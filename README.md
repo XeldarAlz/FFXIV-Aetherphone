@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <em>Your phone, in Eorzea. Built on Dalamud.</em>
+  <em>A smartphone, built for you. Built on Dalamud.</em>
 </p>
 
 ---
