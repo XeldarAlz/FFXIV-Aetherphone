@@ -16,7 +16,6 @@ internal static class TransitionTiming
 
     public const float MaxFrameSeconds = 0.1f;
 
-    // How long a chat bubble takes to pop into place when a message is sent or arrives.
     public const float BubbleSeconds = 0.34f;
 
     public static readonly EasingFunction PresentCurve = Easing.EaseOutQuint;

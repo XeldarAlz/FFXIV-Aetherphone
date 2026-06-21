@@ -9,9 +9,13 @@
     "IconUrl": "https://raw.githubusercontent.com/XeldarAlz/FFXIV-Aetherphone/master/src/Aetherphone/Images/Icon.png",
     "Tags": [
         "phone",
+	"aether",
+	"aetherphone",
         "messages",
         "social",
         "ui",
-        "quality of life"
+        "quality of life",
+	"device",
+	"call"
     ]
 }

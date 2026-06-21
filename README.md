@@ -17,6 +17,10 @@
 
 ---
 
+<p align="center">
+  <img src="src/Aetherphone/Images/demo.png" width="600" alt="Aetherphone in-game" />
+</p>
+
 ## What it does
 
 Puts a real smartphone on screen: a docked, always-on device with a home screen, a status bar, app icons, notifications, ringtones, and themeable wallpapers. Its anchor is **Messages** — a chat client that absorbs the game's `/tell` system into bubbles you can read and reply to, with toast notifications and an unread badge on the server-info bar.

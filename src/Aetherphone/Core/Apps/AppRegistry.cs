@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.Contacts;
+using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Messages;
 using Aetherphone.Apps.MyCharacter;
 using Aetherphone.Apps.Notifications;
@@ -22,6 +23,7 @@ internal static class AppRegistry
             new PlaceholderApp("photos", "Photos", "P", new Vector4(0.95f, 0.62f, 0.25f, 1f)),
             new SkywatcherApp(services.Weather),
             new ClockApp(),
+            new GamesApp(),
             new NotificationsApp(services.Notifications),
             new SettingsApp(services.Configuration, services.Themes, services.Ringtone, showAbout),
         };

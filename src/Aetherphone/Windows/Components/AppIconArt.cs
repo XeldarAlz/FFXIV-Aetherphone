@@ -41,6 +41,21 @@ internal static class AppIconArt
             case "settings":
                 DrawSettings(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "games":
+                DrawGames(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "minesweeper":
+                DrawMine(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "memory":
+                DrawMemory(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "match3":
+                DrawGem(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "2048":
+                DrawTiles(dl, center, extent, inkColor);
+                return true;
             default:
                 return false;
         }
@@ -221,6 +236,109 @@ internal static class AppIconArt
 
         dl.AddCircleFilled(center, extent * 0.62f, ink, 48);
         dl.AddCircleFilled(center, extent * 0.26f, hole, 24);
+    }
+
+    private static void DrawGames(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        dl.AddCircleFilled(At(center, extent, -0.62f, 0.42f), extent * 0.42f, ink, 32);
+        dl.AddCircleFilled(At(center, extent, 0.62f, 0.42f), extent * 0.42f, ink, 32);
+
+        var bodyMin = At(center, extent, -0.88f, -0.42f);
+        var bodyMax = At(center, extent, 0.88f, 0.30f);
+        dl.AddRectFilled(bodyMin, bodyMax, ink, extent * 0.30f);
+
+        var crossHorizontalMin = At(center, extent, -0.70f, -0.12f);
+        var crossHorizontalMax = At(center, extent, -0.20f, 0.08f);
+        dl.AddRectFilled(crossHorizontalMin, crossHorizontalMax, hole, extent * 0.04f);
+
+        var crossVerticalMin = At(center, extent, -0.55f, -0.27f);
+        var crossVerticalMax = At(center, extent, -0.35f, 0.23f);
+        dl.AddRectFilled(crossVerticalMin, crossVerticalMax, hole, extent * 0.04f);
+
+        var buttonRadius = extent * 0.11f;
+        dl.AddCircleFilled(At(center, extent, 0.48f, -0.24f), buttonRadius, hole, 16);
+        dl.AddCircleFilled(At(center, extent, 0.48f, 0.20f), buttonRadius, hole, 16);
+        dl.AddCircleFilled(At(center, extent, 0.27f, -0.02f), buttonRadius, hole, 16);
+        dl.AddCircleFilled(At(center, extent, 0.69f, -0.02f), buttonRadius, hole, 16);
+    }
+
+    private static void DrawMine(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var spikeThickness = extent * 0.16f;
+        for (var spike = 0; spike < 8; spike++)
+        {
+            var angle = spike * (MathF.PI / 4f);
+            dl.AddLine(Polar(center, extent, 0.45f, angle), Polar(center, extent, 0.98f, angle), ink, spikeThickness);
+        }
+
+        dl.AddCircleFilled(center, extent * 0.62f, ink, 32);
+        dl.AddCircleFilled(At(center, extent, -0.22f, -0.22f), extent * 0.16f, hole, 16);
+    }
+
+    private static void DrawMemory(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var backMin = At(center, extent, -0.10f, -0.90f);
+        var backMax = At(center, extent, 0.85f, 0.45f);
+        dl.AddRectFilled(backMin, backMax, ink, extent * 0.16f);
+
+        var outlineMin = At(center, extent, -0.92f, -0.47f);
+        var outlineMax = At(center, extent, 0.20f, 0.92f);
+        dl.AddRectFilled(outlineMin, outlineMax, hole, extent * 0.20f);
+
+        var frontMin = At(center, extent, -0.80f, -0.35f);
+        var frontMax = At(center, extent, 0.08f, 0.80f);
+        dl.AddRectFilled(frontMin, frontMax, ink, extent * 0.16f);
+
+        var symbol = At(center, extent, -0.36f, 0.22f);
+        Span<Vector2> diamond = stackalloc Vector2[4]
+        {
+            new(symbol.X, symbol.Y - extent * 0.28f),
+            new(symbol.X + extent * 0.24f, symbol.Y),
+            new(symbol.X, symbol.Y + extent * 0.28f),
+            new(symbol.X - extent * 0.24f, symbol.Y),
+        };
+        FillConvex(dl, hole, diamond);
+    }
+
+    private static void DrawGem(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> gem = stackalloc Vector2[5]
+        {
+            At(center, extent, -0.60f, -0.55f),
+            At(center, extent, 0.60f, -0.55f),
+            At(center, extent, 0.92f, -0.05f),
+            At(center, extent, 0f, 0.92f),
+            At(center, extent, -0.92f, -0.05f),
+        };
+        FillConvex(dl, ink, gem);
+
+        var facetThickness = extent * 0.06f;
+        dl.AddLine(At(center, extent, -0.92f, -0.05f), At(center, extent, 0.92f, -0.05f), hole, facetThickness);
+        dl.AddLine(At(center, extent, 0f, -0.55f), At(center, extent, 0f, -0.05f), hole, facetThickness);
+        dl.AddLine(At(center, extent, -0.60f, -0.55f), At(center, extent, 0f, 0.92f), hole, facetThickness);
+        dl.AddLine(At(center, extent, 0.60f, -0.55f), At(center, extent, 0f, 0.92f), hole, facetThickness);
+    }
+
+    private static void DrawTiles(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        var tileExtent = extent * 0.40f;
+        var rounding = extent * 0.14f;
+
+        Span<Vector2> tileCenters = stackalloc Vector2[4]
+        {
+            At(center, extent, -0.45f, -0.45f),
+            At(center, extent, 0.45f, -0.45f),
+            At(center, extent, -0.45f, 0.45f),
+            At(center, extent, 0.45f, 0.45f),
+        };
+
+        for (var tile = 0; tile < tileCenters.Length; tile++)
+        {
+            var tileCenter = tileCenters[tile];
+            var tileMin = new Vector2(tileCenter.X - tileExtent, tileCenter.Y - tileExtent);
+            var tileMax = new Vector2(tileCenter.X + tileExtent, tileCenter.Y + tileExtent);
+            dl.AddRectFilled(tileMin, tileMax, ink, rounding);
+        }
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

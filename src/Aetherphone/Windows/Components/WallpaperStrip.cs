@@ -28,9 +28,7 @@ internal static class WallpaperStrip
             var min = new Vector2(startX + index * step, row.Center.Y - thumbHeight * 0.5f);
             var max = new Vector2(min.X + thumbWidth, min.Y + thumbHeight);
 
-            dl.PushClipRect(min, max, true);
-            WallpaperPainter.Paint(options[index], new Rect(min, max));
-            dl.PopClipRect();
+            dl.AddImageRounded(Plugin.Wallpapers.Handle(options[index]), min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
 
             dl.AddRect(min, max, ImGui.GetColorU32(index == selected ? theme.TextStrong : theme.Separator), rounding);
             if (index == selected)

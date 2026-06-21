@@ -8,10 +8,17 @@ namespace Aetherphone.Windows;
 
 internal sealed class PhoneWindow : Window
 {
+    private const ImGuiWindowFlags BaseFlags =
+        ImGuiWindowFlags.NoTitleBar
+      | ImGuiWindowFlags.NoScrollbar
+      | ImGuiWindowFlags.NoScrollWithMouse
+      | ImGuiWindowFlags.NoCollapse
+      | ImGuiWindowFlags.NoBackground;
+
     private readonly PhoneShell shell;
 
     public PhoneWindow(PhoneShell shell)
-        : base(AepConstants.Name, BuildFlags())
+        : base(AepConstants.Name, BaseFlags)
     {
         this.shell = shell;
         Size = new Vector2(360f, 740f);
@@ -24,14 +31,11 @@ internal sealed class PhoneWindow : Window
         RespectCloseHotkey = false;
     }
 
-    private static ImGuiWindowFlags BuildFlags()
-        => ImGuiWindowFlags.NoTitleBar
-         | ImGuiWindowFlags.NoScrollbar
-         | ImGuiWindowFlags.NoScrollWithMouse
-         | ImGuiWindowFlags.NoCollapse
-         | ImGuiWindowFlags.NoBackground;
-
-    public override void PreDraw() => ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+    public override void PreDraw()
+    {
+        Flags = Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+    }
 
     public override void PostDraw() => ImGui.PopStyleVar();
 

@@ -30,46 +30,9 @@ internal static class DeviceChrome
 
     public static void DrawWallpaper(Rect screen, PhoneTheme theme)
     {
-        var dl = ImGui.GetWindowDrawList();
-        dl.PushClipRect(screen.Min, screen.Max, true);
-        WallpaperPainter.Paint(theme.Wallpaper, screen);
-        dl.PopClipRect();
-
-        RoundCorners(screen, theme);
-    }
-
-    private static readonly float[] CornerStartAngles = { MathF.PI, MathF.PI * 1.5f, 0f, MathF.PI * 0.5f };
-
-    private static void RoundCorners(Rect screen, PhoneTheme theme)
-    {
-        const int cornerSegments = 24;
-        const float quarterTurn = MathF.PI * 0.5f;
-
-        var radius = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
-        var bezel = ImGui.GetColorU32(theme.BezelOuter);
-
-        for (var index = 0; index < CornerStartAngles.Length; index++)
-        {
-            var (corner, center) = CornerGeometry(screen, radius, index);
-            var startAngle = CornerStartAngles[index];
-
-            dl.PathClear();
-            dl.PathLineTo(corner);
-            dl.PathArcTo(center, radius, startAngle, startAngle + quarterTurn, cornerSegments);
-            dl.PathFillConvex(bezel);
-        }
-    }
-
-    private static (Vector2 Corner, Vector2 Center) CornerGeometry(Rect screen, float radius, int index)
-    {
-        return index switch
-        {
-            0 => (new Vector2(screen.Min.X, screen.Min.Y), new Vector2(screen.Min.X + radius, screen.Min.Y + radius)),
-            1 => (new Vector2(screen.Max.X, screen.Min.Y), new Vector2(screen.Max.X - radius, screen.Min.Y + radius)),
-            2 => (new Vector2(screen.Max.X, screen.Max.Y), new Vector2(screen.Max.X - radius, screen.Max.Y - radius)),
-            _ => (new Vector2(screen.Min.X, screen.Max.Y), new Vector2(screen.Min.X + radius, screen.Max.Y - radius)),
-        };
+        var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
+        var handle = Plugin.Wallpapers.Handle(theme.Wallpaper);
+        ImGui.GetWindowDrawList().AddImageRounded(handle, screen.Min, screen.Max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
     }
 
     public static void DrawIsland(Rect screen, PhoneTheme theme)

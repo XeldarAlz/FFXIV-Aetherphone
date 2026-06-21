@@ -59,6 +59,20 @@ internal sealed class PhoneShell : IDisposable
             DeviceChrome.DrawIsland(screen, theme);
             StatusBar.Draw(screen, theme);
             DrawHomeIndicator(screen, theme);
+            DrawLockButton(screen, theme);
+        }
+    }
+
+    private static void DrawLockButton(Rect screen, PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var radius = 13f * scale;
+        var center = new Vector2(screen.Max.X - 30f * scale, screen.Max.Y - 28f * scale);
+
+        if (LockButton.Draw(center, radius, Plugin.Cfg.LockPosition, theme))
+        {
+            Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
+            Plugin.Cfg.Save();
         }
     }
 

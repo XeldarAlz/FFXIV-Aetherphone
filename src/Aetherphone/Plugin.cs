@@ -1,10 +1,12 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Device;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
+using Aetherphone.Windows.Components;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.Dtr;
 using Dalamud.IoC;
@@ -30,6 +32,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
+    internal static WallpaperTextureCache Wallpapers { get; private set; } = null!;
+    internal static DeviceStatus Device { get; private set; } = null!;
 
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
@@ -45,6 +49,8 @@ public sealed class Plugin : IDalamudPlugin
         Instance = this;
         Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Fonts = new FontService(PluginInterface);
+        Wallpapers = new WallpaperTextureCache(TextureProvider);
+        Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
 
         services = PhoneServices.Build(Cfg, NotificationManager, ChatGui, DataManager, ObjectTable, ClientState, TextureProvider);
         aboutWindow = new AboutWindow();
@@ -82,7 +88,9 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.RemoveAllWindows();
         shell.Dispose();
         services.Dispose();
+        Device.Dispose();
         Fonts.Dispose();
+        Wallpapers.Dispose();
 
         CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
         CommandManager.RemoveHandler(AepConstants.AliasCommand);
