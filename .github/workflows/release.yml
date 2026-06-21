@@ -46,7 +46,7 @@ jobs:
           echo "Releasing $target"
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.tag.outputs.target }}
           fetch-depth: 0
