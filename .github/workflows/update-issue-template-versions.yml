@@ -1,15 +1,3 @@
-# When a release tag is pushed, refresh the "Plugin version" dropdown options in
-# every .github/ISSUE_TEMPLATE/*.yml: prepend the new version (with the leading
-# `v` stripped), dedupe, keep the most recent 5 versions, and preserve the
-# "Older / not sure" sentinel at the bottom. Can also be dispatched manually
-# (defaults to the latest GitHub release tag) to backfill or recover.
-#
-# Triggered on the v*.*.* tag push rather than `release: published` on purpose:
-# release.yml publishes the GitHub release with GITHUB_TOKEN, and GitHub does
-# NOT cascade-trigger workflows from GITHUB_TOKEN events — so a release-published
-# trigger never fires. The tag itself is pushed by auto-tag.yml using HUB_REPO_PAT,
-# and PAT-pushed tags DO cascade, which is the same path release.yml relies on.
-
 name: Update Issue Template Versions
 
 on:
@@ -162,8 +150,7 @@ jobs:
             exit 0
           fi
           git commit -m "Update issue template versions for $TAG"
-          # release.yml commits repo.json on the same tag push; rebase-retry so we
-          # don't lose the race (different files, so the rebase applies cleanly).
+          # Rebase-retry to avoid races with same-trigger release.yml commits.
           for i in 1 2 3 4 5; do
             git fetch origin "$DEFAULT_BRANCH"
             if ! git rebase "origin/$DEFAULT_BRANCH"; then

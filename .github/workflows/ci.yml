@@ -8,8 +8,6 @@ on:
 
 jobs:
 
-  # Cheap gates that don't need the SDK or Dalamud — run them first so a
-  # version-sync mistake fails fast without burning the full build.
   guards:
     name: Guards (version sync)
     runs-on: ubuntu-latest
@@ -37,8 +35,6 @@ jobs:
             exit 1
           fi
 
-  # Full build. Needs Dalamud present at the standard plugin path so
-  # Dalamud.NET.Sdk can resolve $(DalamudLibPath).
   build:
     name: Build (Windows)
     needs: guards
@@ -55,9 +51,7 @@ jobs:
 
       - name: Download Dalamud dev build
         shell: pwsh
-        # Track staging while API 15 / Patch 7.50 is in beta — the release
-        # channel is still API 14 and won't satisfy Dalamud.NET.Sdk 15.x.
-        # Revert to /latest.zip once Dalamud 15 GAs.
+        # Staging URL is required while Dalamud API 15 is in beta.
         run: |
           $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/stg/latest.zip"
           $dalamudDir = "$env:AppData\XIVLauncher\addon\Hooks\dev"

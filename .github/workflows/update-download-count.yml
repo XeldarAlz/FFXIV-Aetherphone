@@ -1,7 +1,3 @@
-# DownloadCount in repo.json is normally bumped by the release workflow once per
-# tagged release. This workflow refreshes it every 6 hours so the number stays current
-# between releases, and can also be triggered manually from the Actions tab.
-
 name: Update Download Count
 
 on:

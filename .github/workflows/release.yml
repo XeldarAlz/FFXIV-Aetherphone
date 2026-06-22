@@ -4,9 +4,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  # Manual fallback: when auto-tag pushes a tag via GITHUB_TOKEN, GitHub
-  # sometimes refuses to cascade-trigger this workflow. Dispatch on the tag
-  # ref to publish the release without having to delete and re-push the tag.
   workflow_dispatch:
     inputs:
       tag:
@@ -20,8 +17,6 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    # Job-level so the hub-ping step's `if` can see it — `secrets` can't be used
-    # directly in an `if:` condition, but `env` mapped from a secret can.
     env:
       HUB_REPO_PAT: ${{ secrets.HUB_REPO_PAT }}
 
@@ -59,9 +54,7 @@ jobs:
 
       - name: Download Dalamud dev build
         shell: pwsh
-        # Track staging while API 15 / Patch 7.50 is in beta — the release
-        # channel is still API 14 and won't satisfy Dalamud.NET.Sdk 15.x.
-        # Revert to /latest.zip once Dalamud 15 GAs.
+        # Staging URL is required while Dalamud API 15 is in beta.
         run: |
           $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/stg/latest.zip"
           $dalamudDir = "$env:AppData\XIVLauncher\addon\Hooks\dev"
@@ -110,7 +103,7 @@ jobs:
           $json[0].TestingAssemblyVersion = $v
           $json[0].DownloadCount = [int]'${{ steps.count.outputs.total }}'
           $json[0] | Add-Member -NotePropertyName 'LastUpdate' -NotePropertyValue ([string][int][double]::Parse((Get-Date -UFormat %s))) -Force
-          # -AsArray preserves the array wrapper; piping a single-element array through | unrolls it and loses the [ ... ] Dalamud requires.
+          # Keep -AsArray so repo.json stays wrapped in [ ... ] as required.
           ConvertTo-Json -InputObject $json -Depth 10 -AsArray | Set-Content -Path $path -Encoding utf8
 
       - name: Commit local repo.json
@@ -124,11 +117,7 @@ jobs:
             exit 0
           }
           git commit -m "Release ${{ steps.tag.outputs.target }}: bump repo.json"
-          # -X theirs auto-resolves any repo.json conflict in favour of our just-bumped values
-          # (rebase semantics: "theirs" = the commits being rebased, i.e. ours).
-          # Without it, a concurrent push that touched repo.json leaves conflict markers,
-          # push then reports "Everything up-to-date" with exit 0, and downstream steps
-          # silently consume the corrupted file.
+          # -X theirs keeps our new repo.json values during rebase retries.
           for ($i = 1; $i -le 5; $i++) {
             git fetch origin master
             git rebase -X theirs origin/master
@@ -145,10 +134,6 @@ jobs:
           }
           Write-Error 'Failed to push repo.json bump after 5 attempts.'
           exit 1
-
-      # Ping the multi-plugin hub repo so it regenerates repo.json immediately
-      # instead of waiting for its hourly cron. The hub workflow re-reads each
-      # plugin's repo.json and refreshes DownloadCount from the GitHub API.
       - name: Trigger hub repo regeneration
         if: ${{ env.HUB_REPO_PAT != '' }}
         shell: bash
