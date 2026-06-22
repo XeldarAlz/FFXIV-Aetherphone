@@ -17,6 +17,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly ThemeProvider themes;
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly NavigationStack navigation;
+    private readonly BootSequence boot = new();
 
     public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps)
     {
@@ -25,13 +26,33 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
     }
 
+    public void OnOpened() => boot.Begin(!Plugin.Cfg.WelcomeShown);
+
+    public void OnClosed() => boot.Cancel();
+
     public void Draw(Rect device)
     {
         var theme = themes.Current;
         var screen = DeviceChrome.DrawBody(device, theme);
 
-        navigation.Advance(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        boot.Advance(delta);
+        navigation.Advance(delta);
 
+        using (InputShield.Engage(boot.IsActive))
+        {
+            DrawContent(screen, theme);
+            DrawChrome(screen, theme);
+        }
+
+        if (boot.IsActive)
+        {
+            BootScreen.Draw(screen, theme, boot);
+        }
+    }
+
+    private void DrawContent(Rect screen, PhoneTheme theme)
+    {
         if (navigation.IsTransitioning)
         {
             DrawTransition(screen, theme);
@@ -47,8 +68,6 @@ internal sealed class PhoneShell : IDisposable
                 PaintApp(screen, theme, navigation.Current!);
             }
         }
-
-        DrawChrome(screen, theme);
     }
 
     private void DrawChrome(Rect screen, PhoneTheme theme)
@@ -56,7 +75,6 @@ internal sealed class PhoneShell : IDisposable
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("chrome", screen.Size, false, ChromeFlags))
         {
-            DeviceChrome.DrawIsland(screen, theme);
             StatusBar.Draw(screen, theme);
             DrawHomeIndicator(screen, theme);
             DrawLockButton(screen, theme);

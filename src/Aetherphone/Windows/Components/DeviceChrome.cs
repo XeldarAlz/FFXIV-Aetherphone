@@ -35,14 +35,8 @@ internal static class DeviceChrome
         ImGui.GetWindowDrawList().AddImageRounded(handle, screen.Min, screen.Max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
     }
 
-    public static void DrawIsland(Rect screen, PhoneTheme theme)
+    public static void DrawIsland(Rect island, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var width = 98f * scale;
-        var height = 26f * scale;
-        var top = screen.Min.Y + 9f * scale;
-        var min = new Vector2(screen.Center.X - width * 0.5f, top);
-        var max = new Vector2(screen.Center.X + width * 0.5f, top + height);
-        ImGui.GetWindowDrawList().AddRectFilled(min, max, ImGui.GetColorU32(theme.BezelOuter), height * 0.5f);
+        ImGui.GetWindowDrawList().AddRectFilled(island.Min, island.Max, ImGui.GetColorU32(theme.BezelOuter), island.Height * 0.5f);
     }
 }

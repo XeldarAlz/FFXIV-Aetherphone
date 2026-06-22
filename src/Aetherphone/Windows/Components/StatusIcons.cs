@@ -9,27 +9,52 @@ namespace Aetherphone.Windows.Components;
 internal static class StatusIcons
 {
     private const float LabelScale = 0.8f;
+    private const float NubWidth = 2f;
+    private const float BodyWidth = 22f;
+    private const float LabelGap = 6f;
+    private const float SignalGap = 7f;
+    private const float BarWidth = 3f;
+    private const float BarGap = 1.8f;
+    private const float RightPadding = 24f;
+    private const float MinRightPadding = 8f;
 
-    public static void Draw(Rect screen, PhoneTheme theme, float rowCenterY)
+    public static float MeasureWidth(float scale, int percent)
     {
+        var labelWidth = Typography.Measure(percent + "%", LabelScale).X;
+        return (NubWidth + BodyWidth) * scale + LabelGap * scale + labelWidth + SignalGap * scale + SignalClusterWidth(scale);
+    }
+
+    public static void Draw(Rect screen, PhoneTheme theme, float rowCenterY, float minClusterLeft)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
         var device = Plugin.Device;
-        var batteryLeft = DrawBattery(screen, theme, rowCenterY, device.BatteryPercent, device.Charging);
+
+        var clusterWidth = MeasureWidth(scale, device.BatteryPercent);
+        var nubRight = screen.Max.X - RightPadding * scale;
+        if (nubRight - clusterWidth < minClusterLeft)
+        {
+            nubRight = MathF.Min(screen.Max.X - MinRightPadding * scale, minClusterLeft + clusterWidth);
+        }
+
+        var batteryLeft = DrawBattery(theme, rowCenterY, nubRight, device.BatteryPercent, device.Charging);
         var labelLeft = DrawBatteryLabel(theme, rowCenterY, batteryLeft, device.BatteryPercent);
         DrawSignal(theme, rowCenterY, labelLeft, device.SignalBars);
     }
 
-    private static float DrawBattery(Rect screen, PhoneTheme theme, float rowCenterY, int percent, bool charging)
+    private static float SignalClusterWidth(float scale) => (BarWidth * 4f + BarGap * 3f) * scale;
+
+    private static float DrawBattery(PhoneTheme theme, float rowCenterY, float nubRight, int percent, bool charging)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
 
-        var nubWidth = 2f * scale;
+        var nubWidth = NubWidth * scale;
         var nubHeight = 4.5f * scale;
-        var bodyWidth = 22f * scale;
+        var bodyWidth = BodyWidth * scale;
         var bodyHeight = 11f * scale;
         var rounding = 3f * scale;
 
-        var bodyMax = new Vector2(screen.Max.X - 24f * scale - nubWidth, rowCenterY + bodyHeight * 0.5f);
+        var bodyMax = new Vector2(nubRight - nubWidth, rowCenterY + bodyHeight * 0.5f);
         var bodyMin = new Vector2(bodyMax.X - bodyWidth, rowCenterY - bodyHeight * 0.5f);
 
         var shell = Palette.WithAlpha(theme.TextStrong, 0.6f);
@@ -59,7 +84,7 @@ internal static class StatusIcons
         var scale = ImGuiHelpers.GlobalScale;
         var label = percent + "%";
         var size = Typography.Measure(label, LabelScale);
-        var position = new Vector2(batteryLeft - 6f * scale - size.X, rowCenterY - size.Y * 0.5f);
+        var position = new Vector2(batteryLeft - LabelGap * scale - size.X, rowCenterY - size.Y * 0.5f);
         Typography.Draw(position, label, theme.TextStrong, LabelScale);
         return position.X;
     }
@@ -69,10 +94,9 @@ internal static class StatusIcons
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
 
-        var barWidth = 3f * scale;
-        var barGap = 1.8f * scale;
-        var clusterWidth = barWidth * 4f + barGap * 3f;
-        var clusterLeft = labelLeft - 7f * scale - clusterWidth;
+        var barWidth = BarWidth * scale;
+        var barGap = BarGap * scale;
+        var clusterLeft = labelLeft - SignalGap * scale - SignalClusterWidth(scale);
         var baseline = rowCenterY + 6.5f * scale;
 
         Span<float> heights = stackalloc float[4] { 5f, 7.8f, 10.6f, 13.4f };

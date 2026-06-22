@@ -9,6 +9,8 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool OpenOnStartup { get; set; }
 
+    public bool WelcomeShown { get; set; }
+
     public bool LockPosition { get; set; }
 
     public bool DoNotDisturb { get; set; }

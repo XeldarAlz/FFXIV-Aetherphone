@@ -31,6 +31,10 @@ internal sealed class PhoneWindow : Window
         RespectCloseHotkey = false;
     }
 
+    public override void OnOpen() => shell.OnOpened();
+
+    public override void OnClose() => shell.OnClosed();
+
     public override void PreDraw()
     {
         Flags = Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
