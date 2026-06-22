@@ -8,8 +8,6 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Clock;
 
-// An Apple "World Clock"-style face: Local, Eorzea, and Server (UTC) each as a live analog clock
-// with a large digital readout. Eorzea runs ~20.6x real time, so its sweep hand visibly races.
 internal sealed class ClockApp : IPhoneApp
 {
     private const double EorzeaRate = 144.0 / 7.0;
@@ -49,8 +47,6 @@ internal sealed class ClockApp : IPhoneApp
         {
             var card = GroupCard.Begin(theme, 3, 92f);
             DrawRow(card.NextRow(), theme, "Local", LocalOffsetLabel(), local.ToString("HH:mm"), local.Hour, local.Minute, local.Second + local.Millisecond / 1000f);
-            // AnalogClock adds the sub-unit sweep itself, so hours/minutes must be whole units
-            // (matching the local/server rows); only seconds carry the fraction.
             DrawRow(card.NextRow(), theme, "Eorzea", "In-game", EorzeaTime.Now().Formatted, (float)Math.Floor(eorzea / 3600 % 24), (float)Math.Floor(eorzea / 60 % 60), (float)(eorzea % 60));
             DrawRow(card.NextRow(), theme, "Server", "UTC", utc.ToString("HH:mm"), utc.Hour, utc.Minute, utc.Second + utc.Millisecond / 1000f);
             card.End();

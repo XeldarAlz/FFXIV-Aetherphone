@@ -10,9 +10,6 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Settings;
 
-// The device's settings, organised like the iOS Settings app: a root list of categories that
-// each drill into a self-contained page. The app is only the shell here — a ViewRouter owns the
-// page stack and the framework slides between pages; each ISettingsPage owns its own controls.
 internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 {
     public string Id => "settings";

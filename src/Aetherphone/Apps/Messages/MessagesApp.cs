@@ -10,10 +10,6 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Messages;
 
-// The anchor app. Mirrors the game's native tells into a WhatsApp-style thread and sends replies
-// back out as /tells. Two views — the conversation list and a thread with a composer — driven by a
-// ViewRouter so opening and leaving a thread slides like a real phone. The selected conversation is
-// the view token, so the router can keep drawing the outgoing view through the slide.
 internal sealed class MessagesApp : IPhoneApp
 {
     public string Id => "messages";

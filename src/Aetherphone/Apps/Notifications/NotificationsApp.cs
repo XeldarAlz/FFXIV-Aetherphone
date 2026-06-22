@@ -7,8 +7,6 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Notifications;
 
-// The in-phone notification center. Shows the recent feed newest-first and clears the unread
-// count on open, the way pulling down Notification Center does on iOS.
 internal sealed class NotificationsApp : IPhoneApp
 {
     public string Id => "notifications";

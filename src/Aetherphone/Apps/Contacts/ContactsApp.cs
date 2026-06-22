@@ -13,12 +13,6 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Contacts;
 
-// Reads the player's in-game friend list and presents it iOS-style: an Online section pinned
-// above Offline, each an inset-grouped card. Tapping a friend slides to a detail card with the
-// same actions as the native context menu. A ViewRouter owns the list/detail stack so the slide
-// matches every other app. Opening and the refresh button ask the server for fresh data; the
-// response lands asynchronously, so we poll the proxy quickly for a short window afterwards and
-// re-read at a slow idle cadence the rest of the time to keep presence in sync.
 internal sealed class ContactsApp : IPhoneApp
 {
     private const float IdleReadIntervalSeconds = 5f;

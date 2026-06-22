@@ -3,10 +3,6 @@ using Aetherphone.Core.Messaging;
 
 namespace Aetherphone.Apps.Messages;
 
-// Decides which bubbles pop in. Opening a thread shows its history settled — only lines that
-// arrive while the thread is on screen animate, the way iMessage leaves the backlog alone and
-// inflates just the new message. Tracks per-line elapsed time for the few bubbles currently
-// animating; everything else reports fully settled.
 internal sealed class ChatEntranceAnimator
 {
     private struct Entrance
@@ -52,7 +48,6 @@ internal sealed class ChatEntranceAnimator
         }
     }
 
-    // Linear progress in [0,1]; 1 means the bubble is settled and should draw at rest.
     public float Progress(int line)
     {
         for (var index = 0; index < active.Count; index++)

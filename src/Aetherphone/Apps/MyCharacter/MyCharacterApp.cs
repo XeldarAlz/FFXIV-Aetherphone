@@ -10,10 +10,6 @@ using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.MyCharacter;
 
-// The player's own Lodestone-style profile, read live from the game: hero header, the profile
-// detail block, and the equipped-gear grid. The snapshot refreshes on open and periodically so
-// job and gear swaps appear without reopening. v1 is in-game only; the rendered portrait is a
-// later Lodestone addition.
 internal sealed class MyCharacterApp : IPhoneApp
 {
     private const float RefreshIntervalSeconds = 3f;

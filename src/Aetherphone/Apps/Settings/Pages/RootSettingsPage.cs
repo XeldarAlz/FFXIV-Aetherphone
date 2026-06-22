@@ -7,8 +7,6 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
-// The Settings home: clustered grouped cards of link rows, one per category, exactly like the
-// iOS Settings root. Each row drills into its page through the navigator.
 internal sealed class RootSettingsPage : ISettingsPage
 {
     public string Title => "Settings";

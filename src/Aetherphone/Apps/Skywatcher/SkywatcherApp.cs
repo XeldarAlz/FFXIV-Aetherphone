@@ -9,8 +9,6 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Skywatcher;
 
-// The Eorzea weather forecast for the player's current zone: current conditions on top, then the
-// upcoming windows. Refreshed on open and every few seconds so the countdown stays accurate.
 internal sealed class SkywatcherApp : IPhoneApp
 {
     private const int WindowCount = 8;
