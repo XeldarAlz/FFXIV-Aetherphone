@@ -18,7 +18,7 @@
 ---
 
 <p align="center">
-  <img src="src/Aetherphone/Images/demo.png" width="600" alt="Aetherphone in-game" />
+  <img src="src/Aetherphone/Images/demo.png" width="400" alt="Aetherphone in-game" />
 </p>
 
 ## What it does
