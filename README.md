@@ -18,12 +18,35 @@
 ---
 
 <p align="center">
-  <img src="src/Aetherphone/Images/demo.png" width="400" alt="Aetherphone in-game" />
+  <img src="src/Aetherphone/Images/screenshots/Home.png" width="280" alt="Aetherphone in-game" />
 </p>
 
 ## What it does
 
 Puts a real smartphone on screen: a docked, always-on device with a home screen, a status bar, app icons, notifications, ringtones, and themeable wallpapers. Its anchor is **Messages** — a chat client that absorbs the game's `/tell` system into bubbles you can read and reply to, with toast notifications and an unread badge on the server-info bar.
+
+## Take a look
+
+A few of the things you can do — listen to music, check the weather, search the market, message your contacts, and more.
+
+<p align="center">
+  <img src="src/Aetherphone/Images/screenshots/Chat.png" width="260" alt="Messages chat thread" />
+  <br />
+  <sub><b>Message your contacts</b> — every <code>/tell</code> becomes a chat bubble you can read and reply to</sub>
+</p>
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="src/Aetherphone/Images/screenshots/Music.png" width="220" alt="Music app" /><br /><sub><b>Listen to music</b><br />Internet radio, sorted by genre</sub></td>
+    <td align="center" width="33%"><img src="src/Aetherphone/Images/screenshots/Weather.png" width="220" alt="Skywatcher weather" /><br /><sub><b>Check the weather</b><br />Live Eorzean forecast for your zone</sub></td>
+    <td align="center" width="33%"><img src="src/Aetherphone/Images/screenshots/Market.png" width="220" alt="Market board" /><br /><sub><b>Search the market</b><br />Live Universalis prices, stats &amp; trends</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="src/Aetherphone/Images/screenshots/Contacts.png" width="220" alt="Contacts list" /><br /><sub><b>Browse your contacts</b><br />Your friend list as an address book</sub></td>
+    <td align="center"><img src="src/Aetherphone/Images/screenshots/Wallet.png" width="220" alt="Wallet" /><br /><sub><b>Track your wallet</b><br />Gil, currencies, tomestones &amp; seals</sub></td>
+    <td align="center"><img src="src/Aetherphone/Images/screenshots/Dynamic.png" width="220" alt="Now Playing banner" /><br /><sub><b>Now Playing</b><br />A dynamic island that follows your music</sub></td>
+  </tr>
+</table>
 
 ## Features
 
@@ -32,6 +55,9 @@ Puts a real smartphone on screen: a docked, always-on device with a home screen,
 - **Contacts**: your friend list as an address book; start a conversation straight from a contact.
 - **My Character**: a profile card for the local character, gear and all.
 - **Skywatcher**: live Eorzean weather for your current zone.
+- **Market**: live market board prices from Universalis — search any item (or right-click one in-game), see the cheapest listings, price stats, sale velocity, and recent-sale history with a trend graph across your World, Data Center, or Region. Set price-drop alerts that ping the phone, compare against NPC vendor prices, and star favorites.
+- **Wallet**: track your gil, currencies, tomestones, hunt seals, and PvP marks at a glance, with progress toward weekly caps.
+- **Music**: an internet-radio player — pick a genre station and listen in-game, with a Now Playing banner on the home screen.
 - **Clock**: an analog clock on Eorzea time.
 - **Notifications**: a notification center, optional toasts, game-sound ringtones, and a Do Not Disturb switch.
 - **Themes**: pick an accent palette and wallpaper; the whole device restyles to match.
@@ -54,7 +80,6 @@ Planned work, roughly in order.
 - **Calendar**: events and reminders on Eorzea (and real) time.
 - **Maps**: in-world navigation and points of interest.
 - **Orchestrion**: a music player for in-game tracks.
-- **Market**: live market board prices powered by Universalis.
 - **Memories**: a curated highlights view stitched from your photos and moments.
 - **Alarms**: timers and alarms tied to game or real time.
 - **Games**: small playable mini-games on the device.
