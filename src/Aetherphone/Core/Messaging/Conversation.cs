@@ -8,6 +8,8 @@ internal sealed class Conversation
 
     public string SendTarget { get; }
 
+    public string World { get; }
+
     public IReadOnlyList<ChatLine> Lines => lines;
 
     public DateTime LastActivity { get; private set; }
@@ -20,6 +22,9 @@ internal sealed class Conversation
     {
         Contact = contact;
         SendTarget = sendTarget;
+
+        var separator = sendTarget.IndexOf('@');
+        World = separator >= 0 ? sendTarget.Substring(separator + 1) : string.Empty;
     }
 
     public void Append(ChatLine line)

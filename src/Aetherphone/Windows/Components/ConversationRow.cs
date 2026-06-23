@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -10,7 +11,7 @@ internal static class ConversationRow
 {
     private const float Height = 60f;
 
-    public static bool Draw(Conversation conversation, PhoneTheme theme)
+    public static bool Draw(Conversation conversation, PhoneTheme theme, LodestoneService lodestone)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
@@ -27,8 +28,7 @@ internal static class ConversationRow
 
         var avatarRadius = 20f * scale;
         var avatarCenter = new Vector2(min.X + 14f * scale + avatarRadius, min.Y + Height * scale * 0.5f);
-        dl.AddCircleFilled(avatarCenter, avatarRadius, ImGui.GetColorU32(theme.Accent), 32);
-        Typography.DrawCentered(avatarCenter, Initial(conversation.Contact), new Vector4(1f, 1f, 1f, 1f), 1.1f);
+        AvatarView.Draw(dl, avatarCenter, avatarRadius, theme.Accent, Initial(conversation.Contact), 1.1f, lodestone.Avatar(conversation.Contact, conversation.World), 32);
 
         var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
         var textRight = max.X - 14f * scale;

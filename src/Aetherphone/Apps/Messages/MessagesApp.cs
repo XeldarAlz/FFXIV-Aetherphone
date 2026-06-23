@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -25,6 +26,7 @@ internal sealed class MessagesApp : IPhoneApp
     private readonly MessageStore store;
     private readonly ChatBridge bridge;
     private readonly MessageLauncher launcher;
+    private readonly LodestoneService lodestone;
 
     private readonly ViewRouter<Conversation?> router;
     private readonly RouterDraw<Conversation?> drawView;
@@ -35,11 +37,12 @@ internal sealed class MessagesApp : IPhoneApp
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public MessagesApp(MessageStore store, ChatBridge bridge, MessageLauncher launcher)
+    public MessagesApp(MessageStore store, ChatBridge bridge, MessageLauncher launcher, LodestoneService lodestone)
     {
         this.store = store;
         this.bridge = bridge;
         this.launcher = launcher;
+        this.lodestone = lodestone;
 
         router = new ViewRouter<Conversation?>(null);
         drawView = DrawView;
@@ -101,7 +104,7 @@ internal sealed class MessagesApp : IPhoneApp
         {
             for (var index = 0; index < conversations.Count; index++)
             {
-                if (ConversationRow.Draw(conversations[index], frameTheme))
+                if (ConversationRow.Draw(conversations[index], frameTheme, lodestone))
                 {
                     conversations[index].MarkRead();
                     router.Push(conversations[index]);
