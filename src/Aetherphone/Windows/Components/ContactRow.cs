@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Contacts;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -9,7 +10,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class ContactRow
 {
-    public static bool Draw(Rect row, FriendEntry friend, PhoneTheme theme)
+    public static bool Draw(Rect row, FriendEntry friend, PhoneTheme theme, LodestoneService lodestone)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
@@ -17,8 +18,8 @@ internal static class ContactRow
 
         var avatarRadius = 16f * scale;
         var avatarCenter = new Vector2(row.Min.X + avatarRadius, row.Center.Y);
-        dl.AddCircleFilled(avatarCenter, avatarRadius, ImGui.GetColorU32(friend.Online ? theme.Accent : theme.SurfaceMuted), 32);
-        Typography.DrawCentered(avatarCenter, Initial(friend.Name), new Vector4(1f, 1f, 1f, 1f), 0.95f);
+        var baseColor = friend.Online ? theme.Accent : theme.SurfaceMuted;
+        AvatarView.Draw(dl, avatarCenter, avatarRadius, baseColor, Initial(friend.Name), 0.95f, lodestone.Avatar(friend.Name, friend.WorldName), 32);
 
         var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
         var nameColor = friend.Online ? theme.TextStrong : Palette.WithAlpha(theme.TextStrong, 0.5f);

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core.Character;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -8,7 +9,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class CharacterHeader
 {
-    public static void Draw(LocalCharacter character, PhoneTheme theme)
+    public static void Draw(LocalCharacter character, PhoneTheme theme, LodestoneService lodestone)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
@@ -18,8 +19,7 @@ internal static class CharacterHeader
 
         var radius = 34f * scale;
         var avatarCenter = new Vector2(centerX, origin.Y + radius + 6f * scale);
-        dl.AddCircleFilled(avatarCenter, radius, ImGui.GetColorU32(theme.Accent), 48);
-        Typography.DrawCentered(avatarCenter, Initial(character.Name), new Vector4(1f, 1f, 1f, 1f), 2.0f);
+        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(character.Name), 2.0f, lodestone.Avatar(character.Name, character.WorldName), 48);
 
         var nameY = avatarCenter.Y + radius + 18f * scale;
         Typography.DrawCentered(new Vector2(centerX, nameY), character.Name, theme.TextStrong, 1.5f);

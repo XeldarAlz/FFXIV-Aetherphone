@@ -52,7 +52,7 @@ public sealed class Plugin : IDalamudPlugin
         Wallpapers = new WallpaperTextureCache(TextureProvider);
         Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
 
-        services = PhoneServices.Build(Cfg, NotificationManager, ChatGui, DataManager, ObjectTable, ClientState, TextureProvider);
+        services = PhoneServices.Build(Cfg, NotificationManager, ChatGui, DataManager, ObjectTable, ClientState, TextureProvider, PluginInterface.ConfigDirectory);
         aboutWindow = new AboutWindow();
         shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout));
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };

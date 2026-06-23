@@ -13,6 +13,36 @@
         "requested": "[1.2.39, )",
         "resolved": "1.2.39",
         "contentHash": "fcFN01tDTIQqDuTwr1jUQK/geofiwjG5DycJQOnC72i1SsLAk1ELe+apBOuZ11UMQG8YKFZG1FgvjZPbqHyatg=="
+      },
+      "NetStone": {
+        "type": "Direct",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "uJawEi8Bf66tOQwZ1UHIEuqY7QD3by79iZAy10YOz0p24+wDB9vEl/3QCEXw5pxBIVGGa2GnQ7m5gT8OmXjMOQ==",
+        "dependencies": {
+          "HtmlAgilityPack": "1.11.46",
+          "Karashiiro.HtmlAgilityPack.CssSelectors.NetCoreFork": "0.0.2",
+          "Newtonsoft.Json": "13.0.3"
+        }
+      },
+      "Newtonsoft.Json": {
+        "type": "Direct",
+        "requested": "[13.0.3, )",
+        "resolved": "13.0.3",
+        "contentHash": "HrC5BXdl00IP9zeV+0Z848QWPAoCr9P3bDEZguI+gkLcBKAOxix/tLEAAHC+UvDNPv4a2d18lOReHMOagPa+zQ=="
+      },
+      "HtmlAgilityPack": {
+        "type": "Transitive",
+        "resolved": "1.11.46",
+        "contentHash": "dLMn4EVfJBHWmWK4Uh0XGD76FPLHI0qr2Tm0s1m/xmgiHb1JUb9zB8AzO8HtrkBBlMN6JfCUBYddhqC0hZNR+g=="
+      },
+      "Karashiiro.HtmlAgilityPack.CssSelectors.NetCoreFork": {
+        "type": "Transitive",
+        "resolved": "0.0.2",
+        "contentHash": "+7cqe/+tN7gDW36pgrefSeyAQvhqznM34D0uTwnETgU25iAC6boPtblxbrMluW5rA9o6MzjEg4qZK7WrnT+tSw==",
+        "dependencies": {
+          "HtmlAgilityPack": "1.11.46"
+        }
       }
     }
   }

@@ -22,4 +22,11 @@
     <Using Include="System.Collections.Generic" />
     <Using Include="System.Linq" />
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NetStone" Version="1.4.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
 </Project>

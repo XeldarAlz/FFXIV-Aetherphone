@@ -17,8 +17,8 @@ internal static class AppRegistry
         return new IPhoneApp[]
         {
             new MessagesApp(services.Messages, services.ChatBridge, services.MessageLauncher),
-            new ContactsApp(services.GameData, services.MessageLauncher),
-            new MyCharacterApp(services.GameData, services.Textures),
+            new ContactsApp(services.GameData, services.MessageLauncher, services.Lodestone),
+            new MyCharacterApp(services.GameData, services.Textures, services.Lodestone),
             new PlaceholderApp("camera", "Camera", "O", new Vector4(0.34f, 0.35f, 0.41f, 1f)),
             new PlaceholderApp("photos", "Photos", "P", new Vector4(0.95f, 0.62f, 0.25f, 1f)),
             new SkywatcherApp(services.Weather),

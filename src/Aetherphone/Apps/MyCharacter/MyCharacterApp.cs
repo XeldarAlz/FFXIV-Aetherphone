@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Character;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -26,14 +27,16 @@ internal sealed class MyCharacterApp : IPhoneApp
 
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
+    private readonly LodestoneService lodestone;
 
     private LocalCharacter? character;
     private float sinceRefresh;
 
-    public MyCharacterApp(GameData gameData, ITextureProvider textures)
+    public MyCharacterApp(GameData gameData, ITextureProvider textures, LodestoneService lodestone)
     {
         this.gameData = gameData;
         this.textures = textures;
+        this.lodestone = lodestone;
     }
 
     public void OnOpened() => Refresh();
@@ -71,7 +74,7 @@ internal sealed class MyCharacterApp : IPhoneApp
 
         using (AppSurface.Begin(body))
         {
-            CharacterHeader.Draw(snapshot, theme);
+            CharacterHeader.Draw(snapshot, theme, lodestone);
 
             SettingsSection.Header("Profile", theme);
             var card = GroupCard.Begin(theme, 7, ProfileRow.RowHeight);

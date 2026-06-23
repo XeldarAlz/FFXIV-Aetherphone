@@ -15,6 +15,8 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool DoNotDisturb { get; set; }
 
+    public bool ShowLodestonePortraits { get; set; } = true;
+
     public string AccentName { get; set; } = "Violet";
 
     public string WallpaperName { get; set; } = "Aurora";

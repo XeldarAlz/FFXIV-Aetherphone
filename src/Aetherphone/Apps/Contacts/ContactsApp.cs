@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Contacts;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -32,6 +33,7 @@ internal sealed class ContactsApp : IPhoneApp
 
     private readonly GameData gameData;
     private readonly MessageLauncher launcher;
+    private readonly LodestoneService lodestone;
     private readonly List<FriendEntry> friends = new();
 
     private readonly ViewRouter<FriendEntry?> router;
@@ -44,10 +46,11 @@ internal sealed class ContactsApp : IPhoneApp
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public ContactsApp(GameData gameData, MessageLauncher launcher)
+    public ContactsApp(GameData gameData, MessageLauncher launcher, LodestoneService lodestone)
     {
         this.gameData = gameData;
         this.launcher = launcher;
+        this.lodestone = lodestone;
 
         router = new ViewRouter<FriendEntry?>(null);
         drawView = DrawView;
@@ -174,7 +177,7 @@ internal sealed class ContactsApp : IPhoneApp
                 continue;
             }
 
-            if (ContactRow.Draw(card.NextRow(), friends[index], frameTheme))
+            if (ContactRow.Draw(card.NextRow(), friends[index], frameTheme, lodestone))
             {
                 router.Push(friends[index]);
             }
@@ -194,7 +197,7 @@ internal sealed class ContactsApp : IPhoneApp
 
         using (AppSurface.Begin(body))
         {
-            DrawProfile(friend, theme);
+            DrawProfile(friend, theme, lodestone);
 
             var canInvite = friend.Online;
             var canVisit = friend.HomeWorldId != 0 && gameData.LocalCurrentWorldId == friend.HomeWorldId;
@@ -232,7 +235,7 @@ internal sealed class ContactsApp : IPhoneApp
         }
     }
 
-    private static void DrawProfile(FriendEntry friend, PhoneTheme theme)
+    private static void DrawProfile(FriendEntry friend, PhoneTheme theme, LodestoneService lodestone)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
@@ -241,8 +244,8 @@ internal sealed class ContactsApp : IPhoneApp
 
         var avatarRadius = 34f * scale;
         var avatarCenter = new Vector2(centerX, origin.Y + 10f * scale + avatarRadius);
-        ImGui.GetWindowDrawList().AddCircleFilled(avatarCenter, avatarRadius, ImGui.GetColorU32(friend.Online ? theme.Accent : theme.SurfaceMuted), 48);
-        Typography.DrawCentered(avatarCenter, Initial(friend.Name), new Vector4(1f, 1f, 1f, 1f), 1.8f);
+        var baseColor = friend.Online ? theme.Accent : theme.SurfaceMuted;
+        AvatarView.Draw(ImGui.GetWindowDrawList(), avatarCenter, avatarRadius, baseColor, Initial(friend.Name), 1.8f, lodestone.Avatar(friend.Name, friend.WorldName), 48);
 
         Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 18f * scale), friend.Name, theme.TextStrong, 1.3f);
 
