@@ -1,6 +1,8 @@
 using System.Numerics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Radio;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -17,18 +19,32 @@ internal sealed class PhoneShell : IDisposable
     private readonly ThemeProvider themes;
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly NavigationStack navigation;
+    private readonly NotificationBanner banner;
+    private readonly NowPlayingIsland nowPlaying;
     private readonly BootSequence boot = new();
 
-    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps)
+    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, RadioPlayer radioPlayer)
     {
         this.themes = themes;
         this.apps = apps;
         navigation = new NavigationStack(apps);
+        banner = new NotificationBanner(notifications);
+        nowPlaying = new NowPlayingIsland(radioPlayer);
     }
 
     public void OnOpened() => boot.Begin(!Plugin.Cfg.WelcomeShown);
 
     public void OnClosed() => boot.Cancel();
+
+    public void OpenApp(string appId)
+    {
+        if (navigation.Current?.Id == appId)
+        {
+            return;
+        }
+
+        navigation.Open(appId);
+    }
 
     public void Draw(Rect device)
     {
@@ -38,8 +54,11 @@ internal sealed class PhoneShell : IDisposable
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         boot.Advance(delta);
         navigation.Advance(delta);
+        banner.Advance(delta);
 
-        using (InputShield.Engage(boot.IsActive))
+        var islandCaptures = !boot.IsActive && nowPlaying.CapturesPointer(screen);
+
+        using (InputShield.Engage(boot.IsActive || islandCaptures))
         {
             DrawContent(screen, theme);
             DrawChrome(screen, theme);
@@ -48,6 +67,11 @@ internal sealed class PhoneShell : IDisposable
         if (boot.IsActive)
         {
             BootScreen.Draw(screen, theme, boot);
+        }
+        else
+        {
+            banner.Draw(screen, theme);
+            nowPlaying.Draw(screen, theme, navigation);
         }
     }
 
@@ -172,6 +196,7 @@ internal sealed class PhoneShell : IDisposable
 
     public void Dispose()
     {
+        banner.Dispose();
         for (var index = 0; index < apps.Count; index++)
         {
             apps[index].Dispose();

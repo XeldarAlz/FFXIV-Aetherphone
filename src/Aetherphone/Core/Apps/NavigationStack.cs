@@ -70,6 +70,11 @@ internal sealed class NavigationStack : INavigator
 
     public void Open(string appId)
     {
+        if (current?.Id == appId)
+        {
+            return;
+        }
+
         for (var index = 0; index < apps.Count; index++)
         {
             if (apps[index].Id == appId)

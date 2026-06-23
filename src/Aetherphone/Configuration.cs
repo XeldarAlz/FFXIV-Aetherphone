@@ -1,3 +1,4 @@
+using Aetherphone.Core.Market;
 using Dalamud.Configuration;
 
 namespace Aetherphone;
@@ -17,11 +18,29 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool ShowLodestonePortraits { get; set; } = true;
 
+    public float TextZoom { get; set; } = 1.0f;
+
     public string AccentName { get; set; } = "Violet";
 
     public string WallpaperName { get; set; } = "Aurora";
 
     public uint RingtoneId { get; set; } = 7;
+
+    public string AethernetBaseUrl { get; set; } = "http://127.0.0.1:5240";
+
+    public string AethernetToken { get; set; } = string.Empty;
+
+    public bool ChirperEnabled { get; set; }
+
+    public MarketScopeKind MarketScope { get; set; } = MarketScopeKind.DataCenter;
+
+    public bool MarketHqOnly { get; set; }
+
+    public List<uint> MarketFavorites { get; set; } = new();
+
+    public List<uint> MarketRecents { get; set; } = new();
+
+    public List<MarketAlert> MarketAlerts { get; set; } = new();
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

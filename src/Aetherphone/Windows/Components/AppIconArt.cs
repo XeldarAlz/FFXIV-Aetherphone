@@ -32,6 +32,15 @@ internal static class AppIconArt
             case "skywatcher":
                 DrawSkywatcher(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "market":
+                DrawMarket(dl, center, extent, inkColor);
+                return true;
+            case "music":
+                DrawMusic(dl, center, extent, inkColor);
+                return true;
+            case "wallet":
+                DrawWallet(dl, center, extent, inkColor, holeColor);
+                return true;
             case "clock":
                 DrawClock(dl, center, extent, inkColor, holeColor);
                 return true;
@@ -159,6 +168,63 @@ internal static class AppIconArt
 
         DrawCloud(dl, center, extent, hole, 0.14f);
         DrawCloud(dl, center, extent, ink, 0f);
+    }
+
+    private static void DrawMarket(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        var rounding = extent * 0.12f;
+
+        var firstMin = At(center, extent, -0.82f, 0.22f);
+        var firstMax = At(center, extent, -0.34f, 0.82f);
+        dl.AddRectFilled(firstMin, firstMax, ink, rounding);
+
+        var secondMin = At(center, extent, -0.24f, -0.18f);
+        var secondMax = At(center, extent, 0.24f, 0.82f);
+        dl.AddRectFilled(secondMin, secondMax, ink, rounding);
+
+        var thirdMin = At(center, extent, 0.34f, -0.62f);
+        var thirdMax = At(center, extent, 0.82f, 0.82f);
+        dl.AddRectFilled(thirdMin, thirdMax, ink, rounding);
+    }
+
+    private static void DrawMusic(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        dl.AddCircleFilled(At(center, extent, -0.34f, 0.52f), extent * 0.34f, ink, 32);
+        dl.AddCircleFilled(At(center, extent, 0.46f, 0.30f), extent * 0.34f, ink, 32);
+
+        var leftStemMin = At(center, extent, -0.06f, -0.78f);
+        var leftStemMax = At(center, extent, 0.06f, 0.52f);
+        dl.AddRectFilled(leftStemMin, leftStemMax, ink, extent * 0.05f);
+
+        var rightStemMin = At(center, extent, 0.74f, -0.96f);
+        var rightStemMax = At(center, extent, 0.86f, 0.30f);
+        dl.AddRectFilled(rightStemMin, rightStemMax, ink, extent * 0.05f);
+
+        Span<Vector2> beam = stackalloc Vector2[4]
+        {
+            At(center, extent, -0.06f, -0.78f),
+            At(center, extent, 0.86f, -0.96f),
+            At(center, extent, 0.86f, -0.62f),
+            At(center, extent, -0.06f, -0.44f),
+        };
+        FillConvex(dl, ink, beam);
+    }
+
+    private static void DrawWallet(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var cardMin = At(center, extent, -0.34f, -0.78f);
+        var cardMax = At(center, extent, 0.46f, -0.40f);
+        dl.AddRectFilled(cardMin, cardMax, hole, extent * 0.08f);
+
+        var bodyMin = At(center, extent, -0.92f, -0.52f);
+        var bodyMax = At(center, extent, 0.92f, 0.74f);
+        dl.AddRectFilled(bodyMin, bodyMax, ink, extent * 0.22f);
+
+        var pocketMin = At(center, extent, 0.34f, 0.12f);
+        var pocketMax = At(center, extent, 0.92f, 0.50f);
+        dl.AddRectFilled(pocketMin, pocketMax, hole, extent * 0.14f);
+
+        dl.AddCircleFilled(At(center, extent, 0.60f, 0.31f), extent * 0.12f, ink, 24);
     }
 
     private static void DrawCloud(ImDrawListPtr dl, Vector2 center, float extent, uint color, float inflate)

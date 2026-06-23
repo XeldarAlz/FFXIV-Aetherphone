@@ -1,9 +1,12 @@
 using System.IO;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Market;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Radio;
 using Aetherphone.Core.Theme;
 using Dalamud.Plugin.Services;
 
@@ -37,7 +40,23 @@ internal sealed class PhoneServices : IDisposable
 
     public LodestoneService Lodestone { get; }
 
-    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone, MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, HttpService http, MediaCache media, LodestoneService lodestone)
+    public AethernetSession AethernetSession { get; }
+
+    public AethernetClient AethernetClient { get; }
+
+    public MarketItemIndex MarketIndex { get; }
+
+    public MarketboardService Market { get; }
+
+    public MarketLauncher MarketLauncher { get; }
+
+    public MarketAlertService MarketAlerts { get; }
+
+    public RadioService Radio { get; }
+
+    public RadioPlayer RadioPlayer { get; }
+
+    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone, MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, HttpService http, MediaCache media, LodestoneService lodestone, AethernetSession aethernetSession, AethernetClient aethernetClient, MarketItemIndex marketIndex, MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, RadioService radio, RadioPlayer radioPlayer)
     {
         Configuration = configuration;
         Themes = themes;
@@ -52,16 +71,23 @@ internal sealed class PhoneServices : IDisposable
         Http = http;
         Media = media;
         Lodestone = lodestone;
+        AethernetSession = aethernetSession;
+        AethernetClient = aethernetClient;
+        MarketIndex = marketIndex;
+        Market = market;
+        MarketLauncher = marketLauncher;
+        MarketAlerts = marketAlerts;
+        Radio = radio;
+        RadioPlayer = radioPlayer;
     }
 
-    public static PhoneServices Build(Configuration configuration, INotificationManager notificationManager, IChatGui chatGui, IDataManager dataManager, IObjectTable objectTable, IClientState clientState, ITextureProvider textures, DirectoryInfo configDirectory)
+    public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager, IObjectTable objectTable, IClientState clientState, ITextureProvider textures, DirectoryInfo configDirectory)
     {
         var themes = new ThemeProvider(configuration);
         var gameData = new GameData(dataManager, objectTable);
         var weather = new WeatherService(dataManager, clientState);
-        var toast = new DalamudToast(notificationManager);
         var ringtone = new GameSoundRingtone(configuration);
-        var notifications = new NotificationService(toast, ringtone, configuration);
+        var notifications = new NotificationService(ringtone, configuration);
         var messages = new MessageStore();
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
         var messageLauncher = new MessageLauncher();
@@ -73,14 +99,26 @@ internal sealed class PhoneServices : IDisposable
         var disk = new DiskCache(mediaRoot, 64L * 1024 * 1024);
         var media = new MediaCache(textures, disk);
         var lodestone = new LodestoneService(configuration, http, media, cacheRoot);
+        var aethernetSession = new AethernetSession(configuration);
+        var aethernetClient = new AethernetClient(http, aethernetSession);
+        var marketIndex = new MarketItemIndex(dataManager);
+        var market = new MarketboardService(http);
+        var marketLauncher = new MarketLauncher();
+        var marketAlerts = new MarketAlertService(market, notifications, configuration);
+        var radio = new RadioService(http);
+        var radioPlayer = new RadioPlayer();
 
-        return new PhoneServices(configuration, themes, gameData, textures, weather, notifications, ringtone, messages, chatBridge, messageLauncher, http, media, lodestone);
+        return new PhoneServices(configuration, themes, gameData, textures, weather, notifications, ringtone, messages, chatBridge, messageLauncher, http, media, lodestone, aethernetSession, aethernetClient, marketIndex, market, marketLauncher, marketAlerts, radio, radioPlayer);
     }
 
     public void Dispose()
     {
+        RadioPlayer.Dispose();
+        Radio.Dispose();
         ChatBridge.Dispose();
         Lodestone.Dispose();
+        MarketAlerts.Dispose();
+        Market.Dispose();
         Media.Dispose();
         Http.Dispose();
     }

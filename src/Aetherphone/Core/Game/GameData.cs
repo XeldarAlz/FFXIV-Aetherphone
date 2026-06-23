@@ -72,6 +72,25 @@ internal sealed class GameData
         return string.Empty;
     }
 
+    public string RegionName(uint worldId)
+    {
+        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) && world.DataCenter.RowId != 0)
+        {
+            return RegionNameFromId(world.DataCenter.Value.Region.RowId);
+        }
+
+        return string.Empty;
+    }
+
+    private static string RegionNameFromId(uint region) => region switch
+    {
+        1 => "Japan",
+        2 => "North-America",
+        3 => "Europe",
+        4 => "Oceania",
+        _ => string.Empty,
+    };
+
     public string RaceName(uint raceId, bool female)
     {
         if (raceId != 0 && data.GetExcelSheet<Race>().TryGetRow(raceId, out var race))
@@ -136,5 +155,44 @@ internal sealed class GameData
         iconId = item.Icon;
         itemLevel = (int)item.LevelItem.RowId;
         return true;
+    }
+
+    public void CollectTomestoneItemIds(List<uint> into)
+    {
+        const uint poeticsItemId = 28;
+
+        into.Clear();
+        var highest = 0u;
+        var second = 0u;
+        foreach (var row in data.GetExcelSheet<TomestonesItem>())
+        {
+            var itemId = row.Item.RowId;
+            if (itemId == 0 || itemId == poeticsItemId)
+            {
+                continue;
+            }
+
+            if (itemId > highest)
+            {
+                second = highest;
+                highest = itemId;
+            }
+            else if (itemId > second)
+            {
+                second = itemId;
+            }
+        }
+
+        if (highest != 0)
+        {
+            into.Add(highest);
+        }
+
+        if (second != 0)
+        {
+            into.Add(second);
+        }
+
+        into.Add(poeticsItemId);
     }
 }

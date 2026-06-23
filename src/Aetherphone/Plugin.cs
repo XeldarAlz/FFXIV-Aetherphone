@@ -8,6 +8,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Game.Command;
+using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Gui.Dtr;
 using Dalamud.IoC;
 using Dalamud.Interface.Windowing;
@@ -20,13 +21,14 @@ public sealed class Plugin : IDalamudPlugin
 {
     [PluginService] internal static IDalamudPluginInterface PluginInterface { get; private set; } = null!;
     [PluginService] internal static ICommandManager CommandManager { get; private set; } = null!;
-    [PluginService] internal static INotificationManager NotificationManager { get; private set; } = null!;
     [PluginService] internal static IDtrBar DtrBar { get; private set; } = null!;
     [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
     [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
     [PluginService] internal static IObjectTable ObjectTable { get; private set; } = null!;
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
+    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
 
     internal static Plugin Instance { get; private set; } = null!;
@@ -48,13 +50,13 @@ public sealed class Plugin : IDalamudPlugin
     {
         Instance = this;
         Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        Fonts = new FontService(PluginInterface);
+        Fonts = new FontService(PluginInterface, Cfg.TextZoom);
         Wallpapers = new WallpaperTextureCache(TextureProvider);
         Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
 
-        services = PhoneServices.Build(Cfg, NotificationManager, ChatGui, DataManager, ObjectTable, ClientState, TextureProvider, PluginInterface.ConfigDirectory);
+        services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, TextureProvider, PluginInterface.ConfigDirectory);
         aboutWindow = new AboutWindow();
-        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout));
+        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.RadioPlayer);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
         windowSystem.AddWindow(phoneWindow);
         windowSystem.AddWindow(aboutWindow);
@@ -64,9 +66,12 @@ public sealed class Plugin : IDalamudPlugin
         services.Notifications.Changed += UpdateDtrBadge;
         UpdateDtrBadge();
 
+        services.MarketIndex.EnsureBuilt();
+        ContextMenu.OnMenuOpened += OnMenuOpened;
+
         CommandManager.AddHandler(AepConstants.PrimaryCommand, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Toggle the Aetherphone. /phone about opens credits & links, /phone test sends a sample notification."
+            HelpMessage = "Toggle the Aetherphone. /phone market [item] opens the market board, /phone about opens credits & links, /phone test sends a sample notification."
         });
         CommandManager.AddHandler(AepConstants.AliasCommand, new CommandInfo(OnCommand)
         {
@@ -83,6 +88,7 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.Toggle;
 
         services.Notifications.Changed -= UpdateDtrBadge;
+        ContextMenu.OnMenuOpened -= OnMenuOpened;
         dtrEntry.Remove();
 
         windowSystem.RemoveAllWindows();
@@ -118,10 +124,61 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
+        if (argument.StartsWith("market", StringComparison.OrdinalIgnoreCase))
+        {
+            var query = argument.Length > 6 ? argument.Substring(6).Trim() : string.Empty;
+            OpenMarket(query);
+            return;
+        }
+
         phoneWindow.Toggle();
     }
 
     private void ShowAbout() => aboutWindow.IsOpen = true;
+
+    private void OnMenuOpened(IMenuOpenedArgs args)
+    {
+        var itemId = ResolveContextItem(args);
+        if (itemId == 0 || !services.MarketIndex.TryGet(itemId, out _))
+        {
+            return;
+        }
+
+        args.AddMenuItem(new MenuItem
+        {
+            Name = "Search the Market",
+            OnClicked = _ => OpenMarketAt(itemId),
+        });
+    }
+
+    private static uint ResolveContextItem(IMenuOpenedArgs args)
+    {
+        if (args.Target is MenuTargetInventory inventory && inventory.TargetItem is { } targetItem)
+        {
+            return targetItem.ItemId;
+        }
+
+        var hovered = GameGui.HoveredItem;
+        return hovered == 0 ? 0u : (uint)(hovered % 1_000_000);
+    }
+
+    private void OpenMarketAt(uint itemId)
+    {
+        services.MarketLauncher.RequestItem(itemId);
+        phoneWindow.IsOpen = true;
+        shell.OpenApp("market");
+    }
+
+    private void OpenMarket(string query)
+    {
+        if (query.Length > 0)
+        {
+            services.MarketLauncher.RequestSearch(query);
+        }
+
+        phoneWindow.IsOpen = true;
+        shell.OpenApp("market");
+    }
 
     private void SendSampleNotification()
     {
