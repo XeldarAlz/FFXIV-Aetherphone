@@ -1,7 +1,9 @@
 using System.Numerics;
 using Aetherphone.Apps.Settings.Pages;
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -29,8 +31,11 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone, Action showAbout)
+    private readonly AccountPage accountPage;
+
+    public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone, AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData, Action showAbout)
     {
+        accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
         var appearance = new AppearancePage(configuration, themes);
         var notifications = new NotificationsPage(configuration);
         var ringtonePage = new RingtonePage(configuration, ringtone);
@@ -38,6 +43,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 
         var groups = new IReadOnlyList<ISettingsPage>[]
         {
+            new ISettingsPage[] { accountPage },
             new ISettingsPage[] { appearance },
             new ISettingsPage[] { notifications, ringtonePage },
             new ISettingsPage[] { about },
@@ -78,5 +84,6 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 
     public void Dispose()
     {
+        accountPage.Dispose();
     }
 }
