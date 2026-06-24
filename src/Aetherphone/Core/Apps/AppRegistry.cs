@@ -1,4 +1,4 @@
-using System.Numerics;
+using Aetherphone.Apps.Camera;
 using Aetherphone.Apps.Chirper;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.Contacts;
@@ -8,9 +8,11 @@ using Aetherphone.Apps.Messages;
 using Aetherphone.Apps.Music;
 using Aetherphone.Apps.MyCharacter;
 using Aetherphone.Apps.Notifications;
+using Aetherphone.Apps.Photos;
 using Aetherphone.Apps.Settings;
 using Aetherphone.Apps.Skywatcher;
 using Aetherphone.Apps.Wallet;
+using Aetherphone.Core.Photos;
 
 namespace Aetherphone.Core.Apps;
 
@@ -30,8 +32,9 @@ internal static class AppRegistry
             apps.Add(new ChirperApp(services.AethernetSession, services.AethernetClient, services.Lodestone));
         }
 
-        apps.Add(new PlaceholderApp("camera", "Camera", "O", new Vector4(0.34f, 0.35f, 0.41f, 1f)));
-        apps.Add(new PlaceholderApp("photos", "Photos", "P", new Vector4(0.95f, 0.62f, 0.25f, 1f)));
+        var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
+        apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));
+        apps.Add(new PhotosApp(photoLibrary));
         apps.Add(new SkywatcherApp(services.Weather));
         apps.Add(new MarketApp(services.Market, services.MarketIndex, services.MarketAlerts, services.MarketLauncher, services.GameData, services.Textures, services.Configuration));
         apps.Add(new WalletApp(services.GameData, services.Textures));

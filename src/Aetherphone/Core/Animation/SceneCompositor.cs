@@ -37,6 +37,26 @@ internal static class SceneCompositor
         DrawLayer(clip, over);
     }
 
+    public static void DrawClipped(Rect clip, Rect paintTarget, float dim, LayerPainter paint)
+    {
+        if (clip.Height <= 0.5f)
+        {
+            return;
+        }
+
+        ImGui.SetCursorScreenPos(clip.Min);
+        using (ImRaii.Child("clip", clip.Size, false, LayerFlags | ImGuiWindowFlags.NoInputs))
+        using (InputShield.Engage(true))
+        {
+            paint(paintTarget);
+
+            if (dim > 0f)
+            {
+                ImGui.GetWindowDrawList().AddRectFilled(paintTarget.Min, paintTarget.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)));
+            }
+        }
+    }
+
     public static void DrawLayer(Rect clip, in Layer layer)
     {
         var shifted = new Rect(clip.Min + layer.Offset, clip.Max + layer.Offset);

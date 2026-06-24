@@ -30,6 +30,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
+    <PackageReference Include="Vortice.Direct3D11" Version="3.6.2" />
     <PackageReference Include="YoutubeExplode" Version="6.*" />
   </ItemGroup>
 </Project>

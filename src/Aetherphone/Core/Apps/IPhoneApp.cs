@@ -14,6 +14,8 @@ internal interface IPhoneApp : IDisposable
 
     int BadgeCount { get; }
 
+    bool WantsTransparentScreen => false;
+
     void OnOpened();
 
     void OnClosed();
