@@ -2,6 +2,7 @@ using System.Runtime.InteropServices;
 using Aetherphone.Core;
 using Vortice.Direct3D11;
 using Vortice.DXGI;
+using Box = Vortice.Mathematics.Box;
 using KernelDevice = FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Device;
 
 namespace Aetherphone.Apps.Camera;
@@ -111,22 +112,26 @@ internal sealed class PhotoCaptureService
 
         for (var row = 0; row < height; row++)
         {
-            Marshal.Copy(IntPtr.Add(mapped.DataPointer, row * mapped.RowPitch), rowBuffer, 0, rowBuffer.Length);
+            Marshal.Copy(IntPtr.Add(mapped.DataPointer, row * (int)mapped.RowPitch), rowBuffer, 0, rowBuffer.Length);
             var destinationOffset = row * width * 4;
-
-            if (!swapRedBlue)
-            {
-                Array.Copy(rowBuffer, 0, result, destinationOffset, rowBuffer.Length);
-                continue;
-            }
 
             for (var column = 0; column < width; column++)
             {
                 var index = column * 4;
-                result[destinationOffset + index + 0] = rowBuffer[index + 2];
-                result[destinationOffset + index + 1] = rowBuffer[index + 1];
-                result[destinationOffset + index + 2] = rowBuffer[index + 0];
-                result[destinationOffset + index + 3] = rowBuffer[index + 3];
+                if (swapRedBlue)
+                {
+                    result[destinationOffset + index + 0] = rowBuffer[index + 2];
+                    result[destinationOffset + index + 1] = rowBuffer[index + 1];
+                    result[destinationOffset + index + 2] = rowBuffer[index + 0];
+                }
+                else
+                {
+                    result[destinationOffset + index + 0] = rowBuffer[index + 0];
+                    result[destinationOffset + index + 1] = rowBuffer[index + 1];
+                    result[destinationOffset + index + 2] = rowBuffer[index + 2];
+                }
+
+                result[destinationOffset + index + 3] = 255;
             }
         }
 
