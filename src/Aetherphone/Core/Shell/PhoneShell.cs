@@ -49,7 +49,7 @@ internal sealed class PhoneShell : IDisposable
     public void Draw(Rect device)
     {
         var theme = themes.Current;
-        var screen = DeviceChrome.DrawBody(device, theme);
+        var screen = DeviceChrome.DrawBody(device, theme, !TransparencyActive());
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         boot.Advance(delta);
@@ -73,6 +73,16 @@ internal sealed class PhoneShell : IDisposable
             banner.Draw(screen, theme);
             nowPlaying.Draw(screen, theme, navigation);
         }
+    }
+
+    private bool TransparencyActive()
+    {
+        if (navigation.IsTransitioning)
+        {
+            return navigation.MotionOver.WantsTransparentScreen || (navigation.MotionUnder?.WantsTransparentScreen ?? false);
+        }
+
+        return !navigation.AtHome && (navigation.Current?.WantsTransparentScreen ?? false);
     }
 
     private void DrawContent(Rect screen, PhoneTheme theme)
@@ -138,10 +148,19 @@ internal sealed class PhoneShell : IDisposable
             underDim = (1f - progress) * TransitionTiming.ShellDimMax;
         }
 
-        var underLayer = under is null
-            ? new SceneCompositor.Layer("home", Vector2.Zero, underDim, target => PaintHome(target, theme), default, true)
-            : new SceneCompositor.Layer(under.Id, Vector2.Zero, underDim, target => PaintApp(target, theme, under), default, true);
-        var overLayer = new SceneCompositor.Layer(over.Id, overOffset, 0f, target => PaintApp(target, theme, over), default, true);
+        LayerPainter underPaint = under is null ? target => PaintHome(target, theme) : target => PaintApp(target, theme, under);
+        LayerPainter overPaint = target => PaintApp(target, theme, over);
+
+        if (over.WantsTransparentScreen || (under?.WantsTransparentScreen ?? false))
+        {
+            var band = new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + overOffset.Y));
+            SceneCompositor.DrawClipped(band, screen, underDim, underPaint);
+            SceneCompositor.DrawLayer(screen, new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true));
+            return;
+        }
+
+        var underLayer = new SceneCompositor.Layer(under?.Id ?? "home", Vector2.Zero, underDim, underPaint, default, true);
+        var overLayer = new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true);
 
         SceneCompositor.Composite(screen, underLayer, overLayer);
     }
@@ -154,7 +173,11 @@ internal sealed class PhoneShell : IDisposable
 
     private void PaintApp(Rect screen, PhoneTheme theme, IPhoneApp app)
     {
-        DeviceChrome.FillScreen(screen, theme, theme.AppBackground);
+        if (!app.WantsTransparentScreen)
+        {
+            DeviceChrome.FillScreen(screen, theme, theme.AppBackground);
+        }
+
         app.Draw(new PhoneContext(ContentRect(screen, theme), theme, navigation));
     }
 
