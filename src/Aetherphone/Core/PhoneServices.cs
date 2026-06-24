@@ -16,6 +16,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Songs;
+using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Dalamud.Plugin.Services;
@@ -93,7 +94,9 @@ internal sealed class PhoneServices : IDisposable
 
     public InventoryCaptureService InventoryCapture { get; }
 
-    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps, ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone, MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, HttpService http, MediaCache media, LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession, AethernetClient aethernetClient, IAnalyticsService analytics, MarketItemIndex marketIndex, MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news, RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer, SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues, CollectionsCatalogService collections, InventoryCaptureService inventoryCapture)
+    public CallHub Calls { get; }
+
+    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps, ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone, MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, HttpService http, MediaCache media, LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession, AethernetClient aethernetClient, IAnalyticsService analytics, MarketItemIndex marketIndex, MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news, RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer, SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues, CollectionsCatalogService collections, InventoryCaptureService inventoryCapture, CallHub calls)
     {
         Configuration = configuration;
         Themes = themes;
@@ -129,6 +132,7 @@ internal sealed class PhoneServices : IDisposable
         Venues = venues;
         Collections = collections;
         InventoryCapture = inventoryCapture;
+        Calls = calls;
     }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager, IObjectTable objectTable, IClientState clientState, IFramework framework, ITextureProvider textures, DirectoryInfo configDirectory)
@@ -186,12 +190,14 @@ internal sealed class PhoneServices : IDisposable
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
+        var calls = new CallHub(configuration, aethernetSession, notifications, ringtone, playback);
 
-        return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, ringtone, messages, chatBridge, messageLauncher, http, media, lodestone, collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher, marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues, collections, inventoryCapture);
+        return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, ringtone, messages, chatBridge, messageLauncher, http, media, lodestone, collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher, marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues, collections, inventoryCapture, calls);
     }
 
     public void Dispose()
     {
+        Calls.Dispose();
         Collections.Dispose();
         InventoryCapture.Dispose();
         Venues.Dispose();

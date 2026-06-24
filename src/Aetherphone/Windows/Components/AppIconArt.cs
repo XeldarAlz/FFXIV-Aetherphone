@@ -131,6 +131,9 @@ internal static class AppIconArt
             case "snake":
                 DrawSnake(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "phone":
+                DrawPhone(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -958,6 +961,21 @@ internal static class AppIconArt
         FillConvex(dl, ink, tail);
 
         dl.AddCircleFilled(At(center, extent, -0.52f, -0.14f), extent * 0.13f, hole, 20);
+    }
+
+    private static void DrawPhone(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var ear = At(center, extent, -0.55f, -0.55f);
+        var mouth = At(center, extent, 0.55f, 0.55f);
+        dl.AddLine(ear, mouth, ink, extent * 0.42f);
+
+        var bulb = extent * 0.46f;
+        dl.AddCircleFilled(ear, bulb, ink, 24);
+        dl.AddCircleFilled(mouth, bulb, ink, 24);
+
+        var dimple = extent * 0.17f;
+        dl.AddCircleFilled(ear, dimple, hole, 16);
+        dl.AddCircleFilled(mouth, dimple, hole, 16);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

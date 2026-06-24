@@ -3,6 +3,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
+using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -26,19 +27,27 @@ internal sealed class PhoneShell : IDisposable
     private readonly LockScreen lockScreen;
     private readonly HomeScreen home;
     private readonly SideButton sideButton = new();
+    private readonly CallHub calls;
+    private readonly CallIsland callIsland;
+    private readonly IncomingCallOverlay incomingOverlay;
     private readonly BootSequence boot = new();
     private bool closeRequested;
 
-    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback)
+    private CallState lastCallState;
+
+    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback, CallHub calls)
     {
         this.themes = themes;
         this.apps = apps;
+        this.calls = calls;
         navigation = new NavigationStack(apps);
         banner = new NotificationBanner(notifications);
         nowPlaying = new NowPlayingIsland(playback);
         controlCenter = new ControlCenter(themes, playback);
         lockScreen = new LockScreen(notifications);
         home = new HomeScreen(apps);
+        callIsland = new CallIsland(calls);
+        incomingOverlay = new IncomingCallOverlay(calls);
     }
 
     public void OnOpened() => boot.Begin(!Plugin.Cfg.WelcomeShown);
@@ -73,6 +82,7 @@ internal sealed class PhoneShell : IDisposable
         boot.Advance(delta);
         navigation.Advance(delta);
         banner.Advance(delta);
+        calls.Advance(delta);
 
         if (!boot.IsActive)
         {
@@ -87,10 +97,13 @@ internal sealed class PhoneShell : IDisposable
             }
         }
 
-        var overlaysCapture = !boot.IsActive && (controlCenter.CapturesPointer || lockScreen.CapturesPointer);
-        var islandCaptures = !boot.IsActive && !overlaysCapture && nowPlaying.CapturesPointer(screen);
+        SyncCallNavigation();
 
-        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture))
+        var overlaysCapture = !boot.IsActive && (controlCenter.CapturesPointer || lockScreen.CapturesPointer);
+        var ringing = !boot.IsActive && incomingOverlay.IsRinging;
+        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing && (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen));
+
+        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing))
         {
             DrawContent(screen, theme);
             DrawChrome(screen, theme);
@@ -108,7 +121,10 @@ internal sealed class PhoneShell : IDisposable
             if (!controlCenter.IsActive)
             {
                 nowPlaying.Draw(screen, theme, navigation);
+                callIsland.Draw(screen, theme, navigation);
             }
+
+            incomingOverlay.Draw(screen, theme);
         }
 
         controlCenter.Draw(screen, theme, delta, !lockScreen.IsActive && !navigation.IsTransitioning);
@@ -123,6 +139,17 @@ internal sealed class PhoneShell : IDisposable
         }
 
         return !navigation.AtHome && (navigation.Current?.WantsTransparentScreen ?? false);
+    }
+
+    private void SyncCallNavigation()
+    {
+        var state = calls.Snapshot().State;
+        if (state == CallState.Active && lastCallState != CallState.Active && navigation.Current?.Id != "phone")
+        {
+            navigation.Open("phone");
+        }
+
+        lastCallState = state;
     }
 
     private void DrawContent(Rect screen, PhoneTheme theme)
