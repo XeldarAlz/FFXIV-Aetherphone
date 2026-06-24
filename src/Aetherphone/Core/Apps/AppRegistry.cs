@@ -35,7 +35,7 @@ internal static class AppRegistry
         apps.Add(new SkywatcherApp(services.Weather));
         apps.Add(new MarketApp(services.Market, services.MarketIndex, services.MarketAlerts, services.MarketLauncher, services.GameData, services.Textures, services.Configuration));
         apps.Add(new WalletApp(services.GameData, services.Textures));
-        apps.Add(new MusicApp(services.Radio, services.SongSearch, services.Playback, services.Media, services.Http, services.Textures));
+        apps.Add(new MusicApp(services.Radio, services.SongSearch, services.Playback, services.SongHistory, services.Media, services.Http, services.Textures));
         apps.Add(new ClockApp());
         apps.Add(new GamesApp());
         apps.Add(new NotificationsApp(services.Notifications));

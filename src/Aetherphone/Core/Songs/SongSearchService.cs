@@ -10,6 +10,8 @@ namespace Aetherphone.Core.Songs;
 internal sealed class SongSearchService : IDisposable
 {
     private const int MaxResults = 25;
+    private const int MinSongSeconds = 30;
+    private const int MaxSongSeconds = 360;
 
     private readonly YoutubeClient youtube;
     private readonly RequestThrottle throttle;
@@ -41,7 +43,13 @@ internal sealed class SongSearchService : IDisposable
                         continue;
                     }
 
-                    var song = new Song(video.Id.Value, video.Title, video.Author.ChannelTitle, PickThumbnail(video.Thumbnails), (int)video.Duration.Value.TotalSeconds);
+                    var seconds = (int)video.Duration.Value.TotalSeconds;
+                    if (seconds < MinSongSeconds || seconds > MaxSongSeconds)
+                    {
+                        continue;
+                    }
+
+                    var song = new Song(video.Id.Value, video.Title, video.Author.ChannelTitle, PickThumbnail(video.Thumbnails), seconds);
                     results.Add(song);
                     if (results.Count >= MaxResults)
                     {

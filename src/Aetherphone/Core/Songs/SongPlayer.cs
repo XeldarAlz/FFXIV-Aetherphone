@@ -265,9 +265,9 @@ internal sealed class SongPlayer : IDisposable
 
     private static AudioOnlyStreamInfo? SelectAudioStream(StreamManifest manifest)
     {
-        var streams = manifest.GetAudioOnlyStreams();
+        var streams = manifest.GetAudioOnlyStreams().ToArray();
         AudioOnlyStreamInfo? best = null;
-        for (var index = 0; index < streams.Count; index++)
+        for (var index = 0; index < streams.Length; index++)
         {
             var candidate = streams[index];
             if (!string.Equals(candidate.Container.Name, "mp4", StringComparison.OrdinalIgnoreCase))

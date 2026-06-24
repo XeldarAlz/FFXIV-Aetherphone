@@ -30,6 +30,30 @@ internal sealed class MusicApp : IPhoneApp
     private const float MiniHeight = 58f;
     private const float TileHeight = 92f;
     private const float SearchBarHeight = 50f;
+    private const int RecentTiles = 4;
+    private const int FeaturedTiles = 4;
+
+    private readonly struct FeaturedSeed
+    {
+        public readonly string Title;
+        public readonly string Query;
+
+        public FeaturedSeed(string title, string query)
+        {
+            Title = title;
+            Query = query;
+        }
+    }
+
+    private static readonly FeaturedSeed[] FeaturedSeeds =
+    {
+        new("FFXIV soundtrack", "final fantasy xiv soundtrack"),
+        new("FFXIV battle themes", "final fantasy xiv battle theme ost"),
+        new("Endwalker OST", "final fantasy xiv endwalker soundtrack"),
+        new("Shadowbringers OST", "final fantasy xiv shadowbringers soundtrack"),
+        new("Dawntrail OST", "final fantasy xiv dawntrail soundtrack"),
+        new("FFXIV city themes", "final fantasy xiv city theme music"),
+    };
 
     public string Id => "music";
 
@@ -44,6 +68,7 @@ internal sealed class MusicApp : IPhoneApp
     private readonly RadioService radio;
     private readonly SongSearchService songSearch;
     private readonly PlaybackHub playback;
+    private readonly SongHistory history;
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly ArtworkCache artwork;
@@ -61,13 +86,22 @@ internal sealed class MusicApp : IPhoneApp
     private CancellationTokenSource? search;
     private string searchDraft = string.Empty;
 
+    private Song[] featured = Array.Empty<Song>();
+    private volatile bool featuredLoading;
+    private bool featuredRequested;
+    private int featuredIndex = -1;
+    private string featuredTitle = "Featured";
+    private CancellationTokenSource? featuredFetch;
+
+    private string lastRecordedVideoId = string.Empty;
     private float clock;
 
-    public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, MediaCache media, HttpService http, ITextureProvider textures)
+    public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history, MediaCache media, HttpService http, ITextureProvider textures)
     {
         this.radio = radio;
         this.songSearch = songSearch;
         this.playback = playback;
+        this.history = history;
         this.media = media;
         this.http = http;
         artwork = new ArtworkCache(textures);
@@ -75,6 +109,11 @@ internal sealed class MusicApp : IPhoneApp
 
     public void OnOpened()
     {
+        featuredIndex = (featuredIndex + 1) % FeaturedSeeds.Length;
+        featuredRequested = false;
+        featuredLoading = false;
+        featured = Array.Empty<Song>();
+        featuredFetch?.Cancel();
     }
 
     public void OnClosed()
@@ -84,6 +123,7 @@ internal sealed class MusicApp : IPhoneApp
     public void Draw(in PhoneContext context)
     {
         clock += MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+        CaptureRecent();
 
         if (view == View.RadioNowPlaying && !playback.RadioActive)
         {
@@ -122,6 +162,7 @@ internal sealed class MusicApp : IPhoneApp
         var content = context.Content;
 
         AppHeader.Draw(context, DisplayName);
+        EnsureFeatured();
 
         var barRect = SearchBarRect(content, scale);
         if (DrawSearchBar(barRect, theme))
@@ -133,11 +174,143 @@ internal sealed class MusicApp : IPhoneApp
         var body = new Rect(new Vector2(content.Min.X, barRect.Max.Y), new Vector2(content.Max.X, BodyBottom(content, scale)));
         using (AppSurface.Begin(body))
         {
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
+            ImGui.Dummy(new Vector2(0f, 2f * scale));
+            DrawRecentSection(theme, scale);
+            DrawFeaturedSection(theme, scale);
+            DrawSectionHeader(theme, scale, "Radio stations");
             DrawCategoryGrid(theme, scale);
+            ImGui.Dummy(new Vector2(0f, 6f * scale));
         }
 
         DrawMiniPlayer(context, scale);
+    }
+
+    private static void DrawSectionHeader(PhoneTheme theme, float scale, string title)
+    {
+        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        var origin = ImGui.GetCursorScreenPos();
+        Typography.Draw(origin, title, theme.TextStrong, 1.15f);
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+    }
+
+    private void DrawRecentSection(PhoneTheme theme, float scale)
+    {
+        var recents = history.Recent(RecentTiles);
+        if (recents.Length == 0)
+        {
+            return;
+        }
+
+        DrawSectionHeader(theme, scale, "Recently played");
+
+        var gap = 8f * scale;
+        var available = ImGui.GetContentRegionAvail().X;
+        var cardWidth = (available - gap) * 0.5f;
+        var cardHeight = 58f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var rows = (recents.Length + 1) / 2;
+        var dl = ImGui.GetWindowDrawList();
+
+        for (var index = 0; index < recents.Length; index++)
+        {
+            var column = index % 2;
+            var row = index / 2;
+            var min = new Vector2(origin.X + column * (cardWidth + gap), origin.Y + row * (cardHeight + gap));
+            var max = min + new Vector2(cardWidth, cardHeight);
+            var rounding = 12f * scale;
+
+            var song = recents[index];
+            var playing = IsCurrentSong(song);
+            var hovered = ImGui.IsMouseHoveringRect(min, max);
+            var fill = Palette.WithAlpha(playing ? Accent : theme.TextStrong, playing ? 0.14f : hovered ? 0.10f : 0.05f);
+            dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
+
+            var artSize = cardHeight - 12f * scale;
+            var artMin = new Vector2(min.X + 6f * scale, min.Y + 6f * scale);
+            var artMax = artMin + new Vector2(artSize, artSize);
+            DrawThumb(dl, artMin, artMax, song.ThumbnailUrl, song.Title, 8f * scale);
+
+            var textLeft = artMax.X + 9f * scale;
+            Typography.Draw(new Vector2(textLeft, min.Y + 11f * scale), Truncate(song.Title, 14), playing ? Accent : theme.TextStrong, 0.86f);
+            Typography.Draw(new Vector2(textLeft, min.Y + 31f * scale), Truncate(song.Author, 16), Palette.WithAlpha(theme.TextStrong, 0.6f), 0.72f);
+
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    PlaySong(recents, index);
+                }
+            }
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(available, rows * cardHeight + (rows - 1) * gap));
+    }
+
+    private void DrawFeaturedSection(PhoneTheme theme, float scale)
+    {
+        if (featured.Length == 0)
+        {
+            if (!featuredLoading)
+            {
+                return;
+            }
+
+            DrawSectionHeader(theme, scale, featuredTitle);
+            var caption = ImGui.GetCursorScreenPos();
+            Typography.Draw(caption, "Loading…", theme.TextMuted, 0.84f);
+            ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 22f * scale));
+            return;
+        }
+
+        DrawSectionHeader(theme, scale, featuredTitle);
+
+        var gap = 10f * scale;
+        var available = ImGui.GetContentRegionAvail().X;
+        var cardWidth = (available - gap) * 0.5f;
+        var artSize = cardWidth;
+        var cardHeight = artSize + 42f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var rows = (featured.Length + 1) / 2;
+        var dl = ImGui.GetWindowDrawList();
+
+        for (var index = 0; index < featured.Length; index++)
+        {
+            var column = index % 2;
+            var row = index / 2;
+            var min = new Vector2(origin.X + column * (cardWidth + gap), origin.Y + row * (cardHeight + gap));
+            var artMin = min;
+            var artMax = artMin + new Vector2(artSize, artSize);
+            var rounding = 14f * scale;
+
+            var song = featured[index];
+            var playing = IsCurrentSong(song);
+            var hovered = ImGui.IsMouseHoveringRect(min, new Vector2(min.X + cardWidth, min.Y + cardHeight));
+
+            dl.AddRectFilled(artMin + new Vector2(0f, 5f * scale), artMax + new Vector2(0f, 6f * scale), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.28f)), rounding);
+            DrawThumb(dl, artMin, artMax, song.ThumbnailUrl, song.Title, rounding);
+            if (hovered || playing)
+            {
+                dl.AddRectFilled(artMin, artMax, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.18f : 0.30f)), rounding);
+                PlayBadge.Draw(dl, (artMin + artMax) * 0.5f, 16f * scale, Accent, playing && playback.Songs.State == SongPlaybackState.Playing);
+            }
+
+            Typography.Draw(new Vector2(artMin.X, artMax.Y + 7f * scale), Truncate(song.Title, 16), playing ? Accent : theme.TextStrong, 0.86f);
+            Typography.Draw(new Vector2(artMin.X, artMax.Y + 25f * scale), Truncate(song.Author, 18), Palette.WithAlpha(theme.TextStrong, 0.6f), 0.72f);
+
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    PlaySong(featured, index);
+                }
+            }
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(available, rows * cardHeight + (rows - 1) * gap));
     }
 
     private void DrawCategoryGrid(PhoneTheme theme, float scale)
@@ -372,30 +545,31 @@ internal sealed class MusicApp : IPhoneApp
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
         var centerX = body.Center.X;
 
-        var artSize = MathF.Min(body.Width * 0.66f, 196f * scale);
-        var artTop = body.Min.Y + 14f * scale;
+        var margin = 22f * scale;
+        var artSize = MathF.Min(body.Width - margin * 2f, body.Height * 0.46f);
+        var artTop = body.Min.Y + 18f * scale;
         var artMin = new Vector2(centerX - artSize * 0.5f, artTop);
         var artMax = artMin + new Vector2(artSize, artSize);
-        var artRounding = 20f * scale;
+        var artRounding = 22f * scale;
 
-        dl.AddRectFilled(artMin + new Vector2(0f, 10f * scale), artMax + new Vector2(0f, 12f * scale), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), artRounding);
+        dl.AddRectFilled(artMin + new Vector2(0f, 12f * scale), artMax + new Vector2(0f, 14f * scale), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), artRounding);
         dl.AddImageRounded(artwork.HandleForName(station), artMin, artMax, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, artRounding, ImDrawFlags.RoundCornersAll);
         var pulse = state == RadioPlaybackState.Buffering ? 0.5f + 0.5f * MathF.Abs(MathF.Sin(clock * 3f)) : 1f;
-        Equalizer.Draw(dl, new Vector2(artMax.X - 22f * scale, artMax.Y - 18f * scale), scale, 16f * scale, clock, new Vector4(1f, 1f, 1f, 1f), pulse, state == RadioPlaybackState.Playing);
+        Equalizer.Draw(dl, new Vector2(artMax.X - 24f * scale, artMax.Y - 20f * scale), scale, 18f * scale, clock, new Vector4(1f, 1f, 1f, 1f), pulse, state == RadioPlaybackState.Playing);
 
-        var nameY = artMax.Y + 30f * scale;
-        Typography.DrawCentered(new Vector2(centerX, nameY), Truncate(station, 22), theme.TextStrong, 1.45f);
-        Typography.DrawCentered(new Vector2(centerX, nameY + 26f * scale), RadioNowPlayingSubtitle(state), Palette.WithAlpha(Accent, 0.95f), 0.9f);
+        var nameY = artMax.Y + 32f * scale;
+        Typography.DrawCentered(new Vector2(centerX, nameY), Truncate(station, 24), theme.TextStrong, 1.45f);
+        Typography.DrawCentered(new Vector2(centerX, nameY + 27f * scale), RadioNowPlayingSubtitle(state), Palette.WithAlpha(Accent, 0.95f), 0.9f);
 
-        var controlsY = nameY + 70f * scale;
+        var controlsY = nameY + 74f * scale;
         if (playback.Radio.HasQueue)
         {
-            if (TransportButton.Draw(new Vector2(centerX - 64f * scale, controlsY), 22f * scale, TransportAction.Previous, Accent, theme.TextStrong, 1f, true))
+            if (TransportButton.Draw(new Vector2(centerX - 72f * scale, controlsY), 22f * scale, TransportAction.Previous, Accent, theme.TextStrong, 1f, true))
             {
                 playback.Previous();
             }
 
-            if (TransportButton.Draw(new Vector2(centerX + 64f * scale, controlsY), 22f * scale, TransportAction.Next, Accent, theme.TextStrong, 1f, true))
+            if (TransportButton.Draw(new Vector2(centerX + 72f * scale, controlsY), 22f * scale, TransportAction.Next, Accent, theme.TextStrong, 1f, true))
             {
                 playback.Next();
             }
@@ -407,8 +581,8 @@ internal sealed class MusicApp : IPhoneApp
             GoToReturnView();
         }
 
-        var trackY = controlsY + 52f * scale;
-        var trackRect = new Rect(new Vector2(body.Min.X + 28f * scale, trackY - 3f * scale), new Vector2(body.Max.X - 28f * scale, trackY + 3f * scale));
+        var trackY = controlsY + 56f * scale;
+        var trackRect = new Rect(new Vector2(body.Min.X + margin + 20f * scale, trackY - 3f * scale), new Vector2(body.Max.X - margin - 20f * scale, trackY + 3f * scale));
         playback.Volume = Scrubber.Draw(trackRect, playback.Volume, Accent, Palette.WithAlpha(theme.TextStrong, 0.18f), 1f);
     }
 
@@ -430,58 +604,59 @@ internal sealed class MusicApp : IPhoneApp
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
         var centerX = body.Center.X;
 
-        var artSize = MathF.Min(body.Width * 0.58f, 156f * scale);
-        var artTop = body.Min.Y + 10f * scale;
+        var margin = 22f * scale;
+        var artSize = MathF.Min(body.Width - margin * 2f, body.Height * 0.42f);
+        var artTop = body.Min.Y + 16f * scale;
         var artMin = new Vector2(centerX - artSize * 0.5f, artTop);
         var artMax = artMin + new Vector2(artSize, artSize);
-        var artRounding = 18f * scale;
+        var artRounding = 20f * scale;
 
-        dl.AddRectFilled(artMin + new Vector2(0f, 10f * scale), artMax + new Vector2(0f, 12f * scale), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), artRounding);
+        dl.AddRectFilled(artMin + new Vector2(0f, 12f * scale), artMax + new Vector2(0f, 14f * scale), ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), artRounding);
         DrawThumb(dl, artMin, artMax, songs.CurrentThumbnail, songs.CurrentTitle, artRounding);
 
-        var nameY = artMax.Y + 26f * scale;
-        Typography.DrawCentered(new Vector2(centerX, nameY), Truncate(songs.CurrentTitle, 26), theme.TextStrong, 1.3f);
-        Typography.DrawCentered(new Vector2(centerX, nameY + 23f * scale), Truncate(SongNowPlayingSubtitle(), 30), Palette.WithAlpha(Accent, 0.95f), 0.85f);
+        var nameY = artMax.Y + 28f * scale;
+        Typography.DrawCentered(new Vector2(centerX, nameY), Truncate(songs.CurrentTitle, 30), theme.TextStrong, 1.4f);
+        Typography.DrawCentered(new Vector2(centerX, nameY + 27f * scale), Truncate(SongNowPlayingSubtitle(), 34), Palette.WithAlpha(Accent, 0.95f), 0.9f);
 
         var duration = songs.Duration;
         var position = songs.Position;
         var fraction = duration > 0f ? Math.Clamp(position / duration, 0f, 1f) : 0f;
 
-        var trackY = nameY + 52f * scale;
-        var trackRect = new Rect(new Vector2(body.Min.X + 28f * scale, trackY - 3f * scale), new Vector2(body.Max.X - 28f * scale, trackY + 3f * scale));
+        var trackY = nameY + 60f * scale;
+        var trackRect = new Rect(new Vector2(body.Min.X + margin, trackY - 3f * scale), new Vector2(body.Max.X - margin, trackY + 3f * scale));
         var newFraction = Scrubber.Draw(trackRect, fraction, Accent, Palette.WithAlpha(theme.TextStrong, 0.18f), 1f);
         if (duration > 0f && MathF.Abs(newFraction - fraction) > 0.0025f)
         {
             songs.Seek(newFraction * duration);
         }
 
-        Typography.Draw(new Vector2(trackRect.Min.X, trackY + 8f * scale), FormatTime((int)position), theme.TextMuted, 0.72f);
+        Typography.Draw(new Vector2(trackRect.Min.X, trackY + 9f * scale), FormatTime((int)position), theme.TextMuted, 0.72f);
         var durationLabel = FormatTime((int)duration);
         var durationSize = Typography.Measure(durationLabel, 0.72f);
-        Typography.Draw(new Vector2(trackRect.Max.X - durationSize.X, trackY + 8f * scale), durationLabel, theme.TextMuted, 0.72f);
+        Typography.Draw(new Vector2(trackRect.Max.X - durationSize.X, trackY + 9f * scale), durationLabel, theme.TextMuted, 0.72f);
 
-        var controlsY = trackY + 42f * scale;
+        var controlsY = trackY + 50f * scale;
         if (playback.HasQueue)
         {
-            if (TransportButton.Draw(new Vector2(centerX - 64f * scale, controlsY), 22f * scale, TransportAction.Previous, Accent, theme.TextStrong, 1f, true))
+            if (TransportButton.Draw(new Vector2(centerX - 72f * scale, controlsY), 22f * scale, TransportAction.Previous, Accent, theme.TextStrong, 1f, true))
             {
                 playback.Previous();
             }
 
-            if (TransportButton.Draw(new Vector2(centerX + 64f * scale, controlsY), 22f * scale, TransportAction.Next, Accent, theme.TextStrong, 1f, true))
+            if (TransportButton.Draw(new Vector2(centerX + 72f * scale, controlsY), 22f * scale, TransportAction.Next, Accent, theme.TextStrong, 1f, true))
             {
                 playback.Next();
             }
         }
 
-        if (TransportButton.Draw(new Vector2(centerX, controlsY), 30f * scale, TransportAction.Stop, Accent, theme.TextStrong, 1f, true))
+        if (TransportButton.Draw(new Vector2(centerX, controlsY), 32f * scale, TransportAction.Stop, Accent, theme.TextStrong, 1f, true))
         {
             playback.Stop();
             GoToReturnView();
         }
 
-        var volumeY = controlsY + 44f * scale;
-        var volumeRect = new Rect(new Vector2(body.Min.X + 42f * scale, volumeY - 2.5f * scale), new Vector2(body.Max.X - 42f * scale, volumeY + 2.5f * scale));
+        var volumeY = controlsY + 50f * scale;
+        var volumeRect = new Rect(new Vector2(body.Min.X + margin + 20f * scale, volumeY - 2.5f * scale), new Vector2(body.Max.X - margin - 20f * scale, volumeY + 2.5f * scale));
         playback.Volume = Scrubber.Draw(volumeRect, playback.Volume, Accent, Palette.WithAlpha(theme.TextStrong, 0.18f), 1f);
     }
 
@@ -672,6 +847,61 @@ internal sealed class MusicApp : IPhoneApp
         view = View.SongNowPlaying;
     }
 
+    private void CaptureRecent()
+    {
+        var songs = playback.Songs;
+        if (songs.State == SongPlaybackState.Stopped)
+        {
+            lastRecordedVideoId = string.Empty;
+            return;
+        }
+
+        if (songs.State != SongPlaybackState.Playing)
+        {
+            return;
+        }
+
+        var videoId = songs.CurrentVideoId;
+        if (string.IsNullOrEmpty(videoId) || string.Equals(videoId, lastRecordedVideoId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastRecordedVideoId = videoId;
+        history.Record(new Song(videoId, songs.CurrentTitle, songs.CurrentAuthor, songs.CurrentThumbnail, (int)songs.Duration));
+    }
+
+    private void EnsureFeatured()
+    {
+        if (featuredRequested)
+        {
+            return;
+        }
+
+        var seed = FeaturedSeeds[featuredIndex < 0 ? 0 : featuredIndex % FeaturedSeeds.Length];
+        featuredTitle = seed.Title;
+        featuredRequested = true;
+        featuredLoading = true;
+        featuredFetch?.Dispose();
+        featuredFetch = new CancellationTokenSource();
+        _ = FetchFeaturedAsync(seed.Query, featuredFetch.Token);
+    }
+
+    private async Task FetchFeaturedAsync(string query, CancellationToken token)
+    {
+        var found = await songSearch.SearchAsync(query, token).ConfigureAwait(false);
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        var take = Math.Min(FeaturedTiles, found.Length);
+        var top = new Song[take];
+        Array.Copy(found, top, take);
+        featured = top;
+        featuredLoading = false;
+    }
+
     private void GoToBrowse()
     {
         fetch?.Cancel();
@@ -771,6 +1001,8 @@ internal sealed class MusicApp : IPhoneApp
         fetch?.Dispose();
         search?.Cancel();
         search?.Dispose();
+        featuredFetch?.Cancel();
+        featuredFetch?.Dispose();
         artwork.Dispose();
     }
 }

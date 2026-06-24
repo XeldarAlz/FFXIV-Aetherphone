@@ -1,4 +1,5 @@
 using Aetherphone.Core.Market;
+using Aetherphone.Core.Songs;
 using Dalamud.Configuration;
 
 namespace Aetherphone;
@@ -41,6 +42,8 @@ internal sealed class Configuration : IPluginConfiguration
     public List<uint> MarketRecents { get; set; } = new();
 
     public List<MarketAlert> MarketAlerts { get; set; } = new();
+
+    public List<SongRecord> SongRecents { get; set; } = new();
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

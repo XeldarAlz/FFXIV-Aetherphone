@@ -19,6 +19,14 @@ internal static class MediaGlyph
             ink);
     }
 
+    public static void Pause(ImDrawListPtr drawList, Vector2 center, float size, uint ink)
+    {
+        var barWidth = size * 0.34f;
+        var gap = size * 0.32f;
+        drawList.AddRectFilled(new Vector2(center.X - gap - barWidth, center.Y - size), new Vector2(center.X - gap, center.Y + size), ink, barWidth * 0.3f);
+        drawList.AddRectFilled(new Vector2(center.X + gap, center.Y - size), new Vector2(center.X + gap + barWidth, center.Y + size), ink, barWidth * 0.3f);
+    }
+
     public static void Next(ImDrawListPtr drawList, Vector2 center, float size, uint ink)
     {
         drawList.AddTriangleFilled(
