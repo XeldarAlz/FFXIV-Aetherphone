@@ -8,11 +8,15 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Core.Shell;
 
 internal sealed class LockScreen
 {
+    private const ImGuiWindowFlags OverlayFlags =
+        ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
+
     private const float SmoothTime = 0.22f;
     private const float UnlockFraction = 0.40f;
     private const float CommitFraction = 0.30f;
@@ -57,22 +61,26 @@ internal sealed class LockScreen
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
-        var height = screen.Height;
-        var rounding = theme.ScreenRounding * scale;
-        var lockTop = screen.Min.Y - (1f - amount) * height;
+        ImGui.SetCursorScreenPos(screen.Min);
+        using (ImRaii.Child("##lockScreen", screen.Size, false, OverlayFlags))
+        {
+            var scale = ImGuiHelpers.GlobalScale;
+            var dl = ImGui.GetWindowDrawList();
+            var height = screen.Height;
+            var rounding = theme.ScreenRounding * scale;
+            var lockTop = screen.Min.Y - (1f - amount) * height;
 
-        dl.PushClipRect(screen.Min, screen.Max, true);
+            dl.PushClipRect(screen.Min, screen.Max, true);
 
-        Material.Veil(dl, screen.Min, screen.Max, 0.40f * amount, rounding);
-        Material.Frosted(dl, new Vector2(screen.Min.X, lockTop), new Vector2(screen.Max.X, lockTop + height), rounding, scale, 1f);
+            Material.Veil(dl, screen.Min, screen.Max, 0.40f * amount, rounding);
+            Material.Frosted(dl, new Vector2(screen.Min.X, lockTop), new Vector2(screen.Max.X, lockTop + height), rounding, scale, 1f);
 
-        var opacity = Math.Clamp(amount * 1.6f, 0f, 1f);
-        var interactive = locked && !drag.Active && cover.Value > 0.96f;
-        DrawContents(screen, theme, lockTop, scale, opacity, interactive, navigation);
+            var opacity = Math.Clamp(amount * 1.6f, 0f, 1f);
+            var interactive = locked && !drag.Active && cover.Value > 0.96f;
+            DrawContents(screen, theme, lockTop, scale, opacity, interactive, navigation);
 
-        dl.PopClipRect();
+            dl.PopClipRect();
+        }
     }
 
     private void DrawContents(Rect screen, PhoneTheme theme, float lockTop, float scale, float opacity, bool interactive, INavigator navigation)

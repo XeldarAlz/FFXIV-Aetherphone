@@ -6,6 +6,7 @@ using Aetherphone.Core.Playback;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
@@ -126,11 +127,11 @@ internal sealed class PhoneShell : IDisposable
         {
             StatusBar.Draw(screen, theme);
             DrawHomeIndicator(screen, theme);
-            DrawLockButton(screen, theme);
+            DrawChromeButtons(screen, theme);
         }
     }
 
-    private void DrawLockButton(Rect screen, PhoneTheme theme)
+    private void DrawChromeButtons(Rect screen, PhoneTheme theme)
     {
         if (lockScreen.IsActive)
         {
@@ -139,11 +140,20 @@ internal sealed class PhoneShell : IDisposable
 
         var scale = ImGuiHelpers.GlobalScale;
         var radius = 13f * scale;
-        var center = new Vector2(screen.Max.X - 30f * scale, screen.Max.Y - 28f * scale);
+        var buttonY = screen.Max.Y - 28f * scale;
 
-        if (LockButton.Draw(center, radius, false, theme))
+        var lockScreenCenter = new Vector2(screen.Min.X + 30f * scale, buttonY);
+        if (LockButton.Draw(lockScreenCenter, radius, FontAwesomeIcon.PowerOff, false, theme))
         {
             lockScreen.Lock();
+        }
+
+        var moveCenter = new Vector2(screen.Max.X - 30f * scale, buttonY);
+        var moveIcon = Plugin.Cfg.LockPosition ? FontAwesomeIcon.Lock : FontAwesomeIcon.LockOpen;
+        if (LockButton.Draw(moveCenter, radius, moveIcon, Plugin.Cfg.LockPosition, theme))
+        {
+            Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
+            Plugin.Cfg.Save();
         }
     }
 
