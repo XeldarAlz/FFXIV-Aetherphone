@@ -2,7 +2,7 @@ namespace Aetherphone.Core.Animation;
 
 internal static class TransitionTiming
 {
-    public const float PresentSmoothTime = 0.15f;
+    public const float PresentSmoothTime = 0.12f;
 
     public const float DismissSmoothTime = 0.12f;
 
