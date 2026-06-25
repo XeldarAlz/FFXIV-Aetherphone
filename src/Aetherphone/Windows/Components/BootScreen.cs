@@ -110,7 +110,7 @@ internal static class BootScreen
 
         var glyphs = GreetingGlyphs(text);
 
-        using (Plugin.Fonts.Push(GreetingFontScale))
+        using (Plugin.Fonts.Push(GreetingFontScale, FontWeight.Bold))
         {
             Span<float> widths = stackalloc float[length];
             var totalWidth = 0f;

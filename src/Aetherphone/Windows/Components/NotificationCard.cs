@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -26,7 +27,7 @@ internal static class NotificationCard
         var textLeft = min.X + 32f * scale;
         var textRight = max.X - 14f * scale;
 
-        Typography.Draw(new Vector2(textLeft, min.Y + 12f * scale), notification.Title, theme.TextStrong);
+        Typography.Draw(new Vector2(textLeft, min.Y + 12f * scale), notification.Title, theme.TextStrong, 1f, FontWeight.SemiBold);
 
         var time = RelativeTime(notification.ReceivedAt);
         var timeSize = Typography.Measure(time, 0.82f);

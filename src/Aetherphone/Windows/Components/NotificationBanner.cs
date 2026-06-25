@@ -163,7 +163,7 @@ internal sealed class NotificationBanner : IDisposable
         Typography.Draw(new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time, Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
 
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 6f * scale, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f);
+        Typography.Draw(new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f, FontWeight.SemiBold);
         dl.PopClipRect();
 
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);

@@ -155,7 +155,7 @@ internal sealed class NowPlayingIsland
         ArtGradient.DrawDisc(dl, discCenter, discRadius, ArtGradient.FromName(playback.Title), alpha);
 
         var textLeft = discCenter.X + discRadius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, top + 18f * scale), Truncate(playback.Title, 16), Palette.WithAlpha(theme.TextStrong, alpha), 1.0f);
+        Typography.Draw(new Vector2(textLeft, top + 18f * scale), Truncate(playback.Title, 16), Palette.WithAlpha(theme.TextStrong, alpha), 1.0f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(textLeft, top + 40f * scale), Truncate(playback.Subtitle, 18), Palette.WithAlpha(Accent, 0.9f * alpha), 0.8f);
 
         var active = alpha > ControlThreshold;

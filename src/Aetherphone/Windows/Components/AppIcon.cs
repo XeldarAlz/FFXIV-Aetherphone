@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Theme;
@@ -56,7 +57,7 @@ internal static class AppIcon
             Typography.DrawCentered(center, app.Glyph, theme.TextStrong, glyphScale);
         }
 
-        Typography.DrawCentered(new Vector2(center.X, max.Y + 11f * scale), app.DisplayName, Palette.WithAlpha(theme.TextStrong, 0.95f), 0.85f);
+        Typography.DrawCentered(new Vector2(center.X, max.Y + 11f * scale), app.DisplayName, Palette.WithAlpha(theme.TextStrong, 0.95f), 0.85f, FontWeight.Medium);
 
         if (app.BadgeCount > 0)
         {
@@ -88,6 +89,6 @@ internal static class AppIcon
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddCircleFilled(center, 9f * scale, ImGui.GetColorU32(theme.Danger), 24);
         var label = count > 99 ? "99+" : count.ToString();
-        Typography.DrawCentered(center, label, theme.TextStrong, 0.7f);
+        Typography.DrawCentered(center, label, theme.TextStrong, 0.7f, FontWeight.SemiBold);
     }
 }

@@ -8,6 +8,7 @@ namespace Aetherphone.Core.Shell;
 internal static class StatusBar
 {
     private const float TimeScale = 0.95f;
+    private const FontWeight TimeWeight = FontWeight.SemiBold;
     private const float TimePadding = 24f;
     private const float EarGap = 10f;
     private const float IslandSidePadding = 14f;
@@ -40,7 +41,7 @@ internal static class StatusBar
         Plugin.Device.SyncTarget();
 
         var localTime = CurrentTime();
-        var timeSize = Typography.Measure(localTime, TimeScale);
+        var timeSize = Typography.Measure(localTime, TimeScale, TimeWeight);
 
         var island = BaseIsland(screen);
         DeviceChrome.DrawIsland(island, theme);
@@ -48,7 +49,7 @@ internal static class StatusBar
         var earGap = EarGap * scale;
 
         var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale, island.Min.X - earGap - timeSize.X);
-        Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale);
+        Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale, TimeWeight);
 
         StatusIcons.Draw(screen, theme, rowCenterY, island.Max.X + earGap);
     }
@@ -56,7 +57,7 @@ internal static class StatusBar
     internal static Rect BaseIsland(Rect screen)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var timeWidth = Typography.Measure(CurrentTime(), TimeScale).X;
+        var timeWidth = Typography.Measure(CurrentTime(), TimeScale, TimeWeight).X;
         var clusterWidth = StatusIcons.MeasureWidth(scale, Plugin.Device.BatteryPercent);
         return ComputeIsland(screen, scale, timeWidth, clusterWidth);
     }

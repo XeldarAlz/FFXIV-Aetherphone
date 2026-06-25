@@ -23,7 +23,7 @@ internal static class ContactRow
 
         var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
         var nameColor = friend.Online ? theme.TextStrong : Palette.WithAlpha(theme.TextStrong, 0.5f);
-        Typography.Draw(new Vector2(textLeft, row.Min.Y + 9f * scale), friend.Name, nameColor);
+        Typography.Draw(new Vector2(textLeft, row.Min.Y + 9f * scale), friend.Name, nameColor, 1f, FontWeight.SemiBold);
 
         var subtitle = Subtitle(friend);
         var subtitleRight = row.Max.X - (friend.Online ? 22f * scale : 8f * scale);

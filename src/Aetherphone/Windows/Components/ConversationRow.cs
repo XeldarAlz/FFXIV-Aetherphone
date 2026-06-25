@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
@@ -33,7 +34,7 @@ internal static class ConversationRow
         var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
         var textRight = max.X - 14f * scale;
 
-        Typography.Draw(new Vector2(textLeft, min.Y + 12f * scale), conversation.Contact, theme.TextStrong);
+        Typography.Draw(new Vector2(textLeft, min.Y + 12f * scale), conversation.Contact, theme.TextStrong, 1f, FontWeight.SemiBold);
 
         var preview = conversation.Last?.Text ?? string.Empty;
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
