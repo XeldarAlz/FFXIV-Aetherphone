@@ -83,7 +83,7 @@ internal sealed class Twenty48App : IPhoneApp
             var gridArea = new Rect(new Vector2(surface.Min.X, gridTop), surface.Max);
             var grid = GameCommon.LayoutGameGrid(gridArea, GridSize, GridSize, 0.08f);
 
-            DrawTileGrid(grid, scale);
+            DrawTileGrid(grid, scale, dt);
             HandleSwipeInput(grid);
 
             if (won)
@@ -126,7 +126,7 @@ internal sealed class Twenty48App : IPhoneApp
         SpawnTile();
     }
 
-    private void DrawTileGrid(Rect grid, float scale)
+    private void DrawTileGrid(Rect grid, float scale, float dt)
     {
         for (var row = 0; row < GridSize; row++)
         {
@@ -184,7 +184,7 @@ internal sealed class Twenty48App : IPhoneApp
                 var spawn = spawnAnim[index];
                 if (spawn > 0f && !isSliding)
                 {
-                    spawn = MathF.Max(0f, spawn - ImGui.GetIO().DeltaTime / SpawnDuration);
+                    spawn = MathF.Max(0f, spawn - dt / SpawnDuration);
                     spawnAnim[index] = spawn;
                     var pop = 0.5f + 0.5f * (1f - spawn);
                     var dMin = new Vector2(drawCenter.X - halfW * pop, drawCenter.Y - halfH * pop);
@@ -211,7 +211,7 @@ internal sealed class Twenty48App : IPhoneApp
                 {
                     var textColor = colorIdx <= 2 ? new Vector4(0.25f, 0.25f, 0.30f, 1f) : new Vector4(0.97f, 0.97f, 0.98f, 1f);
                     var fontScale = value >= 1000 ? 1f : 1.25f;
-                    Typography.DrawCentered(new Vector2(drawCenter.X, drawCenter.Y), value.ToString(), Styling.WithAlpha(textColor, alpha), fontScale);
+                    Typography.DrawCentered(new Vector2(drawCenter.X, drawCenter.Y), GameCommon.Label(value), Styling.WithAlpha(textColor, alpha), fontScale);
                 }
             }
         }

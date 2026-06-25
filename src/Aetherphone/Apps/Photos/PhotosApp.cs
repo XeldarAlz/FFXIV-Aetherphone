@@ -37,6 +37,8 @@ internal sealed class PhotosApp : IPhoneApp
 
     private string[] paths = Array.Empty<string>();
     private int? viewerIndex;
+    private int countLabelKey = -1;
+    private string countLabel = string.Empty;
 
     public PhotosApp(PhotoLibrary library)
     {
@@ -72,8 +74,14 @@ internal sealed class PhotosApp : IPhoneApp
         var content = context.Content;
 
         Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 2f * scale), "Photos", theme.TextStrong, 1.7f);
-        var subtitle = paths.Length == 1 ? "1 Photo" : $"{paths.Length} Photos";
-        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 34f * scale), subtitle, theme.TextMuted, 0.85f);
+
+        if (countLabelKey != paths.Length)
+        {
+            countLabelKey = paths.Length;
+            countLabel = paths.Length == 1 ? "1 Photo" : $"{paths.Length} Photos";
+        }
+
+        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 34f * scale), countLabel, theme.TextMuted, 0.85f);
 
         if (paths.Length == 0)
         {

@@ -38,6 +38,20 @@ internal static class GameCommon
         new(0.90f, 0.55f, 0.35f, 1f),
     };
 
+    private static readonly Dictionary<int, string> NumberLabels = new();
+
+    public static string Label(int value)
+    {
+        if (NumberLabels.TryGetValue(value, out var label))
+        {
+            return label;
+        }
+
+        label = value.ToString();
+        NumberLabels[value] = label;
+        return label;
+    }
+
     public static void FillRect(Vector2 min, Vector2 max, Vector4 color, float rounding)
     {
         ImGui.GetWindowDrawList().AddRectFilled(min, max, ImGui.GetColorU32(color), rounding);
@@ -123,7 +137,7 @@ internal static class GameCommon
     {
         var scale = ImGuiHelpers.GlobalScale;
         var labelSize = Typography.Measure(label, 0.75f);
-        var valueText = value.ToString();
+        var valueText = Label(value);
         var valueSize = Typography.Measure(valueText, 1.3f);
 
         var pillWidth = MathF.Max(valueSize.X, labelSize.X) + 28f * scale;

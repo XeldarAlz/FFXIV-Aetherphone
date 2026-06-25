@@ -6,7 +6,7 @@ internal static class TransitionTiming
 
     public const float DismissSmoothTime = 0.18f;
 
-    public const float PushSeconds = 0.28f;
+    public const float PushSmoothTime = 0.20f;
 
     public const float ShellDimMax = 0.45f;
 
@@ -22,5 +22,7 @@ internal static class TransitionTiming
 
     public const float RestVelocityEpsilon = 0.02f;
 
-    public static readonly EasingFunction PushCurve = Easing.EaseOutCubic;
+    public const float ZoomGrowEnd = 0.62f;
+
+    public const float ZoomRevealEnd = 0.92f;
 }

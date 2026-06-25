@@ -149,10 +149,47 @@ internal sealed class PhoneShell : IDisposable
             return;
         }
 
+        var origin = navigation.MotionOrigin;
+        if (origin.HasValue && navigation.Motion == ShellMotion.Present)
+        {
+            DrawZoomTransition(screen, theme, over, underPaint, underDim, cover, origin.Value);
+            return;
+        }
+
         var underLayer = new SceneCompositor.Layer(under?.Id ?? "home", Vector2.Zero, underDim, underPaint, default, true);
         var overLayer = new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true);
 
         SceneCompositor.Composite(screen, underLayer, overLayer);
+    }
+
+    private void DrawZoomTransition(Rect screen, PhoneTheme theme, IPhoneApp over, LayerPainter underPaint, float underDim, float cover, Rect origin)
+    {
+        SceneCompositor.DrawLayer(screen, new SceneCompositor.Layer("home", Vector2.Zero, underDim, underPaint, default, true));
+
+        if (cover >= TransitionTiming.ZoomGrowEnd)
+        {
+            SceneCompositor.DrawLayer(screen, new SceneCompositor.Layer(over.Id, Vector2.Zero, 0f, target => PaintApp(target, theme, over), default, true));
+        }
+
+        var growth = Easing.EaseOutCubic(Math.Clamp(cover / TransitionTiming.ZoomGrowEnd, 0f, 1f));
+        var tileMin = Vector2.Lerp(origin.Min, screen.Min, growth);
+        var tileMax = Vector2.Lerp(origin.Max, screen.Max, growth);
+        var iconRadius = origin.Width * 0.26f;
+        var screenRadius = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
+        var radius = iconRadius + (screenRadius - iconRadius) * growth;
+
+        var fadeSpan = TransitionTiming.ZoomRevealEnd - TransitionTiming.ZoomGrowEnd;
+        var fade = cover <= TransitionTiming.ZoomGrowEnd
+            ? 1f
+            : 1f - Math.Clamp((cover - TransitionTiming.ZoomGrowEnd) / fadeSpan, 0f, 1f);
+
+        if (fade <= 0f)
+        {
+            return;
+        }
+
+        var color = ImGui.GetColorU32(Palette.WithAlpha(over.Accent, fade));
+        SceneCompositor.DrawLayer(screen, new SceneCompositor.Layer("zoom", Vector2.Zero, 0f, _ => Squircle.Fill(ImGui.GetWindowDrawList(), tileMin, tileMax, radius, color), default, true));
     }
 
     private void PaintHome(Rect screen, PhoneTheme theme)

@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Core.Shell;
@@ -13,6 +14,7 @@ internal static class HomeScreen
     public static void Draw(Rect content, PhoneTheme theme, IReadOnlyList<IPhoneApp> apps, INavigator navigation)
     {
         var scale = ImGuiHelpers.GlobalScale;
+        var delta = ImGui.GetIO().DeltaTime;
         var columnWidth = content.Width / Columns;
         var iconSize = MathF.Min(columnWidth * 0.58f, 58f * scale);
         var rowHeight = iconSize + 30f * scale;
@@ -25,9 +27,11 @@ internal static class HomeScreen
             var topY = content.Min.Y + row * rowHeight + 10f * scale;
             var iconCenter = new Vector2(centerX, topY + iconSize * 0.5f);
 
-            if (AppIcon.Draw(iconCenter, iconSize, apps[index], theme))
+            if (AppIcon.Draw(iconCenter, iconSize, apps[index], theme, delta))
             {
-                navigation.OpenApp(apps[index]);
+                var iconHalf = iconSize * 0.5f;
+                var origin = new Rect(iconCenter - new Vector2(iconHalf, iconHalf), iconCenter + new Vector2(iconHalf, iconHalf));
+                navigation.OpenApp(apps[index], origin);
             }
         }
     }

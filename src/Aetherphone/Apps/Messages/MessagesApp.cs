@@ -36,6 +36,9 @@ internal sealed class MessagesApp : IPhoneApp
     private string draft = string.Empty;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
+    private Conversation? trackedThread;
+    private bool followBottom;
+    private bool snapToBottom;
 
     public MessagesApp(MessageStore store, ChatBridge bridge, MessageLauncher launcher, LodestoneService lodestone)
     {
@@ -52,6 +55,7 @@ internal sealed class MessagesApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
+        trackedThread = null;
         if (launcher.TryConsume(out var display, out var sendTarget))
         {
             var conversation = store.GetOrCreate(display, sendTarget);
@@ -64,6 +68,7 @@ internal sealed class MessagesApp : IPhoneApp
     {
         router.Reset();
         draft = string.Empty;
+        trackedThread = null;
     }
 
     public void Draw(in PhoneContext context)
@@ -87,6 +92,7 @@ internal sealed class MessagesApp : IPhoneApp
 
     private void DrawConversationList(Rect area)
     {
+        trackedThread = null;
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, DisplayName);
 
@@ -127,13 +133,29 @@ internal sealed class MessagesApp : IPhoneApp
 
         using (AppSurface.Begin(bubbles))
         {
+            if (ReferenceEquals(trackedThread, conversation))
+            {
+                followBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 4f * scale;
+            }
+            else
+            {
+                trackedThread = conversation;
+                followBottom = true;
+            }
+
+            if (snapToBottom)
+            {
+                followBottom = true;
+                snapToBottom = false;
+            }
+
             var lines = conversation.Lines;
             for (var index = 0; index < lines.Count; index++)
             {
                 ChatBubble.Draw(lines[index], frameTheme, entrance.Progress(index));
             }
 
-            if (ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 1f)
+            if (followBottom)
             {
                 ImGui.SetScrollHereY(1f);
             }
@@ -186,6 +208,7 @@ internal sealed class MessagesApp : IPhoneApp
         {
             bridge.Send(conversation, draft);
             draft = string.Empty;
+            snapToBottom = true;
         }
     }
 

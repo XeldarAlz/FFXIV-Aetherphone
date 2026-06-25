@@ -950,16 +950,36 @@ internal sealed class MusicApp : IPhoneApp
         };
     }
 
+    private static readonly Dictionary<(string, int), string> SongSubtitleCache = new();
+
     private static string SongRowSubtitle(Song song)
     {
+        var key = (song.Author, song.DurationSeconds);
+        if (SongSubtitleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
         var author = Truncate(song.Author, 20);
-        return string.IsNullOrEmpty(author) ? FormatTime(song.DurationSeconds) : $"{author} · {FormatTime(song.DurationSeconds)}";
+        var subtitle = string.IsNullOrEmpty(author) ? FormatTime(song.DurationSeconds) : $"{author} · {FormatTime(song.DurationSeconds)}";
+        SongSubtitleCache[key] = subtitle;
+        return subtitle;
     }
+
+    private static readonly Dictionary<(int, string), string> StationSubtitleCache = new();
 
     private static string StationSubtitle(RadioStation station)
     {
+        var key = (station.Bitrate, station.Country);
+        if (StationSubtitleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
         var bitrate = station.Bitrate > 0 ? $"{station.Bitrate}kbps" : "live";
-        return string.IsNullOrEmpty(station.Country) ? bitrate : $"{bitrate} · {station.Country}";
+        var subtitle = string.IsNullOrEmpty(station.Country) ? bitrate : $"{bitrate} · {station.Country}";
+        StationSubtitleCache[key] = subtitle;
+        return subtitle;
     }
 
     private static string RadioStateLabel(RadioPlaybackState state)
@@ -973,6 +993,8 @@ internal sealed class MusicApp : IPhoneApp
         };
     }
 
+    private static readonly Dictionary<int, string> TimeCache = new();
+
     private static string FormatTime(int totalSeconds)
     {
         if (totalSeconds < 0)
@@ -980,10 +1002,19 @@ internal sealed class MusicApp : IPhoneApp
             totalSeconds = 0;
         }
 
+        if (TimeCache.TryGetValue(totalSeconds, out var cached))
+        {
+            return cached;
+        }
+
         var minutes = totalSeconds / 60;
         var seconds = totalSeconds % 60;
-        return $"{minutes}:{seconds:D2}";
+        var formatted = $"{minutes}:{seconds:D2}";
+        TimeCache[totalSeconds] = formatted;
+        return formatted;
     }
+
+    private static readonly Dictionary<(string, int), string> TruncateCache = new();
 
     private static string Truncate(string value, int max)
     {
@@ -992,7 +1023,15 @@ internal sealed class MusicApp : IPhoneApp
             return value ?? string.Empty;
         }
 
-        return value.Substring(0, max - 1) + "…";
+        var key = (value, max);
+        if (TruncateCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var result = value.Substring(0, max - 1) + "…";
+        TruncateCache[key] = result;
+        return result;
     }
 
     public void Dispose()

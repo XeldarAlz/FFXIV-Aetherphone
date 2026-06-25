@@ -6,6 +6,8 @@ internal interface INavigator
 
     void OpenApp(IPhoneApp app);
 
+    void OpenApp(IPhoneApp app, Rect origin);
+
     void Open(string appId);
 
     void Back();

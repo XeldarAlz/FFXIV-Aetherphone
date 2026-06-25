@@ -1,10 +1,24 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 
 namespace Aetherphone.Core.Market;
 
 internal static class MarketFormat
 {
-    public static string Gil(long amount) => amount.ToString("N0", CultureInfo.InvariantCulture);
+    private static readonly ConcurrentDictionary<long, string> GilCache = new();
+    private static readonly ConcurrentDictionary<(string, int), string> ClipCache = new();
+
+    public static string Gil(long amount)
+    {
+        if (GilCache.TryGetValue(amount, out var cached))
+        {
+            return cached;
+        }
+
+        var formatted = amount.ToString("N0", CultureInfo.InvariantCulture);
+        GilCache.TryAdd(amount, formatted);
+        return formatted;
+    }
 
     public static string Gil(double amount) => Gil((long)Math.Round(amount));
 
@@ -72,6 +86,14 @@ internal static class MarketFormat
             return value;
         }
 
-        return value.Substring(0, maxLength - 1) + "…";
+        var key = (value, maxLength);
+        if (ClipCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var clipped = value.Substring(0, maxLength - 1) + "…";
+        ClipCache.TryAdd(key, clipped);
+        return clipped;
     }
 }

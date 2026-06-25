@@ -177,6 +177,10 @@ internal sealed class GamesApp : IPhoneApp
         {
         }
 
+        public void OpenApp(IPhoneApp app, Rect origin)
+        {
+        }
+
         public void Open(string appId)
         {
         }
