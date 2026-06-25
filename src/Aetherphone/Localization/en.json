@@ -271,5 +271,16 @@
   "catalog.radio.metal": "Metal",
   "catalog.radio.hipHop": "Hip-Hop",
   "catalog.radio.soundtrack": "Soundtrack",
-  "catalog.radio.anime": "Anime"
+  "catalog.radio.anime": "Anime",
+  "wallpaper.title": "Wallpaper",
+  "wallpaper.moveAndScale": "Move and Scale",
+  "wallpaper.add": "Add Wallpaper",
+  "wallpaper.fromPhotos": "Photos",
+  "wallpaper.fromFiles": "Files",
+  "wallpaper.set": "Set Wallpaper",
+  "wallpaper.loadFailed": "Couldn't load that image",
+  "wallpaper.custom": "Custom",
+  "wallpaper.gestureHint": "Drag to move · scroll to zoom",
+  "wallpaper.light": "Light",
+  "wallpaper.dark": "Dark"
 }

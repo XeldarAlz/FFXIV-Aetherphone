@@ -63,6 +63,31 @@ internal static class SettingsRow
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
+    public static bool Disclosure(Rect row, string label, string value, PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        DrawLabel(row, label, theme.TextStrong);
+
+        var chevronWidth = 6f * scale;
+        var chevronTip = new Vector2(row.Max.X, row.Center.Y);
+        DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
+
+        if (!string.IsNullOrEmpty(value))
+        {
+            var valueSize = Typography.Measure(value);
+            var valueX = chevronTip.X - chevronWidth - 12f * scale - valueSize.X;
+            Typography.Draw(new Vector2(valueX, row.Center.Y - valueSize.Y * 0.5f), value, theme.TextMuted);
+        }
+
+        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
     public static bool Selectable(Rect row, string label, bool selected, PhoneTheme theme)
     {
         DrawLabel(row, label, theme.TextStrong);

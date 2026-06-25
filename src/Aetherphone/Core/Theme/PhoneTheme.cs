@@ -10,7 +10,9 @@ internal sealed class PhoneTheme
 
     public required Vector4 ScreenBase { get; init; }
 
-    public required WallpaperStyle Wallpaper { get; init; }
+    public required string LightWallpaperId { get; init; }
+
+    public required string DarkWallpaperId { get; init; }
 
     public required Vector4 AppBackground { get; init; }
 
@@ -46,12 +48,13 @@ internal sealed class PhoneTheme
 
     public required float SidePadding { get; init; }
 
-    public static PhoneTheme From(Vector4 accent, WallpaperStyle wallpaper) => new()
+    public static PhoneTheme From(Vector4 accent, string lightWallpaperId, string darkWallpaperId) => new()
     {
         BezelOuter = new Vector4(0.03f, 0.03f, 0.04f, 1f),
         BezelRim = new Vector4(0.22f, 0.22f, 0.26f, 1f),
         ScreenBase = new Vector4(0.06f, 0.06f, 0.10f, 1f),
-        Wallpaper = wallpaper,
+        LightWallpaperId = lightWallpaperId,
+        DarkWallpaperId = darkWallpaperId,
         AppBackground = new Vector4(0.055f, 0.055f, 0.075f, 1f),
         GroupedCard = new Vector4(0.110f, 0.110f, 0.125f, 1f),
         Separator = new Vector4(0.34f, 0.34f, 0.37f, 0.5f),
@@ -71,5 +74,5 @@ internal sealed class PhoneTheme
         SidePadding = 16f,
     };
 
-    public static PhoneTheme Default { get; } = From(new Vector4(0.55f, 0.45f, 0.95f, 1f), WallpaperStyle.Dusk);
+    public static PhoneTheme Default { get; } = From(new Vector4(0.55f, 0.45f, 0.95f, 1f), "DuskLight", "DuskDark");
 }

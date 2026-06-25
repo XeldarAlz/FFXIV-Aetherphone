@@ -46,8 +46,13 @@ internal static class DeviceChrome
     public static void DrawWallpaper(Rect screen, PhoneTheme theme)
     {
         var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
-        var handle = Plugin.Wallpapers.Handle(theme.Wallpaper);
-        ImGui.GetWindowDrawList().AddImageRounded(handle, screen.Min, screen.Max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+        var library = Plugin.Wallpapers;
+        library.CurrentTargetAspect = screen.Height > 0f ? screen.Width / screen.Height : 0.5f;
+        library.StepDayNight(MathF.Min(ImGui.GetIO().DeltaTime, 0.1f));
+
+        var light = library.Resolve(theme.LightWallpaperId);
+        var dark = library.Resolve(theme.DarkWallpaperId);
+        WallpaperRenderer.Draw(ImGui.GetWindowDrawList(), screen, rounding, light, dark, library.CurrentTargetAspect, library.Darkness, theme.ScreenBase);
     }
 
     public static void DrawIsland(Rect island, PhoneTheme theme)

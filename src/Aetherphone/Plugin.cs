@@ -7,6 +7,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Game.Command;
@@ -36,7 +37,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
-    internal static WallpaperTextureCache Wallpapers { get; private set; } = null!;
+    internal static WallpaperLibrary Wallpapers { get; private set; } = null!;
+    internal static WallpaperImageCache WallpaperImages { get; private set; } = null!;
     internal static DeviceStatus Device { get; private set; } = null!;
 
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
@@ -55,7 +57,10 @@ public sealed class Plugin : IDalamudPlugin
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
         Loc.LanguageChanged += Fonts.OnLanguageChanged;
-        Wallpapers = new WallpaperTextureCache(TextureProvider);
+        var builtInWallpaperDirectory = new DirectoryInfo(Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
+        var customWallpaperDirectory = new DirectoryInfo(Path.Combine(PluginInterface.ConfigDirectory.FullName, "Wallpapers"));
+        Wallpapers = new WallpaperLibrary(TextureProvider, builtInWallpaperDirectory, customWallpaperDirectory, Cfg);
+        WallpaperImages = new WallpaperImageCache();
         Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
 
         services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, TextureProvider, PluginInterface.ConfigDirectory);
@@ -102,6 +107,7 @@ public sealed class Plugin : IDalamudPlugin
         Device.Dispose();
         Fonts.Dispose();
         Wallpapers.Dispose();
+        WallpaperImages.Dispose();
 
         CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
         CommandManager.RemoveHandler(AepConstants.AliasCommand);

@@ -42,7 +42,7 @@ internal static class AppRegistry
         apps.Add(new ClockApp());
         apps.Add(new GamesApp());
         apps.Add(new NotificationsApp(services.Notifications));
-        apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Ringtone, services.AethernetSession, services.AethernetClient, services.GameData, showAbout));
+        apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Ringtone, services.AethernetSession, services.AethernetClient, services.GameData, photoLibrary, showAbout));
 
         return apps;
     }

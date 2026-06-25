@@ -1,5 +1,6 @@
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Songs;
+using Aetherphone.Core.Wallpapers;
 using Dalamud.Configuration;
 
 namespace Aetherphone;
@@ -25,7 +26,11 @@ internal sealed class Configuration : IPluginConfiguration
 
     public string AccentName { get; set; } = "Violet";
 
-    public string WallpaperName { get; set; } = "Aurora";
+    public string LightWallpaperId { get; set; } = "DuskLight";
+
+    public string DarkWallpaperId { get; set; } = "DuskDark";
+
+    public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
 
     public uint RingtoneId { get; set; } = 7;
 

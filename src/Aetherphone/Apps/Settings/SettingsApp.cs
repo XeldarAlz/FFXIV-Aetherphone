@@ -6,6 +6,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -34,10 +35,10 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 
     private readonly AccountPage accountPage;
 
-    public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone, AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData, Action showAbout)
+    public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone, AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData, PhotoLibrary photoLibrary, Action showAbout)
     {
         accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
-        var appearance = new AppearancePage(configuration, themes);
+        var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var notifications = new NotificationsPage(configuration);
         var ringtonePage = new RingtonePage(configuration, ringtone);
@@ -57,6 +58,8 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     }
 
     public void Open(ISettingsPage page) => router.Push(page);
+
+    public void Back() => router.Pop();
 
     public void OnOpened()
     {

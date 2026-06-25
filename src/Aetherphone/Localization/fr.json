@@ -271,5 +271,16 @@
   "catalog.radio.metal": "Metal",
   "catalog.radio.hipHop": "Hip-Hop",
   "catalog.radio.soundtrack": "Bandes originales",
-  "catalog.radio.anime": "Anime"
+  "catalog.radio.anime": "Anime",
+  "wallpaper.title": "Fond d'écran",
+  "wallpaper.moveAndScale": "Déplacer et redimensionner",
+  "wallpaper.add": "Ajouter un fond d'écran",
+  "wallpaper.fromPhotos": "Photos",
+  "wallpaper.fromFiles": "Fichiers",
+  "wallpaper.set": "Définir le fond d'écran",
+  "wallpaper.loadFailed": "Impossible de charger cette image",
+  "wallpaper.custom": "Personnalisé",
+  "wallpaper.gestureHint": "Glissez pour déplacer · molette pour zoomer",
+  "wallpaper.light": "Clair",
+  "wallpaper.dark": "Sombre"
 }

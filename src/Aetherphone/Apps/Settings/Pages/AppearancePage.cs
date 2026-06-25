@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 
@@ -19,11 +20,15 @@ internal sealed class AppearancePage : ISettingsPage
 
     private readonly Configuration configuration;
     private readonly ThemeProvider themes;
+    private readonly ISettingsNavigator navigator;
+    private readonly PhotoLibrary photos;
 
-    public AppearancePage(Configuration configuration, ThemeProvider themes)
+    public AppearancePage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator, PhotoLibrary photos)
     {
         this.configuration = configuration;
         this.themes = themes;
+        this.navigator = navigator;
+        this.photos = photos;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -42,12 +47,9 @@ internal sealed class AppearancePage : ISettingsPage
                 ApplyTheme();
             }
 
-            var wallpaperIndex = WallpaperStrip.Draw(card.NextRow(), Loc.T(L.Settings.Wallpaper), WallpaperCatalog.All, WallpaperCatalog.IndexOf(WallpaperCatalog.Resolve(configuration.WallpaperName)), theme);
-            var wallpaperName = WallpaperCatalog.All[wallpaperIndex].ToString();
-            if (wallpaperName != configuration.WallpaperName)
+            if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Settings.Wallpaper), string.Empty, theme))
             {
-                configuration.WallpaperName = wallpaperName;
-                ApplyTheme();
+                navigator.Open(new WallpaperPage(configuration, themes, navigator, photos));
             }
 
             card.End();

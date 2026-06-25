@@ -9,5 +9,5 @@ internal sealed class ThemeProvider
     public void Apply(Configuration configuration) => Current = Build(configuration);
 
     private static PhoneTheme Build(Configuration configuration)
-        => PhoneTheme.From(ThemeCatalog.ResolveAccent(configuration.AccentName), WallpaperCatalog.Resolve(configuration.WallpaperName));
+        => PhoneTheme.From(ThemeCatalog.ResolveAccent(configuration.AccentName), configuration.LightWallpaperId, configuration.DarkWallpaperId);
 }

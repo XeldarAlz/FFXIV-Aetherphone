@@ -271,5 +271,16 @@
   "catalog.radio.metal": "Metal",
   "catalog.radio.hipHop": "Hip-Hop",
   "catalog.radio.soundtrack": "Film Müziği",
-  "catalog.radio.anime": "Anime"
+  "catalog.radio.anime": "Anime",
+  "wallpaper.title": "Duvar Kağıdı",
+  "wallpaper.moveAndScale": "Taşı ve Ölçekle",
+  "wallpaper.add": "Duvar Kağıdı Ekle",
+  "wallpaper.fromPhotos": "Fotoğraflar",
+  "wallpaper.fromFiles": "Dosyalar",
+  "wallpaper.set": "Duvar Kağıdı Yap",
+  "wallpaper.loadFailed": "Bu görsel yüklenemedi",
+  "wallpaper.custom": "Özel",
+  "wallpaper.gestureHint": "Taşımak için sürükle · yakınlaştırmak için kaydır",
+  "wallpaper.light": "Açık",
+  "wallpaper.dark": "Koyu"
 }

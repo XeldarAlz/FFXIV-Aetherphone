@@ -93,6 +93,31 @@ internal static class L
         public static readonly LocString AboutAetherphone = new("settings.aboutAetherphone", "About Aetherphone");
     }
 
+    internal static class Wallpaper
+    {
+        public static readonly LocString Title = new("wallpaper.title", "Wallpaper");
+
+        public static readonly LocString MoveAndScale = new("wallpaper.moveAndScale", "Move and Scale");
+
+        public static readonly LocString Add = new("wallpaper.add", "Add Wallpaper");
+
+        public static readonly LocString FromPhotos = new("wallpaper.fromPhotos", "Photos");
+
+        public static readonly LocString FromFiles = new("wallpaper.fromFiles", "Files");
+
+        public static readonly LocString Set = new("wallpaper.set", "Set Wallpaper");
+
+        public static readonly LocString LoadFailed = new("wallpaper.loadFailed", "Couldn't load that image");
+
+        public static readonly LocString Custom = new("wallpaper.custom", "Custom");
+
+        public static readonly LocString GestureHint = new("wallpaper.gestureHint", "Drag to move · scroll to zoom");
+
+        public static readonly LocString Light = new("wallpaper.light", "Light");
+
+        public static readonly LocString Dark = new("wallpaper.dark", "Dark");
+    }
+
     internal static class Account
     {
         public static readonly LocString Title = new("account.title", "Aethernet Account");

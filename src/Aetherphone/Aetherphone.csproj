@@ -20,6 +20,9 @@
     <Content Include="Localization\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Wallpapers\*.png;Wallpapers\*.jpg;Wallpapers\*.jpeg;Wallpapers\*.bmp">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
