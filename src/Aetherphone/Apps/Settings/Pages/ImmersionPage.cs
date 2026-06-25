@@ -33,13 +33,20 @@ internal sealed class ImmersionPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.Immersion), theme);
-            var card = GroupCard.Begin(theme, 1);
+            var card = GroupCard.Begin(theme, 2);
             var scroll = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ScrollWhileIdle), configuration.ScrollWhileIdle, theme);
+            var lockPosition = SettingsRow.Bool(card.NextRow(), Loc.T(L.ControlCenter.LockPosition), configuration.LockPosition, theme);
             card.End();
 
             if (scroll != configuration.ScrollWhileIdle)
             {
                 configuration.ScrollWhileIdle = scroll;
+                configuration.Save();
+            }
+
+            if (lockPosition != configuration.LockPosition)
+            {
+                configuration.LockPosition = lockPosition;
                 configuration.Save();
             }
 

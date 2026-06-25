@@ -21,6 +21,9 @@ internal sealed class PhoneShell : IDisposable
     private readonly NavigationStack navigation;
     private readonly NotificationBanner banner;
     private readonly NowPlayingIsland nowPlaying;
+    private readonly ControlCenter controlCenter;
+    private readonly LockScreen lockScreen;
+    private readonly HomeScreen home;
     private readonly BootSequence boot = new();
 
     public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback)
@@ -30,6 +33,9 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         banner = new NotificationBanner(notifications);
         nowPlaying = new NowPlayingIsland(playback);
+        controlCenter = new ControlCenter(themes, playback);
+        lockScreen = new LockScreen(notifications);
+        home = new HomeScreen(apps);
     }
 
     public void OnOpened() => boot.Begin(!Plugin.Cfg.WelcomeShown);
@@ -56,9 +62,10 @@ internal sealed class PhoneShell : IDisposable
         navigation.Advance(delta);
         banner.Advance(delta);
 
-        var islandCaptures = !boot.IsActive && nowPlaying.CapturesPointer(screen);
+        var overlaysCapture = !boot.IsActive && (controlCenter.CapturesPointer || lockScreen.CapturesPointer);
+        var islandCaptures = !boot.IsActive && !overlaysCapture && nowPlaying.CapturesPointer(screen);
 
-        using (InputShield.Engage(boot.IsActive || islandCaptures))
+        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture))
         {
             DrawContent(screen, theme);
             DrawChrome(screen, theme);
@@ -67,12 +74,20 @@ internal sealed class PhoneShell : IDisposable
         if (boot.IsActive)
         {
             BootScreen.Draw(screen, theme, boot);
+            return;
         }
-        else
+
+        if (!lockScreen.IsActive)
         {
             banner.Draw(screen, theme);
-            nowPlaying.Draw(screen, theme, navigation);
+            if (!controlCenter.IsActive)
+            {
+                nowPlaying.Draw(screen, theme, navigation);
+            }
         }
+
+        controlCenter.Draw(screen, theme, delta, !lockScreen.IsActive && !navigation.IsTransitioning);
+        lockScreen.Draw(screen, theme, delta, navigation);
     }
 
     private bool TransparencyActive()
@@ -115,16 +130,20 @@ internal sealed class PhoneShell : IDisposable
         }
     }
 
-    private static void DrawLockButton(Rect screen, PhoneTheme theme)
+    private void DrawLockButton(Rect screen, PhoneTheme theme)
     {
+        if (lockScreen.IsActive)
+        {
+            return;
+        }
+
         var scale = ImGuiHelpers.GlobalScale;
         var radius = 13f * scale;
         var center = new Vector2(screen.Max.X - 30f * scale, screen.Max.Y - 28f * scale);
 
-        if (LockButton.Draw(center, radius, Plugin.Cfg.LockPosition, theme))
+        if (LockButton.Draw(center, radius, false, theme))
         {
-            Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
-            Plugin.Cfg.Save();
+            lockScreen.Lock();
         }
     }
 
@@ -158,7 +177,7 @@ internal sealed class PhoneShell : IDisposable
     private void PaintHome(Rect screen, PhoneTheme theme)
     {
         DeviceChrome.DrawWallpaper(screen, theme);
-        HomeScreen.Draw(ContentRect(screen, theme), theme, apps, navigation);
+        home.Draw(ContentRect(screen, theme), theme, navigation);
     }
 
     private void PaintApp(Rect screen, PhoneTheme theme, IPhoneApp app)

@@ -289,6 +289,29 @@ internal static class L
         public static readonly LocString Empty = new("notifications.empty", "No notifications");
     }
 
+    internal static class ControlCenter
+    {
+        public static readonly LocString Title = new("controlCenter.title", "Control Center");
+
+        public static readonly LocString LockPosition = new("controlCenter.lockPosition", "Lock Position");
+
+        public static readonly LocString Volume = new("controlCenter.volume", "Volume");
+
+        public static readonly LocString Brightness = new("controlCenter.brightness", "Text Size");
+    }
+
+    internal static class LockScreen
+    {
+        public static readonly LocString SwipeToOpen = new("lockScreen.swipeToOpen", "swipe up to open");
+    }
+
+    internal static class Home
+    {
+        public static readonly LocString Done = new("home.done", "Done");
+
+        public static readonly LocString NewFolder = new("home.newFolder", "Folder");
+    }
+
     internal static class Photos
     {
         public static readonly LocString NoPhotos = new("photos.noPhotos", "No Photos");
