@@ -19,7 +19,7 @@ internal static class CharacterHeader
 
         var radius = 34f * scale;
         var avatarCenter = new Vector2(centerX, origin.Y + radius + 6f * scale);
-        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(character.Name), 2.0f, lodestone.Avatar(character.Name, character.WorldName), 48);
+        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initials.Of(character.Name), 2.0f, lodestone.Avatar(character.Name, character.WorldName), 48);
 
         var nameY = avatarCenter.Y + radius + 18f * scale;
         Typography.DrawCentered(new Vector2(centerX, nameY), character.Name, theme.TextStrong, 1.5f);
@@ -38,6 +38,4 @@ internal static class CharacterHeader
         var job = character.Job.Length > 0 ? $"Lv {character.Level} · {character.Job}" : $"Lv {character.Level}";
         return character.AverageItemLevel > 0 ? $"{job} · i{character.AverageItemLevel}" : job;
     }
-
-    private static string Initial(string name) => name.Length > 0 ? name.Substring(0, 1).ToUpperInvariant() : "?";
 }

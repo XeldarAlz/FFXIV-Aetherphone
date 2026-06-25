@@ -245,9 +245,9 @@ internal sealed class ContactsApp : IPhoneApp
         var avatarRadius = 34f * scale;
         var avatarCenter = new Vector2(centerX, origin.Y + 10f * scale + avatarRadius);
         var baseColor = friend.Online ? theme.Accent : theme.SurfaceMuted;
-        AvatarView.Draw(ImGui.GetWindowDrawList(), avatarCenter, avatarRadius, baseColor, Initial(friend.Name), 1.8f, lodestone.Avatar(friend.Name, friend.WorldName), 48);
+        AvatarView.Draw(ImGui.GetWindowDrawList(), avatarCenter, avatarRadius, baseColor, Initials.Of(friend.Name), 1.8f, lodestone.Avatar(friend.Name, friend.WorldName), 48);
 
-        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 18f * scale), friend.Name, theme.TextStrong, 1.3f);
+        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 18f * scale), friend.Name, theme.TextStrong, 1.3f, FontWeight.Bold);
 
         var status = friend.Online
             ? (friend.JobName.Length > 0 ? $"{friend.WorldName} · {friend.JobName} · Online" : $"{friend.WorldName} · Online")
@@ -292,8 +292,6 @@ internal sealed class ContactsApp : IPhoneApp
     }
 
     private static string SendTarget(FriendEntry friend) => friend.WorldName.Length > 0 ? $"{friend.Name}@{friend.WorldName}" : friend.Name;
-
-    private static string Initial(string name) => name.Length > 0 ? name.Substring(0, 1).ToUpperInvariant() : "?";
 
     public void Dispose()
     {

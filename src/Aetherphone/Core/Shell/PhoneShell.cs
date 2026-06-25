@@ -130,23 +130,13 @@ internal sealed class PhoneShell : IDisposable
 
     private void DrawTransition(Rect screen, PhoneTheme theme)
     {
-        var progress = navigation.MotionProgress;
+        var cover = navigation.MotionProgress;
         var height = screen.Height;
         var over = navigation.MotionOver;
         var under = navigation.MotionUnder;
 
-        Vector2 overOffset;
-        float underDim;
-        if (navigation.Motion == ShellMotion.Present)
-        {
-            overOffset = new Vector2(0f, (1f - progress) * height);
-            underDim = progress * TransitionTiming.ShellDimMax;
-        }
-        else
-        {
-            overOffset = new Vector2(0f, progress * height);
-            underDim = (1f - progress) * TransitionTiming.ShellDimMax;
-        }
+        var overOffset = new Vector2(0f, (1f - cover) * height);
+        var underDim = cover * TransitionTiming.ShellDimMax;
 
         LayerPainter underPaint = under is null ? target => PaintHome(target, theme) : target => PaintApp(target, theme, under);
         LayerPainter overPaint = target => PaintApp(target, theme, over);

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -15,7 +16,7 @@ internal static class AppHeader
         var content = context.Content;
         var rowCenterY = content.Min.Y + Height * scale * 0.5f;
 
-        Typography.DrawCentered(new Vector2(content.Center.X, rowCenterY), title, context.Theme.TextStrong, 1.15f);
+        Typography.DrawCentered(new Vector2(content.Center.X, rowCenterY), title, context.Theme.TextStrong, 1.15f, FontWeight.SemiBold);
 
         var hitMin = new Vector2(content.Min.X, content.Min.Y);
         var hitMax = new Vector2(content.Min.X + 44f * scale, content.Min.Y + Height * scale);

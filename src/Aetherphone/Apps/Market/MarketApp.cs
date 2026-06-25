@@ -429,8 +429,8 @@ internal sealed class MarketApp : IPhoneApp
 
         var min = snapshot.Min(hq);
         var priceText = min > 0 ? MarketFormat.Gil(min) : "—";
-        var priceSize = Typography.Measure(priceText, 1.5f);
-        Typography.Draw(new Vector2(origin.X + width - priceSize.X, iconMin.Y + 4f * scale), priceText, frameTheme.Accent, 1.5f);
+        var priceSize = Typography.Measure(priceText, 1.5f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(origin.X + width - priceSize.X, iconMin.Y + 4f * scale), priceText, frameTheme.Accent, 1.5f, FontWeight.SemiBold);
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, iconSize + 12f * scale));

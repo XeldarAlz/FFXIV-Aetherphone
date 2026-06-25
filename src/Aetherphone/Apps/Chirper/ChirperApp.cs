@@ -189,7 +189,7 @@ internal sealed class ChirperApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var avatarCenter = new Vector2(origin.X + radius, origin.Y + radius);
-        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(post.AuthorName), 0.95f, lodestone.Avatar(post.AuthorName, post.AuthorWorld), 32);
+        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initials.Of(post.AuthorName), 0.95f, lodestone.Avatar(post.AuthorName, post.AuthorWorld), 32);
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(radius * 2f, radius * 2f));
@@ -240,7 +240,7 @@ internal sealed class ChirperApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
         var radius = 18f * scale;
         var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
-        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(user.Name), 0.95f, lodestone.Avatar(user.Name, user.World), 32);
+        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initials.Of(user.Name), 0.95f, lodestone.Avatar(user.Name, user.World), 32);
 
         var textLeft = origin.X + radius * 2f + 10f * scale;
         Typography.Draw(new Vector2(textLeft, origin.Y + 9f * scale), user.DisplayName, theme.TextStrong);
@@ -473,8 +473,6 @@ internal sealed class ChirperApp : IPhoneApp
 
         return moment.ToString("MMM d");
     }
-
-    private static string Initial(string name) => name.Length > 0 ? name.Substring(0, 1).ToUpperInvariant() : "?";
 
     public void Dispose()
     {

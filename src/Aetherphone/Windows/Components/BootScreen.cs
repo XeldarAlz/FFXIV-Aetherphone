@@ -81,6 +81,24 @@ internal static class BootScreen
         dl.AddCircleFilled(center, baseRadius * 0.32f, ImGui.GetColorU32(Palette.WithAlpha(core, alpha)), 48);
     }
 
+    private static string greetingSource = string.Empty;
+    private static string[] greetingGlyphs = Array.Empty<string>();
+
+    private static string[] GreetingGlyphs(string text)
+    {
+        if (!string.Equals(greetingSource, text, StringComparison.Ordinal))
+        {
+            greetingSource = text;
+            greetingGlyphs = new string[text.Length];
+            for (var index = 0; index < text.Length; index++)
+            {
+                greetingGlyphs[index] = text[index].ToString();
+            }
+        }
+
+        return greetingGlyphs;
+    }
+
     private static void DrawGreeting(Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
     {
         var text = boot.Greeting!;
@@ -90,14 +108,16 @@ internal static class BootScreen
             return;
         }
 
-        using (Plugin.Fonts.Push(GreetingFontScale))
+        var glyphs = GreetingGlyphs(text);
+
+        using (Plugin.Fonts.Push(GreetingFontScale, FontWeight.Bold))
         {
             Span<float> widths = stackalloc float[length];
             var totalWidth = 0f;
             var height = 0f;
             for (var index = 0; index < length; index++)
             {
-                var glyphSize = ImGui.CalcTextSize(text[index].ToString());
+                var glyphSize = ImGui.CalcTextSize(glyphs[index]);
                 widths[index] = glyphSize.X;
                 totalWidth += glyphSize.X;
                 if (glyphSize.Y > height)
@@ -119,7 +139,7 @@ internal static class BootScreen
                 if (letterAlpha > 0.01f)
                 {
                     var rise = (1f - letterProgress) * LetterRisePixels * scale;
-                    DrawGlyph(text[index].ToString(), new Vector2(penX, baseY + rise), theme.TextStrong, letterAlpha, scale);
+                    DrawGlyph(glyphs[index], new Vector2(penX, baseY + rise), theme.TextStrong, letterAlpha, scale);
                 }
 
                 penX += widths[index];

@@ -18,9 +18,9 @@ internal sealed class NotificationBanner : IDisposable
         Exit,
     }
 
-    private const float EnterSeconds = 0.46f;
+    private const float EnterSmoothTime = 0.30f;
     private const float HoldSeconds = 4.2f;
-    private const float ExitSeconds = 0.34f;
+    private const float ExitSmoothTime = 0.20f;
 
     private const float SideMargin = 8f;
     private const float BannerHeight = 64f;
@@ -35,7 +35,7 @@ internal sealed class NotificationBanner : IDisposable
 
     private readonly NotificationService notifications;
     private readonly Queue<PhoneNotification> pending = new();
-    private readonly TransitionPlayer player = new();
+    private Spring slide;
 
     private PhoneNotification? active;
     private Stage stage = Stage.Idle;
@@ -65,12 +65,14 @@ internal sealed class NotificationBanner : IDisposable
             return;
         }
 
-        player.Advance(deltaSeconds);
-        if (player.IsPlaying)
+        var smoothTime = stage == Stage.Enter ? EnterSmoothTime : ExitSmoothTime;
+        slide.Step(1f, smoothTime, deltaSeconds);
+        if (!slide.IsResting(1f, TransitionTiming.RestPositionEpsilon, TransitionTiming.RestVelocityEpsilon))
         {
             return;
         }
 
+        slide.SnapTo(1f);
         if (stage == Stage.Enter)
         {
             stage = Stage.Hold;
@@ -103,13 +105,13 @@ internal sealed class NotificationBanner : IDisposable
         float opacity;
         if (stage == Stage.Enter)
         {
-            top = Lerp(hiddenTop, restTop, player.Progress);
-            opacity = Math.Clamp(player.RawProgress * 1.8f, 0f, 1f);
+            top = Lerp(hiddenTop, restTop, slide.Value);
+            opacity = Math.Clamp(slide.Value * 1.8f, 0f, 1f);
         }
         else if (stage == Stage.Exit)
         {
-            top = Lerp(restTop, hiddenTop, player.Progress);
-            opacity = 1f - player.RawProgress;
+            top = Lerp(restTop, hiddenTop, slide.Value);
+            opacity = 1f - slide.Value;
         }
         else
         {
@@ -130,20 +132,17 @@ internal sealed class NotificationBanner : IDisposable
     {
         var rounding = CornerRadius * scale;
 
-        var shadowSpread = 8f * scale;
-        var shadowMin = new Vector2(min.X - shadowSpread, min.Y - shadowSpread * 0.4f);
-        var shadowMax = new Vector2(max.X + shadowSpread, max.Y + shadowSpread);
-        dl.AddRectFilled(shadowMin, shadowMax, Color(new Vector4(0f, 0f, 0f, 0.30f), opacity), rounding + shadowSpread);
+        Elevation.Floating(dl, min, max, rounding, scale, opacity);
 
         var cardColor = Palette.Mix(theme.GroupedCard, theme.TextStrong, 0.06f);
-        dl.AddRectFilled(min, max, Color(Palette.WithAlpha(cardColor, 0.99f), opacity), rounding);
-        dl.AddRect(min, max, Color(Palette.WithAlpha(theme.TextStrong, 0.10f), opacity), rounding, ImDrawFlags.RoundCornersAll, scale);
+        Squircle.Fill(dl, min, max, rounding, Color(Palette.WithAlpha(cardColor, 0.99f), opacity));
+        Squircle.Stroke(dl, min, max, rounding, Color(Palette.WithAlpha(theme.TextStrong, 0.10f), opacity), scale);
 
         var iconExtent = IconSize * scale * 0.5f;
         var iconCenter = new Vector2(min.X + Padding * scale + iconExtent, (min.Y + max.Y) * 0.5f);
         var iconMin = new Vector2(iconCenter.X - iconExtent, iconCenter.Y - iconExtent);
         var iconMax = new Vector2(iconCenter.X + iconExtent, iconCenter.Y + iconExtent);
-        dl.AddRectFilled(iconMin, iconMax, Color(notification.Accent, opacity), iconExtent * 0.52f);
+        Squircle.Fill(dl, iconMin, iconMax, iconExtent * 0.52f, Color(notification.Accent, opacity));
 
         var ink = Palette.WithAlpha(theme.TextStrong, opacity);
         if (!AppIconArt.TryDraw(notification.AppId, iconCenter, IconSize * scale, ink, Palette.WithAlpha(notification.Accent, opacity)))
@@ -161,7 +160,7 @@ internal sealed class NotificationBanner : IDisposable
         Typography.Draw(new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time, Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
 
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 6f * scale, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f);
+        Typography.Draw(new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f, FontWeight.SemiBold);
         dl.PopClipRect();
 
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
@@ -188,13 +187,13 @@ internal sealed class NotificationBanner : IDisposable
         active = pending.Dequeue();
         stage = Stage.Enter;
         holdElapsed = 0f;
-        player.Start(EnterSeconds, Easing.EaseOutQuint);
+        slide.SnapTo(0f);
     }
 
     private void BeginExit()
     {
         stage = Stage.Exit;
-        player.Start(ExitSeconds, Easing.EaseInCubic);
+        slide.SnapTo(0f);
     }
 
     private static uint Color(Vector4 color, float opacity) => ImGui.GetColorU32(color with { W = color.W * opacity });

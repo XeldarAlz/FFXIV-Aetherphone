@@ -84,12 +84,13 @@ internal sealed class MinesweeperApp : IPhoneApp
             var gridMinY = statsY + 30f * scale;
             var gridArea = new Rect(new Vector2(surface.Min.X, gridMinY), surface.Max);
             var grid = GameCommon.LayoutGameGrid(gridArea, Columns, Rows, 0.08f);
+            var delta = ImGui.GetIO().DeltaTime;
 
             for (var row = 0; row < Rows; row++)
             {
                 for (var column = 0; column < Columns; column++)
                 {
-                    DrawCell(grid, column, row, scale);
+                    DrawCell(grid, column, row, scale, delta);
                 }
             }
 
@@ -358,7 +359,7 @@ internal sealed class MinesweeperApp : IPhoneApp
         GameCommon.DrawScorePill(new Vector2(surface.Center.X + 52f * scale, statsY), "Time", elapsed, frameTheme);
     }
 
-    private void DrawCell(Rect grid, int column, int row, float scale)
+    private void DrawCell(Rect grid, int column, int row, float scale, float delta)
     {
         var index = row * Columns + column;
         var (cellMin, cellMax) = GameCommon.CellBounds(grid, column, row, Columns, Rows, 0.08f);
@@ -387,7 +388,7 @@ internal sealed class MinesweeperApp : IPhoneApp
                 if (adjacent > 0)
                 {
                     var color = NumberColors[adjacent - 1];
-                    Typography.DrawCentered(center, adjacent.ToString(), color, 1.15f);
+                    Typography.DrawCentered(center, GameCommon.Label(adjacent), color, 1.15f);
                 }
             }
         }
@@ -403,7 +404,7 @@ internal sealed class MinesweeperApp : IPhoneApp
                 var pop = flagAnim[index];
                 if (pop > 0f)
                 {
-                    pop = MathF.Max(0f, pop - ImGui.GetIO().DeltaTime / FlagPopDuration);
+                    pop = MathF.Max(0f, pop - delta / FlagPopDuration);
                     flagAnim[index] = pop;
 
                     var popScale = 1f + pop * 0.2f;

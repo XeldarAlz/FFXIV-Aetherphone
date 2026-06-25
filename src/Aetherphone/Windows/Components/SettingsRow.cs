@@ -36,7 +36,7 @@ internal static class SettingsRow
         var tileSize = 28f * scale;
         var tileMin = new Vector2(row.Min.X, row.Center.Y - tileSize * 0.5f);
         var tileFill = hovered ? Palette.Mix(tint, theme.TextStrong, 0.14f) : tint;
-        dl.AddRectFilled(tileMin, tileMin + new Vector2(tileSize, tileSize), ImGui.GetColorU32(tileFill), tileSize * 0.28f);
+        Squircle.Fill(dl, tileMin, tileMin + new Vector2(tileSize, tileSize), tileSize * 0.28f, ImGui.GetColorU32(tileFill));
 
         var glyphHeight = Typography.Measure(glyph).Y;
         var glyphScale = glyphHeight > 0f ? tileSize * 0.5f / glyphHeight : 1f;

@@ -223,7 +223,7 @@ internal sealed class MusicApp : IPhoneApp
             var playing = IsCurrentSong(song);
             var hovered = ImGui.IsMouseHoveringRect(min, max);
             var fill = Palette.WithAlpha(playing ? Accent : theme.TextStrong, playing ? 0.14f : hovered ? 0.10f : 0.05f);
-            dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
+            Squircle.Fill(dl, min, max, rounding, ImGui.GetColorU32(fill));
 
             var artSize = cardHeight - 12f * scale;
             var artMin = new Vector2(min.X + 6f * scale, min.Y + 6f * scale);
@@ -405,7 +405,7 @@ internal sealed class MusicApp : IPhoneApp
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         if (hovered || playing)
         {
-            dl.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(playing ? Accent : theme.TextStrong, playing ? 0.10f : 0.06f)), 14f * scale);
+            Squircle.Fill(dl, min, max, 14f * scale, ImGui.GetColorU32(Palette.WithAlpha(playing ? Accent : theme.TextStrong, playing ? 0.10f : 0.06f)));
         }
 
         if (hovered)
@@ -493,7 +493,7 @@ internal sealed class MusicApp : IPhoneApp
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         if (hovered || playing)
         {
-            dl.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(playing ? Accent : theme.TextStrong, playing ? 0.10f : 0.06f)), 14f * scale);
+            Squircle.Fill(dl, min, max, 14f * scale, ImGui.GetColorU32(Palette.WithAlpha(playing ? Accent : theme.TextStrong, playing ? 0.10f : 0.06f)));
         }
 
         if (hovered)
@@ -615,7 +615,7 @@ internal sealed class MusicApp : IPhoneApp
         DrawThumb(dl, artMin, artMax, songs.CurrentThumbnail, songs.CurrentTitle, artRounding);
 
         var nameY = artMax.Y + 28f * scale;
-        Typography.DrawCentered(new Vector2(centerX, nameY), Truncate(songs.CurrentTitle, 30), theme.TextStrong, 1.4f);
+        Typography.DrawCentered(new Vector2(centerX, nameY), Truncate(songs.CurrentTitle, 30), theme.TextStrong, 1.4f, FontWeight.SemiBold);
         Typography.DrawCentered(new Vector2(centerX, nameY + 27f * scale), Truncate(SongNowPlayingSubtitle(), 34), Palette.WithAlpha(Accent, 0.95f), 0.9f);
 
         var duration = songs.Duration;
@@ -676,8 +676,8 @@ internal sealed class MusicApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
 
         var hovered = ImGui.IsMouseHoveringRect(min, max);
-        dl.AddRectFilled(min, max, ImGui.GetColorU32(theme.Surface), rounding);
-        dl.AddRect(min, max, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f)), rounding, ImDrawFlags.RoundCornersAll, 1f);
+        Squircle.Fill(dl, min, max, rounding, ImGui.GetColorU32(theme.Surface));
+        Squircle.Stroke(dl, min, max, rounding, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f)), 1f);
 
         var discRadius = 18f * scale;
         var discCenter = new Vector2(min.X + 12f * scale + discRadius, min.Y + height * 0.5f);
@@ -950,16 +950,36 @@ internal sealed class MusicApp : IPhoneApp
         };
     }
 
+    private static readonly Dictionary<(string, int), string> SongSubtitleCache = new();
+
     private static string SongRowSubtitle(Song song)
     {
+        var key = (song.Author, song.DurationSeconds);
+        if (SongSubtitleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
         var author = Truncate(song.Author, 20);
-        return string.IsNullOrEmpty(author) ? FormatTime(song.DurationSeconds) : $"{author} · {FormatTime(song.DurationSeconds)}";
+        var subtitle = string.IsNullOrEmpty(author) ? FormatTime(song.DurationSeconds) : $"{author} · {FormatTime(song.DurationSeconds)}";
+        SongSubtitleCache[key] = subtitle;
+        return subtitle;
     }
+
+    private static readonly Dictionary<(int, string), string> StationSubtitleCache = new();
 
     private static string StationSubtitle(RadioStation station)
     {
+        var key = (station.Bitrate, station.Country);
+        if (StationSubtitleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
         var bitrate = station.Bitrate > 0 ? $"{station.Bitrate}kbps" : "live";
-        return string.IsNullOrEmpty(station.Country) ? bitrate : $"{bitrate} · {station.Country}";
+        var subtitle = string.IsNullOrEmpty(station.Country) ? bitrate : $"{bitrate} · {station.Country}";
+        StationSubtitleCache[key] = subtitle;
+        return subtitle;
     }
 
     private static string RadioStateLabel(RadioPlaybackState state)
@@ -973,6 +993,8 @@ internal sealed class MusicApp : IPhoneApp
         };
     }
 
+    private static readonly Dictionary<int, string> TimeCache = new();
+
     private static string FormatTime(int totalSeconds)
     {
         if (totalSeconds < 0)
@@ -980,10 +1002,19 @@ internal sealed class MusicApp : IPhoneApp
             totalSeconds = 0;
         }
 
+        if (TimeCache.TryGetValue(totalSeconds, out var cached))
+        {
+            return cached;
+        }
+
         var minutes = totalSeconds / 60;
         var seconds = totalSeconds % 60;
-        return $"{minutes}:{seconds:D2}";
+        var formatted = $"{minutes}:{seconds:D2}";
+        TimeCache[totalSeconds] = formatted;
+        return formatted;
     }
+
+    private static readonly Dictionary<(string, int), string> TruncateCache = new();
 
     private static string Truncate(string value, int max)
     {
@@ -992,7 +1023,15 @@ internal sealed class MusicApp : IPhoneApp
             return value ?? string.Empty;
         }
 
-        return value.Substring(0, max - 1) + "…";
+        var key = (value, max);
+        if (TruncateCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var result = value.Substring(0, max - 1) + "…";
+        TruncateCache[key] = result;
+        return result;
     }
 
     public void Dispose()

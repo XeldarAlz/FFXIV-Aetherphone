@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
@@ -23,17 +24,17 @@ internal static class ConversationRow
         var dl = ImGui.GetWindowDrawList();
         if (hovered)
         {
-            dl.AddRectFilled(min, max, ImGui.GetColorU32(theme.GroupedCard), 12f * scale);
+            Squircle.Fill(dl, min, max, 12f * scale, ImGui.GetColorU32(theme.GroupedCard));
         }
 
         var avatarRadius = 20f * scale;
         var avatarCenter = new Vector2(min.X + 14f * scale + avatarRadius, min.Y + Height * scale * 0.5f);
-        AvatarView.Draw(dl, avatarCenter, avatarRadius, theme.Accent, Initial(conversation.Contact), 1.1f, lodestone.Avatar(conversation.Contact, conversation.World), 32);
+        AvatarView.Draw(dl, avatarCenter, avatarRadius, theme.Accent, Initials.Of(conversation.Contact), 1.1f, lodestone.Avatar(conversation.Contact, conversation.World), 32);
 
         var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
         var textRight = max.X - 14f * scale;
 
-        Typography.Draw(new Vector2(textLeft, min.Y + 12f * scale), conversation.Contact, theme.TextStrong);
+        Typography.Draw(new Vector2(textLeft, min.Y + 12f * scale), conversation.Contact, theme.TextStrong, 1f, FontWeight.SemiBold);
 
         var preview = conversation.Last?.Text ?? string.Empty;
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
@@ -55,6 +56,4 @@ internal static class ConversationRow
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
-
-    private static string Initial(string contact) => contact.Length > 0 ? contact.Substring(0, 1).ToUpperInvariant() : "?";
 }

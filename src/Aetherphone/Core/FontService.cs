@@ -1,22 +1,58 @@
+using System.IO;
+using System.Numerics;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Plugin;
 
 namespace Aetherphone.Core;
 
+internal enum FontWeight : byte
+{
+    Regular,
+    Medium,
+    SemiBold,
+    Bold,
+}
+
 internal sealed class FontService : IDisposable
 {
-    private static readonly float[] Multipliers = { 0.8f, 1.0f, 1.2f, 1.45f, 1.9f };
+    private static readonly string[] WeightFiles =
+    {
+        "Inter-Regular.ttf",
+        "Inter-Medium.ttf",
+        "Inter-SemiBold.ttf",
+        "Inter-Bold.ttf",
+    };
+
+    private static readonly float[] SizeMultipliers =
+    {
+        0.60f, 0.72f, 0.80f, 0.88f, 0.95f, 1.00f, 1.10f, 1.20f, 1.32f, 1.45f, 1.65f, 1.90f,
+    };
+
+    private static readonly ushort[] GlyphRanges =
+    {
+        0x0020, 0x00FF, // Basic Latin and Latin-1 Supplement
+        0x0100, 0x017F, // Latin Extended-A for European name accents
+        0x2000, 0x206F, // General Punctuation: ellipsis, em dash, curly quotes
+        0x2200, 0x22FF, // Mathematical Operators for the market alert glyphs
+        0x25A0, 0x27BF, // Geometric Shapes, Misc Symbols, Dingbats for game and gender glyphs
+        0,
+    };
+
+    private const float TrackingThreshold = 1.20f;
+    private const float TrackingRatio = -0.02f;
 
     private readonly IFontAtlas atlas;
+    private readonly string fontDirectory;
     private readonly float baseSize;
 
-    private IFontHandle[] handles;
+    private IFontHandle[,] handles;
     private float zoom;
 
     public FontService(IDalamudPluginInterface pluginInterface, float zoom)
     {
         atlas = pluginInterface.UiBuilder.FontAtlas;
+        fontDirectory = Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Fonts");
         baseSize = UiBuilder.DefaultFontSizePx;
         this.zoom = zoom;
         handles = Build(zoom);
@@ -34,34 +70,57 @@ internal sealed class FontService : IDisposable
         var previous = handles;
         zoom = value;
         handles = Build(value);
-
-        for (var index = 0; index < previous.Length; index++)
-        {
-            previous[index].Dispose();
-        }
+        DisposeHandles(previous);
     }
 
-    public IDisposable Push(float scale) => handles[Nearest(scale)].Push();
+    public IDisposable Push(float scale) => Push(scale, FontWeight.Regular);
 
-    private IFontHandle[] Build(float scale)
+    public IDisposable Push(float scale, FontWeight weight) => handles[(int)weight, NearestSize(scale)].Push();
+
+    private IFontHandle[,] Build(float scale)
     {
-        var built = new IFontHandle[Multipliers.Length];
-        for (var index = 0; index < Multipliers.Length; index++)
+        var built = new IFontHandle[WeightFiles.Length, SizeMultipliers.Length];
+        for (var weightIndex = 0; weightIndex < WeightFiles.Length; weightIndex++)
         {
-            var pixels = baseSize * Multipliers[index] * scale;
-            built[index] = atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk => tk.AddDalamudDefaultFont(pixels)));
+            var path = Path.Combine(fontDirectory, WeightFiles[weightIndex]);
+            for (var sizeIndex = 0; sizeIndex < SizeMultipliers.Length; sizeIndex++)
+            {
+                built[weightIndex, sizeIndex] = BuildHandle(path, SizeMultipliers[sizeIndex], scale);
+            }
         }
 
         return built;
     }
 
-    private static int Nearest(float scale)
+    private IFontHandle BuildHandle(string path, float multiplier, float scale)
+    {
+        var pixels = baseSize * multiplier * scale;
+        var tracking = multiplier >= TrackingThreshold ? pixels * TrackingRatio : 0f;
+        return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
+        {
+            var primary = tk.AddFontFromFile(path, new SafeFontConfig
+            {
+                SizePx = pixels,
+                GlyphRanges = GlyphRanges,
+                GlyphExtraSpacing = new Vector2(tracking, 0f),
+            });
+
+            tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular, new SafeFontConfig
+            {
+                SizePx = pixels,
+                GlyphRanges = GlyphRanges,
+                MergeFont = primary,
+            });
+        }));
+    }
+
+    private static int NearestSize(float scale)
     {
         var best = 0;
         var bestDelta = float.MaxValue;
-        for (var index = 0; index < Multipliers.Length; index++)
+        for (var index = 0; index < SizeMultipliers.Length; index++)
         {
-            var delta = MathF.Abs(Multipliers[index] - scale);
+            var delta = MathF.Abs(SizeMultipliers[index] - scale);
             if (delta < bestDelta)
             {
                 bestDelta = delta;
@@ -72,11 +131,16 @@ internal sealed class FontService : IDisposable
         return best;
     }
 
-    public void Dispose()
+    public void Dispose() => DisposeHandles(handles);
+
+    private static void DisposeHandles(IFontHandle[,] target)
     {
-        for (var index = 0; index < handles.Length; index++)
+        for (var weightIndex = 0; weightIndex < target.GetLength(0); weightIndex++)
         {
-            handles[index].Dispose();
+            for (var sizeIndex = 0; sizeIndex < target.GetLength(1); sizeIndex++)
+            {
+                target[weightIndex, sizeIndex].Dispose();
+            }
         }
     }
 }

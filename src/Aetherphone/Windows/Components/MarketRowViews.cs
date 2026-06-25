@@ -158,8 +158,16 @@ internal static class MarketRowViews
         Typography.Draw(new Vector2(row.Min.X, row.Max.Y - 9f * scale - subSize.Y), sub, theme.TextMuted, 0.82f);
     }
 
+    private static readonly Dictionary<(int, string, string), string> SubCache = new();
+
     private static string BuildSub(int quantity, string world, string detail)
     {
+        var key = (quantity, world, detail);
+        if (SubCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
         var result = $"Qty {quantity}";
         if (world.Length > 0)
         {
@@ -171,6 +179,7 @@ internal static class MarketRowViews
             result += $" · {MarketFormat.Clip(detail, 16)}";
         }
 
+        SubCache[key] = result;
         return result;
     }
 

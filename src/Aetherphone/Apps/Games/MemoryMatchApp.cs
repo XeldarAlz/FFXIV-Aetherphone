@@ -335,7 +335,7 @@ internal sealed class MemoryMatchApp : IPhoneApp
             : accent;
 
         var symbolSize = Typography.Measure(symbol, 1.6f);
-        Typography.DrawCentered(new Vector2(center.X, center.Y - symbolSize.Y * 0.1f), symbol, symbolColor, 1.6f);
+        Typography.DrawCentered(new Vector2(center.X, center.Y - symbolSize.Y * 0.1f), symbol, symbolColor, 1.6f, FontWeight.SemiBold);
     }
 
     private void OnCardClicked(int index)

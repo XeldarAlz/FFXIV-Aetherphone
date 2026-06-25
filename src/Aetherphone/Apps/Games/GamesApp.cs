@@ -130,7 +130,7 @@ internal sealed class GamesApp : IPhoneApp
             Typography.DrawCentered(artCenter, game.Glyph, frameTheme.TextStrong, glyphScale);
         }
 
-        Typography.DrawCentered(new Vector2(center.X, max.Y - 18f * scale), game.DisplayName, frameTheme.TextStrong, 1.3f);
+        Typography.DrawCentered(new Vector2(center.X, max.Y - 18f * scale), game.DisplayName, frameTheme.TextStrong, 1.3f, FontWeight.SemiBold);
 
         if (hovered)
         {

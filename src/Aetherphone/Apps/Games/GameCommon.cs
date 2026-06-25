@@ -38,6 +38,20 @@ internal static class GameCommon
         new(0.90f, 0.55f, 0.35f, 1f),
     };
 
+    private static readonly Dictionary<int, string> NumberLabels = new();
+
+    public static string Label(int value)
+    {
+        if (NumberLabels.TryGetValue(value, out var label))
+        {
+            return label;
+        }
+
+        label = value.ToString();
+        NumberLabels[value] = label;
+        return label;
+    }
+
     public static void FillRect(Vector2 min, Vector2 max, Vector4 color, float rounding)
     {
         ImGui.GetWindowDrawList().AddRectFilled(min, max, ImGui.GetColorU32(color), rounding);
@@ -123,7 +137,7 @@ internal static class GameCommon
     {
         var scale = ImGuiHelpers.GlobalScale;
         var labelSize = Typography.Measure(label, 0.75f);
-        var valueText = value.ToString();
+        var valueText = Label(value);
         var valueSize = Typography.Measure(valueText, 1.3f);
 
         var pillWidth = MathF.Max(valueSize.X, labelSize.X) + 28f * scale;
@@ -135,7 +149,7 @@ internal static class GameCommon
         FillRect(min, max, ScoreBg, 12f * scale);
         DrawRect(min, max, Styling.BorderDim, 12f * scale, 1f);
 
-        Typography.DrawCentered(new Vector2(center.X, center.Y - 6f * scale), valueText, theme.Accent, 1.3f);
+        Typography.DrawCentered(new Vector2(center.X, center.Y - 6f * scale), valueText, theme.Accent, 1.3f, FontWeight.Bold);
         Typography.DrawCentered(new Vector2(center.X, center.Y + 12f * scale), label, theme.TextMuted, 0.75f);
     }
 
@@ -146,7 +160,7 @@ internal static class GameCommon
         var scale = ImGuiHelpers.GlobalScale;
         var center = area.Center;
 
-        Typography.DrawCentered(new Vector2(center.X, center.Y - 60f * scale), "Game Over", theme.TextStrong, 1.6f);
+        Typography.DrawCentered(new Vector2(center.X, center.Y - 60f * scale), "Game Over", theme.TextStrong, 1.6f, FontWeight.Bold);
         Typography.DrawCentered(new Vector2(center.X, center.Y - 30f * scale), $"{scoreLabel}: {score}", theme.TextMuted, 1.1f);
 
         var buttonSize = new Vector2(100f * scale, 36f * scale);
@@ -160,7 +174,7 @@ internal static class GameCommon
         var scale = ImGuiHelpers.GlobalScale;
         var center = area.Center;
 
-        Typography.DrawCentered(new Vector2(center.X, center.Y - 70f * scale), "You Win!", theme.Accent, 1.6f);
+        Typography.DrawCentered(new Vector2(center.X, center.Y - 70f * scale), "You Win!", theme.Accent, 1.6f, FontWeight.Bold);
 
         var minutes = elapsedSeconds / 60;
         var seconds = elapsedSeconds % 60;

@@ -106,7 +106,7 @@ internal sealed class SkywatcherApp : IPhoneApp
 
         if (zone.Length > 0)
         {
-            Typography.DrawCentered(new Vector2(centerX, origin.Y + 16f * scale), zone, palette.Ink, 1.3f);
+            Typography.DrawCentered(new Vector2(centerX, origin.Y + 16f * scale), zone, palette.Ink, 1.3f, FontWeight.SemiBold);
         }
 
         var glyphCenter = new Vector2(centerX, origin.Y + 100f * scale);
@@ -234,8 +234,8 @@ internal sealed class SkywatcherApp : IPhoneApp
         var lightSky = palette.Ink.X < 0.5f;
         var fill = lightSky ? new Vector4(0.10f, 0.12f, 0.16f, 0.10f) : new Vector4(1f, 1f, 1f, 0.10f);
         var rounding = 18f * scale;
-        drawList.AddRectFilled(card.Min, card.Max, ImGui.GetColorU32(fill), rounding);
-        drawList.AddRect(card.Min, card.Max, ImGui.GetColorU32(palette.Ink with { W = 0.14f }), rounding, ImDrawFlags.RoundCornersAll, 1f * scale);
+        Squircle.Fill(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(fill));
+        Squircle.Stroke(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(palette.Ink with { W = 0.14f }), 1f * scale);
         drawList.AddLine(new Vector2(card.Min.X + rounding, card.Min.Y + 1f), new Vector2(card.Max.X - rounding, card.Min.Y + 1f), ImGui.GetColorU32(palette.Ink with { W = lightSky ? 0.05f : 0.18f }), 1f);
     }
 

@@ -13,7 +13,9 @@ internal sealed class NavigationStack : INavigator
 {
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly Stack<IPhoneApp> history = new();
-    private readonly TransitionPlayer player = new();
+
+    private Spring cover;
+    private float targetCover;
 
     private IPhoneApp? current;
     private IPhoneApp? motionOver;
@@ -33,7 +35,7 @@ internal sealed class NavigationStack : INavigator
 
     public ShellMotion Motion => motion;
 
-    public float MotionProgress => player.Progress;
+    public float MotionProgress => cover.Value;
 
     public IPhoneApp MotionOver => motionOver!;
 
@@ -46,15 +48,29 @@ internal sealed class NavigationStack : INavigator
             return;
         }
 
-        player.Advance(deltaSeconds);
-        if (!player.IsPlaying)
+        var smoothTime = motion == ShellMotion.Present ? TransitionTiming.PresentSmoothTime : TransitionTiming.DismissSmoothTime;
+        cover.Step(targetCover, smoothTime, deltaSeconds);
+
+        if (cover.IsResting(targetCover, TransitionTiming.RestPositionEpsilon, TransitionTiming.RestVelocityEpsilon))
         {
+            cover.SnapTo(targetCover);
             FinalizeMotion();
         }
     }
 
     public void OpenApp(IPhoneApp app)
     {
+        if (motion == ShellMotion.None && ReferenceEquals(current, app))
+        {
+            return;
+        }
+
+        if (motion == ShellMotion.Dismiss && ReferenceEquals(motionOver, app))
+        {
+            ReverseToPresent();
+            return;
+        }
+
         SettleAny();
 
         var under = current;
@@ -65,12 +81,12 @@ internal sealed class NavigationStack : INavigator
 
         current = app;
         app.OnOpened();
-        Begin(ShellMotion.Present, app, under);
+        BeginPresent(app, under);
     }
 
     public void Open(string appId)
     {
-        if (current?.Id == appId)
+        if (current?.Id == appId && motion == ShellMotion.None)
         {
             return;
         }
@@ -87,6 +103,12 @@ internal sealed class NavigationStack : INavigator
 
     public void Back()
     {
+        if (motion == ShellMotion.Present && ReferenceEquals(motionOver, current))
+        {
+            ReverseToDismiss();
+            return;
+        }
+
         if (current is null)
         {
             return;
@@ -98,38 +120,65 @@ internal sealed class NavigationStack : INavigator
         var under = history.Count > 0 ? history.Pop() : null;
         current = under;
         under?.OnOpened();
-        Begin(ShellMotion.Dismiss, leaving, under);
+        BeginDismiss(leaving, under);
     }
 
     public void GoHome()
     {
+        SettleAny();
+
         if (current is null)
         {
             return;
         }
 
-        SettleAny();
-
         var leaving = current;
         history.Clear();
         current = null;
-        Begin(ShellMotion.Dismiss, leaving, null);
+        BeginDismiss(leaving, null);
     }
 
-    private void Begin(ShellMotion shellMotion, IPhoneApp over, IPhoneApp? under)
+    private void BeginPresent(IPhoneApp over, IPhoneApp? under)
     {
-        motion = shellMotion;
+        motion = ShellMotion.Present;
         motionOver = over;
         motionUnder = under;
+        cover.SnapTo(0f);
+        targetCover = 1f;
+    }
 
-        if (shellMotion == ShellMotion.Present)
+    private void BeginDismiss(IPhoneApp over, IPhoneApp? under)
+    {
+        motion = ShellMotion.Dismiss;
+        motionOver = over;
+        motionUnder = under;
+        cover.SnapTo(1f);
+        targetCover = 0f;
+    }
+
+    private void ReverseToPresent()
+    {
+        if (motionUnder is not null)
         {
-            player.Start(TransitionTiming.PresentSeconds, TransitionTiming.PresentCurve);
+            history.Push(motionUnder);
         }
-        else
+
+        current = motionOver;
+        motion = ShellMotion.Present;
+        targetCover = 1f;
+    }
+
+    private void ReverseToDismiss()
+    {
+        var under = motionUnder;
+        if (under is not null && history.Count > 0 && ReferenceEquals(history.Peek(), under))
         {
-            player.Start(TransitionTiming.DismissSeconds, TransitionTiming.DismissCurve);
+            history.Pop();
         }
+
+        current = under;
+        motion = ShellMotion.Dismiss;
+        targetCover = 0f;
     }
 
     private void SettleAny()
@@ -139,7 +188,7 @@ internal sealed class NavigationStack : INavigator
             return;
         }
 
-        player.Finish();
+        cover.SnapTo(targetCover);
         FinalizeMotion();
     }
 

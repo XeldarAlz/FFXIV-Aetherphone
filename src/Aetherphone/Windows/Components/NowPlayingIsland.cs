@@ -71,9 +71,8 @@ internal sealed class NowPlayingIsland
         var compact = CompactBounds(rest, scale);
         var expanded = ExpandedBounds(screen, rest, scale);
 
-        var hovered = ImGui.IsMouseHoveringRect(
-            LerpRect(compact, expanded, Ease(expand)).Min,
-            LerpRect(compact, expanded, Ease(expand)).Max);
+        var hoverBounds = LerpRect(compact, expanded, Ease(expand));
+        var hovered = ImGui.IsMouseHoveringRect(hoverBounds.Min, hoverBounds.Max);
 
         var target = hovered ? 1f : 0f;
         expand = Math.Clamp(expand + (target - expand) * MathF.Min(1f, delta * 16f), 0f, 1f);
@@ -86,6 +85,9 @@ internal sealed class NowPlayingIsland
         DrawPulse(dl, compact, scale, collapsedAlpha);
 
         var rounding = float.Lerp(compact.Height * 0.5f, 30f * scale, eased);
+
+        Elevation.Draw(dl, bounds.Min, bounds.Max, rounding, scale, 5f + 5f * eased, 3f, 0.30f + 0.16f * eased);
+
         dl.AddRectFilled(bounds.Min, bounds.Max, ImGui.GetColorU32(theme.BezelOuter), rounding);
         dl.AddRect(bounds.Min, bounds.Max, ImGui.GetColorU32(Palette.WithAlpha(Accent, 0.14f + 0.46f * eased)), rounding, ImDrawFlags.RoundCornersAll, 1.5f * scale);
 
@@ -149,7 +151,7 @@ internal sealed class NowPlayingIsland
         ArtGradient.DrawDisc(dl, discCenter, discRadius, ArtGradient.FromName(playback.Title), alpha);
 
         var textLeft = discCenter.X + discRadius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, top + 18f * scale), Truncate(playback.Title, 16), Palette.WithAlpha(theme.TextStrong, alpha), 1.0f);
+        Typography.Draw(new Vector2(textLeft, top + 18f * scale), Truncate(playback.Title, 16), Palette.WithAlpha(theme.TextStrong, alpha), 1.0f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(textLeft, top + 40f * scale), Truncate(playback.Subtitle, 18), Palette.WithAlpha(Accent, 0.9f * alpha), 0.8f);
 
         var active = alpha > ControlThreshold;
