@@ -1,3 +1,4 @@
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Songs;
@@ -54,6 +55,8 @@ internal sealed class Configuration : IPluginConfiguration
     public List<MarketAlert> MarketAlerts { get; set; } = new();
 
     public List<SongRecord> SongRecents { get; set; } = new();
+
+    public List<GameStatRecord> GameStats { get; set; } = new();
 
     public HomeLayout? Home { get; set; }
 

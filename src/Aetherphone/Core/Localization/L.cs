@@ -444,6 +444,18 @@ internal static class L
 
         public static readonly LocString PlayAgain = new("games.playAgain", "Play Again");
 
+        public static readonly LocString Best = new("games.best", "Best");
+
+        public static readonly LocString NewBest = new("games.newBest", "New Best!");
+
+        public static readonly LocString Streak = new("games.streak", "Streak");
+
+        public static readonly LocString Easy = new("games.easy", "Easy");
+
+        public static readonly LocString Medium = new("games.medium", "Medium");
+
+        public static readonly LocString Hard = new("games.hard", "Hard");
+
         public static readonly LocPlural AttemptsCount = new("games.attemptsCount", "{0} attempt", "{0} attempts");
     }
 

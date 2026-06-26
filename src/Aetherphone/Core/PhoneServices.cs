@@ -1,6 +1,7 @@
 using System.IO;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Messaging;
@@ -67,7 +68,9 @@ internal sealed class PhoneServices : IDisposable
 
     public PlaybackHub Playback { get; }
 
-    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone, MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, HttpService http, MediaCache media, LodestoneService lodestone, AethernetSession aethernetSession, AethernetClient aethernetClient, MarketItemIndex marketIndex, MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer, SongHistory songHistory, PlaybackHub playback)
+    public GameStatsStore GameStats { get; }
+
+    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone, MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, HttpService http, MediaCache media, LodestoneService lodestone, AethernetSession aethernetSession, AethernetClient aethernetClient, MarketItemIndex marketIndex, MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer, SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats)
     {
         Configuration = configuration;
         Themes = themes;
@@ -94,6 +97,7 @@ internal sealed class PhoneServices : IDisposable
         SongPlayer = songPlayer;
         SongHistory = songHistory;
         Playback = playback;
+        GameStats = gameStats;
     }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager, IObjectTable objectTable, IClientState clientState, ITextureProvider textures, DirectoryInfo configDirectory)
@@ -129,8 +133,9 @@ internal sealed class PhoneServices : IDisposable
         var songPlayer = new SongPlayer(youtube, audioCache);
         var songHistory = new SongHistory(configuration);
         var playback = new PlaybackHub(radioPlayer, songPlayer);
+        var gameStats = new GameStatsStore(configuration);
 
-        return new PhoneServices(configuration, themes, gameData, textures, weather, notifications, ringtone, messages, chatBridge, messageLauncher, http, media, lodestone, aethernetSession, aethernetClient, marketIndex, market, marketLauncher, marketAlerts, radio, radioPlayer, songSearch, songPlayer, songHistory, playback);
+        return new PhoneServices(configuration, themes, gameData, textures, weather, notifications, ringtone, messages, chatBridge, messageLauncher, http, media, lodestone, aethernetSession, aethernetClient, marketIndex, market, marketLauncher, marketAlerts, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats);
     }
 
     public void Dispose()

@@ -1,9 +1,15 @@
 using System.Numerics;
+using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.GemSwap;
+using Aetherphone.Apps.Games.Pairs;
+using Aetherphone.Apps.Games.Sweeper;
+using Aetherphone.Apps.Games.Twenty48;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -14,28 +20,42 @@ internal sealed class GamesApp : IPhoneApp
 {
     private const int Columns = 2;
 
+    private const float HeaderHeight = 42f;
+
+    private readonly GameStatsStore stats;
+
+    private readonly IMiniGame[] games;
+
+    private readonly Spring[] cardScale;
+
+    private IMiniGame? currentGame;
+
     public string Id => "games";
+
     public string DisplayName => Loc.T(L.Apps.Games);
+
     public string Glyph => ">";
 
     public Vector4 Accent => new(0.32f, 0.78f, 0.50f, 1f);
+
     public int BadgeCount => 0;
 
-    private readonly IPhoneApp[] games;
-    private IPhoneApp? currentGame;
-    private readonly GameBackNavigator backNav;
-    private PhoneTheme frameTheme = PhoneTheme.Default;
-
-    public GamesApp()
+    public GamesApp(GameStatsStore stats)
     {
-        games = new IPhoneApp[]
+        this.stats = stats;
+        games = new IMiniGame[]
         {
-            new MinesweeperApp(),
-            new MemoryMatchApp(),
-            new Match3App(),
+            new SweeperApp(),
+            new PairsApp(),
+            new GemSwapApp(),
             new Twenty48App(),
         };
-        backNav = new GameBackNavigator(this);
+
+        cardScale = new Spring[games.Length];
+        for (var index = 0; index < cardScale.Length; index++)
+        {
+            cardScale[index] = new Spring(1f);
+        }
     }
 
     public void OnOpened()
@@ -44,66 +64,73 @@ internal sealed class GamesApp : IPhoneApp
 
     public void OnClosed()
     {
-        if (currentGame is not null)
+        CloseCurrentGame();
+    }
+
+    public void Dispose()
+    {
+        for (var index = 0; index < games.Length; index++)
         {
-            currentGame.OnClosed();
-            currentGame = null;
+            games[index].Dispose();
         }
     }
 
     public void Draw(in PhoneContext context)
     {
-        frameTheme = context.Theme;
-
         if (currentGame is not null)
         {
-            DrawGame(context);
+            DrawActiveGame(context);
         }
         else
         {
-            DrawGameList(context);
+            DrawLauncher(context);
         }
     }
 
-    public void Dispose()
+    private void DrawActiveGame(in PhoneContext context)
     {
-        if (currentGame is not null)
-        {
-            currentGame.OnClosed();
-            currentGame = null;
-        }
-    }
+        var game = currentGame!;
+        AppHeader.Draw(context, game.Title, CloseCurrentGame);
 
-    private void DrawGameList(in PhoneContext context)
-    {
-        AppHeader.Draw(context, DisplayName);
-
-        var body = GameCommon.LayoutBelowHeader(context.Content);
+        var scale = ImGuiHelpers.GlobalScale;
+        var content = context.Content;
+        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
 
         using (AppSurface.Begin(body))
         {
-            var contentMax = new Vector2(body.Min.X, body.Min.Y) + ImGui.GetContentRegionAvail();
-            var surface = new Rect(new Vector2(body.Min.X, body.Min.Y), contentMax);
-            var scale = ImGuiHelpers.GlobalScale;
+            var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+            game.Draw(new GameContext(body, context.Theme, stats, deltaSeconds));
+        }
+    }
 
-            var pad = 16f * scale;
-            var availableWidth = surface.Width - pad * 2f;
-            var cardSpacing = 12f * scale;
-            var cardWidth = (availableWidth - cardSpacing) / Columns;
-            var cardHeight = cardWidth * 1.15f;
+    private void DrawLauncher(in PhoneContext context)
+    {
+        AppHeader.Draw(context, DisplayName);
 
-            var startX = surface.Min.X + pad;
-            var startY = surface.Min.Y + 8f * scale;
+        var scale = ImGuiHelpers.GlobalScale;
+        var content = context.Content;
+        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
+
+        using (AppSurface.Begin(body))
+        {
+            var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+            var padding = 18f * scale;
+            var spacing = 14f * scale;
+            var availableWidth = body.Width - padding * 2f;
+            var cardWidth = (availableWidth - spacing * (Columns - 1)) / Columns;
+            var cardHeight = cardWidth * 1.12f;
+
+            var startX = body.Min.X + padding;
+            var startY = body.Min.Y + 12f * scale;
 
             for (var index = 0; index < games.Length; index++)
             {
                 var column = index % Columns;
                 var row = index / Columns;
-                var cardCenter = new Vector2(
-                    startX + cardWidth * 0.5f + column * (cardWidth + cardSpacing),
-                    startY + cardHeight * 0.5f + row * (cardHeight + cardSpacing));
+                var cardMin = new Vector2(startX + column * (cardWidth + spacing), startY + row * (cardHeight + spacing));
+                var cardRect = new Rect(cardMin, cardMin + new Vector2(cardWidth, cardHeight));
 
-                if (DrawGameCard(cardCenter, cardWidth, cardHeight, games[index], scale))
+                if (DrawCard(cardRect, games[index], index, deltaSeconds, context.Theme, scale))
                 {
                     OpenGame(games[index]);
                 }
@@ -111,27 +138,48 @@ internal sealed class GamesApp : IPhoneApp
         }
     }
 
-    private bool DrawGameCard(Vector2 center, float width, float height, IPhoneApp game, float scale)
+    private bool DrawCard(Rect rect, IMiniGame game, int index, float deltaSeconds, PhoneTheme theme, float scale)
     {
-        var half = new Vector2(width * 0.5f, height * 0.5f);
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
+
+        var target = pressed ? 0.96f : hovered ? 1.04f : 1f;
+        var grow = cardScale[index].Step(target, 0.09f, deltaSeconds);
+
+        var center = rect.Center;
+        var half = rect.Size * 0.5f * grow;
         var min = center - half;
         var max = center + half;
-        var rounding = 16f * scale;
+        var rounding = 22f * scale;
 
-        var hovered = GameCommon.HitTest(min, max);
-        var fill = hovered ? Palette.Mix(game.Accent, frameTheme.TextStrong, 0.14f) : game.Accent;
+        Elevation.Card(drawList, min, max, rounding, scale, hovered ? 1f : 0.8f);
 
-        GameCommon.FillRect(min, max, fill, rounding);
+        var accent = game.Accent;
+        var top = GamePalette.Lighten(accent, 0.06f);
+        var bottom = GamePalette.Darken(accent, 0.28f);
+        drawList.AddRectFilledMultiColor(min, max, ImGui.GetColorU32(top), ImGui.GetColorU32(top), ImGui.GetColorU32(bottom), ImGui.GetColorU32(bottom));
+        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(GamePalette.Lighten(accent, 0.3f) with { W = 0.5f }), 1f * scale);
 
-        var artCenter = new Vector2(center.X, center.Y - 6f * scale);
-        if (!AppIconArt.TryDraw(game.Id, artCenter, height * 0.7f, frameTheme.TextStrong, fill))
+        if (hovered)
         {
-            var glyphSize = Typography.Measure(game.Glyph, 2f);
-            var glyphScale = glyphSize.Y > 0f ? height * 0.4f / glyphSize.Y : 1f;
-            Typography.DrawCentered(artCenter, game.Glyph, frameTheme.TextStrong, glyphScale);
+            ProgressRing.Glow(center, half.X * 0.7f, GamePalette.Lighten(accent, 0.4f), 0.5f);
         }
 
-        Typography.DrawCentered(new Vector2(center.X, max.Y - 18f * scale), game.DisplayName, frameTheme.TextStrong, 1.3f, FontWeight.SemiBold);
+        var iconCenter = new Vector2(center.X, min.Y + half.Y * 0.72f);
+        var ink = GamePalette.InkOn(accent);
+        if (!AppIconArt.TryDraw(game.Id, iconCenter, rect.Height * 0.46f * grow, ink, accent))
+        {
+            Typography.DrawCentered(iconCenter, game.Title, ink, TextStyles.Title2);
+        }
+
+        Typography.DrawCentered(new Vector2(center.X, max.Y - 34f * scale), game.Title, ink, TextStyles.Headline);
+
+        var caption = StatCaption(game.Id);
+        if (!string.IsNullOrEmpty(caption))
+        {
+            Typography.DrawCentered(new Vector2(center.X, max.Y - 16f * scale), caption, ink with { W = 0.75f }, TextStyles.Caption2);
+        }
 
         if (hovered)
         {
@@ -141,55 +189,52 @@ internal sealed class GamesApp : IPhoneApp
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private void DrawGame(in PhoneContext context)
+    private string StatCaption(string gameId)
     {
-        var game = currentGame!;
-        var gameContext = new PhoneContext(context.Content, frameTheme, backNav);
-        game.Draw(gameContext);
+        switch (gameId)
+        {
+            case "2048":
+            case "match3":
+            {
+                var best = stats.Get(gameId).BestScore;
+                return best > 0 ? $"{Loc.T(L.Games.Best)} {GameNumber.Label(best)}" : string.Empty;
+            }
+
+            case "memory":
+                return FormatBestTime(stats.Get("memory").BestTimeSeconds);
+
+            case "minesweeper":
+                return FormatBestTime(stats.Get("minesweeper.easy").BestTimeSeconds);
+
+            default:
+                return string.Empty;
+        }
     }
 
-    private void OpenGame(IPhoneApp game)
+    private static string FormatBestTime(int seconds)
+    {
+        if (seconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        return $"{Loc.T(L.Games.Best)} {seconds / 60}:{seconds % 60:D2}";
+    }
+
+    private void OpenGame(IMiniGame game)
     {
         currentGame = game;
-        game.OnOpened();
+        game.Open();
     }
 
-    internal void CloseCurrentGame()
+    private void CloseCurrentGame()
     {
-        if (currentGame is not null)
+        if (currentGame is null)
         {
-            currentGame.OnClosed();
-            currentGame = null;
-        }
-    }
-
-    private sealed class GameBackNavigator : INavigator
-    {
-        private readonly GamesApp owner;
-
-        public bool AtHome => true;
-
-        public GameBackNavigator(GamesApp owner)
-        {
-            this.owner = owner;
+            return;
         }
 
-        public void OpenApp(IPhoneApp app)
-        {
-        }
-
-        public void Open(string appId)
-        {
-        }
-
-        public void Back()
-        {
-            owner.CloseCurrentGame();
-        }
-
-        public void GoHome()
-        {
-            owner.CloseCurrentGame();
-        }
+        currentGame.Close();
+        currentGame = null;
     }
 }
