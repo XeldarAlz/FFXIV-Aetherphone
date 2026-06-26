@@ -20,8 +20,6 @@ internal sealed class TimersApp : IPhoneApp
     private const float RefreshIntervalSeconds = 2f;
 
     private const double DailyPeriodSeconds = 86400;
-    private const double WeeklyPeriodSeconds = 604800;
-    private const double OceanPeriodSeconds = 7200;
 
     private static readonly Vector4 ResetTint = new(0.40f, 0.45f, 0.92f, 1f);
 
@@ -87,18 +85,7 @@ internal sealed class TimersApp : IPhoneApp
     private void DrawHero(PhoneTheme theme, DateTime utcNow, float scale)
     {
         var daily = GameSchedule.NextDailyReset(utcNow);
-        var grandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
-        var weekly = GameSchedule.NextWeeklyReset(utcNow);
-        var ocean = GameSchedule.OceanFishing(utcNow);
-
-        var oceanRemaining = ocean.BoardingNow ? TimeSpan.Zero : ocean.NextBoardingUtc - utcNow;
-        var oceanContext = ocean.Route.Length == 0 ? string.Empty : $"{ocean.Route} · {TimeOfDayLabel(ocean.TimeOfDay)}";
-
-        var best = Pick(
-            new HeroCandidate(Loc.T(L.Timers.DailyReset), Styling.AccentAmber, daily - utcNow, DailyPeriodSeconds, LocalTime(daily)),
-            new HeroCandidate(Loc.T(L.Timers.GrandCompanyReset), Styling.AccentRose, grandCompany - utcNow, DailyPeriodSeconds, LocalTime(grandCompany)),
-            new HeroCandidate(Loc.T(L.Timers.WeeklyReset), Styling.AccentBlue, weekly - utcNow, WeeklyPeriodSeconds, LocalTime(weekly)),
-            new HeroCandidate(Loc.T(L.Timers.OceanFishing), Styling.AccentMint, oceanRemaining, OceanPeriodSeconds, oceanContext));
+        var best = new HeroCandidate(Loc.T(L.Timers.DailyReset), Styling.AccentAmber, daily - utcNow, DailyPeriodSeconds, LocalTime(daily));
 
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -303,29 +290,6 @@ internal sealed class TimersApp : IPhoneApp
         configuration.NotifyWeeklyReset = value;
         configuration.Save();
     }
-
-    private static HeroCandidate Pick(HeroCandidate a, HeroCandidate b, HeroCandidate c, HeroCandidate d)
-    {
-        var best = a;
-        if (Sooner(b, best))
-        {
-            best = b;
-        }
-
-        if (Sooner(c, best))
-        {
-            best = c;
-        }
-
-        if (Sooner(d, best))
-        {
-            best = d;
-        }
-
-        return best;
-    }
-
-    private static bool Sooner(HeroCandidate candidate, HeroCandidate current) => candidate.Remaining < current.Remaining;
 
     private static string LocalTime(DateTime utc) => utc.ToLocalTime().ToString("t", Loc.Culture);
 
