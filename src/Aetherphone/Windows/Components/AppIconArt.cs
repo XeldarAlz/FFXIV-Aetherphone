@@ -89,6 +89,9 @@ internal static class AppIconArt
             case "flap":
                 DrawFlap(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "reversi":
+                DrawReversi(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -539,6 +542,25 @@ internal static class AppIconArt
         dl.AddCircleFilled(fourth, dotRadius, ink, 24);
         dl.AddCircleFilled(first - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
         dl.AddCircleFilled(fourth - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
+    }
+
+    private static void DrawReversi(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<float> tracks = stackalloc float[2] { -0.44f, 0.44f };
+        var radius = extent * 0.36f;
+
+        for (var row = 0; row < 2; row++)
+        {
+            for (var column = 0; column < 2; column++)
+            {
+                var cell = At(center, extent, tracks[column], tracks[row]);
+                dl.AddCircleFilled(cell, radius, ink, 28);
+                if ((row + column) % 2 != 0)
+                {
+                    dl.AddCircleFilled(cell, radius * 0.6f, hole, 24);
+                }
+            }
+        }
     }
 
     private static void DrawFlap(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

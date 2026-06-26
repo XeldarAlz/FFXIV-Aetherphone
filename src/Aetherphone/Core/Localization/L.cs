@@ -511,6 +511,20 @@ internal static class L
         public static readonly LocString Flap = new("games.flap", "Flap");
 
         public static readonly LocString TapToStart = new("games.tapToStart", "Tap to start");
+
+        public static readonly LocString Reversi = new("games.reversi", "Reversi");
+
+        public static readonly LocString GenreStrategy = new("games.genreStrategy", "Strategy");
+
+        public static readonly LocString You = new("games.you", "You");
+
+        public static readonly LocString Cpu = new("games.cpu", "CPU");
+
+        public static readonly LocString Lose = new("games.lose", "You Lose");
+
+        public static readonly LocString Draw = new("games.draw", "Draw");
+
+        public static readonly LocString Pass = new("games.pass", "Pass");
     }
 
     internal static class Time

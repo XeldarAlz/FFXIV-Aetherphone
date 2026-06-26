@@ -7,6 +7,7 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Pairs;
+using Aetherphone.Apps.Games.Reversi;
 using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Sweeper;
@@ -65,6 +66,7 @@ internal sealed class GamesApp : IPhoneApp
             new SolitaireApp(),
             new SimonApp(),
             new FlapApp(),
+            new ReversiApp(),
         };
 
         cardScale = new Spring[games.Length];
@@ -280,6 +282,12 @@ internal sealed class GamesApp : IPhoneApp
 
             case "nonogram":
                 return FormatTime(stats.Get("nonogram.easy").BestTimeSeconds);
+
+            case "reversi":
+            {
+                var wins = stats.Get("reversi").Streak;
+                return wins > 0 ? GameNumber.Label(wins) : string.Empty;
+            }
 
             default:
                 return string.Empty;
