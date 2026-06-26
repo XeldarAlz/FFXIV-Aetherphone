@@ -206,6 +206,8 @@
   "games.nextLevel": "Niveau suivant",
   "games.attemptsCount.one": "{0} essai",
   "games.attemptsCount.other": "{0} essais",
+  "games.nonogram": "Nonogramme",
+  "games.left": "Restant",
   "time.now": "à l'instant",
   "time.justNow": "à l'instant",
   "time.minutesShort": "{0} min",

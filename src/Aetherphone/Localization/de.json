@@ -206,6 +206,8 @@
   "games.nextLevel": "Nächstes Level",
   "games.attemptsCount.one": "{0} Versuch",
   "games.attemptsCount.other": "{0} Versuche",
+  "games.nonogram": "Nonogramm",
+  "games.left": "Übrig",
   "time.now": "gerade eben",
   "time.justNow": "gerade eben",
   "time.minutesShort": "{0} Min.",

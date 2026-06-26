@@ -3,6 +3,7 @@ using Aetherphone.Apps.Games.Breakout;
 using Aetherphone.Apps.Games.BubbleShooter;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
+using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Pairs;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Twenty48;
@@ -55,6 +56,7 @@ internal sealed class GamesApp : IPhoneApp
             new WaterSortApp(),
             new BreakoutApp(),
             new BubbleShooterApp(),
+            new NonogramApp(),
         };
 
         cardScale = new Spring[games.Length];
@@ -261,6 +263,9 @@ internal sealed class GamesApp : IPhoneApp
 
             case "minesweeper":
                 return FormatTime(stats.Get("minesweeper.easy").BestTimeSeconds);
+
+            case "nonogram":
+                return FormatTime(stats.Get("nonogram.easy").BestTimeSeconds);
 
             default:
                 return string.Empty;

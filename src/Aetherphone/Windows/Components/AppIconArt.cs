@@ -74,6 +74,9 @@ internal static class AppIconArt
             case "watersort":
                 DrawWaterSort(dl, center, extent, inkColor);
                 return true;
+            case "nonogram":
+                DrawNonogram(dl, center, extent, inkColor);
+                return true;
             default:
                 return false;
         }
@@ -476,6 +479,31 @@ internal static class AppIconArt
 
             var fillTopY = bottomY - (bottomY - topY) * fillFractions[tube];
             dl.AddRectFilled(new Vector2(min.X + inset, fillTopY), new Vector2(max.X - inset, max.Y - inset), ink, halfWidth - inset, ImDrawFlags.RoundCornersBottom);
+        }
+    }
+
+    private static void DrawNonogram(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        Span<float> tracks = stackalloc float[3] { -0.6f, 0f, 0.6f };
+        var half = extent * 0.26f;
+        var rounding = extent * 0.06f;
+
+        for (var row = 0; row < 3; row++)
+        {
+            for (var column = 0; column < 3; column++)
+            {
+                var cell = At(center, extent, tracks[column], tracks[row]);
+                var min = new Vector2(cell.X - half, cell.Y - half);
+                var max = new Vector2(cell.X + half, cell.Y + half);
+                if ((row + column) % 2 == 0)
+                {
+                    dl.AddRectFilled(min, max, ink, rounding);
+                }
+                else
+                {
+                    dl.AddRect(min, max, ink, rounding, ImDrawFlags.RoundCornersAll, extent * 0.05f);
+                }
+            }
         }
     }
 

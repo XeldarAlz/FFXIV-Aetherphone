@@ -489,6 +489,10 @@ internal static class L
         public static readonly LocString NextLevel = new("games.nextLevel", "Next Level");
 
         public static readonly LocPlural AttemptsCount = new("games.attemptsCount", "{0} attempt", "{0} attempts");
+
+        public static readonly LocString Nonogram = new("games.nonogram", "Nonogram");
+
+        public static readonly LocString Left = new("games.left", "Left");
     }
 
     internal static class Time
