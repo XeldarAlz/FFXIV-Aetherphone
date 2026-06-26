@@ -208,6 +208,8 @@
   "games.attemptsCount.other": "{0} attempts",
   "games.nonogram": "Nonogram",
   "games.left": "Left",
+  "games.flow": "Flow",
+  "games.flows": "Flows",
   "time.now": "now",
   "time.justNow": "just now",
   "time.minutesShort": "{0}m",

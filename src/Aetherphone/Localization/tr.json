@@ -208,6 +208,8 @@
   "games.attemptsCount.other": "{0} deneme",
   "games.nonogram": "Nonogram",
   "games.left": "Kalan",
+  "games.flow": "Akış",
+  "games.flows": "Hatlar",
   "time.now": "şimdi",
   "time.justNow": "az önce",
   "time.minutesShort": "{0} dk",

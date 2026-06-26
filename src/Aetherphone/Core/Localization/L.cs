@@ -493,6 +493,10 @@ internal static class L
         public static readonly LocString Nonogram = new("games.nonogram", "Nonogram");
 
         public static readonly LocString Left = new("games.left", "Left");
+
+        public static readonly LocString Flow = new("games.flow", "Flow");
+
+        public static readonly LocString Flows = new("games.flows", "Flows");
     }
 
     internal static class Time

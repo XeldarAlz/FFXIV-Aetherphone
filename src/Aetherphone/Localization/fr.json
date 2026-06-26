@@ -208,6 +208,8 @@
   "games.attemptsCount.other": "{0} essais",
   "games.nonogram": "Nonogramme",
   "games.left": "Restant",
+  "games.flow": "Flow",
+  "games.flows": "Liens",
   "time.now": "à l'instant",
   "time.justNow": "à l'instant",
   "time.minutesShort": "{0} min",

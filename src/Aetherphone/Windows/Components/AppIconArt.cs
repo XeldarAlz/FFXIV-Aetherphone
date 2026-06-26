@@ -77,6 +77,9 @@ internal static class AppIconArt
             case "nonogram":
                 DrawNonogram(dl, center, extent, inkColor);
                 return true;
+            case "flow":
+                DrawFlow(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -480,6 +483,27 @@ internal static class AppIconArt
             var fillTopY = bottomY - (bottomY - topY) * fillFractions[tube];
             dl.AddRectFilled(new Vector2(min.X + inset, fillTopY), new Vector2(max.X - inset, max.Y - inset), ink, halfWidth - inset, ImDrawFlags.RoundCornersBottom);
         }
+    }
+
+    private static void DrawFlow(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var thickness = extent * 0.2f;
+        var first = At(center, extent, -0.55f, -0.45f);
+        var second = At(center, extent, -0.55f, 0.5f);
+        var third = At(center, extent, 0.55f, 0.5f);
+        var fourth = At(center, extent, 0.55f, -0.45f);
+
+        dl.AddLine(first, second, ink, thickness);
+        dl.AddLine(second, third, ink, thickness);
+        dl.AddLine(third, fourth, ink, thickness);
+        dl.AddCircleFilled(second, thickness * 0.5f, ink, 16);
+        dl.AddCircleFilled(third, thickness * 0.5f, ink, 16);
+
+        var dotRadius = extent * 0.22f;
+        dl.AddCircleFilled(first, dotRadius, ink, 24);
+        dl.AddCircleFilled(fourth, dotRadius, ink, 24);
+        dl.AddCircleFilled(first - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
+        dl.AddCircleFilled(fourth - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
     }
 
     private static void DrawNonogram(ImDrawListPtr dl, Vector2 center, float extent, uint ink)

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Breakout;
 using Aetherphone.Apps.Games.BubbleShooter;
+using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Nonogram;
@@ -57,6 +58,7 @@ internal sealed class GamesApp : IPhoneApp
             new BreakoutApp(),
             new BubbleShooterApp(),
             new NonogramApp(),
+            new FlowApp(),
         };
 
         cardScale = new Spring[games.Length];
@@ -253,6 +255,7 @@ internal sealed class GamesApp : IPhoneApp
             }
 
             case "watersort":
+            case "flow":
             {
                 var bestLevel = stats.Get(gameId).BestScore;
                 return bestLevel > 0 ? $"{Loc.T(L.Games.Level)} {GameNumber.Label(bestLevel)}" : string.Empty;
