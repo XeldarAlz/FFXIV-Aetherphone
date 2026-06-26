@@ -225,6 +225,7 @@
   "games.draw": "Unentschieden",
   "games.pass": "Aussetzen",
   "games.whack": "Whack",
+  "games.snake": "Snake",
   "time.now": "gerade eben",
   "time.justNow": "gerade eben",
   "time.minutesShort": "{0} Min.",

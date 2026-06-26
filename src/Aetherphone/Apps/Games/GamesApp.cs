@@ -9,6 +9,7 @@ using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Pairs;
 using Aetherphone.Apps.Games.Reversi;
 using Aetherphone.Apps.Games.Simon;
+using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Twenty48;
@@ -69,6 +70,7 @@ internal sealed class GamesApp : IPhoneApp
             new FlapApp(),
             new ReversiApp(),
             new WhackApp(),
+            new SnakeApp(),
         };
 
         cardScale = new Spring[games.Length];
@@ -262,6 +264,7 @@ internal sealed class GamesApp : IPhoneApp
             case "simon":
             case "flap":
             case "whack":
+            case "snake":
             {
                 var best = stats.Get(gameId).BestScore;
                 return best > 0 ? GameNumber.Label(best) : string.Empty;

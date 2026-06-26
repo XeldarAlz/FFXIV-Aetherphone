@@ -225,6 +225,7 @@
   "games.draw": "Draw",
   "games.pass": "Pass",
   "games.whack": "Whack",
+  "games.snake": "Snake",
   "time.now": "now",
   "time.justNow": "just now",
   "time.minutesShort": "{0}m",

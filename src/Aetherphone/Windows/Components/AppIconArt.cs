@@ -95,6 +95,9 @@ internal static class AppIconArt
             case "whack":
                 DrawWhack(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "snake":
+                DrawSnake(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -545,6 +548,30 @@ internal static class AppIconArt
         dl.AddCircleFilled(fourth, dotRadius, ink, 24);
         dl.AddCircleFilled(first - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
         dl.AddCircleFilled(fourth - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
+    }
+
+    private static void DrawSnake(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> body = stackalloc Vector2[5]
+        {
+            At(center, extent, -0.72f, 0.4f),
+            At(center, extent, -0.36f, -0.08f),
+            At(center, extent, 0.02f, 0.3f),
+            At(center, extent, 0.4f, -0.12f),
+            At(center, extent, 0.66f, 0.12f),
+        };
+
+        var radius = extent * 0.24f;
+        for (var index = 0; index < body.Length; index++)
+        {
+            dl.AddCircleFilled(body[index], radius * (0.62f + 0.08f * index), ink, 20);
+        }
+
+        var head = At(center, extent, 0.82f, -0.08f);
+        dl.AddCircleFilled(head, radius * 1.15f, ink, 24);
+        dl.AddCircleFilled(new Vector2(head.X + radius * 0.34f, head.Y - radius * 0.34f), radius * 0.24f, hole, 12);
+
+        dl.AddCircleFilled(At(center, extent, -0.86f, -0.6f), extent * 0.16f, ink, 16);
     }
 
     private static void DrawWhack(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

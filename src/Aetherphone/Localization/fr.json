@@ -225,6 +225,7 @@
   "games.draw": "Égalité",
   "games.pass": "Passe",
   "games.whack": "Whack",
+  "games.snake": "Snake",
   "time.now": "à l'instant",
   "time.justNow": "à l'instant",
   "time.minutesShort": "{0} min",
