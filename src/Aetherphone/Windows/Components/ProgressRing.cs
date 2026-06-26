@@ -72,28 +72,20 @@ internal static class ProgressRing
         dl.AddCircleFilled(c + Dir(head) * r, thickness * 0.62f, ImGui.GetColorU32(Styling.WithAlpha(col, headAlpha)));
     }
 
-    public static void CenterValue(Vector2 c, string big, string? small, Vector4 bigCol, Vector4 smallCol, float bigScale)
+    public static void CenterValue(Vector2 c, string big, string? small, Vector4 bigCol, Vector4 smallCol, in TextStyle bigStyle)
     {
-        ImGui.SetWindowFontScale(bigScale);
-        var bs = ImGui.CalcTextSize(big);
-        ImGui.SetWindowFontScale(1f);
+        var bs = Typography.Measure(big, bigStyle);
 
         var hasSmall = !string.IsNullOrEmpty(small);
-        var ss = hasSmall ? ImGui.CalcTextSize(small) : Vector2.Zero;
-        var gap = hasSmall ? 1f * ImGuiHelpers.GlobalScale : 0f;
+        var ss = hasSmall ? Typography.Measure(small!, TextStyles.Footnote) : Vector2.Zero;
+        var gap = hasSmall ? 2f * ImGuiHelpers.GlobalScale : 0f;
         var top = c.Y - (bs.Y + gap + ss.Y) * 0.5f;
 
-        ImGui.SetCursorScreenPos(new Vector2(c.X - bs.X * 0.5f, top));
-        ImGui.SetWindowFontScale(bigScale);
-        using (ImRaii.PushColor(ImGuiCol.Text, bigCol))
-            ImGui.TextUnformatted(big);
-        ImGui.SetWindowFontScale(1f);
+        Typography.Draw(new Vector2(c.X - bs.X * 0.5f, top), big, bigCol, bigStyle);
 
         if (hasSmall)
         {
-            ImGui.SetCursorScreenPos(new Vector2(c.X - ss.X * 0.5f, top + bs.Y + gap));
-            using (ImRaii.PushColor(ImGuiCol.Text, smallCol))
-                ImGui.TextUnformatted(small!);
+            Typography.Draw(new Vector2(c.X - ss.X * 0.5f, top + bs.Y + gap), small!, smallCol, TextStyles.Footnote);
         }
     }
 

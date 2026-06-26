@@ -102,7 +102,7 @@ internal sealed class TimersApp : IPhoneApp
         ProgressRing.Fill(ringCenter, radius, thickness, fraction, best.Tint);
 
         var big = best.Remaining <= TimeSpan.Zero ? Loc.T(L.Time.Now) : HeroClock(best.Remaining);
-        ProgressRing.CenterValue(ringCenter, big, null, theme.TextStrong, theme.TextMuted, 2.1f);
+        ProgressRing.CenterValue(ringCenter, big, null, theme.TextStrong, theme.TextMuted, TextStyles.LargeTitle);
 
         Typography.DrawCentered(new Vector2(centerX, ringCenter.Y + radius + 26f * scale), best.Name, theme.TextStrong, TextStyles.Title3);
 
