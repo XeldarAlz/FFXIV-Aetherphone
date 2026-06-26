@@ -39,6 +39,10 @@ internal sealed class GamesApp : IPhoneApp
 
     private readonly Spring[] cardScale;
 
+    private readonly int[] tileOrder;
+
+    private readonly int[] sectionSizes;
+
     private IMiniGame? currentGame;
 
     public string Id => "games";
@@ -78,6 +82,51 @@ internal sealed class GamesApp : IPhoneApp
         {
             cardScale[index] = new Spring(1f);
         }
+
+        (tileOrder, sectionSizes) = BuildSections();
+    }
+
+    private (int[] Order, int[] Sizes) BuildSections()
+    {
+        var distinct = new string[games.Length];
+        var distinctCount = 0;
+        for (var index = 0; index < games.Length; index++)
+        {
+            var genre = games[index].Genre;
+            var found = false;
+            for (var search = 0; search < distinctCount; search++)
+            {
+                if (string.Equals(distinct[search], genre, StringComparison.Ordinal))
+                {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                distinct[distinctCount++] = genre;
+            }
+        }
+
+        var order = new int[games.Length];
+        var sizes = new int[distinctCount];
+        var cursor = 0;
+        for (var section = 0; section < distinctCount; section++)
+        {
+            for (var index = 0; index < games.Length; index++)
+            {
+                if (!string.Equals(games[index].Genre, distinct[section], StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                order[cursor++] = index;
+                sizes[section]++;
+            }
+        }
+
+        return (order, sizes);
     }
 
     public void OnOpened()
@@ -136,38 +185,54 @@ internal sealed class GamesApp : IPhoneApp
         using (AppSurface.Begin(body))
         {
             var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
-            var sidePadding = 16f * scale;
-            var topPadding = 10f * scale;
-            var bottomPadding = 14f * scale;
-            var spacing = 14f * scale;
-            var rowCount = (games.Length + Columns - 1) / Columns;
-
-            var availableWidth = body.Width - sidePadding * 2f;
+            var origin = ImGui.GetCursorScreenPos();
+            var availableWidth = ImGui.GetContentRegionAvail().X;
+            var spacing = 12f * scale;
             var cardWidth = (availableWidth - spacing * (Columns - 1)) / Columns;
+            var cardHeight = cardWidth * 1.18f;
+            var headerHeight = 34f * scale;
+            var sectionGap = 14f * scale;
 
-            var availableHeight = body.Height - topPadding - bottomPadding;
-            var cardHeight = (availableHeight - spacing * (rowCount - 1)) / rowCount;
-            cardHeight = MathF.Min(cardHeight, cardWidth * 1.34f);
-
-            var gridHeight = cardHeight * rowCount + spacing * (rowCount - 1);
-            var startX = body.Min.X + sidePadding;
-            var startY = body.Min.Y + topPadding + MathF.Max(0f, (availableHeight - gridHeight) * 0.5f);
-
-            for (var index = 0; index < games.Length; index++)
+            var offsetY = 4f * scale;
+            var sectionStart = 0;
+            for (var section = 0; section < sectionSizes.Length; section++)
             {
-                var column = index % Columns;
-                var row = index / Columns;
-                var tilesInRow = Math.Min(Columns, games.Length - row * Columns);
-                var rowOffset = (Columns - tilesInRow) * (cardWidth + spacing) * 0.5f;
-                var cardMin = new Vector2(startX + rowOffset + column * (cardWidth + spacing), startY + row * (cardHeight + spacing));
-                var cardRect = new Rect(cardMin, cardMin + new Vector2(cardWidth, cardHeight));
+                var size = sectionSizes[section];
+                DrawSectionHeader(new Vector2(origin.X, origin.Y + offsetY), availableWidth, headerHeight, games[tileOrder[sectionStart]].Genre, size, context.Theme, scale);
+                offsetY += headerHeight;
 
-                if (DrawCard(cardRect, games[index], index, deltaSeconds, context.Theme, scale))
+                for (var member = 0; member < size; member++)
                 {
-                    OpenGame(games[index]);
+                    var gameIndex = tileOrder[sectionStart + member];
+                    var column = member % Columns;
+                    var row = member / Columns;
+                    var cardMin = new Vector2(origin.X + column * (cardWidth + spacing), origin.Y + offsetY + row * (cardHeight + spacing));
+                    var cardRect = new Rect(cardMin, cardMin + new Vector2(cardWidth, cardHeight));
+                    if (DrawCard(cardRect, games[gameIndex], gameIndex, deltaSeconds, context.Theme, scale))
+                    {
+                        OpenGame(games[gameIndex]);
+                    }
                 }
+
+                var rows = (size + Columns - 1) / Columns;
+                offsetY += rows * cardHeight + (rows - 1) * spacing + sectionGap;
+                sectionStart += size;
             }
+
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + offsetY));
+            ImGui.Dummy(new Vector2(availableWidth, 2f * scale));
         }
+    }
+
+    private static void DrawSectionHeader(Vector2 position, float width, float height, string genre, int count, PhoneTheme theme, float scale)
+    {
+        var label = genre.ToUpperInvariant();
+        var labelSize = Typography.Measure(label, TextStyles.Title3);
+        Typography.Draw(new Vector2(position.X + 2f * scale, position.Y + (height - labelSize.Y) * 0.5f), label, theme.TextStrong, TextStyles.Title3);
+
+        var countText = GameNumber.Label(count);
+        var countSize = Typography.Measure(countText, TextStyles.Caption1);
+        Typography.Draw(new Vector2(position.X + width - countSize.X - 2f * scale, position.Y + (height - countSize.Y) * 0.5f), countText, theme.TextMuted, TextStyles.Caption1);
     }
 
     private bool DrawCard(Rect rect, IMiniGame game, int index, float deltaSeconds, PhoneTheme theme, float scale)
