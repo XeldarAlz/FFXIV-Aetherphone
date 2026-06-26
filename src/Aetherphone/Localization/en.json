@@ -269,6 +269,7 @@
   "plugin.commandHelp": "Toggle the Aetherphone. /phone market [item] opens the market board, /phone about opens credits & links, /phone test sends a sample notification.",
   "plugin.commandHelpAlias": "Alias for /phone.",
   "plugin.searchTheMarket": "Search the Market",
+  "plugin.sideButtonHint": "Tap to turn off · Hold to lock",
   "about.linkDiscussions": "Discussions",
   "about.linkReportBug": "Report a bug",
   "about.linkMorePlugins": "More plugins",

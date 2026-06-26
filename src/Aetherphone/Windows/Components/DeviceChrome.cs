@@ -8,13 +8,33 @@ namespace Aetherphone.Windows.Components;
 
 internal static class DeviceChrome
 {
-    public static Rect DrawBody(Rect device, PhoneTheme theme, bool fillScreen = true)
+    public const float RailWidth = 7f;
+
+    public static Rect BodyRect(Rect window)
+    {
+        var rail = RailWidth * ImGuiHelpers.GlobalScale;
+        return new Rect(new Vector2(window.Min.X + rail, window.Min.Y), new Vector2(window.Max.X - rail, window.Max.Y));
+    }
+
+    public static Rect SideButtonRect(Rect window)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var device = BodyRect(window);
+        var top = device.Min.Y + device.Height * 0.255f;
+        var height = device.Height * 0.092f;
+        return new Rect(new Vector2(device.Max.X - 2f * scale, top), new Vector2(window.Max.X, top + height));
+    }
+
+    public static Rect DrawBody(Rect window, PhoneTheme theme, bool fillScreen = true)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
 
+        var device = BodyRect(window);
         var deviceRounding = theme.DeviceRounding * scale;
         var screen = device.Inset(theme.BezelThickness * scale);
+
+        DrawHardwareButtons(dl, window, device, ImGui.GetColorU32(theme.BezelRim));
 
         if (fillScreen)
         {
@@ -26,6 +46,27 @@ internal static class DeviceChrome
 
         DrawBezelFrame(dl, device, screen, deviceRounding, ImGui.GetColorU32(theme.BezelOuter), ImGui.GetColorU32(theme.BezelRim));
         return screen;
+    }
+
+    private static void DrawHardwareButtons(ImDrawListPtr dl, Rect window, Rect device, uint metal)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var leftOuter = window.Min.X;
+        var leftInner = device.Min.X + 2f * scale;
+        DrawRailPill(dl, leftOuter, leftInner, device, 0.150f, 0.045f, metal);
+        DrawRailPill(dl, leftOuter, leftInner, device, 0.250f, 0.085f, metal);
+        DrawRailPill(dl, leftOuter, leftInner, device, 0.355f, 0.085f, metal);
+
+        var rightInner = device.Max.X - 2f * scale;
+        DrawRailPill(dl, rightInner, window.Max.X, device, 0.430f, 0.050f, metal);
+    }
+
+    private static void DrawRailPill(ImDrawListPtr dl, float xMin, float xMax, Rect device, float topFraction, float heightFraction, uint color)
+    {
+        var top = device.Min.Y + device.Height * topFraction;
+        var min = new Vector2(xMin, top);
+        var max = new Vector2(xMax, top + device.Height * heightFraction);
+        dl.AddRectFilled(min, max, color, (xMax - xMin) * 0.5f);
     }
 
     private static void DrawBezelFrame(ImDrawListPtr dl, Rect device, Rect screen, float deviceRounding, uint bezel, uint rim)

@@ -245,6 +245,7 @@
   "plugin.commandHelp": "Affiche ou masque l'Aetherphone. /phone market [objet] ouvre l'hôtel des ventes, /phone about ouvre les crédits et liens, /phone test envoie une notification d'exemple.",
   "plugin.commandHelpAlias": "Alias de /phone.",
   "plugin.searchTheMarket": "Rechercher sur le marché",
+  "plugin.sideButtonHint": "Appuyer pour éteindre · Maintenir pour verrouiller",
   "about.linkDiscussions": "Discussions",
   "about.linkReportBug": "Signaler un bug",
   "about.linkMorePlugins": "Plus d'extensions",

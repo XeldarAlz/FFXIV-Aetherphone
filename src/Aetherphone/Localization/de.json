@@ -245,6 +245,7 @@
   "plugin.commandHelp": "Aetherphone ein- oder ausblenden. /phone market [Gegenstand] öffnet das Marktbrett, /phone about öffnet Credits und Links, /phone test sendet eine Beispielbenachrichtigung.",
   "plugin.commandHelpAlias": "Alias für /phone.",
   "plugin.searchTheMarket": "Im Markt suchen",
+  "plugin.sideButtonHint": "Tippen zum Ausschalten · Halten zum Sperren",
   "about.linkDiscussions": "Diskussionen",
   "about.linkReportBug": "Fehler melden",
   "about.linkMorePlugins": "Weitere Plugins",

@@ -49,5 +49,10 @@ internal sealed class PhoneWindow : Window
         var available = ImGui.GetContentRegionAvail();
         ImGui.Dummy(available);
         shell.Draw(new Rect(origin, origin + available));
+
+        if (shell.ConsumeCloseRequest())
+        {
+            IsOpen = false;
+        }
     }
 }

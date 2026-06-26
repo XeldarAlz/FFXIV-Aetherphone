@@ -245,6 +245,7 @@
   "plugin.commandHelp": "Aetherphone'u açar/kapatır. /phone market [eşya] pazar tahtasını açar, /phone about künye ve bağlantıları açar, /phone test örnek bir bildirim gönderir.",
   "plugin.commandHelpAlias": "/phone için takma ad.",
   "plugin.searchTheMarket": "Pazarda Ara",
+  "plugin.sideButtonHint": "Kapatmak için dokun · Kilitlemek için basılı tut",
   "about.linkDiscussions": "Tartışmalar",
   "about.linkReportBug": "Hata bildir",
   "about.linkMorePlugins": "Diğer eklentiler",

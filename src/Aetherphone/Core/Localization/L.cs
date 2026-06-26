@@ -685,6 +685,8 @@ internal static class L
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /phone.");
 
         public static readonly LocString SearchTheMarket = new("plugin.searchTheMarket", "Search the Market");
+
+        public static readonly LocString SideButtonHint = new("plugin.sideButtonHint", "Tap to turn off · Hold to lock");
     }
 
     internal static class About
