@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Breakout;
 using Aetherphone.Apps.Games.BubbleShooter;
+using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
@@ -63,6 +64,7 @@ internal sealed class GamesApp : IPhoneApp
             new FlowApp(),
             new SolitaireApp(),
             new SimonApp(),
+            new FlapApp(),
         };
 
         cardScale = new Spring[games.Length];
@@ -254,6 +256,7 @@ internal sealed class GamesApp : IPhoneApp
             case "breakout":
             case "bubbles":
             case "simon":
+            case "flap":
             {
                 var best = stats.Get(gameId).BestScore;
                 return best > 0 ? GameNumber.Label(best) : string.Empty;

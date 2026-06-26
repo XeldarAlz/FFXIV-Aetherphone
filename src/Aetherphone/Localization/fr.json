@@ -215,6 +215,8 @@
   "games.simon": "Simon",
   "games.watch": "Regarde",
   "games.yourTurn": "À toi",
+  "games.flap": "Flap",
+  "games.tapToStart": "Touchez pour commencer",
   "time.now": "à l'instant",
   "time.justNow": "à l'instant",
   "time.minutesShort": "{0} min",

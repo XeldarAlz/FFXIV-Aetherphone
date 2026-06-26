@@ -86,6 +86,9 @@ internal static class AppIconArt
             case "simon":
                 DrawSimon(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "flap":
+                DrawFlap(dl, center, extent, inkColor, holeColor);
+                return true;
             default:
                 return false;
         }
@@ -536,6 +539,29 @@ internal static class AppIconArt
         dl.AddCircleFilled(fourth, dotRadius, ink, 24);
         dl.AddCircleFilled(first - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
         dl.AddCircleFilled(fourth - new Vector2(dotRadius * 0.3f, dotRadius * 0.3f), dotRadius * 0.34f, hole, 16);
+    }
+
+    private static void DrawFlap(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var topMin = At(center, extent, 0.46f, -1f);
+        var topMax = At(center, extent, 0.92f, -0.28f);
+        dl.AddRectFilled(topMin, topMax, ink, extent * 0.08f);
+        var bottomMin = At(center, extent, 0.46f, 0.32f);
+        var bottomMax = At(center, extent, 0.92f, 1f);
+        dl.AddRectFilled(bottomMin, bottomMax, ink, extent * 0.08f);
+
+        var bird = At(center, extent, -0.34f, 0.04f);
+        var radius = extent * 0.42f;
+        dl.AddCircleFilled(bird, radius, ink, 28);
+        dl.AddCircleFilled(new Vector2(bird.X + radius * 0.34f, bird.Y - radius * 0.32f), radius * 0.24f, hole, 16);
+
+        Span<Vector2> beak = stackalloc Vector2[3]
+        {
+            new(bird.X + radius * 0.82f, bird.Y - radius * 0.12f),
+            new(bird.X + radius * 1.34f, bird.Y + radius * 0.06f),
+            new(bird.X + radius * 0.82f, bird.Y + radius * 0.28f),
+        };
+        FillConvex(dl, ink, beak);
     }
 
     private static void DrawSimon(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

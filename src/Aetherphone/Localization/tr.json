@@ -215,6 +215,8 @@
   "games.simon": "Simon",
   "games.watch": "İzle",
   "games.yourTurn": "Sıra sende",
+  "games.flap": "Flap",
+  "games.tapToStart": "Başlamak için dokun",
   "time.now": "şimdi",
   "time.justNow": "az önce",
   "time.minutesShort": "{0} dk",

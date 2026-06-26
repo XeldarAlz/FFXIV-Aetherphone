@@ -215,6 +215,8 @@
   "games.simon": "Simon",
   "games.watch": "Watch",
   "games.yourTurn": "Your Turn",
+  "games.flap": "Flap",
+  "games.tapToStart": "Tap to start",
   "time.now": "now",
   "time.justNow": "just now",
   "time.minutesShort": "{0}m",
