@@ -65,6 +65,15 @@ internal static class AppIconArt
             case "2048":
                 DrawTiles(dl, center, extent, inkColor);
                 return true;
+            case "breakout":
+                DrawBreakout(dl, center, extent, inkColor);
+                return true;
+            case "bubbles":
+                DrawBubbles(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "watersort":
+                DrawWaterSort(dl, center, extent, inkColor);
+                return true;
             default:
                 return false;
         }
@@ -404,6 +413,69 @@ internal static class AppIconArt
             var tileMin = new Vector2(tileCenter.X - tileExtent, tileCenter.Y - tileExtent);
             var tileMax = new Vector2(tileCenter.X + tileExtent, tileCenter.Y + tileExtent);
             dl.AddRectFilled(tileMin, tileMax, ink, rounding);
+        }
+    }
+
+    private static void DrawBreakout(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        var brickWidth = extent * 0.30f;
+        var brickHeight = extent * 0.16f;
+        var rounding = extent * 0.06f;
+        Span<float> columns = stackalloc float[3] { -0.62f, 0f, 0.62f };
+
+        for (var column = 0; column < columns.Length; column++)
+        {
+            var brick = At(center, extent, columns[column], -0.72f);
+            dl.AddRectFilled(new Vector2(brick.X - brickWidth, brick.Y - brickHeight), new Vector2(brick.X + brickWidth, brick.Y + brickHeight), ink, rounding);
+        }
+
+        dl.AddCircleFilled(At(center, extent, 0.18f, 0.05f), extent * 0.15f, ink);
+
+        var paddle = At(center, extent, 0f, 0.78f);
+        var paddleWidth = extent * 0.52f;
+        var paddleHeight = extent * 0.12f;
+        dl.AddRectFilled(new Vector2(paddle.X - paddleWidth, paddle.Y - paddleHeight), new Vector2(paddle.X + paddleWidth, paddle.Y + paddleHeight), ink, paddleHeight);
+    }
+
+    private static void DrawBubbles(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        Span<Vector2> bubbles = stackalloc Vector2[5]
+        {
+            At(center, extent, -0.46f, -0.42f),
+            At(center, extent, 0.46f, -0.42f),
+            At(center, extent, 0f, 0.04f),
+            At(center, extent, -0.42f, 0.5f),
+            At(center, extent, 0.42f, 0.5f),
+        };
+
+        var radius = extent * 0.34f;
+        for (var bubble = 0; bubble < bubbles.Length; bubble++)
+        {
+            dl.AddCircleFilled(bubbles[bubble], radius, ink);
+            dl.AddCircleFilled(new Vector2(bubbles[bubble].X - radius * 0.32f, bubbles[bubble].Y - radius * 0.32f), radius * 0.3f, hole);
+        }
+    }
+
+    private static void DrawWaterSort(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        Span<float> tubeColumns = stackalloc float[2] { -0.5f, 0.5f };
+        Span<float> fillFractions = stackalloc float[2] { 0.62f, 0.86f };
+
+        var halfWidth = extent * 0.26f;
+        var topY = At(center, extent, 0f, -0.82f).Y;
+        var bottomY = At(center, extent, 0f, 0.84f).Y;
+        var thickness = extent * 0.09f;
+        var inset = extent * 0.05f;
+
+        for (var tube = 0; tube < tubeColumns.Length; tube++)
+        {
+            var centerX = At(center, extent, tubeColumns[tube], 0f).X;
+            var min = new Vector2(centerX - halfWidth, topY);
+            var max = new Vector2(centerX + halfWidth, bottomY);
+            dl.AddRect(min, max, ink, halfWidth, ImDrawFlags.RoundCornersBottom, thickness);
+
+            var fillTopY = bottomY - (bottomY - topY) * fillFractions[tube];
+            dl.AddRectFilled(new Vector2(min.X + inset, fillTopY), new Vector2(max.X - inset, max.Y - inset), ink, halfWidth - inset, ImDrawFlags.RoundCornersBottom);
         }
     }
 

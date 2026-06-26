@@ -464,6 +464,24 @@ internal static class L
 
         public static readonly LocString GenreLogic = new("games.genreLogic", "Logic");
 
+        public static readonly LocString GenreArcade = new("games.genreArcade", "Arcade");
+
+        public static readonly LocString Breakout = new("games.breakout", "Breakout");
+
+        public static readonly LocString Bubbles = new("games.bubbles", "Bubbles");
+
+        public static readonly LocString WaterSort = new("games.waterSort", "Water Sort");
+
+        public static readonly LocString Level = new("games.level", "Level");
+
+        public static readonly LocString Lives = new("games.lives", "Lives");
+
+        public static readonly LocString Moves = new("games.moves", "Moves");
+
+        public static readonly LocString Undo = new("games.undo", "Undo");
+
+        public static readonly LocString NextLevel = new("games.nextLevel", "Next Level");
+
         public static readonly LocPlural AttemptsCount = new("games.attemptsCount", "{0} attempt", "{0} attempts");
     }
 

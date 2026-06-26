@@ -129,7 +129,7 @@ internal sealed class Twenty48App : IMiniGame
 
         if (!finished && phase == Phase.Idle)
         {
-            HandleInput(grid);
+            HandleSwipe(grid);
         }
 
         if (board.Score > displayBest)
@@ -236,35 +236,6 @@ internal sealed class Twenty48App : IMiniGame
         resultAppear = 0f;
         newBest = board.Score > loadedBest;
         pendingSubmit = true;
-    }
-
-    private void HandleInput(GameGrid grid)
-    {
-        if (ImGui.IsKeyPressed(ImGuiKey.UpArrow) || ImGui.IsKeyPressed(ImGuiKey.W))
-        {
-            Move(SwipeDirection.Up);
-            return;
-        }
-
-        if (ImGui.IsKeyPressed(ImGuiKey.DownArrow) || ImGui.IsKeyPressed(ImGuiKey.S))
-        {
-            Move(SwipeDirection.Down);
-            return;
-        }
-
-        if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow) || ImGui.IsKeyPressed(ImGuiKey.A))
-        {
-            Move(SwipeDirection.Left);
-            return;
-        }
-
-        if (ImGui.IsKeyPressed(ImGuiKey.RightArrow) || ImGui.IsKeyPressed(ImGuiKey.D))
-        {
-            Move(SwipeDirection.Right);
-            return;
-        }
-
-        HandleSwipe(grid);
     }
 
     private void HandleSwipe(GameGrid grid)

@@ -1,9 +1,12 @@
 using System.Numerics;
+using Aetherphone.Apps.Games.Breakout;
+using Aetherphone.Apps.Games.BubbleShooter;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Pairs;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Twenty48;
+using Aetherphone.Apps.Games.WaterSort;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
@@ -49,6 +52,9 @@ internal sealed class GamesApp : IPhoneApp
             new PairsApp(),
             new GemSwapApp(),
             new Twenty48App(),
+            new WaterSortApp(),
+            new BreakoutApp(),
+            new BubbleShooterApp(),
         };
 
         cardScale = new Spring[games.Length];
@@ -135,7 +141,9 @@ internal sealed class GamesApp : IPhoneApp
             {
                 var column = index % Columns;
                 var row = index / Columns;
-                var cardMin = new Vector2(startX + column * (cardWidth + spacing), startY + row * (cardHeight + spacing));
+                var tilesInRow = Math.Min(Columns, games.Length - row * Columns);
+                var rowOffset = (Columns - tilesInRow) * (cardWidth + spacing) * 0.5f;
+                var cardMin = new Vector2(startX + rowOffset + column * (cardWidth + spacing), startY + row * (cardHeight + spacing));
                 var cardRect = new Rect(cardMin, cardMin + new Vector2(cardWidth, cardHeight));
 
                 if (DrawCard(cardRect, games[index], index, deltaSeconds, context.Theme, scale))
@@ -235,9 +243,17 @@ internal sealed class GamesApp : IPhoneApp
         {
             case "2048":
             case "match3":
+            case "breakout":
+            case "bubbles":
             {
                 var best = stats.Get(gameId).BestScore;
                 return best > 0 ? GameNumber.Label(best) : string.Empty;
+            }
+
+            case "watersort":
+            {
+                var bestLevel = stats.Get(gameId).BestScore;
+                return bestLevel > 0 ? $"{Loc.T(L.Games.Level)} {GameNumber.Label(bestLevel)}" : string.Empty;
             }
 
             case "memory":

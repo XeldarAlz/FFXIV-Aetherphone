@@ -23,7 +23,9 @@ internal readonly struct GameResult
 
     public readonly bool NewBest;
 
-    public GameResult(string title, Vector4 titleColor, string primaryLabel, string primaryValue, string? secondaryLine, bool newBest)
+    public readonly string? ButtonLabel;
+
+    public GameResult(string title, Vector4 titleColor, string primaryLabel, string primaryValue, string? secondaryLine, bool newBest, string? buttonLabel = null)
     {
         Title = title;
         TitleColor = titleColor;
@@ -31,6 +33,7 @@ internal readonly struct GameResult
         PrimaryValue = primaryValue;
         SecondaryLine = secondaryLine;
         NewBest = newBest;
+        ButtonLabel = buttonLabel;
     }
 }
 
@@ -89,6 +92,6 @@ internal static class GameOverlay
             return false;
         }
 
-        return GameHud.Button(buttonCenter, buttonSize, Loc.T(L.Games.PlayAgain), accent, theme);
+        return GameHud.Button(buttonCenter, buttonSize, result.ButtonLabel ?? Loc.T(L.Games.PlayAgain), accent, theme);
     }
 }
