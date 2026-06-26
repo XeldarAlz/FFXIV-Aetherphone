@@ -35,6 +35,9 @@ internal static class AppIconArt
             case "venues":
                 DrawVenues(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "news":
+                DrawNews(dl, center, extent, inkColor, holeColor);
+                return true;
             case "market":
                 DrawMarket(dl, center, extent, inkColor);
                 return true;
@@ -716,6 +719,32 @@ internal static class AppIconArt
         dl.AddTriangleFilled(point[0], point[1], point[2], ink);
 
         dl.AddCircleFilled(headCenter, radius * 0.42f, hole, 24);
+    }
+
+    private static void DrawNews(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var sheetMin = At(center, extent, -0.92f, -0.82f);
+        var sheetMax = At(center, extent, 0.92f, 0.82f);
+        dl.AddRectFilled(sheetMin, sheetMax, ink, extent * 0.18f);
+
+        var photoMin = At(center, extent, -0.66f, -0.58f);
+        var photoMax = At(center, extent, -0.06f, 0.06f);
+        dl.AddRectFilled(photoMin, photoMax, hole, extent * 0.07f);
+
+        var lineHeight = extent * 0.12f;
+        var lineRounding = extent * 0.05f;
+        DrawNewsLine(dl, center, extent, hole, 0.08f, 0.66f, -0.48f, lineHeight, lineRounding);
+        DrawNewsLine(dl, center, extent, hole, 0.08f, 0.66f, -0.24f, lineHeight, lineRounding);
+        DrawNewsLine(dl, center, extent, hole, 0.08f, 0.50f, 0f, lineHeight, lineRounding);
+        DrawNewsLine(dl, center, extent, hole, -0.66f, 0.66f, 0.34f, lineHeight, lineRounding);
+        DrawNewsLine(dl, center, extent, hole, -0.66f, 0.36f, 0.58f, lineHeight, lineRounding);
+    }
+
+    private static void DrawNewsLine(ImDrawListPtr dl, Vector2 center, float extent, uint color, float left, float right, float centerY, float height, float rounding)
+    {
+        var min = new Vector2(At(center, extent, left, centerY).X, center.Y + centerY * extent - height * 0.5f);
+        var max = new Vector2(At(center, extent, right, centerY).X, center.Y + centerY * extent + height * 0.5f);
+        dl.AddRectFilled(min, max, color, rounding);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)
