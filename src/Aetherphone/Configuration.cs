@@ -50,7 +50,7 @@ internal sealed class Configuration : IPluginConfiguration
 
     public uint RingtoneId { get; set; } = 7;
 
-    public string AethernetBaseUrl { get; set; } = "http://127.0.0.1:5240";
+    public string AethernetBaseUrl { get; set; } = "https://ffxiv-aethernet-production.up.railway.app";
 
     public string AethernetToken { get; set; } = string.Empty;
 

@@ -4,7 +4,7 @@ namespace Aetherphone.Core.Aethernet;
 
 internal sealed class AethernetSession
 {
-    private const string DefaultBaseUrl = "http://127.0.0.1:5240";
+    private const string DefaultBaseUrl = "https://ffxiv-aethernet-production.up.railway.app";
 
     private readonly Configuration configuration;
 
