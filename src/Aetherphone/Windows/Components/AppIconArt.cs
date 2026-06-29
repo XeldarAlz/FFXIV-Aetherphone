@@ -53,6 +53,9 @@ internal static class AppIconArt
             case "timers":
                 DrawTimers(dl, center, extent, inkColor);
                 return true;
+            case "fishing":
+                DrawFishing(dl, center, extent, inkColor, holeColor);
+                return true;
             case "notifications":
                 DrawNotifications(dl, center, extent, inkColor);
                 return true;
@@ -745,6 +748,24 @@ internal static class AppIconArt
         var min = new Vector2(At(center, extent, left, centerY).X, center.Y + centerY * extent - height * 0.5f);
         var max = new Vector2(At(center, extent, right, centerY).X, center.Y + centerY * extent + height * 0.5f);
         dl.AddRectFilled(min, max, color, rounding);
+    }
+
+    private static void DrawFishing(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var bodyCenter = At(center, extent, -0.12f, 0.04f);
+        var bodyRadius = extent * 0.62f;
+        dl.AddCircleFilled(bodyCenter, bodyRadius, ink, 40);
+        dl.AddRectFilled(At(center, extent, -0.74f, -0.40f), At(center, extent, 0.30f, 0.48f), ink, extent * 0.42f);
+
+        Span<Vector2> tail = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.30f, 0.04f),
+            At(center, extent, 0.96f, -0.52f),
+            At(center, extent, 0.96f, 0.60f),
+        };
+        FillConvex(dl, ink, tail);
+
+        dl.AddCircleFilled(At(center, extent, -0.52f, -0.14f), extent * 0.13f, hole, 20);
     }
 
     private static Vector2 At(Vector2 center, float extent, float unitX, float unitY)

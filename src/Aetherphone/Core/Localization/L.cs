@@ -57,6 +57,8 @@ internal static class L
 
         public static readonly LocString News = new("app.news", "News");
 
+        public static readonly LocString Fishing = new("app.fishing", "Fishing");
+
         public static readonly LocString Settings = new("app.settings", "Settings");
     }
 
@@ -413,6 +415,29 @@ internal static class L
         public static readonly LocString ResetNotice = new("timers.resetNotice", "Server reset is here");
 
         public static readonly LocString VentureComplete = new("timers.ventureComplete", "Venture complete");
+    }
+
+    internal static class Fishing
+    {
+        public static readonly LocString NowBoarding = new("fishing.nowBoarding", "Now Boarding");
+
+        public static readonly LocString NextVoyage = new("fishing.nextVoyage", "Next Voyage");
+
+        public static readonly LocString Upcoming = new("fishing.upcoming", "Upcoming Voyages");
+
+        public static readonly LocString BlueFish = new("fishing.blueFish", "Blue Fish");
+
+        public static readonly LocString NoBlueFish = new("fishing.noBlueFish", "No blue fish on this route");
+
+        public static readonly LocString Day = new("fishing.day", "Day");
+
+        public static readonly LocString Sunset = new("fishing.sunset", "Sunset");
+
+        public static readonly LocString Night = new("fishing.night", "Night");
+
+        public static readonly LocString DeparturesNote = new("fishing.departuresNote", "Voyages depart every 2 hours from the Fisher's Guild in Limsa Lominsa.");
+
+        public static readonly LocString InDays = new("fishing.inDays", "in {0}d {1}h");
     }
 
     internal static class ControlCenter
