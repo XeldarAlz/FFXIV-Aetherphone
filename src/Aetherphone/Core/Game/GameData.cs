@@ -11,6 +11,9 @@ internal sealed class GameData
     private readonly IDataManager data;
     private readonly IObjectTable objectTable;
 
+    private uint[]? collectableMountIds;
+    private uint[]? collectableMinionIds;
+
     public GameData(IDataManager data, IObjectTable objectTable)
     {
         this.data = data;
@@ -225,5 +228,66 @@ internal sealed class GameData
         }
 
         into.Add(poeticsItemId);
+    }
+
+    public bool TryGetWeeklyTomestone(out uint itemId, out string name)
+    {
+        itemId = 0;
+        name = string.Empty;
+
+        var ids = new List<uint>(4);
+        CollectTomestoneItemIds(ids);
+        if (ids.Count == 0 || !TryGetItem(ids[0], out var resolvedName, out _, out _))
+        {
+            return false;
+        }
+
+        itemId = ids[0];
+        name = resolvedName;
+        return true;
+    }
+
+    public uint[] CollectableMountIds()
+    {
+        if (collectableMountIds is not null)
+        {
+            return collectableMountIds;
+        }
+
+        var ids = new List<uint>(512);
+        foreach (var row in data.GetExcelSheet<Mount>())
+        {
+            if (row.RowId == 0 || row.Order < 0 || row.Singular.ExtractText().Length == 0)
+            {
+                continue;
+            }
+
+            ids.Add(row.RowId);
+        }
+
+        collectableMountIds = ids.ToArray();
+        return collectableMountIds;
+    }
+
+    public uint[] CollectableMinionIds()
+    {
+        if (collectableMinionIds is not null)
+        {
+            return collectableMinionIds;
+        }
+
+        var ids = new List<uint>(768);
+        foreach (var row in data.GetExcelSheet<Companion>())
+        {
+            if (row.RowId == 0 || row.Order == 0 || row.Singular.ExtractText().Length == 0)
+            {
+                continue;
+            }
+
+            ids.Add(row.RowId);
+        }
+
+        collectableMinionIds = ids.ToArray();
+        return collectableMinionIds;
     }
 }

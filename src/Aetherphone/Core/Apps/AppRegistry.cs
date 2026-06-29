@@ -29,7 +29,7 @@ internal static class AppRegistry
         {
             new MessagesApp(services.Messages, services.ChatBridge, services.MessageLauncher, services.Lodestone),
             new ContactsApp(services.GameData, services.MessageLauncher, services.Lodestone),
-            new MyCharacterApp(services.GameData, services.Textures, services.Lodestone),
+            new MyCharacterApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
         };
 
         if (services.Configuration.ChirperEnabled)

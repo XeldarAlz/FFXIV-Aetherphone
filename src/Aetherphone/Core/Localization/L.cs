@@ -297,6 +297,46 @@ internal static class L
         public static readonly LocString CityState = new("character.cityState", "City-state");
 
         public static readonly LocString GrandCompany = new("character.grandCompany", "Grand Company");
+
+        public static readonly LocString Activity = new("character.activity", "Activity");
+
+        public static readonly LocString Summary = new("character.summary", "Summary");
+
+        public static readonly LocString RingJob = new("character.ringJob", "Job");
+
+        public static readonly LocString RingTomestones = new("character.ringTomestones", "Tomes");
+
+        public static readonly LocString RingCollection = new("character.ringCollection", "Collect");
+
+        public static readonly LocString JobLevelMax = new("character.jobLevelMax", "MAX");
+
+        public static readonly LocString ExpToLevel = new("character.expToLevel", "{0} XP to Lv {1}");
+
+        public static readonly LocString JobsAtMax = new("character.jobsAtMax", "{0} of {1} jobs maxed");
+
+        public static readonly LocString WeeklyTomestones = new("character.weeklyTomestones", "Weekly Tomestones");
+
+        public static readonly LocString Collection = new("character.collection", "Collection");
+
+        public static readonly LocString Mounts = new("character.mounts", "Mounts");
+
+        public static readonly LocString Minions = new("character.minions", "Minions");
+
+        public static readonly LocString Gil = new("character.gil", "Gil");
+
+        public static readonly LocString Retainers = new("character.retainers", "Retainers");
+
+        public static readonly LocString VenturesReady = new("character.venturesReady", "{0} ready");
+
+        public static readonly LocString VenturesActive = new("character.venturesActive", "{0} running");
+
+        public static readonly LocString RetainersNone = new("character.retainersNone", "Open the summoning bell once");
+
+        public static readonly LocString Achievements = new("character.achievements", "Achievements");
+
+        public static readonly LocString AchievementPoints = new("character.achievementPoints", "Points");
+
+        public static readonly LocString CollectHint = new("character.collectHint", "Open a chat with someone or view a portrait once to link Lodestone for full collection stats");
     }
 
     internal static class Camera

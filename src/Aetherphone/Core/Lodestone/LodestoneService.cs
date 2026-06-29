@@ -37,6 +37,29 @@ internal sealed class LodestoneService : IDisposable
 
     public AvatarHandle Portrait(string name, string world) => Image(name, world, true);
 
+    public bool TryGetCachedId(string name, string world, out string id)
+    {
+        id = string.Empty;
+        if (name.Length == 0 || world.Length == 0)
+        {
+            return false;
+        }
+
+        EnsureIdsLoaded();
+
+        var key = $"{name}@{world}";
+        lock (idSync)
+        {
+            if (resolvedIds.TryGetValue(key, out var cached))
+            {
+                id = cached;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private AvatarHandle Image(string name, string world, bool fullBody)
     {
         if (!configuration.ShowLodestonePortraits || name.Length == 0 || world.Length == 0)
