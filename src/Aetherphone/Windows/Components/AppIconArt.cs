@@ -41,6 +41,9 @@ internal static class AppIconArt
             case "news":
                 DrawNews(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "collections":
+                DrawCollections(dl, center, extent, inkColor, holeColor);
+                return true;
             case "market":
                 DrawMarket(dl, center, extent, inkColor);
                 return true;
@@ -820,6 +823,26 @@ internal static class AppIconArt
         var min = new Vector2(At(center, extent, left, centerY).X, center.Y + centerY * extent - height * 0.5f);
         var max = new Vector2(At(center, extent, right, centerY).X, center.Y + centerY * extent + height * 0.5f);
         dl.AddRectFilled(min, max, color, rounding);
+    }
+
+    private static void DrawCollections(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var lidMin = At(center, extent, -0.88f, -0.72f);
+        var lidMax = At(center, extent, 0.88f, -0.12f);
+        dl.AddRectFilled(lidMin, lidMax, ink, extent * 0.34f, ImDrawFlags.RoundCornersTop);
+
+        var bodyMin = At(center, extent, -0.80f, -0.16f);
+        var bodyMax = At(center, extent, 0.80f, 0.78f);
+        dl.AddRectFilled(bodyMin, bodyMax, ink, extent * 0.18f, ImDrawFlags.RoundCornersBottom);
+
+        dl.AddLine(At(center, extent, -0.80f, -0.14f), At(center, extent, 0.80f, -0.14f), hole, extent * 0.07f);
+
+        var lockMin = At(center, extent, -0.18f, -0.42f);
+        var lockMax = At(center, extent, 0.18f, 0.16f);
+        dl.AddRectFilled(lockMin, lockMax, hole, extent * 0.07f);
+
+        dl.AddCircleFilled(At(center, extent, 0f, -0.12f), extent * 0.11f, ink, 16);
+        dl.AddRectFilled(At(center, extent, -0.05f, -0.12f), At(center, extent, 0.05f, 0.06f), ink, extent * 0.02f);
     }
 
     private static void DrawFishing(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

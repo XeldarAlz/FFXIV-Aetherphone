@@ -441,7 +441,6 @@
   "collections.failed": "FFXIV Collect'e ulaşılamadı.",
   "collections.tryAgain": "Tekrar dene",
   "collections.noResults": "Filtrelerinle eşleşen öğe yok.",
-  "collections.moreCount": "+{0} daha",
   "collections.completePercent": "%{0} tamamlandı",
   "collections.ownedUnavailable": "Sahip olduğun öğeler şu anda yüklenemedi."
 }

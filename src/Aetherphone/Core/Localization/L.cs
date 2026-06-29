@@ -136,8 +136,6 @@ internal static class L
 
         public static readonly LocString NoResults = new("collections.noResults", "No items match your filters.");
 
-        public static readonly LocString MoreCount = new("collections.moreCount", "+{0} more");
-
         public static readonly LocString CompletePercent = new("collections.completePercent", "{0}% complete");
     }
 

@@ -441,7 +441,6 @@
   "collections.failed": "Impossible de joindre FFXIV Collect.",
   "collections.tryAgain": "Réessayer",
   "collections.noResults": "Aucun objet ne correspond à vos filtres.",
-  "collections.moreCount": "+{0} de plus",
   "collections.completePercent": "{0}% terminé",
   "collections.ownedUnavailable": "Impossible de charger vos objets obtenus pour l'instant."
 }

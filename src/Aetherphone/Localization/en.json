@@ -465,7 +465,6 @@
   "collections.failed": "Couldn't reach FFXIV Collect.",
   "collections.tryAgain": "Try again",
   "collections.noResults": "No items match your filters.",
-  "collections.moreCount": "+{0} more",
   "collections.completePercent": "{0}% complete",
   "collections.ownedUnavailable": "Couldn't load your owned items right now."
 }

@@ -441,7 +441,6 @@
   "collections.failed": "FFXIV Collect nicht erreichbar.",
   "collections.tryAgain": "Erneut versuchen",
   "collections.noResults": "Keine Einträge passen zu deinen Filtern.",
-  "collections.moreCount": "+{0} weitere",
   "collections.completePercent": "{0}% abgeschlossen",
   "collections.ownedUnavailable": "Deine erhaltenen Einträge konnten nicht geladen werden."
 }
