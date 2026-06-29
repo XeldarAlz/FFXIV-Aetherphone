@@ -53,6 +53,9 @@ internal static class AppIconArt
             case "timers":
                 DrawTimers(dl, center, extent, inkColor);
                 return true;
+            case "dailies":
+                DrawDailies(dl, center, extent, inkColor, holeColor);
+                return true;
             case "fishing":
                 DrawFishing(dl, center, extent, inkColor, holeColor);
                 return true;
@@ -322,6 +325,24 @@ internal static class AppIconArt
             At(center, extent, 0f, 0.02f),
         };
         FillConvex(dl, ink, lower);
+    }
+
+    private static void DrawDailies(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        dl.AddRectFilled(At(center, extent, -0.26f, -0.96f), At(center, extent, 0.26f, -0.58f), ink, extent * 0.10f);
+        dl.AddRectFilled(At(center, extent, -0.78f, -0.74f), At(center, extent, 0.78f, 0.92f), ink, extent * 0.22f);
+
+        Span<float> rows = stackalloc float[3] { -0.34f, 0.06f, 0.46f };
+        for (var row = 0; row < rows.Length; row++)
+        {
+            var rowY = rows[row];
+            dl.AddRectFilled(At(center, extent, -0.59f, rowY - 0.17f), At(center, extent, -0.25f, rowY + 0.17f), hole, extent * 0.06f);
+            dl.AddRectFilled(At(center, extent, -0.10f, rowY - 0.08f), At(center, extent, 0.58f, rowY + 0.08f), hole, extent * 0.08f);
+        }
+
+        var checkThickness = extent * 0.09f;
+        dl.AddLine(At(center, extent, -0.55f, -0.34f), At(center, extent, -0.45f, -0.23f), ink, checkThickness);
+        dl.AddLine(At(center, extent, -0.45f, -0.23f), At(center, extent, -0.27f, -0.47f), ink, checkThickness);
     }
 
     private static void DrawNotifications(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
