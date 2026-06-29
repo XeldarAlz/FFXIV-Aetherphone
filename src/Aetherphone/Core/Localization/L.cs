@@ -304,7 +304,7 @@ internal static class L
 
         public static readonly LocString RingJob = new("character.ringJob", "Job");
 
-        public static readonly LocString RingTomestones = new("character.ringTomestones", "Tomes");
+        public static readonly LocString RingMastery = new("character.ringMastery", "Mastery");
 
         public static readonly LocString RingCollection = new("character.ringCollection", "Collect");
 
@@ -314,15 +314,13 @@ internal static class L
 
         public static readonly LocString JobsAtMax = new("character.jobsAtMax", "{0} of {1} jobs maxed");
 
-        public static readonly LocString WeeklyTomestones = new("character.weeklyTomestones", "Weekly Tomestones");
+        public static readonly LocString JobMastery = new("character.jobMastery", "Job Mastery");
 
         public static readonly LocString Collection = new("character.collection", "Collection");
 
         public static readonly LocString Mounts = new("character.mounts", "Mounts");
 
         public static readonly LocString Minions = new("character.minions", "Minions");
-
-        public static readonly LocString Gil = new("character.gil", "Gil");
 
         public static readonly LocString Retainers = new("character.retainers", "Retainers");
 

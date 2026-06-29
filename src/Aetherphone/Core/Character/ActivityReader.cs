@@ -6,8 +6,6 @@ namespace Aetherphone.Core.Character;
 
 internal static unsafe class ActivityReader
 {
-    private const long WeeklyTomestoneCap = 2000;
-
     public static ActivitySnapshot? Read(GameData gameData)
     {
         var player = gameData.LocalPlayer;
@@ -35,11 +33,8 @@ internal static unsafe class ActivityReader
         }
 
         CountJobsAtMax(playerState, out var jobsAtMax, out var jobsTotal);
-        ReadTomestone(gameData, out var tomeAmount, out var tomeName);
         ReadCollection(gameData, playerState, out var mountsOwned, out var mountsTotal, out var minionsOwned, out var minionsTotal);
         ReadRetainers(out var retainerCount, out var venturesReady, out var venturesActive);
-
-        var gil = ReadGil();
 
         return new ActivitySnapshot(
             gameData.JobName(jobRowId),
@@ -49,14 +44,10 @@ internal static unsafe class ActivityReader
             neededExp,
             jobsAtMax,
             jobsTotal,
-            tomeAmount,
-            WeeklyTomestoneCap,
-            tomeName,
             mountsOwned,
             mountsTotal,
             minionsOwned,
             minionsTotal,
-            gil,
             retainerCount,
             venturesReady,
             venturesActive);
@@ -88,27 +79,6 @@ internal static unsafe class ActivityReader
                 jobsAtMax++;
             }
         }
-    }
-
-    private static void ReadTomestone(GameData gameData, out long amount, out string name)
-    {
-        amount = 0;
-        name = string.Empty;
-
-        if (!gameData.TryGetWeeklyTomestone(out var itemId, out var resolvedName))
-        {
-            return;
-        }
-
-        name = resolvedName;
-
-        var manager = InventoryManager.Instance();
-        if (manager is null)
-        {
-            return;
-        }
-
-        amount = manager->GetTomestoneCount(itemId);
     }
 
     private static void ReadCollection(GameData gameData, PlayerState* playerState, out int mountsOwned, out int mountsTotal, out int minionsOwned, out int minionsTotal)
@@ -186,16 +156,5 @@ internal static unsafe class ActivityReader
                 venturesActive++;
             }
         }
-    }
-
-    private static long ReadGil()
-    {
-        var manager = InventoryManager.Instance();
-        if (manager is null)
-        {
-            return 0;
-        }
-
-        return (long)manager->GetGil();
     }
 }

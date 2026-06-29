@@ -85,7 +85,7 @@ internal sealed class MyCharacterApp : IPhoneApp
         {
             DrawRings(theme, snapshot, scale);
             DrawActivitySummary(theme, snapshot);
-            DrawWallet(theme, snapshot);
+            DrawRetainers(theme, snapshot);
             DrawCollect(theme, profile);
             DrawProfile(profile, theme, scale);
         }
@@ -93,7 +93,7 @@ internal sealed class MyCharacterApp : IPhoneApp
 
     private static void DrawRings(PhoneTheme theme, ActivitySnapshot snapshot, float scale)
     {
-        ActivityRings.Draw(theme, snapshot.JobFraction, snapshot.TomestoneFraction, snapshot.CollectionFraction);
+        ActivityRings.Draw(theme, snapshot.JobFraction, snapshot.MasteryFraction, snapshot.CollectionFraction);
         DrawLegend(theme, scale, snapshot);
     }
 
@@ -105,7 +105,7 @@ internal sealed class MyCharacterApp : IPhoneApp
         var height = 36f * scale;
 
         DrawLegendItem(new Vector2(origin.X + third * 0.5f, origin.Y), ActivityRings.RingOneTint, Loc.T(L.Character.RingJob), Percent(snapshot.JobFraction), theme);
-        DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), ActivityRings.RingTwoTint, Loc.T(L.Character.RingTomestones), Percent(snapshot.TomestoneFraction), theme);
+        DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), ActivityRings.RingTwoTint, Loc.T(L.Character.RingMastery), Percent(snapshot.MasteryFraction), theme);
         DrawLegendItem(new Vector2(origin.X + third * 2.5f, origin.Y), ActivityRings.RingThreeTint, Loc.T(L.Character.RingCollection), Percent(snapshot.CollectionFraction), theme);
 
         ImGui.SetCursorScreenPos(origin);
@@ -136,34 +136,26 @@ internal sealed class MyCharacterApp : IPhoneApp
         var jobDetail = JobDetail(snapshot);
         ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingOneTint, FontAwesomeIcon.Bolt, jobLabel, jobValue, snapshot.JobFraction, jobDetail);
 
-        var tomeLabel = snapshot.TomestoneName.Length > 0 ? snapshot.TomestoneName : Loc.T(L.Character.WeeklyTomestones);
-        var tomeValue = $"{Number(snapshot.TomestoneAmount)} / {Number(snapshot.TomestoneCap)}";
-        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingTwoTint, FontAwesomeIcon.Coins, tomeLabel, tomeValue, snapshot.TomestoneFraction);
+        var masteryDetail = snapshot.JobsTotal > 0 ? Loc.T(L.Character.JobsAtMax, snapshot.JobsAtMax, snapshot.JobsTotal) : string.Empty;
+        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingTwoTint, FontAwesomeIcon.Crown, Loc.T(L.Character.JobMastery), Percent(snapshot.MasteryFraction), snapshot.MasteryFraction, masteryDetail);
 
         var collectionValue = $"{Number(snapshot.CollectionOwned)} / {Number(snapshot.CollectionTotal)}";
-        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingThreeTint, FontAwesomeIcon.Dragon, Loc.T(L.Character.Collection), collectionValue, snapshot.CollectionFraction);
+        var collectionDetail = $"{Loc.T(L.Character.Mounts)} {Number(snapshot.MountsOwned)} · {Loc.T(L.Character.Minions)} {Number(snapshot.MinionsOwned)}";
+        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingThreeTint, FontAwesomeIcon.Dragon, Loc.T(L.Character.Collection), collectionValue, snapshot.CollectionFraction, collectionDetail);
 
         card.End();
     }
 
-    private void DrawWallet(PhoneTheme theme, ActivitySnapshot snapshot)
+    private void DrawRetainers(PhoneTheme theme, ActivitySnapshot snapshot)
     {
-        var hasRetainers = snapshot.RetainerCount > 0;
-        var rowCount = hasRetainers ? 3 : 2;
-
-        SettingsSection.Header(Loc.T(L.Apps.Wallet), theme);
-        var card = GroupCard.Begin(theme, rowCount, ActivityStatRow.RowHeight);
-
-        ActivityStatRow.Draw(card.NextRow(), theme, Styling.AccentAmber, FontAwesomeIcon.Coins, Loc.T(L.Character.Gil), Number(snapshot.Gil));
-
-        var mountsDetail = $"{Loc.T(L.Character.Mounts)} {Number(snapshot.MountsOwned)} · {Loc.T(L.Character.Minions)} {Number(snapshot.MinionsOwned)}";
-        ActivityStatRow.Draw(card.NextRow(), theme, Styling.AccentMint, FontAwesomeIcon.Paw, Loc.T(L.Character.Collection), Percent(snapshot.CollectionFraction), mountsDetail);
-
-        if (hasRetainers)
+        if (snapshot.RetainerCount <= 0)
         {
-            ActivityStatRow.Draw(card.NextRow(), theme, Styling.AccentBlue, FontAwesomeIcon.Briefcase, Loc.T(L.Character.Retainers), Number(snapshot.RetainerCount), RetainerDetail(snapshot));
+            return;
         }
 
+        SettingsSection.Header(Loc.T(L.Character.Retainers), theme);
+        var card = GroupCard.Begin(theme, 1, ActivityStatRow.RowHeight);
+        ActivityStatRow.Draw(card.NextRow(), theme, Styling.AccentBlue, FontAwesomeIcon.Briefcase, Loc.T(L.Character.Retainers), Number(snapshot.RetainerCount), RetainerDetail(snapshot));
         card.End();
     }
 
@@ -233,7 +225,7 @@ internal sealed class MyCharacterApp : IPhoneApp
     {
         if (snapshot.MaxLevel)
         {
-            return snapshot.JobsTotal > 0 ? Loc.T(L.Character.JobsAtMax, snapshot.JobsAtMax, snapshot.JobsTotal) : string.Empty;
+            return string.Empty;
         }
 
         var remaining = snapshot.NeededExp - snapshot.CurrentExp;

@@ -230,23 +230,6 @@ internal sealed class GameData
         into.Add(poeticsItemId);
     }
 
-    public bool TryGetWeeklyTomestone(out uint itemId, out string name)
-    {
-        itemId = 0;
-        name = string.Empty;
-
-        var ids = new List<uint>(4);
-        CollectTomestoneItemIds(ids);
-        if (ids.Count == 0 || !TryGetItem(ids[0], out var resolvedName, out _, out _))
-        {
-            return false;
-        }
-
-        itemId = ids[0];
-        name = resolvedName;
-        return true;
-    }
-
     public uint[] CollectableMountIds()
     {
         if (collectableMountIds is not null)

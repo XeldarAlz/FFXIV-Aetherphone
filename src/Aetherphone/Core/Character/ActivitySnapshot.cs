@@ -8,21 +8,17 @@ internal readonly record struct ActivitySnapshot(
     long NeededExp,
     int JobsAtMax,
     int JobsTotal,
-    long TomestoneAmount,
-    long TomestoneCap,
-    string TomestoneName,
     int MountsOwned,
     int MountsTotal,
     int MinionsOwned,
     int MinionsTotal,
-    long Gil,
     int RetainerCount,
     int RetainerVenturesReady,
     int RetainerVenturesActive)
 {
     public float JobFraction => MaxLevel || NeededExp <= 0 ? 1f : Math.Clamp((float)((double)CurrentExp / NeededExp), 0f, 1f);
 
-    public float TomestoneFraction => TomestoneCap <= 0 ? 0f : Math.Clamp((float)((double)TomestoneAmount / TomestoneCap), 0f, 1f);
+    public float MasteryFraction => JobsTotal <= 0 ? 0f : Math.Clamp((float)((double)JobsAtMax / JobsTotal), 0f, 1f);
 
     public int CollectionOwned => MountsOwned + MinionsOwned;
 
