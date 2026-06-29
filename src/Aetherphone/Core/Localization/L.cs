@@ -65,6 +65,8 @@ internal static class L
 
         public static readonly LocString Collections = new("app.collections", "Collections");
 
+        public static readonly LocString Inventory = new("app.inventory", "Inventory");
+
         public static readonly LocString Settings = new("app.settings", "Settings");
     }
 
@@ -704,6 +706,49 @@ internal static class L
         public static readonly LocString LogInToView = new("wallet.logInToView", "Log in to view your wallet");
 
         public static readonly LocString GilBalance = new("wallet.gilBalance", "GIL BALANCE");
+    }
+
+    internal static class Inventory
+    {
+        public static readonly LocString LogInToView = new("inventory.logInToView", "Log in to view your items");
+
+        public static readonly LocString Search = new("inventory.search", "Search your items");
+
+        public static readonly LocString SearchHint = new("inventory.searchHint", "Search to find where any item is across everything you own.");
+
+        public static readonly LocString NoMatches = new("inventory.noMatches", "Nothing matches that");
+
+        public static readonly LocString SourceInventory = new("inventory.sourceInventory", "Inventory");
+
+        public static readonly LocString SourceArmoury = new("inventory.sourceArmoury", "Armoury Chest");
+
+        public static readonly LocString SourceCrystals = new("inventory.sourceCrystals", "Crystals");
+
+        public static readonly LocString SourceSaddlebag = new("inventory.sourceSaddlebag", "Saddlebag");
+
+        public static readonly LocString SourceEquipped = new("inventory.sourceEquipped", "Equipped");
+
+        public static readonly LocString SourceRetainer = new("inventory.sourceRetainer", "Retainer");
+
+        public static readonly LocString SourceFreeCompany = new("inventory.sourceFreeCompany", "FC Chest");
+
+        public static readonly LocString RetainerNamed = new("inventory.retainerNamed", "Retainer · {0}");
+
+        public static readonly LocString FreeCompanyNamed = new("inventory.freeCompanyNamed", "FC Chest · {0}");
+
+        public static readonly LocString TotalItems = new("inventory.totalItems", "Items carried");
+
+        public static readonly LocString Gil = new("inventory.gil", "Gil");
+
+        public static readonly LocString CachedSources = new("inventory.cachedSources", "Stored away");
+
+        public static readonly LocString RetainerEmpty = new("inventory.retainerEmpty", "Open a retainer at a summoning bell to store their contents here.");
+
+        public static readonly LocString FreeCompanyEmpty = new("inventory.freeCompanyEmpty", "Open your FC chest once to store its contents here.");
+
+        public static readonly LocString Updated = new("inventory.updated", "Updated {0}");
+
+        public static readonly LocString NotYetSeen = new("inventory.notYetSeen", "Not opened yet");
     }
 
     internal static class Market

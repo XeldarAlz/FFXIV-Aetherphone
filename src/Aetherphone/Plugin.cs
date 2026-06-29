@@ -68,7 +68,7 @@ public sealed class Plugin : IDalamudPlugin
         WallpaperImages = new WallpaperImageCache();
         Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
 
-        services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, TextureProvider, PluginInterface.ConfigDirectory);
+        services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, TextureProvider, PluginInterface.ConfigDirectory);
         aboutWindow = new AboutWindow();
         shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
