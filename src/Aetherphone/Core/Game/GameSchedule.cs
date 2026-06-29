@@ -11,6 +11,8 @@ internal readonly record struct TimerWindow(bool Active, DateTime NextChangeUtc)
 
 internal readonly record struct OceanVoyage(DateTime NextBoardingUtc, bool BoardingNow, string Route, OceanTimeOfDay TimeOfDay);
 
+internal readonly record struct OceanVoyageSlot(DateTime BoardingUtc, bool BoardingNow, char Destination, char Time);
+
 internal static class GameSchedule
 {
     private const int DailyResetHour = 15;
@@ -66,14 +68,35 @@ internal static class GameSchedule
 
     public static OceanVoyage OceanFishing(DateTime utcNow)
     {
+        var boarding = NextOceanBoarding(utcNow, out var boardingNow);
+        var code = RouteCode(boarding);
+        return new OceanVoyage(boarding, boardingNow, RouteName(code[0]), TimeOfDay(code[1]));
+    }
+
+    public static void UpcomingOceanVoyages(DateTime utcNow, OceanVoyageSlot[] destination)
+    {
+        if (destination.Length == 0)
+        {
+            return;
+        }
+
+        var firstBoarding = NextOceanBoarding(utcNow, out var firstBoardingNow);
+        for (var index = 0; index < destination.Length; index++)
+        {
+            var boarding = firstBoarding.AddHours(2 * index);
+            var code = RouteCode(boarding);
+            var boardingNow = index == 0 && firstBoardingNow;
+            destination[index] = new OceanVoyageSlot(boarding, boardingNow, code[0], code[1]);
+        }
+    }
+
+    private static DateTime NextOceanBoarding(DateTime utcNow, out bool boardingNow)
+    {
         var evenHour = utcNow.Hour - (utcNow.Hour % 2);
         var windowStart = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, evenHour, 0, 0, DateTimeKind.Utc);
 
-        var boardingNow = utcNow - windowStart < OceanBoardingWindow;
-        var boarding = boardingNow ? windowStart : windowStart.AddHours(2);
-
-        var code = RouteCode(boarding);
-        return new OceanVoyage(boarding, boardingNow, RouteName(code[0]), TimeOfDay(code[1]));
+        boardingNow = utcNow - windowStart < OceanBoardingWindow;
+        return boardingNow ? windowStart : windowStart.AddHours(2);
     }
 
     private static string RouteCode(DateTime boardingUtc)
