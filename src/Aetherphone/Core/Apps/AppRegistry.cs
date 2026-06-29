@@ -2,6 +2,7 @@ using Aetherphone.Apps.Camera;
 using Aetherphone.Apps.Chirper;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.Contacts;
+using Aetherphone.Apps.Dailies;
 using Aetherphone.Apps.Fishing;
 using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Market;
@@ -47,6 +48,7 @@ internal static class AppRegistry
         apps.Add(new MusicApp(services.Radio, services.SongSearch, services.Playback, services.SongHistory, services.Media, services.Http, services.Textures));
         apps.Add(new ClockApp());
         apps.Add(new TimersApp(services.Configuration));
+        apps.Add(new DailiesApp(services.Configuration));
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats));
         apps.Add(new NotificationsApp(services.Notifications));

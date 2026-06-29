@@ -51,6 +51,8 @@ internal static class L
 
         public static readonly LocString Timers = new("app.timers", "Timers");
 
+        public static readonly LocString Dailies = new("app.dailies", "Dailies");
+
         public static readonly LocString Games = new("app.games", "Games");
 
         public static readonly LocString Notifications = new("app.notifications", "Notifications");
@@ -438,6 +440,55 @@ internal static class L
         public static readonly LocString DeparturesNote = new("fishing.departuresNote", "Voyages depart every 2 hours from the Fisher's Guild in Limsa Lominsa.");
 
         public static readonly LocString InDays = new("fishing.inDays", "in {0}d {1}h");
+    }
+
+    internal static class Dailies
+    {
+        public static readonly LocString Daily = new("dailies.daily", "Daily");
+
+        public static readonly LocString Weekly = new("dailies.weekly", "Weekly");
+
+        public static readonly LocString DailyTasks = new("dailies.dailyTasks", "Daily Tasks");
+
+        public static readonly LocString WeeklyTasks = new("dailies.weeklyTasks", "Weekly Tasks");
+
+        public static readonly LocString AllDone = new("dailies.allDone", "All done");
+
+        public static readonly LocString NothingLeft = new("dailies.nothingLeft", "Nothing left to do");
+
+        public static readonly LocString Remaining = new("dailies.remaining", "{0} remaining");
+
+        public static readonly LocString Resets = new("dailies.resets", "Resets {0}");
+
+        public static readonly LocString NotifyReset = new("dailies.notifyReset", "Notify when tasks reset");
+
+        public static readonly LocString AutoTracked = new("dailies.autoTracked", "Auto");
+
+        public static readonly LocString DutyRoulettes = new("dailies.dutyRoulettes", "Duty Roulettes");
+
+        public static readonly LocString BeastTribe = new("dailies.beastTribe", "Tribal Quests");
+
+        public static readonly LocString MiniCactpot = new("dailies.miniCactpot", "Mini Cactpot");
+
+        public static readonly LocString GrandCompanySupply = new("dailies.grandCompanySupply", "GC Supply & Provisioning");
+
+        public static readonly LocString DomanEnclave = new("dailies.domanEnclave", "Doman Enclave");
+
+        public static readonly LocString Levequests = new("dailies.levequests", "Levequest Allowances");
+
+        public static readonly LocString WondrousTails = new("dailies.wondrousTails", "Wondrous Tails");
+
+        public static readonly LocString JumboCactpot = new("dailies.jumboCactpot", "Jumbo Cactpot");
+
+        public static readonly LocString CustomDeliveries = new("dailies.customDeliveries", "Custom Deliveries");
+
+        public static readonly LocString FashionReport = new("dailies.fashionReport", "Fashion Report");
+
+        public static readonly LocString ChallengeLog = new("dailies.challengeLog", "Challenge Log");
+
+        public static readonly LocString RaidLockout = new("dailies.raidLockout", "Raid & Alliance Lockouts");
+
+        public static readonly LocString HuntBills = new("dailies.huntBills", "Hunt Bills");
     }
 
     internal static class ControlCenter

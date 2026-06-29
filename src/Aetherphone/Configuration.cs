@@ -1,3 +1,4 @@
+using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Market;
@@ -29,6 +30,10 @@ internal sealed class Configuration : IPluginConfiguration
     public bool NotifyGrandCompanyReset { get; set; }
 
     public bool NotifyRetainerVentures { get; set; }
+
+    public bool NotifyDailiesReset { get; set; }
+
+    public List<DailyCheckRecord> DailyChecks { get; set; } = new();
 
     public bool ScrollWhileIdle { get; set; } = true;
 
