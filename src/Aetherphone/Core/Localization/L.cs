@@ -526,17 +526,63 @@ internal static class L
 
         public static readonly LocString Empty = new("chirper.empty", "No chirps yet — post the first one");
 
+        public static readonly LocString FollowingEmpty = new("chirper.followingEmpty", "Follow people to see their chirps here");
+
+        public static readonly LocString ExploreEmpty = new("chirper.exploreEmpty", "No chirps yet — be the first to post");
+
         public static readonly LocString FindPeople = new("chirper.findPeople", "Find People");
 
-        public static readonly LocString SearchByName = new("chirper.searchByName", "Search by name or name@world");
+        public static readonly LocString SearchByName = new("chirper.searchByName", "Search by name, @username, or world");
+
+        public static readonly LocString ForYou = new("chirper.forYou", "For You");
 
         public static readonly LocString Following = new("chirper.following", "Following");
 
         public static readonly LocString Follow = new("chirper.follow", "Follow");
 
-        public static readonly LocString NameOrWorld = new("chirper.nameOrWorld", "Name or Name@World");
+        public static readonly LocString NameOrWorld = new("chirper.nameOrWorld", "Name, @username, or world");
 
-        public static readonly LocString Compose = new("chirper.compose", "Chirp something");
+        public static readonly LocString Compose = new("chirper.compose", "What's happening?");
+
+        public static readonly LocString NewChirp = new("chirper.newChirp", "New Chirp");
+
+        public static readonly LocString Post = new("chirper.post", "Post");
+
+        public static readonly LocString EditProfile = new("chirper.editProfile", "Edit Profile");
+
+        public static readonly LocString DisplayNameLabel = new("chirper.displayNameLabel", "Display name");
+
+        public static readonly LocString HandleLabel = new("chirper.handleLabel", "Username");
+
+        public static readonly LocString BioLabel = new("chirper.bioLabel", "Bio");
+
+        public static readonly LocString BioHint = new("chirper.bioHint", "Add a bio");
+
+        public static readonly LocString Save = new("chirper.save", "Save");
+
+        public static readonly LocString Saving = new("chirper.saving", "Saving…");
+
+        public static readonly LocString HandleTaken = new("chirper.handleTaken", "That username is taken");
+
+        public static readonly LocString HandleRules = new("chirper.handleRules", "3–15 characters: letters, numbers, or _");
+
+        public static readonly LocString ProfileError = new("chirper.profileError", "Couldn't load this profile");
+
+        public static readonly LocString React = new("chirper.react", "React");
+
+        public static readonly LocString ReactLike = new("chirper.reactLike", "Like");
+
+        public static readonly LocString ReactLove = new("chirper.reactLove", "Love");
+
+        public static readonly LocString ReactLaugh = new("chirper.reactLaugh", "Haha");
+
+        public static readonly LocString ReactWow = new("chirper.reactWow", "Wow");
+
+        public static readonly LocString ReactSad = new("chirper.reactSad", "Sad");
+
+        public static readonly LocString ReactAngry = new("chirper.reactAngry", "Angry");
+
+        public static readonly LocPlural Posts = new("chirper.posts", "{0} post", "{0} posts");
 
         public static readonly LocPlural Likes = new("chirper.likes", "{0} like", "{0} likes");
     }

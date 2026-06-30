@@ -13,21 +13,32 @@ internal sealed record UserDto(
     string Name,
     string World,
     string DisplayName,
+    string Handle,
+    string Bio,
     int Followers,
     int Following,
-    bool IsFollowing);
+    int Posts,
+    bool IsFollowing,
+    bool IsMe);
+
+internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio);
 
 internal sealed record CreatePostRequest(string Text);
+
+internal sealed record ReactRequest(int Kind);
 
 internal sealed record PostDto(
     string Id,
     string AuthorId,
     string AuthorName,
     string AuthorWorld,
+    string AuthorDisplayName,
+    string AuthorHandle,
     string Text,
     long CreatedAtUnix,
-    int Likes,
-    bool LikedByMe);
+    int[] ReactionCounts,
+    int TotalReactions,
+    int MyReaction);
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 

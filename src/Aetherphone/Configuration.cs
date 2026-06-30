@@ -59,8 +59,6 @@ internal sealed class Configuration : IPluginConfiguration
 
     public string AethernetToken { get; set; } = string.Empty;
 
-    public bool ChirperEnabled { get; set; }
-
     public MarketScopeKind MarketScope { get; set; } = MarketScopeKind.DataCenter;
 
     public bool MarketHqOnly { get; set; }

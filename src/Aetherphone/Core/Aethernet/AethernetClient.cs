@@ -32,9 +32,24 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url("/me"), AethernetJsonContext.Default.UserDto, session.Token, token);
     }
 
-    public Task<FeedPage?> FeedAsync(string? cursor, CancellationToken token)
+    public Task<UserDto?> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken token)
     {
-        var path = cursor is null ? "/feed" : $"/feed?cursor={Uri.EscapeDataString(cursor)}";
+        return http.SendJsonAsync(HttpMethod.Patch, Url("/me"), request, AethernetJsonContext.Default.UpdateProfileRequest, AethernetJsonContext.Default.UserDto, session.Token, token);
+    }
+
+    public Task<UserDto?> UserAsync(string userId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/users/{Uri.EscapeDataString(userId)}"), AethernetJsonContext.Default.UserDto, session.Token, token);
+    }
+
+    public Task<FeedPage?> FeedAsync(string scope, string? cursor, CancellationToken token)
+    {
+        var path = $"/feed?scope={scope}";
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
         return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.FeedPage, session.Token, token);
     }
 
@@ -63,14 +78,14 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/follows/{userId}"), session.Token, token);
     }
 
-    public Task<bool> LikeAsync(string postId, CancellationToken token)
+    public Task<PostDto?> ReactAsync(string postId, int kind, CancellationToken token)
     {
-        return http.SendAsync(HttpMethod.Post, Url($"/posts/{postId}/like"), session.Token, token);
+        return http.SendJsonAsync(HttpMethod.Put, Url($"/posts/{postId}/reaction"), new ReactRequest(kind), AethernetJsonContext.Default.ReactRequest, AethernetJsonContext.Default.PostDto, session.Token, token);
     }
 
-    public Task<bool> UnlikeAsync(string postId, CancellationToken token)
+    public Task<PostDto?> RemoveReactionAsync(string postId, CancellationToken token)
     {
-        return http.SendAsync(HttpMethod.Delete, Url($"/posts/{postId}/like"), session.Token, token);
+        return http.RequestJsonAsync(HttpMethod.Delete, Url($"/posts/{postId}/reaction"), AethernetJsonContext.Default.PostDto, session.Token, token);
     }
 
     private string Url(string path) => $"{session.BaseUrl.TrimEnd('/')}{path}";

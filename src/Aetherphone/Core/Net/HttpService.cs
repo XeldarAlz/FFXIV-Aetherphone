@@ -71,11 +71,22 @@ internal sealed class HttpService : IDisposable
         return await SendForJsonAsync(request, typeInfo, bearer, token).ConfigureAwait(false);
     }
 
-    public async Task<TResponse?> PostJsonAsync<TRequest, TResponse>(string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token)
+    public Task<TResponse?> PostJsonAsync<TRequest, TResponse>(string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, url);
+        return SendJsonAsync(HttpMethod.Post, url, body, requestInfo, responseInfo, bearer, token);
+    }
+
+    public async Task<TResponse?> SendJsonAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token)
+    {
+        using var request = new HttpRequestMessage(method, url);
         var payload = JsonSerializer.Serialize(body, requestInfo);
         request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+        return await SendForJsonAsync(request, responseInfo, bearer, token).ConfigureAwait(false);
+    }
+
+    public async Task<TResponse?> RequestJsonAsync<TResponse>(HttpMethod method, string url, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token)
+    {
+        using var request = new HttpRequestMessage(method, url);
         return await SendForJsonAsync(request, responseInfo, bearer, token).ConfigureAwait(false);
     }
 

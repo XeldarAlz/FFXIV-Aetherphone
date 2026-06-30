@@ -36,10 +36,7 @@ internal static class AppRegistry
             new MyCharacterApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
         };
 
-        if (services.Configuration.ChirperEnabled)
-        {
-            apps.Add(new ChirperApp(services.AethernetSession, services.AethernetClient, services.Lodestone));
-        }
+        apps.Add(new ChirperApp(services.AethernetSession, services.AethernetClient, services.Lodestone));
 
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));
