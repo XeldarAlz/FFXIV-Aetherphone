@@ -45,10 +45,13 @@ internal sealed class PhoneWindow : Window
 
     public override void Draw()
     {
-        var origin = ImGui.GetCursorScreenPos();
-        var available = ImGui.GetContentRegionAvail();
-        ImGui.Dummy(available);
-        shell.Draw(new Rect(origin, origin + available));
+        using (Plugin.Fonts.Push(1f))
+        {
+            var origin = ImGui.GetCursorScreenPos();
+            var available = ImGui.GetContentRegionAvail();
+            ImGui.Dummy(available);
+            shell.Draw(new Rect(origin, origin + available));
+        }
 
         if (shell.ConsumeCloseRequest())
         {

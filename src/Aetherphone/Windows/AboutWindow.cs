@@ -75,6 +75,7 @@ public sealed class AboutWindow : Window, IDisposable
 
     public override void Draw()
     {
+        using var font = Plugin.Fonts.Push(1f);
         using var style = Styling.PushWindowStyle();
 
         using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, MathF.Max(0.0001f, Reveal(0))))
