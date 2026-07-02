@@ -206,6 +206,24 @@ internal sealed class TetrisBoard
         return false;
     }
 
+    public bool SoftDrop()
+    {
+        if (GameOver || !HasActivePiece)
+        {
+            return false;
+        }
+
+        if (CanPlace(activeX, activeY + 1, activeRotation))
+        {
+            activeY += 1;
+            scoring.AddSoftDrop(1);
+            return true;
+        }
+
+        LockPiece();
+        return false;
+    }
+
     public void HardDrop()
     {
         if (GameOver || !HasActivePiece)

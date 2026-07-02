@@ -18,6 +18,14 @@ internal sealed class TetrisScoringSystem
         comboChain = -1;
     }
 
+    public void AddSoftDrop(int cellsDropped)
+    {
+        if (cellsDropped > 0)
+        {
+            pendingDropPoints += cellsDropped;
+        }
+    }
+
     public void AddHardDrop(int cellsDropped)
     {
         if (cellsDropped > 0)

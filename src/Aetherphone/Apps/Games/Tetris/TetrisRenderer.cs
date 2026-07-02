@@ -27,7 +27,6 @@ internal sealed class TetrisRenderer
 
         Elevation.Card(drawList, grid.Bounds.Min, grid.Bounds.Max, 18f * scale, scale, 0.8f);
         Squircle.Fill(drawList, grid.Bounds.Min, grid.Bounds.Max, 18f * scale, ImGui.GetColorU32(GamePalette.Board));
-        Squircle.Fill(drawList, grid.Bounds.Min, new Vector2(grid.Bounds.Max.X, grid.Bounds.Center.Y), 18f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)));
 
         DrawGridLines(drawList, grid, scale);
 
