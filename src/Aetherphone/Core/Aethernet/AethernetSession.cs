@@ -4,8 +4,6 @@ namespace Aetherphone.Core.Aethernet;
 
 internal sealed class AethernetSession
 {
-    private const string DefaultBaseUrl = "https://ffxiv-aethernet-production.up.railway.app";
-
     private readonly Configuration configuration;
 
     public AethernetSession(Configuration configuration)
@@ -13,7 +11,7 @@ internal sealed class AethernetSession
         this.configuration = configuration;
     }
 
-    public string BaseUrl => string.IsNullOrWhiteSpace(configuration.AethernetBaseUrl) ? DefaultBaseUrl : configuration.AethernetBaseUrl;
+    public string BaseUrl => string.IsNullOrWhiteSpace(configuration.AethernetBaseUrl) ? Configuration.DefaultAethernetBaseUrl : configuration.AethernetBaseUrl;
 
     public string? Token => string.IsNullOrEmpty(configuration.AethernetToken) ? null : configuration.AethernetToken;
 
