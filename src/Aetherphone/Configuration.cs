@@ -65,6 +65,12 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool AnalyticsEnabled { get; set; } = true;
 
+    public bool CallsEnabled { get; set; }
+
+    public string CallInputDevice { get; set; } = string.Empty;
+
+    public string CallOutputDevice { get; set; } = string.Empty;
+
     public MarketScopeKind MarketScope { get; set; } = MarketScopeKind.DataCenter;
 
     public bool MarketHqOnly { get; set; }

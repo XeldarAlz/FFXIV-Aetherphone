@@ -16,6 +16,7 @@ using Aetherphone.Apps.Music;
 using Aetherphone.Apps.MyCharacter;
 using Aetherphone.Apps.News;
 using Aetherphone.Apps.Notifications;
+using Aetherphone.Apps.Phone;
 using Aetherphone.Apps.Photos;
 using Aetherphone.Apps.Settings;
 using Aetherphone.Apps.Skywatcher;
@@ -32,6 +33,7 @@ internal static class AppRegistry
     {
         var apps = new List<IPhoneApp>
         {
+            new PhoneApp(services.Calls, services.AethernetSession, services.AethernetClient, services.Lodestone),
             new MessagesApp(services.Messages, services.ChatBridge, services.MessageLauncher, services.Lodestone),
             new ContactsApp(services.GameData, services.MessageLauncher, services.Lodestone),
             new MyCharacterApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
@@ -59,7 +61,7 @@ internal static class AppRegistry
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats));
         apps.Add(new NotificationsApp(services.Notifications));
-        apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Ringtone, services.AethernetSession, services.AethernetClient, services.GameData, photoLibrary, showAbout));
+        apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Ringtone, services.AethernetSession, services.AethernetClient, services.GameData, photoLibrary, services.Calls, showAbout));
 
         return apps;
     }
