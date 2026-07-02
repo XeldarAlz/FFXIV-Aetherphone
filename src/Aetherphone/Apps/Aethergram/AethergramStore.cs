@@ -20,9 +20,13 @@ internal sealed class AethergramStore : IDisposable
     private const int GramSize = 1080;
     private const int AvatarSize = 512;
 
+    private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
+
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly CancellationTokenSource cancellation = new();
+
+    private DateTime lastMeAttemptUtc = DateTime.MinValue;
 
     private volatile PostDto[] forYou = Array.Empty<PostDto>();
     private volatile PostDto[] following = Array.Empty<PostDto>();
@@ -89,18 +93,22 @@ internal sealed class AethergramStore : IDisposable
             return;
         }
 
+        var now = DateTime.UtcNow;
+        if (now - lastMeAttemptUtc < MeRetryCooldown)
+        {
+            return;
+        }
+
+        lastMeAttemptUtc = now;
         loadingMe = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("profile load", async token =>
         {
             var me = await client.MeAsync(token).ConfigureAwait(false);
             if (me is not null)
             {
                 session.SetUser(me);
             }
-
-            loadingMe = false;
-        });
+        }, () => loadingMe = false);
     }
 
     public void RefreshFeed(AethergramFeedScope scope)
@@ -119,8 +127,7 @@ internal sealed class AethergramStore : IDisposable
             loadingFollowing = true;
         }
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("feed refresh", async token =>
         {
             var page = await client.GramFeedAsync(scope == AethergramFeedScope.ForYou ? "explore" : "following", null, token).ConfigureAwait(false);
             if (page is not null)
@@ -134,7 +141,8 @@ internal sealed class AethergramStore : IDisposable
                     following = page.Items;
                 }
             }
-
+        }, () =>
+        {
             if (scope == AethergramFeedScope.ForYou)
             {
                 loadingForYou = false;
@@ -262,8 +270,7 @@ internal sealed class AethergramStore : IDisposable
         var liked = post.MyReaction < 0;
         ReplacePost(ApplyLike(post, liked));
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("like", async token =>
         {
             var result = liked
                 ? await client.LikeAsync(post.Id, token).ConfigureAwait(false)
@@ -282,8 +289,7 @@ internal sealed class AethergramStore : IDisposable
         detailComments = Array.Empty<CommentDto>();
         detailLoading = true;
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("comments load", async token =>
         {
             var page = await client.CommentsAsync(post.Id, null, token).ConfigureAwait(false);
             if (detailPostId != post.Id)
@@ -295,8 +301,12 @@ internal sealed class AethergramStore : IDisposable
             {
                 detailComments = Oldest(page.Items);
             }
-
-            detailLoading = false;
+        }, () =>
+        {
+            if (detailPostId == post.Id)
+            {
+                detailLoading = false;
+            }
         });
     }
 
@@ -312,21 +322,33 @@ internal sealed class AethergramStore : IDisposable
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
-            var created = await client.AddCommentAsync(postId, trimmed, token).ConfigureAwait(false);
-            commenting = false;
-            if (created is null)
+            var succeeded = false;
+            try
             {
-                onComplete(false);
-                return;
-            }
+                var created = await client.AddCommentAsync(postId, trimmed, token).ConfigureAwait(false);
+                if (created is not null)
+                {
+                    if (detailPostId == postId)
+                    {
+                        detailComments = Append(detailComments, created);
+                    }
 
-            if (detailPostId == postId)
+                    BumpCommentCount(postId, 1);
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
             {
-                detailComments = Append(detailComments, created);
             }
-
-            BumpCommentCount(postId, 1);
-            onComplete(true);
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Aethergram] comment failed: {exception.Message}");
+            }
+            finally
+            {
+                commenting = false;
+                onComplete(succeeded);
+            }
         });
     }
 
@@ -338,16 +360,14 @@ internal sealed class AethergramStore : IDisposable
         }
 
         BumpCommentCount(postId, -1);
-        var token = cancellation.Token;
-        _ = Task.Run(async () => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
+        RunGuarded("comment delete", async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
     public void SetFollow(string userId, bool follow)
     {
         UpdateUserEverywhere(userId, follow);
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("follow", async token =>
         {
             if (follow)
             {
@@ -373,8 +393,7 @@ internal sealed class AethergramStore : IDisposable
         profileFailed = false;
         profileLoading = true;
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("profile open", async token =>
         {
             var user = await client.UserAsync(userId, token).ConfigureAwait(false);
             var posts = await client.UserGramsAsync(userId, token).ConfigureAwait(false);
@@ -392,8 +411,12 @@ internal sealed class AethergramStore : IDisposable
                 profileUser = user;
                 profilePosts = posts?.Items ?? Array.Empty<PostDto>();
             }
-
-            profileLoading = false;
+        }, () =>
+        {
+            if (profileUserId == userId)
+            {
+                profileLoading = false;
+            }
         });
     }
 
@@ -414,20 +437,32 @@ internal sealed class AethergramStore : IDisposable
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
-            var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
-            if (updated is null)
+            var succeeded = false;
+            try
             {
-                onResult(false, string.Empty);
-                return;
-            }
+                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
+                if (updated is not null)
+                {
+                    session.SetUser(updated);
+                    if (profileUserId == updated.Id)
+                    {
+                        profileUser = updated;
+                    }
 
-            session.SetUser(updated);
-            if (profileUserId == updated.Id)
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
             {
-                profileUser = updated;
             }
-
-            onResult(true, string.Empty);
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Aethergram] profile update failed: {exception.Message}");
+            }
+            finally
+            {
+                onResult(succeeded, string.Empty);
+            }
         });
     }
 
@@ -441,20 +476,40 @@ internal sealed class AethergramStore : IDisposable
         }
 
         searching = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("search", async token =>
         {
             var result = await client.SearchAsync(trimmed, token).ConfigureAwait(false);
             if (result is not null)
             {
                 discoverResults = result.Users;
             }
-
-            searching = false;
-        });
+        }, () => searching = false);
     }
 
     public void ClearDiscover() => discoverResults = Array.Empty<UserDto>();
+
+    private void RunGuarded(string operation, Func<CancellationToken, Task> action, Action? cleanup = null)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await action(token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Aethergram] {operation} failed: {exception.Message}");
+            }
+            finally
+            {
+                cleanup?.Invoke();
+            }
+        });
+    }
 
     private static PostDto ApplyLike(PostDto post, bool liked)
     {

@@ -40,7 +40,6 @@ internal sealed class DeviceStatus : IDisposable
     private readonly IDataManager data;
 
     private readonly CancellationTokenSource cancellation = new();
-    private readonly Task worker;
 
     private readonly bool[] sampleSucceeded = new bool[SampleWindow];
     private readonly long[] sampleRoundtrip = new long[SampleWindow];
@@ -62,7 +61,7 @@ internal sealed class DeviceStatus : IDisposable
         this.clientState = clientState;
         this.objectTable = objectTable;
         this.data = data;
-        worker = Task.Run(() => RunAsync(cancellation.Token));
+        _ = Task.Run(() => RunAsync(cancellation.Token));
     }
 
     public int BatteryPercent => batteryPercent;
@@ -255,15 +254,6 @@ internal sealed class DeviceStatus : IDisposable
     public void Dispose()
     {
         cancellation.Cancel();
-        try
-        {
-            worker.Wait(TimeSpan.FromSeconds(2));
-        }
-        catch
-        {
-            // Worker is shutting down; ignore the aggregated cancellation noise.
-        }
-
         cancellation.Dispose();
     }
 }

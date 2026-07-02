@@ -27,6 +27,7 @@ internal sealed class CollectService : IDisposable
 
     private static readonly TimeSpan MemoryFreshFor = TimeSpan.FromHours(6);
     private static readonly TimeSpan DiskFreshFor = TimeSpan.FromHours(24);
+    private static readonly TimeSpan UnavailableRetryFor = TimeSpan.FromMinutes(2);
 
     private readonly HttpService http;
     private readonly DiskCache disk;
@@ -66,7 +67,8 @@ internal sealed class CollectService : IDisposable
             return entry;
         }
 
-        var stale = entry.State is CollectState.Idle or CollectState.Unavailable || DateTime.UtcNow - entry.FetchedUtc >= MemoryFreshFor;
+        var freshFor = entry.State == CollectState.Unavailable ? UnavailableRetryFor : MemoryFreshFor;
+        var stale = entry.State == CollectState.Idle || DateTime.UtcNow - entry.FetchedUtc >= freshFor;
         if (stale)
         {
             entry.State = CollectState.Loading;

@@ -31,7 +31,7 @@ internal sealed class VenuesService : IDisposable
     private volatile VenueEvent[] events = Array.Empty<VenueEvent>();
     private volatile int version;
     private DateTime lastRefreshUtc;
-    private VenueState state = VenueState.Idle;
+    private volatile VenueState state = VenueState.Idle;
 
     public VenuesService(HttpService http, NotificationService notifications, Configuration configuration, GameData gameData)
     {
@@ -72,10 +72,11 @@ internal sealed class VenuesService : IDisposable
             state = VenueState.Loading;
         }
 
-        _ = RefreshAsync();
+        var homeDataCenter = gameData.DataCenterName(gameData.LocalCurrentWorldId);
+        _ = RefreshAsync(homeDataCenter);
     }
 
-    private async Task RefreshAsync()
+    private async Task RefreshAsync(string homeDataCenter)
     {
         try
         {
@@ -87,7 +88,7 @@ internal sealed class VenuesService : IDisposable
             collected.Sort(static (left, right) => left.StartUtc.CompareTo(right.StartUtc));
             var snapshot = collected.ToArray();
 
-            NotifyNew(snapshot);
+            NotifyNew(snapshot, homeDataCenter);
 
             events = snapshot;
             lastRefreshUtc = DateTime.UtcNow;
@@ -174,7 +175,7 @@ internal sealed class VenuesService : IDisposable
             "team { name iconUrl websiteUrl discordUrl } } }";
     }
 
-    private void NotifyNew(VenueEvent[] snapshot)
+    private void NotifyNew(VenueEvent[] snapshot, string homeDataCenter)
     {
         if (!seeded)
         {
@@ -197,7 +198,6 @@ internal sealed class VenuesService : IDisposable
             return;
         }
 
-        var homeDataCenter = gameData.DataCenterName(gameData.LocalCurrentWorldId);
         var nowUtc = DateTime.UtcNow;
         var presented = 0;
         for (var index = 0; index < snapshot.Length; index++)

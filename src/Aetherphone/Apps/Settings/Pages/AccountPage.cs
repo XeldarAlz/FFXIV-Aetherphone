@@ -314,18 +314,31 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
-            var response = await client.ChallengeAsync(name, world, token).ConfigureAwait(false);
-            if (response is null)
+            try
             {
-                status = Loc.T(L.Account.CannotReach);
-                busy = false;
-                return;
-            }
+                var response = await client.ChallengeAsync(name, world, token).ConfigureAwait(false);
+                if (response is null)
+                {
+                    status = Loc.T(L.Account.CannotReach);
+                    return;
+                }
 
-            code = response.Code;
-            challengeId = response.ChallengeId;
-            status = string.Empty;
-            busy = false;
+                code = response.Code;
+                challengeId = response.ChallengeId;
+                status = string.Empty;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Aethernet challenge failed: {exception.Message}");
+                status = Loc.T(L.Account.CannotReach);
+            }
+            finally
+            {
+                busy = false;
+            }
         });
     }
 
@@ -342,16 +355,30 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
-            var auth = await client.VerifyAsync(id, token).ConfigureAwait(false);
-            if (auth is null)
+            try
             {
-                status = Loc.T(L.Account.CodeNotFound);
-                busy = false;
-                return;
-            }
+                var auth = await client.VerifyAsync(id, token).ConfigureAwait(false);
+                if (auth is null)
+                {
+                    status = Loc.T(L.Account.CodeNotFound);
+                    return;
+                }
 
-            session.SignIn(auth.Token, auth.User);
-            ResetFlow();
+                session.SignIn(auth.Token, auth.User);
+                ResetFlow();
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Aethernet verify failed: {exception.Message}");
+                status = Loc.T(L.Account.CannotReach);
+            }
+            finally
+            {
+                busy = false;
+            }
         });
     }
 
@@ -360,10 +387,20 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
-            var me = await client.MeAsync(token).ConfigureAwait(false);
-            if (me is not null)
+            try
             {
-                session.SetUser(me);
+                var me = await client.MeAsync(token).ConfigureAwait(false);
+                if (me is not null)
+                {
+                    session.SetUser(me);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Aethernet profile load failed: {exception.Message}");
             }
         });
     }

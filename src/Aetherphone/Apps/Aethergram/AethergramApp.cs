@@ -32,8 +32,20 @@ internal sealed class AethergramApp : IPhoneApp
     private const int HandleMax = 15;
     private const int BioMax = 200;
     private const float TabsHeight = 40f;
+    private const float BottomNavHeight = 52f;
     private const float CropSmoothTime = 0.10f;
     private const int GridColumns = 3;
+    private const float LikeBurstDuration = 0.9f;
+
+    private static readonly Vector4 LikeRed = new(0.95f, 0.27f, 0.36f, 1f);
+
+    private static readonly Vector4[] RingStops =
+    [
+        new(1f, 0.863f, 0.502f, 1f),
+        new(0.969f, 0.435f, 0.216f, 1f),
+        new(0.882f, 0.188f, 0.424f, 1f),
+        new(0.514f, 0.227f, 0.706f, 1f),
+    ];
 
     public string Id => "aethergram";
 
@@ -83,6 +95,9 @@ internal sealed class AethergramApp : IPhoneApp
     private string commentDraft = string.Empty;
 
     private string searchDraft = string.Empty;
+
+    private string likeBurstPostId = string.Empty;
+    private double likeBurstStart;
 
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
@@ -189,14 +204,15 @@ internal sealed class AethergramApp : IPhoneApp
         sinceFollowing += ImGui.GetIO().DeltaTime;
         TickRefresh(activeScope);
 
-        var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y), area.Max);
+        var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - BottomNavHeight * scale), area.Max);
+        var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y), new Vector2(area.Max.X, navRect.Min.Y));
         DrawFeedList(listRect, activeScope);
-        DrawComposeFab(listRect);
+        DrawBottomNav(navRect);
     }
 
     private int ChirperTabsProxy(Rect tabsRect, string[] tabs)
     {
-        return Aetherphone.Apps.Chirper.ChirperTabs.Draw("aethergram.tabs", tabsRect, tabs, (int)activeScope, theme);
+        return Aetherphone.Apps.Chirper.ChirperTabs.Draw("aethergram.tabs", tabsRect, tabs, (int)activeScope, theme, Accent);
     }
 
     private void DrawFeedList(Rect listRect, AethergramFeedScope scope)
@@ -218,7 +234,7 @@ internal sealed class AethergramApp : IPhoneApp
                     DrawGramCard(snapshot[index]);
                 }
 
-                ImGui.Dummy(new Vector2(0f, 80f * ImGuiHelpers.GlobalScale));
+                ImGui.Dummy(new Vector2(0f, 16f * ImGuiHelpers.GlobalScale));
             }
         }
     }
@@ -229,61 +245,74 @@ internal sealed class AethergramApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
+        var bleed = 16f * scale;
 
-        var headerHeight = 44f * scale;
-        var avatarRadius = 16f * scale;
-        var avatarCenter = new Vector2(origin.X + avatarRadius, origin.Y + headerHeight * 0.5f);
+        var headerHeight = 56f * scale;
+        var avatarRadius = 17f * scale;
+        var avatarCenter = new Vector2(origin.X + avatarRadius + 4f * scale, origin.Y + headerHeight * 0.5f);
+        DrawStoryRing(drawList, avatarCenter, avatarRadius + 4f * scale, scale);
         DrawAvatar(avatarCenter, avatarRadius, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl, 0.85f, 28);
         if (HoverClick(avatarCenter - new Vector2(avatarRadius, avatarRadius), avatarCenter + new Vector2(avatarRadius, avatarRadius)))
         {
             OpenProfile(post.AuthorId);
         }
 
-        var nameLeft = avatarCenter.X + avatarRadius + 10f * scale;
+        var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
         var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
-        Typography.Draw(new Vector2(nameLeft, avatarCenter.Y - 8f * scale), displayName, theme.TextStrong, 0.95f, FontWeight.SemiBold);
-        if (HoverClick(new Vector2(nameLeft, origin.Y), new Vector2(origin.X + width, origin.Y + headerHeight)))
+        Typography.Draw(new Vector2(nameLeft, avatarCenter.Y - 16f * scale), displayName, theme.TextStrong, 0.92f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(nameLeft, avatarCenter.Y + 1f * scale), post.AuthorWorld, theme.TextMuted, 0.78f);
+        if (HoverClick(new Vector2(nameLeft, origin.Y), new Vector2(origin.X + width - 44f * scale, origin.Y + headerHeight)))
         {
             OpenProfile(post.AuthorId);
         }
 
-        var imageTop = origin.Y + headerHeight;
-        var imageRect = new Rect(new Vector2(origin.X, imageTop), new Vector2(origin.X + width, imageTop + width));
-        DrawGramImage(imageRect, post.MediaUrl, 0f);
-        if (HoverClick(imageRect.Min, imageRect.Max))
+        var moreCenter = new Vector2(origin.X + width - 10f * scale, avatarCenter.Y);
+        if (DrawIconButton(moreCenter, 12f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 0.85f))
         {
             OpenDetail(post);
         }
 
-        var actionsY = imageRect.Max.Y + 14f * scale;
+        var imageTop = origin.Y + headerHeight;
+        var imageSide = width + bleed * 2f;
+        var imageRect = new Rect(new Vector2(origin.X - bleed, imageTop), new Vector2(origin.X + width + bleed, imageTop + imageSide));
+        DrawGramImage(imageRect, post.MediaUrl, 0f);
+        HandleLikeGesture(imageRect, post);
+        DrawLikeBurst(imageRect, post.Id);
+
         var liked = post.MyReaction >= 0;
+        var actionsY = imageRect.Max.Y + 24f * scale;
         var heartCenter = new Vector2(origin.X + 12f * scale, actionsY);
-        if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? new Vector4(0.95f, 0.27f, 0.36f, 1f) : theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1f))
+        if (DrawIconButton(heartCenter, 16f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1.3f))
         {
             store.ToggleLike(post);
         }
 
-        var commentCenter = new Vector2(heartCenter.X + 34f * scale, actionsY);
-        if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 0.95f))
+        var commentCenter = new Vector2(heartCenter.X + 44f * scale, actionsY);
+        if (DrawIconButton(commentCenter, 16f * scale, FontAwesomeIcon.Comment.ToIconString(), theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1.22f))
         {
             OpenDetail(post);
         }
 
-        var textTop = actionsY + 18f * scale;
+        var textTop = actionsY + 24f * scale;
         ImGui.SetCursorScreenPos(new Vector2(origin.X, textTop));
 
         if (post.TotalReactions > 0)
         {
-            Typography.Draw(new Vector2(origin.X, textTop), Loc.Plural(L.Aethergram.Likes, post.TotalReactions), theme.TextStrong, 0.9f, FontWeight.SemiBold);
-            ImGui.SetCursorScreenPos(new Vector2(origin.X, textTop + 18f * scale));
+            Typography.Draw(new Vector2(origin.X, textTop), Loc.Plural(L.Aethergram.Likes, post.TotalReactions), theme.TextStrong, 0.92f, FontWeight.SemiBold);
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, textTop + 20f * scale));
         }
 
         if (post.Text.Length > 0)
         {
+            var captionPos = ImGui.GetCursorScreenPos();
+            Typography.Draw(captionPos, displayName, theme.TextStrong, 0.92f, FontWeight.SemiBold);
+            var nameWidth = Typography.Measure(displayName, 0.92f, FontWeight.SemiBold).X;
+            ImGui.SetCursorScreenPos(new Vector2(captionPos.X + nameWidth + 6f * scale, captionPos.Y));
             ImGui.PushTextWrapPos(origin.X + width);
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+            using (Plugin.Fonts.Push(0.92f))
             {
-                ImGui.TextWrapped($"{displayName}  {post.Text}");
+                ImGui.TextWrapped(post.Text);
             }
 
             ImGui.PopTextWrapPos();
@@ -291,7 +320,7 @@ internal sealed class AethergramApp : IPhoneApp
 
         if (post.CommentCount > 0)
         {
-            ImGui.Dummy(new Vector2(0f, 2f * scale));
+            ImGui.Dummy(new Vector2(0f, 3f * scale));
             var commentsLabel = Loc.T(L.Aethergram.ViewComments, post.CommentCount);
             var labelPos = ImGui.GetCursorScreenPos();
             Typography.Draw(labelPos, commentsLabel, theme.TextMuted, 0.85f);
@@ -304,12 +333,75 @@ internal sealed class AethergramApp : IPhoneApp
             ImGui.Dummy(labelSize);
         }
 
-        Typography.Draw(ImGui.GetCursorScreenPos(), RelativeTime(post.CreatedAtUnix), theme.TextMuted, 0.75f);
-        ImGui.Dummy(new Vector2(width, 16f * scale));
+        ImGui.Dummy(new Vector2(0f, 1f * scale));
+        Typography.Draw(ImGui.GetCursorScreenPos(), RelativeTime(post.CreatedAtUnix), theme.TextMuted, 0.72f);
+        ImGui.Dummy(new Vector2(width, 26f * scale));
+    }
 
-        var separatorY = ImGui.GetCursorScreenPos().Y;
-        drawList.AddLine(new Vector2(origin.X, separatorY), new Vector2(origin.X + width, separatorY), ImGui.GetColorU32(theme.Separator), 1f);
-        ImGui.Dummy(new Vector2(0f, 12f * scale));
+    private static void DrawStoryRing(ImDrawListPtr drawList, Vector2 center, float radius, float scale)
+    {
+        const int Segments = 40;
+        var direction = Vector2.Normalize(new Vector2(1f, -1f));
+        var step = MathF.Tau / Segments;
+        var previous = center + new Vector2(radius, 0f);
+        for (var index = 1; index <= Segments; index++)
+        {
+            var angle = step * index;
+            var point = center + radius * new Vector2(MathF.Cos(angle), MathF.Sin(angle));
+            var normal = Vector2.Normalize((previous + point) * 0.5f - center);
+            var position = Vector2.Dot(normal, direction) * 0.5f + 0.5f;
+            drawList.AddLine(previous, point, ImGui.GetColorU32(RingColor(position)), 2.4f * scale);
+            previous = point;
+        }
+    }
+
+    private static Vector4 RingColor(float t)
+    {
+        var position = Math.Clamp(t, 0f, 1f) * (RingStops.Length - 1);
+        var index = Math.Min((int)position, RingStops.Length - 2);
+        return Vector4.Lerp(RingStops[index], RingStops[index + 1], position - index);
+    }
+
+    private void HandleLikeGesture(Rect imageRect, PostDto post)
+    {
+        if (!ImGui.IsMouseHoveringRect(imageRect.Min, imageRect.Max) || !ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+        {
+            return;
+        }
+
+        if (post.MyReaction < 0)
+        {
+            store.ToggleLike(post);
+        }
+
+        likeBurstPostId = post.Id;
+        likeBurstStart = ImGui.GetTime();
+    }
+
+    private void DrawLikeBurst(Rect imageRect, string postId)
+    {
+        if (likeBurstPostId != postId)
+        {
+            return;
+        }
+
+        var elapsed = (float)(ImGui.GetTime() - likeBurstStart);
+        if (elapsed >= LikeBurstDuration)
+        {
+            likeBurstPostId = string.Empty;
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var appear = Math.Clamp(elapsed / 0.22f, 0f, 1f);
+        var back = appear - 1f;
+        var pop = MathF.Max(1f + back * back * (2.70158f * back + 1.70158f), 0.05f);
+        var alpha = elapsed < 0.55f ? 1f : 1f - (elapsed - 0.55f) / (LikeBurstDuration - 0.55f);
+        var rise = elapsed < 0.55f ? 0f : (elapsed - 0.55f) * 46f * scale;
+
+        var center = new Vector2(imageRect.Center.X, imageRect.Center.Y - rise);
+        DrawIcon(center + new Vector2(0f, 2f * scale), FontAwesomeIcon.Heart.ToIconString(), new Vector4(0f, 0f, 0f, 0.35f * alpha), 4.5f * pop);
+        DrawIcon(center, FontAwesomeIcon.Heart.ToIconString(), new Vector4(1f, 1f, 1f, alpha), 4.4f * pop);
     }
 
     private void DrawGramImage(Rect rect, string? url, float rounding)
@@ -328,25 +420,48 @@ internal sealed class AethergramApp : IPhoneApp
         drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
     }
 
-    private void DrawComposeFab(Rect area)
+    private void DrawBottomNav(Rect bar)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var radius = 26f * scale;
-        var center = new Vector2(area.Max.X - radius - 16f * scale, area.Max.Y - radius - 18f * scale);
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        drawList.AddRectFilled(bar.Min, bar.Max, ImGui.GetColorU32(theme.AppBackground));
+        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
 
-        drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(hovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent), 32);
-        DrawIcon(center, FontAwesomeIcon.Plus.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 1.05f);
+        var slot = bar.Width / 4f;
+        var centerY = bar.Center.Y;
+        var none = new Vector4(0f, 0f, 0f, 0f);
 
-        if (hovered)
+        if (DrawIconButton(new Vector2(bar.Min.X + slot * 0.5f, centerY), 17f * scale, FontAwesomeIcon.Home.ToIconString(), theme.TextStrong, none, 1.15f))
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            store.RefreshFeed(activeScope);
+        }
+
+        if (DrawIconButton(new Vector2(bar.Min.X + slot * 1.5f, centerY), 17f * scale, FontAwesomeIcon.Search.ToIconString(), theme.TextMuted, none, 1.1f))
+        {
+            store.ClearDiscover();
+            searchDraft = string.Empty;
+            router.Push(AethergramRoute.Discover);
+        }
+
+        if (DrawIconButton(new Vector2(bar.Min.X + slot * 2.5f, centerY), 17f * scale, FontAwesomeIcon.PlusSquare.ToIconString(), theme.TextMuted, none, 1.2f))
+        {
+            StartCompose(false);
+        }
+
+        var profileCenter = new Vector2(bar.Min.X + slot * 3.5f, centerY);
+        if (store.Me is { } me)
+        {
+            var radius = 13f * scale;
+            DrawAvatar(profileCenter, radius, me.Name, me.World, me.AvatarUrl, 0.8f, 24);
+            if (HoverClick(profileCenter - new Vector2(radius, radius), profileCenter + new Vector2(radius, radius)))
             {
-                StartCompose(false);
+                OpenProfile(me.Id);
             }
+        }
+        else
+        {
+            store.EnsureMe();
+            DrawIcon(profileCenter, FontAwesomeIcon.User.ToIconString(), theme.TextMuted, 1.05f);
         }
     }
 
@@ -732,7 +847,7 @@ internal sealed class AethergramApp : IPhoneApp
             var liked = post.MyReaction >= 0;
             var actionsY = imageRect.Max.Y + 12f * scale + 8f * scale;
             var heartCenter = new Vector2(origin.X + 12f * scale, actionsY);
-            if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? new Vector4(0.95f, 0.27f, 0.36f, 1f) : theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1f))
+            if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1f))
             {
                 store.ToggleLike(post);
             }
@@ -1199,27 +1314,8 @@ internal sealed class AethergramApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), DisplayName, theme.TextStrong, 1.15f, FontWeight.SemiBold);
-
-        var me = store.Me;
-        if (me is not null)
-        {
-            var radius = 14f * scale;
-            var center = new Vector2(area.Min.X + 22f * scale, rowCenterY);
-            DrawAvatar(center, radius, me.Name, me.World, me.AvatarUrl, 0.85f, 24);
-            if (HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
-            {
-                OpenProfile(me.Id);
-            }
-        }
-
-        var searchCenter = new Vector2(area.Max.X - 22f * scale, rowCenterY);
-        if (DrawIconButton(searchCenter, 14f * scale, FontAwesomeIcon.Search.ToIconString(), theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 0.95f) && store.IsSignedIn)
-        {
-            store.ClearDiscover();
-            searchDraft = string.Empty;
-            router.Push(AethergramRoute.Discover);
-        }
+        var logoSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
+        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f), DisplayName, theme.TextStrong, 1.3f, FontWeight.Bold);
     }
 
     private void DrawAvatar(Vector2 center, float radius, string name, string world, string? avatarUrl, float monogramScale, int segments)

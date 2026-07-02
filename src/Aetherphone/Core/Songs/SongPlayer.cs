@@ -27,6 +27,7 @@ internal sealed class SongPlayer : IDisposable
 
     private CancellationTokenSource? cancellation;
     private Thread? worker;
+    private int session;
 
     private volatile SongPlaybackState state = SongPlaybackState.Stopped;
     private volatile string currentVideoId = string.Empty;
@@ -131,7 +132,8 @@ internal sealed class SongPlayer : IDisposable
             cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
             var videoId = song.VideoId;
-            worker = new Thread(() => Run(videoId, token))
+            var workerSession = session;
+            worker = new Thread(() => Run(videoId, token, workerSession))
             {
                 IsBackground = true,
                 Name = "Aetherphone.Song",
@@ -152,28 +154,48 @@ internal sealed class SongPlayer : IDisposable
         durationSeconds = 0f;
     }
 
-    private void CancelWorker()
+    private Thread? CancelWorker()
     {
-        Thread? toJoin;
-        CancellationTokenSource? toDispose;
+        Thread? stopped;
+        CancellationTokenSource? toCancel;
         lock (gate)
         {
-            toJoin = worker;
-            toDispose = cancellation;
+            session++;
+            stopped = worker;
+            toCancel = cancellation;
             worker = null;
             cancellation = null;
         }
 
-        toDispose?.Cancel();
-        if (toJoin is not null && toJoin.IsAlive && toJoin != Thread.CurrentThread)
+        if (toCancel is not null)
         {
-            toJoin.Join(TimeSpan.FromSeconds(3));
+            toCancel.Cancel();
+            toCancel.Dispose();
         }
 
-        toDispose?.Dispose();
+        return stopped;
     }
 
-    private void Run(string videoId, CancellationToken token)
+    private bool IsCurrent(int workerSession)
+    {
+        lock (gate)
+        {
+            return workerSession == session;
+        }
+    }
+
+    private void TrySetState(int workerSession, SongPlaybackState value)
+    {
+        lock (gate)
+        {
+            if (workerSession == session)
+            {
+                state = value;
+            }
+        }
+    }
+
+    private void Run(string videoId, CancellationToken token, int workerSession)
     {
         MemoryStream? audio = null;
         StreamMediaFoundationReader? reader = null;
@@ -184,7 +206,7 @@ internal sealed class SongPlayer : IDisposable
             var bytes = cache.Get(videoId, CacheMaxAge) ?? Download(videoId, token);
             if (bytes is null || bytes.Length == 0)
             {
-                state = SongPlaybackState.Failed;
+                TrySetState(workerSession, SongPlaybackState.Failed);
                 return;
             }
 
@@ -193,15 +215,18 @@ internal sealed class SongPlayer : IDisposable
                 return;
             }
 
-            state = SongPlaybackState.Buffering;
+            TrySetState(workerSession, SongPlaybackState.Buffering);
             audio = new MemoryStream(bytes, false);
             reader = new StreamMediaFoundationReader(audio);
-            durationSeconds = (float)reader.TotalTime.TotalSeconds;
+            if (IsCurrent(workerSession))
+            {
+                durationSeconds = (float)reader.TotalTime.TotalSeconds;
+            }
 
             output = new WaveOutEvent { Volume = volume };
             output.Init(reader);
             output.Play();
-            state = SongPlaybackState.Playing;
+            TrySetState(workerSession, SongPlaybackState.Playing);
 
             while (!token.IsCancellationRequested)
             {
@@ -219,7 +244,11 @@ internal sealed class SongPlayer : IDisposable
                     output.Play();
                 }
 
-                positionSeconds = (float)reader.CurrentTime.TotalSeconds;
+                if (IsCurrent(workerSession))
+                {
+                    positionSeconds = (float)reader.CurrentTime.TotalSeconds;
+                }
+
                 output.Volume = volume;
                 Thread.Sleep(80);
             }
@@ -227,15 +256,18 @@ internal sealed class SongPlayer : IDisposable
             if (!token.IsCancellationRequested)
             {
                 output.Stop();
-                AdvanceAfterCompletion();
+                AdvanceAfterCompletion(workerSession);
             }
         }
         catch (OperationCanceledException)
         {
         }
+        catch (Exception) when (token.IsCancellationRequested)
+        {
+        }
         catch (Exception exception)
         {
-            state = SongPlaybackState.Failed;
+            TrySetState(workerSession, SongPlaybackState.Failed);
             AepLog.Warning($"Song playback failed: {exception.Message}");
         }
         finally
@@ -284,11 +316,16 @@ internal sealed class SongPlayer : IDisposable
         return best;
     }
 
-    private void AdvanceAfterCompletion()
+    private void AdvanceAfterCompletion(int workerSession)
     {
         Song next;
         lock (gate)
         {
+            if (workerSession != session)
+            {
+                return;
+            }
+
             if (queue.Length == 0 || queueIndex + 1 >= queue.Length)
             {
                 state = SongPlaybackState.Stopped;
@@ -310,7 +347,18 @@ internal sealed class SongPlayer : IDisposable
 
     public void Dispose()
     {
-        Stop();
+        var stopped = CancelWorker();
+        if (stopped is not null && stopped.IsAlive)
+        {
+            stopped.Join(TimeSpan.FromSeconds(2));
+        }
+
+        if (stopped is not null && stopped.IsAlive)
+        {
+            AepLog.Warning("Song worker did not exit in time; skipping MediaFoundation shutdown.");
+            return;
+        }
+
         MediaFoundationApi.Shutdown();
     }
 }

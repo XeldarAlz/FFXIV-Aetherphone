@@ -21,6 +21,7 @@ internal readonly struct MediaResult
 internal sealed class MediaCache : IDisposable
 {
     private static readonly TimeSpan MaxAge = TimeSpan.FromDays(30);
+    private static readonly TimeSpan FailureRetryFor = TimeSpan.FromMinutes(2);
 
     private readonly ITextureProvider textures;
     private readonly DiskCache disk;
@@ -28,7 +29,9 @@ internal sealed class MediaCache : IDisposable
 
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
     private readonly ConcurrentDictionary<string, byte> inFlight = new();
-    private readonly ConcurrentDictionary<string, byte> failed = new();
+    private readonly ConcurrentDictionary<string, DateTime> failed = new();
+
+    private volatile bool disposed;
 
     public MediaCache(ITextureProvider textures, DiskCache disk)
     {
@@ -43,9 +46,14 @@ internal sealed class MediaCache : IDisposable
             return new MediaResult(wrap, false);
         }
 
-        if (failed.ContainsKey(key))
+        if (failed.TryGetValue(key, out var failedAtUtc))
         {
-            return new MediaResult(null, false);
+            if (DateTime.UtcNow - failedAtUtc < FailureRetryFor)
+            {
+                return new MediaResult(null, false);
+            }
+
+            failed.TryRemove(key, out _);
         }
 
         if (!inFlight.TryAdd(key, 0))
@@ -74,7 +82,7 @@ internal sealed class MediaCache : IDisposable
 
             if (bytes is null)
             {
-                failed.TryAdd(key, 0);
+                failed[key] = DateTime.UtcNow;
                 return;
             }
 
@@ -82,6 +90,12 @@ internal sealed class MediaCache : IDisposable
             if (!ready.TryAdd(key, wrap))
             {
                 wrap.Dispose();
+                return;
+            }
+
+            if (disposed && ready.TryRemove(key, out var lateWrap))
+            {
+                lateWrap.Dispose();
             }
         }
         catch (OperationCanceledException)
@@ -89,7 +103,7 @@ internal sealed class MediaCache : IDisposable
         }
         catch (Exception exception)
         {
-            failed.TryAdd(key, 0);
+            failed[key] = DateTime.UtcNow;
             AepLog.Warning($"MediaCache load failed for {key}: {exception.Message}");
         }
         finally
@@ -100,13 +114,16 @@ internal sealed class MediaCache : IDisposable
 
     public void Dispose()
     {
+        disposed = true;
         cancellation.Cancel();
-        foreach (var wrap in ready.Values)
+        foreach (var key in ready.Keys)
         {
-            wrap.Dispose();
+            if (ready.TryRemove(key, out var wrap))
+            {
+                wrap.Dispose();
+            }
         }
 
-        ready.Clear();
         cancellation.Dispose();
     }
 }

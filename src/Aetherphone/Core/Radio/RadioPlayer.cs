@@ -24,6 +24,8 @@ internal sealed class RadioPlayer : IDisposable
 
     private CancellationTokenSource? cancellation;
     private Thread? worker;
+    private HttpResponseMessage? activeResponse;
+    private int session;
     private volatile RadioPlaybackState state = RadioPlaybackState.Stopped;
     private volatile string currentStation = string.Empty;
     private float volume = 0.6f;
@@ -98,7 +100,8 @@ internal sealed class RadioPlayer : IDisposable
             cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
             var url = station.StreamUrl;
-            worker = new Thread(() => Stream(url, token))
+            var workerSession = session;
+            worker = new Thread(() => Stream(url, token, workerSession))
             {
                 IsBackground = true,
                 Name = "Aetherphone.Radio",
@@ -109,38 +112,67 @@ internal sealed class RadioPlayer : IDisposable
 
     public void Stop()
     {
-        Thread? toJoin;
-        CancellationTokenSource? toDispose;
+        CancellationTokenSource? toCancel;
+        HttpResponseMessage? toAbort;
         lock (gate)
         {
-            toJoin = worker;
-            toDispose = cancellation;
+            session++;
+            toCancel = cancellation;
+            toAbort = activeResponse;
             worker = null;
             cancellation = null;
+            activeResponse = null;
         }
 
-        toDispose?.Cancel();
-        if (toJoin is not null && toJoin.IsAlive && toJoin != Thread.CurrentThread)
-        {
-            toJoin.Join(TimeSpan.FromSeconds(3));
-        }
-
-        toDispose?.Dispose();
+        toCancel?.Cancel();
+        toAbort?.Dispose();
+        toCancel?.Dispose();
         state = RadioPlaybackState.Stopped;
         currentStation = string.Empty;
     }
 
-    private void Stream(string url, CancellationToken token)
+    private void TrySetState(int workerSession, RadioPlaybackState value)
+    {
+        lock (gate)
+        {
+            if (workerSession == session)
+            {
+                state = value;
+            }
+        }
+    }
+
+    private bool TryPublishResponse(HttpResponseMessage response, int workerSession)
+    {
+        lock (gate)
+        {
+            if (workerSession != session)
+            {
+                return false;
+            }
+
+            activeResponse = response;
+            return true;
+        }
+    }
+
+    private void Stream(string url, CancellationToken token, int workerSession)
     {
         IWavePlayer? output = null;
         IMp3FrameDecompressor? decompressor = null;
         BufferedWaveProvider? buffer = null;
+        HttpResponseMessage? response = null;
         var decoded = new byte[16384 * 4];
 
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            using var response = client.Send(request, HttpCompletionOption.ResponseHeadersRead, token);
+            response = client.Send(request, HttpCompletionOption.ResponseHeadersRead, token);
+            if (!TryPublishResponse(response, workerSession))
+            {
+                return;
+            }
+
             response.EnsureSuccessStatusCode();
 
             using var network = response.Content.ReadAsStream(token);
@@ -192,7 +224,7 @@ internal sealed class RadioPlayer : IDisposable
                     output = new WaveOutEvent { Volume = volume };
                     output.Init(buffer);
                     output.Play();
-                    state = RadioPlaybackState.Playing;
+                    TrySetState(workerSession, RadioPlaybackState.Playing);
                 }
 
                 if (output is not null)
@@ -201,17 +233,20 @@ internal sealed class RadioPlayer : IDisposable
                 }
             }
 
-            if (!token.IsCancellationRequested && state != RadioPlaybackState.Failed)
+            if (!token.IsCancellationRequested)
             {
-                state = RadioPlaybackState.Stopped;
+                TrySetState(workerSession, RadioPlaybackState.Stopped);
             }
         }
         catch (OperationCanceledException)
         {
         }
+        catch (Exception) when (token.IsCancellationRequested)
+        {
+        }
         catch (Exception exception)
         {
-            state = RadioPlaybackState.Failed;
+            TrySetState(workerSession, RadioPlaybackState.Failed);
             AepLog.Warning($"Radio playback failed: {exception.Message}");
         }
         finally
@@ -219,6 +254,15 @@ internal sealed class RadioPlayer : IDisposable
             output?.Stop();
             output?.Dispose();
             decompressor?.Dispose();
+            lock (gate)
+            {
+                if (ReferenceEquals(activeResponse, response))
+                {
+                    activeResponse = null;
+                }
+            }
+
+            response?.Dispose();
         }
     }
 

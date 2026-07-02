@@ -9,11 +9,15 @@ namespace Aetherphone.Core.Media;
 
 internal sealed class RemoteImageCache : IDisposable
 {
+    private static readonly TimeSpan FailureRetryFor = TimeSpan.FromMinutes(2);
+
     private readonly HttpService http;
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
     private readonly ConcurrentDictionary<string, byte> loading = new();
-    private readonly ConcurrentDictionary<string, byte> failed = new();
+    private readonly ConcurrentDictionary<string, DateTime> failed = new();
     private readonly CancellationTokenSource cancellation = new();
+
+    private volatile bool disposed;
 
     public RemoteImageCache(HttpService http)
     {
@@ -32,7 +36,17 @@ internal sealed class RemoteImageCache : IDisposable
             return wrap;
         }
 
-        if (failed.ContainsKey(url) || !loading.TryAdd(url, 0))
+        if (failed.TryGetValue(url, out var failedAtUtc))
+        {
+            if (DateTime.UtcNow - failedAtUtc < FailureRetryFor)
+            {
+                return null;
+            }
+
+            failed.TryRemove(url, out _);
+        }
+
+        if (!loading.TryAdd(url, 0))
         {
             return null;
         }
@@ -56,7 +70,7 @@ internal sealed class RemoteImageCache : IDisposable
             var bytes = await http.GetBytesAsync(new Uri(url), token).ConfigureAwait(false);
             if (bytes is null)
             {
-                failed.TryAdd(url, 0);
+                failed[url] = DateTime.UtcNow;
                 return;
             }
 
@@ -64,6 +78,12 @@ internal sealed class RemoteImageCache : IDisposable
             if (!ready.TryAdd(url, wrap))
             {
                 wrap.Dispose();
+                return;
+            }
+
+            if (disposed && ready.TryRemove(url, out var lateWrap))
+            {
+                lateWrap.Dispose();
             }
         }
         catch (OperationCanceledException)
@@ -71,7 +91,7 @@ internal sealed class RemoteImageCache : IDisposable
         }
         catch (Exception exception)
         {
-            failed.TryAdd(url, 0);
+            failed[url] = DateTime.UtcNow;
             AepLog.Warning($"[Aethergram] failed to load image {url}: {exception.Message}");
         }
         finally
@@ -82,13 +102,16 @@ internal sealed class RemoteImageCache : IDisposable
 
     public void Dispose()
     {
+        disposed = true;
         cancellation.Cancel();
-        foreach (var wrap in ready.Values)
+        foreach (var key in ready.Keys)
         {
-            wrap.Dispose();
+            if (ready.TryRemove(key, out var wrap))
+            {
+                wrap.Dispose();
+            }
         }
 
-        ready.Clear();
         cancellation.Dispose();
     }
 }

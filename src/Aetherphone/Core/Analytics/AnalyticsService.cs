@@ -125,19 +125,19 @@ internal sealed class AnalyticsService : IAnalyticsService
     public void Dispose()
     {
         cancellation.Cancel();
-
-        using (var finalFlush = new CancellationTokenSource(FinalFlushTimeout))
-        {
-            try
-            {
-                FlushAsync(finalFlush.Token).GetAwaiter().GetResult();
-            }
-            catch (Exception)
-            {
-            }
-        }
-
         cancellation.Dispose();
+
+        var finalFlush = new CancellationTokenSource(FinalFlushTimeout);
+        _ = FlushAsync(finalFlush.Token).ContinueWith(
+            static (task, resource) =>
+            {
+                ((CancellationTokenSource)resource!).Dispose();
+                _ = task.Exception;
+            },
+            finalFlush,
+            CancellationToken.None,
+            TaskContinuationOptions.ExecuteSynchronously,
+            TaskScheduler.Default);
     }
 
     private readonly record struct PendingEvent(string Type, string? AppId, string? Props, DateTime ClientTime);

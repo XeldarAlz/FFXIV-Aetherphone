@@ -138,7 +138,7 @@ internal sealed class PhoneServices : IDisposable
         var maps = new MapData(dataManager, clientState);
         var weather = new WeatherService(dataManager, clientState);
         var ringtone = new GameSoundRingtone(configuration);
-        var notifications = new NotificationService(ringtone, configuration);
+        var notifications = new NotificationService(ringtone, configuration, framework);
         var messages = new MessageStore();
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
         var messageLauncher = new MessageLauncher();
@@ -154,7 +154,7 @@ internal sealed class PhoneServices : IDisposable
         var collectCache = new DiskCache(collectRoot, 8L * 1024 * 1024);
         var collect = new CollectService(http, collectCache);
         var lookup = new LookupService(lodestone);
-        var aethernetSession = new AethernetSession(configuration);
+        var aethernetSession = new AethernetSession(configuration, framework);
         var aethernetClient = new AethernetClient(http, aethernetSession);
         var gameRegion = clientState.ClientLanguage switch
         {
@@ -206,6 +206,7 @@ internal sealed class PhoneServices : IDisposable
         MarketAlerts.Dispose();
         Market.Dispose();
         News.Dispose();
+        Notifications.Dispose();
         Media.Dispose();
         Analytics.Dispose();
         Http.Dispose();

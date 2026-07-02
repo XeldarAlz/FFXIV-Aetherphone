@@ -196,7 +196,7 @@ internal sealed class LookupService : IDisposable
                     }
                 }
 
-                var page = await client.SearchCharacter(query).ConfigureAwait(false);
+                var page = await client.SearchCharacter(query).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
                 var matches = MapCharacterMatches(page);
                 target.Matches = matches;
                 target.State = matches.Length > 0 ? LookupState.Ready : LookupState.Empty;
@@ -264,7 +264,7 @@ internal sealed class LookupService : IDisposable
                     }
                 }
 
-                var page = await client.SearchFreeCompany(query).ConfigureAwait(false);
+                var page = await client.SearchFreeCompany(query).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
                 var matches = MapFreeCompanyMatches(page);
                 target.Matches = matches;
                 target.State = matches.Length > 0 ? LookupState.Ready : LookupState.Empty;
@@ -330,14 +330,14 @@ internal sealed class LookupService : IDisposable
                     return;
                 }
 
-                var character = await client.GetCharacter(id).ConfigureAwait(false);
+                var character = await client.GetCharacter(id).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
                 if (character is null)
                 {
                     target.State = LookupState.Empty;
                     return;
                 }
 
-                var jobs = await BuildJobsAsync(character).ConfigureAwait(false);
+                var jobs = await BuildJobsAsync(character, token).ConfigureAwait(false);
                 target.Detail = BuildCharacterDetail(id, character, fallbackName, fallbackWorld, jobs);
                 target.State = LookupState.Ready;
             }
@@ -352,11 +352,11 @@ internal sealed class LookupService : IDisposable
         }
     }
 
-    private static async Task<ClassJobLevel[]> BuildJobsAsync(LodestoneCharacter character)
+    private static async Task<ClassJobLevel[]> BuildJobsAsync(LodestoneCharacter character, CancellationToken token)
     {
         try
         {
-            var info = await character.GetClassJobInfo().ConfigureAwait(false);
+            var info = await character.GetClassJobInfo().WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
             return MapJobs(info);
         }
         catch (Exception exception)
@@ -519,7 +519,7 @@ internal sealed class LookupService : IDisposable
                     return;
                 }
 
-                var company = await client.GetFreeCompany(id).ConfigureAwait(false);
+                var company = await client.GetFreeCompany(id).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
                 if (company is null)
                 {
                     target.State = LookupState.Empty;
@@ -604,7 +604,7 @@ internal sealed class LookupService : IDisposable
             return;
         }
 
-        var members = await client.GetFreeCompanyMembers(id, page + 1).ConfigureAwait(false);
+        var members = await client.GetFreeCompanyMembers(id, page + 1).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
         if (members?.Members is null)
         {
             return;

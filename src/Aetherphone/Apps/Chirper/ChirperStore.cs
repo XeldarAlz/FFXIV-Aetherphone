@@ -1,5 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
+using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 
@@ -13,9 +14,13 @@ internal enum ChirperFeedScope
 
 internal sealed class ChirperStore : IDisposable
 {
+    private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
+
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly CancellationTokenSource cancellation = new();
+
+    private DateTime lastMeAttemptUtc = DateTime.MinValue;
 
     private volatile PostDto[] forYou = Array.Empty<PostDto>();
     private volatile PostDto[] following = Array.Empty<PostDto>();
@@ -70,18 +75,22 @@ internal sealed class ChirperStore : IDisposable
             return;
         }
 
+        var now = DateTime.UtcNow;
+        if (now - lastMeAttemptUtc < MeRetryCooldown)
+        {
+            return;
+        }
+
+        lastMeAttemptUtc = now;
         loadingMe = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("profile load", async token =>
         {
             var me = await client.MeAsync(token).ConfigureAwait(false);
             if (me is not null)
             {
                 session.SetUser(me);
             }
-
-            loadingMe = false;
-        });
+        }, () => loadingMe = false);
     }
 
     public void RefreshFeed(ChirperFeedScope scope)
@@ -100,8 +109,7 @@ internal sealed class ChirperStore : IDisposable
             loadingFollowing = true;
         }
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("feed refresh", async token =>
         {
             var page = await client.FeedAsync(scope == ChirperFeedScope.ForYou ? "explore" : "following", null, token).ConfigureAwait(false);
             if (page is not null)
@@ -115,7 +123,8 @@ internal sealed class ChirperStore : IDisposable
                     following = page.Items;
                 }
             }
-
+        }, () =>
+        {
             if (scope == ChirperFeedScope.ForYou)
             {
                 loadingForYou = false;
@@ -139,22 +148,34 @@ internal sealed class ChirperStore : IDisposable
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
-            var created = await client.CreatePostAsync(trimmed, token).ConfigureAwait(false);
-            posting = false;
-            if (created is null)
+            var succeeded = false;
+            try
             {
-                onComplete(false);
-                return;
-            }
+                var created = await client.CreatePostAsync(trimmed, token).ConfigureAwait(false);
+                if (created is not null)
+                {
+                    forYou = Prepend(forYou, created);
+                    following = Prepend(following, created);
+                    if (profileUserId is not null && profileUserId == created.AuthorId)
+                    {
+                        profilePosts = Prepend(profilePosts, created);
+                    }
 
-            forYou = Prepend(forYou, created);
-            following = Prepend(following, created);
-            if (profileUserId is not null && profileUserId == created.AuthorId)
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
             {
-                profilePosts = Prepend(profilePosts, created);
             }
-
-            onComplete(true);
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Chirper] compose failed: {exception.Message}");
+            }
+            finally
+            {
+                posting = false;
+                onComplete(succeeded);
+            }
         });
     }
 
@@ -164,8 +185,7 @@ internal sealed class ChirperStore : IDisposable
         var optimistic = ApplyReaction(post, target);
         ReplacePost(optimistic);
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("reaction", async token =>
         {
             var result = target < 0
                 ? await client.RemoveReactionAsync(post.Id, token).ConfigureAwait(false)
@@ -181,8 +201,7 @@ internal sealed class ChirperStore : IDisposable
     {
         UpdateUserEverywhere(userId, follow);
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("follow", async token =>
         {
             if (follow)
             {
@@ -208,8 +227,7 @@ internal sealed class ChirperStore : IDisposable
         profileFailed = false;
         profileLoading = true;
 
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("profile open", async token =>
         {
             var user = await client.UserAsync(userId, token).ConfigureAwait(false);
             var posts = await client.UserPostsAsync(userId, token).ConfigureAwait(false);
@@ -227,8 +245,12 @@ internal sealed class ChirperStore : IDisposable
                 profileUser = user;
                 profilePosts = posts?.Items ?? Array.Empty<PostDto>();
             }
-
-            profileLoading = false;
+        }, () =>
+        {
+            if (profileUserId == userId)
+            {
+                profileLoading = false;
+            }
         });
     }
 
@@ -249,20 +271,32 @@ internal sealed class ChirperStore : IDisposable
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
-            var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
-            if (updated is null)
+            var succeeded = false;
+            try
             {
-                onResult(false, string.Empty);
-                return;
-            }
+                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
+                if (updated is not null)
+                {
+                    session.SetUser(updated);
+                    if (profileUserId == updated.Id)
+                    {
+                        profileUser = updated;
+                    }
 
-            session.SetUser(updated);
-            if (profileUserId == updated.Id)
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
             {
-                profileUser = updated;
             }
-
-            onResult(true, string.Empty);
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Chirper] profile update failed: {exception.Message}");
+            }
+            finally
+            {
+                onResult(succeeded, string.Empty);
+            }
         });
     }
 
@@ -276,20 +310,40 @@ internal sealed class ChirperStore : IDisposable
         }
 
         searching = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        RunGuarded("search", async token =>
         {
             var result = await client.SearchAsync(trimmed, token).ConfigureAwait(false);
             if (result is not null)
             {
                 discoverResults = result.Users;
             }
-
-            searching = false;
-        });
+        }, () => searching = false);
     }
 
     public void ClearDiscover() => discoverResults = Array.Empty<UserDto>();
+
+    private void RunGuarded(string operation, Func<CancellationToken, Task> action, Action? cleanup = null)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await action(token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Chirper] {operation} failed: {exception.Message}");
+            }
+            finally
+            {
+                cleanup?.Invoke();
+            }
+        });
+    }
 
     private static PostDto ApplyReaction(PostDto post, int newKind)
     {

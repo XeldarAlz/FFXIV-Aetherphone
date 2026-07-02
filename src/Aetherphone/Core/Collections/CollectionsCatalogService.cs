@@ -18,6 +18,7 @@ internal sealed class OwnedEntry
     public volatile OwnedState State = OwnedState.Unknown;
     public HashSet<int> Ids = new();
     public int Count;
+    public DateTime FetchedUtc;
 }
 
 internal sealed class CollectionsCatalogService : IDisposable
@@ -25,6 +26,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     private const string ApiRoot = "https://ffxivcollect.com/api";
 
     private static readonly TimeSpan CatalogFreshFor = TimeSpan.FromDays(14);
+    private static readonly TimeSpan OwnedFailedRetryFor = TimeSpan.FromMinutes(1);
 
     private readonly HttpService http;
     private readonly DiskCache disk;
@@ -57,7 +59,8 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         var key = string.Concat(lodestoneId, ":", CollectionCategories.OwnedPath(category));
         var entry = owned.GetOrAdd(key, static _ => new OwnedEntry());
-        if (entry.State == OwnedState.Unknown)
+        var retryFailed = entry.State == OwnedState.Failed && DateTime.UtcNow - entry.FetchedUtc >= OwnedFailedRetryFor;
+        if (entry.State == OwnedState.Unknown || retryFailed)
         {
             entry.State = OwnedState.Loading;
             _ = LoadOwnedAsync(lodestoneId, category, entry);
@@ -139,15 +142,17 @@ internal sealed class CollectionsCatalogService : IDisposable
             var token = cancellation.Token;
             var url = string.Concat(ApiRoot, "/characters/", lodestoneId, "/", CollectionCategories.OwnedPath(category), "/owned");
 
+            var statusCode = 0;
             OwnedItemDto[]? items;
             using (await throttle.EnterAsync(token).ConfigureAwait(false))
             {
-                items = await http.GetJsonAsync(url, CollectionJsonContext.Default.OwnedItemDtoArray, null, token).ConfigureAwait(false);
+                items = await http.GetJsonAsync(url, CollectionJsonContext.Default.OwnedItemDtoArray, null, token, status => statusCode = status).ConfigureAwait(false);
             }
 
+            entry.FetchedUtc = DateTime.UtcNow;
             if (items is null)
             {
-                entry.State = OwnedState.Private;
+                entry.State = statusCode is 403 or 404 ? OwnedState.Private : OwnedState.Failed;
                 return;
             }
 
@@ -166,6 +171,7 @@ internal sealed class CollectionsCatalogService : IDisposable
         }
         catch (Exception exception)
         {
+            entry.FetchedUtc = DateTime.UtcNow;
             entry.State = OwnedState.Failed;
             AepLog.Warning($"Collections owned fetch failed for {category}: {exception.Message}");
         }

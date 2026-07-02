@@ -10,6 +10,10 @@ namespace Aetherphone.Core.Lodestone;
 
 internal sealed class LodestoneService : IDisposable
 {
+    internal static readonly TimeSpan NetStoneTimeout = TimeSpan.FromSeconds(20);
+
+    private static readonly TimeSpan InitRetryFor = TimeSpan.FromMinutes(1);
+
     private readonly Configuration configuration;
     private readonly HttpService http;
     private readonly MediaCache media;
@@ -23,6 +27,7 @@ internal sealed class LodestoneService : IDisposable
 
     private readonly SemaphoreSlim clientGate = new(1, 1);
     private LodestoneClient? client;
+    private DateTime lastInitFailureUtc = DateTime.MinValue;
 
     public LodestoneService(Configuration configuration, HttpService http, MediaCache media, DirectoryInfo cacheRoot)
     {
@@ -125,7 +130,7 @@ internal sealed class LodestoneService : IDisposable
                 return null;
             }
 
-            var character = await ready.GetCharacter(id).ConfigureAwait(false);
+            var character = await ready.GetCharacter(id).WaitAsync(NetStoneTimeout, token).ConfigureAwait(false);
             var uri = fullBody ? character?.Portrait : character?.Avatar;
             if (uri is null)
             {
@@ -160,7 +165,7 @@ internal sealed class LodestoneService : IDisposable
             return null;
         }
 
-        var page = await ready.SearchCharacter(new CharacterSearchQuery { CharacterName = name, World = world }).ConfigureAwait(false);
+        var page = await ready.SearchCharacter(new CharacterSearchQuery { CharacterName = name, World = world }).WaitAsync(NetStoneTimeout, token).ConfigureAwait(false);
         var id = SelectId(page, name);
 
         lock (idSync)
@@ -213,10 +218,17 @@ internal sealed class LodestoneService : IDisposable
         await clientGate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            client ??= await LodestoneClient.GetClientAsync().ConfigureAwait(false);
+            if (client is null && DateTime.UtcNow - lastInitFailureUtc >= InitRetryFor)
+            {
+                client = await LodestoneClient.GetClientAsync().WaitAsync(NetStoneTimeout, token).ConfigureAwait(false);
+            }
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
         }
         catch (Exception exception)
         {
+            lastInitFailureUtc = DateTime.UtcNow;
             AepLog.Warning($"Lodestone client init failed: {exception.Message}");
         }
         finally
@@ -284,5 +296,6 @@ internal sealed class LodestoneService : IDisposable
     {
         throttle.Dispose();
         clientGate.Dispose();
+        client?.Dispose();
     }
 }

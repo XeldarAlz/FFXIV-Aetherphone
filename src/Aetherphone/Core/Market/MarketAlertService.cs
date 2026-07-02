@@ -18,7 +18,6 @@ internal sealed class MarketAlertService : IDisposable
     private readonly object sync = new();
 
     private readonly CancellationTokenSource cancellation = new();
-    private readonly Task worker;
 
     private volatile int triggeredCount;
 
@@ -27,7 +26,7 @@ internal sealed class MarketAlertService : IDisposable
         this.market = market;
         this.notifications = notifications;
         this.configuration = configuration;
-        worker = Task.Run(() => RunAsync(cancellation.Token));
+        _ = Task.Run(() => RunAsync(cancellation.Token));
     }
 
     public int TriggeredCount => triggeredCount;
@@ -217,14 +216,6 @@ internal sealed class MarketAlertService : IDisposable
     public void Dispose()
     {
         cancellation.Cancel();
-        try
-        {
-            worker.Wait(TimeSpan.FromSeconds(2));
-        }
-        catch
-        {
-        }
-
         cancellation.Dispose();
     }
 }

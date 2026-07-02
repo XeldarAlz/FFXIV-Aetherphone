@@ -14,7 +14,7 @@ internal static class ChirperTabs
 
     private static readonly Dictionary<string, Spring> Indicators = new(StringComparer.Ordinal);
 
-    public static int Draw(string id, Rect row, IReadOnlyList<string> tabs, int selected, PhoneTheme theme)
+    public static int Draw(string id, Rect row, IReadOnlyList<string> tabs, int selected, PhoneTheme theme, Vector4? accent = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -48,7 +48,7 @@ internal static class ChirperTabs
         var indicatorWidth = MathF.Max(labelHalf + 8f * scale, 18f * scale);
         var indicatorMin = new Vector2(indicatorCenterX - indicatorWidth, row.Max.Y - 3f * scale);
         var indicatorMax = new Vector2(indicatorCenterX + indicatorWidth, row.Max.Y);
-        Squircle.Fill(drawList, indicatorMin, indicatorMax, 1.5f * scale, ImGui.GetColorU32(theme.Accent));
+        Squircle.Fill(drawList, indicatorMin, indicatorMax, 1.5f * scale, ImGui.GetColorU32(accent ?? theme.Accent));
 
         return result;
     }
