@@ -358,13 +358,25 @@ internal static class L
 
         public static readonly LocString LogInFirst = new("account.logInFirst", "Log in to your character first");
 
-        public static readonly LocString SignInIntro = new("account.signInIntro", "Sign in to Aethernet to use Chirper. Ownership is verified through your Lodestone profile — no password.");
+        public static readonly LocString SignInIntro = new("account.signInIntro", "One account signs you in to every Aethernet app — Chirper, Aethergram and more. Ownership is verified through your Lodestone profile, so there's no password.");
 
-        public static readonly LocString AddCode = new("account.addCode", "Add this code to your Lodestone profile:");
+        public static readonly LocString SigningInAs = new("account.signingInAs", "Signing in as");
+
+        public static readonly LocString VerifyTitle = new("account.verifyTitle", "Verify with Lodestone");
+
+        public static readonly LocString VerifyIntro = new("account.verifyIntro", "Add this code anywhere on your Lodestone character Profile, then tap Verify. You can remove it afterwards.");
+
+        public static readonly LocString Step1 = new("account.step1", "Copy the code above");
+
+        public static readonly LocString Step2 = new("account.step2", "Open your Lodestone profile in a browser");
+
+        public static readonly LocString Step3 = new("account.step3", "Paste it into your Profile, then Save on Lodestone");
+
+        public static readonly LocString Step4 = new("account.step4", "Return here and tap Verify");
 
         public static readonly LocString CopyCode = new("account.copyCode", "Copy code");
 
-        public static readonly LocString OpenProfile = new("account.openProfile", "Open Lodestone profile");
+        public static readonly LocString OpenProfile = new("account.openProfile", "Open Lodestone");
 
         public static readonly LocString VerifyAdded = new("account.verifyAdded", "I've added it — Verify");
 
@@ -1062,9 +1074,9 @@ internal static class L
 
         public static readonly LocString WaterSort = new("games.waterSort", "Water Sort");
 
-        public static readonly LocString Save = new("games.save", "Save");
-
         public static readonly LocString Saved = new("games.saved", "Saved");
+
+        public static readonly LocString Next = new("games.next", "Next");
 
         public static readonly LocString Lines = new("games.lines", "Lines");
 

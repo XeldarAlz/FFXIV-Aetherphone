@@ -84,7 +84,7 @@ internal sealed class TetrisBoard
 
     private readonly Random random = new();
 
-    private int bagIndex = 7;
+    private int bagIndex;
 
     private TetrisPieceKind? heldKind;
 
@@ -106,21 +106,19 @@ internal sealed class TetrisBoard
 
     public int Level => levelSystem.Level;
 
-    public int Combo => scoring.Combo;
-
     public int ClearedLinesThisFrame { get; private set; }
+
+    public int LastLockScore { get; private set; }
 
     public bool GameOver { get; private set; }
 
     public bool HasActivePiece { get; private set; }
 
-    public bool HasHeldPiece => heldKind.HasValue;
-
     public TetrisPieceKind? HeldKind => heldKind;
 
     public TetrisPieceKind ActiveKind => activeKind;
 
-    public TetrisPieceKind NextPieceKind => bagIndex < bag.Length ? bag[bagIndex] : (TetrisPieceKind)0;
+    public TetrisPieceKind NextPieceKind => bag[bagIndex];
 
     public int ActiveRotation => activeRotation;
 
@@ -136,12 +134,12 @@ internal sealed class TetrisBoard
         scoring.Reset();
         levelSystem.Reset();
         ClearedLinesThisFrame = 0;
+        LastLockScore = 0;
         GameOver = false;
         HasActivePiece = false;
         heldKind = null;
         holdUsedThisTurn = false;
         dropTimer = 0f;
-        bagIndex = bag.Length;
         RefillBag();
         SpawnNextPiece();
     }
@@ -166,19 +164,19 @@ internal sealed class TetrisBoard
         }
     }
 
-    public bool Move(int dx)
+    public bool Move(int direction)
     {
         if (GameOver || !HasActivePiece)
         {
             return false;
         }
 
-        if (!CanPlace(activeX + dx, activeY, activeRotation))
+        if (!CanPlace(activeX + direction, activeY, activeRotation))
         {
             return false;
         }
 
-        activeX += dx;
+        activeX += direction;
         return true;
     }
 
@@ -205,24 +203,6 @@ internal sealed class TetrisBoard
             return true;
         }
 
-        return false;
-    }
-
-    public bool SoftDrop()
-    {
-        if (GameOver || !HasActivePiece)
-        {
-            return false;
-        }
-
-        if (CanPlace(activeX, activeY + 1, activeRotation))
-        {
-            activeY += 1;
-            scoring.AddSoftDrop(1);
-            return true;
-        }
-
-        LockPiece();
         return false;
     }
 
@@ -277,11 +257,6 @@ internal sealed class TetrisBoard
         return y;
     }
 
-    public (int X, int Y) GetCell(int index)
-    {
-        return Shapes[(int)activeKind][activeRotation][index];
-    }
-
     public static (int X, int Y)[] GetCells(TetrisPieceKind kind, int rotation)
     {
         return Shapes[(int)kind][rotation];
@@ -308,7 +283,7 @@ internal sealed class TetrisBoard
         HasActivePiece = false;
         var clearedLines = ClearLines();
         ClearedLinesThisFrame = clearedLines;
-        scoring.CommitPiece(clearedLines, levelSystem.Level);
+        LastLockScore = scoring.CommitPiece(clearedLines, levelSystem.Level);
 
         if (clearedLines > 0)
         {
@@ -375,12 +350,14 @@ internal sealed class TetrisBoard
 
     private void SpawnNextPiece(bool resetHoldLock = true)
     {
+        var kind = bag[bagIndex];
+        bagIndex++;
         if (bagIndex >= bag.Length)
         {
             RefillBag();
         }
 
-        SpawnSpecificPiece(bag[bagIndex++], resetHoldLock);
+        SpawnSpecificPiece(kind, resetHoldLock);
     }
 
     private void SpawnSpecificPiece(TetrisPieceKind kind, bool resetHoldLock = true)

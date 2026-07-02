@@ -131,6 +131,9 @@ internal static class AppIconArt
             case "snake":
                 DrawSnake(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "tetris":
+                DrawTetris(dl, center, extent, inkColor);
+                return true;
             default:
                 return false;
         }
@@ -667,6 +670,28 @@ internal static class AppIconArt
         dl.AddCircleFilled(new Vector2(head.X + radius * 0.34f, head.Y - radius * 0.34f), radius * 0.24f, hole, 12);
 
         dl.AddCircleFilled(At(center, extent, -0.86f, -0.6f), extent * 0.16f, ink, 16);
+    }
+
+    private static void DrawTetris(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        var blockExtent = extent * 0.30f;
+        var rounding = extent * 0.10f;
+
+        Span<Vector2> blockCenters = stackalloc Vector2[4]
+        {
+            At(center, extent, -0.66f, -0.33f),
+            At(center, extent, 0f, -0.33f),
+            At(center, extent, 0.66f, -0.33f),
+            At(center, extent, 0f, 0.33f),
+        };
+
+        for (var block = 0; block < blockCenters.Length; block++)
+        {
+            var blockCenter = blockCenters[block];
+            var blockMin = new Vector2(blockCenter.X - blockExtent, blockCenter.Y - blockExtent);
+            var blockMax = new Vector2(blockCenter.X + blockExtent, blockCenter.Y + blockExtent);
+            dl.AddRectFilled(blockMin, blockMax, ink, rounding);
+        }
     }
 
     private static void DrawWhack(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

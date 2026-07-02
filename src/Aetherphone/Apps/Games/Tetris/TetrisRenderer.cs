@@ -21,20 +21,12 @@ internal sealed class TetrisRenderer
         new(0.95f, 0.48f, 0.52f, 1f),
     };
 
-    private static readonly (int X, int Y)[] DrawCells =
-    {
-        (0, 0),
-        (0, 0),
-        (0, 0),
-        (0, 0),
-    };
-
     public void Draw(TetrisBoard board, GameGrid grid, Vector4 accent, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
 
         Elevation.Card(drawList, grid.Bounds.Min, grid.Bounds.Max, 18f * scale, scale, 0.8f);
-        Squircle.Fill(drawList, grid.Bounds.Min, grid.Bounds.Max, 18f * scale, ImGui.GetColorU32(new Vector4(0.08f, 0.09f, 0.12f, 1f)));
+        Squircle.Fill(drawList, grid.Bounds.Min, grid.Bounds.Max, 18f * scale, ImGui.GetColorU32(GamePalette.Board));
         Squircle.Fill(drawList, grid.Bounds.Min, new Vector2(grid.Bounds.Max.X, grid.Bounds.Center.Y), 18f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)));
 
         DrawGridLines(drawList, grid, scale);
@@ -63,45 +55,37 @@ internal sealed class TetrisRenderer
         DrawActivePiece(drawList, board, grid, board.ActiveY, 1f, scale);
     }
 
-    public bool DrawHoldSlot(TetrisBoard board, Rect rect, PhoneTheme theme, Vector4 accent, float scale)
+    public void DrawHoldSlot(TetrisBoard board, Rect rect, PhoneTheme theme, Vector4 accent, bool hovered, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
 
-        Elevation.Floating(drawList, rect.Min, rect.Max, 18f * scale, scale, hovered ? 1f : 0.8f);
-        Squircle.Fill(drawList, rect.Min, rect.Max, 18f * scale, ImGui.GetColorU32(new Vector4(0.08f, 0.09f, 0.12f, 1f)));
-        Squircle.Stroke(drawList, rect.Min, rect.Max, 18f * scale, ImGui.GetColorU32(GamePalette.Lighten(accent, 0.32f) with { W = hovered ? 0.75f : 0.35f }), 1f * scale);
-
-        Typography.DrawCentered(new Vector2(rect.Center.X, rect.Min.Y + 12f * scale), Loc.T(L.Games.Saved), theme.TextMuted, TextStyles.Caption2);
+        DrawSlotFrame(drawList, rect, theme, accent, Loc.T(L.Games.Saved), hovered, scale);
 
         if (board.HeldKind is { } heldKind)
         {
-            DrawPiecePreview(drawList, rect, heldKind, accent, scale);
+            DrawPiecePreview(drawList, rect, heldKind, scale);
         }
         else
         {
             Typography.DrawCentered(rect.Center, "-", theme.TextMuted, TextStyles.Headline);
         }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     public void DrawNextSlot(TetrisBoard board, Rect rect, PhoneTheme theme, Vector4 accent, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
 
-        Elevation.Floating(drawList, rect.Min, rect.Max, 18f * scale, scale, 0.8f);
-        Squircle.Fill(drawList, rect.Min, rect.Max, 18f * scale, ImGui.GetColorU32(new Vector4(0.08f, 0.09f, 0.12f, 1f)));
-        Squircle.Stroke(drawList, rect.Min, rect.Max, 18f * scale, ImGui.GetColorU32(GamePalette.Lighten(accent, 0.32f) with { W = 0.35f }), 1f * scale);
+        DrawSlotFrame(drawList, rect, theme, accent, Loc.T(L.Games.Next), hovered: false, scale);
+        DrawPiecePreview(drawList, rect, board.NextPieceKind, scale);
+    }
 
-        Typography.DrawCentered(new Vector2(rect.Center.X, rect.Min.Y + 12f * scale), "Next", theme.TextMuted, TextStyles.Caption2);
+    private static void DrawSlotFrame(ImDrawListPtr drawList, Rect rect, PhoneTheme theme, Vector4 accent, string caption, bool hovered, float scale)
+    {
+        Elevation.Floating(drawList, rect.Min, rect.Max, 18f * scale, scale, hovered ? 1f : 0.8f);
+        Squircle.Fill(drawList, rect.Min, rect.Max, 18f * scale, ImGui.GetColorU32(GamePalette.Board));
+        Squircle.Stroke(drawList, rect.Min, rect.Max, 18f * scale, ImGui.GetColorU32(GamePalette.Lighten(accent, 0.32f) with { W = hovered ? 0.75f : 0.35f }), 1f * scale);
 
-        DrawPiecePreview(drawList, rect, board.NextPieceKind, accent, scale);
+        Typography.DrawCentered(new Vector2(rect.Center.X, rect.Min.Y + 12f * scale), caption, theme.TextMuted, TextStyles.Caption2);
     }
 
     private static void DrawGridLines(ImDrawListPtr drawList, GameGrid grid, float scale)
@@ -123,14 +107,11 @@ internal sealed class TetrisRenderer
     private static void DrawActivePiece(ImDrawListPtr drawList, TetrisBoard board, GameGrid grid, int boardY, float alpha, float scale)
     {
         var tint = GamePalette.Lighten(PieceColorOf((int)board.ActiveKind), 0.12f);
-        DrawCells[0] = board.GetCell(0);
-        DrawCells[1] = board.GetCell(1);
-        DrawCells[2] = board.GetCell(2);
-        DrawCells[3] = board.GetCell(3);
+        var cells = TetrisBoard.GetCells(board.ActiveKind, board.ActiveRotation);
 
-        for (var index = 0; index < DrawCells.Length; index++)
+        for (var index = 0; index < cells.Length; index++)
         {
-            var cell = DrawCells[index];
+            var cell = cells[index];
             DrawCell(drawList, grid, board.ActiveX + cell.X, boardY + cell.Y, tint, alpha, scale);
         }
     }
@@ -144,7 +125,7 @@ internal sealed class TetrisRenderer
         Squircle.Fill(drawList, rect.Min, new Vector2(rect.Max.X, rect.Center.Y), rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.18f * alpha)));
     }
 
-    private static void DrawPiecePreview(ImDrawListPtr drawList, Rect rect, TetrisPieceKind kind, Vector4 accent, float scale)
+    private static void DrawPiecePreview(ImDrawListPtr drawList, Rect rect, TetrisPieceKind kind, float scale)
     {
         var cells = TetrisBoard.GetCells(kind, 0);
         var minX = cells[0].X;

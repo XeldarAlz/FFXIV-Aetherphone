@@ -37,6 +37,10 @@ internal sealed class TetrisApp : IMiniGame
 
     private float resultAppear;
 
+    private int levelTextLevel;
+
+    private string levelText = string.Empty;
+
     public string Id => GameId;
 
     public string Title => Loc.T(L.Games.Tetris);
@@ -100,18 +104,9 @@ internal sealed class TetrisApp : IMiniGame
             pendingSubmit = false;
         }
 
-        if (!board.GameOver)
-        {
-            board.Update(deltaSeconds);
-        }
-
+        board.Update(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
-        if (board.Score > bestScore)
-        {
-            bestScore = board.Score;
-        }
 
         if (board.GameOver && !wasOver)
         {
@@ -134,9 +129,15 @@ internal sealed class TetrisApp : IMiniGame
         }
 
         var holdRect = new Rect(new Vector2(body.Max.X - 96f * scale, body.Min.Y + 74f * scale), new Vector2(body.Max.X - 12f * scale, body.Min.Y + 168f * scale));
-        if (renderer.DrawHoldSlot(board, holdRect, theme, Accent, scale) && !board.GameOver)
+        var holdHovered = ImGui.IsMouseHoveringRect(holdRect.Min, holdRect.Max);
+        renderer.DrawHoldSlot(board, holdRect, theme, Accent, holdHovered, scale);
+        if (holdHovered)
         {
-            board.HoldPiece();
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                board.HoldPiece();
+            }
         }
 
         var nextRect = new Rect(new Vector2(body.Max.X - 96f * scale, body.Min.Y + 174f * scale), new Vector2(body.Max.X - 12f * scale, body.Min.Y + 268f * scale));
@@ -146,7 +147,7 @@ internal sealed class TetrisApp : IMiniGame
         var controlSpacing = 8f * scale;
         var controlWidth = 46f * scale;
         var centerX = body.Center.X;
-        if (GameHud.Button(new Vector2(centerX - (controlWidth + controlSpacing) * 2f, controlY), new Vector2(controlWidth, 32f * scale), Loc.T(L.Games.Save), Accent, theme))
+        if (GameHud.Button(new Vector2(centerX - (controlWidth + controlSpacing) * 2f, controlY), new Vector2(controlWidth, 32f * scale), "S", Accent, theme))
         {
             board.HoldPiece();
         }
@@ -171,16 +172,27 @@ internal sealed class TetrisApp : IMiniGame
             board.HardDrop();
         }
 
+        var field = new Rect(new Vector2(body.Min.X + 10f * scale, body.Min.Y + 72f * scale), new Vector2(body.Max.X - 108f * scale, body.Max.Y - 52f * scale));
+
         if (board.ClearedLinesThisFrame > 0)
         {
             fx.AddTrauma(MathF.Min(0.28f, 0.06f * board.ClearedLinesThisFrame));
             fx.Flash(new Vector4(0.95f, 0.92f, 1f, 1f), 0.16f);
+            particles.Burst(field.Center, 10 * board.ClearedLinesThisFrame, GamePalette.Lighten(Accent, 0.2f), 170f * scale, 2.8f, 0.5f, 320f);
+            fx.AddText($"+{GameNumber.Label(board.LastLockScore)}", new Vector2(field.Center.X, field.Min.Y + field.Height * 0.3f), Accent, 1.2f);
         }
 
-        Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 64f * scale), $"{Loc.T(L.Games.Level)} {GameNumber.Label(board.Level)}", theme.TextMuted, TextStyles.Caption1);
+        if (levelTextLevel != board.Level)
+        {
+            levelTextLevel = board.Level;
+            levelText = $"{Loc.T(L.Games.Level)} {GameNumber.Label(board.Level)}";
+        }
 
-        var field = new Rect(new Vector2(body.Min.X + 10f * scale, body.Min.Y + 72f * scale), new Vector2(body.Max.X - 108f * scale, body.Max.Y - 52f * scale));
-        var grid = GameGrid.Centered(field, TetrisBoard.Columns, TetrisBoard.Rows, 0.08f);
+        Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 64f * scale), levelText, theme.TextMuted, TextStyles.Caption1);
+
+        var shake = fx.ShakeOffset(scale);
+        var shakenField = new Rect(field.Min + shake, field.Max + shake);
+        var grid = GameGrid.Centered(shakenField, TetrisBoard.Columns, TetrisBoard.Rows, 0.08f);
 
         renderer.Draw(board, grid, Accent, scale);
 
@@ -191,13 +203,13 @@ internal sealed class TetrisApp : IMiniGame
 
         if (board.GameOver)
         {
-            DrawResult(theme, body);
+            DrawResult(theme, body, deltaSeconds);
         }
     }
 
-    private void DrawResult(PhoneTheme theme, Rect body)
+    private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
     {
-        resultAppear = MathF.Min(1f, resultAppear + ImGui.GetIO().DeltaTime * 3.4f);
+        resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
 
         var secondary = $"{Loc.T(L.Games.Lines)} {GameNumber.Label(board.Lines)}  ·  {Loc.T(L.Games.Level)} {GameNumber.Label(board.Level)}";
         var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score), GameNumber.Label(finalScore), secondary, newBest);
