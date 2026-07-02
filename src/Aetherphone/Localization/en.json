@@ -165,6 +165,8 @@
   "aethergram.importFromPc": "Import from PC",
   "aethergram.moveAndScale": "Move and Scale",
   "aethergram.gestureHint": "Drag to move · scroll to zoom",
+  "aethergram.captionHint": "Write a caption…",
+  "aethergram.tapToAdjust": "Tap the photo to adjust the crop",
   "aethergram.next": "Next",
   "aethergram.use": "Use",
   "aethergram.share": "Share",

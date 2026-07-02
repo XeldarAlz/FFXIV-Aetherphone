@@ -164,6 +164,8 @@
   "aethergram.importFromPc": "PC'den içe aktar",
   "aethergram.moveAndScale": "Taşı ve Ölçekle",
   "aethergram.gestureHint": "Taşımak için sürükle · yakınlaştırmak için kaydır",
+  "aethergram.captionHint": "Bir açıklama yaz…",
+  "aethergram.tapToAdjust": "Kırpmayı ayarlamak için fotoğrafa dokun",
   "aethergram.next": "İleri",
   "aethergram.use": "Kullan",
   "aethergram.share": "Paylaş",

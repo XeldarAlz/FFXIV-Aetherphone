@@ -631,6 +631,10 @@ internal static class L
 
         public static readonly LocString GestureHint = new("aethergram.gestureHint", "Drag to move · scroll to zoom");
 
+        public static readonly LocString CaptionHint = new("aethergram.captionHint", "Write a caption…");
+
+        public static readonly LocString TapToAdjust = new("aethergram.tapToAdjust", "Tap the photo to adjust the crop");
+
         public static readonly LocString Next = new("aethergram.next", "Next");
 
         public static readonly LocString Use = new("aethergram.use", "Use");

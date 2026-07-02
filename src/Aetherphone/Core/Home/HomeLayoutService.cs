@@ -5,7 +5,7 @@ namespace Aetherphone.Core.Home;
 internal sealed class HomeLayoutService
 {
     public const int Columns = 4;
-    public const int Rows = 6;
+    public const int Rows = 8;
     public const int Capacity = Columns * Rows;
 
     private readonly IReadOnlyList<IPhoneApp> apps;

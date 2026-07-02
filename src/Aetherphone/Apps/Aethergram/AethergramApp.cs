@@ -709,63 +709,158 @@ internal sealed class AethergramApp : IPhoneApp
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Aethergram.NewPost), () => composeStage = ComposeStage.Crop);
 
-        var canShare = !store.Posting;
-        if (DrawHeaderAction(area, store.Posting ? Loc.T(L.Aethergram.Sharing) : Loc.T(L.Aethergram.Share), canShare))
+        var scale = ImGuiHelpers.GlobalScale;
+        var margin = 16f * scale;
+        var top = area.Min.Y + AppHeader.Height * scale;
+
+        var shareHeight = 46f * scale;
+        var shareRect = new Rect(
+            new Vector2(area.Min.X + margin, area.Max.Y - margin - shareHeight),
+            new Vector2(area.Max.X - margin, area.Max.Y - margin));
+
+        var statusHeight = composeStatus.Length > 0 ? 24f * scale : 0f;
+        var cardHeight = 124f * scale;
+        var cardBottom = shareRect.Min.Y - 14f * scale - statusHeight;
+        var cardRect = new Rect(
+            new Vector2(area.Min.X + margin, cardBottom - cardHeight),
+            new Vector2(area.Max.X - margin, cardBottom));
+
+        var hintY = cardRect.Min.Y - 20f * scale;
+        var previewRegion = new Rect(
+            new Vector2(area.Min.X + margin, top + 14f * scale),
+            new Vector2(area.Max.X - margin, hintY - 12f * scale));
+        DrawCaptionPreview(previewRegion, scale);
+        Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Aethergram.TapToAdjust), theme.TextMuted, 0.75f);
+
+        DrawCaptionCard(cardRect, scale);
+
+        if (composeStatus.Length > 0)
+        {
+            Typography.DrawCentered(new Vector2(area.Center.X, cardRect.Max.Y + 10f * scale), composeStatus, theme.Danger, 0.82f);
+        }
+
+        var busy = store.Posting;
+        if (DrawShareBar(shareRect, busy ? Loc.T(L.Aethergram.Sharing) : Loc.T(L.Aethergram.Share), !busy))
         {
             CommitGram();
         }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-
-        using (AppSurface.Begin(body))
-        {
-            var origin = ImGui.GetCursorScreenPos();
-            var thumbSide = 64f * scale;
-            var thumbRect = new Rect(origin, new Vector2(origin.X + thumbSide, origin.Y + thumbSide));
-            DrawCropThumbnail(thumbRect, scale);
-
-            var inputLeft = thumbSide + 12f * scale;
-            ImGui.SetCursorScreenPos(new Vector2(origin.X + inputLeft, origin.Y));
-            if (captionFocus)
-            {
-                ImGui.SetKeyboardFocusHere();
-                captionFocus = false;
-            }
-
-            using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-            using (Plugin.Fonts.Push(1.05f))
-            {
-                ImGui.InputTextMultiline("##gramCaption", ref caption, MaxCaptionLength, new Vector2(ImGui.GetContentRegionAvail().X, thumbSide), ImGuiInputTextFlags.None);
-            }
-
-            if (composeStatus.Length > 0)
-            {
-                ImGui.Dummy(new Vector2(0f, 8f * scale));
-                using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
-                {
-                    ImGui.TextWrapped(composeStatus);
-                }
-            }
-        }
     }
 
-    private void DrawCropThumbnail(Rect rect, float scale)
+    private void DrawCaptionPreview(Rect region, float scale)
     {
+        var side = MathF.Min(region.Width, region.Height);
+        if (side <= 0f)
+        {
+            return;
+        }
+
+        var half = side * 0.5f;
+        var preview = new Rect(region.Center - new Vector2(half, half), region.Center + new Vector2(half, half));
+        var rounding = 18f * scale;
         var drawList = ImGui.GetWindowDrawList();
-        var rounding = 10f * scale;
+
+        Squircle.Fill(
+            drawList,
+            new Vector2(preview.Min.X - 2f * scale, preview.Min.Y + 4f * scale),
+            new Vector2(preview.Max.X + 2f * scale, preview.Max.Y + 8f * scale),
+            rounding + 2f * scale,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.32f)));
+
         var texture = Plugin.WallpaperImages.Get(composeSourcePath);
         if (texture is null)
         {
-            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
+            Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
+            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), theme.TextMuted);
             return;
         }
 
         var crop = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY).Clamped(texture.Size, 1f);
         var (uv0, uv1) = crop.ComputeUv(texture.Size, 1f);
-        drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+        drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+        Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
+
+        if (HoverClick(preview.Min, preview.Max))
+        {
+            composeStage = ComposeStage.Crop;
+        }
+    }
+
+    private void DrawCaptionCard(Rect card, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var rounding = 14f * scale;
+        Squircle.Fill(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(theme.GroupedCard));
+        Material.EdgeSquircle(drawList, card.Min, card.Max, rounding, scale);
+
+        var padding = 12f * scale;
+        var inputTop = card.Min.Y + padding;
+        if (store.Me is { } me)
+        {
+            var radius = 11f * scale;
+            var avatarCenter = new Vector2(card.Min.X + padding + radius, card.Min.Y + padding + radius);
+            DrawAvatar(avatarCenter, radius, me.Name, me.World, me.AvatarUrl, 0.7f, 24);
+            var displayName = string.IsNullOrEmpty(me.DisplayName) ? me.Name : me.DisplayName;
+            Typography.Draw(new Vector2(avatarCenter.X + radius + 8f * scale, avatarCenter.Y - 8f * scale), displayName, theme.TextStrong, 0.88f, FontWeight.SemiBold);
+            inputTop = avatarCenter.Y + radius + 6f * scale;
+        }
+
+        var counter = $"{caption.Length}/{MaxCaptionLength}";
+        var counterSize = Typography.Measure(counter, 0.72f);
+        var counterPos = new Vector2(card.Max.X - padding - counterSize.X, card.Max.Y - padding * 0.75f - counterSize.Y);
+
+        var inputPos = new Vector2(card.Min.X + padding, inputTop);
+        var inputSize = new Vector2(card.Width - padding * 2f, counterPos.Y - 4f * scale - inputTop);
+
+        ImGui.SetCursorScreenPos(inputPos);
+        if (captionFocus)
+        {
+            ImGui.SetKeyboardFocusHere();
+            captionFocus = false;
+        }
+
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        {
+            ImGui.InputTextMultiline("##gramCaption", ref caption, MaxCaptionLength, inputSize, ImGuiInputTextFlags.None);
+        }
+
+        if (caption.Length == 0)
+        {
+            Typography.Draw(inputPos + ImGui.GetStyle().FramePadding, Loc.T(L.Aethergram.CaptionHint), theme.TextMuted, 1f);
+        }
+
+        var counterInk = caption.Length >= MaxCaptionLength - 50 ? theme.Danger : theme.TextMuted;
+        Typography.Draw(counterPos, counter, counterInk, 0.72f);
+    }
+
+    private bool DrawShareBar(Rect rect, string label, bool enabled)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = enabled && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var radius = rect.Height * 0.5f;
+
+        var fill = enabled
+            ? (hovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent)
+            : Palette.Mix(Accent, theme.AppBackground, 0.55f);
+        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
+        Material.EdgeSquircle(drawList, rect.Min, rect.Max, radius, scale, enabled ? 1f : 0.5f);
+
+        var ink = new Vector4(1f, 1f, 1f, enabled ? 1f : 0.75f);
+        var textSize = Typography.Measure(label, 1f, FontWeight.SemiBold);
+        var iconWidth = 14f * scale;
+        var iconGap = 8f * scale;
+        var left = rect.Center.X - (iconWidth + iconGap + textSize.X) * 0.5f;
+        DrawIcon(new Vector2(left + iconWidth * 0.5f, rect.Center.Y), FontAwesomeIcon.PaperPlane.ToIconString(), ink, 0.9f);
+        Typography.Draw(new Vector2(left + iconWidth + iconGap, rect.Center.Y - textSize.Y * 0.5f), label, ink, 1f, FontWeight.SemiBold);
+
+        if (!hovered)
+        {
+            return false;
+        }
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private void CommitGram()

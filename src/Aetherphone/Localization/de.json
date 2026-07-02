@@ -164,6 +164,8 @@
   "aethergram.importFromPc": "Vom PC importieren",
   "aethergram.moveAndScale": "Verschieben und Zoomen",
   "aethergram.gestureHint": "Ziehen zum Bewegen · Scrollen zum Zoomen",
+  "aethergram.captionHint": "Bildunterschrift verfassen…",
+  "aethergram.tapToAdjust": "Tippe auf das Foto, um den Zuschnitt anzupassen",
   "aethergram.next": "Weiter",
   "aethergram.use": "Verwenden",
   "aethergram.share": "Teilen",

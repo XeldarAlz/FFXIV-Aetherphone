@@ -164,6 +164,8 @@
   "aethergram.importFromPc": "Importer depuis le PC",
   "aethergram.moveAndScale": "Déplacer et zoomer",
   "aethergram.gestureHint": "Glissez pour déplacer · molette pour zoomer",
+  "aethergram.captionHint": "Écris une légende…",
+  "aethergram.tapToAdjust": "Touche la photo pour ajuster le cadrage",
   "aethergram.next": "Suivant",
   "aethergram.use": "Utiliser",
   "aethergram.share": "Partager",
