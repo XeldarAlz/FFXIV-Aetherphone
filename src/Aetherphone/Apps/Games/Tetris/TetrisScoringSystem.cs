@@ -10,22 +10,12 @@ internal sealed class TetrisScoringSystem
 
     public int Score { get; private set; }
 
-    public int Combo => comboChain < 0 ? 0 : comboChain;
-
     public void Reset()
     {
         Score = 0;
         pendingDropPoints = 0;
         backToBackTetris = false;
         comboChain = -1;
-    }
-
-    public void AddSoftDrop(int cellsDropped)
-    {
-        if (cellsDropped > 0)
-        {
-            pendingDropPoints += cellsDropped;
-        }
     }
 
     public void AddHardDrop(int cellsDropped)
@@ -68,7 +58,7 @@ internal sealed class TetrisScoringSystem
             1 => 100 * level,
             2 => 200 * level,
             3 => 300 * level,
-            _ => 400 * level,
+            _ => backToBackTetris ? 600 * level : 400 * level,
         };
     }
 

@@ -4,7 +4,7 @@ namespace Aetherphone.Apps.Games.Tetris;
 
 internal sealed class TetrisLevelSystem
 {
-    public const int LinesPerLevel = 10;
+    private const int LinesPerLevel = 10;
 
     private const float BaseDropInterval = 0.72f;
 
@@ -16,7 +16,7 @@ internal sealed class TetrisLevelSystem
 
     public int TotalLinesCleared { get; private set; }
 
-    public float DropInterval => GetDropInterval(Level);
+    public float DropInterval => MathF.Max(MinimumDropInterval, BaseDropInterval - DropIntervalStep * (Level - 1));
 
     public void Reset()
     {
@@ -24,11 +24,11 @@ internal sealed class TetrisLevelSystem
         TotalLinesCleared = 0;
     }
 
-    public int RegisterClearedLines(int clearedLines)
+    public void RegisterClearedLines(int clearedLines)
     {
         if (clearedLines <= 0)
         {
-            return Level;
+            return;
         }
 
         TotalLinesCleared += clearedLines;
@@ -37,12 +37,5 @@ internal sealed class TetrisLevelSystem
         {
             Level = nextLevel;
         }
-
-        return Level;
-    }
-
-    public float GetDropInterval(int level)
-    {
-        return MathF.Max(MinimumDropInterval, BaseDropInterval - DropIntervalStep * MathF.Max(0, level - 1));
     }
 }
