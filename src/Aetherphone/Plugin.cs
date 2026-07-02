@@ -75,13 +75,16 @@ public sealed class Plugin : IDalamudPlugin
         Analytics = services.Analytics;
         Analytics.Track(AnalyticsEvents.SessionStart());
         aboutWindow = new AboutWindow();
-        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback);
+        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback, services.Calls);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
         windowSystem.AddWindow(phoneWindow);
         windowSystem.AddWindow(aboutWindow);
 
         phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager, () => phoneWindow.IsOpen);
         timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
+
+        services.Calls.IncomingCallPresented += OnIncomingCall;
+        services.Calls.Start();
 
         dtrEntry = DtrBar.Get(AepConstants.Name);
         dtrEntry.OnClick = _ => phoneWindow.Toggle();
@@ -111,6 +114,7 @@ public sealed class Plugin : IDalamudPlugin
 
         Loc.LanguageChanged -= Fonts.OnLanguageChanged;
         services.Notifications.Changed -= UpdateDtrBadge;
+        services.Calls.IncomingCallPresented -= OnIncomingCall;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
         dtrEntry.Remove();
 
@@ -183,6 +187,8 @@ public sealed class Plugin : IDalamudPlugin
     }
 
     private void ShowAbout() => aboutWindow.IsOpen = true;
+
+    private void OnIncomingCall() => phoneWindow.IsOpen = true;
 
     private void OnMenuOpened(IMenuOpenedArgs args)
     {
