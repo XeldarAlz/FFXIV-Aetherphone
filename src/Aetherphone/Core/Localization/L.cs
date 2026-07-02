@@ -358,27 +358,27 @@ internal static class L
 
         public static readonly LocString LogInFirst = new("account.logInFirst", "Log in to your character first");
 
-        public static readonly LocString SignInIntro = new("account.signInIntro", "One account signs you in to every Aethernet app — Chirper, Aethergram and more. Ownership is verified through your Lodestone profile, so there's no password.");
+        public static readonly LocString SignInIntro = new("account.signInIntro", "One account signs you in to every Aethernet app: Chirper, Aethergram and more. Ownership is verified through your Lodestone profile, so there's no password.");
 
         public static readonly LocString SigningInAs = new("account.signingInAs", "Signing in as");
 
         public static readonly LocString VerifyTitle = new("account.verifyTitle", "Verify with Lodestone");
 
-        public static readonly LocString VerifyIntro = new("account.verifyIntro", "Add this code anywhere on your Lodestone character Profile, then tap Verify. You can remove it afterwards.");
+        public static readonly LocString VerifyIntro = new("account.verifyIntro", "Add this code to your Lodestone profile. You can remove it afterwards.");
 
-        public static readonly LocString Step1 = new("account.step1", "Copy the code above");
+        public static readonly LocString Step1 = new("account.step1", "Copy the code");
 
-        public static readonly LocString Step2 = new("account.step2", "Open your Lodestone profile in a browser");
+        public static readonly LocString Step2 = new("account.step2", "Open your Lodestone profile");
 
-        public static readonly LocString Step3 = new("account.step3", "Paste it into your Profile, then Save on Lodestone");
+        public static readonly LocString Step3 = new("account.step3", "Paste it into your profile, then click Confirm");
 
-        public static readonly LocString Step4 = new("account.step4", "Return here and tap Verify");
+        public static readonly LocString Step4 = new("account.step4", "Verify below");
 
         public static readonly LocString CopyCode = new("account.copyCode", "Copy code");
 
         public static readonly LocString OpenProfile = new("account.openProfile", "Open Lodestone");
 
-        public static readonly LocString VerifyAdded = new("account.verifyAdded", "I've added it — Verify");
+        public static readonly LocString VerifyAdded = new("account.verifyAdded", "Verify");
 
         public static readonly LocString RequestingCode = new("account.requestingCode", "Requesting a code…");
 
@@ -538,11 +538,11 @@ internal static class L
     {
         public static readonly LocString SetUpAccount = new("chirper.setUpAccount", "Set up your account in Settings");
 
-        public static readonly LocString Empty = new("chirper.empty", "No chirps yet — post the first one");
+        public static readonly LocString Empty = new("chirper.empty", "No chirps yet. Post the first one");
 
         public static readonly LocString FollowingEmpty = new("chirper.followingEmpty", "Follow people to see their chirps here");
 
-        public static readonly LocString ExploreEmpty = new("chirper.exploreEmpty", "No chirps yet — be the first to post");
+        public static readonly LocString ExploreEmpty = new("chirper.exploreEmpty", "No chirps yet. Be the first to post");
 
         public static readonly LocString FindPeople = new("chirper.findPeople", "Find People");
 
@@ -613,7 +613,7 @@ internal static class L
 
         public static readonly LocString FollowingEmpty = new("aethergram.followingEmpty", "Follow people to see their photos here");
 
-        public static readonly LocString ExploreEmpty = new("aethergram.exploreEmpty", "No photos yet — share the first one");
+        public static readonly LocString ExploreEmpty = new("aethergram.exploreEmpty", "No photos yet. Share the first one");
 
         public static readonly LocString Empty = new("aethergram.empty", "No photos yet");
 
@@ -1017,7 +1017,7 @@ internal static class L
 
         public static readonly LocString PerDay = new("market.perDay", "{0}/day");
 
-        public static readonly LocString AlertBody = new("market.alertBody", "{0} {1} — now {2} on {3}");
+        public static readonly LocString AlertBody = new("market.alertBody", "{0} {1} is now {2} on {3}");
     }
 
     internal static class Games
