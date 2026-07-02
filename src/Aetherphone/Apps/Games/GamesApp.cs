@@ -12,6 +12,7 @@ using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
 using Aetherphone.Apps.Games.Sweeper;
+using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Apps.Games.Twenty48;
 using Aetherphone.Apps.Games.WaterSort;
 using Aetherphone.Apps.Games.Whack;
@@ -61,6 +62,7 @@ internal sealed class GamesApp : IPhoneApp
             new SweeperApp(),
             new PairsApp(),
             new GemSwapApp(),
+            new TetrisApp(),
             new Twenty48App(),
             new WaterSortApp(),
             new BreakoutApp(),
@@ -293,6 +295,7 @@ internal sealed class GamesApp : IPhoneApp
             case "flap":
             case "whack":
             case "snake":
+            case "tetris":
             {
                 var best = stats.Get(gameId).BestScore;
                 return best > 0 ? GameNumber.Label(best) : string.Empty;

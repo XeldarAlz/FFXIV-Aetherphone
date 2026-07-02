@@ -1010,6 +1010,8 @@ internal static class L
 
     internal static class Games
     {
+        public static readonly LocString Tetris = new("games.tetris", "Tetris");
+
         public static readonly LocString Sweeper = new("games.sweeper", "Sweeper");
 
         public static readonly LocString Pairs = new("games.pairs", "Pairs");
@@ -1059,6 +1061,12 @@ internal static class L
         public static readonly LocString Bubbles = new("games.bubbles", "Bubbles");
 
         public static readonly LocString WaterSort = new("games.waterSort", "Water Sort");
+
+        public static readonly LocString Save = new("games.save", "Save");
+
+        public static readonly LocString Saved = new("games.saved", "Saved");
+
+        public static readonly LocString Lines = new("games.lines", "Lines");
 
         public static readonly LocString Level = new("games.level", "Level");
 
