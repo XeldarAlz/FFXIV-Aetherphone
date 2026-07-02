@@ -55,7 +55,9 @@ internal sealed class Configuration : IPluginConfiguration
 
     public uint RingtoneId { get; set; } = 7;
 
-    public string AethernetBaseUrl { get; set; } = "https://ffxiv-aethernet-production.up.railway.app";
+    public const string DefaultAethernetBaseUrl = "https://ffxiv-aethernet-production.up.railway.app";
+
+    public string AethernetBaseUrl { get; set; } = DefaultAethernetBaseUrl;
 
     public string AethernetToken { get; set; } = string.Empty;
 
@@ -90,6 +92,32 @@ internal sealed class Configuration : IPluginConfiguration
     public List<string> VenueFavorites { get; set; } = new();
 
     public List<uint> MapFavorites { get; set; } = new();
+
+    public void NormalizeAethernetBaseUrl()
+    {
+        if (!ShouldResetBaseUrl(AethernetBaseUrl))
+        {
+            return;
+        }
+
+        AethernetBaseUrl = DefaultAethernetBaseUrl;
+        Save();
+    }
+
+    private static bool ShouldResetBaseUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return true;
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed))
+        {
+            return true;
+        }
+
+        return parsed.IsLoopback;
+    }
 
     public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
 }

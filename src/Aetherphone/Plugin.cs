@@ -61,6 +61,7 @@ public sealed class Plugin : IDalamudPlugin
     {
         Instance = this;
         Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+        Cfg.NormalizeAethernetBaseUrl();
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
         Loc.LanguageChanged += Fonts.OnLanguageChanged;
