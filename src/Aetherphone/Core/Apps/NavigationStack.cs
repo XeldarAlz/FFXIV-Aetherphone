@@ -28,6 +28,8 @@ internal sealed class NavigationStack : INavigator
         this.apps = apps;
     }
 
+    public event Action<string>? AppOpened;
+
     public IPhoneApp? Current => current;
 
     public bool AtHome => current is null;
@@ -83,6 +85,7 @@ internal sealed class NavigationStack : INavigator
         current = app;
         app.OnOpened();
         Plugin.Analytics.Track(AnalyticsEvents.AppOpen(app.Id));
+        AppOpened?.Invoke(app.Id);
         BeginPresent(app, under);
     }
 

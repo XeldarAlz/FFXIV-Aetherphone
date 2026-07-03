@@ -42,6 +42,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
+        var tutorials = new TutorialsPage(configuration);
         var callsPage = new CallsPage(calls, configuration);
         var notifications = new NotificationsPage(configuration);
         var ringtonePage = new RingtonePage(configuration, ringtone);
@@ -50,7 +51,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var groups = new IReadOnlyList<ISettingsPage>[]
         {
             new ISettingsPage[] { accountPage },
-            new ISettingsPage[] { appearance, language, immersion },
+            new ISettingsPage[] { appearance, language, immersion, tutorials },
             new ISettingsPage[] { callsPage },
             new ISettingsPage[] { notifications, ringtonePage },
             new ISettingsPage[] { about },

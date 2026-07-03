@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
@@ -31,6 +32,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly CallIsland callIsland;
     private readonly IncomingCallOverlay incomingOverlay;
     private readonly BootSequence boot = new();
+    private readonly OnboardingDirector director;
     private bool closeRequested;
 
     private CallState lastCallState;
@@ -41,6 +43,8 @@ internal sealed class PhoneShell : IDisposable
         this.apps = apps;
         this.calls = calls;
         navigation = new NavigationStack(apps);
+        director = new OnboardingDirector(navigation);
+        navigation.AppOpened += director.OnAppOpened;
         banner = new NotificationBanner(notifications);
         nowPlaying = new NowPlayingIsland(playback);
         controlCenter = new ControlCenter(themes, playback);
@@ -50,9 +54,17 @@ internal sealed class PhoneShell : IDisposable
         incomingOverlay = new IncomingCallOverlay(calls);
     }
 
-    public void OnOpened() => boot.Begin(!Plugin.Cfg.WelcomeShown);
+    public void OnOpened()
+    {
+        boot.Begin(!Plugin.Cfg.WelcomeShown);
+        director.OnPhoneOpened();
+    }
 
-    public void OnClosed() => boot.Cancel();
+    public void OnClosed()
+    {
+        boot.Cancel();
+        director.Suspend();
+    }
 
     public void OpenApp(string appId)
     {
@@ -103,7 +115,11 @@ internal sealed class PhoneShell : IDisposable
         var ringing = !boot.IsActive && incomingOverlay.IsRinging;
         var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing && (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen));
 
-        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing))
+        var busy = boot.IsActive || overlaysCapture || ringing || navigation.IsTransitioning;
+        director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
+        UiAnchors.BeginFrame(director.WantsAnchors);
+
+        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing || director.CapturesPointer))
         {
             DrawContent(screen, theme);
             DrawChrome(screen, theme);
@@ -115,7 +131,7 @@ internal sealed class PhoneShell : IDisposable
             return;
         }
 
-        if (!lockScreen.IsActive)
+        if (!lockScreen.IsActive && !director.CapturesPointer)
         {
             banner.Draw(screen, theme);
             if (!controlCenter.IsActive)
@@ -127,8 +143,10 @@ internal sealed class PhoneShell : IDisposable
             incomingOverlay.Draw(screen, theme);
         }
 
-        controlCenter.Draw(screen, theme, delta, !lockScreen.IsActive && !navigation.IsTransitioning);
+        controlCenter.Draw(screen, theme, delta, !lockScreen.IsActive && !navigation.IsTransitioning && !director.CapturesPointer);
         lockScreen.Draw(screen, theme, delta, navigation);
+
+        director.Draw(screen, theme);
     }
 
     private bool TransparencyActive()

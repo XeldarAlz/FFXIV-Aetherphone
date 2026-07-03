@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -413,6 +414,7 @@ internal sealed class HomeScreen
 
                 var center = SlotCenter(content, m, page, slot) + Jiggle(tile, m);
                 DrawTile(tile, center, m, theme, 1f, labelAlpha, false);
+                ReportIconAnchor(tile, center, m);
             }
 
             return;
@@ -473,6 +475,17 @@ internal sealed class HomeScreen
         {
             HomeTileView.DrawApp(center, m.IconSize, tile.App!, theme, drawScale, labelAlpha);
         }
+    }
+
+    private static void ReportIconAnchor(HomeTile tile, Vector2 center, in Metrics m)
+    {
+        if (!UiAnchors.Recording || tile.App is null)
+        {
+            return;
+        }
+
+        var half = m.IconSize * 0.5f;
+        UiAnchors.Report(string.Concat("home.app.", tile.App.Id), new Rect(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half)));
     }
 
     private void DrawPageDots(Rect content, in Metrics m, PhoneTheme theme)
