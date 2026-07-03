@@ -34,6 +34,7 @@ internal sealed class NotificationBanner : IDisposable
     private const int MaxQueued = 4;
 
     private readonly NotificationService notifications;
+    private readonly Func<string?> currentAppId;
     private readonly Queue<PhoneNotification> pending = new();
     private Spring slide;
 
@@ -41,9 +42,10 @@ internal sealed class NotificationBanner : IDisposable
     private Stage stage = Stage.Idle;
     private float holdElapsed;
 
-    public NotificationBanner(NotificationService notifications)
+    public NotificationBanner(NotificationService notifications, Func<string?> currentAppId)
     {
         this.notifications = notifications;
+        this.currentAppId = currentAppId;
         notifications.Presented += OnPresented;
     }
 
@@ -122,7 +124,7 @@ internal sealed class NotificationBanner : IDisposable
         var min = new Vector2(screen.Min.X + SideMargin * scale, top);
         var max = new Vector2(screen.Max.X - SideMargin * scale, top + height);
 
-        var dl = ImGui.GetWindowDrawList();
+        var dl = ImGui.GetForegroundDrawList();
         dl.PushClipRect(screen.Min, screen.Max, true);
         DrawCard(dl, notification, theme, min, max, scale, opacity);
         dl.PopClipRect();
@@ -145,10 +147,10 @@ internal sealed class NotificationBanner : IDisposable
         Squircle.Fill(dl, iconMin, iconMax, iconExtent * 0.52f, Color(notification.Accent, opacity));
 
         var ink = Palette.WithAlpha(theme.TextStrong, opacity);
-        if (!AppIconArt.TryDraw(notification.AppId, iconCenter, IconSize * scale, ink, Palette.WithAlpha(notification.Accent, opacity)))
+        if (!AppIconArt.TryDraw(dl, notification.AppId, iconCenter, IconSize * scale, ink, Palette.WithAlpha(notification.Accent, opacity)))
         {
             var initial = notification.Title.Length > 0 ? notification.Title.Substring(0, 1) : "?";
-            Typography.DrawCentered(iconCenter, initial, ink, 1.1f);
+            Typography.DrawCentered(dl, iconCenter, initial, ink, 1.1f);
         }
 
         var textLeft = iconMax.X + TextGap * scale;
@@ -157,19 +159,24 @@ internal sealed class NotificationBanner : IDisposable
 
         var time = NotificationCard.RelativeTime(notification.ReceivedAt);
         var timeSize = Typography.Measure(time, 0.78f);
-        Typography.Draw(new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time, Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
+        Typography.Draw(dl, new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time, Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
 
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 6f * scale, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f, FontWeight.SemiBold);
+        Typography.Draw(dl, new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f, FontWeight.SemiBold);
         dl.PopClipRect();
 
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, titleTop + BodyOffset * scale), notification.Body, Palette.WithAlpha(theme.TextMuted, opacity), 0.88f);
+        Typography.Draw(dl, new Vector2(textLeft, titleTop + BodyOffset * scale), notification.Body, Palette.WithAlpha(theme.TextMuted, opacity), 0.88f);
         dl.PopClipRect();
     }
 
     private void OnPresented(PhoneNotification notification)
     {
+        if (currentAppId() == notification.AppId)
+        {
+            return;
+        }
+
         if (pending.Count >= MaxQueued)
         {
             return;

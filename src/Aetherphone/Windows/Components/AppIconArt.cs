@@ -5,9 +5,11 @@ namespace Aetherphone.Windows.Components;
 
 internal static class AppIconArt
 {
-    public static bool TryDraw(string id, Vector2 center, float size, Vector4 ink, Vector4 hole)
+    public static bool TryDraw(string id, Vector2 center, float size, Vector4 ink, Vector4 hole) =>
+        TryDraw(ImGui.GetWindowDrawList(), id, center, size, ink, hole);
+
+    public static bool TryDraw(ImDrawListPtr dl, string id, Vector2 center, float size, Vector4 ink, Vector4 hole)
     {
-        var dl = ImGui.GetWindowDrawList();
         var extent = size * 0.30f;
         var inkColor = ImGui.GetColorU32(ink);
         var holeColor = ImGui.GetColorU32(hole);

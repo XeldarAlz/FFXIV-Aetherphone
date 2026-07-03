@@ -45,7 +45,7 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
-        banner = new NotificationBanner(notifications);
+        banner = new NotificationBanner(notifications, () => navigation.Current?.Id);
         nowPlaying = new NowPlayingIsland(playback);
         controlCenter = new ControlCenter(themes, playback);
         lockScreen = new LockScreen(notifications);

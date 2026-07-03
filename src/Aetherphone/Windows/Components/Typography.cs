@@ -37,8 +37,31 @@ internal static class Typography
         }
     }
 
+    public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float scale = 1f) =>
+        Draw(drawList, position, text, color, scale, FontWeight.Regular);
+
+    public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float scale, FontWeight weight)
+    {
+        using (Plugin.Fonts.Push(scale, weight))
+        {
+            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), position, ImGui.GetColorU32(color), text);
+        }
+    }
+
     public static void DrawCentered(Vector2 center, string text, Vector4 color, float scale = 1f) =>
         DrawCentered(center, text, color, scale, FontWeight.Regular);
+
+    public static void DrawCentered(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color, float scale = 1f) =>
+        DrawCentered(drawList, center, text, color, scale, FontWeight.Regular);
+
+    public static void DrawCentered(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color, float scale, FontWeight weight)
+    {
+        using (Plugin.Fonts.Push(scale, weight))
+        {
+            var size = ImGui.CalcTextSize(text);
+            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), center - size * 0.5f, ImGui.GetColorU32(color), text);
+        }
+    }
 
     public static void DrawCentered(Vector2 center, string text, Vector4 color, in TextStyle style) =>
         DrawCentered(center, text, color, style.Scale, style.Weight);
