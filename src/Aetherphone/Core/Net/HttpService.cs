@@ -113,6 +113,29 @@ internal sealed class HttpService : IDisposable
         }
     }
 
+    public async Task<bool> SendJsonForStatusAsync<TRequest>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null)
+    {
+        using var request = new HttpRequestMessage(method, url);
+        var payload = JsonSerializer.Serialize(body, requestInfo);
+        request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
+        ApplyBearer(request, bearer);
+        try
+        {
+            using var response = await client.SendAsync(request, token).ConfigureAwait(false);
+            onStatus?.Invoke((int)response.StatusCode);
+            return response.IsSuccessStatusCode;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"HTTP {method} failed for {url}: {exception.Message}");
+            return false;
+        }
+    }
+
     public async Task<bool> SendAsync(HttpMethod method, string url, string? bearer, CancellationToken token, Action<int>? onStatus = null)
     {
         using var request = new HttpRequestMessage(method, url);

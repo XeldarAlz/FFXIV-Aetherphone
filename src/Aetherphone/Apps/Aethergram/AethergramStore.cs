@@ -380,6 +380,30 @@ internal sealed class AethergramStore : IDisposable
         });
     }
 
+    public void Report(string targetType, string targetId, string? reason, Action<bool> onComplete)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                succeeded = await client.ReportAsync(targetType, targetId, reason, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Aethergram] report failed: {exception.Message}");
+            }
+            finally
+            {
+                onComplete(succeeded);
+            }
+        });
+    }
+
     public void OpenProfile(string userId)
     {
         if (profileUserId == userId && (profileUser is not null || profileLoading))

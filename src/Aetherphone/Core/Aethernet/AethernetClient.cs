@@ -152,5 +152,10 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/posts/{postId}/comments/{commentId}"), session.Token, token, authStatusSink);
     }
 
+    public Task<bool> ReportAsync(string targetType, string targetId, string? reason, CancellationToken token)
+    {
+        return http.SendJsonForStatusAsync(HttpMethod.Post, Url("/reports"), new ReportRequest(targetType, targetId, reason), AethernetJsonContext.Default.ReportRequest, session.Token, token, authStatusSink);
+    }
+
     private string Url(string path) => $"{session.BaseUrl.TrimEnd('/')}{path}";
 }
