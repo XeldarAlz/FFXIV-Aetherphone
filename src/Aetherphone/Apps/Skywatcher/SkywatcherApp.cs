@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
@@ -128,6 +129,11 @@ internal sealed class SkywatcherApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var height = 96f * scale;
         var card = new Rect(origin, origin + new Vector2(width, height));
+        if (UiAnchors.Recording)
+        {
+            UiAnchors.Report("skywatcher.forecast", card);
+        }
+
         DrawGlass(card, palette, scale);
 
         var inner = card.Inset(12f * scale);

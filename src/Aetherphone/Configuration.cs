@@ -19,6 +19,10 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool WelcomeShown { get; set; }
 
+    public bool TutorialsEnabled { get; set; } = true;
+
+    public Dictionary<string, int> OnboardingCompleted { get; set; } = new();
+
     public bool LockPosition { get; set; }
 
     public bool DoNotDisturb { get; set; }
