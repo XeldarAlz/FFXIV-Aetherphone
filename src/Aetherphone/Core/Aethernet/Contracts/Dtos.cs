@@ -83,3 +83,5 @@ internal sealed record AnalyticsBatchRequest(
     AnalyticsEventDto[] Events);
 
 internal sealed record AnalyticsAckDto(int Accepted);
+
+internal sealed record ReportRequest(string TargetType, string TargetId, string? Reason);

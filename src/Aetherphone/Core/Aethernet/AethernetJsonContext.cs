@@ -25,6 +25,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(AnalyticsBatchRequest))]
 [JsonSerializable(typeof(AnalyticsEventDto))]
 [JsonSerializable(typeof(AnalyticsAckDto))]
+[JsonSerializable(typeof(ReportRequest))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 internal sealed partial class AethernetJsonContext : JsonSerializerContext
 {
