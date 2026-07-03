@@ -210,6 +210,7 @@ internal sealed class PhoneShell : IDisposable
         var scale = ImGuiHelpers.GlobalScale;
         var radius = 13f * scale;
         var center = new Vector2(screen.Max.X - 30f * scale, screen.Max.Y - 28f * scale);
+        UiAnchors.Report("chrome.lock", new Rect(center - new Vector2(radius), center + new Vector2(radius)));
         var icon = Plugin.Cfg.LockPosition ? FontAwesomeIcon.Lock : FontAwesomeIcon.LockOpen;
         if (LockButton.Draw(center, radius, icon, Plugin.Cfg.LockPosition, theme))
         {
@@ -278,6 +279,8 @@ internal sealed class PhoneShell : IDisposable
         var center = new Vector2(screen.Center.X, screen.Max.Y - 14f * scale);
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
         var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
+
+        UiAnchors.Report("chrome.home", new Rect(min, max));
 
         var hitMin = new Vector2(min.X - 24f * scale, min.Y - 16f * scale);
         var hitMax = new Vector2(max.X + 24f * scale, max.Y + 16f * scale);

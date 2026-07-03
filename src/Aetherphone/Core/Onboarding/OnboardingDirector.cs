@@ -186,7 +186,7 @@ internal sealed class OnboardingDirector
                 stepIndex++;
                 if (stepIndex >= sequence.Steps.Length)
                 {
-                    Complete(sequence);
+                    Finish(sequence);
                 }
                 else
                 {
@@ -210,6 +210,24 @@ internal sealed class OnboardingDirector
     private void Complete(GuideSequence sequence)
     {
         OnboardingState.MarkCompleted(sequence.Id, sequence.ContentVersion);
+        active = null;
+    }
+
+    private void Finish(GuideSequence sequence)
+    {
+        OnboardingState.MarkCompleted(sequence.Id, sequence.ContentVersion);
+
+        if (sequence.CompletesOnFinish is { } covered)
+        {
+            for (var index = 0; index < covered.Length; index++)
+            {
+                if (TourRegistry.TryGetAppTour(covered[index], out var tour))
+                {
+                    OnboardingState.MarkCompleted(tour.Id, tour.ContentVersion);
+                }
+            }
+        }
+
         active = null;
     }
 

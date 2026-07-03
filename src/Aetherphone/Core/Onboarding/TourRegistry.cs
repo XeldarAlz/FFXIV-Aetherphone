@@ -8,15 +8,23 @@ internal static class TourRegistry
 
     private static readonly GuideSequence Welcome = new(
         WelcomeId,
-        1,
+        3,
         null,
         new[]
         {
             GuideStep.Page(L.Onboarding.WelcomeTitle, L.Onboarding.WelcomeBody, L.Onboarding.Continue),
             GuideStep.Page(L.Onboarding.AllInOneTitle, L.Onboarding.AllInOneBody, L.Onboarding.Continue),
+            GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.Continue),
             GuideStep.Page(L.Onboarding.TipsTitle, L.Onboarding.TipsBody, L.Onboarding.GetStarted),
             GuideStep.Tap(L.Onboarding.BeginTitle, L.Onboarding.BeginBody, "home.app.skywatcher", static nav => nav.Open("skywatcher")),
-        });
+            GuideStep.Note(L.Onboarding.SkywatcherTitle, L.Onboarding.SkywatcherBody),
+            GuideStep.Point(L.Onboarding.SkywatcherForecastTitle, L.Onboarding.SkywatcherForecastBody, "skywatcher.forecast"),
+            GuideStep.Tap(L.Onboarding.ReturnHomeTitle, L.Onboarding.ReturnHomeBody, "chrome.home", static nav => nav.GoHome()),
+            GuideStep.Tap(L.Onboarding.OpenTimersTitle, L.Onboarding.OpenTimersBody, "home.app.timers", static nav => nav.Open("timers")),
+            GuideStep.Tap(L.Onboarding.GoBackTitle, L.Onboarding.GoBackBody, "chrome.back", static nav => nav.Back()),
+            GuideStep.Point(L.Onboarding.LockTitle, L.Onboarding.LockBody, "chrome.lock"),
+        },
+        new[] { "skywatcher" });
 
     private static readonly Dictionary<string, GuideSequence> Tours = BuildTours();
 

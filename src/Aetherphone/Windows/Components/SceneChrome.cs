@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
@@ -20,6 +21,7 @@ internal static class SceneChrome
         var rowCenterY = content.Min.Y + 20f * scale;
         var hitMin = new Vector2(content.Min.X, content.Min.Y);
         var hitMax = new Vector2(content.Min.X + 46f * scale, content.Min.Y + 40f * scale);
+        UiAnchors.Report("chrome.back", new Rect(hitMin, hitMax));
         var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
 
         var tip = new Vector2(content.Min.X + 8f * scale, rowCenterY);
