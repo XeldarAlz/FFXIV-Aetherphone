@@ -157,5 +157,150 @@ internal sealed class AethernetClient
         return http.SendJsonForStatusAsync(HttpMethod.Post, Url("/reports"), new ReportRequest(targetType, targetId, reason), AethernetJsonContext.Default.ReportRequest, session.Token, token, authStatusSink);
     }
 
+    public Task<VelvetProfileDto?> VelvetMeAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/velvet/me"), AethernetJsonContext.Default.VelvetProfileDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetProfileDto?> UpdateVelvetProfileAsync(UpdateVelvetProfileRequest request, CancellationToken token)
+    {
+        return http.SendJsonAsync(HttpMethod.Patch, Url("/velvet/me"), request, AethernetJsonContext.Default.UpdateVelvetProfileRequest, AethernetJsonContext.Default.VelvetProfileDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetProfileDto?> AcceptGateAsync(int gateVersion, CancellationToken token)
+    {
+        return http.SendJsonAsync(HttpMethod.Post, Url("/velvet/gate/accept"), new GateAcceptRequest(gateVersion), AethernetJsonContext.Default.GateAcceptRequest, AethernetJsonContext.Default.VelvetProfileDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetProfileDto?> VelvetUserAsync(string userId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/users/{Uri.EscapeDataString(userId)}"), AethernetJsonContext.Default.VelvetProfileDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetDiscoverPage?> VelvetDiscoverAsync(int lookingFor, string tags, string? cursor, CancellationToken token)
+    {
+        var path = $"/velvet/discover?lookingFor={lookingFor}";
+        if (tags.Length > 0)
+        {
+            path += $"&tags={Uri.EscapeDataString(tags)}";
+        }
+
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetDiscoverPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> ConnectAsync(string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url($"/velvet/connect/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DisconnectAsync(string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/velvet/connect/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetConnectionPage?> VelvetRequestsAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/velvet/requests"), AethernetJsonContext.Default.VelvetConnectionPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeclineRequestAsync(string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/velvet/requests/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetConnectionPage?> VelvetConnectionsAsync(string? cursor, CancellationToken token)
+    {
+        var path = "/velvet/connections";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetConnectionPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetFeedPage?> VelvetFeedAsync(string scope, int tier, string? cursor, CancellationToken token)
+    {
+        var path = $"/velvet/feed?scope={scope}&tier={tier}";
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetFeedPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetPostDto?> CreateVelvetPostAsync(CreateVelvetPostRequest request, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/velvet/posts"), request, AethernetJsonContext.Default.CreateVelvetPostRequest, AethernetJsonContext.Default.VelvetPostDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteVelvetPostAsync(string postId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/velvet/posts/{Uri.EscapeDataString(postId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetPostDto?> VelvetReactAsync(string postId, int kind, CancellationToken token)
+    {
+        return http.SendJsonAsync(HttpMethod.Put, Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/reaction"), new ReactRequest(kind), AethernetJsonContext.Default.ReactRequest, AethernetJsonContext.Default.VelvetPostDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetPostDto?> VelvetRemoveReactionAsync(string postId, CancellationToken token)
+    {
+        return http.RequestJsonAsync(HttpMethod.Delete, Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/reaction"), AethernetJsonContext.Default.VelvetPostDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> GrantMediaAsync(string mediaId, string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url($"/velvet/media/{Uri.EscapeDataString(mediaId)}/grant/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetMediaUrlDto?> VelvetMediaUrlAsync(string mediaId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/media/{Uri.EscapeDataString(mediaId)}/url"), AethernetJsonContext.Default.VelvetMediaUrlDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetThreadPage?> VelvetThreadsAsync(string? cursor, CancellationToken token)
+    {
+        var path = "/velvet/threads";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetThreadPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetMessagePage?> VelvetMessagesAsync(string threadId, string? cursor, CancellationToken token)
+    {
+        var path = $"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetMessagePage, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetMessageDto?> SendVelvetMessageAsync(string threadId, string body, int kind, int? ttlSeconds, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages"), new SendVelvetMessageRequest(body, kind, ttlSeconds), AethernetJsonContext.Default.SendVelvetMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> BlockAsync(string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url($"/blocks/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> UnblockAsync(string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/blocks/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
     private string Url(string path) => $"{session.BaseUrl.TrimEnd('/')}{path}";
 }

@@ -49,6 +49,9 @@ internal static class AppIconArt
             case "aethergram":
                 DrawAethergram(dl, center, extent, inkColor);
                 return true;
+            case "velvet":
+                DrawVelvet(dl, center, extent, inkColor);
+                return true;
             case "news":
                 DrawNews(dl, center, extent, inkColor, holeColor);
                 return true;
@@ -142,6 +145,37 @@ internal static class AppIconArt
             default:
                 return false;
         }
+    }
+
+    private static void DrawVelvet(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        Span<Vector2> leftHorn = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.60f, -0.50f),
+            At(center, extent, -0.18f, -0.60f),
+            At(center, extent, -0.70f, -1.04f),
+        };
+        FillConvex(dl, ink, leftHorn);
+
+        Span<Vector2> rightHorn = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.60f, -0.50f),
+            At(center, extent, 0.18f, -0.60f),
+            At(center, extent, 0.70f, -1.04f),
+        };
+        FillConvex(dl, ink, rightHorn);
+
+        var lobeRadius = extent * 0.46f;
+        dl.AddCircleFilled(At(center, extent, -0.40f, -0.16f), lobeRadius, ink, 32);
+        dl.AddCircleFilled(At(center, extent, 0.40f, -0.16f), lobeRadius, ink, 32);
+
+        Span<Vector2> point = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.82f, 0.04f),
+            At(center, extent, 0.82f, 0.04f),
+            At(center, extent, 0f, 0.96f),
+        };
+        FillConvex(dl, ink, point);
     }
 
     private static void DrawMessages(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

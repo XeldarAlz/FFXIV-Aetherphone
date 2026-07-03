@@ -45,6 +45,8 @@ internal sealed class Configuration : IPluginConfiguration
 
     public float TextZoom { get; set; } = 1.0f;
 
+    public float PhoneScale { get; set; } = 1.0f;
+
     public string Language { get; set; } = string.Empty;
 
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
@@ -102,6 +104,21 @@ internal sealed class Configuration : IPluginConfiguration
     public List<string> VenueFavorites { get; set; } = new();
 
     public List<uint> MapFavorites { get; set; } = new();
+
+    public const int VelvetGateVersion = 1;
+
+    public bool VelvetAcknowledgedGate { get; set; }
+
+    public bool VelvetOnboarded { get; set; }
+
+    public int VelvetAcknowledgedGateVersion { get; set; }
+
+
+    public bool VelvetExplicitOptIn { get; set; }
+
+    public int VelvetTierCeiling { get; set; }
+
+    public bool VelvetBlurByDefault { get; set; } = true;
 
     public void NormalizeAethernetBaseUrl()
     {

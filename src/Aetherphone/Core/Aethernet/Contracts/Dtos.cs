@@ -85,3 +85,105 @@ internal sealed record AnalyticsBatchRequest(
 internal sealed record AnalyticsAckDto(int Accepted);
 
 internal sealed record ReportRequest(string TargetType, string TargetId, string? Reason);
+
+internal sealed record VelvetProfileDto(
+    string UserId,
+    string DisplayName,
+    string Handle,
+    bool Verified,
+    string Intro,
+    string Pronouns,
+    string Dynamic,
+    string[] Tags,
+    string[] Limits,
+    int LookingFor,
+    int RelationshipStatus,
+    int TierCeiling,
+    string DataCenter,
+    string World,
+    int ConnectionState,
+    bool Discoverable,
+    string? AvatarUrl,
+    long GateAckAtUnix);
+
+internal sealed record UpdateVelvetProfileRequest(
+    string? Intro,
+    string? Pronouns,
+    string? Dynamic,
+    string[]? Tags,
+    string[]? Limits,
+    int? LookingFor,
+    int? RelationshipStatus,
+    int? TierCeiling,
+    bool? Discoverable);
+
+internal sealed record GateAcceptRequest(int GateVersion);
+
+internal sealed record VelvetPostDto(
+    string Id,
+    string OwnerId,
+    string OwnerDisplayName,
+    string OwnerHandle,
+    string? OwnerAvatarUrl,
+    string MediaId,
+    int Tier,
+    string[] Tags,
+    int Visibility,
+    bool Unlocked,
+    int MediaWidth,
+    int MediaHeight,
+    long CreatedAtUnix,
+    int[] ReactionCounts,
+    int TotalReactions,
+    int MyReaction);
+
+internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
+
+internal sealed record CreateVelvetPostRequest(
+    string MediaKey,
+    int Width,
+    int Height,
+    int Tier,
+    string[] Tags,
+    int Visibility);
+
+internal sealed record VelvetDiscoverPage(VelvetProfileDto[] Users, string? NextCursor);
+
+internal sealed record VelvetConnectionDto(
+    string UserId,
+    string DisplayName,
+    string Handle,
+    string? AvatarUrl,
+    int State,
+    int Presence,
+    long ConnectedAtUnix);
+
+internal sealed record VelvetConnectionPage(VelvetConnectionDto[] Items, string? NextCursor);
+
+internal sealed record VelvetThreadDto(
+    string Id,
+    string OtherUserId,
+    string OtherDisplayName,
+    string OtherHandle,
+    string? OtherAvatarUrl,
+    long LastMessageAtUnix,
+    string LastMessagePreview,
+    int UnreadCount,
+    int Presence);
+
+internal sealed record VelvetThreadPage(VelvetThreadDto[] Items, string? NextCursor);
+
+internal sealed record VelvetMessageDto(
+    string Id,
+    string ThreadId,
+    string SenderId,
+    string Body,
+    int Kind,
+    long CreatedAtUnix,
+    long? ExpiresAtUnix);
+
+internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
+
+internal sealed record SendVelvetMessageRequest(string Body, int Kind, int? TtlSeconds);
+
+internal sealed record VelvetMediaUrlDto(string Url, long ExpiresAtUnix);
