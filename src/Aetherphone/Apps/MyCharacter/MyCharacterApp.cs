@@ -102,7 +102,7 @@ internal sealed class MyCharacterApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
         var third = width / 3f;
-        var height = 36f * scale;
+        var height = 48f * scale;
 
         DrawLegendItem(new Vector2(origin.X + third * 0.5f, origin.Y), ActivityRings.RingOneTint, Loc.T(L.Character.RingJob), Percent(snapshot.JobFraction), theme);
         DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), ActivityRings.RingTwoTint, Loc.T(L.Character.RingMastery), Percent(snapshot.MasteryFraction), theme);
@@ -115,15 +115,15 @@ internal sealed class MyCharacterApp : IPhoneApp
     private static void DrawLegendItem(Vector2 top, Vector4 tint, string label, string value, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var dot = 5f * scale;
-        var labelSize = Typography.Measure(label, TextStyles.Caption1);
-        var dotCenter = new Vector2(top.X - labelSize.X * 0.5f - dot - 4f * scale, top.Y + labelSize.Y * 0.5f);
+        var dot = 6f * scale;
+        var labelSize = Typography.Measure(label, TextStyles.Callout);
+        var dotCenter = new Vector2(top.X - labelSize.X * 0.5f - dot - 5f * scale, top.Y + labelSize.Y * 0.5f);
         ImGui.GetWindowDrawList().AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
 
-        Typography.Draw(new Vector2(top.X - labelSize.X * 0.5f, top.Y), label, theme.TextMuted, TextStyles.Caption1);
+        Typography.Draw(new Vector2(top.X - labelSize.X * 0.5f, top.Y), label, theme.TextMuted, TextStyles.Callout);
 
-        var valueSize = Typography.Measure(value, TextStyles.SubheadlineEmphasized);
-        Typography.Draw(new Vector2(top.X - valueSize.X * 0.5f, top.Y + 15f * scale), value, theme.TextStrong, TextStyles.SubheadlineEmphasized);
+        var valueSize = Typography.Measure(value, TextStyles.Title3);
+        Typography.Draw(new Vector2(top.X - valueSize.X * 0.5f, top.Y + labelSize.Y + 5f * scale), value, theme.TextStrong, TextStyles.Title3);
     }
 
     private void DrawActivitySummary(PhoneTheme theme, ActivitySnapshot snapshot)

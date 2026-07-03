@@ -33,6 +33,11 @@ internal static class SettingsRow
         var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         var dl = ImGui.GetWindowDrawList();
 
+        if (hovered)
+        {
+            DrawRowHighlight(row, theme);
+        }
+
         var tileSize = 28f * scale;
         var tileMin = new Vector2(row.Min.X, row.Center.Y - tileSize * 0.5f);
         var tileFill = hovered ? Palette.Mix(tint, theme.TextStrong, 0.14f) : tint;
@@ -66,6 +71,12 @@ internal static class SettingsRow
     public static bool Disclosure(Rect row, string label, string value, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
+        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        if (hovered)
+        {
+            DrawRowHighlight(row, theme);
+        }
+
         DrawLabel(row, label, theme.TextStrong);
 
         var chevronWidth = 6f * scale;
@@ -79,7 +90,6 @@ internal static class SettingsRow
             Typography.Draw(new Vector2(valueX, row.Center.Y - valueSize.Y * 0.5f), value, theme.TextMuted);
         }
 
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -90,6 +100,12 @@ internal static class SettingsRow
 
     public static bool Selectable(Rect row, string label, bool selected, PhoneTheme theme)
     {
+        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        if (hovered)
+        {
+            DrawRowHighlight(row, theme);
+        }
+
         DrawLabel(row, label, theme.TextStrong);
 
         if (selected)
@@ -102,13 +118,22 @@ internal static class SettingsRow
             dl.AddLine(tip, new Vector2(tip.X + 9f * scale, tip.Y - 11f * scale), color, 2f * scale);
         }
 
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    private static void DrawRowHighlight(Rect row, PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        var min = new Vector2(row.Min.X - 10f * scale, row.Min.Y + 3f * scale);
+        var max = new Vector2(row.Max.X + 10f * scale, row.Max.Y - 3f * scale);
+        var alpha = pressed ? 0.10f : 0.05f;
+        Squircle.Fill(ImGui.GetWindowDrawList(), min, max, 8f * scale, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, alpha)));
     }
 
     private static void DrawLabel(Rect row, string label, Vector4 color)

@@ -78,12 +78,6 @@ internal static class CoachmarkOverlay
             action = CoachmarkAction.Advance;
         }
 
-        var skipCenter = new Vector2(screen.Max.X - 34f * scale, screen.Min.Y + 34f * scale);
-        if (TextButton(dl, skipCenter, Loc.T(L.Onboarding.Skip), theme.TextMuted, alpha, live))
-        {
-            action = CoachmarkAction.Skip;
-        }
-
         return action;
     }
 
@@ -115,15 +109,15 @@ internal static class CoachmarkOverlay
 
         var isTap = step.Advance == GuideAdvance.TapTarget && hole.HasValue;
 
-        var cardWidth = MathF.Min(screen.Width - 30f * scale, 296f * scale);
-        var innerWidth = cardWidth - 36f * scale;
-        var titleLine = LineHeight(TextStyles.Headline);
-        var bodyLine = LineHeight(TextStyles.Subheadline);
-        var bodyLines = CountWrapped(Loc.T(step.Body), TextStyles.Subheadline, innerWidth);
-        var bodyBlock = bodyLines * bodyLine * 1.2f;
-        var actionHeight = isTap ? bodyLine : 44f * scale;
-        var dotsHeight = count > 1 ? 14f * scale : 0f;
-        var cardHeight = 18f * scale + titleLine + 8f * scale + bodyBlock + 14f * scale + dotsHeight + actionHeight + 18f * scale;
+        var cardWidth = MathF.Min(screen.Width - 24f * scale, 344f * scale);
+        var innerWidth = cardWidth - 44f * scale;
+        var titleLine = LineHeight(TextStyles.Title3);
+        var bodyLine = LineHeight(TextStyles.Body);
+        var bodyLines = CountWrapped(Loc.T(step.Body), TextStyles.Body, innerWidth);
+        var bodyBlock = bodyLines * bodyLine * 1.25f;
+        var actionHeight = isTap ? bodyLine : 50f * scale;
+        var dotsHeight = count > 1 ? 16f * scale : 0f;
+        var cardHeight = 22f * scale + titleLine + 10f * scale + bodyBlock + 18f * scale + dotsHeight + actionHeight + 22f * scale;
 
         var margin = 14f * scale;
         var arrowH = 9f * scale;
@@ -162,12 +156,12 @@ internal static class CoachmarkOverlay
         Elevation.Floating(dl, cardMin, cardMax, radius, scale, alpha);
         Material.Frosted(dl, cardMin, cardMax, radius, scale, alpha);
 
-        var cursorY = cardMin.Y + 18f * scale;
-        DrawCentered(dl, new Vector2(cardCenterX, cursorY + titleLine * 0.5f), Loc.T(step.Title), theme.TextStrong with { W = alpha }, TextStyles.Headline);
-        cursorY += titleLine + 8f * scale;
+        var cursorY = cardMin.Y + 22f * scale;
+        DrawCentered(dl, new Vector2(cardCenterX, cursorY + titleLine * 0.5f), Loc.T(step.Title), theme.TextStrong with { W = alpha }, TextStyles.Title3);
+        cursorY += titleLine + 10f * scale;
 
-        cursorY = DrawWrapped(dl, Loc.T(step.Body), TextStyles.Subheadline, theme.TextMuted with { W = alpha }, new Vector2(cardCenterX, cursorY), innerWidth, scale, false);
-        cursorY += 14f * scale;
+        cursorY = DrawWrapped(dl, Loc.T(step.Body), TextStyles.Body, theme.TextMuted with { W = alpha }, new Vector2(cardCenterX, cursorY), innerWidth, scale, true);
+        cursorY += 18f * scale;
 
         if (count > 1)
         {
@@ -193,18 +187,12 @@ internal static class CoachmarkOverlay
         }
         else
         {
-            var buttonSize = new Vector2(cardWidth - 36f * scale, 40f * scale);
+            var buttonSize = new Vector2(cardWidth - 44f * scale, 46f * scale);
             var buttonCenter = new Vector2(cardCenterX, cursorY + buttonSize.Y * 0.5f);
             if (Button(dl, buttonCenter, buttonSize, Loc.T(step.ButtonLabel), theme.Accent, alpha, live, scale))
             {
                 action = CoachmarkAction.Advance;
             }
-        }
-
-        var skipCenter = new Vector2(screen.Center.X, screen.Max.Y - 22f * scale);
-        if (TextButton(dl, skipCenter, Loc.T(L.Onboarding.SkipTour), theme.TextMuted, alpha, live))
-        {
-            action = CoachmarkAction.Skip;
         }
 
         return action;
@@ -285,26 +273,6 @@ internal static class CoachmarkOverlay
 
         Squircle.Fill(dl, min, max, radius, ImGui.GetColorU32(fill with { W = fill.W * alpha }));
         DrawCentered(dl, center, label, Ink with { W = alpha }, TextStyles.Headline);
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-    }
-
-    private static bool TextButton(ImDrawListPtr dl, Vector2 center, string label, Vector4 color, float alpha, bool live)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-        var pad = new Vector2(12f * scale, 8f * scale);
-        var min = center - size * 0.5f - pad;
-        var max = center + size * 0.5f + pad;
-        var hovered = live && ImGui.IsMouseHoveringRect(min, max);
-        var tint = color with { W = (hovered ? 0.95f : 0.7f) * alpha };
-
-        DrawCentered(dl, center, label, tint, TextStyles.FootnoteEmphasized);
 
         if (hovered)
         {
