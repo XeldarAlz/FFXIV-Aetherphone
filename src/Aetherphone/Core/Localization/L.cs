@@ -162,6 +162,38 @@ internal static class L
         public static readonly LocString NeedsLifestream = new("maps.needsLifestream", "Lifestream is not installed");
     }
 
+    internal static class Phone
+    {
+        public static readonly LocString Title = new("phone.title", "Phone");
+        public static readonly LocString AddToCall = new("phone.addToCall", "Add to Call");
+
+        public static readonly LocString SignInPrompt =
+            new("phone.signInPrompt", "Sign in to Aethernet in Settings to make calls");
+
+        public static readonly LocString NoOneFound = new("phone.noOneFound", "No one found");
+        public static readonly LocString SearchPrompt = new("phone.searchPrompt", "Search for someone to call");
+        public static readonly LocString Recents = new("phone.recents", "Recents");
+        public static readonly LocString Connecting = new("phone.connecting", "Connecting to call service…");
+        public static readonly LocString UseHeadphones = new("phone.useHeadphones", "Use headphones to avoid echo");
+        public static readonly LocString EnableTitle = new("phone.enableTitle", "Phone Calls");
+        public static readonly LocString EnableBody = new("phone.enableBody", "Voice calls with other Aetherphone users");
+        public static readonly LocString Enable = new("phone.enable", "Enable");
+        public static readonly LocString SearchHint = new("phone.searchHint", "Name or Name@World");
+        public static readonly LocString StatusCalling = new("phone.statusCalling", "Calling…");
+        public static readonly LocString StatusConnecting = new("phone.statusConnecting", "Connecting…");
+        public static readonly LocString SettingsTitle = new("phone.settingsTitle", "Phone Calls");
+        public static readonly LocString SummaryOn = new("phone.summaryOn", "On");
+        public static readonly LocString SummaryOff = new("phone.summaryOff", "Off");
+        public static readonly LocString Calls = new("phone.calls", "Calls");
+        public static readonly LocString EnablePhoneCalls = new("phone.enablePhoneCalls", "Enable Phone Calls");
+        public static readonly LocString Microphone = new("phone.microphone", "Microphone");
+        public static readonly LocString SystemDefault = new("phone.systemDefault", "System default");
+        public static readonly LocString DeviceFallback = new("phone.deviceFallback", "Microphone {0}");
+
+        public static readonly LocString AudioHint = new("phone.audioHint",
+            "Audio plays on your system default output device. Use headphones to avoid echo. A device change applies to your next call.");
+    }
+
     internal static class Settings
     {
         public static readonly LocString Title = new("settings.title", "Settings");
@@ -384,6 +416,13 @@ internal static class L
         public static readonly LocString ReactAngry = new("chirper.reactAngry", "Angry");
         public static readonly LocPlural Posts = new("chirper.posts", "{0} post", "{0} posts");
         public static readonly LocPlural Likes = new("chirper.likes", "{0} like", "{0} likes");
+
+        public static readonly LocString ReportReasonHint =
+            new("chirper.reportReasonHint", "Why are you reporting this? (optional)");
+
+        public static readonly LocString ReportSubmit = new("chirper.reportSubmit", "Report");
+        public static readonly LocString ReportSent = new("chirper.reportSent", "Report submitted. Thank you.");
+        public static readonly LocString ReportFailed = new("chirper.reportFailed", "Couldn't submit the report");
     }
 
     internal static class Aethergram
@@ -442,6 +481,13 @@ internal static class L
         public static readonly LocString NameOrWorld = new("aethergram.nameOrWorld", "Name, @username, or world");
         public static readonly LocPlural Posts = new("aethergram.posts", "{0} post", "{0} posts");
         public static readonly LocPlural Likes = new("aethergram.likes", "{0} like", "{0} likes");
+
+        public static readonly LocString ReportReasonHint =
+            new("aethergram.reportReasonHint", "Why are you reporting this? (optional)");
+
+        public static readonly LocString ReportSubmit = new("aethergram.reportSubmit", "Report");
+        public static readonly LocString ReportSent = new("aethergram.reportSent", "Report submitted. Thank you.");
+        public static readonly LocString ReportFailed = new("aethergram.reportFailed", "Couldn't submit the report");
     }
 
     internal static class Clock

@@ -5,6 +5,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Telephony.Contracts;
@@ -23,7 +24,7 @@ internal sealed class PhoneApp : IPhoneApp
 
     public string Id => "phone";
 
-    public string DisplayName => "Phone";
+    public string DisplayName => Loc.T(L.Phone.Title);
 
     public string Glyph => "Ph";
 
@@ -92,14 +93,14 @@ internal sealed class PhoneApp : IPhoneApp
         var theme = context.Theme;
         var content = context.Content;
 
-        AppHeader.Draw(context, addMode ? "Add to Call" : "Phone", addMode ? StopAdding : null);
+        AppHeader.Draw(context, addMode ? Loc.T(L.Phone.AddToCall) : DisplayName, addMode ? StopAdding : null);
 
         var top = content.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
 
         if (!session.IsSignedIn)
         {
-            Typography.DrawCentered(body.Center, "Sign in to Aethernet in Settings to make calls", theme.TextMuted);
+            Typography.DrawCentered(body.Center, Loc.T(L.Phone.SignInPrompt), theme.TextMuted);
             return;
         }
 
@@ -122,7 +123,7 @@ internal sealed class PhoneApp : IPhoneApp
             {
                 if (results.Length == 0)
                 {
-                    Typography.DrawCentered(listRect.Center, searching ? "Searching…" : "No one found", theme.TextMuted);
+                    Typography.DrawCentered(listRect.Center, searching ? Loc.T(L.Common.Searching) : Loc.T(L.Phone.NoOneFound), theme.TextMuted);
                 }
                 else
                 {
@@ -141,7 +142,7 @@ internal sealed class PhoneApp : IPhoneApp
 
         if (!view.Connected)
         {
-            Typography.DrawCentered(new Vector2(body.Center.X, body.Max.Y - 14f * scale), "Connecting to call service…", theme.TextMuted, 0.8f);
+            Typography.DrawCentered(new Vector2(body.Center.X, body.Max.Y - 14f * scale), Loc.T(L.Phone.Connecting), theme.TextMuted, 0.8f);
         }
     }
 
@@ -151,11 +152,11 @@ internal sealed class PhoneApp : IPhoneApp
         if (recents.Length == 0)
         {
             ImGui.Dummy(new Vector2(0f, 30f * scale));
-            Typography.DrawCentered(new Vector2(ImGui.GetContentRegionAvail().X * 0.5f + ImGui.GetCursorScreenPos().X, ImGui.GetCursorScreenPos().Y), "Search for someone to call", theme.TextMuted);
+            Typography.DrawCentered(new Vector2(ImGui.GetContentRegionAvail().X * 0.5f + ImGui.GetCursorScreenPos().X, ImGui.GetCursorScreenPos().Y), Loc.T(L.Phone.SearchPrompt), theme.TextMuted);
             return;
         }
 
-        SettingsSection.Header("Recents", theme);
+        SettingsSection.Header(Loc.T(L.Phone.Recents), theme);
         for (var index = 0; index < recents.Length; index++)
         {
             var contact = recents[index];
@@ -231,7 +232,7 @@ internal sealed class PhoneApp : IPhoneApp
 
         if (view.State == CallState.Active)
         {
-            Typography.DrawCentered(new Vector2(centerX, labelY + 50f * scale), "Use headphones to avoid echo", theme.TextMuted, 0.75f);
+            Typography.DrawCentered(new Vector2(centerX, labelY + 50f * scale), Loc.T(L.Phone.UseHeadphones), theme.TextMuted, 0.75f);
         }
 
         DrawCallControls(context, view, scale, theme);
@@ -288,8 +289,8 @@ internal sealed class PhoneApp : IPhoneApp
     private void DrawEnablePrompt(Rect body, PhoneTheme theme, float scale)
     {
         var centerX = body.Center.X;
-        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 30f * scale), "Phone Calls", theme.TextStrong, 1.4f);
-        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 4f * scale), "Voice calls with other Aetherphone users", theme.TextMuted, 0.85f);
+        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 30f * scale), Loc.T(L.Phone.EnableTitle), theme.TextStrong, 1.4f);
+        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 4f * scale), Loc.T(L.Phone.EnableBody), theme.TextMuted, 0.85f);
 
         var toggleWidth = 48f * scale;
         var toggleHeight = 28f * scale;
@@ -300,7 +301,7 @@ internal sealed class PhoneApp : IPhoneApp
             calls.SetEnabled(!calls.Enabled);
         }
 
-        Typography.DrawCentered(new Vector2(centerX, bounds.Max.Y + 18f * scale), "Enable", theme.TextMuted, 0.85f);
+        Typography.DrawCentered(new Vector2(centerX, bounds.Max.Y + 18f * scale), Loc.T(L.Phone.Enable), theme.TextMuted, 0.85f);
     }
 
     private void DrawSearchBar(Rect bar, PhoneTheme theme, float scale)
@@ -315,7 +316,7 @@ internal sealed class PhoneApp : IPhoneApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            if (ImGui.InputTextWithHint("##phoneSearch", "Name or Name@World", ref searchDraft, 64, ImGuiInputTextFlags.EnterReturnsTrue))
+            if (ImGui.InputTextWithHint("##phoneSearch", Loc.T(L.Phone.SearchHint), ref searchDraft, 64, ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 StartSearch(searchDraft);
             }
@@ -417,8 +418,8 @@ internal sealed class PhoneApp : IPhoneApp
     {
         return view.State switch
         {
-            CallState.Dialing => "Calling…",
-            CallState.Connecting => "Connecting…",
+            CallState.Dialing => Loc.T(L.Phone.StatusCalling),
+            CallState.Connecting => Loc.T(L.Phone.StatusConnecting),
             CallState.Active => CallFormat.Duration(view.Seconds),
             _ => string.Empty,
         };

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Windows.Components;
@@ -12,9 +13,9 @@ namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class CallsPage : ISettingsPage
 {
-    public string Title => "Phone Calls";
+    public string Title => Loc.T(L.Phone.SettingsTitle);
 
-    public string Summary => calls.Enabled ? "On" : "Off";
+    public string Summary => calls.Enabled ? Loc.T(L.Phone.SummaryOn) : Loc.T(L.Phone.SummaryOff);
 
     public string Glyph => "Ph";
 
@@ -36,9 +37,9 @@ internal sealed class CallsPage : ISettingsPage
 
         using (AppSurface.Begin(body))
         {
-            SettingsSection.Header("Calls", theme);
+            SettingsSection.Header(Loc.T(L.Phone.Calls), theme);
             var toggleCard = GroupCard.Begin(theme, 1);
-            var enabled = SettingsRow.Bool(toggleCard.NextRow(), "Enable Phone Calls", calls.Enabled, theme);
+            var enabled = SettingsRow.Bool(toggleCard.NextRow(), Loc.T(L.Phone.EnablePhoneCalls), calls.Enabled, theme);
             toggleCard.End();
 
             if (enabled != calls.Enabled)
@@ -46,12 +47,12 @@ internal sealed class CallsPage : ISettingsPage
                 calls.SetEnabled(enabled);
             }
 
-            SettingsSection.Header("Microphone", theme);
+            SettingsSection.Header(Loc.T(L.Phone.Microphone), theme);
             var inputs = AudioDevices.InputNames();
             var current = configuration.CallInputDevice;
             var micCard = GroupCard.Begin(theme, inputs.Length + 1);
 
-            if (SettingsRow.Selectable(micCard.NextRow(), "System default", string.IsNullOrEmpty(current), theme))
+            if (SettingsRow.Selectable(micCard.NextRow(), Loc.T(L.Phone.SystemDefault), string.IsNullOrEmpty(current), theme))
             {
                 SetInput(string.Empty);
             }
@@ -71,7 +72,7 @@ internal sealed class CallsPage : ISettingsPage
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
             {
                 ImGui.PushTextWrapPos(0f);
-                ImGui.TextWrapped("Audio plays on your system default output device. Use headphones to avoid echo. A device change applies to your next call.");
+                ImGui.TextWrapped(Loc.T(L.Phone.AudioHint));
                 ImGui.PopTextWrapPos();
             }
         }
@@ -90,6 +91,6 @@ internal sealed class CallsPage : ISettingsPage
 
     private static string DeviceLabel(string name, int index)
     {
-        return string.IsNullOrWhiteSpace(name) ? $"Microphone {index + 1}" : name;
+        return string.IsNullOrWhiteSpace(name) ? Loc.T(L.Phone.DeviceFallback, index + 1) : name;
     }
 }
