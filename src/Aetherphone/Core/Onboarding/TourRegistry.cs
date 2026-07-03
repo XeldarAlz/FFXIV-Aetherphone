@@ -15,7 +15,7 @@ internal static class TourRegistry
             GuideStep.Page(L.Onboarding.WelcomeTitle, L.Onboarding.WelcomeBody, L.Onboarding.Continue),
             GuideStep.Page(L.Onboarding.AllInOneTitle, L.Onboarding.AllInOneBody, L.Onboarding.Continue),
             GuideStep.Page(L.Onboarding.TipsTitle, L.Onboarding.TipsBody, L.Onboarding.GetStarted),
-            GuideStep.Tap(L.Onboarding.BeginTitle, L.Onboarding.BeginBody, "home.app.messages", static nav => nav.Open("messages")),
+            GuideStep.Tap(L.Onboarding.BeginTitle, L.Onboarding.BeginBody, "home.app.skywatcher", static nav => nav.Open("skywatcher")),
         });
 
     private static readonly Dictionary<string, GuideSequence> Tours = BuildTours();

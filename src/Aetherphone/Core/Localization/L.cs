@@ -902,7 +902,7 @@ internal static class L
         public static readonly LocString BeginTitle = new("onboarding.beginTitle", "Ready when you are");
 
         public static readonly LocString BeginBody = new("onboarding.beginBody",
-            "Tap Messages to dive in. You can replay any tip later from Settings.");
+            "Tap the app icon to dive in. You can replay any tip later from Settings.");
 
         public static readonly LocString MessagesTitle = new("onboarding.messagesTitle", "Messages");
 

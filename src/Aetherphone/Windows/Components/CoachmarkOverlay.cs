@@ -27,7 +27,7 @@ internal static class CoachmarkOverlay
     public static CoachmarkAction Draw(Rect screen, PhoneTheme theme, in GuideStep step, Rect? anchor, float progress, int index, int count)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
+        var dl = ImGui.GetForegroundDrawList();
         var rounding = theme.ScreenRounding * scale;
         var alpha = MathF.Min(1f, progress * 1.6f);
         var grow = Easing.EaseOutBack(Math.Clamp(progress, 0f, 1f));
@@ -45,14 +45,22 @@ internal static class CoachmarkOverlay
 
     private static CoachmarkAction DrawFullCard(Rect screen, PhoneTheme theme, in GuideStep step, float alpha, float grow, bool live, int index, int count, float scale, ImDrawListPtr dl)
     {
-        Material.Veil(dl, screen.Min, screen.Max, 0.9f * alpha, theme.ScreenRounding * scale);
+        Material.Veil(dl, screen.Min, screen.Max, 0.94f * alpha, theme.ScreenRounding * scale);
 
         var rise = (1f - grow) * 16f * scale;
         var emblemCenter = new Vector2(screen.Center.X, screen.Min.Y + screen.Height * 0.29f - rise);
+
+        var buttonSize = new Vector2(MathF.Min(screen.Width - 48f * scale, 230f * scale), 46f * scale);
+        var buttonCenter = new Vector2(screen.Center.X, screen.Max.Y - 68f * scale);
+
+        var panelMin = new Vector2(screen.Min.X + 20f * scale, emblemCenter.Y - 92f * scale);
+        var panelMax = new Vector2(screen.Max.X - 20f * scale, buttonCenter.Y + buttonSize.Y * 0.5f + 22f * scale);
+        Material.Frosted(dl, panelMin, panelMax, 28f * scale, scale, alpha);
+
         Emblem(dl, emblemCenter, theme.Accent, scale, grow, alpha);
 
         var titleCenter = new Vector2(screen.Center.X, screen.Min.Y + screen.Height * 0.47f - rise);
-        Typography.DrawCentered(titleCenter, Loc.T(step.Title), theme.TextStrong with { W = alpha }, TextStyles.Title1);
+        DrawCentered(dl, titleCenter, Loc.T(step.Title), theme.TextStrong with { W = alpha }, TextStyles.Title1);
 
         var bodyWidth = screen.Width * 0.80f;
         var bodyTop = titleCenter.Y + LineHeight(TextStyles.Title1) * 0.5f + 14f * scale;
@@ -65,8 +73,6 @@ internal static class CoachmarkOverlay
             Dots(dl, new Vector2(screen.Center.X, screen.Max.Y - 112f * scale), index, count, theme.Accent, theme.TextMuted, alpha, scale);
         }
 
-        var buttonSize = new Vector2(MathF.Min(screen.Width - 48f * scale, 230f * scale), 46f * scale);
-        var buttonCenter = new Vector2(screen.Center.X, screen.Max.Y - 68f * scale);
         if (Button(dl, buttonCenter, buttonSize, Loc.T(step.ButtonLabel), theme.Accent, alpha, live, scale))
         {
             action = CoachmarkAction.Advance;
@@ -157,7 +163,7 @@ internal static class CoachmarkOverlay
         Material.Frosted(dl, cardMin, cardMax, radius, scale, alpha);
 
         var cursorY = cardMin.Y + 18f * scale;
-        Typography.DrawCentered(new Vector2(cardCenterX, cursorY + titleLine * 0.5f), Loc.T(step.Title), theme.TextStrong with { W = alpha }, TextStyles.Headline);
+        DrawCentered(dl, new Vector2(cardCenterX, cursorY + titleLine * 0.5f), Loc.T(step.Title), theme.TextStrong with { W = alpha }, TextStyles.Headline);
         cursorY += titleLine + 8f * scale;
 
         cursorY = DrawWrapped(dl, Loc.T(step.Body), TextStyles.Subheadline, theme.TextMuted with { W = alpha }, new Vector2(cardCenterX, cursorY), innerWidth, scale, false);
@@ -173,7 +179,7 @@ internal static class CoachmarkOverlay
 
         if (isTap)
         {
-            Typography.DrawCentered(new Vector2(cardCenterX, cursorY + bodyLine * 0.5f), Loc.T(L.Onboarding.TapToContinue), theme.Accent with { W = alpha }, TextStyles.FootnoteEmphasized);
+            DrawCentered(dl, new Vector2(cardCenterX, cursorY + bodyLine * 0.5f), Loc.T(L.Onboarding.TapToContinue), theme.Accent with { W = alpha }, TextStyles.FootnoteEmphasized);
 
             var padded = hole!.Value;
             if (live && ImGui.IsMouseHoveringRect(padded.Min, padded.Max))
@@ -278,7 +284,7 @@ internal static class CoachmarkOverlay
         var fill = hovered ? Palette.Mix(accent, Vector4.One, 0.14f) : accent;
 
         Squircle.Fill(dl, min, max, radius, ImGui.GetColorU32(fill with { W = fill.W * alpha }));
-        Typography.DrawCentered(center, label, Ink with { W = alpha }, TextStyles.Headline);
+        DrawCentered(dl, center, label, Ink with { W = alpha }, TextStyles.Headline);
 
         if (hovered)
         {
@@ -298,7 +304,7 @@ internal static class CoachmarkOverlay
         var hovered = live && ImGui.IsMouseHoveringRect(min, max);
         var tint = color with { W = (hovered ? 0.95f : 0.7f) * alpha };
 
-        Typography.DrawCentered(center, label, tint, TextStyles.FootnoteEmphasized);
+        DrawCentered(dl, center, label, tint, TextStyles.FootnoteEmphasized);
 
         if (hovered)
         {
@@ -328,7 +334,7 @@ internal static class CoachmarkOverlay
             if (Typography.Measure(candidate, style).X > maxWidth && lastSpace > lineStart)
             {
                 var line = text.Substring(lineStart, lastSpace - lineStart);
-                Typography.DrawCentered(new Vector2(topCenter.X, y + lineHeight * 0.5f), line, color, style);
+                DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), line, color, style);
                 y += lineHeight;
                 lineStart = lastSpace + 1;
             }
@@ -338,7 +344,7 @@ internal static class CoachmarkOverlay
             if (atEnd)
             {
                 var tail = text.Substring(lineStart);
-                Typography.DrawCentered(new Vector2(topCenter.X, y + lineHeight * 0.5f), tail, color, style);
+                DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), tail, color, style);
                 y += lineHeight;
             }
         }
@@ -372,6 +378,16 @@ internal static class CoachmarkOverlay
         }
 
         return lines;
+    }
+
+    private static void DrawCentered(ImDrawListPtr dl, Vector2 center, string text, Vector4 color, in TextStyle style)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            var size = ImGui.CalcTextSize(text);
+            var font = ImGui.GetFont();
+            dl.AddText(font, ImGui.GetFontSize(), center - size * 0.5f, ImGui.GetColorU32(color), text);
+        }
     }
 
     private static float LineHeight(in TextStyle style) => Typography.Measure("Ay", style).Y;
