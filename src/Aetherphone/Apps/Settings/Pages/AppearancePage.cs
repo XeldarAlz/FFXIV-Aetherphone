@@ -76,6 +76,18 @@ internal sealed class AppearancePage : ISettingsPage
                 Plugin.Fonts.SetZoom(zoom);
                 configuration.Save();
             }
+
+            SettingsSection.Header(Loc.T(L.Settings.PhoneSize), theme);
+            var sizeCard = GroupCard.Begin(theme, 1);
+            var sizeIndex = SegmentStrip.Draw("settings.phoneSize", sizeCard.NextRow(), PhoneSizeCatalog.Labels, PhoneSizeCatalog.IndexOf(configuration.PhoneScale), theme);
+            sizeCard.End();
+
+            var phoneScale = PhoneSizeCatalog.Scales[sizeIndex];
+            if (MathF.Abs(phoneScale - configuration.PhoneScale) > 0.001f)
+            {
+                configuration.PhoneScale = phoneScale;
+                configuration.Save();
+            }
         }
     }
 

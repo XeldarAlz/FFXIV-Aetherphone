@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Shell;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Windowing;
 
@@ -13,6 +14,7 @@ internal sealed class PhoneWindow : Window
       | ImGuiWindowFlags.NoScrollbar
       | ImGuiWindowFlags.NoScrollWithMouse
       | ImGuiWindowFlags.NoCollapse
+      | ImGuiWindowFlags.NoResize
       | ImGuiWindowFlags.NoBackground;
 
     private readonly PhoneShell shell;
@@ -21,13 +23,8 @@ internal sealed class PhoneWindow : Window
         : base(AepConstants.Name, BaseFlags)
     {
         this.shell = shell;
-        Size = new Vector2(360f, 740f);
-        SizeCondition = ImGuiCond.FirstUseEver;
-        SizeConstraints = new WindowSizeConstraints
-        {
-            MinimumSize = new Vector2(300f, 620f),
-            MaximumSize = new Vector2(460f, 940f),
-        };
+        Size = PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        SizeCondition = ImGuiCond.Always;
         RespectCloseHotkey = false;
     }
 
@@ -37,6 +34,8 @@ internal sealed class PhoneWindow : Window
 
     public override void PreDraw()
     {
+        Size = PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        SizeCondition = ImGuiCond.Always;
         Flags = Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
     }
