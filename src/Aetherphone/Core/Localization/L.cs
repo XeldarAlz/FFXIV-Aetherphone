@@ -1330,10 +1330,10 @@ internal static class L
         public static readonly LocString ChirperPostBody = new("onboarding.chirperPostBody",
             "Post what's on your mind, follow people, and reply or react to their chirps. It runs on our own network, completely separate from the Lodestone.");
 
-        public static readonly LocString ChirperKindTitle = new("onboarding.chirperKindTitle", "Keep it friendly");
+        public static readonly LocString ChirperKindTitle = new("onboarding.chirperKindTitle", "Consent and Respect");
 
         public static readonly LocString ChirperKindBody = new("onboarding.chirperKindBody",
-            "This space is for everyone. Hateful, harassing or NSFW posts can get you banned.");
+            "This space is for everyone. Discriminatory, hateful or harmful content isn't welcome and can get you banned.");
 
         public static readonly LocString AethergramBody = new("onboarding.aethergramBody",
             "Welcome to Aethergram! A photo-sharing app made for the Aetherphone community, a lot like the real thing.");
@@ -1349,10 +1349,10 @@ internal static class L
             "It's completely separate from the Lodestone. Nothing here is linked to your character or account.");
 
         public static readonly LocString AethergramKindTitle =
-            new("onboarding.aethergramKindTitle", "Be good to each other");
+            new("onboarding.aethergramKindTitle", "Consent and Respect");
 
         public static readonly LocString AethergramKindBody = new("onboarding.aethergramKindBody",
-            "Discriminatory, hateful or harmful content isn't welcome and can get you banned.");
+            "This space is for everyone. Discriminatory, hateful or harmful content isn't welcome and can get you banned.");
 
         public static readonly LocString MapsBody = new("onboarding.mapsBody",
             "Every zone map with its aetherytes and points of interest. Star the places you visit most for one-tap access.");
@@ -1405,10 +1405,10 @@ internal static class L
         public static readonly LocString VelvetProfileBody = new("onboarding.velvetProfileBody",
             "Set up your intro, vibe, tags and limits, and choose whether you're discoverable to others.");
 
-        public static readonly LocString VelvetKindTitle = new("onboarding.velvetKindTitle", "Consent and respect");
+        public static readonly LocString VelvetKindTitle = new("onboarding.velvetKindTitle", "Consent and Respect");
 
         public static readonly LocString VelvetKindBody = new("onboarding.velvetKindBody",
-            "Everything here is opt-in. Harassment or ignoring someone's limits can get you banned, and you can report or block anyone from their profile.");
+            "This space is for everyone. Discriminatory, hateful or harmful content isn't welcome and can get you banned.");
 
         public static readonly LocString PhoneBody = new("onboarding.phoneBody",
             "Call your friends directly in-game and talk over voice chat. The other person needs the Aetherphone plugin too, and you both need to be signed in to Aethernet from Settings.");
