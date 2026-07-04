@@ -35,7 +35,7 @@ internal sealed class ChirperApp : IPhoneApp
 
     public string Glyph => "Ch";
 
-    public Vector4 Accent => new(0.114f, 0.631f, 0.949f, 1f);
+    public Vector4 Accent => new(0.16f, 0.52f, 0.94f, 1f);
 
     public int BadgeCount => 0;
 
@@ -83,6 +83,14 @@ internal sealed class ChirperApp : IPhoneApp
     private string deleteStatus = string.Empty;
     private volatile bool deleteSubmitting;
 
+    private string? deleteCommentPostId;
+    private string? deleteCommentId;
+    private string deleteCommentStatus = string.Empty;
+    private volatile bool deleteCommentSubmitting;
+
+    private Spring confirmSpring;
+    private bool confirmWasPostDelete;
+
     public ChirperApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, HttpService http, PhotoLibrary library)
     {
         store = new ChirperStore(session, client);
@@ -120,6 +128,7 @@ internal sealed class ChirperApp : IPhoneApp
         reportStatus = string.Empty;
         deleteTargetId = null;
         deleteStatus = string.Empty;
+        confirmSpring.SnapTo(0f);
         store.ClearDiscover();
     }
 
@@ -137,6 +146,7 @@ internal sealed class ChirperApp : IPhoneApp
     private void DrawView(ChirperRoute route, Rect area, int depth)
     {
         ui.Body(area);
+
         switch (route.Screen)
         {
             case ChirperScreen.Compose:
@@ -160,6 +170,86 @@ internal sealed class ChirperApp : IPhoneApp
             default:
                 DrawHome(area);
                 break;
+        }
+
+        var showPostDelete = deleteTargetId is not null;
+        var showCommentDelete = deleteCommentPostId is not null && deleteCommentId is not null && route.Screen == ChirperScreen.Thread;
+        var showConfirmation = showPostDelete || showCommentDelete;
+
+        if (showConfirmation)
+        {
+            confirmWasPostDelete = showPostDelete;
+        }
+
+        var target = showConfirmation ? 1f : 0f;
+        confirmSpring.Step(target, 0.18f, ImGui.GetIO().DeltaTime);
+        var opacity = confirmSpring.Value;
+
+        if (showConfirmation || !confirmSpring.IsResting(target, 0.001f, 0.005f))
+        {
+            var screen = SceneChrome.ScreenFrom(area, theme, ImGuiHelpers.GlobalScale);
+
+            ImGui.SetCursorScreenPos(area.Min);
+            using (ImRaii.Child("##confirmOverlay", area.Size, false,
+                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
+            {
+                if (showPostDelete || (confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
+                {
+                    ConfirmDialog.Draw(
+                        screen,
+                        theme,
+                        Loc.T(L.Chirper.DeleteConfirmMessage),
+                        Loc.T(L.Chirper.DeleteConfirm),
+                        Loc.T(L.Chirper.DeleteCancel),
+                        Loc.T(L.Chirper.Saving),
+                        deleteSubmitting,
+                        deleteStatus.Length > 0 ? deleteStatus : null,
+                        out var postCanceled,
+                        out var postConfirmed,
+                        opacity);
+
+                    if (postCanceled)
+                    {
+                        deleteTargetId = null;
+                    }
+
+                    if (postConfirmed)
+                    {
+                        SubmitDelete(deleteTargetId!);
+                    }
+                }
+                else if (showCommentDelete || (!confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
+                {
+                    ConfirmDialog.Draw(
+                        screen,
+                        theme,
+                        Loc.T(L.Chirper.DeleteCommentConfirmMessage),
+                        Loc.T(L.Chirper.DeleteConfirm),
+                        Loc.T(L.Chirper.DeleteCancel),
+                        Loc.T(L.Chirper.Saving),
+                        deleteCommentSubmitting,
+                        deleteCommentStatus.Length > 0 ? deleteCommentStatus : null,
+                        out var commentCanceled,
+                        out var commentConfirmed,
+                        opacity);
+
+                    if (commentCanceled)
+                    {
+                        deleteCommentPostId = null;
+                        deleteCommentId = null;
+                    }
+
+                    if (commentConfirmed)
+                    {
+                        SubmitDeleteComment(deleteCommentPostId!, deleteCommentId!);
+                    }
+                }
+            }
+        }
+
+        if (!showConfirmation && confirmSpring.IsResting(0f, 0.001f, 0.005f))
+        {
+            confirmSpring.SnapTo(0f);
         }
     }
 
@@ -282,7 +372,7 @@ internal sealed class ChirperApp : IPhoneApp
         var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
         var nameSize = Typography.Measure(displayName, 1.05f, FontWeight.SemiBold);
 
-        var textTop = origin.Y + pad + nameSize.Y + 4f * scale;
+        var textTop = origin.Y + pad + nameSize.Y + 6f * scale;
         var textHeight = post.Text.Length > 0 ? MeasureWrapped(post.Text, contentWidth, 1.05f) : 0f;
         var contentBottom = MathF.Max(avatarCenter.Y + radius, textTop + textHeight);
         var actionsTop = contentBottom + 8f * scale;
@@ -302,7 +392,7 @@ internal sealed class ChirperApp : IPhoneApp
             ? $"@{post.AuthorHandle} · {RelativeTime(post.CreatedAtUnix)}"
             : $"{post.AuthorWorld} · {RelativeTime(post.CreatedAtUnix)}";
         var metaSize = Typography.Measure(meta, 0.9f);
-        Typography.Draw(new Vector2(contentLeft + nameSize.X + 7f * scale, origin.Y + pad + nameSize.Y - metaSize.Y - 1f * scale), meta, ChirperUi.MutedInk, 0.9f);
+        Typography.Draw(new Vector2(contentLeft + nameSize.X + 7f * scale, origin.Y + pad + (nameSize.Y - metaSize.Y) * 0.5f), meta, ChirperUi.MutedInk, 0.9f);
         if (HoverClick(new Vector2(contentLeft, origin.Y + pad), new Vector2(contentRight - 24f * scale, origin.Y + pad + nameSize.Y)))
         {
             OpenProfile(post.AuthorId);
@@ -311,7 +401,8 @@ internal sealed class ChirperApp : IPhoneApp
         if (post.Text.Length > 0)
         {
             ImGui.SetCursorScreenPos(new Vector2(contentLeft, textTop));
-            ImGui.PushTextWrapPos(contentRight);
+            var wrapPos = contentRight - ImGui.GetWindowPos().X;
+            ImGui.PushTextWrapPos(wrapPos);
             using (Plugin.Fonts.Push(1.05f))
             using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.BodyInk))
             {
@@ -326,21 +417,13 @@ internal sealed class ChirperApp : IPhoneApp
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y));
 
-        var deleteActive = deleteTargetId == post.Id;
         var reportActive = reportTargetType == "post" && reportTargetId == post.Id;
-        if (deleteActive || reportActive)
+        if (reportActive)
         {
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             var composerLeft = origin.X + pad;
             var composerWidth = width - pad * 2f;
-            if (deleteActive)
-            {
-                DrawDeleteComposer(post.Id, composerLeft, composerWidth);
-            }
-            else
-            {
-                DrawReportComposer(composerLeft, composerWidth);
-            }
+            DrawReportComposer(composerLeft, composerWidth);
         }
 
         ImGui.Dummy(new Vector2(0f, 10f * scale));
@@ -375,7 +458,7 @@ internal sealed class ChirperApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
 
         var commentCenter = new Vector2(left + 11f * scale, centerY);
-        if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 1f) && !isThreadHead)
+        if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 1f, Loc.T(L.Chirper.Reply)) && !isThreadHead)
         {
             OpenThread(post);
         }
@@ -391,7 +474,7 @@ internal sealed class ChirperApp : IPhoneApp
 
         cursorX += 12f * scale;
         var triggerCenter = new Vector2(cursorX + 11f * scale, centerY);
-        if (DrawIconButton(triggerCenter, 14f * scale, FontAwesomeIcon.GrinBeam.ToIconString(), ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 1f))
+        if (DrawIconButton(triggerCenter, 14f * scale, FontAwesomeIcon.GrinBeam.ToIconString(), ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 1f, Loc.T(L.Chirper.React)))
         {
             actions.Open(post.Id, ChirperActionReveal.Panel.Picker);
         }
@@ -411,7 +494,7 @@ internal sealed class ChirperApp : IPhoneApp
         }
 
         var ellipsisCenter = new Vector2(left + width - 12f * scale, centerY);
-        if (DrawIconButton(ellipsisCenter, 13f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), ChirperUi.BodyInk, new Vector4(0f, 0f, 0f, 0f), 0.9f))
+        if (DrawIconButton(ellipsisCenter, 13f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), ChirperUi.BodyInk, new Vector4(0f, 0f, 0f, 0f), 0.9f, Loc.T(L.Chirper.More)))
         {
             actions.Open(post.Id, ChirperActionReveal.Panel.Menu);
         }
@@ -617,10 +700,11 @@ internal sealed class ChirperApp : IPhoneApp
             ? $"@{comment.AuthorHandle} · {RelativeTime(comment.CreatedAtUnix)}"
             : RelativeTime(comment.CreatedAtUnix);
         var metaSize = Typography.Measure(meta, 0.82f);
-        Typography.Draw(new Vector2(textLeft + nameSize.X + 7f * scale, origin.Y + nameSize.Y - metaSize.Y - 1f * scale), meta, ChirperUi.MutedInk, 0.82f);
+        Typography.Draw(new Vector2(textLeft + nameSize.X + 7f * scale, origin.Y + (nameSize.Y - metaSize.Y) * 0.5f), meta, ChirperUi.MutedInk, 0.82f);
 
-        ImGui.SetCursorScreenPos(new Vector2(textLeft, origin.Y + nameSize.Y + 3f * scale));
-        ImGui.PushTextWrapPos(origin.X + width - 4f * scale);
+        ImGui.SetCursorScreenPos(new Vector2(textLeft, origin.Y + nameSize.Y + 6f * scale));
+        var commentWrapPos = (origin.X + width - 4f * scale) - ImGui.GetWindowPos().X;
+        ImGui.PushTextWrapPos(commentWrapPos);
         using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.BodyInk))
         {
             ImGui.TextWrapped(comment.Text);
@@ -631,9 +715,18 @@ internal sealed class ChirperApp : IPhoneApp
         if (store.Me is { } me && me.Id == comment.AuthorId && store.DetailPost is { } post)
         {
             var trashCenter = new Vector2(origin.X + width - 10f * scale, origin.Y + 9f * scale);
-            if (DrawIconButton(trashCenter, 11f * scale, FontAwesomeIcon.Times.ToIconString(), ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 0.75f))
+            var trashHitRadius = 11f * scale;
+            if (DrawIconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 0.75f))
             {
-                store.DeleteComment(post.Id, comment.Id);
+                deleteCommentPostId = post.Id;
+                deleteCommentId = comment.Id;
+                deleteCommentStatus = string.Empty;
+            }
+
+            var trashHovered = ImGui.IsMouseHoveringRect(trashCenter - new Vector2(trashHitRadius, trashHitRadius), trashCenter + new Vector2(trashHitRadius, trashHitRadius));
+            if (trashHovered)
+            {
+                DrawDeleteCommentTooltip(trashCenter, trashHitRadius, scale);
             }
         }
 
@@ -930,7 +1023,8 @@ internal sealed class ChirperApp : IPhoneApp
         if (user.Bio.Length > 0)
         {
             ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
-            ImGui.PushTextWrapPos(innerLeft + innerWidth);
+            var bioWrapPos = (innerLeft + innerWidth) - ImGui.GetWindowPos().X;
+            ImGui.PushTextWrapPos(bioWrapPos);
             using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.BodyInk))
             {
                 ImGui.TextWrapped(user.Bio);
@@ -1067,51 +1161,54 @@ internal sealed class ChirperApp : IPhoneApp
         });
     }
 
-    private void DrawDeleteComposer(string postId, float left, float width)
+    private void SubmitDeleteComment(string postId, string commentId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-
-        using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.BodyInk))
+        if (deleteCommentSubmitting || deleteCommentPostId != postId || deleteCommentId != commentId)
         {
-            ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
-            ImGui.PushTextWrapPos(left + width);
-            ImGui.TextWrapped(Loc.T(L.Chirper.DeleteConfirmMessage));
-            ImGui.PopTextWrapPos();
+            return;
         }
 
-        var rowY = ImGui.GetCursorScreenPos().Y + 6f * scale;
-        var buttonWidth = 84f * scale;
-        var buttonHeight = 28f * scale;
-
-        var cancelRect = new Rect(new Vector2(left + width - buttonWidth * 2f - 8f * scale, rowY), new Vector2(left + width - buttonWidth - 8f * scale, rowY + buttonHeight));
-        if (DrawPillButton(cancelRect, Loc.T(L.Chirper.DeleteCancel), false) && !deleteSubmitting)
+        deleteCommentSubmitting = true;
+        store.DeleteComment(postId, commentId, ok =>
         {
-            deleteTargetId = null;
-        }
-
-        var deleteRect = new Rect(new Vector2(left + width - buttonWidth, rowY), new Vector2(left + width, rowY + buttonHeight));
-        var canSubmit = !deleteSubmitting;
-        if (DrawDangerPillButton(deleteRect, deleteSubmitting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.DeleteConfirm)) && canSubmit)
-        {
-            SubmitDelete(postId);
-        }
-
-        ImGui.SetCursorScreenPos(new Vector2(left, rowY + buttonHeight + 2f * scale));
-        if (deleteStatus.Length > 0)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.MutedInk))
+            deleteCommentSubmitting = false;
+            if (ok)
             {
-                ImGui.TextUnformatted(deleteStatus);
+                deleteCommentPostId = null;
+                deleteCommentId = null;
+                deleteCommentStatus = string.Empty;
             }
-
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-        }
+            else
+            {
+                deleteCommentStatus = Loc.T(L.Chirper.DeleteCommentFailed);
+            }
+        });
     }
 
-    private bool DrawDangerPillButton(Rect rect, string label)
+    private void DrawDeleteCommentTooltip(Vector2 iconCenter, float hitRadius, float scale)
     {
-        return ui.DangerPillButton(rect, label);
+        var dl = ImGui.GetWindowDrawList();
+        var tooltipText = Loc.T(L.Chirper.DeleteComment);
+        var textSize = Typography.Measure(tooltipText, 0.78f, FontWeight.Medium);
+        var padX = 9f * scale;
+        var padY = 5f * scale;
+        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
+        var gap = 9f * scale;
+
+        var windowMin = ImGui.GetWindowPos();
+        var windowMax = windowMin + ImGui.GetWindowSize();
+        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale, windowMax.X - bubbleSize.X - 4f * scale);
+        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
+        if (minY < windowMin.Y + 4f * scale)
+        {
+            minY = iconCenter.Y + hitRadius + gap;
+        }
+
+        var min = new Vector2(minX, minY);
+        var max = min + bubbleSize;
+        var bubble = Palette.WithAlpha(Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f), 0.97f);
+        Squircle.Fill(dl, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
+        Typography.Draw(dl, new Vector2(min.X + padX, min.Y + padY), tooltipText, theme.AppBackground, 0.78f, FontWeight.Medium);
     }
 
     private void SubmitDelete(string postId)
@@ -1425,7 +1522,7 @@ internal sealed class ChirperApp : IPhoneApp
         return ui.PillButton(rect, label, filled);
     }
 
-    private bool DrawIconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale)
+    private bool DrawIconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale, string tooltip = "")
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius), center + new Vector2(hitRadius, hitRadius));
@@ -1439,6 +1536,10 @@ internal sealed class ChirperApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (tooltip.Length > 0)
+            {
+                DrawActionTooltip(center, hitRadius, tooltip);
+            }
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);

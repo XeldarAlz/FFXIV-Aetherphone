@@ -12,7 +12,7 @@ namespace Aetherphone.Apps.Chirper;
 
 internal sealed class ChirperUi
 {
-    public static readonly Vector4 Accent = new(0.114f, 0.631f, 0.949f, 1f);
+    public static readonly Vector4 Accent = new(0.16f, 0.52f, 0.94f, 1f);
     public static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
     public static readonly Vector4 TitleInk = new(0.96f, 0.98f, 1f, 1f);
     public static readonly Vector4 BodyInk = new(0.85f, 0.90f, 0.97f, 0.96f);
