@@ -243,6 +243,18 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0820 =
+        {
+            new("changelog.r0820.0", "Added linkshell chat channels to Messages alongside direct messages"),
+            new("changelog.r0820.1", "Overhauled the notification center with stacking, swipe to dismiss, and deep links into the right app"),
+            new("changelog.r0820.2", "Added a minimized phone window you can restore by tapping it or on an incoming call"),
+            new("changelog.r0820.3", "Chirper, Aethergram, and Velvet now each support their own profile picture"),
+            new("changelog.r0820.4", "Added follow/unfollow, comment threads, and avatar cropping to Chirper"),
+            new("changelog.r0820.5", "Redesigned the Velvet profile and added time zone sharing and secure image DMs"),
+            new("changelog.r0820.6", "Added a confirmation step before deleting a photo"),
+            new("changelog.r0820.7", "Smoothed out status bar and window transition animations"),
+        };
+
         public static readonly LocString[] Release0810 =
         {
             new("changelog.r0810.0", "Added a subtle shadow behind home screen app labels for readability on bright wallpapers"),
