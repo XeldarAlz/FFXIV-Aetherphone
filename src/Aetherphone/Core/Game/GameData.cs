@@ -26,6 +26,28 @@ internal sealed class GameData
 
     public uint LocalCurrentWorldId => objectTable.LocalPlayer?.CurrentWorld.RowId ?? 0u;
 
+    public bool IsLocalPlayer(string name, string world)
+    {
+        var local = objectTable.LocalPlayer;
+        if (local is null || name.Length == 0)
+        {
+            return false;
+        }
+
+        if (!string.Equals(name, local.Name.TextValue, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (world.Length == 0)
+        {
+            return true;
+        }
+
+        return string.Equals(world, WorldName(local.HomeWorld.RowId), StringComparison.Ordinal)
+            || string.Equals(world, WorldName(local.CurrentWorld.RowId), StringComparison.Ordinal);
+    }
+
     public string WorldName(uint rowId)
     {
         if (rowId != 0 && data.GetExcelSheet<World>().TryGetRow(rowId, out var world))

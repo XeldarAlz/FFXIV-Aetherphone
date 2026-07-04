@@ -6,4 +6,6 @@ internal enum MessageDirection
     Outgoing,
 }
 
-internal sealed record ChatLine(MessageDirection Direction, string Text, DateTime At);
+internal sealed record MessageAuthor(string Name, string World);
+
+internal sealed record ChatLine(MessageDirection Direction, string Text, DateTime At, MessageAuthor? Author = null);

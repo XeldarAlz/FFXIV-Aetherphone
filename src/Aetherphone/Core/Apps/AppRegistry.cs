@@ -21,11 +21,10 @@ using Aetherphone.Apps.Photos;
 using Aetherphone.Apps.Settings;
 using Aetherphone.Apps.Skywatcher;
 using Aetherphone.Apps.Timers;
-#if VELVET
 using Aetherphone.Apps.Velvet;
-#endif
 using Aetherphone.Apps.Venues;
 using Aetherphone.Apps.Wallet;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Photos;
 
 namespace Aetherphone.Core.Apps;
@@ -37,18 +36,15 @@ internal static class AppRegistry
         var apps = new List<IPhoneApp>
         {
             new PhoneApp(services.Calls, services.AethernetSession, services.AethernetClient, services.Lodestone),
-            new MessagesApp(services.Messages, services.ChatBridge, services.MessageLauncher, services.Lodestone),
+            new MessagesApp(services.Messages, services.Linkshells, services.ChatBridge, services.LinkshellBridge, services.MessageLauncher, services.Lodestone),
             new ContactsApp(services.GameData, services.MessageLauncher, services.Lodestone),
             new MyCharacterApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
         };
 
-        apps.Add(new ChirperApp(services.AethernetSession, services.AethernetClient, services.Lodestone));
-
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
-        apps.Add(new AethergramApp(services.AethernetSession, services.AethernetClient, services.Lodestone, services.Http, photoLibrary));
-#if VELVET
-        apps.Add(new VelvetApp(services.AethernetSession, services.AethernetClient, services.Lodestone, services.Configuration, photoLibrary, services.Http));
-#endif
+        apps.Add(new ChirperApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "chirper"), services.Lodestone, services.Http, photoLibrary));
+        apps.Add(new AethergramApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "aethergram"), services.Lodestone, services.Http, photoLibrary));
+        apps.Add(new VelvetApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.Notifications, services.VelvetLauncher));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));
         apps.Add(new PhotosApp(photoLibrary));
         apps.Add(new SkywatcherApp(services.Weather));
@@ -66,7 +62,7 @@ internal static class AppRegistry
         apps.Add(new DailiesApp(services.Configuration));
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats));
-        apps.Add(new NotificationsApp(services.Notifications));
+        apps.Add(new NotificationsApp(services.Notifications, services.MessageLauncher, services.VelvetLauncher));
         apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Ringtone, services.AethernetSession, services.AethernetClient, services.GameData, photoLibrary, services.Calls, showAbout));
 
         return apps;

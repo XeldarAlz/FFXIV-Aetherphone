@@ -62,7 +62,7 @@ internal sealed class ChatBridge : IDisposable
 
         if (incoming)
         {
-            notifications.Notify(new PhoneNotification("messages", display, text, DateTime.Now, MessagesAccent));
+            notifications.Notify(new PhoneNotification("messages", display, text, DateTime.Now, MessagesAccent, sendTarget));
         }
     }
 

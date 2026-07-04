@@ -1,5 +1,4 @@
 using Aetherphone.Core.Animation;
-using Aetherphone.Core.Messaging;
 
 namespace Aetherphone.Apps.Messages;
 
@@ -13,20 +12,19 @@ internal sealed class ChatEntranceAnimator
 
     private readonly List<Entrance> active = new();
 
-    private Conversation? tracked;
+    private object? tracked;
     private int settledCount;
 
-    public void Sync(Conversation conversation, float deltaSeconds)
+    public void Sync(object thread, int lineCount, float deltaSeconds)
     {
-        if (!ReferenceEquals(conversation, tracked))
+        if (!ReferenceEquals(thread, tracked))
         {
-            tracked = conversation;
-            settledCount = conversation.Lines.Count;
+            tracked = thread;
+            settledCount = lineCount;
             active.Clear();
             return;
         }
 
-        var lineCount = conversation.Lines.Count;
         while (settledCount < lineCount)
         {
             active.Add(new Entrance { Line = settledCount, Elapsed = 0f });
