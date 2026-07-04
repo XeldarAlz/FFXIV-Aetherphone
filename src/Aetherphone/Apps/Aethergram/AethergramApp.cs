@@ -1242,6 +1242,8 @@ internal sealed class AethergramApp : IPhoneApp
         using (AppSurface.Begin(body))
         {
             DrawProfileHeader(user);
+
+            ui.SectionHeading(Loc.T(L.Aethergram.GramsTitle));
             DrawProfileGrid();
         }
     }
@@ -1422,59 +1424,39 @@ internal sealed class AethergramApp : IPhoneApp
     private void DrawProfileHeader(UserDto user)
     {
         var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var drawList = ImGui.GetWindowDrawList();
-
-        var avatarRadius = 36f * scale;
-        var avatarCenter = new Vector2(origin.X + avatarRadius, origin.Y + avatarRadius);
-        DrawAvatar(avatarCenter, avatarRadius, user.Name, user.World, user.AvatarUrl, 1.3f, 48);
-
-        var statsLeft = avatarCenter.X + avatarRadius + 18f * scale;
-        var statsY = origin.Y + 6f * scale;
-        var third = (origin.X + width - statsLeft) / 3f;
-        DrawCountStat(statsLeft + third * 0f, statsY, third, user.Grams.ToString(Loc.Culture), PostsLabel(user.Grams));
-        DrawCountStat(statsLeft + third * 1f, statsY, third, user.Followers.ToString(Loc.Culture), FollowersLabel(user.Followers));
-        DrawCountStat(statsLeft + third * 2f, statsY, third, user.Following.ToString(Loc.Culture), Loc.T(L.Aethergram.Following));
-
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, avatarCenter.Y + avatarRadius + 10f * scale));
+        var pad = 16f * scale;
+        var innerLeft = origin.X + pad;
+        var innerWidth = width - pad * 2f;
 
         var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Name : user.DisplayName;
-        using (Plugin.Fonts.Push(1.1f, FontWeight.SemiBold))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            ImGui.TextUnformatted(displayName);
-        }
+        var avatarRadius = 40f * scale;
+        var handleLine = user.Handle.Length > 0 ? $"@{user.Handle}" : string.Empty;
+        var worldLine = $"{user.Name} · {user.World}";
 
-        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
-        {
-            if (user.Handle.Length > 0)
-            {
-                ImGui.TextUnformatted($"@{user.Handle}");
-            }
+        var lineGap = 3f * scale;
+        var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
+        var handleH = handleLine.Length > 0 ? Typography.Measure(handleLine, 0.95f).Y + lineGap : 0f;
+        var worldH = Typography.Measure(worldLine, 0.95f).Y;
+        var bioH = user.Bio.Length > 0 ? 8f * scale + MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
 
-            ImGui.TextUnformatted($"{user.Name} · {user.World}");
-        }
+        var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
+        var cardBottom = textTop + nameH + lineGap + handleH + worldH + bioH + pad;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
 
-        if (user.Bio.Length > 0)
-        {
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            ImGui.PushTextWrapPos(0f);
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-            {
-                ImGui.TextWrapped(user.Bio);
-            }
+        var avatarCenter = new Vector2(innerLeft + avatarRadius, origin.Y + pad + avatarRadius);
+        drawList.AddCircleFilled(avatarCenter, avatarRadius + 2.5f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)), 64);
+        DrawAvatar(avatarCenter, avatarRadius, user.Name, user.World, user.AvatarUrl, 1.5f, 64);
 
-            ImGui.PopTextWrapPos();
-        }
-
-        ImGui.Dummy(new Vector2(0f, 10f * scale));
-        var buttonHeight = 32f * scale;
-        var buttonTop = ImGui.GetCursorScreenPos().Y;
+        var buttonHeight = 34f * scale;
+        var buttonWidth = 122f * scale;
+        var buttonMax = new Vector2(origin.X + width - pad, avatarCenter.Y + buttonHeight * 0.5f);
+        var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
         var reportShown = false;
         if (user.IsMe)
         {
-            var buttonRect = new Rect(new Vector2(origin.X, buttonTop), new Vector2(origin.X + width, buttonTop + buttonHeight));
             if (DrawPillButton(buttonRect, Loc.T(L.Aethergram.EditProfile), false))
             {
                 editLoadedFor = null;
@@ -1483,25 +1465,84 @@ internal sealed class AethergramApp : IPhoneApp
         }
         else
         {
-            var reportCenter = new Vector2(origin.X + width - buttonHeight * 0.5f, buttonTop + buttonHeight * 0.5f);
+            var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
             reportShown = DrawReportToggle(reportCenter, buttonHeight * 0.5f, "user", user.Id);
 
-            var followRect = new Rect(new Vector2(origin.X, buttonTop), new Vector2(origin.X + width - buttonHeight - 10f * scale, buttonTop + buttonHeight));
-            if (DrawPillButton(followRect, user.IsFollowing ? Loc.T(L.Aethergram.Following) : Loc.T(L.Aethergram.Follow), !user.IsFollowing))
+            if (DrawPillButton(buttonRect, user.IsFollowing ? Loc.T(L.Aethergram.Following) : Loc.T(L.Aethergram.Follow), !user.IsFollowing))
             {
                 store.SetFollow(user.Id, !user.IsFollowing);
             }
         }
 
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, buttonTop + buttonHeight + 10f * scale));
-        if (reportShown)
+        Typography.Draw(new Vector2(innerLeft, textTop), displayName, theme.TextStrong, 1.4f, FontWeight.Bold);
+        var textY = textTop + nameH + lineGap;
+        if (handleLine.Length > 0)
         {
-            DrawReportComposer(origin.X, width);
+            Typography.Draw(new Vector2(innerLeft, textY), handleLine, AethergramUi.MutedInk, 0.95f);
+            textY += handleH;
         }
 
-        var separatorY = ImGui.GetCursorScreenPos().Y;
-        drawList.AddLine(new Vector2(origin.X, separatorY), new Vector2(origin.X + width, separatorY), ImGui.GetColorU32(theme.Separator), 1f);
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        Typography.Draw(new Vector2(innerLeft, textY), worldLine, AethergramUi.MutedInk, 0.95f);
+        textY += worldH;
+
+        if (user.Bio.Length > 0)
+        {
+            ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
+            ImGui.PushTextWrapPos(innerLeft + innerWidth);
+            using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.BodyInk))
+            {
+                ImGui.TextWrapped(user.Bio);
+            }
+
+            ImGui.PopTextWrapPos();
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, cardBottom - origin.Y + 10f * scale));
+
+        if (reportShown)
+        {
+            DrawReportComposer(innerLeft, innerWidth);
+            ImGui.Dummy(new Vector2(0f, 10f * scale));
+        }
+
+        DrawProfileStats(user);
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+    }
+
+    private void DrawProfileStats(UserDto user)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = 64f * scale;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 18f * scale);
+
+        var third = width / 3f;
+        var centerY = origin.Y + height * 0.5f;
+        var dividerColor = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f));
+        for (var index = 1; index < 3; index++)
+        {
+            var x = origin.X + third * index;
+            drawList.AddLine(new Vector2(x, origin.Y + 14f * scale), new Vector2(x, origin.Y + height - 14f * scale), dividerColor, 1f);
+        }
+
+        var followersLabel = FollowersLabel(user.Followers);
+        DrawStatColumn(origin.X + third * 0f, third, centerY, user.Grams.ToString(Loc.Culture), PostsLabel(user.Grams));
+        DrawStatColumn(origin.X + third * 1f, third, centerY, user.Followers.ToString(Loc.Culture), followersLabel);
+        DrawStatColumn(origin.X + third * 2f, third, centerY, user.Following.ToString(Loc.Culture), Loc.T(L.Aethergram.Following));
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private void DrawStatColumn(float left, float columnWidth, float centerY, string value, string label)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var center = left + columnWidth * 0.5f;
+        Typography.DrawCentered(new Vector2(center, centerY - 10f * scale), value, theme.TextStrong, 1.25f, FontWeight.Bold);
+        Typography.DrawCentered(new Vector2(center, centerY + 13f * scale), label, AethergramUi.MutedInk, 0.8f);
     }
 
     private void DrawProfileGrid()
@@ -1774,43 +1815,9 @@ internal sealed class AethergramApp : IPhoneApp
         AvatarView.Draw(drawList, center, radius, theme.Accent, Initials.Of(name), monogramScale, lodestone.Avatar(name, world), segments);
     }
 
-    private void DrawCountStat(float left, float y, float columnWidth, string value, string label)
-    {
-        var center = left + columnWidth * 0.5f;
-        Typography.DrawCentered(new Vector2(center, y + 8f * ImGuiHelpers.GlobalScale), value, theme.TextStrong, 1f, FontWeight.SemiBold);
-        Typography.DrawCentered(new Vector2(center, y + 26f * ImGuiHelpers.GlobalScale), label, AethergramUi.MutedInk, 0.78f);
-    }
-
     private void DrawField(string label, string id, ref string value, int maxLength, bool multiline)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
-        {
-            ImGui.TextUnformatted(label);
-        }
-
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = (multiline ? 88f : 34f) * scale;
-        Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale, ImGui.GetColorU32(AethergramUi.FieldSurface));
-
-        ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale, origin.Y + (multiline ? 8f * scale : height * 0.5f - ImGui.GetFrameHeight() * 0.5f)));
-        ImGui.SetNextItemWidth(width - 24f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            if (multiline)
-            {
-                ImGui.InputTextMultiline(id, ref value, maxLength, new Vector2(width - 24f * scale, height - 16f * scale), ImGuiInputTextFlags.None);
-            }
-            else
-            {
-                ImGui.InputText(id, ref value, maxLength, ImGuiInputTextFlags.None);
-            }
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
+        ui.Field(label, id, ref value, maxLength, multiline);
     }
 
     private void DrawHandleField()

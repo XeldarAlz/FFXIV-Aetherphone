@@ -618,6 +618,7 @@ internal static class L
         public static readonly LocString Saving = new("aethergram.saving", "Saving…");
         public static readonly LocString PostTitle = new("aethergram.postTitle", "Post");
         public static readonly LocString CommentsTitle = new("aethergram.comments", "Comments");
+        public static readonly LocString GramsTitle = new("aethergram.gramsTitle", "Grams");
         public static readonly LocString NoComments = new("aethergram.noComments", "No comments yet");
         public static readonly LocString AddComment = new("aethergram.addComment", "Add a comment…");
         public static readonly LocString ProfileError = new("aethergram.profileError", "Couldn't load this profile");
