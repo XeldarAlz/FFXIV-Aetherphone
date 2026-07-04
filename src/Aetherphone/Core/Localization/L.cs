@@ -243,6 +243,15 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0830 =
+        {
+            new("changelog.r0830.0", "The minimized phone can now be moved freely, even when the position is locked"),
+            new("changelog.r0830.1", "Replaced the side button lock with tap to minimize and hold to turn off"),
+            new("changelog.r0830.2", "Control Center now stays in front of other windows"),
+            new("changelog.r0830.3", "The minimized phone shakes and shows an unread badge when a notification arrives"),
+            new("changelog.r0830.4", "Filled in missing German, French, and Turkish translations across Messages, Notifications, Chirper, Velvet, and Photos"),
+        };
+
         public static readonly LocString[] Release0820 =
         {
             new("changelog.r0820.0", "Added linkshell chat channels to Messages alongside direct messages"),
@@ -921,11 +930,6 @@ internal static class L
         public static readonly LocString Brightness = new("controlCenter.brightness", "Text Size");
     }
 
-    internal static class LockScreen
-    {
-        public static readonly LocString SwipeToOpen = new("lockScreen.swipeToOpen", "swipe up to open");
-    }
-
     internal static class Home
     {
         public static readonly LocString Done = new("home.done", "Done");
@@ -1147,9 +1151,7 @@ internal static class L
         public static readonly LocString SearchTheMarket = new("plugin.searchTheMarket", "Search the Market");
 
         public static readonly LocString
-            SideButtonHint = new("plugin.sideButtonHint", "Tap to turn off · Hold to lock");
-
-        public static readonly LocString MinimizeHint = new("plugin.minimizeHint", "Minimize");
+            SideButtonHint = new("plugin.sideButtonHint", "Tap to minimize · Hold to turn off");
 
         public static readonly LocString MaximizeHint = new("plugin.maximizeHint", "Maximize");
 

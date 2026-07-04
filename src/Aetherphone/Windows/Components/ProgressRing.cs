@@ -89,6 +89,20 @@ internal static class ProgressRing
         }
     }
 
+    public static void CenterIcon(ImDrawListPtr dl, Vector2 c, FontAwesomeIcon icon, Vector4 col, float targetHeight)
+    {
+        var glyph = icon.ToIconString();
+        using (ImRaii.PushFont(UiBuilder.IconFont))
+        {
+            var font = ImGui.GetFont();
+            var baseSize = ImGui.GetFontSize();
+            var measured = ImGui.CalcTextSize(glyph);
+            var scale = measured.Y > 0f ? targetHeight / measured.Y : 1f;
+            var size = measured * scale;
+            dl.AddText(font, baseSize * scale, new Vector2(c.X - size.X * 0.5f, c.Y - size.Y * 0.5f), ImGui.GetColorU32(col), glyph);
+        }
+    }
+
     public static void CenterIcon(Vector2 c, FontAwesomeIcon icon, Vector4 col, float targetHeight)
     {
         var glyph = icon.ToIconString();

@@ -48,7 +48,7 @@ internal sealed class ControlCenter
         }
 
         var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
+        var dl = ImGui.GetForegroundDrawList();
         var height = screen.Height;
         var rounding = theme.ScreenRounding * scale;
         var panelTop = screen.Min.Y - (1f - eased) * height;
@@ -67,7 +67,7 @@ internal sealed class ControlCenter
 
     private void DrawContents(Rect screen, PhoneTheme theme, float panelTop, float scale, float opacity, bool interactive)
     {
-        var dl = ImGui.GetWindowDrawList();
+        var dl = ImGui.GetForegroundDrawList();
         var pad = 22f * scale;
         var left = screen.Min.X + pad;
         var right = screen.Max.X - pad;
@@ -80,7 +80,7 @@ internal sealed class ControlCenter
             new Vector2(screen.Center.X + grabberHalf, grabberY + 2.5f * scale),
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.35f * opacity)), 2.5f * scale);
 
-        Typography.Draw(new Vector2(left, panelTop + 28f * scale), Loc.T(L.ControlCenter.Title), Palette.WithAlpha(theme.TextStrong, opacity), 1.05f, FontWeight.Bold);
+        Typography.Draw(dl, new Vector2(left, panelTop + 28f * scale), Loc.T(L.ControlCenter.Title), Palette.WithAlpha(theme.TextStrong, opacity), 1.05f, FontWeight.Bold);
 
         var gap = 12f * scale;
         var toggleTop = panelTop + 62f * scale;
@@ -91,26 +91,26 @@ internal sealed class ControlCenter
         var pin = new Rect(new Vector2(left + toggleWidth + gap, toggleTop), new Vector2(left + 2f * toggleWidth + gap, toggleTop + toggleHeight));
         var idle = new Rect(new Vector2(right - toggleWidth, toggleTop), new Vector2(right, toggleTop + toggleHeight));
 
-        if (ControlTile.Toggle(dnd, FontAwesomeIcon.Moon, Loc.T(L.Settings.DoNotDisturb), Plugin.Cfg.DoNotDisturb, theme.Accent, theme, opacity, interactive))
+        if (ControlTile.Toggle(dl, dnd, FontAwesomeIcon.Moon, Loc.T(L.Settings.DoNotDisturb), Plugin.Cfg.DoNotDisturb, theme.Accent, theme, opacity, interactive))
         {
             Plugin.Cfg.DoNotDisturb = !Plugin.Cfg.DoNotDisturb;
             Plugin.Cfg.Save();
         }
 
-        if (ControlTile.Toggle(pin, FontAwesomeIcon.Thumbtack, Loc.T(L.ControlCenter.LockPosition), Plugin.Cfg.LockPosition, theme.Accent, theme, opacity, interactive))
+        if (ControlTile.Toggle(dl, pin, FontAwesomeIcon.Thumbtack, Loc.T(L.ControlCenter.LockPosition), Plugin.Cfg.LockPosition, theme.Accent, theme, opacity, interactive))
         {
             Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
             Plugin.Cfg.Save();
         }
 
-        if (ControlTile.Toggle(idle, FontAwesomeIcon.HandPointUp, Loc.T(L.Settings.ScrollWhileIdle), Plugin.Cfg.ScrollWhileIdle, theme.Accent, theme, opacity, interactive))
+        if (ControlTile.Toggle(dl, idle, FontAwesomeIcon.HandPointUp, Loc.T(L.Settings.ScrollWhileIdle), Plugin.Cfg.ScrollWhileIdle, theme.Accent, theme, opacity, interactive))
         {
             Plugin.Cfg.ScrollWhileIdle = !Plugin.Cfg.ScrollWhileIdle;
             Plugin.Cfg.Save();
         }
 
         var swatchTop = toggleTop + toggleHeight + 22f * scale;
-        Typography.Draw(new Vector2(left, swatchTop), Loc.T(L.Settings.Appearance).ToUpperInvariant(), Palette.WithAlpha(theme.TextMuted, opacity), 0.72f, FontWeight.Medium);
+        Typography.Draw(dl, new Vector2(left, swatchTop), Loc.T(L.Settings.Appearance).ToUpperInvariant(), Palette.WithAlpha(theme.TextMuted, opacity), 0.72f, FontWeight.Medium);
 
         var accents = ThemeCatalog.Accents;
         var swatchRadius = 13f * scale;
@@ -120,7 +120,7 @@ internal sealed class ControlCenter
         {
             var center = new Vector2(left + swatchSpacing * (index + 0.5f), swatchY);
             var selected = accents[index].Name == Plugin.Cfg.AccentName;
-            if (ControlTile.Swatch(center, swatchRadius, accents[index].Color, selected, opacity, interactive) && !selected)
+            if (ControlTile.Swatch(dl, center, swatchRadius, accents[index].Color, selected, opacity, interactive) && !selected)
             {
                 Plugin.Cfg.AccentName = accents[index].Name;
                 themes.Apply(Plugin.Cfg);
@@ -137,7 +137,7 @@ internal sealed class ControlCenter
         var volumeRect = new Rect(new Vector2(right - sliderWidth, sliderTop), new Vector2(right, sliderTop + sliderHeight));
 
         var baseBright = Math.Clamp((Plugin.Cfg.TextZoom - 1.0f) / 0.5f, 0f, 1f);
-        var newBright = ControlTile.VerticalSlider(brightnessRect, baseBright, FontAwesomeIcon.Sun, theme, opacity, interactive, out var brightReleased);
+        var newBright = ControlTile.VerticalSlider(dl, brightnessRect, baseBright, FontAwesomeIcon.Sun, theme, opacity, interactive, out var brightReleased);
         if (brightReleased)
         {
             var zoom = 1.0f + Math.Clamp(newBright, 0f, 1f) * 0.5f;
@@ -149,7 +149,7 @@ internal sealed class ControlCenter
             }
         }
 
-        var newVolume = ControlTile.VerticalSlider(volumeRect, playback.Volume, FontAwesomeIcon.VolumeUp, theme, opacity, interactive, out _);
+        var newVolume = ControlTile.VerticalSlider(dl, volumeRect, playback.Volume, FontAwesomeIcon.VolumeUp, theme, opacity, interactive, out _);
         if (MathF.Abs(newVolume - playback.Volume) > 0.0005f)
         {
             playback.Volume = newVolume;
@@ -163,27 +163,27 @@ internal sealed class ControlCenter
 
     private void DrawNowPlaying(Rect rect, PhoneTheme theme, float scale, float opacity, bool interactive)
     {
-        var dl = ImGui.GetWindowDrawList();
+        var dl = ImGui.GetForegroundDrawList();
         Squircle.Fill(dl, rect.Min, rect.Max, 18f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f * opacity)));
         Material.EdgeSquircle(dl, rect.Min, rect.Max, 18f * scale, scale, opacity);
 
-        Typography.Draw(new Vector2(rect.Min.X + 16f * scale, rect.Min.Y + 14f * scale), Truncate(playback.Title, 22), Palette.WithAlpha(theme.TextStrong, opacity), 0.92f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(rect.Min.X + 16f * scale, rect.Min.Y + 36f * scale), Truncate(playback.Subtitle, 24), Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
+        Typography.Draw(dl, new Vector2(rect.Min.X + 16f * scale, rect.Min.Y + 14f * scale), Truncate(playback.Title, 22), Palette.WithAlpha(theme.TextStrong, opacity), 0.92f, FontWeight.SemiBold);
+        Typography.Draw(dl, new Vector2(rect.Min.X + 16f * scale, rect.Min.Y + 36f * scale), Truncate(playback.Subtitle, 24), Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
 
         var controlY = rect.Max.Y - 22f * scale;
         var accent = theme.Accent;
         var ink = theme.TextStrong;
-        if (playback.HasQueue && TransportButton.Draw(new Vector2(rect.Max.X - 92f * scale, controlY), 15f * scale, TransportAction.Previous, accent, ink, opacity, interactive))
+        if (playback.HasQueue && TransportButton.Draw(new Vector2(rect.Max.X - 92f * scale, controlY), 15f * scale, TransportAction.Previous, accent, ink, opacity, interactive, dl))
         {
             playback.Previous();
         }
 
-        if (TransportButton.Draw(new Vector2(rect.Max.X - 54f * scale, controlY), 16f * scale, TransportAction.Stop, accent, ink, opacity, interactive))
+        if (TransportButton.Draw(new Vector2(rect.Max.X - 54f * scale, controlY), 16f * scale, TransportAction.Stop, accent, ink, opacity, interactive, dl))
         {
             playback.Stop();
         }
 
-        if (playback.HasQueue && TransportButton.Draw(new Vector2(rect.Max.X - 18f * scale, controlY), 15f * scale, TransportAction.Next, accent, ink, opacity, interactive))
+        if (playback.HasQueue && TransportButton.Draw(new Vector2(rect.Max.X - 18f * scale, controlY), 15f * scale, TransportAction.Next, accent, ink, opacity, interactive, dl))
         {
             playback.Next();
         }

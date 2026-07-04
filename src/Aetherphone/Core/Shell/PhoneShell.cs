@@ -27,7 +27,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly NotificationBanner banner;
     private readonly NowPlayingIsland nowPlaying;
     private readonly ControlCenter controlCenter;
-    private readonly LockScreen lockScreen;
+    private readonly MinimizedPhone minimizedView;
     private readonly HomeScreen home;
     private readonly SideButton sideButton = new();
     private readonly CallHub calls;
@@ -51,7 +51,7 @@ internal sealed class PhoneShell : IDisposable
         banner = new NotificationBanner(notifications, () => navigation.Current?.Id, new NotificationRouter(navigation, messageLauncher, velvetLauncher));
         nowPlaying = new NowPlayingIsland(playback);
         controlCenter = new ControlCenter(themes, playback);
-        lockScreen = new LockScreen(notifications);
+        minimizedView = new MinimizedPhone(notifications);
         home = new HomeScreen(apps);
         callIsland = new CallIsland(calls);
         incomingOverlay = new IncomingCallOverlay(calls);
@@ -93,10 +93,16 @@ internal sealed class PhoneShell : IDisposable
         return requested;
     }
 
-    public bool DrawMinimized(Rect device) => MinimizedPhone.Draw(device, themes.Chrome);
+    public bool DrawMinimized(Rect device)
+    {
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        minimizedView.IsShowing = true;
+        return minimizedView.Draw(device, themes.Chrome, delta);
+    }
 
     public void Draw(Rect device)
     {
+        minimizedView.IsShowing = false;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         Plugin.Wallpapers.StepDayNight(delta);
 
@@ -112,18 +118,18 @@ internal sealed class PhoneShell : IDisposable
         {
             switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta))
             {
+                case SideButtonAction.Minimize:
+                    minimizeRequested = true;
+                    break;
                 case SideButtonAction.Close:
                     closeRequested = true;
-                    break;
-                case SideButtonAction.Lock:
-                    lockScreen.Lock();
                     break;
             }
         }
 
         SyncCallNavigation();
 
-        var overlaysCapture = !boot.IsActive && (controlCenter.CapturesPointer || lockScreen.CapturesPointer);
+        var overlaysCapture = !boot.IsActive && controlCenter.CapturesPointer;
         var ringing = !boot.IsActive && incomingOverlay.IsRinging;
         var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing
             && (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen) || (!director.CapturesPointer && banner.CapturesPointer(screen)));
@@ -144,7 +150,7 @@ internal sealed class PhoneShell : IDisposable
             return;
         }
 
-        if (!lockScreen.IsActive && !director.CapturesPointer)
+        if (!director.CapturesPointer)
         {
             banner.Draw(screen, theme);
             if (!controlCenter.IsActive)
@@ -156,8 +162,7 @@ internal sealed class PhoneShell : IDisposable
             incomingOverlay.Draw(screen, theme);
         }
 
-        controlCenter.Draw(screen, theme, delta, !lockScreen.IsActive && !navigation.IsTransitioning && !director.CapturesPointer);
-        lockScreen.Draw(screen, theme, delta, navigation);
+        controlCenter.Draw(screen, theme, delta, !navigation.IsTransitioning && !director.CapturesPointer);
 
         director.Draw(screen, theme);
     }
@@ -209,39 +214,12 @@ internal sealed class PhoneShell : IDisposable
         {
             StatusBar.Draw(screen, theme);
             DrawHomeIndicator(screen, theme);
-            DrawMinimizeButton(screen, theme);
             DrawPositionLock(screen, theme);
-        }
-    }
-
-    private void DrawMinimizeButton(Rect screen, PhoneTheme theme)
-    {
-        if (lockScreen.IsActive)
-        {
-            return;
-        }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        var radius = 13f * scale;
-        var center = new Vector2(screen.Min.X + 30f * scale, screen.Max.Y - 28f * scale);
-        if (LockButton.Draw(center, radius, FontAwesomeIcon.Compress, false, theme))
-        {
-            minimizeRequested = true;
-        }
-
-        if (ImGui.IsMouseHoveringRect(center - new Vector2(radius), center + new Vector2(radius)))
-        {
-            ImGui.SetTooltip(Loc.T(L.Plugin.MinimizeHint));
         }
     }
 
     private void DrawPositionLock(Rect screen, PhoneTheme theme)
     {
-        if (lockScreen.IsActive)
-        {
-            return;
-        }
-
         var scale = ImGuiHelpers.GlobalScale;
         var radius = 13f * scale;
         var center = new Vector2(screen.Max.X - 30f * scale, screen.Max.Y - 28f * scale);
@@ -344,6 +322,7 @@ internal sealed class PhoneShell : IDisposable
     public void Dispose()
     {
         banner.Dispose();
+        minimizedView.Dispose();
         for (var index = 0; index < apps.Count; index++)
         {
             apps[index].Dispose();

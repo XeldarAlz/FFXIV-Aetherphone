@@ -9,10 +9,9 @@ namespace Aetherphone.Windows.Components;
 
 internal static class ControlTile
 {
-    public static bool Toggle(Rect rect, FontAwesomeIcon icon, string label, bool active, Vector4 accent, PhoneTheme theme, float opacity, bool interactive)
+    public static bool Toggle(ImDrawListPtr dl, Rect rect, FontAwesomeIcon icon, string label, bool active, Vector4 accent, PhoneTheme theme, float opacity, bool interactive)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
         var radius = 18f * scale;
         var hovered = interactive && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
 
@@ -24,10 +23,10 @@ internal static class ControlTile
 
         var iconColor = Palette.WithAlpha(active ? new Vector4(1f, 1f, 1f, 1f) : theme.TextStrong, opacity);
         var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + rect.Height * 0.40f);
-        ProgressRing.CenterIcon(iconCenter, icon, iconColor, rect.Height * 0.27f);
+        ProgressRing.CenterIcon(dl, iconCenter, icon, iconColor, rect.Height * 0.27f);
 
         var labelColor = active ? new Vector4(1f, 1f, 1f, opacity) : Palette.WithAlpha(theme.TextMuted, opacity);
-        Typography.DrawCentered(new Vector2(rect.Center.X, rect.Max.Y - rect.Height * 0.24f), label, labelColor, 0.7f, FontWeight.Medium);
+        Typography.DrawCentered(dl, new Vector2(rect.Center.X, rect.Max.Y - rect.Height * 0.24f), label, labelColor, 0.7f, FontWeight.Medium);
 
         if (hovered)
         {
@@ -37,10 +36,9 @@ internal static class ControlTile
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public static float VerticalSlider(Rect rect, float value, FontAwesomeIcon icon, PhoneTheme theme, float opacity, bool interactive, out bool released)
+    public static float VerticalSlider(ImDrawListPtr dl, Rect rect, float value, FontAwesomeIcon icon, PhoneTheme theme, float opacity, bool interactive, out bool released)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
         var radius = 18f * scale;
         var result = Math.Clamp(value, 0f, 1f);
         released = false;
@@ -71,15 +69,14 @@ internal static class ControlTile
 
         var iconOnFill = result > 0.16f;
         var iconColor = Palette.WithAlpha(iconOnFill ? new Vector4(0.14f, 0.14f, 0.17f, 1f) : theme.TextStrong, opacity);
-        ProgressRing.CenterIcon(new Vector2(rect.Center.X, rect.Max.Y - 20f * scale), icon, iconColor, 17f * scale);
+        ProgressRing.CenterIcon(dl, new Vector2(rect.Center.X, rect.Max.Y - 20f * scale), icon, iconColor, 17f * scale);
 
         return result;
     }
 
-    public static bool Swatch(Vector2 center, float radius, Vector4 color, bool selected, float opacity, bool interactive)
+    public static bool Swatch(ImDrawListPtr dl, Vector2 center, float radius, Vector4 color, bool selected, float opacity, bool interactive)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
         var hovered = interactive && ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
 
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, opacity)), 32);

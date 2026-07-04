@@ -10,8 +10,8 @@ namespace Aetherphone.Windows.Components;
 internal enum SideButtonAction
 {
     None,
+    Minimize,
     Close,
-    Lock,
 }
 
 internal sealed class SideButton
@@ -20,7 +20,7 @@ internal sealed class SideButton
 
     private bool armed;
     private float held;
-    private bool lockFired;
+    private bool closeFired;
 
     public SideButtonAction Update(Rect bounds, PhoneTheme theme, float delta)
     {
@@ -35,24 +35,24 @@ internal sealed class SideButton
         {
             armed = true;
             held = 0f;
-            lockFired = false;
+            closeFired = false;
         }
 
         if (armed && ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
             held += delta;
-            if (held >= HoldSeconds && !lockFired)
+            if (held >= HoldSeconds && !closeFired)
             {
-                lockFired = true;
-                action = SideButtonAction.Lock;
+                closeFired = true;
+                action = SideButtonAction.Close;
             }
         }
 
         if (armed && !ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
-            if (!lockFired && hovered)
+            if (!closeFired && hovered)
             {
-                action = SideButtonAction.Close;
+                action = SideButtonAction.Minimize;
             }
 
             armed = false;

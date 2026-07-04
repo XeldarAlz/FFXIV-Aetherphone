@@ -53,7 +53,7 @@ internal sealed class PhoneWindow : Window
     {
         Size = minimized ? MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
         SizeCondition = ImGuiCond.Always;
-        Flags = Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
+        Flags = !minimized && Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
     }
 
