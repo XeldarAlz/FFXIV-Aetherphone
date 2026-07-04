@@ -22,6 +22,11 @@ internal sealed class PhoneApp : IPhoneApp
 {
     private static readonly Vector4 CallGreen = new(0.20f, 0.78f, 0.35f, 1f);
 
+    private static readonly Vector4 BackdropTop = new(0.05f, 0.19f, 0.10f, 1f);
+    private static readonly Vector4 BackdropBottom = new(0.02f, 0.04f, 0.03f, 1f);
+    private static readonly Vector4 BloomTop = new(0.20f, 0.78f, 0.35f, 0.20f);
+    private static readonly Vector4 BloomBottom = new(0.10f, 0.40f, 0.20f, 0f);
+
     public string Id => "phone";
 
     public string DisplayName => Loc.T(L.Phone.Title);
@@ -198,9 +203,12 @@ internal sealed class PhoneApp : IPhoneApp
         var content = context.Content;
         var dl = ImGui.GetWindowDrawList();
 
-        var tintTop = ImGui.GetColorU32(Palette.WithAlpha(CallGreen, 0.22f));
-        var tintBottom = ImGui.GetColorU32(Palette.WithAlpha(CallGreen, 0f));
-        dl.AddRectFilledMultiColor(content.Min, new Vector2(content.Max.X, content.Min.Y + content.Height * 0.55f), tintTop, tintTop, tintBottom, tintBottom);
+        var screen = SceneChrome.ScreenFrom(content, theme, scale);
+        var rounding = theme.ScreenRounding * scale;
+        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding,
+            ImGui.GetColorU32(BackdropTop), ImGui.GetColorU32(BackdropBottom));
+        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding,
+            ImGui.GetColorU32(BloomTop), ImGui.GetColorU32(BloomBottom));
 
         var others = Others(view);
         var centerX = content.Center.X;

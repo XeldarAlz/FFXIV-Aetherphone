@@ -62,9 +62,14 @@ internal sealed class MusicApp : IPhoneApp
 
     public string Glyph => "M";
 
-    public Vector4 Accent => new(0.96f, 0.36f, 0.52f, 1f);
+    public Vector4 Accent => new(0.13f, 0.75f, 0.36f, 1f);
 
     public int BadgeCount => 0;
+
+    private static readonly Vector4 BackdropTop = new(0.05f, 0.20f, 0.11f, 1f);
+    private static readonly Vector4 BackdropBottom = new(0.02f, 0.04f, 0.03f, 1f);
+    private static readonly Vector4 BloomTop = new(0.13f, 0.75f, 0.36f, 0.22f);
+    private static readonly Vector4 BloomBottom = new(0.08f, 0.38f, 0.19f, 0f);
 
     private readonly RadioService radio;
     private readonly SongSearchService songSearch;
@@ -125,6 +130,7 @@ internal sealed class MusicApp : IPhoneApp
     {
         clock += MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         CaptureRecent();
+        DrawBackdrop(context);
 
         if (view == View.RadioNowPlaying && !playback.RadioActive)
         {
@@ -527,6 +533,19 @@ internal sealed class MusicApp : IPhoneApp
         }
     }
 
+    private static void DrawBackdrop(in PhoneContext context)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
+        var rounding = context.Theme.ScreenRounding * scale;
+        var dl = ImGui.GetWindowDrawList();
+
+        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding,
+            ImGui.GetColorU32(BackdropTop), ImGui.GetColorU32(BackdropBottom));
+        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding,
+            ImGui.GetColorU32(BloomTop), ImGui.GetColorU32(BloomBottom));
+    }
+
     private void DrawRadioNowPlaying(in PhoneContext context)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -534,12 +553,7 @@ internal sealed class MusicApp : IPhoneApp
         var content = context.Content;
         var station = playback.Radio.CurrentStation;
         var state = playback.Radio.State;
-        var swatch = ArtGradient.FromName(station);
         var dl = ImGui.GetWindowDrawList();
-
-        var tintTop = ImGui.GetColorU32(Palette.WithAlpha(swatch.Top, 0.42f));
-        var tintBottom = ImGui.GetColorU32(Palette.WithAlpha(swatch.Top, 0f));
-        dl.AddRectFilledMultiColor(content.Min, new Vector2(content.Max.X, content.Min.Y + content.Height * 0.6f), tintTop, tintTop, tintBottom, tintBottom);
 
         AppHeader.Draw(context, Loc.T(L.Music.NowPlaying), GoToReturnView);
 
@@ -593,12 +607,7 @@ internal sealed class MusicApp : IPhoneApp
         var theme = context.Theme;
         var content = context.Content;
         var songs = playback.Songs;
-        var swatch = ArtGradient.FromName(songs.CurrentTitle);
         var dl = ImGui.GetWindowDrawList();
-
-        var tintTop = ImGui.GetColorU32(Palette.WithAlpha(swatch.Top, 0.42f));
-        var tintBottom = ImGui.GetColorU32(Palette.WithAlpha(swatch.Top, 0f));
-        dl.AddRectFilledMultiColor(content.Min, new Vector2(content.Max.X, content.Min.Y + content.Height * 0.6f), tintTop, tintTop, tintBottom, tintBottom);
 
         AppHeader.Draw(context, Loc.T(L.Music.NowPlaying), GoToReturnView);
 
