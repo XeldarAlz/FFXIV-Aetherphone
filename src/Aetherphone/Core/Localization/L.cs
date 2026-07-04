@@ -284,7 +284,7 @@ internal static class L
         public static readonly LocString Verifying = new("account.verifying", "Verifying via Lodestone…");
 
         public static readonly LocString CodeNotFound = new("account.codeNotFound",
-            "Code not found on your profile yet. Save it on Lodestone, then Verify again.");
+            "Code not found on your profile yet. Save it on Lodestone, then Verify again. Make sure both Profile and Character Search visibility are set to Public/Displayed in Results.");
 
         public static readonly LocString SignOut = new("account.signOut", "Sign out");
         public static readonly LocString SignIn = new("account.signIn", "Sign in with Lodestone");

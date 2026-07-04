@@ -71,7 +71,7 @@
   "account.requestingCode": "Requesting a code…",
   "account.cannotReach": "Could not reach Aethernet. Is the server running?",
   "account.verifying": "Verifying via Lodestone…",
-  "account.codeNotFound": "Code not found on your profile yet. Save it on Lodestone, then Verify again.",
+  "account.codeNotFound": "Code not found on your profile yet. Save it on Lodestone, then Verify again. Make sure both Profile and Character Search visibility are set to Public/Displayed in Results.",
   "account.signOut": "Sign out",
   "account.signIn": "Sign in with Lodestone",
   "account.followers.one": "{0} follower",
