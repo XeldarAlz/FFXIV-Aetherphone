@@ -21,7 +21,9 @@ using Aetherphone.Apps.Photos;
 using Aetherphone.Apps.Settings;
 using Aetherphone.Apps.Skywatcher;
 using Aetherphone.Apps.Timers;
+#if VELVET
 using Aetherphone.Apps.Velvet;
+#endif
 using Aetherphone.Apps.Venues;
 using Aetherphone.Apps.Wallet;
 using Aetherphone.Core.Photos;
@@ -44,7 +46,9 @@ internal static class AppRegistry
 
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
         apps.Add(new AethergramApp(services.AethernetSession, services.AethernetClient, services.Lodestone, services.Http, photoLibrary));
-        apps.Add(new VelvetApp(services.AethernetSession, services.AethernetClient, services.Lodestone, services.Configuration, photoLibrary));
+#if VELVET
+        apps.Add(new VelvetApp(services.AethernetSession, services.AethernetClient, services.Lodestone, services.Configuration, photoLibrary, services.Http));
+#endif
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));
         apps.Add(new PhotosApp(photoLibrary));
         apps.Add(new SkywatcherApp(services.Weather));

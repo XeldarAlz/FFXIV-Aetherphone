@@ -6,6 +6,19 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <!-- Velvet is the 18+ companion app. Enabled by default (local/dev builds).
+       For a public or official release, build with /p:IncludeVelvet=false to
+       exclude it entirely (its sources are dropped and it is never registered). -->
+  <PropertyGroup>
+    <IncludeVelvet Condition="'$(IncludeVelvet)' == ''">true</IncludeVelvet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(IncludeVelvet)' == 'true'">
+    <DefineConstants>$(DefineConstants);VELVET</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(IncludeVelvet)' != 'true'">
+    <Compile Remove="Apps\Velvet\**\*.cs" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Linux)))'">
     <DalamudLibPath>$(DALAMUD_HOME)/</DalamudLibPath>
   </PropertyGroup>

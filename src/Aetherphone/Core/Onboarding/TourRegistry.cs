@@ -8,14 +8,13 @@ internal static class TourRegistry
 
     private static readonly GuideSequence Welcome = new(
         WelcomeId,
-        3,
+        4,
         null,
         new[]
         {
             GuideStep.Page(L.Onboarding.WelcomeTitle, L.Onboarding.WelcomeBody, L.Onboarding.Continue),
             GuideStep.Page(L.Onboarding.AllInOneTitle, L.Onboarding.AllInOneBody, L.Onboarding.Continue),
-            GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.Continue),
-            GuideStep.Page(L.Onboarding.TipsTitle, L.Onboarding.TipsBody, L.Onboarding.GetStarted),
+            GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.GetStarted),
             GuideStep.Tap(L.Onboarding.BeginTitle, L.Onboarding.BeginBody, "home.app.skywatcher", static nav => nav.Open("skywatcher")),
             GuideStep.Note(L.Onboarding.SkywatcherTitle, L.Onboarding.SkywatcherBody),
             GuideStep.Point(L.Onboarding.SkywatcherForecastTitle, L.Onboarding.SkywatcherForecastBody, "skywatcher.forecast"),
@@ -162,6 +161,22 @@ internal static class TourRegistry
         Add(tours, "notifications", 1, new[]
         {
             GuideStep.Note(L.Apps.Notifications, L.Onboarding.NotificationsBody),
+        });
+
+        Add(tours, "phone", 1, new[]
+        {
+            GuideStep.Note(L.Phone.Title, L.Onboarding.PhoneBody),
+            GuideStep.Note(L.Onboarding.PhoneGroupTitle, L.Onboarding.PhoneGroupBody),
+            GuideStep.Note(L.Onboarding.PhoneVoiceTitle, L.Onboarding.PhoneVoiceBody),
+        });
+
+        Add(tours, "velvet", 1, new[]
+        {
+            GuideStep.Note(L.Apps.Velvet, L.Onboarding.VelvetBody),
+            GuideStep.Note(L.Onboarding.VelvetDiscoverTitle, L.Onboarding.VelvetDiscoverBody),
+            GuideStep.Note(L.Onboarding.VelvetMessagesTitle, L.Onboarding.VelvetMessagesBody),
+            GuideStep.Note(L.Onboarding.VelvetProfileTitle, L.Onboarding.VelvetProfileBody),
+            GuideStep.Note(L.Onboarding.VelvetKindTitle, L.Onboarding.VelvetKindBody),
         });
 
         return tours;

@@ -43,9 +43,9 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool ShowLodestonePortraits { get; set; } = true;
 
-    public float TextZoom { get; set; } = 1.0f;
+    public float TextZoom { get; set; } = 1.15f;
 
-    public float PhoneScale { get; set; } = 1.0f;
+    public float PhoneScale { get; set; } = 1.25f;
 
     public string Language { get; set; } = string.Empty;
 
