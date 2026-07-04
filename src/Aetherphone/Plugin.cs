@@ -75,7 +75,7 @@ public sealed class Plugin : IDalamudPlugin
         Analytics = services.Analytics;
         Analytics.Track(AnalyticsEvents.SessionStart());
         aboutWindow = new AboutWindow();
-        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback, services.Calls);
+        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
         windowSystem.AddWindow(phoneWindow);
         windowSystem.AddWindow(aboutWindow);
@@ -83,11 +83,12 @@ public sealed class Plugin : IDalamudPlugin
         phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager, () => phoneWindow.IsOpen);
         timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
 
+        services.AethernetClient.EnsureCurrentUser();
         services.Calls.IncomingCallPresented += OnIncomingCall;
         services.Calls.Start();
 
         dtrEntry = DtrBar.Get(AepConstants.Name);
-        dtrEntry.OnClick = _ => phoneWindow.Toggle();
+        dtrEntry.OnClick = _ => phoneWindow.ToggleShell();
         services.Notifications.Changed += UpdateDtrBadge;
         UpdateDtrBadge();
 
@@ -104,13 +105,13 @@ public sealed class Plugin : IDalamudPlugin
         });
 
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
-        PluginInterface.UiBuilder.OpenMainUi += phoneWindow.Toggle;
+        PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
     }
 
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
-        PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.Toggle;
+        PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
 
         Loc.LanguageChanged -= Fonts.OnLanguageChanged;
         services.Notifications.Changed -= UpdateDtrBadge;
@@ -183,12 +184,16 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        phoneWindow.Toggle();
+        phoneWindow.ToggleShell();
     }
 
     private void ShowAbout() => aboutWindow.IsOpen = true;
 
-    private void OnIncomingCall() => phoneWindow.IsOpen = true;
+    private void OnIncomingCall()
+    {
+        phoneWindow.Maximize();
+        phoneWindow.IsOpen = true;
+    }
 
     private void OnMenuOpened(IMenuOpenedArgs args)
     {
@@ -219,6 +224,7 @@ public sealed class Plugin : IDalamudPlugin
     private void OpenMarketAt(uint itemId)
     {
         services.MarketLauncher.RequestItem(itemId);
+        phoneWindow.Maximize();
         phoneWindow.IsOpen = true;
         shell.OpenApp("market");
     }
@@ -230,14 +236,18 @@ public sealed class Plugin : IDalamudPlugin
             services.MarketLauncher.RequestSearch(query);
         }
 
+        phoneWindow.Maximize();
         phoneWindow.IsOpen = true;
         shell.OpenApp("market");
     }
+
+    private static readonly string[] SampleSenders = { "Alisaie", "Y'shtola", "Thancred" };
 
     private void SendSampleNotification()
     {
         sampleCounter++;
         var accent = new Vector4(0.30f, 0.78f, 0.42f, 1f);
-        services.Notifications.Notify(new PhoneNotification("messages", "Alisaie", $"Sample message #{sampleCounter}", DateTime.Now, accent));
+        var sender = SampleSenders[sampleCounter % SampleSenders.Length];
+        services.Notifications.Notify(new PhoneNotification("messages", sender, $"Sample message #{sampleCounter}", DateTime.Now, accent, $"{sender}@Sample"));
     }
 }

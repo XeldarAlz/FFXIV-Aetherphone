@@ -17,7 +17,10 @@ internal sealed class PhoneWindow : Window
       | ImGuiWindowFlags.NoResize
       | ImGuiWindowFlags.NoBackground;
 
+    private static readonly Vector2 MinimizedSize = new(78f, 152f);
+
     private readonly PhoneShell shell;
+    private bool minimized;
 
     public PhoneWindow(PhoneShell shell)
         : base(AepConstants.Name, BaseFlags)
@@ -28,13 +31,27 @@ internal sealed class PhoneWindow : Window
         RespectCloseHotkey = false;
     }
 
+    public void Maximize() => minimized = false;
+
+    public void ToggleShell()
+    {
+        if (IsOpen)
+        {
+            IsOpen = false;
+            return;
+        }
+
+        minimized = false;
+        IsOpen = true;
+    }
+
     public override void OnOpen() => shell.OnOpened();
 
     public override void OnClose() => shell.OnClosed();
 
     public override void PreDraw()
     {
-        Size = PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        Size = minimized ? MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
         SizeCondition = ImGuiCond.Always;
         Flags = Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
@@ -49,12 +66,29 @@ internal sealed class PhoneWindow : Window
             var origin = ImGui.GetCursorScreenPos();
             var available = ImGui.GetContentRegionAvail();
             ImGui.Dummy(available);
-            shell.Draw(new Rect(origin, origin + available));
+            var device = new Rect(origin, origin + available);
+
+            if (minimized)
+            {
+                if (shell.DrawMinimized(device))
+                {
+                    minimized = false;
+                }
+
+                return;
+            }
+
+            shell.Draw(device);
         }
 
         if (shell.ConsumeCloseRequest())
         {
             IsOpen = false;
+        }
+
+        if (shell.ConsumeMinimizeRequest())
+        {
+            minimized = true;
         }
     }
 }

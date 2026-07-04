@@ -1,6 +1,8 @@
 using System.Numerics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Playback;
@@ -34,10 +36,11 @@ internal sealed class PhoneShell : IDisposable
     private readonly BootSequence boot = new();
     private readonly OnboardingDirector director;
     private bool closeRequested;
+    private bool minimizeRequested;
 
     private CallState lastCallState;
 
-    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback, CallHub calls)
+    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher)
     {
         this.themes = themes;
         this.apps = apps;
@@ -45,7 +48,7 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
-        banner = new NotificationBanner(notifications, () => navigation.Current?.Id);
+        banner = new NotificationBanner(notifications, () => navigation.Current?.Id, new NotificationRouter(navigation, messageLauncher, velvetLauncher));
         nowPlaying = new NowPlayingIsland(playback);
         controlCenter = new ControlCenter(themes, playback);
         lockScreen = new LockScreen(notifications);
@@ -83,6 +86,15 @@ internal sealed class PhoneShell : IDisposable
         return requested;
     }
 
+    public bool ConsumeMinimizeRequest()
+    {
+        var requested = minimizeRequested;
+        minimizeRequested = false;
+        return requested;
+    }
+
+    public bool DrawMinimized(Rect device) => MinimizedPhone.Draw(device, themes.Chrome);
+
     public void Draw(Rect device)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
@@ -113,7 +125,8 @@ internal sealed class PhoneShell : IDisposable
 
         var overlaysCapture = !boot.IsActive && (controlCenter.CapturesPointer || lockScreen.CapturesPointer);
         var ringing = !boot.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing && (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen));
+        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing
+            && (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen) || (!director.CapturesPointer && banner.CapturesPointer(screen)));
 
         var busy = boot.IsActive || overlaysCapture || ringing || navigation.IsTransitioning;
         director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
@@ -196,7 +209,29 @@ internal sealed class PhoneShell : IDisposable
         {
             StatusBar.Draw(screen, theme);
             DrawHomeIndicator(screen, theme);
+            DrawMinimizeButton(screen, theme);
             DrawPositionLock(screen, theme);
+        }
+    }
+
+    private void DrawMinimizeButton(Rect screen, PhoneTheme theme)
+    {
+        if (lockScreen.IsActive)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var radius = 13f * scale;
+        var center = new Vector2(screen.Min.X + 30f * scale, screen.Max.Y - 28f * scale);
+        if (LockButton.Draw(center, radius, FontAwesomeIcon.Compress, false, theme))
+        {
+            minimizeRequested = true;
+        }
+
+        if (ImGui.IsMouseHoveringRect(center - new Vector2(radius), center + new Vector2(radius)))
+        {
+            ImGui.SetTooltip(Loc.T(L.Plugin.MinimizeHint));
         }
     }
 
@@ -216,6 +251,11 @@ internal sealed class PhoneShell : IDisposable
         {
             Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
             Plugin.Cfg.Save();
+        }
+
+        if (ImGui.IsMouseHoveringRect(center - new Vector2(radius), center + new Vector2(radius)))
+        {
+            ImGui.SetTooltip(Loc.T(Plugin.Cfg.LockPosition ? L.Plugin.UnlockPositionHint : L.Plugin.LockPositionHint));
         }
     }
 
