@@ -24,20 +24,8 @@ internal static class SceneChrome
         UiAnchors.Report("chrome.back", new Rect(hitMin, hitMax));
         var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
 
-        var tip = new Vector2(content.Min.X + 8f * scale, rowCenterY);
-        var size = 7f * scale;
-        var color = ImGui.GetColorU32(hovered ? ink : ink with { W = 0.82f });
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddLine(new Vector2(tip.X + size, tip.Y - size), tip, color, 2.4f * scale);
-        drawList.AddLine(tip, new Vector2(tip.X + size, tip.Y + size), color, 2.4f * scale);
-
-        if (!hovered)
-        {
-            return;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var center = new Vector2(content.Min.X + 15f * scale, rowCenterY);
+        if (BackButton.Draw("chrome.back", center, 15f * scale, ink, hovered, scale, shadow: true))
         {
             navigation.Back();
         }

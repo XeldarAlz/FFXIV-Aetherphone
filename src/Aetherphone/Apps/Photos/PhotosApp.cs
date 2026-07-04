@@ -174,7 +174,9 @@ internal sealed class PhotosApp : IPhoneApp
             return;
         }
 
-        if (DrawChevron(new Vector2(content.Min.X + 16f * scale, content.Min.Y + 20f * scale), theme.TextStrong, true, scale))
+        var backCenter = new Vector2(content.Min.X + 18f * scale, content.Min.Y + 20f * scale);
+        var backHovered = ImGui.IsMouseHoveringRect(backCenter - new Vector2(18f * scale, 18f * scale), backCenter + new Vector2(18f * scale, 18f * scale));
+        if (BackButton.Draw("photos.viewer.back", backCenter, 15f * scale, new Vector4(1f, 1f, 1f, 1f), backHovered, scale, shadow: true))
         {
             viewerIndex = null;
             return;
