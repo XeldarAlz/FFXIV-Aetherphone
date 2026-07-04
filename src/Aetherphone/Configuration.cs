@@ -113,11 +113,6 @@ internal sealed class Configuration : IPluginConfiguration
 
     public int VelvetAcknowledgedGateVersion { get; set; }
 
-
-    public bool VelvetExplicitOptIn { get; set; }
-
-    public int VelvetTierCeiling { get; set; }
-
     public bool VelvetBlurByDefault { get; set; } = true;
 
     public void NormalizeAethernetBaseUrl()

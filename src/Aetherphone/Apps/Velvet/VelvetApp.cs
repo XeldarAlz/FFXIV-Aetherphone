@@ -58,7 +58,6 @@ internal sealed partial class VelvetApp : IPhoneApp
     private readonly VelvetReportControl report;
     private readonly VelvetDeleteControl delete;
     private readonly RemoteImageCache images;
-    private readonly HashSet<string> revealed = new(StringComparer.Ordinal);
 
     private readonly ViewRouter<VelvetRoute> router;
     private readonly RouterDraw<VelvetRoute> drawView;
@@ -100,6 +99,8 @@ internal sealed partial class VelvetApp : IPhoneApp
     private float sinceTypingSend = TypingSendSeconds;
     private string lastTypingDraft = string.Empty;
 
+    private string commentsPostId = string.Empty;
+    private string commentDraft = string.Empty;
 
 
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, Configuration configuration, PhotoLibrary library, HttpService http)
@@ -198,7 +199,7 @@ internal sealed partial class VelvetApp : IPhoneApp
                 if (post.Draw(area, ui, new PhoneContext(area, theme, navigation)))
                 {
                     router.Pop();
-                    store.RefreshFeed(AllowedTier());
+                    store.RefreshFeed();
                 }
 
                 break;
@@ -282,14 +283,12 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
     }
 
-    private int AllowedTier() => configuration.VelvetExplicitOptIn ? VelvetTiers.Explicit : VelvetTiers.Soft;
-
     private void DrawHub(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
         if (!store.FeedLoaded && !store.LoadingFeed)
         {
-            store.RefreshFeed(AllowedTier());
+            store.RefreshFeed();
         }
 
         if (!store.DiscoverLoaded && !store.LoadingDiscover)
@@ -351,14 +350,7 @@ internal sealed partial class VelvetApp : IPhoneApp
                     DrawPostThumbnail(posts[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
                     if (clicked)
                     {
-                        if (posts[index].Tier == VelvetTiers.Soft && !revealed.Contains(posts[index].Id))
-                        {
-                            revealed.Add(posts[index].Id);
-                        }
-                        else
-                        {
-                            router.Push(VelvetRoute.PostDetail(posts[index].Id));
-                        }
+                        router.Push(VelvetRoute.PostDetail(posts[index].Id));
                     }
                 }
 
@@ -382,15 +374,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
 
         drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
-
-        var conceal = post.Tier == VelvetTiers.Soft && !revealed.Contains(post.Id);
-        if (conceal)
-        {
-            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0.04f, 0.02f, 0.06f, 0.82f)));
-            var center = new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f);
-            VelvetUi.Icon(new Vector2(center.X, center.Y - 8f * scale), FontAwesomeIcon.EyeSlash.ToIconString(), VelvetUi.BodyInk, 1f);
-            Typography.DrawCentered(new Vector2(center.X, center.Y + 12f * scale), Loc.T(L.Velvet.TapToReveal), VelvetUi.MutedInk, 0.72f);
-        }
 
         if (ImGui.IsItemHovered())
         {
@@ -422,6 +405,13 @@ internal sealed partial class VelvetApp : IPhoneApp
         {
             Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetUi.MutedInk);
             return;
+        }
+
+        if (commentsPostId != postId)
+        {
+            commentsPostId = postId;
+            commentDraft = string.Empty;
+            store.OpenComments(postId);
         }
 
         using (AppSurface.Begin(body))
@@ -483,12 +473,116 @@ internal sealed partial class VelvetApp : IPhoneApp
                 ImGui.Dummy(new Vector2(0f, 12f * scale));
             }
 
+            if (!string.IsNullOrWhiteSpace(post.Caption))
+            {
+                ImGui.PushTextWrapPos(0f);
+                using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+                {
+                    ImGui.TextWrapped(post.Caption);
+                }
+
+                ImGui.PopTextWrapPos();
+                ImGui.Dummy(new Vector2(0f, 12f * scale));
+            }
+
             if (post.Tags.Length > 0)
             {
                 DrawTagChips(post.Tags);
             }
 
+            DrawComments(post.Id, width, scale);
+
             ImGui.Dummy(new Vector2(0f, 20f * scale));
+        }
+    }
+
+    private void DrawComments(string postId, float width, float scale)
+    {
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        VelvetUi.SectionLabel(Loc.T(L.Velvet.Comments));
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+
+        if (store.LoadingComments)
+        {
+            Typography.Draw(ImGui.GetCursorScreenPos(), Loc.T(L.Common.Loading), VelvetUi.MutedInk, 0.85f);
+            ImGui.Dummy(new Vector2(0f, 16f * scale));
+        }
+        else
+        {
+            var comments = store.DetailComments;
+            if (comments.Length == 0)
+            {
+                Typography.Draw(ImGui.GetCursorScreenPos(), Loc.T(L.Velvet.NoComments), VelvetUi.MutedInk, 0.85f);
+                ImGui.Dummy(new Vector2(0f, 16f * scale));
+            }
+            else
+            {
+                for (var index = 0; index < comments.Length; index++)
+                {
+                    DrawCommentRow(comments[index], scale);
+                }
+            }
+        }
+
+        DrawCommentComposer(postId, width, scale);
+    }
+
+    private void DrawCommentRow(VelvetCommentDto comment, float scale)
+    {
+        var name = string.IsNullOrEmpty(comment.AuthorDisplayName) ? comment.AuthorHandle : comment.AuthorDisplayName;
+        Typography.Draw(ImGui.GetCursorScreenPos(), name, theme.TextStrong, 0.85f, FontWeight.SemiBold);
+        ImGui.Dummy(new Vector2(0f, 15f * scale));
+
+        ImGui.PushTextWrapPos(0f);
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            ImGui.TextWrapped(comment.Text);
+        }
+
+        ImGui.PopTextWrapPos();
+        ImGui.Dummy(new Vector2(0f, 12f * scale));
+    }
+
+    private void DrawCommentComposer(string postId, float width, float scale)
+    {
+        ImGui.Dummy(new Vector2(0f, 4f * scale));
+        var drawList = ImGui.GetWindowDrawList();
+        var sendRadius = 15f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var pillHeight = ImGui.GetFrameHeight() + 8f * scale;
+        var pillMin = origin;
+        var pillMax = new Vector2(origin.X + width - sendRadius * 2f - 12f * scale, origin.Y + pillHeight);
+        Squircle.Fill(drawList, pillMin, pillMax, pillHeight * 0.5f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
+
+        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale, (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
+
+        var submitted = false;
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        {
+            if (ImGui.InputTextWithHint("##velvetComment", Loc.T(L.Velvet.AddComment), ref commentDraft, 500, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
+                submitted = true;
+            }
+        }
+
+        var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
+        var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, (pillMin.Y + pillMax.Y) * 0.5f);
+        drawList.AddCircleFilled(sendCenter, sendRadius, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
+        VelvetUi.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.8f);
+        if (VelvetUi.HoverClick(sendCenter - new Vector2(sendRadius, sendRadius), sendCenter + new Vector2(sendRadius, sendRadius)) && canSend)
+        {
+            submitted = true;
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, pillMax.Y));
+        ImGui.Dummy(new Vector2(0f, 4f * scale));
+
+        if (submitted && canSend)
+        {
+            store.AddComment(postId, commentDraft, _ => { });
+            commentDraft = string.Empty;
         }
     }
 
@@ -861,7 +955,7 @@ internal sealed partial class VelvetApp : IPhoneApp
                 if (discoverable != me.Discoverable && !editBusy)
                 {
                     editBusy = true;
-                    store.UpdateProfile(new UpdateVelvetProfileRequest(null, null, null, null, null, null, null, null, discoverable), _ => editBusy = false);
+                    store.UpdateProfile(new UpdateVelvetProfileRequest(null, null, null, null, null, null, null, discoverable), _ => editBusy = false);
                 }
             }
 
@@ -964,7 +1058,6 @@ internal sealed partial class VelvetApp : IPhoneApp
             VelvetTags.Parse(editLimits),
             editLookingFor,
             editRelationship,
-            null,
             editDiscoverable);
         store.UpdateProfile(request, ok =>
         {

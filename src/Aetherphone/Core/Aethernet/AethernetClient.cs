@@ -259,9 +259,9 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetConnectionPage, session.Token, token, authStatusSink);
     }
 
-    public Task<VelvetFeedPage?> VelvetFeedAsync(string scope, int tier, string? cursor, CancellationToken token)
+    public Task<VelvetFeedPage?> VelvetFeedAsync(string scope, string? cursor, CancellationToken token)
     {
-        var path = $"/velvet/feed?scope={scope}&tier={tier}";
+        var path = $"/velvet/feed?scope={scope}";
         if (cursor is not null)
         {
             path += $"&cursor={Uri.EscapeDataString(cursor)}";

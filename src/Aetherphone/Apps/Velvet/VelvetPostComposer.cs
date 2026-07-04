@@ -30,7 +30,6 @@ internal sealed class VelvetPostComposer
     private volatile int outcome;
     private bool closeRequested;
 
-    private int tier = VelvetTiers.Soft;
     private int visibility = VelvetVisibility.Public;
     private string caption = string.Empty;
 
@@ -56,7 +55,6 @@ internal sealed class VelvetPostComposer
         pendingPickedPath = null;
         outcome = 0;
         closeRequested = false;
-        tier = VelvetTiers.Soft;
         visibility = VelvetVisibility.Public;
         caption = string.Empty;
         pickerPaths = library.List();
@@ -227,9 +225,18 @@ internal sealed class VelvetPostComposer
         var updatedZoom = Scrubber.Draw(track, zoomNormalized, VelvetUi.Accent, VelvetUi.MutedInk, 1f);
         targetZoom = WallpaperCrop.MinZoom + updatedZoom * (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
 
-        var rowY = track.Max.Y + 26f * scale;
-        rowY = DrawChoiceRow(ui, area, rowY, Loc.T(L.Velvet.CaptionTierPrompt), new[] { VelvetTiers.Soft, VelvetTiers.Explicit }, tier, value => tier = value, VelvetTiers.Label);
-        DrawChoiceRow(ui, area, rowY + 18f * scale, Loc.T(L.Velvet.VisibilityLabel), new[] { VelvetVisibility.Public, VelvetVisibility.Connections }, visibility, value => visibility = value, VelvetVisibility.Label);
+        var captionY = track.Max.Y + 22f * scale;
+        var captionRect = new Rect(new Vector2(area.Min.X + 16f * scale, captionY), new Vector2(area.Max.X - 16f * scale, captionY + 34f * scale));
+        Squircle.Fill(drawList, captionRect.Min, captionRect.Max, 9f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
+        ImGui.SetCursorScreenPos(new Vector2(captionRect.Min.X + 12f * scale, captionRect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(captionRect.Width - 24f * scale);
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (ImRaii.PushColor(ImGuiCol.Text, VelvetUi.TitleInk))
+        {
+            ImGui.InputTextWithHint("##velvetCaption", Loc.T(L.Velvet.CaptionHint), ref caption, 500);
+        }
+
+        DrawChoiceRow(ui, area, captionRect.Max.Y + 20f * scale, Loc.T(L.Velvet.VisibilityLabel), new[] { VelvetVisibility.Public, VelvetVisibility.Connections }, visibility, value => visibility = value, VelvetVisibility.Label);
     }
 
     private static float DrawChoiceRow(VelvetUi ui, Rect area, float y, string label, int[] values, int selected, Action<int> onSelect, Func<int, string> labelFor)
@@ -307,7 +314,7 @@ internal sealed class VelvetPostComposer
         }
 
         var crop = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY);
-        store.CreatePost(sourcePath, crop, caption, tier, Array.Empty<string>(), visibility, ok => outcome = ok ? 1 : 2);
+        store.CreatePost(sourcePath, crop, caption, Array.Empty<string>(), visibility, ok => outcome = ok ? 1 : 2);
     }
 
     private void LaunchFileDialog()

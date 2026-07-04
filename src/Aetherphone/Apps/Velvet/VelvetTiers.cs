@@ -3,18 +3,6 @@ using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Velvet;
 
-internal static class VelvetTiers
-{
-    public const int Soft = 0;
-    public const int Explicit = 1;
-
-    public static string Label(int tier) => tier == Explicit ? Loc.T(L.Velvet.TierExplicit) : Loc.T(L.Velvet.TierSoft);
-
-    public static Vector4 Color(int tier) => tier == Explicit
-        ? new Vector4(0.90f, 0.28f, 0.42f, 1f)
-        : new Vector4(0.62f, 0.44f, 0.86f, 1f);
-}
-
 internal static class VelvetVisibility
 {
     public const int Connections = 0;

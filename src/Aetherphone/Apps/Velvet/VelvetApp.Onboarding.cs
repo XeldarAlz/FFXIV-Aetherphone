@@ -138,7 +138,6 @@ internal sealed partial class VelvetApp
             null,
             editLookingFor,
             null,
-            null,
             editDiscoverable);
         store.UpdateProfile(request, _ => { });
     }

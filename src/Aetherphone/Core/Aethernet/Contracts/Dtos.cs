@@ -98,7 +98,6 @@ internal sealed record VelvetProfileDto(
     string[] Limits,
     int LookingFor,
     int RelationshipStatus,
-    int TierCeiling,
     string DataCenter,
     string World,
     int ConnectionState,
@@ -114,7 +113,6 @@ internal sealed record UpdateVelvetProfileRequest(
     string[]? Limits,
     int? LookingFor,
     int? RelationshipStatus,
-    int? TierCeiling,
     bool? Discoverable);
 
 internal sealed record GateAcceptRequest(int GateVersion);
@@ -128,7 +126,6 @@ internal sealed record VelvetPostDto(
     string MediaId,
     string MediaUrl,
     string Caption,
-    int Tier,
     string[] Tags,
     int Visibility,
     bool Unlocked,
@@ -147,7 +144,6 @@ internal sealed record CreateVelvetPostRequest(
     int Width,
     int Height,
     string Caption,
-    int Tier,
     string[] Tags,
     int Visibility);
 

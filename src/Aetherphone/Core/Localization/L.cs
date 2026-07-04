@@ -566,9 +566,6 @@ internal static class L
         public static readonly LocString PresenceDnd = new("velvet.presenceDnd", "Do not disturb");
         public static readonly LocString PresenceOffline = new("velvet.presenceOffline", "Offline");
 
-        public static readonly LocString TierSoft = new("velvet.tierSoft", "Soft");
-        public static readonly LocString TierExplicit = new("velvet.tierExplicit", "Explicit");
-        public static readonly LocString TapToReveal = new("velvet.tapToReveal", "Tap to reveal");
         public static readonly LocString Locked = new("velvet.locked", "Locked");
         public static readonly LocString Unlock = new("velvet.unlock", "Unlock");
 
@@ -578,14 +575,13 @@ internal static class L
         public static readonly LocString DynamicLabel = new("velvet.dynamicLabel", "Your vibe");
         public static readonly LocString TagsLabel = new("velvet.tagsLabel", "Tags (comma separated)");
         public static readonly LocString LimitsLabel = new("velvet.limitsLabel", "Hard limits");
-        public static readonly LocString TierCeilingLabel = new("velvet.tierCeilingLabel", "Show me up to");
         public static readonly LocString DiscoverableLabel = new("velvet.discoverableLabel", "Appear in Discover");
         public static readonly LocString Save = new("velvet.save", "Save");
         public static readonly LocString Saving = new("velvet.saving", "Saving…");
 
         public static readonly LocString NewPost = new("velvet.newPost", "New Post");
         public static readonly LocString Share = new("velvet.share", "Share");
-        public static readonly LocString CaptionTierPrompt = new("velvet.captionTierPrompt", "How spicy is this?");
+        public static readonly LocString CaptionHint = new("velvet.captionHint", "Write a caption…");
         public static readonly LocString VisibilityLabel = new("velvet.visibilityLabel", "Who can see it");
         public static readonly LocString VisibilityConnections = new("velvet.visibilityConnections", "Connections");
         public static readonly LocString VisibilityPublic = new("velvet.visibilityPublic", "Everyone in Velvet");
@@ -595,6 +591,10 @@ internal static class L
         public static readonly LocString Blocked = new("velvet.blocked", "Blocked");
 
         public static readonly LocPlural Likes = new("velvet.likes", "{0} like", "{0} likes");
+
+        public static readonly LocString Comments = new("velvet.comments", "Comments");
+        public static readonly LocString NoComments = new("velvet.noComments", "No comments yet. Say something.");
+        public static readonly LocString AddComment = new("velvet.addComment", "Add a comment…");
 
         public static readonly LocString ReportReasonHint =
             new("velvet.reportReasonHint", "Why are you reporting this? (optional)");
