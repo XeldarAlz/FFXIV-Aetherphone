@@ -975,6 +975,8 @@
   "chirper.postTitle": "Post",
   "chirper.noComments": "No replies yet. Start the conversation",
   "chirper.addComment": "Add a reply…",
+  "chirper.repliesTitle": "Replies",
+  "chirper.chirpsTitle": "Chirps",
   "aethergram.reportReasonHint": "Why are you reporting this? (optional)",
   "aethergram.reportSubmit": "Report",
   "aethergram.reportSent": "Report submitted. Thank you.",

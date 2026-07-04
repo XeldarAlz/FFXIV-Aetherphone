@@ -952,6 +952,8 @@
   "chirper.postTitle": "Beitrag",
   "chirper.noComments": "Noch keine Antworten. Starte die Unterhaltung",
   "chirper.addComment": "Antwort hinzufügen…",
+  "chirper.repliesTitle": "Antworten",
+  "chirper.chirpsTitle": "Chirps",
   "aethergram.reportReasonHint": "Warum meldest du das? (optional)",
   "aethergram.reportSubmit": "Melden",
   "aethergram.reportSent": "Meldung gesendet. Danke.",

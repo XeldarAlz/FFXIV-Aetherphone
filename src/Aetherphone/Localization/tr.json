@@ -952,6 +952,8 @@
   "chirper.postTitle": "Gönderi",
   "chirper.noComments": "Henüz yanıt yok. Sohbeti başlat",
   "chirper.addComment": "Yanıt ekle…",
+  "chirper.repliesTitle": "Yanıtlar",
+  "chirper.chirpsTitle": "Chirps",
   "aethergram.reportReasonHint": "Bunu neden bildiriyorsun? (isteğe bağlı)",
   "aethergram.reportSubmit": "Bildir",
   "aethergram.reportSent": "Bildirim gönderildi. Teşekkürler.",

@@ -579,6 +579,8 @@ internal static class L
         public static readonly LocString PostTitle = new("chirper.postTitle", "Post");
         public static readonly LocString NoComments = new("chirper.noComments", "No replies yet. Start the conversation");
         public static readonly LocString AddComment = new("chirper.addComment", "Add a reply…");
+        public static readonly LocString RepliesTitle = new("chirper.repliesTitle", "Replies");
+        public static readonly LocString ChirpsTitle = new("chirper.chirpsTitle", "Chirps");
     }
 
     internal static class Aethergram

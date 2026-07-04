@@ -952,6 +952,8 @@
   "chirper.postTitle": "Publication",
   "chirper.noComments": "Pas encore de réponses. Lancez la conversation",
   "chirper.addComment": "Ajouter une réponse…",
+  "chirper.repliesTitle": "Réponses",
+  "chirper.chirpsTitle": "Chirps",
   "aethergram.reportReasonHint": "Pourquoi signalez-vous ceci ? (facultatif)",
   "aethergram.reportSubmit": "Signaler",
   "aethergram.reportSent": "Signalement envoyé. Merci.",
