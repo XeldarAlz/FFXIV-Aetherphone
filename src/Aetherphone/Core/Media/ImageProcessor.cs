@@ -47,4 +47,22 @@ internal static class ImageProcessor
         image.SaveAsJpeg(stream, new JpegEncoder { Quality = JpegQuality });
         return new BakedImage(stream.ToArray(), target, target);
     }
+
+    public static BakedImage BakeJpeg(string sourcePath, int maxDimension)
+    {
+        using var image = Image.Load(sourcePath);
+        var width = image.Width;
+        var height = image.Height;
+        if (width > maxDimension || height > maxDimension)
+        {
+            var factor = MathF.Min((float)maxDimension / width, (float)maxDimension / height);
+            width = Math.Max(1, (int)MathF.Round(width * factor));
+            height = Math.Max(1, (int)MathF.Round(height * factor));
+            image.Mutate(context => context.Resize(width, height));
+        }
+
+        using var stream = new MemoryStream();
+        image.SaveAsJpeg(stream, new JpegEncoder { Quality = JpegQuality });
+        return new BakedImage(stream.ToArray(), width, height);
+    }
 }

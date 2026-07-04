@@ -1,10 +1,13 @@
+using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Wallpapers;
+using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -16,9 +19,26 @@ internal sealed class VelvetStore : IDisposable
 
     private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
 
+    private const int DmImageMaxDimension = 1280;
+
+    private static readonly TimeSpan InboxPollInterval = TimeSpan.FromSeconds(15);
+
+    private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
+
     private readonly AethernetSession session;
     private readonly AethernetClient client;
+    private readonly NotificationService notifications;
+    private readonly Configuration configuration;
     private readonly CancellationTokenSource cancellation = new();
+
+    private readonly Dictionary<string, long> inboxLastAt = new();
+    private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
+    private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
+    private volatile bool inboxPolling;
+    private bool inboxPrimed;
+    private DateTime lastInboxPollUtc = DateTime.MinValue;
+    private volatile string? viewingThreadUserId;
+    private DateTime lastViewingUtc = DateTime.MinValue;
 
     private DateTime lastMeAttemptUtc = DateTime.MinValue;
 
@@ -63,10 +83,84 @@ internal sealed class VelvetStore : IDisposable
     private volatile bool feedLoaded;
     private volatile bool posting;
 
-    public VelvetStore(AethernetSession session, AethernetClient client)
+    public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications, Configuration configuration)
     {
         this.session = session;
         this.client = client;
+        this.notifications = notifications;
+        this.configuration = configuration;
+        Plugin.Framework.Update += OnFrameworkTick;
+    }
+
+    public void NoteThreadViewed(string userId)
+    {
+        viewingThreadUserId = userId;
+        lastViewingUtc = DateTime.UtcNow;
+    }
+
+    private void OnFrameworkTick(IFramework framework)
+    {
+        if (!session.IsSignedIn || !configuration.VelvetOnboarded)
+        {
+            inboxPrimed = false;
+            return;
+        }
+
+        var now = DateTime.UtcNow;
+        if (now - lastInboxPollUtc < InboxPollInterval)
+        {
+            return;
+        }
+
+        lastInboxPollUtc = now;
+        PollInbox();
+    }
+
+    private void PollInbox()
+    {
+        if (inboxPolling)
+        {
+            return;
+        }
+
+        inboxPolling = true;
+        RunGuarded("inbox poll",
+            async token =>
+            {
+                var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
+                if (page is not null)
+                {
+                    threads = page.Items;
+                    RaiseInboxNotifications(page.Items);
+                }
+            },
+            () => inboxPolling = false);
+    }
+
+    private void RaiseInboxNotifications(VelvetThreadDto[] items)
+    {
+        var primed = inboxPrimed;
+        for (var index = 0; index < items.Length; index++)
+        {
+            var thread = items[index];
+            var previous = inboxLastAt.GetValueOrDefault(thread.OtherUserId, 0L);
+            inboxLastAt[thread.OtherUserId] = thread.LastMessageAtUnix;
+
+            if (!primed || thread.LastMessageAtUnix <= previous || thread.UnreadCount <= 0)
+            {
+                continue;
+            }
+
+            if (viewingThreadUserId == thread.OtherUserId && DateTime.UtcNow - lastViewingUtc < ViewingGrace)
+            {
+                continue;
+            }
+
+            var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
+            notifications.Notify(new PhoneNotification("velvet", name, thread.LastMessagePreview, DateTime.Now, VelvetUi.Accent, thread.OtherUserId));
+        }
+
+        inboxPrimed = true;
     }
 
     public bool IsSignedIn => session.IsSignedIn;
@@ -254,6 +348,44 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
+    public void UpdateIdentity(string displayName, string handle, Action<bool> onComplete)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                var request = new UpdateProfileRequest(
+                    displayName.Length > 0 ? displayName : null,
+                    handle.Length > 0 ? handle : null,
+                    null);
+                var updated = await client.UpdateProfileAsync(request, token).ConfigureAwait(false);
+                if (updated is not null)
+                {
+                    var current = me;
+                    if (current is not null)
+                    {
+                        me = current with { DisplayName = updated.DisplayName, Handle = updated.Handle };
+                    }
+
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Velvet] identity update failed: {exception.Message}");
+            }
+            finally
+            {
+                onComplete(succeeded);
+            }
+        });
+    }
+
     public void UpdateProfile(UpdateVelvetProfileRequest request, Action<bool> onComplete)
     {
         var token = cancellation.Token;
@@ -334,7 +466,8 @@ internal sealed class VelvetStore : IDisposable
             return;
         }
 
-        RunGuarded("heartbeat", async token => await client.VelvetHeartbeatAsync(token).ConfigureAwait(false));
+        var offset = VelvetTimeZone.EffectiveOffsetMinutes(configuration);
+        RunGuarded("heartbeat", async token => await client.VelvetHeartbeatAsync(offset, token).ConfigureAwait(false));
     }
 
     public void RefreshRequests()
@@ -576,6 +709,7 @@ internal sealed class VelvetStore : IDisposable
                         messages = Append(messages, sent);
                     }
 
+                    threadsLoaded = false;
                     succeeded = true;
                 }
             }
@@ -592,6 +726,85 @@ internal sealed class VelvetStore : IDisposable
                 onComplete(succeeded);
             }
         });
+    }
+
+    public void SendImageMessage(string id, string sourcePath, string caption, Action<bool> onComplete)
+    {
+        if (sending)
+        {
+            return;
+        }
+
+        sending = true;
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
+                var upload = await client.UploadUrlAsync("image/jpeg", "velvet-dm", token).ConfigureAwait(false);
+                if (upload is null)
+                {
+                    return;
+                }
+
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                if (!uploaded)
+                {
+                    return;
+                }
+
+                var sent = await client.SendVelvetMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height).ConfigureAwait(false);
+                if (sent is not null)
+                {
+                    if (threadId == id)
+                    {
+                        messages = Append(messages, sent);
+                    }
+
+                    threadsLoaded = false;
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Velvet] send image failed: {exception.Message}");
+            }
+            finally
+            {
+                sending = false;
+                onComplete(succeeded);
+            }
+        });
+    }
+
+    public string? DmMediaUrl(string messageId)
+    {
+        if (dmMediaUrls.TryGetValue(messageId, out var url))
+        {
+            return url;
+        }
+
+        if (!dmMediaLoading.TryAdd(messageId, 0))
+        {
+            return null;
+        }
+
+        RunGuarded("dm media url",
+            async token =>
+            {
+                var result = await client.VelvetDmMediaUrlAsync(messageId, token).ConfigureAwait(false);
+                if (result is not null)
+                {
+                    dmMediaUrls[messageId] = result.Url;
+                }
+            },
+            () => dmMediaLoading.TryRemove(messageId, out _));
+        return null;
     }
 
     public void CreatePost(string sourcePath, WallpaperCrop crop, string caption, string[] tags, int visibility, Action<bool> onComplete)
@@ -927,6 +1140,7 @@ internal sealed class VelvetStore : IDisposable
 
     public void Dispose()
     {
+        Plugin.Framework.Update -= OnFrameworkTick;
         cancellation.Cancel();
         cancellation.Dispose();
     }

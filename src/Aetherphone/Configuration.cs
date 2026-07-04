@@ -115,6 +115,10 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool VelvetBlurByDefault { get; set; } = true;
 
+    public bool VelvetTimeZoneManual { get; set; }
+
+    public int VelvetManualUtcOffsetMinutes { get; set; }
+
     public void NormalizeAethernetBaseUrl()
     {
         if (!ShouldResetBaseUrl(AethernetBaseUrl))

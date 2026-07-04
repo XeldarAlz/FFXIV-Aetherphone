@@ -7,6 +7,12 @@ internal enum VelvetTab
     Me,
 }
 
+internal enum VelvetHubView
+{
+    Timeline,
+    Discover,
+}
+
 internal enum VelvetScreen
 {
     Root,
@@ -17,6 +23,8 @@ internal enum VelvetScreen
     Avatar,
     Compose,
     PostDetail,
+    ChatImage,
+    ImageView,
 }
 
 internal readonly record struct VelvetRoute(VelvetScreen Screen, string? Id = null)
@@ -34,6 +42,10 @@ internal readonly record struct VelvetRoute(VelvetScreen Screen, string? Id = nu
     public static VelvetRoute Profile(string userId) => new(VelvetScreen.Profile, userId);
 
     public static VelvetRoute Thread(string userId) => new(VelvetScreen.Thread, userId);
+
+    public static VelvetRoute ChatImage(string userId) => new(VelvetScreen.ChatImage, userId);
+
+    public static VelvetRoute ImageView(string messageId) => new(VelvetScreen.ImageView, messageId);
 
     public static VelvetRoute PostDetail(string postId) => new(VelvetScreen.PostDetail, postId);
 }
