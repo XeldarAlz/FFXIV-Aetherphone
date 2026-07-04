@@ -130,6 +130,11 @@ internal sealed partial class VelvetApp : IPhoneApp
     private string commentsPostId = string.Empty;
     private string commentDraft = string.Empty;
 
+    private string? deleteCommentId;
+    private string deleteCommentStatus = string.Empty;
+    private volatile bool deleteCommentSubmitting;
+    private Spring confirmDeleteCommentSpring;
+
 
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, Configuration configuration, PhotoLibrary library, HttpService http, NotificationService notifications, VelvetLauncher launcher)
     {
@@ -181,6 +186,9 @@ internal sealed partial class VelvetApp : IPhoneApp
         discoverApplied = string.Empty;
         report.Reset();
         delete.Reset();
+        deleteCommentId = null;
+        deleteCommentStatus = string.Empty;
+        confirmDeleteCommentSpring.SnapTo(0f);
         store.ClearDiscover();
     }
 
@@ -475,7 +483,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         var liked = post.MyReaction >= 0;
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var heartCenter = new Vector2(innerX + 11f * scale, actionCenterY);
-        if (ui.IconButton(heartCenter, 12f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? theme.Danger : VelvetUi.BodyInk, VelvetUi.Transparent, 1f))
+        if (ui.IconButton(heartCenter, 12f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? theme.Danger : VelvetUi.BodyInk, VelvetUi.Transparent, 1f, Loc.T(L.Velvet.Like)))
         {
             store.ToggleReaction(post, 0);
         }
@@ -493,7 +501,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
 
         var commentCenter = new Vector2(cursorX + 11f * scale, actionCenterY);
-        if (ui.IconButton(commentCenter, 12f * scale, FontAwesomeIcon.Comment.ToIconString(), VelvetUi.BodyInk, VelvetUi.Transparent, 0.95f))
+        if (ui.IconButton(commentCenter, 12f * scale, FontAwesomeIcon.Comment.ToIconString(), VelvetUi.BodyInk, VelvetUi.Transparent, 0.95f, Loc.T(L.Velvet.Comment)))
         {
             router.Push(VelvetRoute.PostDetail(post.Id));
         }
@@ -735,6 +743,8 @@ internal sealed partial class VelvetApp : IPhoneApp
         {
             commentsPostId = postId;
             commentDraft = string.Empty;
+            deleteCommentId = null;
+            deleteCommentStatus = string.Empty;
             store.OpenComments(postId);
         }
 
@@ -779,7 +789,7 @@ internal sealed partial class VelvetApp : IPhoneApp
             var actionsY = imageRect.Max.Y + 22f * scale;
             var liked = post.MyReaction >= 0;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
-            if (ui.IconButton(heartCenter, 13f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? theme.Danger : VelvetUi.BodyInk, new Vector4(0f, 0f, 0f, 0f), 1.1f))
+            if (ui.IconButton(heartCenter, 13f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? theme.Danger : VelvetUi.BodyInk, new Vector4(0f, 0f, 0f, 0f), 1.1f, Loc.T(L.Velvet.Like)))
             {
                 store.ToggleReaction(post, 0);
             }
@@ -798,6 +808,11 @@ internal sealed partial class VelvetApp : IPhoneApp
 
             var commentCenter = new Vector2(actionCursorX + 12f * scale, actionsY);
             VelvetUi.Icon(commentCenter, FontAwesomeIcon.Comment.ToIconString(), VelvetUi.BodyInk, 1.02f);
+            if (ImGui.IsMouseHoveringRect(commentCenter - new Vector2(12f * scale, 12f * scale), commentCenter + new Vector2(12f * scale, 12f * scale)))
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                ui.DrawActionTooltip(commentCenter, 12f * scale, Loc.T(L.Velvet.Comment));
+            }
             if (post.CommentCount > 0)
             {
                 Typography.Draw(new Vector2(commentCenter.X + 16f * scale, actionsY - 7f * scale), post.CommentCount.ToString(Loc.Culture), VelvetUi.BodyInk, 0.85f, FontWeight.Medium);
@@ -809,12 +824,12 @@ internal sealed partial class VelvetApp : IPhoneApp
             if (mine)
             {
                 var deleteCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
-                deleteShown = delete.Toggle(ui, deleteCenter, 14f * scale, post.Id);
+                deleteShown = delete.Toggle(ui, deleteCenter, 14f * scale, post.Id, Loc.T(L.Velvet.DeleteConfirm));
             }
             else
             {
                 var reportCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
-                reportShown = report.Toggle(ui, reportCenter, 14f * scale, "post", post.Id);
+                reportShown = report.Toggle(ui, reportCenter, 14f * scale, "post", post.Id, Loc.T(L.Velvet.ReportSubmit));
             }
 
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
@@ -850,6 +865,48 @@ internal sealed partial class VelvetApp : IPhoneApp
             DrawComments(post.Id, width, scale);
 
             ImGui.Dummy(new Vector2(0f, 20f * scale));
+        }
+
+        var showConfirm = deleteCommentId is not null;
+        var target = showConfirm ? 1f : 0f;
+        confirmDeleteCommentSpring.Step(target, 0.18f, ImGui.GetIO().DeltaTime);
+        var opacity = confirmDeleteCommentSpring.Value;
+
+        if (showConfirm || !confirmDeleteCommentSpring.IsResting(target, 0.001f, 0.005f))
+        {
+            var screen = SceneChrome.ScreenFrom(area, theme, scale);
+            ImGui.SetCursorScreenPos(area.Min);
+            using (ImRaii.Child("##velvetDeleteCommentOverlay", area.Size, false,
+                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
+            {
+                ConfirmDialog.Draw(
+                    screen,
+                    theme,
+                    Loc.T(L.Velvet.DeleteCommentConfirmMessage),
+                    Loc.T(L.Velvet.DeleteConfirm),
+                    Loc.T(L.Velvet.DeleteCancel),
+                    Loc.T(L.Velvet.Saving),
+                    deleteCommentSubmitting,
+                    deleteCommentStatus.Length > 0 ? deleteCommentStatus : null,
+                    out var canceled,
+                    out var confirmed,
+                    opacity);
+
+                if (canceled)
+                {
+                    deleteCommentId = null;
+                }
+
+                if (confirmed)
+                {
+                    SubmitDeleteComment(commentsPostId, deleteCommentId!);
+                }
+            }
+        }
+
+        if (!showConfirm && confirmDeleteCommentSpring.IsResting(0f, 0.001f, 0.005f))
+        {
+            confirmDeleteCommentSpring.SnapTo(0f);
         }
     }
 
@@ -929,6 +986,18 @@ internal sealed partial class VelvetApp : IPhoneApp
             OpenProfile(comment.AuthorId);
         }
 
+        var mine = store.Me is { } me && me.UserId == comment.AuthorId;
+        if (mine)
+        {
+            var trashCenter = new Vector2(origin.X + width - 8f * scale, origin.Y + 8f * scale);
+            var trashHitRadius = 10f * scale;
+            if (ui.IconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), VelvetUi.MutedInk, VelvetUi.Transparent, 0.7f))
+            {
+                deleteCommentId = comment.Id;
+                deleteCommentStatus = string.Empty;
+            }
+        }
+
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight + 14f * scale));
     }
@@ -961,9 +1030,15 @@ internal sealed partial class VelvetApp : IPhoneApp
         var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, (pillMin.Y + pillMax.Y) * 0.5f);
         drawList.AddCircleFilled(sendCenter, sendRadius, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
         VelvetUi.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.8f);
-        if (VelvetUi.HoverClick(sendCenter - new Vector2(sendRadius, sendRadius), sendCenter + new Vector2(sendRadius, sendRadius)) && canSend)
+        var sendHovered = ImGui.IsMouseHoveringRect(sendCenter - new Vector2(sendRadius, sendRadius), sendCenter + new Vector2(sendRadius, sendRadius));
+        if (sendHovered)
         {
-            submitted = true;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            ui.DrawActionTooltip(sendCenter, sendRadius, Loc.T(L.Velvet.Send));
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && canSend)
+            {
+                submitted = true;
+            }
         }
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X, pillMax.Y));
@@ -974,6 +1049,29 @@ internal sealed partial class VelvetApp : IPhoneApp
             store.AddComment(postId, commentDraft, _ => { });
             commentDraft = string.Empty;
         }
+    }
+
+    private void SubmitDeleteComment(string postId, string commentId)
+    {
+        if (deleteCommentSubmitting || deleteCommentId != commentId)
+        {
+            return;
+        }
+
+        deleteCommentSubmitting = true;
+        store.DeleteComment(postId, commentId, ok =>
+        {
+            deleteCommentSubmitting = false;
+            if (ok)
+            {
+                deleteCommentId = null;
+                deleteCommentStatus = string.Empty;
+            }
+            else
+            {
+                deleteCommentStatus = Loc.T(L.Velvet.DeleteCommentFailed);
+            }
+        });
     }
 
     private void DrawComposeFab(Rect area)
@@ -996,6 +1094,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            ui.DrawActionTooltip(center, radius, Loc.T(L.Velvet.NewPost));
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
                 post.Open();

@@ -29,11 +29,11 @@ internal sealed class VelvetDeleteControl
         status = string.Empty;
     }
 
-    public bool Toggle(VelvetUi ui, Vector2 center, float radius, string postId)
+    public bool Toggle(VelvetUi ui, Vector2 center, float radius, string postId, string tooltip = "")
     {
         var active = targetId == postId;
         var background = Palette.WithAlpha(ui.Theme.Danger, active ? 0.32f : 0.16f);
-        if (ui.IconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), ui.Theme.Danger, background, 0.9f))
+        if (ui.IconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), ui.Theme.Danger, background, 0.9f, tooltip))
         {
             if (active)
             {

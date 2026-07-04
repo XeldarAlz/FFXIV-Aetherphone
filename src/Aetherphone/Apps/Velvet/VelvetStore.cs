@@ -1003,6 +1003,47 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
+    public void DeleteComment(string postId, string commentId)
+    {
+        if (detailPostId == postId)
+        {
+            detailComments = RemoveComment(detailComments, commentId);
+        }
+
+        RunGuarded("comment delete", async token => await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false));
+    }
+
+    public void DeleteComment(string postId, string commentId, Action<bool> onComplete)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                succeeded = await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false);
+                if (succeeded)
+                {
+                    if (detailPostId == postId)
+                    {
+                        detailComments = RemoveComment(detailComments, commentId);
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Velvet] comment delete failed: {exception.Message}");
+            }
+            finally
+            {
+                onComplete(succeeded);
+            }
+        });
+    }
+
     public void ClearDiscover() => discoverResults = Array.Empty<VelvetProfileDto>();
 
     public void InvalidateLists()
@@ -1074,6 +1115,29 @@ internal sealed class VelvetStore : IDisposable
     private void RemovePost(string postId)
     {
         feed = RemoveById(feed, postId);
+    }
+
+    private static VelvetCommentDto[] RemoveComment(VelvetCommentDto[] source, string commentId)
+    {
+        var index = -1;
+        for (var i = 0; i < source.Length; i++)
+        {
+            if (source[i].Id == commentId)
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            return source;
+        }
+
+        var result = new VelvetCommentDto[source.Length - 1];
+        Array.Copy(source, 0, result, 0, index);
+        Array.Copy(source, index + 1, result, index, source.Length - index - 1);
+        return result;
     }
 
     private static VelvetPostDto[] RemoveById(VelvetPostDto[] source, string postId)

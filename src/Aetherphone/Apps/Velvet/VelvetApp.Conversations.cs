@@ -63,7 +63,7 @@ internal sealed partial class VelvetApp
 
         var flagRadius = 16f * scale;
         var flagCenter = new Vector2(origin.X + width - flagRadius, origin.Y + flagRadius + 2f * scale);
-        var reportShown = report.Toggle(ui, flagCenter, flagRadius, "velvet_profile", user.UserId);
+        var reportShown = report.Toggle(ui, flagCenter, flagRadius, "velvet_profile", user.UserId, Loc.T(L.Velvet.ReportSubmit));
 
         var avatarRadius = 66f * scale;
         var avatarCenter = new Vector2(centerX, origin.Y + 18f * scale + avatarRadius);
@@ -856,9 +856,15 @@ internal sealed partial class VelvetApp
         var sendCenter = new Vector2(area.Max.X - sendWidth * 0.5f - 8f * scale, area.Center.Y);
         drawList.AddCircleFilled(sendCenter, 16f * scale, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
         VelvetUi.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
-        if (VelvetUi.HoverClick(sendCenter - new Vector2(16f * scale, 16f * scale), sendCenter + new Vector2(16f * scale, 16f * scale)) && canSend)
+        var sendHitRadius = 16f * scale;
+        if (ImGui.IsMouseHoveringRect(sendCenter - new Vector2(sendHitRadius, sendHitRadius), sendCenter + new Vector2(sendHitRadius, sendHitRadius)))
         {
-            submitted = true;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            ui.DrawActionTooltip(sendCenter, sendHitRadius, Loc.T(L.Velvet.Send));
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && canSend)
+            {
+                submitted = true;
+            }
         }
 
         if (submitted && canSend)

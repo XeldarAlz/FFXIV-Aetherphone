@@ -13,7 +13,7 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed class VelvetUi
 {
-    public static readonly Vector4 Accent = new(0.72f, 0.26f, 0.56f, 1f);
+    public static readonly Vector4 Accent = new(0.84f, 0.16f, 0.40f, 1f);
     public static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
     public static readonly Vector4 TitleInk = new(0.99f, 0.95f, 0.97f, 1f);
     public static readonly Vector4 BodyInk = new(0.93f, 0.85f, 0.90f, 0.96f);
@@ -97,7 +97,7 @@ internal sealed class VelvetUi
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale)
+    public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale, string tooltip = "")
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius), center + new Vector2(hitRadius, hitRadius));
@@ -111,9 +111,46 @@ internal sealed class VelvetUi
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (tooltip.Length > 0)
+            {
+                DrawActionTooltip(center, hitRadius, tooltip);
+            }
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    public void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetForegroundDrawList();
+        var textSize = Typography.Measure(text, 0.78f, FontWeight.Medium);
+        var padX = 9f * scale;
+        var padY = 5f * scale;
+        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
+        var gap = 9f * scale;
+
+        var windowMin = ImGui.GetWindowPos();
+        var windowMax = windowMin + ImGui.GetWindowSize();
+        var minBoundX = windowMin.X + 4f * scale;
+        var maxBoundX = windowMax.X - bubbleSize.X - 4f * scale;
+        if (minBoundX > maxBoundX)
+        {
+            return;
+        }
+
+        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, minBoundX, maxBoundX);
+        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
+        if (minY < windowMin.Y + 4f * scale)
+        {
+            minY = iconCenter.Y + hitRadius + gap;
+        }
+
+        var min = new Vector2(minX, minY);
+        var max = min + bubbleSize;
+        var bubble = Palette.WithAlpha(Palette.Mix(Theme.AppBackground, Theme.TextStrong, 0.9f), 0.97f);
+        Squircle.Fill(drawList, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
+        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, Theme.AppBackground, 0.78f, FontWeight.Medium);
     }
 
     public bool Chip(Rect rect, string label, bool active)
