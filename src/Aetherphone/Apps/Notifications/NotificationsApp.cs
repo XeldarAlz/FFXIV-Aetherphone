@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface.Utility;
@@ -21,40 +22,36 @@ internal sealed class NotificationsApp : IPhoneApp
     public int BadgeCount => notifications.UnreadCount;
 
     private readonly NotificationService notifications;
+    private readonly MessageLauncher messageLauncher;
+    private readonly VelvetLauncher velvetLauncher;
 
-    public NotificationsApp(NotificationService notifications)
+    private NotificationCenter? center;
+
+    public NotificationsApp(NotificationService notifications, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher)
     {
         this.notifications = notifications;
+        this.messageLauncher = messageLauncher;
+        this.velvetLauncher = velvetLauncher;
     }
 
-    public void OnOpened() => notifications.MarkAllRead();
-
-    public void OnClosed()
+    public void OnOpened()
     {
+        notifications.MarkAllRead();
+        center?.Reset();
     }
+
+    public void OnClosed() => center?.Reset();
 
     public void Draw(in PhoneContext context)
     {
         AppHeader.Draw(context, DisplayName);
 
+        center ??= new NotificationCenter(notifications, new NotificationRouter(context.Navigation, messageLauncher, velvetLauncher));
+
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-
-        var recent = notifications.Recent;
-        if (recent.Count == 0)
-        {
-            Typography.DrawCentered(body.Center, Loc.T(L.Notifications.Empty), context.Theme.TextMuted);
-            return;
-        }
-
-        using (AppSurface.Begin(body))
-        {
-            for (var index = recent.Count - 1; index >= 0; index--)
-            {
-                NotificationCard.Draw(recent[index], context.Theme);
-            }
-        }
+        center.Draw(context, body);
     }
 
     public void Dispose()

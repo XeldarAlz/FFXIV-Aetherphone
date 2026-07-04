@@ -18,9 +18,9 @@ internal sealed class NotificationBanner : IDisposable
         Exit,
     }
 
-    private const float EnterSmoothTime = 0.30f;
-    private const float HoldSeconds = 4.2f;
-    private const float ExitSmoothTime = 0.20f;
+    private const float EnterSmoothTime = 0.18f;
+    private const float HoldSeconds = 1.3f;
+    private const float ExitSmoothTime = 0.12f;
 
     private const float SideMargin = 8f;
     private const float BannerHeight = 64f;
@@ -35,6 +35,7 @@ internal sealed class NotificationBanner : IDisposable
 
     private readonly NotificationService notifications;
     private readonly Func<string?> currentAppId;
+    private readonly NotificationRouter router;
     private readonly Queue<PhoneNotification> pending = new();
     private Spring slide;
 
@@ -42,11 +43,23 @@ internal sealed class NotificationBanner : IDisposable
     private Stage stage = Stage.Idle;
     private float holdElapsed;
 
-    public NotificationBanner(NotificationService notifications, Func<string?> currentAppId)
+    public NotificationBanner(NotificationService notifications, Func<string?> currentAppId, NotificationRouter router)
     {
         this.notifications = notifications;
         this.currentAppId = currentAppId;
+        this.router = router;
         notifications.Presented += OnPresented;
+    }
+
+    public bool CapturesPointer(Rect screen)
+    {
+        if (stage is Stage.Idle or Stage.Exit || active is null)
+        {
+            return false;
+        }
+
+        var bounds = CurrentBounds(screen, ImGuiHelpers.GlobalScale, out _);
+        return ImGui.IsMouseHoveringRect(bounds.Min, bounds.Max);
     }
 
     public void Advance(float deltaSeconds)
@@ -99,12 +112,34 @@ internal sealed class NotificationBanner : IDisposable
         }
 
         var scale = ImGuiHelpers.GlobalScale;
+        var bounds = CurrentBounds(screen, scale, out var opacity);
+        var hovered = stage != Stage.Exit && ImGui.IsMouseHoveringRect(bounds.Min, bounds.Max);
+
+        var dl = ImGui.GetForegroundDrawList();
+        dl.PushClipRect(screen.Min, screen.Max, true);
+        DrawCard(dl, notification, theme, bounds.Min, bounds.Max, scale, opacity, hovered);
+        dl.PopClipRect();
+
+        if (!hovered)
+        {
+            return;
+        }
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            router.Open(notification);
+            BeginExit();
+        }
+    }
+
+    private Rect CurrentBounds(Rect screen, float scale, out float opacity)
+    {
         var height = BannerHeight * scale;
         var restTop = screen.Min.Y + RestTopOffset * scale;
         var hiddenTop = screen.Min.Y - height - HiddenGap * scale;
 
         float top;
-        float opacity;
         if (stage == Stage.Enter)
         {
             top = Lerp(hiddenTop, restTop, slide.Value);
@@ -123,22 +158,19 @@ internal sealed class NotificationBanner : IDisposable
 
         var min = new Vector2(screen.Min.X + SideMargin * scale, top);
         var max = new Vector2(screen.Max.X - SideMargin * scale, top + height);
-
-        var dl = ImGui.GetForegroundDrawList();
-        dl.PushClipRect(screen.Min, screen.Max, true);
-        DrawCard(dl, notification, theme, min, max, scale, opacity);
-        dl.PopClipRect();
+        return new Rect(min, max);
     }
 
-    private static void DrawCard(ImDrawListPtr dl, PhoneNotification notification, PhoneTheme theme, Vector2 min, Vector2 max, float scale, float opacity)
+    private static void DrawCard(ImDrawListPtr dl, PhoneNotification notification, PhoneTheme theme, Vector2 min, Vector2 max, float scale, float opacity, bool hovered)
     {
         var rounding = CornerRadius * scale;
 
         Elevation.Floating(dl, min, max, rounding, scale, opacity);
 
-        var cardColor = Palette.Mix(theme.GroupedCard, theme.TextStrong, 0.06f);
+        var cardColor = Palette.Mix(theme.GroupedCard, theme.TextStrong, hovered ? 0.11f : 0.06f);
         Squircle.Fill(dl, min, max, rounding, Color(Palette.WithAlpha(cardColor, 0.99f), opacity));
-        Squircle.Stroke(dl, min, max, rounding, Color(Palette.WithAlpha(theme.TextStrong, 0.10f), opacity), scale);
+        var strokeColor = hovered ? Palette.WithAlpha(notification.Accent, 0.55f) : Palette.WithAlpha(theme.TextStrong, 0.10f);
+        Squircle.Stroke(dl, min, max, rounding, Color(strokeColor, opacity), (hovered ? 1.5f : 1f) * scale);
 
         var iconExtent = IconSize * scale * 0.5f;
         var iconCenter = new Vector2(min.X + Padding * scale + iconExtent, (min.Y + max.Y) * 0.5f);
