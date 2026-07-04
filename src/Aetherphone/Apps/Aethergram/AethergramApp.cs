@@ -53,7 +53,7 @@ internal sealed class AethergramApp : IPhoneApp
 
     public string Glyph => "Ag";
 
-    public Vector4 Accent => new(0.78f, 0.23f, 0.58f, 1f);
+    public Vector4 Accent => new(0.92f, 0.30f, 0.38f, 1f);
 
     public int BadgeCount => 0;
 
@@ -121,6 +121,19 @@ internal sealed class AethergramApp : IPhoneApp
     private string deleteStatus = string.Empty;
     private volatile bool deleteSubmitting;
 
+    private string? deleteCommentPostId;
+    private string? deleteCommentId;
+    private string deleteCommentStatus = string.Empty;
+    private volatile bool deleteCommentSubmitting;
+
+    private Spring confirmSpring;
+    private bool confirmWasPostDelete;
+
+    private bool deferredTooltipActive;
+    private Vector2 deferredTooltipCenter;
+    private float deferredTooltipRadius;
+    private string deferredTooltipText = string.Empty;
+
     public AethergramApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, HttpService http, PhotoLibrary library)
     {
         store = new AethergramStore(session, client);
@@ -162,6 +175,10 @@ internal sealed class AethergramApp : IPhoneApp
         reportStatus = string.Empty;
         deleteTargetId = null;
         deleteStatus = string.Empty;
+        deleteCommentPostId = null;
+        deleteCommentId = null;
+        deleteCommentStatus = string.Empty;
+        confirmSpring.SnapTo(0f);
         store.ClearDiscover();
     }
 
@@ -179,6 +196,7 @@ internal sealed class AethergramApp : IPhoneApp
     private void DrawView(AethergramRoute route, Rect area, int depth)
     {
         ui.Body(area);
+
         switch (route.Screen)
         {
             case AethergramScreen.Compose:
@@ -199,6 +217,86 @@ internal sealed class AethergramApp : IPhoneApp
             default:
                 DrawHome(area);
                 break;
+        }
+
+        var showPostDelete = deleteTargetId is not null;
+        var showCommentDelete = deleteCommentPostId is not null && deleteCommentId is not null && route.Screen == AethergramScreen.Detail;
+        var showConfirmation = showPostDelete || showCommentDelete;
+
+        if (showConfirmation)
+        {
+            confirmWasPostDelete = showPostDelete;
+        }
+
+        var target = showConfirmation ? 1f : 0f;
+        confirmSpring.Step(target, 0.18f, ImGui.GetIO().DeltaTime);
+        var opacity = confirmSpring.Value;
+
+        if (showConfirmation || !confirmSpring.IsResting(target, 0.001f, 0.005f))
+        {
+            var screen = SceneChrome.ScreenFrom(area, theme, ImGuiHelpers.GlobalScale);
+
+            ImGui.SetCursorScreenPos(area.Min);
+            using (ImRaii.Child("##confirmOverlay", area.Size, false,
+                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
+            {
+                if (showPostDelete || (confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
+                {
+                    ConfirmDialog.Draw(
+                        screen,
+                        theme,
+                        Loc.T(L.Aethergram.DeleteConfirmMessage),
+                        Loc.T(L.Aethergram.DeleteConfirm),
+                        Loc.T(L.Aethergram.DeleteCancel),
+                        Loc.T(L.Aethergram.Saving),
+                        deleteSubmitting,
+                        deleteStatus.Length > 0 ? deleteStatus : null,
+                        out var postCanceled,
+                        out var postConfirmed,
+                        opacity);
+
+                    if (postCanceled)
+                    {
+                        deleteTargetId = null;
+                    }
+
+                    if (postConfirmed)
+                    {
+                        SubmitDelete(deleteTargetId!);
+                    }
+                }
+                else if (showCommentDelete || (!confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
+                {
+                    ConfirmDialog.Draw(
+                        screen,
+                        theme,
+                        Loc.T(L.Aethergram.DeleteCommentConfirmMessage),
+                        Loc.T(L.Aethergram.DeleteConfirm),
+                        Loc.T(L.Aethergram.DeleteCancel),
+                        Loc.T(L.Aethergram.Saving),
+                        deleteCommentSubmitting,
+                        deleteCommentStatus.Length > 0 ? deleteCommentStatus : null,
+                        out var commentCanceled,
+                        out var commentConfirmed,
+                        opacity);
+
+                    if (commentCanceled)
+                    {
+                        deleteCommentPostId = null;
+                        deleteCommentId = null;
+                    }
+
+                    if (commentConfirmed)
+                    {
+                        SubmitDeleteComment(deleteCommentPostId!, deleteCommentId!);
+                    }
+                }
+            }
+        }
+
+        if (!showConfirmation && confirmSpring.IsResting(0f, 0.001f, 0.005f))
+        {
+            confirmSpring.SnapTo(0f);
         }
     }
 
@@ -233,8 +331,9 @@ internal sealed class AethergramApp : IPhoneApp
 
         var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - BottomNavHeight * scale), area.Max);
         var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y + 6f * scale), new Vector2(area.Max.X, navRect.Min.Y));
-        DrawFeedList(listRect, activeScope);
         DrawBottomNav(navRect);
+        DrawFeedList(listRect, activeScope);
+        FlushDeferredTooltip();
     }
 
     private int DrawScopeSegments(Rect rect)
@@ -343,7 +442,7 @@ internal sealed class AethergramApp : IPhoneApp
         }
 
         var moreCenter = new Vector2(origin.X + width - pad - 4f * scale, avatarCenter.Y);
-        if (ui.IconButton(moreCenter, 12f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 0.85f))
+        if (DrawIconButton(moreCenter, 12f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 0.85f, Loc.T(L.Aethergram.More)))
         {
             OpenDetail(post, false);
         }
@@ -356,7 +455,7 @@ internal sealed class AethergramApp : IPhoneApp
         var liked = post.MyReaction >= 0;
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var heartCenter = new Vector2(innerX + 12f * scale, actionCenterY);
-        if (ui.IconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : AethergramUi.BodyInk, AethergramUi.Transparent, 1.15f))
+        if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : AethergramUi.BodyInk, AethergramUi.Transparent, 1.15f, Loc.T(L.Aethergram.Like)))
         {
             store.ToggleLike(post);
         }
@@ -374,7 +473,7 @@ internal sealed class AethergramApp : IPhoneApp
         }
 
         var commentCenter = new Vector2(cursorX + 12f * scale, actionCenterY);
-        if (ui.IconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 1.05f))
+        if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 1.05f, Loc.T(L.Aethergram.Comment)))
         {
             OpenDetail(post, true);
         }
@@ -511,23 +610,30 @@ internal sealed class AethergramApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), 1f);
 
+        deferredTooltipActive = false;
+        deferredTooltipText = string.Empty;
+
         var slot = bar.Width / 4f;
         var centerY = bar.Center.Y;
         var none = AethergramUi.Transparent;
+        var hitRadius = 17f * scale;
 
-        if (ui.IconButton(new Vector2(bar.Min.X + slot * 0.5f, centerY), 17f * scale, FontAwesomeIcon.Home.ToIconString(), AethergramUi.TitleInk, none, 1.15f))
+        var homeCenter = new Vector2(bar.Min.X + slot * 0.5f, centerY);
+        if (DrawIconButton(homeCenter, hitRadius, FontAwesomeIcon.Home.ToIconString(), AethergramUi.TitleInk, none, 1.15f))
         {
             store.RefreshFeed(activeScope);
         }
 
-        if (ui.IconButton(new Vector2(bar.Min.X + slot * 1.5f, centerY), 17f * scale, FontAwesomeIcon.Search.ToIconString(), AethergramUi.MutedInk, none, 1.1f))
+        var searchCenter = new Vector2(bar.Min.X + slot * 1.5f, centerY);
+        if (DrawIconButton(searchCenter, hitRadius, FontAwesomeIcon.Search.ToIconString(), AethergramUi.MutedInk, none, 1.1f))
         {
             store.ClearDiscover();
             searchDraft = string.Empty;
             router.Push(AethergramRoute.Discover);
         }
 
-        if (ui.IconButton(new Vector2(bar.Min.X + slot * 2.5f, centerY), 17f * scale, FontAwesomeIcon.PlusSquare.ToIconString(), AethergramUi.MutedInk, none, 1.2f))
+        var postCenter = new Vector2(bar.Min.X + slot * 2.5f, centerY);
+        if (DrawIconButton(postCenter, hitRadius, FontAwesomeIcon.PlusSquare.ToIconString(), AethergramUi.MutedInk, none, 1.2f))
         {
             StartCompose(false);
         }
@@ -536,16 +642,24 @@ internal sealed class AethergramApp : IPhoneApp
         if (store.Me is { } me)
         {
             var radius = 13f * scale;
+            var profileMin = profileCenter - new Vector2(radius, radius);
+            var profileMax = profileCenter + new Vector2(radius, radius);
+            var hovered = ImGui.IsMouseHoveringRect(profileMin, profileMax);
             DrawAvatar(profileCenter, radius, me.Name, me.World, me.AvatarUrl, 0.8f, 24);
-            if (HoverClick(profileCenter - new Vector2(radius, radius), profileCenter + new Vector2(radius, radius)))
+            if (hovered)
             {
-                OpenProfile(me.Id);
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                DeferTooltip(profileCenter, radius, Loc.T(L.Aethergram.Profile));
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    OpenProfile(me.Id);
+                }
             }
         }
         else
         {
             store.EnsureMe();
-            DrawIcon(profileCenter, FontAwesomeIcon.User.ToIconString(), AethergramUi.MutedInk, 1.05f);
+            DrawIconButton(profileCenter, hitRadius, FontAwesomeIcon.User.ToIconString(), AethergramUi.MutedInk, AethergramUi.Transparent, 1.05f);
         }
     }
 
@@ -1029,7 +1143,7 @@ internal sealed class AethergramApp : IPhoneApp
             var liked = post.MyReaction >= 0;
             var actionsY = imageRect.Max.Y + 22f * scale;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
-            if (ui.IconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : AethergramUi.BodyInk, AethergramUi.Transparent, 1.1f))
+            if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : AethergramUi.BodyInk, AethergramUi.Transparent, 1.1f, Loc.T(L.Aethergram.Like)))
             {
                 store.ToggleLike(post);
             }
@@ -1047,7 +1161,7 @@ internal sealed class AethergramApp : IPhoneApp
             }
 
             var commentCenter = new Vector2(actionCursorX + 12f * scale, actionsY);
-            if (ui.IconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 1.05f))
+            if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 1.05f, Loc.T(L.Aethergram.Comment)))
             {
                 commentFocusPending = true;
             }
@@ -1059,11 +1173,10 @@ internal sealed class AethergramApp : IPhoneApp
 
             var mine = store.Me is { } me && me.Id == post.AuthorId;
             var reportShown = false;
-            var deleteShown = false;
             if (mine)
             {
                 var deleteCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
-                deleteShown = DrawDeleteToggle(deleteCenter, 14f * scale, post.Id);
+                DrawDeleteToggle(deleteCenter, 14f * scale, post.Id);
             }
             else
             {
@@ -1072,12 +1185,7 @@ internal sealed class AethergramApp : IPhoneApp
             }
 
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
-            if (deleteShown)
-            {
-                DrawDeleteComposer(post.Id, origin.X, width);
-                ImGui.Dummy(new Vector2(0f, 6f * scale));
-            }
-            else if (reportShown)
+            if (reportShown)
             {
                 DrawReportComposer(origin.X, width);
                 ImGui.Dummy(new Vector2(0f, 6f * scale));
@@ -1161,9 +1269,18 @@ internal sealed class AethergramApp : IPhoneApp
         if (mine)
         {
             var trashCenter = new Vector2(origin.X + width - 8f * scale, origin.Y + 8f * scale);
-            if (ui.IconButton(trashCenter, 10f * scale, FontAwesomeIcon.Times.ToIconString(), AethergramUi.MutedInk, AethergramUi.Transparent, 0.7f) && store.DetailPost is { } post)
+            var trashHitRadius = 10f * scale;
+            if (ui.IconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), AethergramUi.MutedInk, AethergramUi.Transparent, 0.7f) && store.DetailPost is { } post)
             {
-                store.DeleteComment(post.Id, comment.Id);
+                deleteCommentPostId = post.Id;
+                deleteCommentId = comment.Id;
+                deleteCommentStatus = string.Empty;
+            }
+
+            var trashHovered = ImGui.IsMouseHoveringRect(trashCenter - new Vector2(trashHitRadius, trashHitRadius), trashCenter + new Vector2(trashHitRadius, trashHitRadius));
+            if (trashHovered)
+            {
+                DrawDeleteCommentTooltip(trashCenter, trashHitRadius, scale);
             }
         }
 
@@ -1252,7 +1369,7 @@ internal sealed class AethergramApp : IPhoneApp
     {
         var active = reportTargetType == targetType && reportTargetId == targetId;
         var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
-        if (DrawIconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f))
+        if (DrawIconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f, Loc.T(L.Aethergram.ReportSubmit)))
         {
             if (active)
             {
@@ -1328,73 +1445,22 @@ internal sealed class AethergramApp : IPhoneApp
         });
     }
 
-    private bool DrawDeleteToggle(Vector2 center, float radius, string postId)
+    private void DrawDeleteToggle(Vector2 center, float radius, string postId)
     {
         var active = deleteTargetId == postId;
         var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
-        if (DrawIconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, background, 0.9f))
+        if (DrawIconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, background, 0.9f, Loc.T(L.Aethergram.DeleteConfirm)))
         {
             if (active)
             {
                 deleteTargetId = null;
-                active = false;
             }
             else
             {
                 deleteTargetId = postId;
                 deleteStatus = string.Empty;
-                active = true;
             }
         }
-
-        return active;
-    }
-
-    private void DrawDeleteComposer(string postId, float left, float width)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
-            ImGui.PushTextWrapPos(left + width);
-            ImGui.TextWrapped(Loc.T(L.Aethergram.DeleteConfirmMessage));
-            ImGui.PopTextWrapPos();
-        }
-
-        var rowY = ImGui.GetCursorScreenPos().Y + 6f * scale;
-        var buttonWidth = 84f * scale;
-        var buttonHeight = 28f * scale;
-
-        var cancelRect = new Rect(new Vector2(left + width - buttonWidth * 2f - 8f * scale, rowY), new Vector2(left + width - buttonWidth - 8f * scale, rowY + buttonHeight));
-        if (DrawPillButton(cancelRect, Loc.T(L.Aethergram.DeleteCancel), false) && !deleteSubmitting)
-        {
-            deleteTargetId = null;
-        }
-
-        var deleteRect = new Rect(new Vector2(left + width - buttonWidth, rowY), new Vector2(left + width, rowY + buttonHeight));
-        var canSubmit = !deleteSubmitting;
-        if (DrawDangerPillButton(deleteRect, deleteSubmitting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.DeleteConfirm)) && canSubmit)
-        {
-            SubmitDelete(postId);
-        }
-
-        ImGui.SetCursorScreenPos(new Vector2(left, rowY + buttonHeight + 2f * scale));
-        if (deleteStatus.Length > 0)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
-            {
-                ImGui.TextUnformatted(deleteStatus);
-            }
-
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-        }
-    }
-
-    private bool DrawDangerPillButton(Rect rect, string label)
-    {
-        return ui.DangerPillButton(rect, label);
     }
 
     private void SubmitDelete(string postId)
@@ -1419,6 +1485,77 @@ internal sealed class AethergramApp : IPhoneApp
                 deleteStatus = Loc.T(L.Aethergram.DeleteFailed);
             }
         });
+    }
+
+    private void SubmitDeleteComment(string postId, string commentId)
+    {
+        if (deleteCommentSubmitting || deleteCommentPostId != postId || deleteCommentId != commentId)
+        {
+            return;
+        }
+
+        deleteCommentSubmitting = true;
+        store.DeleteComment(postId, commentId, ok =>
+        {
+            deleteCommentSubmitting = false;
+            if (ok)
+            {
+                deleteCommentPostId = null;
+                deleteCommentId = null;
+                deleteCommentStatus = string.Empty;
+            }
+            else
+            {
+                deleteCommentStatus = Loc.T(L.Aethergram.DeleteCommentFailed);
+            }
+        });
+    }
+
+    private void DeferTooltip(Vector2 center, float hitRadius, string text)
+    {
+        deferredTooltipActive = true;
+        deferredTooltipCenter = center;
+        deferredTooltipRadius = hitRadius;
+        deferredTooltipText = text;
+    }
+
+    private void FlushDeferredTooltip()
+    {
+        if (deferredTooltipActive && deferredTooltipText.Length > 0)
+        {
+            DrawActionTooltip(deferredTooltipCenter, deferredTooltipRadius, deferredTooltipText);
+        }
+    }
+
+    private void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetForegroundDrawList();
+        var textSize = Typography.Measure(text, 0.78f, FontWeight.Medium);
+        var padX = 9f * scale;
+        var padY = 5f * scale;
+        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
+        var gap = 9f * scale;
+
+        var windowMin = ImGui.GetWindowPos();
+        var windowMax = windowMin + ImGui.GetWindowSize();
+        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale, windowMax.X - bubbleSize.X - 4f * scale);
+        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
+        if (minY < windowMin.Y + 4f * scale)
+        {
+            minY = iconCenter.Y + hitRadius + gap;
+        }
+
+        var min = new Vector2(minX, minY);
+        var max = min + bubbleSize;
+        var bubble = Palette.WithAlpha(Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f), 0.97f);
+        Squircle.Fill(drawList, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
+        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, theme.AppBackground, 0.78f, FontWeight.Medium);
+    }
+
+    private void DrawDeleteCommentTooltip(Vector2 iconCenter, float hitRadius, float scale)
+    {
+        DrawActionTooltip(iconCenter, hitRadius, Loc.T(L.Aethergram.DeleteComment));
     }
 
     private void DrawProfileHeader(UserDto user)
@@ -1863,7 +2000,7 @@ internal sealed class AethergramApp : IPhoneApp
         return ui.PillButton(rect, label, filled);
     }
 
-    private bool DrawIconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale)
+    private bool DrawIconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale, string tooltip = "")
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius), center + new Vector2(hitRadius, hitRadius));
@@ -1877,6 +2014,10 @@ internal sealed class AethergramApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (tooltip.Length > 0)
+            {
+                DrawActionTooltip(center, hitRadius, tooltip);
+            }
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);

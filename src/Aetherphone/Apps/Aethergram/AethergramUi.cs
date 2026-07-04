@@ -12,7 +12,7 @@ namespace Aetherphone.Apps.Aethergram;
 
 internal sealed class AethergramUi
 {
-    public static readonly Vector4 Accent = new(0.78f, 0.23f, 0.58f, 1f);
+    public static readonly Vector4 Accent = new(0.92f, 0.30f, 0.38f, 1f);
     public static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
     public static readonly Vector4 TitleInk = new(0.99f, 0.95f, 0.97f, 1f);
     public static readonly Vector4 BodyInk = new(0.93f, 0.85f, 0.90f, 0.96f);

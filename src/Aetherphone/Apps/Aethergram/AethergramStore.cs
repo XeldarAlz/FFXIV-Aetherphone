@@ -365,6 +365,39 @@ internal sealed class AethergramStore : IDisposable
         RunGuarded("comment delete", async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
+    public void DeleteComment(string postId, string commentId, Action<bool> onComplete)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                succeeded = await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false);
+                if (succeeded)
+                {
+                    if (detailPostId == postId)
+                    {
+                        detailComments = RemoveComment(detailComments, commentId);
+                    }
+
+                    BumpCommentCount(postId, -1);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Aethergram] comment delete failed: {exception.Message}");
+            }
+            finally
+            {
+                onComplete(succeeded);
+            }
+        });
+    }
+
     public void DeletePost(string postId, Action<bool> onComplete)
     {
         var token = cancellation.Token;
