@@ -12,7 +12,7 @@ namespace Aetherphone.Apps.Market;
 
 internal sealed class MarketUi
 {
-    public static readonly Vector4 Accent = new(0.95f, 0.74f, 0.26f, 1f);
+    public static readonly Vector4 Accent = new(0.92f, 0.62f, 0.18f, 1f);
     public static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
     public static readonly Vector4 TitleInk = new(0.99f, 0.97f, 0.93f, 1f);
     public static readonly Vector4 BodyInk = new(0.95f, 0.90f, 0.84f, 0.96f);

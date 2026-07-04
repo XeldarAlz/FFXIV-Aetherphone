@@ -29,7 +29,7 @@ internal sealed class MarketApp : IPhoneApp
 
     public string Glyph => "$";
 
-    public Vector4 Accent => new(0.95f, 0.74f, 0.26f, 1f);
+    public Vector4 Accent => new(0.92f, 0.62f, 0.18f, 1f);
 
     public int BadgeCount => alerts.TriggeredCount;
 
