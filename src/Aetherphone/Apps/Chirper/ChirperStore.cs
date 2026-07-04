@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Wallpapers;
 
 namespace Aetherphone.Apps.Chirper;
 
@@ -14,6 +16,8 @@ internal enum ChirperFeedScope
 
 internal sealed class ChirperStore : IDisposable
 {
+    private const int AvatarSize = 512;
+
     private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
 
     private readonly AethernetSession session;
@@ -21,6 +25,8 @@ internal sealed class ChirperStore : IDisposable
     private readonly CancellationTokenSource cancellation = new();
 
     private DateTime lastMeAttemptUtc = DateTime.MinValue;
+
+    private volatile UserDto? me;
 
     private volatile PostDto[] forYou = Array.Empty<PostDto>();
     private volatile PostDto[] following = Array.Empty<PostDto>();
@@ -33,10 +39,17 @@ internal sealed class ChirperStore : IDisposable
     private volatile bool profileLoading;
     private volatile bool profileFailed;
 
+    private volatile string? detailPostId;
+    private volatile PostDto? detailPost;
+    private volatile CommentDto[] detailComments = Array.Empty<CommentDto>();
+    private volatile bool detailLoading;
+    private volatile bool commenting;
+
     private volatile UserDto[] discoverResults = Array.Empty<UserDto>();
     private volatile bool searching;
     private volatile bool posting;
     private volatile bool loadingMe;
+    private volatile bool avatarBusy;
 
     public ChirperStore(AethernetSession session, AethernetClient client)
     {
@@ -46,7 +59,7 @@ internal sealed class ChirperStore : IDisposable
 
     public bool IsSignedIn => session.IsSignedIn;
 
-    public UserDto? Me => session.CurrentUser;
+    public UserDto? Me => me;
 
     public PostDto[] Feed(ChirperFeedScope scope) => scope == ChirperFeedScope.ForYou ? forYou : following;
 
@@ -62,15 +75,25 @@ internal sealed class ChirperStore : IDisposable
 
     public bool ProfileFailed => profileFailed;
 
+    public PostDto? DetailPost => detailPost;
+
+    public CommentDto[] DetailComments => detailComments;
+
+    public bool DetailLoading => detailLoading;
+
+    public bool Commenting => commenting;
+
     public UserDto[] DiscoverResults => discoverResults;
 
     public bool Searching => searching;
 
     public bool Posting => posting;
 
+    public bool AvatarBusy => avatarBusy;
+
     public void EnsureMe()
     {
-        if (!session.IsSignedIn || session.CurrentUser is not null || loadingMe)
+        if (!session.IsSignedIn || me is not null || loadingMe)
         {
             return;
         }
@@ -85,10 +108,10 @@ internal sealed class ChirperStore : IDisposable
         loadingMe = true;
         RunGuarded("profile load", async token =>
         {
-            var me = await client.MeAsync(token).ConfigureAwait(false);
-            if (me is not null)
+            var profile = await client.MeAsync(token).ConfigureAwait(false);
+            if (profile is not null)
             {
-                session.SetUser(me);
+                me = profile;
             }
         }, () => loadingMe = false);
     }
@@ -195,6 +218,87 @@ internal sealed class ChirperStore : IDisposable
                 ReplacePost(result);
             }
         });
+    }
+
+    public void OpenDetail(PostDto post)
+    {
+        detailPostId = post.Id;
+        detailPost = post;
+        detailComments = Array.Empty<CommentDto>();
+        detailLoading = true;
+
+        RunGuarded("comments load", async token =>
+        {
+            var page = await client.CommentsAsync(post.Id, null, token).ConfigureAwait(false);
+            if (detailPostId != post.Id)
+            {
+                return;
+            }
+
+            if (page is not null)
+            {
+                detailComments = Oldest(page.Items);
+            }
+        }, () =>
+        {
+            if (detailPostId == post.Id)
+            {
+                detailLoading = false;
+            }
+        });
+    }
+
+    public void AddComment(string postId, string text, Action<bool> onComplete)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0 || commenting)
+        {
+            return;
+        }
+
+        commenting = true;
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                var created = await client.AddCommentAsync(postId, trimmed, token).ConfigureAwait(false);
+                if (created is not null)
+                {
+                    if (detailPostId == postId)
+                    {
+                        detailComments = Append(detailComments, created);
+                    }
+
+                    BumpCommentCount(postId, 1);
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Chirper] comment failed: {exception.Message}");
+            }
+            finally
+            {
+                commenting = false;
+                onComplete(succeeded);
+            }
+        });
+    }
+
+    public void DeleteComment(string postId, string commentId)
+    {
+        if (detailPostId == postId)
+        {
+            detailComments = RemoveComment(detailComments, commentId);
+        }
+
+        BumpCommentCount(postId, -1);
+        RunGuarded("comment delete", async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
     public void SetFollow(string userId, bool follow)
@@ -329,7 +433,7 @@ internal sealed class ChirperStore : IDisposable
                 var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
                 if (updated is not null)
                 {
-                    session.SetUser(updated);
+                    me = updated;
                     if (profileUserId == updated.Id)
                     {
                         profileUser = updated;
@@ -348,6 +452,62 @@ internal sealed class ChirperStore : IDisposable
             finally
             {
                 onResult(succeeded, string.Empty);
+            }
+        });
+    }
+
+    public void UpdateAvatar(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
+    {
+        if (avatarBusy)
+        {
+            return;
+        }
+
+        avatarBusy = true;
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarSize);
+                var upload = await client.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
+                if (upload is null)
+                {
+                    return;
+                }
+
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                if (!uploaded)
+                {
+                    return;
+                }
+
+                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token).ConfigureAwait(false);
+                if (updated is null)
+                {
+                    return;
+                }
+
+                me = updated;
+                if (profileUserId == updated.Id)
+                {
+                    profileUser = updated;
+                }
+
+                succeeded = true;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Chirper] avatar update failed: {exception.Message}");
+            }
+            finally
+            {
+                avatarBusy = false;
+                onComplete(succeeded);
             }
         });
     }
@@ -424,6 +584,10 @@ internal sealed class ChirperStore : IDisposable
         forYou = Replace(forYou, updated);
         following = Replace(following, updated);
         profilePosts = Replace(profilePosts, updated);
+        if (detailPost is { } current && current.Id == updated.Id)
+        {
+            detailPost = updated;
+        }
     }
 
     private void RemovePost(string postId)
@@ -431,15 +595,77 @@ internal sealed class ChirperStore : IDisposable
         forYou = RemoveById(forYou, postId);
         following = RemoveById(following, postId);
         profilePosts = RemoveById(profilePosts, postId);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = null;
+            detailPostId = null;
+        }
+    }
+
+    private void BumpCommentCount(string postId, int delta)
+    {
+        forYou = MapCommentCount(forYou, postId, delta);
+        following = MapCommentCount(following, postId, delta);
+        profilePosts = MapCommentCount(profilePosts, postId, delta);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = current with { CommentCount = Math.Max(0, current.CommentCount + delta) };
+        }
     }
 
     private void UpdateUserEverywhere(string userId, bool follow)
     {
         discoverResults = MapUsers(discoverResults, userId, follow);
+        forYou = MapFollowByAuthor(forYou, userId, follow);
+        following = MapFollowByAuthor(following, userId, follow);
+        profilePosts = MapFollowByAuthor(profilePosts, userId, follow);
+        if (detailPost is { } post && post.AuthorId == userId)
+        {
+            detailPost = post with { IsFollowing = follow };
+        }
+
         if (profileUser is { } current && current.Id == userId)
         {
             profileUser = current with { IsFollowing = follow, Followers = Math.Max(0, current.Followers + (follow ? 1 : -1)) };
         }
+    }
+
+    private static PostDto[] MapCommentCount(PostDto[] source, string postId, int delta)
+    {
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index].Id != postId)
+            {
+                continue;
+            }
+
+            var result = (PostDto[])source.Clone();
+            result[index] = source[index] with { CommentCount = Math.Max(0, source[index].CommentCount + delta) };
+            return result;
+        }
+
+        return source;
+    }
+
+    private static PostDto[] MapFollowByAuthor(PostDto[] source, string userId, bool follow)
+    {
+        var changed = false;
+        var result = new PostDto[source.Length];
+        for (var index = 0; index < source.Length; index++)
+        {
+            var post = source[index];
+            if (post.AuthorId == userId && post.IsFollowing != follow)
+            {
+                result[index] = post with { IsFollowing = follow };
+                changed = true;
+            }
+            else
+            {
+                result[index] = post;
+            }
+        }
+
+        return changed ? result : source;
     }
 
     private static UserDto[] MapUsers(UserDto[] source, string userId, bool follow)
@@ -522,6 +748,39 @@ internal sealed class ChirperStore : IDisposable
         var result = new PostDto[source.Length + 1];
         result[0] = post;
         Array.Copy(source, 0, result, 1, source.Length);
+        return result;
+    }
+
+    private static CommentDto[] Oldest(CommentDto[] newestFirst)
+    {
+        var result = new CommentDto[newestFirst.Length];
+        for (var index = 0; index < newestFirst.Length; index++)
+        {
+            result[index] = newestFirst[newestFirst.Length - 1 - index];
+        }
+
+        return result;
+    }
+
+    private static CommentDto[] Append(CommentDto[] source, CommentDto comment)
+    {
+        var result = new CommentDto[source.Length + 1];
+        Array.Copy(source, 0, result, 0, source.Length);
+        result[source.Length] = comment;
+        return result;
+    }
+
+    private static CommentDto[] RemoveComment(CommentDto[] source, string commentId)
+    {
+        var index = Array.FindIndex(source, comment => comment.Id == commentId);
+        if (index < 0)
+        {
+            return source;
+        }
+
+        var result = new CommentDto[source.Length - 1];
+        Array.Copy(source, 0, result, 0, index);
+        Array.Copy(source, index + 1, result, index, source.Length - index - 1);
         return result;
     }
 
