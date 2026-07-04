@@ -131,11 +131,11 @@ internal static class CoachmarkOverlay
         if (hole.HasValue)
         {
             var h = hole.Value;
-            arrowX = Math.Clamp(h.Center.X, screen.Min.X + margin + 24f * scale, screen.Max.X - margin - 24f * scale);
+            arrowX = ClampToRange(h.Center.X, screen.Min.X + margin + 24f * scale, screen.Max.X - margin - 24f * scale);
             var below = h.Max.Y + arrowH + cardHeight + margin <= screen.Max.Y;
             arrowUp = below;
             cardTop = below ? h.Max.Y + arrowH : h.Min.Y - arrowH - cardHeight;
-            cardCenterX = Math.Clamp(h.Center.X, screen.Min.X + margin + cardWidth * 0.5f, screen.Max.X - margin - cardWidth * 0.5f);
+            cardCenterX = ClampToRange(h.Center.X, screen.Min.X + margin + cardWidth * 0.5f, screen.Max.X - margin - cardWidth * 0.5f);
         }
         else
         {
@@ -196,6 +196,16 @@ internal static class CoachmarkOverlay
         }
 
         return action;
+    }
+
+    private static float ClampToRange(float value, float min, float max)
+    {
+        if (min > max)
+        {
+            return (min + max) * 0.5f;
+        }
+
+        return Math.Clamp(value, min, max);
     }
 
     private static void Spotlight(ImDrawListPtr dl, Rect screen, Rect hole, float rounding, float dim, float scale)
