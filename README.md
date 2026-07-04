@@ -23,11 +23,11 @@
 
 ## What it does
 
-Puts a real smartphone on screen: a docked, always-on device with a home screen, a status bar, app icons, notifications, ringtones, and themeable wallpapers. Its anchor is **Messages** — a chat client that absorbs the game's `/tell` system into bubbles you can read and reply to, with toast notifications and an unread badge on the server-info bar.
+Puts a real smartphone on screen: a docked, always-on device with a home screen, a status bar, app icons, notifications, ringtones, and themeable wallpapers. At its core is a small social network for Aetherphone users: Chirper for microblogging, Aethergram for sharing photos, and Phone for group voice calls, all running on their own backend alongside a Messages app that turns the game's `/tell` system into a proper chat client.
 
 ## Take a look
 
-A few of the things you can do — message your contacts, listen to music, check the weather, search the market, hop between venues, and more.
+A few of the things you can do: message your contacts, post to Chirper and Aethergram, listen to music, check the weather, search the market, hop between venues, and more.
 
 <table>
   <tr>
@@ -56,47 +56,48 @@ A few of the things you can do — message your contacts, listen to music, check
 
 - **Home screen & shell**: a docked device with a status bar and a multi-page app grid. Long-press to enter edit mode, then drag icons to rearrange them across pages. Smooth slide transitions between every screen.
 - **Lock screen**: a real lock screen with a large clock and date, your latest notifications stacked as cards (tap one to jump straight into its app), and a swipe to get back in.
-- **Control Center**: swipe down for quick toggles — Do Not Disturb, position lock, idle scrolling — plus accent-color swatches, brightness (text size) and volume sliders, and live music controls.
+- **Control Center**: swipe down for quick toggles: Do Not Disturb, position lock, idle scrolling, plus accent-color swatches, brightness (text size) and volume sliders, and live music controls.
 - **Notifications**: a notification center, optional toasts, game-sound ringtones, and a Do Not Disturb switch.
+
+### Social
+
+Aetherphone runs its own backend, Aethernet, so these apps work across characters and sessions, not just locally.
+
+- **Chirper**: an X/Twitter-style microblog. Post short updates, browse For You and Following feeds, search, edit your profile, and report content.
+- **Aethergram**: an Instagram-style photo feed built on your Photos library. Post your captures, follow other players, and browse what they share.
+- **Messages**: reads incoming `/tell`s and lays them out as chat bubbles you can reply to, with toast notifications and an unread badge on the server-info bar.
+- **Phone**: place group voice calls to other Aetherphone users, right from the device.
+- **Find People**: look players up on the Lodestone and jump straight into a conversation with them.
+- **Velvet**: a separate, private 18+ companion app for sharing work and connecting with other creators. Ships as an optional build.
 
 ### Apps
 
-- **Messages**: reads incoming `/tell`s, lays them out as chat bubbles, and lets you reply — with notifications and an unread count.
 - **Contacts**: your friend list as an address book, with Lodestone portraits; start a conversation straight from a contact.
-- **Character**: a profile card for the local character, gear and Lodestone portrait included.
+- **Character**: a profile card for the local character, with gear, Lodestone portrait, and a fitness-style Activity dashboard tracking job mastery rings.
 - **Skywatcher**: live Eorzean weather for your current zone, with a forecast for the hours ahead.
-- **Venues**: browse community venues and events — nightclubs, bars, photography spots, and more — with live / upcoming filters, tag and name search, and favorites. One tap travels you there with Lifestream (or copies the command), or opens the venue's listing and Discord.
-- **News**: the Lodestone feed for your region — Topics, Notices, Maintenance, and Updates — with images, maintenance windows, and a tap to open the full story.
-- **Market**: live market board prices from Universalis — search any item (or right-click one in-game), see the cheapest listings, price stats, sale velocity, and recent-sale history with a trend graph across your World, Data Center, or Region. Set price-drop alerts that ping the phone, compare against NPC vendor prices, and star favorites.
+- **Venues**: browse community venues and events, nightclubs, bars, photography spots, and more, with live and upcoming filters, tag and name search, and favorites. One tap travels you there with Lifestream (or copies the command), or opens the venue's listing and Discord.
+- **News**: the Lodestone feed for your region: Topics, Notices, Maintenance, and Updates, with images, maintenance windows, and a tap to open the full story.
+- **Market**: live market board prices from Universalis. Search any item (or right-click one in-game), see the cheapest listings, price stats, sale velocity, and recent-sale history with a trend graph across your World, Data Center, or Region. Set price-drop alerts that ping the phone, compare against NPC vendor prices, and star favorites.
 - **Wallet**: track your gil, currencies, tomestones, hunt seals, and PvP marks at a glance, with progress toward weekly caps.
-- **Music**: an in-game player — browse genre stations or search for any track, with playback controls and a Now Playing banner on the home screen.
-- **Camera**: capture in-game shots straight from the phone, with square / photo / pano modes, an optional framing grid, and a flash.
+- **Music**: an in-game player. Browse genre stations or search for any track, with playback controls and a Now Playing banner on the home screen.
+- **Camera**: capture in-game shots straight from the phone, with square, photo, and pano modes, an optional framing grid, and a flash.
 - **Photos**: a gallery for your captures, laid out like a real photo library with a full-screen viewer.
-- **Games**: a pocket arcade of 15 mini-games across logic, memory, match-3, and puzzle — Sweeper, Nonogram, Pairs, Simon, Gem Swap, 2048, Water Sort, Flow, Solitaire, Reversi, Breakout, Bubble Shooter, Snake, Flap, and Whack — each tracking your best score.
+- **Games**: a pocket arcade of 15 mini-games across logic, memory, match-3, and puzzle: Sweeper, Nonogram, Pairs, Simon, Gem Swap, 2048, Water Sort, Flow, Solitaire, Reversi, Breakout, Bubble Shooter, Snake, Flap, and Whack, each tracking your best score.
 - **Clock**: an analog clock on Eorzea time.
-- **Timers**: countdowns to the daily, Grand Company, and weekly resets, plus Fashion Report, Jumbo Cactpot, and Ocean Fishing windows and your retainer ventures — with optional reminders.
+- **Timers**: countdowns to the daily, Grand Company, and weekly resets, plus Fashion Report, Jumbo Cactpot, and Ocean Fishing windows and your retainer ventures, with optional reminders.
+- **Fishing**: Ocean Fishing voyage predictions, so you know what's coming before you set sail.
+- **Dailies**: track your recurring daily and weekly content, with checkable rows, badge counts, and auto-detected completion.
+- **Collections**: browse your mounts, minions, and other collectibles.
+- **Inventory**: a quick look at your bags without opening the game menu.
+- **Maps**: in-world maps and points of interest.
 
 ### Personalization
 
-- **Themes & wallpapers**: pick an accent palette and a wallpaper — built-in art, one of your own photos, or any image you import; the whole device restyles to match.
+- **Themes & wallpapers**: pick an accent palette and a wallpaper: built-in art, one of your own photos, or any image you import. The whole device restyles to match.
 - **Lodestone portraits**: real character avatars and portraits, pulled from the Lodestone and shown on your profile, contacts, and chats (toggleable).
 - **Text size**: an accessibility zoom that scales the on-device type without resizing the phone.
-- **Idle animation**: your character idly scrolls the phone (Tomescroll) when you're standing around — optional.
-- **About window**: an animated credits & links screen, reachable from Settings or `/phone about`.
-
-## Roadmap
-
-Most of the original roadmap has shipped — Camera, Photos, Games, Market, Venues, News, Timers, custom wallpapers, and Lodestone portraits are all in. What's left is mostly the social layer, which waits on the backend.
-
-- **Backend integration**: a server layer so the phone can sync data, persist state, and power the social apps below across characters and sessions. (The Aethernet account flow is already built and will switch on once the server is live.)
-- **Friends**: add friends who also run Aetherphone, share stories, and keep up with each other in-game.
-- **Aethergram**: an Instagram-style social feed — post photos, follow friends, and browse.
-- **Chirper**: an X/Twitter-style microblog for short posts and timelines with your friends. (Built; gated behind the backend.)
-- **In-game voice call**: call your friends in-game right from the phone.
-- **Calendar**: events and reminders on Eorzean (and real) time.
-- **Maps**: in-world navigation and points of interest.
-- **Orchestrion**: a player for in-game tracks.
-- **Memories**: a curated highlights view stitched from your photos and moments.
+- **Idle animation**: your character idly scrolls the phone (Tomescroll) when you're standing around, optional.
+- **About window**: an animated credits and links screen, reachable from Settings or `/phone about`.
 
 ## Install
 
