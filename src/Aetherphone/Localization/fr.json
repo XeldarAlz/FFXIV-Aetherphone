@@ -68,7 +68,7 @@
   "account.requestingCode": "Demande d'un code…",
   "account.cannotReach": "Impossible de joindre Aethernet. Le serveur est-il démarré ?",
   "account.verifying": "Vérification via Lodestone…",
-  "account.codeNotFound": "Code introuvable sur votre profil pour l'instant. Enregistrez-le sur Lodestone, puis vérifiez de nouveau.",
+  "account.codeNotFound": "Code introuvable sur votre profil pour l'instant. Enregistrez-le sur Lodestone, puis vérifiez de nouveau. Assurez-vous que la visibilité du profil et de la recherche de personnage sont toutes deux réglées sur Public/Affiché dans les résultats.",
   "account.signOut": "Se déconnecter",
   "account.signIn": "Se connecter avec Lodestone",
   "account.followers.one": "{0} abonné",

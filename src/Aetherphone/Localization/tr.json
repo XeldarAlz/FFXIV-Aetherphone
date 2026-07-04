@@ -68,7 +68,7 @@
   "account.requestingCode": "Kod isteniyor…",
   "account.cannotReach": "Aethernet'e ulaşılamadı. Sunucu çalışıyor mu?",
   "account.verifying": "Lodestone üzerinden doğrulanıyor…",
-  "account.codeNotFound": "Kod henüz profilinde bulunamadı. Lodestone'da kaydet, sonra tekrar doğrula.",
+  "account.codeNotFound": "Kod henüz profilinde bulunamadı. Lodestone'da kaydet, sonra tekrar doğrula. Hem Profil hem de Karakter Arama görünürlüğünün Herkese Açık/Sonuçlarda Gösterilir olarak ayarlandığından emin ol.",
   "account.signOut": "Oturumu kapat",
   "account.signIn": "Lodestone ile oturum aç",
   "account.followers.one": "{0} takipçi",

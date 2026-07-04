@@ -68,7 +68,7 @@
   "account.requestingCode": "Code wird angefordert…",
   "account.cannotReach": "Aethernet nicht erreichbar. Läuft der Server?",
   "account.verifying": "Überprüfung über Lodestone…",
-  "account.codeNotFound": "Code noch nicht in deinem Profil gefunden. Speichere ihn auf Lodestone und überprüfe erneut.",
+  "account.codeNotFound": "Code noch nicht in deinem Profil gefunden. Speichere ihn auf Lodestone und überprüfe erneut. Stelle sicher, dass sowohl die Sichtbarkeit von Profil als auch von Charaktersuche auf Öffentlich/In Ergebnissen angezeigt eingestellt ist.",
   "account.signOut": "Abmelden",
   "account.signIn": "Mit Lodestone anmelden",
   "account.followers.one": "{0} Abonnent",
