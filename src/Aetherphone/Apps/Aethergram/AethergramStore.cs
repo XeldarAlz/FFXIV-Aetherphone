@@ -28,6 +28,8 @@ internal sealed class AethergramStore : IDisposable
 
     private DateTime lastMeAttemptUtc = DateTime.MinValue;
 
+    private volatile UserDto? me;
+
     private volatile PostDto[] forYou = Array.Empty<PostDto>();
     private volatile PostDto[] following = Array.Empty<PostDto>();
     private volatile bool loadingForYou;
@@ -58,7 +60,7 @@ internal sealed class AethergramStore : IDisposable
 
     public bool IsSignedIn => session.IsSignedIn;
 
-    public UserDto? Me => session.CurrentUser;
+    public UserDto? Me => me;
 
     public PostDto[] Feed(AethergramFeedScope scope) => scope == AethergramFeedScope.ForYou ? forYou : following;
 
@@ -88,7 +90,7 @@ internal sealed class AethergramStore : IDisposable
 
     public void EnsureMe()
     {
-        if (!session.IsSignedIn || session.CurrentUser is not null || loadingMe)
+        if (!session.IsSignedIn || me is not null || loadingMe)
         {
             return;
         }
@@ -103,10 +105,10 @@ internal sealed class AethergramStore : IDisposable
         loadingMe = true;
         RunGuarded("profile load", async token =>
         {
-            var me = await client.MeAsync(token).ConfigureAwait(false);
-            if (me is not null)
+            var profile = await client.MeAsync(token).ConfigureAwait(false);
+            if (profile is not null)
             {
-                session.SetUser(me);
+                me = profile;
             }
         }, () => loadingMe = false);
     }
@@ -245,7 +247,7 @@ internal sealed class AethergramStore : IDisposable
                     return;
                 }
 
-                session.SetUser(updated);
+                me = updated;
                 if (profileUserId == updated.Id)
                 {
                     profileUser = updated;
@@ -495,7 +497,7 @@ internal sealed class AethergramStore : IDisposable
                 var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
                 if (updated is not null)
                 {
-                    session.SetUser(updated);
+                    me = updated;
                     if (profileUserId == updated.Id)
                     {
                         profileUser = updated;

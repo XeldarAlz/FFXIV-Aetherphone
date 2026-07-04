@@ -46,7 +46,8 @@ internal sealed record PostDto(
     int MediaWidth,
     int MediaHeight,
     string? AuthorAvatarUrl,
-    int CommentCount);
+    int CommentCount,
+    bool IsFollowing);
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
@@ -103,7 +104,9 @@ internal sealed record VelvetProfileDto(
     int ConnectionState,
     bool Discoverable,
     string? AvatarUrl,
-    long GateAckAtUnix);
+    long GateAckAtUnix,
+    bool ShareTimeZone = true,
+    int? UtcOffsetMinutes = null);
 
 internal sealed record UpdateVelvetProfileRequest(
     string? Intro,
@@ -113,7 +116,8 @@ internal sealed record UpdateVelvetProfileRequest(
     string[]? Limits,
     int? LookingFor,
     int? RelationshipStatus,
-    bool? Discoverable);
+    bool? Discoverable,
+    bool? ShareTimeZone = null);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 
@@ -170,7 +174,8 @@ internal sealed record VelvetConnectionDto(
     string? AvatarUrl,
     int State,
     int Presence,
-    long ConnectedAtUnix);
+    long ConnectedAtUnix,
+    int? UtcOffsetMinutes = null);
 
 internal sealed record VelvetConnectionPage(VelvetConnectionDto[] Items, string? NextCursor);
 
@@ -183,7 +188,8 @@ internal sealed record VelvetThreadDto(
     long LastMessageAtUnix,
     string LastMessagePreview,
     int UnreadCount,
-    int Presence);
+    int Presence,
+    int? UtcOffsetMinutes = null);
 
 internal sealed record VelvetThreadPage(VelvetThreadDto[] Items, string? NextCursor);
 
@@ -194,11 +200,13 @@ internal sealed record VelvetMessageDto(
     string Body,
     int Kind,
     long CreatedAtUnix,
-    long? ExpiresAtUnix);
+    long? ExpiresAtUnix,
+    int MediaWidth = 0,
+    int MediaHeight = 0);
 
 internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
 
-internal sealed record SendVelvetMessageRequest(string Body, int Kind, int? TtlSeconds);
+internal sealed record SendVelvetMessageRequest(string Body, int Kind, int? TtlSeconds, string? MediaKey = null, int MediaWidth = 0, int MediaHeight = 0);
 
 internal sealed record VelvetMediaUrlDto(string Url, long ExpiresAtUnix);
 

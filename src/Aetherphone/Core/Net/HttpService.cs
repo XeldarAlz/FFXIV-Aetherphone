@@ -65,29 +65,29 @@ internal sealed class HttpService : IDisposable
         return null;
     }
 
-    public async Task<T?> GetJsonAsync<T>(string url, JsonTypeInfo<T> typeInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null)
+    public async Task<T?> GetJsonAsync<T>(string url, JsonTypeInfo<T> typeInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
-        return await SendForJsonAsync(request, typeInfo, bearer, onStatus, token).ConfigureAwait(false);
+        return await SendForJsonAsync(request, typeInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
     }
 
-    public Task<TResponse?> PostJsonAsync<TRequest, TResponse>(string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null)
+    public Task<TResponse?> PostJsonAsync<TRequest, TResponse>(string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
-        return SendJsonAsync(HttpMethod.Post, url, body, requestInfo, responseInfo, bearer, token, onStatus);
+        return SendJsonAsync(HttpMethod.Post, url, body, requestInfo, responseInfo, bearer, token, onStatus, appScope);
     }
 
-    public async Task<TResponse?> SendJsonAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null)
+    public async Task<TResponse?> SendJsonAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
         var payload = JsonSerializer.Serialize(body, requestInfo);
         request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
-        return await SendForJsonAsync(request, responseInfo, bearer, onStatus, token).ConfigureAwait(false);
+        return await SendForJsonAsync(request, responseInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
     }
 
-    public async Task<TResponse?> RequestJsonAsync<TResponse>(HttpMethod method, string url, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null)
+    public async Task<TResponse?> RequestJsonAsync<TResponse>(HttpMethod method, string url, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
-        return await SendForJsonAsync(request, responseInfo, bearer, onStatus, token).ConfigureAwait(false);
+        return await SendForJsonAsync(request, responseInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
     }
 
     public async Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token)
@@ -113,12 +113,12 @@ internal sealed class HttpService : IDisposable
         }
     }
 
-    public async Task<bool> SendJsonForStatusAsync<TRequest>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null)
+    public async Task<bool> SendJsonForStatusAsync<TRequest>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
         var payload = JsonSerializer.Serialize(body, requestInfo);
         request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
-        ApplyBearer(request, bearer);
+        ApplyHeaders(request, bearer, appScope);
         try
         {
             using var response = await client.SendAsync(request, token).ConfigureAwait(false);
@@ -136,10 +136,10 @@ internal sealed class HttpService : IDisposable
         }
     }
 
-    public async Task<bool> SendAsync(HttpMethod method, string url, string? bearer, CancellationToken token, Action<int>? onStatus = null)
+    public async Task<bool> SendAsync(HttpMethod method, string url, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
-        ApplyBearer(request, bearer);
+        ApplyHeaders(request, bearer, appScope);
         try
         {
             using var response = await client.SendAsync(request, token).ConfigureAwait(false);
@@ -157,9 +157,9 @@ internal sealed class HttpService : IDisposable
         }
     }
 
-    private async Task<T?> SendForJsonAsync<T>(HttpRequestMessage request, JsonTypeInfo<T> typeInfo, string? bearer, Action<int>? onStatus, CancellationToken token)
+    private async Task<T?> SendForJsonAsync<T>(HttpRequestMessage request, JsonTypeInfo<T> typeInfo, string? bearer, Action<int>? onStatus, string? appScope, CancellationToken token)
     {
-        ApplyBearer(request, bearer);
+        ApplyHeaders(request, bearer, appScope);
         try
         {
             using var response = await client.SendAsync(request, token).ConfigureAwait(false);
@@ -183,11 +183,16 @@ internal sealed class HttpService : IDisposable
         }
     }
 
-    private static void ApplyBearer(HttpRequestMessage request, string? bearer)
+    private static void ApplyHeaders(HttpRequestMessage request, string? bearer, string? appScope)
     {
         if (!string.IsNullOrEmpty(bearer))
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
+        }
+
+        if (!string.IsNullOrEmpty(appScope))
+        {
+            request.Headers.TryAddWithoutValidation("X-Aep-App", appScope);
         }
     }
 

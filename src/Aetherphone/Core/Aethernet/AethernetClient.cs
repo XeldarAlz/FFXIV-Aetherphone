@@ -8,13 +8,13 @@ namespace Aetherphone.Core.Aethernet;
 
 internal sealed class AethernetClient
 {
-    private readonly HttpService http;
+    private readonly ScopedHttp http;
     private readonly AethernetSession session;
     private readonly Action<int> authStatusSink;
 
-    public AethernetClient(HttpService http, AethernetSession session)
+    public AethernetClient(HttpService http, AethernetSession session, string appScope = "")
     {
-        this.http = http;
+        this.http = new ScopedHttp(http, appScope);
         this.session = session;
         authStatusSink = session.ReportAuthStatus;
     }
@@ -32,6 +32,30 @@ internal sealed class AethernetClient
     public Task<UserDto?> MeAsync(CancellationToken token)
     {
         return http.GetJsonAsync(Url("/me"), AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);
+    }
+
+    public void EnsureCurrentUser()
+    {
+        if (!session.IsSignedIn || session.CurrentUser is not null)
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var user = await MeAsync(CancellationToken.None).ConfigureAwait(false);
+                if (user is not null)
+                {
+                    session.SetUser(user);
+                }
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Aethernet account load failed: {exception.Message}");
+            }
+        });
     }
 
     public Task<UserDto?> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken token)
@@ -202,9 +226,12 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(userId)}/typing"), AethernetJsonContext.Default.VelvetTypingDto, session.Token, token, authStatusSink);
     }
 
-    public Task<bool> VelvetHeartbeatAsync(CancellationToken token)
+    public Task<bool> VelvetHeartbeatAsync(int? utcOffsetMinutes, CancellationToken token)
     {
-        return http.SendAsync(HttpMethod.Post, Url("/velvet/heartbeat"), session.Token, token, authStatusSink);
+        var path = utcOffsetMinutes is { } offset
+            ? $"/velvet/heartbeat?utcOffsetMinutes={offset}"
+            : "/velvet/heartbeat";
+        return http.SendAsync(HttpMethod.Post, Url(path), session.Token, token, authStatusSink);
     }
 
     public Task<VelvetProfileDto?> VelvetUserAsync(string userId, CancellationToken token)
@@ -322,9 +349,14 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetMessagePage, session.Token, token, authStatusSink);
     }
 
-    public Task<VelvetMessageDto?> SendVelvetMessageAsync(string threadId, string body, int kind, int? ttlSeconds, CancellationToken token)
+    public Task<VelvetMessageDto?> SendVelvetMessageAsync(string threadId, string body, int kind, int? ttlSeconds, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0)
     {
-        return http.PostJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages"), new SendVelvetMessageRequest(body, kind, ttlSeconds), AethernetJsonContext.Default.SendVelvetMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages"), new SendVelvetMessageRequest(body, kind, ttlSeconds, mediaKey, mediaWidth, mediaHeight), AethernetJsonContext.Default.SendVelvetMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetMediaUrlDto?> VelvetDmMediaUrlAsync(string messageId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/media/dm/{Uri.EscapeDataString(messageId)}/url"), AethernetJsonContext.Default.VelvetMediaUrlDto, session.Token, token, authStatusSink);
     }
 
     public Task<bool> BlockAsync(string userId, CancellationToken token)
