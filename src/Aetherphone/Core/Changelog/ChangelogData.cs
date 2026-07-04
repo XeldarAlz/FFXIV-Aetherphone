@@ -1,29 +1,22 @@
+using Aetherphone.Core.Localization;
+
 namespace Aetherphone.Core.Changelog;
 
 internal static class ChangelogData
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new[]
     {
-        new ChangelogEntry("0.7.1.0", "2026-07-03", new[]
-        {
-            "Added an onboarding tour with coachmarks to guide you through the phone and its apps",
-            "Added content reporting to Chirper and Aethergram",
-            "Rendered incoming call and notification banners in front of other windows",
-            "Localized Phone Calls and filled in missing translations",
-        }),
-        new ChangelogEntry("0.7.0.0", "2026-07-02", new[]
-        {
-            "Added Phone app with group voice calls",
-            "Added Chirper, an X-style microblog client",
-            "Added Aethergram, an Instagram-style photo app",
-            "Added Find People, Maps, Collections, and Inventory apps",
-            "Added Tetris and Dailies to Games",
-            "Redesigned MyCharacter into an Activity-style dashboard and reworked Lodestone sign-in",
-        }),
-        new ChangelogEntry("0.6.0.0", "2026-06-26", new[]
-        {
-            "Added Ocean Fishing voyage predictor app",
-            "Pointed the Aethernet client at the production backend",
-        }),
+        new ChangelogEntry("0.8.0.0", "2026-07-04", L.Changelog.Release0800),
+        new ChangelogEntry("0.7.1.0", "2026-07-03", L.Changelog.Release0710),
+        new ChangelogEntry("0.7.0.0", "2026-07-02", L.Changelog.Release0700),
+        new ChangelogEntry("0.6.0.0", "2026-06-26", L.Changelog.Release0600),
+        new ChangelogEntry("0.5.0.0", "2026-06-25", L.Changelog.Release0500),
+        new ChangelogEntry("0.4.0.0", "2026-06-24", L.Changelog.Release0400),
+        new ChangelogEntry("0.3.0.0", "2026-06-24", L.Changelog.Release0300),
+        new ChangelogEntry("0.2.0.0", "2026-06-23", L.Changelog.Release0200),
+        new ChangelogEntry("0.1.3.0", "2026-06-23", L.Changelog.Release0130),
+        new ChangelogEntry("0.1.2.0", "2026-06-22", L.Changelog.Release0120),
+        new ChangelogEntry("0.1.1.0", "2026-06-21", L.Changelog.Release0110),
+        new ChangelogEntry("0.1.0.0", "2026-06-21", L.Changelog.Release0100),
     };
 }

@@ -227,6 +227,8 @@ internal static class L
         public static readonly LocString AboutAetherphone = new("settings.aboutAetherphone", "About Aetherphone");
         public static readonly LocString Changelog = new("settings.changelog", "Changelog");
         public static readonly LocString ChangelogSummary = new("settings.changelogSummary", "What's new");
+        public static readonly LocString ChangelogHero = new("settings.changelogHero", "What's New");
+        public static readonly LocString ChangelogLatest = new("settings.changelogLatest", "Latest");
         public static readonly LocString Tutorials = new("settings.tutorials", "Tips & Tutorials");
         public static readonly LocString TutorialsSummary = new("settings.tutorialsSummary", "On");
         public static readonly LocString TutorialsOff = new("settings.tutorialsOff", "Off");
@@ -236,6 +238,107 @@ internal static class L
 
         public static readonly LocString TutorialsHint = new("settings.tutorialsHint",
             "Tips appear once the first time you open each app. Reset to see them all again.");
+    }
+
+    internal static class Changelog
+    {
+        public static readonly LocString[] Release0800 =
+        {
+            new("changelog.r0800.0", "Added Velvet, a private 18+ companion app for sharing work and connecting"),
+            new("changelog.r0800.1", "Added an adjustable phone window size in Settings"),
+            new("changelog.r0800.2", "Added post deletion, captions, and comments across the social apps"),
+            new("changelog.r0800.3", "Added this changelog to Settings"),
+        };
+
+        public static readonly LocString[] Release0710 =
+        {
+            new("changelog.r0710.0", "Added a guided onboarding tour with coachmarks"),
+            new("changelog.r0710.1", "Added content reporting to Chirper and Aethergram"),
+            new("changelog.r0710.2", "Brought call and notification banners in front of other windows"),
+            new("changelog.r0710.3", "Localized Phone Calls and filled in missing translations"),
+        };
+
+        public static readonly LocString[] Release0700 =
+        {
+            new("changelog.r0700.0", "Added Phone with group voice calls"),
+            new("changelog.r0700.1", "Added Chirper, an X-style microblog"),
+            new("changelog.r0700.2", "Added Aethergram, an Instagram-style photo app"),
+            new("changelog.r0700.3", "Added Find People, Maps, Collections, and Inventory apps"),
+            new("changelog.r0700.4", "Added Ocean Fishing voyage predictions"),
+            new("changelog.r0700.5", "Added Dailies to track recurring content"),
+            new("changelog.r0700.6", "Rebuilt Activity into a fitness-style dashboard with job mastery rings"),
+            new("changelog.r0700.7", "Reworked the Lodestone sign-in flow with an identity card and step guide"),
+            new("changelog.r0700.8", "Added Tetris to Games, contributed by Yesanith"),
+            new("changelog.r0700.9", "Connected the Aethernet apps to the production backend"),
+        };
+
+        public static readonly LocString[] Release0600 =
+        {
+            new("changelog.r0600.0", "Added Timers for server resets, retainers, and reminders"),
+            new("changelog.r0600.1", "Added Venues to browse community events in-game"),
+            new("changelog.r0600.2", "Added News with a region-aware Lodestone feed"),
+            new("changelog.r0600.3", "Added Light, Dark, and Auto themes for app content"),
+            new("changelog.r0600.4", "Added the Side button: tap to close, hold to lock"),
+            new("changelog.r0600.5", "Rebuilt Games with new titles and an arcade-style launcher"),
+            new("changelog.r0600.6", "Overhauled Clock, Market, Contacts, Wallet, Messages, and Notifications"),
+        };
+
+        public static readonly LocString[] Release0500 =
+        {
+            new("changelog.r0500.0", "Added image wallpapers with Light and Dark variants and custom imports"),
+            new("changelog.r0500.1", "Added home screen editing, a lock screen, and Control Center"),
+            new("changelog.r0500.2", "Added an idle phone-scrolling emote you can toggle in Settings"),
+            new("changelog.r0500.3", "Added full localization in English, French, German, and Turkish"),
+            new("changelog.r0500.4", "Refined typography, depth, and spring animations across the phone"),
+        };
+
+        public static readonly LocString[] Release0400 =
+        {
+            new("changelog.r0400.0", "Added Camera with a see-through viewfinder"),
+            new("changelog.r0400.1", "Added the Photos gallery"),
+        };
+
+        public static readonly LocString[] Release0300 =
+        {
+            new("changelog.r0300.0", "Redesigned the Music home screen"),
+            new("changelog.r0300.1", "Added song search and playback"),
+        };
+
+        public static readonly LocString[] Release0200 =
+        {
+            new("changelog.r0200.0", "Added Market with live Universalis prices"),
+            new("changelog.r0200.1", "Added Music, an internet radio player"),
+            new("changelog.r0200.2", "Added Wallet to track your gil"),
+            new("changelog.r0200.3", "Added Chirper and Aethernet account sign-in"),
+            new("changelog.r0200.4", "Added a Text Size accessibility setting"),
+            new("changelog.r0200.5", "Moved notifications into an in-shell banner"),
+            new("changelog.r0200.6", "Added weather glyphs and a live sky to Skywatcher"),
+        };
+
+        public static readonly LocString[] Release0130 =
+        {
+            new("changelog.r0130.0", "Added Lodestone character portraits"),
+            new("changelog.r0130.1", "Laid the networking foundation for online features"),
+        };
+
+        public static readonly LocString[] Release0120 =
+        {
+            new("changelog.r0120.0", "Added an iPhone-style welcome and boot animation"),
+        };
+
+        public static readonly LocString[] Release0110 =
+        {
+            new("changelog.r0110.0", "Added the Games app"),
+            new("changelog.r0110.1", "Added a status bar with battery, signal, and network"),
+            new("changelog.r0110.2", "Added a lock button to the phone"),
+        };
+
+        public static readonly LocString[] Release0100 =
+        {
+            new("changelog.r0100.0", "Introduced Aetherphone, an in-game smartphone in a single window"),
+            new("changelog.r0100.1", "Added the home screen, status bar, and swipe-driven app shell"),
+            new("changelog.r0100.2", "Shipped the first apps: Messages, Contacts, Character, Clock, Skywatcher, and Notifications"),
+        };
     }
 
     internal static class Wallpaper
