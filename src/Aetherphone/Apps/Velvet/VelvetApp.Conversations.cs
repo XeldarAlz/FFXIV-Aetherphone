@@ -258,6 +258,7 @@ internal sealed partial class VelvetApp
         var radius = 22f * scale;
         var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
         AvatarView.Draw(drawList, avatarCenter, radius, Accent, Monogram(thread.OtherDisplayName, thread.OtherHandle), 0.95f, lodestone.Remote(thread.OtherUserId, ToUri(thread.OtherAvatarUrl)), 32);
+        DrawPresenceDot(new Vector2(avatarCenter.X + radius - 4f * scale, avatarCenter.Y + radius - 4f * scale), thread.Presence);
 
         var textLeft = origin.X + radius * 2f + 12f * scale;
         var displayName = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
@@ -286,6 +287,8 @@ internal sealed partial class VelvetApp
         if (store.ThreadId != threadId)
         {
             store.OpenThread(threadId);
+            sinceThreadPoll = ThreadPollSeconds;
+            lastTypingDraft = string.Empty;
         }
 
         if (sendOutcome != 0)
@@ -294,6 +297,7 @@ internal sealed partial class VelvetApp
             messageDraft = string.Empty;
         }
 
+        TickThread(threadId);
         var title = ThreadTitle(threadId);
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, title, back);
@@ -319,9 +323,38 @@ internal sealed partial class VelvetApp
 
                 ImGui.Dummy(new Vector2(0f, 8f * scale));
             }
+
+            if (store.OtherTyping)
+            {
+                Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(2f * scale, 0f), "…", VelvetUi.MutedInk, 1.2f, FontWeight.SemiBold);
+                ImGui.Dummy(new Vector2(0f, 20f * scale));
+            }
         }
 
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), threadId);
+    }
+
+    private void TickThread(string threadId)
+    {
+        var delta = ImGui.GetIO().DeltaTime;
+        sinceThreadPoll += delta;
+        if (sinceThreadPoll >= ThreadPollSeconds)
+        {
+            sinceThreadPoll = 0f;
+            store.RefreshThread();
+            store.RefreshTyping(threadId);
+        }
+
+        sinceTypingSend += delta;
+        if (messageDraft != lastTypingDraft)
+        {
+            lastTypingDraft = messageDraft;
+            if (messageDraft.Trim().Length > 0 && sinceTypingSend >= TypingSendSeconds)
+            {
+                sinceTypingSend = 0f;
+                store.SendTyping(threadId);
+            }
+        }
     }
 
     private void DrawMessageBubble(VelvetMessageDto message)

@@ -70,6 +70,10 @@ internal sealed class ChirperApp : IPhoneApp
     private string reportStatus = string.Empty;
     private volatile bool reportSubmitting;
 
+    private string? deleteTargetId;
+    private string deleteStatus = string.Empty;
+    private volatile bool deleteSubmitting;
+
     public ChirperApp(AethernetSession session, AethernetClient client, LodestoneService lodestone)
     {
         store = new ChirperStore(session, client);
@@ -102,6 +106,8 @@ internal sealed class ChirperApp : IPhoneApp
         reportTargetId = null;
         reportReasonDraft = string.Empty;
         reportStatus = string.Empty;
+        deleteTargetId = null;
+        deleteStatus = string.Empty;
         store.ClearDiscover();
     }
 
@@ -232,7 +238,14 @@ internal sealed class ChirperApp : IPhoneApp
         if (DrawActionRow(post, contentLeft, contentWidth))
         {
             ImGui.Dummy(new Vector2(0f, 6f * scale));
-            DrawReportComposer(contentLeft, contentWidth);
+            if (deleteTargetId == post.Id)
+            {
+                DrawDeleteComposer(post.Id, contentLeft, contentWidth);
+            }
+            else
+            {
+                DrawReportComposer(contentLeft, contentWidth);
+            }
         }
 
         ImGui.Dummy(new Vector2(0f, 10f * scale));
@@ -299,7 +312,13 @@ internal sealed class ChirperApp : IPhoneApp
 
             var reactionSummaryRight = left + width;
             var mine = store.Me is { } me && me.Id == post.AuthorId;
-            if (!mine)
+            if (mine)
+            {
+                var deleteCenter = new Vector2(reactionSummaryRight - 13f * scale, centerY);
+                reportShown = DrawDeleteToggle(deleteCenter, 13f * scale, post.Id);
+                reactionSummaryRight -= 34f * scale;
+            }
+            else
             {
                 var reportCenter = new Vector2(reactionSummaryRight - 13f * scale, centerY);
                 reportShown = DrawReportToggle(reportCenter, 13f * scale, "post", post.Id);
@@ -691,6 +710,112 @@ internal sealed class ChirperApp : IPhoneApp
             {
                 reportTargetType = null;
                 reportTargetId = null;
+            }
+        });
+    }
+
+    private bool DrawDeleteToggle(Vector2 center, float radius, string postId)
+    {
+        var active = deleteTargetId == postId;
+        var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
+        if (DrawIconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, background, 0.9f))
+        {
+            if (active)
+            {
+                deleteTargetId = null;
+                active = false;
+            }
+            else
+            {
+                deleteTargetId = postId;
+                deleteStatus = string.Empty;
+                active = true;
+            }
+        }
+
+        return active;
+    }
+
+    private void DrawDeleteComposer(string postId, float left, float width)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var origin = ImGui.GetCursorScreenPos();
+
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        {
+            ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
+            ImGui.PushTextWrapPos(left + width);
+            ImGui.TextWrapped(Loc.T(L.Chirper.DeleteConfirmMessage));
+            ImGui.PopTextWrapPos();
+        }
+
+        var rowY = ImGui.GetCursorScreenPos().Y + 6f * scale;
+        var buttonWidth = 84f * scale;
+        var buttonHeight = 28f * scale;
+
+        var cancelRect = new Rect(new Vector2(left + width - buttonWidth * 2f - 8f * scale, rowY), new Vector2(left + width - buttonWidth - 8f * scale, rowY + buttonHeight));
+        if (DrawPillButton(cancelRect, Loc.T(L.Chirper.DeleteCancel), false) && !deleteSubmitting)
+        {
+            deleteTargetId = null;
+        }
+
+        var deleteRect = new Rect(new Vector2(left + width - buttonWidth, rowY), new Vector2(left + width, rowY + buttonHeight));
+        var canSubmit = !deleteSubmitting;
+        if (DrawDangerPillButton(deleteRect, deleteSubmitting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.DeleteConfirm)) && canSubmit)
+        {
+            SubmitDelete(postId);
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(left, rowY + buttonHeight + 2f * scale));
+        if (deleteStatus.Length > 0)
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            {
+                ImGui.TextUnformatted(deleteStatus);
+            }
+
+            ImGui.Dummy(new Vector2(0f, 4f * scale));
+        }
+    }
+
+    private bool DrawDangerPillButton(Rect rect, string label)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var radius = rect.Height * 0.5f;
+        var fill = hovered ? Palette.Mix(theme.Danger, theme.TextStrong, 0.12f) : theme.Danger;
+        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
+
+        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(rect.Center - textSize * 0.5f, label, new Vector4(1f, 1f, 1f, 1f), 0.9f, FontWeight.SemiBold);
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    private void SubmitDelete(string postId)
+    {
+        if (deleteSubmitting || deleteTargetId != postId)
+        {
+            return;
+        }
+
+        deleteSubmitting = true;
+        store.DeletePost(postId, ok =>
+        {
+            deleteSubmitting = false;
+            if (ok)
+            {
+                deleteTargetId = null;
+                deleteStatus = string.Empty;
+            }
+            else
+            {
+                deleteStatus = Loc.T(L.Chirper.DeleteFailed);
             }
         });
     }

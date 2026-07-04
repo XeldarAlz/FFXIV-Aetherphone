@@ -126,6 +126,8 @@ internal sealed record VelvetPostDto(
     string OwnerHandle,
     string? OwnerAvatarUrl,
     string MediaId,
+    string MediaUrl,
+    string Caption,
     int Tier,
     string[] Tags,
     int Visibility,
@@ -135,7 +137,8 @@ internal sealed record VelvetPostDto(
     long CreatedAtUnix,
     int[] ReactionCounts,
     int TotalReactions,
-    int MyReaction);
+    int MyReaction,
+    int CommentCount);
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
 
@@ -143,9 +146,24 @@ internal sealed record CreateVelvetPostRequest(
     string MediaKey,
     int Width,
     int Height,
+    string Caption,
     int Tier,
     string[] Tags,
     int Visibility);
+
+internal sealed record VelvetCommentDto(
+    string Id,
+    string PostId,
+    string AuthorId,
+    string AuthorDisplayName,
+    string AuthorHandle,
+    string? AuthorAvatarUrl,
+    string Text,
+    long CreatedAtUnix);
+
+internal sealed record VelvetCommentPage(VelvetCommentDto[] Items, string? NextCursor);
+
+internal sealed record CreateVelvetCommentRequest(string Text);
 
 internal sealed record VelvetDiscoverPage(VelvetProfileDto[] Users, string? NextCursor);
 
@@ -187,3 +205,5 @@ internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextC
 internal sealed record SendVelvetMessageRequest(string Body, int Kind, int? TtlSeconds);
 
 internal sealed record VelvetMediaUrlDto(string Url, long ExpiresAtUnix);
+
+internal sealed record VelvetTypingDto(bool OtherTyping);

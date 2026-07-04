@@ -238,6 +238,34 @@ internal sealed class ChirperStore : IDisposable
         });
     }
 
+    public void DeletePost(string postId, Action<bool> onComplete)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                succeeded = await client.DeletePostAsync(postId, token).ConfigureAwait(false);
+                if (succeeded)
+                {
+                    RemovePost(postId);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Chirper] delete post failed: {exception.Message}");
+            }
+            finally
+            {
+                onComplete(succeeded);
+            }
+        });
+    }
+
     public void OpenProfile(string userId)
     {
         if (profileUserId == userId && (profileUser is not null || profileLoading))
@@ -398,6 +426,13 @@ internal sealed class ChirperStore : IDisposable
         profilePosts = Replace(profilePosts, updated);
     }
 
+    private void RemovePost(string postId)
+    {
+        forYou = RemoveById(forYou, postId);
+        following = RemoveById(following, postId);
+        profilePosts = RemoveById(profilePosts, postId);
+    }
+
     private void UpdateUserEverywhere(string userId, bool follow)
     {
         discoverResults = MapUsers(discoverResults, userId, follow);
@@ -443,6 +478,35 @@ internal sealed class ChirperStore : IDisposable
         }
 
         return source;
+    }
+
+    private static PostDto[] RemoveById(PostDto[] source, string postId)
+    {
+        var count = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index].Id != postId)
+            {
+                count++;
+            }
+        }
+
+        if (count == source.Length)
+        {
+            return source;
+        }
+
+        var result = new PostDto[count];
+        var resultIndex = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index].Id != postId)
+            {
+                result[resultIndex++] = source[index];
+            }
+        }
+
+        return result;
     }
 
     private static PostDto[] Prepend(PostDto[] source, PostDto post)

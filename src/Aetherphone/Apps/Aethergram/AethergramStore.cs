@@ -363,6 +363,34 @@ internal sealed class AethergramStore : IDisposable
         RunGuarded("comment delete", async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
+    public void DeletePost(string postId, Action<bool> onComplete)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                succeeded = await client.DeletePostAsync(postId, token).ConfigureAwait(false);
+                if (succeeded)
+                {
+                    RemovePost(postId);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Aethergram] delete post failed: {exception.Message}");
+            }
+            finally
+            {
+                onComplete(succeeded);
+            }
+        });
+    }
+
     public void SetFollow(string userId, bool follow)
     {
         UpdateUserEverywhere(userId, follow);
@@ -574,6 +602,18 @@ internal sealed class AethergramStore : IDisposable
         }
     }
 
+    private void RemovePost(string postId)
+    {
+        forYou = RemoveById(forYou, postId);
+        following = RemoveById(following, postId);
+        profilePosts = RemoveById(profilePosts, postId);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = null;
+            detailPostId = null;
+        }
+    }
+
     private void BumpCommentCount(string postId, int delta)
     {
         forYou = MapCommentCount(forYou, postId, delta);
@@ -647,6 +687,35 @@ internal sealed class AethergramStore : IDisposable
         }
 
         return source;
+    }
+
+    private static PostDto[] RemoveById(PostDto[] source, string postId)
+    {
+        var count = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index].Id != postId)
+            {
+                count++;
+            }
+        }
+
+        if (count == source.Length)
+        {
+            return source;
+        }
+
+        var result = new PostDto[count];
+        var resultIndex = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index].Id != postId)
+            {
+                result[resultIndex++] = source[index];
+            }
+        }
+
+        return result;
     }
 
     private static PostDto[] Prepend(PostDto[] source, PostDto post)

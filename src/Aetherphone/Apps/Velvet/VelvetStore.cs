@@ -12,6 +12,8 @@ internal sealed class VelvetStore : IDisposable
 {
     private const int AvatarSize = 512;
 
+    private const int PostSize = 1080;
+
     private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
 
     private readonly AethernetSession session;
@@ -49,9 +51,17 @@ internal sealed class VelvetStore : IDisposable
     private volatile VelvetMessageDto[] messages = Array.Empty<VelvetMessageDto>();
     private volatile bool loadingThread;
     private volatile bool sending;
+    private volatile bool otherTyping;
 
     private volatile VelvetPostDto[] feed = Array.Empty<VelvetPostDto>();
     private volatile bool loadingFeed;
+
+    private volatile string? detailPostId;
+    private volatile VelvetCommentDto[] detailComments = Array.Empty<VelvetCommentDto>();
+    private volatile bool loadingComments;
+    private volatile bool commenting;
+    private volatile bool feedLoaded;
+    private volatile bool posting;
 
     public VelvetStore(AethernetSession session, AethernetClient client)
     {
@@ -109,9 +119,15 @@ internal sealed class VelvetStore : IDisposable
 
     public bool Sending => sending;
 
+    public bool OtherTyping => otherTyping;
+
     public VelvetPostDto[] Feed => feed;
 
     public bool LoadingFeed => loadingFeed;
+
+    public bool FeedLoaded => feedLoaded;
+
+    public bool Posting => posting;
 
     public int UnreadCount
     {
@@ -311,6 +327,16 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
+    public void Heartbeat()
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        RunGuarded("heartbeat", async token => await client.VelvetHeartbeatAsync(token).ConfigureAwait(false));
+    }
+
     public void RefreshRequests()
     {
         if (!session.IsSignedIn)
@@ -361,7 +387,11 @@ internal sealed class VelvetStore : IDisposable
             {
                 feed = page.Items;
             }
-        }, () => loadingFeed = false);
+        }, () =>
+        {
+            loadingFeed = false;
+            feedLoaded = true;
+        });
     }
 
     public void OpenProfile(string userId)
@@ -469,6 +499,7 @@ internal sealed class VelvetStore : IDisposable
 
         threadId = id;
         messages = Array.Empty<VelvetMessageDto>();
+        otherTyping = false;
         loadingThread = true;
 
         RunGuarded("thread open", async token =>
@@ -501,6 +532,23 @@ internal sealed class VelvetStore : IDisposable
             if (threadId == current && page is not null)
             {
                 messages = page.Items;
+            }
+        });
+    }
+
+    public void SendTyping(string id)
+    {
+        RunGuarded("typing", async token => await client.SendVelvetTypingAsync(id, token).ConfigureAwait(false));
+    }
+
+    public void RefreshTyping(string id)
+    {
+        RunGuarded("typing state", async token =>
+        {
+            var result = await client.VelvetTypingAsync(id, token).ConfigureAwait(false);
+            if (threadId == id && result is not null)
+            {
+                otherTyping = result.OtherTyping;
             }
         });
     }
@@ -546,6 +594,135 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
+    public void CreatePost(string sourcePath, WallpaperCrop crop, string caption, int tier, string[] tags, int visibility, Action<bool> onComplete)
+    {
+        if (posting)
+        {
+            return;
+        }
+
+        posting = true;
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, PostSize);
+                var upload = await client.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
+                if (upload is null)
+                {
+                    return;
+                }
+
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                if (!uploaded)
+                {
+                    return;
+                }
+
+                var request = new CreateVelvetPostRequest(upload.Key, baked.Width, baked.Height, caption, tier, tags, visibility);
+                var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
+                succeeded = created is not null;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Velvet] create post failed: {exception.Message}");
+            }
+            finally
+            {
+                posting = false;
+                onComplete(succeeded);
+            }
+        });
+    }
+
+    public VelvetCommentDto[] DetailComments => detailComments;
+
+    public bool LoadingComments => loadingComments;
+
+    public bool Commenting => commenting;
+
+    public void OpenComments(string postId)
+    {
+        detailPostId = postId;
+        detailComments = Array.Empty<VelvetCommentDto>();
+        loadingComments = true;
+        RunGuarded("comments", async token =>
+        {
+            var page = await client.VelvetCommentsAsync(postId, token).ConfigureAwait(false);
+            if (detailPostId == postId && page is not null)
+            {
+                detailComments = page.Items;
+            }
+        }, () =>
+        {
+            if (detailPostId == postId)
+            {
+                loadingComments = false;
+            }
+        });
+    }
+
+    public void AddComment(string postId, string text, Action<bool> onComplete)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0 || commenting)
+        {
+            return;
+        }
+
+        commenting = true;
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                var created = await client.AddVelvetCommentAsync(postId, trimmed, token).ConfigureAwait(false);
+                if (created is not null)
+                {
+                    if (detailPostId == postId)
+                    {
+                        detailComments = Append(detailComments, created);
+                    }
+
+                    succeeded = true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Velvet] comment failed: {exception.Message}");
+            }
+            finally
+            {
+                commenting = false;
+                onComplete(succeeded);
+            }
+        });
+    }
+
+    public void DeletePost(string postId)
+    {
+        var source = feed;
+        var index = Array.FindIndex(source, item => item.Id == postId);
+        if (index >= 0)
+        {
+            var result = new VelvetPostDto[source.Length - 1];
+            Array.Copy(source, 0, result, 0, index);
+            Array.Copy(source, index + 1, result, index, source.Length - index - 1);
+            feed = result;
+        }
+
+        RunGuarded("delete post", async token => await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false));
+    }
+
     public void ToggleReaction(VelvetPostDto post, int kind)
     {
         var target = post.MyReaction == kind ? -1 : kind;
@@ -585,6 +762,34 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
+    public void DeletePost(string postId, Action<bool> onComplete)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            var succeeded = false;
+            try
+            {
+                succeeded = await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false);
+                if (succeeded)
+                {
+                    RemovePost(postId);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"[Velvet] delete post failed: {exception.Message}");
+            }
+            finally
+            {
+                onComplete(succeeded);
+            }
+        });
+    }
+
     public void ClearDiscover() => discoverResults = Array.Empty<VelvetProfileDto>();
 
     public void InvalidateLists()
@@ -593,6 +798,7 @@ internal sealed class VelvetStore : IDisposable
         connectionsLoaded = false;
         threadsLoaded = false;
         requestsLoaded = false;
+        feedLoaded = false;
     }
 
     private static VelvetConnectionDto[] RemoveConnection(VelvetConnectionDto[] source, string userId)
@@ -652,6 +858,40 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
+    private void RemovePost(string postId)
+    {
+        feed = RemoveById(feed, postId);
+    }
+
+    private static VelvetPostDto[] RemoveById(VelvetPostDto[] source, string postId)
+    {
+        var count = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index].Id != postId)
+            {
+                count++;
+            }
+        }
+
+        if (count == source.Length)
+        {
+            return source;
+        }
+
+        var result = new VelvetPostDto[count];
+        var resultIndex = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (source[index].Id != postId)
+            {
+                result[resultIndex++] = source[index];
+            }
+        }
+
+        return result;
+    }
+
     private static VelvetPostDto[] Replace(VelvetPostDto[] source, VelvetPostDto updated)
     {
         for (var index = 0; index < source.Length; index++)
@@ -674,6 +914,14 @@ internal sealed class VelvetStore : IDisposable
         var result = new VelvetMessageDto[source.Length + 1];
         Array.Copy(source, result, source.Length);
         result[source.Length] = message;
+        return result;
+    }
+
+    private static VelvetCommentDto[] Append(VelvetCommentDto[] source, VelvetCommentDto comment)
+    {
+        var result = new VelvetCommentDto[source.Length + 1];
+        Array.Copy(source, result, source.Length);
+        result[source.Length] = comment;
         return result;
     }
 

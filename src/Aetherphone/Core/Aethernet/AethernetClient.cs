@@ -152,6 +152,11 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/posts/{postId}/comments/{commentId}"), session.Token, token, authStatusSink);
     }
 
+    public Task<bool> DeletePostAsync(string postId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/posts/{postId}"), session.Token, token, authStatusSink);
+    }
+
     public Task<bool> ReportAsync(string targetType, string targetId, string? reason, CancellationToken token)
     {
         return http.SendJsonForStatusAsync(HttpMethod.Post, Url("/reports"), new ReportRequest(targetType, targetId, reason), AethernetJsonContext.Default.ReportRequest, session.Token, token, authStatusSink);
@@ -170,6 +175,36 @@ internal sealed class AethernetClient
     public Task<VelvetProfileDto?> AcceptGateAsync(int gateVersion, CancellationToken token)
     {
         return http.SendJsonAsync(HttpMethod.Post, Url("/velvet/gate/accept"), new GateAcceptRequest(gateVersion), AethernetJsonContext.Default.GateAcceptRequest, AethernetJsonContext.Default.VelvetProfileDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetCommentPage?> VelvetCommentsAsync(string postId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/comments"), AethernetJsonContext.Default.VelvetCommentPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetCommentDto?> AddVelvetCommentAsync(string postId, string text, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/comments"), new CreateVelvetCommentRequest(text), AethernetJsonContext.Default.CreateVelvetCommentRequest, AethernetJsonContext.Default.VelvetCommentDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteVelvetCommentAsync(string postId, string commentId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/comments/{Uri.EscapeDataString(commentId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> SendVelvetTypingAsync(string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url($"/velvet/threads/{Uri.EscapeDataString(userId)}/typing"), session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetTypingDto?> VelvetTypingAsync(string userId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(userId)}/typing"), AethernetJsonContext.Default.VelvetTypingDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> VelvetHeartbeatAsync(CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url("/velvet/heartbeat"), session.Token, token, authStatusSink);
     }
 
     public Task<VelvetProfileDto?> VelvetUserAsync(string userId, CancellationToken token)

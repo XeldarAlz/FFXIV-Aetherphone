@@ -425,6 +425,13 @@ internal static class L
         public static readonly LocString ReportSubmit = new("chirper.reportSubmit", "Report");
         public static readonly LocString ReportSent = new("chirper.reportSent", "Report submitted. Thank you.");
         public static readonly LocString ReportFailed = new("chirper.reportFailed", "Couldn't submit the report");
+
+        public static readonly LocString DeleteConfirmMessage =
+            new("chirper.deleteConfirmMessage", "Delete this post? This can't be undone.");
+
+        public static readonly LocString DeleteConfirm = new("chirper.deleteConfirm", "Delete");
+        public static readonly LocString DeleteCancel = new("chirper.deleteCancel", "Cancel");
+        public static readonly LocString DeleteFailed = new("chirper.deleteFailed", "Couldn't delete the post");
     }
 
     internal static class Aethergram
@@ -490,6 +497,13 @@ internal static class L
         public static readonly LocString ReportSubmit = new("aethergram.reportSubmit", "Report");
         public static readonly LocString ReportSent = new("aethergram.reportSent", "Report submitted. Thank you.");
         public static readonly LocString ReportFailed = new("aethergram.reportFailed", "Couldn't submit the report");
+
+        public static readonly LocString DeleteConfirmMessage =
+            new("aethergram.deleteConfirmMessage", "Delete this post? This can't be undone.");
+
+        public static readonly LocString DeleteConfirm = new("aethergram.deleteConfirm", "Delete");
+        public static readonly LocString DeleteCancel = new("aethergram.deleteCancel", "Cancel");
+        public static readonly LocString DeleteFailed = new("aethergram.deleteFailed", "Couldn't delete the post");
     }
 
     internal static class Velvet
@@ -524,7 +538,8 @@ internal static class L
 
         public static readonly LocString SetupPrompt =
             new("velvet.setupPrompt", "Set up your profile so others can find you and connect.");
-        public static readonly LocString FeedEmpty = new("velvet.feedEmpty", "Sharing spicy posts arrives in a later update");
+        public static readonly LocString FeedEmpty = new("velvet.feedEmpty", "Nothing here yet. Tap + to share the first");
+        public static readonly LocString Fresh = new("velvet.fresh", "Fresh");
         public static readonly LocString ConnectionsEmpty = new("velvet.connectionsEmpty", "Connect with people to message them");
         public static readonly LocString MessagesEmpty = new("velvet.messagesEmpty", "No conversations yet");
         public static readonly LocString ThreadEmpty = new("velvet.threadEmpty", "Say hello");
@@ -579,12 +594,21 @@ internal static class L
         public static readonly LocString Block = new("velvet.block", "Block");
         public static readonly LocString Blocked = new("velvet.blocked", "Blocked");
 
+        public static readonly LocPlural Likes = new("velvet.likes", "{0} like", "{0} likes");
+
         public static readonly LocString ReportReasonHint =
             new("velvet.reportReasonHint", "Why are you reporting this? (optional)");
 
         public static readonly LocString ReportSubmit = new("velvet.reportSubmit", "Report");
         public static readonly LocString ReportSent = new("velvet.reportSent", "Report submitted. Thank you.");
         public static readonly LocString ReportFailed = new("velvet.reportFailed", "Couldn't submit the report");
+
+        public static readonly LocString DeleteConfirmMessage =
+            new("velvet.deleteConfirmMessage", "Delete this post? This can't be undone.");
+
+        public static readonly LocString DeleteConfirm = new("velvet.deleteConfirm", "Delete");
+        public static readonly LocString DeleteCancel = new("velvet.deleteCancel", "Cancel");
+        public static readonly LocString DeleteFailed = new("velvet.deleteFailed", "Couldn't delete the post");
 
         public static readonly LocString SettingsSection = new("velvet.settingsSection", "Velvet");
         public static readonly LocString SetPasscode = new("velvet.setPasscode", "Passcode");
@@ -1095,11 +1119,6 @@ internal static class L
         public static readonly LocString AllInOneBody = new("onboarding.allInOneBody",
             "Chat, music, weather, the market board, mini-games and more, all in your pocket.");
 
-        public static readonly LocString TipsTitle = new("onboarding.tipsTitle", "Tips as you go");
-
-        public static readonly LocString TipsBody = new("onboarding.tipsBody",
-            "The first time you open an app, a short tip like this shows you the ropes.");
-
         public static readonly LocString FeedbackTitle = new("onboarding.feedbackTitle", "Still a work in progress");
 
         public static readonly LocString FeedbackBody = new("onboarding.feedbackBody",
@@ -1262,5 +1281,41 @@ internal static class L
 
         public static readonly LocString NotificationsBody = new("onboarding.notificationsBody",
             "A running history of everything your phone has pinged you about, so nothing slips past you.");
+
+        public static readonly LocString VelvetBody = new("onboarding.velvetBody",
+            "Welcome to Velvet! A private, 18+ space for sharing mature work and connecting with like-minded people, separate from the rest of the phone.");
+
+        public static readonly LocString VelvetDiscoverTitle = new("onboarding.velvetDiscoverTitle", "Discover people");
+
+        public static readonly LocString VelvetDiscoverBody = new("onboarding.velvetDiscoverBody",
+            "Browse profiles filtered by what people are looking for, and send a connection request when you find someone interesting.");
+
+        public static readonly LocString VelvetMessagesTitle = new("onboarding.velvetMessagesTitle", "Requests and messages");
+
+        public static readonly LocString VelvetMessagesBody = new("onboarding.velvetMessagesBody",
+            "Accept or decline requests, then chat privately with the connections you make.");
+
+        public static readonly LocString VelvetProfileTitle = new("onboarding.velvetProfileTitle", "Your profile");
+
+        public static readonly LocString VelvetProfileBody = new("onboarding.velvetProfileBody",
+            "Set up your intro, vibe, tags and limits, and choose whether you're discoverable to others.");
+
+        public static readonly LocString VelvetKindTitle = new("onboarding.velvetKindTitle", "Consent and respect");
+
+        public static readonly LocString VelvetKindBody = new("onboarding.velvetKindBody",
+            "Everything here is opt-in. Harassment or ignoring someone's limits can get you banned, and you can report or block anyone from their profile.");
+
+        public static readonly LocString PhoneBody = new("onboarding.phoneBody",
+            "Call your friends directly in-game and talk over voice chat. The other person needs the Aetherphone plugin too, and you both need to be signed in to Aethernet from Settings.");
+
+        public static readonly LocString PhoneGroupTitle = new("onboarding.phoneGroupTitle", "Group calls");
+
+        public static readonly LocString PhoneGroupBody = new("onboarding.phoneGroupBody",
+            "While a call is active, add more people to bring everyone into the same conversation. Group calls are supported too.");
+
+        public static readonly LocString PhoneVoiceTitle = new("onboarding.phoneVoiceTitle", "Voice settings");
+
+        public static readonly LocString PhoneVoiceBody = new("onboarding.phoneVoiceBody",
+            "You can pick your microphone and adjust voice input options from Settings.");
     }
 }

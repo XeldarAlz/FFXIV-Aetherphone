@@ -15,6 +15,8 @@ internal enum VelvetScreen
     Settings,
     Thread,
     Avatar,
+    Compose,
+    PostDetail,
 }
 
 internal readonly record struct VelvetRoute(VelvetScreen Screen, string? Id = null)
@@ -27,7 +29,11 @@ internal readonly record struct VelvetRoute(VelvetScreen Screen, string? Id = nu
 
     public static readonly VelvetRoute Avatar = new(VelvetScreen.Avatar);
 
+    public static readonly VelvetRoute Compose = new(VelvetScreen.Compose);
+
     public static VelvetRoute Profile(string userId) => new(VelvetScreen.Profile, userId);
 
     public static VelvetRoute Thread(string userId) => new(VelvetScreen.Thread, userId);
+
+    public static VelvetRoute PostDetail(string postId) => new(VelvetScreen.PostDetail, postId);
 }
