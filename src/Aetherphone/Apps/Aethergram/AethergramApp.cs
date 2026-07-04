@@ -31,7 +31,6 @@ internal sealed class AethergramApp : IPhoneApp
     private const int DisplayNameMax = 40;
     private const int HandleMax = 15;
     private const int BioMax = 200;
-    private const float TabsHeight = 40f;
     private const float BottomNavHeight = 52f;
     private const float CropSmoothTime = 0.10f;
     private const int GridColumns = 3;
@@ -62,6 +61,7 @@ internal sealed class AethergramApp : IPhoneApp
     private readonly LodestoneService lodestone;
     private readonly PhotoLibrary library;
     private readonly RemoteImageCache images;
+    private readonly AethergramUi ui = new();
 
     private readonly ViewRouter<AethergramRoute> router;
     private readonly RouterDraw<AethergramRoute> drawView;
@@ -71,8 +71,11 @@ internal sealed class AethergramApp : IPhoneApp
     private INavigator navigation = null!;
 
     private AethergramFeedScope activeScope = AethergramFeedScope.ForYou;
+    private float tabSegmentAnim;
     private float sinceForYou;
     private float sinceFollowing;
+
+    private bool commentFocusPending;
 
     private ComposeStage composeStage = ComposeStage.Pick;
     private bool composeAvatarMode;
@@ -166,11 +169,16 @@ internal sealed class AethergramApp : IPhoneApp
     {
         theme = context.Theme;
         navigation = context.Navigation;
-        router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawView);
+        ui.Theme = theme;
+
+        var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
+        ui.Backdrop(screen);
+        router.Draw(context.Content, AethergramUi.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
     private void DrawView(AethergramRoute route, Rect area, int depth)
     {
+        ui.Body(area);
         switch (route.Screen)
         {
             case AethergramScreen.Compose:
@@ -204,13 +212,15 @@ internal sealed class AethergramApp : IPhoneApp
         if (!store.IsSignedIn)
         {
             var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-            Typography.DrawCentered(body.Center, Loc.T(L.Aethergram.SetUpAccount), theme.TextMuted);
+            Typography.DrawCentered(body.Center, Loc.T(L.Aethergram.SetUpAccount), AethergramUi.MutedInk);
             return;
         }
 
-        var tabsRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + TabsHeight * scale));
-        var tabs = new[] { Loc.T(L.Aethergram.ForYou), Loc.T(L.Aethergram.Following) };
-        var selected = ChirperTabsProxy(tabsRect, tabs);
+        var segmentHeight = 38f * scale;
+        var tabsRect = new Rect(
+            new Vector2(area.Min.X + 16f * scale, top + 2f * scale),
+            new Vector2(area.Max.X - 16f * scale, top + 2f * scale + segmentHeight));
+        var selected = DrawScopeSegments(tabsRect);
         if (selected != (int)activeScope)
         {
             activeScope = (AethergramFeedScope)selected;
@@ -222,14 +232,51 @@ internal sealed class AethergramApp : IPhoneApp
         TickRefresh(activeScope);
 
         var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - BottomNavHeight * scale), area.Max);
-        var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y), new Vector2(area.Max.X, navRect.Min.Y));
+        var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y + 6f * scale), new Vector2(area.Max.X, navRect.Min.Y));
         DrawFeedList(listRect, activeScope);
         DrawBottomNav(navRect);
     }
 
-    private int ChirperTabsProxy(Rect tabsRect, string[] tabs)
+    private int DrawScopeSegments(Rect rect)
     {
-        return Aetherphone.Apps.Chirper.ChirperTabs.Draw("aethergram.tabs", tabsRect, tabs, (int)activeScope, theme, Accent);
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = rect.Height * 0.5f;
+        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)));
+
+        var target = (int)activeScope == 1 ? 1f : 0f;
+        tabSegmentAnim += (target - tabSegmentAnim) * MathF.Min(1f, ImGui.GetIO().DeltaTime * 14f);
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var half = rect.Width * 0.5f;
+        var pad = 3f * scale;
+        var thumbMinX = rect.Min.X + pad + tabSegmentAnim * half;
+        var thumbMin = new Vector2(thumbMinX, rect.Min.Y + pad);
+        var thumbMax = new Vector2(thumbMinX + half - pad * 2f, rect.Max.Y - pad);
+        Squircle.Fill(drawList, thumbMin, thumbMax, (thumbMax.Y - thumbMin.Y) * 0.5f, ImGui.GetColorU32(Accent));
+
+        var forYouRect = new Rect(rect.Min, new Vector2(rect.Min.X + half, rect.Max.Y));
+        var followingRect = new Rect(new Vector2(rect.Min.X + half, rect.Min.Y), rect.Max);
+        DrawSegmentLabel(forYouRect, Loc.T(L.Aethergram.ForYou), activeScope == AethergramFeedScope.ForYou);
+        DrawSegmentLabel(followingRect, Loc.T(L.Aethergram.Following), activeScope == AethergramFeedScope.Following);
+
+        var selected = (int)activeScope;
+        if (HoverClick(forYouRect.Min, forYouRect.Max))
+        {
+            selected = 0;
+        }
+
+        if (HoverClick(followingRect.Min, followingRect.Max))
+        {
+            selected = 1;
+        }
+
+        return selected;
+    }
+
+    private static void DrawSegmentLabel(Rect rect, string label, bool active)
+    {
+        var ink = active ? new Vector4(1f, 1f, 1f, 1f) : AethergramUi.MutedInk;
+        Typography.DrawCentered(rect.Center, label, ink, 0.9f, active ? FontWeight.SemiBold : FontWeight.Medium);
     }
 
     private void DrawFeedList(Rect listRect, AethergramFeedScope scope)
@@ -242,10 +289,11 @@ internal sealed class AethergramApp : IPhoneApp
                 var message = store.IsLoading(scope)
                     ? Loc.T(L.Common.Loading)
                     : scope == AethergramFeedScope.Following ? Loc.T(L.Aethergram.FollowingEmpty) : Loc.T(L.Aethergram.ExploreEmpty);
-                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 90f * ImGuiHelpers.GlobalScale), message, theme.TextMuted);
+                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 90f * ImGuiHelpers.GlobalScale), message, AethergramUi.MutedInk);
             }
             else
             {
+                ImGui.Dummy(new Vector2(0f, 4f * ImGuiHelpers.GlobalScale));
                 for (var index = 0; index < snapshot.Length; index++)
                 {
                     DrawGramCard(snapshot[index]);
@@ -262,97 +310,117 @@ internal sealed class AethergramApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var bleed = 16f * scale;
+        var pad = 14f * scale;
+        var innerX = origin.X + pad;
+        var innerWidth = width - pad * 2f;
+        var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
 
-        var headerHeight = 56f * scale;
-        var avatarRadius = 17f * scale;
-        var avatarCenter = new Vector2(origin.X + avatarRadius + 4f * scale, origin.Y + headerHeight * 0.5f);
-        DrawStoryRing(drawList, avatarCenter, avatarRadius + 4f * scale, scale);
-        DrawAvatar(avatarCenter, avatarRadius, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl, 0.85f, 28);
-        if (HoverClick(avatarCenter - new Vector2(avatarRadius, avatarRadius), avatarCenter + new Vector2(avatarRadius, avatarRadius)))
-        {
-            OpenProfile(post.AuthorId);
-        }
+        var headerBlock = 40f * scale;
+        var avatarRadius = 18f * scale;
+        var imageTop = origin.Y + pad + headerBlock + 12f * scale;
+        var imageBottom = imageTop + innerWidth;
+        var actionsTop = imageBottom + 12f * scale;
+        var actionsHeight = 22f * scale;
+        var textTop = actionsTop + actionsHeight + 10f * scale;
+
+        var captionHeight = post.Text.Length > 0 ? MeasureWrapped(post.Text, innerWidth, 0.9f) + 6f * scale : 0f;
+        var commentsHeight = post.CommentCount > 0 ? 20f * scale : 0f;
+        var cardBottom = textTop + captionHeight + commentsHeight + pad;
+
+        ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 18f * scale);
+
+        var avatarCenter = new Vector2(innerX + avatarRadius, origin.Y + pad + avatarRadius);
+        DrawStoryRing(drawList, avatarCenter, avatarRadius + 3f * scale, scale);
+        DrawAvatar(avatarCenter, avatarRadius - 1f * scale, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl, 0.85f, 32);
 
         var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
-        var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
-        Typography.Draw(new Vector2(nameLeft, avatarCenter.Y - 16f * scale), displayName, theme.TextStrong, 0.92f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(nameLeft, avatarCenter.Y + 1f * scale), post.AuthorWorld, theme.TextMuted, 0.78f);
-        if (HoverClick(new Vector2(nameLeft, origin.Y), new Vector2(origin.X + width - 44f * scale, origin.Y + headerHeight)))
+        Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 2f * scale), displayName, theme.TextStrong, 0.92f, FontWeight.SemiBold);
+        var subline = $"{post.AuthorWorld} · {RelativeTime(post.CreatedAtUnix)}";
+        Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), subline, AethergramUi.MutedInk, 0.76f);
+        if (HoverClick(new Vector2(innerX, origin.Y + pad), new Vector2(origin.X + width - pad - 30f * scale, origin.Y + pad + headerBlock)))
         {
             OpenProfile(post.AuthorId);
         }
 
-        var moreCenter = new Vector2(origin.X + width - 10f * scale, avatarCenter.Y);
-        if (DrawIconButton(moreCenter, 12f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 0.85f))
+        var moreCenter = new Vector2(origin.X + width - pad - 4f * scale, avatarCenter.Y);
+        if (ui.IconButton(moreCenter, 12f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 0.85f))
         {
-            OpenDetail(post);
+            OpenDetail(post, false);
         }
 
-        var imageTop = origin.Y + headerHeight;
-        var imageSide = width + bleed * 2f;
-        var imageRect = new Rect(new Vector2(origin.X - bleed, imageTop), new Vector2(origin.X + width + bleed, imageTop + imageSide));
-        DrawGramImage(imageRect, post.MediaUrl, 0f);
+        var imageRect = new Rect(new Vector2(innerX, imageTop), new Vector2(innerX + innerWidth, imageBottom));
+        DrawGramImage(imageRect, post.MediaUrl, 14f * scale);
         HandleLikeGesture(imageRect, post);
         DrawLikeBurst(imageRect, post.Id);
 
         var liked = post.MyReaction >= 0;
-        var actionsY = imageRect.Max.Y + 24f * scale;
-        var heartCenter = new Vector2(origin.X + 12f * scale, actionsY);
-        if (DrawIconButton(heartCenter, 16f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1.3f))
+        var actionCenterY = actionsTop + actionsHeight * 0.5f;
+        var heartCenter = new Vector2(innerX + 12f * scale, actionCenterY);
+        if (ui.IconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : AethergramUi.BodyInk, AethergramUi.Transparent, 1.15f))
         {
             store.ToggleLike(post);
         }
 
-        var commentCenter = new Vector2(heartCenter.X + 44f * scale, actionsY);
-        if (DrawIconButton(commentCenter, 16f * scale, FontAwesomeIcon.Comment.ToIconString(), theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1.22f))
-        {
-            OpenDetail(post);
-        }
-
-        var textTop = actionsY + 24f * scale;
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, textTop));
-
+        var cursorX = heartCenter.X + 18f * scale;
         if (post.TotalReactions > 0)
         {
-            Typography.Draw(new Vector2(origin.X, textTop), Loc.Plural(L.Aethergram.Likes, post.TotalReactions), theme.TextStrong, 0.92f, FontWeight.SemiBold);
-            ImGui.SetCursorScreenPos(new Vector2(origin.X, textTop + 20f * scale));
+            var likeText = post.TotalReactions.ToString(Loc.Culture);
+            Typography.Draw(new Vector2(cursorX, actionCenterY - 7f * scale), likeText, AethergramUi.BodyInk, 0.82f, FontWeight.Medium);
+            cursorX += Typography.Measure(likeText, 0.82f, FontWeight.Medium).X + 14f * scale;
+        }
+        else
+        {
+            cursorX += 6f * scale;
         }
 
+        var commentCenter = new Vector2(cursorX + 12f * scale, actionCenterY);
+        if (ui.IconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 1.05f))
+        {
+            OpenDetail(post, true);
+        }
+
+        if (post.CommentCount > 0)
+        {
+            Typography.Draw(new Vector2(commentCenter.X + 18f * scale, actionCenterY - 7f * scale), post.CommentCount.ToString(Loc.Culture), AethergramUi.BodyInk, 0.82f, FontWeight.Medium);
+        }
+
+        var y = textTop;
         if (post.Text.Length > 0)
         {
-            var captionPos = ImGui.GetCursorScreenPos();
-            Typography.Draw(captionPos, displayName, theme.TextStrong, 0.92f, FontWeight.SemiBold);
-            var nameWidth = Typography.Measure(displayName, 0.92f, FontWeight.SemiBold).X;
-            ImGui.SetCursorScreenPos(new Vector2(captionPos.X + nameWidth + 6f * scale, captionPos.Y));
-            ImGui.PushTextWrapPos(origin.X + width);
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-            using (Plugin.Fonts.Push(0.92f))
+            ImGui.SetCursorScreenPos(new Vector2(innerX, y));
+            ImGui.PushTextWrapPos(innerX + innerWidth);
+            using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.BodyInk))
+            using (Plugin.Fonts.Push(0.9f))
             {
                 ImGui.TextWrapped(post.Text);
             }
 
             ImGui.PopTextWrapPos();
+            y += captionHeight;
         }
 
         if (post.CommentCount > 0)
         {
-            ImGui.Dummy(new Vector2(0f, 3f * scale));
             var commentsLabel = Loc.T(L.Aethergram.ViewComments, post.CommentCount);
-            var labelPos = ImGui.GetCursorScreenPos();
-            Typography.Draw(labelPos, commentsLabel, theme.TextMuted, 0.85f);
-            var labelSize = Typography.Measure(commentsLabel, 0.85f);
+            var labelPos = new Vector2(innerX, y + 2f * scale);
+            Typography.Draw(labelPos, commentsLabel, AethergramUi.MutedInk, 0.82f);
+            var labelSize = Typography.Measure(commentsLabel, 0.82f);
             if (HoverClick(labelPos, labelPos + labelSize))
             {
-                OpenDetail(post);
+                OpenDetail(post, false);
             }
-
-            ImGui.Dummy(labelSize);
         }
 
-        ImGui.Dummy(new Vector2(0f, 1f * scale));
-        Typography.Draw(ImGui.GetCursorScreenPos(), RelativeTime(post.CreatedAtUnix), theme.TextMuted, 0.72f);
-        ImGui.Dummy(new Vector2(width, 26f * scale));
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, cardBottom - origin.Y + 12f * scale));
+    }
+
+    private static float MeasureWrapped(string text, float wrapWidth, float fontScale)
+    {
+        using (Plugin.Fonts.Push(fontScale))
+        {
+            return ImGui.CalcTextSize(text, false, wrapWidth).Y;
+        }
     }
 
     private static void DrawStoryRing(ImDrawListPtr drawList, Vector2 center, float radius, float scale)
@@ -428,8 +496,8 @@ internal sealed class AethergramApp : IPhoneApp
         var texture = images.Get(url);
         if (texture is null)
         {
-            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-            Typography.DrawCentered(rect.Center, Loc.T(images.Failed(url) ? L.Aethergram.ImageFailed : L.Common.Loading), theme.TextMuted, 0.85f);
+            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(AethergramUi.FieldSurface));
+            Typography.DrawCentered(rect.Center, Loc.T(images.Failed(url) ? L.Aethergram.ImageFailed : L.Common.Loading), AethergramUi.MutedInk, 0.85f);
             return;
         }
 
@@ -441,26 +509,25 @@ internal sealed class AethergramApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(bar.Min, bar.Max, ImGui.GetColorU32(theme.AppBackground));
-        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
+        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), 1f);
 
         var slot = bar.Width / 4f;
         var centerY = bar.Center.Y;
-        var none = new Vector4(0f, 0f, 0f, 0f);
+        var none = AethergramUi.Transparent;
 
-        if (DrawIconButton(new Vector2(bar.Min.X + slot * 0.5f, centerY), 17f * scale, FontAwesomeIcon.Home.ToIconString(), theme.TextStrong, none, 1.15f))
+        if (ui.IconButton(new Vector2(bar.Min.X + slot * 0.5f, centerY), 17f * scale, FontAwesomeIcon.Home.ToIconString(), AethergramUi.TitleInk, none, 1.15f))
         {
             store.RefreshFeed(activeScope);
         }
 
-        if (DrawIconButton(new Vector2(bar.Min.X + slot * 1.5f, centerY), 17f * scale, FontAwesomeIcon.Search.ToIconString(), theme.TextMuted, none, 1.1f))
+        if (ui.IconButton(new Vector2(bar.Min.X + slot * 1.5f, centerY), 17f * scale, FontAwesomeIcon.Search.ToIconString(), AethergramUi.MutedInk, none, 1.1f))
         {
             store.ClearDiscover();
             searchDraft = string.Empty;
             router.Push(AethergramRoute.Discover);
         }
 
-        if (DrawIconButton(new Vector2(bar.Min.X + slot * 2.5f, centerY), 17f * scale, FontAwesomeIcon.PlusSquare.ToIconString(), theme.TextMuted, none, 1.2f))
+        if (ui.IconButton(new Vector2(bar.Min.X + slot * 2.5f, centerY), 17f * scale, FontAwesomeIcon.PlusSquare.ToIconString(), AethergramUi.MutedInk, none, 1.2f))
         {
             StartCompose(false);
         }
@@ -478,7 +545,7 @@ internal sealed class AethergramApp : IPhoneApp
         else
         {
             store.EnsureMe();
-            DrawIcon(profileCenter, FontAwesomeIcon.User.ToIconString(), theme.TextMuted, 1.05f);
+            DrawIcon(profileCenter, FontAwesomeIcon.User.ToIconString(), AethergramUi.MutedInk, 1.05f);
         }
     }
 
@@ -558,7 +625,7 @@ internal sealed class AethergramApp : IPhoneApp
         {
             if (pickerPaths.Length == 0)
             {
-                Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale), Loc.T(L.Photos.NoPhotos), theme.TextMuted);
+                Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale), Loc.T(L.Photos.NoPhotos), AethergramUi.MutedInk);
                 return;
             }
 
@@ -654,7 +721,7 @@ internal sealed class AethergramApp : IPhoneApp
         if (texture is null)
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), theme.TextMuted);
+            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), AethergramUi.MutedInk);
             return;
         }
 
@@ -669,7 +736,7 @@ internal sealed class AethergramApp : IPhoneApp
         Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
         HandleCropGestures(preview, size, uv1 - uv0);
 
-        Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), Loc.T(L.Aethergram.GestureHint), theme.TextMuted, 0.78f);
+        Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), Loc.T(L.Aethergram.GestureHint), AethergramUi.MutedInk, 0.78f);
         var trackWidth = area.Width * 0.62f;
         var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, area.Max.Y - 48f * scale), new Vector2(area.Center.X + trackWidth * 0.5f, area.Max.Y - 44f * scale));
         var zoomNormalized = (targetZoom - WallpaperCrop.MinZoom) / (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
@@ -747,7 +814,7 @@ internal sealed class AethergramApp : IPhoneApp
             new Vector2(area.Min.X + margin, top + 14f * scale),
             new Vector2(area.Max.X - margin, hintY - 12f * scale));
         DrawCaptionPreview(previewRegion, scale);
-        Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Aethergram.TapToAdjust), theme.TextMuted, 0.75f);
+        Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Aethergram.TapToAdjust), AethergramUi.MutedInk, 0.75f);
 
         DrawCaptionCard(cardRect, scale);
 
@@ -787,7 +854,7 @@ internal sealed class AethergramApp : IPhoneApp
         if (texture is null)
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), theme.TextMuted);
+            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), AethergramUi.MutedInk);
             return;
         }
 
@@ -806,7 +873,7 @@ internal sealed class AethergramApp : IPhoneApp
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 14f * scale;
-        Squircle.Fill(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(theme.GroupedCard));
+        Squircle.Fill(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(AethergramUi.FieldSurface));
         Material.EdgeSquircle(drawList, card.Min, card.Max, rounding, scale);
 
         var padding = 12f * scale;
@@ -843,10 +910,10 @@ internal sealed class AethergramApp : IPhoneApp
 
         if (caption.Length == 0)
         {
-            Typography.Draw(inputPos + ImGui.GetStyle().FramePadding, Loc.T(L.Aethergram.CaptionHint), theme.TextMuted, 1f);
+            Typography.Draw(inputPos + ImGui.GetStyle().FramePadding, Loc.T(L.Aethergram.CaptionHint), AethergramUi.MutedInk, 1f);
         }
 
-        var counterInk = caption.Length >= MaxCaptionLength - 50 ? theme.Danger : theme.TextMuted;
+        var counterInk = caption.Length >= MaxCaptionLength - 50 ? theme.Danger : AethergramUi.MutedInk;
         Typography.Draw(counterPos, counter, counterInk, 0.72f);
     }
 
@@ -926,11 +993,11 @@ internal sealed class AethergramApp : IPhoneApp
 
         if (post is null || post.Id != postId)
         {
-            Typography.DrawCentered(new Vector2(area.Center.X, top + 60f * scale), Loc.T(L.Common.Loading), theme.TextMuted);
+            Typography.DrawCentered(new Vector2(area.Center.X, top + 60f * scale), Loc.T(L.Common.Loading), AethergramUi.MutedInk);
             return;
         }
 
-        var composerHeight = 50f * scale;
+        var composerHeight = 54f * scale;
         var body = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, area.Max.Y - composerHeight));
 
         using (AppSurface.Begin(body))
@@ -938,30 +1005,56 @@ internal sealed class AethergramApp : IPhoneApp
             var origin = ImGui.GetCursorScreenPos();
             var width = ImGui.GetContentRegionAvail().X;
 
-            var headerHeight = 44f * scale;
-            var avatarRadius = 16f * scale;
-            var avatarCenter = new Vector2(origin.X + avatarRadius, origin.Y + headerHeight * 0.5f);
-            DrawAvatar(avatarCenter, avatarRadius, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl, 0.85f, 28);
-            if (HoverClick(avatarCenter - new Vector2(avatarRadius, avatarRadius), avatarCenter + new Vector2(avatarRadius, avatarRadius)))
+            var headerHeight = 48f * scale;
+            var avatarRadius = 17f * scale;
+            var avatarCenter = new Vector2(origin.X + avatarRadius + 4f * scale, origin.Y + headerHeight * 0.5f);
+            DrawStoryRing(ImGui.GetWindowDrawList(), avatarCenter, avatarRadius + 3f * scale, scale);
+            DrawAvatar(avatarCenter, avatarRadius - 1f * scale, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl, 0.85f, 32);
+
+            var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
+            var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
+            Typography.Draw(new Vector2(nameLeft, avatarCenter.Y - 14f * scale), displayName, theme.TextStrong, 0.95f, FontWeight.SemiBold);
+            Typography.Draw(new Vector2(nameLeft, avatarCenter.Y + 2f * scale), $"{post.AuthorWorld} · {RelativeTime(post.CreatedAtUnix)}", AethergramUi.MutedInk, 0.78f);
+            if (HoverClick(new Vector2(origin.X, origin.Y), new Vector2(origin.X + width * 0.7f, origin.Y + headerHeight)))
             {
                 OpenProfile(post.AuthorId);
             }
 
-            var nameLeft = avatarCenter.X + avatarRadius + 10f * scale;
-            var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
-            Typography.Draw(new Vector2(nameLeft, avatarCenter.Y - 8f * scale), displayName, theme.TextStrong, 0.95f, FontWeight.SemiBold);
-
             ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + headerHeight));
             var imageRect = new Rect(new Vector2(origin.X, origin.Y + headerHeight), new Vector2(origin.X + width, origin.Y + headerHeight + width));
-            DrawGramImage(imageRect, post.MediaUrl, 0f);
+            DrawGramImage(imageRect, post.MediaUrl, 16f * scale);
+            HandleLikeGesture(imageRect, post);
+            DrawLikeBurst(imageRect, post.Id);
 
-            ImGui.SetCursorScreenPos(new Vector2(origin.X, imageRect.Max.Y + 12f * scale));
             var liked = post.MyReaction >= 0;
-            var actionsY = imageRect.Max.Y + 12f * scale + 8f * scale;
-            var heartCenter = new Vector2(origin.X + 12f * scale, actionsY);
-            if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : theme.TextStrong, new Vector4(0f, 0f, 0f, 0f), 1f))
+            var actionsY = imageRect.Max.Y + 22f * scale;
+            var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
+            if (ui.IconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(), liked ? LikeRed : AethergramUi.BodyInk, AethergramUi.Transparent, 1.1f))
             {
                 store.ToggleLike(post);
+            }
+
+            var actionCursorX = heartCenter.X + 18f * scale;
+            if (post.TotalReactions > 0)
+            {
+                var likeText = post.TotalReactions.ToString(Loc.Culture);
+                Typography.Draw(new Vector2(actionCursorX, actionsY - 7f * scale), likeText, AethergramUi.BodyInk, 0.85f, FontWeight.Medium);
+                actionCursorX += Typography.Measure(likeText, 0.85f, FontWeight.Medium).X + 16f * scale;
+            }
+            else
+            {
+                actionCursorX += 6f * scale;
+            }
+
+            var commentCenter = new Vector2(actionCursorX + 12f * scale, actionsY);
+            if (ui.IconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AethergramUi.BodyInk, AethergramUi.Transparent, 1.05f))
+            {
+                commentFocusPending = true;
+            }
+
+            if (post.CommentCount > 0)
+            {
+                Typography.Draw(new Vector2(commentCenter.X + 18f * scale, actionsY - 7f * scale), post.CommentCount.ToString(Loc.Culture), AethergramUi.BodyInk, 0.85f, FontWeight.Medium);
             }
 
             var mine = store.Me is { } me && me.Id == post.AuthorId;
@@ -978,7 +1071,7 @@ internal sealed class AethergramApp : IPhoneApp
                 reportShown = DrawReportToggle(reportCenter, 14f * scale, "post", post.Id);
             }
 
-            ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 18f * scale));
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
             if (deleteShown)
             {
                 DrawDeleteComposer(post.Id, origin.X, width);
@@ -990,32 +1083,34 @@ internal sealed class AethergramApp : IPhoneApp
                 ImGui.Dummy(new Vector2(0f, 6f * scale));
             }
 
-            if (post.TotalReactions > 0)
-            {
-                Typography.Draw(ImGui.GetCursorScreenPos(), Loc.Plural(L.Aethergram.Likes, post.TotalReactions), theme.TextStrong, 0.9f, FontWeight.SemiBold);
-                ImGui.Dummy(new Vector2(0f, 18f * scale));
-            }
-
             if (post.Text.Length > 0)
             {
+                var captionPos = ImGui.GetCursorScreenPos();
+                Typography.Draw(captionPos, displayName, theme.TextStrong, 0.9f, FontWeight.SemiBold);
+                var nameWidth = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).X;
+                ImGui.SetCursorScreenPos(new Vector2(captionPos.X + nameWidth + 6f * scale, captionPos.Y));
                 ImGui.PushTextWrapPos(origin.X + width);
-                using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+                using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.BodyInk))
+                using (Plugin.Fonts.Push(0.9f))
                 {
-                    ImGui.TextWrapped($"{displayName}  {post.Text}");
+                    ImGui.TextWrapped(post.Text);
                 }
 
                 ImGui.PopTextWrapPos();
+                ImGui.Dummy(new Vector2(0f, 4f * scale));
             }
 
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            var separatorY = ImGui.GetCursorScreenPos().Y;
-            ImGui.GetWindowDrawList().AddLine(new Vector2(origin.X, separatorY), new Vector2(origin.X + width, separatorY), ImGui.GetColorU32(theme.Separator), 1f);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            var linePos = ImGui.GetCursorScreenPos();
+            ImGui.GetWindowDrawList().AddLine(linePos, new Vector2(linePos.X + width, linePos.Y), ImGui.GetColorU32(theme.Separator), 1f);
+            ImGui.Dummy(new Vector2(0f, 14f * scale));
 
             var comments = store.DetailComments;
+            ui.SectionHeading(comments.Length > 0 ? $"{Loc.T(L.Aethergram.CommentsTitle)} · {comments.Length}" : Loc.T(L.Aethergram.CommentsTitle));
+
             if (comments.Length == 0 && !store.DetailLoading)
             {
-                Typography.Draw(ImGui.GetCursorScreenPos(), Loc.T(L.Aethergram.NoComments), theme.TextMuted, 0.85f);
+                Typography.Draw(ImGui.GetCursorScreenPos(), Loc.T(L.Aethergram.NoComments), AethergramUi.MutedInk, 0.85f);
             }
             else
             {
@@ -1036,21 +1131,28 @@ internal sealed class AethergramApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var radius = 14f * scale;
+        var radius = 15f * scale;
         var avatarCenter = new Vector2(origin.X + radius, origin.Y + radius);
-        DrawAvatar(avatarCenter, radius, comment.AuthorName, string.Empty, comment.AuthorAvatarUrl, 0.8f, 24);
-        if (HoverClick(avatarCenter - new Vector2(radius, radius), avatarCenter + new Vector2(radius, radius)))
+        DrawAvatar(avatarCenter, radius, comment.AuthorName, string.Empty, comment.AuthorAvatarUrl, 0.8f, 28);
+
+        var textLeft = avatarCenter.X + radius + 10f * scale;
+        var wrapRight = origin.X + width - 18f * scale;
+        var displayName = string.IsNullOrEmpty(comment.AuthorDisplayName) ? comment.AuthorName : comment.AuthorDisplayName;
+        Typography.Draw(new Vector2(textLeft, origin.Y), displayName, theme.TextStrong, 0.85f, FontWeight.SemiBold);
+        var nameWidth = Typography.Measure(displayName, 0.85f, FontWeight.SemiBold).X;
+
+        if (HoverClick(new Vector2(origin.X, origin.Y), new Vector2(textLeft + nameWidth, origin.Y + 16f * scale)))
         {
             OpenProfile(comment.AuthorId);
         }
 
-        var textLeft = origin.X + radius * 2f + 10f * scale;
-        var displayName = string.IsNullOrEmpty(comment.AuthorDisplayName) ? comment.AuthorName : comment.AuthorDisplayName;
-        ImGui.SetCursorScreenPos(new Vector2(textLeft, origin.Y));
-        ImGui.PushTextWrapPos(origin.X + width);
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        var textTop = origin.Y + 17f * scale;
+        ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop));
+        ImGui.PushTextWrapPos(wrapRight);
+        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.BodyInk))
+        using (Plugin.Fonts.Push(0.88f))
         {
-            ImGui.TextWrapped($"{displayName}  {comment.Text}");
+            ImGui.TextWrapped(comment.Text);
         }
 
         ImGui.PopTextWrapPos();
@@ -1059,39 +1161,49 @@ internal sealed class AethergramApp : IPhoneApp
         if (mine)
         {
             var trashCenter = new Vector2(origin.X + width - 8f * scale, origin.Y + 8f * scale);
-            if (DrawIconButton(trashCenter, 10f * scale, FontAwesomeIcon.Times.ToIconString(), theme.TextMuted, new Vector4(0f, 0f, 0f, 0f), 0.7f) && store.DetailPost is { } post)
+            if (ui.IconButton(trashCenter, 10f * scale, FontAwesomeIcon.Times.ToIconString(), AethergramUi.MutedInk, AethergramUi.Transparent, 0.7f) && store.DetailPost is { } post)
             {
                 store.DeleteComment(post.Id, comment.Id);
             }
         }
 
-        var bottom = MathF.Max(ImGui.GetCursorScreenPos().Y, origin.Y + radius * 2f);
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, bottom));
-        ImGui.Dummy(new Vector2(width, 8f * scale));
+        var textHeight = MeasureWrapped(comment.Text, wrapRight - textLeft, 0.88f);
+        var rowHeight = MathF.Max(radius * 2f, 17f * scale + textHeight);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, rowHeight + 12f * scale));
     }
 
     private void DrawCommentComposer(Rect bar, string postId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
+        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), 1f);
 
-        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 8f * scale);
-        var pillMax = new Vector2(bar.Max.X - 56f * scale, bar.Max.Y - 8f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(theme.GroupedCard));
+        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
+        var pillMax = new Vector2(bar.Max.X - 54f * scale, bar.Max.Y - 9f * scale);
+        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(AethergramUi.FieldSurface));
 
         ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale, (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
+        if (commentFocusPending)
+        {
+            ImGui.SetKeyboardFocusHere();
+            commentFocusPending = false;
+        }
+
         var submitted = false;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.TitleInk))
         {
             submitted = ImGui.InputTextWithHint("##gramComment", Loc.T(L.Aethergram.AddComment), ref commentDraft, MaxCommentLength, ImGuiInputTextFlags.EnterReturnsTrue);
         }
 
         var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
-        var sendCenter = new Vector2(bar.Max.X - 28f * scale, bar.Center.Y);
-        if ((DrawIconButton(sendCenter, 16f * scale, FontAwesomeIcon.PaperPlane.ToIconString(), canSend ? Accent : theme.TextMuted, new Vector4(0f, 0f, 0f, 0f), 0.95f) || submitted) && canSend)
+        var sendRadius = 15f * scale;
+        var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, bar.Center.Y);
+        drawList.AddCircleFilled(sendCenter, sendRadius, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
+        AethergramUi.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.8f);
+        if ((HoverClick(sendCenter - new Vector2(sendRadius, sendRadius), sendCenter + new Vector2(sendRadius, sendRadius)) || submitted) && canSend)
         {
             var text = commentDraft;
             commentDraft = string.Empty;
@@ -1117,13 +1229,13 @@ internal sealed class AethergramApp : IPhoneApp
 
         if (store.ProfileFailed)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Aethergram.ProfileError), theme.TextMuted);
+            Typography.DrawCentered(body.Center, Loc.T(L.Aethergram.ProfileError), AethergramUi.MutedInk);
             return;
         }
 
         if (user is null)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), theme.TextMuted);
+            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), AethergramUi.MutedInk);
             return;
         }
 
@@ -1168,8 +1280,8 @@ internal sealed class AethergramApp : IPhoneApp
 
         ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
         ImGui.SetNextItemWidth(width - buttonWidth - 8f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, theme.GroupedCard))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, AethergramUi.FieldSurface))
+        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.TitleInk))
         {
             ImGui.InputTextWithHint("##reportReason", Loc.T(L.Aethergram.ReportReasonHint), ref reportReasonDraft, MaxReportReasonLength);
         }
@@ -1184,7 +1296,7 @@ internal sealed class AethergramApp : IPhoneApp
         ImGui.SetCursorScreenPos(new Vector2(left, origin.Y + buttonHeight + 2f * scale));
         if (reportStatus.Length > 0)
         {
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
             {
                 ImGui.TextUnformatted(reportStatus);
             }
@@ -1269,7 +1381,7 @@ internal sealed class AethergramApp : IPhoneApp
         ImGui.SetCursorScreenPos(new Vector2(left, rowY + buttonHeight + 2f * scale));
         if (deleteStatus.Length > 0)
         {
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
             {
                 ImGui.TextUnformatted(deleteStatus);
             }
@@ -1280,21 +1392,7 @@ internal sealed class AethergramApp : IPhoneApp
 
     private bool DrawDangerPillButton(Rect rect, string label)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-        var radius = rect.Height * 0.5f;
-        var fill = hovered ? Palette.Mix(theme.Danger, theme.TextStrong, 0.12f) : theme.Danger;
-        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, new Vector4(1f, 1f, 1f, 1f), 0.9f, FontWeight.SemiBold);
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return ui.DangerPillButton(rect, label);
     }
 
     private void SubmitDelete(string postId)
@@ -1348,7 +1446,7 @@ internal sealed class AethergramApp : IPhoneApp
             ImGui.TextUnformatted(displayName);
         }
 
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
         {
             if (user.Handle.Length > 0)
             {
@@ -1412,7 +1510,7 @@ internal sealed class AethergramApp : IPhoneApp
         var posts = store.ProfilePosts;
         if (posts.Length == 0)
         {
-            Typography.DrawCentered(new Vector2(ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X * 0.5f, ImGui.GetCursorScreenPos().Y + 40f * scale), Loc.T(L.Aethergram.Empty), theme.TextMuted);
+            Typography.DrawCentered(new Vector2(ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X * 0.5f, ImGui.GetCursorScreenPos().Y + 40f * scale), Loc.T(L.Aethergram.Empty), AethergramUi.MutedInk);
             return;
         }
 
@@ -1445,18 +1543,19 @@ internal sealed class AethergramApp : IPhoneApp
     private void DrawGridThumbnail(PostDto post, Vector2 min, Vector2 max)
     {
         var drawList = ImGui.GetWindowDrawList();
+        var rounding = 8f * ImGuiHelpers.GlobalScale;
         var texture = images.Get(post.MediaUrl);
         if (texture is null)
         {
-            drawList.AddRectFilled(min, max, ImGui.GetColorU32(theme.SurfaceMuted));
+            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(AethergramUi.FieldSurface));
             return;
         }
 
         var (uv0, uv1) = CenterCropSquare(texture.Size);
-        drawList.AddImage(texture.Handle, min, max, uv0, uv1);
+        drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
         if (ImGui.IsItemHovered())
         {
-            drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)));
+            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)));
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
     }
@@ -1474,7 +1573,7 @@ internal sealed class AethergramApp : IPhoneApp
         if (me is null)
         {
             store.EnsureMe();
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), theme.TextMuted);
+            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), AethergramUi.MutedInk);
             return;
         }
 
@@ -1581,7 +1680,7 @@ internal sealed class AethergramApp : IPhoneApp
         {
             if (snapshot.Length == 0)
             {
-                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale), store.Searching ? Loc.T(L.Common.Searching) : Loc.T(L.Aethergram.SearchByName), theme.TextMuted);
+                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale), store.Searching ? Loc.T(L.Common.Searching) : Loc.T(L.Aethergram.SearchByName), AethergramUi.MutedInk);
             }
             else
             {
@@ -1607,7 +1706,7 @@ internal sealed class AethergramApp : IPhoneApp
         var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Name : user.DisplayName;
         Typography.Draw(new Vector2(textLeft, origin.Y + 9f * scale), displayName, theme.TextStrong, 1f, FontWeight.SemiBold);
         var sub = user.Handle.Length > 0 ? $"@{user.Handle} · {user.World}" : $"{user.Name} · {user.World}";
-        Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), sub, theme.TextMuted, 0.85f);
+        Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), sub, AethergramUi.MutedInk, 0.85f);
 
         var buttonWidth = 96f * scale;
         var buttonHeight = 30f * scale;
@@ -1632,9 +1731,9 @@ internal sealed class AethergramApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
         var pillMax = new Vector2(bar.Max.X - 12f * scale, bar.Max.Y - 9f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(theme.GroupedCard));
+        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(AethergramUi.FieldSurface));
 
-        DrawIcon(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f), FontAwesomeIcon.Search.ToIconString(), theme.TextMuted, 0.85f);
+        DrawIcon(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f), FontAwesomeIcon.Search.ToIconString(), AethergramUi.MutedInk, 0.85f);
 
         ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 32f * scale, (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
@@ -1653,7 +1752,7 @@ internal sealed class AethergramApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var logoSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
-        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f), DisplayName, theme.TextStrong, 1.3f, FontWeight.Bold);
+        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f), DisplayName, AethergramUi.TitleInk, 1.3f, FontWeight.Bold);
     }
 
     private void DrawAvatar(Vector2 center, float radius, string name, string world, string? avatarUrl, float monogramScale, int segments)
@@ -1679,13 +1778,13 @@ internal sealed class AethergramApp : IPhoneApp
     {
         var center = left + columnWidth * 0.5f;
         Typography.DrawCentered(new Vector2(center, y + 8f * ImGuiHelpers.GlobalScale), value, theme.TextStrong, 1f, FontWeight.SemiBold);
-        Typography.DrawCentered(new Vector2(center, y + 26f * ImGuiHelpers.GlobalScale), label, theme.TextMuted, 0.78f);
+        Typography.DrawCentered(new Vector2(center, y + 26f * ImGuiHelpers.GlobalScale), label, AethergramUi.MutedInk, 0.78f);
     }
 
     private void DrawField(string label, string id, ref string value, int maxLength, bool multiline)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
         {
             ImGui.TextUnformatted(label);
         }
@@ -1693,7 +1792,7 @@ internal sealed class AethergramApp : IPhoneApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var height = (multiline ? 88f : 34f) * scale;
-        Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale, ImGui.GetColorU32(theme.GroupedCard));
+        Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale, ImGui.GetColorU32(AethergramUi.FieldSurface));
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale, origin.Y + (multiline ? 8f * scale : height * 0.5f - ImGui.GetFrameHeight() * 0.5f)));
         ImGui.SetNextItemWidth(width - 24f * scale);
@@ -1717,7 +1816,7 @@ internal sealed class AethergramApp : IPhoneApp
     private void DrawHandleField()
     {
         var scale = ImGuiHelpers.GlobalScale;
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        using (ImRaii.PushColor(ImGuiCol.Text, AethergramUi.MutedInk))
         {
             ImGui.TextUnformatted(Loc.T(L.Aethergram.HandleLabel));
         }
@@ -1726,9 +1825,9 @@ internal sealed class AethergramApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var height = 34f * scale;
         var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale, ImGui.GetColorU32(theme.GroupedCard));
+        Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale, ImGui.GetColorU32(AethergramUi.FieldSurface));
 
-        Typography.Draw(new Vector2(origin.X + 12f * scale, origin.Y + height * 0.5f - 8f * scale), "@", theme.TextMuted, 1f);
+        Typography.Draw(new Vector2(origin.X + 12f * scale, origin.Y + height * 0.5f - 8f * scale), "@", AethergramUi.MutedInk, 1f);
 
         ImGui.SetCursorScreenPos(new Vector2(origin.X + 26f * scale, origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(width - 38f * scale);
@@ -1743,46 +1842,18 @@ internal sealed class AethergramApp : IPhoneApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
-        Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale), Loc.T(L.Aethergram.HandleRules), theme.TextMuted, 0.78f);
+        Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale), Loc.T(L.Aethergram.HandleRules), AethergramUi.MutedInk, 0.78f);
         ImGui.Dummy(new Vector2(width, 16f * scale));
     }
 
     private bool DrawHeaderAction(Rect area, string label, bool enabled)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var height = 28f * scale;
-        var width = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 26f * scale;
-        var max = new Vector2(area.Max.X - 12f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f + height * 0.5f);
-        var min = new Vector2(max.X - width, max.Y - height);
-        var rect = new Rect(min, max);
-        return DrawPillButton(rect, label, enabled) && enabled;
+        return ui.HeaderAction(area, label, enabled);
     }
 
     private bool DrawPillButton(Rect rect, string label, bool filled)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-        var radius = rect.Height * 0.5f;
-
-        var fill = filled
-            ? (hovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent)
-            : (hovered ? Palette.Mix(theme.GroupedCard, theme.TextStrong, 0.08f) : theme.GroupedCard);
-        var ink = filled ? new Vector4(1f, 1f, 1f, 1f) : theme.TextStrong;
-        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-        if (!filled)
-        {
-            Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(theme.Separator), 1f);
-        }
-
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return ui.PillButton(rect, label, filled);
     }
 
     private bool DrawIconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale)
@@ -1857,10 +1928,11 @@ internal sealed class AethergramApp : IPhoneApp
         router.Push(AethergramRoute.Profile(userId));
     }
 
-    private void OpenDetail(PostDto post)
+    private void OpenDetail(PostDto post, bool focusComment = false)
     {
         store.OpenDetail(post);
         commentDraft = string.Empty;
+        commentFocusPending = focusComment;
         router.Push(AethergramRoute.Detail(post.Id));
     }
 
