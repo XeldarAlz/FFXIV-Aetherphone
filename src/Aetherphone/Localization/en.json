@@ -55,6 +55,8 @@
   "settings.changelogSummary": "What's new",
   "settings.changelogHero": "What's New",
   "settings.changelogLatest": "Latest",
+  "changelog.r0810.0": "Added a subtle shadow behind home screen app labels for readability on bright wallpapers",
+  "changelog.r0810.1": "Changed the default wallpaper",
   "changelog.r0800.0": "Added Velvet, a private 18+ companion app for sharing work and connecting",
   "changelog.r0800.1": "Added an adjustable phone window size in Settings",
   "changelog.r0800.2": "Added post deletion, captions, and comments across the social apps",

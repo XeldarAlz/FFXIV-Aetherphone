@@ -54,6 +54,8 @@
   "settings.changelogSummary": "Yenilikler",
   "settings.changelogHero": "Yenilikler",
   "settings.changelogLatest": "Son",
+  "changelog.r0810.0": "Parlak duvar kağıtlarında okunabilirlik için ana ekran uygulama etiketlerinin arkasına ince bir gölge eklendi",
+  "changelog.r0810.1": "Varsayılan duvar kağıdı değiştirildi",
   "changelog.r0800.0": "Velvet eklendi: içerik paylaşmak ve bağlantı kurmak için özel 18+ yardımcı uygulama",
   "changelog.r0800.1": "Ayarlar'a ayarlanabilir telefon pencere boyutu eklendi",
   "changelog.r0800.2": "Sosyal uygulamalara gönderi silme, başlık ve yorumlar eklendi",

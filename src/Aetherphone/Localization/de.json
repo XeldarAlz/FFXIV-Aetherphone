@@ -54,6 +54,8 @@
   "settings.changelogSummary": "Neuigkeiten",
   "settings.changelogHero": "Neuigkeiten",
   "settings.changelogLatest": "Neu",
+  "changelog.r0810.0": "Dezenter Schatten hinter Startbildschirm-App-Beschriftungen für bessere Lesbarkeit auf hellen Hintergrundbildern hinzugefügt",
+  "changelog.r0810.1": "Standardhintergrundbild geändert",
   "changelog.r0800.0": "Velvet hinzugefügt, eine private 18+ Begleit-App zum Teilen von Werken und Verbinden",
   "changelog.r0800.1": "Einstellbare Telefonfenstergröße in den Einstellungen hinzugefügt",
   "changelog.r0800.2": "Löschen von Beiträgen, Bildunterschriften und Kommentare in den sozialen Apps hinzugefügt",

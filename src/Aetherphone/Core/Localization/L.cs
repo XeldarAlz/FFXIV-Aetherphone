@@ -242,6 +242,12 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0810 =
+        {
+            new("changelog.r0810.0", "Added a subtle shadow behind home screen app labels for readability on bright wallpapers"),
+            new("changelog.r0810.1", "Changed the default wallpaper"),
+        };
+
         public static readonly LocString[] Release0800 =
         {
             new("changelog.r0800.0", "Added Velvet, a private 18+ companion app for sharing work and connecting"),

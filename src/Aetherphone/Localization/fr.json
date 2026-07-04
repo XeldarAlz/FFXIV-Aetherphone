@@ -54,6 +54,8 @@
   "settings.changelogSummary": "Nouveautés",
   "settings.changelogHero": "Nouveautés",
   "settings.changelogLatest": "Récent",
+  "changelog.r0810.0": "Ajout d'une ombre subtile derrière les libellés des apps sur l'écran d'accueil pour une meilleure lisibilité sur les fonds d'écran clairs",
+  "changelog.r0810.1": "Changement du fond d'écran par défaut",
   "changelog.r0800.0": "Ajout de Velvet, une app privée 18+ pour partager du contenu et se connecter",
   "changelog.r0800.1": "Ajout d'une taille de fenêtre du téléphone ajustable dans les Réglages",
   "changelog.r0800.2": "Ajout de la suppression des publications, des légendes et des commentaires dans les apps sociales",
