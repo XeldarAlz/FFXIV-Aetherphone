@@ -51,6 +51,8 @@
   "settings.command": "Command",
   "settings.creditsLinks": "Credits & links",
   "settings.aboutAetherphone": "About Aetherphone",
+  "settings.changelog": "Changelog",
+  "settings.changelogSummary": "What's new",
   "account.title": "Aethernet Account",
   "account.signedIn": "Signed in",
   "account.notSignedIn": "Not signed in",

@@ -225,6 +225,8 @@ internal static class L
         public static readonly LocString Command = new("settings.command", "Command");
         public static readonly LocString CreditsLinks = new("settings.creditsLinks", "Credits & links");
         public static readonly LocString AboutAetherphone = new("settings.aboutAetherphone", "About Aetherphone");
+        public static readonly LocString Changelog = new("settings.changelog", "Changelog");
+        public static readonly LocString ChangelogSummary = new("settings.changelogSummary", "What's new");
         public static readonly LocString Tutorials = new("settings.tutorials", "Tips & Tutorials");
         public static readonly LocString TutorialsSummary = new("settings.tutorialsSummary", "On");
         public static readonly LocString TutorialsOff = new("settings.tutorialsOff", "Off");

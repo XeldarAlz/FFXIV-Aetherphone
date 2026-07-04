@@ -47,6 +47,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var notifications = new NotificationsPage(configuration);
         var ringtonePage = new RingtonePage(configuration, ringtone);
         var about = new AboutPage(showAbout);
+        var changelog = new ChangelogPage();
 
         var groups = new IReadOnlyList<ISettingsPage>[]
         {
@@ -54,7 +55,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             new ISettingsPage[] { appearance, language, immersion, tutorials },
             new ISettingsPage[] { callsPage },
             new ISettingsPage[] { notifications, ringtonePage },
-            new ISettingsPage[] { about },
+            new ISettingsPage[] { about, changelog },
         };
 
         router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups));
