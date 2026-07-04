@@ -980,7 +980,14 @@ internal sealed partial class VelvetApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var radius = 26f * scale;
-        var center = new Vector2(area.Max.X - radius - 18f * scale, area.Max.Y - radius - 18f * scale);
+        var margin = 18f * scale;
+        var boxSize = radius * 2f + margin;
+        var boxMin = new Vector2(area.Max.X - boxSize, area.Max.Y - boxSize);
+
+        ImGui.SetCursorScreenPos(boxMin);
+        using var overlay = ImRaii.Child("##velvetComposeFab", new Vector2(boxSize, boxSize), false, ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
+
+        var center = new Vector2(area.Max.X - radius - margin, area.Max.Y - radius - margin);
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
