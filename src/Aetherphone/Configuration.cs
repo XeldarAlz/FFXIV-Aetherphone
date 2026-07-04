@@ -53,9 +53,9 @@ internal sealed class Configuration : IPluginConfiguration
 
     public string AccentName { get; set; } = "Violet";
 
-    public string LightWallpaperId { get; set; } = "DuskLight";
+    public string LightWallpaperId { get; set; } = "ShadowDark";
 
-    public string DarkWallpaperId { get; set; } = "DuskDark";
+    public string DarkWallpaperId { get; set; } = "ShadowDark";
 
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
 

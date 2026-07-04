@@ -75,7 +75,10 @@ internal static class HomeTileView
             return;
         }
 
-        Typography.DrawCentered(new Vector2(center.X, center.Y + size * 0.5f + 11f * scale), label, Palette.WithAlpha(theme.TextStrong, 0.95f * labelAlpha), 0.85f, FontWeight.Medium);
+        var labelCenter = new Vector2(center.X, center.Y + size * 0.5f + 11f * scale);
+        var shadowOffset = new Vector2(0f, 1f * scale);
+        Typography.DrawCentered(labelCenter + shadowOffset, label, Palette.WithAlpha(new Vector4(0f, 0f, 0f, 1f), 0.45f * labelAlpha), 0.85f, FontWeight.Medium);
+        Typography.DrawCentered(labelCenter, label, Palette.WithAlpha(theme.TextStrong, 0.95f * labelAlpha), 0.85f, FontWeight.Medium);
     }
 
     private static void DrawBadge(Vector2 center, int count, PhoneTheme theme, float scale)
