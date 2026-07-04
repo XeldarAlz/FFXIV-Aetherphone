@@ -74,7 +74,7 @@ internal static class ChatBubble
         {
             ImGui.SetCursorPos(new Vector2(start.X + offsetX, bubbleTop));
             var bubbleScreen = ImGui.GetCursorScreenPos();
-            ImGui.GetWindowDrawList().AddRectFilled(bubbleScreen, bubbleScreen + new Vector2(bubbleWidth, bubbleHeight), ImGui.GetColorU32(fillColor), 13f * scale);
+            Squircle.Fill(ImGui.GetWindowDrawList(), bubbleScreen, bubbleScreen + new Vector2(bubbleWidth, bubbleHeight), 13f * scale, ImGui.GetColorU32(fillColor));
 
             ImGui.SetCursorPos(new Vector2(start.X + offsetX + padding, bubbleTop + padding));
             ImGui.PushTextWrapPos(start.X + offsetX + padding + wrap);
@@ -101,7 +101,7 @@ internal static class ChatBubble
         var anchor = new Vector2(outgoing ? fillMax.X : fillMin.X, fillMax.Y);
         var scaledMin = anchor + (fillMin - anchor) * pop + rise;
         var scaledMax = anchor + (fillMax - anchor) * pop + rise;
-        ImGui.GetWindowDrawList().AddRectFilled(scaledMin, scaledMax, ImGui.GetColorU32(Palette.WithAlpha(fillColor, fillColor.W * alpha)), 13f * scale * pop);
+        Squircle.Fill(ImGui.GetWindowDrawList(), scaledMin, scaledMax, 13f * scale * pop, ImGui.GetColorU32(Palette.WithAlpha(fillColor, fillColor.W * alpha)));
 
         var textLocal = new Vector2(start.X + offsetX + padding, start.Y + padding);
         var anchorLocal = new Vector2(outgoing ? start.X + offsetX + bubbleWidth : start.X + offsetX, start.Y + bubbleHeight);

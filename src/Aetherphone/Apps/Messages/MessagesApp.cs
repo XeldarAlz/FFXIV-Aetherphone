@@ -67,6 +67,7 @@ internal sealed class MessagesApp : IPhoneApp
     private int activeTab;
     private bool followBottom;
     private bool snapToBottom;
+    private bool composerFocus;
 
     public MessagesApp(MessageStore store, LinkshellStore linkshells, ChatBridge bridge, LinkshellBridge linkshellBridge, MessageLauncher launcher, LodestoneService lodestone)
     {
@@ -246,11 +247,14 @@ internal sealed class MessagesApp : IPhoneApp
         using (AppSurface.Begin(bubbles))
         {
             SyncFollow(conversation);
+            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
             var lines = conversation.Lines;
             for (var index = 0; index < lines.Count; index++)
             {
                 ChatBubble.Draw(lines[index], frameTheme, entrance.Progress(index));
             }
+
+            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
 
             if (followBottom)
             {
@@ -273,11 +277,14 @@ internal sealed class MessagesApp : IPhoneApp
         using (AppSurface.Begin(bubbles))
         {
             SyncFollow(thread);
+            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
             var lines = thread.Lines;
             for (var index = 0; index < lines.Count; index++)
             {
                 ChatBubble.Draw(lines[index], frameTheme, entrance.Progress(index), GroupContext(lines, index));
             }
+
+            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
 
             if (followBottom)
             {
@@ -354,6 +361,11 @@ internal sealed class MessagesApp : IPhoneApp
 
         ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(inputWidth);
+        if (composerFocus)
+        {
+            ImGui.SetKeyboardFocusHere();
+            composerFocus = false;
+        }
 
         var submitted = false;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
@@ -386,6 +398,7 @@ internal sealed class MessagesApp : IPhoneApp
             send(draft);
             draft = string.Empty;
             snapToBottom = true;
+            composerFocus = true;
         }
     }
 
