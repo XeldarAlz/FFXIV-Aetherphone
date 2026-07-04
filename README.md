@@ -25,31 +25,6 @@
 
 Puts a real smartphone on screen: a docked, always-on device with a home screen, a status bar, app icons, notifications, ringtones, and themeable wallpapers. At its core is a small social network for Aetherphone users: Chirper for microblogging, Aethergram for sharing photos, and Phone for group voice calls, all part of the same social network alongside a Messages app that turns the game's `/tell` system into a proper chat client.
 
-## Take a look
-
-A few of the things you can do: message your contacts, post to Chirper and Aethergram, listen to music, check the weather, search the market, hop between venues, and more.
-
-<table>
-  <tr>
-    <td align="center" width="33%"><img src="src/Aetherphone/Images/screenshots/Chat.png" width="340" alt="Messages chat thread" /><br /><sub><b>Message your contacts</b><br />Every <code>/tell</code> becomes a chat bubble</sub></td>
-    <td align="center" width="33%"><img src="src/Aetherphone/Images/screenshots/Music.png" width="340" alt="Music app" /><br /><sub><b>Listen to music</b><br />Internet radio &amp; song search, in-game</sub></td>
-    <td align="center" width="33%"><img src="src/Aetherphone/Images/screenshots/Weather.png" width="340" alt="Skywatcher weather" /><br /><sub><b>Check the weather</b><br />Live Eorzean forecast for your zone</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="src/Aetherphone/Images/screenshots/Market.png" width="340" alt="Market board" /><br /><sub><b>Search the market</b><br />Live Universalis prices, stats &amp; trends</sub></td>
-    <td align="center"><img src="src/Aetherphone/Images/screenshots/Venues.png" width="340" alt="Venues list" /><br /><sub><b>Find a venue</b><br />Live community events &amp; one-tap travel</sub></td>
-    <td align="center"><img src="src/Aetherphone/Images/screenshots/News.png" width="340" alt="News feed" /><br /><sub><b>Catch up on the news</b><br />Lodestone headlines for your region</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="src/Aetherphone/Images/screenshots/Contacts.png" width="340" alt="Contacts list" /><br /><sub><b>Browse your contacts</b><br />Your friend list as an address book</sub></td>
-    <td align="center"><img src="src/Aetherphone/Images/screenshots/Wallet.png" width="340" alt="Wallet" /><br /><sub><b>Track your wallet</b><br />Gil, currencies, tomestones &amp; seals</sub></td>
-    <td align="center"><img src="src/Aetherphone/Images/screenshots/Games.png" width="340" alt="Games arcade" /><br /><sub><b>Take a break</b><br />A pocket arcade of 15 mini-games</sub></td>
-  </tr>
-  <tr>
-    <td align="center" colspan="3"><img src="src/Aetherphone/Images/screenshots/Dynamic.png" width="240" alt="Now Playing banner" /><br /><sub><b>Now Playing</b><br />A dynamic island that follows your music</sub></td>
-  </tr>
-</table>
-
 ## Features
 
 ### The device
