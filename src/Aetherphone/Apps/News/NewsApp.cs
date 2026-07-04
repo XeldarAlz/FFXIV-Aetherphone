@@ -19,16 +19,22 @@ internal sealed class NewsApp : IPhoneApp
 {
     private const float RegionRowHeight = 24f;
     private const float SegmentRowHeight = 36f;
-    private const float CardGap = 12f;
-    private const float CardRounding = 16f;
-    private const float CardPadding = 13f;
-    private const float ImageAspect = 0.52f;
-    private const float TitleScale = 1.0f;
-    private const float DescriptionScale = 0.82f;
-    private const float MetaScale = 0.76f;
+    private const float CardGap = 14f;
+    private const float CardRounding = 20f;
+    private const float CardPadding = 16f;
+    private const float ImageAspectFallback = 0.56f;
+    private const float ImageAspectMin = 0.22f;
+    private const float ImageAspectMax = 0.75f;
+    private const float TitleScale = 1.10f;
+    private const float DescriptionScale = 0.88f;
+    private const float MetaScale = 0.78f;
     private const float ImageFadeSeconds = 0.28f;
     private const int MaxItems = 40;
-    private const int DescriptionClip = 220;
+    private const int MaxTitleLines = 2;
+    private const int MaxDescriptionLines = 3;
+    private const float RowHeightNotices = 58f;
+    private const float RowHeightMaintenance = 72f;
+    private const float RowTitleScale = 0.95f;
 
     private static readonly Vector4 StatusUpcoming = new(0.95f, 0.62f, 0.22f, 1f);
     private static readonly Vector4 StatusActive = new(0.30f, 0.78f, 0.46f, 1f);
@@ -47,12 +53,14 @@ internal sealed class NewsApp : IPhoneApp
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly GameData gameData;
+    private readonly NewsUi ui = new();
 
     private readonly string[] categoryLabels = new string[NewsCategories.All.Length];
     private readonly List<string> titleLines = new();
     private readonly List<string> descriptionLines = new();
     private readonly Dictionary<string, float> imageFade = new();
 
+    private PhoneTheme theme = PhoneTheme.Default;
     private string locale = "na";
     private int categoryIndex;
     private bool forceRefresh;
@@ -77,14 +85,18 @@ internal sealed class NewsApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        var theme = context.Theme;
+        theme = context.Theme;
+        ui.Theme = theme;
         var area = context.Content;
         var scale = ImGuiHelpers.GlobalScale;
+
+        var screen = SceneChrome.ScreenFrom(area, theme, scale);
+        ui.Backdrop(screen);
 
         AppHeader.Draw(context, DisplayName);
 
         var top = area.Min.Y + AppHeader.Height * scale;
-        DrawRegionRow(new Vector2(area.Min.X + 18f * scale, top + RegionRowHeight * scale * 0.5f), theme);
+        DrawRegionRow(new Vector2(area.Min.X + 18f * scale, top + RegionRowHeight * scale * 0.5f));
 
         var segmentTop = top + RegionRowHeight * scale;
         var segmentRow = new Rect(new Vector2(area.Min.X + 16f * scale, segmentTop), new Vector2(area.Max.X - 16f * scale, segmentTop + SegmentRowHeight * scale));
@@ -101,16 +113,19 @@ internal sealed class NewsApp : IPhoneApp
         var entry = news.Request(category, locale, forceRefresh);
         forceRefresh = false;
 
-        DrawRefreshControl(new Vector2(area.Max.X - 20f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f), entry.State, theme, scale);
+        DrawRefreshControl(new Vector2(area.Max.X - 20f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f), entry.State, scale);
 
         var body = new Rect(new Vector2(area.Min.X, segmentRow.Max.Y), area.Max);
         var hasItems = entry.Items.Length > 0;
 
         if (!hasItems)
         {
-            DrawState(body, entry.State, theme, scale);
+            ui.Body(body);
+            DrawState(body, entry.State, scale);
             return;
         }
+
+        ui.Body(body);
 
         using (AppSurface.Begin(body))
         {
@@ -120,11 +135,11 @@ internal sealed class NewsApp : IPhoneApp
                 resetScroll = false;
             }
 
-            DrawFeed(entry.Items, Math.Min(entry.Items.Length, MaxItems), category, theme, scale);
+            DrawFeed(entry.Items, Math.Min(entry.Items.Length, MaxItems), category, scale);
         }
     }
 
-    private void DrawState(Rect body, NewsState state, PhoneTheme theme, float scale)
+    private void DrawState(Rect body, NewsState state, float scale)
     {
         var center = body.Center;
         if (state == NewsState.Failed)
@@ -150,7 +165,7 @@ internal sealed class NewsApp : IPhoneApp
         Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Loading), theme.TextMuted, 0.9f);
     }
 
-    private void DrawFeed(LodestoneNewsItem[] items, int count, NewsCategory category, PhoneTheme theme, float scale)
+    private void DrawFeed(LodestoneNewsItem[] items, int count, NewsCategory category, float scale)
     {
         ImGui.Dummy(new Vector2(0f, 4f * scale));
 
@@ -160,7 +175,7 @@ internal sealed class NewsApp : IPhoneApp
             {
                 var origin = ImGui.GetCursorScreenPos();
                 var width = ImGui.GetContentRegionAvail().X;
-                var height = DrawTopicCard(items[index], origin, width, theme, scale);
+                var height = DrawTopicCard(items[index], origin, width, scale);
                 ImGui.SetCursorScreenPos(origin);
                 ImGui.Dummy(new Vector2(width, height));
                 ImGui.Dummy(new Vector2(0f, CardGap * scale));
@@ -169,7 +184,7 @@ internal sealed class NewsApp : IPhoneApp
             return;
         }
 
-        var rowHeight = category == NewsCategory.Maintenance ? 64f : 54f;
+        var rowHeight = category == NewsCategory.Maintenance ? RowHeightMaintenance : RowHeightNotices;
         var card = GroupCard.Begin(theme, count, rowHeight);
         for (var index = 0; index < count; index++)
         {
@@ -177,11 +192,11 @@ internal sealed class NewsApp : IPhoneApp
             var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
             if (category == NewsCategory.Maintenance)
             {
-                DrawMaintenanceRow(row, items[index], theme, scale, hovered);
+                DrawMaintenanceRow(row, items[index], scale, hovered);
             }
             else
             {
-                DrawSimpleRow(row, items[index], theme, scale, hovered);
+                DrawSimpleRow(row, items[index], scale, hovered);
             }
 
             if (hovered)
@@ -197,17 +212,31 @@ internal sealed class NewsApp : IPhoneApp
         card.End();
     }
 
-    private float DrawTopicCard(LodestoneNewsItem item, Vector2 origin, float width, PhoneTheme theme, float scale)
+    private float DrawTopicCard(LodestoneNewsItem item, Vector2 origin, float width, float scale)
     {
         var hasImage = !string.IsNullOrEmpty(item.Image);
-        var imageHeight = hasImage ? width * ImageAspect : 0f;
+        var imageHeight = 0f;
+        if (hasImage)
+        {
+            var probe = Thumb(item.Image!);
+            if (probe.Texture is { } probeTexture && probeTexture.Size.X > 0f && probeTexture.Size.Y > 0f)
+            {
+                var naturalAspect = probeTexture.Size.Y / probeTexture.Size.X;
+                imageHeight = width * Math.Clamp(naturalAspect, ImageAspectMin, ImageAspectMax);
+            }
+            else
+            {
+                imageHeight = width * ImageAspectFallback;
+            }
+        }
+
         var innerWidth = width - 2f * CardPadding * scale;
 
-        WrapInto(titleLines, item.Title, innerWidth, TitleScale, FontWeight.SemiBold, 2);
+        WrapInto(titleLines, item.Title, innerWidth, TitleScale, FontWeight.SemiBold, MaxTitleLines);
         var hasDescription = !string.IsNullOrWhiteSpace(item.Description);
         if (hasDescription)
         {
-            WrapInto(descriptionLines, Clip(item.Description!, DescriptionClip), innerWidth, DescriptionScale, FontWeight.Regular, 2);
+            WrapInto(descriptionLines, item.Description!, innerWidth, DescriptionScale, FontWeight.Regular, MaxDescriptionLines);
         }
         else
         {
@@ -219,19 +248,22 @@ internal sealed class NewsApp : IPhoneApp
         var metaHeight = Typography.Measure("Ag", MetaScale, FontWeight.Regular).Y;
 
         var contentHeight = titleLines.Count * titleLineHeight
-            + (descriptionLines.Count > 0 ? 4f * scale + descriptionLines.Count * descLineHeight : 0f)
-            + 6f * scale + metaHeight;
+            + (descriptionLines.Count > 0 ? 5f * scale + descriptionLines.Count * descLineHeight : 0f)
+            + 8f * scale + metaHeight;
         var cardHeight = imageHeight + CardPadding * scale + contentHeight + CardPadding * scale;
         var cardMax = new Vector2(origin.X + width, origin.Y + cardHeight);
         var rounding = CardRounding * scale;
 
         var drawList = ImGui.GetWindowDrawList();
-        Elevation.Card(drawList, origin, cardMax, rounding, scale, 0.6f);
+        Elevation.Card(drawList, origin, cardMax, rounding, scale, 0.7f);
+
         Squircle.Fill(drawList, origin, cardMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
 
         if (hasImage)
         {
-            DrawCardImage(drawList, item.Image!, origin, new Vector2(cardMax.X, origin.Y + imageHeight), rounding, theme, scale);
+            var imageMax = new Vector2(cardMax.X, origin.Y + imageHeight);
+            drawList.AddRectFilled(origin, imageMax, ImGui.GetColorU32(theme.SurfaceMuted), rounding, ImDrawFlags.RoundCornersTop);
+            DrawCardImage(drawList, item.Image!, origin, imageMax, rounding, scale);
         }
 
         var textX = origin.X + CardPadding * scale;
@@ -244,7 +276,7 @@ internal sealed class NewsApp : IPhoneApp
 
         if (descriptionLines.Count > 0)
         {
-            cursorY += 4f * scale;
+            cursorY += 5f * scale;
             for (var lineIndex = 0; lineIndex < descriptionLines.Count; lineIndex++)
             {
                 Typography.Draw(new Vector2(textX, cursorY), descriptionLines[lineIndex], theme.TextMuted, DescriptionScale, FontWeight.Regular);
@@ -252,18 +284,17 @@ internal sealed class NewsApp : IPhoneApp
             }
         }
 
-        cursorY += 6f * scale;
+        cursorY += 8f * scale;
         Typography.Draw(new Vector2(textX, cursorY), NewsFormat.Ago(item.Time), theme.TextMuted, MetaScale, FontWeight.Medium);
 
         Material.EdgeSquircle(drawList, origin, cardMax, rounding, scale);
+
         InteractCard(new Rect(origin, cardMax), rounding, item.Url, drawList);
         return cardHeight;
     }
 
-    private void DrawCardImage(ImDrawListPtr drawList, string url, Vector2 min, Vector2 max, float rounding, PhoneTheme theme, float scale)
+    private void DrawCardImage(ImDrawListPtr drawList, string url, Vector2 min, Vector2 max, float rounding, float scale)
     {
-        drawList.AddRectFilled(min, max, ImGui.GetColorU32(theme.SurfaceMuted), rounding, ImDrawFlags.RoundCornersTop);
-
         var result = Thumb(url);
         if (result.Texture is { } texture)
         {
@@ -288,60 +319,86 @@ internal sealed class NewsApp : IPhoneApp
         ProgressRing.CenterIcon((min + max) * 0.5f, FontAwesomeIcon.Image, Palette.WithAlpha(theme.TextMuted, 0.5f), 22f * scale);
     }
 
-    private void DrawSimpleRow(Rect row, LodestoneNewsItem item, PhoneTheme theme, float scale, bool hovered)
+    private void DrawSimpleRow(Rect row, LodestoneNewsItem item, float scale, bool hovered)
     {
         var titleY = row.Min.Y + 10f * scale;
-        Typography.Draw(new Vector2(row.Min.X, titleY), NewsFormat.Clip(item.Title, 52), theme.TextStrong, 0.92f, FontWeight.Medium);
-        Typography.Draw(new Vector2(row.Min.X, titleY + 22f * scale), NewsFormat.Ago(item.Time), theme.TextMuted, MetaScale, FontWeight.Regular);
+        var maxTitleWidth = row.Width - 24f * scale;
+        var clippedTitle = PixelEllipsize(item.Title, maxTitleWidth, RowTitleScale, FontWeight.Medium);
+        Typography.Draw(new Vector2(row.Min.X, titleY), clippedTitle, theme.TextStrong, RowTitleScale, FontWeight.Medium);
+        Typography.Draw(new Vector2(row.Min.X, titleY + 23f * scale), NewsFormat.Ago(item.Time), theme.TextMuted, MetaScale, FontWeight.Regular);
         DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale, hovered ? theme.TextStrong : theme.TextMuted);
     }
 
-    private void DrawMaintenanceRow(Rect row, LodestoneNewsItem item, PhoneTheme theme, float scale, bool hovered)
+    private void DrawMaintenanceRow(Rect row, LodestoneNewsItem item, float scale, bool hovered)
     {
-        var titleY = row.Min.Y + 9f * scale;
+        var titleY = row.Min.Y + 10f * scale;
+        var subY = titleY + 25f * scale;
         var status = NewsFormat.Status(item.Start, item.End);
-        if (status != MaintenanceStatus.None)
-        {
-            DrawStatusPill(new Vector2(row.Max.X - 12f * scale, titleY + 6f * scale), status, theme, scale);
-        }
 
-        var titleClip = status == MaintenanceStatus.None ? 46 : 34;
-        Typography.Draw(new Vector2(row.Min.X, titleY), NewsFormat.Clip(item.Title, titleClip), theme.TextStrong, 0.92f, FontWeight.Medium);
+        var pillInfo = status != MaintenanceStatus.None
+            ? MeasurePill(StatusLabel(status), MetaScale, FontWeight.SemiBold, scale)
+            : default;
+
+        var rightPadding = 8f * scale;
+        var pillReserved = pillInfo.hasPill ? pillInfo.width + 12f * scale + rightPadding : rightPadding + 4f * scale;
+        var maxTitleWidth = row.Width - pillReserved;
+        var clippedTitle = PixelEllipsize(item.Title, maxTitleWidth, RowTitleScale, FontWeight.Medium);
+
+        Typography.Draw(new Vector2(row.Min.X, titleY), clippedTitle, theme.TextStrong, RowTitleScale, FontWeight.Medium);
 
         var sub = item.Start is { } start && item.End is { } end ? NewsFormat.Window(start, end) : NewsFormat.Ago(item.Time);
-        Typography.Draw(new Vector2(row.Min.X, titleY + 24f * scale), sub, theme.TextMuted, MetaScale, FontWeight.Regular);
+        var subWidth = Typography.Measure(sub, MetaScale, FontWeight.Regular).X;
+        var maxSubWidth = row.Width - rightPadding;
+        if (subWidth > maxSubWidth)
+        {
+            sub = PixelEllipsize(sub, maxSubWidth, MetaScale, FontWeight.Regular);
+        }
+
+        Typography.Draw(new Vector2(row.Min.X, subY), sub, theme.TextMuted, MetaScale, FontWeight.Regular);
+
+        if (pillInfo.hasPill)
+        {
+            var drawList = ImGui.GetWindowDrawList();
+            var pillRight = row.Max.X - rightPadding;
+            DrawStatusPill(drawList, pillRight, titleY + 2f * scale, status, scale);
+        }
 
         DrawChevronRight(new Vector2(row.Max.X, row.Max.Y - 14f * scale), 5f * scale, 2f * scale, hovered ? theme.TextStrong : Palette.WithAlpha(theme.TextMuted, 0.6f));
     }
 
-    private void DrawStatusPill(Vector2 rightCenter, MaintenanceStatus status, PhoneTheme theme, float scale)
+    private (bool hasPill, float width, float height) MeasurePill(string label, float labelScale, FontWeight labelWeight, float scale)
     {
-        var label = status switch
+        if (string.IsNullOrEmpty(label))
         {
-            MaintenanceStatus.Upcoming => Loc.T(L.News.Upcoming),
-            MaintenanceStatus.Active => Loc.T(L.News.Active),
-            _ => Loc.T(L.News.Ended),
-        };
+            return (false, 0f, 0f);
+        }
 
-        var color = status switch
-        {
-            MaintenanceStatus.Upcoming => StatusUpcoming,
-            MaintenanceStatus.Active => StatusActive,
-            _ => theme.TextMuted,
-        };
-
-        var textSize = Typography.Measure(label, MetaScale, FontWeight.SemiBold);
+        var labelSize = Typography.Measure(label, labelScale, labelWeight);
         var padX = 8f * scale;
         var padY = 3f * scale;
-        var pillMax = new Vector2(rightCenter.X, rightCenter.Y + textSize.Y * 0.5f + padY);
-        var pillMin = new Vector2(rightCenter.X - textSize.X - 2f * padX, rightCenter.Y - textSize.Y * 0.5f - padY);
-
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(Palette.WithAlpha(color, 0.16f)), (pillMax.Y - pillMin.Y) * 0.5f);
-        Typography.DrawCentered(new Vector2((pillMin.X + pillMax.X) * 0.5f, rightCenter.Y), label, color, MetaScale, FontWeight.SemiBold);
+        return (true, labelSize.X + 2f * padX, labelSize.Y + 2f * padY);
     }
 
-    private void DrawRefreshControl(Vector2 center, NewsState state, PhoneTheme theme, float scale)
+    private void DrawStatusPill(ImDrawListPtr drawList, float right, float top, MaintenanceStatus status, float scale)
+    {
+        var label = StatusLabel(status);
+        var color = StatusColor(status);
+        var size = MeasurePill(label, MetaScale, FontWeight.SemiBold, scale);
+        if (!size.hasPill)
+        {
+            return;
+        }
+
+        var pillMin = new Vector2(right - size.width, top);
+        var pillMax = new Vector2(right, top + size.height);
+        var pillRounding = size.height * 0.5f;
+
+        drawList.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(Palette.WithAlpha(color, 0.18f)), pillRounding);
+        var labelCenterY = (pillMin.Y + pillMax.Y) * 0.5f;
+        Typography.DrawCentered(drawList, new Vector2((pillMin.X + pillMax.X) * 0.5f, labelCenterY), label, color, MetaScale, FontWeight.SemiBold);
+    }
+
+    private void DrawRefreshControl(Vector2 center, NewsState state, float scale)
     {
         if (state == NewsState.Loading)
         {
@@ -374,7 +431,7 @@ internal sealed class NewsApp : IPhoneApp
         }
     }
 
-    private void DrawRegionRow(Vector2 leftCenter, PhoneTheme theme)
+    private void DrawRegionRow(Vector2 leftCenter)
     {
         var label = RegionLabel(locale);
         var size = Typography.Measure(label, 0.78f, FontWeight.Medium);
@@ -409,7 +466,7 @@ internal sealed class NewsApp : IPhoneApp
         }
 
         var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var wash = pressed ? new Vector4(0f, 0f, 0f, 0.06f) : new Vector4(1f, 1f, 1f, 0.04f);
+        var wash = pressed ? new Vector4(0f, 0f, 0f, 0.08f) : new Vector4(1f, 1f, 1f, 0.05f);
         Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(wash));
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -452,6 +509,7 @@ internal sealed class NewsApp : IPhoneApp
     }
 
     private MediaResult Thumb(string url) => media.GetOrRequest(url, token => http.GetBytesAsync(new Uri(url), token));
+
 
     private void WrapInto(List<string> output, string text, float maxWidth, float scale, FontWeight weight, int maxLines)
     {
@@ -508,6 +566,31 @@ internal sealed class NewsApp : IPhoneApp
         return string.Concat(trimmed, "…");
     }
 
+    private string PixelEllipsize(string text, float maxWidth, float scale, FontWeight weight)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        using (Plugin.Fonts.Push(scale, weight))
+        {
+            var size = ImGui.CalcTextSize(text);
+            if (size.X <= maxWidth)
+            {
+                return text;
+            }
+
+            var trimmed = text;
+            while (trimmed.Length > 1 && ImGui.CalcTextSize(string.Concat(trimmed, "…")).X > maxWidth)
+            {
+                trimmed = trimmed.Substring(0, trimmed.Length - 1).TrimEnd();
+            }
+
+            return string.Concat(trimmed, "…");
+        }
+    }
+
     private static string Normalize(string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -518,14 +601,26 @@ internal sealed class NewsApp : IPhoneApp
         return text.Replace('\n', ' ').Replace('\r', ' ').Replace('\t', ' ');
     }
 
-    private static string Clip(string value, int maxLength) => value.Length <= maxLength ? value : value.Substring(0, maxLength);
-
     private static string CategoryLabel(NewsCategory category) => category switch
     {
         NewsCategory.Notices => Loc.T(L.News.Notices),
         NewsCategory.Maintenance => Loc.T(L.News.Maintenance),
         NewsCategory.Updates => Loc.T(L.News.Updates),
         _ => Loc.T(L.News.Topics),
+    };
+
+    private static string StatusLabel(MaintenanceStatus status) => status switch
+    {
+        MaintenanceStatus.Upcoming => Loc.T(L.News.Upcoming),
+        MaintenanceStatus.Active => Loc.T(L.News.Active),
+        _ => Loc.T(L.News.Ended),
+    };
+
+    private Vector4 StatusColor(MaintenanceStatus status) => status switch
+    {
+        MaintenanceStatus.Upcoming => StatusUpcoming,
+        MaintenanceStatus.Active => StatusActive,
+        _ => theme.TextMuted,
     };
 
     private static string RegionLabel(string locale) => locale switch
