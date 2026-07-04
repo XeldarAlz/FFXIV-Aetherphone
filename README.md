@@ -23,7 +23,7 @@
 
 ## What it does
 
-Puts a real smartphone on screen: a docked, always-on device with a home screen, a status bar, app icons, notifications, ringtones, and themeable wallpapers. At its core is a small social network for Aetherphone users: Chirper for microblogging, Aethergram for sharing photos, and Phone for group voice calls, all running on their own backend alongside a Messages app that turns the game's `/tell` system into a proper chat client.
+Puts a real smartphone on screen: a docked, always-on device with a home screen, a status bar, app icons, notifications, ringtones, and themeable wallpapers. At its core is a small social network for Aetherphone users: Chirper for microblogging, Aethergram for sharing photos, and Phone for group voice calls, all part of the same social network alongside a Messages app that turns the game's `/tell` system into a proper chat client.
 
 ## Take a look
 
@@ -61,7 +61,7 @@ A few of the things you can do: message your contacts, post to Chirper and Aethe
 
 ### Social
 
-Aetherphone runs its own backend, Aethernet, so these apps work across characters and sessions, not just locally.
+Aetherphone runs its own social network, Aethernet, so these apps work across characters and sessions, not just locally.
 
 - **Chirper**: an X/Twitter-style microblog. Post short updates, browse For You and Following feeds, search, edit your profile, and report content.
 - **Aethergram**: an Instagram-style photo feed built on your Photos library. Post your captures, follow other players, and browse what they share.
