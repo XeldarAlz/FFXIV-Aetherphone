@@ -243,6 +243,16 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0840 =
+        {
+            new("changelog.r0840.0", "Refined accent colors across the social apps for a more cohesive look"),
+            new("changelog.r0840.1", "Replaced inline delete buttons with a centered confirmation dialog"),
+            new("changelog.r0840.2", "Added the ability to delete your own comments on posts"),
+            new("changelog.r0840.3", "Added tooltip labels to action icons so you know what each one does"),
+            new("changelog.r0840.4", "Redesigned the News app with dynamic image sizing, pixel-perfect titles, and maintenance status pills"),
+            new("changelog.r0840.5", "Added spacing around chat bubbles in Messages and restored keyboard focus after sending"),
+        };
+
         public static readonly LocString[] Release0830 =
         {
             new("changelog.r0830.0", "The minimized phone can now be moved freely, even when the position is locked"),
