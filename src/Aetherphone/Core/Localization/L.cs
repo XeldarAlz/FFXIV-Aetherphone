@@ -8,6 +8,7 @@ internal static class L
         public static readonly LocString Searching = new("common.searching", "Searching…");
         public static readonly LocString Search = new("common.search", "Search");
         public static readonly LocString Cancel = new("common.cancel", "Cancel");
+        public static readonly LocString Close = new("common.close", "Close");
         public static readonly LocString Alerts = new("common.alerts", "Alerts");
         public static readonly LocString Live = new("common.live", "LIVE");
         public static readonly LocString Hq = new("common.hq", "HQ");
@@ -424,6 +425,11 @@ internal static class L
     {
         public static readonly LocString Empty = new("messages.empty", "No messages yet");
         public static readonly LocString Placeholder = new("messages.placeholder", "Message");
+        public static readonly LocString TabDirect = new("messages.tabDirect", "Direct");
+        public static readonly LocString TabLinkshells = new("messages.tabLinkshells", "Linkshells");
+        public static readonly LocString LinkshellsEmpty = new("messages.linkshellsEmpty", "No linkshell chatter yet");
+        public static readonly LocString Linkshell = new("messages.linkshell", "Linkshell {0}");
+        public static readonly LocString CrossWorldLinkshell = new("messages.crossWorldLinkshell", "Crossworld Linkshell {0}");
     }
 
     internal static class Character
@@ -503,11 +509,17 @@ internal static class L
         public static readonly LocString ForYou = new("chirper.forYou", "For You");
         public static readonly LocString Following = new("chirper.following", "Following");
         public static readonly LocString Follow = new("chirper.follow", "Follow");
+        public static readonly LocString Unfollow = new("chirper.unfollow", "Unfollow");
         public static readonly LocString NameOrWorld = new("chirper.nameOrWorld", "Name, @username, or world");
         public static readonly LocString Compose = new("chirper.compose", "What's happening?");
         public static readonly LocString NewChirp = new("chirper.newChirp", "New Chirp");
         public static readonly LocString Post = new("chirper.post", "Post");
         public static readonly LocString EditProfile = new("chirper.editProfile", "Edit Profile");
+        public static readonly LocString ChangePhoto = new("chirper.changePhoto", "Change Photo");
+        public static readonly LocString ImportFromPc = new("chirper.importFromPc", "Import from PC");
+        public static readonly LocString MoveAndScale = new("chirper.moveAndScale", "Move and Scale");
+        public static readonly LocString GestureHint = new("chirper.gestureHint", "Drag to move · scroll to zoom");
+        public static readonly LocString Use = new("chirper.use", "Use");
         public static readonly LocString DisplayNameLabel = new("chirper.displayNameLabel", "Display name");
         public static readonly LocString HandleLabel = new("chirper.handleLabel", "Username");
         public static readonly LocString BioLabel = new("chirper.bioLabel", "Bio");
@@ -543,6 +555,9 @@ internal static class L
         public static readonly LocString DeleteConfirm = new("chirper.deleteConfirm", "Delete");
         public static readonly LocString DeleteCancel = new("chirper.deleteCancel", "Cancel");
         public static readonly LocString DeleteFailed = new("chirper.deleteFailed", "Couldn't delete the post");
+        public static readonly LocString PostTitle = new("chirper.postTitle", "Post");
+        public static readonly LocString NoComments = new("chirper.noComments", "No replies yet. Start the conversation");
+        public static readonly LocString AddComment = new("chirper.addComment", "Add a reply…");
     }
 
     internal static class Aethergram
@@ -642,6 +657,8 @@ internal static class L
 
         public static readonly LocString TabDiscover = new("velvet.tabDiscover", "Discover");
         public static readonly LocString TabFeed = new("velvet.tabFeed", "Feed");
+        public static readonly LocString TabTimeline = new("velvet.tabTimeline", "Timeline");
+        public static readonly LocString SearchPeopleHint = new("velvet.searchPeopleHint", "Search people by tag");
 
         public static readonly LocString Connections = new("velvet.connections", "Connections");
         public static readonly LocString Messages = new("velvet.messages", "Messages");
@@ -762,20 +779,33 @@ internal static class L
         public static readonly LocString RemovePin = new("velvet.removePin", "Remove lock");
         public static readonly LocString AppearHelp = new("velvet.appearHelp", "Let others find your profile in the Hub.");
 
+        public static readonly LocString TimeZoneLabel = new("velvet.timeZoneLabel", "Time zone");
+        public static readonly LocString TimeZoneHelp = new("velvet.timeZoneHelp", "Show others your current local time so it is easy to find a moment that works for both of you.");
+        public static readonly LocString ShareTimeZoneLabel = new("velvet.shareTimeZoneLabel", "Share my time zone");
+        public static readonly LocString TimeZoneManualLabel = new("velvet.timeZoneManualLabel", "Set it manually");
+        public static readonly LocString UtcOffsetLabel = new("velvet.utcOffsetLabel", "UTC offset");
+        public static readonly LocString YourTimeLabel = new("velvet.yourTimeLabel", "Your time");
+        public static readonly LocString LocalTimeLabel = new("velvet.localTimeLabel", "Local time");
+
         public static readonly LocString IntroHint = new("velvet.introHint", "A little about you and what you're into…");
         public static readonly LocString VibeHint = new("velvet.vibeHint", "e.g. soft, switch, service, playful");
         public static readonly LocString TagsHint = new("velvet.tagsHint", "Add tags, comma separated");
         public static readonly LocString LimitsHint = new("velvet.limitsHint", "Anything that's off the table");
         public static readonly LocString Suggestions = new("velvet.suggestions", "Tap to add");
+        public static readonly LocString IdentityHeader = new("velvet.identityHeader", "Display");
+        public static readonly LocString DisplayNameLabel = new("velvet.displayNameLabel", "Display name");
+        public static readonly LocString HandleLabel = new("velvet.handleLabel", "Username");
         public static readonly LocString AboutHeader = new("velvet.aboutHeader", "About you");
         public static readonly LocString WantHeader = new("velvet.wantHeader", "What you're after");
         public static readonly LocString SafetyHeader = new("velvet.safetyHeader", "Safety");
-        public static readonly LocString SharingSoon = new("velvet.sharingSoon", "Sharing spicy work arrives in a later update.");
         public static readonly LocString ViewProfile = new("velvet.viewProfile", "View my profile");
         public static readonly LocString ChangePhoto = new("velvet.changePhoto", "Change photo");
         public static readonly LocString MoveAndScale = new("velvet.moveAndScale", "Move and scale");
         public static readonly LocString GestureHint = new("velvet.gestureHint", "Drag to move, scroll to zoom");
         public static readonly LocString ImportFromPc = new("velvet.importFromPc", "Import from PC");
+        public static readonly LocString SendPicture = new("velvet.sendPicture", "Send a picture");
+        public static readonly LocString SaveToGallery = new("velvet.saveToGallery", "Save to gallery");
+        public static readonly LocString SavedToGallery = new("velvet.savedToGallery", "Saved to gallery");
         public static readonly LocString NoPhotos = new("velvet.noPhotos", "No photos in your gallery yet");
         public static readonly LocString Use = new("velvet.use", "Use");
     }
@@ -790,6 +820,8 @@ internal static class L
     internal static class Notifications
     {
         public static readonly LocString Empty = new("notifications.empty", "No notifications");
+        public static readonly LocString ClearAll = new("notifications.clearAll", "Clear All");
+        public static readonly LocString ShowLess = new("notifications.showLess", "Show Less");
     }
 
     internal static class Timers
@@ -893,6 +925,13 @@ internal static class L
         public static readonly LocString NoPhotos = new("photos.noPhotos", "No Photos");
         public static readonly LocString UseCameraHint = new("photos.useCameraHint", "Use the Camera to take a shot");
         public static readonly LocPlural Count = new("photos.count", "{0} Photo", "{0} Photos");
+        public static readonly LocString Delete = new("photos.delete", "Delete");
+
+        public static readonly LocString DeleteConfirmMessage =
+            new("photos.deleteConfirmMessage", "Delete this photo? This can't be undone.");
+
+        public static readonly LocString DeleteConfirm = new("photos.deleteConfirm", "Delete");
+        public static readonly LocString DeleteCancel = new("photos.deleteCancel", "Cancel");
     }
 
     internal static class Skywatcher
@@ -1097,6 +1136,14 @@ internal static class L
 
         public static readonly LocString
             SideButtonHint = new("plugin.sideButtonHint", "Tap to turn off · Hold to lock");
+
+        public static readonly LocString MinimizeHint = new("plugin.minimizeHint", "Minimize");
+
+        public static readonly LocString MaximizeHint = new("plugin.maximizeHint", "Maximize");
+
+        public static readonly LocString LockPositionHint = new("plugin.lockPositionHint", "Lock position");
+
+        public static readonly LocString UnlockPositionHint = new("plugin.unlockPositionHint", "Unlock position");
     }
 
     internal static class About
