@@ -16,6 +16,17 @@ internal static class L
         public static readonly LocString ComingSoon = new("common.comingSoon", "Coming soon");
     }
 
+    internal static class Social
+    {
+        public static readonly LocString LikedChirp = new("social.likedChirp", "liked your chirp");
+        public static readonly LocString LikedPhoto = new("social.likedPhoto", "liked your photo");
+        public static readonly LocString CommentedChirp = new("social.commentedChirp", "commented on your chirp");
+        public static readonly LocString CommentedPhoto = new("social.commentedPhoto", "commented on your photo");
+        public static readonly LocString Followed = new("social.followed", "started following you");
+        public static readonly LocString ConnectionRequest = new("social.connectionRequest", "wants to connect with you");
+        public static readonly LocString ConnectionAccepted = new("social.connectionAccepted", "accepted your connection request");
+    }
+
     internal static class Apps
     {
         public static readonly LocString Messages = new("app.messages", "Messages");
@@ -43,6 +54,10 @@ internal static class L
         public static readonly LocString Inventory = new("app.inventory", "Inventory");
         public static readonly LocString Settings = new("app.settings", "Settings");
         public static readonly LocString FindPeople = new("app.findpeople", "Find People");
+        public static readonly LocString Feedback = new("app.feedback", "Feedback");
+        public static readonly LocString Calendar = new("app.calendar", "Calendar");
+        public static readonly LocString Notes = new("app.notes", "Notes");
+        public static readonly LocString Calculator = new("app.calculator", "Calculator");
     }
 
     internal static class FindPeople
@@ -180,6 +195,10 @@ internal static class L
         public static readonly LocString SystemDefault = new("phone.systemDefault", "System default");
         public static readonly LocString DeviceFallback = new("phone.deviceFallback", "Microphone {0}");
         public static readonly LocString AudioHint = new("phone.audioHint", "Audio plays on your system default output device. Use headphones to avoid echo. A device change applies to your next call.");
+        public static readonly LocString IncomingCallBody = new("phone.incomingCallBody", "Incoming call");
+        public static readonly LocString NoAnswerTitle = new("phone.noAnswerTitle", "No answer");
+        public static readonly LocString NoAnswerBody = new("phone.noAnswerBody", "The call was not answered");
+        public static readonly LocString CallEnded = new("phone.callEnded", "Call ended");
     }
 
     internal static class Settings
@@ -196,6 +215,10 @@ internal static class L
         public static readonly LocString PhoneSize = new("settings.phoneSize", "Phone Size");
         public static readonly LocString Notifications = new("settings.notifications", "Notifications");
         public static readonly LocString DoNotDisturb = new("settings.doNotDisturb", "Do Not Disturb");
+        public static readonly LocString NotificationApps = new("settings.notificationApps", "Apps");
+        public static readonly LocString AllowNotifications = new("settings.allowNotifications", "Allow Notifications");
+        public static readonly LocString NotificationsOff = new("settings.notificationsOff", "Off");
+        public static readonly LocString SoundDefault = new("settings.soundDefault", "Default");
         public static readonly LocString Immersion = new("settings.immersion", "Immersion");
         public static readonly LocString ScrollWhileIdle = new("settings.scrollWhileIdle", "Scroll while idle");
         public static readonly LocString ScrollWhileIdleHint = new("settings.scrollWhileIdleHint", "Your character scrolls through their phone (Tomescroll emote) while standing still and out of combat. Does nothing if you haven't unlocked the emote.");
@@ -204,6 +227,10 @@ internal static class L
         public static readonly LocString StartupHint = new("settings.startupHint", "Open the phone automatically when you log in. Open minimized shows it as a small dock that you tap to expand.");
         public static readonly LocString Ringtone = new("settings.ringtone", "Ringtone");
         public static readonly LocString Sound = new("settings.sound", "Sound");
+        public static readonly LocString NotificationSound = new("settings.notificationSound", "Notification Sound");
+        public static readonly LocString Volume = new("settings.volume", "Volume");
+        public static readonly LocString ImportSound = new("settings.importSound", "Import from PC");
+        public static readonly LocString SoundImportHint = new("settings.soundImportHint", "Imported files appear in the list below and play at the volume set here, separate from the game's own sound settings.");
         public static readonly LocString Language = new("settings.language", "Language");
         public static readonly LocString About = new("settings.about", "About");
         public static readonly LocString Information = new("settings.information", "Information");
@@ -223,6 +250,14 @@ internal static class L
         public static readonly LocString TutorialsReplay = new("settings.tutorialsReplay", "Replay welcome");
         public static readonly LocString TutorialsReset = new("settings.tutorialsReset", "Reset all tutorials");
         public static readonly LocString TutorialsHint = new("settings.tutorialsHint", "Tips appear once the first time you open each app. Reset to see them all again.");
+        public static readonly LocString Privacy = new("settings.privacy", "Privacy");
+        public static readonly LocString PrivacyOn = new("settings.privacyOn", "Sharing");
+        public static readonly LocString PrivacyOff = new("settings.privacyOff", "Private");
+        public static readonly LocString PrivacyAnalytics = new("settings.privacyAnalytics", "Share anonymous usage");
+        public static readonly LocString PrivacyHint = new("settings.privacyHint", "Aetherphone is made by one solo developer. Sharing anonymous usage, which apps you open and for how long plus your region, helps me see what to build next. It never includes your character name, your messages, or any personal data.");
+        public static readonly LocString ConsentMessage = new("settings.consentMessage", "Aetherphone is made by one solo developer. To keep making it better for everyone, it really helps to know which apps people use and where to focus next.\n\nWith your OK, the app shares anonymous usage only: which apps you open and for how long, plus your region. It never includes your character name, your messages, or any personal data.\n\nYou can change this anytime in Settings, under Privacy. Thank you for helping shape Aetherphone.");
+        public static readonly LocString ConsentAccept = new("settings.consentAccept", "Sure, count me in");
+        public static readonly LocString ConsentDecline = new("settings.consentDecline", "No thanks");
         public static readonly LocString Commands = new("settings.commands", "Commands");
         public static readonly LocString CommandsSummary = new("settings.commandsSummary", "Slash commands");
         public static readonly LocString CommandsHint = new("settings.commandsHint", "Type these into the chat box. Reset brings the phone back to the middle of your screen if you ever move it out of view.");
@@ -240,6 +275,30 @@ internal static class L
         {
             new("changelog.r0850.0", "Your local time now shows on your profile in Chirper, Aethergram, and Velvet"),
             new("changelog.r0850.1", "Moved the time zone setting to a new Profile section in Settings"),
+            new("changelog.r0850.2", "Added Calendar with a month view of community events and your own reminders"),
+            new("changelog.r0850.3", "Added Feedback so you can send thoughts and bug reports straight to the developers"),
+            new("changelog.r0850.4", "Chirper, Aethergram, and Velvet now alert you to new likes, comments, and follows while the phone is closed"),
+            new("changelog.r0850.5", "Added per-app notification controls to mute or set a custom sound for each app"),
+            new("changelog.r0850.6", "Added a Commands page in Settings that lists every slash command"),
+            new("changelog.r0850.7", "Added an option to open the phone automatically when you log in, full size or minimized"),
+            new("changelog.r0850.8", "Added /phone reset to bring the phone back to the center of your screen"),
+            new("changelog.r0850.9", "Refreshed every app icon with crisp new artwork"),
+            new("changelog.r0850.10", "Rebuilt the apps on a shared design system for a more consistent look and feel"),
+            new("changelog.r0850.11", "Polished animations and transitions throughout the interface"),
+            new("changelog.r0850.12", "Tidied up the codebase for better performance and stability"),
+            new("changelog.r0850.13", "Improved the home screen with app icons that magnify under your cursor and press in when tapped"),
+            new("changelog.r0850.14", "Rebuilt Clock with World Clock, Alarms, Stopwatch, and Timer tabs"),
+            new("changelog.r0850.15", "Added world clocks for cities around the globe alongside Eorzea and server time"),
+            new("changelog.r0850.16", "Added Notes to jot things down and keep reminders with optional due dates"),
+            new("changelog.r0850.17", "Added Calculator for quick everyday sums"),
+            new("changelog.r0850.18", "Alarms, timers, and reminders now notify you even when the phone is closed"),
+            new("changelog.r0850.19", "Added Chinese, Japanese, Spanish, and Russian translations"),
+            new("changelog.r0850.20", "Improved the loading animation"),
+            new("changelog.r0850.21", "Gave incoming calls and notifications their own separate sounds, chosen in Settings"),
+            new("changelog.r0850.22", "Added Import from PC to use your own MP3 or WAV files as ringtones and notification sounds"),
+            new("changelog.r0850.23", "Added a volume control for ringtones and notification sounds"),
+            new("changelog.r0850.24", "The phone now remembers its position, keeping separate spots for the full phone and the minimized view"),
+            new("changelog.r0850.25", "Velvet now alerts you to new connection requests and when yours are accepted"),
         };
 
         public static readonly LocString[] Release0840 =
@@ -795,6 +854,75 @@ internal static class L
         public static readonly LocString Local = new("clock.local", "Local");
         public static readonly LocString InGame = new("clock.inGame", "In-game");
         public static readonly LocString Server = new("clock.server", "Server");
+        public static readonly LocString TabWorld = new("clock.tabWorld", "World Clock");
+        public static readonly LocString TabAlarms = new("clock.tabAlarms", "Alarms");
+        public static readonly LocString TabStopwatch = new("clock.tabStopwatch", "Stopwatch");
+        public static readonly LocString TabTimer = new("clock.tabTimer", "Timer");
+        public static readonly LocString AddCity = new("clock.addCity", "Add City");
+        public static readonly LocString SearchCities = new("clock.searchCities", "Search cities");
+        public static readonly LocString WorldEmpty = new("clock.worldEmpty", "Add a city to see its local time.");
+        public static readonly LocString DayToday = new("clock.dayToday", "Today");
+        public static readonly LocString DayTomorrow = new("clock.dayTomorrow", "Tomorrow");
+        public static readonly LocString DayYesterday = new("clock.dayYesterday", "Yesterday");
+        public static readonly LocString RemoveCity = new("clock.removeCity", "Remove");
+        public static readonly LocString AlarmsEmpty = new("clock.alarmsEmpty", "No alarms yet. Tap + to add one.");
+        public static readonly LocString NewAlarm = new("clock.newAlarm", "New Alarm");
+        public static readonly LocString EditAlarm = new("clock.editAlarm", "Edit Alarm");
+        public static readonly LocString AlarmLabel = new("clock.alarmLabel", "Label");
+        public static readonly LocString AlarmLabelHint = new("clock.alarmLabelHint", "Alarm");
+        public static readonly LocString Repeat = new("clock.repeat", "Repeat");
+        public static readonly LocString RepeatNever = new("clock.repeatNever", "Never");
+        public static readonly LocString RepeatEveryDay = new("clock.repeatEveryDay", "Every day");
+        public static readonly LocString RepeatWeekdays = new("clock.repeatWeekdays", "Weekdays");
+        public static readonly LocString RepeatWeekends = new("clock.repeatWeekends", "Weekends");
+        public static readonly LocString Save = new("clock.save", "Save");
+        public static readonly LocString DeleteAlarm = new("clock.deleteAlarm", "Delete Alarm");
+        public static readonly LocString DeleteAlarmConfirm = new("clock.deleteAlarmConfirm", "Delete this alarm?");
+        public static readonly LocString Delete = new("clock.delete", "Delete");
+        public static readonly LocString KeepIt = new("clock.keepIt", "Keep");
+        public static readonly LocString Start = new("clock.start", "Start");
+        public static readonly LocString Stop = new("clock.stop", "Stop");
+        public static readonly LocString Pause = new("clock.pause", "Pause");
+        public static readonly LocString Resume = new("clock.resume", "Resume");
+        public static readonly LocString Reset = new("clock.reset", "Reset");
+        public static readonly LocString Lap = new("clock.lap", "Lap");
+        public static readonly LocString Cancel = new("clock.cancel", "Cancel");
+        public static readonly LocString Hours = new("clock.hours", "hours");
+        public static readonly LocString Minutes = new("clock.minutes", "min");
+        public static readonly LocString Seconds = new("clock.seconds", "sec");
+        public static readonly LocString TimerWhenEnds = new("clock.timerWhenEnds", "When Timer Ends");
+        public static readonly LocString Alarm = new("clock.alarm", "Alarm");
+        public static readonly LocString TimerTitle = new("clock.timerTitle", "Timer");
+        public static readonly LocString TimerFinished = new("clock.timerFinished", "Timer finished");
+        public static readonly LocString LapNumber = new("clock.lapNumber", "Lap {0}");
+    }
+
+    internal static class Notes
+    {
+        public static readonly LocString TabNotes = new("notes.tabNotes", "Notes");
+        public static readonly LocString TabReminders = new("notes.tabReminders", "Reminders");
+        public static readonly LocString NotesEmpty = new("notes.notesEmpty", "No notes yet. Tap + to write one.");
+        public static readonly LocString RemindersEmpty = new("notes.remindersEmpty", "No reminders yet. Tap + to add one.");
+        public static readonly LocString NoteHint = new("notes.noteHint", "Start typing…");
+        public static readonly LocString NoteTitle = new("notes.noteTitle", "Note");
+        public static readonly LocString NewNote = new("notes.newNote", "New Note");
+        public static readonly LocString Untitled = new("notes.untitled", "New Note");
+        public static readonly LocString NoAdditionalText = new("notes.noAdditionalText", "No additional text");
+        public static readonly LocString DeleteNote = new("notes.deleteNote", "Delete Note");
+        public static readonly LocString DeleteNoteConfirm = new("notes.deleteNoteConfirm", "Delete this note?");
+        public static readonly LocString NewReminder = new("notes.newReminder", "New Reminder");
+        public static readonly LocString EditReminder = new("notes.editReminder", "Edit Reminder");
+        public static readonly LocString ReminderHint = new("notes.reminderHint", "Reminder");
+        public static readonly LocString AddReminderHint = new("notes.addReminderHint", "Add a reminder");
+        public static readonly LocString RemindMe = new("notes.remindMe", "Remind me on a day");
+        public static readonly LocString ReminderDate = new("notes.reminderDate", "Date");
+        public static readonly LocString ReminderTime = new("notes.reminderTime", "Time");
+        public static readonly LocString Completed = new("notes.completed", "Completed");
+        public static readonly LocString Save = new("notes.save", "Save");
+        public static readonly LocString Delete = new("notes.delete", "Delete");
+        public static readonly LocString KeepIt = new("notes.keepIt", "Keep");
+        public static readonly LocString DeleteReminder = new("notes.deleteReminder", "Delete Reminder");
+        public static readonly LocString DeleteReminderConfirm = new("notes.deleteReminderConfirm", "Delete this reminder?");
     }
 
     internal static class Notifications
@@ -809,6 +937,7 @@ internal static class L
         public static readonly LocString ServerResets = new("timers.serverResets", "Server Resets");
         public static readonly LocString Activities = new("timers.activities", "Activities");
         public static readonly LocString Retainers = new("timers.retainers", "Retainers");
+        public static readonly LocString Reminders = new("timers.reminders", "Reminders");
         public static readonly LocString DailyReset = new("timers.dailyReset", "Daily Reset");
         public static readonly LocString WeeklyReset = new("timers.weeklyReset", "Weekly Reset");
         public static readonly LocString GrandCompanyReset = new("timers.grandCompanyReset", "Grand Company");
@@ -870,6 +999,12 @@ internal static class L
         public static readonly LocString ChallengeLog = new("dailies.challengeLog", "Challenge Log");
         public static readonly LocString RaidLockout = new("dailies.raidLockout", "Raid & Alliance Lockouts");
         public static readonly LocString HuntBills = new("dailies.huntBills", "Hunt Bills");
+        public static readonly LocString AutoSection = new("dailies.autoSection", "Auto-tracked");
+        public static readonly LocString ManualSection = new("dailies.manualSection", "Check manually");
+        public static readonly LocString VotingOpenCloses = new("dailies.votingOpenCloses", "Open · closes {0}");
+        public static readonly LocString VotingOpensIn = new("dailies.votingOpensIn", "Opens {0}");
+        public static readonly LocString NextDrawing = new("dailies.nextDrawing", "Next drawing {0}");
+        public static readonly LocString SealBalance = new("dailies.sealBalance", "{0} seals");
     }
 
     internal static class ControlCenter
@@ -877,7 +1012,7 @@ internal static class L
         public static readonly LocString Title = new("controlCenter.title", "Control Center");
         public static readonly LocString LockPosition = new("controlCenter.lockPosition", "Lock Position");
         public static readonly LocString Volume = new("controlCenter.volume", "Volume");
-        public static readonly LocString Brightness = new("controlCenter.brightness", "Text Size");
+        public static readonly LocString Brightness = new("controlCenter.brightness", "Brightness");
     }
 
     internal static class Home
@@ -1085,6 +1220,25 @@ internal static class L
         public static readonly LocString UnlockPositionHint = new("plugin.unlockPositionHint", "Unlock position");
     }
 
+    internal static class Feedback
+    {
+        public static readonly LocString SendFeedback = new("feedback.sendFeedback", "Send Feedback");
+        public static readonly LocString Subtitle = new("feedback.subtitle", "Share your thoughts, suggestions, or bug reports directly with the developer");
+        public static readonly LocString YourFeedback = new("feedback.yourFeedback", "Your feedback");
+        public static readonly LocString Placeholder = new("feedback.placeholder", "What's on your mind? Suggestions, bug reports, feature ideas…");
+        public static readonly LocString Send = new("feedback.send", "Send");
+        public static readonly LocString Sending = new("feedback.sending", "Sending…");
+        public static readonly LocString Sent = new("feedback.sent", "Feedback Sent");
+        public static readonly LocString ThankYou = new("feedback.thankYou", "Thank you for your feedback!");
+        public static readonly LocString SentMessage = new("feedback.sentMessage", "Your message has been sent to the developer.");
+        public static readonly LocString ConfirmMessage = new("feedback.confirmMessage", "Send this feedback to the developer?");
+        public static readonly LocString SendMore = new("feedback.sendMore", "Send more feedback");
+        public static readonly LocString Cooldown = new("feedback.cooldown", "You can send again in {0}");
+        public static readonly LocString Error = new("feedback.error", "Something went wrong");
+        public static readonly LocString ErrorMessage = new("feedback.errorMessage", "Couldn't send your feedback. Please try again.");
+        public static readonly LocString SignInRequired = new("feedback.signInRequired", "Sign in to Aethernet in Settings to send feedback");
+    }
+
     internal static class About
     {
         public static readonly LocString LinkDiscussions = new("about.linkDiscussions", "Discussions");
@@ -1191,6 +1345,30 @@ internal static class L
         public static readonly LocString RadioAnime = new("catalog.radio.anime", "Anime");
     }
 
+    internal static class Calendar
+    {
+        public static readonly LocString Title = new("calendar.title", "Calendar");
+        public static readonly LocString Today = new("calendar.today", "Today");
+        public static readonly LocString NoEvents = new("calendar.noEvents", "No Events");
+        public static readonly LocString FailedToLoad = new("calendar.failedToLoad", "Couldn't load events");
+        public static readonly LocString WeekSun = new("calendar.weekSun", "S");
+        public static readonly LocString WeekMon = new("calendar.weekMon", "M");
+        public static readonly LocString WeekTue = new("calendar.weekTue", "T");
+        public static readonly LocString WeekWed = new("calendar.weekWed", "W");
+        public static readonly LocString WeekThu = new("calendar.weekThu", "T");
+        public static readonly LocString WeekFri = new("calendar.weekFri", "F");
+        public static readonly LocString WeekSat = new("calendar.weekSat", "S");
+        public static readonly LocString NewEvent = new("calendar.newEvent", "New Event");
+        public static readonly LocString TitlePlaceholder = new("calendar.titlePlaceholder", "Event name");
+        public static readonly LocString EventDate = new("calendar.eventDate", "Date");
+        public static readonly LocString EventTime = new("calendar.eventTime", "Time");
+        public static readonly LocString Save = new("calendar.save", "Save");
+        public static readonly LocString DeleteEvent = new("calendar.deleteEvent", "Delete Event");
+        public static readonly LocString DeleteConfirmMessage = new("calendar.deleteConfirmMessage", "Are you sure you want to delete this event?");
+        public static readonly LocString DeleteConfirm = new("calendar.deleteConfirm", "Delete");
+        public static readonly LocString DeleteCancel = new("calendar.deleteCancel", "Cancel");
+    }
+
     internal static class Onboarding
     {
         public static readonly LocString Continue = new("onboarding.continue", "Continue");
@@ -1273,6 +1451,12 @@ internal static class L
         public static readonly LocString VelvetProfileBody = new("onboarding.velvetProfileBody", "Set up your intro, vibe, tags and limits, and choose whether you're discoverable to others.");
         public static readonly LocString VelvetKindTitle = new("onboarding.velvetKindTitle", "Consent and Respect");
         public static readonly LocString VelvetKindBody = new("onboarding.velvetKindBody", "This space is for everyone. Discriminatory, hateful or harmful content isn't welcome and can get you banned.");
+        public static readonly LocString FeedbackIntroTitle = new("onboarding.feedbackIntroTitle", "Feedback");
+        public static readonly LocString FeedbackIntroBody = new("onboarding.feedbackIntroBody", "Tell the developer what you think: suggestions, bug reports, feature ideas, or just a hello.");
+        public static readonly LocString FeedbackWriteTitle = new("onboarding.feedbackWriteTitle", "Write and send");
+        public static readonly LocString FeedbackWriteBody = new("onboarding.feedbackWriteBody", "Type your message and tap Send. Your feedback goes directly to the developer's dashboard.");
+        public static readonly LocString FeedbackPrivacyTitle = new("onboarding.feedbackPrivacyTitle", "Honest and respectful");
+        public static readonly LocString FeedbackPrivacyBody = new("onboarding.feedbackPrivacyBody", "Your character name is attached so the developer knows who you are in game. Be constructive and kind.");
         public static readonly LocString PhoneBody = new("onboarding.phoneBody", "Call your friends directly in-game and talk over voice chat. The other person needs the Aetherphone plugin too, and you both need to be signed in to Aethernet from Settings.");
         public static readonly LocString PhoneGroupTitle = new("onboarding.phoneGroupTitle", "Group calls");
         public static readonly LocString PhoneGroupBody = new("onboarding.phoneGroupBody", "While a call is active, add more people to bring everyone into the same conversation. Group calls are supported too.");
