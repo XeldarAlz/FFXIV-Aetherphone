@@ -1,3 +1,4 @@
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Messaging;
 
@@ -36,6 +37,7 @@ internal sealed class NotificationRouter
             velvetLauncher.Request(notification.GroupKey);
         }
 
-        navigation.Open(notification.AppId);
+        Plugin.Analytics.Track(AnalyticsEvents.NotificationOpened(notification.AppId, notification.GroupKey ?? string.Empty));
+        navigation.Open(notification.AppId, AppOpenSource.Notification);
     }
 }

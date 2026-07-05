@@ -14,7 +14,6 @@ internal sealed class NotificationsApp : IPhoneApp
     public string Id => "notifications";
     public string DisplayName => Loc.T(L.Apps.Notifications);
     public string Glyph => "N";
-    public Vector4 Accent => new(0.92f, 0.30f, 0.34f, 1f);
     public int BadgeCount => notifications.UnreadCount;
     private readonly NotificationService notifications;
     private readonly MessageLauncher messageLauncher;

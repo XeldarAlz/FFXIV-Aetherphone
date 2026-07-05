@@ -6,7 +6,7 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class NotificationService : IDisposable
 {
     private const int MaxRetained = 50;
-    private readonly IRingtone ringtone;
+    private readonly SoundService sound;
     private readonly Configuration configuration;
     private readonly IFramework framework;
     private readonly ConcurrentQueue<PhoneNotification> pending = new();
@@ -17,9 +17,9 @@ internal sealed class NotificationService : IDisposable
     public event Action? Changed;
     public event Action<PhoneNotification>? Presented;
 
-    public NotificationService(IRingtone ringtone, Configuration configuration, IFramework framework)
+    public NotificationService(SoundService sound, Configuration configuration, IFramework framework)
     {
-        this.ringtone = ringtone;
+        this.sound = sound;
         this.configuration = configuration;
         this.framework = framework;
         framework.Update += OnFrameworkUpdate;
@@ -40,6 +40,11 @@ internal sealed class NotificationService : IDisposable
 
     private void Present(PhoneNotification notification)
     {
+        if (!configuration.IsAppNotificationEnabled(notification.AppId))
+        {
+            return;
+        }
+
         var stamped = notification with { Id = ++sequence };
         recent.Add(stamped);
         if (recent.Count > MaxRetained)
@@ -51,7 +56,7 @@ internal sealed class NotificationService : IDisposable
         if (!configuration.DoNotDisturb)
         {
             Presented?.Invoke(stamped);
-            ringtone.Play();
+            sound.PlayNotification(notification.AppId);
         }
 
         Changed?.Invoke();
