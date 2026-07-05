@@ -43,12 +43,6 @@ internal sealed class LinkshellBridge : IDisposable
             return;
         }
 
-        ResolveSender(message.Sender, out var name, out var world);
-        if (name.Length == 0)
-        {
-            return;
-        }
-
         var text = message.Message.TextValue;
         if (text.Length == 0)
         {
@@ -56,21 +50,20 @@ internal sealed class LinkshellBridge : IDisposable
         }
 
         var display = LinkshellDirectory.Name(channel);
-        var isSelf = gameData.IsLocalPlayer(name, world);
-        var direction = isSelf ? MessageDirection.Outgoing : MessageDirection.Incoming;
-        var author = isSelf ? null : new MessageAuthor(name, world);
-        store.Append(channel, display, new ChatLine(direction, text, DateTime.Now, author));
-        if (isSelf)
+        if (!TryResolveMember(message.Sender, out var name, out var world) || gameData.IsLocalPlayer(name, world))
         {
+            store.Append(channel, display, new ChatLine(MessageDirection.Outgoing, text, DateTime.Now, null));
             return;
         }
 
+        store.Append(channel, display,
+            new ChatLine(MessageDirection.Incoming, text, DateTime.Now, new MessageAuthor(name, world)));
         var title = LinkshellLabel.Of(channel, display);
         notifications.Notify(new PhoneNotification("messages", title, $"{name}: {text}", DateTime.Now, MessagesAccent,
             channel.Key));
     }
 
-    private void ResolveSender(SeString sender, out string name, out string world)
+    private bool TryResolveMember(SeString sender, out string name, out string world)
     {
         var payloads = sender.Payloads;
         for (var index = 0; index < payloads.Count; index++)
@@ -79,23 +72,13 @@ internal sealed class LinkshellBridge : IDisposable
             {
                 name = player.PlayerName;
                 world = gameData.WorldName(player.World.RowId);
-                return;
+                return true;
             }
         }
 
-        name = TrimGlyphs(sender.TextValue);
-        world = name.Length > 0 ? gameData.WorldName(gameData.LocalHomeWorldId) : string.Empty;
-    }
-
-    private static string TrimGlyphs(string raw)
-    {
-        var start = 0;
-        while (start < raw.Length && !char.IsLetter(raw[start]))
-        {
-            start++;
-        }
-
-        return start == 0 ? raw.Trim() : raw.Substring(start).Trim();
+        name = string.Empty;
+        world = string.Empty;
+        return false;
     }
 
     public void Dispose() => chatGui.ChatMessage -= OnChatMessage;
