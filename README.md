@@ -32,7 +32,7 @@ Puts a real smartphone on screen: a docked, always-on device with a home screen,
 - **Home screen & shell**: a docked device with a status bar and a multi-page app grid. Long-press to enter edit mode, then drag icons to rearrange them across pages. Smooth slide transitions between every screen.
 - **Lock screen**: a real lock screen with a large clock and date, your latest notifications stacked as cards (tap one to jump straight into its app), and a swipe to get back in.
 - **Control Center**: swipe down for quick toggles: Do Not Disturb, position lock, idle scrolling, plus accent-color swatches, brightness (text size) and volume sliders, and live music controls.
-- **Notifications**: a notification center, optional toasts, game-sound ringtones, and a Do Not Disturb switch.
+- **Notifications**: a notification center, optional toasts, custom alert sounds, and a Do Not Disturb switch.
 
 ### Social
 
@@ -55,22 +55,27 @@ Aetherphone runs its own social network, Aethernet, so these apps work across ch
 - **Market**: live market board prices from Universalis. Search any item (or right-click one in-game), see the cheapest listings, price stats, sale velocity, and recent-sale history with a trend graph across your World, Data Center, or Region. Set price-drop alerts that ping the phone, compare against NPC vendor prices, and star favorites.
 - **Wallet**: track your gil, currencies, tomestones, hunt seals, and PvP marks at a glance, with progress toward weekly caps.
 - **Music**: an in-game player. Browse genre stations or search for any track, with playback controls and a Now Playing banner on the home screen.
-- **Camera**: capture in-game shots straight from the phone, with square, photo, and pano modes, an optional framing grid, and a flash.
+- **Camera**: capture in-game shots straight from the phone, with square and photo modes, an optional framing grid, and a toggleable flash.
 - **Photos**: a gallery for your captures, laid out like a real photo library with a full-screen viewer.
-- **Games**: a pocket arcade of 15 mini-games across logic, memory, match-3, and puzzle: Sweeper, Nonogram, Pairs, Simon, Gem Swap, 2048, Water Sort, Flow, Solitaire, Reversi, Breakout, Bubble Shooter, Snake, Flap, and Whack, each tracking your best score.
-- **Clock**: an analog clock on Eorzea time.
+- **Games**: a pocket arcade of 16 mini-games spanning logic, memory, match-3, arcade, puzzle, cards, and strategy: Sweeper, Nonogram, Pairs, Simon, Gem Swap, Tetris, 2048, Water Sort, Flow, Solitaire, Reversi, Breakout, Bubble Shooter, Snake, Flap, and Whack, each tracking your best score.
+- **Clock**: local, Eorzea, and server time at a glance, world clocks for any cities you add, plus alarms, a stopwatch, and a countdown timer.
+- **Calendar**: a month view of live and upcoming in-game events, with your own custom events layered in and a tap-through agenda for each day.
+- **Notes**: quick notes and a reminders checklist, with optional due dates that ping the phone when they come up.
+- **Calculator**: a standard calculator with a running history tape you can tap to reuse a past result.
 - **Timers**: countdowns to the daily, Grand Company, and weekly resets, plus Fashion Report, Jumbo Cactpot, and Ocean Fishing windows and your retainer ventures, with optional reminders.
 - **Fishing**: Ocean Fishing voyage predictions, so you know what's coming before you set sail.
 - **Dailies**: track your recurring daily and weekly content, with checkable rows, badge counts, and auto-detected completion.
 - **Collections**: browse your mounts, minions, and other collectibles.
 - **Inventory**: a quick look at your bags without opening the game menu.
 - **Maps**: in-world maps and points of interest.
+- **Feedback**: send a note straight to the developer from inside the phone.
 
 ### Personalization
 
 - **Themes & wallpapers**: pick an accent palette and a wallpaper: built-in art, one of your own photos, or any image you import. The whole device restyles to match.
 - **Lodestone portraits**: real character avatars and portraits, pulled from the Lodestone and shown on your profile, contacts, and chats (toggleable).
 - **Text size**: an accessibility zoom that scales the on-device type without resizing the phone.
+- **Sounds**: set a ringtone for calls and an alert sound for notifications, chosen from a bundled library or your own imported MP3/WAV files.
 - **Idle animation**: your character idly scrolls the phone (Tomescroll) when you're standing around, optional.
 - **About window**: an animated credits and links screen, reachable from Settings or `/phone about`.
 
