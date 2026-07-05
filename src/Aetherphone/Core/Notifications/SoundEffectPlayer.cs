@@ -5,6 +5,7 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class SoundEffectPlayer : IDisposable
 {
     private readonly object gate = new();
+    private readonly List<WaveOutEvent> oneShots = new();
     private WaveOutEvent? loopOutput;
     private MediaFoundationReader? loopReader;
     private bool disposed;
@@ -17,6 +18,32 @@ internal sealed class SoundEffectPlayer : IDisposable
             IsBackground = true, Name = "Aetherphone.Sound",
         };
         thread.Start();
+    }
+
+    public void StopOneShots()
+    {
+        WaveOutEvent[] snapshot;
+        lock (gate)
+        {
+            if (oneShots.Count == 0)
+            {
+                return;
+            }
+
+            snapshot = oneShots.ToArray();
+            oneShots.Clear();
+        }
+
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            try
+            {
+                snapshot[index].Stop();
+            }
+            catch (Exception)
+            {
+            }
+        }
     }
 
     public void PlayLoop(string path, float volume)
@@ -81,13 +108,25 @@ internal sealed class SoundEffectPlayer : IDisposable
         reader?.Dispose();
     }
 
-    private static void RunOnce(string path, float volume)
+    private void RunOnce(string path, float volume)
     {
+        MediaFoundationReader? reader = null;
+        WaveOutEvent? output = null;
         try
         {
-            using var reader = new MediaFoundationReader(path);
-            using var output = new WaveOutEvent { Volume = volume };
+            reader = new MediaFoundationReader(path);
+            output = new WaveOutEvent { Volume = volume };
             output.Init(reader);
+            lock (gate)
+            {
+                if (disposed)
+                {
+                    return;
+                }
+
+                oneShots.Add(output);
+            }
+
             output.Play();
             while (output.PlaybackState == NAudio.Wave.PlaybackState.Playing)
             {
@@ -97,6 +136,20 @@ internal sealed class SoundEffectPlayer : IDisposable
         catch (Exception exception)
         {
             AepLog.Warning($"[Sound] playback failed: {exception.Message}");
+        }
+        finally
+        {
+            if (output is not null)
+            {
+                lock (gate)
+                {
+                    oneShots.Remove(output);
+                }
+
+                output.Dispose();
+            }
+
+            reader?.Dispose();
         }
     }
 
@@ -108,6 +161,7 @@ internal sealed class SoundEffectPlayer : IDisposable
         }
 
         StopLoop();
+        StopOneShots();
     }
 }
 

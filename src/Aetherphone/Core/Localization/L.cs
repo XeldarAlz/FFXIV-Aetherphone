@@ -272,6 +272,11 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0851 =
+        {
+            new("changelog.r0851.0", "Fixed an issue where the preview of a long ringtone or notification sound kept playing after leaving Settings"),
+        };
+
         public static readonly LocString[] Release0850 =
         {
             new("changelog.r0850.0", "Your local time now shows on your profile in Chirper, Aethergram, and Velvet"),

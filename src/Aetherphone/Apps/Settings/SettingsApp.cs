@@ -24,6 +24,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private readonly ViewRouter<ISettingsPage> router;
     private readonly RouterDraw<ISettingsPage> drawPage;
     private readonly Action popBack;
+    private readonly SoundService sound;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
     private readonly AccountPage accountPage;
@@ -33,6 +34,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
         PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
     {
+        this.sound = sound;
         accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
         profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
@@ -81,13 +83,22 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     }
 
     public void Open(ISettingsPage page) => router.Push(page);
-    public void Back() => router.Pop();
+
+    public void Back()
+    {
+        sound.StopPreview();
+        router.Pop();
+    }
 
     public void OnOpened()
     {
     }
 
-    public void OnClosed() => router.Reset();
+    public void OnClosed()
+    {
+        sound.StopPreview();
+        router.Reset();
+    }
 
     public void Draw(in PhoneContext context)
     {
@@ -106,7 +117,11 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         page.Draw(context, body);
     }
 
-    private void PopBack() => router.Pop();
+    private void PopBack()
+    {
+        sound.StopPreview();
+        router.Pop();
+    }
 
     public void Dispose()
     {

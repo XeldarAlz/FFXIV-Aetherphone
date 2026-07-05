@@ -298,6 +298,7 @@
   "settings.changelogSummary": "新機能",
   "settings.changelogHero": "新機能",
   "settings.changelogLatest": "最新",
+  "changelog.r0851.0": "長い着信音や通知音の試聴が、設定画面を離れた後も再生され続ける問題を修正しました",
   "changelog.r0850.0": "Chirper、Aethergram、Velvetのプロフィールにあなたの現地時間が表示されるようになりました",
   "changelog.r0850.1": "タイムゾーン設定を設定内の新しい「プロフィール」セクションに移動しました",
   "changelog.r0850.2": "コミュニティイベントと自分のリマインダーを月ごとに表示できるカレンダーを追加しました",

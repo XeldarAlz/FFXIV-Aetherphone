@@ -232,6 +232,7 @@
   "settings.changelogSummary": "What's new",
   "settings.changelogHero": "What's New",
   "settings.changelogLatest": "Latest",
+  "changelog.r0851.0": "Fixed an issue where the preview of a long ringtone or notification sound kept playing after leaving Settings",
   "changelog.r0850.0": "Your local time now shows on your profile in Chirper, Aethergram, and Velvet",
   "changelog.r0850.1": "Moved the time zone setting to a new Profile section in Settings",
   "changelog.r0850.2": "Added Calendar with a month view of community events and your own reminders",

@@ -297,6 +297,7 @@
   "settings.changelogSummary": "Neuigkeiten",
   "settings.changelogHero": "Neuigkeiten",
   "settings.changelogLatest": "Neu",
+  "changelog.r0851.0": "Ein Fehler wurde behoben, durch den die Vorschau eines langen Klingeltons oder Benachrichtigungstons nach dem Verlassen der Einstellungen weiterspielte",
   "changelog.r0850.0": "Deine Ortszeit erscheint jetzt in deinem Profil in Chirper, Aethergram und Velvet",
   "changelog.r0850.1": "Die Zeitzonen-Einstellung ist jetzt im neuen Profil-Bereich der Einstellungen",
   "changelog.r0850.2": "Kalender hinzugefügt mit einer Monatsansicht für Community-Events und eigene Erinnerungen",

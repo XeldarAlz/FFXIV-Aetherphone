@@ -298,6 +298,7 @@
   "settings.changelogSummary": "Novedades",
   "settings.changelogHero": "Novedades",
   "settings.changelogLatest": "Reciente",
+  "changelog.r0851.0": "Se corrigió un problema por el que la vista previa de un tono de llamada o sonido de notificación largo seguía sonando tras salir de Ajustes",
   "changelog.r0850.0": "Tu hora local ahora se muestra en tu perfil de Chirper, Aethergram y Velvet",
   "changelog.r0850.1": "Se movió el ajuste de zona horaria a una nueva sección de Perfil en Ajustes",
   "changelog.r0850.2": "Se añadió Calendario con una vista mensual de eventos de la comunidad y tus propios recordatorios",

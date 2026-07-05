@@ -297,6 +297,7 @@
   "settings.changelogSummary": "Nouveautés",
   "settings.changelogHero": "Nouveautés",
   "settings.changelogLatest": "Récent",
+  "changelog.r0851.0": "Correction d'un problème où l'aperçu d'une sonnerie ou d'un son de notification long continuait de jouer après avoir quitté les Réglages",
   "changelog.r0850.0": "Votre heure locale apparaît désormais sur votre profil dans Chirper, Aethergram et Velvet",
   "changelog.r0850.1": "Le réglage du fuseau horaire se trouve maintenant dans une nouvelle section Profil des Réglages",
   "changelog.r0850.2": "Ajout de Calendrier avec une vue mensuelle des événements communautaires et de vos propres rappels",

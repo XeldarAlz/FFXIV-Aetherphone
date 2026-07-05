@@ -297,6 +297,7 @@
   "settings.changelogSummary": "Yenilikler",
   "settings.changelogHero": "Yenilikler",
   "settings.changelogLatest": "Son",
+  "changelog.r0851.0": "Uzun bir zil sesi veya bildirim sesi önizlemesinin, Ayarlar'dan çıktıktan sonra çalmaya devam etmesine neden olan bir sorun giderildi",
   "changelog.r0850.0": "Yerel saatin artık Chirper, Aethergram ve Velvet'te profilinde görünüyor",
   "changelog.r0850.1": "Saat dilimi ayarı artık Ayarlar'daki yeni Profil bölümünde",
   "changelog.r0850.2": "Topluluk etkinliklerini ve kendi hatırlatıcılarını aylık görünümde gösteren Takvim eklendi",

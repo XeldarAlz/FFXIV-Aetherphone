@@ -39,7 +39,13 @@ internal sealed class SoundService : IDisposable
         return string.Empty;
     }
 
-    public void Preview(string token, float volume) => Play(token, volume, false);
+    public void Preview(string token, float volume)
+    {
+        player.StopOneShots();
+        Play(token, volume, false);
+    }
+
+    public void StopPreview() => player.StopOneShots();
 
     public string AddUserFile(string sourcePath) => library.AddUserFile(sourcePath);
 

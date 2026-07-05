@@ -298,6 +298,7 @@
   "settings.changelogSummary": "最新内容",
   "settings.changelogHero": "最新内容",
   "settings.changelogLatest": "最新",
+  "changelog.r0851.0": "修复了较长的铃声或通知声音试听在离开设置后仍会继续播放的问题",
   "changelog.r0850.0": "你的当地时间现在会显示在 Chirper、Aethergram 和 Velvet 的个人资料上",
   "changelog.r0850.1": "将时区设置移动到了设置中新的“个人资料”板块",
   "changelog.r0850.2": "新增日历，可按月查看社区活动和你自己的提醒",
