@@ -58,9 +58,9 @@ internal sealed class ConfirmOverlay
             var drawList = ImGui.GetWindowDrawList();
             drawList.AddRectFilled(screen.Min, screen.Max,
                 ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * opacity)));
-            ConfirmDialog.Draw(screen, theme, shown.Message, shown.ConfirmLabel, shown.CancelLabel,
-                shown.BusyLabel ?? shown.ConfirmLabel, service.Busy, service.Status, shown.Danger, opacity, cardScale,
-                out var cardRect, out var canceled, out var confirmed);
+            ConfirmDialog.Draw(screen, theme, shown.Title, shown.Message, shown.ConfirmLabel, shown.CancelLabel,
+                shown.BusyLabel ?? shown.ConfirmLabel, service.Busy, service.Status, shown.Danger, shown.Acknowledge,
+                opacity, cardScale, out var cardRect, out var canceled, out var confirmed);
             if (active is null || opacity <= 0.5f)
             {
                 return;

@@ -2,12 +2,14 @@ namespace Aetherphone.Core.Confirm;
 
 internal sealed class ConfirmRequest
 {
+    public string? Title;
     public required string Message;
     public required string ConfirmLabel;
     public required string CancelLabel;
     public string? BusyLabel;
     public string? FailedMessage;
     public bool Danger = true;
+    public bool Acknowledge;
     public Action<Action<bool>>? ConfirmAsync;
     public Action? Confirm;
     public Action? Cancel;
@@ -24,6 +26,21 @@ internal sealed class ConfirmService
         Active = request;
         Busy = false;
         Status = null;
+    }
+
+    public void Alert(string? title, string message, string dismissLabel, Action? onDismiss = null)
+    {
+        Ask(new ConfirmRequest
+        {
+            Title = title,
+            Message = message,
+            ConfirmLabel = dismissLabel,
+            CancelLabel = dismissLabel,
+            Danger = false,
+            Acknowledge = true,
+            Confirm = onDismiss,
+            Cancel = onDismiss,
+        });
     }
 
     public void Proceed()

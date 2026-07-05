@@ -33,6 +33,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private volatile string status = string.Empty;
     private volatile string code = string.Empty;
     private volatile string? challengeId;
+    private volatile string? failureReason;
     private volatile bool busy;
     private bool meRequested;
 
@@ -56,7 +57,19 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             {
                 DrawSignedOut(theme);
             }
+
+            if (failureReason is not null)
+            {
+                ShowFailureAlert();
+            }
         }
+    }
+
+    private void ShowFailureAlert()
+    {
+        var (title, message) = FailureText();
+        failureReason = null;
+        Plugin.Confirm.Alert(title, message, Loc.T(L.Account.FailDismiss));
     }
 
     private void DrawSignedIn(PhoneTheme theme)
@@ -177,13 +190,13 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         ImGui.Dummy(new Vector2(0f, 8f * scale));
-        if (PrimaryButton(Loc.T(L.Account.VerifyAdded), theme) && !busy)
+        if (PrimaryButton(Loc.T(L.Account.VerifyAdded), theme) && !busy && failureReason is null)
         {
             StartVerify();
         }
 
         ImGui.Dummy(new Vector2(0f, 2f * scale));
-        if (GhostButton(Loc.T(L.Common.Cancel), theme))
+        if (GhostButton(Loc.T(L.Common.Cancel), theme) && failureReason is null)
         {
             ResetFlow();
         }
@@ -296,6 +309,33 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
     }
 
+    private (string Title, string Message) FailureText()
+    {
+        switch (failureReason)
+        {
+            case VerifyFailure.CharacterNotFound:
+                var player = gameData.LocalPlayer;
+                var name = player?.Name.TextValue ?? string.Empty;
+                var world = gameData.WorldName(gameData.LocalHomeWorldId);
+                return (Loc.T(L.Account.FailCharacterNotFoundTitle),
+                    Loc.T(L.Account.FailCharacterNotFoundBody, name, world));
+            case VerifyFailure.CodeNotFound:
+                return (Loc.T(L.Account.FailCodeNotFoundTitle), Loc.T(L.Account.FailCodeNotFoundBody));
+            case VerifyFailure.Timeout:
+                return (Loc.T(L.Account.FailTimeoutTitle), Loc.T(L.Account.FailTimeoutBody));
+            case VerifyFailure.ChallengeExpired:
+                return (Loc.T(L.Account.FailChallengeExpiredTitle), Loc.T(L.Account.FailChallengeExpiredBody));
+            case VerifyFailure.Banned:
+                return (Loc.T(L.Account.FailBannedTitle), Loc.T(L.Account.FailBannedBody));
+            case VerifyFailure.RateLimited:
+                return (Loc.T(L.Account.FailRateLimitedTitle), Loc.T(L.Account.FailRateLimitedBody));
+            case VerifyFailure.Network:
+                return (Loc.T(L.Account.FailNetworkTitle), Loc.T(L.Account.FailNetworkBody));
+            default:
+                return (Loc.T(L.Account.FailLodestoneUnavailableTitle), Loc.T(L.Account.FailLodestoneUnavailableBody));
+        }
+    }
+
     private void StartChallenge(string name, string world)
     {
         busy = true;
@@ -351,17 +391,19 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             try
             {
-                var auth = await client.VerifyAsync(id, token).ConfigureAwait(false);
-                if (auth is null)
+                var result = await client.VerifyAsync(id, token).ConfigureAwait(false);
+                if (result.Auth is { } auth)
                 {
-                    status = Loc.T(L.Account.CodeNotFound);
-                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
+                    session.SignIn(auth.Token, auth.User);
+                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
+                    ResetFlow();
                     return;
                 }
 
-                session.SignIn(auth.Token, auth.User);
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
-                ResetFlow();
+                var reason = result.FailureReason ?? VerifyFailure.CodeNotFound;
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
+                status = string.Empty;
+                failureReason = reason;
             }
             catch (OperationCanceledException)
             {
@@ -369,8 +411,9 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             catch (Exception exception)
             {
                 AepLog.Warning($"Aethernet verify failed: {exception.Message}");
-                status = Loc.T(L.Account.CannotReach);
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, VerifyFailure.Network));
+                status = string.Empty;
+                failureReason = VerifyFailure.Network;
             }
             finally
             {
@@ -407,6 +450,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         challengeId = null;
         code = string.Empty;
         status = string.Empty;
+        failureReason = null;
         busy = false;
         meRequested = false;
     }

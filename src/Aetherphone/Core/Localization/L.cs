@@ -493,6 +493,23 @@ internal static class L
         public static readonly LocString SignIn = new("account.signIn", "Sign in with Lodestone");
         public static readonly LocPlural Followers = new("account.followers", "{0} follower", "{0} followers");
         public static readonly LocPlural Following = new("account.following", "{0} following", "{0} following");
+        public static readonly LocString FailDismiss = new("account.fail.dismiss", "Got it");
+        public static readonly LocString FailCharacterNotFoundTitle = new("account.fail.characterNotFound.title", "Character not found");
+        public static readonly LocString FailCharacterNotFoundBody = new("account.fail.characterNotFound.body", "We couldn't find {0} on {1} in the Lodestone search. In your Character settings, set Character Search to Public, then Verify again.");
+        public static readonly LocString FailCodeNotFoundTitle = new("account.fail.codeNotFound.title", "Code not saved yet");
+        public static readonly LocString FailCodeNotFoundBody = new("account.fail.codeNotFound.body", "We found your character, but the code isn't in your profile yet. Lodestone can take a minute to update after you save. Wait a moment, then Verify again. If it keeps happening, press Cancel below and try again with a new code.");
+        public static readonly LocString FailLodestoneUnavailableTitle = new("account.fail.lodestoneUnavailable.title", "Lodestone unavailable");
+        public static readonly LocString FailLodestoneUnavailableBody = new("account.fail.lodestoneUnavailable.body", "The Lodestone didn't respond. This is on Square Enix's side, not yours. Wait a bit, then try again.");
+        public static readonly LocString FailTimeoutTitle = new("account.fail.timeout.title", "Verification timed out");
+        public static readonly LocString FailTimeoutBody = new("account.fail.timeout.body", "The Lodestone took too long to respond. Your code is fine, just Verify again in a moment.");
+        public static readonly LocString FailChallengeExpiredTitle = new("account.fail.challengeExpired.title", "Code expired");
+        public static readonly LocString FailChallengeExpiredBody = new("account.fail.challengeExpired.body", "This sign-in code expired. Start again to get a fresh one.");
+        public static readonly LocString FailBannedTitle = new("account.fail.banned.title", "Character blocked");
+        public static readonly LocString FailBannedBody = new("account.fail.banned.body", "This character can't sign in to Aethernet. Reach out to support if you think this is a mistake.");
+        public static readonly LocString FailRateLimitedTitle = new("account.fail.rateLimited.title", "Too many attempts");
+        public static readonly LocString FailRateLimitedBody = new("account.fail.rateLimited.body", "You've tried a few times in a row. Wait a minute, then try again.");
+        public static readonly LocString FailNetworkTitle = new("account.fail.network.title", "Can't reach Aethernet");
+        public static readonly LocString FailNetworkBody = new("account.fail.network.body", "We couldn't reach the Aethernet server. Check your connection, then try again.");
     }
 
     internal static class Music

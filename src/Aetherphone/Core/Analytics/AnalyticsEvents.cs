@@ -89,6 +89,16 @@ internal static class AnalyticsEvents
         return new AnalyticsEvent(AnalyticsEventType.SignupStep, Properties: properties);
     }
 
+    public static AnalyticsEvent SignupStep(string step, string reason)
+    {
+        var properties = new Dictionary<string, string>(2)
+        {
+            ["step"] = step,
+            ["reason"] = reason,
+        };
+        return new AnalyticsEvent(AnalyticsEventType.SignupStep, Properties: properties);
+    }
+
     public static AnalyticsEvent PostCreated(string appId)
     {
         return new AnalyticsEvent(AnalyticsEventType.PostCreated, appId);

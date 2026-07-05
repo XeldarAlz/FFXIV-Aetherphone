@@ -8,6 +8,8 @@ internal sealed record VerifyRequest(string ChallengeId);
 
 internal sealed record AuthResponse(string Token, UserDto User);
 
+internal sealed record VerifyResponse(bool Ok, string? Reason, string? Token, UserDto? User);
+
 internal sealed record UserDto(
     string Id,
     string Name,

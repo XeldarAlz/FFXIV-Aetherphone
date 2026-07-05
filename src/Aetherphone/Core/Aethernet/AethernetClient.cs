@@ -21,9 +21,21 @@ internal sealed class AethernetClient
         return http.PostJsonAsync(Url("/auth/challenge"), new ChallengeRequest(name, world), AethernetJsonContext.Default.ChallengeRequest, AethernetJsonContext.Default.ChallengeResponse, null, token);
     }
 
-    public Task<AuthResponse?> VerifyAsync(string challengeId, CancellationToken token)
+    public async Task<VerifyResult> VerifyAsync(string challengeId, CancellationToken token)
     {
-        return http.PostJsonAsync(Url("/auth/verify"), new VerifyRequest(challengeId), AethernetJsonContext.Default.VerifyRequest, AethernetJsonContext.Default.AuthResponse, null, token);
+        var status = 0;
+        var response = await http.PostJsonAsync(Url("/auth/verify"), new VerifyRequest(challengeId), AethernetJsonContext.Default.VerifyRequest, AethernetJsonContext.Default.VerifyResponse, null, token, statusCode => status = statusCode).ConfigureAwait(false);
+        if (response is not null)
+        {
+            if (response.Ok && response.Token is not null && response.User is not null)
+            {
+                return VerifyResult.Success(new AuthResponse(response.Token, response.User));
+            }
+
+            return VerifyResult.Failure(response.Reason ?? VerifyFailure.CodeNotFound);
+        }
+
+        return VerifyResult.Failure(status == 429 ? VerifyFailure.RateLimited : VerifyFailure.Network);
     }
 
     public Task<UserDto?> MeAsync(CancellationToken token)

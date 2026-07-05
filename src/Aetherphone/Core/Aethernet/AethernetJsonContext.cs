@@ -8,6 +8,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(ChallengeResponse))]
 [JsonSerializable(typeof(VerifyRequest))]
 [JsonSerializable(typeof(AuthResponse))]
+[JsonSerializable(typeof(VerifyResponse))]
 [JsonSerializable(typeof(UserDto))]
 [JsonSerializable(typeof(UpdateProfileRequest))]
 [JsonSerializable(typeof(UpdateTimeZoneRequest))]
