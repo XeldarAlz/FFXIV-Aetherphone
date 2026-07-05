@@ -406,9 +406,9 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/blocks/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
     }
 
-    public Task<FeedbackDto?> CreateFeedbackAsync(string text, CancellationToken token)
+    public Task<FeedbackDto?> CreateFeedbackAsync(string text, string[] imageKeys, CancellationToken token)
     {
-        return http.PostJsonAsync(Url("/feedback"), new CreateFeedbackRequest(text), AethernetJsonContext.Default.CreateFeedbackRequest, AethernetJsonContext.Default.FeedbackDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url("/feedback"), new CreateFeedbackRequest(text, imageKeys), AethernetJsonContext.Default.CreateFeedbackRequest, AethernetJsonContext.Default.FeedbackDto, session.Token, token, authStatusSink);
     }
 
     public Task<NotificationPage?> NotificationsAsync(CancellationToken token)

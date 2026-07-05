@@ -1,14 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Media;
 
 namespace Aetherphone.Apps.Feedback;
 
 internal sealed class FeedbackStore : IDisposable
 {
+    private const int MaxImageDimension = 1600;
+
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly CancellationTokenSource cancellation = new();
@@ -25,7 +29,7 @@ internal sealed class FeedbackStore : IDisposable
         this.client = client;
     }
 
-    public void Compose(string text, Action<bool> onComplete)
+    public void Compose(string text, IReadOnlyList<string> imagePaths, Action<bool> onComplete)
     {
         var trimmed = (text ?? string.Empty).Trim();
         if (trimmed.Length == 0 || posting)
@@ -40,8 +44,12 @@ internal sealed class FeedbackStore : IDisposable
             var succeeded = false;
             try
             {
-                var created = await client.CreateFeedbackAsync(trimmed, token).ConfigureAwait(false);
-                succeeded = created is not null;
+                var keys = await UploadImagesAsync(imagePaths, token).ConfigureAwait(false);
+                if (keys is not null)
+                {
+                    var created = await client.CreateFeedbackAsync(trimmed, keys, token).ConfigureAwait(false);
+                    succeeded = created is not null;
+                }
             }
             catch (OperationCanceledException)
             {
@@ -56,6 +64,36 @@ internal sealed class FeedbackStore : IDisposable
                 onComplete(succeeded);
             }
         });
+    }
+
+    private async Task<string[]?> UploadImagesAsync(IReadOnlyList<string> imagePaths, CancellationToken token)
+    {
+        if (imagePaths.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var keys = new string[imagePaths.Count];
+        for (var index = 0; index < imagePaths.Count; index++)
+        {
+            var baked = ImageProcessor.BakeJpeg(imagePaths[index], MaxImageDimension);
+            var upload = await client.UploadUrlAsync("image/jpeg", "feedback", token).ConfigureAwait(false);
+            if (upload is null)
+            {
+                return null;
+            }
+
+            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                .ConfigureAwait(false);
+            if (!uploaded)
+            {
+                return null;
+            }
+
+            keys[index] = upload.Key;
+        }
+
+        return keys;
     }
 
     public void Dispose()

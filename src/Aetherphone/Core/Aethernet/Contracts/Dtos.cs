@@ -252,7 +252,7 @@ internal sealed record NotificationDto(
 
 internal sealed record NotificationPage(NotificationDto[] Items);
 
-internal sealed record CreateFeedbackRequest(string Text);
+internal sealed record CreateFeedbackRequest(string Text, string[] ImageKeys);
 
 internal sealed record FeedbackDto(
     string Id,

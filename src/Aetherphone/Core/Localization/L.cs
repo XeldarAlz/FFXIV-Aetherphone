@@ -1273,6 +1273,9 @@ internal static class L
         public static readonly LocString Error = new("feedback.error", "Something went wrong");
         public static readonly LocString ErrorMessage = new("feedback.errorMessage", "Couldn't send your feedback. Please try again.");
         public static readonly LocString SignInRequired = new("feedback.signInRequired", "Sign in to Aethernet in Settings to send feedback");
+        public static readonly LocString AddPhotos = new("feedback.addPhotos", "Add photos");
+        public static readonly LocString ImportFromPc = new("feedback.importFromPc", "Import from PC");
+        public static readonly LocString NoGallery = new("feedback.noGallery", "No photos in your gallery yet");
     }
 
     internal static class About
