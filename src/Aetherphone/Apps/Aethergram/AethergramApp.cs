@@ -6,18 +6,19 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
@@ -117,18 +118,6 @@ internal sealed class AethergramApp : IPhoneApp
     private string reportStatus = string.Empty;
     private volatile bool reportSubmitting;
 
-    private string? deleteTargetId;
-    private string deleteStatus = string.Empty;
-    private volatile bool deleteSubmitting;
-
-    private string? deleteCommentPostId;
-    private string? deleteCommentId;
-    private string deleteCommentStatus = string.Empty;
-    private volatile bool deleteCommentSubmitting;
-
-    private Spring confirmSpring;
-    private bool confirmWasPostDelete;
-
     private bool deferredTooltipActive;
     private Vector2 deferredTooltipCenter;
     private float deferredTooltipRadius;
@@ -173,12 +162,6 @@ internal sealed class AethergramApp : IPhoneApp
         reportTargetId = null;
         reportReasonDraft = string.Empty;
         reportStatus = string.Empty;
-        deleteTargetId = null;
-        deleteStatus = string.Empty;
-        deleteCommentPostId = null;
-        deleteCommentId = null;
-        deleteCommentStatus = string.Empty;
-        confirmSpring.SnapTo(0f);
         store.ClearDiscover();
     }
 
@@ -217,86 +200,6 @@ internal sealed class AethergramApp : IPhoneApp
             default:
                 DrawHome(area);
                 break;
-        }
-
-        var showPostDelete = deleteTargetId is not null;
-        var showCommentDelete = deleteCommentPostId is not null && deleteCommentId is not null && route.Screen == AethergramScreen.Detail;
-        var showConfirmation = showPostDelete || showCommentDelete;
-
-        if (showConfirmation)
-        {
-            confirmWasPostDelete = showPostDelete;
-        }
-
-        var target = showConfirmation ? 1f : 0f;
-        confirmSpring.Step(target, 0.18f, ImGui.GetIO().DeltaTime);
-        var opacity = confirmSpring.Value;
-
-        if (showConfirmation || !confirmSpring.IsResting(target, 0.001f, 0.005f))
-        {
-            var screen = SceneChrome.ScreenFrom(area, theme, ImGuiHelpers.GlobalScale);
-
-            ImGui.SetCursorScreenPos(area.Min);
-            using (ImRaii.Child("##confirmOverlay", area.Size, false,
-                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
-            {
-                if (showPostDelete || (confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
-                {
-                    ConfirmDialog.Draw(
-                        screen,
-                        theme,
-                        Loc.T(L.Aethergram.DeleteConfirmMessage),
-                        Loc.T(L.Aethergram.DeleteConfirm),
-                        Loc.T(L.Aethergram.DeleteCancel),
-                        Loc.T(L.Aethergram.Saving),
-                        deleteSubmitting,
-                        deleteStatus.Length > 0 ? deleteStatus : null,
-                        out var postCanceled,
-                        out var postConfirmed,
-                        opacity);
-
-                    if (postCanceled)
-                    {
-                        deleteTargetId = null;
-                    }
-
-                    if (postConfirmed)
-                    {
-                        SubmitDelete(deleteTargetId!);
-                    }
-                }
-                else if (showCommentDelete || (!confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
-                {
-                    ConfirmDialog.Draw(
-                        screen,
-                        theme,
-                        Loc.T(L.Aethergram.DeleteCommentConfirmMessage),
-                        Loc.T(L.Aethergram.DeleteConfirm),
-                        Loc.T(L.Aethergram.DeleteCancel),
-                        Loc.T(L.Aethergram.Saving),
-                        deleteCommentSubmitting,
-                        deleteCommentStatus.Length > 0 ? deleteCommentStatus : null,
-                        out var commentCanceled,
-                        out var commentConfirmed,
-                        opacity);
-
-                    if (commentCanceled)
-                    {
-                        deleteCommentPostId = null;
-                        deleteCommentId = null;
-                    }
-
-                    if (commentConfirmed)
-                    {
-                        SubmitDeleteComment(deleteCommentPostId!, deleteCommentId!);
-                    }
-                }
-            }
-        }
-
-        if (!showConfirmation && confirmSpring.IsResting(0f, 0.001f, 0.005f))
-        {
-            confirmSpring.SnapTo(0f);
         }
     }
 
@@ -1272,9 +1175,7 @@ internal sealed class AethergramApp : IPhoneApp
             var trashHitRadius = 10f * scale;
             if (ui.IconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), AethergramUi.MutedInk, AethergramUi.Transparent, 0.7f) && store.DetailPost is { } post)
             {
-                deleteCommentPostId = post.Id;
-                deleteCommentId = comment.Id;
-                deleteCommentStatus = string.Empty;
+                AskDeleteComment(post.Id, comment.Id);
             }
 
             var trashHovered = ImGui.IsMouseHoveringRect(trashCenter - new Vector2(trashHitRadius, trashHitRadius), trashCenter + new Vector2(trashHitRadius, trashHitRadius));
@@ -1447,67 +1348,44 @@ internal sealed class AethergramApp : IPhoneApp
 
     private void DrawDeleteToggle(Vector2 center, float radius, string postId)
     {
-        var active = deleteTargetId == postId;
-        var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
+        var background = Palette.WithAlpha(theme.Danger, 0.16f);
         if (DrawIconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, background, 0.9f, Loc.T(L.Aethergram.DeleteConfirm)))
         {
-            if (active)
-            {
-                deleteTargetId = null;
-            }
-            else
-            {
-                deleteTargetId = postId;
-                deleteStatus = string.Empty;
-            }
+            AskDeletePost(postId);
         }
     }
 
-    private void SubmitDelete(string postId)
+    private void AskDeletePost(string postId)
     {
-        if (deleteSubmitting || deleteTargetId != postId)
+        Plugin.Confirm.Ask(new ConfirmRequest
         {
-            return;
-        }
+            Message = Loc.T(L.Aethergram.DeleteConfirmMessage),
+            ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
+            CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
+            BusyLabel = Loc.T(L.Aethergram.Saving),
+            FailedMessage = Loc.T(L.Aethergram.DeleteFailed),
+            ConfirmAsync = done => store.DeletePost(postId, ok =>
+            {
+                if (ok)
+                {
+                    back();
+                }
 
-        deleteSubmitting = true;
-        store.DeletePost(postId, ok =>
-        {
-            deleteSubmitting = false;
-            if (ok)
-            {
-                deleteTargetId = null;
-                deleteStatus = string.Empty;
-                back();
-            }
-            else
-            {
-                deleteStatus = Loc.T(L.Aethergram.DeleteFailed);
-            }
+                done(ok);
+            }),
         });
     }
 
-    private void SubmitDeleteComment(string postId, string commentId)
+    private void AskDeleteComment(string postId, string commentId)
     {
-        if (deleteCommentSubmitting || deleteCommentPostId != postId || deleteCommentId != commentId)
+        Plugin.Confirm.Ask(new ConfirmRequest
         {
-            return;
-        }
-
-        deleteCommentSubmitting = true;
-        store.DeleteComment(postId, commentId, ok =>
-        {
-            deleteCommentSubmitting = false;
-            if (ok)
-            {
-                deleteCommentPostId = null;
-                deleteCommentId = null;
-                deleteCommentStatus = string.Empty;
-            }
-            else
-            {
-                deleteCommentStatus = Loc.T(L.Aethergram.DeleteCommentFailed);
-            }
+            Message = Loc.T(L.Aethergram.DeleteCommentConfirmMessage),
+            ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
+            CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
+            BusyLabel = Loc.T(L.Aethergram.Saving),
+            FailedMessage = Loc.T(L.Aethergram.DeleteCommentFailed),
+            ConfirmAsync = done => store.DeleteComment(postId, commentId, done),
         });
     }
 
@@ -1644,7 +1522,26 @@ internal sealed class AethergramApp : IPhoneApp
         }
 
         DrawProfileStats(user);
+        DrawProfileTimeZone(user);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
+    }
+
+    private void DrawProfileTimeZone(UserDto user)
+    {
+        if (user.UtcOffsetMinutes is not { } offset)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+
+        var text = $"{Loc.T(L.Profile.LocalTimeLabel)}  {SocialTimeZone.Describe(offset)}";
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var textSize = Typography.Measure(text, 0.85f);
+        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + textSize.Y * 0.5f), text, AethergramUi.MutedInk, 0.85f);
+        ImGui.Dummy(new Vector2(width, textSize.Y));
     }
 
     private void DrawProfileStats(UserDto user)

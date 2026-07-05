@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
@@ -38,7 +39,6 @@ internal sealed class PhotosApp : IPhoneApp
 
     private string[] paths = Array.Empty<string>();
     private int? viewerIndex;
-    private bool confirmingDelete;
 
     public PhotosApp(PhotoLibrary library)
     {
@@ -48,7 +48,6 @@ internal sealed class PhotosApp : IPhoneApp
     public void OnOpened()
     {
         viewerIndex = null;
-        confirmingDelete = false;
         Refresh();
     }
 
@@ -109,7 +108,6 @@ internal sealed class PhotosApp : IPhoneApp
                     if (clicked)
                     {
                         viewerIndex = index;
-                        confirmingDelete = false;
                     }
                 }
 
@@ -168,12 +166,6 @@ internal sealed class PhotosApp : IPhoneApp
             Typography.DrawCentered(stage.Center, Loc.T(L.Common.Loading), theme.TextMuted, 1f);
         }
 
-        if (confirmingDelete)
-        {
-            DrawDeleteConfirm(context, index);
-            return;
-        }
-
         var backCenter = new Vector2(content.Min.X + 18f * scale, content.Min.Y + 20f * scale);
         var backHovered = ImGui.IsMouseHoveringRect(backCenter - new Vector2(18f * scale, 18f * scale), backCenter + new Vector2(18f * scale, 18f * scale));
         if (BackButton.Draw("photos.viewer.back", backCenter, 15f * scale, new Vector4(1f, 1f, 1f, 1f), backHovered, scale, shadow: true))
@@ -184,7 +176,7 @@ internal sealed class PhotosApp : IPhoneApp
 
         if (DrawTrash(new Vector2(content.Max.X - 18f * scale, content.Min.Y + 20f * scale), theme, scale))
         {
-            confirmingDelete = true;
+            AskDelete(index);
             return;
         }
 
@@ -296,82 +288,15 @@ internal sealed class PhotosApp : IPhoneApp
         return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private void DrawDeleteConfirm(in PhoneContext context, int index)
+    private void AskDelete(int index)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var theme = context.Theme;
-        var content = context.Content;
-        var dl = ImGui.GetWindowDrawList();
-
-        dl.AddRectFilled(content.Min, content.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.6f)));
-
-        var pad = 18f * scale;
-        var cardWidth = MathF.Min(248f * scale, content.Width - 32f * scale);
-        var wrapWidth = cardWidth - pad * 2f;
-        var message = Loc.T(L.Photos.DeleteConfirmMessage);
-
-        Vector2 messageSize;
-        using (Plugin.Fonts.Push(0.95f, FontWeight.Medium))
+        Plugin.Confirm.Ask(new ConfirmRequest
         {
-            messageSize = ImGui.CalcTextSize(message, false, wrapWidth);
-        }
-
-        var buttonHeight = 34f * scale;
-        var buttonGap = 10f * scale;
-        var cardHeight = pad + messageSize.Y + pad + buttonHeight + pad;
-        var cardMin = new Vector2(content.Center.X - cardWidth * 0.5f, content.Center.Y - cardHeight * 0.5f);
-        var cardMax = cardMin + new Vector2(cardWidth, cardHeight);
-
-        Squircle.Fill(dl, cardMin, cardMax, 18f * scale, ImGui.GetColorU32(theme.Surface));
-        Squircle.Stroke(dl, cardMin, cardMax, 18f * scale, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f)), 1f);
-
-        using (Plugin.Fonts.Push(0.95f, FontWeight.Medium))
-        {
-            ImGui.SetCursorScreenPos(new Vector2(cardMin.X + pad, cardMin.Y + pad));
-            ImGui.PushTextWrapPos(cardMin.X + pad + wrapWidth);
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-            {
-                ImGui.TextWrapped(message);
-            }
-
-            ImGui.PopTextWrapPos();
-        }
-
-        var buttonY = cardMax.Y - pad - buttonHeight;
-        var buttonWidth = (cardWidth - pad * 2f - buttonGap) * 0.5f;
-        var cancelRect = new Rect(new Vector2(cardMin.X + pad, buttonY), new Vector2(cardMin.X + pad + buttonWidth, buttonY + buttonHeight));
-        var deleteRect = new Rect(new Vector2(cancelRect.Max.X + buttonGap, buttonY), new Vector2(cardMax.X - pad, buttonY + buttonHeight));
-
-        if (DrawConfirmButton(cancelRect, Loc.T(L.Photos.DeleteCancel), theme.SurfaceMuted, theme.TextStrong))
-        {
-            confirmingDelete = false;
-            return;
-        }
-
-        if (DrawConfirmButton(deleteRect, Loc.T(L.Photos.DeleteConfirm), theme.Danger, new Vector4(1f, 1f, 1f, 1f)))
-        {
-            confirmingDelete = false;
-            DeletePhoto(index);
-        }
-    }
-
-    private static bool DrawConfirmButton(Rect rect, string label, Vector4 fill, Vector4 textColor)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-        var radius = rect.Height * 0.5f;
-        var background = hovered ? Palette.Mix(fill, new Vector4(1f, 1f, 1f, 1f), 0.12f) : fill;
-        Squircle.Fill(dl, rect.Min, rect.Max, radius, ImGui.GetColorU32(background));
-
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(dl, rect.Center - textSize * 0.5f, label, textColor, 0.9f, FontWeight.SemiBold);
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+            Message = Loc.T(L.Photos.DeleteConfirmMessage),
+            ConfirmLabel = Loc.T(L.Photos.DeleteConfirm),
+            CancelLabel = Loc.T(L.Photos.DeleteCancel),
+            Confirm = () => DeletePhoto(index),
+        });
     }
 
     private static (Vector2 Uv0, Vector2 Uv1) CenterCrop(Vector2 size, float targetAspect)

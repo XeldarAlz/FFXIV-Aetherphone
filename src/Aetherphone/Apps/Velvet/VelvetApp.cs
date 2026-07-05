@@ -1,12 +1,9 @@
 using System.Numerics;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
@@ -14,9 +11,7 @@ using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
-using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
-using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -60,7 +55,6 @@ internal sealed partial class VelvetApp : IPhoneApp
     private readonly VelvetAvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly VelvetReportControl report;
-    private readonly VelvetDeleteControl delete;
     private readonly RemoteImageCache images;
     private readonly HttpService http;
 
@@ -130,12 +124,6 @@ internal sealed partial class VelvetApp : IPhoneApp
     private string commentsPostId = string.Empty;
     private string commentDraft = string.Empty;
 
-    private string? deleteCommentId;
-    private string deleteCommentStatus = string.Empty;
-    private volatile bool deleteCommentSubmitting;
-    private Spring confirmDeleteCommentSpring;
-
-
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, Configuration configuration, PhotoLibrary library, HttpService http, NotificationService notifications, VelvetLauncher launcher)
     {
         store = new VelvetStore(session, client, notifications, configuration);
@@ -146,7 +134,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         avatar = new VelvetAvatarComposer(store, library);
         post = new VelvetPostComposer(store, library);
         report = new VelvetReportControl(store);
-        delete = new VelvetDeleteControl(store);
         images = new RemoteImageCache(http);
         this.http = http;
 
@@ -185,10 +172,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         discoverQuery = string.Empty;
         discoverApplied = string.Empty;
         report.Reset();
-        delete.Reset();
-        deleteCommentId = null;
-        deleteCommentStatus = string.Empty;
-        confirmDeleteCommentSpring.SnapTo(0f);
         store.ClearDiscover();
     }
 
@@ -743,8 +726,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         {
             commentsPostId = postId;
             commentDraft = string.Empty;
-            deleteCommentId = null;
-            deleteCommentStatus = string.Empty;
             store.OpenComments(postId);
         }
 
@@ -820,11 +801,14 @@ internal sealed partial class VelvetApp : IPhoneApp
 
             var mine = store.Me is { } me && me.UserId == post.OwnerId;
             var reportShown = false;
-            var deleteShown = false;
             if (mine)
             {
                 var deleteCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
-                deleteShown = delete.Toggle(ui, deleteCenter, 14f * scale, post.Id, Loc.T(L.Velvet.DeleteConfirm));
+                var deleteBackground = Palette.WithAlpha(ui.Theme.Danger, 0.16f);
+                if (ui.IconButton(deleteCenter, 14f * scale, FontAwesomeIcon.Trash.ToIconString(), ui.Theme.Danger, deleteBackground, 0.9f, Loc.T(L.Velvet.DeleteConfirm)))
+                {
+                    AskDeletePost(post.Id);
+                }
             }
             else
             {
@@ -833,12 +817,7 @@ internal sealed partial class VelvetApp : IPhoneApp
             }
 
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
-            if (deleteShown)
-            {
-                delete.Composer(ui, origin.X, width, () => router.Pop());
-                ImGui.Dummy(new Vector2(0f, 6f * scale));
-            }
-            else if (reportShown)
+            if (reportShown)
             {
                 report.Composer(ui, origin.X, width);
                 ImGui.Dummy(new Vector2(0f, 6f * scale));
@@ -865,48 +844,6 @@ internal sealed partial class VelvetApp : IPhoneApp
             DrawComments(post.Id, width, scale);
 
             ImGui.Dummy(new Vector2(0f, 20f * scale));
-        }
-
-        var showConfirm = deleteCommentId is not null;
-        var target = showConfirm ? 1f : 0f;
-        confirmDeleteCommentSpring.Step(target, 0.18f, ImGui.GetIO().DeltaTime);
-        var opacity = confirmDeleteCommentSpring.Value;
-
-        if (showConfirm || !confirmDeleteCommentSpring.IsResting(target, 0.001f, 0.005f))
-        {
-            var screen = SceneChrome.ScreenFrom(area, theme, scale);
-            ImGui.SetCursorScreenPos(area.Min);
-            using (ImRaii.Child("##velvetDeleteCommentOverlay", area.Size, false,
-                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
-            {
-                ConfirmDialog.Draw(
-                    screen,
-                    theme,
-                    Loc.T(L.Velvet.DeleteCommentConfirmMessage),
-                    Loc.T(L.Velvet.DeleteConfirm),
-                    Loc.T(L.Velvet.DeleteCancel),
-                    Loc.T(L.Velvet.Saving),
-                    deleteCommentSubmitting,
-                    deleteCommentStatus.Length > 0 ? deleteCommentStatus : null,
-                    out var canceled,
-                    out var confirmed,
-                    opacity);
-
-                if (canceled)
-                {
-                    deleteCommentId = null;
-                }
-
-                if (confirmed)
-                {
-                    SubmitDeleteComment(commentsPostId, deleteCommentId!);
-                }
-            }
-        }
-
-        if (!showConfirm && confirmDeleteCommentSpring.IsResting(0f, 0.001f, 0.005f))
-        {
-            confirmDeleteCommentSpring.SnapTo(0f);
         }
     }
 
@@ -993,8 +930,7 @@ internal sealed partial class VelvetApp : IPhoneApp
             var trashHitRadius = 10f * scale;
             if (ui.IconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), VelvetUi.MutedInk, VelvetUi.Transparent, 0.7f))
             {
-                deleteCommentId = comment.Id;
-                deleteCommentStatus = string.Empty;
+                AskDeleteComment(commentsPostId, comment.Id);
             }
         }
 
@@ -1051,26 +987,37 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
     }
 
-    private void SubmitDeleteComment(string postId, string commentId)
+    private void AskDeletePost(string postId)
     {
-        if (deleteCommentSubmitting || deleteCommentId != commentId)
+        Plugin.Confirm.Ask(new ConfirmRequest
         {
-            return;
-        }
+            Message = Loc.T(L.Velvet.DeleteConfirmMessage),
+            ConfirmLabel = Loc.T(L.Velvet.DeleteConfirm),
+            CancelLabel = Loc.T(L.Velvet.DeleteCancel),
+            BusyLabel = Loc.T(L.Velvet.Saving),
+            FailedMessage = Loc.T(L.Velvet.DeleteFailed),
+            ConfirmAsync = done => store.DeletePost(postId, ok =>
+            {
+                if (ok)
+                {
+                    router.Pop();
+                }
 
-        deleteCommentSubmitting = true;
-        store.DeleteComment(postId, commentId, ok =>
+                done(ok);
+            }),
+        });
+    }
+
+    private void AskDeleteComment(string postId, string commentId)
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
         {
-            deleteCommentSubmitting = false;
-            if (ok)
-            {
-                deleteCommentId = null;
-                deleteCommentStatus = string.Empty;
-            }
-            else
-            {
-                deleteCommentStatus = Loc.T(L.Velvet.DeleteCommentFailed);
-            }
+            Message = Loc.T(L.Velvet.DeleteCommentConfirmMessage),
+            ConfirmLabel = Loc.T(L.Velvet.DeleteConfirm),
+            CancelLabel = Loc.T(L.Velvet.DeleteCancel),
+            BusyLabel = Loc.T(L.Velvet.Saving),
+            FailedMessage = Loc.T(L.Velvet.DeleteCommentFailed),
+            ConfirmAsync = done => store.DeleteComment(postId, commentId, done),
         });
     }
 
@@ -1458,88 +1405,10 @@ internal sealed partial class VelvetApp : IPhoneApp
                     editBusy = true;
                     store.UpdateProfile(new UpdateVelvetProfileRequest(null, null, null, null, null, null, null, discoverable), _ => editBusy = false);
                 }
-
-                ImGui.Dummy(new Vector2(0f, 22f * scale));
-                VelvetUi.SectionLabel(Loc.T(L.Velvet.TimeZoneLabel));
-                VelvetUi.HelpText(Loc.T(L.Velvet.TimeZoneHelp));
-                ImGui.Dummy(new Vector2(0f, 6f * scale));
-
-                var shareTimeZone = me.ShareTimeZone;
-                ui.ToggleRow(Loc.T(L.Velvet.ShareTimeZoneLabel), ref shareTimeZone);
-                if (shareTimeZone != me.ShareTimeZone && !editBusy)
-                {
-                    editBusy = true;
-                    store.UpdateProfile(new UpdateVelvetProfileRequest(null, null, null, null, null, null, null, null, shareTimeZone), _ => editBusy = false);
-                }
-
-                if (shareTimeZone)
-                {
-                    var manual = configuration.VelvetTimeZoneManual;
-                    ui.ToggleRow(Loc.T(L.Velvet.TimeZoneManualLabel), ref manual);
-                    if (manual != configuration.VelvetTimeZoneManual)
-                    {
-                        configuration.VelvetTimeZoneManual = manual;
-                        if (manual)
-                        {
-                            configuration.VelvetManualUtcOffsetMinutes = VelvetTimeZone.DeviceOffsetMinutes();
-                        }
-
-                        configuration.Save();
-                    }
-
-                    if (configuration.VelvetTimeZoneManual)
-                    {
-                        DrawOffsetStepper(scale);
-                    }
-
-                    ImGui.Dummy(new Vector2(0f, 6f * scale));
-                    ui.LabelValue(Loc.T(L.Velvet.YourTimeLabel), VelvetTimeZone.Describe(VelvetTimeZone.EffectiveOffsetMinutes(configuration)));
-                }
             }
 
             ImGui.Dummy(new Vector2(0f, 30f * scale));
         }
-    }
-
-    private void DrawOffsetStepper(float scale)
-    {
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = 40f * scale;
-        Typography.Draw(new Vector2(origin.X, origin.Y + height * 0.5f - 8f * scale), Loc.T(L.Velvet.UtcOffsetLabel), theme.TextStrong, 0.95f);
-
-        var buttonRadius = 14f * scale;
-        var rightCenter = new Vector2(origin.X + width - buttonRadius, origin.Y + height * 0.5f);
-        var leftCenter = new Vector2(rightCenter.X - 104f * scale, origin.Y + height * 0.5f);
-        var pill = new Vector4(1f, 1f, 1f, 0.12f);
-
-        if (ui.IconButton(leftCenter, buttonRadius, FontAwesomeIcon.Minus.ToIconString(), VelvetUi.TitleInk, pill, 0.7f))
-        {
-            AdjustManualOffset(-VelvetTimeZone.StepMinutes);
-        }
-
-        var label = VelvetTimeZone.FormatOffset(VelvetTimeZone.EffectiveOffsetMinutes(configuration));
-        Typography.DrawCentered(new Vector2((leftCenter.X + rightCenter.X) * 0.5f, origin.Y + height * 0.5f), label, theme.TextStrong, 0.95f, FontWeight.SemiBold);
-
-        if (ui.IconButton(rightCenter, buttonRadius, FontAwesomeIcon.Plus.ToIconString(), VelvetUi.TitleInk, pill, 0.7f))
-        {
-            AdjustManualOffset(VelvetTimeZone.StepMinutes);
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
-    }
-
-    private void AdjustManualOffset(int deltaMinutes)
-    {
-        var next = Math.Clamp(configuration.VelvetManualUtcOffsetMinutes + deltaMinutes, VelvetTimeZone.MinOffsetMinutes, VelvetTimeZone.MaxOffsetMinutes);
-        if (next == configuration.VelvetManualUtcOffsetMinutes)
-        {
-            return;
-        }
-
-        configuration.VelvetManualUtcOffsetMinutes = next;
-        configuration.Save();
     }
 
     private void DrawEditProfile(Rect area)

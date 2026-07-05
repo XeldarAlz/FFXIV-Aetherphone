@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Notifications;
@@ -33,6 +34,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly CallHub calls;
     private readonly CallIsland callIsland;
     private readonly IncomingCallOverlay incomingOverlay;
+    private readonly ConfirmOverlay confirmOverlay;
     private readonly BootSequence boot = new();
     private readonly OnboardingDirector director;
     private bool closeRequested;
@@ -40,7 +42,7 @@ internal sealed class PhoneShell : IDisposable
 
     private CallState lastCallState;
 
-    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher)
+    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher, ConfirmService confirm)
     {
         this.themes = themes;
         this.apps = apps;
@@ -55,6 +57,7 @@ internal sealed class PhoneShell : IDisposable
         home = new HomeScreen(apps);
         callIsland = new CallIsland(calls);
         incomingOverlay = new IncomingCallOverlay(calls);
+        confirmOverlay = new ConfirmOverlay(confirm);
     }
 
     public void OnOpened()
@@ -129,16 +132,17 @@ internal sealed class PhoneShell : IDisposable
 
         SyncCallNavigation();
 
+        var confirming = !boot.IsActive && confirmOverlay.CapturesPointer;
         var overlaysCapture = !boot.IsActive && controlCenter.CapturesPointer;
         var ringing = !boot.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing
+        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing && !confirming
             && (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen) || (!director.CapturesPointer && banner.CapturesPointer(screen)));
 
-        var busy = boot.IsActive || overlaysCapture || ringing || navigation.IsTransitioning;
+        var busy = boot.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning;
         director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
         UiAnchors.BeginFrame(director.WantsAnchors);
 
-        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing || director.CapturesPointer))
+        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing || confirming || director.CapturesPointer))
         {
             DrawContent(screen, theme);
             DrawChrome(screen, theme);
@@ -163,6 +167,8 @@ internal sealed class PhoneShell : IDisposable
         }
 
         controlCenter.Draw(screen, theme, delta, !navigation.IsTransitioning && !director.CapturesPointer);
+
+        confirmOverlay.Draw(screen, theme);
 
         director.Draw(screen, theme);
     }

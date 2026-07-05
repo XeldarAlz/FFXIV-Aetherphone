@@ -4,11 +4,13 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -79,18 +81,6 @@ internal sealed class ChirperApp : IPhoneApp
     private string reportStatus = string.Empty;
     private volatile bool reportSubmitting;
 
-    private string? deleteTargetId;
-    private string deleteStatus = string.Empty;
-    private volatile bool deleteSubmitting;
-
-    private string? deleteCommentPostId;
-    private string? deleteCommentId;
-    private string deleteCommentStatus = string.Empty;
-    private volatile bool deleteCommentSubmitting;
-
-    private Spring confirmSpring;
-    private bool confirmWasPostDelete;
-
     public ChirperApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, HttpService http, PhotoLibrary library)
     {
         store = new ChirperStore(session, client);
@@ -126,9 +116,6 @@ internal sealed class ChirperApp : IPhoneApp
         reportTargetId = null;
         reportReasonDraft = string.Empty;
         reportStatus = string.Empty;
-        deleteTargetId = null;
-        deleteStatus = string.Empty;
-        confirmSpring.SnapTo(0f);
         store.ClearDiscover();
     }
 
@@ -170,86 +157,6 @@ internal sealed class ChirperApp : IPhoneApp
             default:
                 DrawHome(area);
                 break;
-        }
-
-        var showPostDelete = deleteTargetId is not null;
-        var showCommentDelete = deleteCommentPostId is not null && deleteCommentId is not null && route.Screen == ChirperScreen.Thread;
-        var showConfirmation = showPostDelete || showCommentDelete;
-
-        if (showConfirmation)
-        {
-            confirmWasPostDelete = showPostDelete;
-        }
-
-        var target = showConfirmation ? 1f : 0f;
-        confirmSpring.Step(target, 0.18f, ImGui.GetIO().DeltaTime);
-        var opacity = confirmSpring.Value;
-
-        if (showConfirmation || !confirmSpring.IsResting(target, 0.001f, 0.005f))
-        {
-            var screen = SceneChrome.ScreenFrom(area, theme, ImGuiHelpers.GlobalScale);
-
-            ImGui.SetCursorScreenPos(area.Min);
-            using (ImRaii.Child("##confirmOverlay", area.Size, false,
-                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground))
-            {
-                if (showPostDelete || (confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
-                {
-                    ConfirmDialog.Draw(
-                        screen,
-                        theme,
-                        Loc.T(L.Chirper.DeleteConfirmMessage),
-                        Loc.T(L.Chirper.DeleteConfirm),
-                        Loc.T(L.Chirper.DeleteCancel),
-                        Loc.T(L.Chirper.Saving),
-                        deleteSubmitting,
-                        deleteStatus.Length > 0 ? deleteStatus : null,
-                        out var postCanceled,
-                        out var postConfirmed,
-                        opacity);
-
-                    if (postCanceled)
-                    {
-                        deleteTargetId = null;
-                    }
-
-                    if (postConfirmed)
-                    {
-                        SubmitDelete(deleteTargetId!);
-                    }
-                }
-                else if (showCommentDelete || (!confirmWasPostDelete && !showConfirmation && opacity > 0.005f))
-                {
-                    ConfirmDialog.Draw(
-                        screen,
-                        theme,
-                        Loc.T(L.Chirper.DeleteCommentConfirmMessage),
-                        Loc.T(L.Chirper.DeleteConfirm),
-                        Loc.T(L.Chirper.DeleteCancel),
-                        Loc.T(L.Chirper.Saving),
-                        deleteCommentSubmitting,
-                        deleteCommentStatus.Length > 0 ? deleteCommentStatus : null,
-                        out var commentCanceled,
-                        out var commentConfirmed,
-                        opacity);
-
-                    if (commentCanceled)
-                    {
-                        deleteCommentPostId = null;
-                        deleteCommentId = null;
-                    }
-
-                    if (commentConfirmed)
-                    {
-                        SubmitDeleteComment(deleteCommentPostId!, deleteCommentId!);
-                    }
-                }
-            }
-        }
-
-        if (!showConfirmation && confirmSpring.IsResting(0f, 0.001f, 0.005f))
-        {
-            confirmSpring.SnapTo(0f);
         }
     }
 
@@ -589,10 +496,9 @@ internal sealed class ChirperApp : IPhoneApp
             var trashCenter = new Vector2(anchorX - slot * step, centerY);
             if (DrawRevealIcon(trashCenter, iconRadius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, Palette.WithAlpha(theme.Danger, 0.16f), 0.85f, ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Chirper.DeleteConfirm), interactive))
             {
-                deleteTargetId = post.Id;
-                deleteStatus = string.Empty;
                 reportTargetType = null;
                 reportTargetId = null;
+                AskDeletePost(post.Id);
                 actions.Dismiss();
             }
 
@@ -606,7 +512,6 @@ internal sealed class ChirperApp : IPhoneApp
             reportTargetId = post.Id;
             reportReasonDraft = string.Empty;
             reportStatus = string.Empty;
-            deleteTargetId = null;
             actions.Dismiss();
         }
 
@@ -718,9 +623,7 @@ internal sealed class ChirperApp : IPhoneApp
             var trashHitRadius = 11f * scale;
             if (DrawIconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 0.75f))
             {
-                deleteCommentPostId = post.Id;
-                deleteCommentId = comment.Id;
-                deleteCommentStatus = string.Empty;
+                AskDeleteComment(post.Id, comment.Id);
             }
 
             var trashHovered = ImGui.IsMouseHoveringRect(trashCenter - new Vector2(trashHitRadius, trashHitRadius), trashCenter + new Vector2(trashHitRadius, trashHitRadius));
@@ -1043,7 +946,26 @@ internal sealed class ChirperApp : IPhoneApp
         }
 
         DrawProfileStats(user);
+        DrawProfileTimeZone(user);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
+    }
+
+    private void DrawProfileTimeZone(UserDto user)
+    {
+        if (user.UtcOffsetMinutes is not { } offset)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+
+        var text = $"{Loc.T(L.Profile.LocalTimeLabel)}  {SocialTimeZone.Describe(offset)}";
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var textSize = Typography.Measure(text, 0.85f);
+        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + textSize.Y * 0.5f), text, ChirperUi.MutedInk, 0.85f);
+        ImGui.Dummy(new Vector2(width, textSize.Y));
     }
 
     private void DrawProfileStats(UserDto user)
@@ -1161,27 +1083,16 @@ internal sealed class ChirperApp : IPhoneApp
         });
     }
 
-    private void SubmitDeleteComment(string postId, string commentId)
+    private void AskDeleteComment(string postId, string commentId)
     {
-        if (deleteCommentSubmitting || deleteCommentPostId != postId || deleteCommentId != commentId)
+        Plugin.Confirm.Ask(new ConfirmRequest
         {
-            return;
-        }
-
-        deleteCommentSubmitting = true;
-        store.DeleteComment(postId, commentId, ok =>
-        {
-            deleteCommentSubmitting = false;
-            if (ok)
-            {
-                deleteCommentPostId = null;
-                deleteCommentId = null;
-                deleteCommentStatus = string.Empty;
-            }
-            else
-            {
-                deleteCommentStatus = Loc.T(L.Chirper.DeleteCommentFailed);
-            }
+            Message = Loc.T(L.Chirper.DeleteCommentConfirmMessage),
+            ConfirmLabel = Loc.T(L.Chirper.DeleteConfirm),
+            CancelLabel = Loc.T(L.Chirper.DeleteCancel),
+            BusyLabel = Loc.T(L.Chirper.Saving),
+            FailedMessage = Loc.T(L.Chirper.DeleteCommentFailed),
+            ConfirmAsync = done => store.DeleteComment(postId, commentId, done),
         });
     }
 
@@ -1211,26 +1122,16 @@ internal sealed class ChirperApp : IPhoneApp
         Typography.Draw(dl, new Vector2(min.X + padX, min.Y + padY), tooltipText, theme.AppBackground, 0.78f, FontWeight.Medium);
     }
 
-    private void SubmitDelete(string postId)
+    private void AskDeletePost(string postId)
     {
-        if (deleteSubmitting || deleteTargetId != postId)
+        Plugin.Confirm.Ask(new ConfirmRequest
         {
-            return;
-        }
-
-        deleteSubmitting = true;
-        store.DeletePost(postId, ok =>
-        {
-            deleteSubmitting = false;
-            if (ok)
-            {
-                deleteTargetId = null;
-                deleteStatus = string.Empty;
-            }
-            else
-            {
-                deleteStatus = Loc.T(L.Chirper.DeleteFailed);
-            }
+            Message = Loc.T(L.Chirper.DeleteConfirmMessage),
+            ConfirmLabel = Loc.T(L.Chirper.DeleteConfirm),
+            CancelLabel = Loc.T(L.Chirper.DeleteCancel),
+            BusyLabel = Loc.T(L.Chirper.Saving),
+            FailedMessage = Loc.T(L.Chirper.DeleteFailed),
+            ConfirmAsync = done => store.DeletePost(postId, done),
         });
     }
 
