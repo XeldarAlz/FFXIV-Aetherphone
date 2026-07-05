@@ -1,8 +1,11 @@
 using System.Numerics;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Input;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Playback;
+using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -20,15 +23,19 @@ internal sealed class ControlCenter
     private const float TapSlop = 6f;
     private readonly ThemeProvider themes;
     private readonly PlaybackHub playback;
+    private readonly CallHub calls;
+    private readonly INavigator navigation;
     private readonly DragTracker drag = new();
     private Spring offset;
     private float target;
     private bool open;
 
-    public ControlCenter(ThemeProvider themes, PlaybackHub playback)
+    public ControlCenter(ThemeProvider themes, PlaybackHub playback, CallHub calls, INavigator navigation)
     {
         this.themes = themes;
         this.playback = playback;
+        this.calls = calls;
+        this.navigation = navigation;
     }
 
     public bool IsActive => open || drag.Active || offset.Value > 0.01f;
@@ -76,11 +83,12 @@ internal sealed class ControlCenter
         var gap = 12f * scale;
         var toggleTop = panelTop + 62f * scale;
         var toggleWidth = (width - 2f * gap) / 3f;
-        var toggleHeight = MathF.Min(toggleWidth * 0.94f, 92f * scale);
-        var dnd = new Rect(new Vector2(left, toggleTop), new Vector2(left + toggleWidth, toggleTop + toggleHeight));
-        var pin = new Rect(new Vector2(left + toggleWidth + gap, toggleTop),
-            new Vector2(left + 2f * toggleWidth + gap, toggleTop + toggleHeight));
-        var idle = new Rect(new Vector2(right - toggleWidth, toggleTop), new Vector2(right, toggleTop + toggleHeight));
+        var toggleHeight = MathF.Min(toggleWidth * 0.94f, 84f * scale);
+        var row2Top = toggleTop + toggleHeight + gap;
+
+        var dnd = TileRect(left, toggleTop, toggleWidth, toggleHeight, 0, gap);
+        var pin = TileRect(left, toggleTop, toggleWidth, toggleHeight, 1, gap);
+        var idle = TileRect(left, toggleTop, toggleWidth, toggleHeight, 2, gap);
         if (ControlTile.Toggle(dl, dnd, FontAwesomeIcon.Moon, Loc.T(L.Settings.DoNotDisturb), Plugin.Cfg.DoNotDisturb,
                 theme.Accent, theme, opacity, interactive))
         {
@@ -102,12 +110,35 @@ internal sealed class ControlCenter
             Plugin.Cfg.Save();
         }
 
-        var swatchTop = toggleTop + toggleHeight + 22f * scale;
-        Typography.Draw(dl, new Vector2(left, swatchTop), Loc.T(L.Settings.Appearance).ToUpperInvariant(),
-            Palette.WithAlpha(theme.TextMuted, opacity), 0.72f, FontWeight.Medium);
+        var callsTile = TileRect(left, row2Top, toggleWidth, toggleHeight, 0, gap);
+        var cameraTile = TileRect(left, row2Top, toggleWidth, toggleHeight, 1, gap);
+        var settingsTile = TileRect(left, row2Top, toggleWidth, toggleHeight, 2, gap);
+        if (ControlTile.Toggle(dl, callsTile, FontAwesomeIcon.Phone, Loc.T(L.Phone.Calls), Plugin.Cfg.CallsEnabled,
+                theme.Accent, theme, opacity, interactive))
+        {
+            calls.SetEnabled(!Plugin.Cfg.CallsEnabled);
+        }
+
+        if (ControlTile.Toggle(dl, cameraTile, FontAwesomeIcon.Camera, Loc.T(L.Apps.Camera), false, theme.Accent,
+                theme, opacity, interactive))
+        {
+            navigation.Open("camera", AppOpenSource.ControlCenter);
+            Dismiss();
+        }
+
+        if (ControlTile.Toggle(dl, settingsTile, FontAwesomeIcon.Cog, Loc.T(L.Apps.Settings), false, theme.Accent,
+                theme, opacity, interactive))
+        {
+            navigation.Open("settings", AppOpenSource.ControlCenter);
+            Dismiss();
+        }
+
+        var swatchTop = row2Top + toggleHeight + 44f * scale;
+        Typography.Draw(dl, new Vector2(left, swatchTop), Loc.T(L.Settings.Appearance),
+            Palette.WithAlpha(theme.TextStrong, opacity), 1.05f, FontWeight.Bold);
         var accents = ThemeCatalog.Accents;
-        var swatchRadius = 13f * scale;
-        var swatchY = swatchTop + 26f * scale;
+        var swatchRadius = 14f * scale;
+        var swatchY = swatchTop + 44f * scale;
         var swatchSpacing = width / accents.Count;
         for (var index = 0; index < accents.Count; index++)
         {
@@ -122,7 +153,7 @@ internal sealed class ControlCenter
             }
         }
 
-        var sliderTop = swatchY + swatchRadius + 18f * scale;
+        var sliderTop = swatchY + swatchRadius + 32f * scale;
         var sliderHeight = MathF.Min(150f * scale,
             screen.Max.Y - 0.18f * screen.Height - sliderTop - (playback.IsActive ? 96f * scale : 8f * scale));
         sliderHeight = MathF.Max(sliderHeight, 96f * scale);
@@ -131,18 +162,16 @@ internal sealed class ControlCenter
             new Vector2(left + sliderWidth, sliderTop + sliderHeight));
         var volumeRect = new Rect(new Vector2(right - sliderWidth, sliderTop),
             new Vector2(right, sliderTop + sliderHeight));
-        var baseBright = Math.Clamp((Plugin.Cfg.TextZoom - 1.0f) / 0.5f, 0f, 1f);
-        var newBright = ControlTile.VerticalSlider(dl, brightnessRect, baseBright, FontAwesomeIcon.Sun, theme, opacity,
-            interactive, out var brightReleased);
+        var newBright = ControlTile.VerticalSlider(dl, brightnessRect, Plugin.Cfg.ScreenBrightness, FontAwesomeIcon.Sun,
+            theme, opacity, interactive, out var brightReleased);
+        if (MathF.Abs(newBright - Plugin.Cfg.ScreenBrightness) > 0.0005f)
+        {
+            Plugin.Cfg.ScreenBrightness = newBright;
+        }
+
         if (brightReleased)
         {
-            var zoom = 1.0f + Math.Clamp(newBright, 0f, 1f) * 0.5f;
-            if (MathF.Abs(zoom - Plugin.Cfg.TextZoom) > 0.001f)
-            {
-                Plugin.Cfg.TextZoom = zoom;
-                Plugin.Fonts.SetZoom(zoom);
-                Plugin.Cfg.Save();
-            }
+            Plugin.Cfg.Save();
         }
 
         var newVolume = ControlTile.VerticalSlider(dl, volumeRect, playback.Volume, FontAwesomeIcon.VolumeUp, theme,
@@ -159,6 +188,18 @@ internal sealed class ControlCenter
                     new Vector2(right, sliderTop + sliderHeight + 14f * scale + 78f * scale)), theme, scale, opacity,
                 interactive);
         }
+    }
+
+    private static Rect TileRect(float left, float top, float tileWidth, float tileHeight, int column, float gap)
+    {
+        var columnLeft = left + column * (tileWidth + gap);
+        return new Rect(new Vector2(columnLeft, top), new Vector2(columnLeft + tileWidth, top + tileHeight));
+    }
+
+    private void Dismiss()
+    {
+        open = false;
+        target = 0f;
     }
 
     private void DrawNowPlaying(Rect rect, PhoneTheme theme, float scale, float opacity, bool interactive)

@@ -17,7 +17,7 @@ internal sealed class BootSequence
     private float greetingOutSeconds;
     private int greetingCount;
     private float revealSeconds;
-    private float totalSeconds;
+    private float gateWait;
 
     public bool IsActive { get; private set; }
     public float BackdropAlpha { get; private set; }
@@ -44,7 +44,7 @@ internal sealed class BootSequence
         greetingOutSeconds = BootTiming.GreetingOutSeconds;
         greetingCount = fullSequence ? Greetings.Length : 0;
         revealSeconds = fullSequence ? BootTiming.RevealSeconds : BootTiming.ShortRevealSeconds;
-        totalSeconds = powerOnSeconds + EmblemDuration + GreetingsDuration + revealSeconds;
+        gateWait = 0f;
         Recompute();
     }
 
@@ -65,7 +65,12 @@ internal sealed class BootSequence
 
         elapsed += deltaSeconds;
 
-        if (elapsed >= totalSeconds)
+        if (IsWaitingForFonts())
+        {
+            gateWait += deltaSeconds;
+        }
+
+        if (elapsed >= TotalSeconds)
         {
             Complete();
             return;
@@ -74,7 +79,19 @@ internal sealed class BootSequence
         Recompute();
     }
 
-    private float EmblemDuration => emblemInSeconds + emblemHoldSeconds + emblemExitSeconds;
+    private bool IsWaitingForFonts()
+    {
+        if (gateWait >= BootTiming.FontWaitCapSeconds)
+        {
+            return false;
+        }
+
+        var holdEnd = powerOnSeconds + emblemInSeconds + emblemHoldSeconds + gateWait;
+        return elapsed >= holdEnd && !Plugin.Fonts.Ready;
+    }
+
+    private float TotalSeconds => powerOnSeconds + EmblemDuration + GreetingsDuration + revealSeconds;
+    private float EmblemDuration => emblemInSeconds + emblemHoldSeconds + gateWait + emblemExitSeconds;
     private float NonLastGreetingLife => greetingInSeconds + greetingHoldSeconds + greetingOutSeconds;
     private float LastGreetingLife => greetingInSeconds + greetingHoldSeconds;
     private float GreetingsDuration => greetingCount == 0 ? 0f : (greetingCount - 1) * NonLastGreetingLife + LastGreetingLife;
@@ -124,7 +141,7 @@ internal sealed class BootSequence
 
     private void ComputeEmblem(float phase)
     {
-        var holdEnd = emblemInSeconds + emblemHoldSeconds;
+        var holdEnd = emblemInSeconds + emblemHoldSeconds + gateWait;
 
         if (phase < emblemInSeconds)
         {

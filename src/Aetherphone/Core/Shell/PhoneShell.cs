@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -35,7 +36,6 @@ internal sealed class PhoneShell : IDisposable
     private readonly CallIsland callIsland;
     private readonly IncomingCallOverlay incomingOverlay;
     private readonly ConfirmOverlay confirmOverlay;
-    private readonly BootSequence boot = new();
     private readonly OnboardingDirector director;
     private bool closeRequested;
     private bool minimizeRequested;
@@ -54,7 +54,7 @@ internal sealed class PhoneShell : IDisposable
         banner = new NotificationBanner(notifications, () => navigation.Current?.Id,
             new NotificationRouter(navigation, messageLauncher, velvetLauncher));
         nowPlaying = new NowPlayingIsland(playback);
-        controlCenter = new ControlCenter(themes, playback);
+        controlCenter = new ControlCenter(themes, playback, calls, navigation);
         minimizedView = new MinimizedPhone(notifications);
         home = new HomeScreen(apps);
         callIsland = new CallIsland(calls);
@@ -64,24 +64,50 @@ internal sealed class PhoneShell : IDisposable
 
     public void OnOpened()
     {
-        boot.Begin(!Plugin.Cfg.WelcomeShown);
+        Plugin.Loading.BeginSession();
+        MaybeAskAnalyticsConsent();
         director.OnPhoneOpened();
+    }
+
+    private static void MaybeAskAnalyticsConsent()
+    {
+        if (Plugin.Cfg.AnalyticsConsentPrompted)
+        {
+            return;
+        }
+
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Settings.ConsentMessage),
+            ConfirmLabel = Loc.T(L.Settings.ConsentAccept),
+            CancelLabel = Loc.T(L.Settings.ConsentDecline),
+            Danger = false,
+            Confirm = () => SetAnalyticsConsent(true),
+            Cancel = () => SetAnalyticsConsent(false),
+        });
+    }
+
+    private static void SetAnalyticsConsent(bool enabled)
+    {
+        Plugin.Cfg.AnalyticsEnabled = enabled;
+        Plugin.Cfg.AnalyticsConsentPrompted = true;
+        Plugin.Cfg.Save();
     }
 
     public void OnClosed()
     {
-        boot.Cancel();
+        Plugin.Loading.Cancel();
         director.Suspend();
     }
 
-    public void OpenApp(string appId)
+    public void OpenApp(string appId, string source)
     {
         if (navigation.Current?.Id == appId)
         {
             return;
         }
 
-        navigation.Open(appId);
+        navigation.Open(appId, source);
     }
 
     public bool ConsumeCloseRequest()
@@ -112,11 +138,12 @@ internal sealed class PhoneShell : IDisposable
         Plugin.Wallpapers.StepDayNight(delta);
         var theme = themes.Chrome;
         var screen = DeviceChrome.DrawBody(device, theme, !TransparencyActive());
-        boot.Advance(delta);
+        var loading = Plugin.Loading;
+        loading.Advance(delta);
         navigation.Advance(delta);
         banner.Advance(delta);
         calls.Advance(delta);
-        if (!boot.IsActive)
+        if (!loading.IsActive)
         {
             switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta))
             {
@@ -130,25 +157,25 @@ internal sealed class PhoneShell : IDisposable
         }
 
         SyncCallNavigation();
-        var confirming = !boot.IsActive && confirmOverlay.CapturesPointer;
-        var overlaysCapture = !boot.IsActive && controlCenter.CapturesPointer;
-        var ringing = !boot.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing && !confirming &&
+        var confirming = !loading.IsActive && confirmOverlay.CapturesPointer;
+        var overlaysCapture = !loading.IsActive && controlCenter.CapturesPointer;
+        var ringing = !loading.IsActive && incomingOverlay.IsRinging;
+        var islandCaptures = !loading.IsActive && !overlaysCapture && !ringing && !confirming &&
                              (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen) ||
                               (!director.CapturesPointer && banner.CapturesPointer(screen)));
-        var busy = boot.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning;
+        var busy = loading.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning;
         director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
         UiAnchors.BeginFrame(director.WantsAnchors);
-        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing || confirming ||
+        using (InputShield.Engage(loading.IsActive || islandCaptures || overlaysCapture || ringing || confirming ||
                                   director.CapturesPointer))
         {
             DrawContent(screen, theme);
             DrawChrome(screen, theme);
         }
 
-        if (boot.IsActive)
+        if (loading.IsActive)
         {
-            BootScreen.Draw(screen, theme, boot);
+            loading.Draw(screen, theme);
             return;
         }
 
@@ -167,6 +194,7 @@ internal sealed class PhoneShell : IDisposable
         controlCenter.Draw(screen, theme, delta, !navigation.IsTransitioning && !director.CapturesPointer);
         confirmOverlay.Draw(screen, theme);
         director.Draw(screen, theme);
+        DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);
     }
 
     private bool TransparencyActive()
@@ -185,7 +213,7 @@ internal sealed class PhoneShell : IDisposable
         var state = calls.Snapshot().State;
         if (state == CallState.Active && lastCallState != CallState.Active && navigation.Current?.Id != "phone")
         {
-            navigation.Open("phone");
+            navigation.Open("phone", AppOpenSource.System);
         }
 
         lastCallState = state;

@@ -22,6 +22,12 @@ internal sealed class HomeScreen
     private const float EdgeZone = 0.10f;
     private const float EdgeFlipSeconds = 0.45f;
     private const float DotsReserve = 26f;
+    private const float MagnifyBoost = 0.30f;
+    private const float MagnifySigma = 0.58f;
+    private const float TapPressDepth = 0.12f;
+    private const float TapPressInSeconds = 0.11f;
+    private const float TapPopSeconds = 0.34f;
+    private const float TapPopAmount = 0.06f;
 
     private struct Wobble
     {
@@ -53,6 +59,13 @@ internal sealed class HomeScreen
     private bool folderClosing;
     private Rect folderOrigin;
     private string folderNameBuffer = string.Empty;
+    private Vector2 hoverPointer;
+    private bool magnifyEnabled;
+    private HomeTile? tapTile;
+    private float tapClock;
+    private bool tapHolding;
+    private float tapReleaseFrom;
+    private float tapScaleValue = 1f;
 
     public HomeScreen(IReadOnlyList<IPhoneApp> apps)
     {
@@ -63,6 +76,7 @@ internal sealed class HomeScreen
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         editClock += delta;
+        magnifyEnabled = false;
         var metrics = Compute(content);
         if (!pageSwiping)
         {
@@ -77,6 +91,9 @@ internal sealed class HomeScreen
         }
 
         HandleInput(content, metrics, navigation, delta);
+        hoverPointer = ImGui.GetMousePos();
+        magnifyEnabled = !editing && dragItem is null && !pageSwiping && content.Contains(hoverPointer);
+        AdvanceTap(delta);
         DrawPages(content, metrics, theme, delta);
         if (dragItem is not null)
         {
@@ -97,7 +114,7 @@ internal sealed class HomeScreen
         var iconSize = MathF.Min(columnWidth * 0.58f, 58f * scale);
         var topPad = 10f * scale;
         var available = content.Height - topPad - DotsReserve * scale;
-        var rowHeight = MathF.Min(iconSize + 30f * scale, available / HomeLayoutService.Rows);
+        var rowHeight = MathF.Min(iconSize + 36f * scale, available / HomeLayoutService.Rows);
         return new Metrics(scale, columnWidth, iconSize, rowHeight, topPad);
     }
 
@@ -195,6 +212,10 @@ internal sealed class HomeScreen
             pressPos = mouse;
             pressTime = 0f;
             pressTile = TileAt(content, m, mouse);
+            if (pressTile is not null)
+            {
+                BeginTap(pressTile);
+            }
         }
 
         if (pressActive && ImGui.IsMouseDown(ImGuiMouseButton.Left))
@@ -232,6 +253,7 @@ internal sealed class HomeScreen
 
         if (pressActive && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
         {
+            ReleaseTap();
             var move = mouse - pressPos;
             var tap = move.Length() < TapSlop * m.Scale && pressTime < LongPressSeconds;
             if (tap)
@@ -263,6 +285,7 @@ internal sealed class HomeScreen
         swipeStartX = mouse.X;
         swipeStartPage = pageIndex;
         pressActive = false;
+        CancelTap();
     }
 
     private void HandlePageSwipe(Rect content, Vector2 mouse)
@@ -288,6 +311,7 @@ internal sealed class HomeScreen
         folderTarget = null;
         dropSlot = 0;
         pressActive = false;
+        CancelTap();
     }
 
     private void HandleTileDrag(Rect content, in Metrics m, float delta)
@@ -400,7 +424,7 @@ internal sealed class HomeScreen
                 }
 
                 var center = SlotCenter(content, m, page, slot) + Jiggle(tile, m);
-                DrawTile(tile, center, m, theme, 1f, labelAlpha, false);
+                DrawTile(tile, center, m, theme, MagnifyScale(center, m) * TapScale(tile), labelAlpha, false);
                 ReportIconAnchor(tile, center, m);
             }
 
@@ -431,6 +455,75 @@ internal sealed class HomeScreen
         wobble.Y.Step(targetDelta.Y, ReflowSmoothTime, delta);
         reflow[key] = wobble;
         return new Vector2(wobble.X.Value, wobble.Y.Value);
+    }
+
+    private float MagnifyScale(Vector2 iconCenter, in Metrics m)
+    {
+        if (!magnifyEnabled)
+        {
+            return 1f;
+        }
+
+        var sigma = m.ColumnWidth * MagnifySigma;
+        var distanceSq = (hoverPointer - iconCenter).LengthSquared();
+        return 1f + MagnifyBoost * MathF.Exp(-distanceSq / (2f * sigma * sigma));
+    }
+
+    private float TapScale(HomeTile tile) => ReferenceEquals(tile, tapTile) ? tapScaleValue : 1f;
+
+    private void BeginTap(HomeTile tile)
+    {
+        tapTile = tile;
+        tapClock = 0f;
+        tapHolding = true;
+        tapScaleValue = 1f;
+    }
+
+    private void ReleaseTap()
+    {
+        if (tapTile is null || !tapHolding)
+        {
+            return;
+        }
+
+        tapHolding = false;
+        tapReleaseFrom = tapScaleValue;
+        tapClock = 0f;
+    }
+
+    private void CancelTap()
+    {
+        tapTile = null;
+        tapScaleValue = 1f;
+    }
+
+    private void AdvanceTap(float delta)
+    {
+        if (tapTile is null)
+        {
+            tapScaleValue = 1f;
+            return;
+        }
+
+        tapClock += delta;
+        if (tapHolding)
+        {
+            var progress = Math.Clamp(tapClock / TapPressInSeconds, 0f, 1f);
+            tapScaleValue = 1f - TapPressDepth * Easing.EaseOutCubic(progress);
+            return;
+        }
+
+        var popProgress = tapClock / TapPopSeconds;
+        if (popProgress >= 1f)
+        {
+            tapScaleValue = 1f;
+            tapTile = null;
+            return;
+        }
+
+        var basis = tapReleaseFrom + (1f - tapReleaseFrom) * Easing.EaseOutCubic(popProgress);
+        var overshoot = TapPopAmount * 4f * popProgress * (1f - popProgress);
+        tapScaleValue = basis + overshoot;
     }
 
     private Vector2 Jiggle(HomeTile tile, in Metrics m)

@@ -15,6 +15,7 @@ internal static class BootTiming
     public const float ShortEmblemHoldSeconds = 0.3f;
     public const float ShortEmblemExitSeconds = 0.4f;
     public const float ShortRevealSeconds = 0.45f;
+    public const float FontWaitCapSeconds = 60f;
     public const float EmblemBreatheFrequency = 3.2f;
     public const float EmblemBreatheAmplitude = 0.025f;
     public const float EmblemExitGrowth = 1.18f;

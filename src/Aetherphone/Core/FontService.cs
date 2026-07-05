@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core.Localization;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
 using Dalamud.Plugin;
@@ -37,12 +38,14 @@ internal sealed class FontService : IDisposable
 
     private const float TrackingThreshold = 1.20f;
     private const float TrackingRatio = -0.02f;
+    private const float MaxZoom = 1.5f;
     private readonly IFontAtlas atlas;
     private readonly string fontDirectory;
     private readonly float baseSize;
-    private readonly ushort[] glyphRanges;
+    private ushort[] glyphRanges;
     private IFontHandle[,] handles;
     private float zoom;
+    private float renderScale;
 
     public FontService(IDalamudPluginInterface pluginInterface, float zoom)
     {
@@ -50,11 +53,31 @@ internal sealed class FontService : IDisposable
         fontDirectory = Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Fonts");
         baseSize = UiBuilder.DefaultFontSizePx;
         this.zoom = zoom;
-        glyphRanges = ComposeRanges();
-        handles = Build(zoom);
+        renderScale = zoom / MaxZoom;
+        glyphRanges = ComposeRanges(Loc.Current);
+        handles = Build();
     }
 
     public float Zoom => zoom;
+
+    public bool Ready
+    {
+        get
+        {
+            for (var weightIndex = 0; weightIndex < handles.GetLength(0); weightIndex++)
+            {
+                for (var sizeIndex = 0; sizeIndex < handles.GetLength(1); sizeIndex++)
+                {
+                    if (!handles[weightIndex, sizeIndex].Available)
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return true;
+        }
+    }
 
     public void SetZoom(float value)
     {
@@ -63,44 +86,87 @@ internal sealed class FontService : IDisposable
             return;
         }
 
-        var previous = handles;
         zoom = value;
-        handles = Build(value);
-        DisposeHandles(previous);
+        renderScale = zoom / MaxZoom;
+        ApplyRenderScale();
+    }
+
+    public void OnLanguageChanged()
+    {
+        var next = ComposeRanges(Loc.Current);
+        if (RangesEqual(next, glyphRanges))
+        {
+            return;
+        }
+
+        Plugin.Loading.Show();
+        var previous = handles;
+        glyphRanges = next;
+        handles = Build();
+        using (atlas.SuppressAutoRebuild())
+        {
+            DisposeHandles(previous);
+        }
     }
 
     public IDisposable Push(float scale) => Push(scale, FontWeight.Regular);
     public IDisposable Push(float scale, FontWeight weight) => handles[(int)weight, NearestSize(scale)].Push();
 
-    private IFontHandle[,] Build(float scale)
+    private IFontHandle[,] Build()
     {
         var built = new IFontHandle[WeightFiles.Length, SizeMultipliers.Length];
-        for (var weightIndex = 0; weightIndex < WeightFiles.Length; weightIndex++)
+        using (atlas.SuppressAutoRebuild())
         {
-            var path = Path.Combine(fontDirectory, WeightFiles[weightIndex]);
-            for (var sizeIndex = 0; sizeIndex < SizeMultipliers.Length; sizeIndex++)
+            for (var weightIndex = 0; weightIndex < WeightFiles.Length; weightIndex++)
             {
-                built[weightIndex, sizeIndex] = BuildHandle(path, SizeMultipliers[sizeIndex], scale);
+                var path = Path.Combine(fontDirectory, WeightFiles[weightIndex]);
+                for (var sizeIndex = 0; sizeIndex < SizeMultipliers.Length; sizeIndex++)
+                {
+                    built[weightIndex, sizeIndex] = BuildHandle(path, SizeMultipliers[sizeIndex]);
+                }
             }
         }
 
         return built;
     }
 
-    private IFontHandle BuildHandle(string path, float multiplier, float scale)
+    private IFontHandle BuildHandle(string path, float multiplier)
     {
-        var pixels = baseSize * multiplier * scale;
+        var pixels = baseSize * multiplier * MaxZoom;
         var tracking = multiplier >= TrackingThreshold ? pixels * TrackingRatio : 0f;
-        return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
+        var primary = default(ImFontPtr);
+        return atlas.NewDelegateFontHandle(e =>
         {
-            var primary = tk.AddFontFromFile(path,
-                new SafeFontConfig
+            e.OnPreBuild(tk =>
+            {
+                primary = tk.AddFontFromFile(path,
+                    new SafeFontConfig
+                    {
+                        SizePx = pixels, GlyphRanges = glyphRanges, GlyphExtraSpacing = new Vector2(tracking, 0f),
+                    });
+                tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular,
+                    new SafeFontConfig { SizePx = pixels, GlyphRanges = glyphRanges, MergeFont = primary, });
+            });
+            e.OnPostBuild(_ => primary.Scale = renderScale);
+        });
+    }
+
+    private void ApplyRenderScale()
+    {
+        for (var weightIndex = 0; weightIndex < handles.GetLength(0); weightIndex++)
+        {
+            for (var sizeIndex = 0; sizeIndex < handles.GetLength(1); sizeIndex++)
+            {
+                var handle = handles[weightIndex, sizeIndex];
+                if (!handle.Available)
                 {
-                    SizePx = pixels, GlyphRanges = glyphRanges, GlyphExtraSpacing = new Vector2(tracking, 0f),
-                });
-            tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular,
-                new SafeFontConfig { SizePx = pixels, GlyphRanges = glyphRanges, MergeFont = primary, });
-        }));
+                    continue;
+                }
+
+                using var locked = handle.Lock();
+                locked.ImFont.Scale = renderScale;
+            }
+        }
     }
 
     private static int NearestSize(float scale)
@@ -120,34 +186,78 @@ internal sealed class FontService : IDisposable
         return best;
     }
 
-    private static ushort[] ComposeRanges()
+    private static readonly ushort[] NativeNameGlyphRanges = ComposeNativeNameRanges();
+
+    private static ushort[] ComposeRanges(LanguageInfo language)
     {
-        var extraLength = 0;
-        for (var index = 0; index < Languages.All.Length; index++)
+        var extra = language.ExtraGlyphRanges;
+        var extraLength = extra?.Length ?? 0;
+        var combined = new ushort[BaseGlyphRanges.Length + NativeNameGlyphRanges.Length + extraLength + 1];
+        var offset = 0;
+        Array.Copy(BaseGlyphRanges, 0, combined, offset, BaseGlyphRanges.Length);
+        offset += BaseGlyphRanges.Length;
+        Array.Copy(NativeNameGlyphRanges, 0, combined, offset, NativeNameGlyphRanges.Length);
+        offset += NativeNameGlyphRanges.Length;
+        if (extraLength > 0)
         {
-            var extra = Languages.All[index].ExtraGlyphRanges;
-            if (extra is not null)
+            Array.Copy(extra!, 0, combined, offset, extraLength);
+        }
+
+        return combined;
+    }
+
+    private static ushort[] ComposeNativeNameRanges()
+    {
+        var seen = new bool[char.MaxValue + 1];
+        var count = 0;
+        for (var languageIndex = 0; languageIndex < Languages.All.Length; languageIndex++)
+        {
+            var name = Languages.All[languageIndex].NativeName;
+            for (var charIndex = 0; charIndex < name.Length; charIndex++)
             {
-                extraLength += extra.Length;
+                var codepoint = name[charIndex];
+                if (seen[codepoint])
+                {
+                    continue;
+                }
+
+                seen[codepoint] = true;
+                count++;
             }
         }
 
-        var combined = new ushort[BaseGlyphRanges.Length + extraLength + 1];
-        Array.Copy(BaseGlyphRanges, 0, combined, 0, BaseGlyphRanges.Length);
-        var offset = BaseGlyphRanges.Length;
-        for (var index = 0; index < Languages.All.Length; index++)
+        var ranges = new ushort[count * 2];
+        var offset = 0;
+        for (var codepoint = 0; codepoint <= char.MaxValue; codepoint++)
         {
-            var extra = Languages.All[index].ExtraGlyphRanges;
-            if (extra is null)
+            if (!seen[codepoint])
             {
                 continue;
             }
 
-            Array.Copy(extra, 0, combined, offset, extra.Length);
-            offset += extra.Length;
+            ranges[offset++] = (ushort)codepoint;
+            ranges[offset++] = (ushort)codepoint;
         }
 
-        return combined;
+        return ranges;
+    }
+
+    private static bool RangesEqual(ushort[] left, ushort[] right)
+    {
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < left.Length; index++)
+        {
+            if (left[index] != right[index])
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public void Dispose() => DisposeHandles(handles);

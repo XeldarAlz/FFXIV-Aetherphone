@@ -11,6 +11,7 @@ namespace Aetherphone.Windows.Components;
 internal static class BootScreen
 {
     private const float GreetingFontScale = 1.9f;
+    private const float CaptionFontScale = 0.80f;
     private const float LetterStaggerWindow = 0.6f;
     private const float LetterRevealSpan = 0.4f;
     private const float LetterRisePixels = 16f;
@@ -28,8 +29,7 @@ internal static class BootScreen
         var dl = ImGui.GetWindowDrawList();
         if (boot.BackdropAlpha > 0f)
         {
-            var backdrop = new Vector4(0f, 0f, 0f, boot.BackdropAlpha);
-            dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(backdrop), rounding);
+            DrawBackdrop(dl, screen, theme, boot.BackdropAlpha, rounding);
         }
 
         if (boot.EmblemAlpha > 0f || boot.EmblemRingAlpha > 0f)
@@ -37,10 +37,31 @@ internal static class BootScreen
             DrawEmblem(screen.Center, theme, boot, scale);
         }
 
+        if (boot.EmblemAlpha > 0.01f)
+        {
+            DrawLoadingCaption(screen.Center, theme, boot, scale);
+        }
+
         if (boot.Greeting is not null && boot.GreetingAlpha > 0f)
         {
             DrawGreeting(screen.Center, theme, boot, scale);
         }
+    }
+
+    private static void DrawBackdrop(ImDrawListPtr dl, Rect screen, PhoneTheme theme, float alpha, float rounding)
+    {
+        var baseColor = new Vector4(0.015f, 0.019f, 0.038f, alpha);
+        dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(baseColor), rounding);
+        var breath = 0.8f + 0.2f * Styling.Pulse(5200);
+        dl.PushClipRect(screen.Min, screen.Max, true);
+        for (var ring = 3; ring >= 1; ring--)
+        {
+            var radius = screen.Height * (0.16f + ring * 0.13f);
+            var glow = 0.055f / ring * alpha * breath;
+            dl.AddCircleFilled(screen.Center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, glow)), 96);
+        }
+
+        dl.PopClipRect();
     }
 
     private static void DrawEmblem(Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
@@ -61,12 +82,19 @@ internal static class BootScreen
             return;
         }
 
-        dl.AddCircleFilled(center, baseRadius * 2.4f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 64);
-        dl.AddCircleFilled(center, baseRadius * 1.7f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)), 64);
-        dl.AddCircleFilled(center, baseRadius * 1.15f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.14f * alpha)), 64);
-        dl.AddCircle(center, baseRadius, ImGui.GetColorU32(Palette.WithAlpha(accent, alpha)), 72, 3.0f * scale);
-        var core = Palette.Mix(accent, Vector4.One, 0.7f);
-        dl.AddCircleFilled(center, baseRadius * 0.32f, ImGui.GetColorU32(Palette.WithAlpha(core, alpha)), 48);
+        dl.AddCircleFilled(center, baseRadius * 2.4f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.05f * alpha)), 64);
+        LoadingPulse.Spinner(center, baseRadius, accent, alpha);
+        dl.AddCircleFilled(center, baseRadius * 0.15f, ImGui.GetColorU32(Palette.WithAlpha(Vector4.One, alpha * 0.9f)),
+            32);
+    }
+
+    private static void DrawLoadingCaption(Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
+    {
+        var alpha = boot.EmblemAlpha;
+        var baseRadius = 30f * scale * boot.EmblemScale;
+        var caret = center.Y + baseRadius * 2.15f + 14f * scale;
+        LoadingPulse.Caption(new Vector2(center.X, caret), theme.TextStrong, theme.Accent, LoadingPulse.SafeLabel(),
+            alpha, CaptionFontScale);
     }
 
     private static string greetingSource = string.Empty;
@@ -141,19 +169,19 @@ internal static class BootScreen
             var glow = Palette.WithAlpha(color, glowAlpha);
             for (var index = 0; index < GlowOffsets.Length; index++)
             {
-                DrawGlyphPass(glyph, position + GlowOffsets[index] * (2f * scale), glow);
+                DrawTextRun(glyph, position + GlowOffsets[index] * (2f * scale), glow);
             }
         }
 
-        DrawGlyphPass(glyph, position, Palette.WithAlpha(color, alpha));
+        DrawTextRun(glyph, position, Palette.WithAlpha(color, alpha));
     }
 
-    private static void DrawGlyphPass(string glyph, Vector2 position, Vector4 color)
+    private static void DrawTextRun(string text, Vector2 position, Vector4 color)
     {
         ImGui.SetCursorScreenPos(position);
         using (ImRaii.PushColor(ImGuiCol.Text, color))
         {
-            ImGui.TextUnformatted(glyph);
+            ImGui.TextUnformatted(text);
         }
     }
 
