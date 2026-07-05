@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
@@ -34,8 +35,10 @@ internal sealed class LanguagePage : ISettingsPage
                         theme) && language.Code != configuration.Language)
                 {
                     configuration.Language = language.Code;
+                    Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("language", language.Code));
                     configuration.Save();
                     Loc.SetLanguage(language.Code);
+                    Plugin.Fonts.OnLanguageChanged();
                 }
             }
 

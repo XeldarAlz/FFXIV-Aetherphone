@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
@@ -435,10 +436,12 @@ internal sealed class WallpaperPage : ISettingsPage
         if (editingDark)
         {
             configuration.DarkWallpaperId = id;
+            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_dark", id));
         }
         else
         {
             configuration.LightWallpaperId = id;
+            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_light", id));
         }
 
         themes.Apply(configuration);

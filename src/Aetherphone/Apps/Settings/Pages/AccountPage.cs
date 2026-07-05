@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -299,6 +300,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     {
         busy = true;
         status = Loc.T(L.Account.RequestingCode);
+        Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Began));
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
@@ -308,12 +310,14 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                 if (response is null)
                 {
                     status = Loc.T(L.Account.CannotReach);
+                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
                     return;
                 }
 
                 code = response.Code;
                 challengeId = response.ChallengeId;
                 status = string.Empty;
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.CodeShown));
             }
             catch (OperationCanceledException)
             {
@@ -322,6 +326,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             {
                 AepLog.Warning($"Aethernet challenge failed: {exception.Message}");
                 status = Loc.T(L.Account.CannotReach);
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
             }
             finally
             {
@@ -340,6 +345,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
         busy = true;
         status = Loc.T(L.Account.Verifying);
+        Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.VerifyPending));
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
@@ -349,10 +355,12 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                 if (auth is null)
                 {
                     status = Loc.T(L.Account.CodeNotFound);
+                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
                     return;
                 }
 
                 session.SignIn(auth.Token, auth.User);
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
                 ResetFlow();
             }
             catch (OperationCanceledException)
@@ -362,6 +370,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             {
                 AepLog.Warning($"Aethernet verify failed: {exception.Message}");
                 status = Loc.T(L.Account.CannotReach);
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
             }
             finally
             {

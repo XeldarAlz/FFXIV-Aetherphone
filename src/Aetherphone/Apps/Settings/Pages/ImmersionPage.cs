@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
@@ -38,12 +39,14 @@ internal sealed class ImmersionPage : ISettingsPage
             if (scroll != configuration.ScrollWhileIdle)
             {
                 configuration.ScrollWhileIdle = scroll;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("scroll_while_idle", scroll ? "1" : "0"));
                 configuration.Save();
             }
 
             if (lockPosition != configuration.LockPosition)
             {
                 configuration.LockPosition = lockPosition;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("lock_position", lockPosition ? "1" : "0"));
                 configuration.Save();
             }
 
@@ -65,12 +68,14 @@ internal sealed class ImmersionPage : ISettingsPage
             if (openStartup != configuration.OpenOnStartup)
             {
                 configuration.OpenOnStartup = openStartup;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("open_on_startup", openStartup ? "1" : "0"));
                 configuration.Save();
             }
 
             if (openMinimized != configuration.OpenMinimizedOnStartup)
             {
                 configuration.OpenMinimizedOnStartup = openMinimized;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("open_minimized", openMinimized ? "1" : "0"));
                 configuration.Save();
             }
 

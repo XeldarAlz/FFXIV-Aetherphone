@@ -20,7 +20,6 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     public string Id => "settings";
     public string DisplayName => Loc.T(L.Apps.Settings);
     public string Glyph => "S";
-    public Vector4 Accent => new(0.56f, 0.57f, 0.63f, 1f);
     public int BadgeCount => 0;
     private readonly ViewRouter<ISettingsPage> router;
     private readonly RouterDraw<ISettingsPage> drawPage;
@@ -30,7 +29,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private readonly AccountPage accountPage;
     private readonly ProfilePage profilePage;
 
-    public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone,
+    public SettingsApp(Configuration configuration, ThemeProvider themes, SoundService sound,
         AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
         PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
     {
@@ -41,18 +40,42 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var immersion = new ImmersionPage(configuration);
         var tutorials = new TutorialsPage(configuration);
         var callsPage = new CallsPage(calls, configuration);
-        var notifications = new NotificationsPage(configuration);
-        var ringtonePage = new RingtonePage(configuration, ringtone);
+        var appNotifications = new AppNotificationPage(configuration, sound);
+        var notificationSoundPage = new SoundSettingsPage(sound, Loc.T(L.Settings.NotificationSound), "N",
+            new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume", "notification_sound",
+            () => configuration.NotificationSound, token =>
+            {
+                configuration.NotificationSound = token;
+                configuration.Save();
+            }, () => configuration.NotificationVolume, volume =>
+            {
+                configuration.NotificationVolume = volume;
+                configuration.Save();
+            });
+        var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage);
+        var ringtonePage = new SoundSettingsPage(sound, Loc.T(L.Settings.Ringtone), "R",
+            new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume", "ringtone",
+            () => configuration.RingtoneSound, token =>
+            {
+                configuration.RingtoneSound = token;
+                configuration.Save();
+            }, () => configuration.RingtoneVolume, volume =>
+            {
+                configuration.RingtoneVolume = volume;
+                configuration.Save();
+            });
         var commands = new CommandsPage();
+        var privacy = new PrivacyPage(configuration);
         var about = new AboutPage(showAbout);
         var changelog = new ChangelogPage();
         var groups = new IReadOnlyList<ISettingsPage>[]
         {
             new ISettingsPage[] { accountPage, profilePage },
             new ISettingsPage[] { appearance, language, immersion, tutorials }, new ISettingsPage[] { callsPage },
-            new ISettingsPage[] { notifications, ringtonePage }, new ISettingsPage[] { commands, about, changelog },
+            new ISettingsPage[] { notifications, ringtonePage },
+            new ISettingsPage[] { commands, privacy, about, changelog },
         };
-        router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups));
+        router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups), Id);
         drawPage = DrawPage;
         popBack = PopBack;
     }

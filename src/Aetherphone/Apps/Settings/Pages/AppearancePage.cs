@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
@@ -42,6 +43,7 @@ internal sealed class AppearancePage : ISettingsPage
             if (mode != configuration.ThemeMode)
             {
                 configuration.ThemeMode = mode;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("theme_mode", mode.ToString().ToLowerInvariant()));
                 ApplyTheme();
             }
 
@@ -51,6 +53,7 @@ internal sealed class AppearancePage : ISettingsPage
             if (accentName != configuration.AccentName)
             {
                 configuration.AccentName = accentName;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("accent", accentName));
                 ApplyTheme();
             }
 
@@ -69,6 +72,7 @@ internal sealed class AppearancePage : ISettingsPage
             if (MathF.Abs(zoom - configuration.TextZoom) > 0.001f)
             {
                 configuration.TextZoom = zoom;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("text_zoom", zoom.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 Plugin.Fonts.SetZoom(zoom);
                 configuration.Save();
             }
@@ -82,6 +86,7 @@ internal sealed class AppearancePage : ISettingsPage
             if (MathF.Abs(phoneScale - configuration.PhoneScale) > 0.001f)
             {
                 configuration.PhoneScale = phoneScale;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("phone_scale", phoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 configuration.Save();
             }
         }
