@@ -24,7 +24,14 @@ internal sealed class NotificationRouter
     {
         if (notification.AppId == MessagesAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {
-            messageLauncher.Request(notification.Title, notification.GroupKey);
+            if (LinkshellChannel.TryParse(notification.GroupKey, out var channel))
+            {
+                messageLauncher.RequestLinkshell(channel, notification.Title);
+            }
+            else
+            {
+                messageLauncher.Request(notification.Title, notification.GroupKey);
+            }
         }
         else if (notification.AppId == VelvetAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {

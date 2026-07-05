@@ -21,6 +21,7 @@ internal sealed class PhoneWindow : Window
 
     private readonly PhoneShell shell;
     private bool minimized;
+    private bool recenterRequested;
 
     public PhoneWindow(PhoneShell shell)
         : base(AepConstants.Name, BaseFlags)
@@ -32,6 +33,15 @@ internal sealed class PhoneWindow : Window
     }
 
     public void Maximize() => minimized = false;
+
+    public void StartMinimized() => minimized = true;
+
+    public void Recenter()
+    {
+        minimized = false;
+        recenterRequested = true;
+        IsOpen = true;
+    }
 
     public void ToggleShell()
     {
@@ -51,9 +61,23 @@ internal sealed class PhoneWindow : Window
 
     public override void PreDraw()
     {
-        Size = minimized ? MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        var size = minimized ? MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        Size = size;
         SizeCondition = ImGuiCond.Always;
         Flags = !minimized && Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
+
+        if (recenterRequested)
+        {
+            var viewport = ImGui.GetMainViewport();
+            Position = viewport.Pos + (viewport.Size - size) * 0.5f;
+            PositionCondition = ImGuiCond.Always;
+            recenterRequested = false;
+        }
+        else
+        {
+            Position = null;
+        }
+
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
     }
 

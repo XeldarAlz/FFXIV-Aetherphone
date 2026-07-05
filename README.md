@@ -91,6 +91,7 @@ Tick **Enabled**, click **+**, then **Save and Close**. Open `/xlplugins` → **
 | `/phone` | Toggle the phone |
 | `/aetherphone` | Alias for `/phone` |
 | `/phone about` | Open credits / links |
+| `/phone reset` | Recenter the phone on screen |
 
 ## More from me
 

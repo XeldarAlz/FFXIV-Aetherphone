@@ -87,6 +87,17 @@ internal sealed class MessagesApp : IPhoneApp
     {
         router.Reset();
         trackedThread = null;
+        if (launcher.TryConsumeLinkshell(out var channel, out var linkshellName))
+        {
+            activeTab = 1;
+            var existing = linkshells.Find(channel);
+            var name = existing?.Name is { Length: > 0 } current ? current : linkshellName;
+            var thread = linkshells.GetOrCreate(channel, name);
+            thread.MarkRead();
+            router.Push(new MessagesView(thread), false);
+            return;
+        }
+
         if (launcher.TryConsume(out var display, out var sendTarget))
         {
             activeTab = 0;

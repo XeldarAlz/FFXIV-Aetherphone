@@ -33,10 +33,10 @@ internal sealed class ImmersionPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.Immersion), theme);
-            var card = GroupCard.Begin(theme, 2);
-            var scroll = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.ScrollWhileIdle), configuration.ScrollWhileIdle, theme);
-            var lockPosition = SettingsRow.Bool(card.NextRow(), Loc.T(L.ControlCenter.LockPosition), configuration.LockPosition, theme);
-            card.End();
+            var behaviorCard = GroupCard.Begin(theme, 2);
+            var scroll = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.Settings.ScrollWhileIdle), configuration.ScrollWhileIdle, theme);
+            var lockPosition = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.ControlCenter.LockPosition), configuration.LockPosition, theme);
+            behaviorCard.End();
 
             if (scroll != configuration.ScrollWhileIdle)
             {
@@ -56,6 +56,33 @@ internal sealed class ImmersionPage : ISettingsPage
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
             {
                 ImGui.TextWrapped(Loc.T(L.Settings.ScrollWhileIdleHint));
+            }
+
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+
+            var startupCard = GroupCard.Begin(theme, 2);
+            var openStartup = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenOnStartup), configuration.OpenOnStartup, theme);
+            var openMinimized = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenMinimized), configuration.OpenMinimizedOnStartup, theme);
+            startupCard.End();
+
+            if (openStartup != configuration.OpenOnStartup)
+            {
+                configuration.OpenOnStartup = openStartup;
+                configuration.Save();
+            }
+
+            if (openMinimized != configuration.OpenMinimizedOnStartup)
+            {
+                configuration.OpenMinimizedOnStartup = openMinimized;
+                configuration.Save();
+            }
+
+            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
+            using (Plugin.Fonts.Push(0.8f))
+            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            {
+                ImGui.TextWrapped(Loc.T(L.Settings.StartupHint));
             }
         }
     }

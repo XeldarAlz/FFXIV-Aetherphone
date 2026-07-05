@@ -3,15 +3,14 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Device;
 using Aetherphone.Core.Emote;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Shell;
-using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
-using Aetherphone.Windows.Components;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Gui.Dtr;
@@ -45,6 +44,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static WallpaperImageCache WallpaperImages { get; private set; } = null!;
     internal static DeviceStatus Device { get; private set; } = null!;
     internal static IAnalyticsService Analytics { get; private set; } = null!;
+    internal static ConfirmService Confirm { get; private set; } = null!;
 
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
@@ -64,7 +64,6 @@ public sealed class Plugin : IDalamudPlugin
         Cfg.NormalizeAethernetBaseUrl();
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
-        Loc.LanguageChanged += Fonts.OnLanguageChanged;
         var builtInWallpaperDirectory = new DirectoryInfo(Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
         var customWallpaperDirectory = new DirectoryInfo(Path.Combine(PluginInterface.ConfigDirectory.FullName, "Wallpapers"));
         Wallpapers = new WallpaperLibrary(TextureProvider, builtInWallpaperDirectory, customWallpaperDirectory, Cfg);
@@ -75,8 +74,14 @@ public sealed class Plugin : IDalamudPlugin
         Analytics = services.Analytics;
         Analytics.Track(AnalyticsEvents.SessionStart());
         aboutWindow = new AboutWindow();
-        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher);
+        Confirm = new ConfirmService();
+        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher, Confirm);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
+        if (Cfg.OpenOnStartup && Cfg.OpenMinimizedOnStartup)
+        {
+            phoneWindow.StartMinimized();
+        }
+
         windowSystem.AddWindow(phoneWindow);
         windowSystem.AddWindow(aboutWindow);
 
@@ -113,7 +118,6 @@ public sealed class Plugin : IDalamudPlugin
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
 
-        Loc.LanguageChanged -= Fonts.OnLanguageChanged;
         services.Notifications.Changed -= UpdateDtrBadge;
         services.Calls.IncomingCallPresented -= OnIncomingCall;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
@@ -147,12 +151,27 @@ public sealed class Plugin : IDalamudPlugin
 
     private static string DetectLanguage()
     {
-        return ClientState.ClientLanguage switch
+        switch (ClientState.ClientLanguage)
         {
-            Dalamud.Game.ClientLanguage.German => "de",
-            Dalamud.Game.ClientLanguage.French => "fr",
-            _ => "en",
-        };
+            case Dalamud.Game.ClientLanguage.German:
+                return "de";
+            case Dalamud.Game.ClientLanguage.French:
+                return "fr";
+            case Dalamud.Game.ClientLanguage.Japanese:
+                return "ja";
+        }
+
+        var osLanguage = System.Globalization.CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
+
+        for (var index = 0; index < Languages.All.Length; index++)
+        {
+            if (string.Equals(Languages.All[index].Code, osLanguage, StringComparison.OrdinalIgnoreCase))
+            {
+                return Languages.All[index].Code;
+            }
+        }
+
+        return "en";
     }
 
     private void UpdateDtrBadge()
@@ -174,6 +193,12 @@ public sealed class Plugin : IDalamudPlugin
         if (argument.Equals("about", StringComparison.OrdinalIgnoreCase))
         {
             ShowAbout();
+            return;
+        }
+
+        if (argument.Equals("reset", StringComparison.OrdinalIgnoreCase))
+        {
+            phoneWindow.Recenter();
             return;
         }
 

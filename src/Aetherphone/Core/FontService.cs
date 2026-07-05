@@ -46,8 +46,8 @@ internal sealed class FontService : IDisposable
     private readonly string fontDirectory;
     private readonly float baseSize;
 
+    private readonly ushort[] glyphRanges;
     private IFontHandle[,] handles;
-    private ushort[] glyphRanges;
     private float zoom;
 
     public FontService(IDalamudPluginInterface pluginInterface, float zoom)
@@ -56,7 +56,7 @@ internal sealed class FontService : IDisposable
         fontDirectory = Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Fonts");
         baseSize = UiBuilder.DefaultFontSizePx;
         this.zoom = zoom;
-        glyphRanges = ComposeRanges(Loc.Current);
+        glyphRanges = ComposeRanges();
         handles = Build(zoom);
     }
 
@@ -72,20 +72,6 @@ internal sealed class FontService : IDisposable
         var previous = handles;
         zoom = value;
         handles = Build(value);
-        DisposeHandles(previous);
-    }
-
-    public void OnLanguageChanged()
-    {
-        var next = ComposeRanges(Loc.Current);
-        if (RangesEqual(next, glyphRanges))
-        {
-            return;
-        }
-
-        var previous = handles;
-        glyphRanges = next;
-        handles = Build(zoom);
         DisposeHandles(previous);
     }
 
@@ -147,38 +133,35 @@ internal sealed class FontService : IDisposable
         return best;
     }
 
-    private static ushort[] ComposeRanges(LanguageInfo language)
+    private static ushort[] ComposeRanges()
     {
-        var extra = language.ExtraGlyphRanges;
-        if (extra is null || extra.Length == 0)
+        var extraLength = 0;
+        for (var index = 0; index < Languages.All.Length; index++)
         {
-            var ranges = new ushort[BaseGlyphRanges.Length + 1];
-            Array.Copy(BaseGlyphRanges, ranges, BaseGlyphRanges.Length);
-            return ranges;
-        }
-
-        var combined = new ushort[BaseGlyphRanges.Length + extra.Length + 1];
-        Array.Copy(BaseGlyphRanges, 0, combined, 0, BaseGlyphRanges.Length);
-        Array.Copy(extra, 0, combined, BaseGlyphRanges.Length, extra.Length);
-        return combined;
-    }
-
-    private static bool RangesEqual(ushort[] left, ushort[] right)
-    {
-        if (left.Length != right.Length)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < left.Length; index++)
-        {
-            if (left[index] != right[index])
+            var extra = Languages.All[index].ExtraGlyphRanges;
+            if (extra is not null)
             {
-                return false;
+                extraLength += extra.Length;
             }
         }
 
-        return true;
+        var combined = new ushort[BaseGlyphRanges.Length + extraLength + 1];
+        Array.Copy(BaseGlyphRanges, 0, combined, 0, BaseGlyphRanges.Length);
+
+        var offset = BaseGlyphRanges.Length;
+        for (var index = 0; index < Languages.All.Length; index++)
+        {
+            var extra = Languages.All[index].ExtraGlyphRanges;
+            if (extra is null)
+            {
+                continue;
+            }
+
+            Array.Copy(extra, 0, combined, offset, extra.Length);
+            offset += extra.Length;
+        }
+
+        return combined;
     }
 
     public void Dispose() => DisposeHandles(handles);

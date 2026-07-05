@@ -9,11 +9,7 @@ internal static class Loc
     private static LanguageInfo current = Languages.English;
     private static CultureInfo culture = CultureInfo.InvariantCulture;
     private static StringCatalog catalog = StringCatalog.Empty;
-
-    public static event Action? LanguageChanged;
-
     public static LanguageInfo Current => current;
-
     public static CultureInfo Culture => culture;
 
     public static void Initialize(string code, string localizationDirectory)
@@ -34,11 +30,9 @@ internal static class Loc
         }
 
         Apply(target);
-        LanguageChanged?.Invoke();
     }
 
     public static string T(LocString entry) => catalog.TryGet(entry.Key, out var value) ? value : entry.Source;
-
     public static string T(LocString entry, params object[] args) => string.Format(culture, T(entry), args);
 
     public static string Plural(LocPlural entry, int count)
