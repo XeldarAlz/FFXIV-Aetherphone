@@ -1,9 +1,8 @@
-using System;
 using Aetherphone.Core.Localization;
 
-namespace Aetherphone.Apps.Velvet;
+namespace Aetherphone.Core.Social;
 
-internal static class VelvetTimeZone
+internal static class SocialTimeZone
 {
     public const int MinOffsetMinutes = -720;
 
@@ -19,9 +18,9 @@ internal static class VelvetTimeZone
 
     public static int EffectiveOffsetMinutes(Configuration configuration)
     {
-        if (configuration.VelvetTimeZoneManual)
+        if (configuration.TimeZoneManual)
         {
-            return Math.Clamp(configuration.VelvetManualUtcOffsetMinutes, MinOffsetMinutes, MaxOffsetMinutes);
+            return Math.Clamp(configuration.ManualUtcOffsetMinutes, MinOffsetMinutes, MaxOffsetMinutes);
         }
 
         return DeviceOffsetMinutes();

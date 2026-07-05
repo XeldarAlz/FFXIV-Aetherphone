@@ -8,6 +8,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -97,7 +98,7 @@ internal sealed partial class VelvetApp
         if (user.UtcOffsetMinutes is { } profileOffset)
         {
             y += 5f * scale;
-            var timeLine = $"{Loc.T(L.Velvet.LocalTimeLabel)}  {VelvetTimeZone.Describe(profileOffset)}";
+            var timeLine = $"{Loc.T(L.Velvet.LocalTimeLabel)}  {SocialTimeZone.Describe(profileOffset)}";
             y += DrawCenteredLine(drawList, centerX, y, timeLine, VelvetUi.MutedInk, 0.84f, FontWeight.Regular);
         }
 
@@ -430,7 +431,7 @@ internal sealed partial class VelvetApp
         var textWidth = nameSize.X;
         if (offset is { } minutes)
         {
-            var timeText = VelvetTimeZone.Describe(minutes);
+            var timeText = SocialTimeZone.Describe(minutes);
             var subSize = Typography.Measure(timeText, 0.72f, FontWeight.Regular);
             var gapY = 1f * scale;
             var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;

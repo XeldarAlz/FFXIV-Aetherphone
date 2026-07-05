@@ -6,6 +6,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Plugin.Services;
 
@@ -466,7 +467,7 @@ internal sealed class VelvetStore : IDisposable
             return;
         }
 
-        var offset = VelvetTimeZone.EffectiveOffsetMinutes(configuration);
+        var offset = SocialTimeZone.EffectiveOffsetMinutes(configuration);
         RunGuarded("heartbeat", async token => await client.VelvetHeartbeatAsync(offset, token).ConfigureAwait(false));
     }
 

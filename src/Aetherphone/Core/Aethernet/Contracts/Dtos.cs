@@ -21,9 +21,13 @@ internal sealed record UserDto(
     bool IsFollowing,
     bool IsMe,
     string? AvatarUrl,
-    int Grams);
+    int Grams,
+    int? UtcOffsetMinutes = null,
+    bool ShareTimeZone = true);
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
+
+internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffsetMinutes);
 
 internal sealed record CreatePostRequest(string Text);
 
@@ -116,8 +120,7 @@ internal sealed record UpdateVelvetProfileRequest(
     string[]? Limits,
     int? LookingFor,
     int? RelationshipStatus,
-    bool? Discoverable,
-    bool? ShareTimeZone = null);
+    bool? Discoverable);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 

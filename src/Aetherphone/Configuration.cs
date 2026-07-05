@@ -17,6 +17,8 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool OpenOnStartup { get; set; }
 
+    public bool OpenMinimizedOnStartup { get; set; }
+
     public bool WelcomeShown { get; set; }
 
     public bool TutorialsEnabled { get; set; } = true;
@@ -115,9 +117,9 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool VelvetBlurByDefault { get; set; } = true;
 
-    public bool VelvetTimeZoneManual { get; set; }
+    public bool TimeZoneManual { get; set; }
 
-    public int VelvetManualUtcOffsetMinutes { get; set; }
+    public int ManualUtcOffsetMinutes { get; set; }
 
     public void NormalizeAethernetBaseUrl()
     {

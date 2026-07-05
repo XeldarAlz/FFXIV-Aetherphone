@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using Aetherphone.Core.Aethernet.Contracts;
 
@@ -11,6 +10,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(AuthResponse))]
 [JsonSerializable(typeof(UserDto))]
 [JsonSerializable(typeof(UpdateProfileRequest))]
+[JsonSerializable(typeof(UpdateTimeZoneRequest))]
 [JsonSerializable(typeof(CreatePostRequest))]
 [JsonSerializable(typeof(ReactRequest))]
 [JsonSerializable(typeof(PostDto))]

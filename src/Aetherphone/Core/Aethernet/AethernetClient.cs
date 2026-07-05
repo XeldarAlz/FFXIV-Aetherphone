@@ -63,6 +63,11 @@ internal sealed class AethernetClient
         return http.SendJsonAsync(HttpMethod.Patch, Url("/me"), request, AethernetJsonContext.Default.UpdateProfileRequest, AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);
     }
 
+    public Task<UserDto?> UpdateTimeZoneAsync(UpdateTimeZoneRequest request, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/me/timezone"), request, AethernetJsonContext.Default.UpdateTimeZoneRequest, AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);
+    }
+
     public Task<UserDto?> UserAsync(string userId, CancellationToken token)
     {
         return http.GetJsonAsync(Url($"/users/{Uri.EscapeDataString(userId)}"), AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);

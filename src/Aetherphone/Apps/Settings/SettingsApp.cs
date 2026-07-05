@@ -35,10 +35,12 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private INavigator frameNavigation = null!;
 
     private readonly AccountPage accountPage;
+    private readonly ProfilePage profilePage;
 
     public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone, AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData, PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
     {
         accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
+        profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
@@ -46,16 +48,17 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var callsPage = new CallsPage(calls, configuration);
         var notifications = new NotificationsPage(configuration);
         var ringtonePage = new RingtonePage(configuration, ringtone);
+        var commands = new CommandsPage();
         var about = new AboutPage(showAbout);
         var changelog = new ChangelogPage();
 
         var groups = new IReadOnlyList<ISettingsPage>[]
         {
-            new ISettingsPage[] { accountPage },
+            new ISettingsPage[] { accountPage, profilePage },
             new ISettingsPage[] { appearance, language, immersion, tutorials },
             new ISettingsPage[] { callsPage },
             new ISettingsPage[] { notifications, ringtonePage },
-            new ISettingsPage[] { about, changelog },
+            new ISettingsPage[] { commands, about, changelog },
         };
 
         router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups));
@@ -96,5 +99,6 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     public void Dispose()
     {
         accountPage.Dispose();
+        profilePage.Dispose();
     }
 }
