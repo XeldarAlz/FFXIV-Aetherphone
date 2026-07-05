@@ -55,7 +55,7 @@ internal static class AppIcon
             Palette.WithAlpha(theme.TextStrong, 0.95f), 0.85f, FontWeight.Medium);
         if (app.BadgeCount > 0)
         {
-            DrawBadge(new Vector2(max.X - 5f * scale, min.Y + 5f * scale), app.BadgeCount, theme, scale);
+            AppBadge.Draw(new Vector2(max.X - 5f * scale, min.Y + 5f * scale), app.BadgeCount, theme, scale);
         }
 
         if (hovered)
@@ -76,13 +76,5 @@ internal static class AppIcon
         spring.Step(target, PressSmoothTime, delta);
         PressSprings[id] = spring;
         return spring.Value;
-    }
-
-    private static void DrawBadge(Vector2 center, int count, PhoneTheme theme, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddCircleFilled(center, 9f * scale, ImGui.GetColorU32(theme.Danger), 24);
-        var label = count > 99 ? "99+" : count.ToString();
-        Typography.DrawCentered(center, label, theme.TextStrong, 0.7f, FontWeight.SemiBold);
     }
 }

@@ -35,7 +35,7 @@ internal static class AppAccents
         ["calculator"] = new(0.16f, 0.16f, 0.18f, 1f),
         ["dailies"] = new(0.36f, 0.78f, 0.62f, 1f),
         ["fishing"] = new(0.24f, 0.62f, 0.86f, 1f),
-        ["notifications"] = new(0.92f, 0.30f, 0.34f, 1f),
+        ["notifications"] = new(0.80f, 0.16f, 0.24f, 1f),
         ["settings"] = new(0.56f, 0.57f, 0.63f, 1f),
         ["feedback"] = new(0.08f, 0.66f, 0.55f, 1f),
         ["games"] = new(0.32f, 0.78f, 0.50f, 1f),

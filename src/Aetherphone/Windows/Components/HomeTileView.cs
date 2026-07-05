@@ -29,7 +29,7 @@ internal static class HomeTileView
         DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha);
         if (app.BadgeCount > 0)
         {
-            DrawBadge(new Vector2(center.X + size * 0.5f - 5f * scale, center.Y - size * 0.5f + 5f * scale),
+            AppBadge.Draw(new Vector2(center.X + size * 0.5f - 5f * scale, center.Y - size * 0.5f + 5f * scale),
                 app.BadgeCount, theme, scale);
         }
     }
@@ -80,13 +80,5 @@ internal static class HomeTileView
             Palette.WithAlpha(new Vector4(0f, 0f, 0f, 1f), 0.45f * labelAlpha), 0.85f, FontWeight.Medium);
         Typography.DrawCentered(labelCenter, label, Palette.WithAlpha(theme.TextStrong, 0.95f * labelAlpha), 0.85f,
             FontWeight.Medium);
-    }
-
-    private static void DrawBadge(Vector2 center, int count, PhoneTheme theme, float scale)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        dl.AddCircleFilled(center, 9f * scale, ImGui.GetColorU32(theme.Danger), 24);
-        var label = count > 99 ? "99+" : count.ToString();
-        Typography.DrawCentered(center, label, theme.TextStrong, 0.7f, FontWeight.SemiBold);
     }
 }
