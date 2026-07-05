@@ -50,7 +50,7 @@ internal sealed class VelvetAvatarComposer
         pickerPaths = library.List();
     }
 
-    public bool Draw(Rect area, VelvetUi ui, in PhoneContext context)
+    public bool Draw(Rect area, AppSkin ui, in PhoneContext context)
     {
         if (outcome == 1)
         {
@@ -87,7 +87,7 @@ internal sealed class VelvetAvatarComposer
         return false;
     }
 
-    private void DrawPick(Rect area, VelvetUi ui, in PhoneContext context)
+    private void DrawPick(Rect area, AppSkin ui, in PhoneContext context)
     {
         AppHeader.Draw(context, Loc.T(L.Velvet.ChangePhoto), () => closeRequested = true);
         var scale = ImGuiHelpers.GlobalScale;
@@ -106,7 +106,7 @@ internal sealed class VelvetAvatarComposer
             if (pickerPaths.Length == 0)
             {
                 Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
-                    Loc.T(L.Velvet.NoPhotos), VelvetUi.MutedInk);
+                    Loc.T(L.Velvet.NoPhotos), AppPalettes.Velvet.MutedInk);
                 return;
             }
 
@@ -169,7 +169,7 @@ internal sealed class VelvetAvatarComposer
         cropStage = true;
     }
 
-    private void DrawCrop(Rect area, VelvetUi ui, in PhoneContext context)
+    private void DrawCrop(Rect area, AppSkin ui, in PhoneContext context)
     {
         AppHeader.Draw(context, Loc.T(L.Velvet.MoveAndScale), () => cropStage = false);
         var canUse = !store.AvatarBusy;
@@ -193,7 +193,7 @@ internal sealed class VelvetAvatarComposer
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding,
                 ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
-            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), VelvetUi.MutedInk);
+            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), AppPalettes.Velvet.MutedInk);
             return;
         }
 
@@ -207,12 +207,12 @@ internal sealed class VelvetAvatarComposer
             ImDrawFlags.RoundCornersAll);
         HandleCropGestures(preview, size, uv1 - uv0);
         Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), Loc.T(L.Velvet.GestureHint),
-            VelvetUi.MutedInk, 0.78f);
+            AppPalettes.Velvet.MutedInk, 0.78f);
         var trackWidth = area.Width * 0.62f;
         var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, area.Max.Y - 48f * scale),
             new Vector2(area.Center.X + trackWidth * 0.5f, area.Max.Y - 44f * scale));
         var zoomNormalized = (targetZoom - WallpaperCrop.MinZoom) / (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
-        var updated = Scrubber.Draw(track, zoomNormalized, VelvetUi.Accent, new Vector4(1f, 1f, 1f, 0.16f), 1f);
+        var updated = Scrubber.Draw(track, zoomNormalized, AppPalettes.Velvet.Accent, new Vector4(1f, 1f, 1f, 0.16f), 1f);
         targetZoom = WallpaperCrop.MinZoom + updated * (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
     }
 

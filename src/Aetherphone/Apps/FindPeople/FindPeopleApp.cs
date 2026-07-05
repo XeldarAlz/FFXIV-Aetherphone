@@ -45,9 +45,9 @@ internal sealed class FindPeopleApp : IPhoneApp
     }
 
     public string Id => "findpeople";
+    public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.FindPeople);
     public string Glyph => "Fp";
-    public Vector4 Accent => new(0.36f, 0.68f, 0.92f, 1f);
     public int BadgeCount => 0;
     private readonly LookupService lookup;
     private readonly LodestoneService lodestone;
@@ -75,7 +75,7 @@ internal sealed class FindPeopleApp : IPhoneApp
         this.lodestone = lodestone;
         this.launcher = launcher;
         this.gameData = gameData;
-        router = new ViewRouter<View>(View.SearchRoot);
+        router = new ViewRouter<View>(View.SearchRoot, Id);
         drawView = DrawView;
         back = () => router.Pop();
     }
@@ -647,10 +647,8 @@ internal sealed class FindPeopleApp : IPhoneApp
             return false;
         }
 
-        ProgressRing.Sweep(new Vector2(center.X, center.Y - 6f * scale), 13f * scale, 2.4f * scale, Accent, 900.0, 1.8f,
-            0.95f);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Searching),
-            theme.TextMuted, 0.9f);
+        LoadingPulse.Draw(new Vector2(center.X, center.Y - 14f * scale), 13f * scale, Accent, theme.TextMuted,
+            Loc.T(L.Common.Searching));
         return false;
     }
 

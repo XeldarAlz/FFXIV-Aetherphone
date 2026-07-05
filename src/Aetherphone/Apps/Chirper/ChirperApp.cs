@@ -20,10 +20,11 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
-internal sealed class ChirperApp : IPhoneApp
+internal sealed partial class ChirperApp : IPhoneApp
 {
     private const float FeedRefreshSeconds = 25f;
     private const int MaxPostLength = 500;
+    private const int ComposeBufferBytes = MaxPostLength * 4 + 1024;
     private const int DisplayNameMax = 40;
     private const int HandleMax = 15;
     private const int BioMax = 200;
@@ -31,15 +32,15 @@ internal sealed class ChirperApp : IPhoneApp
     private const int MaxReportReasonLength = 200;
     private const int MaxCommentLength = 500;
     public string Id => "chirper";
+    public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Chirper);
     public string Glyph => "Ch";
-    public Vector4 Accent => new(0.16f, 0.52f, 0.94f, 1f);
     public int BadgeCount => 0;
     private readonly ChirperStore store;
     private readonly LodestoneService lodestone;
     private readonly RemoteImageCache images;
     private readonly ChirperAvatarComposer avatar;
-    private readonly ChirperUi ui = new();
+    private readonly AppSkin ui = new(AppPalettes.Chirper);
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
     private readonly Action back;
@@ -51,6 +52,8 @@ internal sealed class ChirperApp : IPhoneApp
     private float sinceFollowing;
     private string draft = string.Empty;
     private bool composeFocus;
+    private float composeWrapWidth;
+    private readonly ImGui.ImGuiInputTextCallbackPtrDelegate composeCallback;
     private string composeStatus = string.Empty;
     private volatile int composeOutcome;
     private string searchDraft = string.Empty;
@@ -76,8 +79,9 @@ internal sealed class ChirperApp : IPhoneApp
         this.lodestone = lodestone;
         images = new RemoteImageCache(http);
         avatar = new ChirperAvatarComposer(store, library);
-        router = new ViewRouter<ChirperRoute>(ChirperRoute.Home);
+        router = new ViewRouter<ChirperRoute>(ChirperRoute.Home, Id);
         drawView = DrawView;
+        composeCallback = ComposeTextCallback;
         back = () => router.Pop();
     }
 
@@ -115,7 +119,7 @@ internal sealed class ChirperApp : IPhoneApp
         actions.Tick(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
-        router.Draw(context.Content, ChirperUi.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
     private void DrawView(ChirperRoute route, Rect area, int depth)
@@ -155,7 +159,7 @@ internal sealed class ChirperApp : IPhoneApp
         if (!store.IsSignedIn)
         {
             var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-            Typography.DrawCentered(body.Center, Loc.T(L.Chirper.SetUpAccount), ChirperUi.MutedInk);
+            Typography.DrawCentered(body.Center, Loc.T(L.Chirper.SetUpAccount), AppPalettes.Chirper.MutedInk);
             return;
         }
 
@@ -212,7 +216,7 @@ internal sealed class ChirperApp : IPhoneApp
 
     private static void DrawSegmentLabel(Rect rect, string label, bool active)
     {
-        var ink = active ? new Vector4(1f, 1f, 1f, 1f) : ChirperUi.MutedInk;
+        var ink = active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Chirper.MutedInk;
         Typography.DrawCentered(rect.Center, label, ink, 0.9f, active ? FontWeight.SemiBold : FontWeight.Medium);
     }
 
@@ -227,7 +231,7 @@ internal sealed class ChirperApp : IPhoneApp
                     scope == ChirperFeedScope.Following ? Loc.T(L.Chirper.FollowingEmpty) :
                     Loc.T(L.Chirper.ExploreEmpty);
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 90f * ImGuiHelpers.GlobalScale),
-                    message, ChirperUi.MutedInk);
+                    message, AppPalettes.Chirper.MutedInk);
             }
             else
             {
@@ -277,7 +281,7 @@ internal sealed class ChirperApp : IPhoneApp
         var metaSize = Typography.Measure(meta, 0.9f);
         Typography.Draw(
             new Vector2(contentLeft + nameSize.X + 7f * scale, origin.Y + pad + (nameSize.Y - metaSize.Y) * 0.5f), meta,
-            ChirperUi.MutedInk, 0.9f);
+            AppPalettes.Chirper.MutedInk, 0.9f);
         if (HoverClick(new Vector2(contentLeft, origin.Y + pad),
                 new Vector2(contentRight - 24f * scale, origin.Y + pad + nameSize.Y)))
         {
@@ -290,7 +294,7 @@ internal sealed class ChirperApp : IPhoneApp
             var wrapPos = contentRight - ImGui.GetWindowPos().X;
             ImGui.PushTextWrapPos(wrapPos);
             using (Plugin.Fonts.Push(1.05f))
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.BodyInk))
+            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
             {
                 ImGui.TextWrapped(post.Text);
             }
@@ -341,7 +345,7 @@ internal sealed class ChirperApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var commentCenter = new Vector2(left + 11f * scale, centerY);
-        if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), ChirperUi.MutedInk,
+        if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Chirper.MutedInk,
                 new Vector4(0f, 0f, 0f, 0f), 1f, Loc.T(L.Chirper.Reply)) && !isThreadHead)
         {
             OpenThread(post);
@@ -352,14 +356,14 @@ internal sealed class ChirperApp : IPhoneApp
         {
             var countText = post.CommentCount.ToString(Loc.Culture);
             var countSize = Typography.Measure(countText, 0.9f, FontWeight.Medium);
-            Typography.Draw(new Vector2(cursorX, centerY - countSize.Y * 0.5f), countText, ChirperUi.MutedInk, 0.9f,
+            Typography.Draw(new Vector2(cursorX, centerY - countSize.Y * 0.5f), countText, AppPalettes.Chirper.MutedInk, 0.9f,
                 FontWeight.Medium);
             cursorX += countSize.X + 6f * scale;
         }
 
         cursorX += 12f * scale;
         var triggerCenter = new Vector2(cursorX + 11f * scale, centerY);
-        if (DrawIconButton(triggerCenter, 14f * scale, FontAwesomeIcon.GrinBeam.ToIconString(), ChirperUi.MutedInk,
+        if (DrawIconButton(triggerCenter, 14f * scale, FontAwesomeIcon.GrinBeam.ToIconString(), AppPalettes.Chirper.MutedInk,
                 new Vector4(0f, 0f, 0f, 0f), 1f, Loc.T(L.Chirper.React)))
         {
             actions.Open(post.Id, ChirperActionReveal.Panel.Picker);
@@ -380,7 +384,7 @@ internal sealed class ChirperApp : IPhoneApp
         }
 
         var ellipsisCenter = new Vector2(left + width - 12f * scale, centerY);
-        if (DrawIconButton(ellipsisCenter, 13f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), ChirperUi.BodyInk,
+        if (DrawIconButton(ellipsisCenter, 13f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), AppPalettes.Chirper.BodyInk,
                 new Vector4(0f, 0f, 0f, 0f), 0.9f, Loc.T(L.Chirper.More)))
         {
             actions.Open(post.Id, ChirperActionReveal.Panel.Menu);
@@ -405,11 +409,11 @@ internal sealed class ChirperApp : IPhoneApp
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         var background = active
             ? Palette.WithAlpha(color, 0.24f)
-            : (hovered ? new Vector4(1f, 1f, 1f, 0.14f) : ChirperUi.FieldSurface);
+            : (hovered ? new Vector4(1f, 1f, 1f, 0.14f) : AppPalettes.Chirper.FieldSurface);
         Squircle.Fill(drawList, min, max, chipHeight * 0.5f, ImGui.GetColorU32(background));
-        DrawIcon(new Vector2(min.X + padX + glyphWidth * 0.5f, centerY), ChirperReactions.Glyph(kind), color, 0.82f);
+        AppSkin.Icon(new Vector2(min.X + padX + glyphWidth * 0.5f, centerY), ChirperReactions.Glyph(kind), color, 0.82f);
         Typography.Draw(new Vector2(min.X + padX + glyphWidth + gap, centerY - countSize.Y * 0.5f), countText,
-            active ? color : ChirperUi.MutedInk, 0.82f, FontWeight.Medium);
+            active ? color : AppPalettes.Chirper.MutedInk, 0.82f, FontWeight.Medium);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -434,7 +438,7 @@ internal sealed class ChirperApp : IPhoneApp
             var center = new Vector2(left + iconRadius + kind * step, centerY);
             var color = ChirperReactions.Color(kind);
             var active = post.MyReaction == kind;
-            var background = active ? Palette.WithAlpha(color, 0.22f) : ChirperUi.FieldSurface;
+            var background = active ? Palette.WithAlpha(color, 0.22f) : AppPalettes.Chirper.FieldSurface;
             var reveal = ChirperActionReveal.Stagger(actions.Progress, kind, count);
             if (DrawRevealIcon(center, iconRadius, ChirperReactions.Glyph(kind), color, background, 1f, reveal,
                     ChirperReactions.Label(kind), interactive))
@@ -446,8 +450,8 @@ internal sealed class ChirperApp : IPhoneApp
 
         var closeCenter = new Vector2(left + iconRadius + ChirperReactions.Count * step, centerY);
         var closeReveal = ChirperActionReveal.Stagger(actions.Progress, ChirperReactions.Count, count);
-        if (DrawRevealIcon(closeCenter, iconRadius, FontAwesomeIcon.Times.ToIconString(), ChirperUi.MutedInk,
-                ChirperUi.FieldSurface, 0.9f, closeReveal, Loc.T(L.Common.Close), interactive))
+        if (DrawRevealIcon(closeCenter, iconRadius, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Chirper.MutedInk,
+                AppPalettes.Chirper.FieldSurface, 0.9f, closeReveal, Loc.T(L.Common.Close), interactive))
         {
             actions.Dismiss();
         }
@@ -464,8 +468,8 @@ internal sealed class ChirperApp : IPhoneApp
         var count = mine ? 2 : 3;
         var slot = 0;
         var closeCenter = new Vector2(anchorX - slot * step, centerY);
-        if (DrawRevealIcon(closeCenter, iconRadius, FontAwesomeIcon.Times.ToIconString(), ChirperUi.MutedInk,
-                ChirperUi.FieldSurface, 0.9f, ChirperActionReveal.Stagger(actions.Progress, slot, count),
+        if (DrawRevealIcon(closeCenter, iconRadius, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Chirper.MutedInk,
+                AppPalettes.Chirper.FieldSurface, 0.9f, ChirperActionReveal.Stagger(actions.Progress, slot, count),
                 Loc.T(L.Common.Close), interactive))
         {
             actions.Dismiss();
@@ -508,7 +512,7 @@ internal sealed class ChirperApp : IPhoneApp
         var followColor = post.IsFollowing ? theme.Accent : theme.TextStrong;
         var followTip = Loc.T(post.IsFollowing ? L.Chirper.Unfollow : L.Chirper.Follow);
         var followCenter = new Vector2(anchorX - slot * step, centerY);
-        if (DrawRevealIcon(followCenter, iconRadius, followGlyph, followColor, ChirperUi.FieldSurface, 0.9f,
+        if (DrawRevealIcon(followCenter, iconRadius, followGlyph, followColor, AppPalettes.Chirper.FieldSurface, 0.9f,
                 ChirperActionReveal.Stagger(actions.Progress, slot, count), followTip, interactive))
         {
             store.SetFollow(post.AuthorId, !post.IsFollowing);
@@ -532,7 +536,7 @@ internal sealed class ChirperApp : IPhoneApp
             }
 
             Typography.DrawCentered(new Vector2(area.Center.X, top + 60f * scale), Loc.T(L.Common.Loading),
-                ChirperUi.MutedInk);
+                AppPalettes.Chirper.MutedInk);
             return;
         }
 
@@ -553,7 +557,7 @@ internal sealed class ChirperApp : IPhoneApp
                 {
                     Typography.Draw(
                         new Vector2(ImGui.GetCursorScreenPos().X + 2f * scale, ImGui.GetCursorScreenPos().Y),
-                        Loc.T(L.Chirper.NoComments), ChirperUi.MutedInk, 0.85f);
+                        Loc.T(L.Chirper.NoComments), AppPalettes.Chirper.MutedInk, 0.85f);
                 }
             }
             else
@@ -596,11 +600,11 @@ internal sealed class ChirperApp : IPhoneApp
             : RelativeTime(comment.CreatedAtUnix);
         var metaSize = Typography.Measure(meta, 0.82f);
         Typography.Draw(new Vector2(textLeft + nameSize.X + 7f * scale, origin.Y + (nameSize.Y - metaSize.Y) * 0.5f),
-            meta, ChirperUi.MutedInk, 0.82f);
+            meta, AppPalettes.Chirper.MutedInk, 0.82f);
         ImGui.SetCursorScreenPos(new Vector2(textLeft, origin.Y + nameSize.Y + 6f * scale));
         var commentWrapPos = (origin.X + width - 4f * scale) - ImGui.GetWindowPos().X;
         ImGui.PushTextWrapPos(commentWrapPos);
-        using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.BodyInk))
+        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
         {
             ImGui.TextWrapped(comment.Text);
         }
@@ -610,7 +614,7 @@ internal sealed class ChirperApp : IPhoneApp
         {
             var trashCenter = new Vector2(origin.X + width - 10f * scale, origin.Y + 9f * scale);
             var trashHitRadius = 11f * scale;
-            if (DrawIconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), ChirperUi.MutedInk,
+            if (DrawIconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Chirper.MutedInk,
                     new Vector4(0f, 0f, 0f, 0f), 0.75f))
             {
                 AskDeleteComment(post.Id, comment.Id);
@@ -638,13 +642,13 @@ internal sealed class ChirperApp : IPhoneApp
         var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 8f * scale);
         var pillMax = new Vector2(bar.Max.X - 56f * scale, bar.Max.Y - 8f * scale);
         Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(ChirperUi.FieldSurface));
+            ImGui.GetColorU32(AppPalettes.Chirper.FieldSurface));
         ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
         var submitted = false;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.TitleInk))
+        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.TitleInk))
         {
             submitted = ImGui.InputTextWithHint("##chirperComment", Loc.T(L.Chirper.AddComment), ref commentDraft,
                 MaxCommentLength, ImGuiInputTextFlags.EnterReturnsTrue);
@@ -653,765 +657,11 @@ internal sealed class ChirperApp : IPhoneApp
         var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
         var sendCenter = new Vector2(bar.Max.X - 28f * scale, bar.Center.Y);
         if ((DrawIconButton(sendCenter, 16f * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
-                canSend ? Accent : ChirperUi.MutedInk, new Vector4(0f, 0f, 0f, 0f), 0.95f) || submitted) && canSend)
+                canSend ? Accent : AppPalettes.Chirper.MutedInk, new Vector4(0f, 0f, 0f, 0f), 0.95f) || submitted) && canSend)
         {
             var text = commentDraft;
             commentDraft = string.Empty;
             store.AddComment(postId, text, _ => { });
-        }
-    }
-
-    private void DrawComposeFab(Rect area)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var radius = 26f * scale;
-        var center = new Vector2(area.Max.X - radius - 16f * scale, area.Max.Y - radius - 18f * scale);
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
-        drawList.AddCircleFilled(center, radius,
-            ImGui.GetColorU32(hovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent), 32);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        {
-            var glyph = FontAwesomeIcon.Feather.ToIconString();
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f)))
-            {
-                ImGui.TextUnformatted(glyph);
-            }
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                composeFocus = true;
-                router.Push(ChirperRoute.Compose);
-            }
-        }
-    }
-
-    private void DrawCompose(Rect area)
-    {
-        if (composeOutcome == 1)
-        {
-            composeOutcome = 0;
-            draft = string.Empty;
-            composeStatus = string.Empty;
-            sinceForYou = FeedRefreshSeconds;
-            sinceFollowing = FeedRefreshSeconds;
-            router.Pop();
-            return;
-        }
-
-        if (composeOutcome == 2)
-        {
-            composeOutcome = 0;
-            composeStatus = Loc.T(L.Account.CannotReach);
-        }
-
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Chirper.NewChirp), back);
-        var canPost = !string.IsNullOrWhiteSpace(draft) && !store.Posting;
-        if (DrawHeaderAction(area, store.Posting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Post), canPost))
-        {
-            Submit();
-        }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        using (AppSurface.Begin(body))
-        {
-            var drawList = ImGui.GetWindowDrawList();
-            var origin = ImGui.GetCursorScreenPos();
-            var width = ImGui.GetContentRegionAvail().X;
-            var footerHeight = 40f * scale;
-            var cardMin = origin;
-            var cardMax = new Vector2(origin.X + width, area.Max.Y - footerHeight);
-            ui.Card(drawList, cardMin, cardMax, 18f * scale);
-            var pad = 14f * scale;
-            var radius = 20f * scale;
-            var me = store.Me;
-            var displayName =
-                me is null ? string.Empty : (string.IsNullOrEmpty(me.DisplayName) ? me.Name : me.DisplayName);
-            if (me is not null)
-            {
-                DrawAvatar(drawList, new Vector2(cardMin.X + pad + radius, cardMin.Y + pad + radius), radius, me.Name,
-                    me.World, me.AvatarUrl, 0.95f, 48);
-            }
-
-            var inputLeft = pad + radius * 2f + 12f * scale;
-            var inputX = cardMin.X + inputLeft;
-            var nameSize = displayName.Length > 0
-                ? Typography.Measure(displayName, 1.05f, FontWeight.SemiBold)
-                : Vector2.Zero;
-            if (displayName.Length > 0)
-            {
-                Typography.Draw(new Vector2(inputX, cardMin.Y + pad), displayName, theme.TextStrong, 1.05f,
-                    FontWeight.SemiBold);
-            }
-
-            var inputTop = cardMin.Y + pad + nameSize.Y + 6f * scale;
-            var inputWidth = width - inputLeft - pad;
-            var inputHeight = cardMax.Y - inputTop - pad;
-            ImGui.SetCursorScreenPos(new Vector2(inputX, inputTop));
-            ImGui.SetNextItemWidth(inputWidth);
-            if (composeFocus)
-            {
-                ImGui.SetKeyboardFocusHere();
-                composeFocus = false;
-            }
-
-            using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.TitleInk))
-            using (Plugin.Fonts.Push(1.15f))
-            {
-                ImGui.InputTextMultiline("##chirpBody", ref draft, MaxPostLength, new Vector2(inputWidth, inputHeight),
-                    ImGuiInputTextFlags.None);
-            }
-
-            if (draft.Length == 0)
-            {
-                Typography.Draw(new Vector2(inputX + 4f * scale, inputTop + 2f * scale), Loc.T(L.Chirper.Compose),
-                    ChirperUi.MutedInk, 1.15f);
-            }
-
-            var footerY = area.Max.Y - footerHeight * 0.5f;
-            if (composeStatus.Length > 0)
-            {
-                Typography.Draw(
-                    new Vector2(origin.X + 2f * scale, footerY - Typography.Measure(composeStatus, 0.85f).Y * 0.5f),
-                    composeStatus, theme.Danger, 0.85f);
-            }
-
-            var remaining = MaxPostLength - draft.Length;
-            var counterColor = remaining < 40
-                ? (remaining < 0 ? theme.Danger : new Vector4(0.95f, 0.65f, 0.20f, 1f))
-                : ChirperUi.MutedInk;
-            var counter = remaining.ToString(Loc.Culture);
-            var counterSize = Typography.Measure(counter, 0.9f, FontWeight.Medium);
-            Typography.Draw(new Vector2(area.Max.X - 4f * scale - counterSize.X, footerY - counterSize.Y * 0.5f),
-                counter, counterColor, 0.9f, FontWeight.Medium);
-        }
-    }
-
-    private void Submit()
-    {
-        if (string.IsNullOrWhiteSpace(draft) || store.Posting)
-        {
-            return;
-        }
-
-        composeStatus = string.Empty;
-        store.Compose(draft, ok => composeOutcome = ok ? 1 : 2);
-    }
-
-    private void DrawProfile(Rect area, string userId)
-    {
-        if (store.ProfileUserId != userId)
-        {
-            store.OpenProfile(userId);
-        }
-
-        var user = store.ProfileUser;
-        var title = user is null
-            ? Loc.T(L.Apps.Chirper)
-            : (string.IsNullOrEmpty(user.DisplayName) ? user.Name : user.DisplayName);
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, title, back);
-        var scale = ImGuiHelpers.GlobalScale;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        if (store.ProfileFailed)
-        {
-            Typography.DrawCentered(body.Center, Loc.T(L.Chirper.ProfileError), ChirperUi.MutedInk);
-            return;
-        }
-
-        if (user is null)
-        {
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), ChirperUi.MutedInk);
-            return;
-        }
-
-        using (AppSurface.Begin(body))
-        {
-            DrawProfileHeader(user);
-            var posts = store.ProfilePosts;
-            ui.SectionHeading(Loc.T(L.Chirper.ChirpsTitle));
-            if (posts.Length == 0)
-            {
-                Typography.DrawCentered(new Vector2(body.Center.X, ImGui.GetCursorScreenPos().Y + 40f * scale),
-                    Loc.T(L.Chirper.Empty), ChirperUi.MutedInk);
-            }
-            else
-            {
-                for (var index = 0; index < posts.Length; index++)
-                {
-                    DrawPost(posts[index]);
-                }
-
-                ImGui.Dummy(new Vector2(0f, 24f * scale));
-            }
-        }
-    }
-
-    private void DrawProfileHeader(UserDto user)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var pad = 16f * scale;
-        var innerLeft = origin.X + pad;
-        var innerWidth = width - pad * 2f;
-        var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Name : user.DisplayName;
-        var avatarRadius = 40f * scale;
-        var handleLine = user.Handle.Length > 0 ? $"@{user.Handle}" : string.Empty;
-        var worldLine = $"{user.Name} · {user.World}";
-        var lineGap = 3f * scale;
-        var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
-        var handleH = handleLine.Length > 0 ? Typography.Measure(handleLine, 0.95f).Y + lineGap : 0f;
-        var worldH = Typography.Measure(worldLine, 0.95f).Y;
-        var bioH = user.Bio.Length > 0 ? 8f * scale + MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
-        var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
-        var cardBottom = textTop + nameH + lineGap + handleH + worldH + bioH + pad;
-        ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
-        var avatarCenter = new Vector2(innerLeft + avatarRadius, origin.Y + pad + avatarRadius);
-        drawList.AddCircleFilled(avatarCenter, avatarRadius + 2.5f * scale,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)), 64);
-        DrawAvatar(drawList, avatarCenter, avatarRadius, user.Name, user.World, user.AvatarUrl, 1.5f, 64);
-        var buttonHeight = 34f * scale;
-        var buttonWidth = 122f * scale;
-        var buttonMax = new Vector2(origin.X + width - pad, avatarCenter.Y + buttonHeight * 0.5f);
-        var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
-        var reportShown = false;
-        if (user.IsMe)
-        {
-            if (DrawPillButton(buttonRect, Loc.T(L.Chirper.EditProfile), false))
-            {
-                editLoadedFor = null;
-                router.Push(ChirperRoute.EditProfile);
-            }
-        }
-        else
-        {
-            var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-            reportShown = DrawReportToggle(reportCenter, buttonHeight * 0.5f, "user", user.Id);
-            if (DrawPillButton(buttonRect, user.IsFollowing ? Loc.T(L.Chirper.Following) : Loc.T(L.Chirper.Follow),
-                    !user.IsFollowing))
-            {
-                store.SetFollow(user.Id, !user.IsFollowing);
-            }
-        }
-
-        Typography.Draw(new Vector2(innerLeft, textTop), displayName, theme.TextStrong, 1.4f, FontWeight.Bold);
-        var textY = textTop + nameH + lineGap;
-        if (handleLine.Length > 0)
-        {
-            Typography.Draw(new Vector2(innerLeft, textY), handleLine, ChirperUi.MutedInk, 0.95f);
-            textY += handleH;
-        }
-
-        Typography.Draw(new Vector2(innerLeft, textY), worldLine, ChirperUi.MutedInk, 0.95f);
-        textY += worldH;
-        if (user.Bio.Length > 0)
-        {
-            ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
-            var bioWrapPos = (innerLeft + innerWidth) - ImGui.GetWindowPos().X;
-            ImGui.PushTextWrapPos(bioWrapPos);
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.BodyInk))
-            {
-                ImGui.TextWrapped(user.Bio);
-            }
-
-            ImGui.PopTextWrapPos();
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, cardBottom - origin.Y + 10f * scale));
-        if (reportShown)
-        {
-            DrawReportComposer(innerLeft, innerWidth);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-        }
-
-        DrawProfileStats(user);
-        DrawProfileTimeZone(user);
-        ImGui.Dummy(new Vector2(0f, 14f * scale));
-    }
-
-    private void DrawProfileTimeZone(UserDto user)
-    {
-        if (user.UtcOffsetMinutes is not { } offset)
-        {
-            return;
-        }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
-        var text = $"{Loc.T(L.Profile.LocalTimeLabel)}  {SocialTimeZone.Describe(offset)}";
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var textSize = Typography.Measure(text, 0.85f);
-        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + textSize.Y * 0.5f), text,
-            ChirperUi.MutedInk, 0.85f);
-        ImGui.Dummy(new Vector2(width, textSize.Y));
-    }
-
-    private void DrawProfileStats(UserDto user)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = 64f * scale;
-        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 18f * scale);
-        var third = width / 3f;
-        var centerY = origin.Y + height * 0.5f;
-        var dividerColor = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f));
-        for (var index = 1; index < 3; index++)
-        {
-            var x = origin.X + third * index;
-            drawList.AddLine(new Vector2(x, origin.Y + 14f * scale), new Vector2(x, origin.Y + height - 14f * scale),
-                dividerColor, 1f);
-        }
-
-        var followersLabel = Loc.Plural(L.Account.Followers, user.Followers).Split(' ', 2)[^1];
-        DrawStatColumn(origin.X + third * 0f, third, centerY, user.Following.ToString(Loc.Culture),
-            Loc.T(L.Chirper.Following));
-        DrawStatColumn(origin.X + third * 1f, third, centerY, user.Followers.ToString(Loc.Culture), followersLabel);
-        DrawStatColumn(origin.X + third * 2f, third, centerY, user.Posts.ToString(Loc.Culture), PostsLabel(user.Posts));
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
-    }
-
-    private void DrawStatColumn(float left, float columnWidth, float centerY, string value, string label)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var center = left + columnWidth * 0.5f;
-        Typography.DrawCentered(new Vector2(center, centerY - 10f * scale), value, theme.TextStrong, 1.25f,
-            FontWeight.Bold);
-        Typography.DrawCentered(new Vector2(center, centerY + 13f * scale), label, ChirperUi.MutedInk, 0.8f);
-    }
-
-    private bool DrawReportToggle(Vector2 center, float radius, string targetType, string targetId)
-    {
-        var active = reportTargetType == targetType && reportTargetId == targetId;
-        var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
-        if (DrawIconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f))
-        {
-            if (active)
-            {
-                reportTargetType = null;
-                reportTargetId = null;
-                active = false;
-            }
-            else
-            {
-                reportTargetType = targetType;
-                reportTargetId = targetId;
-                reportReasonDraft = string.Empty;
-                reportStatus = string.Empty;
-                active = true;
-            }
-        }
-
-        return active;
-    }
-
-    private void DrawReportComposer(float left, float width)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-        var buttonWidth = 84f * scale;
-        var buttonHeight = 28f * scale;
-        ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
-        ImGui.SetNextItemWidth(width - buttonWidth - 8f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, ChirperUi.FieldSurface))
-        using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.TitleInk))
-        {
-            ImGui.InputTextWithHint("##reportReason", Loc.T(L.Chirper.ReportReasonHint), ref reportReasonDraft,
-                MaxReportReasonLength);
-        }
-
-        var buttonRect = new Rect(new Vector2(left + width - buttonWidth, origin.Y - 2f * scale),
-            new Vector2(left + width, origin.Y - 2f * scale + buttonHeight));
-        var canSubmit = !reportSubmitting;
-        if (DrawPillButton(buttonRect, reportSubmitting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.ReportSubmit),
-                canSubmit) && canSubmit)
-        {
-            SubmitReport();
-        }
-
-        ImGui.SetCursorScreenPos(new Vector2(left, origin.Y + buttonHeight + 2f * scale));
-        if (reportStatus.Length > 0)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.MutedInk))
-            {
-                ImGui.TextUnformatted(reportStatus);
-            }
-
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-        }
-    }
-
-    private void SubmitReport()
-    {
-        if (reportSubmitting || reportTargetType is not { } targetType || reportTargetId is not { } targetId)
-        {
-            return;
-        }
-
-        reportSubmitting = true;
-        var reason = reportReasonDraft.Trim();
-        store.Report(targetType, targetId, reason.Length > 0 ? reason : null, ok =>
-        {
-            reportSubmitting = false;
-            reportStatus = Loc.T(ok ? L.Chirper.ReportSent : L.Chirper.ReportFailed);
-            if (ok)
-            {
-                reportTargetType = null;
-                reportTargetId = null;
-            }
-        });
-    }
-
-    private void AskDeleteComment(string postId, string commentId)
-    {
-        Plugin.Confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Chirper.DeleteCommentConfirmMessage),
-            ConfirmLabel = Loc.T(L.Chirper.DeleteConfirm),
-            CancelLabel = Loc.T(L.Chirper.DeleteCancel),
-            BusyLabel = Loc.T(L.Chirper.Saving),
-            FailedMessage = Loc.T(L.Chirper.DeleteCommentFailed),
-            ConfirmAsync = done => store.DeleteComment(postId, commentId, done),
-        });
-    }
-
-    private void DrawDeleteCommentTooltip(Vector2 iconCenter, float hitRadius, float scale)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        var tooltipText = Loc.T(L.Chirper.DeleteComment);
-        var textSize = Typography.Measure(tooltipText, 0.78f, FontWeight.Medium);
-        var padX = 9f * scale;
-        var padY = 5f * scale;
-        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
-        var gap = 9f * scale;
-        var windowMin = ImGui.GetWindowPos();
-        var windowMax = windowMin + ImGui.GetWindowSize();
-        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale,
-            windowMax.X - bubbleSize.X - 4f * scale);
-        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
-        if (minY < windowMin.Y + 4f * scale)
-        {
-            minY = iconCenter.Y + hitRadius + gap;
-        }
-
-        var min = new Vector2(minX, minY);
-        var max = min + bubbleSize;
-        var bubble = Palette.WithAlpha(Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f), 0.97f);
-        Squircle.Fill(dl, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(dl, new Vector2(min.X + padX, min.Y + padY), tooltipText, theme.AppBackground, 0.78f,
-            FontWeight.Medium);
-    }
-
-    private void AskDeletePost(string postId)
-    {
-        Plugin.Confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Chirper.DeleteConfirmMessage),
-            ConfirmLabel = Loc.T(L.Chirper.DeleteConfirm),
-            CancelLabel = Loc.T(L.Chirper.DeleteCancel),
-            BusyLabel = Loc.T(L.Chirper.Saving),
-            FailedMessage = Loc.T(L.Chirper.DeleteFailed),
-            ConfirmAsync = done => store.DeletePost(postId, done),
-        });
-    }
-
-    private void DrawEditProfile(Rect area)
-    {
-        var me = store.Me ?? (store.ProfileUser is { IsMe: true } self ? self : null);
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Chirper.EditProfile), back);
-        var scale = ImGuiHelpers.GlobalScale;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        if (me is null)
-        {
-            store.EnsureMe();
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), ChirperUi.MutedInk);
-            return;
-        }
-
-        if (editOutcome == 1)
-        {
-            editOutcome = 0;
-            store.ReloadProfile();
-            router.Pop();
-            return;
-        }
-
-        if (editOutcome == 2)
-        {
-            editOutcome = 0;
-            editStatus = Loc.T(L.Chirper.HandleTaken);
-        }
-
-        if (editLoadedFor != me.Id)
-        {
-            editLoadedFor = me.Id;
-            editDisplay = me.DisplayName;
-            editHandle = me.Handle;
-            editBio = me.Bio;
-            editStatus = string.Empty;
-        }
-
-        var handleValid = IsHandleValid(editHandle);
-        var canSave = !editBusy && editDisplay.Trim().Length > 0 && handleValid;
-        if (DrawHeaderAction(area, editBusy ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Save), canSave))
-        {
-            SaveProfile();
-        }
-
-        using (AppSurface.Begin(body))
-        {
-            var avatarRadius = 34f * scale;
-            var avatarOrigin = ImGui.GetCursorScreenPos();
-            var avatarCenter = new Vector2(avatarOrigin.X + ImGui.GetContentRegionAvail().X * 0.5f,
-                avatarOrigin.Y + avatarRadius);
-            DrawAvatar(ImGui.GetWindowDrawList(), avatarCenter, avatarRadius, me.Name, me.World, me.AvatarUrl, 1.3f,
-                48);
-            ImGui.SetCursorScreenPos(new Vector2(avatarOrigin.X, avatarCenter.Y + avatarRadius + 8f * scale));
-            var changeWidth = 150f * scale;
-            var changeTop = ImGui.GetCursorScreenPos().Y;
-            var changeRect = new Rect(new Vector2(avatarCenter.X - changeWidth * 0.5f, changeTop),
-                new Vector2(avatarCenter.X + changeWidth * 0.5f, changeTop + 30f * scale));
-            if (DrawPillButton(changeRect, Loc.T(L.Chirper.ChangePhoto), false))
-            {
-                OpenAvatarComposer();
-            }
-
-            ImGui.SetCursorScreenPos(new Vector2(avatarOrigin.X, changeRect.Max.Y + 16f * scale));
-            DrawField(Loc.T(L.Chirper.DisplayNameLabel), "##editDisplay", ref editDisplay, DisplayNameMax, false);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-            DrawHandleField();
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-            DrawField(Loc.T(L.Chirper.BioLabel), "##editBio", ref editBio, BioMax, true);
-            if (editStatus.Length > 0)
-            {
-                ImGui.Dummy(new Vector2(0f, 10f * scale));
-                using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
-                {
-                    ImGui.TextWrapped(editStatus);
-                }
-            }
-        }
-    }
-
-    private void OpenAvatarComposer()
-    {
-        avatar.Open();
-        router.Push(ChirperRoute.Avatar);
-    }
-
-    private void DrawAvatarCompose(Rect area)
-    {
-        var context = new PhoneContext(area, theme, navigation);
-        if (avatar.Draw(area, context, Accent))
-        {
-            store.ReloadProfile();
-            router.Pop();
-        }
-    }
-
-    private void DrawHandleField()
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.MutedInk))
-        {
-            ImGui.TextUnformatted(Loc.T(L.Chirper.HandleLabel));
-        }
-
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = 34f * scale;
-        var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale,
-            ImGui.GetColorU32(ChirperUi.FieldSurface));
-        Typography.Draw(new Vector2(origin.X + 12f * scale, origin.Y + height * 0.5f - 8f * scale), "@",
-            ChirperUi.MutedInk, 1f);
-        ImGui.SetCursorScreenPos(new Vector2(origin.X + 26f * scale,
-            origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(width - 38f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, IsHandleValid(editHandle) ? ChirperUi.TitleInk : theme.Danger))
-        {
-            if (ImGui.InputText("##editHandle", ref editHandle, HandleMax, ImGuiInputTextFlags.CharsNoBlank))
-            {
-                editHandle = editHandle.ToLowerInvariant();
-            }
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
-        Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale),
-            Loc.T(L.Chirper.HandleRules), ChirperUi.MutedInk, 0.78f);
-        ImGui.Dummy(new Vector2(width, 16f * scale));
-    }
-
-    private void DrawField(string label, string id, ref string value, int maxLength, bool multiline)
-    {
-        ui.Field(label, id, ref value, maxLength, multiline);
-    }
-
-    private void SaveProfile()
-    {
-        if (!store.IsSignedIn || editBusy)
-        {
-            return;
-        }
-
-        if (!IsHandleValid(editHandle) || editDisplay.Trim().Length == 0)
-        {
-            editStatus = Loc.T(L.Chirper.HandleRules);
-            return;
-        }
-
-        editBusy = true;
-        editStatus = string.Empty;
-        store.UpdateProfile(editDisplay.Trim(), editHandle.Trim(), editBio.Trim(), (ok, _) =>
-        {
-            editBusy = false;
-            editOutcome = ok ? 1 : 2;
-        });
-    }
-
-    private void DrawDiscover(Rect area)
-    {
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Chirper.FindPeople), back);
-        var scale = ImGuiHelpers.GlobalScale;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var searchHeight = 52f * scale;
-        DrawSearchBar(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)));
-        var listRect = new Rect(new Vector2(area.Min.X, top + searchHeight), area.Max);
-        var snapshot = store.DiscoverResults;
-        using (AppSurface.Begin(listRect))
-        {
-            if (snapshot.Length == 0)
-            {
-                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale),
-                    store.Searching ? Loc.T(L.Common.Searching) : Loc.T(L.Chirper.SearchByName), ChirperUi.MutedInk);
-            }
-            else
-            {
-                ImGui.Dummy(new Vector2(0f, 4f * scale));
-                for (var index = 0; index < snapshot.Length; index++)
-                {
-                    DrawUserRow(snapshot[index]);
-                }
-            }
-        }
-    }
-
-    private void DrawUserRow(UserDto user)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var rowHeight = 58f * scale;
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var drawList = ImGui.GetWindowDrawList();
-        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + rowHeight), 16f * scale);
-        var pad = 12f * scale;
-        var radius = 20f * scale;
-        var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
-        DrawAvatar(drawList, avatarCenter, radius, user.Name, user.World, user.AvatarUrl, 0.95f, 32);
-        var textLeft = avatarCenter.X + radius + 12f * scale;
-        var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Name : user.DisplayName;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale), displayName, theme.TextStrong, 1f,
-            FontWeight.SemiBold);
-        var sub = user.Handle.Length > 0 ? $"@{user.Handle} · {user.World}" : $"{user.Name} · {user.World}";
-        Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale), sub, ChirperUi.MutedInk, 0.85f);
-        var buttonWidth = 96f * scale;
-        var buttonHeight = 30f * scale;
-        var buttonRect =
-            new Rect(
-                new Vector2(origin.X + width - pad - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f),
-                new Vector2(origin.X + width - pad, origin.Y + rowHeight * 0.5f + buttonHeight * 0.5f));
-        if (DrawPillButton(buttonRect, user.IsFollowing ? Loc.T(L.Chirper.Following) : Loc.T(L.Chirper.Follow),
-                !user.IsFollowing))
-        {
-            store.SetFollow(user.Id, !user.IsFollowing);
-        }
-
-        var rowMin = origin;
-        var rowMax = new Vector2(origin.X + width - buttonWidth - pad - 6f * scale, origin.Y + rowHeight);
-        if (HoverClick(rowMin, rowMax))
-        {
-            OpenProfile(user.Id);
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rowHeight + 8f * scale));
-    }
-
-    private void DrawSearchBar(Rect bar)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
-        var pillMax = new Vector2(bar.Max.X - 12f * scale, bar.Max.Y - 9f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(ChirperUi.FieldSurface));
-        DrawIcon(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f),
-            FontAwesomeIcon.Search.ToIconString(), ChirperUi.MutedInk, 0.85f);
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 32f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, ChirperUi.TitleInk))
-        {
-            if (ImGui.InputTextWithHint("##chirperSearch", Loc.T(L.Chirper.NameOrWorld), ref searchDraft, 64,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                store.Search(searchDraft);
-            }
-        }
-    }
-
-    private void DrawHomeTopBar(Rect area)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        var logoSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
-        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f), DisplayName,
-            ChirperUi.TitleInk, 1.3f, FontWeight.Bold);
-        var me = store.Me;
-        var searchCenter = new Vector2(area.Max.X - 22f * scale, rowCenterY);
-        if (me is not null)
-        {
-            var radius = 14f * scale;
-            var center = new Vector2(area.Max.X - 52f * scale, rowCenterY);
-            DrawAvatar(ImGui.GetWindowDrawList(), center, radius, me.Name, me.World, me.AvatarUrl, 0.85f, 24);
-            if (HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
-            {
-                OpenProfile(me.Id);
-            }
-        }
-
-        if (DrawIconButton(searchCenter, 14f * scale, FontAwesomeIcon.Search.ToIconString(), ChirperUi.BodyInk,
-                new Vector4(0f, 0f, 0f, 0f), 0.95f) && store.IsSignedIn)
-        {
-            store.ClearDiscover();
-            searchDraft = string.Empty;
-            router.Push(ChirperRoute.Discover);
         }
     }
 
@@ -1428,26 +678,7 @@ internal sealed class ChirperApp : IPhoneApp
     private bool DrawIconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
         float glyphScale, string tooltip = "")
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius),
-            center + new Vector2(hitRadius, hitRadius));
-        if (background.W > 0f)
-        {
-            drawList.AddCircleFilled(center, hitRadius,
-                ImGui.GetColorU32(hovered ? Palette.Mix(background, theme.TextStrong, 0.08f) : background), 24);
-        }
-
-        DrawIcon(center, glyph, hovered ? Palette.Mix(color, theme.TextStrong, 0.2f) : color, glyphScale);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (tooltip.Length > 0)
-            {
-                DrawActionTooltip(center, hitRadius, tooltip);
-            }
-        }
-
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return ui.IconButton(center, hitRadius, glyph, color, background, glyphScale, tooltip);
     }
 
     private bool DrawRevealIcon(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
@@ -1466,59 +697,19 @@ internal sealed class ChirperApp : IPhoneApp
         }
 
         var ink = hovered ? Palette.Mix(color, theme.TextStrong, 0.2f) : color;
-        DrawIcon(center, glyph, Palette.WithAlpha(ink, ink.W * alpha), glyphScale * eased);
+        AppSkin.Icon(center, glyph, Palette.WithAlpha(ink, ink.W * alpha), glyphScale * eased);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (tooltip.Length > 0 && reveal > 0.6f)
             {
-                DrawActionTooltip(center, hitRadius, tooltip);
+                ui.DrawActionTooltip(center, hitRadius, tooltip);
             }
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var textSize = Typography.Measure(text, 0.78f, FontWeight.Medium);
-        var padX = 9f * scale;
-        var padY = 5f * scale;
-        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
-        var gap = 9f * scale;
-        var windowMin = ImGui.GetWindowPos();
-        var windowMax = windowMin + ImGui.GetWindowSize();
-        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale,
-            windowMax.X - bubbleSize.X - 4f * scale);
-        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
-        if (minY < windowMin.Y + 4f * scale)
-        {
-            minY = iconCenter.Y + hitRadius + gap;
-        }
-
-        var min = new Vector2(minX, minY);
-        var max = min + bubbleSize;
-        var bubble = Palette.WithAlpha(Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f), 0.97f);
-        Squircle.Fill(drawList, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, theme.AppBackground, 0.78f,
-            FontWeight.Medium);
-    }
-
-    private static void DrawIcon(Vector2 center, string glyph, Vector4 color, float scale)
-    {
-        float fontSize;
-        Vector2 size;
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        {
-            fontSize = ImGui.GetFontSize() * scale;
-            size = ImGui.CalcTextSize(glyph) * scale;
-        }
-
-        ImGui.GetWindowDrawList().AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(color),
-            glyph, 0f);
-    }
 
     private void DrawAvatar(ImDrawListPtr drawList, Vector2 center, float radius, string name, string world,
         string? avatarUrl, float monogramScale, int segments)

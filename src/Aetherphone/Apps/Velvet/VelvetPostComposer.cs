@@ -54,7 +54,7 @@ internal sealed class VelvetPostComposer
         pickerPaths = library.List();
     }
 
-    public bool Draw(Rect area, VelvetUi ui, in PhoneContext context)
+    public bool Draw(Rect area, AppSkin ui, in PhoneContext context)
     {
         if (outcome == 1)
         {
@@ -91,7 +91,7 @@ internal sealed class VelvetPostComposer
         return false;
     }
 
-    private void DrawPick(Rect area, VelvetUi ui, in PhoneContext context)
+    private void DrawPick(Rect area, AppSkin ui, in PhoneContext context)
     {
         AppHeader.Draw(context, Loc.T(L.Velvet.NewPost), () => closeRequested = true);
         var scale = ImGuiHelpers.GlobalScale;
@@ -110,7 +110,7 @@ internal sealed class VelvetPostComposer
             if (pickerPaths.Length == 0)
             {
                 Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
-                    Loc.T(L.Velvet.NoPhotos), VelvetUi.MutedInk);
+                    Loc.T(L.Velvet.NoPhotos), AppPalettes.Velvet.MutedInk);
                 return;
             }
 
@@ -173,7 +173,7 @@ internal sealed class VelvetPostComposer
         cropStage = true;
     }
 
-    private void DrawCrop(Rect area, VelvetUi ui, in PhoneContext context)
+    private void DrawCrop(Rect area, AppSkin ui, in PhoneContext context)
     {
         AppHeader.Draw(context, Loc.T(L.Velvet.MoveAndScale), () => cropStage = false);
         var canShare = !store.Posting;
@@ -197,7 +197,7 @@ internal sealed class VelvetPostComposer
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding,
                 ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
-            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), VelvetUi.MutedInk);
+            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), AppPalettes.Velvet.MutedInk);
             return;
         }
 
@@ -211,14 +211,14 @@ internal sealed class VelvetPostComposer
             ImDrawFlags.RoundCornersAll);
         HandleCropGestures(preview, size, uv1 - uv0);
         var hintY = stage.Max.Y + 18f * scale;
-        Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Velvet.GestureHint), VelvetUi.MutedInk,
+        Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Velvet.GestureHint), AppPalettes.Velvet.MutedInk,
             0.78f);
         var trackWidth = area.Width * 0.62f;
         var trackY = hintY + 22f * scale;
         var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, trackY),
             new Vector2(area.Center.X + trackWidth * 0.5f, trackY + 4f * scale));
         var zoomNormalized = (targetZoom - WallpaperCrop.MinZoom) / (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
-        var updatedZoom = Scrubber.Draw(track, zoomNormalized, VelvetUi.Accent, VelvetUi.MutedInk, 1f);
+        var updatedZoom = Scrubber.Draw(track, zoomNormalized, AppPalettes.Velvet.Accent, AppPalettes.Velvet.MutedInk, 1f);
         targetZoom = WallpaperCrop.MinZoom + updatedZoom * (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
         var captionY = track.Max.Y + 22f * scale;
         var captionRect = new Rect(new Vector2(area.Min.X + 16f * scale, captionY),
@@ -229,7 +229,7 @@ internal sealed class VelvetPostComposer
             captionRect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(captionRect.Width - 24f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, VelvetUi.TitleInk))
+        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.TitleInk))
         {
             ImGui.InputTextWithHint("##velvetCaption", Loc.T(L.Velvet.CaptionHint), ref caption, 500);
         }
@@ -239,11 +239,11 @@ internal sealed class VelvetPostComposer
             VelvetVisibility.Label);
     }
 
-    private static float DrawChoiceRow(VelvetUi ui, Rect area, float y, string label, int[] values, int selected,
+    private static float DrawChoiceRow(AppSkin ui, Rect area, float y, string label, int[] values, int selected,
         Action<int> onSelect, Func<int, string> labelFor)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(new Vector2(area.Min.X + 18f * scale, y), label, VelvetUi.BodyInk, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(area.Min.X + 18f * scale, y), label, AppPalettes.Velvet.BodyInk, 0.9f, FontWeight.SemiBold);
         var cursorX = area.Min.X + 18f * scale;
         var chipY = y + 26f * scale;
         var chipHeight = 36f * scale;

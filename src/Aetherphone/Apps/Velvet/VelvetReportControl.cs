@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -32,7 +33,7 @@ internal sealed class VelvetReportControl
         status = string.Empty;
     }
 
-    public bool Toggle(VelvetUi ui, Vector2 center, float radius, string type, string id, string tooltip = "")
+    public bool Toggle(AppSkin ui, Vector2 center, float radius, string type, string id, string tooltip = "")
     {
         var active = targetType == type && targetId == id;
         var background = Palette.WithAlpha(ui.Theme.Danger, active ? 0.32f : 0.16f);
@@ -57,7 +58,7 @@ internal sealed class VelvetReportControl
         return active;
     }
 
-    public void Composer(VelvetUi ui, float left, float width)
+    public void Composer(AppSkin ui, float left, float width)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
@@ -84,7 +85,7 @@ internal sealed class VelvetReportControl
         ImGui.SetCursorScreenPos(new Vector2(left, origin.Y + buttonHeight + 2f * scale));
         if (status.Length > 0)
         {
-            using (ImRaii.PushColor(ImGuiCol.Text, VelvetUi.MutedInk))
+            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.MutedInk))
             {
                 ImGui.TextUnformatted(status);
             }

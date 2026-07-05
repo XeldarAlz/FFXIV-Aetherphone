@@ -2,10 +2,12 @@ using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
+using Aetherphone.Windows.Components;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Velvet;
@@ -138,7 +140,7 @@ internal sealed class VelvetStore : IDisposable
 
             var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
             notifications.Notify(new PhoneNotification("velvet", name, thread.LastMessagePreview, DateTime.Now,
-                VelvetUi.Accent, thread.OtherUserId));
+                AppPalettes.Velvet.Accent, thread.OtherUserId));
         }
 
         inboxPrimed = true;
@@ -662,6 +664,7 @@ internal sealed class VelvetStore : IDisposable
 
                     threadsLoaded = false;
                     succeeded = true;
+                    Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
                 }
             }
             catch (OperationCanceledException)
@@ -719,6 +722,7 @@ internal sealed class VelvetStore : IDisposable
 
                     threadsLoaded = false;
                     succeeded = true;
+                    Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
                 }
             }
             catch (OperationCanceledException)
@@ -792,6 +796,10 @@ internal sealed class VelvetStore : IDisposable
                     new CreateVelvetPostRequest(upload.Key, baked.Width, baked.Height, caption, tags, visibility);
                 var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
                 succeeded = created is not null;
+                if (succeeded)
+                {
+                    Plugin.Analytics.Track(AnalyticsEvents.PostCreated("velvet"));
+                }
             }
             catch (OperationCanceledException)
             {
@@ -857,6 +865,7 @@ internal sealed class VelvetStore : IDisposable
                     }
 
                     succeeded = true;
+                    Plugin.Analytics.Track(AnalyticsEvents.Comment("velvet"));
                 }
             }
             catch (OperationCanceledException)
@@ -893,6 +902,11 @@ internal sealed class VelvetStore : IDisposable
     public void ToggleReaction(VelvetPostDto post, int kind)
     {
         var target = post.MyReaction == kind ? -1 : kind;
+        if (target >= 0)
+        {
+            Plugin.Analytics.Track(AnalyticsEvents.Reaction("velvet"));
+        }
+
         RunGuarded("reaction", async token =>
         {
             var result = target < 0

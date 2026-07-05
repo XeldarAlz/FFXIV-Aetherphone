@@ -30,9 +30,9 @@ internal sealed partial class VelvetApp
             2 => Loc.T(L.Velvet.OnboardPrivacyHint),
             _ => Loc.T(L.Velvet.OnboardIntentHint),
         };
-        Typography.DrawCentered(new Vector2(centerX, content.Min.Y + 60f * scale), title, VelvetUi.TitleInk, 1.5f,
+        Typography.DrawCentered(new Vector2(centerX, content.Min.Y + 60f * scale), title, AppPalettes.Velvet.TitleInk, 1.5f,
             FontWeight.SemiBold);
-        VelvetUi.WrappedCentered(centerX, content.Min.Y + 84f * scale, hint, textWidth, VelvetUi.MutedInk, scale, 0.9f);
+        UiText.WrappedCentered(centerX, content.Min.Y + 84f * scale, hint, textWidth, AppPalettes.Velvet.MutedInk, scale, 0.9f);
         var bodyTop = content.Min.Y + 150f * scale;
         if (onboardStep == 0)
         {
@@ -118,7 +118,7 @@ internal sealed partial class VelvetApp
         using (AppSurface.Begin(new Rect(new Vector2(left, top), new Vector2(left + width, top + 120f * scale))))
         {
             ui.ToggleRow(Loc.T(L.Velvet.DiscoverableLabel), ref editDiscoverable);
-            VelvetUi.HelpText(Loc.T(L.Velvet.AppearHelp));
+            ui.HelpText(Loc.T(L.Velvet.AppearHelp));
         }
     }
 
@@ -144,14 +144,14 @@ internal sealed partial class VelvetApp
             40);
         drawList.AddCircleFilled(moonCenter, 30f * scale, ImGui.GetColorU32(new Vector4(0.95f, 0.42f, 0.60f, 0.22f)),
             36);
-        VelvetUi.Icon(moonCenter, FontAwesomeIcon.Moon.ToIconString(), new Vector4(0.99f, 0.72f, 0.82f, 1f), 1.7f);
+        AppSkin.Icon(moonCenter, FontAwesomeIcon.Moon.ToIconString(), new Vector4(0.99f, 0.72f, 0.82f, 1f), 1.7f);
         Typography.DrawCentered(new Vector2(centerX, moonCenter.Y + 66f * scale), Loc.T(L.Velvet.GateTitle),
-            VelvetUi.TitleInk, 1.7f, FontWeight.SemiBold);
+            AppPalettes.Velvet.TitleInk, 1.7f, FontWeight.SemiBold);
         var bodyTop = moonCenter.Y + 96f * scale;
-        var bodyHeight = VelvetUi.WrappedCentered(centerX, bodyTop, Loc.T(L.Velvet.GateBody), textWidth,
-            VelvetUi.BodyInk, scale, 1.05f);
-        VelvetUi.WrappedCentered(centerX, bodyTop + bodyHeight + 16f * scale, Loc.T(L.Velvet.GateDiscretion), textWidth,
-            VelvetUi.MutedInk, scale, 0.88f);
+        var bodyHeight = UiText.WrappedCentered(centerX, bodyTop, Loc.T(L.Velvet.GateBody), textWidth,
+            AppPalettes.Velvet.BodyInk, scale, 1.05f);
+        UiText.WrappedCentered(centerX, bodyTop + bodyHeight + 16f * scale, Loc.T(L.Velvet.GateDiscretion), textWidth,
+            AppPalettes.Velvet.MutedInk, scale, 0.88f);
         var buttonWidth = MathF.Min(content.Width - 48f * scale, 300f * scale);
         var buttonHeight = 46f * scale;
         var enterMin = new Vector2(centerX - buttonWidth * 0.5f, content.Max.Y - buttonHeight * 2f - 30f * scale);

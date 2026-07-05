@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Wallpapers;
 
@@ -181,6 +182,7 @@ internal sealed class AethergramStore : IDisposable
                     profilePosts = Prepend(profilePosts, created);
                 }
 
+                Plugin.Analytics.Track(AnalyticsEvents.PostCreated("aethergram"));
                 onComplete(true);
             }
             catch (Exception exception)
@@ -257,6 +259,11 @@ internal sealed class AethergramStore : IDisposable
     {
         var liked = post.MyReaction < 0;
         ReplacePost(ApplyLike(post, liked));
+        if (liked)
+        {
+            Plugin.Analytics.Track(AnalyticsEvents.Reaction("aethergram"));
+        }
+
         RunGuarded("like", async token =>
         {
             var result = liked
@@ -321,6 +328,7 @@ internal sealed class AethergramStore : IDisposable
 
                     BumpCommentCount(postId, 1);
                     succeeded = true;
+                    Plugin.Analytics.Track(AnalyticsEvents.Comment("aethergram"));
                 }
             }
             catch (OperationCanceledException)
@@ -414,6 +422,11 @@ internal sealed class AethergramStore : IDisposable
     public void SetFollow(string userId, bool follow)
     {
         UpdateUserEverywhere(userId, follow);
+        if (follow)
+        {
+            Plugin.Analytics.Track(AnalyticsEvents.Follow("aethergram"));
+        }
+
         RunGuarded("follow", async token =>
         {
             if (follow)

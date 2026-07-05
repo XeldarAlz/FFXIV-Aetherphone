@@ -36,13 +36,13 @@ internal sealed partial class VelvetApp
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         if (store.ProfileFailed)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.ComingSoon), VelvetUi.MutedInk);
+            Typography.DrawCentered(body.Center, Loc.T(L.Common.ComingSoon), AppPalettes.Velvet.MutedInk);
             return;
         }
 
         if (user is null)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetUi.MutedInk);
+            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), AppPalettes.Velvet.MutedInk);
             return;
         }
 
@@ -79,7 +79,7 @@ internal sealed partial class VelvetApp
 
         if (meta.Length > 0)
         {
-            y += DrawCenteredLine(drawList, centerX, y, meta, VelvetUi.MutedInk, 0.92f, FontWeight.Regular) +
+            y += DrawCenteredLine(drawList, centerX, y, meta, AppPalettes.Velvet.MutedInk, 0.92f, FontWeight.Regular) +
                  2f * scale;
         }
 
@@ -95,7 +95,7 @@ internal sealed partial class VelvetApp
         {
             y += 5f * scale;
             var timeLine = $"{Loc.T(L.Velvet.LocalTimeLabel)}  {SocialTimeZone.Describe(profileOffset)}";
-            y += DrawCenteredLine(drawList, centerX, y, timeLine, VelvetUi.MutedInk, 0.84f, FontWeight.Regular);
+            y += DrawCenteredLine(drawList, centerX, y, timeLine, AppPalettes.Velvet.MutedInk, 0.84f, FontWeight.Regular);
         }
 
         y += 18f * scale;
@@ -125,7 +125,7 @@ internal sealed partial class VelvetApp
         var contentWidth = width - 24f * scale;
         if (user.Intro.Length > 0)
         {
-            y += VelvetUi.WrappedCentered(centerX, y, user.Intro, contentWidth, VelvetUi.BodyInk, scale, 1.02f) +
+            y += UiText.WrappedCentered(centerX, y, user.Intro, contentWidth, AppPalettes.Velvet.BodyInk, scale, 1.02f) +
                  14f * scale;
         }
 
@@ -137,9 +137,9 @@ internal sealed partial class VelvetApp
         if (user.Limits.Length > 0)
         {
             y += 8f * scale;
-            y += DrawCenteredLine(drawList, centerX, y, Loc.T(L.Velvet.LimitsLabel), VelvetUi.MutedInk, 0.78f,
+            y += DrawCenteredLine(drawList, centerX, y, Loc.T(L.Velvet.LimitsLabel), AppPalettes.Velvet.MutedInk, 0.78f,
                 FontWeight.SemiBold) + 4f * scale;
-            y += VelvetUi.WrappedCentered(centerX, y, string.Join(", ", user.Limits), contentWidth, VelvetUi.BodyInk,
+            y += UiText.WrappedCentered(centerX, y, string.Join(", ", user.Limits), contentWidth, AppPalettes.Velvet.BodyInk,
                 scale, 0.9f);
         }
 
@@ -268,7 +268,7 @@ internal sealed partial class VelvetApp
         Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale), displayName, theme.TextStrong, 1f,
             FontWeight.SemiBold);
         var sub = $"{VelvetLookingFor.Label(profile.LookingFor)} · {profile.DataCenter}";
-        Typography.Draw(new Vector2(textLeft, origin.Y + 32f * scale), sub, VelvetUi.MutedInk, 0.82f);
+        Typography.Draw(new Vector2(textLeft, origin.Y + 32f * scale), sub, AppPalettes.Velvet.MutedInk, 0.82f);
         DrawTagsLine(new Vector2(textLeft, origin.Y + 50f * scale), profile.Tags);
         var buttonWidth = 92f * scale;
         var buttonHeight = 30f * scale;
@@ -276,7 +276,7 @@ internal sealed partial class VelvetApp
             new Rect(new Vector2(origin.X + width - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f),
                 new Vector2(origin.X + width, origin.Y + rowHeight * 0.5f + buttonHeight * 0.5f));
         DrawConnectButton(buttonRect, profile);
-        if (VelvetUi.HoverClick(origin, new Vector2(origin.X + width - buttonWidth - 6f * scale, origin.Y + rowHeight)))
+        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width - buttonWidth - 6f * scale, origin.Y + rowHeight)))
         {
             OpenProfile(profile.UserId);
         }
@@ -333,8 +333,8 @@ internal sealed partial class VelvetApp
         var displayName = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
         Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale), displayName, theme.TextStrong, 1f,
             FontWeight.SemiBold);
-        var previewColor = thread.UnreadCount > 0 ? theme.TextStrong : VelvetUi.MutedInk;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 32f * scale), VelvetUi.Truncate(thread.LastMessagePreview, 42),
+        var previewColor = thread.UnreadCount > 0 ? theme.TextStrong : AppPalettes.Velvet.MutedInk;
+        Typography.Draw(new Vector2(textLeft, origin.Y + 32f * scale), UiText.Truncate(thread.LastMessagePreview, 42),
             previewColor, 0.85f);
         if (thread.UnreadCount > 0)
         {
@@ -344,7 +344,7 @@ internal sealed partial class VelvetApp
                 0.75f, FontWeight.SemiBold);
         }
 
-        if (VelvetUi.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
+        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
         {
             OpenThreadWith(thread.OtherUserId);
         }
@@ -379,7 +379,7 @@ internal sealed partial class VelvetApp
             if (snapshot.Length == 0 && typingReveal < 0.01f)
             {
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale),
-                    store.LoadingThread ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.ThreadEmpty), VelvetUi.MutedInk);
+                    store.LoadingThread ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.ThreadEmpty), AppPalettes.Velvet.MutedInk);
             }
             else
             {
@@ -435,7 +435,7 @@ internal sealed partial class VelvetApp
             var gapY = 1f * scale;
             var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
             Typography.Draw(new Vector2(nameLeft, stackTop), name, theme.TextStrong, 1f, FontWeight.SemiBold);
-            Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), timeText, VelvetUi.MutedInk, 0.72f);
+            Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), timeText, AppPalettes.Velvet.MutedInk, 0.72f);
             textWidth = MathF.Max(nameSize.X, subSize.X);
         }
         else
@@ -446,7 +446,7 @@ internal sealed partial class VelvetApp
 
         var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
         var hitMax = new Vector2(nameLeft + textWidth, area.Min.Y + AppHeader.Height * scale);
-        if (VelvetUi.HoverClick(hitMin, hitMax))
+        if (UiInteract.HoverClick(hitMin, hitMax))
         {
             OpenProfile(threadId);
         }
@@ -732,8 +732,8 @@ internal sealed partial class VelvetApp
         {
             Squircle.Fill(drawList, imageMin, imageMax, rounding,
                 ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * alpha)));
-            VelvetUi.Icon((imageMin + imageMax) * 0.5f, FontAwesomeIcon.Image.ToIconString(),
-                Palette.WithAlpha(VelvetUi.MutedInk, alpha), 1.2f);
+            AppSkin.Icon((imageMin + imageMax) * 0.5f, FontAwesomeIcon.Image.ToIconString(),
+                Palette.WithAlpha(AppPalettes.Velvet.MutedInk, alpha), 1.2f);
         }
         else
         {
@@ -753,7 +753,7 @@ internal sealed partial class VelvetApp
         {
             var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : theme.TextStrong;
             Typography.Draw(drawList, new Vector2(imageMin.X, imageMax.Y + 4f * scale * pop),
-                VelvetUi.Truncate(caption, 60), Palette.WithAlpha(ink, alpha), 0.9f);
+                UiText.Truncate(caption, 60), Palette.WithAlpha(ink, alpha), 0.9f);
         }
 
         ImGui.SetCursorPos(new Vector2(start.X, start.Y + bubbleHeight + 6f * scale));
@@ -789,7 +789,7 @@ internal sealed partial class VelvetApp
             var dotAlpha = (0.35f + 0.5f * wave) * eased;
             var center = new Vector2(firstDotX + dot * (dotRadius * 2f + dotGap), baseY + offsetY);
             drawList.AddCircleFilled(center, dotRadius,
-                ImGui.GetColorU32(Palette.WithAlpha(VelvetUi.BodyInk, dotAlpha)), 16);
+                ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.Velvet.BodyInk, dotAlpha)), 16);
         }
 
         ImGui.SetCursorPos(start);
@@ -814,7 +814,7 @@ internal sealed partial class VelvetApp
         var pictureHovered = ImGui.IsMouseHoveringRect(pictureMin, pictureMax);
         drawList.AddCircleFilled(pictureCenter, buttonRadius,
             ImGui.GetColorU32(pictureHovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent), 24);
-        VelvetUi.Icon(pictureCenter, FontAwesomeIcon.Image.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
+        AppSkin.Icon(pictureCenter, FontAwesomeIcon.Image.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
         if (pictureHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -857,7 +857,7 @@ internal sealed partial class VelvetApp
         var canSend = messageDraft.Trim().Length > 0 && !store.Sending;
         var sendCenter = new Vector2(area.Max.X - sendWidth * 0.5f - 8f * scale, area.Center.Y);
         drawList.AddCircleFilled(sendCenter, 16f * scale, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
-        VelvetUi.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
+        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
         var sendHitRadius = 16f * scale;
         if (ImGui.IsMouseHoveringRect(sendCenter - new Vector2(sendHitRadius, sendHitRadius),
                 sendCenter + new Vector2(sendHitRadius, sendHitRadius)))
@@ -900,7 +900,7 @@ internal sealed partial class VelvetApp
         if (texture is null)
         {
             Typography.DrawCentered(new Vector2(area.Center.X, (fitMin.Y + fitMax.Y) * 0.5f), Loc.T(L.Common.Loading),
-                VelvetUi.MutedInk);
+                AppPalettes.Velvet.MutedInk);
         }
         else
         {
@@ -997,7 +997,7 @@ internal sealed partial class VelvetApp
             if (chatPickerPaths.Length == 0)
             {
                 Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
-                    Loc.T(L.Velvet.NoPhotos), VelvetUi.MutedInk);
+                    Loc.T(L.Velvet.NoPhotos), AppPalettes.Velvet.MutedInk);
                 return;
             }
 
