@@ -6,7 +6,6 @@ namespace Aetherphone.Core.Localization;
 internal sealed class StringCatalog
 {
     public static readonly StringCatalog Empty = new(new Dictionary<string, string>(0, StringComparer.Ordinal));
-
     private readonly Dictionary<string, string> entries;
 
     private StringCatalog(Dictionary<string, string> entries)
@@ -15,11 +14,8 @@ internal sealed class StringCatalog
     }
 
     public int Count => entries.Count;
-
     public IReadOnlyCollection<string> Keys => entries.Keys;
-
     public bool TryGet(string key, out string value) => entries.TryGetValue(key, out value!);
-
     public bool Contains(string key) => entries.ContainsKey(key);
 
     public static StringCatalog Load(string path)
