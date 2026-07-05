@@ -316,6 +316,7 @@ internal sealed class PhoneShell : IDisposable
     private void PaintHome(Rect screen, PhoneTheme theme)
     {
         DeviceChrome.DrawWallpaper(screen, theme);
+        DeviceChrome.DrawHomeScrim(screen, theme);
         home.Draw(ContentRect(screen, theme), theme, navigation);
     }
 

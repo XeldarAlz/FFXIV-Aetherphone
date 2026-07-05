@@ -77,6 +77,14 @@ internal static class DeviceChrome
             library.Darkness, theme.ScreenBase);
     }
 
+    public static void DrawHomeScrim(Rect screen, PhoneTheme theme)
+    {
+        const float dim = 0.11f;
+        var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
+        ImGui.GetWindowDrawList()
+            .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)), rounding);
+    }
+
     public static void DrawBrightnessVeil(Rect screen, PhoneTheme theme, float brightness)
     {
         const float MaxDim = 0.88f;

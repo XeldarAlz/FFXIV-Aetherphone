@@ -551,11 +551,12 @@ internal sealed class HomeScreen
 
         if (tile.IsFolder)
         {
-            HomeTileView.DrawFolder(center, m.IconSize, tile, theme, drawScale, labelAlpha, Loc.T(L.Home.NewFolder));
+            HomeTileView.DrawFolder(center, m.IconSize, tile, theme, drawScale, labelAlpha, Loc.T(L.Home.NewFolder),
+                m.ColumnWidth);
         }
         else
         {
-            HomeTileView.DrawApp(center, m.IconSize, tile.App!, theme, drawScale, labelAlpha);
+            HomeTileView.DrawApp(center, m.IconSize, tile.App!, theme, drawScale, labelAlpha, m.ColumnWidth);
         }
     }
 
@@ -702,7 +703,7 @@ internal sealed class HomeScreen
             var center = new Vector2(panel.Min.X + pad + (column + 0.5f) * cellWidth,
                 gridTop + (row + 0.5f) * cellHeight);
             var app = folder.Apps[index];
-            HomeTileView.DrawApp(center, iconSize, app, theme, 1f, 1f);
+            HomeTileView.DrawApp(center, iconSize, app, theme, 1f, 1f, cellWidth);
             var half = iconSize * 0.5f;
             var iconRect = new Rect(new Vector2(center.X - half, center.Y - half),
                 new Vector2(center.X + half, center.Y + half));
