@@ -272,6 +272,19 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0860 =
+        {
+            new("changelog.r0860.0", "Added Sign in with XIVAuth so you can link your account by approving in your browser instead of pasting a Lodestone code"),
+            new("changelog.r0860.1", "Overhauled Games and every mini-game with arcade-style polish, screen shake, and juicier feedback"),
+            new("changelog.r0860.2", "Redesigned Control Center to open with a tap and show your notifications right inside it"),
+            new("changelog.r0860.3", "Home screen app icons and labels now stay legible over any wallpaper"),
+            new("changelog.r0860.4", "Long posts and messages now wrap neatly as you type in every text box"),
+            new("changelog.r0860.5", "You can now attach up to five photos to your feedback"),
+            new("changelog.r0860.6", "Chirper now shows every reaction on a post instead of only the first three"),
+            new("changelog.r0860.7", "Your own linkshell and cross-world linkshell messages now line up on the right, like direct messages"),
+            new("changelog.r0860.8", "The unread badge on app icons now stays readable on any tile color"),
+        };
+
         public static readonly LocString[] Release0851 =
         {
             new("changelog.r0851.0", "Fixed an issue where the preview of a long ringtone or notification sound kept playing after leaving Settings"),
