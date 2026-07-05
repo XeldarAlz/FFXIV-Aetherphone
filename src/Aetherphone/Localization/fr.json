@@ -326,6 +326,8 @@
   "changelog.r0850.24": "Le téléphone mémorise désormais sa position et conserve des emplacements distincts pour le téléphone complet et la vue réduite",
   "changelog.r0850.25": "Velvet vous informe désormais des nouvelles demandes de connexion et lorsque les vôtres sont acceptées",
   "changelog.r0850.26": "L'entrée de la barre d'informations du serveur affiche désormais Aetherphone avec votre nombre de notifications non lues et reste toujours en anglais",
+  "changelog.r0850.27": "Passer à une langue avec un alphabet différent affiche désormais l'écran de chargement jusqu'à ce que tous ses caractères soient prêts",
+  "changelog.r0850.28": "Correction d'un problème où les messages de linkshell pouvaient parfois apparaître comme des messages directs",
   "changelog.r0840.0": "Affinage des couleurs d'accentuation dans les apps sociales pour un look plus cohérent",
   "changelog.r0840.1": "Remplacement des boutons de suppression intégrés par une boîte de dialogue de confirmation centrée",
   "changelog.r0840.2": "Ajout de la possibilité de supprimer vos propres commentaires sur les publications",

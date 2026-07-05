@@ -326,6 +326,8 @@
   "changelog.r0850.24": "Telefon artık konumunu hatırlıyor ve tam telefon ile küçültülmüş görünüm için ayrı konumlar tutuyor",
   "changelog.r0850.25": "Velvet artık yeni bağlantı isteklerinde ve isteklerin kabul edildiğinde seni bilgilendiriyor",
   "changelog.r0850.26": "Sunucu bilgi çubuğundaki öğe artık okunmamış bildirim sayınla birlikte Aetherphone gösteriyor ve her zaman İngilizce kalıyor",
+  "changelog.r0850.27": "Farklı bir alfabeye sahip bir dile geçtiğinizde artık tüm karakterleri hazır olana kadar yükleme ekranı gösteriliyor",
+  "changelog.r0850.28": "Linkshell mesajlarının bazen doğrudan mesaj olarak görünmesine neden olan bir sorun giderildi",
   "changelog.r0840.0": "Sosyal uygulamalarda daha uyumlu bir görünüm için vurgu renkleri iyileştirildi",
   "changelog.r0840.1": "Satır içi silme düğmeleri, ortalanmış bir onay penceresi ile değiştirildi",
   "changelog.r0840.2": "Gönderilerdeki kendi yorumlarınızı silme özelliği eklendi",

@@ -301,6 +301,8 @@ internal static class L
             new("changelog.r0850.24", "The phone now remembers its position, keeping separate spots for the full phone and the minimized view"),
             new("changelog.r0850.25", "Velvet now alerts you to new connection requests and when yours are accepted"),
             new("changelog.r0850.26", "The server info bar entry now shows Aetherphone with your unread notification count and always stays in English"),
+            new("changelog.r0850.27", "Switching to a language with a different alphabet now shows the loading screen until all its characters are ready"),
+            new("changelog.r0850.28", "Fixed an issue where linkshell messages could sometimes appear as direct messages"),
         };
 
         public static readonly LocString[] Release0840 =

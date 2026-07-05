@@ -56,9 +56,9 @@ internal static class ProgressRing
     }
 
     public static void Sweep(Vector2 c, float r, float thickness, Vector4 col, double periodMs, float arcLen,
-        float headAlpha)
+        float headAlpha, ImDrawListPtr? drawList = null)
     {
-        var dl = ImGui.GetWindowDrawList();
+        var dl = drawList ?? ImGui.GetWindowDrawList();
         var head = Top + Styling.Phase(periodMs) * MathF.PI * 2f;
         var tail = head - arcLen;
         var steps = Math.Max(10, (int)MathF.Ceiling(arcLen / (MathF.PI / 36f)));

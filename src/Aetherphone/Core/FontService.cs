@@ -102,9 +102,9 @@ internal sealed class FontService : IDisposable
         Plugin.Loading.Show();
         var previous = handles;
         glyphRanges = next;
-        handles = Build();
         using (atlas.SuppressAutoRebuild())
         {
+            handles = Build();
             DisposeHandles(previous);
         }
     }

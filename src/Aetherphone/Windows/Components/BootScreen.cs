@@ -4,7 +4,6 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -27,7 +26,7 @@ internal static class BootScreen
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rounding = theme.ScreenRounding * scale;
-        var dl = ImGui.GetWindowDrawList();
+        var dl = ImGui.GetForegroundDrawList();
         if (boot.BackdropAlpha > 0f)
         {
             DrawBackdrop(dl, screen, theme, boot.BackdropAlpha, rounding);
@@ -35,17 +34,17 @@ internal static class BootScreen
 
         if (boot.EmblemAlpha > 0f || boot.EmblemRingAlpha > 0f)
         {
-            DrawEmblem(screen.Center, theme, boot, scale);
+            DrawEmblem(dl, screen.Center, theme, boot, scale);
         }
 
         if (boot.EmblemAlpha > 0.01f)
         {
-            DrawLoadingCaption(screen.Center, theme, boot, scale);
+            DrawLoadingCaption(dl, screen.Center, theme, boot, scale);
         }
 
         if (boot.Greeting is not null && boot.GreetingAlpha > 0f)
         {
-            DrawGreeting(screen.Center, theme, boot, scale);
+            DrawGreeting(dl, screen.Center, theme, boot, scale);
         }
     }
 
@@ -65,9 +64,8 @@ internal static class BootScreen
         dl.PopClipRect();
     }
 
-    private static void DrawEmblem(Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
+    private static void DrawEmblem(ImDrawListPtr dl, Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
     {
-        var dl = ImGui.GetWindowDrawList();
         var accent = theme.Accent;
         var alpha = boot.EmblemAlpha;
         var baseRadius = EmblemBaseRadius * scale * boot.EmblemScale;
@@ -84,18 +82,19 @@ internal static class BootScreen
         }
 
         dl.AddCircleFilled(center, baseRadius * 2.4f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.05f * alpha)), 64);
-        LoadingPulse.Spinner(center, baseRadius, accent, alpha);
+        LoadingPulse.Spinner(center, baseRadius, accent, alpha, dl);
         dl.AddCircleFilled(center, baseRadius * 0.15f, ImGui.GetColorU32(Palette.WithAlpha(Vector4.One, alpha * 0.9f)),
             32);
     }
 
-    private static void DrawLoadingCaption(Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
+    private static void DrawLoadingCaption(ImDrawListPtr dl, Vector2 center, PhoneTheme theme, BootSequence boot,
+        float scale)
     {
         var alpha = boot.EmblemAlpha;
         var baseRadius = EmblemBaseRadius * scale * boot.EmblemScale;
         var caret = center.Y + baseRadius * 2.15f + 14f * scale;
         LoadingPulse.Caption(new Vector2(center.X, caret), theme.TextStrong, theme.Accent, LoadingPulse.SafeLabel(),
-            alpha, CaptionFontScale);
+            alpha, CaptionFontScale, drawList: dl);
     }
 
     private static string greetingSource = string.Empty;
@@ -116,7 +115,7 @@ internal static class BootScreen
         return greetingGlyphs;
     }
 
-    private static void DrawGreeting(Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
+    private static void DrawGreeting(ImDrawListPtr dl, Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
     {
         var text = boot.Greeting!;
         var length = text.Length;
@@ -128,6 +127,8 @@ internal static class BootScreen
         var glyphs = GreetingGlyphs(text);
         using (Plugin.Fonts.Push(GreetingFontScale, FontWeight.Bold))
         {
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
             Span<float> widths = stackalloc float[length];
             var totalWidth = 0f;
             var height = 0f;
@@ -154,7 +155,8 @@ internal static class BootScreen
                 if (letterAlpha > 0.01f)
                 {
                     var rise = (1f - letterProgress) * LetterRisePixels * scale;
-                    DrawGlyph(glyphs[index], new Vector2(penX, baseY + rise), theme.TextStrong, letterAlpha, scale);
+                    DrawGlyph(dl, font, fontSize, glyphs[index], new Vector2(penX, baseY + rise), theme.TextStrong,
+                        letterAlpha, scale);
                 }
 
                 penX += widths[index];
@@ -162,7 +164,8 @@ internal static class BootScreen
         }
     }
 
-    private static void DrawGlyph(string glyph, Vector2 position, Vector4 color, float alpha, float scale)
+    private static void DrawGlyph(ImDrawListPtr dl, ImFontPtr font, float fontSize, string glyph, Vector2 position,
+        Vector4 color, float alpha, float scale)
     {
         var glowAlpha = alpha * 0.22f;
         if (glowAlpha > 0.01f)
@@ -170,20 +173,11 @@ internal static class BootScreen
             var glow = Palette.WithAlpha(color, glowAlpha);
             for (var index = 0; index < GlowOffsets.Length; index++)
             {
-                DrawTextRun(glyph, position + GlowOffsets[index] * (2f * scale), glow);
+                dl.AddText(font, fontSize, position + GlowOffsets[index] * (2f * scale), ImGui.GetColorU32(glow), glyph);
             }
         }
 
-        DrawTextRun(glyph, position, Palette.WithAlpha(color, alpha));
-    }
-
-    private static void DrawTextRun(string text, Vector2 position, Vector4 color)
-    {
-        ImGui.SetCursorScreenPos(position);
-        using (ImRaii.PushColor(ImGuiCol.Text, color))
-        {
-            ImGui.TextUnformatted(text);
-        }
+        dl.AddText(font, fontSize, position, ImGui.GetColorU32(Palette.WithAlpha(color, alpha)), glyph);
     }
 
     private static float Clamp01(float value) => Math.Clamp(value, 0f, 1f);

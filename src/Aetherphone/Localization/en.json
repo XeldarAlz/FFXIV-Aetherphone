@@ -254,6 +254,8 @@
   "changelog.r0850.24": "The phone now remembers its position, keeping separate spots for the full phone and the minimized view",
   "changelog.r0850.25": "Velvet now alerts you to new connection requests and when yours are accepted",
   "changelog.r0850.26": "The server info bar entry now shows Aetherphone with your unread notification count and always stays in English",
+  "changelog.r0850.27": "Switching to a language with a different alphabet now shows the loading screen until all its characters are ready",
+  "changelog.r0850.28": "Fixed an issue where linkshell messages could sometimes appear as direct messages",
   "changelog.r0840.0": "Refined accent colors across the social apps for a more cohesive look",
   "changelog.r0840.1": "Replaced inline delete buttons with a centered confirmation dialog",
   "changelog.r0840.2": "Added the ability to delete your own comments on posts",
