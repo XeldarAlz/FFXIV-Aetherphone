@@ -19,7 +19,7 @@ internal sealed class CameraApp : IPhoneApp
     private const float ReticleDuration = 1.1f;
     private const float PressDuration = 0.18f;
     private const int SquareModeIndex = 0;
-    private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto, L.Camera.ModePano };
+    private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
     public string Id => "camera";
     public string DisplayName => Loc.T(L.Apps.Camera);
     public string Glyph => "O";
@@ -29,7 +29,7 @@ internal sealed class CameraApp : IPhoneApp
     private readonly PhotoLibrary library;
     private int modeIndex = 1;
     private bool gridEnabled;
-    private bool flashEnabled;
+    private bool flashEnabled = true;
     private float shutterPress;
     private float flashAge = FlashDuration + 1f;
     private float reticleAge = ReticleDuration + 1f;
@@ -127,7 +127,11 @@ internal sealed class CameraApp : IPhoneApp
     private void Shoot(Rect captureRect)
     {
         shutterPress = 1f;
-        flashAge = 0f;
+        if (flashEnabled)
+        {
+            flashAge = 0f;
+        }
+
         if (!capture.TryCapture(captureRect, out var pixels, out var width, out var height))
         {
             return;

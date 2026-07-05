@@ -28,27 +28,33 @@ internal static class CameraChrome
         var dl = ImGui.GetWindowDrawList();
         var barMax = new Vector2(screen.Max.X, screen.Min.Y + topBarHeight * scale);
         dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint));
-        var rowCenterY = barMax.Y - Metrics.Space.Lg * scale;
-        var consumed = FlashToggle(new Vector2(screen.Min.X + 28f * scale, rowCenterY), flashEnabled, scale);
-        LiveBadge(new Vector2(screen.Max.X - 34f * scale, rowCenterY), scale);
-        return consumed;
+        var rowCenterY = barMax.Y - Metrics.Space.Md * scale;
+        return FlashChip(new Vector2(screen.Min.X + 34f * scale, rowCenterY), flashEnabled, scale);
     }
 
-    private static bool FlashToggle(Vector2 center, bool flashEnabled, float scale)
+    private static bool FlashChip(Vector2 center, bool flashEnabled, float scale)
     {
         var dl = ImGui.GetWindowDrawList();
-        var radius = 15f * scale;
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        var tint = flashEnabled ? SelectedMode : new Vector4(0.92f, 0.92f, 0.94f, 0.9f);
-        if (hovered)
+        var half = new Vector2(16f * scale, 16f * scale);
+        var min = center - half;
+        var max = center + half;
+        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var rounding = Metrics.Radius.Field * scale;
+        var fill = flashEnabled
+            ? SelectedMode
+            : new Vector4(0f, 0f, 0f, hovered ? 0.44f : 0.30f);
+        dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
+        var boltColor = flashEnabled
+            ? new Vector4(0.08f, 0.07f, 0.04f, 1f)
+            : new Vector4(0.95f, 0.95f, 0.97f, 0.95f);
+        DrawBolt(dl, center, 8.5f * scale, ImGui.GetColorU32(boltColor));
+        if (!hovered)
         {
-            dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.12f)), 24);
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            return false;
         }
 
-        DrawBolt(dl, center, 9f * scale, ImGui.GetColorU32(tint));
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private static void DrawBolt(ImDrawListPtr dl, Vector2 center, float extent, uint color)
@@ -71,21 +77,13 @@ internal static class CameraChrome
         dl.PathFillConvex(color);
     }
 
-    private static void LiveBadge(Vector2 center, float scale)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        var radius = 14f * scale;
-        dl.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(0.92f, 0.92f, 0.94f, 0.55f)), 28, 1.4f * scale);
-        Typography.DrawCentered(center, Loc.T(L.Common.Live), new Vector4(0.92f, 0.92f, 0.94f, 0.85f), 0.55f);
-    }
-
     public static void Viewfinder(Rect viewfinder, Rect captureRect, bool gridEnabled, float reticleAge,
         float reticleDuration, Vector2 reticlePos, float scale)
     {
         var dl = ImGui.GetWindowDrawList();
         if (captureRect.Min.Y > viewfinder.Min.Y + 0.5f)
         {
-            var crop = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.78f));
+            var crop = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.9f));
             dl.AddRectFilled(viewfinder.Min, new Vector2(viewfinder.Max.X, captureRect.Min.Y), crop);
             dl.AddRectFilled(new Vector2(viewfinder.Min.X, captureRect.Max.Y), viewfinder.Max, crop);
         }

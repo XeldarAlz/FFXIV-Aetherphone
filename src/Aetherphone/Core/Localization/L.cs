@@ -579,7 +579,6 @@ internal static class L
     {
         public static readonly LocString ModeSquare = new("camera.modeSquare", "SQUARE");
         public static readonly LocString ModePhoto = new("camera.modePhoto", "PHOTO");
-        public static readonly LocString ModePano = new("camera.modePano", "PANO");
     }
 
     internal static class Contacts
@@ -1425,7 +1424,7 @@ internal static class L
         public static readonly LocString GamesTitle = new("onboarding.gamesTitle", "Games");
         public static readonly LocString GamesBody = new("onboarding.gamesBody", "A whole pocket arcade, 15 mini-games from puzzles to reflex tests, and every one remembers your best score.");
         public static readonly LocString CameraTitle = new("onboarding.cameraTitle", "Camera");
-        public static readonly LocString CameraBody = new("onboarding.cameraBody", "Snap in-game photos straight from your phone. Pick square, photo or pano, frame up with the grid, and tap the shutter.");
+        public static readonly LocString CameraBody = new("onboarding.cameraBody", "Snap in-game photos straight from your phone. Pick square or photo, frame up with the grid, and tap the shutter.");
         public static readonly LocString PhotosTitle = new("onboarding.photosTitle", "Photos");
         public static readonly LocString PhotosBody = new("onboarding.photosBody", "Every shot you take lands here in a tidy gallery. Tap any photo to view it full-screen.");
         public static readonly LocString SettingsTitle = new("onboarding.settingsTitle", "Make it yours");
