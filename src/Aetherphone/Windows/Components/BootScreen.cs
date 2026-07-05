@@ -10,8 +10,9 @@ namespace Aetherphone.Windows.Components;
 
 internal static class BootScreen
 {
-    private const float GreetingFontScale = 1.9f;
-    private const float CaptionFontScale = 0.80f;
+    private const float GreetingFontScale = 2.3f;
+    private const float CaptionFontScale = 1.10f;
+    private const float EmblemBaseRadius = 44f;
     private const float LetterStaggerWindow = 0.6f;
     private const float LetterRevealSpan = 0.4f;
     private const float LetterRisePixels = 16f;
@@ -69,7 +70,7 @@ internal static class BootScreen
         var dl = ImGui.GetWindowDrawList();
         var accent = theme.Accent;
         var alpha = boot.EmblemAlpha;
-        var baseRadius = 30f * scale * boot.EmblemScale;
+        var baseRadius = EmblemBaseRadius * scale * boot.EmblemScale;
         if (boot.EmblemRingAlpha > 0f)
         {
             var ringRadius = baseRadius * (1f + BootTiming.EmblemRingExpansion * boot.EmblemRingProgress);
@@ -91,7 +92,7 @@ internal static class BootScreen
     private static void DrawLoadingCaption(Vector2 center, PhoneTheme theme, BootSequence boot, float scale)
     {
         var alpha = boot.EmblemAlpha;
-        var baseRadius = 30f * scale * boot.EmblemScale;
+        var baseRadius = EmblemBaseRadius * scale * boot.EmblemScale;
         var caret = center.Y + baseRadius * 2.15f + 14f * scale;
         LoadingPulse.Caption(new Vector2(center.X, caret), theme.TextStrong, theme.Accent, LoadingPulse.SafeLabel(),
             alpha, CaptionFontScale);
