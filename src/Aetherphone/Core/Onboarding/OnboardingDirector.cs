@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Theme;
@@ -178,15 +179,18 @@ internal sealed class OnboardingDirector
                 if (stepIndex >= sequence.Steps.Length)
                 {
                     Finish(sequence);
+                    TrackStep(sequence, sequence.Steps.Length, OnboardingAction.Complete);
                 }
                 else
                 {
                     ResetForStep();
+                    TrackStep(sequence, stepIndex, OnboardingAction.Advance);
                 }
 
                 break;
             case CoachmarkAction.Skip:
                 Complete(sequence);
+                TrackStep(sequence, stepIndex, OnboardingAction.Skip);
                 break;
         }
     }
@@ -196,6 +200,12 @@ internal sealed class OnboardingDirector
         active = sequence;
         stepIndex = 0;
         ResetForStep();
+        TrackStep(sequence, 0, OnboardingAction.Begin);
+    }
+
+    private static void TrackStep(GuideSequence sequence, int step, string action)
+    {
+        Plugin.Analytics.Track(AnalyticsEvents.OnboardingStep(sequence.Id, step, sequence.Steps.Length, action));
     }
 
     private void Complete(GuideSequence sequence)

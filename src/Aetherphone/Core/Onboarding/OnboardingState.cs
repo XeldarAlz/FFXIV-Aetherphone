@@ -8,17 +8,6 @@ internal static class OnboardingState
     public static bool HasCompleted(string id, int version) =>
         Plugin.Cfg.OnboardingCompleted.TryGetValue(id, out var stored) && stored >= version;
 
-    public static void MarkCompleted(string id, int version)
-    {
-        if (HasCompleted(id, version))
-        {
-            return;
-        }
-
-        Plugin.Cfg.OnboardingCompleted[id] = version;
-        Plugin.Cfg.Save();
-    }
-
     public static void SetEnabled(bool enabled)
     {
         if (Plugin.Cfg.TutorialsEnabled == enabled)
@@ -27,6 +16,13 @@ internal static class OnboardingState
         }
 
         Plugin.Cfg.TutorialsEnabled = enabled;
+        Plugin.Cfg.Save();
+        Plugin.Analytics.Track(Analytics.AnalyticsEvents.SettingChanged("tutorials", enabled ? "1" : "0"));
+    }
+
+    public static void MarkCompleted(string id, int version)
+    {
+        Plugin.Cfg.OnboardingCompleted[id] = version;
         Plugin.Cfg.Save();
     }
 

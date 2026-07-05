@@ -25,12 +25,15 @@ internal sealed class AnalyticsService : IAnalyticsService
 
     private int queuedCount;
 
+    public bool IsFirstRun { get; }
+
     public AnalyticsService(AnalyticsClient client, Configuration configuration, string gameRegion)
     {
         this.client = client;
         this.configuration = configuration;
         this.gameRegion = gameRegion;
         pluginVersion = AepConstants.Version;
+        IsFirstRun = string.IsNullOrEmpty(configuration.AnalyticsInstallId);
         installId = EnsureInstallId(configuration);
         sessionId = Guid.NewGuid().ToString("N");
         flushLoop = Task.Run(() => RunFlushLoopAsync(cancellation.Token));
@@ -38,7 +41,7 @@ internal sealed class AnalyticsService : IAnalyticsService
 
     public void Track(AnalyticsEvent analyticsEvent)
     {
-        if (!configuration.AnalyticsEnabled || analyticsEvent is null)
+        if (!configuration.AnalyticsEnabled || !configuration.AnalyticsConsentPrompted || analyticsEvent is null)
         {
             return;
         }
@@ -95,11 +98,11 @@ internal sealed class AnalyticsService : IAnalyticsService
 
     private async Task FlushAsync(CancellationToken token)
     {
-        var batch = new List<AnalyticsEventDto>(MaxBatch);
+        var batch = new List<PendingEvent>(MaxBatch);
         while (batch.Count < MaxBatch && queue.TryDequeue(out var pending))
         {
             Interlocked.Decrement(ref queuedCount);
-            batch.Add(new AnalyticsEventDto(pending.Type, pending.AppId, pending.ClientTime, pending.Props));
+            batch.Add(pending);
         }
 
         if (batch.Count == 0)
@@ -107,18 +110,41 @@ internal sealed class AnalyticsService : IAnalyticsService
             return;
         }
 
-        var request = new AnalyticsBatchRequest(installId, sessionId, pluginVersion, gameRegion, batch.ToArray());
+        var events = new AnalyticsEventDto[batch.Count];
+        for (var index = 0; index < batch.Count; index++)
+        {
+            var pending = batch[index];
+            events[index] = new AnalyticsEventDto(pending.Type, pending.AppId, pending.ClientTime, pending.Props);
+        }
+
+        var request = new AnalyticsBatchRequest(installId, sessionId, pluginVersion, gameRegion, events);
         try
         {
             await client.SendAsync(request, token).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
+            Requeue(batch);
             throw;
         }
         catch (Exception exception)
         {
+            Requeue(batch);
             AepLog.Warning($"Analytics flush failed: {exception.Message}");
+        }
+    }
+
+    private void Requeue(List<PendingEvent> batch)
+    {
+        for (var index = 0; index < batch.Count; index++)
+        {
+            if (Volatile.Read(ref queuedCount) >= MaxQueued)
+            {
+                return;
+            }
+
+            queue.Enqueue(batch[index]);
+            Interlocked.Increment(ref queuedCount);
         }
     }
 

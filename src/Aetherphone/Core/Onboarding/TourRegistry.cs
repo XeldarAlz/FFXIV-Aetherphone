@@ -1,3 +1,4 @@
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Core.Onboarding;
@@ -13,14 +14,14 @@ internal static class TourRegistry
             GuideStep.Page(L.Onboarding.AllInOneTitle, L.Onboarding.AllInOneBody, L.Onboarding.Continue),
             GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.GetStarted),
             GuideStep.Tap(L.Onboarding.BeginTitle, L.Onboarding.BeginBody, "home.app.skywatcher",
-                static nav => nav.Open("skywatcher")),
+                static nav => nav.Open("skywatcher", AppOpenSource.Onboarding)),
             GuideStep.Note(L.Onboarding.SkywatcherTitle, L.Onboarding.SkywatcherBody),
             GuideStep.Point(L.Onboarding.SkywatcherForecastTitle, L.Onboarding.SkywatcherForecastBody,
                 "skywatcher.forecast"),
             GuideStep.Tap(L.Onboarding.ReturnHomeTitle, L.Onboarding.ReturnHomeBody, "chrome.home",
                 static nav => nav.GoHome()),
             GuideStep.Tap(L.Onboarding.OpenTimersTitle, L.Onboarding.OpenTimersBody, "home.app.timers",
-                static nav => nav.Open("timers")),
+                static nav => nav.Open("timers", AppOpenSource.Onboarding)),
             GuideStep.Tap(L.Onboarding.GoBackTitle, L.Onboarding.GoBackBody, "chrome.back",
                 static nav => nav.Back()),
             GuideStep.Point(L.Onboarding.LockTitle, L.Onboarding.LockBody, "chrome.lock"),
@@ -103,6 +104,13 @@ internal static class TourRegistry
                 GuideStep.Note(L.Onboarding.VelvetMessagesTitle, L.Onboarding.VelvetMessagesBody),
                 GuideStep.Note(L.Onboarding.VelvetProfileTitle, L.Onboarding.VelvetProfileBody),
                 GuideStep.Note(L.Onboarding.VelvetKindTitle, L.Onboarding.VelvetKindBody),
+            });
+        Add(tours, "feedback", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.Feedback, L.Onboarding.FeedbackIntroBody),
+                GuideStep.Note(L.Onboarding.FeedbackWriteTitle, L.Onboarding.FeedbackWriteBody),
+                GuideStep.Note(L.Onboarding.FeedbackPrivacyTitle, L.Onboarding.FeedbackPrivacyBody),
             });
         return tours;
     }
