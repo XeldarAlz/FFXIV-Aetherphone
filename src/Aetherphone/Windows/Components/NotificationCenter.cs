@@ -20,6 +20,9 @@ internal sealed class NotificationCenter
     private const int MaxPeek = 2;
     private const float HeaderHeight = 28f;
     private const float ClearBarHeight = 40f;
+    private const float ListTopPad = 8f;
+    private const float EmptyHeight = 72f;
+    private const float WheelStep = 48f;
     private const float SwipeMaxReveal = 96f;
     private const float SwipeRightClamp = 10f;
     private const float SwipeCommitFraction = 0.42f;
@@ -28,6 +31,7 @@ internal sealed class NotificationCenter
     private const float SwipeSmoothTime = 0.18f;
     private readonly NotificationService notifications;
     private readonly NotificationRouter router;
+    private readonly Action? navigated;
     private readonly DragTracker drag = new();
     private readonly List<Group> groups = new();
     private readonly Dictionary<string, Group> groupLookup = new();
@@ -35,6 +39,8 @@ internal sealed class NotificationCenter
     private readonly Dictionary<string, GroupState> states = new();
     private readonly List<string> staleKeys = new();
     private readonly List<Candidate> candidates = new();
+    private Rect interactionBounds;
+    private float scrollY;
     private long dragId;
     private string dragKey = string.Empty;
     private bool dragGroup;
@@ -49,10 +55,11 @@ internal sealed class NotificationCenter
     private Spring animOffset;
     private float animTarget;
 
-    public NotificationCenter(NotificationService notifications, NotificationRouter router)
+    public NotificationCenter(NotificationService notifications, NotificationRouter router, Action? navigated = null)
     {
         this.notifications = notifications;
         this.router = router;
+        this.navigated = navigated;
     }
 
     public void Reset()
@@ -60,6 +67,7 @@ internal sealed class NotificationCenter
         drag.Cancel();
         dragNotification = null;
         swipeOffset = 0f;
+        scrollY = 0f;
         animActive = false;
         states.Clear();
         groups.Clear();
@@ -70,19 +78,43 @@ internal sealed class NotificationCenter
     public void Draw(in PhoneContext context, Rect body)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        var theme = context.Theme;
+        DrawCore(ImGui.GetWindowDrawList(), body, context.Theme, scale, 16f * scale, 1f, true);
+    }
+
+    public void DrawOverlay(ImDrawListPtr dl, Rect area, PhoneTheme theme, float opacity, bool interactive)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        DrawCore(dl, area, theme, scale, 0f, opacity, interactive);
+    }
+
+    public float MeasureHeight(float scale)
+    {
         BuildGroups();
         if (groups.Count == 0)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Notifications.Empty), theme.TextMuted);
+            return EmptyHeight * scale;
+        }
+
+        return (ClearBarHeight + ListTopPad) * scale + ContentHeight(scale);
+    }
+
+    private void DrawCore(ImDrawListPtr dl, Rect body, PhoneTheme theme, float scale, float inset, float opacity,
+        bool interactive)
+    {
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        BuildGroups();
+        if (groups.Count == 0)
+        {
+            Typography.DrawCentered(dl, body.Center, Loc.T(L.Notifications.Empty),
+                Palette.WithAlpha(theme.TextMuted, opacity));
         }
         else
         {
             var clearBar = new Rect(body.Min, new Vector2(body.Max.X, body.Min.Y + ClearBarHeight * scale));
-            DrawClearAll(clearBar, theme, scale);
-            var listArea = new Rect(new Vector2(body.Min.X, clearBar.Max.Y), body.Max);
-            DrawList(theme, listArea, scale);
+            DrawClearAll(dl, clearBar, theme, scale, opacity, interactive);
+            var listArea = new Rect(new Vector2(body.Min.X + inset, clearBar.Max.Y + ListTopPad * scale),
+                new Vector2(body.Max.X - inset, body.Max.Y));
+            DrawList(dl, theme, listArea, scale, opacity, interactive);
         }
 
         AdvanceAnimations(delta);
@@ -203,21 +235,23 @@ internal sealed class NotificationCenter
         }
     }
 
-    private void DrawClearAll(Rect bar, PhoneTheme theme, float scale)
+    private void DrawClearAll(ImDrawListPtr dl, Rect bar, PhoneTheme theme, float scale, float opacity,
+        bool interactive)
     {
-        var dl = ImGui.GetWindowDrawList();
         var label = Loc.T(L.Notifications.ClearAll);
         var textSize = Typography.Measure(label, TextStyles.FootnoteEmphasized);
         var padX = 14f * scale;
         var pillHeight = 26f * scale;
         var pillMax = new Vector2(bar.Max.X, bar.Center.Y + pillHeight * 0.5f);
         var pillMin = new Vector2(pillMax.X - textSize.X - padX * 2f, bar.Center.Y - pillHeight * 0.5f);
-        var hovered = ImGui.IsMouseHoveringRect(pillMin, pillMax);
+        var hovered = interactive && ImGui.IsMouseHoveringRect(pillMin, pillMax);
+        var fill = hovered ? theme.Surface : theme.GroupedCard;
         Squircle.Fill(dl, pillMin, pillMax, pillHeight * 0.5f,
-            ImGui.GetColorU32(hovered ? theme.Surface : theme.GroupedCard));
-        Material.EdgeSquircle(dl, pillMin, pillMax, pillHeight * 0.5f, scale);
-        Typography.Draw(dl, new Vector2(pillMin.X + padX, bar.Center.Y - textSize.Y * 0.5f), label, theme.Accent,
-            TextStyles.FootnoteEmphasized.Scale, TextStyles.FootnoteEmphasized.Weight);
+            ImGui.GetColorU32(fill with { W = fill.W * opacity }));
+        Material.EdgeSquircle(dl, pillMin, pillMax, pillHeight * 0.5f, scale, opacity);
+        Typography.Draw(dl, new Vector2(pillMin.X + padX, bar.Center.Y - textSize.Y * 0.5f), label,
+            Palette.WithAlpha(theme.Accent, opacity), TextStyles.FootnoteEmphasized.Scale,
+            TextStyles.FootnoteEmphasized.Weight);
         if (!hovered)
         {
             return;
@@ -231,51 +265,77 @@ internal sealed class NotificationCenter
         }
     }
 
-    private void DrawList(PhoneTheme theme, Rect listArea, float scale)
+    private float ContentHeight(float scale)
+    {
+        var total = 0f;
+        for (var index = 0; index < groups.Count; index++)
+        {
+            if (!states.TryGetValue(groups[index].Key, out var state))
+            {
+                continue;
+            }
+
+            total += BlockHeight(groups[index].Items.Count, state.Expand.Value, scale) + GroupGap * scale;
+        }
+
+        return total;
+    }
+
+    private void DrawList(ImDrawListPtr dl, PhoneTheme theme, Rect listArea, float scale, float opacity,
+        bool interactive)
     {
         if (drag.Active)
         {
             swipeOffset = Math.Clamp(drag.Delta.X, -SwipeMaxReveal * scale, SwipeRightClamp * scale);
         }
 
-        candidates.Clear();
-        using (AppSurface.Begin(listArea))
+        var maxScroll = MathF.Max(0f, ContentHeight(scale) - listArea.Height);
+        if (interactive && !drag.Active && listArea.Contains(ImGui.GetMousePos()))
         {
-            var dl = ImGui.GetWindowDrawList();
-            var origin = ImGui.GetCursorScreenPos();
-            var avail = ImGui.GetContentRegionAvail();
-            var width = avail.X;
-            var y = origin.Y;
-            for (var index = 0; index < groups.Count; index++)
+            var wheel = ImGui.GetIO().MouseWheel;
+            if (wheel != 0f)
             {
-                var group = groups[index];
-                if (!states.TryGetValue(group.Key, out var state))
-                {
-                    continue;
-                }
-
-                var progress = state.Expand.Value;
-                DrawGroup(dl, group, state, new Vector2(origin.X, y), width, progress, theme, scale);
-                y += BlockHeight(group.Items.Count, progress, scale) + GroupGap * scale;
+                scrollY -= wheel * WheelStep * scale;
             }
-
-            var total = y - origin.Y;
-            ImGui.SetCursorScreenPos(origin);
-            ImGui.Dummy(new Vector2(width, MathF.Max(total, avail.Y)));
         }
 
-        HandleGesture(scale);
+        scrollY = Math.Clamp(scrollY, 0f, maxScroll);
+        interactionBounds = listArea;
+        candidates.Clear();
+        dl.PushClipRect(listArea.Min, listArea.Max, true);
+        var y = listArea.Min.Y - scrollY;
+        for (var index = 0; index < groups.Count; index++)
+        {
+            var group = groups[index];
+            if (!states.TryGetValue(group.Key, out var state))
+            {
+                continue;
+            }
+
+            var progress = state.Expand.Value;
+            var blockHeight = BlockHeight(group.Items.Count, progress, scale);
+            if (y + blockHeight >= listArea.Min.Y && y <= listArea.Max.Y)
+            {
+                DrawGroup(dl, group, state, new Vector2(listArea.Min.X, y), listArea.Width, progress, theme, scale,
+                    opacity, interactive);
+            }
+
+            y += blockHeight + GroupGap * scale;
+        }
+
+        dl.PopClipRect();
+        HandleGesture(scale, interactive);
     }
 
     private void DrawGroup(ImDrawListPtr dl, Group group, GroupState state, Vector2 blockOrigin, float width,
-        float progress, PhoneTheme theme, float scale)
+        float progress, PhoneTheme theme, float scale, float opacity, bool interactive)
     {
         var itemCount = group.Items.Count;
         var cardHeight = NotificationCard.Height * scale;
         var groupTargeted = TryGroupSlide(group.Key, out var groupSlide);
         for (var index = itemCount - 1; index >= 0; index--)
         {
-            var alpha = LayoutAlpha(index, progress);
+            var alpha = LayoutAlpha(index, progress) * opacity;
             if (alpha <= 0.01f)
             {
                 continue;
@@ -287,9 +347,9 @@ internal sealed class NotificationCenter
             var rect = new Rect(new Vector2(blockOrigin.X + insetX, cardTop),
                 new Vector2(blockOrigin.X + width - insetX, cardTop + cardHeight));
             var isGroupCard = !state.Expanded && itemCount > 1 && index == 0;
-            var interactive = IsInteractive(state, index);
+            var hittable = interactive && IsInteractive(state, index);
             var slide = groupTargeted ? groupSlide : OffsetFor(group.Items[index].Id);
-            if (slide < 0f && interactive)
+            if (slide < 0f && hittable)
             {
                 DrawDeleteAffordance(dl, rect, slide, theme, scale, alpha);
             }
@@ -303,7 +363,7 @@ internal sealed class NotificationCenter
                     scale, alpha * (1f - progress));
             }
 
-            if (interactive)
+            if (hittable)
             {
                 candidates.Add(new Candidate(drawRect, isGroupCard, group.Key, group.Items[index].Id, width,
                     group.Items[index]));
@@ -314,8 +374,9 @@ internal sealed class NotificationCenter
         {
             var headerRect = new Rect(blockOrigin,
                 new Vector2(blockOrigin.X + width, blockOrigin.Y + HeaderHeight * scale));
-            DrawHeader(dl, headerRect, group.Items[0].Title, theme, scale, progress);
-            if (state.Expanded && progress > 0.5f && ImGui.IsMouseHoveringRect(headerRect.Min, headerRect.Max))
+            DrawHeader(dl, headerRect, group.Items[0].Title, theme, scale, progress * opacity);
+            if (interactive && state.Expanded && progress > 0.5f &&
+                ImGui.IsMouseHoveringRect(headerRect.Min, headerRect.Max))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -371,25 +432,29 @@ internal sealed class NotificationCenter
             color, 2f * scale);
     }
 
-    private void HandleGesture(float scale)
+    private void HandleGesture(float scale, bool interactive)
     {
-        if (!drag.Active)
+        if (!drag.Active && interactive)
         {
-            for (var index = 0; index < candidates.Count; index++)
+            var mouse = ImGui.GetMousePos();
+            if (interactionBounds.Contains(mouse))
             {
-                var candidate = candidates[index];
-                if (!candidate.Rect.Contains(ImGui.GetMousePos()))
+                for (var index = 0; index < candidates.Count; index++)
                 {
-                    continue;
-                }
+                    var candidate = candidates[index];
+                    if (!candidate.Rect.Contains(mouse))
+                    {
+                        continue;
+                    }
 
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (drag.Begin(candidate.Rect))
-                {
-                    BeginDrag(candidate);
-                }
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                    if (drag.Begin(candidate.Rect))
+                    {
+                        BeginDrag(candidate);
+                    }
 
-                break;
+                    break;
+                }
             }
         }
 
@@ -452,6 +517,7 @@ internal sealed class NotificationCenter
         if (dragNotification is { } notification)
         {
             router.Open(notification);
+            navigated?.Invoke();
         }
     }
 

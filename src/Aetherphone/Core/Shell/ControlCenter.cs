@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Input;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
@@ -21,31 +22,41 @@ internal sealed class ControlCenter
     private const float CommitFraction = 0.30f;
     private const float FlingVelocity = 900f;
     private const float TapSlop = 6f;
+    private const float TopBandHeight = 44f;
+    private const float DismissBandHeight = 48f;
+    private const float SwatchRadius = 9f;
+    private const float SwatchSpacing = 27f;
+    private const float NowPlayingHeight = 78f;
     private readonly ThemeProvider themes;
     private readonly PlaybackHub playback;
     private readonly CallHub calls;
     private readonly INavigator navigation;
+    private readonly NotificationService notifications;
+    private readonly NotificationCenter notificationCenter;
     private readonly DragTracker drag = new();
     private Spring offset;
     private float target;
     private bool open;
 
-    public ControlCenter(ThemeProvider themes, PlaybackHub playback, CallHub calls, INavigator navigation)
+    public ControlCenter(ThemeProvider themes, PlaybackHub playback, CallHub calls, INavigator navigation,
+        NotificationService notifications, NotificationRouter router)
     {
         this.themes = themes;
         this.playback = playback;
         this.calls = calls;
         this.navigation = navigation;
+        this.notifications = notifications;
+        notificationCenter = new NotificationCenter(notifications, router, Dismiss);
     }
 
-    public bool IsActive => open || drag.Active || offset.Value > 0.01f;
+    public bool IsActive => open || offset.Value > 0.01f;
     public bool CapturesPointer => IsActive;
 
     public void Draw(Rect screen, PhoneTheme theme, float delta, bool gesturesEnabled)
     {
         HandleGesture(screen, delta, gesturesEnabled);
         var eased = offset.Value;
-        if (eased <= 0.001f && !drag.Active)
+        if (eased <= 0.001f)
         {
             return;
         }
@@ -80,20 +91,71 @@ internal sealed class ControlCenter
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.35f * opacity)), 2.5f * scale);
         Typography.Draw(dl, new Vector2(left, panelTop + 28f * scale), Loc.T(L.ControlCenter.Title),
             Palette.WithAlpha(theme.TextStrong, opacity), 1.05f, FontWeight.Bold);
+        DrawAccentRow(dl, right, panelTop + 38f * scale, scale, opacity, interactive);
         var gap = 12f * scale;
-        var toggleTop = panelTop + 62f * scale;
-        var toggleWidth = (width - 2f * gap) / 3f;
-        var toggleHeight = MathF.Min(toggleWidth * 0.94f, 84f * scale);
-        var row2Top = toggleTop + toggleHeight + gap;
+        var controlsTop = panelTop + 64f * scale;
+        var tileWidth = (width - 3f * gap) * 0.27f;
+        var sliderWidth = (width - 3f * gap) * 0.23f;
+        var tileHeight = MathF.Min(tileWidth * 0.94f, 84f * scale);
+        var gridHeight = 3f * tileHeight + 2f * gap;
+        DrawToggles(dl, theme, left, controlsTop, tileWidth, tileHeight, gap, opacity, interactive);
+        DrawSliders(dl, theme, left + 2f * tileWidth + 2f * gap, controlsTop, sliderWidth, gridHeight, gap, opacity,
+            interactive);
+        var contentBottom = controlsTop + gridHeight;
+        if (playback.IsActive)
+        {
+            var nowPlaying = new Rect(new Vector2(left, contentBottom + 14f * scale),
+                new Vector2(right, contentBottom + 14f * scale + NowPlayingHeight * scale));
+            DrawNowPlaying(nowPlaying, theme, scale, opacity, interactive);
+            contentBottom = nowPlaying.Max.Y;
+        }
 
-        var dnd = TileRect(left, toggleTop, toggleWidth, toggleHeight, 0, gap);
-        var pin = TileRect(left, toggleTop, toggleWidth, toggleHeight, 1, gap);
-        var idle = TileRect(left, toggleTop, toggleWidth, toggleHeight, 2, gap);
+        DrawNotificationSection(dl, theme, left, right, contentBottom, screen, scale, opacity, interactive);
+    }
+
+    private void DrawAccentRow(ImDrawListPtr dl, float right, float centerY, float scale, float opacity,
+        bool interactive)
+    {
+        var accents = ThemeCatalog.Accents;
+        var radius = SwatchRadius * scale;
+        var spacing = SwatchSpacing * scale;
+        var firstCenterX = right - radius - (accents.Count - 1) * spacing;
+        for (var index = 0; index < accents.Count; index++)
+        {
+            var center = new Vector2(firstCenterX + index * spacing, centerY);
+            var selected = accents[index].Name == Plugin.Cfg.AccentName;
+            if (ControlTile.Swatch(dl, center, radius, accents[index].Color, selected, opacity, interactive) &&
+                !selected)
+            {
+                Plugin.Cfg.AccentName = accents[index].Name;
+                themes.Apply(Plugin.Cfg);
+                Plugin.Cfg.Save();
+            }
+        }
+    }
+
+    private void DrawToggles(ImDrawListPtr dl, PhoneTheme theme, float left, float top, float tileWidth,
+        float tileHeight, float gap, float opacity, bool interactive)
+    {
+        var row1Top = top + tileHeight + gap;
+        var row2Top = row1Top + tileHeight + gap;
+        var dnd = TileRect(left, top, tileWidth, tileHeight, 0, gap);
+        var callsTile = TileRect(left, top, tileWidth, tileHeight, 1, gap);
+        var pin = TileRect(left, row1Top, tileWidth, tileHeight, 0, gap);
+        var idle = TileRect(left, row1Top, tileWidth, tileHeight, 1, gap);
+        var cameraTile = TileRect(left, row2Top, tileWidth, tileHeight, 0, gap);
+        var settingsTile = TileRect(left, row2Top, tileWidth, tileHeight, 1, gap);
         if (ControlTile.Toggle(dl, dnd, FontAwesomeIcon.Moon, Loc.T(L.Settings.DoNotDisturb), Plugin.Cfg.DoNotDisturb,
                 theme.Accent, theme, opacity, interactive))
         {
             Plugin.Cfg.DoNotDisturb = !Plugin.Cfg.DoNotDisturb;
             Plugin.Cfg.Save();
+        }
+
+        if (ControlTile.Toggle(dl, callsTile, FontAwesomeIcon.Phone, Loc.T(L.Phone.Calls), Plugin.Cfg.CallsEnabled,
+                theme.Accent, theme, opacity, interactive))
+        {
+            calls.SetEnabled(!Plugin.Cfg.CallsEnabled);
         }
 
         if (ControlTile.Toggle(dl, pin, FontAwesomeIcon.Thumbtack, Loc.T(L.ControlCenter.LockPosition),
@@ -110,15 +172,6 @@ internal sealed class ControlCenter
             Plugin.Cfg.Save();
         }
 
-        var callsTile = TileRect(left, row2Top, toggleWidth, toggleHeight, 0, gap);
-        var cameraTile = TileRect(left, row2Top, toggleWidth, toggleHeight, 1, gap);
-        var settingsTile = TileRect(left, row2Top, toggleWidth, toggleHeight, 2, gap);
-        if (ControlTile.Toggle(dl, callsTile, FontAwesomeIcon.Phone, Loc.T(L.Phone.Calls), Plugin.Cfg.CallsEnabled,
-                theme.Accent, theme, opacity, interactive))
-        {
-            calls.SetEnabled(!Plugin.Cfg.CallsEnabled);
-        }
-
         if (ControlTile.Toggle(dl, cameraTile, FontAwesomeIcon.Camera, Loc.T(L.Apps.Camera), false, theme.Accent,
                 theme, opacity, interactive))
         {
@@ -132,36 +185,16 @@ internal sealed class ControlCenter
             navigation.Open("settings", AppOpenSource.ControlCenter);
             Dismiss();
         }
+    }
 
-        var swatchTop = row2Top + toggleHeight + 44f * scale;
-        Typography.Draw(dl, new Vector2(left, swatchTop), Loc.T(L.Settings.Appearance),
-            Palette.WithAlpha(theme.TextStrong, opacity), 1.05f, FontWeight.Bold);
-        var accents = ThemeCatalog.Accents;
-        var swatchRadius = 14f * scale;
-        var swatchY = swatchTop + 44f * scale;
-        var swatchSpacing = width / accents.Count;
-        for (var index = 0; index < accents.Count; index++)
-        {
-            var center = new Vector2(left + swatchSpacing * (index + 0.5f), swatchY);
-            var selected = accents[index].Name == Plugin.Cfg.AccentName;
-            if (ControlTile.Swatch(dl, center, swatchRadius, accents[index].Color, selected, opacity, interactive) &&
-                !selected)
-            {
-                Plugin.Cfg.AccentName = accents[index].Name;
-                themes.Apply(Plugin.Cfg);
-                Plugin.Cfg.Save();
-            }
-        }
-
-        var sliderTop = swatchY + swatchRadius + 32f * scale;
-        var sliderHeight = MathF.Min(150f * scale,
-            screen.Max.Y - 0.18f * screen.Height - sliderTop - (playback.IsActive ? 96f * scale : 8f * scale));
-        sliderHeight = MathF.Max(sliderHeight, 96f * scale);
-        var sliderWidth = (width - gap) / 2f;
-        var brightnessRect = new Rect(new Vector2(left, sliderTop),
-            new Vector2(left + sliderWidth, sliderTop + sliderHeight));
-        var volumeRect = new Rect(new Vector2(right - sliderWidth, sliderTop),
-            new Vector2(right, sliderTop + sliderHeight));
+    private void DrawSliders(ImDrawListPtr dl, PhoneTheme theme, float slidersLeft, float top, float sliderWidth,
+        float sliderHeight, float gap, float opacity, bool interactive)
+    {
+        var brightnessRect = new Rect(new Vector2(slidersLeft, top),
+            new Vector2(slidersLeft + sliderWidth, top + sliderHeight));
+        var volumeLeft = slidersLeft + sliderWidth + gap;
+        var volumeRect = new Rect(new Vector2(volumeLeft, top),
+            new Vector2(volumeLeft + sliderWidth, top + sliderHeight));
         var newBright = ControlTile.VerticalSlider(dl, brightnessRect, Plugin.Cfg.ScreenBrightness, FontAwesomeIcon.Sun,
             theme, opacity, interactive, out var brightReleased);
         if (MathF.Abs(newBright - Plugin.Cfg.ScreenBrightness) > 0.0005f)
@@ -174,26 +207,53 @@ internal sealed class ControlCenter
             Plugin.Cfg.Save();
         }
 
-        var newVolume = ControlTile.VerticalSlider(dl, volumeRect, playback.Volume, FontAwesomeIcon.VolumeUp, theme,
-            opacity, interactive, out _);
+        var volumeIcon = playback.Volume <= 0.001f ? FontAwesomeIcon.VolumeMute
+            : playback.Volume < 0.5f ? FontAwesomeIcon.VolumeDown : FontAwesomeIcon.VolumeUp;
+        var newVolume = ControlTile.VerticalSlider(dl, volumeRect, playback.Volume, volumeIcon, theme, opacity,
+            interactive, out _);
         if (MathF.Abs(newVolume - playback.Volume) > 0.0005f)
         {
             playback.Volume = newVolume;
         }
+    }
 
-        if (playback.IsActive)
+    private void DrawNotificationSection(ImDrawListPtr dl, PhoneTheme theme, float left, float right,
+        float contentBottom, Rect screen, float scale, float opacity, bool interactive)
+    {
+        var titleTop = contentBottom + 28f * scale;
+        var panelTop = titleTop + 34f * scale;
+        var panelBottom = screen.Max.Y - DismissBandHeight * scale - 8f * scale;
+        if (panelBottom - panelTop < 80f * scale)
         {
-            DrawNowPlaying(
-                new Rect(new Vector2(left, sliderTop + sliderHeight + 14f * scale),
-                    new Vector2(right, sliderTop + sliderHeight + 14f * scale + 78f * scale)), theme, scale, opacity,
-                interactive);
+            return;
         }
+
+        Typography.Draw(dl, new Vector2(left, titleTop), Loc.T(L.ControlCenter.Notifications),
+            Palette.WithAlpha(theme.TextStrong, opacity), 1.05f, FontWeight.Bold);
+        var padding = 12f * scale;
+        var rounding = 22f * scale;
+        var measured = notificationCenter.MeasureHeight(scale) + 2f * padding;
+        var panelHeight = MathF.Min(panelBottom - panelTop, measured);
+        var panel = new Rect(new Vector2(left, panelTop), new Vector2(right, panelTop + panelHeight));
+        Squircle.Fill(dl, panel.Min, panel.Max, rounding,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f * opacity)));
+        Material.EdgeSquircle(dl, panel.Min, panel.Max, rounding, scale, opacity);
+        var inner = new Rect(panel.Min + new Vector2(padding, padding), panel.Max - new Vector2(padding, padding));
+        notificationCenter.DrawOverlay(dl, inner, theme, opacity, interactive);
     }
 
     private static Rect TileRect(float left, float top, float tileWidth, float tileHeight, int column, float gap)
     {
         var columnLeft = left + column * (tileWidth + gap);
         return new Rect(new Vector2(columnLeft, top), new Vector2(columnLeft + tileWidth, top + tileHeight));
+    }
+
+    private void Open()
+    {
+        open = true;
+        target = 1f;
+        notifications.MarkAllRead();
+        notificationCenter.Reset();
     }
 
     private void Dismiss()
@@ -244,27 +304,24 @@ internal sealed class ControlCenter
         {
             if (gesturesEnabled)
             {
-                var topBand = new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 48f * scale));
+                var topBand = new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + TopBandHeight * scale));
+                if (!drag.Active && topBand.Contains(ImGui.GetMousePos()))
+                {
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                }
+
                 drag.Begin(topBand);
             }
 
-            if (drag.Active)
+            if (drag.Released(out var totalDelta, out _) && MathF.Abs(totalDelta.X) < TapSlop * scale &&
+                MathF.Abs(totalDelta.Y) < TapSlop * scale)
             {
-                var fraction = Math.Clamp(drag.Delta.Y / openDistance, 0f, 1f);
-                offset.SnapTo(fraction);
-                target = fraction;
-            }
-
-            if (drag.Released(out var totalDelta, out var velocity))
-            {
-                var commit = totalDelta.Y / openDistance > CommitFraction || velocity > fling;
-                open = commit;
-                target = commit ? 1f : 0f;
+                Open();
             }
         }
         else
         {
-            var bottomZone = new Rect(new Vector2(screen.Min.X, screen.Max.Y - height * 0.18f), screen.Max);
+            var bottomZone = new Rect(new Vector2(screen.Min.X, screen.Max.Y - DismissBandHeight * scale), screen.Max);
             drag.Begin(bottomZone);
             if (drag.Active)
             {

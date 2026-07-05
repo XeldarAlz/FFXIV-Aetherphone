@@ -52,10 +52,10 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
-        banner = new NotificationBanner(notifications, () => navigation.Current?.Id,
-            new NotificationRouter(navigation, messageLauncher, velvetLauncher));
+        var router = new NotificationRouter(navigation, messageLauncher, velvetLauncher);
+        banner = new NotificationBanner(notifications, () => navigation.Current?.Id, router);
         nowPlaying = new NowPlayingIsland(playback);
-        controlCenter = new ControlCenter(themes, playback, calls, navigation);
+        controlCenter = new ControlCenter(themes, playback, calls, navigation, notifications, router);
         minimizedView = new MinimizedPhone(notifications);
         home = new HomeScreen(apps);
         callIsland = new CallIsland(calls);
@@ -210,7 +210,8 @@ internal sealed class PhoneShell : IDisposable
             incomingOverlay.Draw(screen, theme);
         }
 
-        controlCenter.Draw(screen, theme, delta, !navigation.IsTransitioning && !director.CapturesPointer);
+        controlCenter.Draw(screen, theme, delta,
+            !navigation.IsTransitioning && !director.CapturesPointer && !islandCaptures);
         confirmOverlay.Draw(screen, theme);
         director.Draw(screen, theme);
         DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);

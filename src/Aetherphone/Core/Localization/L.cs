@@ -1051,6 +1051,7 @@ internal static class L
         public static readonly LocString LockPosition = new("controlCenter.lockPosition", "Lock Position");
         public static readonly LocString Volume = new("controlCenter.volume", "Volume");
         public static readonly LocString Brightness = new("controlCenter.brightness", "Brightness");
+        public static readonly LocString Notifications = new("controlCenter.notifications", "Notification Center");
     }
 
     internal static class Home
