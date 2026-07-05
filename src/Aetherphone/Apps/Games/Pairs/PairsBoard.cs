@@ -1,5 +1,3 @@
-using System;
-
 namespace Aetherphone.Apps.Games.Pairs;
 
 internal enum CardState

@@ -1,8 +1,6 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
-using Aetherphone.Core;
 using Aetherphone.Core.Animation;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;

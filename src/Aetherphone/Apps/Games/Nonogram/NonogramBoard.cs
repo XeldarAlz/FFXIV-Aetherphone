@@ -1,5 +1,3 @@
-using System;
-
 namespace Aetherphone.Apps.Games.Nonogram;
 
 internal enum CellMark : byte

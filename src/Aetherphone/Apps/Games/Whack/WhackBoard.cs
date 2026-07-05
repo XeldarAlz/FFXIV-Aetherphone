@@ -1,5 +1,3 @@
-using System;
-
 namespace Aetherphone.Apps.Games.Whack;
 
 internal enum WhackResult

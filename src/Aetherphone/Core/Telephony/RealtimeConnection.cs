@@ -3,7 +3,6 @@ using System.Net.WebSockets;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Telephony.Contracts;
 

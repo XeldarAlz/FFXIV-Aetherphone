@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Aetherphone.Core.Analytics;
 
 internal sealed record AnalyticsEvent(

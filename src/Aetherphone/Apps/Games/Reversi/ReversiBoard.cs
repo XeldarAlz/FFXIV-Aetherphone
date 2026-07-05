@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-
 namespace Aetherphone.Apps.Games.Reversi;
 
 internal sealed class ReversiBoard

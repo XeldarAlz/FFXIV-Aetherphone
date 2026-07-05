@@ -1,6 +1,5 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
-using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;

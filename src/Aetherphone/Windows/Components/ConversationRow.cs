@@ -1,5 +1,4 @@
 using System.Numerics;
-using Aetherphone.Core;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;

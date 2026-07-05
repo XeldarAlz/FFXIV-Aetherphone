@@ -1,7 +1,6 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Aetherphone.Core.Localization;
-using NetStone;
 using NetStone.Model.Parseables.Character;
 using NetStone.Model.Parseables.Character.ClassJob;
 using NetStone.Model.Parseables.Character.Gear;

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Aetherphone.Core;
 
 namespace Aetherphone.Apps.Games.Flap;

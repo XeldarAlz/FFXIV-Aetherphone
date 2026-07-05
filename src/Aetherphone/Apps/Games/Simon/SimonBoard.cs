@@ -1,5 +1,3 @@
-using System;
-
 namespace Aetherphone.Apps.Games.Simon;
 
 internal sealed class SimonBoard

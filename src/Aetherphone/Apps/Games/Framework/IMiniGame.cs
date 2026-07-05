@@ -1,4 +1,3 @@
-using System;
 using System.Numerics;
 
 namespace Aetherphone.Apps.Games.Framework;

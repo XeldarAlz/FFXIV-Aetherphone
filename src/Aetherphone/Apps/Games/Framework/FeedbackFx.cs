@@ -1,4 +1,3 @@
-using System;
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Windows.Components;

@@ -5,7 +5,6 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
-using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 

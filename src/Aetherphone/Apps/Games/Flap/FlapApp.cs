@@ -1,4 +1,3 @@
-using System;
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;

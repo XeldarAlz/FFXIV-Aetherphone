@@ -1,5 +1,4 @@
 using System.Runtime.InteropServices;
-using Aetherphone.Core;
 using Concentus;
 using NAudio.Wave;
 

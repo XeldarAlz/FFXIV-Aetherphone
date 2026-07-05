@@ -1,7 +1,5 @@
-using Aetherphone.Core;
 using Concentus;
 using NAudio.Wave;
-using NAudio.Wave.SampleProviders;
 
 namespace Aetherphone.Core.Telephony.Audio;
 

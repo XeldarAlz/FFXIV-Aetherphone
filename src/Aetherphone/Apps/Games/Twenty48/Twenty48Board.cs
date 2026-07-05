@@ -1,5 +1,3 @@
-using System;
-
 namespace Aetherphone.Apps.Games.Twenty48;
 
 internal enum SwipeDirection

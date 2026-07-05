@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 using YoutubeExplode;
 using YoutubeExplode.Common;
-using YoutubeExplode.Search;
 
 namespace Aetherphone.Core.Songs;
 

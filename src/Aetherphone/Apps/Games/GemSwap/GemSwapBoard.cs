@@ -1,5 +1,3 @@
-using System;
-
 namespace Aetherphone.Apps.Games.GemSwap;
 
 internal sealed class GemSwapBoard
