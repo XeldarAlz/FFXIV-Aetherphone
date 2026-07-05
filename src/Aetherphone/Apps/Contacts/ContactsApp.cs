@@ -25,7 +25,6 @@ internal sealed class ContactsApp : IPhoneApp
     public string Id => "contacts";
     public string DisplayName => Loc.T(L.Apps.Contacts);
     public string Glyph => "C";
-    public Vector4 Accent => new(0.45f, 0.55f, 0.95f, 1f);
     public int BadgeCount => 0;
     private readonly GameData gameData;
     private readonly MessageLauncher launcher;
@@ -46,7 +45,7 @@ internal sealed class ContactsApp : IPhoneApp
         this.gameData = gameData;
         this.launcher = launcher;
         this.lodestone = lodestone;
-        router = new ViewRouter<FriendEntry?>(null);
+        router = new ViewRouter<FriendEntry?>(null, Id);
         drawView = DrawView;
         backToList = () => router.Pop();
     }

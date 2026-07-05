@@ -1,6 +1,8 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
@@ -92,7 +94,7 @@ internal sealed class CallIsland
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (eased < 0.5f && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            navigation.Open("phone");
+            navigation.Open("phone", AppOpenSource.Island);
         }
     }
 
@@ -180,8 +182,8 @@ internal sealed class CallIsland
     {
         return view.State switch
         {
-            CallState.Dialing => "Calling…",
-            CallState.Connecting => "Connecting…",
+            CallState.Dialing => Loc.T(L.Phone.StatusCalling),
+            CallState.Connecting => Loc.T(L.Phone.StatusConnecting),
             CallState.Active => CallFormat.Duration(view.Seconds),
             _ => string.Empty,
         };

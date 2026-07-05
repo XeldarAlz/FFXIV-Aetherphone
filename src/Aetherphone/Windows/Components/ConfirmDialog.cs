@@ -12,7 +12,6 @@ internal static class ConfirmDialog
     private const float CardRounding = 24f;
     private const float CardPadding = 20f;
     private const float CardMaxWidth = 340f;
-    private const float CardMinWidth = 280f;
     private const float ButtonHeight = 36f;
     private const float ButtonGap = 10f;
 
@@ -26,7 +25,8 @@ internal static class ConfirmDialog
         var s = scale * cardScale;
         var drawList = ImGui.GetWindowDrawList();
         var pad = CardPadding * s;
-        var cardWidth = Math.Clamp(area.Width - 40f * scale, CardMinWidth * scale, CardMaxWidth * scale) * cardScale;
+        var available = area.Width - 32f * scale;
+        var cardWidth = MathF.Min(CardMaxWidth * scale, available) * cardScale;
         var wrapWidth = cardWidth - pad * 2f;
         Vector2 messageSize;
         using (Plugin.Fonts.Push(0.95f * cardScale, FontWeight.Medium))

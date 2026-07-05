@@ -11,14 +11,14 @@ internal static class SettingsSection
     public static void Header(string title, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        ImGui.Dummy(new Vector2(0f, 10f * scale));
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Metrics.Space.Lg * scale);
         using (Plugin.Fonts.Push(0.8f))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             ImGui.TextUnformatted(title.ToUpperInvariant());
         }
 
-        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
     }
 }

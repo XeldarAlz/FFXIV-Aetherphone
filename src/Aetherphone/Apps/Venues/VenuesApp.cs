@@ -25,7 +25,6 @@ internal sealed class VenuesApp : IPhoneApp
     public string Id => "venues";
     public string DisplayName => Loc.T(L.Apps.Venues);
     public string Glyph => "V";
-    public Vector4 Accent => new(0.93f, 0.28f, 0.55f, 1f);
     public int BadgeCount => 0;
     private readonly VenuesService venues;
     private readonly MediaCache media;
@@ -56,7 +55,7 @@ internal sealed class VenuesApp : IPhoneApp
         this.gameData = gameData;
         this.configuration = configuration;
         artwork = new ArtworkCache(textures);
-        router = new ViewRouter<VenueEvent?>(null);
+        router = new ViewRouter<VenueEvent?>(null, Id);
         drawView = DrawView;
         backToList = () => router.Pop();
     }
@@ -197,13 +196,15 @@ internal sealed class VenuesApp : IPhoneApp
 
     private void DrawEmptyState(Rect body)
     {
-        var message = venues.State switch
-        {
-            VenueState.Loading when venues.Events.Count == 0 => Loc.T(L.Common.Loading),
-            VenueState.Failed => Loc.T(L.Venues.Failed),
-            _ => Loc.T(L.Venues.NoVenues),
-        };
         var scale = ImGuiHelpers.GlobalScale;
+        if (venues.State == VenueState.Loading && venues.Events.Count == 0)
+        {
+            LoadingPulse.Draw(new Vector2(body.Center.X, body.Min.Y + 80f * scale), 13f * scale, frameTheme.Accent,
+                frameTheme.TextMuted, Loc.T(L.Common.Loading));
+            return;
+        }
+
+        var message = venues.State == VenueState.Failed ? Loc.T(L.Venues.Failed) : Loc.T(L.Venues.NoVenues);
         Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 90f * scale), message, frameTheme.TextMuted);
     }
 

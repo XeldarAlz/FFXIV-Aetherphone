@@ -23,9 +23,9 @@ internal static class ConversationRow
         var dl = ImGui.GetWindowDrawList();
         if (hovered)
         {
-            var hlMin = new Vector2(min.X + 6f * scale, min.Y + 3f * scale);
-            var hlMax = new Vector2(max.X - 6f * scale, max.Y - 3f * scale);
-            Squircle.Fill(dl, hlMin, hlMax, 12f * scale,
+            var hlMin = new Vector2(min.X + Metrics.Space.Xs * scale, min.Y + 3f * scale);
+            var hlMax = new Vector2(max.X - Metrics.Space.Xs * scale, max.Y - 3f * scale);
+            Squircle.Fill(dl, hlMin, hlMax, Metrics.Radius.Md * scale,
                 ImGui.GetColorU32(new Vector4(1f, 1f, 1f, pressed ? 0.10f : 0.05f)));
         }
 
@@ -33,7 +33,7 @@ internal static class ConversationRow
         var avatarCenter = new Vector2(min.X + 14f * scale + avatarRadius, min.Y + Height * scale * 0.5f);
         AvatarView.Draw(dl, avatarCenter, avatarRadius, theme.Accent, Initials.Of(conversation.Contact), 1.2f,
             lodestone.Avatar(conversation.Contact, conversation.World), 32);
-        var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
+        var textLeft = avatarCenter.X + avatarRadius + Metrics.Space.Md * scale;
         var textRight = max.X - 14f * scale;
         var hasUnread = conversation.Unread > 0;
         var time = NotificationCard.RelativeTime(conversation.LastActivity);

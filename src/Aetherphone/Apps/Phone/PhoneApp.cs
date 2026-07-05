@@ -18,7 +18,13 @@ namespace Aetherphone.Apps.Phone;
 
 internal sealed class PhoneApp : IPhoneApp
 {
-    private static readonly Vector4 CallGreen = new(0.20f, 0.78f, 0.35f, 1f);
+    private enum PhoneRoute : byte
+    {
+        Main,
+        AddToCall,
+    }
+
+    private static readonly Vector4 CallGreen = AppAccents.For("phone");
     private static readonly Vector4 BackdropTop = new(0.05f, 0.19f, 0.10f, 1f);
     private static readonly Vector4 BackdropBottom = new(0.02f, 0.04f, 0.03f, 1f);
     private static readonly Vector4 BloomTop = new(0.20f, 0.78f, 0.35f, 0.20f);
@@ -26,7 +32,6 @@ internal sealed class PhoneApp : IPhoneApp
     public string Id => "phone";
     public string DisplayName => Loc.T(L.Phone.Title);
     public string Glyph => "Ph";
-    public Vector4 Accent => CallGreen;
     public int BadgeCount => 0;
     private readonly CallHub calls;
     private readonly AethernetSession session;
@@ -36,7 +41,11 @@ internal sealed class PhoneApp : IPhoneApp
     private volatile UserDto[] searchResults = Array.Empty<UserDto>();
     private volatile bool searching;
     private string searchDraft = string.Empty;
-    private bool addingToCall;
+    private readonly ViewRouter<PhoneRoute> router;
+    private readonly RouterDraw<PhoneRoute> drawView;
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private CallView currentCall;
     private float clock;
 
     public PhoneApp(CallHub calls, AethernetSession session, AethernetClient client, LodestoneService lodestone)
@@ -45,39 +54,53 @@ internal sealed class PhoneApp : IPhoneApp
         this.session = session;
         this.client = client;
         this.lodestone = lodestone;
+        router = new ViewRouter<PhoneRoute>(PhoneRoute.Main, Id);
+        drawView = DrawView;
     }
 
     public void OnOpened()
     {
-        addingToCall = false;
+        router.Reset();
     }
 
     public void OnClosed()
     {
+        router.Reset();
         searchDraft = string.Empty;
         searchResults = Array.Empty<UserDto>();
-        addingToCall = false;
     }
 
     public void Draw(in PhoneContext context)
     {
         clock += MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
-        var view = calls.Snapshot();
-        var inCall = view.State is CallState.Dialing or CallState.Connecting or CallState.Active;
-        if (inCall && addingToCall && view.State == CallState.Active)
+        theme = context.Theme;
+        navigation = context.Navigation;
+        currentCall = calls.Snapshot();
+        if (router.Current == PhoneRoute.AddToCall && currentCall.State != CallState.Active)
+        {
+            router.Pop(false);
+        }
+
+        router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawView);
+    }
+
+    private void DrawView(PhoneRoute route, Rect area, int depth)
+    {
+        var context = new PhoneContext(area, theme, navigation);
+        var view = currentCall;
+        if (route == PhoneRoute.AddToCall)
         {
             DrawDialer(context, view, true);
             return;
         }
 
+        var inCall = view.State is CallState.Dialing or CallState.Connecting or CallState.Active;
         if (inCall)
         {
-            addingToCall = false;
             DrawCallScreen(context, view);
             return;
         }
 
-        addingToCall = false;
         DrawDialer(context, view, false);
     }
 
@@ -282,7 +305,7 @@ internal sealed class PhoneApp : IPhoneApp
         if (CircleButton(new Vector2(centerX + 76f * scale, controlsY), 24f * scale, FontAwesomeIcon.UserPlus,
                 Palette.WithAlpha(theme.TextStrong, 0.16f), theme.TextStrong, canAdd) && canAdd)
         {
-            addingToCall = true;
+            router.Push(PhoneRoute.AddToCall);
         }
     }
 
@@ -370,7 +393,7 @@ internal sealed class PhoneApp : IPhoneApp
         if (addMode)
         {
             calls.AddParticipant(contact);
-            addingToCall = false;
+            router.Pop();
         }
         else
         {
@@ -378,7 +401,7 @@ internal sealed class PhoneApp : IPhoneApp
         }
     }
 
-    private void StopAdding() => addingToCall = false;
+    private void StopAdding() => router.Pop();
 
     private void StartSearch(string query)
     {

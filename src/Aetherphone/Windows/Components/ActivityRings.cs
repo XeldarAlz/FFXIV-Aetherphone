@@ -26,7 +26,7 @@ internal static class ActivityRings
         var outerRadius = 64f * scale;
         var middleRadius = outerRadius - thickness - gap;
         var innerRadius = middleRadius - thickness - gap;
-        var trackColor = Styling.WithAlpha(theme.TextStrong, 0.12f);
+        var trackColor = Palette.WithAlpha(theme.TextStrong, 0.12f);
         DrawRing(center, outerRadius, thickness, jobFraction, MoveTint, trackColor);
         DrawRing(center, middleRadius, thickness, tomestoneFraction, ExerciseTint, trackColor);
         DrawRing(center, innerRadius, thickness, collectionFraction, StandTint, trackColor);

@@ -30,7 +30,7 @@ internal static class ContactRow
         var baseColor = friend.Online ? theme.Accent : theme.SurfaceMuted;
         AvatarView.Draw(dl, avatarCenter, avatarRadius, baseColor, Initials.Of(friend.Name), 0.95f,
             lodestone.Avatar(friend.Name, friend.WorldName), 32);
-        var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
+        var textLeft = avatarCenter.X + avatarRadius + Metrics.Space.Md * scale;
         var nameColor = friend.Online ? theme.TextStrong : Palette.WithAlpha(theme.TextStrong, 0.5f);
         Typography.Draw(new Vector2(textLeft, row.Min.Y + 9f * scale), friend.Name, nameColor, TextStyles.Headline);
         var subtitle = Subtitle(friend);

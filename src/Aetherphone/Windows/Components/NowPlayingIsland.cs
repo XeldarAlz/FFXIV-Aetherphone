@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Shell;
@@ -90,7 +91,7 @@ internal sealed class NowPlayingIsland
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (eased < 0.5f && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            navigation.Open("music");
+            navigation.Open("music", AppOpenSource.Island);
         }
     }
 

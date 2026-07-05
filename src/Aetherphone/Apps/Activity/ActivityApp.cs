@@ -22,7 +22,6 @@ internal sealed class ActivityApp : IPhoneApp
     public string Id => "character";
     public string DisplayName => Loc.T(L.Character.Activity);
     public string Glyph => "Ac";
-    public Vector4 Accent => ActivityRings.RingOneTint;
     public int BadgeCount => 0;
     private readonly GameData gameData;
     private readonly ITextureProvider textures;

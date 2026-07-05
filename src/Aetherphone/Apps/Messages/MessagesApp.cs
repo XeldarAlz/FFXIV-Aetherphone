@@ -38,7 +38,6 @@ internal sealed class MessagesApp : IPhoneApp
     public string Id => "messages";
     public string DisplayName => Loc.T(L.Apps.Messages);
     public string Glyph => "M";
-    public Vector4 Accent => new(0.30f, 0.78f, 0.42f, 1f);
     public int BadgeCount => store.TotalUnread() + linkshells.TotalUnread();
     private readonly MessageStore store;
     private readonly LinkshellStore linkshells;
@@ -70,7 +69,7 @@ internal sealed class MessagesApp : IPhoneApp
         this.linkshellBridge = linkshellBridge;
         this.launcher = launcher;
         this.lodestone = lodestone;
-        router = new ViewRouter<MessagesView>(default);
+        router = new ViewRouter<MessagesView>(default, Id);
         drawView = DrawView;
         backToList = () => router.Pop();
     }

@@ -19,11 +19,10 @@ internal sealed class FishingApp : IPhoneApp
     private const float RefreshIntervalSeconds = 5f;
     private const float UpcomingRowHeight = 64f;
     private const double VoyagePeriodSeconds = 7200;
-    private static readonly Vector4 OceanTint = new(0.24f, 0.62f, 0.86f, 1f);
+    private static readonly Vector4 OceanTint = AppAccents.For("fishing");
     public string Id => "fishing";
     public string DisplayName => Loc.T(L.Apps.Fishing);
     public string Glyph => "F";
-    public Vector4 Accent => OceanTint;
     public int BadgeCount => 0;
     private readonly OceanVoyageSlot[] voyages = new OceanVoyageSlot[VoyageCount];
     private float sinceRefresh;
@@ -78,7 +77,7 @@ internal sealed class FishingApp : IPhoneApp
             : 1f - (float)Math.Clamp(remaining.TotalSeconds / VoyagePeriodSeconds, 0f, 1f);
         var tint = current.BoardingNow ? theme.Accent : OceanTint;
         ProgressRing.Glow(ringCenter, radius, tint, 0.45f + 0.30f * Styling.Pulse(Styling.PulseBreath));
-        ProgressRing.Track(ringCenter, radius, thickness, Styling.WithAlpha(theme.TextStrong, 0.10f));
+        ProgressRing.Track(ringCenter, radius, thickness, Palette.WithAlpha(theme.TextStrong, 0.10f));
         ProgressRing.Fill(ringCenter, radius, thickness, fraction, tint);
         ProgressRing.CenterIcon(ringCenter, FontAwesomeIcon.Fish, tint, radius * 0.52f);
         var status = current.BoardingNow ? Loc.T(L.Fishing.NowBoarding) : Loc.T(L.Fishing.NextVoyage);

@@ -20,6 +20,8 @@ internal sealed class NavigationStack : INavigator
     private IPhoneApp? motionOver;
     private IPhoneApp? motionUnder;
     private ShellMotion motion = ShellMotion.None;
+    private DateTime appOpenedAt;
+    private string? trackedAppId;
 
     public NavigationStack(IReadOnlyList<IPhoneApp> apps)
     {
@@ -57,7 +59,9 @@ internal sealed class NavigationStack : INavigator
         FinalizeMotion();
     }
 
-    public void OpenApp(IPhoneApp app)
+    public void OpenApp(IPhoneApp app) => OpenApp(app, AppOpenSource.Home);
+
+    public void OpenApp(IPhoneApp app, string source)
     {
         if (motion == ShellMotion.None && ReferenceEquals(current, app))
         {
@@ -80,12 +84,16 @@ internal sealed class NavigationStack : INavigator
 
         current = app;
         app.OnOpened();
-        Plugin.Analytics.Track(AnalyticsEvents.AppOpen(app.Id));
+        appOpenedAt = DateTime.UtcNow;
+        trackedAppId = app.Id;
+        Plugin.Analytics.Track(AnalyticsEvents.AppOpen(app.Id, source));
         AppOpened?.Invoke(app.Id);
         BeginPresent(app, under);
     }
 
-    public void Open(string appId)
+    public void Open(string appId) => Open(appId, AppOpenSource.CrossApp);
+
+    public void Open(string appId, string source)
     {
         if (current?.Id == appId && motion == ShellMotion.None)
         {
@@ -96,7 +104,7 @@ internal sealed class NavigationStack : INavigator
         {
             if (apps[index].Id == appId)
             {
-                OpenApp(apps[index]);
+                OpenApp(apps[index], source);
                 return;
             }
         }
@@ -202,8 +210,14 @@ internal sealed class NavigationStack : INavigator
         else if (motion == ShellMotion.Dismiss)
         {
             motionOver?.OnClosed();
+            if (trackedAppId is not null && string.Equals(trackedAppId, motionOver?.Id, StringComparison.Ordinal))
+            {
+                var durationMs = (DateTime.UtcNow - appOpenedAt).TotalMilliseconds;
+                Plugin.Analytics.Track(AnalyticsEvents.AppClose(trackedAppId, durationMs));
+                trackedAppId = null;
+            }
         }
-        
+
         motion = ShellMotion.None;
         motionOver = null;
         motionUnder = null;

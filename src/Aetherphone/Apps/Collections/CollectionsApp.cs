@@ -30,9 +30,9 @@ internal sealed class CollectionsApp : IPhoneApp
     private const float PagerHeight = 52f;
     private const int PageSize = 50;
     public string Id => "collections";
+    public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Collections);
     public string Glyph => "Co";
-    public Vector4 Accent => new(0.36f, 0.62f, 0.96f, 1f);
     public int BadgeCount => 0;
     private readonly CollectionsCatalogService catalog;
     private readonly LodestoneService lodestone;
@@ -68,7 +68,7 @@ internal sealed class CollectionsApp : IPhoneApp
         this.media = media;
         this.http = http;
         this.gameData = gameData;
-        router = new ViewRouter<CollectionView>(CollectionView.Root());
+        router = new ViewRouter<CollectionView>(CollectionView.Root(), Id);
         drawView = DrawView;
         back = () => router.Pop();
     }
@@ -891,10 +891,8 @@ internal sealed class CollectionsApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var center = body.Center;
-        ProgressRing.Sweep(new Vector2(center.X, center.Y - 6f * scale), 13f * scale, 2.4f * scale, Accent, 900.0, 1.8f,
-            0.95f);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Loading),
-            frameTheme.TextMuted, 0.9f);
+        LoadingPulse.Draw(new Vector2(center.X, center.Y - 14f * scale), 13f * scale, Accent, frameTheme.TextMuted,
+            Loc.T(L.Common.Loading));
     }
 
     private void OpenItem(CollectionCategory category, CollectionItem item) =>

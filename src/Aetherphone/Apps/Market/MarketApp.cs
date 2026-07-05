@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -18,6 +19,7 @@ namespace Aetherphone.Apps.Market;
 internal sealed class MarketApp : IPhoneApp
 {
     private const float ScopeBarHeight = 38f;
+    private const float SearchReportDelaySeconds = 1f;
     private const float SearchHeight = 46f;
     private const int MaxResults = 50;
     private const int MaxRecents = 12;
@@ -25,7 +27,6 @@ internal sealed class MarketApp : IPhoneApp
     public string Id => "market";
     public string DisplayName => Loc.T(L.Apps.Market);
     public string Glyph => "$";
-    public Vector4 Accent => new(0.92f, 0.62f, 0.18f, 1f);
     public int BadgeCount => alerts.TriggeredCount;
     private readonly MarketboardService market;
     private readonly MarketItemIndex index;
@@ -48,6 +49,9 @@ internal sealed class MarketApp : IPhoneApp
     private bool showHq;
     private string search = string.Empty;
     private string lastSearch = " ";
+    private string settledQuery = string.Empty;
+    private string reportedSearch = string.Empty;
+    private float searchSettleSeconds;
     private bool lastIndexReady;
     private uint pendingOpenId;
     private MarketItemRef lastHovered;
@@ -57,7 +61,7 @@ internal sealed class MarketApp : IPhoneApp
     private bool alertBelow = true;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
-    private readonly MarketUi ui = new();
+    private readonly AppSkin ui = new(AppPalettes.Market);
 
     public MarketApp(MarketboardService market, MarketItemIndex index, MarketAlertService alerts,
         MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration)
@@ -69,7 +73,7 @@ internal sealed class MarketApp : IPhoneApp
         this.gameData = gameData;
         this.textures = textures;
         this.configuration = configuration;
-        router = new ViewRouter<MarketView?>(null);
+        router = new ViewRouter<MarketView?>(null, Id);
         drawView = DrawView;
         backToList = () => router.Pop();
     }
@@ -139,7 +143,7 @@ internal sealed class MarketApp : IPhoneApp
 
         var screen = SceneChrome.ScreenFrom(context.Content, frameTheme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
-        router.Draw(context.Content, MarketUi.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
     private void DrawView(MarketView? view, Rect area, int depth)
@@ -152,6 +156,28 @@ internal sealed class MarketApp : IPhoneApp
         else
         {
             DrawRoot(area);
+        }
+    }
+
+    private void ReportSearch(string query)
+    {
+        if (!string.Equals(query, settledQuery, StringComparison.Ordinal))
+        {
+            settledQuery = query;
+            searchSettleSeconds = 0f;
+            return;
+        }
+
+        if (query.Length < 2 || string.Equals(query, reportedSearch, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        searchSettleSeconds += ImGui.GetIO().DeltaTime;
+        if (searchSettleSeconds >= SearchReportDelaySeconds)
+        {
+            Plugin.Analytics.Track(AnalyticsEvents.MarketSearch());
+            reportedSearch = query;
         }
     }
 
@@ -175,6 +201,7 @@ internal sealed class MarketApp : IPhoneApp
         }
 
         lastIndexReady = index.Ready;
+        ReportSearch(query);
         var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -194,7 +221,7 @@ internal sealed class MarketApp : IPhoneApp
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var displaySize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
         Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - displaySize.Y * 0.5f), DisplayName,
-            MarketUi.TitleInk, 1.3f, FontWeight.Bold);
+            AppPalettes.Market.TitleInk, 1.3f, FontWeight.Bold);
     }
 
     private void DrawBrandedScopeBar(Rect bar)
@@ -210,7 +237,7 @@ internal sealed class MarketApp : IPhoneApp
             scopeLabels.Add(MarketFormat.Clip(scopes[scopeIdx].ApiName, 11));
         }
 
-        var newIndex = ui.DrawScopeTabs("market.scope", bar, scopeLabels, scopeIndex);
+        var newIndex = MarketScopeTabs.Draw("market.scope", bar, scopeLabels, scopeIndex, AppPalettes.Market);
         if (newIndex != scopeIndex && newIndex >= 0)
         {
             SetScope(newIndex);
@@ -222,7 +249,7 @@ internal sealed class MarketApp : IPhoneApp
         var scope = CurrentScope;
         if (!index.Ready)
         {
-            CenteredHint(body, Loc.T(L.Market.LoadingItemList));
+            CenteredLoading(body, Loc.T(L.Market.LoadingItemList));
             return;
         }
 
@@ -258,7 +285,7 @@ internal sealed class MarketApp : IPhoneApp
     {
         if (!index.Ready)
         {
-            CenteredHint(body, Loc.T(L.Market.LoadingItemList));
+            CenteredLoading(body, Loc.T(L.Market.LoadingItemList));
             return;
         }
 
@@ -305,7 +332,7 @@ internal sealed class MarketApp : IPhoneApp
 
     private void DrawHoveredSection(MarketScope scope)
     {
-        MarketUi.SectionLabel(Loc.T(L.Market.HoveredInGame));
+        ui.SectionHeading(Loc.T(L.Market.HoveredInGame), 14f);
         var card = GroupCard.Begin(frameTheme, 1, MarketRowViews.ItemRowHeight);
         var price = market.AggregatedMin(lastHovered.Id, scope);
         if (MarketRowViews.ItemRow(card.NextRow(), lastHovered, price, textures, frameTheme))
@@ -318,7 +345,7 @@ internal sealed class MarketApp : IPhoneApp
 
     private void DrawAlertsSection()
     {
-        MarketUi.SectionLabel(Loc.T(L.Common.Alerts));
+        ui.SectionHeading(Loc.T(L.Common.Alerts), 14f);
         var card = GroupCard.Begin(frameTheme, alertBuffer.Count, MarketRowViews.DataRowHeight);
         for (var alertIndex = 0; alertIndex < alertBuffer.Count; alertIndex++)
         {
@@ -355,7 +382,7 @@ internal sealed class MarketApp : IPhoneApp
             return;
         }
 
-        MarketUi.SectionLabel(title);
+        ui.SectionHeading(title, 14f);
         var card = GroupCard.Begin(frameTheme, sectionBuffer.Count, MarketRowViews.ItemRowHeight);
         for (var bufferIndex = 0; bufferIndex < sectionBuffer.Count; bufferIndex++)
         {
@@ -390,8 +417,17 @@ internal sealed class MarketApp : IPhoneApp
         var bodyTop = scopeBar.Max.Y + 4f * scale;
         if (snapshot is null)
         {
-            var message = entry.State == MarketState.Failed ? Loc.T(L.Market.CouldntReach) : Loc.T(L.Common.Loading);
-            Typography.DrawCentered(new Vector2(area.Center.X, bodyTop + 60f * scale), message, frameTheme.TextMuted);
+            if (entry.State == MarketState.Failed)
+            {
+                Typography.DrawCentered(new Vector2(area.Center.X, bodyTop + 60f * scale), Loc.T(L.Market.CouldntReach),
+                    frameTheme.TextMuted);
+            }
+            else
+            {
+                LoadingPulse.Draw(new Vector2(area.Center.X, bodyTop + 46f * scale), 13f * scale,
+                    AppPalettes.Market.Accent, frameTheme.TextMuted, Loc.T(L.Common.Loading));
+            }
+
             return;
         }
 
@@ -427,7 +463,7 @@ internal sealed class MarketApp : IPhoneApp
         var iconMin = new Vector2(origin.X + leftPad, origin.Y + (cardHeight - iconSize) * 0.5f);
         var iconMax = iconMin + new Vector2(iconSize, iconSize);
         Elevation.Card(drawList, iconMin, iconMax, tileRounding, scale, 0.5f);
-        Squircle.Fill(drawList, iconMin, iconMax, tileRounding, ImGui.GetColorU32(MarketUi.Surface));
+        Squircle.Fill(drawList, iconMin, iconMax, tileRounding, ImGui.GetColorU32(AppPalettes.Market.CardFill));
         if (view.IconId != 0)
         {
             var texture = textures.GetFromGameIcon(new GameIconLookup(view.IconId)).GetWrapOrEmpty();
@@ -444,7 +480,7 @@ internal sealed class MarketApp : IPhoneApp
         var min = snapshot.Min(hq);
         var priceText = min > 0 ? MarketFormat.Gil(min) : "\u2014";
         var priceSize = Typography.Measure(priceText, 1.4f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(textX, textTop + 26f * scale), priceText, MarketUi.Accent, 1.4f,
+        Typography.Draw(new Vector2(textX, textTop + 26f * scale), priceText, AppPalettes.Market.Accent, 1.4f,
             FontWeight.SemiBold);
         var cheapestLabel = hq ? Loc.T(L.Market.CheapestHq) : Loc.T(L.Market.Cheapest);
         Typography.Draw(
@@ -482,7 +518,7 @@ internal sealed class MarketApp : IPhoneApp
     {
         var hasVendor = index.TryGet(snapshot.ItemId, out var itemRef) && itemRef.VendorPrice > 0;
         var rowCount = hasVendor ? 6 : 5;
-        MarketUi.SectionLabel(Loc.T(L.Market.Prices));
+        ui.SectionHeading(Loc.T(L.Market.Prices), 14f);
         var card = GroupCard.Begin(frameTheme, rowCount);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Market.Average), PriceOrDash(snapshot.Average(hq)), frameTheme);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Market.Highest), PriceOrDash(snapshot.Max(hq)), frameTheme);
@@ -508,7 +544,7 @@ internal sealed class MarketApp : IPhoneApp
 
     private void DrawAlertEditor(MarketView view, MarketSnapshot snapshot, bool hq, MarketScope scope)
     {
-        MarketUi.SectionLabel(Loc.T(L.Market.PriceAlert));
+        ui.SectionHeading(Loc.T(L.Market.PriceAlert), 14f);
         var card = GroupCard.Begin(frameTheme, 1);
         var existing = alerts.HasAlertFor(view.ItemId);
         var label = showAlertEditor ? Loc.T(L.Common.Cancel) :
@@ -634,7 +670,7 @@ internal sealed class MarketApp : IPhoneApp
             return;
         }
 
-        MarketUi.SectionLabel(Loc.T(L.Market.Trend));
+        ui.SectionHeading(Loc.T(L.Market.Trend), 14f);
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
@@ -650,7 +686,7 @@ internal sealed class MarketApp : IPhoneApp
             }
         }
 
-        Sparkline.Draw(graph, values, MarketUi.Accent, Palette.WithAlpha(MarketUi.Accent, 0.18f));
+        Sparkline.Draw(graph, values, AppPalettes.Market.Accent, Palette.WithAlpha(AppPalettes.Market.Accent, 0.18f));
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
@@ -659,7 +695,7 @@ internal sealed class MarketApp : IPhoneApp
     {
         var listings = snapshot.Listings;
         var count = CountListings(listings, hq);
-        MarketUi.SectionLabel(count > 0 ? Loc.T(L.Market.ListingsCount, count) : Loc.T(L.Market.Listings));
+        ui.SectionHeading(count > 0 ? Loc.T(L.Market.ListingsCount, count) : Loc.T(L.Market.Listings), 14f);
         if (count == 0)
         {
             DrawEmptyCard(hq ? Loc.T(L.Market.NoHqListings) : Loc.T(L.Market.NoListings));
@@ -687,7 +723,7 @@ internal sealed class MarketApp : IPhoneApp
     {
         var sales = snapshot.Sales;
         var count = CountQuality(sales, hq);
-        MarketUi.SectionLabel(count > 0 ? Loc.T(L.Market.RecentSalesCount, count) : Loc.T(L.Market.RecentSales));
+        ui.SectionHeading(count > 0 ? Loc.T(L.Market.RecentSalesCount, count) : Loc.T(L.Market.RecentSales), 14f);
         if (count == 0)
         {
             DrawEmptyCard(hq ? Loc.T(L.Market.NoHqSales) : Loc.T(L.Market.NoRecentSales));
@@ -789,7 +825,14 @@ internal sealed class MarketApp : IPhoneApp
     private void CenteredHint(Rect body, string message)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 70f * scale), message, MarketUi.MutedInk);
+        Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 70f * scale), message, AppPalettes.Market.MutedInk);
+    }
+
+    private void CenteredLoading(Rect body, string message)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        LoadingPulse.Draw(new Vector2(body.Center.X, body.Min.Y + 60f * scale), 13f * scale, AppPalettes.Market.Accent,
+            AppPalettes.Market.MutedInk, message);
     }
 
     private void OpenItem(MarketItemRef item)

@@ -20,7 +20,6 @@ internal sealed class SkywatcherApp : IPhoneApp
     public string Id => "skywatcher";
     public string DisplayName => Loc.T(L.Apps.Skywatcher);
     public string Glyph => "W";
-    public Vector4 Accent => new(0.28f, 0.68f, 0.92f, 1f);
     public int BadgeCount => 0;
     private readonly WeatherService weather;
     private readonly List<WeatherWindow> forecast = new();

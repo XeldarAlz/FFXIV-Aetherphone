@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 
@@ -6,6 +7,9 @@ namespace Aetherphone.Core.Dailies;
 internal static unsafe class DailiesReader
 {
     private const int WondrousTailsCellCount = 16;
+    private const uint StormSealItemId = 20;
+    private const uint SerpentSealItemId = 21;
+    private const uint FlameSealItemId = 22;
 
     public static DailyAutoStatus Read(DailyTracking tracking, int goal)
     {
@@ -124,5 +128,34 @@ internal static unsafe class DailiesReader
 
         var current = Math.Clamp((int)quests->NumLeveAllowances, 0, goal);
         return new DailyAutoStatus(true, true, current, goal);
+    }
+
+    public static TimerWindow ReadFashionReportWindow(DateTime utcNow) => GameSchedule.FashionReport(utcNow);
+
+    public static DateTime ReadNextJumboCactpot(DateTime utcNow) => GameSchedule.NextJumboCactpot(utcNow);
+
+    public static int ReadHuntSealBalance()
+    {
+        var manager = InventoryManager.Instance();
+        var playerState = PlayerState.Instance();
+        if (manager is null || playerState is null)
+        {
+            return -1;
+        }
+
+        var sealItemId = playerState->GrandCompany switch
+        {
+            1 => StormSealItemId,
+            2 => SerpentSealItemId,
+            3 => FlameSealItemId,
+            _ => 0u,
+        };
+
+        if (sealItemId == 0)
+        {
+            return -1;
+        }
+
+        return (int)manager->GetInventoryItemCount(sealItemId, false, true, true, 0);
     }
 }

@@ -77,6 +77,20 @@ internal static class DeviceChrome
             library.Darkness, theme.ScreenBase);
     }
 
+    public static void DrawBrightnessVeil(Rect screen, PhoneTheme theme, float brightness)
+    {
+        const float MaxDim = 0.88f;
+        var dim = (1f - Math.Clamp(brightness, 0f, 1f)) * MaxDim;
+        if (dim <= 0.001f)
+        {
+            return;
+        }
+
+        var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
+        ImGui.GetForegroundDrawList()
+            .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)), rounding);
+    }
+
     public static void DrawIsland(Rect island, PhoneTheme theme)
     {
         ImGui.GetWindowDrawList().AddRectFilled(island.Min, island.Max, ImGui.GetColorU32(theme.BezelOuter),

@@ -38,15 +38,15 @@ internal sealed class NewsApp : IPhoneApp
     private static readonly Vector4 StatusUpcoming = new(0.95f, 0.62f, 0.22f, 1f);
     private static readonly Vector4 StatusActive = new(0.30f, 0.78f, 0.46f, 1f);
     public string Id => "news";
+    public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.News);
     public string Glyph => "Ne";
-    public Vector4 Accent => new(0.96f, 0.44f, 0.27f, 1f);
     public int BadgeCount => 0;
     private readonly NewsService news;
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly GameData gameData;
-    private readonly NewsUi ui = new();
+    private readonly AppSkin ui = new(AppPalettes.News);
     private readonly string[] categoryLabels = new string[NewsCategories.All.Length];
     private readonly List<string> titleLines = new();
     private readonly List<string> descriptionLines = new();
@@ -150,9 +150,8 @@ internal sealed class NewsApp : IPhoneApp
             return;
         }
 
-        DrawSpinner(new Vector2(center.X, center.Y - 6f * scale), 13f * scale, Accent);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Loading), theme.TextMuted,
-            0.9f);
+        LoadingPulse.Draw(new Vector2(center.X, center.Y - 14f * scale), 13f * scale, Accent, theme.TextMuted,
+            Loc.T(L.Common.Loading));
     }
 
     private void DrawFeed(LodestoneNewsItem[] items, int count, NewsCategory category, float scale)

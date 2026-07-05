@@ -8,7 +8,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class AppHeader
 {
-    public const float Height = 42f;
+    public const float Height = Metrics.Size.Header;
 
     public static void Draw(in PhoneContext context, string title, Action? onBack = null)
     {

@@ -12,8 +12,8 @@ internal static class SettingsRow
     {
         DrawLabel(row, label, theme.TextStrong);
         var scale = ImGuiHelpers.GlobalScale;
-        var width = 46f * scale;
-        var height = 28f * scale;
+        var width = Metrics.Size.ToggleWidth * scale;
+        var height = Metrics.Size.ToggleHeight * scale;
         var min = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
         return Toggle.Draw(new Rect(min, min + new Vector2(width, height)), value, theme);
     }
@@ -36,18 +36,60 @@ internal static class SettingsRow
             DrawRowHighlight(row, theme);
         }
 
-        var tileSize = 28f * scale;
+        var tileSize = Metrics.Size.IconTile * scale;
         var tileMin = new Vector2(row.Min.X, row.Center.Y - tileSize * 0.5f);
         var tileFill = hovered ? Palette.Mix(tint, theme.TextStrong, 0.14f) : tint;
-        Squircle.Fill(dl, tileMin, tileMin + new Vector2(tileSize, tileSize), tileSize * 0.28f,
+        Squircle.Fill(dl, tileMin, tileMin + new Vector2(tileSize, tileSize), tileSize * Metrics.Radius.TileFactor,
             ImGui.GetColorU32(tileFill));
         var glyphHeight = Typography.Measure(glyph).Y;
         var glyphScale = glyphHeight > 0f ? tileSize * 0.5f / glyphHeight : 1f;
         Typography.DrawCentered(new Vector2(tileMin.X + tileSize * 0.5f, row.Center.Y), glyph, theme.TextStrong,
             glyphScale);
-        DrawLabel(new Rect(new Vector2(tileMin.X + tileSize + 12f * scale, row.Min.Y), row.Max), label,
+        DrawLabel(new Rect(new Vector2(tileMin.X + tileSize + Metrics.Space.Md * scale, row.Min.Y), row.Max), label,
             theme.TextStrong);
-        var chevronWidth = 6f * scale;
+        var chevronWidth = Metrics.Space.Xs * scale;
+        var chevronTip = new Vector2(row.Max.X, row.Center.Y);
+        DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
+        if (!string.IsNullOrEmpty(value))
+        {
+            var valueSize = Typography.Measure(value);
+            var valueX = chevronTip.X - chevronWidth - 12f * scale - valueSize.X;
+            Typography.Draw(new Vector2(valueX, row.Center.Y - valueSize.Y * 0.5f), value, theme.TextMuted);
+        }
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    public static bool AppLink(Rect row, string appId, Vector4 tint, string label, string value, PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var dl = ImGui.GetWindowDrawList();
+        if (hovered)
+        {
+            DrawRowHighlight(row, theme);
+        }
+
+        var tileSize = 30f * scale;
+        var tileMin = new Vector2(row.Min.X, row.Center.Y - tileSize * 0.5f);
+        var tileMax = tileMin + new Vector2(tileSize, tileSize);
+        var tileFill = hovered ? Palette.Mix(tint, theme.TextStrong, 0.14f) : tint;
+        Squircle.Fill(dl, tileMin, tileMax, tileSize * Metrics.Radius.TileFactor, ImGui.GetColorU32(tileFill));
+        var iconCenter = (tileMin + tileMax) * 0.5f;
+        var hole = Palette.Mix(tint, new Vector4(0f, 0f, 0f, 1f), 0.25f);
+        if (!AppIconArt.TryDraw(dl, appId, iconCenter, tileSize * 0.98f, theme.TextStrong, hole))
+        {
+            dl.AddCircleFilled(iconCenter, 4f * scale, ImGui.GetColorU32(theme.TextStrong), 16);
+        }
+
+        DrawLabel(new Rect(new Vector2(tileMax.X + Metrics.Space.Md * scale, row.Min.Y), row.Max), label,
+            theme.TextStrong);
+        var chevronWidth = Metrics.Space.Xs * scale;
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
         DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
         if (!string.IsNullOrEmpty(value))

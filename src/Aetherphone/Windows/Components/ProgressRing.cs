@@ -1,3 +1,4 @@
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -37,7 +38,7 @@ internal static class ProgressRing
         {
             var r = radius * (0.72f + i * 0.17f);
             var a = Math.Clamp(intensity * 0.05f * (5 - i), 0f, 0.5f);
-            dl.AddCircleFilled(c, r, ImGui.GetColorU32(Styling.WithAlpha(color, a)));
+            dl.AddCircleFilled(c, r, ImGui.GetColorU32(Palette.WithAlpha(color, a)));
         }
     }
 
@@ -67,11 +68,11 @@ internal static class ProgressRing
             var t = i / (float)steps;
             var a = tail + (head - tail) * t;
             var cur = c + Dir(a) * r;
-            dl.AddLine(prev, cur, ImGui.GetColorU32(Styling.WithAlpha(col, headAlpha * t * t)), thickness);
+            dl.AddLine(prev, cur, ImGui.GetColorU32(Palette.WithAlpha(col, headAlpha * t * t)), thickness);
             prev = cur;
         }
 
-        dl.AddCircleFilled(c + Dir(head) * r, thickness * 0.62f, ImGui.GetColorU32(Styling.WithAlpha(col, headAlpha)));
+        dl.AddCircleFilled(c + Dir(head) * r, thickness * 0.62f, ImGui.GetColorU32(Palette.WithAlpha(col, headAlpha)));
     }
 
     public static void CenterValue(Vector2 c, string big, string? small, Vector4 bigCol, Vector4 smallCol,
@@ -135,7 +136,7 @@ internal static class ProgressRing
                 ? Vector4.Lerp(Styling.CardBg, accent, hovered ? 0.30f : 0.15f)
                 : Styling.CardBgSoft));
         Track(c, radius, thickness,
-            enabled ? Styling.WithAlpha(accent, hovered ? 1f : 0.78f) : Styling.WithAlpha(Styling.BorderDim, 0.85f));
+            enabled ? Palette.WithAlpha(accent, hovered ? 1f : 0.78f) : Palette.WithAlpha(Styling.BorderDim, 0.85f));
         var glyph = enabled ? FontAwesomeIcon.Play : FontAwesomeIcon.Lock;
         var glyphCol = enabled ? (hovered ? Styling.TextStrong : Styling.AccentVioletSoft) : Styling.TextMuted;
         // A play triangle is visually heavier on its left edge; nudge right so it reads centred.

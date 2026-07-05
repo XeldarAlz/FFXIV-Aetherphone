@@ -22,7 +22,7 @@ internal static class CurrencyRow
         var iconMin = new Vector2(row.Min.X, row.Center.Y - iconSize * 0.5f);
         var iconMax = iconMin + new Vector2(iconSize, iconSize);
         DrawIcon(drawList, entry.IconId, iconMin, iconMax, scale, textures);
-        var textLeft = iconMax.X + 12f * scale;
+        var textLeft = iconMax.X + Metrics.Space.Md * scale;
         var gap = 10f * scale;
         var amountText = Format(entry.Amount);
         if (entry.Cap <= 0)

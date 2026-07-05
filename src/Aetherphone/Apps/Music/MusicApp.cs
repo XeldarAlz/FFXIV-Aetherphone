@@ -55,14 +55,10 @@ internal sealed class MusicApp : IPhoneApp
     };
 
     public string Id => "music";
+    public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Music);
     public string Glyph => "M";
-    public Vector4 Accent => new(0.13f, 0.75f, 0.36f, 1f);
     public int BadgeCount => 0;
-    private static readonly Vector4 BackdropTop = new(0.05f, 0.20f, 0.11f, 1f);
-    private static readonly Vector4 BackdropBottom = new(0.02f, 0.04f, 0.03f, 1f);
-    private static readonly Vector4 BloomTop = new(0.13f, 0.75f, 0.36f, 0.22f);
-    private static readonly Vector4 BloomBottom = new(0.08f, 0.38f, 0.19f, 0f);
     private readonly RadioService radio;
     private readonly SongSearchService songSearch;
     private readonly PlaybackHub playback;
@@ -70,8 +66,10 @@ internal sealed class MusicApp : IPhoneApp
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly ArtworkCache artwork;
-    private View view = View.Browse;
-    private View returnView = View.Browse;
+    private readonly ViewRouter<View> router;
+    private readonly RouterDraw<View> drawView;
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
     private int categoryIndex = -1;
     private RadioStation[] stations = Array.Empty<RadioStation>();
     private volatile bool loading;
@@ -100,10 +98,13 @@ internal sealed class MusicApp : IPhoneApp
         this.media = media;
         this.http = http;
         artwork = new ArtworkCache(textures);
+        router = new ViewRouter<View>(View.Browse, Id);
+        drawView = DrawView;
     }
 
     public void OnOpened()
     {
+        router.Reset();
         featuredIndex = (featuredIndex + 1) % FeaturedSeeds.Length;
         featuredRequested = false;
         featuredLoading = false;
@@ -113,23 +114,29 @@ internal sealed class MusicApp : IPhoneApp
 
     public void OnClosed()
     {
+        router.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
         clock += MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+        theme = context.Theme;
+        navigation = context.Navigation;
         CaptureRecent();
-        DrawBackdrop(context);
-        if (view == View.RadioNowPlaying && !playback.RadioActive)
+        var current = router.Current;
+        if ((current == View.RadioNowPlaying && !playback.RadioActive) ||
+            (current == View.SongNowPlaying && !playback.SongActive))
         {
-            view = returnView;
+            router.Pop(false);
         }
 
-        if (view == View.SongNowPlaying && !playback.SongActive)
-        {
-            view = returnView;
-        }
+        MusicArt.Backdrop(context);
+        router.Draw(context.Content, default, ImGui.GetIO().DeltaTime, drawView);
+    }
 
+    private void DrawView(View view, Rect area, int depth)
+    {
+        var context = new PhoneContext(area, theme, navigation);
         switch (view)
         {
             case View.Stations:
@@ -160,7 +167,7 @@ internal sealed class MusicApp : IPhoneApp
         var barRect = SearchBarRect(content, scale);
         if (DrawSearchBar(barRect, theme))
         {
-            view = View.Search;
+            router.Push(View.Search);
             BeginSearch(searchDraft);
         }
 
@@ -356,7 +363,8 @@ internal sealed class MusicApp : IPhoneApp
         var body = ScrollBody(content, scale);
         if (loading)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Music.TuningIn), theme.TextMuted);
+            LoadingPulse.Draw(new Vector2(body.Center.X, body.Center.Y - 14f * scale), 13f * scale, theme.Accent,
+                theme.TextMuted, Loc.T(L.Music.TuningIn));
             DrawMiniPlayer(context, scale);
             return;
         }
@@ -442,7 +450,8 @@ internal sealed class MusicApp : IPhoneApp
             new Vector2(content.Max.X, BodyBottom(content, scale)));
         if (searching)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Searching), theme.TextMuted);
+            LoadingPulse.Draw(new Vector2(body.Center.X, body.Center.Y - 14f * scale), 13f * scale, theme.Accent,
+                theme.TextMuted, Loc.T(L.Common.Searching));
             DrawMiniPlayer(context, scale);
             return;
         }
@@ -510,18 +519,6 @@ internal sealed class MusicApp : IPhoneApp
         {
             PlaySong(results, index);
         }
-    }
-
-    private static void DrawBackdrop(in PhoneContext context)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
-        var rounding = context.Theme.ScreenRounding * scale;
-        var dl = ImGui.GetWindowDrawList();
-        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding, ImGui.GetColorU32(BackdropTop),
-            ImGui.GetColorU32(BackdropBottom));
-        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding, ImGui.GetColorU32(BloomTop),
-            ImGui.GetColorU32(BloomBottom));
     }
 
     private void DrawRadioNowPlaying(in PhoneContext context)
@@ -701,8 +698,7 @@ internal sealed class MusicApp : IPhoneApp
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(
                 stopCenter - new Vector2(16f * scale, 16f * scale), stopCenter + new Vector2(16f * scale, 16f * scale)))
         {
-            returnView = view;
-            view = playback.SongActive ? View.SongNowPlaying : View.RadioNowPlaying;
+            router.Push(playback.SongActive ? View.SongNowPlaying : View.RadioNowPlaying);
         }
 
         if (hovered)
@@ -737,18 +733,7 @@ internal sealed class MusicApp : IPhoneApp
 
     private void DrawThumb(ImDrawListPtr dl, Vector2 min, Vector2 max, string url, string fallbackName, float rounding)
     {
-        var result = Thumb(url);
-        if (result.Texture is not null)
-        {
-            dl.AddImageRounded(result.Texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding,
-                ImDrawFlags.RoundCornersAll);
-            return;
-        }
-
-        var swatch = ArtGradient.FromName(fallbackName);
-        dl.AddRectFilled(min, max, ImGui.GetColorU32(swatch.Bottom), rounding);
-        dl.AddRectFilledMultiColor(min, new Vector2(max.X, (min.Y + max.Y) * 0.5f), ImGui.GetColorU32(swatch.Top),
-            ImGui.GetColorU32(swatch.Top), 0u, 0u);
+        MusicArt.Thumb(dl, min, max, Thumb(url).Texture, fallbackName, rounding);
     }
 
     private MediaResult Thumb(string url)
@@ -781,7 +766,7 @@ internal sealed class MusicApp : IPhoneApp
     private void OpenCategory(int index)
     {
         categoryIndex = index;
-        view = View.Stations;
+        router.Push(View.Stations);
         BeginFetch(RadioService.Categories[index].Tag);
     }
 
@@ -839,9 +824,8 @@ internal sealed class MusicApp : IPhoneApp
 
     private void PlaySong(Song[] list, int index)
     {
-        returnView = view;
         playback.PlaySongs(list, index);
-        view = View.SongNowPlaying;
+        router.Push(View.SongNowPlaying);
     }
 
     private void CaptureRecent()
@@ -906,10 +890,10 @@ internal sealed class MusicApp : IPhoneApp
         search?.Cancel();
         loading = false;
         searching = false;
-        view = View.Browse;
+        router.Pop();
     }
 
-    private void GoToReturnView() => view = returnView;
+    private void GoToReturnView() => router.Pop();
 
     private bool IsCurrentStation(RadioStation station)
     {

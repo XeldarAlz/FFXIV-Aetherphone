@@ -15,20 +15,34 @@ namespace Aetherphone.Apps.Dailies;
 
 internal sealed class DailiesApp : IPhoneApp
 {
-    private const float RowHeight = 60f;
     private const float TileSize = 30f;
     private const float RefreshIntervalSeconds = 2f;
-    private static readonly Vector4 DailiesTint = new(0.36f, 0.78f, 0.62f, 1f);
+    private const float ItemCardHeight = 62f;
+    private const float ItemCardRounding = 18f;
+    private const float ItemCardGap = 10f;
+    private const float ItemPadding = 14f;
+
+    private static readonly Vector4 DailiesTint = AppAccents.For("dailies");
+
     public string Id => "dailies";
+
     public string DisplayName => Loc.T(L.Apps.Dailies);
+
     public string Glyph => "D";
-    public Vector4 Accent => DailiesTint;
+
     public int BadgeCount => outstandingCount;
+
     private readonly Configuration configuration;
     private readonly DailyCheckStore checkStore;
     private readonly DailyAutoStatus[] autoStatuses;
+    private readonly AppSkin ui = new(AppPalettes.Dailies);
+
     private int outstandingCount;
     private float sinceRefresh;
+    private int cadenceIndex;
+    private TimerWindow fashionReportWindow;
+    private DateTime nextJumboCactpot;
+    private int huntSealBalance = -1;
 
     public DailiesApp(Configuration configuration)
     {
@@ -56,6 +70,7 @@ internal sealed class DailiesApp : IPhoneApp
                 ? DailyAutoStatus.Unavailable
                 : DailiesReader.Read(item.Tracking, item.Goal);
             autoStatuses[index] = status;
+
             if (IsOutstanding(item, status, utcNow))
             {
                 outstanding++;
@@ -63,6 +78,9 @@ internal sealed class DailiesApp : IPhoneApp
         }
 
         outstandingCount = outstanding;
+        fashionReportWindow = DailiesReader.ReadFashionReportWindow(utcNow);
+        nextJumboCactpot = DailiesReader.ReadNextJumboCactpot(utcNow);
+        huntSealBalance = DailiesReader.ReadHuntSealBalance();
         sinceRefresh = 0f;
     }
 
@@ -83,7 +101,6 @@ internal sealed class DailiesApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        AppHeader.Draw(context, DisplayName);
         sinceRefresh += ImGui.GetIO().DeltaTime;
         if (sinceRefresh >= RefreshIntervalSeconds)
         {
@@ -93,20 +110,53 @@ internal sealed class DailiesApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var content = context.Content;
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
         var utcNow = DateTime.UtcNow;
+
+        ui.Theme = theme;
+        var screen = SceneChrome.ScreenFrom(content, theme, scale);
+        ui.Backdrop(screen);
+        DrawHeader(content, scale);
+
+        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
+
         using (AppSurface.Begin(body))
         {
-            DrawHero(theme, utcNow, scale);
-            DrawCadence(theme, utcNow, DailyCadence.Daily, L.Dailies.DailyTasks, GameSchedule.NextDailyReset(utcNow));
-            DrawCadence(theme, utcNow, DailyCadence.Weekly, L.Dailies.WeeklyTasks,
-                GameSchedule.NextWeeklyReset(utcNow));
-            DrawNotify(theme);
+            DrawHero(utcNow, scale);
+
+            var stripRect = NextRowRect(36f, scale);
+            var cadenceLabels = new[] { Loc.T(L.Dailies.Daily), Loc.T(L.Dailies.Weekly) };
+            cadenceIndex = SegmentStrip.Draw("dailies.cadence", stripRect, cadenceLabels, cadenceIndex, theme);
+            ImGui.SetCursorScreenPos(stripRect.Min);
+            ImGui.Dummy(stripRect.Size);
+
+            var cadence = cadenceIndex == 0 ? DailyCadence.Daily : DailyCadence.Weekly;
+            var nextReset = cadence == DailyCadence.Daily
+                ? GameSchedule.NextDailyReset(utcNow)
+                : GameSchedule.NextWeeklyReset(utcNow);
+            DrawResetLine(utcNow, nextReset, scale);
+
+            DrawGroup(utcNow, cadence, autoGroup: true, scale);
+            DrawGroup(utcNow, cadence, autoGroup: false, scale);
+            DrawNotify(scale);
             ImGui.Dummy(new Vector2(0f, 10f * scale));
         }
     }
 
-    private void DrawHero(PhoneTheme theme, DateTime utcNow, float scale)
+    private void DrawHeader(Rect content, float scale)
+    {
+        var rowCenterY = content.Min.Y + AppHeader.Height * scale * 0.5f;
+        Typography.DrawCentered(new Vector2(content.Center.X, rowCenterY), DisplayName, AppPalettes.Dailies.TitleInk, 1.15f,
+            FontWeight.SemiBold);
+    }
+
+    private static Rect NextRowRect(float height, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        return new Rect(origin, origin + new Vector2(width, height * scale));
+    }
+
+    private void DrawHero(DateTime utcNow, float scale)
     {
         var items = DailyCatalog.Items;
         var tracked = 0;
@@ -126,111 +176,126 @@ internal sealed class DailiesApp : IPhoneApp
             }
         }
 
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var centerX = origin.X + width * 0.5f;
-        var ringCenter = new Vector2(centerX, origin.Y + 86f * scale);
-        var radius = 56f * scale;
-        var thickness = 7f * scale;
         var fraction = tracked == 0 ? 1f : done / (float)tracked;
-        fraction = Math.Clamp(fraction, 0f, 1f);
-        ProgressRing.Glow(ringCenter, radius, DailiesTint, 0.45f + 0.30f * Styling.Pulse(Styling.PulseBreath));
-        ProgressRing.Track(ringCenter, radius, thickness, Styling.WithAlpha(theme.TextStrong, 0.10f));
-        ProgressRing.Fill(ringCenter, radius, thickness, fraction, DailiesTint);
         var remaining = tracked - done;
+        var title = remaining <= 0 ? Loc.T(L.Dailies.AllDone) : Loc.T(L.Dailies.Remaining, remaining);
+        var sub = remaining <= 0 ? Loc.T(L.Dailies.NothingLeft) : $"{done} / {tracked}";
         if (remaining <= 0)
         {
-            ProgressRing.CenterIcon(ringCenter, FontAwesomeIcon.Star, DailiesTint, radius * 0.62f);
+            HeroRing.Draw(fraction, DailiesTint, AppPalettes.Dailies.TitleInk, AppPalettes.Dailies.MutedInk,
+                FontAwesomeIcon.Star, title, sub);
         }
         else
         {
-            ProgressRing.CenterValue(ringCenter, remaining.ToString(Loc.Culture), $"/ {tracked}", theme.TextStrong,
-                theme.TextMuted, TextStyles.LargeTitle);
+            HeroRing.Draw(fraction, DailiesTint, AppPalettes.Dailies.TitleInk, AppPalettes.Dailies.MutedInk,
+                remaining.ToString(Loc.Culture), $"/ {tracked}", title, sub);
         }
-
-        var title = remaining <= 0 ? Loc.T(L.Dailies.AllDone) : Loc.T(L.Dailies.Remaining, remaining);
-        Typography.DrawCentered(new Vector2(centerX, ringCenter.Y + radius + 26f * scale), title, theme.TextStrong,
-            TextStyles.Title3);
-        var sub = remaining <= 0 ? Loc.T(L.Dailies.NothingLeft) : $"{done} / {tracked}";
-        Typography.DrawCentered(new Vector2(centerX, ringCenter.Y + radius + 50f * scale), sub, theme.TextMuted,
-            TextStyles.Footnote);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 196f * scale));
     }
 
-    private void DrawCadence(PhoneTheme theme, DateTime utcNow, DailyCadence cadence, LocString sectionTitle,
-        DateTime nextReset)
+    private static void DrawResetLine(DateTime utcNow, DateTime nextReset, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var text = Loc.T(L.Dailies.Resets, TimeFormat.Relative(nextReset - utcNow));
+        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + 11f * scale), text, AppPalettes.Dailies.MutedInk,
+            TextStyles.Subheadline);
+        ImGui.Dummy(new Vector2(width, 26f * scale));
+    }
+
+    private void DrawGroup(DateTime utcNow, DailyCadence cadence, bool autoGroup, float scale)
     {
         var items = DailyCatalog.Items;
-        var rowCount = 0;
+        var any = false;
         for (var index = 0; index < items.Length; index++)
         {
-            if (items[index].Cadence == cadence)
-            {
-                rowCount++;
-            }
-        }
-
-        if (rowCount == 0)
-        {
-            return;
-        }
-
-        var countdown = Relative(nextReset - utcNow);
-        SectionHeaderWithCountdown(Loc.T(sectionTitle), Loc.T(L.Dailies.Resets, countdown), theme);
-        var card = GroupCard.Begin(theme, rowCount, RowHeight);
-        for (var index = 0; index < items.Length; index++)
-        {
-            if (items[index].Cadence != cadence)
+            if (items[index].Cadence != cadence || items[index].Tracking != DailyTracking.Manual != autoGroup)
             {
                 continue;
             }
 
-            DrawItemRow(card.NextRow(), theme, items[index], autoStatuses[index], utcNow);
+            any = true;
+            break;
         }
 
-        card.End();
+        if (!any)
+        {
+            return;
+        }
+
+        ui.SectionLabel(Loc.T(autoGroup ? L.Dailies.AutoSection : L.Dailies.ManualSection), TextStyles.FootnoteEmphasized, 6f);
+
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Cadence != cadence || items[index].Tracking != DailyTracking.Manual != autoGroup)
+            {
+                continue;
+            }
+
+            DrawItemCard(items[index], index, utcNow, scale);
+            ImGui.Dummy(new Vector2(0f, ItemCardGap * scale));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 4f * scale));
     }
 
-    private void DrawItemRow(Rect row, PhoneTheme theme, in DailyItem item, in DailyAutoStatus status, DateTime utcNow)
+    private void DrawItemCard(in DailyItem item, int itemIndex, DateTime utcNow, float scale)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var status = autoStatuses[itemIndex];
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = ItemCardHeight * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var min = origin;
+        var max = origin + new Vector2(width, height);
+        var drawList = ImGui.GetWindowDrawList();
+        ui.Card(drawList, min, max, ItemCardRounding * scale, elevated: true);
+
+        var padding = ItemPadding * scale;
+        var row = new Rect(new Vector2(min.X + padding, min.Y), new Vector2(max.X - padding, max.Y));
+
         var tile = TileSize * scale;
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
         IconTile(tileCenter, tile, item.Accent, item.Icon);
+
         var auto = item.Tracking != DailyTracking.Manual && status.Available;
         var complete = auto ? status.Complete : checkStore.IsChecked(item, utcNow);
         var info = item.Tracking == DailyTracking.Levequests;
+
         var textLeft = row.Min.X + tile + 12f * scale;
-        var sublabel = BuildSublabel(item, status, auto, info);
+        var sublabel = BuildSublabel(item, status, utcNow);
         if (sublabel.Length > 0)
         {
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - 16f * scale), Loc.T(item.Label), theme.TextStrong,
+            Typography.Draw(new Vector2(textLeft, row.Center.Y - 16f * scale), Loc.T(item.Label), AppPalettes.Dailies.TitleInk,
                 TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, row.Center.Y + 5f * scale), sublabel, theme.TextMuted,
+            Typography.Draw(new Vector2(textLeft, row.Center.Y + 5f * scale), sublabel, AppPalettes.Dailies.MutedInk,
                 TextStyles.Footnote);
         }
         else
         {
             var nameSize = Typography.Measure(Loc.T(item.Label), TextStyles.Headline);
             Typography.Draw(new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), Loc.T(item.Label),
-                theme.TextStrong, TextStyles.Headline);
+                AppPalettes.Dailies.TitleInk, TextStyles.Headline);
         }
 
         if (info)
         {
-            DrawCountValue(row, theme, status);
+            DrawCountValue(row, status);
+            ImGui.SetCursorScreenPos(min);
+            ImGui.Dummy(new Vector2(width, height));
             return;
         }
 
         var markCenter = new Vector2(row.Max.X - 13f * scale, row.Center.Y);
-        DrawCheckmark(markCenter, 13f * scale, complete, auto, theme, item.Accent);
+        DrawCheckmark(markCenter, 13f * scale, complete, auto, item.Accent);
+
+        ImGui.SetCursorScreenPos(min);
+        ImGui.Dummy(new Vector2(width, height));
+
         if (auto)
         {
             return;
         }
 
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = ImGui.IsMouseHoveringRect(min, max);
         if (!hovered)
         {
             return;
@@ -244,39 +309,50 @@ internal sealed class DailiesApp : IPhoneApp
         }
     }
 
-    private static string BuildSublabel(in DailyItem item, in DailyAutoStatus status, bool auto, bool info)
+    private string BuildSublabel(in DailyItem item, in DailyAutoStatus status, DateTime utcNow)
     {
-        if (info)
+        if (item.Tracking == DailyTracking.Levequests)
         {
             return Loc.T(L.Dailies.AutoTracked);
         }
 
-        if (!auto)
+        if (item.Tracking != DailyTracking.Manual)
         {
-            return string.Empty;
+            if (!status.Available)
+            {
+                return string.Empty;
+            }
+
+            return status.Complete
+                ? Loc.T(L.Dailies.AutoTracked)
+                : string.Concat(Loc.T(L.Dailies.AutoTracked), " · ", Loc.T(L.Dailies.Remaining, status.Remaining));
         }
 
-        if (status.Complete)
+        return item.Id switch
         {
-            return Loc.T(L.Dailies.AutoTracked);
-        }
-
-        return string.Concat(Loc.T(L.Dailies.AutoTracked), " · ", Loc.T(L.Dailies.Remaining, status.Remaining));
+            "weekly.fashionReport" => fashionReportWindow.Active
+                ? Loc.T(L.Dailies.VotingOpenCloses, TimeFormat.Relative(fashionReportWindow.NextChangeUtc - utcNow))
+                : Loc.T(L.Dailies.VotingOpensIn, TimeFormat.Relative(fashionReportWindow.NextChangeUtc - utcNow)),
+            "weekly.jumboCactpot" => Loc.T(L.Dailies.NextDrawing, TimeFormat.Relative(nextJumboCactpot - utcNow)),
+            "weekly.huntBills" when huntSealBalance >= 0 => Loc.T(L.Dailies.SealBalance,
+                huntSealBalance.ToString("N0", Loc.Culture)),
+            _ => string.Empty,
+        };
     }
 
-    private static void DrawCountValue(Rect row, PhoneTheme theme, in DailyAutoStatus status)
+    private static void DrawCountValue(Rect row, in DailyAutoStatus status)
     {
         var value = status.Available ? $"{status.Remaining} / {status.Goal}" : "--";
         var valueSize = Typography.Measure(value, TextStyles.Headline);
         Typography.Draw(new Vector2(row.Max.X - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), value,
-            theme.TextStrong, TextStyles.Headline);
+            AppPalettes.Dailies.TitleInk, TextStyles.Headline);
     }
 
-    private static void DrawCheckmark(Vector2 center, float radius, bool complete, bool auto, PhoneTheme theme,
-        Vector4 accent)
+    private static void DrawCheckmark(Vector2 center, float radius, bool complete, bool auto, Vector4 accent)
     {
         var dl = ImGui.GetWindowDrawList();
         var scale = ImGuiHelpers.GlobalScale;
+
         if (complete)
         {
             dl.AddCircleFilled(center, radius, ImGui.GetColorU32(accent), 32);
@@ -287,16 +363,35 @@ internal sealed class DailiesApp : IPhoneApp
             return;
         }
 
-        var ringColor = auto ? Styling.WithAlpha(theme.TextMuted, 0.55f) : theme.TextMuted;
+        var ringColor = auto ? Palette.WithAlpha(AppPalettes.Dailies.MutedInk, 0.55f) : AppPalettes.Dailies.MutedInk;
         dl.AddCircle(center, radius, ImGui.GetColorU32(ringColor), 32, 2f * scale);
     }
 
-    private void DrawNotify(PhoneTheme theme)
+    private void DrawNotify(float scale)
     {
-        var card = GroupCard.Begin(theme, 1);
-        var notify = SettingsRow.Bool(card.NextRow(), Loc.T(L.Dailies.NotifyReset), configuration.NotifyDailiesReset,
-            theme);
-        card.End();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = 56f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var min = origin;
+        var max = origin + new Vector2(width, height);
+        var drawList = ImGui.GetWindowDrawList();
+        ui.Card(drawList, min, max, 16f * scale, elevated: true);
+
+        var padding = 16f * scale;
+        var label = Loc.T(L.Dailies.NotifyReset);
+        var labelSize = Typography.Measure(label, TextStyles.Body);
+        Typography.Draw(new Vector2(min.X + padding, min.Y + height * 0.5f - labelSize.Y * 0.5f), label,
+            AppPalettes.Dailies.BodyInk, TextStyles.Body);
+
+        var toggleWidth = 46f * scale;
+        var toggleHeight = 28f * scale;
+        var toggleMin = new Vector2(max.X - padding - toggleWidth, min.Y + height * 0.5f - toggleHeight * 0.5f);
+        var notify = Toggle.Draw(new Rect(toggleMin, toggleMin + new Vector2(toggleWidth, toggleHeight)),
+            configuration.NotifyDailiesReset, PhoneTheme.Default);
+
+        ImGui.SetCursorScreenPos(min);
+        ImGui.Dummy(new Vector2(width, height));
+
         if (notify == configuration.NotifyDailiesReset)
         {
             return;
@@ -313,44 +408,6 @@ internal sealed class DailiesApp : IPhoneApp
         Squircle.Fill(dl, center - new Vector2(half, half), center + new Vector2(half, half), size * 0.30f,
             ImGui.GetColorU32(tint));
         ProgressRing.CenterIcon(center, icon, new Vector4(1f, 1f, 1f, 1f), size * 0.50f);
-    }
-
-    private static void SectionHeaderWithCountdown(string title, string countdown, PhoneTheme theme)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var top = ImGui.GetCursorScreenPos();
-        var right = top.X + ImGui.GetContentRegionAvail().X - 16f * scale;
-        SettingsSection.Header(title, theme);
-        var countdownSize = Typography.Measure(countdown, TextStyles.Caption1);
-        var titleSize = Typography.Measure(title, TextStyles.Footnote);
-        var titleTop = top.Y + 10f * scale;
-        Typography.Draw(new Vector2(right - countdownSize.X, titleTop + (titleSize.Y - countdownSize.Y) * 0.5f),
-            countdown, theme.TextMuted, TextStyles.Caption1);
-    }
-
-    private static string Relative(TimeSpan remaining)
-    {
-        if (remaining <= TimeSpan.Zero)
-        {
-            return Loc.T(L.Time.Now);
-        }
-
-        var totalMinutes = (int)remaining.TotalMinutes;
-        if (totalMinutes < 60)
-        {
-            return Loc.T(L.Time.InMinutes, Math.Max(1, totalMinutes));
-        }
-
-        var totalHours = totalMinutes / 60;
-        if (totalHours < 24)
-        {
-            var minutes = totalMinutes % 60;
-            return minutes == 0 ? Loc.T(L.Time.InHours, totalHours) : Loc.T(L.Time.InHoursMinutes, totalHours, minutes);
-        }
-
-        var days = totalHours / 24;
-        var hours = totalHours % 24;
-        return hours == 0 ? Loc.T(L.Timers.InDays, days) : Loc.T(L.Timers.InDaysHours, days, hours);
     }
 
     public void Dispose()

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 
 namespace Aetherphone.Core.Apps;
@@ -7,8 +8,11 @@ internal delegate void RouterDraw<TView>(TView view, Rect area, int depth);
 
 internal sealed class ViewRouter<TView>
 {
+    private static readonly bool IsEnumView = (Nullable.GetUnderlyingType(typeof(TView)) ?? typeof(TView)).IsEnum;
+
     private readonly List<TView> stack = new();
     private readonly List<string> viewIds = new();
+    private readonly string screenScope;
     private Spring slide;
     private bool transitioning;
     private int idCounter;
@@ -17,8 +21,13 @@ internal sealed class ViewRouter<TView>
     private string outgoingId = string.Empty;
     private SlideDirection direction;
 
-    public ViewRouter(TView root)
+    public ViewRouter(TView root) : this(root, string.Empty)
     {
+    }
+
+    public ViewRouter(TView root, string screenScope)
+    {
+        this.screenScope = screenScope;
         stack.Add(root);
         viewIds.Add(NewId());
     }
@@ -38,6 +47,7 @@ internal sealed class ViewRouter<TView>
 
         stack.Add(view);
         viewIds.Add(NewId());
+        TrackScreen();
 
         if (animate)
         {
@@ -45,17 +55,32 @@ internal sealed class ViewRouter<TView>
         }
     }
 
-    public bool Pop()
+    public bool Pop() => Pop(true);
+
+    public bool Pop(bool animate)
     {
         if (stack.Count <= 1)
         {
             return false;
         }
 
-        BeginOutgoing(SlideDirection.Back);
+        if (animate)
+        {
+            BeginOutgoing(SlideDirection.Back);
+        }
+
         stack.RemoveAt(stack.Count - 1);
         viewIds.RemoveAt(viewIds.Count - 1);
-        StartSlide();
+        TrackScreen();
+
+        if (animate)
+        {
+            StartSlide();
+            return true;
+        }
+
+        transitioning = false;
+        outgoing = default!;
         return true;
     }
 
@@ -150,4 +175,24 @@ internal sealed class ViewRouter<TView>
     }
 
     private string NewId() => "view" + idCounter++;
+
+    private void TrackScreen()
+    {
+        if (screenScope.Length == 0)
+        {
+            return;
+        }
+
+        Plugin.Analytics.Track(AnalyticsEvents.ScreenView(screenScope, DescribeScreen(Current)));
+    }
+
+    private static string DescribeScreen(TView view)
+    {
+        if (view is null)
+        {
+            return "root";
+        }
+
+        return IsEnumView ? view.ToString()! : view.GetType().Name;
+    }
 }

@@ -8,7 +8,7 @@ namespace Aetherphone.Windows.Components;
 
 internal struct GroupCard
 {
-    public const float DefaultRowHeight = 46f;
+    public const float DefaultRowHeight = Metrics.Size.Row;
     private readonly PhoneTheme theme;
     private readonly float scale;
     private readonly float rowHeight;
@@ -39,8 +39,8 @@ internal struct GroupCard
         var height = rowCount * rowHeight * scale;
         var cardMax = new Vector2(right, origin.Y + height);
         var dl = ImGui.GetWindowDrawList();
-        Squircle.Fill(dl, origin, cardMax, 12f * scale, ImGui.GetColorU32(theme.GroupedCard));
-        Material.EdgeSquircle(dl, origin, cardMax, 12f * scale, scale);
+        Squircle.Fill(dl, origin, cardMax, Metrics.Radius.Md * scale, ImGui.GetColorU32(theme.GroupedCard));
+        Material.EdgeSquircle(dl, origin, cardMax, Metrics.Radius.Md * scale, scale);
         return new GroupCard(theme, scale, rowHeight, origin.X, right, origin.Y, rowCount);
     }
 
@@ -49,13 +49,13 @@ internal struct GroupCard
         var rowTop = startY + rowIndex * rowHeight * scale;
         if (rowIndex > 0)
         {
-            var separatorX = left + 16f * scale;
+            var separatorX = left + Metrics.Space.Lg * scale;
             ImGui.GetWindowDrawList().AddLine(new Vector2(separatorX, rowTop), new Vector2(right, rowTop),
-                ImGui.GetColorU32(theme.Separator), 1f);
+                ImGui.GetColorU32(theme.Separator), Metrics.Stroke.Hairline);
         }
 
         rowIndex++;
-        var padding = 16f * scale;
+        var padding = Metrics.Space.Lg * scale;
         return new Rect(new Vector2(left + padding, rowTop), new Vector2(right - padding, rowTop + rowHeight * scale));
     }
 

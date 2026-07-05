@@ -17,7 +17,6 @@ internal sealed class WalletApp : IPhoneApp
     public string Id => "wallet";
     public string DisplayName => Loc.T(L.Apps.Wallet);
     public string Glyph => "G";
-    public Vector4 Accent => new(0.26f, 0.78f, 0.52f, 1f);
     public int BadgeCount => 0;
     private readonly GameData gameData;
     private readonly ITextureProvider textures;

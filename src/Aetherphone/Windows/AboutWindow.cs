@@ -1,4 +1,5 @@
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -132,7 +133,7 @@ public sealed class AboutWindow : Window, IDisposable
         {
             var r = radius * i / layers;
             var a = peak * (1f - (i - 1f) / layers);
-            dl.AddCircleFilled(c, r, ImGui.GetColorU32(Styling.WithAlpha(color, a)), 40);
+            dl.AddCircleFilled(c, r, ImGui.GetColorU32(Palette.WithAlpha(color, a)), 40);
         }
     }
 
@@ -148,7 +149,7 @@ public sealed class AboutWindow : Window, IDisposable
         var bob = Wave(3000) * 3f * s;
         var center = new Vector2(start.X + availX * 0.5f, start.Y + ringR * s + bob);
         ProgressRing.Glow(center, ringR * s, Styling.AccentViolet, 0.55f + 0.5f * Styling.Pulse(Styling.PulseBreath));
-        ProgressRing.Track(center, ringR * s, 1.5f * s, Styling.WithAlpha(Styling.BorderDim, 0.7f));
+        ProgressRing.Track(center, ringR * s, 1.5f * s, Palette.WithAlpha(Styling.BorderDim, 0.7f));
         ProgressRing.Sweep(center, ringR * s, 2.6f * s, Styling.AccentVioletSoft, Styling.PulseOrbit, MathF.PI * 0.55f,
             1f);
         OrbitParticles(center, ringR * s, 3, 4600, +1, Styling.AccentVioletSoft, 2.4f * s);
@@ -169,7 +170,7 @@ public sealed class AboutWindow : Window, IDisposable
             }
         }
 
-        dl.AddRect(imin, imax, ImGui.GetColorU32(Styling.WithAlpha(Styling.AccentVioletSoft, 0.55f)), rounding,
+        dl.AddRect(imin, imax, ImGui.GetColorU32(Palette.WithAlpha(Styling.AccentVioletSoft, 0.55f)), rounding,
             ImDrawFlags.RoundCornersAll, 1.5f * s);
         IconEasterEgg(imin, imax, s);
         ImGui.SetCursorScreenPos(start);
@@ -178,7 +179,7 @@ public sealed class AboutWindow : Window, IDisposable
         ShimmerCentered(Name, Styling.TextStrong, Styling.AccentVioletSoft, 1.85f, Styling.PulseOrbit, 0.42f);
         Styling.VSpace(9);
         var version = typeof(AboutWindow).Assembly.GetName().Version?.ToString() ?? "?";
-        CenteredPill($"v {version}", Styling.TextSecondary, Styling.WithAlpha(Styling.AccentViolet, 0.45f),
+        CenteredPill($"v {version}", Styling.TextSecondary, Palette.WithAlpha(Styling.AccentViolet, 0.45f),
             Styling.CardBgSoft);
     }
 
@@ -191,8 +192,8 @@ public sealed class AboutWindow : Window, IDisposable
         {
             var a = baseA + i * (MathF.PI * 2f / count);
             var p = c + new Vector2(MathF.Cos(a), MathF.Sin(a)) * r;
-            dl.AddCircleFilled(p, dotR * 2.4f, ImGui.GetColorU32(Styling.WithAlpha(color, 0.16f)));
-            dl.AddCircleFilled(p, dotR * 1.5f, ImGui.GetColorU32(Styling.WithAlpha(color, 0.32f)));
+            dl.AddCircleFilled(p, dotR * 2.4f, ImGui.GetColorU32(Palette.WithAlpha(color, 0.16f)));
+            dl.AddCircleFilled(p, dotR * 1.5f, ImGui.GetColorU32(Palette.WithAlpha(color, 0.32f)));
             dl.AddCircleFilled(p, dotR, ImGui.GetColorU32(color));
         }
     }
@@ -296,13 +297,13 @@ public sealed class AboutWindow : Window, IDisposable
         var centerX = origin.X + availX * 0.5f;
         dl.AddRectFilled(origin, end, ImGui.GetColorU32(Vector4.Lerp(Styling.CardBg, Styling.AccentPink, 0.07f)),
             Styling.CardRounding);
-        dl.AddRect(origin, end, ImGui.GetColorU32(Styling.WithAlpha(accent, 0.55f + 0.35f * pulse)),
+        dl.AddRect(origin, end, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.55f + 0.35f * pulse)),
             Styling.CardRounding, ImDrawFlags.None, 1.5f);
         var beat = Heartbeat(1400.0);
         var medC = new Vector2(centerX, origin.Y + pad + medR);
         ProgressRing.Glow(medC, medR, accent, 0.4f + 0.7f * beat);
         dl.AddCircleFilled(medC, medR, ImGui.GetColorU32(Vector4.Lerp(Styling.CardBg, accent, 0.28f)));
-        ProgressRing.Track(medC, medR, 1.5f * s, Styling.WithAlpha(accent, 0.85f));
+        ProgressRing.Track(medC, medR, 1.5f * s, Palette.WithAlpha(accent, 0.85f));
         ProgressRing.CenterIcon(medC, FontAwesomeIcon.Heart, Lighten(accent, 0.25f), medR * (0.80f + 0.22f * beat));
         ImGui.SetCursorScreenPos(new Vector2(slotOrigin.X, origin.Y + pad + medR * 2f + 12f * s));
         Styling.TextCentered(title, Styling.TextStrong, 1.12f);
@@ -350,7 +351,7 @@ public sealed class AboutWindow : Window, IDisposable
             var grow = i * 2.6f * s;
             var a = 0.06f * i * glowPulse * (hover ? 1.8f : 1f);
             dl.AddRectFilled(origin - new Vector2(grow, grow), end + new Vector2(grow, grow),
-                ImGui.GetColorU32(Styling.WithAlpha(fill, a)), rounding + grow);
+                ImGui.GetColorU32(Palette.WithAlpha(fill, a)), rounding + grow);
         }
 
         dl.AddRectFilled(origin, end, ImGui.GetColorU32(fill), rounding);
@@ -499,7 +500,7 @@ public sealed class AboutWindow : Window, IDisposable
             {
                 var grow = i * 2.4f * s;
                 dl.AddRectFilled(origin - new Vector2(grow, grow), end + new Vector2(grow, grow),
-                    ImGui.GetColorU32(Styling.WithAlpha(accent, 0.05f * i * h)), rounding + grow);
+                    ImGui.GetColorU32(Palette.WithAlpha(accent, 0.05f * i * h)), rounding + grow);
             }
 
         var bg = Vector4.Lerp(Styling.CardBgSoft, Vector4.Lerp(Styling.CardBg, accent, 0.24f), h);
@@ -597,7 +598,7 @@ public sealed class AboutWindow : Window, IDisposable
             var travel = MathF.Max(0f, 1f - MathF.Abs(t0 - glowPhase) * 6f);
             var a = fade + 0.35f * travel;
             dl.AddLine(new Vector2(x0 + (x1 - x0) * t0, y), new Vector2(x0 + (x1 - x0) * t1, y),
-                ImGui.GetColorU32(Styling.WithAlpha(accent, a)), 1f);
+                ImGui.GetColorU32(Palette.WithAlpha(accent, a)), 1f);
         }
     }
 
@@ -609,7 +610,7 @@ public sealed class AboutWindow : Window, IDisposable
         var avail = ImGui.GetContentRegionAvail().X;
         if (avail > size.X) ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (avail - size.X) * 0.5f);
         var startScreen = ImGui.GetCursorScreenPos();
-        var bloom = Styling.WithAlpha(Styling.AccentViolet, 0.22f);
+        var bloom = Palette.WithAlpha(Styling.AccentViolet, 0.22f);
         foreach (var off in BloomOffsets)
         {
             ImGui.SetCursorScreenPos(startScreen + off * ImGuiHelpers.GlobalScale);

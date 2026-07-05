@@ -24,7 +24,6 @@ internal sealed class InventoryApp : IPhoneApp
     public string Id => "inventory";
     public string DisplayName => Loc.T(L.Apps.Inventory);
     public string Glyph => "I";
-    public Vector4 Accent => new(0.42f, 0.58f, 0.86f, 1f);
     public int BadgeCount => 0;
     private readonly InventoryCaptureService capture;
     private readonly GameData gameData;
@@ -48,7 +47,7 @@ internal sealed class InventoryApp : IPhoneApp
         this.gameData = gameData;
         this.textures = textures;
         search = new InventorySearch(gameData);
-        router = new ViewRouter<InventoryView>(InventoryView.Root());
+        router = new ViewRouter<InventoryView>(InventoryView.Root(), Id);
         drawView = DrawView;
         back = () => router.Pop();
     }

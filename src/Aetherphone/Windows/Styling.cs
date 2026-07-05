@@ -50,7 +50,6 @@ internal static class Styling
         Vector4.Lerp(a, b, Pulse(periodMs));
 
     public static float Phase(double periodMs) => (float)((Environment.TickCount % periodMs) / periodMs);
-    public static Vector4 WithAlpha(Vector4 c, float a) => c with { W = a };
 
     public static void TextCentered(string text, Vector4 color, float fontScale = 1f)
     {

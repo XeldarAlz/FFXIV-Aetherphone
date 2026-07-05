@@ -61,7 +61,7 @@ internal sealed class ConfirmOverlay
             ConfirmDialog.Draw(screen, theme, shown.Message, shown.ConfirmLabel, shown.CancelLabel,
                 shown.BusyLabel ?? shown.ConfirmLabel, service.Busy, service.Status, shown.Danger, opacity, cardScale,
                 out var cardRect, out var canceled, out var confirmed);
-            if (active is null)
+            if (active is null || opacity <= 0.5f)
             {
                 return;
             }
