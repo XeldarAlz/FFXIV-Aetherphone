@@ -35,6 +35,10 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private volatile string? challengeId;
     private volatile string? failureReason;
     private volatile bool busy;
+    private volatile bool xivAuthActive;
+    private volatile string xivUserCode = string.Empty;
+    private volatile string? xivVerificationUri;
+    private CancellationTokenSource? xivFlowCancellation;
     private bool meRequested;
 
     public AccountPage(AethernetSession session, AethernetClient client, GameData gameData)
@@ -120,6 +124,12 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             return;
         }
 
+        if (xivAuthActive)
+        {
+            DrawXivAuthStep(theme);
+            return;
+        }
+
         if (challengeId is not null)
         {
             DrawVerifyStep(theme);
@@ -129,6 +139,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var scale = ImGuiHelpers.GlobalScale;
         var name = player.Name.TextValue;
         var world = gameData.WorldName(gameData.LocalHomeWorldId);
+        var ready = !busy && name.Length > 0 && world.Length > 0;
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -138,12 +149,72 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         DrawIdentityCard(name, world, theme);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
-        if (PrimaryButton(Loc.T(L.Account.SignIn), theme) && !busy && name.Length > 0 && world.Length > 0)
+        if (PrimaryButton(Loc.T(L.Account.XivSignIn), theme) && ready)
+        {
+            StartXivAuth(name, world);
+        }
+
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        if (Button(Loc.T(L.Account.SignIn), theme) && ready)
         {
             StartChallenge(name, world);
         }
 
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            ImGui.TextWrapped(Loc.T(L.Account.LodestoneHint));
+        }
+
         DrawStatus(theme);
+    }
+
+    private void DrawXivAuthStep(PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.Dummy(new Vector2(0f, 4f * scale));
+        using (Plugin.Fonts.Push(1.3f, FontWeight.SemiBold))
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+            {
+                ImGui.TextUnformatted(Loc.T(L.Account.XivTitle));
+            }
+        }
+
+        ImGui.Dummy(new Vector2(0f, 4f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            ImGui.TextWrapped(Loc.T(L.Account.XivIntro));
+        }
+
+        if (xivUserCode.Length > 0)
+        {
+            ImGui.Dummy(new Vector2(0f, 10f * scale));
+            if (DrawCodeCard(theme, xivUserCode))
+            {
+                ImGui.SetClipboardText(xivUserCode);
+            }
+        }
+
+        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            ImGui.TextWrapped(Loc.T(L.Account.XivWaiting));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        var spacing = 8f * scale;
+        var half = (ImGui.GetContentRegionAvail().X - spacing) * 0.5f;
+        if (Button(Loc.T(L.Account.XivOpen), theme, half) && xivVerificationUri is not null)
+        {
+            UrlActions.OpenInBrowser(xivVerificationUri);
+        }
+
+        ImGui.SameLine(0f, spacing);
+        if (Button(Loc.T(L.Common.Cancel), theme, half) && failureReason is null)
+        {
+            CancelXivFlow();
+        }
     }
 
     private void DrawVerifyStep(PhoneTheme theme)
@@ -165,7 +236,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         ImGui.Dummy(new Vector2(0f, 10f * scale));
-        if (DrawCodeCard(theme))
+        if (DrawCodeCard(theme, code))
         {
             ImGui.SetClipboardText(code);
         }
@@ -225,7 +296,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(width, height));
     }
 
-    private bool DrawCodeCard(PhoneTheme theme)
+    private static bool DrawCodeCard(PhoneTheme theme, string value)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -239,9 +310,9 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         Squircle.Fill(drawList, start, max, radius, ImGui.GetColorU32(background));
         Squircle.Stroke(drawList, start, max, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, 0.55f)),
             1.4f * scale);
-        var codeSize = Typography.Measure(code, 1.55f, FontWeight.SemiBold);
+        var codeSize = Typography.Measure(value, 1.55f, FontWeight.SemiBold);
         var center = new Vector2((start.X + max.X) * 0.5f, (start.Y + max.Y) * 0.5f);
-        Typography.Draw(center - codeSize * 0.5f, code, theme.Accent, 1.55f, FontWeight.SemiBold);
+        Typography.Draw(center - codeSize * 0.5f, value, theme.Accent, 1.55f, FontWeight.SemiBold);
         ImGui.SetCursorScreenPos(start);
         ImGui.Dummy(new Vector2(width, height));
         if (hovered)
@@ -331,6 +402,16 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                 return (Loc.T(L.Account.FailRateLimitedTitle), Loc.T(L.Account.FailRateLimitedBody));
             case VerifyFailure.Network:
                 return (Loc.T(L.Account.FailNetworkTitle), Loc.T(L.Account.FailNetworkBody));
+            case VerifyFailure.AccessDenied:
+                return (Loc.T(L.Account.FailAccessDeniedTitle), Loc.T(L.Account.FailAccessDeniedBody));
+            case VerifyFailure.XivAuthUnavailable:
+                return (Loc.T(L.Account.FailXivUnavailableTitle), Loc.T(L.Account.FailXivUnavailableBody));
+            case VerifyFailure.XivCharacterNotVerified:
+                var xivPlayer = gameData.LocalPlayer;
+                var xivName = xivPlayer?.Name.TextValue ?? string.Empty;
+                var xivWorld = gameData.WorldName(gameData.LocalHomeWorldId);
+                return (Loc.T(L.Account.FailXivCharacterTitle),
+                    Loc.T(L.Account.FailXivCharacterBody, xivName, xivWorld));
             default:
                 return (Loc.T(L.Account.FailLodestoneUnavailableTitle), Loc.T(L.Account.FailLodestoneUnavailableBody));
         }
@@ -422,6 +503,131 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         });
     }
 
+    private void StartXivAuth(string name, string world)
+    {
+        busy = true;
+        status = Loc.T(L.Account.XivConnecting);
+        Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Began));
+        var flowCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
+        Interlocked.Exchange(ref xivFlowCancellation, flowCancellation)?.Dispose();
+        var token = flowCancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var response = await client.StartXivAuthAsync(name, world, token).ConfigureAwait(false);
+                if (response is null || !response.Ok || response.FlowId is null || response.VerificationUri is null)
+                {
+                    var reason = response?.Reason ?? VerifyFailure.Network;
+                    status = string.Empty;
+                    failureReason = reason;
+                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
+                    busy = false;
+                    return;
+                }
+
+                xivUserCode = response.UserCode ?? string.Empty;
+                xivVerificationUri = response.VerificationUriComplete ?? response.VerificationUri;
+                xivAuthActive = true;
+                status = string.Empty;
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.CodeShown));
+                UrlActions.OpenInBrowser(xivVerificationUri);
+                await PollXivLoopAsync(response.FlowId, response.IntervalSeconds, response.ExpiresInSeconds, token)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"XIVAuth sign-in failed: {exception.Message}");
+                status = string.Empty;
+                failureReason = VerifyFailure.Network;
+                ResetXivFlow();
+            }
+        });
+    }
+
+    private async Task PollXivLoopAsync(string flowId, int intervalSeconds, int expiresInSeconds, CancellationToken token)
+    {
+        var interval = Math.Max(3, intervalSeconds);
+        var deadline = DateTime.UtcNow.AddSeconds(expiresInSeconds > 0 ? expiresInSeconds : 600);
+        var consecutiveNetworkFailures = 0;
+        while (!token.IsCancellationRequested && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(interval), token).ConfigureAwait(false);
+            var result = await client.PollXivAuthAsync(flowId, token).ConfigureAwait(false);
+            if (result.Auth is { } auth)
+            {
+                session.SignIn(auth.Token, auth.User);
+                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
+                ResetFlow();
+                return;
+            }
+
+            var reason = result.FailureReason ?? VerifyFailure.Pending;
+            if (reason == VerifyFailure.Pending)
+            {
+                consecutiveNetworkFailures = 0;
+                continue;
+            }
+
+            if (reason == VerifyFailure.RateLimited)
+            {
+                consecutiveNetworkFailures = 0;
+                interval += 2;
+                continue;
+            }
+
+            if (reason == VerifyFailure.Network && ++consecutiveNetworkFailures < 5)
+            {
+                continue;
+            }
+
+            if (reason == VerifyFailure.CharacterNotFound)
+            {
+                reason = VerifyFailure.XivCharacterNotVerified;
+            }
+
+            Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
+            status = string.Empty;
+            failureReason = reason;
+            ResetXivFlow();
+            return;
+        }
+
+        if (!token.IsCancellationRequested)
+        {
+            Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, VerifyFailure.Timeout));
+            status = string.Empty;
+            failureReason = VerifyFailure.Timeout;
+            ResetXivFlow();
+        }
+    }
+
+    private void CancelXivFlow()
+    {
+        var flowCancellation = xivFlowCancellation;
+        try
+        {
+            flowCancellation?.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+
+        ResetXivFlow();
+    }
+
+    private void ResetXivFlow()
+    {
+        xivAuthActive = false;
+        xivUserCode = string.Empty;
+        xivVerificationUri = null;
+        busy = false;
+        Interlocked.Exchange(ref xivFlowCancellation, null)?.Dispose();
+    }
+
     private void StartMe()
     {
         var token = cancellation.Token;
@@ -453,6 +659,10 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         failureReason = null;
         busy = false;
         meRequested = false;
+        xivAuthActive = false;
+        xivUserCode = string.Empty;
+        xivVerificationUri = null;
+        Interlocked.Exchange(ref xivFlowCancellation, null)?.Dispose();
     }
 
     private static bool Button(string label, PhoneTheme theme, float width = -1f)
@@ -490,6 +700,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     public void Dispose()
     {
         cancellation.Cancel();
+        Interlocked.Exchange(ref xivFlowCancellation, null)?.Dispose();
         cancellation.Dispose();
     }
 }

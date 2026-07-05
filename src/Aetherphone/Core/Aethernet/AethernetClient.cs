@@ -38,6 +38,28 @@ internal sealed class AethernetClient
         return VerifyResult.Failure(status == 429 ? VerifyFailure.RateLimited : VerifyFailure.Network);
     }
 
+    public Task<XivAuthStartResponse?> StartXivAuthAsync(string name, string world, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/auth/xivauth/start"), new XivAuthStartRequest(name, world), AethernetJsonContext.Default.XivAuthStartRequest, AethernetJsonContext.Default.XivAuthStartResponse, null, token);
+    }
+
+    public async Task<VerifyResult> PollXivAuthAsync(string flowId, CancellationToken token)
+    {
+        var status = 0;
+        var response = await http.PostJsonAsync(Url("/auth/xivauth/poll"), new XivAuthPollRequest(flowId), AethernetJsonContext.Default.XivAuthPollRequest, AethernetJsonContext.Default.VerifyResponse, null, token, statusCode => status = statusCode).ConfigureAwait(false);
+        if (response is not null)
+        {
+            if (response.Ok && response.Token is not null && response.User is not null)
+            {
+                return VerifyResult.Success(new AuthResponse(response.Token, response.User));
+            }
+
+            return VerifyResult.Failure(response.Reason ?? VerifyFailure.Pending);
+        }
+
+        return VerifyResult.Failure(status == 429 ? VerifyFailure.RateLimited : VerifyFailure.Network);
+    }
+
     public Task<UserDto?> MeAsync(CancellationToken token)
     {
         return http.GetJsonAsync(Url("/me"), AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);

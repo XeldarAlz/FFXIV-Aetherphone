@@ -10,6 +10,20 @@ internal sealed record AuthResponse(string Token, UserDto User);
 
 internal sealed record VerifyResponse(bool Ok, string? Reason, string? Token, UserDto? User);
 
+internal sealed record XivAuthStartRequest(string Name, string World);
+
+internal sealed record XivAuthStartResponse(
+    bool Ok,
+    string? Reason,
+    string? FlowId,
+    string? UserCode,
+    string? VerificationUri,
+    string? VerificationUriComplete,
+    int IntervalSeconds,
+    int ExpiresInSeconds);
+
+internal sealed record XivAuthPollRequest(string FlowId);
+
 internal sealed record UserDto(
     string Id,
     string Name,

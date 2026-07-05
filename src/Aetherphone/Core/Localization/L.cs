@@ -498,6 +498,13 @@ internal static class L
         public static readonly LocString CodeNotFound = new("account.codeNotFound", "Code not found on your profile yet. Save it on Lodestone, then Verify again. Make sure both Profile and Character Search visibility are set to Public/Displayed in Results.");
         public static readonly LocString SignOut = new("account.signOut", "Sign out");
         public static readonly LocString SignIn = new("account.signIn", "Sign in with Lodestone");
+        public static readonly LocString XivSignIn = new("account.xivSignIn", "Sign in with XIVAuth");
+        public static readonly LocString LodestoneHint = new("account.lodestoneHint", "No XIVAuth account? Verify with a Lodestone code instead.");
+        public static readonly LocString XivTitle = new("account.xivTitle", "Approve on XIVAuth");
+        public static readonly LocString XivIntro = new("account.xivIntro", "We opened XIVAuth in your browser. Approve this device to finish signing in. If you're asked for a code, enter the one below.");
+        public static readonly LocString XivWaiting = new("account.xivWaiting", "Waiting for approval…");
+        public static readonly LocString XivOpen = new("account.xivOpen", "Open XIVAuth");
+        public static readonly LocString XivConnecting = new("account.xivConnecting", "Connecting to XIVAuth…");
         public static readonly LocPlural Followers = new("account.followers", "{0} follower", "{0} followers");
         public static readonly LocPlural Following = new("account.following", "{0} following", "{0} following");
         public static readonly LocString FailDismiss = new("account.fail.dismiss", "Got it");
@@ -517,6 +524,12 @@ internal static class L
         public static readonly LocString FailRateLimitedBody = new("account.fail.rateLimited.body", "You've tried a few times in a row. Wait a minute, then try again.");
         public static readonly LocString FailNetworkTitle = new("account.fail.network.title", "Can't reach Aethernet");
         public static readonly LocString FailNetworkBody = new("account.fail.network.body", "We couldn't reach the Aethernet server. Check your connection, then try again.");
+        public static readonly LocString FailAccessDeniedTitle = new("account.fail.accessDenied.title", "Sign-in cancelled");
+        public static readonly LocString FailAccessDeniedBody = new("account.fail.accessDenied.body", "The request was declined on XIVAuth. Start again whenever you're ready.");
+        public static readonly LocString FailXivUnavailableTitle = new("account.fail.xivUnavailable.title", "XIVAuth unavailable");
+        public static readonly LocString FailXivUnavailableBody = new("account.fail.xivUnavailable.body", "We couldn't reach XIVAuth. Wait a moment and try again, or verify with a Lodestone code instead.");
+        public static readonly LocString FailXivCharacterTitle = new("account.fail.xivCharacter.title", "Character not verified");
+        public static readonly LocString FailXivCharacterBody = new("account.fail.xivCharacter.body", "{0} on {1} isn't a verified character on your XIVAuth account. Add and verify it on xivauth.net, then try again.");
     }
 
     internal static class Music
