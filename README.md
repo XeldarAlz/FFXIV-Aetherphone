@@ -12,6 +12,17 @@
 </p>
 
 <p align="center">
+  <a href="README.md"><img alt="English" src="https://img.shields.io/badge/English-blue?style=flat-square"></a>
+  <a href="README.de.md"><img alt="Deutsch" src="https://img.shields.io/badge/Deutsch-lightgrey?style=flat-square"></a>
+  <a href="README.fr.md"><img alt="Français" src="https://img.shields.io/badge/Fran%C3%A7ais-lightgrey?style=flat-square"></a>
+  <a href="README.es.md"><img alt="Español" src="https://img.shields.io/badge/Espa%C3%B1ol-lightgrey?style=flat-square"></a>
+  <a href="README.tr.md"><img alt="Türkçe" src="https://img.shields.io/badge/T%C3%BCrk%C3%A7e-lightgrey?style=flat-square"></a>
+  <a href="README.zh.md"><img alt="中文" src="https://img.shields.io/badge/%E4%B8%AD%E6%96%87-lightgrey?style=flat-square"></a>
+  <a href="README.ja.md"><img alt="日本語" src="https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-lightgrey?style=flat-square"></a>
+  <a href="README.ru.md"><img alt="Русский" src="https://img.shields.io/badge/%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-lightgrey?style=flat-square"></a>
+</p>
+
+<p align="center">
   <em>A smartphone, built for you. Built on Dalamud.</em>
 </p>
 
