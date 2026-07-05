@@ -1,0 +1,121 @@
+using System.Numerics;
+using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Notifications;
+using Aetherphone.Windows.Components;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
+
+namespace Aetherphone.Apps.Settings.Pages;
+
+internal sealed class SoundSettingsPage : ISettingsPage
+{
+    private readonly SoundService sound;
+    private readonly string title;
+    private readonly string glyph;
+    private readonly Vector4 tint;
+    private readonly string segmentId;
+    private readonly string analyticsKey;
+    private readonly Func<string> getToken;
+    private readonly Action<string> setToken;
+    private readonly Func<float> getVolume;
+    private readonly Action<float> setVolume;
+    private readonly SoundImport import = new();
+
+    public SoundSettingsPage(SoundService sound, string title, string glyph, Vector4 tint, string segmentId,
+        string analyticsKey, Func<string> getToken, Action<string> setToken, Func<float> getVolume,
+        Action<float> setVolume)
+    {
+        this.sound = sound;
+        this.title = title;
+        this.glyph = glyph;
+        this.tint = tint;
+        this.segmentId = segmentId;
+        this.analyticsKey = analyticsKey;
+        this.getToken = getToken;
+        this.setToken = setToken;
+        this.getVolume = getVolume;
+        this.setVolume = setVolume;
+    }
+
+    public string Title => title;
+    public string Summary => sound.Label(getToken());
+    public string Glyph => glyph;
+    public Vector4 Tint => tint;
+
+    public void Draw(in PhoneContext context, Rect body)
+    {
+        var theme = context.Theme;
+        var scale = ImGuiHelpers.GlobalScale;
+        if (import.TryTake(out var importedPath))
+        {
+            TryImport(importedPath);
+        }
+
+        using (AppSurface.Begin(body))
+        {
+            SettingsSection.Header(Loc.T(L.Settings.Sound), theme);
+            SoundOptionList.Draw(theme, sound, getToken(), false, Select);
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+            SettingsSection.Header(Loc.T(L.Settings.Volume), theme);
+            var volumeCard = GroupCard.Begin(theme, 1);
+            var volumeIndex = SegmentStrip.Draw(segmentId, volumeCard.NextRow(), VolumeCatalog.Labels,
+                VolumeCatalog.IndexOf(getVolume()), theme);
+            volumeCard.End();
+            var volume = VolumeCatalog.Scales[volumeIndex];
+            if (MathF.Abs(volume - getVolume()) > 0.001f)
+            {
+                setVolume(volume);
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey + "_volume",
+                    volume.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
+                sound.Preview(getToken(), volume);
+            }
+
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+            var importCard = GroupCard.Begin(theme, 1);
+            if (SettingsRow.Disclosure(importCard.NextRow(), Loc.T(L.Settings.ImportSound), string.Empty, theme))
+            {
+                import.Launch(title);
+            }
+
+            importCard.End();
+            ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
+            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            {
+                ImGui.PushTextWrapPos(0f);
+                ImGui.TextWrapped(Loc.T(L.Settings.SoundImportHint));
+                ImGui.PopTextWrapPos();
+            }
+        }
+    }
+
+    private void Select(string? token)
+    {
+        if (token is null)
+        {
+            return;
+        }
+
+        setToken(token);
+        Plugin.Analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, token));
+        sound.Preview(token, getVolume());
+    }
+
+    private void TryImport(string path)
+    {
+        try
+        {
+            var token = sound.AddUserFile(path);
+            setToken(token);
+            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, "file"));
+            sound.Preview(token, getVolume());
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Sound] import failed: {exception.Message}");
+        }
+    }
+}

@@ -1,5 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Analytics;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Telephony.Audio;
@@ -17,7 +19,7 @@ internal sealed class CallHub : IDisposable
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly NotificationService notifications;
-    private readonly IRingtone ringtone;
+    private readonly SoundService sound;
     private readonly PlaybackHub playback;
     private readonly RealtimeConnection connection;
     private readonly object gate = new();
@@ -36,12 +38,12 @@ internal sealed class CallHub : IDisposable
     private CallContact[] recents = Array.Empty<CallContact>();
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
-        IRingtone ringtone, PlaybackHub playback)
+        SoundService sound, PlaybackHub playback)
     {
         this.configuration = configuration;
         this.session = session;
         this.notifications = notifications;
-        this.ringtone = ringtone;
+        this.sound = sound;
         this.playback = playback;
         connection = new RealtimeConnection(session);
     }
@@ -65,6 +67,7 @@ internal sealed class CallHub : IDisposable
     {
         configuration.CallsEnabled = value;
         configuration.Save();
+        Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("calls_enabled", value ? "1" : "0"));
         Reconcile();
     }
 
@@ -122,6 +125,7 @@ internal sealed class CallHub : IDisposable
         {
             Type = SignalType.Start, CallId = id.ToString("D"), InviteeIds = new[] { target.UserId },
         });
+        Plugin.Analytics.Track(AnalyticsEvents.Call("placed"));
     }
 
     public void AddParticipant(CallContact target)
@@ -155,6 +159,7 @@ internal sealed class CallHub : IDisposable
             id = callId.ToString("D");
         }
 
+        sound.StopCallRing();
         Send(new CallControl { Type = SignalType.Accept, CallId = id });
     }
 
@@ -250,7 +255,7 @@ internal sealed class CallHub : IDisposable
 
         if (ring)
         {
-            ringtone.Play();
+            sound.PulseCallRing();
         }
 
         if (declineTimeout)
@@ -260,7 +265,7 @@ internal sealed class CallHub : IDisposable
         else if (dialTimeout)
         {
             Hangup();
-            notifications.Notify(new PhoneNotification("phone", "No answer", "The call was not answered", DateTime.Now,
+            notifications.Notify(new PhoneNotification("phone", Loc.T(L.Phone.NoAnswerTitle), Loc.T(L.Phone.NoAnswerBody), DateTime.Now,
                 Accent));
         }
     }
@@ -318,10 +323,11 @@ internal sealed class CallHub : IDisposable
             return;
         }
 
-        ringtone.Play();
-        notifications.Notify(new PhoneNotification("phone", message.From.DisplayName, "Incoming call", DateTime.Now,
+        sound.StartCallRing();
+        notifications.Notify(new PhoneNotification("phone", message.From.DisplayName, Loc.T(L.Phone.IncomingCallBody), DateTime.Now,
             Accent));
         IncomingCallPresented?.Invoke();
+        Plugin.Analytics.Track(AnalyticsEvents.Call("received"));
     }
 
     private void HandleRoster(CallControl message)
@@ -333,6 +339,7 @@ internal sealed class CallHub : IDisposable
 
         var participants = message.Participants ?? Array.Empty<ParticipantInfo>();
         CallSession? sessionToDispose = null;
+        var connected = false;
         var localId = LocalUserId;
         lock (gate)
         {
@@ -362,6 +369,7 @@ internal sealed class CallHub : IDisposable
                 if (activeSession is null)
                 {
                     StartSessionLocked(localSlot);
+                    connected = true;
                 }
                 else if (localSlot >= 0)
                 {
@@ -379,6 +387,10 @@ internal sealed class CallHub : IDisposable
         }
 
         sessionToDispose?.Dispose();
+        if (connected)
+        {
+            Plugin.Analytics.Track(AnalyticsEvents.Call("connected"));
+        }
     }
 
     private void HandleDeclined(CallControl message)
@@ -552,6 +564,8 @@ internal sealed class CallHub : IDisposable
     private void EndCall(bool notify, string? reason)
     {
         CallSession? toDispose;
+        bool wasConnected;
+        double durationMs;
         lock (gate)
         {
             if (state == CallState.Idle)
@@ -559,14 +573,18 @@ internal sealed class CallHub : IDisposable
                 return;
             }
 
+            wasConnected = callStartTicks != 0;
+            durationMs = wasConnected ? Environment.TickCount64 - callStartTicks : 0;
             toDispose = activeSession;
             ClearLocked();
         }
 
+        sound.StopCallRing();
         toDispose?.Dispose();
+        Plugin.Analytics.Track(AnalyticsEvents.CallEnded(durationMs, wasConnected));
         if (notify && reason is not null)
         {
-            notifications.Notify(new PhoneNotification("phone", reason, "Call ended", DateTime.Now, Accent));
+            notifications.Notify(new PhoneNotification("phone", reason, Loc.T(L.Phone.CallEnded), DateTime.Now, Accent));
         }
     }
 
@@ -604,11 +622,11 @@ internal sealed class CallHub : IDisposable
         switch (state)
         {
             case CallState.Dialing:
-                return dialingTo?.DisplayName ?? "Calling…";
+                return dialingTo?.DisplayName ?? Loc.T(L.Phone.StatusCalling);
             case CallState.Ringing:
-                return incomingFrom?.DisplayName ?? "Incoming call";
+                return incomingFrom?.DisplayName ?? Loc.T(L.Phone.IncomingCallBody);
             case CallState.Connecting:
-                return "Connecting…";
+                return Loc.T(L.Phone.StatusConnecting);
             case CallState.Active:
                 ParticipantInfo? only = null;
                 var others = 0;

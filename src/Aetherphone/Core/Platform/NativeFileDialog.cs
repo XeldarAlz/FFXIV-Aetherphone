@@ -10,19 +10,24 @@ internal static class NativeFileDialog
     private const int OfnNoChangeDir = 0x00000008;
     private const int OfnExplorer = 0x00080000;
     private const string ImageFilter = "Images\0*.png;*.jpg;*.jpeg;*.bmp\0All Files\0*.*\0";
+    private const string AudioFilter = "Audio\0*.mp3;*.wav\0All Files\0*.*\0";
 
-    public static Task<string?> OpenImageAsync(string title)
+    public static Task<string?> OpenImageAsync(string title) => OpenAsync(title, ImageFilter, "[Wallpaper]");
+
+    public static Task<string?> OpenAudioAsync(string title) => OpenAsync(title, AudioFilter, "[Sound]");
+
+    private static Task<string?> OpenAsync(string title, string filter, string logTag)
     {
         var completion = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>
         {
             try
             {
-                completion.SetResult(ShowDialog(title));
+                completion.SetResult(ShowDialog(title, filter));
             }
             catch (Exception exception)
             {
-                AepLog.Warning($"[Wallpaper] file dialog failed: {exception.Message}");
+                AepLog.Warning($"{logTag} file dialog failed: {exception.Message}");
                 completion.SetResult(null);
             }
         }) { IsBackground = true, };
@@ -31,10 +36,10 @@ internal static class NativeFileDialog
         return completion.Task;
     }
 
-    private static string? ShowDialog(string title)
+    private static string? ShowDialog(string title, string filter)
     {
         var fileBuffer = Marshal.AllocHGlobal(MaxPath * sizeof(char));
-        var filterBuffer = Marshal.StringToHGlobalUni(ImageFilter);
+        var filterBuffer = Marshal.StringToHGlobalUni(filter);
         try
         {
             for (var offset = 0; offset < MaxPath; offset++)
