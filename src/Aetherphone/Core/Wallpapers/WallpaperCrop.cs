@@ -5,13 +5,9 @@ namespace Aetherphone.Core.Wallpapers;
 internal readonly struct WallpaperCrop
 {
     public const float MinZoom = 1f;
-
     public const float MaxZoom = 5f;
-
     public readonly float Zoom;
-
     public readonly float CenterX;
-
     public readonly float CenterY;
 
     public WallpaperCrop(float zoom, float centerX, float centerY)
@@ -22,7 +18,6 @@ internal readonly struct WallpaperCrop
     }
 
     public static WallpaperCrop Cover => new(1f, 0.5f, 0.5f);
-
     public WallpaperCrop With(float zoom, float centerX, float centerY) => new(zoom, centerX, centerY);
 
     public (Vector2 Uv0, Vector2 Uv1) ComputeUv(Vector2 imageSize, float targetAspect)

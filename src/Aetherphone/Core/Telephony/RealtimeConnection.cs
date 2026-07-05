@@ -1,8 +1,5 @@
-using System.IO;
 using System.Net.WebSockets;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Telephony.Contracts;
 
@@ -11,11 +8,9 @@ namespace Aetherphone.Core.Telephony;
 internal sealed class RealtimeConnection : IDisposable
 {
     private const int ReceiveBufferBytes = 16 * 1024;
-
     private readonly AethernetSession session;
     private readonly object gate = new();
     private readonly SemaphoreSlim sendLock = new(1, 1);
-
     private CancellationTokenSource? lifetime;
     private ClientWebSocket? socket;
     private volatile bool connected;
@@ -26,11 +21,8 @@ internal sealed class RealtimeConnection : IDisposable
     }
 
     public bool Connected => connected;
-
     public event Action<CallControl>? ControlReceived;
-
     public event Action<byte[]>? MediaReceived;
-
     public event Action<bool>? ConnectedChanged;
 
     public void Start()
@@ -139,7 +131,6 @@ internal sealed class RealtimeConnection : IDisposable
     {
         var buffer = new byte[ReceiveBufferBytes];
         using var message = new MemoryStream();
-
         while (!token.IsCancellationRequested && ws.State == WebSocketState.Open)
         {
             message.SetLength(0);
@@ -153,8 +144,7 @@ internal sealed class RealtimeConnection : IDisposable
                 }
 
                 message.Write(buffer, 0, chunk.Count);
-            }
-            while (!chunk.EndOfMessage);
+            } while (!chunk.EndOfMessage);
 
             if (chunk.MessageType == WebSocketMessageType.Text)
             {
@@ -171,7 +161,8 @@ internal sealed class RealtimeConnection : IDisposable
     {
         try
         {
-            var control = JsonSerializer.Deserialize(new ReadOnlySpan<byte>(data, 0, length), TelephonyJsonContext.Default.CallControl);
+            var control = JsonSerializer.Deserialize(new ReadOnlySpan<byte>(data, 0, length),
+                TelephonyJsonContext.Default.CallControl);
             if (control is not null)
             {
                 ControlReceived?.Invoke(control);

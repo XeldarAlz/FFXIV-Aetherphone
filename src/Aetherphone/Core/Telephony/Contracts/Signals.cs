@@ -10,7 +10,6 @@ internal static class SignalType
     public const string Cancel = "call.cancel";
     public const string Leave = "call.leave";
     public const string Mute = "call.mute";
-
     public const string Incoming = "call.incoming";
     public const string Ringing = "call.ringing";
     public const string Roster = "call.roster";
@@ -41,18 +40,11 @@ internal sealed record ParticipantInfo(
 internal sealed record CallControl
 {
     public string Type { get; init; } = string.Empty;
-
     public string? CallId { get; init; }
-
     public string[]? InviteeIds { get; init; }
-
     public ParticipantInfo? From { get; init; }
-
     public ParticipantInfo[]? Participants { get; init; }
-
     public string? UserId { get; init; }
-
     public bool? Muted { get; init; }
-
     public string? Reason { get; init; }
 }

@@ -26,7 +26,6 @@ internal static unsafe class FriendListReader
     public static void Read(List<FriendEntry> into, GameData gameData)
     {
         into.Clear();
-
         var proxy = InfoProxyFriendList.Instance();
         if (proxy == null)
         {
@@ -43,16 +42,10 @@ internal static unsafe class FriendListReader
             }
 
             var online = entry->State.HasFlag(InfoProxyCommonList.CharacterData.OnlineStatus.Online);
-            into.Add(new FriendEntry(
-                entry->ContentId,
-                entry->NameString,
-                gameData.WorldName(entry->HomeWorld),
-                entry->FCTagString,
-                online ? gameData.JobAbbreviation(entry->Job) : string.Empty,
+            into.Add(new FriendEntry(entry->ContentId, entry->NameString, gameData.WorldName(entry->HomeWorld),
+                entry->FCTagString, online ? gameData.JobAbbreviation(entry->Job) : string.Empty,
                 online ? gameData.JobName(entry->Job) : string.Empty,
-                online ? gameData.TerritoryName(entry->Location) : string.Empty,
-                online,
-                entry->HomeWorld,
+                online ? gameData.TerritoryName(entry->Location) : string.Empty, online, entry->HomeWorld,
                 entry->CurrentWorld));
         }
     }

@@ -9,61 +9,50 @@ internal enum OceanTimeOfDay
 
 internal readonly record struct TimerWindow(bool Active, DateTime NextChangeUtc);
 
-internal readonly record struct OceanVoyage(DateTime NextBoardingUtc, bool BoardingNow, string Route, OceanTimeOfDay TimeOfDay);
+internal readonly record struct OceanVoyage(
+    DateTime NextBoardingUtc,
+    bool BoardingNow,
+    string Route,
+    OceanTimeOfDay TimeOfDay);
 
 internal readonly record struct OceanVoyageSlot(DateTime BoardingUtc, bool BoardingNow, char Destination, char Time);
 
 internal static class GameSchedule
 {
     private const int DailyResetHour = 15;
-
     private const int GrandCompanyResetHour = 20;
-
     private const int WeeklyResetHour = 8;
-
     private const int FashionReportOpenHour = 8;
-
     private const int JumboCactpotHour = 8;
-
     private const int OceanVoyageEpochIndex = 88;
-
     private const int OceanVoyagePatternLength = 144;
-
     private const long OceanVoyageWindowSeconds = 7200;
-
     private static readonly TimeSpan OceanBoardingWindow = TimeSpan.FromMinutes(15);
 
     private static readonly string[] OceanPattern =
     {
-        "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN",
-        "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD",
-        "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD",
-        "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND",
-        "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD",
-        "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS",
-        "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS",
-        "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS",
-        "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS",
-        "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN",
-        "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN",
-        "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN",
+        "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "TD", "ND", "RD", "BS", "TS", "NS",
+        "RS", "BN", "TN", "NN", "RN", "BD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD",
+        "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "BS", "TS", "NS", "RS", "BN", "TN",
+        "NN", "RN", "BD", "TD", "ND", "RD", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS",
+        "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "RS", "BN", "TN", "NN", "RN", "BD",
+        "TD", "ND", "RD", "BS", "TS", "NS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS",
+        "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "NN", "RN", "BD", "TD", "ND", "RD",
+        "BS", "TS", "NS", "RS", "BN", "TN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN",
     };
 
     public static DateTime NextDailyReset(DateTime utcNow) => NextDailyAt(utcNow, DailyResetHour);
-
     public static DateTime NextGrandCompanyReset(DateTime utcNow) => NextDailyAt(utcNow, GrandCompanyResetHour);
-
     public static DateTime NextWeeklyReset(DateTime utcNow) => NextWeeklyAt(utcNow, DayOfWeek.Tuesday, WeeklyResetHour);
 
-    public static DateTime NextJumboCactpot(DateTime utcNow) => NextWeeklyAt(utcNow, DayOfWeek.Saturday, JumboCactpotHour);
+    public static DateTime NextJumboCactpot(DateTime utcNow) =>
+        NextWeeklyAt(utcNow, DayOfWeek.Saturday, JumboCactpotHour);
 
     public static TimerWindow FashionReport(DateTime utcNow)
     {
         var nextOpen = NextWeeklyAt(utcNow, DayOfWeek.Friday, FashionReportOpenHour);
         var nextClose = NextWeeklyAt(utcNow, DayOfWeek.Tuesday, WeeklyResetHour);
-        return nextClose < nextOpen
-            ? new TimerWindow(true, nextClose)
-            : new TimerWindow(false, nextOpen);
+        return nextClose < nextOpen ? new TimerWindow(true, nextClose) : new TimerWindow(false, nextOpen);
     }
 
     public static OceanVoyage OceanFishing(DateTime utcNow)
@@ -94,7 +83,6 @@ internal static class GameSchedule
     {
         var evenHour = utcNow.Hour - (utcNow.Hour % 2);
         var windowStart = new DateTime(utcNow.Year, utcNow.Month, utcNow.Day, evenHour, 0, 0, DateTimeKind.Utc);
-
         boardingNow = utcNow - windowStart < OceanBoardingWindow;
         return boardingNow ? windowStart : windowStart.AddHours(2);
     }
@@ -102,25 +90,29 @@ internal static class GameSchedule
     private static string RouteCode(DateTime boardingUtc)
     {
         var voyageNumber = new DateTimeOffset(boardingUtc).ToUnixTimeSeconds() / OceanVoyageWindowSeconds;
-        var index = (int)(((OceanVoyageEpochIndex + voyageNumber) % OceanVoyagePatternLength + OceanVoyagePatternLength) % OceanVoyagePatternLength);
+        var index =
+            (int)(((OceanVoyageEpochIndex + voyageNumber) % OceanVoyagePatternLength + OceanVoyagePatternLength) %
+                  OceanVoyagePatternLength);
         return OceanPattern[index];
     }
 
-    private static string RouteName(char destination) => destination switch
-    {
-        'B' => "Bloodbrine",
-        'T' => "Rothlyt",
-        'N' => "Northern",
-        'R' => "Rhotano",
-        _ => string.Empty,
-    };
+    private static string RouteName(char destination) =>
+        destination switch
+        {
+            'B' => "Bloodbrine",
+            'T' => "Rothlyt",
+            'N' => "Northern",
+            'R' => "Rhotano",
+            _ => string.Empty,
+        };
 
-    private static OceanTimeOfDay TimeOfDay(char time) => time switch
-    {
-        'S' => OceanTimeOfDay.Sunset,
-        'N' => OceanTimeOfDay.Night,
-        _ => OceanTimeOfDay.Day,
-    };
+    private static OceanTimeOfDay TimeOfDay(char time) =>
+        time switch
+        {
+            'S' => OceanTimeOfDay.Sunset,
+            'N' => OceanTimeOfDay.Night,
+            _ => OceanTimeOfDay.Day,
+        };
 
     private static DateTime NextDailyAt(DateTime utcNow, int hour)
     {

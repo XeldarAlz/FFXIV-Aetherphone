@@ -1,5 +1,3 @@
-using System.IO;
-using System.Threading;
 using Aetherphone.Core.Net;
 using NAudio.MediaFoundation;
 using NAudio.Wave;
@@ -20,15 +18,12 @@ internal enum SongPlaybackState : byte
 internal sealed class SongPlayer : IDisposable
 {
     private static readonly TimeSpan CacheMaxAge = TimeSpan.FromDays(14);
-
     private readonly YoutubeClient youtube;
     private readonly DiskCache cache;
     private readonly object gate = new();
-
     private CancellationTokenSource? cancellation;
     private Thread? worker;
     private int session;
-
     private volatile SongPlaybackState state = SongPlaybackState.Stopped;
     private volatile string currentVideoId = string.Empty;
     private volatile string currentTitle = string.Empty;
@@ -38,7 +33,6 @@ internal sealed class SongPlayer : IDisposable
     private float positionSeconds;
     private float durationSeconds;
     private int pendingSeekMs = -1;
-
     private Song[] queue = Array.Empty<Song>();
     private int queueIndex = -1;
 
@@ -50,19 +44,12 @@ internal sealed class SongPlayer : IDisposable
     }
 
     public SongPlaybackState State => state;
-
     public string CurrentVideoId => currentVideoId;
-
     public string CurrentTitle => currentTitle;
-
     public string CurrentAuthor => currentAuthor;
-
     public string CurrentThumbnail => currentThumbnail;
-
     public bool HasQueue => queue.Length > 1;
-
     public float Position => positionSeconds;
-
     public float Duration => durationSeconds;
 
     public float Volume
@@ -89,7 +76,6 @@ internal sealed class SongPlayer : IDisposable
     }
 
     public void Next() => Skip(1);
-
     public void Previous() => Skip(-1);
 
     private void Skip(int direction)
@@ -118,7 +104,6 @@ internal sealed class SongPlayer : IDisposable
     private void StartSong(Song song)
     {
         CancelWorker();
-
         lock (gate)
         {
             currentVideoId = song.VideoId;
@@ -135,8 +120,7 @@ internal sealed class SongPlayer : IDisposable
             var workerSession = session;
             worker = new Thread(() => Run(videoId, token, workerSession))
             {
-                IsBackground = true,
-                Name = "Aetherphone.Song",
+                IsBackground = true, Name = "Aetherphone.Song",
             };
             worker.Start();
         }
@@ -200,7 +184,6 @@ internal sealed class SongPlayer : IDisposable
         MemoryStream? audio = null;
         StreamMediaFoundationReader? reader = null;
         WaveOutEvent? output = null;
-
         try
         {
             var bytes = cache.Get(videoId, CacheMaxAge) ?? Download(videoId, token);
@@ -227,7 +210,6 @@ internal sealed class SongPlayer : IDisposable
             output.Init(reader);
             output.Play();
             TrySetState(workerSession, SongPlaybackState.Playing);
-
             while (!token.IsCancellationRequested)
             {
                 if (output.PlaybackState == NAudio.Wave.PlaybackState.Stopped)

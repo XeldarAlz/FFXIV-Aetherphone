@@ -13,13 +13,11 @@ internal static class SwatchStrip
         var scale = ImGuiHelpers.GlobalScale;
         var labelSize = Typography.Measure(label);
         Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), label, theme.TextStrong);
-
         var radius = 11f * scale;
         var gap = 12f * scale;
         var step = radius * 2f + gap;
         var startX = row.Max.X - (options.Count * step - gap) + radius;
         var result = selected;
-
         var dl = ImGui.GetWindowDrawList();
         for (var index = 0; index < options.Count; index++)
         {

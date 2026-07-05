@@ -25,15 +25,14 @@ internal sealed class CharacterMatch
     }
 
     public string Id { get; }
-
     public string Name { get; }
-
     public string World { get; }
 }
 
 internal sealed class FreeCompanyMatch
 {
-    public FreeCompanyMatch(string id, string name, string world, string subtitle, bool recruiting, Uri? crest, string crestKey)
+    public FreeCompanyMatch(string id, string name, string world, string subtitle, bool recruiting, Uri? crest,
+        string crestKey)
     {
         Id = id;
         Name = name;
@@ -45,17 +44,11 @@ internal sealed class FreeCompanyMatch
     }
 
     public string Id { get; }
-
     public string Name { get; }
-
     public string World { get; }
-
     public string Subtitle { get; }
-
     public bool Recruiting { get; }
-
     public Uri? Crest { get; }
-
     public string CrestKey { get; }
 }
 
@@ -77,11 +70,8 @@ internal sealed class ClassJobLevel
     }
 
     public string Name { get; }
-
     public int Level { get; }
-
     public string LevelLabel { get; }
-
     public JobCategory Category { get; }
 }
 
@@ -94,13 +84,14 @@ internal sealed class GearPiece
     }
 
     public string ItemName { get; }
-
     public string ItemLevelLabel { get; }
 }
 
 internal sealed class CharacterDetail
 {
-    public CharacterDetail(string id, string name, string title, string world, string raceClan, string grandCompany, string freeCompany, Uri? portrait, string portraitKey, IReadOnlyList<ClassJobLevel> jobs, IReadOnlyList<GearPiece> gear)
+    public CharacterDetail(string id, string name, string title, string world, string raceClan, string grandCompany,
+        string freeCompany, Uri? portrait, string portraitKey, IReadOnlyList<ClassJobLevel> jobs,
+        IReadOnlyList<GearPiece> gear)
     {
         Id = id;
         Name = name;
@@ -116,25 +107,15 @@ internal sealed class CharacterDetail
     }
 
     public string Id { get; }
-
     public string Name { get; }
-
     public string Title { get; }
-
     public string World { get; }
-
     public string RaceClan { get; }
-
     public string GrandCompany { get; }
-
     public string FreeCompany { get; }
-
     public Uri? Portrait { get; }
-
     public string PortraitKey { get; }
-
     public IReadOnlyList<ClassJobLevel> Jobs { get; }
-
     public IReadOnlyList<GearPiece> Gear { get; }
 }
 
@@ -151,15 +132,10 @@ internal sealed class RosterMember
     }
 
     public string Id { get; }
-
     public string Name { get; }
-
     public string Subtitle { get; }
-
     public string World { get; }
-
     public Uri? Avatar { get; }
-
     public string AvatarKey { get; }
 }
 
@@ -175,15 +151,14 @@ internal sealed class RosterSnapshot
     }
 
     public RosterMember[] Members { get; }
-
     public int Page { get; }
-
     public int PageCount { get; }
 }
 
 internal sealed class FreeCompanyDetail
 {
-    public FreeCompanyDetail(string id, string name, string tag, string heading, string world, string slogan, string membersLabel, bool recruiting, Uri? crest, string crestKey)
+    public FreeCompanyDetail(string id, string name, string tag, string heading, string world, string slogan,
+        string membersLabel, bool recruiting, Uri? crest, string crestKey)
     {
         Id = id;
         Name = name;
@@ -198,22 +173,13 @@ internal sealed class FreeCompanyDetail
     }
 
     public string Id { get; }
-
     public string Name { get; }
-
     public string Tag { get; }
-
     public string Heading { get; }
-
     public string World { get; }
-
     public string Slogan { get; }
-
     public string MembersLabel { get; }
-
     public bool Recruiting { get; }
-
     public Uri? Crest { get; }
-
     public string CrestKey { get; }
 }

@@ -11,13 +11,9 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class RootSettingsPage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Title);
-
     public string Summary => string.Empty;
-
     public string Glyph => "S";
-
     public Vector4 Tint => new(0.56f, 0.57f, 0.63f, 1f);
-
     private readonly ISettingsNavigator navigator;
     private readonly IReadOnlyList<IReadOnlyList<ISettingsPage>> groups;
 

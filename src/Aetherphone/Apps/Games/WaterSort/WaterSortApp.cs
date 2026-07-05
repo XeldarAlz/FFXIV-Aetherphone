@@ -13,51 +13,28 @@ namespace Aetherphone.Apps.Games.WaterSort;
 internal sealed class WaterSortApp : IMiniGame
 {
     private const string GameId = "watersort";
-
     private const float PourDuration = 0.26f;
-
     private readonly WaterSortBoard board = new();
-
     private readonly WaterSortRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private Spring liftSpring = new(0f);
-
     private bool statsLoaded;
-
     private int bestCleared;
-
     private int currentLevel = 1;
-
     private bool pouring;
-
     private float pourTimer;
-
     private Rect pourFrom;
-
     private Rect pourTo;
-
     private Vector4 pourColor;
-
     private bool finished;
-
     private bool newBest;
-
     private bool pendingSubmit;
-
     private int clearedLevel;
-
     private float resultAppear;
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.WaterSort);
-
     public string Genre => Loc.T(L.Games.GenrePuzzle);
-
     public Vector4 Accent => new(0.40f, 0.68f, 0.98f, 1f);
 
     public void Open()
@@ -94,7 +71,6 @@ internal sealed class WaterSortApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (!statsLoaded)
         {
             bestCleared = context.Stats.Get(GameId).BestScore;
@@ -111,7 +87,6 @@ internal sealed class WaterSortApp : IMiniGame
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
         var lift = liftSpring.Step(board.Selected >= 0 ? 10f * scale : 0f, 0.06f, deltaSeconds);
-
         if (pouring)
         {
             pourTimer += deltaSeconds / PourDuration;
@@ -122,10 +97,12 @@ internal sealed class WaterSortApp : IMiniGame
         }
 
         var rowY = body.Min.Y + 30f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 48f * scale, rowY), Loc.T(L.Games.Level), GameNumber.Label(currentLevel), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 48f * scale, rowY), Loc.T(L.Games.Moves), GameNumber.Label(board.Moves), Accent, theme);
-
-        if (GameHud.Button(new Vector2(body.Min.X + 36f * scale, rowY), new Vector2(58f * scale, 28f * scale), Loc.T(L.Games.Undo), theme.SurfaceMuted, theme))
+        GameHud.Pill(new Vector2(body.Center.X - 48f * scale, rowY), Loc.T(L.Games.Level),
+            GameNumber.Label(currentLevel), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 48f * scale, rowY), Loc.T(L.Games.Moves),
+            GameNumber.Label(board.Moves), Accent, theme);
+        if (GameHud.Button(new Vector2(body.Min.X + 36f * scale, rowY), new Vector2(58f * scale, 28f * scale),
+                Loc.T(L.Games.Undo), theme.SurfaceMuted, theme))
         {
             board.Undo();
         }
@@ -136,15 +113,14 @@ internal sealed class WaterSortApp : IMiniGame
             return;
         }
 
-        var area = new Rect(new Vector2(body.Min.X + 6f * scale, rowY + 28f * scale), new Vector2(body.Max.X - 6f * scale, body.Max.Y - 8f * scale));
-
+        var area = new Rect(new Vector2(body.Min.X + 6f * scale, rowY + 28f * scale),
+            new Vector2(body.Max.X - 6f * scale, body.Max.Y - 8f * scale));
         if (!finished)
         {
             HandleClick(area, scale);
         }
 
         renderer.Draw(board, area, scale, theme, lift);
-
         if (pouring)
         {
             renderer.DrawPourStream(pourFrom, pourTo, pourColor, MathF.Min(1f, pourTimer), scale);
@@ -153,7 +129,6 @@ internal sealed class WaterSortApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
         fx.DrawText();
-
         if (finished)
         {
             DrawResult(theme, body, scale);
@@ -199,10 +174,8 @@ internal sealed class WaterSortApp : IMiniGame
         pourColor = WaterSortRenderer.ColorOf(pour.Color);
         pouring = true;
         pourTimer = 0f;
-
         var splash = new Vector2(pourTo.Center.X, pourTo.Min.Y + pourTo.Height * 0.2f);
         particles.Burst(splash, 9, pourColor, 130f * scale, 2.6f, 0.45f, 320f);
-
         if (board.IsSolved())
         {
             OnSolved(area, scale);
@@ -222,31 +195,16 @@ internal sealed class WaterSortApp : IMiniGame
 
         pendingSubmit = true;
         fx.AddTrauma(0.25f);
-
-        ReadOnlySpan<Vector4> palette = new[]
-        {
-            Accent,
-            Styling.AccentMint,
-            Styling.AccentAmber,
-            Styling.AccentPink,
-        };
+        ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink, };
         particles.Confetti(new Vector2(area.Center.X, area.Min.Y), 64, palette, 260f * scale, 4f, 1.3f);
     }
 
     private void DrawResult(PhoneTheme theme, Rect body, float scale)
     {
         resultAppear = MathF.Min(1f, resultAppear + ImGui.GetIO().DeltaTime * 3.4f);
-
         var secondary = $"{GameNumber.Label(board.Moves)} {Loc.T(L.Games.Moves)}";
-        var result = new GameResult(
-            Loc.T(L.Games.YouWin),
-            Accent,
-            Loc.T(L.Games.Level),
-            GameNumber.Label(clearedLevel),
-            secondary,
-            newBest,
-            Loc.T(L.Games.NextLevel));
-
+        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Level), GameNumber.Label(clearedLevel),
+            secondary, newBest, Loc.T(L.Games.NextLevel));
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartLevel(currentLevel + 1);

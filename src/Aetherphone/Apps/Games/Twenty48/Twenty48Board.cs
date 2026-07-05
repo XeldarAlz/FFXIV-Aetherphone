@@ -11,37 +11,21 @@ internal enum SwipeDirection
 internal sealed class Twenty48Board
 {
     public const int Size = 4;
-
     public const int CellCount = Size * Size;
-
     public const int WinValue = 2048;
-
     private readonly int[] values = new int[CellCount];
-
     private readonly int[] previous = new int[CellCount];
-
     private readonly int[] slideFrom = new int[CellCount];
-
     private readonly bool[] merged = new bool[CellCount];
-
     private readonly bool[] slotLocked = new bool[Size];
-
     private readonly int[] slotValue = new int[Size];
-
     private readonly Random random = new();
-
     public int Score { get; private set; }
-
     public bool Won { get; private set; }
-
     public int SpawnIndex { get; private set; } = -1;
-
     public int LastMergeMax { get; private set; }
-
     public int Value(int index) => values[index];
-
     public int SlideFrom(int index) => slideFrom[index];
-
     public bool Merged(int index) => merged[index];
 
     public void Reset()
@@ -93,7 +77,6 @@ internal sealed class Twenty48Board
         Array.Copy(values, previous, CellCount);
         ClearTransients();
         LastMergeMax = 0;
-
         for (var line = 0; line < Size; line++)
         {
             CollapseLine(direction, line);

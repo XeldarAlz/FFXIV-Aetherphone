@@ -9,13 +9,9 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class LanguagePage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Language);
-
     public string Summary => Loc.Current.NativeName;
-
     public string Glyph => "L";
-
     public Vector4 Tint => new(0.30f, 0.62f, 0.95f, 1f);
-
     private readonly Configuration configuration;
 
     public LanguagePage(Configuration configuration)
@@ -34,7 +30,8 @@ internal sealed class LanguagePage : ISettingsPage
             for (var index = 0; index < languages.Length; index++)
             {
                 var language = languages[index];
-                if (SettingsRow.Selectable(card.NextRow(), language.NativeName, language.Code == Loc.Current.Code, theme) && language.Code != configuration.Language)
+                if (SettingsRow.Selectable(card.NextRow(), language.NativeName, language.Code == Loc.Current.Code,
+                        theme) && language.Code != configuration.Language)
                 {
                     configuration.Language = language.Code;
                     configuration.Save();

@@ -18,26 +18,21 @@ namespace Aetherphone.Apps.Settings;
 internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 {
     public string Id => "settings";
-
     public string DisplayName => Loc.T(L.Apps.Settings);
-
     public string Glyph => "S";
-
     public Vector4 Accent => new(0.56f, 0.57f, 0.63f, 1f);
-
     public int BadgeCount => 0;
-
     private readonly ViewRouter<ISettingsPage> router;
     private readonly RouterDraw<ISettingsPage> drawPage;
     private readonly Action popBack;
-
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
-
     private readonly AccountPage accountPage;
     private readonly ProfilePage profilePage;
 
-    public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone, AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData, PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
+    public SettingsApp(Configuration configuration, ThemeProvider themes, IRingtone ringtone,
+        AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
+        PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
     {
         accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
         profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient);
@@ -51,23 +46,18 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var commands = new CommandsPage();
         var about = new AboutPage(showAbout);
         var changelog = new ChangelogPage();
-
         var groups = new IReadOnlyList<ISettingsPage>[]
         {
             new ISettingsPage[] { accountPage, profilePage },
-            new ISettingsPage[] { appearance, language, immersion, tutorials },
-            new ISettingsPage[] { callsPage },
-            new ISettingsPage[] { notifications, ringtonePage },
-            new ISettingsPage[] { commands, about, changelog },
+            new ISettingsPage[] { appearance, language, immersion, tutorials }, new ISettingsPage[] { callsPage },
+            new ISettingsPage[] { notifications, ringtonePage }, new ISettingsPage[] { commands, about, changelog },
         };
-
         router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups));
         drawPage = DrawPage;
         popBack = PopBack;
     }
 
     public void Open(ISettingsPage page) => router.Push(page);
-
     public void Back() => router.Pop();
 
     public void OnOpened()
@@ -88,7 +78,6 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         var onBack = depth > 1 ? popBack : null;
         AppHeader.Draw(context, page.Title, onBack);
-
         var scale = ImGuiHelpers.GlobalScale;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         page.Draw(context, body);

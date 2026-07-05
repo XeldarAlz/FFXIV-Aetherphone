@@ -24,6 +24,7 @@ internal static class CollectionFilter
             if (hasOwned && ownership != OwnershipFilter.All)
             {
                 var isOwned = owned!.Ids.Contains(item.Id);
+
                 if (ownership == OwnershipFilter.Owned && !isOwned)
                 {
                     continue;
@@ -52,6 +53,7 @@ internal static class CollectionFilter
     public static void CollectSourceTypes(CollectionItem[] items, SortedSet<string> into)
     {
         into.Clear();
+
         for (var index = 0; index < items.Length; index++)
         {
             var type = items[index].SourceType;

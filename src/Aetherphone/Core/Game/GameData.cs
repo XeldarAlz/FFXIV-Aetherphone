@@ -10,7 +10,6 @@ internal sealed class GameData
 {
     private readonly IDataManager data;
     private readonly IObjectTable objectTable;
-
     private uint[]? collectableMountIds;
     private uint[]? collectableMinionIds;
 
@@ -21,9 +20,7 @@ internal sealed class GameData
     }
 
     public IPlayerCharacter? LocalPlayer => objectTable.LocalPlayer;
-
     public uint LocalHomeWorldId => objectTable.LocalPlayer?.HomeWorld.RowId ?? 0u;
-
     public uint LocalCurrentWorldId => objectTable.LocalPlayer?.CurrentWorld.RowId ?? 0u;
 
     public bool IsLocalPlayer(string name, string world)
@@ -44,8 +41,8 @@ internal sealed class GameData
             return true;
         }
 
-        return string.Equals(world, WorldName(local.HomeWorld.RowId), StringComparison.Ordinal)
-            || string.Equals(world, WorldName(local.CurrentWorld.RowId), StringComparison.Ordinal);
+        return string.Equals(world, WorldName(local.HomeWorld.RowId), StringComparison.Ordinal) ||
+               string.Equals(world, WorldName(local.CurrentWorld.RowId), StringComparison.Ordinal);
     }
 
     public string WorldName(uint rowId)
@@ -90,7 +87,8 @@ internal sealed class GameData
 
     public string DataCenterName(uint worldId)
     {
-        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) && world.DataCenter.RowId != 0)
+        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) &&
+            world.DataCenter.RowId != 0)
         {
             return world.DataCenter.Value.Name.ExtractText();
         }
@@ -124,7 +122,8 @@ internal sealed class GameData
 
     public string RegionName(uint worldId)
     {
-        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) && world.DataCenter.RowId != 0)
+        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) &&
+            world.DataCenter.RowId != 0)
         {
             return RegionNameFromId(world.DataCenter.Value.Region.RowId);
         }
@@ -132,21 +131,23 @@ internal sealed class GameData
         return string.Empty;
     }
 
-    private static string RegionNameFromId(uint region) => region switch
-    {
-        1 => "Japan",
-        2 => "North-America",
-        3 => "Europe",
-        4 => "Oceania",
-        _ => string.Empty,
-    };
+    private static string RegionNameFromId(uint region) =>
+        region switch
+        {
+            1 => "Japan",
+            2 => "North-America",
+            3 => "Europe",
+            4 => "Oceania",
+            _ => string.Empty,
+        };
 
-    public string LodestoneLocale() => RegionId() switch
-    {
-        1 => "jp",
-        3 => EuropeanLocale(),
-        _ => "na",
-    };
+    public string LodestoneLocale() =>
+        RegionId() switch
+        {
+            1 => "jp",
+            3 => EuropeanLocale(),
+            _ => "na",
+        };
 
     private uint RegionId()
     {
@@ -156,7 +157,8 @@ internal sealed class GameData
             worldId = LocalHomeWorldId;
         }
 
-        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) && world.DataCenter.RowId != 0)
+        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) &&
+            world.DataCenter.RowId != 0)
         {
             return world.DataCenter.Value.Region.RowId;
         }
@@ -164,12 +166,13 @@ internal sealed class GameData
         return 0;
     }
 
-    private string EuropeanLocale() => data.Language switch
-    {
-        ClientLanguage.French => "fr",
-        ClientLanguage.German => "de",
-        _ => "eu",
-    };
+    private string EuropeanLocale() =>
+        data.Language switch
+        {
+            ClientLanguage.French => "fr",
+            ClientLanguage.German => "de",
+            _ => "eu",
+        };
 
     public string RaceName(uint raceId, bool female)
     {
@@ -240,7 +243,6 @@ internal sealed class GameData
     public void CollectTomestoneItemIds(List<uint> into)
     {
         const uint poeticsItemId = 28;
-
         into.Clear();
         var highest = 0u;
         var second = 0u;

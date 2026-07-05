@@ -16,7 +16,6 @@ internal static class StatusBar
     private const float MaxIslandHalfWidth = 49f;
     private const float IslandHeight = 26f;
     private const float IslandTop = 9f;
-
     private static string cachedTime = string.Empty;
     private static int cachedTimeKey = -1;
 
@@ -37,20 +36,15 @@ internal static class StatusBar
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = screen.Min.Y + 22f * scale;
-
         Plugin.Device.SyncTarget();
-
         var localTime = CurrentTime();
         var timeSize = Typography.Measure(localTime, TimeScale, TimeWeight);
-
         var island = BaseIsland(screen);
         DeviceChrome.DrawIsland(island, theme);
-
         var earGap = EarGap * scale;
-
         var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale, island.Min.X - earGap - timeSize.X);
-        Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale, TimeWeight);
-
+        Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale,
+            TimeWeight);
         StatusIcons.Draw(screen, theme, rowCenterY, island.Max.X + earGap);
     }
 
@@ -70,7 +64,6 @@ internal static class StatusBar
         var leftEarNeed = earGap + timeWidth + sidePadding;
         var maxHalfWidth = screen.Width * 0.5f - MathF.Max(rightEarNeed, leftEarNeed);
         var halfWidth = Math.Clamp(maxHalfWidth, MinIslandHalfWidth * scale, MaxIslandHalfWidth * scale);
-
         var top = screen.Min.Y + IslandTop * scale;
         var height = IslandHeight * scale;
         var centerX = screen.Center.X;

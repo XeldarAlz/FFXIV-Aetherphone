@@ -1,4 +1,3 @@
-using System.IO;
 using Newtonsoft.Json.Linq;
 
 namespace Aetherphone.Core.Localization;

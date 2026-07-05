@@ -3,11 +3,10 @@ namespace Aetherphone.Core.Onboarding;
 internal static class OnboardingState
 {
     private static bool replayWelcomeRequested;
-
     public static bool Enabled => Plugin.Cfg.TutorialsEnabled;
 
-    public static bool HasCompleted(string id, int version)
-        => Plugin.Cfg.OnboardingCompleted.TryGetValue(id, out var stored) && stored >= version;
+    public static bool HasCompleted(string id, int version) =>
+        Plugin.Cfg.OnboardingCompleted.TryGetValue(id, out var stored) && stored >= version;
 
     public static void MarkCompleted(string id, int version)
     {

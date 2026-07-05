@@ -1,7 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Collections;
@@ -24,15 +22,12 @@ internal sealed class OwnedEntry
 internal sealed class CollectionsCatalogService : IDisposable
 {
     private const string ApiRoot = "https://ffxivcollect.com/api";
-
     private static readonly TimeSpan CatalogFreshFor = TimeSpan.FromDays(14);
     private static readonly TimeSpan OwnedFailedRetryFor = TimeSpan.FromMinutes(1);
-
     private readonly HttpService http;
     private readonly DiskCache disk;
     private readonly RequestThrottle throttle;
     private readonly CancellationTokenSource cancellation = new();
-
     private readonly ConcurrentDictionary<CollectionCategory, CatalogEntry> catalogs = new();
     private readonly ConcurrentDictionary<string, OwnedEntry> owned = new();
 
@@ -46,6 +41,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     public CatalogEntry RequestCatalog(CollectionCategory category)
     {
         var entry = catalogs.GetOrAdd(category, static _ => new CatalogEntry());
+
         if (entry.State == CollectionState.Idle)
         {
             entry.State = CollectionState.Loading;
@@ -60,6 +56,7 @@ internal sealed class CollectionsCatalogService : IDisposable
         var key = string.Concat(lodestoneId, ":", CollectionCategories.OwnedPath(category));
         var entry = owned.GetOrAdd(key, static _ => new OwnedEntry());
         var retryFailed = entry.State == OwnedState.Failed && DateTime.UtcNow - entry.FetchedUtc >= OwnedFailedRetryFor;
+
         if (entry.State == OwnedState.Unknown || retryFailed)
         {
             entry.State = OwnedState.Loading;
@@ -90,9 +87,9 @@ internal sealed class CollectionsCatalogService : IDisposable
             var token = cancellation.Token;
             var path = CollectionCategories.CatalogPath(category);
             var cacheKey = string.Concat("collect:catalog:", path);
-
             var cached = disk.Get(cacheKey, CatalogFreshFor);
             CollectionResponse? response;
+
             if (cached is not null)
             {
                 response = Deserialize(cached);
@@ -131,7 +128,8 @@ internal sealed class CollectionsCatalogService : IDisposable
     {
         using (await throttle.EnterAsync(token).ConfigureAwait(false))
         {
-            return await http.GetJsonAsync(url, CollectionJsonContext.Default.CollectionResponse, null, token).ConfigureAwait(false);
+            return await http.GetJsonAsync(url, CollectionJsonContext.Default.CollectionResponse, null, token)
+                .ConfigureAwait(false);
         }
     }
 
@@ -140,16 +138,19 @@ internal sealed class CollectionsCatalogService : IDisposable
         try
         {
             var token = cancellation.Token;
-            var url = string.Concat(ApiRoot, "/characters/", lodestoneId, "/", CollectionCategories.OwnedPath(category), "/owned");
-
+            var url = string.Concat(ApiRoot, "/characters/", lodestoneId, "/", CollectionCategories.OwnedPath(category),
+                "/owned");
             var statusCode = 0;
             OwnedItemDto[]? items;
+
             using (await throttle.EnterAsync(token).ConfigureAwait(false))
             {
-                items = await http.GetJsonAsync(url, CollectionJsonContext.Default.OwnedItemDtoArray, null, token, status => statusCode = status).ConfigureAwait(false);
+                items = await http.GetJsonAsync(url, CollectionJsonContext.Default.OwnedItemDtoArray, null, token,
+                    status => statusCode = status).ConfigureAwait(false);
             }
 
             entry.FetchedUtc = DateTime.UtcNow;
+
             if (items is null)
             {
                 entry.State = statusCode is 403 or 404 ? OwnedState.Private : OwnedState.Failed;
@@ -157,6 +158,7 @@ internal sealed class CollectionsCatalogService : IDisposable
             }
 
             var ids = new HashSet<int>(items.Length);
+
             for (var index = 0; index < items.Length; index++)
             {
                 ids.Add(items[index].Id);
@@ -180,6 +182,7 @@ internal sealed class CollectionsCatalogService : IDisposable
     private static CollectionItem[] Build(CollectionItemDto[] results)
     {
         var items = new CollectionItem[results.Length];
+
         for (var index = 0; index < results.Length; index++)
         {
             items[index] = new CollectionItem(results[index]);

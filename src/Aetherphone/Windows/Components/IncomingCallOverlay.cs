@@ -11,14 +11,12 @@ namespace Aetherphone.Windows.Components;
 
 internal sealed class IncomingCallOverlay
 {
-    private const ImGuiWindowFlags OverlayFlags =
-        ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
+    private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
+                                                  ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
 
     private static readonly Vector4 Green = new(0.20f, 0.78f, 0.35f, 1f);
     private static readonly Vector4 Ink = new(0.98f, 0.98f, 0.99f, 1f);
-
     private readonly CallHub calls;
-
     private float clock;
 
     public IncomingCallOverlay(CallHub calls)
@@ -37,7 +35,6 @@ internal sealed class IncomingCallOverlay
         }
 
         clock += MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
-
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##incomingCall", screen.Size, false, OverlayFlags))
         {
@@ -49,47 +46,47 @@ internal sealed class IncomingCallOverlay
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
-
         dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0.02f, 0.03f, 0.05f, 0.78f)));
-
         var centerX = screen.Center.X;
         var caller = view.IncomingFrom?.DisplayName ?? view.PeerLabel;
-
         var avatarRadius = 50f * scale;
         var avatarCenter = new Vector2(centerX, screen.Min.Y + 150f * scale);
-
         var pulse = 0.5f + 0.5f * MathF.Sin(clock * 2.2f);
-        dl.AddCircle(avatarCenter, avatarRadius + (6f + 7f * pulse) * scale, ImGui.GetColorU32(Palette.WithAlpha(Green, 0.30f + 0.25f * pulse)), 64, 2.5f * scale);
+        dl.AddCircle(avatarCenter, avatarRadius + (6f + 7f * pulse) * scale,
+            ImGui.GetColorU32(Palette.WithAlpha(Green, 0.30f + 0.25f * pulse)), 64, 2.5f * scale);
         dl.AddCircleFilled(avatarCenter, avatarRadius, ImGui.GetColorU32(theme.Accent), 64);
         Typography.DrawCentered(avatarCenter, Initial(caller), Ink, 2.3f);
-
-        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 30f * scale), caller, theme.TextStrong, 1.7f);
-
-        var subtitle = view.OthersCount > 1 ? $"Aetherphone · +{view.OthersCount - 1} others" : "Aetherphone audio call";
-        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 56f * scale), subtitle, theme.TextMuted, 0.95f);
-
+        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 30f * scale), caller,
+            theme.TextStrong, 1.7f);
+        var subtitle = view.OthersCount > 1
+            ? $"Aetherphone · +{view.OthersCount - 1} others"
+            : "Aetherphone audio call";
+        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 56f * scale), subtitle,
+            theme.TextMuted, 0.95f);
         var buttonY = screen.Max.Y - 96f * scale;
         var buttonRadius = 32f * scale;
-
-        if (ActionButton(new Vector2(centerX - 70f * scale, buttonY), buttonRadius, FontAwesomeIcon.PhoneSlash, theme.Danger, "Decline", theme))
+        if (ActionButton(new Vector2(centerX - 70f * scale, buttonY), buttonRadius, FontAwesomeIcon.PhoneSlash,
+                theme.Danger, "Decline", theme))
         {
             calls.Decline();
         }
 
-        if (ActionButton(new Vector2(centerX + 70f * scale, buttonY), buttonRadius, FontAwesomeIcon.Phone, Green, "Accept", theme))
+        if (ActionButton(new Vector2(centerX + 70f * scale, buttonY), buttonRadius, FontAwesomeIcon.Phone, Green,
+                "Accept", theme))
         {
             calls.Accept();
         }
     }
 
-    private static bool ActionButton(Vector2 center, float radius, FontAwesomeIcon icon, Vector4 fill, string label, PhoneTheme theme)
+    private static bool ActionButton(Vector2 center, float radius, FontAwesomeIcon icon, Vector4 fill, string label,
+        PhoneTheme theme)
     {
         var dl = ImGui.GetWindowDrawList();
         var scale = ImGuiHelpers.GlobalScale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(color), 40);
-
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
             var glyph = icon.ToIconString();
@@ -102,7 +99,6 @@ internal sealed class IncomingCallOverlay
         }
 
         Typography.DrawCentered(new Vector2(center.X, center.Y + radius + 16f * scale), label, theme.TextMuted, 0.85f);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

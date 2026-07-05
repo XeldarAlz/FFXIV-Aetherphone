@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Radio;
@@ -23,18 +21,9 @@ internal sealed class RadioService : IDisposable
 
     public static readonly RadioCategory[] Categories =
     {
-        new("Lofi", "lofi"),
-        new("Chillout", "chillout"),
-        new("Jazz", "jazz"),
-        new("Classical", "classical"),
-        new("Ambient", "ambient"),
-        new("Electronic", "electronic"),
-        new("Pop", "pop"),
-        new("Rock", "rock"),
-        new("Metal", "metal"),
-        new("Hip-Hop", "hip hop"),
-        new("Soundtrack", "soundtrack"),
-        new("Anime", "anime"),
+        new("Lofi", "lofi"), new("Chillout", "chillout"), new("Jazz", "jazz"), new("Classical", "classical"),
+        new("Ambient", "ambient"), new("Electronic", "electronic"), new("Pop", "pop"), new("Rock", "rock"),
+        new("Metal", "metal"), new("Hip-Hop", "hip hop"), new("Soundtrack", "soundtrack"), new("Anime", "anime"),
     };
 
     private readonly HttpService http;
@@ -54,8 +43,11 @@ internal sealed class RadioService : IDisposable
         {
             using (await throttle.EnterAsync(linked.Token).ConfigureAwait(false))
             {
-                var url = $"{ApiRoot}/json/stations/search?tag={Uri.EscapeDataString(tag)}&tagExact=true&codec=MP3&hidebroken=true&order=clickcount&reverse=true&limit={StationLimit}";
-                var dtos = await http.GetJsonAsync(url, RadioJsonContext.Default.RadioStationDtoArray, null, linked.Token).ConfigureAwait(false);
+                var url =
+                    $"{ApiRoot}/json/stations/search?tag={Uri.EscapeDataString(tag)}&tagExact=true&codec=MP3&hidebroken=true&order=clickcount&reverse=true&limit={StationLimit}";
+                var dtos = await http
+                    .GetJsonAsync(url, RadioJsonContext.Default.RadioStationDtoArray, null, linked.Token)
+                    .ConfigureAwait(false);
                 return Project(dtos);
             }
         }
@@ -87,7 +79,8 @@ internal sealed class RadioService : IDisposable
                 continue;
             }
 
-            stations.Add(new RadioStation(dto.Name, stream, dto.Codec ?? string.Empty, dto.Bitrate, dto.Country ?? string.Empty));
+            stations.Add(new RadioStation(dto.Name, stream, dto.Codec ?? string.Empty, dto.Bitrate,
+                dto.Country ?? string.Empty));
         }
 
         return stations.ToArray();

@@ -11,23 +11,17 @@ internal sealed class OnboardingDirector
     private const float EnterSeconds = 0.34f;
     private const float AnchorMissGrace = 0.4f;
     private const float AnchorSmoothing = 16f;
-
     private readonly INavigator navigation;
-
     private GuideSequence? active;
     private int stepIndex;
-
     private GuideSequence? suspended;
     private int suspendedIndex;
-
     private bool pendingWelcome;
     private bool pendingResume;
     private string? pendingAppId;
-
     private bool suppressed = true;
     private float frameDelta;
     private float enterClock;
-
     private Vector2 anchorMin;
     private Vector2 anchorMax;
     private bool anchorInitialized;
@@ -39,7 +33,6 @@ internal sealed class OnboardingDirector
     }
 
     public bool CapturesPointer => active.HasValue && !suppressed;
-
     public bool WantsAnchors => active.HasValue && !suppressed;
 
     public void OnPhoneOpened()
@@ -97,7 +90,6 @@ internal sealed class OnboardingDirector
     public void Advance(float delta, bool busy, bool atHome, string? currentAppId)
     {
         frameDelta = MathF.Min(delta, TransitionTiming.MaxFrameSeconds);
-
         if (!OnboardingState.Enabled)
         {
             active = null;
@@ -110,7 +102,6 @@ internal sealed class OnboardingDirector
         }
 
         suppressed = busy;
-
         if (active.HasValue)
         {
             var current = active.Value;
@@ -159,7 +150,8 @@ internal sealed class OnboardingDirector
         {
             var appId = pendingAppId;
             pendingAppId = null;
-            if (TourRegistry.TryGetAppTour(appId, out var tour) && !OnboardingState.HasCompleted(tour.Id, tour.ContentVersion))
+            if (TourRegistry.TryGetAppTour(appId, out var tour) &&
+                !OnboardingState.HasCompleted(tour.Id, tour.ContentVersion))
             {
                 Start(tour);
             }
@@ -177,7 +169,6 @@ internal sealed class OnboardingDirector
         var step = sequence.Steps[stepIndex];
         var progress = Math.Clamp(enterClock / EnterSeconds, 0f, 1f);
         var anchor = ResolveAnchor(step);
-
         var result = CoachmarkOverlay.Draw(screen, theme, step, anchor, progress, stepIndex, sequence.Steps.Length);
         switch (result)
         {
@@ -216,7 +207,6 @@ internal sealed class OnboardingDirector
     private void Finish(GuideSequence sequence)
     {
         OnboardingState.MarkCompleted(sequence.Id, sequence.ContentVersion);
-
         if (sequence.CompletesOnFinish is { } covered)
         {
             for (var index = 0; index < covered.Length; index++)
@@ -238,8 +228,8 @@ internal sealed class OnboardingDirector
         missTimer = 0f;
     }
 
-    private static bool CanStart(in GuideSequence sequence, bool atHome, string? currentAppId)
-        => sequence.RequiredAppId is null ? atHome : currentAppId == sequence.RequiredAppId;
+    private static bool CanStart(in GuideSequence sequence, bool atHome, string? currentAppId) =>
+        sequence.RequiredAppId is null ? atHome : currentAppId == sequence.RequiredAppId;
 
     private Rect? ResolveAnchor(in GuideStep step)
     {

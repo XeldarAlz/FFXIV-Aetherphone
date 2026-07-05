@@ -14,7 +14,6 @@ internal static unsafe class LinkshellDirectory
     public static void Collect(List<LinkshellEntry> into)
     {
         into.Clear();
-
         var local = InfoProxyLinkshell.Instance();
         if (local is not null)
         {
@@ -42,7 +41,8 @@ internal static unsafe class LinkshellDirectory
                     continue;
                 }
 
-                into.Add(new LinkshellEntry(new LinkshellChannel(LinkshellKind.CrossWorldLinkshell, slot), name->ToString()));
+                into.Add(new LinkshellEntry(new LinkshellChannel(LinkshellKind.CrossWorldLinkshell, slot),
+                    name->ToString()));
             }
         }
     }

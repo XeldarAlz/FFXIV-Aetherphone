@@ -11,15 +11,10 @@ namespace Aetherphone.Apps.Games.Simon;
 internal sealed class SimonApp : IMiniGame
 {
     private const string GameId = "simon";
-
     private const float OnDuration = 0.4f;
-
     private const float GapDuration = 0.18f;
-
     private const float StartDelay = 0.55f;
-
     private const float RewardDuration = 0.55f;
-
     private const float LitDecay = 4.2f;
 
     private enum Phase
@@ -31,45 +26,25 @@ internal sealed class SimonApp : IMiniGame
     }
 
     private readonly SimonBoard board = new();
-
     private readonly SimonRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private readonly float[] lit = new float[SimonBoard.PadCount];
-
     private Phase phase;
-
     private int showStep;
-
     private bool showOn;
-
     private float phaseTimer;
-
     private int inputIndex;
-
     private int score;
-
     private int bestScore;
-
     private bool statsLoaded;
-
     private float rewardTimer;
-
     private bool pendingSubmit;
-
     private bool newBest;
-
     private float resultAppear;
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Simon);
-
     public string Genre => Loc.T(L.Games.GenreMemory);
-
     public Vector4 Accent => new(0.46f, 0.86f, 0.66f, 1f);
 
     public void Open()
@@ -114,7 +89,6 @@ internal sealed class SimonApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (!statsLoaded)
         {
             bestScore = context.Stats.Get(GameId).BestScore;
@@ -134,20 +108,20 @@ internal sealed class SimonApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         var rowY = body.Min.Y + 30f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), GameNumber.Label(score), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(bestScore), Accent, theme);
-
+        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), GameNumber.Label(score),
+            Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(bestScore),
+            Accent, theme);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
             StartGame();
             return;
         }
 
-        var area = new Rect(new Vector2(body.Min.X + 10f * scale, rowY + 28f * scale), new Vector2(body.Max.X - 10f * scale, body.Max.Y - 10f * scale));
+        var area = new Rect(new Vector2(body.Min.X + 10f * scale, rowY + 28f * scale),
+            new Vector2(body.Max.X - 10f * scale, body.Max.Y - 10f * scale));
         var grid = GameGrid.Centered(area, 2, 2, 0.08f);
-
         if (phase == Phase.Showing)
         {
             UpdateShowing(deltaSeconds, grid, scale);
@@ -169,11 +143,9 @@ internal sealed class SimonApp : IMiniGame
 
         var hubLabel = phase == Phase.Showing ? Loc.T(L.Games.Watch) : Loc.T(L.Games.YourTurn);
         renderer.Draw(grid, lit, GameNumber.Label(board.Length), hubLabel, Accent, theme, scale);
-
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
-
         if (phase == Phase.Over)
         {
             DrawResult(theme, body, deltaSeconds);
@@ -257,7 +229,6 @@ internal sealed class SimonApp : IMiniGame
         resultAppear = 0f;
         fx.AddTrauma(0.7f);
         fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
-
         for (var pad = 0; pad < SimonBoard.PadCount; pad++)
         {
             BurstPad(grid, pad, 14, scale);
@@ -292,15 +263,14 @@ internal sealed class SimonApp : IMiniGame
     private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
     {
         resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-
         string? secondary = null;
         if (bestScore > 0)
         {
             secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestScore)}";
         }
 
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score), GameNumber.Label(score), secondary, newBest);
-
+        var result = new GameResult(Loc.T(L.Games.GameOver), theme.Danger, Loc.T(L.Games.Score),
+            GameNumber.Label(score), secondary, newBest);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartGame();

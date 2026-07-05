@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -15,23 +13,16 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed class VelvetStore : IDisposable
 {
     private const int AvatarSize = 512;
-
     private const int PostSize = 1080;
-
     private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
-
     private const int DmImageMaxDimension = 1280;
-
     private static readonly TimeSpan InboxPollInterval = TimeSpan.FromSeconds(15);
-
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
-
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly CancellationTokenSource cancellation = new();
-
     private readonly Dictionary<string, long> inboxLastAt = new();
     private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
@@ -40,43 +31,33 @@ internal sealed class VelvetStore : IDisposable
     private DateTime lastInboxPollUtc = DateTime.MinValue;
     private volatile string? viewingThreadUserId;
     private DateTime lastViewingUtc = DateTime.MinValue;
-
     private DateTime lastMeAttemptUtc = DateTime.MinValue;
-
     private volatile VelvetProfileDto? me;
     private volatile bool loadingMe;
     private volatile bool avatarBusy;
-
     private volatile VelvetProfileDto[] discoverResults = Array.Empty<VelvetProfileDto>();
     private volatile bool loadingDiscover;
     private volatile bool discoverLoaded;
-
     private volatile VelvetConnectionDto[] connections = Array.Empty<VelvetConnectionDto>();
     private volatile bool loadingConnections;
     private volatile bool connectionsLoaded;
-
     private volatile VelvetConnectionDto[] requests = Array.Empty<VelvetConnectionDto>();
     private volatile bool loadingRequests;
     private volatile bool requestsLoaded;
-
     private volatile string? profileUserId;
     private volatile VelvetProfileDto? profileUser;
     private volatile bool profileLoading;
     private volatile bool profileFailed;
-
     private volatile VelvetThreadDto[] threads = Array.Empty<VelvetThreadDto>();
     private volatile bool loadingThreads;
     private volatile bool threadsLoaded;
-
     private volatile string? threadId;
     private volatile VelvetMessageDto[] messages = Array.Empty<VelvetMessageDto>();
     private volatile bool loadingThread;
     private volatile bool sending;
     private volatile bool otherTyping;
-
     private volatile VelvetPostDto[] feed = Array.Empty<VelvetPostDto>();
     private volatile bool loadingFeed;
-
     private volatile string? detailPostId;
     private volatile VelvetCommentDto[] detailComments = Array.Empty<VelvetCommentDto>();
     private volatile bool loadingComments;
@@ -84,7 +65,8 @@ internal sealed class VelvetStore : IDisposable
     private volatile bool feedLoaded;
     private volatile bool posting;
 
-    public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications, Configuration configuration)
+    public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications,
+        Configuration configuration)
     {
         this.session = session;
         this.client = client;
@@ -125,17 +107,15 @@ internal sealed class VelvetStore : IDisposable
         }
 
         inboxPolling = true;
-        RunGuarded("inbox poll",
-            async token =>
+        RunGuarded("inbox poll", async token =>
+        {
+            var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
+            if (page is not null)
             {
-                var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
-                if (page is not null)
-                {
-                    threads = page.Items;
-                    RaiseInboxNotifications(page.Items);
-                }
-            },
-            () => inboxPolling = false);
+                threads = page.Items;
+                RaiseInboxNotifications(page.Items);
+            }
+        }, () => inboxPolling = false);
     }
 
     private void RaiseInboxNotifications(VelvetThreadDto[] items)
@@ -146,7 +126,6 @@ internal sealed class VelvetStore : IDisposable
             var thread = items[index];
             var previous = inboxLastAt.GetValueOrDefault(thread.OtherUserId, 0L);
             inboxLastAt[thread.OtherUserId] = thread.LastMessageAtUnix;
-
             if (!primed || thread.LastMessageAtUnix <= previous || thread.UnreadCount <= 0)
             {
                 continue;
@@ -158,70 +137,42 @@ internal sealed class VelvetStore : IDisposable
             }
 
             var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
-            notifications.Notify(new PhoneNotification("velvet", name, thread.LastMessagePreview, DateTime.Now, VelvetUi.Accent, thread.OtherUserId));
+            notifications.Notify(new PhoneNotification("velvet", name, thread.LastMessagePreview, DateTime.Now,
+                VelvetUi.Accent, thread.OtherUserId));
         }
 
         inboxPrimed = true;
     }
 
     public bool IsSignedIn => session.IsSignedIn;
-
     public VelvetProfileDto? Me => me;
-
     public bool HasProfile => me is not null;
-
     public bool AvatarBusy => avatarBusy;
-
     public VelvetProfileDto[] DiscoverResults => discoverResults;
-
     public bool LoadingDiscover => loadingDiscover;
-
     public bool DiscoverLoaded => discoverLoaded;
-
     public VelvetConnectionDto[] Connections => connections;
-
     public bool LoadingConnections => loadingConnections;
-
     public bool ConnectionsLoaded => connectionsLoaded;
-
     public VelvetConnectionDto[] Requests => requests;
-
     public bool LoadingRequests => loadingRequests;
-
     public bool RequestsLoaded => requestsLoaded;
-
     public int RequestCount => requests.Length;
-
     public string? ProfileUserId => profileUserId;
-
     public VelvetProfileDto? ProfileUser => profileUser;
-
     public bool ProfileLoading => profileLoading;
-
     public bool ProfileFailed => profileFailed;
-
     public VelvetThreadDto[] Threads => threads;
-
     public bool LoadingThreads => loadingThreads;
-
     public bool ThreadsLoaded => threadsLoaded;
-
     public string? ThreadId => threadId;
-
     public VelvetMessageDto[] Messages => messages;
-
     public bool LoadingThread => loadingThread;
-
     public bool Sending => sending;
-
     public bool OtherTyping => otherTyping;
-
     public VelvetPostDto[] Feed => feed;
-
     public bool LoadingFeed => loadingFeed;
-
     public bool FeedLoaded => feedLoaded;
-
     public bool Posting => posting;
 
     public int UnreadCount
@@ -314,13 +265,16 @@ internal sealed class VelvetStore : IDisposable
                     return;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
                 if (!uploaded)
                 {
                     return;
                 }
 
-                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token).ConfigureAwait(false);
+                var updated = await client
+                    .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
+                    .ConfigureAwait(false);
                 if (updated is null)
                 {
                     return;
@@ -357,10 +311,8 @@ internal sealed class VelvetStore : IDisposable
             var succeeded = false;
             try
             {
-                var request = new UpdateProfileRequest(
-                    displayName.Length > 0 ? displayName : null,
-                    handle.Length > 0 ? handle : null,
-                    null);
+                var request = new UpdateProfileRequest(displayName.Length > 0 ? displayName : null,
+                    handle.Length > 0 ? handle : null, null);
                 var updated = await client.UpdateProfileAsync(request, token).ConfigureAwait(false);
                 if (updated is not null)
                 {
@@ -539,7 +491,6 @@ internal sealed class VelvetStore : IDisposable
         profileUser = null;
         profileFailed = false;
         profileLoading = true;
-
         RunGuarded("profile open", async token =>
         {
             var user = await client.VelvetUserAsync(userId, token).ConfigureAwait(false);
@@ -635,7 +586,6 @@ internal sealed class VelvetStore : IDisposable
         messages = Array.Empty<VelvetMessageDto>();
         otherTyping = false;
         loadingThread = true;
-
         RunGuarded("thread open", async token =>
         {
             var page = await client.VelvetMessagesAsync(id, null, token).ConfigureAwait(false);
@@ -750,13 +700,16 @@ internal sealed class VelvetStore : IDisposable
                     return;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
                 if (!uploaded)
                 {
                     return;
                 }
 
-                var sent = await client.SendVelvetMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height).ConfigureAwait(false);
+                var sent = await client
+                    .SendVelvetMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height)
+                    .ConfigureAwait(false);
                 if (sent is not null)
                 {
                     if (threadId == id)
@@ -795,20 +748,19 @@ internal sealed class VelvetStore : IDisposable
             return null;
         }
 
-        RunGuarded("dm media url",
-            async token =>
+        RunGuarded("dm media url", async token =>
+        {
+            var result = await client.VelvetDmMediaUrlAsync(messageId, token).ConfigureAwait(false);
+            if (result is not null)
             {
-                var result = await client.VelvetDmMediaUrlAsync(messageId, token).ConfigureAwait(false);
-                if (result is not null)
-                {
-                    dmMediaUrls[messageId] = result.Url;
-                }
-            },
-            () => dmMediaLoading.TryRemove(messageId, out _));
+                dmMediaUrls[messageId] = result.Url;
+            }
+        }, () => dmMediaLoading.TryRemove(messageId, out _));
         return null;
     }
 
-    public void CreatePost(string sourcePath, WallpaperCrop crop, string caption, string[] tags, int visibility, Action<bool> onComplete)
+    public void CreatePost(string sourcePath, WallpaperCrop crop, string caption, string[] tags, int visibility,
+        Action<bool> onComplete)
     {
         if (posting)
         {
@@ -829,13 +781,15 @@ internal sealed class VelvetStore : IDisposable
                     return;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
                 if (!uploaded)
                 {
                     return;
                 }
 
-                var request = new CreateVelvetPostRequest(upload.Key, baked.Width, baked.Height, caption, tags, visibility);
+                var request =
+                    new CreateVelvetPostRequest(upload.Key, baked.Width, baked.Height, caption, tags, visibility);
                 var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
                 succeeded = created is not null;
             }
@@ -855,9 +809,7 @@ internal sealed class VelvetStore : IDisposable
     }
 
     public VelvetCommentDto[] DetailComments => detailComments;
-
     public bool LoadingComments => loadingComments;
-
     public bool Commenting => commenting;
 
     public void OpenComments(string postId)
@@ -934,7 +886,8 @@ internal sealed class VelvetStore : IDisposable
             feed = result;
         }
 
-        RunGuarded("delete post", async token => await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false));
+        RunGuarded("delete post",
+            async token => await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false));
     }
 
     public void ToggleReaction(VelvetPostDto post, int kind)
@@ -1011,7 +964,8 @@ internal sealed class VelvetStore : IDisposable
             detailComments = RemoveComment(detailComments, commentId);
         }
 
-        RunGuarded("comment delete", async token => await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false));
+        RunGuarded("comment delete",
+            async token => await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
     public void DeleteComment(string postId, string commentId, Action<bool> onComplete)

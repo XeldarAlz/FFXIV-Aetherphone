@@ -10,13 +10,9 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class RingtonePage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Ringtone);
-
     public string Summary => CurrentName();
-
     public string Glyph => "R";
-
     public Vector4 Tint => new(0.95f, 0.40f, 0.65f, 1f);
-
     private readonly Configuration configuration;
     private readonly IRingtone ringtone;
 
@@ -37,7 +33,8 @@ internal sealed class RingtonePage : ISettingsPage
             for (var index = 0; index < options.Count; index++)
             {
                 var option = options[index];
-                if (SettingsRow.Selectable(card.NextRow(), CatalogLabels.Ringtone(option.SoundId), option.SoundId == configuration.RingtoneId, theme))
+                if (SettingsRow.Selectable(card.NextRow(), CatalogLabels.Ringtone(option.SoundId),
+                        option.SoundId == configuration.RingtoneId, theme))
                 {
                     configuration.RingtoneId = option.SoundId;
                     configuration.Save();

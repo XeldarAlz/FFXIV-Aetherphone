@@ -8,7 +8,6 @@ internal sealed class PlaybackHub
 {
     private readonly RadioPlayer radio;
     private readonly SongPlayer songs;
-
     private float volume = 0.6f;
 
     public PlaybackHub(RadioPlayer radio, SongPlayer songs)
@@ -20,21 +19,16 @@ internal sealed class PlaybackHub
     }
 
     public RadioPlayer Radio => radio;
-
     public SongPlayer Songs => songs;
-
     public bool SongActive => songs.State != SongPlaybackState.Stopped;
-
     public bool RadioActive => radio.State != RadioPlaybackState.Stopped;
-
     public bool IsActive => SongActive || RadioActive;
 
-    public bool IsPlaying => SongActive ? songs.State == SongPlaybackState.Playing : radio.State == RadioPlaybackState.Playing;
+    public bool IsPlaying =>
+        SongActive ? songs.State == SongPlaybackState.Playing : radio.State == RadioPlaybackState.Playing;
 
     public string Title => SongActive ? songs.CurrentTitle : radio.CurrentStation;
-
     public string Subtitle => SongActive ? SongSubtitle() : RadioStateLabel(radio.State);
-
     public bool HasQueue => SongActive ? songs.HasQueue : radio.HasQueue;
 
     public float Volume

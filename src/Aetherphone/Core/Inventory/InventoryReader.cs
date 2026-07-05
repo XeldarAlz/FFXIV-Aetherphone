@@ -19,67 +19,44 @@ internal static unsafe class InventoryReader
 
     private static readonly InventoryType[] BagTypes =
     {
-        InventoryType.Inventory1,
-        InventoryType.Inventory2,
-        InventoryType.Inventory3,
-        InventoryType.Inventory4,
+        InventoryType.Inventory1, InventoryType.Inventory2, InventoryType.Inventory3, InventoryType.Inventory4,
     };
 
     private static readonly InventoryType[] ArmouryTypes =
     {
-        InventoryType.ArmoryMainHand,
-        InventoryType.ArmoryOffHand,
-        InventoryType.ArmoryHead,
-        InventoryType.ArmoryBody,
-        InventoryType.ArmoryHands,
-        InventoryType.ArmoryWaist,
-        InventoryType.ArmoryLegs,
-        InventoryType.ArmoryFeets,
-        InventoryType.ArmoryEar,
-        InventoryType.ArmoryNeck,
-        InventoryType.ArmoryWrist,
-        InventoryType.ArmoryRings,
-        InventoryType.ArmorySoulCrystal,
+        InventoryType.ArmoryMainHand, InventoryType.ArmoryOffHand, InventoryType.ArmoryHead,
+        InventoryType.ArmoryBody, InventoryType.ArmoryHands, InventoryType.ArmoryWaist, InventoryType.ArmoryLegs,
+        InventoryType.ArmoryFeets, InventoryType.ArmoryEar, InventoryType.ArmoryNeck, InventoryType.ArmoryWrist,
+        InventoryType.ArmoryRings, InventoryType.ArmorySoulCrystal,
     };
 
     private static readonly InventoryType[] SaddlebagTypes =
     {
-        InventoryType.SaddleBag1,
-        InventoryType.SaddleBag2,
-        InventoryType.PremiumSaddleBag1,
+        InventoryType.SaddleBag1, InventoryType.SaddleBag2, InventoryType.PremiumSaddleBag1,
         InventoryType.PremiumSaddleBag2,
     };
 
     private static readonly InventoryType[] RetainerBagTypes =
     {
-        InventoryType.RetainerPage1,
-        InventoryType.RetainerPage2,
-        InventoryType.RetainerPage3,
-        InventoryType.RetainerPage4,
-        InventoryType.RetainerPage5,
-        InventoryType.RetainerPage6,
-        InventoryType.RetainerPage7,
-        InventoryType.RetainerCrystals,
+        InventoryType.RetainerPage1, InventoryType.RetainerPage2, InventoryType.RetainerPage3,
+        InventoryType.RetainerPage4, InventoryType.RetainerPage5, InventoryType.RetainerPage6,
+        InventoryType.RetainerPage7, InventoryType.RetainerCrystals,
     };
 
     private static readonly InventoryType[] FreeCompanyBagTypes =
     {
-        InventoryType.FreeCompanyPage1,
-        InventoryType.FreeCompanyPage2,
-        InventoryType.FreeCompanyPage3,
-        InventoryType.FreeCompanyPage4,
-        InventoryType.FreeCompanyPage5,
-        InventoryType.FreeCompanyCrystals,
+        InventoryType.FreeCompanyPage1, InventoryType.FreeCompanyPage2, InventoryType.FreeCompanyPage3,
+        InventoryType.FreeCompanyPage4, InventoryType.FreeCompanyPage5, InventoryType.FreeCompanyCrystals,
     };
 
-    public static bool ReadLocal(List<InventoryStack> bags, List<InventoryStack> armoury, List<InventoryStack> crystals, List<InventoryStack> saddlebag, List<InventoryStack> equipped)
+    public static bool ReadLocal(List<InventoryStack> bags, List<InventoryStack> armoury, List<InventoryStack> crystals,
+        List<InventoryStack> saddlebag, List<InventoryStack> equipped)
     {
         bags.Clear();
         armoury.Clear();
         crystals.Clear();
         saddlebag.Clear();
         equipped.Clear();
-
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -99,7 +76,6 @@ internal static unsafe class InventoryReader
         into.Clear();
         retainerId = 0;
         retainerName = string.Empty;
-
         var retainerManager = RetainerManager.Instance();
         if (retainerManager is null || !retainerManager->IsReady)
         {
@@ -134,7 +110,6 @@ internal static unsafe class InventoryReader
         into.Clear();
         freeCompanyId = 0;
         freeCompanyName = string.Empty;
-
         var manager = InventoryManager.Instance();
         if (manager is null)
         {

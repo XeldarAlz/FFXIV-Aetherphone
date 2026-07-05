@@ -5,24 +5,14 @@ internal static class VenueFilter
     public const int SourceAll = 0;
     public const int SourceFfxiv = 1;
     public const int SourcePartake = 2;
-
     private const int UpcomingWindowDays = 14;
 
-    public static void Apply(
-        IReadOnlyList<VenueEvent> source,
-        List<VenueEvent> into,
-        VenueTimeFilter time,
-        int sourceFilter,
-        string dataCenter,
-        bool favoritesOnly,
-        IReadOnlyList<string> favorites,
-        IReadOnlyList<string> selectedTags,
-        string search,
-        DateTime nowUtc)
+    public static void Apply(IReadOnlyList<VenueEvent> source, List<VenueEvent> into, VenueTimeFilter time,
+        int sourceFilter, string dataCenter, bool favoritesOnly, IReadOnlyList<string> favorites,
+        IReadOnlyList<string> selectedTags, string search, DateTime nowUtc)
     {
         into.Clear();
         var query = search.Trim();
-
         for (var index = 0; index < source.Count; index++)
         {
             var venue = source[index];
@@ -31,7 +21,8 @@ internal static class VenueFilter
                 continue;
             }
 
-            if (dataCenter.Length > 0 && !string.Equals(venue.DataCenter, dataCenter, StringComparison.OrdinalIgnoreCase))
+            if (dataCenter.Length > 0 &&
+                !string.Equals(venue.DataCenter, dataCenter, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -60,7 +51,8 @@ internal static class VenueFilter
         }
     }
 
-    public static void CollectTags(IReadOnlyList<VenueEvent> source, int sourceFilter, string dataCenter, SortedSet<string> into)
+    public static void CollectTags(IReadOnlyList<VenueEvent> source, int sourceFilter, string dataCenter,
+        SortedSet<string> into)
     {
         into.Clear();
         for (var index = 0; index < source.Count; index++)
@@ -71,7 +63,8 @@ internal static class VenueFilter
                 continue;
             }
 
-            if (dataCenter.Length > 0 && !string.Equals(venue.DataCenter, dataCenter, StringComparison.OrdinalIgnoreCase))
+            if (dataCenter.Length > 0 &&
+                !string.Equals(venue.DataCenter, dataCenter, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -141,8 +134,8 @@ internal static class VenueFilter
 
     private static bool MatchesSearch(VenueEvent venue, string query)
     {
-        if (Found(venue.Title, query) || Found(venue.Host, query) || Found(venue.LocationLine, query)
-            || Found(venue.World, query) || Found(venue.DataCenter, query))
+        if (Found(venue.Title, query) || Found(venue.Host, query) || Found(venue.LocationLine, query) ||
+            Found(venue.World, query) || Found(venue.DataCenter, query))
         {
             return true;
         }

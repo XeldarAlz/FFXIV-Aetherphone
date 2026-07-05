@@ -11,7 +11,6 @@ namespace Aetherphone.Core.Messaging;
 internal sealed class LinkshellBridge : IDisposable
 {
     private static readonly Vector4 MessagesAccent = new(0.30f, 0.78f, 0.42f, 1f);
-
     private readonly LinkshellStore store;
     private readonly NotificationService notifications;
     private readonly IChatGui chatGui;
@@ -61,14 +60,14 @@ internal sealed class LinkshellBridge : IDisposable
         var direction = isSelf ? MessageDirection.Outgoing : MessageDirection.Incoming;
         var author = isSelf ? null : new MessageAuthor(name, world);
         store.Append(channel, display, new ChatLine(direction, text, DateTime.Now, author));
-
         if (isSelf)
         {
             return;
         }
 
         var title = LinkshellLabel.Of(channel, display);
-        notifications.Notify(new PhoneNotification("messages", title, $"{name}: {text}", DateTime.Now, MessagesAccent, channel.Key));
+        notifications.Notify(new PhoneNotification("messages", title, $"{name}: {text}", DateTime.Now, MessagesAccent,
+            channel.Key));
     }
 
     private void ResolveSender(SeString sender, out string name, out string world)

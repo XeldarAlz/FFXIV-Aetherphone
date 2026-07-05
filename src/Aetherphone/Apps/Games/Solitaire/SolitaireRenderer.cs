@@ -10,32 +10,28 @@ namespace Aetherphone.Apps.Games.Solitaire;
 internal sealed class SolitaireRenderer
 {
     private static readonly Vector4 Red = new(0.88f, 0.22f, 0.26f, 1f);
-
     private static readonly Vector4 Black = new(0.14f, 0.15f, 0.19f, 1f);
-
     private static readonly Vector4 Face = new(0.97f, 0.97f, 0.98f, 1f);
-
     private static readonly Vector4 BackFill = new(0.20f, 0.26f, 0.52f, 1f);
-
     private static readonly Vector4 BackInner = new(0.32f, 0.40f, 0.74f, 1f);
 
-    public void Draw(SolitaireBoard board, in SolitaireLayout layout, PhoneTheme theme, Vector4 accent, float scale, in SolitaireHit dragSource, in SolitaireHit dropTarget)
+    public void Draw(SolitaireBoard board, in SolitaireLayout layout, PhoneTheme theme, Vector4 accent, float scale,
+        in SolitaireHit dragSource, in SolitaireHit dropTarget)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = layout.CardWidth * 0.12f;
-
         DrawStock(drawList, board, layout, rounding, scale);
         DrawWaste(drawList, board, layout, rounding, scale, dragSource);
         DrawFoundations(drawList, board, layout, rounding, scale, dragSource);
         DrawTableau(drawList, board, layout, rounding, scale, dragSource);
-
         if (dropTarget.Kind != SolitairePileKind.None)
         {
             DrawDropHighlight(drawList, layout, rounding, accent, scale, dropTarget);
         }
     }
 
-    private void DrawStock(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout, float rounding, float scale)
+    private void DrawStock(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout, float rounding,
+        float scale)
     {
         var rect = layout.StockRect;
         if (board.StockCount == 0)
@@ -50,7 +46,8 @@ internal sealed class SolitaireRenderer
         DrawCardBack(drawList, rect, rounding, scale);
     }
 
-    private void DrawWaste(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout, float rounding, float scale, in SolitaireHit dragSource)
+    private void DrawWaste(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout, float rounding,
+        float scale, in SolitaireHit dragSource)
     {
         var rect = layout.WasteRect;
         var fromTop = dragSource.Kind == SolitairePileKind.Waste ? 1 : 0;
@@ -64,7 +61,8 @@ internal sealed class SolitaireRenderer
         DrawCardFace(drawList, rect, card, rounding, scale, false);
     }
 
-    private void DrawFoundations(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout, float rounding, float scale, in SolitaireHit dragSource)
+    private void DrawFoundations(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout,
+        float rounding, float scale, in SolitaireHit dragSource)
     {
         for (var suit = 0; suit < SolitaireBoard.SuitCount; suit++)
         {
@@ -82,7 +80,8 @@ internal sealed class SolitaireRenderer
         }
     }
 
-    private void DrawTableau(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout, float rounding, float scale, in SolitaireHit dragSource)
+    private void DrawTableau(ImDrawListPtr drawList, SolitaireBoard board, in SolitaireLayout layout, float rounding,
+        float scale, in SolitaireHit dragSource)
     {
         for (var pile = 0; pile < SolitaireBoard.TableauPiles; pile++)
         {
@@ -93,7 +92,9 @@ internal sealed class SolitaireRenderer
                 continue;
             }
 
-            var skipFrom = dragSource.Kind == SolitairePileKind.Tableau && dragSource.Pile == pile ? dragSource.CardIndex : count;
+            var skipFrom = dragSource.Kind == SolitairePileKind.Tableau && dragSource.Pile == pile
+                ? dragSource.CardIndex
+                : count;
             for (var index = 0; index < count; index++)
             {
                 if (index >= skipFrom)
@@ -127,44 +128,50 @@ internal sealed class SolitaireRenderer
         }
     }
 
-    private void DrawDropHighlight(ImDrawListPtr drawList, in SolitaireLayout layout, float rounding, Vector4 accent, float scale, in SolitaireHit target)
+    private void DrawDropHighlight(ImDrawListPtr drawList, in SolitaireLayout layout, float rounding, Vector4 accent,
+        float scale, in SolitaireHit target)
     {
         var rect = target.Kind switch
         {
             SolitairePileKind.Foundation => layout.FoundationRect(target.Pile),
-            SolitairePileKind.Tableau => target.CardIndex >= 0 ? layout.TableauCardRect(target.Pile, target.CardIndex) : layout.TableauBaseRect(target.Pile),
+            SolitairePileKind.Tableau => target.CardIndex >= 0
+                ? layout.TableauCardRect(target.Pile, target.CardIndex)
+                : layout.TableauBaseRect(target.Pile),
             _ => layout.TopSlot(0),
         };
-
-        Squircle.Stroke(drawList, rect.Min - new Vector2(2f * scale, 2f * scale), rect.Max + new Vector2(2f * scale, 2f * scale), rounding + 2f * scale, ImGui.GetColorU32(accent), 2.4f * scale);
+        Squircle.Stroke(drawList, rect.Min - new Vector2(2f * scale, 2f * scale),
+            rect.Max + new Vector2(2f * scale, 2f * scale), rounding + 2f * scale, ImGui.GetColorU32(accent),
+            2.4f * scale);
     }
 
-    private void DrawCardFace(ImDrawListPtr drawList, in Rect rect, int card, float rounding, float scale, bool floating)
+    private void DrawCardFace(ImDrawListPtr drawList, in Rect rect, int card, float rounding, float scale,
+        bool floating)
     {
         if (!floating)
         {
-            Squircle.Fill(drawList, rect.Min + new Vector2(0f, 1.5f * scale), rect.Max + new Vector2(0f, 1.5f * scale), rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
+            Squircle.Fill(drawList, rect.Min + new Vector2(0f, 1.5f * scale), rect.Max + new Vector2(0f, 1.5f * scale),
+                rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
         }
 
         Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(Face));
-        Squircle.Stroke(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.12f)), 1f * scale);
-
+        Squircle.Stroke(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.12f)),
+            1f * scale);
         var suit = SolitaireBoard.Suit(card);
         var color = SolitaireBoard.IsRed(card) ? Red : Black;
         var labelScale = MathF.Max(0.5f, MathF.Min(0.9f, rect.Width / (40f * scale)));
         var label = RankLabel(SolitaireBoard.Rank(card));
-
         var corner = new Vector2(rect.Min.X + rect.Width * 0.18f, rect.Min.Y + rect.Height * 0.16f);
         Typography.DrawCentered(corner, label, color, labelScale, FontWeight.Bold);
         DrawSuit(drawList, new Vector2(corner.X, corner.Y + rect.Height * 0.2f), rect.Width * 0.1f, suit, color);
-        DrawSuit(drawList, new Vector2(rect.Center.X, rect.Center.Y + rect.Height * 0.08f), rect.Width * 0.24f, suit, color);
+        DrawSuit(drawList, new Vector2(rect.Center.X, rect.Center.Y + rect.Height * 0.08f), rect.Width * 0.24f, suit,
+            color);
     }
 
     private void DrawCardBack(ImDrawListPtr drawList, in Rect rect, float rounding, float scale)
     {
-        Squircle.Fill(drawList, rect.Min + new Vector2(0f, 1.5f * scale), rect.Max + new Vector2(0f, 1.5f * scale), rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
+        Squircle.Fill(drawList, rect.Min + new Vector2(0f, 1.5f * scale), rect.Max + new Vector2(0f, 1.5f * scale),
+            rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
         Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(BackFill));
-
         var inset = rect.Width * 0.12f;
         var innerMin = rect.Min + new Vector2(inset, inset);
         var innerMax = rect.Max - new Vector2(inset, inset);
@@ -175,7 +182,8 @@ internal sealed class SolitaireRenderer
     private void DrawEmptySlot(ImDrawListPtr drawList, in Rect rect, float rounding, float scale)
     {
         Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)));
-        Squircle.Stroke(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f)), 1.4f * scale);
+        Squircle.Stroke(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f)),
+            1.4f * scale);
     }
 
     private void DrawSuit(ImDrawListPtr drawList, Vector2 center, float radius, int suit, Vector4 color)
@@ -202,10 +210,8 @@ internal sealed class SolitaireRenderer
     {
         Span<Vector2> points = stackalloc Vector2[4]
         {
-            new(center.X, center.Y - radius),
-            new(center.X + radius * 0.72f, center.Y),
-            new(center.X, center.Y + radius),
-            new(center.X - radius * 0.72f, center.Y),
+            new(center.X, center.Y - radius), new(center.X + radius * 0.72f, center.Y),
+            new(center.X, center.Y + radius), new(center.X - radius * 0.72f, center.Y),
         };
         FillConvex(drawList, packed, points);
     }
@@ -218,8 +224,7 @@ internal sealed class SolitaireRenderer
         Span<Vector2> triangle = stackalloc Vector2[3]
         {
             new(center.X - radius * 0.98f, center.Y - radius * 0.08f),
-            new(center.X + radius * 0.98f, center.Y - radius * 0.08f),
-            new(center.X, center.Y + radius),
+            new(center.X + radius * 0.98f, center.Y - radius * 0.08f), new(center.X, center.Y + radius),
         };
         FillConvex(drawList, packed, triangle);
     }
@@ -232,8 +237,7 @@ internal sealed class SolitaireRenderer
         Span<Vector2> triangle = stackalloc Vector2[3]
         {
             new(center.X - radius * 0.98f, center.Y + radius * 0.08f),
-            new(center.X + radius * 0.98f, center.Y + radius * 0.08f),
-            new(center.X, center.Y - radius),
+            new(center.X + radius * 0.98f, center.Y + radius * 0.08f), new(center.X, center.Y - radius),
         };
         FillConvex(drawList, packed, triangle);
         DrawStem(drawList, center, radius, packed);

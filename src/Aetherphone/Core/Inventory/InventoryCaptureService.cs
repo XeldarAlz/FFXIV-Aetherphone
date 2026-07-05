@@ -5,25 +5,20 @@ namespace Aetherphone.Core.Inventory;
 internal sealed class InventoryCaptureService : IDisposable
 {
     private const long TickIntervalMilliseconds = 1000;
-
     private readonly IFramework framework;
     private readonly InventoryStore store;
-
     private readonly object sync = new();
-
     private readonly List<InventoryStack> scratchBags = new();
     private readonly List<InventoryStack> scratchArmoury = new();
     private readonly List<InventoryStack> scratchCrystals = new();
     private readonly List<InventoryStack> scratchSaddlebag = new();
     private readonly List<InventoryStack> scratchEquipped = new();
     private readonly List<InventoryStack> scratchCached = new();
-
     private InventoryStack[] localBags = Array.Empty<InventoryStack>();
     private InventoryStack[] localArmoury = Array.Empty<InventoryStack>();
     private InventoryStack[] localCrystals = Array.Empty<InventoryStack>();
     private InventoryStack[] localSaddlebag = Array.Empty<InventoryStack>();
     private InventoryStack[] localEquipped = Array.Empty<InventoryStack>();
-
     private long lastTickMilliseconds;
     private ulong activeCharacterId;
     private bool hasLocal;
@@ -41,17 +36,16 @@ internal sealed class InventoryCaptureService : IDisposable
     }
 
     public ulong ActiveCharacterId => activeCharacterId;
-
     public bool HasLocal => hasLocal;
 
-    public void SnapshotLocal(List<InventoryStack> bags, List<InventoryStack> armoury, List<InventoryStack> crystals, List<InventoryStack> saddlebag, List<InventoryStack> equipped)
+    public void SnapshotLocal(List<InventoryStack> bags, List<InventoryStack> armoury, List<InventoryStack> crystals,
+        List<InventoryStack> saddlebag, List<InventoryStack> equipped)
     {
         bags.Clear();
         armoury.Clear();
         crystals.Clear();
         saddlebag.Clear();
         equipped.Clear();
-
         lock (sync)
         {
             Copy(localBags, bags);
@@ -77,7 +71,6 @@ internal sealed class InventoryCaptureService : IDisposable
 
         lastTickMilliseconds = now;
         activeCharacterId = InventoryReader.ReadLocalContentId();
-
         RefreshLocal();
         CaptureRetainer();
         CaptureFreeCompany();
@@ -96,7 +89,6 @@ internal sealed class InventoryCaptureService : IDisposable
         var crystals = scratchCrystals.ToArray();
         var saddlebag = scratchSaddlebag.ToArray();
         var equipped = scratchEquipped.ToArray();
-
         lock (sync)
         {
             localBags = bags;
@@ -111,25 +103,30 @@ internal sealed class InventoryCaptureService : IDisposable
 
     private void CaptureRetainer()
     {
-        if (activeCharacterId == 0 || !InventoryReader.ReadActiveRetainer(scratchCached, out var retainerId, out var retainerName))
+        if (activeCharacterId == 0 ||
+            !InventoryReader.ReadActiveRetainer(scratchCached, out var retainerId, out var retainerName))
         {
             return;
         }
 
-        store.CaptureSource(activeCharacterId, BuildSource(InventorySourceKind.Retainer, retainerName, retainerId, scratchCached));
+        store.CaptureSource(activeCharacterId,
+            BuildSource(InventorySourceKind.Retainer, retainerName, retainerId, scratchCached));
     }
 
     private void CaptureFreeCompany()
     {
-        if (activeCharacterId == 0 || !InventoryReader.ReadFreeCompany(scratchCached, out var freeCompanyId, out var freeCompanyName))
+        if (activeCharacterId == 0 ||
+            !InventoryReader.ReadFreeCompany(scratchCached, out var freeCompanyId, out var freeCompanyName))
         {
             return;
         }
 
-        store.CaptureSource(activeCharacterId, BuildSource(InventorySourceKind.FreeCompany, freeCompanyName, freeCompanyId, scratchCached));
+        store.CaptureSource(activeCharacterId,
+            BuildSource(InventorySourceKind.FreeCompany, freeCompanyName, freeCompanyId, scratchCached));
     }
 
-    private static StoredSource BuildSource(InventorySourceKind kind, string ownerName, ulong ownerId, List<InventoryStack> stacks)
+    private static StoredSource BuildSource(InventorySourceKind kind, string ownerName, ulong ownerId,
+        List<InventoryStack> stacks)
     {
         var stored = new StoredStack[stacks.Count];
         for (var index = 0; index < stacks.Count; index++)

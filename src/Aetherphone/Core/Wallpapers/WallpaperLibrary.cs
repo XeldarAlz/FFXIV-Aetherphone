@@ -1,8 +1,5 @@
 using System.Collections.Concurrent;
-using System.IO;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Animation;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -13,35 +10,28 @@ namespace Aetherphone.Core.Wallpapers;
 internal sealed class WallpaperLibrary : IDisposable
 {
     private const int DayStartHour = 7;
-
     private const int NightStartHour = 19;
-
     private const float DayNightSmoothTime = 0.6f;
-
     private static readonly string[] BuiltInPatterns = { "*.png", "*.jpg", "*.jpeg", "*.bmp" };
 
     private static readonly WallpaperEntry Fallback = new()
     {
-        Id = string.Empty,
-        Kind = WallpaperKind.BuiltIn,
-        FilePath = string.Empty,
-        Crop = WallpaperCrop.Cover,
+        Id = string.Empty, Kind = WallpaperKind.BuiltIn, FilePath = string.Empty, Crop = WallpaperCrop.Cover,
     };
 
     private readonly ITextureProvider textures;
     private readonly DirectoryInfo customDirectory;
     private readonly Configuration configuration;
-
     private readonly IReadOnlyList<WallpaperEntry> builtIns;
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
     private readonly CancellationTokenSource cancellation = new();
-
     private Spring darknessSpring;
     private bool dayNightInitialized;
 
-    public WallpaperLibrary(ITextureProvider textures, DirectoryInfo builtInDirectory, DirectoryInfo customDirectory, Configuration configuration)
+    public WallpaperLibrary(ITextureProvider textures, DirectoryInfo builtInDirectory, DirectoryInfo customDirectory,
+        Configuration configuration)
     {
         this.textures = textures;
         this.customDirectory = customDirectory;
@@ -52,9 +42,7 @@ internal sealed class WallpaperLibrary : IDisposable
     }
 
     public IReadOnlyList<WallpaperEntry> Entries { get; private set; }
-
     public float CurrentTargetAspect { get; set; } = 0.5f;
-
     public float Darkness { get; private set; }
 
     public WallpaperEntry Resolve(string id)
@@ -111,7 +99,6 @@ internal sealed class WallpaperLibrary : IDisposable
         var id = "custom-" + Guid.NewGuid().ToString("N");
         var fileName = id + NormalizeExtension(Path.GetExtension(sourcePath));
         File.Copy(sourcePath, Path.Combine(customDirectory.FullName, fileName), true);
-
         configuration.CustomWallpapers.Add(new CustomWallpaper
         {
             Id = id,
@@ -150,7 +137,6 @@ internal sealed class WallpaperLibrary : IDisposable
 
         configuration.CustomWallpapers.Remove(record);
         configuration.Save();
-
         var path = Path.Combine(customDirectory.FullName, record.FileName);
         try
         {
@@ -210,7 +196,6 @@ internal sealed class WallpaperLibrary : IDisposable
         var customs = configuration.CustomWallpapers;
         var entries = new List<WallpaperEntry>(builtIns.Count + customs.Count);
         entries.AddRange(builtIns);
-
         for (var index = 0; index < customs.Count; index++)
         {
             var custom = customs[index];
@@ -240,7 +225,6 @@ internal sealed class WallpaperLibrary : IDisposable
         }
 
         files.Sort(static (left, right) => string.CompareOrdinal(Path.GetFileName(left), Path.GetFileName(right)));
-
         var entries = new List<WallpaperEntry>(files.Count);
         for (var index = 0; index < files.Count; index++)
         {
@@ -282,7 +266,8 @@ internal sealed class WallpaperLibrary : IDisposable
         {
             var token = cancellation.Token;
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
-            var wrap = await textures.CreateFromImageAsync(bytes, $"Aetherphone.Wallpaper.{path}", token).ConfigureAwait(false);
+            var wrap = await textures.CreateFromImageAsync(bytes, $"Aetherphone.Wallpaper.{path}", token)
+                .ConfigureAwait(false);
             if (!ready.TryAdd(path, wrap))
             {
                 wrap.Dispose();

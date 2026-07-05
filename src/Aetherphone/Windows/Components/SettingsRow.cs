@@ -11,7 +11,6 @@ internal static class SettingsRow
     public static bool Bool(Rect row, string label, bool value, PhoneTheme theme)
     {
         DrawLabel(row, label, theme.TextStrong);
-
         var scale = ImGuiHelpers.GlobalScale;
         var width = 46f * scale;
         var height = 28f * scale;
@@ -22,9 +21,9 @@ internal static class SettingsRow
     public static void Info(Rect row, string label, string value, PhoneTheme theme)
     {
         DrawLabel(row, label, theme.TextStrong);
-
         var valueSize = Typography.Measure(value);
-        Typography.Draw(new Vector2(row.Max.X - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), value, theme.TextMuted);
+        Typography.Draw(new Vector2(row.Max.X - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), value,
+            theme.TextMuted);
     }
 
     public static bool Link(Rect row, string glyph, Vector4 tint, string label, string value, PhoneTheme theme)
@@ -32,7 +31,6 @@ internal static class SettingsRow
         var scale = ImGuiHelpers.GlobalScale;
         var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         var dl = ImGui.GetWindowDrawList();
-
         if (hovered)
         {
             DrawRowHighlight(row, theme);
@@ -41,18 +39,17 @@ internal static class SettingsRow
         var tileSize = 28f * scale;
         var tileMin = new Vector2(row.Min.X, row.Center.Y - tileSize * 0.5f);
         var tileFill = hovered ? Palette.Mix(tint, theme.TextStrong, 0.14f) : tint;
-        Squircle.Fill(dl, tileMin, tileMin + new Vector2(tileSize, tileSize), tileSize * 0.28f, ImGui.GetColorU32(tileFill));
-
+        Squircle.Fill(dl, tileMin, tileMin + new Vector2(tileSize, tileSize), tileSize * 0.28f,
+            ImGui.GetColorU32(tileFill));
         var glyphHeight = Typography.Measure(glyph).Y;
         var glyphScale = glyphHeight > 0f ? tileSize * 0.5f / glyphHeight : 1f;
-        Typography.DrawCentered(new Vector2(tileMin.X + tileSize * 0.5f, row.Center.Y), glyph, theme.TextStrong, glyphScale);
-
-        DrawLabel(new Rect(new Vector2(tileMin.X + tileSize + 12f * scale, row.Min.Y), row.Max), label, theme.TextStrong);
-
+        Typography.DrawCentered(new Vector2(tileMin.X + tileSize * 0.5f, row.Center.Y), glyph, theme.TextStrong,
+            glyphScale);
+        DrawLabel(new Rect(new Vector2(tileMin.X + tileSize + 12f * scale, row.Min.Y), row.Max), label,
+            theme.TextStrong);
         var chevronWidth = 6f * scale;
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
         DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
-
         if (!string.IsNullOrEmpty(value))
         {
             var valueSize = Typography.Measure(value);
@@ -78,11 +75,9 @@ internal static class SettingsRow
         }
 
         DrawLabel(row, label, theme.TextStrong);
-
         var chevronWidth = 6f * scale;
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
         DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
-
         if (!string.IsNullOrEmpty(value))
         {
             var valueSize = Typography.Measure(value);
@@ -107,7 +102,6 @@ internal static class SettingsRow
         }
 
         DrawLabel(row, label, theme.TextStrong);
-
         if (selected)
         {
             var scale = ImGuiHelpers.GlobalScale;
@@ -133,7 +127,8 @@ internal static class SettingsRow
         var min = new Vector2(row.Min.X - 10f * scale, row.Min.Y + 3f * scale);
         var max = new Vector2(row.Max.X + 10f * scale, row.Max.Y - 3f * scale);
         var alpha = pressed ? 0.10f : 0.05f;
-        Squircle.Fill(ImGui.GetWindowDrawList(), min, max, 8f * scale, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, alpha)));
+        Squircle.Fill(ImGui.GetWindowDrawList(), min, max, 8f * scale,
+            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, alpha)));
     }
 
     private static void DrawLabel(Rect row, string label, Vector4 color)

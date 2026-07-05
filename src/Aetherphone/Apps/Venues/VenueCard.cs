@@ -23,44 +23,43 @@ internal static class VenueCard
 {
     public const float Height = 92f;
 
-    public static VenueCardAction Draw(Rect card, VenueEvent venue, bool favorite, MediaCache media, HttpService http, ArtworkCache art, PhoneTheme theme, DateTime nowUtc)
+    public static VenueCardAction Draw(Rect card, VenueEvent venue, bool favorite, MediaCache media, HttpService http,
+        ArtworkCache art, PhoneTheme theme, DateTime nowUtc)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 16f * scale;
         var hovered = ImGui.IsMouseHoveringRect(card.Min, card.Max);
-
         var fill = hovered ? Palette.Mix(theme.GroupedCard, theme.TextStrong, 0.05f) : theme.GroupedCard;
         Squircle.Fill(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(fill));
         Material.EdgeSquircle(drawList, card.Min, card.Max, rounding, scale);
-
         var pad = 10f * scale;
         var thumbSide = card.Height - pad * 2f;
-        var thumb = new Rect(new Vector2(card.Min.X + pad, card.Min.Y + pad), new Vector2(card.Min.X + pad + thumbSide, card.Min.Y + pad + thumbSide));
+        var thumb = new Rect(new Vector2(card.Min.X + pad, card.Min.Y + pad),
+            new Vector2(card.Min.X + pad + thumbSide, card.Min.Y + pad + thumbSide));
         VenueImage.Draw(drawList, thumb, venue, media, http, art, 12f * scale);
-
         var live = venue.IsLive(nowUtc);
         if (live)
         {
             var dotCenter = new Vector2(thumb.Min.X + 8f * scale, thumb.Min.Y + 8f * scale);
-            drawList.AddCircleFilled(dotCenter, 5.5f * scale, ImGui.GetColorU32(new Vector4(0.04f, 0.04f, 0.06f, 0.85f)), 18);
+            drawList.AddCircleFilled(dotCenter, 5.5f * scale,
+                ImGui.GetColorU32(new Vector4(0.04f, 0.04f, 0.06f, 0.85f)), 18);
             drawList.AddCircleFilled(dotCenter, 3.4f * scale, ImGui.GetColorU32(theme.ToggleOn), 18);
         }
 
         var starCenter = new Vector2(card.Max.X - 17f * scale, card.Min.Y + 17f * scale);
-        var starHovered = ImGui.IsMouseHoveringRect(starCenter - new Vector2(14f * scale, 14f * scale), starCenter + new Vector2(14f * scale, 14f * scale));
-        DrawStar(starCenter, favorite ? theme.Accent : starHovered ? theme.TextStrong : theme.TextMuted);
-
+        var starHovered = ImGui.IsMouseHoveringRect(starCenter - new Vector2(14f * scale, 14f * scale),
+            starCenter + new Vector2(14f * scale, 14f * scale));
+        DrawStar(starCenter, favorite ? theme.Accent :
+            starHovered ? theme.TextStrong : theme.TextMuted);
         var textLeft = thumb.Max.X + 12f * scale;
         var textRight = card.Max.X - 34f * scale;
         var textWidth = textRight - textLeft;
-
         var title = VenueText.Fit(venue.Title, textWidth, 0.98f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(textLeft, card.Min.Y + 11f * scale), title, theme.TextStrong, 0.98f, FontWeight.SemiBold);
-
+        Typography.Draw(new Vector2(textLeft, card.Min.Y + 11f * scale), title, theme.TextStrong, 0.98f,
+            FontWeight.SemiBold);
         var subtitle = VenueText.Fit(BuildSubtitle(venue), textWidth, 0.78f, FontWeight.Regular);
         Typography.Draw(new Vector2(textLeft, card.Min.Y + 31f * scale), subtitle, theme.TextMuted, 0.78f);
-
         var timeY = card.Min.Y + 49f * scale;
         if (live)
         {
@@ -75,11 +74,11 @@ internal static class VenueCard
         }
         else
         {
-            Typography.Draw(new Vector2(textLeft, timeY), VenueFormat.Range(venue), theme.Accent, 0.78f, FontWeight.Medium);
+            Typography.Draw(new Vector2(textLeft, timeY), VenueFormat.Range(venue), theme.Accent, 0.78f,
+                FontWeight.Medium);
         }
 
         DrawTags(drawList, venue, textLeft, card.Max.Y - pad - VenueChips.Height(scale), textRight, theme, scale);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -114,7 +113,8 @@ internal static class VenueCard
         return place;
     }
 
-    private static void DrawTags(ImDrawListPtr drawList, VenueEvent venue, float left, float top, float right, PhoneTheme theme, float scale)
+    private static void DrawTags(ImDrawListPtr drawList, VenueEvent venue, float left, float top, float right,
+        PhoneTheme theme, float scale)
     {
         if (venue.Tags.Count == 0)
         {
@@ -138,7 +138,8 @@ internal static class VenueCard
         }
     }
 
-    private static void DrawPlusChip(ImDrawListPtr drawList, Vector2 position, int remaining, PhoneTheme theme, float scale)
+    private static void DrawPlusChip(ImDrawListPtr drawList, Vector2 position, int remaining, PhoneTheme theme,
+        float scale)
     {
         var label = $"+{remaining}";
         var textSize = Typography.Measure(label, 0.72f);
@@ -147,7 +148,8 @@ internal static class VenueCard
         var min = position;
         var max = new Vector2(position.X + width, position.Y + height);
         Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(theme.SurfaceMuted));
-        Typography.Draw(new Vector2(min.X + (width - textSize.X) * 0.5f, min.Y + (height - textSize.Y) * 0.5f), label, theme.TextMuted, 0.72f);
+        Typography.Draw(new Vector2(min.X + (width - textSize.X) * 0.5f, min.Y + (height - textSize.Y) * 0.5f), label,
+            theme.TextMuted, 0.72f);
     }
 
     private static void DrawStar(Vector2 center, Vector4 color)

@@ -11,33 +11,19 @@ internal enum FlowEvent
 internal sealed class FlowBoard
 {
     public const int MaxSize = 8;
-
     public const int MaxColors = 8;
-
     private readonly int[] owner = new int[MaxSize * MaxSize];
-
     private readonly bool[] endpoint = new bool[MaxSize * MaxSize];
-
     private readonly int[] endpointA = new int[MaxColors];
-
     private readonly int[] endpointB = new int[MaxColors];
-
     private readonly List<int>[] paths = new List<int>[MaxColors];
-
     private readonly bool[] visited = new bool[MaxSize * MaxSize];
-
     private readonly int[] order = new int[MaxSize * MaxSize];
-
     private readonly Random random = new();
-
     public int Size { get; private set; } = 5;
-
     public int ColorCount { get; private set; } = 4;
-
     public int Level { get; private set; } = 1;
-
     public int Moves { get; private set; }
-
     public int ActiveColor { get; private set; } = -1;
 
     public FlowBoard()
@@ -49,17 +35,11 @@ internal sealed class FlowBoard
     }
 
     public int Owner(int cell) => owner[cell];
-
     public bool IsEndpoint(int cell) => endpoint[cell];
-
     public int EndpointA(int color) => endpointA[color];
-
     public int EndpointB(int color) => endpointB[color];
-
     public int PathLength(int color) => paths[color].Count;
-
     public int PathCell(int color, int index) => paths[color][index];
-
     public int CellCount => Size * Size;
 
     public int FilledCells()
@@ -131,7 +111,6 @@ internal sealed class FlowBoard
         ColorCount = colors;
         Moves = 0;
         ActiveColor = -1;
-
         for (var cell = 0; cell < owner.Length; cell++)
         {
             owner[cell] = -1;
@@ -211,7 +190,6 @@ internal sealed class FlowBoard
         }
 
         var targetOwner = owner[cell];
-
         if (endpoint[cell] && targetOwner == color && cell != path[0])
         {
             path.Add(cell);

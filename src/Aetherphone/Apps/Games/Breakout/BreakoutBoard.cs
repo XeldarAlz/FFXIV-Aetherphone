@@ -11,111 +11,63 @@ internal enum PowerUpKind
 internal struct Ball
 {
     public Vector2 Position;
-
     public Vector2 Velocity;
 }
 
 internal struct PowerUp
 {
     public Vector2 Position;
-
     public PowerUpKind Kind;
 }
 
 internal sealed class BreakoutBoard
 {
     public const int Columns = 7;
-
     public const int MaxRows = 8;
-
     public const int MaxBalls = 10;
-
     public const int MaxPowerUps = 8;
-
     public const float MarginX = 0.05f;
-
     public const float BrickTop = 0.09f;
-
     public const float BrickHeight = 0.045f;
-
     public const float BrickGap = 0.012f;
-
     public const float BallRadius = 0.018f;
-
     public const float PaddleHeight = 0.024f;
-
     private const float BaseSpeed = 0.92f;
-
     private const float SpeedPerLevel = 0.06f;
-
     private const float PowerUpFallSpeed = 0.45f;
-
     private const float WideMultiplier = 1.6f;
-
     private readonly bool[] alive = new bool[Columns * MaxRows];
-
     private readonly int[] colors = new int[Columns * MaxRows];
-
     private readonly Ball[] balls = new Ball[MaxBalls];
-
     private readonly PowerUp[] powerUps = new PowerUp[MaxPowerUps];
-
     private readonly Vector2[] breakPositions = new Vector2[Columns * MaxRows];
-
     private readonly int[] breakColors = new int[Columns * MaxRows];
-
     private readonly Random random = new();
-
     private float defaultPaddleHalf = 0.12f;
-
     private float ballSpeed = BaseSpeed;
-
     public float FieldHeight { get; private set; } = 1.6f;
-
     public int Rows { get; private set; }
-
     public int BallCount { get; private set; }
-
     public int PowerUpCount { get; private set; }
-
     public int BreakCount { get; private set; }
-
     public bool LostLifeThisFrame { get; private set; }
-
     public bool CaughtPowerThisFrame { get; private set; }
-
     public bool LevelCleared { get; private set; }
-
     public float PaddleX { get; private set; } = 0.5f;
-
     public float PaddleHalfWidth { get; private set; } = 0.12f;
-
     public float PaddleY => FieldHeight - 0.06f;
-
     public int Score { get; private set; }
-
     public int Lives { get; private set; }
-
     public int Level { get; private set; }
-
     public int Combo { get; private set; }
-
     public bool Attached { get; private set; }
-
     public bool GameOver { get; private set; }
-
     public Ball GetBall(int index) => balls[index];
-
     public PowerUp GetPowerUp(int index) => powerUps[index];
-
     public bool BrickAlive(int column, int row) => alive[row * Columns + column];
-
     public int BrickColor(int column, int row) => colors[row * Columns + column];
-
     public Vector2 BreakPosition(int index) => breakPositions[index];
-
     public int BreakColor(int index) => breakColors[index];
-
     public float BrickWidth => (1f - MarginX * 2f - (Columns - 1) * BrickGap) / Columns;
 
     public Vector2 BrickCenter(int column, int row)
@@ -167,7 +119,6 @@ internal sealed class BreakoutBoard
         LostLifeThisFrame = false;
         CaughtPowerThisFrame = false;
         LevelCleared = false;
-
         if (GameOver)
         {
             return;
@@ -188,7 +139,6 @@ internal sealed class BreakoutBoard
         }
 
         UpdatePowerUps(deltaSeconds);
-
         if (CountAliveBricks() == 0)
         {
             LevelCleared = true;
@@ -202,7 +152,6 @@ internal sealed class BreakoutBoard
         {
             ref var ball = ref balls[index];
             ball.Position += ball.Velocity * deltaSeconds;
-
             if (ball.Position.X < BallRadius)
             {
                 ball.Position.X = BallRadius;
@@ -222,7 +171,6 @@ internal sealed class BreakoutBoard
 
             BouncePaddle(ref ball);
             BounceBricks(ref ball);
-
             if (ball.Position.Y > FieldHeight + BallRadius)
             {
                 balls[index] = balls[BallCount - 1];
@@ -306,17 +254,14 @@ internal sealed class BreakoutBoard
         alive[cell] = false;
         Combo++;
         Score += 10 + Combo;
-
         breakPositions[BreakCount] = center;
         breakColors[BreakCount] = colors[cell];
         BreakCount++;
-
         if (PowerUpCount < MaxPowerUps && random.Next(100) < 12)
         {
             powerUps[PowerUpCount] = new PowerUp
             {
-                Position = center,
-                Kind = random.Next(2) == 0 ? PowerUpKind.MultiBall : PowerUpKind.Wide,
+                Position = center, Kind = random.Next(2) == 0 ? PowerUpKind.MultiBall : PowerUpKind.Wide,
             };
             PowerUpCount++;
         }
@@ -328,12 +273,8 @@ internal sealed class BreakoutBoard
         {
             powerUps[index].Position.Y += PowerUpFallSpeed * deltaSeconds;
             var position = powerUps[index].Position;
-
-            var caught = position.Y >= PaddleY - PaddleHeight
-                && position.Y <= PaddleY + PaddleHeight
-                && position.X >= PaddleX - PaddleHalfWidth
-                && position.X <= PaddleX + PaddleHalfWidth;
-
+            var caught = position.Y >= PaddleY - PaddleHeight && position.Y <= PaddleY + PaddleHeight &&
+                         position.X >= PaddleX - PaddleHalfWidth && position.X <= PaddleX + PaddleHalfWidth;
             if (caught)
             {
                 ApplyPowerUp(powerUps[index].Kind);
@@ -371,8 +312,7 @@ internal sealed class BreakoutBoard
             var angle = MathF.Atan2(direction.Y, direction.X) + spread;
             balls[BallCount] = new Ball
             {
-                Position = source.Position,
-                Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * ballSpeed,
+                Position = source.Position, Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * ballSpeed,
             };
             BallCount++;
         }
@@ -399,8 +339,7 @@ internal sealed class BreakoutBoard
         BallCount = 1;
         balls[0] = new Ball
         {
-            Position = new Vector2(PaddleX, PaddleY - PaddleHeight * 0.5f - BallRadius),
-            Velocity = Vector2.Zero,
+            Position = new Vector2(PaddleX, PaddleY - PaddleHeight * 0.5f - BallRadius), Velocity = Vector2.Zero,
         };
         Attached = true;
     }

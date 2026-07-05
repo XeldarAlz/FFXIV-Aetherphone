@@ -3,25 +3,15 @@ namespace Aetherphone.Apps.Games.Solitaire;
 internal sealed class SolitaireBoard
 {
     public const int TableauPiles = 7;
-
     public const int SuitCount = 4;
-
     private readonly List<int> stock = new(52);
-
     private readonly List<int> waste = new(52);
-
     private readonly List<int>[] foundations = new List<int>[SuitCount];
-
     private readonly List<int>[] tableau = new List<int>[TableauPiles];
-
     private readonly int[] faceDown = new int[TableauPiles];
-
     private readonly int[] deck = new int[52];
-
     private readonly Random random = new();
-
     public int Moves { get; private set; }
-
     public int LastFlippedPile { get; private set; } = -1;
 
     public SolitaireBoard()
@@ -38,31 +28,23 @@ internal sealed class SolitaireBoard
     }
 
     public static int Rank(int card) => card % 13;
-
     public static int Suit(int card) => card / 13;
-
     public static bool IsRed(int card) => card / 13 == 1 || card / 13 == 2;
-
     public int StockCount => stock.Count;
-
     public int WasteCount => waste.Count;
-
     public int WasteTop() => waste.Count > 0 ? waste[waste.Count - 1] : -1;
-
     public int WastePeek(int fromTop) => waste.Count > fromTop ? waste[waste.Count - 1 - fromTop] : -1;
-
     public int FoundationCount(int suit) => foundations[suit].Count;
 
-    public int FoundationTop(int suit) => foundations[suit].Count > 0 ? foundations[suit][foundations[suit].Count - 1] : -1;
+    public int FoundationTop(int suit) =>
+        foundations[suit].Count > 0 ? foundations[suit][foundations[suit].Count - 1] : -1;
 
-    public int FoundationPeek(int suit, int fromTop) => foundations[suit].Count > fromTop ? foundations[suit][foundations[suit].Count - 1 - fromTop] : -1;
+    public int FoundationPeek(int suit, int fromTop) =>
+        foundations[suit].Count > fromTop ? foundations[suit][foundations[suit].Count - 1 - fromTop] : -1;
 
     public int TableauCount(int pile) => tableau[pile].Count;
-
     public int TableauCardAt(int pile, int index) => tableau[pile][index];
-
     public int TableauFaceDownCount(int pile) => faceDown[pile];
-
     public bool IsTableauFaceUp(int pile, int index) => index >= faceDown[pile];
 
     public bool IsWon

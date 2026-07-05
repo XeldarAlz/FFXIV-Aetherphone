@@ -31,29 +31,23 @@ internal sealed class HomeScreen
 
     private readonly HomeLayoutService layout;
     private readonly Dictionary<string, Wobble> reflow = new();
-
     private Spring pageScroll;
     private int pageIndex;
-
     private bool pageSwiping;
     private float swipeStartX;
     private int swipeStartPage;
-
     private bool pressActive;
     private Vector2 pressPos;
     private float pressTime;
     private HomeTile? pressTile;
-
     private bool editing;
     private float editClock;
-
     private HomeTile? dragItem;
     private int dragPage;
     private Vector2 dragMouse;
     private float edgeDwell;
     private int dropSlot;
     private HomeTile? folderTarget;
-
     private HomeTile? openFolder;
     private Spring folderAnim;
     private bool folderClosing;
@@ -70,7 +64,6 @@ internal sealed class HomeScreen
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         editClock += delta;
         var metrics = Compute(content);
-
         if (!pageSwiping)
         {
             pageScroll.Step(pageIndex, PageSmoothTime, delta);
@@ -85,7 +78,6 @@ internal sealed class HomeScreen
 
         HandleInput(content, metrics, navigation, delta);
         DrawPages(content, metrics, theme, delta);
-
         if (dragItem is not null)
         {
             DrawTile(dragItem, dragMouse, metrics, theme, 1.1f, 0f, false);
@@ -141,7 +133,8 @@ internal sealed class HomeScreen
     {
         var pageX = content.Min.X + (page - pageScroll.Value) * content.Width;
         var column = Math.Clamp((int)MathF.Floor((cursor.X - pageX) / m.ColumnWidth), 0, HomeLayoutService.Columns - 1);
-        var row = Math.Clamp((int)MathF.Floor((cursor.Y - content.Min.Y - m.TopPad) / m.RowHeight), 0, HomeLayoutService.Rows - 1);
+        var row = Math.Clamp((int)MathF.Floor((cursor.Y - content.Min.Y - m.TopPad) / m.RowHeight), 0,
+            HomeLayoutService.Rows - 1);
         return Math.Clamp(row * HomeLayoutService.Columns + column, 0, maxSlot);
     }
 
@@ -177,7 +170,6 @@ internal sealed class HomeScreen
     private void HandleInput(Rect content, in Metrics m, INavigator navigation, float delta)
     {
         var mouse = ImGui.GetMousePos();
-
         if (editing && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && DoneRect(content, m).Contains(mouse))
         {
             editing = false;
@@ -209,8 +201,8 @@ internal sealed class HomeScreen
         {
             pressTime += delta;
             var move = mouse - pressPos;
-
-            if (layout.PageCount > 1 && MathF.Abs(move.X) > SwipeThreshold * m.Scale && MathF.Abs(move.X) > MathF.Abs(move.Y) * 1.2f && (!editing || pressTile is null))
+            if (layout.PageCount > 1 && MathF.Abs(move.X) > SwipeThreshold * m.Scale &&
+                MathF.Abs(move.X) > MathF.Abs(move.Y) * 1.2f && (!editing || pressTile is null))
             {
                 BeginPageSwipe(mouse);
                 return;
@@ -301,7 +293,6 @@ internal sealed class HomeScreen
     private void HandleTileDrag(Rect content, in Metrics m, float delta)
     {
         dragMouse = ImGui.GetMousePos();
-
         var edge = EdgeZone * content.Width;
         if (dragMouse.X < content.Min.X + edge && dragPage > 0)
         {
@@ -329,7 +320,6 @@ internal sealed class HomeScreen
         }
 
         ComputeDrop(content, m);
-
         if (ImGui.IsMouseReleased(ImGuiMouseButton.Left))
         {
             if (folderTarget is not null)
@@ -353,7 +343,6 @@ internal sealed class HomeScreen
         var page = layout.Page(dragPage);
         var siblings = Siblings(page);
         var radius = m.IconSize * 0.42f;
-
         for (var index = 0; index < siblings.Count; index++)
         {
             var center = SlotCenter(content, m, dragPage, index);
@@ -385,7 +374,6 @@ internal sealed class HomeScreen
     private void DrawPages(Rect content, in Metrics m, PhoneTheme theme, float delta)
     {
         ImGui.GetWindowDrawList().PushClipRect(content.Min, content.Max, true);
-
         var scroll = pageScroll.Value;
         var first = Math.Max(0, (int)MathF.Floor(scroll) - 1);
         var last = Math.Min(layout.PageCount - 1, (int)MathF.Ceiling(scroll) + 1);
@@ -401,7 +389,6 @@ internal sealed class HomeScreen
     {
         var tiles = layout.Page(page);
         var labelAlpha = openFolder is null ? 1f : 0.35f;
-
         if (dragItem is null || page != dragPage)
         {
             for (var slot = 0; slot < tiles.Count; slot++)
@@ -459,12 +446,14 @@ internal sealed class HomeScreen
         return new Vector2(x, y) * 1.1f * m.Scale;
     }
 
-    private void DrawTile(HomeTile tile, Vector2 center, in Metrics m, PhoneTheme theme, float drawScale, float labelAlpha, bool highlight)
+    private void DrawTile(HomeTile tile, Vector2 center, in Metrics m, PhoneTheme theme, float drawScale,
+        float labelAlpha, bool highlight)
     {
         if (highlight)
         {
             var ring = m.IconSize * 0.5f * drawScale + 4f * m.Scale;
-            ImGui.GetWindowDrawList().AddCircle(center, ring, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.8f)), 32, 2f * m.Scale);
+            ImGui.GetWindowDrawList().AddCircle(center, ring,
+                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.8f)), 32, 2f * m.Scale);
         }
 
         if (tile.IsFolder)
@@ -485,7 +474,8 @@ internal sealed class HomeScreen
         }
 
         var half = m.IconSize * 0.5f;
-        UiAnchors.Report(string.Concat("home.app.", tile.App.Id), new Rect(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half)));
+        UiAnchors.Report(string.Concat("home.app.", tile.App.Id),
+            new Rect(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half)));
     }
 
     private void DrawPageDots(Rect content, in Metrics m, PhoneTheme theme)
@@ -502,11 +492,11 @@ internal sealed class HomeScreen
         var startX = content.Center.X - totalWidth * 0.5f;
         var y = content.Max.Y - 11f * m.Scale;
         var active = Math.Clamp((int)MathF.Round(pageScroll.Value), 0, layout.PageCount - 1);
-
         for (var index = 0; index < layout.PageCount; index++)
         {
             var alpha = index == active ? 0.95f : 0.32f;
-            dl.AddCircleFilled(new Vector2(startX + index * spacing, y), radius, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, alpha)), 16);
+            dl.AddCircleFilled(new Vector2(startX + index * spacing, y), radius,
+                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, alpha)), 16);
         }
     }
 
@@ -523,8 +513,10 @@ internal sealed class HomeScreen
         var rect = DoneRect(content, m);
         var dl = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-        Squircle.Fill(dl, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, hovered ? 1f : 0.88f)));
-        Typography.DrawCentered(rect.Center, Loc.T(L.Home.Done), new Vector4(1f, 1f, 1f, 1f), 0.82f, FontWeight.SemiBold);
+        Squircle.Fill(dl, rect.Min, rect.Max, rect.Height * 0.5f,
+            ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, hovered ? 1f : 0.88f)));
+        Typography.DrawCentered(rect.Center, Loc.T(L.Home.Done), new Vector4(1f, 1f, 1f, 1f), 0.82f,
+            FontWeight.SemiBold);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -548,7 +540,8 @@ internal sealed class HomeScreen
 
     private void ApplyRename()
     {
-        if (openFolder is { IsFolder: true } folder && !string.Equals(folderNameBuffer, folder.FolderName, StringComparison.Ordinal))
+        if (openFolder is { IsFolder: true } folder &&
+            !string.Equals(folderNameBuffer, folder.FolderName, StringComparison.Ordinal))
         {
             layout.Rename(folder, folderNameBuffer);
         }
@@ -569,7 +562,6 @@ internal sealed class HomeScreen
         var dl = ImGui.GetWindowDrawList();
         dl.PushClipRect(content.Min, content.Max, true);
         Material.Veil(dl, content.Min, content.Max, 0.5f * eased);
-
         var cols = folder.Apps.Count <= 9 ? 3 : 4;
         var rows = (folder.Apps.Count + cols - 1) / cols;
         var panelWidth = content.Width * 0.84f;
@@ -579,18 +571,16 @@ internal sealed class HomeScreen
         var cellHeight = iconSize + 26f * m.Scale;
         var headerHeight = 48f * m.Scale;
         var panelHeight = headerHeight + rows * cellHeight + pad;
-
         var targetMin = new Vector2(content.Center.X - panelWidth * 0.5f, content.Center.Y - panelHeight * 0.5f);
         var targetRect = new Rect(targetMin, targetMin + new Vector2(panelWidth, panelHeight));
-        var panelRect = new Rect(Vector2.Lerp(folderOrigin.Min, targetRect.Min, eased), Vector2.Lerp(folderOrigin.Max, targetRect.Max, eased));
-
+        var panelRect = new Rect(Vector2.Lerp(folderOrigin.Min, targetRect.Min, eased),
+            Vector2.Lerp(folderOrigin.Max, targetRect.Max, eased));
         Material.Frosted(dl, panelRect.Min, panelRect.Max, 28f * m.Scale, m.Scale, eased);
-
         var interactive = !folderClosing && eased > 0.85f;
         if (interactive)
         {
-            DrawFolderContents(panelRect, m, theme, navigation, folder, cols, pad, iconSize, cellWidth, cellHeight, headerHeight);
-
+            DrawFolderContents(panelRect, m, theme, navigation, folder, cols, pad, iconSize, cellWidth, cellHeight,
+                headerHeight);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !panelRect.Contains(ImGui.GetMousePos()))
             {
                 CloseFolder();
@@ -600,11 +590,13 @@ internal sealed class HomeScreen
         dl.PopClipRect();
     }
 
-    private void DrawFolderContents(Rect panel, in Metrics m, PhoneTheme theme, INavigator navigation, HomeTile folder, int cols, float pad, float iconSize, float cellWidth, float cellHeight, float headerHeight)
+    private void DrawFolderContents(Rect panel, in Metrics m, PhoneTheme theme, INavigator navigation, HomeTile folder,
+        int cols, float pad, float iconSize, float cellWidth, float cellHeight, float headerHeight)
     {
         ImGui.SetCursorScreenPos(new Vector2(panel.Min.X + pad, panel.Min.Y + 12f * m.Scale));
         ImGui.SetNextItemWidth(panel.Width - pad * 2f);
-        if (ImGui.InputTextWithHint("##folderName", Loc.T(L.Home.NewFolder), ref folderNameBuffer, 64, ImGuiInputTextFlags.EnterReturnsTrue))
+        if (ImGui.InputTextWithHint("##folderName", Loc.T(L.Home.NewFolder), ref folderNameBuffer, 64,
+                ImGuiInputTextFlags.EnterReturnsTrue))
         {
             ApplyRename();
         }
@@ -614,16 +606,17 @@ internal sealed class HomeScreen
         {
             var column = index % cols;
             var row = index / cols;
-            var center = new Vector2(panel.Min.X + pad + (column + 0.5f) * cellWidth, gridTop + (row + 0.5f) * cellHeight);
+            var center = new Vector2(panel.Min.X + pad + (column + 0.5f) * cellWidth,
+                gridTop + (row + 0.5f) * cellHeight);
             var app = folder.Apps[index];
             HomeTileView.DrawApp(center, iconSize, app, theme, 1f, 1f);
-
             var half = iconSize * 0.5f;
-            var iconRect = new Rect(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half));
-
+            var iconRect = new Rect(new Vector2(center.X - half, center.Y - half),
+                new Vector2(center.X + half, center.Y + half));
             if (editing)
             {
-                if (DrawRemoveBadge(new Vector2(center.X - half + 2f * m.Scale, center.Y - half + 2f * m.Scale), m, theme))
+                if (DrawRemoveBadge(new Vector2(center.X - half + 2f * m.Scale, center.Y - half + 2f * m.Scale), m,
+                        theme))
                 {
                     layout.RemoveFromFolder(folder, app, pageIndex, layout.Page(pageIndex).Count);
                     if (folder.Apps.Count <= 1)
@@ -651,8 +644,10 @@ internal sealed class HomeScreen
     {
         var radius = 9f * m.Scale;
         var dl = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, hovered ? 1f : 0.88f)), 24);
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, hovered ? 1f : 0.88f)),
+            24);
         var arm = radius * 0.4f;
         var ink = ImGui.GetColorU32(new Vector4(0.1f, 0.1f, 0.12f, 1f));
         dl.AddLine(new Vector2(center.X - arm, center.Y), new Vector2(center.X + arm, center.Y), ink, 1.8f * m.Scale);

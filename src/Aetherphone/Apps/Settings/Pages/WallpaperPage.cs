@@ -1,6 +1,4 @@
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
@@ -18,7 +16,6 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class WallpaperPage : ISettingsPage
 {
     private const int Columns = 3;
-
     private const int PhotoColumns = 3;
 
     private enum Overlay
@@ -29,25 +26,21 @@ internal sealed class WallpaperPage : ISettingsPage
     }
 
     public string Title => Loc.T(L.Wallpaper.Title);
-
     public string Summary => string.Empty;
-
     public string Glyph => "W";
-
     public Vector4 Tint => new(0.55f, 0.45f, 0.95f, 1f);
-
     private readonly Configuration configuration;
     private readonly ThemeProvider themes;
     private readonly ISettingsNavigator navigator;
     private readonly PhotoLibrary photos;
     private readonly Action<string> assign;
-
     private Overlay overlay = Overlay.None;
     private string[] photoPaths = Array.Empty<string>();
     private string? pendingFilePath;
     private bool editingDark;
 
-    public WallpaperPage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator, PhotoLibrary photos)
+    public WallpaperPage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator,
+        PhotoLibrary photos)
     {
         this.configuration = configuration;
         this.themes = themes;
@@ -71,21 +64,19 @@ internal sealed class WallpaperPage : ISettingsPage
         var overlayAtFrameStart = overlay;
         var interactive = overlay == Overlay.None;
         var scale = ImGuiHelpers.GlobalScale;
-
         var previewHeight = 198f * scale;
         var previewRegion = new Rect(body.Min, new Vector2(body.Max.X, body.Min.Y + previewHeight));
         var gridRegion = new Rect(new Vector2(body.Min.X, body.Min.Y + previewHeight), body.Max);
-
         DrawAppearancePreviews(previewRegion, theme, interactive);
         DrawGrid(gridRegion, theme, interactive);
-
         if (overlay == Overlay.None)
         {
             return;
         }
 
         ImGui.SetCursorScreenPos(body.Min);
-        using (ImRaii.Child("##wallpaperOverlay", body.Size, false, ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
+        using (ImRaii.Child("##wallpaperOverlay", body.Size, false,
+                   ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
         {
             switch (overlay)
             {
@@ -109,33 +100,33 @@ internal sealed class WallpaperPage : ISettingsPage
         var totalWidth = cardWidth * 2f + gap;
         var startX = region.Center.X - totalWidth * 0.5f;
         var top = region.Min.Y + 12f * scale;
-
         var lightRect = new Rect(new Vector2(startX, top), new Vector2(startX + cardWidth, top + cardHeight));
-        var darkRect = new Rect(new Vector2(startX + cardWidth + gap, top), new Vector2(startX + totalWidth, top + cardHeight));
-
-        DrawAppearanceCard(lightRect, false, configuration.LightWallpaperId, Loc.T(L.Wallpaper.Light), theme, interactive);
+        var darkRect = new Rect(new Vector2(startX + cardWidth + gap, top),
+            new Vector2(startX + totalWidth, top + cardHeight));
+        DrawAppearanceCard(lightRect, false, configuration.LightWallpaperId, Loc.T(L.Wallpaper.Light), theme,
+            interactive);
         DrawAppearanceCard(darkRect, true, configuration.DarkWallpaperId, Loc.T(L.Wallpaper.Dark), theme, interactive);
     }
 
-    private void DrawAppearanceCard(Rect rect, bool isDark, string selectedId, string label, PhoneTheme theme, bool interactive)
+    private void DrawAppearanceCard(Rect rect, bool isDark, string selectedId, string label, PhoneTheme theme,
+        bool interactive)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         var rounding = 22f * scale;
         var active = editingDark == isDark;
         var entry = Plugin.Wallpapers.Resolve(selectedId);
-
         if (active)
         {
             Elevation.Floating(dl, rect.Min, rect.Max, rounding, scale, 0.7f);
         }
 
         WallpaperRenderer.DrawSingle(dl, rect, rounding, entry, TileAspect(), 1f, theme.SurfaceMuted);
-        Squircle.Stroke(dl, rect.Min, rect.Max, rounding, ImGui.GetColorU32(active ? theme.Accent : theme.Separator), (active ? 2.5f : 1f) * scale);
-
+        Squircle.Stroke(dl, rect.Min, rect.Max, rounding, ImGui.GetColorU32(active ? theme.Accent : theme.Separator),
+            (active ? 2.5f : 1f) * scale);
         var labelColor = active ? theme.Accent : theme.TextMuted;
-        Typography.DrawCentered(new Vector2(rect.Center.X, rect.Max.Y + 14f * scale), label, labelColor, 0.95f, active ? FontWeight.SemiBold : FontWeight.Regular);
-
+        Typography.DrawCentered(new Vector2(rect.Center.X, rect.Max.Y + 14f * scale), label, labelColor, 0.95f,
+            active ? FontWeight.SemiBold : FontWeight.Regular);
         if (!interactive)
         {
             return;
@@ -157,14 +148,12 @@ internal sealed class WallpaperPage : ISettingsPage
         var aspect = TileAspect();
         var entries = Plugin.Wallpapers.Entries;
         var gap = 10f * scale;
-
         using (AppSurface.Begin(region))
         using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
         {
             var cellWidth = (ImGui.GetContentRegionAvail().X - gap * (Columns - 1)) / Columns;
             var cellHeight = aspect > 0f ? cellWidth / aspect : cellWidth;
             var tileCount = entries.Count + 1;
-
             for (var index = 0; index < tileCount; index++)
             {
                 using (ImRaii.PushId(index))
@@ -172,7 +161,6 @@ internal sealed class WallpaperPage : ISettingsPage
                     var clicked = ImGui.InvisibleButton("tile", new Vector2(cellWidth, cellHeight)) && interactive;
                     var min = ImGui.GetItemRectMin();
                     var max = ImGui.GetItemRectMax();
-
                     if (index < entries.Count)
                     {
                         DrawWallpaperTile(entries[index], min, max, theme, interactive, clicked);
@@ -191,18 +179,19 @@ internal sealed class WallpaperPage : ISettingsPage
         }
     }
 
-    private void DrawWallpaperTile(WallpaperEntry entry, Vector2 min, Vector2 max, PhoneTheme theme, bool interactive, bool clicked)
+    private void DrawWallpaperTile(WallpaperEntry entry, Vector2 min, Vector2 max, PhoneTheme theme, bool interactive,
+        bool clicked)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         var rounding = 16f * scale;
         var rect = new Rect(min, max);
         var selected = entry.Id == ActiveSelectedId();
-
         WallpaperRenderer.DrawSingle(dl, rect, rounding, entry, TileAspect(), 1f, theme.SurfaceMuted);
-        dl.AddRect(min, max, ImGui.GetColorU32(selected ? theme.Accent : theme.Separator), rounding, ImDrawFlags.RoundCornersAll, selected ? 2.5f * scale : 1f);
-
-        if (entry.Kind == WallpaperKind.Custom && interactive && DrawDeleteBadge(new Vector2(max.X - 14f * scale, min.Y + 14f * scale), theme))
+        dl.AddRect(min, max, ImGui.GetColorU32(selected ? theme.Accent : theme.Separator), rounding,
+            ImDrawFlags.RoundCornersAll, selected ? 2.5f * scale : 1f);
+        if (entry.Kind == WallpaperKind.Custom && interactive &&
+            DrawDeleteBadge(new Vector2(max.X - 14f * scale, min.Y + 14f * scale), theme))
         {
             RemoveCustom(entry.Id);
             return;
@@ -220,16 +209,14 @@ internal sealed class WallpaperPage : ISettingsPage
         var dl = ImGui.GetWindowDrawList();
         var rounding = 16f * scale;
         var hovered = ImGui.IsItemHovered();
-
-        Squircle.Fill(dl, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted with { W = hovered ? 0.55f : 0.4f }));
+        Squircle.Fill(dl, min, max, rounding,
+            ImGui.GetColorU32(theme.SurfaceMuted with { W = hovered ? 0.55f : 0.4f }));
         Squircle.Stroke(dl, min, max, rounding, ImGui.GetColorU32(theme.Separator), 1.4f * scale);
-
         var center = (min + max) * 0.5f;
         var arm = 13f * scale;
         var ink = ImGui.GetColorU32(theme.Accent);
         dl.AddLine(new Vector2(center.X - arm, center.Y), new Vector2(center.X + arm, center.Y), ink, 2.4f * scale);
         dl.AddLine(new Vector2(center.X, center.Y - arm), new Vector2(center.X, center.Y + arm), ink, 2.4f * scale);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -246,14 +233,15 @@ internal sealed class WallpaperPage : ISettingsPage
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         var radius = 11f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.72f : 0.55f)), 24);
         var arm = 4f * scale;
         var ink = ImGui.GetColorU32(hovered ? theme.Danger : new Vector4(1f, 1f, 1f, 0.9f));
-        dl.AddLine(new Vector2(center.X - arm, center.Y - arm), new Vector2(center.X + arm, center.Y + arm), ink, 1.8f * scale);
-        dl.AddLine(new Vector2(center.X - arm, center.Y + arm), new Vector2(center.X + arm, center.Y - arm), ink, 1.8f * scale);
-
+        dl.AddLine(new Vector2(center.X - arm, center.Y - arm), new Vector2(center.X + arm, center.Y + arm), ink,
+            1.8f * scale);
+        dl.AddLine(new Vector2(center.X - arm, center.Y + arm), new Vector2(center.X + arm, center.Y - arm), ink,
+            1.8f * scale);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -267,7 +255,6 @@ internal sealed class WallpaperPage : ISettingsPage
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         dl.AddRectFilled(body.Min, body.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f)), 0f);
-
         var rowHeight = 52f * scale;
         var pad = 14f * scale;
         var width = body.Width - pad * 2f;
@@ -276,24 +263,25 @@ internal sealed class WallpaperPage : ISettingsPage
         var cancelTop = body.Max.Y - pad - rowHeight;
         var optionsBottom = cancelTop - 10f * scale;
         var optionsTop = optionsBottom - rowHeight * 2f;
-
         var cardMin = new Vector2(left, optionsTop);
         var cardMax = new Vector2(right, cancelTop + rowHeight);
         var overCard = ImGui.IsMouseHoveringRect(cardMin, cardMax);
-        if (canDismiss && !overCard && ImGui.IsMouseHoveringRect(body.Min, body.Max) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (canDismiss && !overCard && ImGui.IsMouseHoveringRect(body.Min, body.Max) &&
+            ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             overlay = Overlay.None;
             return;
         }
 
-        Elevation.Floating(dl, new Vector2(left, optionsTop), new Vector2(right, optionsBottom), 16f * scale, scale, 0.9f);
-        Squircle.Fill(dl, new Vector2(left, optionsTop), new Vector2(right, optionsBottom), 16f * scale, ImGui.GetColorU32(theme.GroupedCard));
+        Elevation.Floating(dl, new Vector2(left, optionsTop), new Vector2(right, optionsBottom), 16f * scale, scale,
+            0.9f);
+        Squircle.Fill(dl, new Vector2(left, optionsTop), new Vector2(right, optionsBottom), 16f * scale,
+            ImGui.GetColorU32(theme.GroupedCard));
         Material.EdgeSquircle(dl, new Vector2(left, optionsTop), new Vector2(right, optionsBottom), 16f * scale, scale);
-
         var photosRow = new Rect(new Vector2(left, optionsTop), new Vector2(right, optionsTop + rowHeight));
         var filesRow = new Rect(new Vector2(left, optionsTop + rowHeight), new Vector2(right, optionsBottom));
-        dl.AddLine(new Vector2(left + 16f * scale, optionsTop + rowHeight), new Vector2(right - 4f * scale, optionsTop + rowHeight), ImGui.GetColorU32(theme.Separator), 1f);
-
+        dl.AddLine(new Vector2(left + 16f * scale, optionsTop + rowHeight),
+            new Vector2(right - 4f * scale, optionsTop + rowHeight), ImGui.GetColorU32(theme.Separator), 1f);
         if (DrawSheetRow(photosRow, Loc.T(L.Wallpaper.FromPhotos), theme.Accent))
         {
             photoPaths = photos.List();
@@ -320,7 +308,8 @@ internal sealed class WallpaperPage : ISettingsPage
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         if (hovered)
         {
-            ImGui.GetWindowDrawList().AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), 16f * ImGuiHelpers.GlobalScale);
+            ImGui.GetWindowDrawList().AddRectFilled(rect.Min, rect.Max,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), 16f * ImGuiHelpers.GlobalScale);
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
@@ -333,21 +322,21 @@ internal sealed class WallpaperPage : ISettingsPage
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         dl.AddRectFilled(body.Min, body.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f)), 0f);
-
         var pad = 10f * scale;
         var panel = body.Inset(pad);
         Squircle.Fill(dl, panel.Min, panel.Max, 18f * scale, ImGui.GetColorU32(theme.AppBackground));
         Material.EdgeSquircle(dl, panel.Min, panel.Max, 18f * scale, scale);
-
         var headerHeight = 38f * scale;
-        Typography.DrawCentered(new Vector2(panel.Center.X, panel.Min.Y + headerHeight * 0.5f), Loc.T(L.Wallpaper.FromPhotos), theme.TextStrong, 1.05f, FontWeight.SemiBold);
+        Typography.DrawCentered(new Vector2(panel.Center.X, panel.Min.Y + headerHeight * 0.5f),
+            Loc.T(L.Wallpaper.FromPhotos), theme.TextStrong, 1.05f, FontWeight.SemiBold);
         if (DrawCloseBadge(new Vector2(panel.Max.X - 18f * scale, panel.Min.Y + headerHeight * 0.5f), theme))
         {
             overlay = Overlay.None;
             return;
         }
 
-        var grid = new Rect(new Vector2(panel.Min.X + pad, panel.Min.Y + headerHeight), new Vector2(panel.Max.X - pad, panel.Max.Y - pad));
+        var grid = new Rect(new Vector2(panel.Min.X + pad, panel.Min.Y + headerHeight),
+            new Vector2(panel.Max.X - pad, panel.Max.Y - pad));
         if (photoPaths.Length == 0)
         {
             Typography.DrawCentered(grid.Center, Loc.T(L.Photos.NoPhotos), theme.TextMuted, 1.0f);
@@ -412,12 +401,14 @@ internal sealed class WallpaperPage : ISettingsPage
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         var radius = 12f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         var arm = 5f * scale;
         var ink = ImGui.GetColorU32(hovered ? theme.TextStrong : theme.TextMuted);
-        dl.AddLine(new Vector2(center.X - arm, center.Y - arm), new Vector2(center.X + arm, center.Y + arm), ink, 2f * scale);
-        dl.AddLine(new Vector2(center.X - arm, center.Y + arm), new Vector2(center.X + arm, center.Y - arm), ink, 2f * scale);
-
+        dl.AddLine(new Vector2(center.X - arm, center.Y - arm), new Vector2(center.X + arm, center.Y + arm), ink,
+            2f * scale);
+        dl.AddLine(new Vector2(center.X - arm, center.Y + arm), new Vector2(center.X + arm, center.Y - arm), ink,
+            2f * scale);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -459,7 +450,6 @@ internal sealed class WallpaperPage : ISettingsPage
         Plugin.Wallpapers.RemoveCustom(id);
         var entries = Plugin.Wallpapers.Entries;
         var fallback = entries.Count > 0 ? entries[0].Id : string.Empty;
-
         var changed = false;
         if (configuration.LightWallpaperId == id)
         {

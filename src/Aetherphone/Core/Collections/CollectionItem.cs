@@ -41,6 +41,7 @@ internal sealed class CollectionItem
         var primary = Sources.Length > 0 ? Sources[0] : null;
         SourceType = primary?.Type ?? string.Empty;
         SourceText = primary?.Text ?? string.Empty;
+
         if (SourceType.Length == 0 && dto.Type?.Name is { Length: > 0 } typeName)
         {
             SourceType = typeName;
@@ -53,6 +54,7 @@ internal sealed class CollectionItem
     private static string BuildSearchKey(string name, CollectionSource[] sources)
     {
         var builder = new StringBuilder(name);
+
         for (var index = 0; index < sources.Length; index++)
         {
             var text = sources[index].Text;

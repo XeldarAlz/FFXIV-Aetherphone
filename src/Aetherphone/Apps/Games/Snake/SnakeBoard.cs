@@ -13,49 +13,27 @@ internal enum SnakeState
 internal sealed class SnakeBoard
 {
     private const float SegRadiusFraction = 0.022f;
-
     private const float SpeedFraction = 0.52f;
-
     private const float MaxTurn = 5.5f;
-
     private const int StartLength = 7;
-
     private const int Growth = 4;
-
     private const float GraceSeconds = 0.6f;
-
     private readonly List<Vector2> samples = new(256);
-
     private readonly Random random = new();
-
     private float angle;
-
     private int length;
-
     private float playTime;
-
     private Vector2 lastReadyMouse;
-
     private bool readyMouseInit;
-
     public SnakeState State { get; private set; }
-
     public int Score { get; private set; }
-
     public Vector2 Head { get; private set; }
-
     public Vector2 Food { get; private set; }
-
     public float Angle => angle;
-
     public bool AteLastStep { get; private set; }
-
     public int SampleCount => samples.Count;
-
     public Vector2 Sample(int index) => samples[index];
-
     public static float SegRadiusOf(Rect area) => SegRadiusFraction * area.Height;
-
     public static float FoodRadiusOf(Rect area) => SegRadiusFraction * area.Height * 0.85f;
 
     public void Reset(Rect area)
@@ -68,7 +46,6 @@ internal sealed class SnakeBoard
         playTime = 0f;
         readyMouseInit = false;
         AteLastStep = false;
-
         var step = SegRadiusOf(area) * 0.85f;
         var tailDirection = new Vector2(MathF.Cos(angle + MathF.PI), MathF.Sin(angle + MathF.PI));
         samples.Clear();
@@ -94,7 +71,6 @@ internal sealed class SnakeBoard
     public bool Step(float deltaSeconds, Rect area, Vector2 mouse)
     {
         AteLastStep = false;
-
         if (State == SnakeState.Ready)
         {
             if (!readyMouseInit)
@@ -120,15 +96,14 @@ internal sealed class SnakeBoard
         playTime += deltaSeconds;
         var radius = SegRadiusOf(area);
         var step = radius * 0.85f;
-
         var desired = MathF.Atan2(mouse.Y - Head.Y, mouse.X - Head.X);
         var difference = WrapAngle(desired - angle);
         var maxStep = MaxTurn * deltaSeconds;
         angle += Math.Clamp(difference, -maxStep, maxStep);
         Head += new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * SpeedFraction * area.Height * deltaSeconds;
-
         var margin = radius;
-        if (Head.X < area.Min.X + margin || Head.X > area.Max.X - margin || Head.Y < area.Min.Y + margin || Head.Y > area.Max.Y - margin)
+        if (Head.X < area.Min.X + margin || Head.X > area.Max.X - margin || Head.Y < area.Min.Y + margin ||
+            Head.Y > area.Max.Y - margin)
         {
             State = SnakeState.Over;
             return true;
@@ -174,10 +149,8 @@ internal sealed class SnakeBoard
         var margin = SegRadiusOf(area) * 2.5f;
         for (var attempt = 0; attempt < 24; attempt++)
         {
-            var candidate = new Vector2(
-                area.Min.X + margin + (float)random.NextDouble() * (area.Width - 2f * margin),
+            var candidate = new Vector2(area.Min.X + margin + (float)random.NextDouble() * (area.Width - 2f * margin),
                 area.Min.Y + margin + (float)random.NextDouble() * (area.Height - 2f * margin));
-
             if (Vector2.Distance(candidate, Head) > area.Height * 0.18f)
             {
                 Food = candidate;

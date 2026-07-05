@@ -12,13 +12,9 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class ImmersionPage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Immersion);
-
     public string Summary => configuration.ScrollWhileIdle ? Loc.T(L.Settings.ScrollWhileIdle) : string.Empty;
-
     public string Glyph => "I";
-
     public Vector4 Tint => new(0.20f, 0.70f, 0.62f, 1f);
-
     private readonly Configuration configuration;
 
     public ImmersionPage(Configuration configuration)
@@ -34,10 +30,11 @@ internal sealed class ImmersionPage : ISettingsPage
         {
             SettingsSection.Header(Loc.T(L.Settings.Immersion), theme);
             var behaviorCard = GroupCard.Begin(theme, 2);
-            var scroll = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.Settings.ScrollWhileIdle), configuration.ScrollWhileIdle, theme);
-            var lockPosition = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.ControlCenter.LockPosition), configuration.LockPosition, theme);
+            var scroll = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.Settings.ScrollWhileIdle),
+                configuration.ScrollWhileIdle, theme);
+            var lockPosition = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.ControlCenter.LockPosition),
+                configuration.LockPosition, theme);
             behaviorCard.End();
-
             if (scroll != configuration.ScrollWhileIdle)
             {
                 configuration.ScrollWhileIdle = scroll;
@@ -59,12 +56,12 @@ internal sealed class ImmersionPage : ISettingsPage
             }
 
             ImGui.Dummy(new Vector2(0f, 12f * scale));
-
             var startupCard = GroupCard.Begin(theme, 2);
-            var openStartup = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenOnStartup), configuration.OpenOnStartup, theme);
-            var openMinimized = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenMinimized), configuration.OpenMinimizedOnStartup, theme);
+            var openStartup = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenOnStartup),
+                configuration.OpenOnStartup, theme);
+            var openMinimized = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenMinimized),
+                configuration.OpenMinimizedOnStartup, theme);
             startupCard.End();
-
             if (openStartup != configuration.OpenOnStartup)
             {
                 configuration.OpenOnStartup = openStartup;

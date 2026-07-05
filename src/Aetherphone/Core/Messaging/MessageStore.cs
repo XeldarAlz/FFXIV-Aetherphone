@@ -4,9 +4,7 @@ internal sealed class MessageStore
 {
     private readonly Dictionary<string, Conversation> byTarget = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Conversation> ordered = new();
-
     public IReadOnlyList<Conversation> Conversations => ordered;
-
     public event Action? Changed;
 
     public void Append(string display, string sendTarget, ChatLine line)

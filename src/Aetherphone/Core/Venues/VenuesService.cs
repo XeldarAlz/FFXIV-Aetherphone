@@ -1,6 +1,4 @@
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
@@ -14,26 +12,23 @@ internal sealed class VenuesService : IDisposable
     private const int PartakePageSize = 100;
     private const int PartakeMaxPages = 5;
     private const int MaxNotificationsPerRefresh = 4;
-
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
     private static readonly Vector4 NotificationAccent = new(0.93f, 0.28f, 0.55f, 1f);
-
     private readonly HttpService http;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly GameData gameData;
     private readonly CancellationTokenSource cancellation = new();
-
     private readonly HashSet<string> knownIds = new(StringComparer.Ordinal);
     private bool seeded;
     private int refreshing;
-
     private volatile VenueEvent[] events = Array.Empty<VenueEvent>();
     private volatile int version;
     private DateTime lastRefreshUtc;
     private volatile VenueState state = VenueState.Idle;
 
-    public VenuesService(HttpService http, NotificationService notifications, Configuration configuration, GameData gameData)
+    public VenuesService(HttpService http, NotificationService notifications, Configuration configuration,
+        GameData gameData)
     {
         this.http = http;
         this.notifications = notifications;
@@ -42,11 +37,8 @@ internal sealed class VenuesService : IDisposable
     }
 
     public VenueState State => state;
-
     public int Version => version;
-
     public IReadOnlyList<VenueEvent> Events => events;
-
     public DateTime LastRefreshUtc => lastRefreshUtc;
 
     public void EnsureFresh(bool force)
@@ -84,12 +76,9 @@ internal sealed class VenuesService : IDisposable
             var collected = new List<VenueEvent>(256);
             var ffxivOk = await FetchFfxivAsync(collected, token).ConfigureAwait(false);
             var partakeOk = await FetchPartakeAsync(collected, token).ConfigureAwait(false);
-
             collected.Sort(static (left, right) => left.StartUtc.CompareTo(right.StartUtc));
             var snapshot = collected.ToArray();
-
             NotifyNew(snapshot, homeDataCenter);
-
             events = snapshot;
             lastRefreshUtc = DateTime.UtcNow;
             version++;
@@ -115,7 +104,8 @@ internal sealed class VenuesService : IDisposable
 
     private async Task<bool> FetchFfxivAsync(List<VenueEvent> into, CancellationToken token)
     {
-        var dtos = await http.GetJsonAsync(FfxivApi, VenueJsonContext.Default.FfxivVenueDtoArray, null, token).ConfigureAwait(false);
+        var dtos = await http.GetJsonAsync(FfxivApi, VenueJsonContext.Default.FfxivVenueDtoArray, null, token)
+            .ConfigureAwait(false);
         if (dtos is null)
         {
             return false;
@@ -140,7 +130,8 @@ internal sealed class VenuesService : IDisposable
         for (var page = 0; page < PartakeMaxPages; page++)
         {
             var request = new GraphQlRequest { Query = BuildPartakeQuery(page * PartakePageSize) };
-            var envelope = await http.PostJsonAsync(PartakeApi, request, VenueJsonContext.Default.GraphQlRequest, VenueJsonContext.Default.PartakeEnvelope, null, token).ConfigureAwait(false);
+            var envelope = await http.PostJsonAsync(PartakeApi, request, VenueJsonContext.Default.GraphQlRequest,
+                VenueJsonContext.Default.PartakeEnvelope, null, token).ConfigureAwait(false);
             var batch = envelope?.Data?.Events;
             if (batch is null || batch.Length == 0)
             {
@@ -168,11 +159,11 @@ internal sealed class VenuesService : IDisposable
 
     private static string BuildPartakeQuery(int offset)
     {
-        return "{ events(game: \"final-fantasy-xiv\", sortBy: STARTS_AT, limit: " + PartakePageSize +
-            ", offset: " + offset +
-            ") { id title location tags ageRating startsAt endsAt attendeeCount description: description(type: MARKDOWN) " +
-            "locationData { server { name dataCenterId } dataCenter { id name } } " +
-            "team { name iconUrl websiteUrl discordUrl } } }";
+        return "{ events(game: \"final-fantasy-xiv\", sortBy: STARTS_AT, limit: " + PartakePageSize + ", offset: " +
+               offset +
+               ") { id title location tags ageRating startsAt endsAt attendeeCount description: description(type: MARKDOWN) " +
+               "locationData { server { name dataCenterId } dataCenter { id name } } " +
+               "team { name iconUrl websiteUrl discordUrl } } }";
     }
 
     private void NotifyNew(VenueEvent[] snapshot, string homeDataCenter)
@@ -213,7 +204,8 @@ internal sealed class VenuesService : IDisposable
                 continue;
             }
 
-            if (homeDataCenter.Length > 0 && !string.Equals(venue.DataCenter, homeDataCenter, StringComparison.OrdinalIgnoreCase))
+            if (homeDataCenter.Length > 0 &&
+                !string.Equals(venue.DataCenter, homeDataCenter, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -223,7 +215,8 @@ internal sealed class VenuesService : IDisposable
                 continue;
             }
 
-            notifications.Notify(new PhoneNotification("venues", venue.Title, venue.LocationLine, DateTime.Now, NotificationAccent));
+            notifications.Notify(new PhoneNotification("venues", venue.Title, venue.LocationLine, DateTime.Now,
+                NotificationAccent));
             presented++;
         }
     }

@@ -9,7 +9,6 @@ namespace Aetherphone.Windows.Components;
 internal struct GroupCard
 {
     public const float DefaultRowHeight = 46f;
-
     private readonly PhoneTheme theme;
     private readonly float scale;
     private readonly float rowHeight;
@@ -19,7 +18,8 @@ internal struct GroupCard
     private readonly int rowCount;
     private int rowIndex;
 
-    private GroupCard(PhoneTheme theme, float scale, float rowHeight, float left, float right, float startY, int rowCount)
+    private GroupCard(PhoneTheme theme, float scale, float rowHeight, float left, float right, float startY,
+        int rowCount)
     {
         this.theme = theme;
         this.scale = scale;
@@ -50,7 +50,8 @@ internal struct GroupCard
         if (rowIndex > 0)
         {
             var separatorX = left + 16f * scale;
-            ImGui.GetWindowDrawList().AddLine(new Vector2(separatorX, rowTop), new Vector2(right, rowTop), ImGui.GetColorU32(theme.Separator), 1f);
+            ImGui.GetWindowDrawList().AddLine(new Vector2(separatorX, rowTop), new Vector2(right, rowTop),
+                ImGui.GetColorU32(theme.Separator), 1f);
         }
 
         rowIndex++;

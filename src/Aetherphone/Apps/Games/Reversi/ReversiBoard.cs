@@ -3,37 +3,23 @@ namespace Aetherphone.Apps.Games.Reversi;
 internal sealed class ReversiBoard
 {
     public const int Size = 8;
-
     public const int CellCount = Size * Size;
-
     public const int Dark = 1;
-
     public const int Light = 2;
-
     private const int CpuColor = Light;
-
     private const int SearchDepth = 4;
-
     private static readonly int[] DirectionRow = { -1, -1, -1, 0, 0, 1, 1, 1 };
-
     private static readonly int[] DirectionColumn = { -1, 0, 1, -1, 1, -1, 0, 1 };
 
     private static readonly int[] Weights =
     {
-        120, -20, 20, 5, 5, 20, -20, 120,
-        -20, -40, -5, -5, -5, -5, -40, -20,
-        20, -5, 15, 3, 3, 15, -5, 20,
-        5, -5, 3, 3, 3, 3, -5, 5,
-        5, -5, 3, 3, 3, 3, -5, 5,
-        20, -5, 15, 3, 3, 15, -5, 20,
-        -20, -40, -5, -5, -5, -5, -40, -20,
-        120, -20, 20, 5, 5, 20, -20, 120,
+        120, -20, 20, 5, 5, 20, -20, 120, -20, -40, -5, -5, -5, -5, -40, -20, 20, -5, 15, 3, 3, 15, -5, 20, 5, -5,
+        3, 3, 3, 3, -5, 5, 5, -5, 3, 3, 3, 3, -5, 5, 20, -5, 15, 3, 3, 15, -5, 20, -20, -40, -5, -5, -5, -5, -40,
+        -20, 120, -20, 20, 5, 5, 20, -20, 120,
     };
 
     private readonly sbyte[] cells = new sbyte[CellCount];
-
     public int Cell(int index) => cells[index];
-
     public static int Opponent(int player) => player == Dark ? Light : Dark;
 
     public void Reset()
@@ -46,7 +32,6 @@ internal sealed class ReversiBoard
     }
 
     public bool IsLegal(int cell, int player) => cells[cell] == 0 && ComputeFlips(cells, cell, player, null) > 0;
-
     public bool HasAnyMove(int player) => AnyMove(cells, player);
 
     public bool ApplyMove(int cell, int player, List<int> flippedOut)
@@ -126,7 +111,6 @@ internal sealed class ReversiBoard
 
         var maximizing = player == CpuColor;
         var best = maximizing ? int.MinValue : int.MaxValue;
-
         for (var cell = 0; cell < CellCount; cell++)
         {
             if (state[cell] != 0 || ComputeFlips(state, cell, player, null) == 0)
@@ -137,7 +121,6 @@ internal sealed class ReversiBoard
             var next = (sbyte[])state.Clone();
             PlaceInternal(next, cell, player);
             var value = Search(next, Opponent(player), depth - 1, alpha, beta);
-
             if (maximizing)
             {
                 if (value > best)
@@ -243,7 +226,6 @@ internal sealed class ReversiBoard
         var row = cell / Size;
         var column = cell % Size;
         var opponent = Opponent(player);
-
         for (var direction = 0; direction < 8; direction++)
         {
             var stepRow = DirectionRow[direction];
@@ -251,15 +233,16 @@ internal sealed class ReversiBoard
             var row2 = row + stepRow;
             var column2 = column + stepColumn;
             var run = 0;
-
-            while (row2 >= 0 && row2 < Size && column2 >= 0 && column2 < Size && state[row2 * Size + column2] == opponent)
+            while (row2 >= 0 && row2 < Size && column2 >= 0 && column2 < Size &&
+                   state[row2 * Size + column2] == opponent)
             {
                 row2 += stepRow;
                 column2 += stepColumn;
                 run++;
             }
 
-            if (run == 0 || row2 < 0 || row2 >= Size || column2 < 0 || column2 >= Size || state[row2 * Size + column2] != player)
+            if (run == 0 || row2 < 0 || row2 >= Size || column2 < 0 || column2 >= Size ||
+                state[row2 * Size + column2] != player)
             {
                 continue;
             }
@@ -286,7 +269,6 @@ internal sealed class ReversiBoard
         var column = cell % Size;
         var opponent = Opponent(player);
         var total = 0;
-
         for (var direction = 0; direction < 8; direction++)
         {
             var stepRow = DirectionRow[direction];
@@ -294,15 +276,16 @@ internal sealed class ReversiBoard
             var row2 = row + stepRow;
             var column2 = column + stepColumn;
             var run = 0;
-
-            while (row2 >= 0 && row2 < Size && column2 >= 0 && column2 < Size && state[row2 * Size + column2] == opponent)
+            while (row2 >= 0 && row2 < Size && column2 >= 0 && column2 < Size &&
+                   state[row2 * Size + column2] == opponent)
             {
                 row2 += stepRow;
                 column2 += stepColumn;
                 run++;
             }
 
-            if (run == 0 || row2 < 0 || row2 >= Size || column2 < 0 || column2 >= Size || state[row2 * Size + column2] != player)
+            if (run == 0 || row2 < 0 || row2 >= Size || column2 < 0 || column2 >= Size ||
+                state[row2 * Size + column2] != player)
             {
                 continue;
             }

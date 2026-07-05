@@ -46,7 +46,9 @@ internal static class Languages
         0xFF00, 0xFFEF, // Halfwidth and fullwidth forms
     };
 
-    public static readonly LanguageInfo English = new("en", "English", "English", "en-US", PluralKind.EnglishLike, null);
+    public static readonly LanguageInfo
+        English = new("en", "English", "English", "en-US", PluralKind.EnglishLike, null);
+
     public static readonly LanguageInfo French = new("fr", "Français", "French", "fr-FR", PluralKind.French, null);
     public static readonly LanguageInfo German = new("de", "Deutsch", "German", "de-DE", PluralKind.EnglishLike, null);
     public static readonly LanguageInfo Turkish = new("tr", "Türkçe", "Turkish", "tr-TR", PluralKind.EnglishLike, null);
@@ -54,7 +56,11 @@ internal static class Languages
     public static readonly LanguageInfo Russian = new("ru", "Русский", "Russian", "ru-RU", PluralKind.EnglishLike, new ushort[] { 0x0400, 0x04FF });
     public static readonly LanguageInfo Japanese = new("ja", "日本語", "Japanese", "ja-JP", PluralKind.EnglishLike, JapaneseGlyphRanges);
     public static readonly LanguageInfo Chinese = new("zh", "中文", "Chinese", "zh-CN", PluralKind.EnglishLike, ChineseGlyphRanges);
-    public static readonly LanguageInfo[] All = { English, French, German, Turkish, Spanish, Russian, Japanese, Chinese, };
+
+    public static readonly LanguageInfo[] All =
+    {
+        English, French, German, Turkish, Spanish, Russian, Japanese, Chinese,
+    };
 
     public static LanguageInfo Resolve(string code)
     {

@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
 
@@ -13,7 +11,6 @@ internal sealed class DeviceStatus : IDisposable
     private const int SampleIntervalMilliseconds = 2000;
     private const int PingTimeoutMilliseconds = 1500;
     private const int SampleWindow = 6;
-
     private static readonly IPAddress FallbackHost = IPAddress.Parse("1.1.1.1");
 
     [DllImport("kernel32.dll", SetLastError = true)]
@@ -23,32 +20,23 @@ internal sealed class DeviceStatus : IDisposable
     private struct SystemPowerStatus
     {
         public byte AcLineStatus;
-
         public byte BatteryFlag;
-
         public byte BatteryLifePercent;
-
         public byte Reserved;
-
         public uint BatteryLifeTime;
-
         public uint BatteryFullLifeTime;
     }
 
     private readonly IClientState clientState;
     private readonly IObjectTable objectTable;
     private readonly IDataManager data;
-
     private readonly CancellationTokenSource cancellation = new();
-
     private readonly bool[] sampleSucceeded = new bool[SampleWindow];
     private readonly long[] sampleRoundtrip = new long[SampleWindow];
     private int sampleCursor;
     private int sampleCount;
-
     private volatile IPAddress target = FallbackHost;
     private uint resolvedWorldId;
-
     private volatile int batteryPercent = 100;
     private volatile bool batteryPresent;
     private volatile bool charging;
@@ -65,15 +53,10 @@ internal sealed class DeviceStatus : IDisposable
     }
 
     public int BatteryPercent => batteryPercent;
-
     public bool BatteryPresent => batteryPresent;
-
     public bool Charging => charging;
-
     public int SignalBars => signalBars;
-
     public int LatencyMilliseconds => latencyMilliseconds;
-
     public int PacketLossPercent => packetLossPercent;
 
     public void SyncTarget()
@@ -85,8 +68,8 @@ internal sealed class DeviceStatus : IDisposable
         }
 
         resolvedWorldId = worldId;
-
-        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) && TryDataCenterHost(world.DataCenter.RowId, out var host))
+        if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) &&
+            TryDataCenterHost(world.DataCenter.RowId, out var host))
         {
             target = host;
             return;
@@ -123,7 +106,8 @@ internal sealed class DeviceStatus : IDisposable
         {
             if (GetSystemPowerStatus(out var status))
             {
-                var absent = (status.BatteryFlag & 0x80) != 0 || status.BatteryFlag == 0xFF || status.BatteryLifePercent == 0xFF;
+                var absent = (status.BatteryFlag & 0x80) != 0 || status.BatteryFlag == 0xFF ||
+                             status.BatteryLifePercent == 0xFF;
                 batteryPresent = !absent;
                 batteryPercent = absent ? 100 : Math.Clamp((int)status.BatteryLifePercent, 0, 100);
                 charging = !absent && ((status.BatteryFlag & 0x08) != 0 || status.AcLineStatus == 1);
@@ -145,7 +129,6 @@ internal sealed class DeviceStatus : IDisposable
         var endpoint = target;
         var succeeded = false;
         long roundtrip = 0;
-
         try
         {
             var reply = await ping.SendPingAsync(endpoint, PingTimeoutMilliseconds).ConfigureAwait(false);
@@ -247,7 +230,6 @@ internal sealed class DeviceStatus : IDisposable
             12 => IPAddress.Parse("80.239.145.8"),
             _ => FallbackHost,
         };
-
         return dataCenterId is >= 1 and <= 12;
     }
 

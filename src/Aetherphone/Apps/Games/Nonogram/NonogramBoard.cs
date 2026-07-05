@@ -10,43 +10,24 @@ internal enum CellMark : byte
 internal sealed class NonogramBoard
 {
     public const int MaxSize = 10;
-
     private const int MaxRunsPerLine = (MaxSize + 1) / 2;
-
     private readonly bool[] solution = new bool[MaxSize * MaxSize];
-
     private readonly CellMark[] state = new CellMark[MaxSize * MaxSize];
-
     private readonly int[] rowClues = new int[MaxSize * MaxRunsPerLine];
-
     private readonly int[] rowClueCounts = new int[MaxSize];
-
     private readonly int[] columnClues = new int[MaxSize * MaxRunsPerLine];
-
     private readonly int[] columnClueCounts = new int[MaxSize];
-
     private readonly Random random = new();
-
     public int Size { get; private set; } = 5;
-
     public int MaxRowClues { get; private set; } = 1;
-
     public int MaxColumnClues { get; private set; } = 1;
-
     public bool Solved { get; private set; }
-
     public int CellCount => Size * Size;
-
     public CellMark MarkAt(int index) => state[index];
-
     public bool SolutionAt(int index) => solution[index];
-
     public int RowClueCount(int row) => rowClueCounts[row];
-
     public int RowClue(int row, int slot) => rowClues[row * MaxRunsPerLine + slot];
-
     public int ColumnClueCount(int column) => columnClueCounts[column];
-
     public int ColumnClue(int column, int slot) => columnClues[column * MaxRunsPerLine + slot];
 
     public int FilledRemaining()
@@ -120,7 +101,6 @@ internal sealed class NonogramBoard
     {
         MaxRowClues = 1;
         MaxColumnClues = 1;
-
         Span<int> runs = stackalloc int[MaxRunsPerLine];
         for (var row = 0; row < Size; row++)
         {

@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
 
@@ -26,14 +25,12 @@ internal sealed class MarketItemIndex
 {
     private readonly IDataManager data;
     private readonly object sync = new();
-
     private uint[] ids = Array.Empty<uint>();
     private string[] names = Array.Empty<string>();
     private string[] lowerNames = Array.Empty<string>();
     private uint[] icons = Array.Empty<uint>();
     private uint[] vendorPrices = Array.Empty<uint>();
     private Dictionary<uint, int> indexById = new();
-
     private volatile bool building;
     private volatile bool ready;
 
@@ -89,7 +86,8 @@ internal sealed class MarketItemIndex
 
         for (var index = 0; index < localLower.Length && results.Count < max; index++)
         {
-            if (!localLower[index].StartsWith(needle, StringComparison.Ordinal) && localLower[index].Contains(needle, StringComparison.Ordinal))
+            if (!localLower[index].StartsWith(needle, StringComparison.Ordinal) &&
+                localLower[index].Contains(needle, StringComparison.Ordinal))
             {
                 results.Add(At(index));
             }
@@ -115,13 +113,11 @@ internal sealed class MarketItemIndex
         try
         {
             var vendorItems = BuildVendorSet();
-
             var sheet = data.GetExcelSheet<Item>();
             var bufferIds = new List<uint>(8192);
             var bufferNames = new List<string>(8192);
             var bufferIcons = new List<uint>(8192);
             var bufferVendor = new List<uint>(8192);
-
             foreach (var item in sheet)
             {
                 if (item.ItemSearchCategory.RowId == 0)

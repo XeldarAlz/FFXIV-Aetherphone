@@ -1,6 +1,4 @@
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
@@ -20,20 +18,16 @@ internal sealed class ChirperAvatarComposer
 {
     private const int GridColumns = 3;
     private const float CropSmoothTime = 0.10f;
-
     private readonly ChirperStore store;
     private readonly PhotoLibrary library;
-
     private PhoneTheme theme = PhoneTheme.Default;
     private Vector4 accent;
-
     private bool cropStage;
     private string sourcePath = string.Empty;
     private string[] pickerPaths = Array.Empty<string>();
     private string? pendingPickedPath;
     private volatile int outcome;
     private bool closeRequested;
-
     private Spring zoomSpring = new(1f);
     private Spring centerXSpring = new(0.5f);
     private Spring centerYSpring = new(0.5f);
@@ -63,7 +57,6 @@ internal sealed class ChirperAvatarComposer
     {
         theme = context.Theme;
         accent = accentColor;
-
         if (outcome == 1)
         {
             outcome = 0;
@@ -102,11 +95,11 @@ internal sealed class ChirperAvatarComposer
     private void DrawPick(Rect area, in PhoneContext context)
     {
         AppHeader.Draw(context, Loc.T(L.Chirper.ChangePhoto), () => closeRequested = true);
-
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var importHeight = 46f * scale;
-        var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale), new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
+        var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
+            new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
         if (PillButton(importRect, Loc.T(L.Chirper.ImportFromPc), true))
         {
             LaunchFileDialog();
@@ -117,7 +110,8 @@ internal sealed class ChirperAvatarComposer
         {
             if (pickerPaths.Length == 0)
             {
-                Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale), Loc.T(L.Photos.NoPhotos), theme.TextMuted);
+                Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
+                    Loc.T(L.Photos.NoPhotos), theme.TextMuted);
                 return;
             }
 
@@ -158,7 +152,8 @@ internal sealed class ChirperAvatarComposer
         }
 
         var (uv0, uv1) = CenterCropSquare(texture.Size);
-        drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+        drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
+            ImDrawFlags.RoundCornersAll);
         if (ImGui.IsItemHovered())
         {
             drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)), rounding);
@@ -182,7 +177,6 @@ internal sealed class ChirperAvatarComposer
     private void DrawCrop(Rect area, in PhoneContext context)
     {
         AppHeader.Draw(context, Loc.T(L.Chirper.MoveAndScale), () => cropStage = false);
-
         var canUse = !store.AvatarBusy;
         if (HeaderAction(area, store.AvatarBusy ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Use), canUse))
         {
@@ -193,12 +187,12 @@ internal sealed class ChirperAvatarComposer
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var drawList = ImGui.GetWindowDrawList();
         var top = area.Min.Y + AppHeader.Height * scale;
-
-        var stage = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale), new Vector2(area.Max.X - 16f * scale, area.Max.Y - 96f * scale));
+        var stage = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
+            new Vector2(area.Max.X - 16f * scale, area.Max.Y - 96f * scale));
         var side = MathF.Min(stage.Width, stage.Height);
-        var preview = new Rect(new Vector2(stage.Center.X - side * 0.5f, stage.Center.Y - side * 0.5f), new Vector2(stage.Center.X + side * 0.5f, stage.Center.Y + side * 0.5f));
+        var preview = new Rect(new Vector2(stage.Center.X - side * 0.5f, stage.Center.Y - side * 0.5f),
+            new Vector2(stage.Center.X + side * 0.5f, stage.Center.Y + side * 0.5f));
         var rounding = side * 0.5f;
-
         var texture = Plugin.WallpaperImages.Get(sourcePath);
         if (texture is null)
         {
@@ -213,13 +207,14 @@ internal sealed class ChirperAvatarComposer
         var centerY = centerYSpring.Step(targetCenterY, CropSmoothTime, deltaSeconds);
         var crop = new WallpaperCrop(zoom, centerX, centerY).Clamped(size, 1f);
         var (uv0, uv1) = crop.ComputeUv(size, 1f);
-
-        drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+        drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
+            ImDrawFlags.RoundCornersAll);
         HandleCropGestures(preview, size, uv1 - uv0);
-
-        Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), Loc.T(L.Chirper.GestureHint), theme.TextMuted, 0.78f);
+        Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), Loc.T(L.Chirper.GestureHint),
+            theme.TextMuted, 0.78f);
         var trackWidth = area.Width * 0.62f;
-        var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, area.Max.Y - 48f * scale), new Vector2(area.Center.X + trackWidth * 0.5f, area.Max.Y - 44f * scale));
+        var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, area.Max.Y - 48f * scale),
+            new Vector2(area.Center.X + trackWidth * 0.5f, area.Max.Y - 44f * scale));
         var zoomNormalized = (targetZoom - WallpaperCrop.MinZoom) / (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
         var updated = Scrubber.Draw(track, zoomNormalized, accent, theme.SurfaceMuted, 1f);
         targetZoom = WallpaperCrop.MinZoom + updated * (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
@@ -234,7 +229,8 @@ internal sealed class ChirperAvatarComposer
             var wheel = ImGui.GetIO().MouseWheel;
             if (wheel != 0f)
             {
-                targetZoom = Math.Clamp(targetZoom * (1f + wheel * 0.12f), WallpaperCrop.MinZoom, WallpaperCrop.MaxZoom);
+                targetZoom = Math.Clamp(targetZoom * (1f + wheel * 0.12f), WallpaperCrop.MinZoom,
+                    WallpaperCrop.MaxZoom);
             }
         }
 
@@ -306,7 +302,6 @@ internal sealed class ChirperAvatarComposer
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
-
         var fill = filled
             ? (hovered ? Palette.Mix(accent, theme.TextStrong, 0.12f) : accent)
             : (hovered ? Palette.Mix(theme.GroupedCard, theme.TextStrong, 0.08f) : theme.GroupedCard);
@@ -319,7 +314,6 @@ internal sealed class ChirperAvatarComposer
 
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

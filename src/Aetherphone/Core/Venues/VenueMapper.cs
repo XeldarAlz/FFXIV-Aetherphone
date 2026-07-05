@@ -21,11 +21,9 @@ internal static class VenueMapper
         var world = location?.World ?? string.Empty;
         var locationLine = BuildFfxivLocationLine(location, world);
         var teleport = BuildFfxivTeleport(location, world);
-
         var tags = CollectFfxivTags(dto);
         var description = dto.Description is { Length: > 0 } ? string.Join("\n\n", dto.Description) : string.Empty;
         var website = !string.IsNullOrEmpty(dto.Website) ? dto.Website : $"https://ffxivvenues.com/{dto.Id}";
-
         return new VenueEvent
         {
             Id = $"ffxiv:{dto.Id}",
@@ -60,7 +58,6 @@ internal static class VenueMapper
         var world = dto.LocationData?.Server?.Name ?? string.Empty;
         var freeText = dto.Location ?? string.Empty;
         var locationLine = BuildPartakeLocationLine(world, freeText);
-
         return new VenueEvent
         {
             Id = $"partake:{dto.Id}",
@@ -84,15 +81,14 @@ internal static class VenueMapper
         };
     }
 
-    private static bool TryResolveOpening(FfxivVenueDto dto, DateTime nowUtc, out DateTime startUtc, out DateTime? endUtc)
+    private static bool TryResolveOpening(FfxivVenueDto dto, DateTime nowUtc, out DateTime startUtc,
+        out DateTime? endUtc)
     {
         startUtc = default;
         endUtc = null;
-
         var found = false;
         var bestStart = DateTime.MaxValue;
         DateTime? bestEnd = null;
-
         if (dto.Schedule is { } schedule)
         {
             for (var index = 0; index < schedule.Length; index++)
@@ -209,7 +205,8 @@ internal static class VenueMapper
 
     private static string? BuildFfxivTeleport(FfxivLocationDto? location, string world)
     {
-        if (location is null || string.IsNullOrEmpty(world) || location.Ward <= 0 || string.IsNullOrEmpty(location.District))
+        if (location is null || string.IsNullOrEmpty(world) || location.Ward <= 0 ||
+            string.IsNullOrEmpty(location.District))
         {
             return null;
         }
@@ -279,9 +276,9 @@ internal static class VenueMapper
             return false;
         }
 
-        return ageRating.Contains("ADULT", StringComparison.OrdinalIgnoreCase)
-            || ageRating.Contains("MATURE", StringComparison.OrdinalIgnoreCase)
-            || ageRating.Contains("18", StringComparison.Ordinal);
+        return ageRating.Contains("ADULT", StringComparison.OrdinalIgnoreCase) ||
+               ageRating.Contains("MATURE", StringComparison.OrdinalIgnoreCase) ||
+               ageRating.Contains("18", StringComparison.Ordinal);
     }
 
     private static void AddTag(List<string> tags, string? tag)

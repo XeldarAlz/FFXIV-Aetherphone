@@ -14,20 +14,13 @@ namespace Aetherphone.Apps.Wallet;
 internal sealed class WalletApp : IPhoneApp
 {
     private const float RefreshIntervalSeconds = 1.5f;
-
     public string Id => "wallet";
-
     public string DisplayName => Loc.T(L.Apps.Wallet);
-
     public string Glyph => "G";
-
     public Vector4 Accent => new(0.26f, 0.78f, 0.52f, 1f);
-
     public int BadgeCount => 0;
-
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
-
     private WalletEntry? gil;
     private WalletSection[] sections = Array.Empty<WalletSection>();
     private float sinceRefresh;
@@ -64,12 +57,10 @@ internal sealed class WalletApp : IPhoneApp
     public void Draw(in PhoneContext context)
     {
         AppHeader.Draw(context, DisplayName);
-
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-
         if (gil is null)
         {
             Rebuild();
@@ -91,7 +82,6 @@ internal sealed class WalletApp : IPhoneApp
         using (AppSurface.Begin(body))
         {
             CurrencyRow.Hero(gil, textures, theme);
-
             for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
             {
                 var section = sections[sectionIndex];

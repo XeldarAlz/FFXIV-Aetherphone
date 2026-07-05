@@ -1,29 +1,22 @@
 using System.Net;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Aetherphone.Core.Net;
 
 internal sealed class HttpService : IDisposable
 {
     private const int MaxAttempts = 3;
-
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
-
     private readonly HttpClient client;
 
     public HttpService()
     {
-        client = new HttpClient
-        {
-            Timeout = RequestTimeout,
-        };
-        client.DefaultRequestHeaders.UserAgent.ParseAdd($"Aetherphone/{AepConstants.Version} (+https://github.com/XeldarAlz/FFXIV-Aetherphone)");
+        client = new HttpClient { Timeout = RequestTimeout, };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            $"Aetherphone/{AepConstants.Version} (+https://github.com/XeldarAlz/FFXIV-Aetherphone)");
     }
 
     public async Task<byte[]?> GetBytesAsync(Uri uri, CancellationToken token)
@@ -65,18 +58,23 @@ internal sealed class HttpService : IDisposable
         return null;
     }
 
-    public async Task<T?> GetJsonAsync<T>(string url, JsonTypeInfo<T> typeInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
+    public async Task<T?> GetJsonAsync<T>(string url, JsonTypeInfo<T> typeInfo, string? bearer, CancellationToken token,
+        Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, url);
         return await SendForJsonAsync(request, typeInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
     }
 
-    public Task<TResponse?> PostJsonAsync<TRequest, TResponse>(string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
+    public Task<TResponse?> PostJsonAsync<TRequest, TResponse>(string url, TRequest body,
+        JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer,
+        CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
         return SendJsonAsync(HttpMethod.Post, url, body, requestInfo, responseInfo, bearer, token, onStatus, appScope);
     }
 
-    public async Task<TResponse?> SendJsonAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
+    public async Task<TResponse?> SendJsonAsync<TRequest, TResponse>(HttpMethod method, string url, TRequest body,
+        JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, string? bearer,
+        CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
         var payload = JsonSerializer.Serialize(body, requestInfo);
@@ -84,7 +82,9 @@ internal sealed class HttpService : IDisposable
         return await SendForJsonAsync(request, responseInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
     }
 
-    public async Task<TResponse?> RequestJsonAsync<TResponse>(HttpMethod method, string url, JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
+    public async Task<TResponse?> RequestJsonAsync<TResponse>(HttpMethod method, string url,
+        JsonTypeInfo<TResponse> responseInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null,
+        string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
         return await SendForJsonAsync(request, responseInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
@@ -92,10 +92,7 @@ internal sealed class HttpService : IDisposable
 
     public async Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Put, uri)
-        {
-            Content = new ByteArrayContent(content),
-        };
+        using var request = new HttpRequestMessage(HttpMethod.Put, uri) { Content = new ByteArrayContent(content), };
         request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         try
         {
@@ -113,7 +110,9 @@ internal sealed class HttpService : IDisposable
         }
     }
 
-    public async Task<bool> SendJsonForStatusAsync<TRequest>(HttpMethod method, string url, TRequest body, JsonTypeInfo<TRequest> requestInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
+    public async Task<bool> SendJsonForStatusAsync<TRequest>(HttpMethod method, string url, TRequest body,
+        JsonTypeInfo<TRequest> requestInfo, string? bearer, CancellationToken token, Action<int>? onStatus = null,
+        string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
         var payload = JsonSerializer.Serialize(body, requestInfo);
@@ -136,7 +135,8 @@ internal sealed class HttpService : IDisposable
         }
     }
 
-    public async Task<bool> SendAsync(HttpMethod method, string url, string? bearer, CancellationToken token, Action<int>? onStatus = null, string? appScope = null)
+    public async Task<bool> SendAsync(HttpMethod method, string url, string? bearer, CancellationToken token,
+        Action<int>? onStatus = null, string? appScope = null)
     {
         using var request = new HttpRequestMessage(method, url);
         ApplyHeaders(request, bearer, appScope);
@@ -157,7 +157,8 @@ internal sealed class HttpService : IDisposable
         }
     }
 
-    private async Task<T?> SendForJsonAsync<T>(HttpRequestMessage request, JsonTypeInfo<T> typeInfo, string? bearer, Action<int>? onStatus, string? appScope, CancellationToken token)
+    private async Task<T?> SendForJsonAsync<T>(HttpRequestMessage request, JsonTypeInfo<T> typeInfo, string? bearer,
+        Action<int>? onStatus, string? appScope, CancellationToken token)
     {
         ApplyHeaders(request, bearer, appScope);
         try

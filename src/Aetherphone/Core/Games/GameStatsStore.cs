@@ -98,11 +98,7 @@ internal sealed class GameStatsStore
             return existing;
         }
 
-        var created = new GameStatRecord
-        {
-            GameId = gameId,
-        };
-
+        var created = new GameStatRecord { GameId = gameId, };
         configuration.GameStats.Add(created);
         return created;
     }

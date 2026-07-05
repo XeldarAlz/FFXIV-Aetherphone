@@ -12,7 +12,6 @@ internal static class SettingsSection
     {
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.Dummy(new Vector2(0f, 10f * scale));
-
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
         using (Plugin.Fonts.Push(0.8f))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))

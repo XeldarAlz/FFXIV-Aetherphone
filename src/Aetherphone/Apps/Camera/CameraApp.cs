@@ -20,30 +20,20 @@ internal sealed class CameraApp : IPhoneApp
     private const float FlashDuration = 0.42f;
     private const float ReticleDuration = 1.1f;
     private const float PressDuration = 0.18f;
-
     private const int SquareModeIndex = 0;
-
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto, L.Camera.ModePano };
     private static readonly Vector4 SelectedMode = new(0.98f, 0.79f, 0.20f, 1f);
     private static readonly Vector4 ShutterRing = new(0.98f, 0.98f, 0.98f, 1f);
     private static readonly Vector4 BarTint = new(0f, 0f, 0f, 0.42f);
     private static readonly Vector4 TrayTint = new(0f, 0f, 0f, 0.88f);
-
     public string Id => "camera";
-
     public string DisplayName => Loc.T(L.Apps.Camera);
-
     public string Glyph => "O";
-
     public Vector4 Accent => new(0.34f, 0.35f, 0.41f, 1f);
-
     public int BadgeCount => 0;
-
     public bool WantsTransparentScreen => true;
-
     private readonly PhotoCaptureService capture;
     private readonly PhotoLibrary library;
-
     private int modeIndex = 1;
     private bool gridEnabled;
     private bool flashEnabled;
@@ -75,19 +65,14 @@ internal sealed class CameraApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var delta = ImGui.GetIO().DeltaTime;
-
         AdvanceTimers(delta);
-
         var screen = ScreenFrom(context.Content, theme, scale);
-        var viewfinder = new Rect(
-            new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
+        var viewfinder = new Rect(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
             new Vector2(screen.Max.X, screen.Max.Y - TrayHeight * scale));
         var captureRect = CaptureRect(viewfinder);
-
         var consumed = DrawTopBar(screen, scale);
         DrawViewfinder(viewfinder, captureRect, scale);
         consumed |= DrawTray(screen, captureRect, context.Navigation, scale);
-
         HandleFocusTap(viewfinder, consumed);
         DrawFlash(screen, scale);
     }
@@ -115,7 +100,6 @@ internal sealed class CameraApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
         var barMax = new Vector2(screen.Max.X, screen.Min.Y + TopBarHeight * scale);
         dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint));
-
         var rowCenterY = barMax.Y - 16f * scale;
         var consumed = DrawFlashToggle(new Vector2(screen.Min.X + 28f * scale, rowCenterY), scale);
         DrawLiveBadge(new Vector2(screen.Max.X - 34f * scale, rowCenterY), scale);
@@ -126,9 +110,9 @@ internal sealed class CameraApp : IPhoneApp
     {
         var dl = ImGui.GetWindowDrawList();
         var radius = 15f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         var tint = flashEnabled ? SelectedMode : new Vector4(0.92f, 0.92f, 0.94f, 0.9f);
-
         if (hovered)
         {
             dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.12f)), 24);
@@ -136,7 +120,6 @@ internal sealed class CameraApp : IPhoneApp
         }
 
         DrawBolt(dl, center, 9f * scale, ImGui.GetColorU32(tint));
-
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             flashEnabled = !flashEnabled;
@@ -157,7 +140,6 @@ internal sealed class CameraApp : IPhoneApp
             new Vector2(center.X + extent * 0.55f, center.Y - extent * 0.2f),
             new Vector2(center.X + extent * 0.02f, center.Y - extent * 0.2f),
         };
-
         dl.PathClear();
         for (var index = 0; index < bolt.Length; index++)
         {
@@ -178,7 +160,6 @@ internal sealed class CameraApp : IPhoneApp
     private void DrawViewfinder(Rect viewfinder, Rect captureRect, float scale)
     {
         var dl = ImGui.GetWindowDrawList();
-
         if (captureRect.Min.Y > viewfinder.Min.Y + 0.5f)
         {
             var crop = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.78f));
@@ -200,7 +181,6 @@ internal sealed class CameraApp : IPhoneApp
         var thickness = 1f * scale;
         var thirdX = area.Width / 3f;
         var thirdY = area.Height / 3f;
-
         for (var step = 1; step <= 2; step++)
         {
             var x = area.Min.X + thirdX * step;
@@ -224,7 +204,6 @@ internal sealed class CameraApp : IPhoneApp
         var min = reticlePos - new Vector2(half, half);
         var max = reticlePos + new Vector2(half, half);
         dl.AddRect(min, max, color, 2f * scale, ImDrawFlags.RoundCornersAll, 1.6f * scale);
-
         var tick = 6f * scale;
         dl.AddLine(new Vector2(reticlePos.X, min.Y), new Vector2(reticlePos.X, min.Y + tick), color, 1.6f * scale);
         dl.AddLine(new Vector2(reticlePos.X, max.Y), new Vector2(reticlePos.X, max.Y - tick), color, 1.6f * scale);
@@ -237,9 +216,7 @@ internal sealed class CameraApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
         var trayTop = screen.Max.Y - TrayHeight * scale;
         dl.AddRectFilled(new Vector2(screen.Min.X, trayTop), screen.Max, ImGui.GetColorU32(TrayTint));
-
         var consumed = DrawModeCarousel(screen, trayTop + 22f * scale, scale);
-
         var shutterCenter = new Vector2(screen.Center.X, trayTop + 92f * scale);
         consumed |= DrawShutter(shutterCenter, captureRect, scale);
         consumed |= DrawThumbnailWell(new Vector2(screen.Min.X + 44f * scale, shutterCenter.Y), navigation, scale);
@@ -272,7 +249,6 @@ internal sealed class CameraApp : IPhoneApp
             var color = selected ? SelectedMode : new Vector4(0.82f, 0.82f, 0.85f, 0.75f);
             var labelCenter = new Vector2(cursorX + widths[index] * 0.5f, rowCenterY);
             Typography.DrawCentered(labelCenter, Loc.T(Modes[index]), color, modeScale);
-
             var hitMin = new Vector2(cursorX - gap * 0.4f, rowCenterY - 14f * scale);
             var hitMax = new Vector2(cursorX + widths[index] + gap * 0.4f, rowCenterY + 14f * scale);
             if (!selected && ImGui.IsMouseHoveringRect(hitMin, hitMax))
@@ -295,14 +271,12 @@ internal sealed class CameraApp : IPhoneApp
     {
         var dl = ImGui.GetWindowDrawList();
         var outerRadius = ShutterRadius * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(outerRadius, outerRadius), center + new Vector2(outerRadius, outerRadius));
-
+        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(outerRadius, outerRadius),
+            center + new Vector2(outerRadius, outerRadius));
         dl.AddCircle(center, outerRadius, ImGui.GetColorU32(ShutterRing), 48, 3f * scale);
-
         var innerRadius = (outerRadius - 6f * scale) * (1f - 0.16f * shutterPress);
         var innerTint = hovered ? new Vector4(0.86f, 0.86f, 0.88f, 1f) : ShutterRing;
         dl.AddCircleFilled(center, innerRadius, ImGui.GetColorU32(innerTint), 48);
-
         if (!hovered)
         {
             return false;
@@ -322,14 +296,14 @@ internal sealed class CameraApp : IPhoneApp
     {
         shutterPress = 1f;
         flashAge = 0f;
-
         if (!capture.TryCapture(captureRect, out var pixels, out var width, out var height))
         {
             return;
         }
 
         lastShot?.Dispose();
-        lastShot = Plugin.TextureProvider.CreateFromRaw(RawImageSpecification.Rgba32(width, height), pixels, "Aetherphone.Photo.Last");
+        lastShot = Plugin.TextureProvider.CreateFromRaw(RawImageSpecification.Rgba32(width, height), pixels,
+            "Aetherphone.Photo.Last");
         library.Save(pixels, width, height);
     }
 
@@ -341,19 +315,20 @@ internal sealed class CameraApp : IPhoneApp
         var max = center + new Vector2(half, half);
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         var rounding = 8f * scale;
-
         if (lastShot is { } shot)
         {
-            dl.AddImageRounded(shot.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+            dl.AddImageRounded(shot.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding,
+                ImDrawFlags.RoundCornersAll);
         }
         else
         {
             dl.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(0.18f, 0.19f, 0.23f, 1f)), rounding);
-            dl.AddRectFilled(min, new Vector2(max.X, center.Y), ImGui.GetColorU32(new Vector4(0.30f, 0.33f, 0.40f, 1f)), rounding, ImDrawFlags.RoundCornersTop);
+            dl.AddRectFilled(min, new Vector2(max.X, center.Y), ImGui.GetColorU32(new Vector4(0.30f, 0.33f, 0.40f, 1f)),
+                rounding, ImDrawFlags.RoundCornersTop);
         }
 
-        dl.AddRect(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.18f)), rounding, ImDrawFlags.RoundCornersAll, 1f * scale);
-
+        dl.AddRect(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.18f)), rounding, ImDrawFlags.RoundCornersAll,
+            1f * scale);
         if (!hovered)
         {
             return false;
@@ -373,8 +348,8 @@ internal sealed class CameraApp : IPhoneApp
     {
         var dl = ImGui.GetWindowDrawList();
         var radius = 19f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         if (gridEnabled || hovered)
         {
             var bg = gridEnabled ? new Vector4(1f, 1f, 1f, 0.16f) : new Vector4(1f, 1f, 1f, 0.08f);
@@ -387,8 +362,10 @@ internal sealed class CameraApp : IPhoneApp
         for (var step = 1; step <= 2; step++)
         {
             var offset = -extent + third * step;
-            dl.AddLine(new Vector2(center.X + offset, center.Y - extent), new Vector2(center.X + offset, center.Y + extent), color, 1.3f * scale);
-            dl.AddLine(new Vector2(center.X - extent, center.Y + offset), new Vector2(center.X + extent, center.Y + offset), color, 1.3f * scale);
+            dl.AddLine(new Vector2(center.X + offset, center.Y - extent),
+                new Vector2(center.X + offset, center.Y + extent), color, 1.3f * scale);
+            dl.AddLine(new Vector2(center.X - extent, center.Y + offset),
+                new Vector2(center.X + extent, center.Y + offset), color, 1.3f * scale);
         }
 
         if (!hovered)
@@ -431,7 +408,8 @@ internal sealed class CameraApp : IPhoneApp
         }
 
         var alpha = 0.85f * (1f - flashAge / FlashDuration);
-        ImGui.GetWindowDrawList().AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
+        ImGui.GetWindowDrawList()
+            .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
     }
 
     private Rect CaptureRect(Rect viewfinder)
@@ -450,7 +428,8 @@ internal sealed class CameraApp : IPhoneApp
     private static Rect ScreenFrom(Rect content, PhoneTheme theme, float scale)
     {
         var min = new Vector2(content.Min.X - theme.SidePadding * scale, content.Min.Y - theme.TopZoneHeight * scale);
-        var max = new Vector2(content.Max.X + theme.SidePadding * scale, content.Max.Y + theme.BottomZoneHeight * scale);
+        var max = new Vector2(content.Max.X + theme.SidePadding * scale,
+            content.Max.Y + theme.BottomZoneHeight * scale);
         return new Rect(min, max);
     }
 

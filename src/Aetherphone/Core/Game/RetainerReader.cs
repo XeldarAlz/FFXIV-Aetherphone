@@ -7,7 +7,6 @@ internal static unsafe class RetainerReader
     public static bool TryRead(List<RetainerVenture> into)
     {
         into.Clear();
-
         var manager = RetainerManager.Instance();
         if (manager is null)
         {
@@ -32,7 +31,6 @@ internal static unsafe class RetainerReader
             var complete = hasVenture
                 ? DateTimeOffset.FromUnixTimeSeconds(retainer->VentureComplete).UtcDateTime
                 : DateTime.MinValue;
-
             into.Add(new RetainerVenture(retainer->RetainerId, retainer->NameString, hasVenture, complete));
         }
 

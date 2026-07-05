@@ -17,45 +17,25 @@ internal enum SweeperState
 internal sealed class SweeperBoard
 {
     public const int MaxCells = 13 * 13;
-
     private readonly bool[] mines = new bool[MaxCells];
-
     private readonly bool[] revealed = new bool[MaxCells];
-
     private readonly bool[] flagged = new bool[MaxCells];
-
     private readonly int[] adjacent = new int[MaxCells];
-
     private readonly int[] floodQueue = new int[MaxCells];
-
     private readonly Random random = new();
-
     private bool firstClick;
-
     public int Columns { get; private set; } = 9;
-
     public int Rows { get; private set; } = 9;
-
     public int MineCount { get; private set; } = 10;
-
     public Difficulty Difficulty { get; private set; }
-
     public SweeperState State { get; private set; }
-
     public int FlagCount { get; private set; }
-
     public int ClickedBomb { get; private set; } = -1;
-
     public int CellCount => Columns * Rows;
-
     public int MinesRemaining => MineCount - FlagCount;
-
     public bool IsRevealed(int index) => revealed[index];
-
     public bool IsFlagged(int index) => flagged[index];
-
     public bool IsMine(int index) => mines[index];
-
     public int Adjacent(int index) => adjacent[index];
 
     public static void Dimensions(Difficulty difficulty, out int columns, out int rows, out int mineCount)
@@ -87,12 +67,10 @@ internal sealed class SweeperBoard
         Columns = columns;
         Rows = rows;
         MineCount = mineCount;
-
         Array.Clear(mines, 0, MaxCells);
         Array.Clear(revealed, 0, MaxCells);
         Array.Clear(flagged, 0, MaxCells);
         Array.Clear(adjacent, 0, MaxCells);
-
         State = SweeperState.Playing;
         FlagCount = 0;
         ClickedBomb = -1;
@@ -159,7 +137,6 @@ internal sealed class SweeperBoard
         var column = index % Columns;
         var row = index / Columns;
         var flaggedNeighbors = 0;
-
         for (var rowOffset = -1; rowOffset <= 1; rowOffset++)
         {
             for (var columnOffset = -1; columnOffset <= 1; columnOffset++)
@@ -205,7 +182,6 @@ internal sealed class SweeperBoard
         var safeColumn = safeIndex % Columns;
         var safeRow = safeIndex / Columns;
         var placed = 0;
-
         while (placed < MineCount)
         {
             var index = random.Next(CellCount);
@@ -236,7 +212,6 @@ internal sealed class SweeperBoard
         var column = index % Columns;
         var row = index / Columns;
         var count = 0;
-
         for (var rowOffset = -1; rowOffset <= 1; rowOffset++)
         {
             for (var columnOffset = -1; columnOffset <= 1; columnOffset++)
@@ -258,12 +233,10 @@ internal sealed class SweeperBoard
         var write = 1;
         floodQueue[0] = startIndex;
         revealed[startIndex] = true;
-
         while (read < write)
         {
             var index = floodQueue[read];
             read++;
-
             if (adjacent[index] > 0)
             {
                 continue;
@@ -293,7 +266,6 @@ internal sealed class SweeperBoard
     {
         ClickedBomb = index;
         State = SweeperState.Lost;
-
         for (var cell = 0; cell < CellCount; cell++)
         {
             if (mines[cell])

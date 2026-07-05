@@ -3,11 +3,8 @@ namespace Aetherphone.Apps.Games.Tetris;
 internal sealed class TetrisScoringSystem
 {
     private int pendingDropPoints;
-
     private bool backToBackTetris;
-
     private int comboChain = -1;
-
     public int Score { get; private set; }
 
     public void Reset()
@@ -38,7 +35,6 @@ internal sealed class TetrisScoringSystem
     {
         var pieceScore = pendingDropPoints;
         pendingDropPoints = 0;
-
         if (clearedLines <= 0)
         {
             comboChain = -1;
@@ -48,7 +44,6 @@ internal sealed class TetrisScoringSystem
 
         comboChain = comboChain < 0 ? 0 : comboChain + 1;
         pieceScore += GetLineClearScore(clearedLines, level, backToBackTetris);
-
         if (comboChain > 0)
         {
             pieceScore += GetComboBonus(comboChain, level);

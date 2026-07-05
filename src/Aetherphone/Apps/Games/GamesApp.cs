@@ -31,27 +31,16 @@ namespace Aetherphone.Apps.Games;
 internal sealed class GamesApp : IPhoneApp
 {
     private const int Columns = 2;
-
     private const float HeaderHeight = 42f;
-
     private readonly GameStatsStore stats;
-
     private readonly IMiniGame[] games;
-
     private readonly Spring[] cardScale;
-
     private readonly int[] tileOrder;
-
     private IMiniGame? currentGame;
-
     public string Id => "games";
-
     public string DisplayName => Loc.T(L.Apps.Games);
-
     public string Glyph => ">";
-
     public Vector4 Accent => new(0.32f, 0.78f, 0.50f, 1f);
-
     public int BadgeCount => 0;
 
     public GamesApp(GameStatsStore stats)
@@ -59,24 +48,10 @@ internal sealed class GamesApp : IPhoneApp
         this.stats = stats;
         games = new IMiniGame[]
         {
-            new SweeperApp(),
-            new PairsApp(),
-            new GemSwapApp(),
-            new TetrisApp(),
-            new Twenty48App(),
-            new WaterSortApp(),
-            new BreakoutApp(),
-            new BubbleShooterApp(),
-            new NonogramApp(),
-            new FlowApp(),
-            new SolitaireApp(),
-            new SimonApp(),
-            new FlapApp(),
-            new ReversiApp(),
-            new WhackApp(),
-            new SnakeApp(),
+            new SweeperApp(), new PairsApp(), new GemSwapApp(), new TetrisApp(), new Twenty48App(),
+            new WaterSortApp(), new BreakoutApp(), new BubbleShooterApp(), new NonogramApp(), new FlowApp(),
+            new SolitaireApp(), new SimonApp(), new FlapApp(), new ReversiApp(), new WhackApp(), new SnakeApp(),
         };
-
         cardScale = new Spring[games.Length];
         for (var index = 0; index < cardScale.Length; index++)
         {
@@ -160,11 +135,9 @@ internal sealed class GamesApp : IPhoneApp
     {
         var game = currentGame!;
         AppHeader.Draw(context, game.Title, CloseCurrentGame);
-
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
-
         using (AppSurface.Begin(body))
         {
             var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
@@ -175,11 +148,9 @@ internal sealed class GamesApp : IPhoneApp
     private void DrawLauncher(in PhoneContext context)
     {
         AppHeader.Draw(context, DisplayName);
-
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
-
         using (AppSurface.Begin(body))
         {
             var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
@@ -189,13 +160,13 @@ internal sealed class GamesApp : IPhoneApp
             var cardWidth = (availableWidth - spacing * (Columns - 1)) / Columns;
             var cardHeight = cardWidth * 1.18f;
             var topPadding = 4f * scale;
-
             for (var member = 0; member < tileOrder.Length; member++)
             {
                 var gameIndex = tileOrder[member];
                 var column = member % Columns;
                 var row = member / Columns;
-                var cardMin = new Vector2(origin.X + column * (cardWidth + spacing), origin.Y + topPadding + row * (cardHeight + spacing));
+                var cardMin = new Vector2(origin.X + column * (cardWidth + spacing),
+                    origin.Y + topPadding + row * (cardHeight + spacing));
                 var cardRect = new Rect(cardMin, cardMin + new Vector2(cardWidth, cardHeight));
                 if (DrawCard(cardRect, games[gameIndex], gameIndex, deltaSeconds, context.Theme, scale))
                 {
@@ -215,10 +186,9 @@ internal sealed class GamesApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-
-        var target = pressed ? 0.965f : hovered ? 1.035f : 1f;
+        var target = pressed ? 0.965f :
+            hovered ? 1.035f : 1f;
         var grow = cardScale[index].Step(target, 0.085f, deltaSeconds);
-
         var center = rect.Center;
         var half = rect.Size * 0.5f * grow;
         var min = center - half;
@@ -226,16 +196,12 @@ internal sealed class GamesApp : IPhoneApp
         var height = max.Y - min.Y;
         var rounding = 26f * scale;
         var inset = rounding;
-
         var accent = game.Accent;
         var baseColor = GamePalette.Darken(accent, 0.16f);
-
         Elevation.Floating(drawList, min, max, rounding, scale, hovered ? 1f : 0.7f);
-
         var topTone = ImGui.GetColorU32(GamePalette.Lighten(accent, 0.30f));
         var bottomTone = ImGui.GetColorU32(GamePalette.Darken(accent, 0.44f));
         Squircle.FillVerticalGradient(drawList, min, max, rounding, topTone, bottomTone);
-
         var iconCenter = new Vector2(center.X, min.Y + height * 0.40f);
         if (hovered)
         {
@@ -248,15 +214,14 @@ internal sealed class GamesApp : IPhoneApp
             Typography.DrawCentered(iconCenter, game.Title, ink, TextStyles.Title1);
         }
 
-        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(GamePalette.Lighten(accent, 0.4f) with { W = 0.42f }), 1f * scale);
-        drawList.AddLine(
-            new Vector2(min.X + inset, min.Y + 1.5f * scale),
-            new Vector2(max.X - inset, min.Y + 1.5f * scale),
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.2f)), 1f * scale);
-
+        Squircle.Stroke(drawList, min, max, rounding,
+            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.4f) with { W = 0.42f }), 1f * scale);
+        drawList.AddLine(new Vector2(min.X + inset, min.Y + 1.5f * scale),
+            new Vector2(max.X - inset, min.Y + 1.5f * scale), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.2f)),
+            1f * scale);
         Typography.DrawCentered(new Vector2(center.X, max.Y - height * 0.235f), game.Title, ink, TextStyles.Headline);
-        Typography.DrawCentered(new Vector2(center.X, max.Y - height * 0.115f), game.Genre.ToUpperInvariant(), new Vector4(1f, 1f, 1f, 0.68f), TextStyles.Caption2);
-
+        Typography.DrawCentered(new Vector2(center.X, max.Y - height * 0.115f), game.Genre.ToUpperInvariant(),
+            new Vector4(1f, 1f, 1f, 0.68f), TextStyles.Caption2);
         var best = StatValue(game.Id);
         if (!string.IsNullOrEmpty(best))
         {
@@ -278,7 +243,6 @@ internal sealed class GamesApp : IPhoneApp
         var chipHeight = 18f * scale;
         var min = new Vector2(topRight.X - chipWidth, topRight.Y);
         var max = new Vector2(topRight.X, topRight.Y + chipHeight);
-
         Material.Frosted(drawList, min, max, chipHeight * 0.5f, scale);
         Typography.DrawCentered((min + max) * 0.5f, text, new Vector4(0.97f, 0.97f, 0.99f, 1f), TextStyles.Caption1);
     }
@@ -300,32 +264,25 @@ internal sealed class GamesApp : IPhoneApp
                 var best = stats.Get(gameId).BestScore;
                 return best > 0 ? GameNumber.Label(best) : string.Empty;
             }
-
             case "watersort":
             case "flow":
             {
                 var bestLevel = stats.Get(gameId).BestScore;
                 return bestLevel > 0 ? $"{Loc.T(L.Games.Level)} {GameNumber.Label(bestLevel)}" : string.Empty;
             }
-
             case "memory":
                 return FormatTime(stats.Get("memory").BestTimeSeconds);
-
             case "solitaire":
                 return FormatTime(stats.Get("solitaire").BestTimeSeconds);
-
             case "minesweeper":
                 return FormatTime(stats.Get("minesweeper.easy").BestTimeSeconds);
-
             case "nonogram":
                 return FormatTime(stats.Get("nonogram.easy").BestTimeSeconds);
-
             case "reversi":
             {
                 var wins = stats.Get("reversi").Streak;
                 return wins > 0 ? GameNumber.Label(wins) : string.Empty;
             }
-
             default:
                 return string.Empty;
         }

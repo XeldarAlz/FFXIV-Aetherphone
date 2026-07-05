@@ -59,7 +59,9 @@ internal sealed class MarketSnapshot
     public readonly int UnitsForSale;
     public readonly int UnitsSold;
 
-    public MarketSnapshot(uint itemId, DateTime lastUpload, bool multiWorld, bool hasHq, MarketListing[] listings, MarketSale[] sales, long minNq, long minHq, double avgNq, double avgHq, long maxNq, long maxHq, double velocityNq, double velocityHq, int unitsForSale, int unitsSold)
+    public MarketSnapshot(uint itemId, DateTime lastUpload, bool multiWorld, bool hasHq, MarketListing[] listings,
+        MarketSale[] sales, long minNq, long minHq, double avgNq, double avgHq, long maxNq, long maxHq,
+        double velocityNq, double velocityHq, int unitsForSale, int unitsSold)
     {
         ItemId = itemId;
         LastUpload = lastUpload;
@@ -80,10 +82,7 @@ internal sealed class MarketSnapshot
     }
 
     public long Min(bool hq) => hq ? MinHq : MinNq;
-
     public double Average(bool hq) => hq ? AvgHq : AvgNq;
-
     public long Max(bool hq) => hq ? MaxHq : MaxNq;
-
     public double Velocity(bool hq) => hq ? VelocityHq : VelocityNq;
 }

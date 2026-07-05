@@ -17,37 +17,21 @@ internal enum Occupant : byte
 internal sealed class WhackBoard
 {
     public const int Columns = 3;
-
     public const int Rows = 3;
-
     public const int HoleCount = Columns * Rows;
-
     public const float GameDuration = 60f;
-
     private const float WhackThreshold = 0.3f;
-
     private readonly Occupant[] kind = new Occupant[HoleCount];
-
     private readonly float[] age = new float[HoleCount];
-
     private readonly float[] life = new float[HoleCount];
-
     private readonly bool[] whacked = new bool[HoleCount];
-
     private readonly Random random = new();
-
     private float spawnTimer;
-
     public int Score { get; private set; }
-
     public int Combo { get; private set; }
-
     public float TimeLeft { get; private set; }
-
     public bool Over { get; private set; }
-
     public Occupant KindAt(int hole) => kind[hole];
-
     public bool WhackedAt(int hole) => whacked[hole];
 
     public float HeightAt(int hole)
@@ -143,7 +127,6 @@ internal sealed class WhackBoard
         PhaseDurations(life[hole], out var rise, out var hold, out _);
         whacked[hole] = true;
         age[hole] = rise + hold;
-
         if (kind[hole] == Occupant.Bomb)
         {
             Combo = 0;
@@ -182,11 +165,8 @@ internal sealed class WhackBoard
     }
 
     private float Elapsed => GameDuration - TimeLeft;
-
     private float SpawnInterval() => Math.Clamp(0.85f - Elapsed * 0.009f, 0.34f, 0.85f);
-
     private float MoleLife() => Math.Clamp(1.5f - Elapsed * 0.012f, 0.75f, 1.5f);
-
     private double BombChance() => Math.Clamp(0.08f + Elapsed * 0.0025f, 0.08f, 0.26f);
 
     private static void PhaseDurations(float total, out float rise, out float hold, out float fall)

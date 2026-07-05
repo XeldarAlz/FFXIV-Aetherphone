@@ -14,10 +14,13 @@ internal enum TransportAction : byte
 
 internal static class TransportButton
 {
-    public static bool Draw(Vector2 center, float radius, TransportAction action, Vector4 accent, Vector4 ink, float alpha, bool active, ImDrawListPtr? drawListOverride = null)
+    public static bool Draw(Vector2 center, float radius, TransportAction action, Vector4 accent, Vector4 ink,
+        float alpha, bool active, ImDrawListPtr? drawListOverride = null)
     {
         var drawList = drawListOverride ?? ImGui.GetWindowDrawList();
-        var hovered = active && ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered = active &&
+                      ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius),
+                          center + new Vector2(radius, radius));
         if (hovered)
         {
             drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.20f * alpha)), 32);

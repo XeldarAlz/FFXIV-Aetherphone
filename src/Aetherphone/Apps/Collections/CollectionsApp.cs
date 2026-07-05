@@ -29,33 +29,24 @@ internal sealed class CollectionsApp : IPhoneApp
     private const float MenuRowHeight = 32f;
     private const float PagerHeight = 52f;
     private const int PageSize = 50;
-
     public string Id => "collections";
-
     public string DisplayName => Loc.T(L.Apps.Collections);
-
     public string Glyph => "Co";
-
     public Vector4 Accent => new(0.36f, 0.62f, 0.96f, 1f);
-
     public int BadgeCount => 0;
-
     private readonly CollectionsCatalogService catalog;
     private readonly LodestoneService lodestone;
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly GameData gameData;
-
     private readonly ViewRouter<CollectionView> router;
     private readonly RouterDraw<CollectionView> drawView;
     private readonly Action back;
-
     private readonly List<CollectionItem> filtered = new();
     private readonly SortedSet<string> sourceSet = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<string> sourceList = new();
     private readonly Dictionary<string, float> iconFade = new();
     private readonly string[] ownershipLabels = new string[3];
-
     private string search = string.Empty;
     private OwnershipFilter ownership = OwnershipFilter.All;
     private int sourceIndex;
@@ -66,18 +57,17 @@ internal sealed class CollectionsApp : IPhoneApp
     private string lastSearch = string.Empty;
     private Rect sourceMenuAnchor;
     private float contentBottom;
-
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public CollectionsApp(CollectionsCatalogService catalog, LodestoneService lodestone, MediaCache media, HttpService http, GameData gameData)
+    public CollectionsApp(CollectionsCatalogService catalog, LodestoneService lodestone, MediaCache media,
+        HttpService http, GameData gameData)
     {
         this.catalog = catalog;
         this.lodestone = lodestone;
         this.media = media;
         this.http = http;
         this.gameData = gameData;
-
         router = new ViewRouter<CollectionView>(CollectionView.Root());
         drawView = DrawView;
         back = () => router.Pop();
@@ -145,10 +135,8 @@ internal sealed class CollectionsApp : IPhoneApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, DisplayName);
-
         var scale = ImGuiHelpers.GlobalScale;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-
         using (AppSurface.Begin(body))
         {
             if (lodestoneId is null)
@@ -171,7 +159,10 @@ internal sealed class CollectionsApp : IPhoneApp
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + height);
         Squircle.Fill(drawList, min, max, 10f * scale, ImGui.GetColorU32(Palette.WithAlpha(frameTheme.Accent, 0.12f)));
-        Typography.Draw(new Vector2(min.X + 14f * scale, min.Y + (height - Typography.Measure(Loc.T(L.Collections.LinkHint), 0.8f).Y) * 0.5f), Loc.T(L.Collections.LinkHint), frameTheme.TextMuted, 0.8f, FontWeight.Medium);
+        Typography.Draw(
+            new Vector2(min.X + 14f * scale,
+                min.Y + (height - Typography.Measure(Loc.T(L.Collections.LinkHint), 0.8f).Y) * 0.5f),
+            Loc.T(L.Collections.LinkHint), frameTheme.TextMuted, 0.8f, FontWeight.Medium);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + 10f * scale));
     }
@@ -187,7 +178,6 @@ internal sealed class CollectionsApp : IPhoneApp
         var count = CollectionCategories.All.Length;
         var rows = (count + columns - 1) / columns;
         var bottomMargin = 12f * scale;
-
         var tileWidth = (width - gap) / columns;
         var tileHeight = (available - (rows - 1) * gap - bottomMargin) / rows;
         var minTileHeight = TileHeight * scale;
@@ -219,7 +209,6 @@ internal sealed class CollectionsApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 16f * scale;
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-
         Elevation.Card(drawList, rect.Min, rect.Max, rounding, scale, 0.5f);
         Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(frameTheme.GroupedCard));
         if (hovered)
@@ -230,19 +219,18 @@ internal sealed class CollectionsApp : IPhoneApp
         var entry = catalog.RequestCatalog(category);
         var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
         var total = entry.Total;
-
         var ringRadius = Math.Min(26f * scale, (rect.Max.Y - rect.Min.Y) * 0.27f);
         var ringCenter = new Vector2(rect.Max.X - ringRadius - 16f * scale, rect.Center.Y);
-
         var left = rect.Min.X + 16f * scale;
-        drawList.PushClipRect(new Vector2(left, rect.Min.Y), new Vector2(ringCenter.X - ringRadius - 10f * scale, rect.Max.Y), true);
-        Typography.Draw(new Vector2(left, rect.Center.Y - 19f * scale), CategoryLabel(category), frameTheme.TextStrong, 1f, FontWeight.SemiBold);
+        drawList.PushClipRect(new Vector2(left, rect.Min.Y),
+            new Vector2(ringCenter.X - ringRadius - 10f * scale, rect.Max.Y), true);
+        Typography.Draw(new Vector2(left, rect.Center.Y - 19f * scale), CategoryLabel(category), frameTheme.TextStrong,
+            1f, FontWeight.SemiBold);
         var countLabel = total > 0 ? total.ToString() : "—";
-        Typography.Draw(new Vector2(left, rect.Center.Y + 3f * scale), countLabel, frameTheme.TextMuted, 0.82f, FontWeight.Medium);
+        Typography.Draw(new Vector2(left, rect.Center.Y + 3f * scale), countLabel, frameTheme.TextMuted, 0.82f,
+            FontWeight.Medium);
         drawList.PopClipRect();
-
         DrawTileRing(ringCenter, ringRadius, owned, total, scale);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -254,7 +242,6 @@ internal sealed class CollectionsApp : IPhoneApp
     private void DrawTileRing(Vector2 center, float radius, OwnedEntry? owned, int total, float scale)
     {
         var thickness = 4.5f * scale;
-
         if (owned is not { State: OwnedState.Ready } || total <= 0)
         {
             ProgressRing.Track(center, radius, thickness, Palette.WithAlpha(frameTheme.TextMuted, 0.25f));
@@ -285,16 +272,14 @@ internal sealed class CollectionsApp : IPhoneApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, CategoryLabel(category), back);
-
         var scale = ImGuiHelpers.GlobalScale;
         var pad = 16f * scale;
         var top = area.Min.Y + AppHeader.Height * scale;
         contentBottom = area.Max.Y;
-
         var entry = catalog.RequestCatalog(category);
         var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
-
-        var searchBar = new Rect(new Vector2(area.Min.X + pad, top), new Vector2(area.Max.X - pad, top + SearchHeight * scale));
+        var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
+            new Vector2(area.Max.X - pad, top + SearchHeight * scale));
         SearchField.Draw(searchBar, "##collectSearch", Loc.T(L.Collections.Search), ref search, frameTheme, 60);
         if (search != lastSearch)
         {
@@ -304,11 +289,11 @@ internal sealed class CollectionsApp : IPhoneApp
         }
 
         var rowTop = searchBar.Max.Y;
-
         var hasOwned = owned is { State: OwnedState.Ready };
         if (hasOwned)
         {
-            var segmentBar = new Rect(new Vector2(area.Min.X + pad, rowTop), new Vector2(area.Max.X - pad, rowTop + SegmentHeight * scale));
+            var segmentBar = new Rect(new Vector2(area.Min.X + pad, rowTop),
+                new Vector2(area.Max.X - pad, rowTop + SegmentHeight * scale));
             DrawOwnershipSegments(segmentBar);
             rowTop = segmentBar.Max.Y + 2f * scale;
         }
@@ -316,7 +301,8 @@ internal sealed class CollectionsApp : IPhoneApp
         var hasSources = entry.State == CollectionState.Ready && BuildSourceList(entry);
         if (hasSources)
         {
-            var sourceBar = new Rect(new Vector2(area.Min.X + pad, rowTop), new Vector2(area.Max.X - pad, rowTop + ChipRowHeight * scale));
+            var sourceBar = new Rect(new Vector2(area.Min.X + pad, rowTop),
+                new Vector2(area.Max.X - pad, rowTop + ChipRowHeight * scale));
             DrawSourceDropdownButton(sourceBar);
             rowTop = sourceBar.Max.Y;
         }
@@ -326,7 +312,6 @@ internal sealed class CollectionsApp : IPhoneApp
         }
 
         var body = new Rect(new Vector2(area.Min.X, rowTop), area.Max);
-
         if (entry.State == CollectionState.Failed)
         {
             DrawFailed(body, category);
@@ -339,15 +324,15 @@ internal sealed class CollectionsApp : IPhoneApp
             return;
         }
 
-        var sourceFilter = sourceIndex > 0 && sourceIndex <= sourceList.Count ? sourceList[sourceIndex - 1] : string.Empty;
+        var sourceFilter = sourceIndex > 0 && sourceIndex <= sourceList.Count
+            ? sourceList[sourceIndex - 1]
+            : string.Empty;
         CollectionFilter.Apply(entry.Items, filtered, search, ownership, sourceFilter, owned);
-
         var total = filtered.Count;
         var totalPages = Math.Max(1, (total + PageSize - 1) / PageSize);
         page = Math.Clamp(page, 0, totalPages - 1);
         var start = page * PageSize;
         var end = Math.Min(start + PageSize, total);
-
         using (AppSurface.Begin(body))
         {
             if (resetScroll)
@@ -358,10 +343,10 @@ internal sealed class CollectionsApp : IPhoneApp
 
             DrawSummary(entry, owned);
             DrawOwnedNotice(owned);
-
             if (total == 0)
             {
-                Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 14f * scale), Loc.T(L.Collections.NoResults), frameTheme.TextMuted, 0.85f);
+                Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 14f * scale),
+                    Loc.T(L.Collections.NoResults), frameTheme.TextMuted, 0.85f);
                 ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 40f * scale));
             }
             else
@@ -392,7 +377,8 @@ internal sealed class CollectionsApp : IPhoneApp
             summary = entry.Total.ToString();
         }
 
-        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y + 8f * scale), summary, frameTheme.TextMuted, 0.78f);
+        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y + 8f * scale), summary, frameTheme.TextMuted,
+            0.78f);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 28f * scale));
     }
 
@@ -404,14 +390,14 @@ internal sealed class CollectionsApp : IPhoneApp
             OwnedState.Failed => Loc.T(L.Collections.OwnedUnavailable),
             _ => string.Empty,
         };
-
         if (message.Length == 0)
         {
             return;
         }
 
         var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 2f * scale), message, frameTheme.TextMuted, 0.76f);
+        Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 2f * scale), message, frameTheme.TextMuted,
+            0.76f);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 22f * scale));
     }
 
@@ -420,14 +406,13 @@ internal sealed class CollectionsApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var card = GroupCard.Begin(frameTheme, end - start, RowHeight);
         var hasOwned = owned is { State: OwnedState.Ready };
-
         for (var index = start; index < end; index++)
         {
             var item = filtered[index];
             var row = card.NextRow();
-            var hovered = !sourceMenuOpen && ImGui.IsMouseHoveringRect(new Vector2(row.Min.X - 16f * scale, row.Min.Y), new Vector2(row.Max.X + 16f * scale, row.Max.Y));
+            var hovered = !sourceMenuOpen && ImGui.IsMouseHoveringRect(new Vector2(row.Min.X - 16f * scale, row.Min.Y),
+                new Vector2(row.Max.X + 16f * scale, row.Max.Y));
             DrawRow(row, item, hasOwned && owned!.Ids.Contains(item.Id), hasOwned, scale);
-
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -448,7 +433,6 @@ internal sealed class CollectionsApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var height = PagerHeight * scale;
         var centerY = origin.Y + height * 0.5f;
-
         if (DrawPagerButton(new Vector2(origin.X + 20f * scale, centerY), true, page > 0, scale))
         {
             page--;
@@ -461,8 +445,8 @@ internal sealed class CollectionsApp : IPhoneApp
             resetScroll = true;
         }
 
-        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, centerY), $"{page + 1} / {totalPages}", frameTheme.TextMuted, 0.84f, FontWeight.SemiBold);
-
+        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, centerY), $"{page + 1} / {totalPages}",
+            frameTheme.TextMuted, 0.84f, FontWeight.SemiBold);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
@@ -471,10 +455,10 @@ internal sealed class CollectionsApp : IPhoneApp
     {
         var drawList = ImGui.GetWindowDrawList();
         var radius = 16f * scale;
-        var hovered = enabled && ImGui.IsMouseHoveringRect(new Vector2(center.X - radius, center.Y - radius), new Vector2(center.X + radius, center.Y + radius));
+        var hovered = enabled && ImGui.IsMouseHoveringRect(new Vector2(center.X - radius, center.Y - radius),
+            new Vector2(center.X + radius, center.Y + radius));
         var fill = hovered ? Palette.WithAlpha(frameTheme.Accent, 0.2f) : frameTheme.GroupedCard;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 28);
-
         var arrowColor = enabled ? frameTheme.Accent : Palette.WithAlpha(frameTheme.TextMuted, 0.4f);
         var color = ImGui.GetColorU32(arrowColor);
         var thickness = 1.8f * scale;
@@ -482,7 +466,6 @@ internal sealed class CollectionsApp : IPhoneApp
         var baseX = center.X + (left ? 3f : -3f) * scale;
         drawList.AddLine(new Vector2(baseX, center.Y - 5f * scale), new Vector2(tipX, center.Y), color, thickness);
         drawList.AddLine(new Vector2(baseX, center.Y + 5f * scale), new Vector2(tipX, center.Y), color, thickness);
-
         if (!hovered)
         {
             return false;
@@ -499,14 +482,11 @@ internal sealed class CollectionsApp : IPhoneApp
         var iconMin = new Vector2(row.Min.X, row.Center.Y - iconBox * 0.5f);
         var iconMax = iconMin + new Vector2(iconBox, iconBox);
         DrawIcon(drawList, item, iconMin, iconMax, 9f * scale);
-
         var textLeft = iconMax.X + 12f * scale;
         var textRight = row.Max.X - (hasOwned ? 26f * scale : 6f * scale);
         var nameY = row.Min.Y + 12f * scale;
-
         drawList.PushClipRect(new Vector2(textLeft, row.Min.Y), new Vector2(textRight, row.Max.Y), true);
         Typography.Draw(new Vector2(textLeft, nameY), item.Name, frameTheme.TextStrong, 0.92f, FontWeight.Medium);
-
         var subtitle = SubtitleOf(item);
         if (subtitle.Length > 0)
         {
@@ -514,7 +494,6 @@ internal sealed class CollectionsApp : IPhoneApp
         }
 
         drawList.PopClipRect();
-
         if (hasOwned)
         {
             DrawOwnedTick(drawList, new Vector2(row.Max.X - 9f * scale, row.Center.Y), isOwned, scale);
@@ -526,25 +505,26 @@ internal sealed class CollectionsApp : IPhoneApp
         var radius = 9f * scale;
         if (!isOwned)
         {
-            drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(frameTheme.TextMuted, 0.45f)), 20, 1.6f * scale);
+            drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(frameTheme.TextMuted, 0.45f)), 20,
+                1.6f * scale);
             return;
         }
 
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(frameTheme.ToggleOn), 20);
         var check = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f));
         var thickness = 1.8f * scale;
-        drawList.AddLine(center + new Vector2(-4f * scale, 0f), center + new Vector2(-1.2f * scale, 3.2f * scale), check, thickness);
-        drawList.AddLine(center + new Vector2(-1.2f * scale, 3.2f * scale), center + new Vector2(4.4f * scale, -3.6f * scale), check, thickness);
+        drawList.AddLine(center + new Vector2(-4f * scale, 0f), center + new Vector2(-1.2f * scale, 3.2f * scale),
+            check, thickness);
+        drawList.AddLine(center + new Vector2(-1.2f * scale, 3.2f * scale),
+            center + new Vector2(4.4f * scale, -3.6f * scale), check, thickness);
     }
 
     private void DrawDetail(Rect area, CollectionCategory category, CollectionItem item)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, item.Name, back);
-
         var scale = ImGuiHelpers.GlobalScale;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-
         using (AppSurface.Begin(body))
         {
             DrawDetailHero(item, category);
@@ -563,10 +543,9 @@ internal sealed class CollectionsApp : IPhoneApp
         var iconMin = origin;
         var iconMax = iconMin + new Vector2(iconBox, iconBox);
         DrawIcon(drawList, item, iconMin, iconMax, 14f * scale);
-
         var textLeft = iconMax.X + 14f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 6f * scale), item.Name, frameTheme.TextStrong, 1.05f, FontWeight.SemiBold);
-
+        Typography.Draw(new Vector2(textLeft, origin.Y + 6f * scale), item.Name, frameTheme.TextStrong, 1.05f,
+            FontWeight.SemiBold);
         var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
         if (owned is { State: OwnedState.Ready })
         {
@@ -578,7 +557,8 @@ internal sealed class CollectionsApp : IPhoneApp
 
         if (item.Stars > 0)
         {
-            Typography.Draw(new Vector2(textLeft, origin.Y + 52f * scale), new string('★', Math.Clamp(item.Stars, 1, 5)), frameTheme.Accent, 0.82f, FontWeight.Medium);
+            Typography.Draw(new Vector2(textLeft, origin.Y + 52f * scale),
+                new string('★', Math.Clamp(item.Stars, 1, 5)), frameTheme.Accent, 0.82f, FontWeight.Medium);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -641,7 +621,6 @@ internal sealed class CollectionsApp : IPhoneApp
 
         SettingsSection.Header(Loc.T(L.Collections.Details), frameTheme);
         var card = GroupCard.Begin(frameTheme, rows);
-
         if (item.Patch.Length > 0)
         {
             SettingsRow.Info(card.NextRow(), Loc.T(L.Collections.Patch), item.Patch, frameTheme);
@@ -654,12 +633,14 @@ internal sealed class CollectionsApp : IPhoneApp
 
         if (category == CollectionCategory.TriadCards && item.Stats is { } stats)
         {
-            SettingsRow.Info(card.NextRow(), Loc.T(L.Collections.CardStats), $"{stats.Top} · {stats.Right} · {stats.Bottom} · {stats.Left}", frameTheme);
+            SettingsRow.Info(card.NextRow(), Loc.T(L.Collections.CardStats),
+                $"{stats.Top} · {stats.Right} · {stats.Bottom} · {stats.Left}", frameTheme);
         }
 
         if (item.HasTradeable)
         {
-            SettingsRow.Info(card.NextRow(), Loc.T(L.Collections.Tradeable), item.Tradeable ? Loc.T(L.Collections.Yes) : Loc.T(L.Collections.No), frameTheme);
+            SettingsRow.Info(card.NextRow(), Loc.T(L.Collections.Tradeable),
+                item.Tradeable ? Loc.T(L.Collections.Yes) : Loc.T(L.Collections.No), frameTheme);
         }
 
         if (item.Community.Length > 0)
@@ -686,7 +667,8 @@ internal sealed class CollectionsApp : IPhoneApp
             var scale = ImGuiHelpers.GlobalScale;
             var type = source.Type ?? string.Empty;
             var text = source.Text ?? string.Empty;
-            Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 9f * scale), type.Length > 0 ? type : Loc.T(L.Collections.Source), frameTheme.TextStrong, 0.86f, FontWeight.Medium);
+            Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 9f * scale),
+                type.Length > 0 ? type : Loc.T(L.Collections.Source), frameTheme.TextStrong, 0.86f, FontWeight.Medium);
             if (text.Length > 0)
             {
                 Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 28f * scale), text, frameTheme.TextMuted, 0.78f);
@@ -700,7 +682,6 @@ internal sealed class CollectionsApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(frameTheme.SurfaceMuted), rounding);
-
         if (item.IconUrl.Length == 0)
         {
             return;
@@ -711,7 +692,8 @@ internal sealed class CollectionsApp : IPhoneApp
         {
             var fade = StepFade(item.IconUrl, true);
             var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, fade));
-            drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, tint, rounding, ImDrawFlags.RoundCornersAll);
+            drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, tint, rounding,
+                ImDrawFlags.RoundCornersAll);
             return;
         }
 
@@ -758,7 +740,6 @@ internal sealed class CollectionsApp : IPhoneApp
         var min = new Vector2(bar.Min.X, bar.Center.Y - height * 0.5f);
         var max = new Vector2(bar.Max.X, bar.Center.Y + height * 0.5f);
         sourceMenuAnchor = new Rect(min, max);
-
         var active = sourceIndex != 0;
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         var fill = active ? Palette.WithAlpha(frameTheme.Accent, 0.16f) : frameTheme.GroupedCard;
@@ -771,9 +752,10 @@ internal sealed class CollectionsApp : IPhoneApp
         var label = sourceIndex == 0 ? Loc.T(L.Collections.AllSources) : sourceList[sourceIndex - 1];
         var ink = active ? frameTheme.Accent : frameTheme.TextStrong;
         var textSize = Typography.Measure(label, 0.82f, FontWeight.Medium);
-        Typography.Draw(new Vector2(min.X + 14f * scale, bar.Center.Y - textSize.Y * 0.5f), label, ink, 0.82f, FontWeight.Medium);
-        DrawChevron(drawList, new Vector2(max.X - 16f * scale, bar.Center.Y), 4.5f * scale, sourceMenuOpen, frameTheme.TextMuted, scale);
-
+        Typography.Draw(new Vector2(min.X + 14f * scale, bar.Center.Y - textSize.Y * 0.5f), label, ink, 0.82f,
+            FontWeight.Medium);
+        DrawChevron(drawList, new Vector2(max.X - 16f * scale, bar.Center.Y), 4.5f * scale, sourceMenuOpen,
+            frameTheme.TextMuted, scale);
         if (!hovered)
         {
             return;
@@ -805,11 +787,9 @@ internal sealed class CollectionsApp : IPhoneApp
         var height = visible * rowHeight + pad * 2f;
         var min = new Vector2(sourceMenuAnchor.Min.X, menuTop);
         var max = new Vector2(sourceMenuAnchor.Max.X, menuTop + height);
-
         Elevation.Floating(drawList, min, max, 12f * scale, scale);
         Squircle.Fill(drawList, min, max, 12f * scale, ImGui.GetColorU32(frameTheme.GroupedCard));
         Material.EdgeSquircle(drawList, min, max, 12f * scale, scale);
-
         var clicked = -1;
         for (var index = 0; index < visible; index++)
         {
@@ -819,24 +799,26 @@ internal sealed class CollectionsApp : IPhoneApp
             var label = index == 0 ? Loc.T(L.Collections.AllSources) : sourceList[index - 1];
             var selected = index == sourceIndex;
             var hovered = ImGui.IsMouseHoveringRect(rowMin, rowMax);
-
             if (hovered)
             {
-                Squircle.Fill(drawList, rowMin, rowMax, 8f * scale, ImGui.GetColorU32(Palette.WithAlpha(frameTheme.TextStrong, 0.06f)));
+                Squircle.Fill(drawList, rowMin, rowMax, 8f * scale,
+                    ImGui.GetColorU32(Palette.WithAlpha(frameTheme.TextStrong, 0.06f)));
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
             var ink = selected ? frameTheme.Accent : frameTheme.TextStrong;
             var textSize = Typography.Measure(label, 0.84f, FontWeight.Medium);
-            Typography.Draw(new Vector2(rowMin.X + 12f * scale, centerY - textSize.Y * 0.5f), label, ink, 0.84f, FontWeight.Medium);
-
+            Typography.Draw(new Vector2(rowMin.X + 12f * scale, centerY - textSize.Y * 0.5f), label, ink, 0.84f,
+                FontWeight.Medium);
             if (selected)
             {
                 var check = ImGui.GetColorU32(frameTheme.Accent);
                 var thickness = 1.8f * scale;
                 var checkCenter = new Vector2(rowMax.X - 14f * scale, centerY);
-                drawList.AddLine(checkCenter + new Vector2(-4f * scale, 0f), checkCenter + new Vector2(-1.2f * scale, 3.2f * scale), check, thickness);
-                drawList.AddLine(checkCenter + new Vector2(-1.2f * scale, 3.2f * scale), checkCenter + new Vector2(4.4f * scale, -3.6f * scale), check, thickness);
+                drawList.AddLine(checkCenter + new Vector2(-4f * scale, 0f),
+                    checkCenter + new Vector2(-1.2f * scale, 3.2f * scale), check, thickness);
+                drawList.AddLine(checkCenter + new Vector2(-1.2f * scale, 3.2f * scale),
+                    checkCenter + new Vector2(4.4f * scale, -3.6f * scale), check, thickness);
             }
 
             if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -854,15 +836,15 @@ internal sealed class CollectionsApp : IPhoneApp
             return;
         }
 
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left)
-            && !ImGui.IsMouseHoveringRect(min, max, false)
-            && !ImGui.IsMouseHoveringRect(sourceMenuAnchor.Min, sourceMenuAnchor.Max, false))
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max, false) &&
+            !ImGui.IsMouseHoveringRect(sourceMenuAnchor.Min, sourceMenuAnchor.Max, false))
         {
             sourceMenuOpen = false;
         }
     }
 
-    private static void DrawChevron(ImDrawListPtr drawList, Vector2 center, float size, bool up, Vector4 color, float scale)
+    private static void DrawChevron(ImDrawListPtr drawList, Vector2 center, float size, bool up, Vector4 color,
+        float scale)
     {
         var col = ImGui.GetColorU32(color);
         var thickness = 1.6f * scale;
@@ -876,8 +858,10 @@ internal sealed class CollectionsApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var center = body.Center;
-        ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 24f * scale), FontAwesomeIcon.CloudDownloadAlt, frameTheme.TextMuted, 32f * scale);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.Collections.Failed), frameTheme.TextMuted, 0.92f, FontWeight.Medium);
+        ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 24f * scale), FontAwesomeIcon.CloudDownloadAlt,
+            frameTheme.TextMuted, 32f * scale);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.Collections.Failed),
+            frameTheme.TextMuted, 0.92f, FontWeight.Medium);
         if (DrawTextButton(new Vector2(center.X, center.Y + 50f * scale), Loc.T(L.Collections.TryAgain), scale))
         {
             catalog.Retry(category);
@@ -890,11 +874,10 @@ internal sealed class CollectionsApp : IPhoneApp
         var hitMin = new Vector2(center.X - size.X * 0.5f - 12f * scale, center.Y - size.Y * 0.5f - 6f * scale);
         var hitMax = new Vector2(center.X + size.X * 0.5f + 12f * scale, center.Y + size.Y * 0.5f + 6f * scale);
         var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(hitMin, hitMax, ImGui.GetColorU32(Palette.WithAlpha(Accent, hovered ? 0.22f : 0.14f)), (hitMax.Y - hitMin.Y) * 0.5f);
+        drawList.AddRectFilled(hitMin, hitMax, ImGui.GetColorU32(Palette.WithAlpha(Accent, hovered ? 0.22f : 0.14f)),
+            (hitMax.Y - hitMin.Y) * 0.5f);
         Typography.DrawCentered(center, label, Accent, 0.9f, FontWeight.SemiBold);
-
         if (!hovered)
         {
             return false;
@@ -908,11 +891,14 @@ internal sealed class CollectionsApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var center = body.Center;
-        ProgressRing.Sweep(new Vector2(center.X, center.Y - 6f * scale), 13f * scale, 2.4f * scale, Accent, 900.0, 1.8f, 0.95f);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Loading), frameTheme.TextMuted, 0.9f);
+        ProgressRing.Sweep(new Vector2(center.X, center.Y - 6f * scale), 13f * scale, 2.4f * scale, Accent, 900.0, 1.8f,
+            0.95f);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Loading),
+            frameTheme.TextMuted, 0.9f);
     }
 
-    private void OpenItem(CollectionCategory category, CollectionItem item) => router.Push(CollectionView.ForItem(category, item));
+    private void OpenItem(CollectionCategory category, CollectionItem item) =>
+        router.Push(CollectionView.ForItem(category, item));
 
     private string SubtitleOf(CollectionItem item)
     {
@@ -954,17 +940,18 @@ internal sealed class CollectionsApp : IPhoneApp
         page = 0;
     }
 
-    private static string CategoryLabel(CollectionCategory category) => category switch
-    {
-        CollectionCategory.Mounts => Loc.T(L.Collections.Mounts),
-        CollectionCategory.Minions => Loc.T(L.Collections.Minions),
-        CollectionCategory.Emotes => Loc.T(L.Collections.Emotes),
-        CollectionCategory.Orchestrions => Loc.T(L.Collections.Orchestrions),
-        CollectionCategory.Hairstyles => Loc.T(L.Collections.Hairstyles),
-        CollectionCategory.Facewear => Loc.T(L.Collections.Facewear),
-        CollectionCategory.Achievements => Loc.T(L.Collections.Achievements),
-        _ => Loc.T(L.Collections.TriadCards),
-    };
+    private static string CategoryLabel(CollectionCategory category) =>
+        category switch
+        {
+            CollectionCategory.Mounts => Loc.T(L.Collections.Mounts),
+            CollectionCategory.Minions => Loc.T(L.Collections.Minions),
+            CollectionCategory.Emotes => Loc.T(L.Collections.Emotes),
+            CollectionCategory.Orchestrions => Loc.T(L.Collections.Orchestrions),
+            CollectionCategory.Hairstyles => Loc.T(L.Collections.Hairstyles),
+            CollectionCategory.Facewear => Loc.T(L.Collections.Facewear),
+            CollectionCategory.Achievements => Loc.T(L.Collections.Achievements),
+            _ => Loc.T(L.Collections.TriadCards),
+        };
 
     public void Dispose()
     {

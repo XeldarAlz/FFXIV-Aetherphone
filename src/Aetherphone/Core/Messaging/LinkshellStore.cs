@@ -4,9 +4,7 @@ internal sealed class LinkshellStore
 {
     private readonly Dictionary<string, LinkshellThread> byChannel = new(StringComparer.Ordinal);
     private readonly List<LinkshellThread> ordered = new();
-
     public IReadOnlyList<LinkshellThread> Threads => ordered;
-
     public event Action? Changed;
 
     public void Append(LinkshellChannel channel, string name, ChatLine line)

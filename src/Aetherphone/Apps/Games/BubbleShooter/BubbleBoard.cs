@@ -5,67 +5,36 @@ namespace Aetherphone.Apps.Games.BubbleShooter;
 internal sealed class BubbleBoard
 {
     public const int Columns = 8;
-
     public const int MaxRows = 14;
-
     public const int ColorCount = 5;
-
     public const int NewRowEvery = 6;
-
     private const float Speed = 1.7f;
-
     public readonly float Diameter = 1f / (Columns + 0.5f);
-
     private readonly int[] cells = new int[MaxRows * Columns];
-
     private readonly int[] queue = new int[MaxRows * Columns];
-
     private readonly bool[] connected = new bool[MaxRows * Columns];
-
     private readonly bool[] clusterMark = new bool[MaxRows * Columns];
-
     private readonly Vector2[] popPositions = new Vector2[MaxRows * Columns];
-
     private readonly int[] popColors = new int[MaxRows * Columns];
-
     private readonly Random random = new();
-
     private float firstRowY;
-
     private Vector2 flyVelocity;
-
     private int shotCount;
-
     public float FieldHeight { get; private set; } = 1.7f;
-
     public float Radius => Diameter * 0.5f;
-
     public int CurrentColor { get; private set; }
-
     public int NextColor { get; private set; }
-
     public bool Flying { get; private set; }
-
     public Vector2 FlyPosition { get; private set; }
-
     public int FlyColor { get; private set; }
-
     public int Score { get; private set; }
-
     public bool GameOver { get; private set; }
-
     public int PopCount { get; private set; }
-
     public bool DroppedThisShot { get; private set; }
-
     public Vector2 LauncherPosition => new(0.5f, FieldHeight - 0.10f);
-
     public float DangerY => FieldHeight - 0.20f;
-
     public int ColorAt(int column, int row) => cells[row * Columns + column];
-
     public Vector2 PopPosition(int index) => popPositions[index];
-
     public int PopColor(int index) => popColors[index];
 
     public Vector2 CellCenter(int column, int row)
@@ -132,7 +101,6 @@ internal sealed class BubbleBoard
     {
         PopCount = 0;
         DroppedThisShot = false;
-
         if (!Flying || GameOver)
         {
             return;
@@ -144,7 +112,6 @@ internal sealed class BubbleBoard
         {
             FlyPosition += flyVelocity * subDelta;
             var position = FlyPosition;
-
             if (position.X < Radius)
             {
                 position.X = Radius;
@@ -157,7 +124,6 @@ internal sealed class BubbleBoard
             }
 
             FlyPosition = position;
-
             if (position.Y - Radius <= 0f || TouchesBubble(position))
             {
                 Snap(position);
@@ -214,7 +180,6 @@ internal sealed class BubbleBoard
 
         cells[bestCell] = FlyColor;
         shotCount++;
-
         if (ResolveCluster(bestCell))
         {
             DropFloating();
@@ -236,7 +201,6 @@ internal sealed class BubbleBoard
         var write = 0;
         queue[write++] = startCell;
         clusterMark[startCell] = true;
-
         Span<int> neighborCells = stackalloc int[6];
         while (read < write)
         {
@@ -357,7 +321,6 @@ internal sealed class BubbleBoard
         var row = cell / Columns;
         var even = row % 2 == 0;
         var count = 0;
-
         count = Add(output, count, column - 1, row);
         count = Add(output, count, column + 1, row);
         if (even)

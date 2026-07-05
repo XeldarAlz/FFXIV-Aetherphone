@@ -10,15 +10,13 @@ namespace Aetherphone.Windows.Components;
 
 internal sealed class ConfirmOverlay
 {
-    private const ImGuiWindowFlags OverlayFlags =
-        ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
+    private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
+                                                  ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
 
     private const float RevealSmoothTime = 0.16f;
     private const float MaxDim = 0.55f;
     private const float MinCardScale = 0.92f;
-
     private readonly ConfirmService service;
-
     private Spring reveal;
     private ConfirmRequest? shown;
 
@@ -40,7 +38,6 @@ internal sealed class ConfirmOverlay
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var target = active is not null ? 1f : 0f;
         reveal.Step(target, RevealSmoothTime, delta);
-
         if (shown is null)
         {
             return;
@@ -55,29 +52,15 @@ internal sealed class ConfirmOverlay
 
         var opacity = Math.Clamp(reveal.Value, 0f, 1f);
         var cardScale = MinCardScale + (1f - MinCardScale) * Easing.EaseOutBack(opacity);
-
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##confirmOverlay", screen.Size, false, OverlayFlags))
         {
             var drawList = ImGui.GetWindowDrawList();
-            drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * opacity)));
-
-            ConfirmDialog.Draw(
-                screen,
-                theme,
-                shown.Message,
-                shown.ConfirmLabel,
-                shown.CancelLabel,
-                shown.BusyLabel ?? shown.ConfirmLabel,
-                service.Busy,
-                service.Status,
-                shown.Danger,
-                opacity,
-                cardScale,
-                out var cardRect,
-                out var canceled,
-                out var confirmed);
-
+            drawList.AddRectFilled(screen.Min, screen.Max,
+                ImGui.GetColorU32(new Vector4(0f, 0f, 0f, MaxDim * opacity)));
+            ConfirmDialog.Draw(screen, theme, shown.Message, shown.ConfirmLabel, shown.CancelLabel,
+                shown.BusyLabel ?? shown.ConfirmLabel, service.Busy, service.Status, shown.Danger, opacity, cardScale,
+                out var cardRect, out var canceled, out var confirmed);
             if (active is null)
             {
                 return;
@@ -91,9 +74,8 @@ internal sealed class ConfirmOverlay
             {
                 service.CancelActive();
             }
-            else if (!service.Busy
-                && ImGui.IsMouseClicked(ImGuiMouseButton.Left)
-                && !ImGui.IsMouseHoveringRect(cardRect.Min, cardRect.Max))
+            else if (!service.Busy && ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
+                     !ImGui.IsMouseHoveringRect(cardRect.Min, cardRect.Max))
             {
                 service.CancelActive();
             }

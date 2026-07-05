@@ -19,15 +19,10 @@ internal sealed class WalletEntry
     }
 
     public uint ItemId { get; }
-
     public uint IconId { get; }
-
     public string Name { get; }
-
     public long Cap { get; }
-
     public CurrencyKind Kind { get; }
-
     public long Amount { get; set; }
 }
 
@@ -40,6 +35,5 @@ internal sealed class WalletSection
     }
 
     public string Title { get; }
-
     public WalletEntry[] Entries { get; }
 }

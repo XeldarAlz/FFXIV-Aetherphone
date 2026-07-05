@@ -19,8 +19,8 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed class PhoneShell : IDisposable
 {
-    private const ImGuiWindowFlags ChromeFlags =
-        ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
+    private const ImGuiWindowFlags ChromeFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
+                                                 ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
 
     private readonly ThemeProvider themes;
     private readonly IReadOnlyList<IPhoneApp> apps;
@@ -39,10 +39,11 @@ internal sealed class PhoneShell : IDisposable
     private readonly OnboardingDirector director;
     private bool closeRequested;
     private bool minimizeRequested;
-
     private CallState lastCallState;
 
-    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications, PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher, ConfirmService confirm)
+    public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications,
+        PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
+        ConfirmService confirm)
     {
         this.themes = themes;
         this.apps = apps;
@@ -50,7 +51,8 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
-        banner = new NotificationBanner(notifications, () => navigation.Current?.Id, new NotificationRouter(navigation, messageLauncher, velvetLauncher));
+        banner = new NotificationBanner(notifications, () => navigation.Current?.Id,
+            new NotificationRouter(navigation, messageLauncher, velvetLauncher));
         nowPlaying = new NowPlayingIsland(playback);
         controlCenter = new ControlCenter(themes, playback);
         minimizedView = new MinimizedPhone(notifications);
@@ -108,15 +110,12 @@ internal sealed class PhoneShell : IDisposable
         minimizedView.IsShowing = false;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         Plugin.Wallpapers.StepDayNight(delta);
-
         var theme = themes.Chrome;
         var screen = DeviceChrome.DrawBody(device, theme, !TransparencyActive());
-
         boot.Advance(delta);
         navigation.Advance(delta);
         banner.Advance(delta);
         calls.Advance(delta);
-
         if (!boot.IsActive)
         {
             switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta))
@@ -131,18 +130,17 @@ internal sealed class PhoneShell : IDisposable
         }
 
         SyncCallNavigation();
-
         var confirming = !boot.IsActive && confirmOverlay.CapturesPointer;
         var overlaysCapture = !boot.IsActive && controlCenter.CapturesPointer;
         var ringing = !boot.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing && !confirming
-            && (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen) || (!director.CapturesPointer && banner.CapturesPointer(screen)));
-
+        var islandCaptures = !boot.IsActive && !overlaysCapture && !ringing && !confirming &&
+                             (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen) ||
+                              (!director.CapturesPointer && banner.CapturesPointer(screen)));
         var busy = boot.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning;
         director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
         UiAnchors.BeginFrame(director.WantsAnchors);
-
-        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing || confirming || director.CapturesPointer))
+        using (InputShield.Engage(boot.IsActive || islandCaptures || overlaysCapture || ringing || confirming ||
+                                  director.CapturesPointer))
         {
             DrawContent(screen, theme);
             DrawChrome(screen, theme);
@@ -167,9 +165,7 @@ internal sealed class PhoneShell : IDisposable
         }
 
         controlCenter.Draw(screen, theme, delta, !navigation.IsTransitioning && !director.CapturesPointer);
-
         confirmOverlay.Draw(screen, theme);
-
         director.Draw(screen, theme);
     }
 
@@ -177,7 +173,8 @@ internal sealed class PhoneShell : IDisposable
     {
         if (navigation.IsTransitioning)
         {
-            return navigation.MotionOver.WantsTransparentScreen || (navigation.MotionUnder?.WantsTransparentScreen ?? false);
+            return navigation.MotionOver.WantsTransparentScreen ||
+                   (navigation.MotionUnder?.WantsTransparentScreen ?? false);
         }
 
         return !navigation.AtHome && (navigation.Current?.WantsTransparentScreen ?? false);
@@ -249,24 +246,23 @@ internal sealed class PhoneShell : IDisposable
         var height = screen.Height;
         var over = navigation.MotionOver;
         var under = navigation.MotionUnder;
-
         var overOffset = new Vector2(0f, (1f - cover) * height);
         var underDim = cover * TransitionTiming.ShellDimMax;
-
-        LayerPainter underPaint = under is null ? target => PaintHome(target, theme) : target => PaintApp(target, theme, under);
+        LayerPainter underPaint =
+            under is null ? target => PaintHome(target, theme) : target => PaintApp(target, theme, under);
         LayerPainter overPaint = target => PaintApp(target, theme, over);
-
         if (over.WantsTransparentScreen || (under?.WantsTransparentScreen ?? false))
         {
             var band = new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + overOffset.Y));
             SceneCompositor.DrawClipped(band, screen, underDim, underPaint);
-            SceneCompositor.DrawLayer(screen, new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true));
+            SceneCompositor.DrawLayer(screen,
+                new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true));
             return;
         }
 
-        var underLayer = new SceneCompositor.Layer(under?.Id ?? "home", Vector2.Zero, underDim, underPaint, default, true);
+        var underLayer =
+            new SceneCompositor.Layer(under?.Id ?? "home", Vector2.Zero, underDim, underPaint, default, true);
         var overLayer = new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true);
-
         SceneCompositor.Composite(screen, underLayer, overLayer);
     }
 
@@ -303,16 +299,12 @@ internal sealed class PhoneShell : IDisposable
         var center = new Vector2(screen.Center.X, screen.Max.Y - 14f * scale);
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
         var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
-
         UiAnchors.Report("chrome.home", new Rect(min, max));
-
         var hitMin = new Vector2(min.X - 24f * scale, min.Y - 16f * scale);
         var hitMax = new Vector2(max.X + 24f * scale, max.Y + 16f * scale);
         var actionable = !navigation.AtHome && !navigation.IsTransitioning && ImGui.IsMouseHoveringRect(hitMin, hitMax);
-
         var color = actionable ? theme.TextStrong : Palette.WithAlpha(theme.TextStrong, 0.55f);
         ImGui.GetWindowDrawList().AddRectFilled(min, max, ImGui.GetColorU32(color), height * 0.5f);
-
         if (!actionable)
         {
             return;

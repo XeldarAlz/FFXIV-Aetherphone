@@ -12,56 +12,33 @@ internal enum FlapState
 internal struct FlapPipe
 {
     public float X;
-
     public float GapCenter;
-
     public float GapHalf;
-
     public bool Scored;
 }
 
 internal sealed class FlapBoard
 {
     private const float BirdXFraction = 0.30f;
-
     private const float BirdRadiusFraction = 0.038f;
-
     private const float Gravity = 4.0f;
-
     private const float FlapVelocity = -1.05f;
-
     private const float MaxFall = 2.0f;
-
     private const float PipeSpeed = 0.44f;
-
     private const float PipeWidthFraction = 0.17f;
-
     private const float SpacingFraction = 0.66f;
-
     private const float GapHalfStart = 0.18f;
-
     private const float GapHalfMin = 0.135f;
-
     private readonly List<FlapPipe> pipes = new(8);
-
     private readonly Random random = new();
-
     public FlapState State { get; private set; }
-
     public int Score { get; private set; }
-
     public float BirdY { get; private set; }
-
     public float BirdVelocity { get; private set; }
-
     public int PipeCount => pipes.Count;
-
     public FlapPipe PipeAt(int index) => pipes[index];
-
     public static float BirdXOf(Rect area) => area.Min.X + BirdXFraction * area.Width;
-
     public static float RadiusOf(Rect area) => BirdRadiusFraction * area.Height;
-
     public static float PipeWidthOf(Rect area) => PipeWidthFraction * area.Width;
 
     public void Reset(Rect area)
@@ -97,10 +74,8 @@ internal sealed class FlapBoard
 
         var height = area.Height;
         var radius = RadiusOf(area);
-
         BirdVelocity = MathF.Min(BirdVelocity + Gravity * height * deltaSeconds, MaxFall * height);
         BirdY += BirdVelocity * deltaSeconds;
-
         var ceiling = area.Min.Y + radius;
         if (BirdY < ceiling)
         {
@@ -124,7 +99,6 @@ internal sealed class FlapBoard
         var speed = MathF.Min(PipeSpeed + Score * 0.006f, 0.72f) * width;
         var pipeWidth = PipeWidthOf(area);
         var birdX = BirdXOf(area);
-
         for (var index = 0; index < pipes.Count; index++)
         {
             var pipe = pipes[index];
@@ -144,7 +118,6 @@ internal sealed class FlapBoard
         }
 
         MaybeSpawn(area, width);
-
         for (var index = 0; index < pipes.Count; index++)
         {
             var pipe = pipes[index];
@@ -185,13 +158,9 @@ internal sealed class FlapBoard
         var gapHalf = MathF.Max(GapHalfMin, GapHalfStart - Score * 0.004f) * height;
         var margin = 0.07f * height + gapHalf;
         var center = area.Min.Y + margin + (float)random.NextDouble() * (height - 2f * margin);
-
         pipes.Add(new FlapPipe
         {
-            X = x,
-            GapCenter = center,
-            GapHalf = gapHalf,
-            Scored = false,
+            X = x, GapCenter = center, GapHalf = gapHalf, Scored = false,
         });
     }
 }

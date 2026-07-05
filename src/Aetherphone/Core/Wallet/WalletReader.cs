@@ -12,7 +12,6 @@ internal static unsafe class WalletReader
     private const long PvpCap = 20000;
     private const long SkybuildersCap = 10000;
     private const long BicolorCap = 1500;
-
     private const uint GilItemId = 1;
     private const uint MgpItemId = 29;
     private const uint VentureItemId = 21072;
@@ -32,32 +31,16 @@ internal static unsafe class WalletReader
         }
     }
 
-    private static readonly Def[] HuntDefs =
-    {
-        new(27, SealCap),
-        new(10307, SealCap),
-        new(26533, SealCap),
-    };
-
-    private static readonly Def[] PvpDefs =
-    {
-        new(25, PvpCap),
-        new(36656, PvpCap),
-    };
+    private static readonly Def[] HuntDefs = { new(27, SealCap), new(10307, SealCap), new(26533, SealCap), };
+    private static readonly Def[] PvpDefs = { new(25, PvpCap), new(36656, PvpCap), };
 
     private static readonly Def[] ScripDefs =
     {
-        new(33913, ScripCap),
-        new(33914, ScripCap),
-        new(41784, ScripCap),
-        new(41785, ScripCap),
+        new(33913, ScripCap), new(33914, ScripCap), new(41784, ScripCap), new(41785, ScripCap),
         new(28063, SkybuildersCap),
     };
 
-    private static readonly Def[] OtherDefs =
-    {
-        new(26807, BicolorCap),
-    };
+    private static readonly Def[] OtherDefs = { new(26807, BicolorCap), };
 
     public static WalletEntry BuildGil(GameData gameData)
     {
@@ -72,17 +55,12 @@ internal static unsafe class WalletReader
 
     public static WalletSection[] BuildSections(GameData gameData)
     {
-        var sections = new List<WalletSection>(6)
-        {
-            new("Currency", BuildCurrency(gameData)),
-        };
-
+        var sections = new List<WalletSection>(6) { new("Currency", BuildCurrency(gameData)), };
         AddDefSection(sections, gameData, "Hunt", HuntDefs);
         AddTomestones(sections, gameData);
         AddDefSection(sections, gameData, "PvP", PvpDefs);
         AddDefSection(sections, gameData, "Crafting & Gathering", ScripDefs);
         AddDefSection(sections, gameData, "Other", OtherDefs);
-
         return sections.ToArray();
     }
 
@@ -112,7 +90,6 @@ internal static unsafe class WalletReader
         var entries = new List<WalletEntry>(4);
         AddEntry(entries, gameData, MgpItemId, 0);
         AddEntry(entries, gameData, VentureItemId, 0);
-
         var sealItemId = GrandCompanySealItemId();
         if (sealItemId != 0)
         {
@@ -140,7 +117,6 @@ internal static unsafe class WalletReader
     {
         var ids = new List<uint>(4);
         gameData.CollectTomestoneItemIds(ids);
-
         var entries = new List<WalletEntry>(ids.Count);
         for (var index = 0; index < ids.Count; index++)
         {

@@ -20,31 +20,30 @@ internal static class ConversationRow
         var max = new Vector2(origin.X + width, origin.Y + Height * scale);
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-
         var dl = ImGui.GetWindowDrawList();
         if (hovered)
         {
             var hlMin = new Vector2(min.X + 6f * scale, min.Y + 3f * scale);
             var hlMax = new Vector2(max.X - 6f * scale, max.Y - 3f * scale);
-            Squircle.Fill(dl, hlMin, hlMax, 12f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, pressed ? 0.10f : 0.05f)));
+            Squircle.Fill(dl, hlMin, hlMax, 12f * scale,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, pressed ? 0.10f : 0.05f)));
         }
 
         var avatarRadius = 21f * scale;
         var avatarCenter = new Vector2(min.X + 14f * scale + avatarRadius, min.Y + Height * scale * 0.5f);
-        AvatarView.Draw(dl, avatarCenter, avatarRadius, theme.Accent, Initials.Of(conversation.Contact), 1.2f, lodestone.Avatar(conversation.Contact, conversation.World), 32);
-
+        AvatarView.Draw(dl, avatarCenter, avatarRadius, theme.Accent, Initials.Of(conversation.Contact), 1.2f,
+            lodestone.Avatar(conversation.Contact, conversation.World), 32);
         var textLeft = avatarCenter.X + avatarRadius + 12f * scale;
         var textRight = max.X - 14f * scale;
         var hasUnread = conversation.Unread > 0;
-
         var time = NotificationCard.RelativeTime(conversation.LastActivity);
         var timeSize = Typography.Measure(time, TextStyles.Caption1);
-        Typography.Draw(new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time, hasUnread ? theme.Accent : theme.TextMuted, TextStyles.Caption1);
-
+        Typography.Draw(new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
+            hasUnread ? theme.Accent : theme.TextMuted, TextStyles.Caption1);
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 8f * scale, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, min.Y + 11f * scale), conversation.Contact, theme.TextStrong, TextStyles.Headline);
+        Typography.Draw(new Vector2(textLeft, min.Y + 11f * scale), conversation.Contact, theme.TextStrong,
+            TextStyles.Headline);
         dl.PopClipRect();
-
         var previewRight = textRight;
         if (hasUnread)
         {
@@ -56,7 +55,8 @@ internal static class ConversationRow
             var badgeMin = new Vector2(textRight - badgeWidth, badgeCenterY - badgeHeight * 0.5f);
             var badgeMax = new Vector2(textRight, badgeCenterY + badgeHeight * 0.5f);
             Squircle.Fill(dl, badgeMin, badgeMax, badgeHeight * 0.5f, ImGui.GetColorU32(theme.Accent));
-            Typography.DrawCentered((badgeMin + badgeMax) * 0.5f, label, new Vector4(1f, 1f, 1f, 1f), TextStyles.Caption1);
+            Typography.DrawCentered((badgeMin + badgeMax) * 0.5f, label, new Vector4(1f, 1f, 1f, 1f),
+                TextStyles.Caption1);
             previewRight = badgeMin.X - 8f * scale;
         }
 
@@ -64,10 +64,8 @@ internal static class ConversationRow
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(previewRight, max.Y), true);
         Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), preview, theme.TextMuted, TextStyles.Subheadline);
         dl.PopClipRect();
-
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, Height * scale));
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

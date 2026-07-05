@@ -1,4 +1,3 @@
-using System.IO;
 using System.Numerics;
 using Aetherphone.Core.Localization;
 using Dalamud.Interface;
@@ -19,10 +18,7 @@ internal sealed class FontService : IDisposable
 {
     private static readonly string[] WeightFiles =
     {
-        "Inter-Regular.ttf",
-        "Inter-Medium.ttf",
-        "Inter-SemiBold.ttf",
-        "Inter-Bold.ttf",
+        "Inter-Regular.ttf", "Inter-Medium.ttf", "Inter-SemiBold.ttf", "Inter-Bold.ttf",
     };
 
     private static readonly float[] SizeMultipliers =
@@ -41,11 +37,9 @@ internal sealed class FontService : IDisposable
 
     private const float TrackingThreshold = 1.20f;
     private const float TrackingRatio = -0.02f;
-
     private readonly IFontAtlas atlas;
     private readonly string fontDirectory;
     private readonly float baseSize;
-
     private readonly ushort[] glyphRanges;
     private IFontHandle[,] handles;
     private float zoom;
@@ -76,7 +70,6 @@ internal sealed class FontService : IDisposable
     }
 
     public IDisposable Push(float scale) => Push(scale, FontWeight.Regular);
-
     public IDisposable Push(float scale, FontWeight weight) => handles[(int)weight, NearestSize(scale)].Push();
 
     private IFontHandle[,] Build(float scale)
@@ -100,19 +93,13 @@ internal sealed class FontService : IDisposable
         var tracking = multiplier >= TrackingThreshold ? pixels * TrackingRatio : 0f;
         return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
-            var primary = tk.AddFontFromFile(path, new SafeFontConfig
-            {
-                SizePx = pixels,
-                GlyphRanges = glyphRanges,
-                GlyphExtraSpacing = new Vector2(tracking, 0f),
-            });
-
-            tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular, new SafeFontConfig
-            {
-                SizePx = pixels,
-                GlyphRanges = glyphRanges,
-                MergeFont = primary,
-            });
+            var primary = tk.AddFontFromFile(path,
+                new SafeFontConfig
+                {
+                    SizePx = pixels, GlyphRanges = glyphRanges, GlyphExtraSpacing = new Vector2(tracking, 0f),
+                });
+            tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular,
+                new SafeFontConfig { SizePx = pixels, GlyphRanges = glyphRanges, MergeFont = primary, });
         }));
     }
 
@@ -147,7 +134,6 @@ internal sealed class FontService : IDisposable
 
         var combined = new ushort[BaseGlyphRanges.Length + extraLength + 1];
         Array.Copy(BaseGlyphRanges, 0, combined, 0, BaseGlyphRanges.Length);
-
         var offset = BaseGlyphRanges.Length;
         for (var index = 0; index < Languages.All.Length; index++)
         {

@@ -1,6 +1,3 @@
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Net;
 
@@ -76,6 +73,7 @@ internal sealed class AethernetClient
     public Task<FeedPage?> FeedAsync(string scope, string? cursor, CancellationToken token)
     {
         var path = $"/feed?scope={scope}";
+
         if (cursor is not null)
         {
             path += $"&cursor={Uri.EscapeDataString(cursor)}";

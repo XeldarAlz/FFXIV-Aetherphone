@@ -38,7 +38,6 @@ internal static class Sparkline
         var stepX = area.Width / (count - 1);
         var usableHeight = area.Height - 2f;
         var baseY = area.Max.Y;
-
         Span<Vector2> points = count <= 128 ? stackalloc Vector2[count] : new Vector2[count];
         for (var index = 0; index < count; index++)
         {
@@ -49,7 +48,6 @@ internal static class Sparkline
         var drawList = ImGui.GetWindowDrawList();
         var fillColor = ImGui.GetColorU32(fill);
         var lineColor = ImGui.GetColorU32(line);
-
         for (var index = 0; index < count - 1; index++)
         {
             var leftBase = new Vector2(points[index].X, baseY);

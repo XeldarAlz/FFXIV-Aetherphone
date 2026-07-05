@@ -6,21 +6,15 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class NotificationService : IDisposable
 {
     private const int MaxRetained = 50;
-
     private readonly IRingtone ringtone;
     private readonly Configuration configuration;
     private readonly IFramework framework;
     private readonly ConcurrentQueue<PhoneNotification> pending = new();
     private readonly List<PhoneNotification> recent = new();
-
     private long sequence;
-
     public int UnreadCount { get; private set; }
-
     public IReadOnlyList<PhoneNotification> Recent => recent;
-
     public event Action? Changed;
-
     public event Action<PhoneNotification>? Presented;
 
     public NotificationService(IRingtone ringtone, Configuration configuration, IFramework framework)
@@ -54,7 +48,6 @@ internal sealed class NotificationService : IDisposable
         }
 
         UnreadCount++;
-
         if (!configuration.DoNotDisturb)
         {
             Presented?.Invoke(stamped);

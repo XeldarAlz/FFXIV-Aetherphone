@@ -22,23 +22,12 @@ internal readonly struct RadioStation
 
 internal sealed class RadioStationDto
 {
-    [JsonPropertyName("name")]
-    public string? Name { get; set; }
-
-    [JsonPropertyName("url")]
-    public string? Url { get; set; }
-
-    [JsonPropertyName("url_resolved")]
-    public string? UrlResolved { get; set; }
-
-    [JsonPropertyName("codec")]
-    public string? Codec { get; set; }
-
-    [JsonPropertyName("bitrate")]
-    public int Bitrate { get; set; }
-
-    [JsonPropertyName("country")]
-    public string? Country { get; set; }
+    [JsonPropertyName("name")] public string? Name { get; set; }
+    [JsonPropertyName("url")] public string? Url { get; set; }
+    [JsonPropertyName("url_resolved")] public string? UrlResolved { get; set; }
+    [JsonPropertyName("codec")] public string? Codec { get; set; }
+    [JsonPropertyName("bitrate")] public int Bitrate { get; set; }
+    [JsonPropertyName("country")] public string? Country { get; set; }
 }
 
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]

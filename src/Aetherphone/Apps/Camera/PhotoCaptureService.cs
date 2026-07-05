@@ -14,7 +14,6 @@ internal sealed class PhotoCaptureService
         pixels = Array.Empty<byte>();
         width = 0;
         height = 0;
-
         var device = KernelDevice.Instance();
         if (device == null || device->SwapChain == null)
         {
@@ -43,13 +42,10 @@ internal sealed class PhotoCaptureService
         pixels = Array.Empty<byte>();
         width = 0;
         height = 0;
-
         using var swapChain = new IDXGISwapChain(swapChainPtr);
         swapChain.AddRef();
-
         using var backBuffer = swapChain.GetBuffer<ID3D11Texture2D>(0);
         var sourceDesc = backBuffer.Description;
-
         if (!IsSupported(sourceDesc.Format))
         {
             AepLog.Warning($"[Camera] unsupported back buffer format {sourceDesc.Format}");
@@ -60,7 +56,6 @@ internal sealed class PhotoCaptureService
         var top = Math.Clamp((int)MathF.Round(region.Min.Y), 0, (int)sourceDesc.Height);
         var right = Math.Clamp((int)MathF.Round(region.Max.X), 0, (int)sourceDesc.Width);
         var bottom = Math.Clamp((int)MathF.Round(region.Max.Y), 0, (int)sourceDesc.Height);
-
         var regionWidth = right - left;
         var regionHeight = bottom - top;
         if (regionWidth <= 0 || regionHeight <= 0)
@@ -70,7 +65,6 @@ internal sealed class PhotoCaptureService
 
         using var d3dDevice = backBuffer.Device;
         using var context = d3dDevice.ImmediateContext;
-
         var stagingDesc = new Texture2DDescription
         {
             Width = (uint)regionWidth,
@@ -84,12 +78,9 @@ internal sealed class PhotoCaptureService
             CPUAccessFlags = CpuAccessFlags.Read,
             MiscFlags = ResourceOptionFlags.None,
         };
-
         using var staging = d3dDevice.CreateTexture2D(stagingDesc);
-
         var sourceBox = new Box(left, top, 0, right, bottom, 1);
         context.CopySubresourceRegion(staging, 0, 0, 0, 0, backBuffer, 0, sourceBox);
-
         var mapped = context.Map(staging, 0, MapMode.Read, Vortice.Direct3D11.MapFlags.None);
         try
         {
@@ -109,12 +100,10 @@ internal sealed class PhotoCaptureService
     {
         var result = new byte[width * height * 4];
         var rowBuffer = new byte[width * 4];
-
         for (var row = 0; row < height; row++)
         {
             Marshal.Copy(IntPtr.Add(mapped.DataPointer, row * (int)mapped.RowPitch), rowBuffer, 0, rowBuffer.Length);
             var destinationOffset = row * width * 4;
-
             for (var column = 0; column < width; column++)
             {
                 var index = column * 4;
@@ -138,10 +127,9 @@ internal sealed class PhotoCaptureService
         return result;
     }
 
-    private static bool IsSupported(Format format) => IsBgra(format)
-        || format == Format.R8G8B8A8_UNorm
-        || format == Format.R8G8B8A8_UNorm_SRgb;
+    private static bool IsSupported(Format format) =>
+        IsBgra(format) || format == Format.R8G8B8A8_UNorm || format == Format.R8G8B8A8_UNorm_SRgb;
 
-    private static bool IsBgra(Format format) => format == Format.B8G8R8A8_UNorm
-        || format == Format.B8G8R8A8_UNorm_SRgb;
+    private static bool IsBgra(Format format) =>
+        format == Format.B8G8R8A8_UNorm || format == Format.B8G8R8A8_UNorm_SRgb;
 }

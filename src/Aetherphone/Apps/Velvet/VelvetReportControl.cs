@@ -12,9 +12,7 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed class VelvetReportControl
 {
     private const int ReasonMaxLength = 200;
-
     private readonly VelvetStore store;
-
     private string? targetType;
     private string? targetId;
     private string reasonDraft = string.Empty;
@@ -38,7 +36,8 @@ internal sealed class VelvetReportControl
     {
         var active = targetType == type && targetId == id;
         var background = Palette.WithAlpha(ui.Theme.Danger, active ? 0.32f : 0.16f);
-        if (ui.IconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), ui.Theme.Danger, background, 0.9f, tooltip))
+        if (ui.IconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), ui.Theme.Danger, background, 0.9f,
+                tooltip))
         {
             if (active)
             {
@@ -64,18 +63,20 @@ internal sealed class VelvetReportControl
         var origin = ImGui.GetCursorScreenPos();
         var buttonWidth = 84f * scale;
         var buttonHeight = 28f * scale;
-
         ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
         ImGui.SetNextItemWidth(width - buttonWidth - 8f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(1f, 1f, 1f, 0.10f)))
         using (ImRaii.PushColor(ImGuiCol.Text, ui.Theme.TextStrong))
         {
-            ImGui.InputTextWithHint("##velvetReportReason", Loc.T(L.Velvet.ReportReasonHint), ref reasonDraft, ReasonMaxLength);
+            ImGui.InputTextWithHint("##velvetReportReason", Loc.T(L.Velvet.ReportReasonHint), ref reasonDraft,
+                ReasonMaxLength);
         }
 
-        var buttonRect = new Rect(new Vector2(left + width - buttonWidth, origin.Y - 2f * scale), new Vector2(left + width, origin.Y - 2f * scale + buttonHeight));
+        var buttonRect = new Rect(new Vector2(left + width - buttonWidth, origin.Y - 2f * scale),
+            new Vector2(left + width, origin.Y - 2f * scale + buttonHeight));
         var canSubmit = !submitting;
-        if (ui.PillButton(buttonRect, submitting ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.ReportSubmit), canSubmit) && canSubmit)
+        if (ui.PillButton(buttonRect, submitting ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.ReportSubmit), canSubmit) &&
+            canSubmit)
         {
             Submit();
         }

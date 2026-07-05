@@ -3,47 +3,26 @@ namespace Aetherphone.Apps.Games.GemSwap;
 internal sealed class GemSwapBoard
 {
     public const int Columns = 7;
-
     public const int Rows = 7;
-
     public const int CellCount = Columns * Rows;
-
     public const int ColorCount = 6;
-
     public const int NoFall = -999;
-
     private readonly int[] colors = new int[CellCount];
-
     private readonly GemSpecial[] specials = new GemSpecial[CellCount];
-
     private readonly bool[] matched = new bool[CellCount];
-
     private readonly int[] fallFrom = new int[CellCount];
-
     private readonly GemSpecial[] pendingSpecial = new GemSpecial[CellCount];
-
     private readonly int[] worklist = new int[CellCount];
-
     private readonly Random random = new();
-
     private int worklistCount;
-
     private int lastSwapA = -1;
-
     private int lastSwapB = -1;
-
     public int Score { get; private set; }
-
     public int LastClearCount { get; private set; }
-
     public int LastSpecialsCreated { get; private set; }
-
     public int Color(int index) => colors[index];
-
     public GemSpecial Special(int index) => specials[index];
-
     public bool Matched(int index) => matched[index];
-
     public int FallFrom(int index) => fallFrom[index];
 
     public void Reset()
@@ -123,10 +102,8 @@ internal sealed class GemSwapBoard
         Array.Clear(matched, 0, CellCount);
         Array.Clear(pendingSpecial, 0, CellCount);
         LastSpecialsCreated = 0;
-
         MarkRuns(1, 0);
         MarkRuns(0, 1);
-
         var anyMatched = false;
         for (var index = 0; index < CellCount; index++)
         {
@@ -206,7 +183,6 @@ internal sealed class GemSwapBoard
     public void ApplyGravity()
     {
         ClearFall();
-
         for (var column = 0; column < Columns; column++)
         {
             var write = Rows - 1;
@@ -303,7 +279,6 @@ internal sealed class GemSwapBoard
     {
         var column = cell % Columns;
         var row = cell / Columns;
-
         switch (kind)
         {
             case GemSpecial.LineHorizontal:
@@ -358,7 +333,6 @@ internal sealed class GemSwapBoard
     {
         var lineCount = columnStep == 0 ? Columns : Rows;
         var spanCount = columnStep == 0 ? Rows : Columns;
-
         for (var line = 0; line < lineCount; line++)
         {
             var span = 0;
@@ -399,10 +373,8 @@ internal sealed class GemSwapBoard
             return;
         }
 
-        var kind = length >= 5
-            ? GemSpecial.Bomb
-            : columnStep != 0 ? GemSpecial.LineHorizontal : GemSpecial.LineVertical;
-
+        var kind = length >= 5 ? GemSpecial.Bomb :
+            columnStep != 0 ? GemSpecial.LineHorizontal : GemSpecial.LineVertical;
         var chosen = -1;
         for (var offset = 0; offset < length; offset++)
         {
@@ -445,7 +417,8 @@ internal sealed class GemSwapBoard
         var length = 1;
         var nextColumn = column + columnStep;
         var nextRow = row + rowStep;
-        while (nextColumn >= 0 && nextColumn < Columns && nextRow >= 0 && nextRow < Rows && colors[nextRow * Columns + nextColumn] == color)
+        while (nextColumn >= 0 && nextColumn < Columns && nextRow >= 0 && nextRow < Rows &&
+               colors[nextRow * Columns + nextColumn] == color)
         {
             length++;
             nextColumn += columnStep;

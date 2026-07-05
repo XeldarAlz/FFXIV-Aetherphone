@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 
 namespace Aetherphone.Core.Localization;
 

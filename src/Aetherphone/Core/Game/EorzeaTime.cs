@@ -10,6 +10,5 @@ internal readonly record struct EorzeaTime(int Hour, int Minute)
     }
 
     public static long CurrentSeconds() => DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 144 / 7;
-
     public string Formatted => $"{Hour:D2}:{Minute:D2}";
 }

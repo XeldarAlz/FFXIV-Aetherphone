@@ -13,7 +13,7 @@ using Aetherphone.Apps.Maps;
 using Aetherphone.Apps.Market;
 using Aetherphone.Apps.Messages;
 using Aetherphone.Apps.Music;
-using Aetherphone.Apps.MyCharacter;
+using Aetherphone.Apps.Activity;
 using Aetherphone.Apps.News;
 using Aetherphone.Apps.Notifications;
 using Aetherphone.Apps.Phone;
@@ -38,7 +38,7 @@ internal static class AppRegistry
             new PhoneApp(services.Calls, services.AethernetSession, services.AethernetClient, services.Lodestone),
             new MessagesApp(services.Messages, services.Linkshells, services.ChatBridge, services.LinkshellBridge, services.MessageLauncher, services.Lodestone),
             new ContactsApp(services.GameData, services.MessageLauncher, services.Lodestone),
-            new MyCharacterApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
+            new ActivityApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
         };
 
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);

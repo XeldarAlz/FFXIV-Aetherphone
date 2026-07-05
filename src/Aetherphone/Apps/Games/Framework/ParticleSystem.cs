@@ -36,7 +36,8 @@ internal sealed class ParticleSystem
         active = 0;
     }
 
-    public void Burst(Vector2 origin, int count, Vector4 color, float speed, float size, float life, float gravity = 360f, float spread = MathF.PI * 2f, float direction = 0f, bool square = false)
+    public void Burst(Vector2 origin, int count, Vector4 color, float speed, float size, float life,
+        float gravity = 360f, float spread = MathF.PI * 2f, float direction = 0f, bool square = false)
     {
         for (var index = 0; index < count; index++)
         {
@@ -48,7 +49,6 @@ internal sealed class ParticleSystem
             var angle = direction + ((float)random.NextDouble() - 0.5f) * spread;
             var velocityScale = 0.45f + (float)random.NextDouble() * 0.55f;
             var lifeScale = 0.7f + (float)random.NextDouble() * 0.6f;
-
             ref var particle = ref particles[active];
             particle.Position = origin;
             particle.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed * velocityScale;
@@ -77,7 +77,6 @@ internal sealed class ParticleSystem
             var color = palette.Length > 0 ? palette[random.Next(palette.Length)] : new Vector4(1f, 1f, 1f, 1f);
             var angle = -MathF.PI * 0.5f + ((float)random.NextDouble() - 0.5f) * 1.4f;
             var velocityScale = 0.5f + (float)random.NextDouble() * 0.9f;
-
             ref var particle = ref particles[active];
             particle.Position = origin;
             particle.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed * velocityScale;
@@ -128,17 +127,12 @@ internal sealed class ParticleSystem
             var alpha = fade > 0.7f ? 1f : fade / 0.7f;
             var color = ImGui.GetColorU32(particle.Color with { W = particle.Color.W * alpha });
             var radius = particle.Size * scale * (0.4f + 0.6f * fade);
-
             if (particle.Square)
             {
                 var right = new Vector2(MathF.Cos(particle.Rotation), MathF.Sin(particle.Rotation)) * radius;
                 var up = new Vector2(-right.Y, right.X);
-                drawList.AddQuadFilled(
-                    particle.Position - right - up,
-                    particle.Position + right - up,
-                    particle.Position + right + up,
-                    particle.Position - right + up,
-                    color);
+                drawList.AddQuadFilled(particle.Position - right - up, particle.Position + right - up,
+                    particle.Position + right + up, particle.Position - right + up, color);
             }
             else
             {

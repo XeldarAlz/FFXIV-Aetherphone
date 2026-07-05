@@ -209,7 +209,13 @@ internal sealed record VelvetMessageDto(
 
 internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
 
-internal sealed record SendVelvetMessageRequest(string Body, int Kind, int? TtlSeconds, string? MediaKey = null, int MediaWidth = 0, int MediaHeight = 0);
+internal sealed record SendVelvetMessageRequest(
+    string Body,
+    int Kind,
+    int? TtlSeconds,
+    string? MediaKey = null,
+    int MediaWidth = 0,
+    int MediaHeight = 0);
 
 internal sealed record VelvetMediaUrlDto(string Url, long ExpiresAtUnix);
 

@@ -1,4 +1,3 @@
-using System.IO;
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Analytics;
@@ -36,7 +35,6 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
-
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
@@ -45,7 +43,6 @@ public sealed class Plugin : IDalamudPlugin
     internal static DeviceStatus Device { get; private set; } = null!;
     internal static IAnalyticsService Analytics { get; private set; } = null!;
     internal static ConfirmService Confirm { get; private set; } = null!;
-
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
     private readonly PhoneShell shell;
@@ -54,7 +51,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PhoneEmoteController phoneEmote;
     private readonly TimerNotifier timerNotifier;
     private readonly IDtrBarEntry dtrEntry;
-
     private int sampleCounter;
 
     public Plugin()
@@ -64,18 +60,22 @@ public sealed class Plugin : IDalamudPlugin
         Cfg.NormalizeAethernetBaseUrl();
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
-        var builtInWallpaperDirectory = new DirectoryInfo(Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
-        var customWallpaperDirectory = new DirectoryInfo(Path.Combine(PluginInterface.ConfigDirectory.FullName, "Wallpapers"));
+        var builtInWallpaperDirectory =
+            new DirectoryInfo(
+                Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
+        var customWallpaperDirectory =
+            new DirectoryInfo(Path.Combine(PluginInterface.ConfigDirectory.FullName, "Wallpapers"));
         Wallpapers = new WallpaperLibrary(TextureProvider, builtInWallpaperDirectory, customWallpaperDirectory, Cfg);
         WallpaperImages = new WallpaperImageCache();
         Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
-
-        services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, TextureProvider, PluginInterface.ConfigDirectory);
+        services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, TextureProvider,
+            PluginInterface.ConfigDirectory);
         Analytics = services.Analytics;
         Analytics.Track(AnalyticsEvents.SessionStart());
         aboutWindow = new AboutWindow();
         Confirm = new ConfirmService();
-        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications, services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher, Confirm);
+        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
+            services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher, Confirm);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
         if (Cfg.OpenOnStartup && Cfg.OpenMinimizedOnStartup)
         {
@@ -84,31 +84,22 @@ public sealed class Plugin : IDalamudPlugin
 
         windowSystem.AddWindow(phoneWindow);
         windowSystem.AddWindow(aboutWindow);
-
-        phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager, () => phoneWindow.IsOpen);
+        phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
+            () => phoneWindow.IsOpen);
         timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
-
         services.AethernetClient.EnsureCurrentUser();
         services.Calls.IncomingCallPresented += OnIncomingCall;
         services.Calls.Start();
-
         dtrEntry = DtrBar.Get(AepConstants.Name);
         dtrEntry.OnClick = _ => phoneWindow.ToggleShell();
         services.Notifications.Changed += UpdateDtrBadge;
         UpdateDtrBadge();
-
         services.MarketIndex.EnsureBuilt();
         ContextMenu.OnMenuOpened += OnMenuOpened;
-
-        CommandManager.AddHandler(AepConstants.PrimaryCommand, new CommandInfo(OnCommand)
-        {
-            HelpMessage = Loc.T(L.Plugin.CommandHelp)
-        });
-        CommandManager.AddHandler(AepConstants.AliasCommand, new CommandInfo(OnCommand)
-        {
-            HelpMessage = Loc.T(L.Plugin.CommandHelpAlias)
-        });
-
+        CommandManager.AddHandler(AepConstants.PrimaryCommand,
+            new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) });
+        CommandManager.AddHandler(AepConstants.AliasCommand,
+            new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) });
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
     }
@@ -117,12 +108,10 @@ public sealed class Plugin : IDalamudPlugin
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
-
         services.Notifications.Changed -= UpdateDtrBadge;
         services.Calls.IncomingCallPresented -= OnIncomingCall;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
         dtrEntry.Remove();
-
         windowSystem.RemoveAllWindows();
         phoneEmote.Dispose();
         timerNotifier.Dispose();
@@ -132,7 +121,6 @@ public sealed class Plugin : IDalamudPlugin
         Fonts.Dispose();
         Wallpapers.Dispose();
         WallpaperImages.Dispose();
-
         CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
         CommandManager.RemoveHandler(AepConstants.AliasCommand);
     }
@@ -162,7 +150,6 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         var osLanguage = System.Globalization.CultureInfo.InstalledUICulture.TwoLetterISOLanguageName;
-
         for (var index = 0; index < Languages.All.Length; index++)
         {
             if (string.Equals(Languages.All[index].Code, osLanguage, StringComparison.OrdinalIgnoreCase))
@@ -183,7 +170,6 @@ public sealed class Plugin : IDalamudPlugin
     private void OnCommand(string command, string arguments)
     {
         var argument = arguments.Trim();
-
         if (argument.Equals("test", StringComparison.OrdinalIgnoreCase))
         {
             SendSampleNotification();
@@ -228,11 +214,8 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        args.AddMenuItem(new MenuItem
-        {
-            Name = Loc.T(L.Plugin.SearchTheMarket),
-            OnClicked = _ => OpenMarketAt(itemId),
-        });
+        args.AddMenuItem(
+            new MenuItem { Name = Loc.T(L.Plugin.SearchTheMarket), OnClicked = _ => OpenMarketAt(itemId), });
     }
 
     private static uint ResolveContextItem(IMenuOpenedArgs args)
@@ -273,6 +256,7 @@ public sealed class Plugin : IDalamudPlugin
         sampleCounter++;
         var accent = new Vector4(0.30f, 0.78f, 0.42f, 1f);
         var sender = SampleSenders[sampleCounter % SampleSenders.Length];
-        services.Notifications.Notify(new PhoneNotification("messages", sender, $"Sample message #{sampleCounter}", DateTime.Now, accent, $"{sender}@Sample"));
+        services.Notifications.Notify(new PhoneNotification("messages", sender, $"Sample message #{sampleCounter}",
+            DateTime.Now, accent, $"{sender}@Sample"));
     }
 }

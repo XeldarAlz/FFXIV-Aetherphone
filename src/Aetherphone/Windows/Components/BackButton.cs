@@ -7,10 +7,10 @@ namespace Aetherphone.Windows.Components;
 internal static class BackButton
 {
     private const float PressSmoothTime = 0.08f;
-
     private static readonly Dictionary<string, Spring> Scales = new(StringComparer.Ordinal);
 
-    public static bool Draw(string id, Vector2 center, float radius, Vector4 chevronInk, bool hovered, float scale, bool shadow = false)
+    public static bool Draw(string id, Vector2 center, float radius, Vector4 chevronInk, bool hovered, float scale,
+        bool shadow = false)
     {
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
@@ -21,14 +21,12 @@ internal static class BackButton
 
         var grow = spring.Step(pressed ? 0.82f : 1f, PressSmoothTime, deltaSeconds);
         Scales[id] = spring;
-
         var drawList = ImGui.GetWindowDrawList();
         var reach = radius * 0.5f * grow;
         var thickness = 2.4f * scale;
         var tip = new Vector2(center.X - reach * 0.4f, center.Y);
         var upper = new Vector2(tip.X + reach, tip.Y - reach);
         var lower = new Vector2(tip.X + reach, tip.Y + reach);
-
         if (shadow)
         {
             var offset = new Vector2(0f, 1f * scale);
@@ -44,7 +42,6 @@ internal static class BackButton
         drawList.AddCircleFilled(upper, cap, ink, 8);
         drawList.AddCircleFilled(tip, cap, ink, 8);
         drawList.AddCircleFilled(lower, cap, ink, 8);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

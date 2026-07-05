@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -19,34 +17,26 @@ internal sealed class AethergramStore : IDisposable
     private const int LoveKind = 1;
     private const int GramSize = 1080;
     private const int AvatarSize = 512;
-
     private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
-
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly CancellationTokenSource cancellation = new();
-
     private DateTime lastMeAttemptUtc = DateTime.MinValue;
-
     private volatile UserDto? me;
-
     private volatile PostDto[] forYou = Array.Empty<PostDto>();
     private volatile PostDto[] following = Array.Empty<PostDto>();
     private volatile bool loadingForYou;
     private volatile bool loadingFollowing;
-
     private volatile string? profileUserId;
     private volatile UserDto? profileUser;
     private volatile PostDto[] profilePosts = Array.Empty<PostDto>();
     private volatile bool profileLoading;
     private volatile bool profileFailed;
-
     private volatile string? detailPostId;
     private volatile PostDto? detailPost;
     private volatile CommentDto[] detailComments = Array.Empty<CommentDto>();
     private volatile bool detailLoading;
     private volatile bool commenting;
-
     private volatile UserDto[] discoverResults = Array.Empty<UserDto>();
     private volatile bool searching;
     private volatile bool posting;
@@ -59,33 +49,22 @@ internal sealed class AethergramStore : IDisposable
     }
 
     public bool IsSignedIn => session.IsSignedIn;
-
     public UserDto? Me => me;
-
     public PostDto[] Feed(AethergramFeedScope scope) => scope == AethergramFeedScope.ForYou ? forYou : following;
 
-    public bool IsLoading(AethergramFeedScope scope) => scope == AethergramFeedScope.ForYou ? loadingForYou : loadingFollowing;
+    public bool IsLoading(AethergramFeedScope scope) =>
+        scope == AethergramFeedScope.ForYou ? loadingForYou : loadingFollowing;
 
     public string? ProfileUserId => profileUserId;
-
     public UserDto? ProfileUser => profileUser;
-
     public PostDto[] ProfilePosts => profilePosts;
-
     public bool ProfileFailed => profileFailed;
-
     public PostDto? DetailPost => detailPost;
-
     public CommentDto[] DetailComments => detailComments;
-
     public bool DetailLoading => detailLoading;
-
     public bool Commenting => commenting;
-
     public UserDto[] DiscoverResults => discoverResults;
-
     public bool Searching => searching;
-
     public bool Posting => posting;
 
     public void EnsureMe()
@@ -131,7 +110,9 @@ internal sealed class AethergramStore : IDisposable
 
         RunGuarded("feed refresh", async token =>
         {
-            var page = await client.GramFeedAsync(scope == AethergramFeedScope.ForYou ? "explore" : "following", null, token).ConfigureAwait(false);
+            var page = await client
+                .GramFeedAsync(scope == AethergramFeedScope.ForYou ? "explore" : "following", null, token)
+                .ConfigureAwait(false);
             if (page is not null)
             {
                 if (scope == AethergramFeedScope.ForYou)
@@ -177,14 +158,16 @@ internal sealed class AethergramStore : IDisposable
                     return;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
                 if (!uploaded)
                 {
                     onComplete(false);
                     return;
                 }
 
-                var created = await client.CreateGramAsync(caption.Trim(), upload.Key, baked.Width, baked.Height, token).ConfigureAwait(false);
+                var created = await client.CreateGramAsync(caption.Trim(), upload.Key, baked.Width, baked.Height, token)
+                    .ConfigureAwait(false);
                 if (created is null)
                 {
                     onComplete(false);
@@ -233,14 +216,17 @@ internal sealed class AethergramStore : IDisposable
                     return;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
                 if (!uploaded)
                 {
                     onComplete(false);
                     return;
                 }
 
-                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token).ConfigureAwait(false);
+                var updated = await client
+                    .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
+                    .ConfigureAwait(false);
                 if (updated is null)
                 {
                     onComplete(false);
@@ -271,7 +257,6 @@ internal sealed class AethergramStore : IDisposable
     {
         var liked = post.MyReaction < 0;
         ReplacePost(ApplyLike(post, liked));
-
         RunGuarded("like", async token =>
         {
             var result = liked
@@ -290,7 +275,6 @@ internal sealed class AethergramStore : IDisposable
         detailPost = post;
         detailComments = Array.Empty<CommentDto>();
         detailLoading = true;
-
         RunGuarded("comments load", async token =>
         {
             var page = await client.CommentsAsync(post.Id, null, token).ConfigureAwait(false);
@@ -362,7 +346,8 @@ internal sealed class AethergramStore : IDisposable
         }
 
         BumpCommentCount(postId, -1);
-        RunGuarded("comment delete", async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
+        RunGuarded("comment delete",
+            async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
     public void DeleteComment(string postId, string commentId, Action<bool> onComplete)
@@ -429,7 +414,6 @@ internal sealed class AethergramStore : IDisposable
     public void SetFollow(string userId, bool follow)
     {
         UpdateUserEverywhere(userId, follow);
-
         RunGuarded("follow", async token =>
         {
             if (follow)
@@ -479,7 +463,6 @@ internal sealed class AethergramStore : IDisposable
         profilePosts = Array.Empty<PostDto>();
         profileFailed = false;
         profileLoading = true;
-
         RunGuarded("profile open", async token =>
         {
             var user = await client.UserAsync(userId, token).ConfigureAwait(false);
@@ -527,7 +510,8 @@ internal sealed class AethergramStore : IDisposable
             var succeeded = false;
             try
             {
-                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
+                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token)
+                    .ConfigureAwait(false);
                 if (updated is not null)
                 {
                     me = updated;
@@ -603,7 +587,6 @@ internal sealed class AethergramStore : IDisposable
         var counts = (int[])post.ReactionCounts.Clone();
         var alreadyLiked = post.MyReaction >= 0;
         var total = post.TotalReactions;
-
         if (liked && !alreadyLiked)
         {
             if (LoveKind < counts.Length)
@@ -665,7 +648,10 @@ internal sealed class AethergramStore : IDisposable
         discoverResults = MapUsers(discoverResults, userId, follow);
         if (profileUser is { } current && current.Id == userId)
         {
-            profileUser = current with { IsFollowing = follow, Followers = Math.Max(0, current.Followers + (follow ? 1 : -1)) };
+            profileUser = current with
+            {
+                IsFollowing = follow, Followers = Math.Max(0, current.Followers + (follow ? 1 : -1))
+            };
         }
     }
 
@@ -678,7 +664,10 @@ internal sealed class AethergramStore : IDisposable
             var user = source[index];
             if (user.Id == userId && user.IsFollowing != follow)
             {
-                result[index] = user with { IsFollowing = follow, Followers = Math.Max(0, user.Followers + (follow ? 1 : -1)) };
+                result[index] = user with
+                {
+                    IsFollowing = follow, Followers = Math.Max(0, user.Followers + (follow ? 1 : -1))
+                };
                 changed = true;
             }
             else

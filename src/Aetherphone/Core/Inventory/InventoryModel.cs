@@ -29,7 +29,8 @@ internal readonly struct InventoryStack
 
 internal sealed class InventorySource
 {
-    public InventorySource(InventorySourceKind kind, string ownerName, ulong ownerId, InventoryStack[] stacks, DateTime capturedUtc)
+    public InventorySource(InventorySourceKind kind, string ownerName, ulong ownerId, InventoryStack[] stacks,
+        DateTime capturedUtc)
     {
         Kind = kind;
         OwnerName = ownerName;
@@ -39,15 +40,10 @@ internal sealed class InventorySource
     }
 
     public InventorySourceKind Kind { get; }
-
     public string OwnerName { get; }
-
     public ulong OwnerId { get; }
-
     public InventoryStack[] Stacks { get; }
-
     public DateTime CapturedUtc { get; }
-
     public bool IsCached => Kind is InventorySourceKind.Retainer or InventorySourceKind.FreeCompany;
 }
 
@@ -63,13 +59,9 @@ internal sealed class InventoryResultRow
     }
 
     public uint ItemId { get; }
-
     public string Name { get; }
-
     public uint IconId { get; }
-
     public int Quantity { get; set; }
-
     public bool HasHighQuality { get; set; }
 }
 
@@ -85,14 +77,9 @@ internal sealed class InventoryResultGroup
     }
 
     public InventorySourceKind Kind { get; }
-
     public string Title { get; }
-
     public bool IsCached { get; }
-
     public DateTime CapturedUtc { get; }
-
     public List<InventoryResultRow> Rows { get; }
-
     public int TotalQuantity { get; set; }
 }

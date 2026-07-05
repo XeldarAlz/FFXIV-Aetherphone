@@ -1,7 +1,5 @@
 using System.Collections.Concurrent;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 using Dalamud.Interface.Textures.TextureWraps;
 
@@ -10,13 +8,11 @@ namespace Aetherphone.Core.Media;
 internal sealed class RemoteImageCache : IDisposable
 {
     private static readonly TimeSpan FailureRetryFor = TimeSpan.FromMinutes(2);
-
     private readonly HttpService http;
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, DateTime> failed = new();
     private readonly CancellationTokenSource cancellation = new();
-
     private volatile bool disposed;
 
     public RemoteImageCache(HttpService http)
@@ -74,7 +70,8 @@ internal sealed class RemoteImageCache : IDisposable
                 return;
             }
 
-            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, $"Aetherphone.Gram.{url}", token).ConfigureAwait(false);
+            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, $"Aetherphone.Gram.{url}", token)
+                .ConfigureAwait(false);
             if (!ready.TryAdd(url, wrap))
             {
                 wrap.Dispose();

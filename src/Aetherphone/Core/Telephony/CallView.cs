@@ -16,18 +16,9 @@ internal readonly struct CallView
     public readonly string PeerLabel;
     public readonly int OthersCount;
 
-    public CallView(
-        CallState state,
-        bool muted,
-        float volume,
-        float micLevel,
-        int seconds,
-        ParticipantInfo[] participants,
-        ParticipantInfo? incomingFrom,
-        bool connected,
-        string localUserId,
-        string peerLabel,
-        int othersCount)
+    public CallView(CallState state, bool muted, float volume, float micLevel, int seconds,
+        ParticipantInfo[] participants, ParticipantInfo? incomingFrom, bool connected, string localUserId,
+        string peerLabel, int othersCount)
     {
         State = state;
         Muted = muted;
@@ -43,6 +34,5 @@ internal readonly struct CallView
     }
 
     public bool IsActive => State is not CallState.Idle and not CallState.Ended;
-
     public bool InCall => State == CallState.Active;
 }

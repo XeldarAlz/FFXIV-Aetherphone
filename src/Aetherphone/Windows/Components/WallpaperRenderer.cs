@@ -7,7 +7,8 @@ namespace Aetherphone.Windows.Components;
 
 internal static class WallpaperRenderer
 {
-    public static void Draw(ImDrawListPtr drawList, Rect rect, float rounding, WallpaperEntry light, WallpaperEntry dark, float aspect, float darkness, Vector4 fallback)
+    public static void Draw(ImDrawListPtr drawList, Rect rect, float rounding, WallpaperEntry light,
+        WallpaperEntry dark, float aspect, float darkness, Vector4 fallback)
     {
         DrawSingle(drawList, rect, rounding, light, aspect, 1f, fallback);
         if (darkness > 0.001f)
@@ -16,7 +17,8 @@ internal static class WallpaperRenderer
         }
     }
 
-    public static void DrawSingle(ImDrawListPtr drawList, Rect rect, float rounding, WallpaperEntry entry, float aspect, float alpha, Vector4? fallback)
+    public static void DrawSingle(ImDrawListPtr drawList, Rect rect, float rounding, WallpaperEntry entry, float aspect,
+        float alpha, Vector4? fallback)
     {
         var library = Plugin.Wallpapers;
         if (library.HandlePath(entry.FilePath) is not { } handle)

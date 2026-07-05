@@ -11,9 +11,7 @@ internal sealed class SimonRenderer
 {
     private static readonly Vector4[] PadColors =
     {
-        new(0.46f, 0.86f, 0.66f, 1f),
-        new(0.95f, 0.45f, 0.50f, 1f),
-        new(0.95f, 0.74f, 0.34f, 1f),
+        new(0.46f, 0.86f, 0.66f, 1f), new(0.95f, 0.45f, 0.50f, 1f), new(0.95f, 0.74f, 0.34f, 1f),
         new(0.40f, 0.68f, 0.98f, 1f),
     };
 
@@ -24,11 +22,11 @@ internal sealed class SimonRenderer
         return grid.Cell(pad % 2, pad / 2);
     }
 
-    public void Draw(GameGrid grid, float[] lit, string hubValue, string hubLabel, Vector4 hubColor, PhoneTheme theme, float scale)
+    public void Draw(GameGrid grid, float[] lit, string hubValue, string hubLabel, Vector4 hubColor, PhoneTheme theme,
+        float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = grid.Pitch * 0.16f;
-
         for (var pad = 0; pad < SimonBoard.PadCount; pad++)
         {
             DrawPad(drawList, PadRect(grid, pad), PadColors[pad], lit[pad], rounding, scale);
@@ -42,29 +40,31 @@ internal sealed class SimonRenderer
         var dim = GamePalette.Darken(color, 0.58f);
         var bright = GamePalette.Lighten(color, 0.12f);
         var fill = Vector4.Lerp(dim, bright, lit);
-
         var center = rect.Center;
         var half = rect.Size * 0.5f * (1f + 0.03f * lit);
         var min = center - half;
         var max = center + half;
-
         if (lit > 0.01f)
         {
             ProgressRing.Glow(center, rect.Width * 0.5f, color, 0.5f * lit);
         }
 
         Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(fill));
-        Squircle.Fill(drawList, min, new Vector2(max.X, min.Y + half.Y), rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f + 0.18f * lit)));
-        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(GamePalette.Lighten(color, 0.3f) with { W = 0.35f + 0.5f * lit }), 1.4f * scale);
+        Squircle.Fill(drawList, min, new Vector2(max.X, min.Y + half.Y), rounding,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f + 0.18f * lit)));
+        Squircle.Stroke(drawList, min, max, rounding,
+            ImGui.GetColorU32(GamePalette.Lighten(color, 0.3f) with { W = 0.35f + 0.5f * lit }), 1.4f * scale);
     }
 
-    private void DrawHub(ImDrawListPtr drawList, Vector2 center, float radius, string value, string label, Vector4 color, PhoneTheme theme, float scale)
+    private void DrawHub(ImDrawListPtr drawList, Vector2 center, float radius, string value, string label,
+        Vector4 color, PhoneTheme theme, float scale)
     {
         drawList.AddCircleFilled(center, radius + 4f * scale, ImGui.GetColorU32(GamePalette.Board), 48);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(GamePalette.Cell), 48);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(color with { W = 0.6f }), 48, 1.6f * scale);
-
-        Typography.DrawCentered(new Vector2(center.X, center.Y - radius * 0.16f), value, theme.TextStrong, TextStyles.Title1);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + radius * 0.42f), label.ToUpperInvariant(), color, TextStyles.Caption2);
+        Typography.DrawCentered(new Vector2(center.X, center.Y - radius * 0.16f), value, theme.TextStrong,
+            TextStyles.Title1);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + radius * 0.42f), label.ToUpperInvariant(), color,
+            TextStyles.Caption2);
     }
 }

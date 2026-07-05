@@ -8,20 +8,18 @@ internal sealed class CallSession : IDisposable
     private readonly RealtimeConnection connection;
     private readonly AudioCapture capture;
     private readonly VoiceMixer mixer;
-
     private byte localSlot;
     private ushort sequence;
 
-    public CallSession(Guid callId, RealtimeConnection connection, int inputDevice, int outputDevice, float outputVolume)
+    public CallSession(Guid callId, RealtimeConnection connection, int inputDevice, int outputDevice,
+        float outputVolume)
     {
         this.callId = callId;
         this.connection = connection;
         capture = new AudioCapture();
         mixer = new VoiceMixer();
-
         capture.FrameEncoded = OnFrameEncoded;
         connection.MediaReceived += OnMediaReceived;
-
         mixer.Start(outputDevice, outputVolume);
         capture.Start(inputDevice);
     }
@@ -41,11 +39,8 @@ internal sealed class CallSession : IDisposable
     }
 
     public void SetLocalSlot(int slot) => localSlot = (byte)slot;
-
     public void AddRemote(int slot) => mixer.AddParticipant(slot);
-
     public void RemoveRemote(int slot) => mixer.RemoveParticipant(slot);
-
     public float LevelOf(int slot) => mixer.LevelOf(slot);
 
     private void OnFrameEncoded(ReadOnlyMemory<byte> opus)

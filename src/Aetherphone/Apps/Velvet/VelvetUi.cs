@@ -18,13 +18,11 @@ internal sealed class VelvetUi
     public static readonly Vector4 BodyInk = new(0.93f, 0.85f, 0.90f, 0.96f);
     public static readonly Vector4 MutedInk = new(0.78f, 0.66f, 0.76f, 0.85f);
     public static readonly Vector4 HeaderInk = new(0.99f, 0.72f, 0.82f, 0.95f);
-
     private static readonly Vector4 BackdropTop = new(0.34f, 0.06f, 0.19f, 1f);
     private static readonly Vector4 BackdropBottom = new(0.05f, 0.02f, 0.09f, 1f);
     private static readonly Vector4 BloomTop = new(0.82f, 0.16f, 0.42f, 0.26f);
     private static readonly Vector4 BloomBottom = new(0.42f, 0.10f, 0.44f, 0f);
     private static readonly Vector4 Surface = new(1f, 1f, 1f, 0.10f);
-
     public PhoneTheme Theme { get; set; } = PhoneTheme.Default;
 
     public void Backdrop(Rect screen)
@@ -56,16 +54,13 @@ internal sealed class VelvetUi
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
-
         var fill = filled
             ? (hovered ? Palette.Mix(Accent, Theme.TextStrong, 0.12f) : Accent)
             : (hovered ? new Vector4(1f, 1f, 1f, 0.16f) : Surface);
         var ink = filled ? new Vector4(1f, 1f, 1f, 1f) : TitleInk;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -87,7 +82,6 @@ internal sealed class VelvetUi
         Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.28f)), 1f);
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, TitleInk, 0.9f, FontWeight.SemiBold);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -96,17 +90,19 @@ internal sealed class VelvetUi
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale, string tooltip = "")
+    public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
+        float glyphScale, string tooltip = "")
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius), center + new Vector2(hitRadius, hitRadius));
+        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius),
+            center + new Vector2(hitRadius, hitRadius));
         if (background.W > 0f)
         {
-            drawList.AddCircleFilled(center, hitRadius, ImGui.GetColorU32(hovered ? Palette.Mix(background, Theme.TextStrong, 0.08f) : background), 24);
+            drawList.AddCircleFilled(center, hitRadius,
+                ImGui.GetColorU32(hovered ? Palette.Mix(background, Theme.TextStrong, 0.08f) : background), 24);
         }
 
         Icon(center, glyph, hovered ? Palette.Mix(color, Theme.TextStrong, 0.2f) : color, glyphScale);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -128,7 +124,6 @@ internal sealed class VelvetUi
         var padY = 5f * scale;
         var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
         var gap = 9f * scale;
-
         var windowMin = ImGui.GetWindowPos();
         var windowMax = windowMin + ImGui.GetWindowSize();
         var minBoundX = windowMin.X + 4f * scale;
@@ -149,7 +144,8 @@ internal sealed class VelvetUi
         var max = min + bubbleSize;
         var bubble = Palette.WithAlpha(Palette.Mix(Theme.AppBackground, Theme.TextStrong, 0.9f), 0.97f);
         Squircle.Fill(drawList, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, Theme.AppBackground, 0.78f, FontWeight.Medium);
+        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, Theme.AppBackground, 0.78f,
+            FontWeight.Medium);
     }
 
     public bool Chip(Rect rect, string label, bool active)
@@ -181,16 +177,16 @@ internal sealed class VelvetUi
         var width = ImGui.GetContentRegionAvail().X;
         var height = 34f * scale;
         Typography.Draw(new Vector2(origin.X, origin.Y + height * 0.5f - 8f * scale), label, Theme.TextStrong, 0.95f);
-
         var trackWidth = 44f * scale;
         var trackHeight = 24f * scale;
         var trackMin = new Vector2(origin.X + width - trackWidth, origin.Y + height * 0.5f - trackHeight * 0.5f);
         var trackMax = new Vector2(trackMin.X + trackWidth, trackMin.Y + trackHeight);
         var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, trackMin, trackMax, trackHeight * 0.5f, ImGui.GetColorU32(value ? Accent : new Vector4(1f, 1f, 1f, 0.16f)));
+        Squircle.Fill(drawList, trackMin, trackMax, trackHeight * 0.5f,
+            ImGui.GetColorU32(value ? Accent : new Vector4(1f, 1f, 1f, 0.16f)));
         var knobX = value ? trackMax.X - trackHeight * 0.5f : trackMin.X + trackHeight * 0.5f;
-        drawList.AddCircleFilled(new Vector2(knobX, (trackMin.Y + trackMax.Y) * 0.5f), trackHeight * 0.5f - 3f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), 24);
-
+        drawList.AddCircleFilled(new Vector2(knobX, (trackMin.Y + trackMax.Y) * 0.5f), trackHeight * 0.5f - 3f * scale,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f)), 24);
         ImGui.SetCursorScreenPos(origin);
         if (HoverClick(origin, new Vector2(origin.X + width, origin.Y + height)))
         {
@@ -211,16 +207,18 @@ internal sealed class VelvetUi
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var height = (multiline ? 88f : 34f) * scale;
-        Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale, ImGui.GetColorU32(Surface));
-
-        ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale, origin.Y + (multiline ? 8f * scale : height * 0.5f - ImGui.GetFrameHeight() * 0.5f)));
+        Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale,
+            ImGui.GetColorU32(Surface));
+        ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale,
+            origin.Y + (multiline ? 8f * scale : height * 0.5f - ImGui.GetFrameHeight() * 0.5f)));
         ImGui.SetNextItemWidth(width - 24f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, TitleInk))
         {
             if (multiline)
             {
-                ImGui.InputTextMultiline(id, ref value, maxLength, new Vector2(width - 24f * scale, height - 16f * scale), ImGuiInputTextFlags.None);
+                ImGui.InputTextMultiline(id, ref value, maxLength,
+                    new Vector2(width - 24f * scale, height - 16f * scale), ImGuiInputTextFlags.None);
             }
             else
             {
@@ -293,7 +291,8 @@ internal sealed class VelvetUi
             size = ImGui.CalcTextSize(glyph) * scale;
         }
 
-        ImGui.GetWindowDrawList().AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(color), glyph, 0f);
+        ImGui.GetWindowDrawList().AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(color),
+            glyph, 0f);
     }
 
     public static bool HoverClick(Vector2 min, Vector2 max)
@@ -307,7 +306,8 @@ internal sealed class VelvetUi
         return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public static float WrappedCentered(float centerX, float top, string text, float maxWidth, Vector4 color, float scale, float fontScale)
+    public static float WrappedCentered(float centerX, float top, string text, float maxWidth, Vector4 color,
+        float scale, float fontScale)
     {
         var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var lineHeight = Typography.Measure("Ay", fontScale).Y + 3f * scale;
@@ -339,6 +339,5 @@ internal sealed class VelvetUi
         return y - top;
     }
 
-    public static string Truncate(string value, int max) =>
-        value.Length <= max ? value : value[..max].TrimEnd() + "…";
+    public static string Truncate(string value, int max) => value.Length <= max ? value : value[..max].TrimEnd() + "…";
 }

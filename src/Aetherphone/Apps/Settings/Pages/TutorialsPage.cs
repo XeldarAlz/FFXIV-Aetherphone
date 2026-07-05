@@ -14,12 +14,11 @@ internal sealed class TutorialsPage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Tutorials);
 
-    public string Summary => configuration.TutorialsEnabled ? Loc.T(L.Settings.TutorialsSummary) : Loc.T(L.Settings.TutorialsOff);
+    public string Summary =>
+        configuration.TutorialsEnabled ? Loc.T(L.Settings.TutorialsSummary) : Loc.T(L.Settings.TutorialsOff);
 
     public string Glyph => "?";
-
     public Vector4 Tint => new(0.62f, 0.42f, 0.96f, 1f);
-
     private readonly Configuration configuration;
 
     public TutorialsPage(Configuration configuration)
@@ -35,21 +34,21 @@ internal sealed class TutorialsPage : ISettingsPage
         {
             SettingsSection.Header(Loc.T(L.Settings.Tutorials), theme);
             var card = GroupCard.Begin(theme, 1);
-            var enabled = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.TutorialsShow), configuration.TutorialsEnabled, theme);
+            var enabled = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.TutorialsShow),
+                configuration.TutorialsEnabled, theme);
             card.End();
-
             if (enabled != configuration.TutorialsEnabled)
             {
                 OnboardingState.SetEnabled(enabled);
             }
 
             ImGui.Dummy(new Vector2(0f, 12f * scale));
-
             var actions = GroupCard.Begin(theme, 2);
-            var replay = SettingsRow.Disclosure(actions.NextRow(), Loc.T(L.Settings.TutorialsReplay), string.Empty, theme);
-            var reset = SettingsRow.Disclosure(actions.NextRow(), Loc.T(L.Settings.TutorialsReset), string.Empty, theme);
+            var replay = SettingsRow.Disclosure(actions.NextRow(), Loc.T(L.Settings.TutorialsReplay), string.Empty,
+                theme);
+            var reset = SettingsRow.Disclosure(actions.NextRow(), Loc.T(L.Settings.TutorialsReset), string.Empty,
+                theme);
             actions.End();
-
             if (replay)
             {
                 OnboardingState.SetEnabled(true);

@@ -6,14 +6,11 @@ namespace Aetherphone.Core.Maps;
 internal sealed class MapData
 {
     private const string UnknownRegionName = "Eorzea";
-
     private readonly IDataManager data;
     private readonly IClientState clientState;
-
     private readonly List<MapRegion> regions = new();
     private readonly List<MapExpansion> expansions = new();
     private readonly Dictionary<uint, MapAetheryte> aetherytesById = new();
-
     private bool built;
 
     public MapData(IDataManager data, IClientState clientState)
@@ -83,7 +80,6 @@ internal sealed class MapData
         var territories = data.GetExcelSheet<TerritoryType>();
         var aetherytesByRegion = new Dictionary<string, List<MapAetheryte>>(StringComparer.Ordinal);
         var regionOrder = new Dictionary<string, byte>(StringComparer.Ordinal);
-
         foreach (var territory in territories)
         {
             if (!aetherytesByTerritory.TryGetValue(territory.RowId, out var aetherytes) || aetherytes.Count == 0)
@@ -98,7 +94,6 @@ internal sealed class MapData
             }
 
             var expansionOrder = (byte)territory.ExVersion.RowId;
-
             if (!aetherytesByRegion.TryGetValue(regionName, out var bucket))
             {
                 bucket = new List<MapAetheryte>();
@@ -126,12 +121,7 @@ internal sealed class MapData
         foreach (var pair in aetherytesByRegion)
         {
             pair.Value.Sort(CompareAetherytes);
-            regions.Add(new MapRegion
-            {
-                Name = pair.Key,
-                Order = regionOrder[pair.Key],
-                Aetherytes = pair.Value,
-            });
+            regions.Add(new MapRegion { Name = pair.Key, Order = regionOrder[pair.Key], Aetherytes = pair.Value, });
         }
 
         regions.Sort(CompareRegions);
@@ -141,7 +131,6 @@ internal sealed class MapData
     private void BuildExpansions()
     {
         expansions.Clear();
-
         var regionsByExpansion = new Dictionary<byte, List<MapRegion>>();
         var expansionSequence = new List<byte>();
         for (var index = 0; index < regions.Count; index++)
@@ -162,9 +151,7 @@ internal sealed class MapData
             var order = expansionSequence[index];
             expansions.Add(new MapExpansion
             {
-                Name = ExpansionName(order),
-                Order = order,
-                Regions = regionsByExpansion[order],
+                Name = ExpansionName(order), Order = order, Regions = regionsByExpansion[order],
             });
         }
     }
@@ -173,7 +160,6 @@ internal sealed class MapData
     {
         var result = new Dictionary<uint, List<MapAetheryte>>();
         var seenNames = new Dictionary<uint, HashSet<string>>();
-
         foreach (var aetheryte in data.GetExcelSheet<Aetheryte>())
         {
             if (!aetheryte.IsAetheryte || aetheryte.Invisible)
@@ -210,12 +196,7 @@ internal sealed class MapData
                 result[territoryId] = bucket;
             }
 
-            bucket.Add(new MapAetheryte
-            {
-                RowId = aetheryte.RowId,
-                Name = name,
-                Order = aetheryte.Order,
-            });
+            bucket.Add(new MapAetheryte { RowId = aetheryte.RowId, Name = name, Order = aetheryte.Order, });
         }
 
         return result;

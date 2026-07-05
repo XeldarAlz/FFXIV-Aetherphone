@@ -9,22 +9,16 @@ namespace Aetherphone.Windows;
 
 internal sealed class PhoneWindow : Window
 {
-    private const ImGuiWindowFlags BaseFlags =
-        ImGuiWindowFlags.NoTitleBar
-      | ImGuiWindowFlags.NoScrollbar
-      | ImGuiWindowFlags.NoScrollWithMouse
-      | ImGuiWindowFlags.NoCollapse
-      | ImGuiWindowFlags.NoResize
-      | ImGuiWindowFlags.NoBackground;
+    private const ImGuiWindowFlags BaseFlags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar |
+                                               ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoCollapse |
+                                               ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoBackground;
 
     private static readonly Vector2 MinimizedSize = new(78f, 152f);
-
     private readonly PhoneShell shell;
     private bool minimized;
     private bool recenterRequested;
 
-    public PhoneWindow(PhoneShell shell)
-        : base(AepConstants.Name, BaseFlags)
+    public PhoneWindow(PhoneShell shell) : base(AepConstants.Name, BaseFlags)
     {
         this.shell = shell;
         Size = PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
@@ -33,7 +27,6 @@ internal sealed class PhoneWindow : Window
     }
 
     public void Maximize() => minimized = false;
-
     public void StartMinimized() => minimized = true;
 
     public void Recenter()
@@ -56,7 +49,6 @@ internal sealed class PhoneWindow : Window
     }
 
     public override void OnOpen() => shell.OnOpened();
-
     public override void OnClose() => shell.OnClosed();
 
     public override void PreDraw()
@@ -65,7 +57,6 @@ internal sealed class PhoneWindow : Window
         Size = size;
         SizeCondition = ImGuiCond.Always;
         Flags = !minimized && Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
-
         if (recenterRequested)
         {
             var viewport = ImGui.GetMainViewport();
@@ -91,7 +82,6 @@ internal sealed class PhoneWindow : Window
             var available = ImGui.GetContentRegionAvail();
             ImGui.Dummy(available);
             var device = new Rect(origin, origin + available);
-
             if (minimized)
             {
                 if (shell.DrawMinimized(device))

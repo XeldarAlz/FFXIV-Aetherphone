@@ -11,11 +11,8 @@ internal enum TubeAction
 internal readonly struct PourInfo
 {
     public readonly int FromTube;
-
     public readonly int ToTube;
-
     public readonly int Color;
-
     public readonly int Count;
 
     public PourInfo(int fromTube, int toTube, int color, int count)
@@ -30,35 +27,20 @@ internal readonly struct PourInfo
 internal sealed class WaterSortBoard
 {
     public const int Capacity = 4;
-
     public const int MaxColors = 9;
-
     public const int MaxTubes = MaxColors + 2;
-
     private readonly int[] colors = new int[MaxTubes * Capacity];
-
     private readonly int[] counts = new int[MaxTubes];
-
     private readonly List<PourInfo> history = new();
-
     private readonly Random random = new();
-
     public int TubeCount { get; private set; }
-
     public int ColorCount { get; private set; }
-
     public int Level { get; private set; }
-
     public int Moves { get; private set; }
-
     public int Selected { get; private set; } = -1;
-
     public PourInfo LastPour { get; private set; }
-
     public int Count(int tube) => counts[tube];
-
     public int Segment(int tube, int level) => level < counts[tube] ? colors[tube * Capacity + level] : -1;
-
     public int TopColor(int tube) => counts[tube] > 0 ? colors[tube * Capacity + counts[tube] - 1] : -1;
 
     public void Reset(int level)
@@ -182,7 +164,6 @@ internal sealed class WaterSortBoard
 
         var last = history[history.Count - 1];
         history.RemoveAt(history.Count - 1);
-
         for (var index = 0; index < last.Count; index++)
         {
             counts[last.ToTube]--;
@@ -225,7 +206,6 @@ internal sealed class WaterSortBoard
     private void FillRandom()
     {
         Array.Clear(counts, 0, MaxTubes);
-
         var pool = new int[ColorCount * Capacity];
         var poolIndex = 0;
         for (var color = 0; color < ColorCount; color++)
@@ -260,7 +240,6 @@ internal sealed class WaterSortBoard
         var workingCounts = new int[MaxTubes];
         Array.Copy(colors, working, colors.Length);
         Array.Copy(counts, workingCounts, counts.Length);
-
         var visited = new HashSet<string>();
         var budget = 40000;
         return Search(working, workingCounts, visited, ref budget);
@@ -377,7 +356,8 @@ internal sealed class WaterSortBoard
     private void PourState(int[] state, int[] stateCounts, int from, int to)
     {
         var movingColor = state[from * Capacity + stateCounts[from] - 1];
-        while (stateCounts[from] > 0 && stateCounts[to] < Capacity && state[from * Capacity + stateCounts[from] - 1] == movingColor)
+        while (stateCounts[from] > 0 && stateCounts[to] < Capacity &&
+               state[from * Capacity + stateCounts[from] - 1] == movingColor)
         {
             stateCounts[from]--;
             state[to * Capacity + stateCounts[to]] = movingColor;
@@ -401,7 +381,6 @@ internal sealed class WaterSortBoard
         }
 
         codes.Slice(0, TubeCount).Sort();
-
         var builder = new System.Text.StringBuilder(TubeCount * 4);
         for (var tube = 0; tube < TubeCount; tube++)
         {

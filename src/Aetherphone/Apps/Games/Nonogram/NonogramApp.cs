@@ -13,7 +13,6 @@ namespace Aetherphone.Apps.Games.Nonogram;
 internal sealed class NonogramApp : IMiniGame
 {
     private const string GameId = "nonogram";
-
     private const float FillPopSpeed = 6.5f;
 
     private enum PaintMode
@@ -26,41 +25,23 @@ internal sealed class NonogramApp : IMiniGame
     }
 
     private readonly NonogramBoard board = new();
-
     private readonly NonogramRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private readonly float[] fillAnimation = new float[NonogramBoard.MaxSize * NonogramBoard.MaxSize];
-
     private readonly string[] difficultyLabels = new string[3];
-
     private int difficulty;
-
     private PaintMode painting;
-
     private float elapsed;
-
     private bool wasSolved;
-
     private bool pendingSubmit;
-
     private bool newBestTime;
-
     private int loadedBestTime;
-
     private float resultAppear;
-
     private string resultTimeText = "0:00";
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Nonogram);
-
     public string Genre => Loc.T(L.Games.GenreLogic);
-
     public Vector4 Accent => new(0.40f, 0.78f, 0.82f, 1f);
 
     public void Open()
@@ -98,7 +79,6 @@ internal sealed class NonogramApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (loadedBestTime < 0)
         {
             loadedBestTime = context.Stats.Get(StatId(difficulty)).BestTimeSeconds;
@@ -112,7 +92,6 @@ internal sealed class NonogramApp : IMiniGame
         UpdateFillAnimation(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         if (pendingSubmit)
         {
             newBestTime = context.Stats.SubmitTime(StatId(difficulty), (int)elapsed);
@@ -121,10 +100,9 @@ internal sealed class NonogramApp : IMiniGame
 
         DrawDifficultyRow(body, theme, scale);
         DrawStatsRow(body, theme, scale);
-
-        var area = new Rect(new Vector2(body.Min.X + 6f * scale, body.Min.Y + 96f * scale), new Vector2(body.Max.X - 6f * scale, body.Max.Y - 8f * scale));
+        var area = new Rect(new Vector2(body.Min.X + 6f * scale, body.Min.Y + 96f * scale),
+            new Vector2(body.Max.X - 6f * scale, body.Max.Y - 8f * scale));
         var layout = NonogramRenderer.Layout(area, board, scale);
-
         var hoveredCell = ResolveHover(layout);
         if (!board.Solved)
         {
@@ -132,13 +110,10 @@ internal sealed class NonogramApp : IMiniGame
         }
 
         renderer.Draw(board, layout, hoveredCell, fillAnimation, theme, Accent, scale);
-
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
-
         DetectSolved(layout);
-
         if (board.Solved)
         {
             DrawResult(theme, body, deltaSeconds);
@@ -150,12 +125,9 @@ internal sealed class NonogramApp : IMiniGame
         difficultyLabels[0] = Loc.T(L.Games.Easy);
         difficultyLabels[1] = Loc.T(L.Games.Medium);
         difficultyLabels[2] = Loc.T(L.Games.Hard);
-
         var rowY = body.Min.Y + 22f * scale;
-        var segmentRow = new Rect(
-            new Vector2(body.Min.X + 4f * scale, rowY - 13f * scale),
+        var segmentRow = new Rect(new Vector2(body.Min.X + 4f * scale, rowY - 13f * scale),
             new Vector2(body.Max.X - 44f * scale, rowY + 13f * scale));
-
         var selected = SegmentStrip.Draw("nonogram.difficulty", segmentRow, difficultyLabels, difficulty, theme);
         if (selected != difficulty)
         {
@@ -172,8 +144,10 @@ internal sealed class NonogramApp : IMiniGame
     private void DrawStatsRow(Rect body, PhoneTheme theme, float scale)
     {
         var rowY = body.Min.Y + 64f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Time), GameNumber.Label((int)elapsed), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Left), GameNumber.Label(board.FilledRemaining()), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Time),
+            GameNumber.Label((int)elapsed), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Left),
+            GameNumber.Label(board.FilledRemaining()), Accent, theme);
     }
 
     private int ResolveHover(NonogramLayout layout)
@@ -206,11 +180,13 @@ internal sealed class NonogramApp : IMiniGame
             ApplyPaint(hoveredCell, true);
         }
 
-        if ((painting == PaintMode.Fill || painting == PaintMode.Erase) && ImGui.IsMouseDown(ImGuiMouseButton.Left) && hoveredCell >= 0)
+        if ((painting == PaintMode.Fill || painting == PaintMode.Erase) && ImGui.IsMouseDown(ImGuiMouseButton.Left) &&
+            hoveredCell >= 0)
         {
             ApplyPaint(hoveredCell, false);
         }
-        else if ((painting == PaintMode.Mark || painting == PaintMode.Unmark) && ImGui.IsMouseDown(ImGuiMouseButton.Right) && hoveredCell >= 0)
+        else if ((painting == PaintMode.Mark || painting == PaintMode.Unmark) &&
+                 ImGui.IsMouseDown(ImGuiMouseButton.Right) && hoveredCell >= 0)
         {
             ApplyPaint(hoveredCell, false);
         }
@@ -236,7 +212,6 @@ internal sealed class NonogramApp : IMiniGame
                 }
 
                 break;
-
             case PaintMode.Erase:
                 if (current == CellMark.Filled)
                 {
@@ -244,7 +219,6 @@ internal sealed class NonogramApp : IMiniGame
                 }
 
                 break;
-
             case PaintMode.Mark:
                 if (current == CellMark.Empty)
                 {
@@ -252,7 +226,6 @@ internal sealed class NonogramApp : IMiniGame
                 }
 
                 break;
-
             case PaintMode.Unmark:
                 if (current == CellMark.Marked)
                 {
@@ -274,21 +247,11 @@ internal sealed class NonogramApp : IMiniGame
         painting = PaintMode.None;
         resultAppear = 0f;
         pendingSubmit = true;
-
         var seconds = (int)elapsed;
         resultTimeText = $"{seconds / 60}:{seconds % 60:D2}";
-
         fx.AddTrauma(0.35f);
         fx.Flash(Accent, 0.4f);
-
-        ReadOnlySpan<Vector4> palette = new[]
-        {
-            Accent,
-            Styling.AccentMint,
-            Styling.AccentAmber,
-            Styling.AccentPink,
-        };
-
+        ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink, };
         var gridTop = layout.GridOrigin;
         var gridCenterX = gridTop.X + board.Size * layout.CellSize * 0.5f;
         particles.Confetti(new Vector2(gridCenterX, gridTop.Y), 72, palette, 260f * ImGuiHelpers.GlobalScale, 4f, 1.3f);
@@ -308,15 +271,14 @@ internal sealed class NonogramApp : IMiniGame
     private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
     {
         resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-
         string? secondary = null;
         if (loadedBestTime > 0)
         {
             secondary = $"{Loc.T(L.Games.Best)} {loadedBestTime / 60}:{loadedBestTime % 60:D2}";
         }
 
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary, newBestTime);
-
+        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary,
+            newBestTime);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartNewGame(difficulty);

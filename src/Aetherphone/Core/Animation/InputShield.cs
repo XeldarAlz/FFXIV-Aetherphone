@@ -6,7 +6,6 @@ namespace Aetherphone.Core.Animation;
 internal readonly ref struct InputShield
 {
     private static readonly Vector2 OffScreen = new(-100000f, -100000f);
-
     private readonly Vector2 saved;
     private readonly bool active;
 

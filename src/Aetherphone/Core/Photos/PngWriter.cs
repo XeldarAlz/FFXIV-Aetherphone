@@ -1,4 +1,3 @@
-using System.IO;
 using System.IO.Compression;
 
 namespace Aetherphone.Core.Photos;
@@ -7,7 +6,6 @@ internal static class PngWriter
 {
     private const byte BitDepth = 8;
     private const byte ColorTypeRgba = 6;
-
     private static readonly uint[] CrcTable = BuildCrcTable();
 
     public static byte[] Encode(byte[] rgba, int width, int height)
@@ -71,7 +69,6 @@ internal static class PngWriter
         stream.Write(lengthBytes, 0, 4);
         stream.Write(typeBytes, 0, 4);
         stream.Write(data, 0, data.Length);
-
         var crcBytes = new byte[4];
         WriteBigEndian(crcBytes, 0, Crc(typeBytes, data));
         stream.Write(crcBytes, 0, 4);

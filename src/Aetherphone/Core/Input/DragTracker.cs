@@ -9,13 +9,9 @@ internal sealed class DragTracker
     private Vector2 origin;
     private Vector2 last;
     private float velocityY;
-
     public bool Active => active;
-
     public Vector2 Origin => origin;
-
     public Vector2 Delta => active ? ImGui.GetMousePos() - origin : Vector2.Zero;
-
     public float VelocityY => velocityY;
 
     public bool Begin(Rect startZone)
@@ -58,7 +54,6 @@ internal sealed class DragTracker
     {
         totalDelta = Delta;
         velocity = velocityY;
-
         if (!active)
         {
             return false;

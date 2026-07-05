@@ -3,7 +3,6 @@ namespace Aetherphone.Core.Songs;
 internal sealed class SongHistory
 {
     private const int Capacity = 12;
-
     private readonly Configuration configuration;
 
     public SongHistory(Configuration configuration)

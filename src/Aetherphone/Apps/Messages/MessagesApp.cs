@@ -18,7 +18,6 @@ internal sealed class MessagesApp : IPhoneApp
     private readonly struct MessagesView
     {
         public readonly Conversation? Direct;
-
         public readonly LinkshellThread? Linkshell;
 
         public MessagesView(Conversation direct)
@@ -37,29 +36,22 @@ internal sealed class MessagesApp : IPhoneApp
     }
 
     public string Id => "messages";
-
     public string DisplayName => Loc.T(L.Apps.Messages);
-
     public string Glyph => "M";
-
     public Vector4 Accent => new(0.30f, 0.78f, 0.42f, 1f);
-
     public int BadgeCount => store.TotalUnread() + linkshells.TotalUnread();
-
     private readonly MessageStore store;
     private readonly LinkshellStore linkshells;
     private readonly ChatBridge bridge;
     private readonly LinkshellBridge linkshellBridge;
     private readonly MessageLauncher launcher;
     private readonly LodestoneService lodestone;
-
     private readonly ViewRouter<MessagesView> router;
     private readonly RouterDraw<MessagesView> drawView;
     private readonly Action backToList;
     private readonly ChatEntranceAnimator entrance = new();
     private readonly string[] tabLabels = new string[2];
     private readonly List<LinkshellEntry> roster = new();
-
     private string draft = string.Empty;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
@@ -69,7 +61,8 @@ internal sealed class MessagesApp : IPhoneApp
     private bool snapToBottom;
     private bool composerFocus;
 
-    public MessagesApp(MessageStore store, LinkshellStore linkshells, ChatBridge bridge, LinkshellBridge linkshellBridge, MessageLauncher launcher, LodestoneService lodestone)
+    public MessagesApp(MessageStore store, LinkshellStore linkshells, ChatBridge bridge,
+        LinkshellBridge linkshellBridge, MessageLauncher launcher, LodestoneService lodestone)
     {
         this.store = store;
         this.linkshells = linkshells;
@@ -77,7 +70,6 @@ internal sealed class MessagesApp : IPhoneApp
         this.linkshellBridge = linkshellBridge;
         this.launcher = launcher;
         this.lodestone = lodestone;
-
         router = new ViewRouter<MessagesView>(default);
         drawView = DrawView;
         backToList = () => router.Pop();
@@ -142,16 +134,14 @@ internal sealed class MessagesApp : IPhoneApp
         trackedThread = null;
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, DisplayName);
-
         var scale = ImGuiHelpers.GlobalScale;
         var headerBottom = area.Min.Y + AppHeader.Height * scale;
         var segRowHeight = 40f * scale;
-        var segRow = new Rect(new Vector2(area.Min.X + 14f * scale, headerBottom), new Vector2(area.Max.X - 14f * scale, headerBottom + segRowHeight));
-
+        var segRow = new Rect(new Vector2(area.Min.X + 14f * scale, headerBottom),
+            new Vector2(area.Max.X - 14f * scale, headerBottom + segRowHeight));
         tabLabels[0] = Loc.T(L.Messages.TabDirect);
         tabLabels[1] = Loc.T(L.Messages.TabLinkshells);
         activeTab = SegmentStrip.Draw("messages.tabs", segRow, tabLabels, activeTab, frameTheme);
-
         var body = new Rect(new Vector2(area.Min.X, headerBottom + segRowHeight), area.Max);
         if (activeTab == 0)
         {
@@ -188,7 +178,6 @@ internal sealed class MessagesApp : IPhoneApp
     private void DrawLinkshellList(Rect body)
     {
         LinkshellDirectory.Collect(roster);
-
         var threads = linkshells.Threads;
         if (roster.Count == 0 && threads.Count == 0)
         {
@@ -202,7 +191,8 @@ internal sealed class MessagesApp : IPhoneApp
             {
                 var entry = roster[index];
                 var thread = linkshells.Find(entry.Channel);
-                var label = LinkshellLabel.Of(entry.Channel, thread?.Name is { Length: > 0 } stored ? stored : entry.Name);
+                var label = LinkshellLabel.Of(entry.Channel,
+                    thread?.Name is { Length: > 0 } stored ? stored : entry.Name);
                 if (LinkshellRow.Draw(entry.Channel, label, thread, frameTheme))
                 {
                     OpenLinkshell(entry.Channel, entry.Name);
@@ -251,10 +241,8 @@ internal sealed class MessagesApp : IPhoneApp
         conversation.MarkRead();
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, conversation.Contact, backToList);
-
         var bubbles = BubbleArea(area, out var composerBar);
         entrance.Sync(conversation, conversation.Lines.Count, ImGui.GetIO().DeltaTime);
-
         using (AppSurface.Begin(bubbles))
         {
             SyncFollow(conversation);
@@ -266,7 +254,6 @@ internal sealed class MessagesApp : IPhoneApp
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
-
             if (followBottom)
             {
                 ImGui.SetScrollHereY(1f);
@@ -281,10 +268,8 @@ internal sealed class MessagesApp : IPhoneApp
         thread.MarkRead();
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, LinkshellLabel.Of(thread.Channel, thread.Name), backToList);
-
         var bubbles = BubbleArea(area, out var composerBar);
         entrance.Sync(thread, thread.Lines.Count, ImGui.GetIO().DeltaTime);
-
         using (AppSurface.Begin(bubbles))
         {
             SyncFollow(thread);
@@ -296,7 +281,6 @@ internal sealed class MessagesApp : IPhoneApp
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
-
             if (followBottom)
             {
                 ImGui.SetScrollHereY(1f);
@@ -318,9 +302,9 @@ internal sealed class MessagesApp : IPhoneApp
         if (index > 0)
         {
             var previous = lines[index - 1];
-            if (previous.Direction == MessageDirection.Incoming && previous.Author is { } previousAuthor
-                && string.Equals(previousAuthor.Name, author.Name, StringComparison.Ordinal)
-                && string.Equals(previousAuthor.World, author.World, StringComparison.Ordinal))
+            if (previous.Direction == MessageDirection.Incoming && previous.Author is { } previousAuthor &&
+                string.Equals(previousAuthor.Name, author.Name, StringComparison.Ordinal) &&
+                string.Equals(previousAuthor.World, author.World, StringComparison.Ordinal))
             {
                 showHeader = false;
             }
@@ -366,11 +350,10 @@ internal sealed class MessagesApp : IPhoneApp
         var pillMin = new Vector2(bar.Min.X, bar.Min.Y + 7f * scale);
         var pillMax = new Vector2(bar.Max.X, bar.Max.Y - 7f * scale);
         dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(theme.GroupedCard), (pillMax.Y - pillMin.Y) * 0.5f);
-
         var sendDiameter = pillMax.Y - pillMin.Y - 6f * scale;
         var inputWidth = pillMax.X - pillMin.X - sendDiameter - 30f * scale;
-
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 16f * scale,
+            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(inputWidth);
         if (composerFocus)
         {
@@ -382,7 +365,8 @@ internal sealed class MessagesApp : IPhoneApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            if (ImGui.InputTextWithHint("##composer", Loc.T(L.Messages.Placeholder), ref draft, 480, ImGuiInputTextFlags.EnterReturnsTrue))
+            if (ImGui.InputTextWithHint("##composer", Loc.T(L.Messages.Placeholder), ref draft, 480,
+                    ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 submitted = true;
             }
@@ -390,9 +374,9 @@ internal sealed class MessagesApp : IPhoneApp
 
         var hasText = !string.IsNullOrWhiteSpace(draft);
         var sendCenter = new Vector2(pillMax.X - sendDiameter * 0.5f - 6f * scale, (pillMin.Y + pillMax.Y) * 0.5f);
-        dl.AddCircleFilled(sendCenter, sendDiameter * 0.5f, ImGui.GetColorU32(hasText ? theme.Accent : theme.SurfaceMuted), 24);
+        dl.AddCircleFilled(sendCenter, sendDiameter * 0.5f,
+            ImGui.GetColorU32(hasText ? theme.Accent : theme.SurfaceMuted), 24);
         ProgressRing.CenterIcon(sendCenter, FontAwesomeIcon.ArrowUp, new Vector4(1f, 1f, 1f, 1f), sendDiameter * 0.46f);
-
         var sendMin = sendCenter - new Vector2(sendDiameter * 0.5f, sendDiameter * 0.5f);
         var sendMax = sendCenter + new Vector2(sendDiameter * 0.5f, sendDiameter * 0.5f);
         if (hasText && ImGui.IsMouseHoveringRect(sendMin, sendMax))

@@ -11,11 +11,8 @@ namespace Aetherphone.Apps.Games.Twenty48;
 internal sealed class Twenty48App : IMiniGame
 {
     private const string GameId = "2048";
-
     private const float SlideDuration = 0.10f;
-
     private const float ResolveDuration = 0.16f;
-
     private const float MilestoneFloor = 256f;
 
     private enum Phase
@@ -26,43 +23,24 @@ internal sealed class Twenty48App : IMiniGame
     }
 
     private readonly Twenty48Board board = new();
-
     private readonly Twenty48Renderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private Phase phase;
-
     private float slideTimer;
-
     private float resolveTimer;
-
     private bool finished;
-
     private bool finishedAsWin;
-
     private float resultAppear;
-
     private bool newBest;
-
     private bool pendingSubmit;
-
     private int loadedBest;
-
     private int displayBest;
-
     private bool swipeActive;
-
     private Vector2 swipeStart;
-
     public string Id => GameId;
-
     public string Title => "2048";
-
     public string Genre => Loc.T(L.Games.GenrePuzzle);
-
     public Vector4 Accent => new(0.96f, 0.58f, 0.39f, 1f);
 
     public void Open()
@@ -101,7 +79,6 @@ internal sealed class Twenty48App : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (loadedBest == 0)
         {
             loadedBest = context.Stats.Get(GameId).BestScore;
@@ -110,7 +87,6 @@ internal sealed class Twenty48App : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         if (pendingSubmit)
         {
             context.Stats.SubmitScore(GameId, board.Score);
@@ -119,13 +95,10 @@ internal sealed class Twenty48App : IMiniGame
 
         var rowY = body.Min.Y + 32f * scale;
         var shake = fx.ShakeOffset(scale);
-        var gridArea = new Rect(
-            new Vector2(body.Min.X + shake.X, body.Min.Y + 70f * scale + shake.Y),
+        var gridArea = new Rect(new Vector2(body.Min.X + shake.X, body.Min.Y + 70f * scale + shake.Y),
             new Vector2(body.Max.X + shake.X, body.Max.Y - 8f * scale + shake.Y));
         var grid = GameGrid.Centered(gridArea, Twenty48Board.Size, Twenty48Board.Size, 0.06f);
-
         AdvanceAnimation(deltaSeconds, grid);
-
         if (!finished && phase == Phase.Idle)
         {
             HandleSwipe(grid);
@@ -136,8 +109,10 @@ internal sealed class Twenty48App : IMiniGame
             displayBest = board.Score;
         }
 
-        GameHud.Pill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score), GameNumber.Label(board.Score), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 20f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest), Accent, theme, displayBest > loadedBest);
+        GameHud.Pill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score),
+            GameNumber.Label(board.Score), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 20f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
+            Accent, theme, displayBest > loadedBest);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
             StartNewGame();
@@ -146,11 +121,9 @@ internal sealed class Twenty48App : IMiniGame
 
         var anim = BuildAnim();
         renderer.Draw(board, grid, anim, scale);
-
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
         fx.DrawText();
-
         if (finished)
         {
             DrawResult(context, theme, body);
@@ -211,7 +184,8 @@ internal sealed class Twenty48App : IMiniGame
         var center = grid.Center;
         fx.AddTrauma(value >= Twenty48Board.WinValue ? 0.7f : 0.4f);
         fx.AddText(GameNumber.Label(value) + "!", center, color, 1.6f);
-        particles.Burst(center, value >= Twenty48Board.WinValue ? 60 : 34, color, 320f * ImGuiHelpers.GlobalScale, 4f, 0.9f, 360f);
+        particles.Burst(center, value >= Twenty48Board.WinValue ? 60 : 34, color, 320f * ImGuiHelpers.GlobalScale, 4f,
+            0.9f, 360f);
     }
 
     private void CheckEndState()
@@ -241,7 +215,6 @@ internal sealed class Twenty48App : IMiniGame
     {
         var mouse = ImGui.GetMousePos();
         var bounds = grid.Bounds;
-
         if (ImGui.IsMouseDown(ImGuiMouseButton.Left) && bounds.Contains(mouse) && !swipeActive)
         {
             swipeActive = true;
@@ -315,8 +288,8 @@ internal sealed class Twenty48App : IMiniGame
         var titleColor = finishedAsWin ? Accent : theme.TextStrong;
         var bestValue = board.Score > displayBest ? board.Score : displayBest;
         var secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestValue)}";
-        var result = new GameResult(title, titleColor, Loc.T(L.Games.Score), GameNumber.Label(board.Score), secondary, newBest);
-
+        var result = new GameResult(title, titleColor, Loc.T(L.Games.Score), GameNumber.Label(board.Score), secondary,
+            newBest);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartNewGame();

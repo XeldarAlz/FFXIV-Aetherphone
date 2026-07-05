@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Localization;
 using NetStone.Model.Parseables.Character;
 using NetStone.Model.Parseables.Character.ClassJob;
@@ -17,34 +15,27 @@ namespace Aetherphone.Core.Lodestone;
 internal sealed class CharacterSearchResult
 {
     public volatile LookupState State = LookupState.Idle;
-
     public volatile CharacterMatch[] Matches = Array.Empty<CharacterMatch>();
 }
 
 internal sealed class FreeCompanySearchResult
 {
     public volatile LookupState State = LookupState.Idle;
-
     public volatile FreeCompanyMatch[] Matches = Array.Empty<FreeCompanyMatch>();
 }
 
 internal sealed class CharacterDetailResult
 {
     public volatile LookupState State = LookupState.Idle;
-
     public volatile CharacterDetail? Detail;
 }
 
 internal sealed class FreeCompanyDetailResult
 {
     public volatile LookupState State = LookupState.Idle;
-
     public volatile FreeCompanyDetail? Detail;
-
     public volatile RosterSnapshot Roster = RosterSnapshot.Empty;
-
     public int RosterLoadingFlag;
-
     public bool RosterLoading => Volatile.Read(ref RosterLoadingFlag) == 1;
 }
 
@@ -52,17 +43,22 @@ internal sealed class LookupService : IDisposable
 {
     private const int MaxResults = 30;
     private const int RosterPageSize = 50;
-
     private static readonly TimeSpan SearchTtl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan DetailTtl = TimeSpan.FromMinutes(15);
-
     private readonly LodestoneService lodestone;
     private readonly CancellationTokenSource cancellation = new();
 
-    private readonly Dictionary<string, CacheEntry<CharacterSearchResult>> characterSearches = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, CacheEntry<FreeCompanySearchResult>> freeCompanySearches = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, CacheEntry<CharacterDetailResult>> characterDetails = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, CacheEntry<FreeCompanyDetailResult>> freeCompanyDetails = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, CacheEntry<CharacterSearchResult>> characterSearches =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, CacheEntry<FreeCompanySearchResult>> freeCompanySearches =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private readonly Dictionary<string, CacheEntry<CharacterDetailResult>> characterDetails =
+        new(StringComparer.Ordinal);
+
+    private readonly Dictionary<string, CacheEntry<FreeCompanyDetailResult>> freeCompanyDetails =
+        new(StringComparer.Ordinal);
 
     private readonly object sync = new();
 
@@ -76,7 +72,6 @@ internal sealed class LookupService : IDisposable
         var trimmedName = name.Trim();
         var trimmedRegion = region.Trim();
         var key = string.Concat(trimmedName, "|", regionIsDataCenter ? "dc:" : "w:", trimmedRegion);
-
         lock (sync)
         {
             if (!force && characterSearches.TryGetValue(key, out var cached) && !cached.IsStale(SearchTtl))
@@ -97,7 +92,6 @@ internal sealed class LookupService : IDisposable
         var trimmedName = name.Trim();
         var trimmedRegion = region.Trim();
         var key = string.Concat(trimmedName, "|", regionIsDataCenter ? "dc:" : "w:", trimmedRegion);
-
         lock (sync)
         {
             if (!force && freeCompanySearches.TryGetValue(key, out var cached) && !cached.IsStale(SearchTtl))
@@ -168,7 +162,8 @@ internal sealed class LookupService : IDisposable
         _ = RunRosterPageAsync(result, id, page);
     }
 
-    private async Task RunCharacterSearchAsync(CharacterSearchResult target, string name, string region, bool regionIsDataCenter)
+    private async Task RunCharacterSearchAsync(CharacterSearchResult target, string name, string region,
+        bool regionIsDataCenter)
     {
         try
         {
@@ -195,7 +190,8 @@ internal sealed class LookupService : IDisposable
                     }
                 }
 
-                var page = await client.SearchCharacter(query).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
+                var page = await client.SearchCharacter(query).WaitAsync(LodestoneService.NetStoneTimeout, token)
+                    .ConfigureAwait(false);
                 var matches = MapCharacterMatches(page);
                 target.Matches = matches;
                 target.State = matches.Length > 0 ? LookupState.Ready : LookupState.Empty;
@@ -236,7 +232,8 @@ internal sealed class LookupService : IDisposable
         return list.ToArray();
     }
 
-    private async Task RunFreeCompanySearchAsync(FreeCompanySearchResult target, string name, string region, bool regionIsDataCenter)
+    private async Task RunFreeCompanySearchAsync(FreeCompanySearchResult target, string name, string region,
+        bool regionIsDataCenter)
     {
         try
         {
@@ -263,7 +260,8 @@ internal sealed class LookupService : IDisposable
                     }
                 }
 
-                var page = await client.SearchFreeCompany(query).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
+                var page = await client.SearchFreeCompany(query).WaitAsync(LodestoneService.NetStoneTimeout, token)
+                    .ConfigureAwait(false);
                 var matches = MapFreeCompanyMatches(page);
                 target.Matches = matches;
                 target.State = matches.Length > 0 ? LookupState.Ready : LookupState.Empty;
@@ -296,14 +294,11 @@ internal sealed class LookupService : IDisposable
 
             var world = CleanServer(entry.Server);
             var subtitle = entry.ActiveMembers > 0
-                ? (world.Length > 0 ? string.Concat(world, "  ·  ", Loc.T(L.FindPeople.Active, entry.ActiveMembers)) : Loc.T(L.FindPeople.Active, entry.ActiveMembers))
+                ? (world.Length > 0
+                    ? string.Concat(world, "  ·  ", Loc.T(L.FindPeople.Active, entry.ActiveMembers))
+                    : Loc.T(L.FindPeople.Active, entry.ActiveMembers))
                 : world;
-            list.Add(new FreeCompanyMatch(
-                entry.Id,
-                entry.Name,
-                world,
-                subtitle,
-                entry.RecruitmentOpen,
+            list.Add(new FreeCompanyMatch(entry.Id, entry.Name, world, subtitle, entry.RecruitmentOpen,
                 entry.CrestLayers?.TopLayer ?? entry.CrestLayers?.MiddleLayer ?? entry.CrestLayers?.BottomLayer,
                 CrestKey(entry.Id)));
             if (list.Count >= MaxResults)
@@ -315,7 +310,8 @@ internal sealed class LookupService : IDisposable
         return list.ToArray();
     }
 
-    private async Task RunCharacterDetailAsync(CharacterDetailResult target, string id, string fallbackName, string fallbackWorld)
+    private async Task RunCharacterDetailAsync(CharacterDetailResult target, string id, string fallbackName,
+        string fallbackWorld)
     {
         try
         {
@@ -329,7 +325,8 @@ internal sealed class LookupService : IDisposable
                     return;
                 }
 
-                var character = await client.GetCharacter(id).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
+                var character = await client.GetCharacter(id).WaitAsync(LodestoneService.NetStoneTimeout, token)
+                    .ConfigureAwait(false);
                 if (character is null)
                 {
                     target.State = LookupState.Empty;
@@ -355,7 +352,8 @@ internal sealed class LookupService : IDisposable
     {
         try
         {
-            var info = await character.GetClassJobInfo().WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
+            var info = await character.GetClassJobInfo().WaitAsync(LodestoneService.NetStoneTimeout, token)
+                .ConfigureAwait(false);
             return MapJobs(info);
         }
         catch (Exception exception)
@@ -429,27 +427,19 @@ internal sealed class LookupService : IDisposable
         }
     }
 
-    private static CharacterDetail BuildCharacterDetail(string id, LodestoneCharacter character, string fallbackName, string fallbackWorld, ClassJobLevel[] jobs)
+    private static CharacterDetail BuildCharacterDetail(string id, LodestoneCharacter character, string fallbackName,
+        string fallbackWorld, ClassJobLevel[] jobs)
     {
         var world = character.Server is { Length: > 0 } server ? CleanServer(server) : fallbackWorld;
         var name = character.Name is { Length: > 0 } ? character.Name : fallbackName;
         var grandCompany = character.GrandCompanyName is { Length: > 0 } gc
             ? character.GrandCompanyRank is { Length: > 0 } rank ? string.Concat(gc, " · ", rank) : gc
             : string.Empty;
-        var freeCompany = character.FreeCompany is { Exists: true, Name: { Length: > 0 } fcName } ? fcName : string.Empty;
-
-        return new CharacterDetail(
-            id,
-            name,
-            character.Title ?? string.Empty,
-            world,
-            BuildRaceClan(character),
-            grandCompany,
-            freeCompany,
-            character.Portrait,
-            PortraitKey(id),
-            jobs,
-            MapGear(character.Gear));
+        var freeCompany = character.FreeCompany is { Exists: true, Name: { Length: > 0 } fcName }
+            ? fcName
+            : string.Empty;
+        return new CharacterDetail(id, name, character.Title ?? string.Empty, world, BuildRaceClan(character),
+            grandCompany, freeCompany, character.Portrait, PortraitKey(id), jobs, MapGear(character.Gear));
     }
 
     private static string BuildRaceClan(LodestoneCharacter character)
@@ -473,20 +463,9 @@ internal sealed class LookupService : IDisposable
 
         var slots = new GearEntry?[]
         {
-            gear.Mainhand,
-            gear.Offhand,
-            gear.Head,
-            gear.Body,
-            gear.Hands,
-            gear.Legs,
-            gear.Feet,
-            gear.Earrings,
-            gear.Necklace,
-            gear.Bracelets,
-            gear.Ring1,
-            gear.Ring2,
+            gear.Mainhand, gear.Offhand, gear.Head, gear.Body, gear.Hands, gear.Legs, gear.Feet, gear.Earrings,
+            gear.Necklace, gear.Bracelets, gear.Ring1, gear.Ring2,
         };
-
         var list = new List<GearPiece>(slots.Length);
         for (var index = 0; index < slots.Length; index++)
         {
@@ -518,7 +497,8 @@ internal sealed class LookupService : IDisposable
                     return;
                 }
 
-                var company = await client.GetFreeCompany(id).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
+                var company = await client.GetFreeCompany(id).WaitAsync(LodestoneService.NetStoneTimeout, token)
+                    .ConfigureAwait(false);
                 if (company is null)
                 {
                     target.State = LookupState.Empty;
@@ -557,17 +537,10 @@ internal sealed class LookupService : IDisposable
         var name = company.Name ?? string.Empty;
         var tag = company.Tag ?? string.Empty;
         var heading = tag.Length > 0 ? string.Concat(name, "  «", tag, "»") : name;
-        var recruiting = company.Recruitment is { Length: > 0 } recruitment && recruitment.StartsWith("Open", StringComparison.OrdinalIgnoreCase);
-
-        return new FreeCompanyDetail(
-            id,
-            name,
-            tag,
-            heading,
-            company.World ?? string.Empty,
-            company.Slogan ?? string.Empty,
-            Loc.T(L.FindPeople.Members, company.ActiveMemberCount),
-            recruiting,
+        var recruiting = company.Recruitment is { Length: > 0 } recruitment &&
+                         recruitment.StartsWith("Open", StringComparison.OrdinalIgnoreCase);
+        return new FreeCompanyDetail(id, name, tag, heading, company.World ?? string.Empty,
+            company.Slogan ?? string.Empty, Loc.T(L.FindPeople.Members, company.ActiveMemberCount), recruiting,
             company.CrestLayers?.TopLayer ?? company.CrestLayers?.MiddleLayer ?? company.CrestLayers?.BottomLayer,
             CrestKey(id));
     }
@@ -603,7 +576,8 @@ internal sealed class LookupService : IDisposable
             return;
         }
 
-        var members = await client.GetFreeCompanyMembers(id, page + 1).WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
+        var members = await client.GetFreeCompanyMembers(id, page + 1)
+            .WaitAsync(LodestoneService.NetStoneTimeout, token).ConfigureAwait(false);
         if (members?.Members is null)
         {
             return;
@@ -625,16 +599,15 @@ internal sealed class LookupService : IDisposable
             var world = CleanServer(member.Server);
             var rank = member.FreeCompanyRank ?? string.Empty;
             var subtitle = world.Length > 0 ? string.Concat(rank, "  ·  ", world) : rank;
-            list.Add(new RosterMember(member.Id, member.Name, subtitle, world, member.Avatar, MemberAvatarKey(member.Id)));
+            list.Add(new RosterMember(member.Id, member.Name, subtitle, world, member.Avatar,
+                MemberAvatarKey(member.Id)));
         }
 
         return list.ToArray();
     }
 
     private static string CrestKey(string id) => string.Concat("findpeople:crest:", id);
-
     private static string PortraitKey(string id) => string.Concat("findpeople:portrait:", id);
-
     private static string MemberAvatarKey(string id) => string.Concat("findpeople:member:", id);
 
     private static string CleanServer(string? server)
@@ -669,7 +642,6 @@ internal sealed class LookupService : IDisposable
         }
 
         public T Value { get; }
-
         public bool IsStale(TimeSpan ttl) => DateTime.UtcNow - created >= ttl;
     }
 }

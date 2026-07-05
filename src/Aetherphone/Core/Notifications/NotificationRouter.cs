@@ -6,9 +6,7 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class NotificationRouter
 {
     private const string MessagesAppId = "messages";
-
     private const string VelvetAppId = "velvet";
-
     private readonly INavigator navigation;
     private readonly MessageLauncher messageLauncher;
     private readonly VelvetLauncher velvetLauncher;

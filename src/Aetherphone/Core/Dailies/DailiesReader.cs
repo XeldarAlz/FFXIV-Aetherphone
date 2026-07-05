@@ -15,27 +15,22 @@ internal static unsafe class DailiesReader
             {
                 return ReadBeastTribe(goal);
             }
-
             case DailyTracking.CustomDeliveries:
             {
                 return ReadCustomDeliveries(goal);
             }
-
             case DailyTracking.WondrousTails:
             {
                 return ReadWondrousTails(goal);
             }
-
             case DailyTracking.DomanEnclave:
             {
                 return ReadDomanEnclave();
             }
-
             case DailyTracking.Levequests:
             {
                 return ReadLevequests(goal);
             }
-
             default:
             {
                 return DailyAutoStatus.Unavailable;

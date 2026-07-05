@@ -14,116 +14,74 @@ internal enum TetrisPieceKind
 internal sealed class TetrisBoard
 {
     public const int Columns = 10;
-
     public const int Rows = 20;
-
     private static readonly (int X, int Y)[] WallKicks = { (0, 0), (-1, 0), (1, 0), (-2, 0), (2, 0), (0, -1) };
 
     private static readonly (int X, int Y)[][][] Shapes =
     {
         new[]
         {
-            new[] { (0, 1), (1, 1), (2, 1), (3, 1) },
-            new[] { (2, 0), (2, 1), (2, 2), (2, 3) },
-            new[] { (0, 1), (1, 1), (2, 1), (3, 1) },
-            new[] { (2, 0), (2, 1), (2, 2), (2, 3) },
+            new[] { (0, 1), (1, 1), (2, 1), (3, 1) }, new[] { (2, 0), (2, 1), (2, 2), (2, 3) },
+            new[] { (0, 1), (1, 1), (2, 1), (3, 1) }, new[] { (2, 0), (2, 1), (2, 2), (2, 3) },
         },
         new[]
         {
-            new[] { (1, 1), (2, 1), (1, 2), (2, 2) },
-            new[] { (1, 1), (2, 1), (1, 2), (2, 2) },
-            new[] { (1, 1), (2, 1), (1, 2), (2, 2) },
-            new[] { (1, 1), (2, 1), (1, 2), (2, 2) },
+            new[] { (1, 1), (2, 1), (1, 2), (2, 2) }, new[] { (1, 1), (2, 1), (1, 2), (2, 2) },
+            new[] { (1, 1), (2, 1), (1, 2), (2, 2) }, new[] { (1, 1), (2, 1), (1, 2), (2, 2) },
         },
         new[]
         {
-            new[] { (1, 1), (0, 2), (1, 2), (2, 2) },
-            new[] { (1, 1), (1, 2), (2, 2), (1, 3) },
-            new[] { (0, 2), (1, 2), (2, 2), (1, 3) },
-            new[] { (1, 1), (0, 2), (1, 2), (1, 3) },
+            new[] { (1, 1), (0, 2), (1, 2), (2, 2) }, new[] { (1, 1), (1, 2), (2, 2), (1, 3) },
+            new[] { (0, 2), (1, 2), (2, 2), (1, 3) }, new[] { (1, 1), (0, 2), (1, 2), (1, 3) },
         },
         new[]
         {
-            new[] { (2, 1), (0, 2), (1, 2), (2, 2) },
-            new[] { (1, 1), (1, 2), (1, 3), (2, 3) },
-            new[] { (0, 2), (1, 2), (2, 2), (0, 3) },
-            new[] { (0, 1), (1, 1), (1, 2), (1, 3) },
+            new[] { (2, 1), (0, 2), (1, 2), (2, 2) }, new[] { (1, 1), (1, 2), (1, 3), (2, 3) },
+            new[] { (0, 2), (1, 2), (2, 2), (0, 3) }, new[] { (0, 1), (1, 1), (1, 2), (1, 3) },
         },
         new[]
         {
-            new[] { (0, 1), (0, 2), (1, 2), (2, 2) },
-            new[] { (1, 1), (2, 1), (1, 2), (1, 3) },
-            new[] { (0, 2), (1, 2), (2, 2), (2, 3) },
-            new[] { (1, 1), (1, 2), (0, 3), (1, 3) },
+            new[] { (0, 1), (0, 2), (1, 2), (2, 2) }, new[] { (1, 1), (2, 1), (1, 2), (1, 3) },
+            new[] { (0, 2), (1, 2), (2, 2), (2, 3) }, new[] { (1, 1), (1, 2), (0, 3), (1, 3) },
         },
         new[]
         {
-            new[] { (1, 1), (2, 1), (0, 2), (1, 2) },
-            new[] { (1, 1), (1, 2), (2, 2), (2, 3) },
-            new[] { (1, 2), (2, 2), (0, 3), (1, 3) },
-            new[] { (0, 1), (0, 2), (1, 2), (1, 3) },
+            new[] { (1, 1), (2, 1), (0, 2), (1, 2) }, new[] { (1, 1), (1, 2), (2, 2), (2, 3) },
+            new[] { (1, 2), (2, 2), (0, 3), (1, 3) }, new[] { (0, 1), (0, 2), (1, 2), (1, 3) },
         },
         new[]
         {
-            new[] { (0, 1), (1, 1), (1, 2), (2, 2) },
-            new[] { (2, 1), (1, 2), (2, 2), (1, 3) },
-            new[] { (0, 2), (1, 2), (1, 3), (2, 3) },
-            new[] { (1, 1), (0, 2), (1, 2), (0, 3) },
+            new[] { (0, 1), (1, 1), (1, 2), (2, 2) }, new[] { (2, 1), (1, 2), (2, 2), (1, 3) },
+            new[] { (0, 2), (1, 2), (1, 3), (2, 3) }, new[] { (1, 1), (0, 2), (1, 2), (0, 3) },
         },
     };
 
     private readonly int[] cells = new int[Columns * Rows];
-
     private readonly TetrisPieceKind[] bag = new TetrisPieceKind[7];
-
     private readonly TetrisLevelSystem levelSystem = new();
-
     private readonly TetrisScoringSystem scoring = new();
-
     private readonly Random random = new();
-
     private int bagIndex;
-
     private TetrisPieceKind? heldKind;
-
     private bool holdUsedThisTurn;
-
     private float dropTimer;
-
     private TetrisPieceKind activeKind;
-
     private int activeRotation;
-
     private int activeX;
-
     private int activeY;
-
     public int Score => scoring.Score;
-
     public int Lines => levelSystem.TotalLinesCleared;
-
     public int Level => levelSystem.Level;
-
     public int ClearedLinesThisFrame { get; private set; }
-
     public int LastLockScore { get; private set; }
-
     public bool GameOver { get; private set; }
-
     public bool HasActivePiece { get; private set; }
-
     public TetrisPieceKind? HeldKind => heldKind;
-
     public TetrisPieceKind ActiveKind => activeKind;
-
     public TetrisPieceKind NextPieceKind => bag[bagIndex];
-
     public int ActiveRotation => activeRotation;
-
     public int ActiveX => activeX;
-
     public int ActiveY => activeY;
-
     public int CellColor(int column, int row) => cells[row * Columns + column];
 
     public void Reset()
@@ -145,7 +103,6 @@ internal sealed class TetrisBoard
     public void Update(float deltaSeconds)
     {
         ClearedLinesThisFrame = 0;
-
         if (GameOver || !HasActivePiece)
         {
             return;
@@ -186,7 +143,6 @@ internal sealed class TetrisBoard
         }
 
         var nextRotation = (activeRotation + (direction >= 0 ? 1 : 3)) & 3;
-
         for (var index = 0; index < WallKicks.Length; index++)
         {
             var kick = WallKicks[index];
@@ -248,7 +204,6 @@ internal sealed class TetrisBoard
         }
 
         holdUsedThisTurn = true;
-
         if (!heldKind.HasValue)
         {
             heldKind = activeKind;
@@ -300,7 +255,6 @@ internal sealed class TetrisBoard
         var clearedLines = ClearLines();
         ClearedLinesThisFrame = clearedLines;
         LastLockScore = scoring.CommitPiece(clearedLines, levelSystem.Level);
-
         if (clearedLines > 0)
         {
             levelSystem.RegisterClearedLines(clearedLines);
@@ -384,7 +338,6 @@ internal sealed class TetrisBoard
         activeY = 0;
         HasActivePiece = CanPlace(activeX, activeY, activeRotation);
         holdUsedThisTurn = !resetHoldLock;
-
         if (!HasActivePiece)
         {
             GameOver = true;

@@ -11,7 +11,6 @@ internal static class CallFormat
 
         var minutes = seconds / 60;
         var remainder = seconds % 60;
-
         if (minutes >= 60)
         {
             var hours = minutes / 60;

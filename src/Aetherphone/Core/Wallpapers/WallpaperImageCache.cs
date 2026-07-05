@@ -1,7 +1,4 @@
 using System.Collections.Concurrent;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Core.Wallpapers;

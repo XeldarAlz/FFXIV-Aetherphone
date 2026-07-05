@@ -26,7 +26,6 @@ internal sealed class FeedbackFx
     private readonly FloatText[] floats = new FloatText[FloatCapacity];
     private readonly Random random = new();
     private int activeFloats;
-
     private float trauma;
     private float flashAlpha;
     private Vector4 flashColor;
@@ -49,7 +48,8 @@ internal sealed class FeedbackFx
         flashAlpha = MathF.Max(flashAlpha, alpha);
     }
 
-    public void AddText(string text, Vector2 position, Vector4 color, float scale = 1f, float rise = 46f, FontWeight weight = FontWeight.Bold)
+    public void AddText(string text, Vector2 position, Vector4 color, float scale = 1f, float rise = 46f,
+        FontWeight weight = FontWeight.Bold)
     {
         if (activeFloats >= FloatCapacity)
         {
@@ -77,7 +77,6 @@ internal sealed class FeedbackFx
 
         trauma = MathF.Max(0f, trauma - TraumaDecay * deltaSeconds);
         flashAlpha = MathF.Max(0f, flashAlpha - deltaSeconds * 3.2f);
-
         for (var index = activeFloats - 1; index >= 0; index--)
         {
             ref var entry = ref floats[index];
@@ -114,7 +113,8 @@ internal sealed class FeedbackFx
             return;
         }
 
-        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(flashColor with { W = flashColor.W * flashAlpha }), rounding);
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(flashColor with { W = flashColor.W * flashAlpha }),
+            rounding);
     }
 
     public void DrawText()
@@ -125,7 +125,8 @@ internal sealed class FeedbackFx
             var fade = entry.Life / entry.MaxLife;
             var alpha = fade > 0.6f ? 1f : fade / 0.6f;
             var pop = entry.Life > entry.MaxLife - 0.12f ? 1.18f : 1f;
-            Typography.DrawCentered(entry.Position, entry.Text, entry.Color with { W = entry.Color.W * alpha }, entry.Scale * pop, entry.Weight);
+            Typography.DrawCentered(entry.Position, entry.Text, entry.Color with { W = entry.Color.W * alpha },
+                entry.Scale * pop, entry.Weight);
         }
     }
 }

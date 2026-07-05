@@ -14,7 +14,6 @@ internal static class DailyCatalog
         new("daily.gcSupply", L.Dailies.GrandCompanySupply, FontAwesomeIcon.ShieldAlt, Styling.AccentRose, DailyCadence.Daily, DailyTracking.Manual, 1),
         new("daily.domanEnclave", L.Dailies.DomanEnclave, FontAwesomeIcon.Coins, Styling.AccentAmberSoft, DailyCadence.Daily, DailyTracking.DomanEnclave, 1),
         new("daily.levequests", L.Dailies.Levequests, FontAwesomeIcon.Scroll, Styling.AccentBlueSoft, DailyCadence.Daily, DailyTracking.Levequests, 100),
-
         new("weekly.wondrousTails", L.Dailies.WondrousTails, FontAwesomeIcon.BookOpen, Styling.AccentViolet, DailyCadence.Weekly, DailyTracking.WondrousTails, 9),
         new("weekly.jumboCactpot", L.Dailies.JumboCactpot, FontAwesomeIcon.TicketAlt, Styling.AccentAmber, DailyCadence.Weekly, DailyTracking.Manual, 3),
         new("weekly.customDeliveries", L.Dailies.CustomDeliveries, FontAwesomeIcon.Truck, Styling.AccentMint, DailyCadence.Weekly, DailyTracking.CustomDeliveries, 12),

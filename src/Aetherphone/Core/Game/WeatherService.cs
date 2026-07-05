@@ -10,7 +10,6 @@ internal sealed class WeatherService
     private const long RealSecondsPerEorzeaHour = 175;
     private const long RealSecondsPerWindow = 1400;
     private const long RealSecondsPerEorzeaDay = 4200;
-
     private readonly IDataManager data;
     private readonly IClientState clientState;
 
@@ -34,7 +33,6 @@ internal sealed class WeatherService
     public void Forecast(List<WeatherWindow> into, int count)
     {
         into.Clear();
-
         var territoryId = clientState.TerritoryType;
         if (territoryId == 0 || !data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {
@@ -50,7 +48,6 @@ internal sealed class WeatherService
         var startBell = nowUnix / RealSecondsPerEorzeaHour;
         startBell -= startBell % 8;
         var startUnix = startBell * RealSecondsPerEorzeaHour;
-
         for (var index = 0; index < count; index++)
         {
             var timestamp = startUnix + index * RealSecondsPerWindow;

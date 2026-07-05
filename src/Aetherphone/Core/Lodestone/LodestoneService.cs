@@ -1,6 +1,3 @@
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 using NetStone;
 using NetStone.Model.Parseables.Search.Character;
@@ -11,20 +8,16 @@ namespace Aetherphone.Core.Lodestone;
 internal sealed class LodestoneService : IDisposable
 {
     internal static readonly TimeSpan NetStoneTimeout = TimeSpan.FromSeconds(20);
-
     private static readonly TimeSpan InitRetryFor = TimeSpan.FromMinutes(1);
-
     private readonly Configuration configuration;
     private readonly HttpService http;
     private readonly MediaCache media;
     private readonly RequestThrottle throttle;
     private readonly string idIndexPath;
-
     private readonly object idSync = new();
     private readonly Dictionary<string, string> resolvedIds = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> unresolved = new(StringComparer.OrdinalIgnoreCase);
     private bool idsLoaded;
-
     private readonly SemaphoreSlim clientGate = new(1, 1);
     private LodestoneClient? client;
     private DateTime lastInitFailureUtc = DateTime.MinValue;
@@ -46,7 +39,6 @@ internal sealed class LodestoneService : IDisposable
         }
 
         EnsureIdsLoaded();
-
         var key = $"{name}@{world}";
         lock (idSync)
         {
@@ -55,7 +47,6 @@ internal sealed class LodestoneService : IDisposable
     }
 
     public AvatarHandle Avatar(string name, string world) => Image(name, world, false);
-
     public AvatarHandle Portrait(string name, string world) => Image(name, world, true);
 
     public bool TryGetCachedId(string name, string world, out string id)
@@ -67,7 +58,6 @@ internal sealed class LodestoneService : IDisposable
         }
 
         EnsureIdsLoaded();
-
         var key = $"{name}@{world}";
         lock (idSync)
         {
@@ -89,13 +79,13 @@ internal sealed class LodestoneService : IDisposable
         }
 
         var result = media.GetOrRequest(cacheKey, token => http.GetBytesAsync(uri, token));
-        var state = result.Texture is not null
-            ? AvatarLoadState.Ready
-            : result.Loading ? AvatarLoadState.Loading : AvatarLoadState.Failed;
+        var state = result.Texture is not null ? AvatarLoadState.Ready :
+            result.Loading ? AvatarLoadState.Loading : AvatarLoadState.Failed;
         return new AvatarHandle(result.Texture, state, cacheKey);
     }
 
-    public async Task<IDisposable> ThrottleAsync(CancellationToken token) => await throttle.EnterAsync(token).ConfigureAwait(false);
+    public async Task<IDisposable> ThrottleAsync(CancellationToken token) =>
+        await throttle.EnterAsync(token).ConfigureAwait(false);
 
     public Task<LodestoneClient?> ClientAsync(CancellationToken token) => EnsureClientAsync(token);
 
@@ -108,9 +98,8 @@ internal sealed class LodestoneService : IDisposable
 
         var key = $"lodestone:{(fullBody ? "portrait" : "avatar")}:{name}@{world}".ToLowerInvariant();
         var result = media.GetOrRequest(key, token => FetchAsync(name, world, fullBody, token));
-        var state = result.Texture is not null
-            ? AvatarLoadState.Ready
-            : result.Loading ? AvatarLoadState.Loading : AvatarLoadState.Failed;
+        var state = result.Texture is not null ? AvatarLoadState.Ready :
+            result.Loading ? AvatarLoadState.Loading : AvatarLoadState.Failed;
         return new AvatarHandle(result.Texture, state, key);
     }
 
@@ -144,7 +133,6 @@ internal sealed class LodestoneService : IDisposable
     private async Task<string?> ResolveIdAsync(string name, string world, CancellationToken token)
     {
         EnsureIdsLoaded();
-
         var key = $"{name}@{world}";
         lock (idSync)
         {
@@ -165,9 +153,9 @@ internal sealed class LodestoneService : IDisposable
             return null;
         }
 
-        var page = await ready.SearchCharacter(new CharacterSearchQuery { CharacterName = name, World = world }).WaitAsync(NetStoneTimeout, token).ConfigureAwait(false);
+        var page = await ready.SearchCharacter(new CharacterSearchQuery { CharacterName = name, World = world })
+            .WaitAsync(NetStoneTimeout, token).ConfigureAwait(false);
         var id = SelectId(page, name);
-
         lock (idSync)
         {
             if (id is null)

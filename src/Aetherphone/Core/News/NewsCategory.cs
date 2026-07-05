@@ -5,7 +5,7 @@ internal enum NewsCategory : byte
     Topics,
     Notices,
     Maintenance,
-    Updates,
+    Updates
 }
 
 internal static class NewsCategories
@@ -15,14 +15,17 @@ internal static class NewsCategories
         NewsCategory.Topics,
         NewsCategory.Notices,
         NewsCategory.Maintenance,
-        NewsCategory.Updates,
+        NewsCategory.Updates
     };
 
-    public static string Path(NewsCategory category) => category switch
+    public static string Path(NewsCategory category)
     {
-        NewsCategory.Notices => "notices",
-        NewsCategory.Maintenance => "maintenance",
-        NewsCategory.Updates => "updates",
-        _ => "topics",
-    };
+        return category switch
+        {
+            NewsCategory.Notices => "notices",
+            NewsCategory.Maintenance => "maintenance",
+            NewsCategory.Updates => "updates",
+            _ => "topics"
+        };
+    }
 }

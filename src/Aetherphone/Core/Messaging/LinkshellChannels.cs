@@ -28,7 +28,8 @@ internal static class LinkshellChannels
             case XivChatType.CrossLinkShell6:
             case XivChatType.CrossLinkShell7:
             case XivChatType.CrossLinkShell8:
-                channel = new LinkshellChannel(LinkshellKind.CrossWorldLinkshell, kind - XivChatType.CrossLinkShell2 + 1);
+                channel = new LinkshellChannel(LinkshellKind.CrossWorldLinkshell,
+                    kind - XivChatType.CrossLinkShell2 + 1);
                 return true;
             default:
                 channel = default;

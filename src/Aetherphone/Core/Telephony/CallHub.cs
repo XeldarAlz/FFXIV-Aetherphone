@@ -13,19 +13,15 @@ internal sealed class CallHub : IDisposable
     private const float IncomingTimeoutSeconds = 60f;
     private const float DialingTimeoutSeconds = 60f;
     private const int MaxRecents = 8;
-
     private static readonly Vector4 Accent = new(0.20f, 0.78f, 0.35f, 1f);
-
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly NotificationService notifications;
     private readonly IRingtone ringtone;
     private readonly PlaybackHub playback;
     private readonly RealtimeConnection connection;
-
     private readonly object gate = new();
     private readonly HashSet<int> remoteSlots = new();
-
     private CallState state = CallState.Idle;
     private Guid callId;
     private ParticipantInfo[] roster = Array.Empty<ParticipantInfo>();
@@ -39,7 +35,8 @@ internal sealed class CallHub : IDisposable
     private float stateTimer;
     private CallContact[] recents = Array.Empty<CallContact>();
 
-    public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications, IRingtone ringtone, PlaybackHub playback)
+    public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
+        IRingtone ringtone, PlaybackHub playback)
     {
         this.configuration = configuration;
         this.session = session;
@@ -50,15 +47,10 @@ internal sealed class CallHub : IDisposable
     }
 
     public event Action? IncomingCallPresented;
-
     public bool Enabled => configuration.CallsEnabled;
-
     public bool SignedIn => session.IsSignedIn;
-
     public bool Connected => connection.Connected;
-
     public string LocalUserId => session.CurrentUser?.Id ?? string.Empty;
-
     public CallContact[] Recents => recents;
 
     public void Start()
@@ -85,19 +77,8 @@ internal sealed class CallHub : IDisposable
             var seconds = state == CallState.Active && callStartTicks != 0
                 ? (int)((Environment.TickCount64 - callStartTicks) / 1000)
                 : 0;
-
-            return new CallView(
-                state,
-                muted,
-                volume,
-                activeSession?.MicLevel ?? 0f,
-                seconds,
-                roster,
-                incomingFrom,
-                connection.Connected,
-                localId,
-                BuildPeerLabel(localId),
-                others);
+            return new CallView(state, muted, volume, activeSession?.MicLevel ?? 0f, seconds, roster, incomingFrom,
+                connection.Connected, localId, BuildPeerLabel(localId), others);
         }
     }
 
@@ -139,9 +120,7 @@ internal sealed class CallHub : IDisposable
         AddRecent(target);
         Send(new CallControl
         {
-            Type = SignalType.Start,
-            CallId = id.ToString("D"),
-            InviteeIds = new[] { target.UserId },
+            Type = SignalType.Start, CallId = id.ToString("D"), InviteeIds = new[] { target.UserId },
         });
     }
 
@@ -159,12 +138,7 @@ internal sealed class CallHub : IDisposable
         }
 
         AddRecent(target);
-        Send(new CallControl
-        {
-            Type = SignalType.Invite,
-            CallId = id,
-            InviteeIds = new[] { target.UserId },
-        });
+        Send(new CallControl { Type = SignalType.Invite, CallId = id, InviteeIds = new[] { target.UserId }, });
     }
 
     public void Accept()
@@ -247,7 +221,6 @@ internal sealed class CallHub : IDisposable
         var ring = false;
         var declineTimeout = false;
         var dialTimeout = false;
-
         lock (gate)
         {
             if (state == CallState.Ringing)
@@ -287,7 +260,8 @@ internal sealed class CallHub : IDisposable
         else if (dialTimeout)
         {
             Hangup();
-            notifications.Notify(new PhoneNotification("phone", "No answer", "The call was not answered", DateTime.Now, Accent));
+            notifications.Notify(new PhoneNotification("phone", "No answer", "The call was not answered", DateTime.Now,
+                Accent));
         }
     }
 
@@ -345,7 +319,8 @@ internal sealed class CallHub : IDisposable
         }
 
         ringtone.Play();
-        notifications.Notify(new PhoneNotification("phone", message.From.DisplayName, "Incoming call", DateTime.Now, Accent));
+        notifications.Notify(new PhoneNotification("phone", message.From.DisplayName, "Incoming call", DateTime.Now,
+            Accent));
         IncomingCallPresented?.Invoke();
     }
 
@@ -359,7 +334,6 @@ internal sealed class CallHub : IDisposable
         var participants = message.Participants ?? Array.Empty<ParticipantInfo>();
         CallSession? sessionToDispose = null;
         var localId = LocalUserId;
-
         lock (gate)
         {
             if (id != callId)
@@ -368,7 +342,6 @@ internal sealed class CallHub : IDisposable
             }
 
             roster = participants;
-
             var localSlot = -1;
             var activeOthers = 0;
             for (var index = 0; index < participants.Length; index++)
@@ -507,11 +480,7 @@ internal sealed class CallHub : IDisposable
     {
         var input = AudioDevices.ResolveInput(configuration.CallInputDevice);
         var output = AudioDevices.ResolveOutput(configuration.CallOutputDevice);
-        var created = new CallSession(callId, connection, input, output, volume)
-        {
-            Muted = muted,
-        };
-
+        var created = new CallSession(callId, connection, input, output, volume) { Muted = muted, };
         if (localSlot >= 0)
         {
             created.SetLocalSlot(localSlot);
@@ -530,7 +499,9 @@ internal sealed class CallHub : IDisposable
             return;
         }
 
-        Span<int> present = participants.Length <= 16 ? stackalloc int[participants.Length] : new int[participants.Length];
+        Span<int> present = participants.Length <= 16
+            ? stackalloc int[participants.Length]
+            : new int[participants.Length];
         var presentCount = 0;
         for (var index = 0; index < participants.Length; index++)
         {
@@ -593,7 +564,6 @@ internal sealed class CallHub : IDisposable
         }
 
         toDispose?.Dispose();
-
         if (notify && reason is not null)
         {
             notifications.Notify(new PhoneNotification("phone", reason, "Call ended", DateTime.Now, Accent));
@@ -697,7 +667,6 @@ internal sealed class CallHub : IDisposable
         connection.ControlReceived -= OnControl;
         connection.ConnectedChanged -= OnConnectedChanged;
         session.Changed -= Reconcile;
-
         CallSession? toDispose;
         lock (gate)
         {

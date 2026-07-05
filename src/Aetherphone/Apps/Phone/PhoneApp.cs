@@ -1,6 +1,4 @@
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -21,28 +19,20 @@ namespace Aetherphone.Apps.Phone;
 internal sealed class PhoneApp : IPhoneApp
 {
     private static readonly Vector4 CallGreen = new(0.20f, 0.78f, 0.35f, 1f);
-
     private static readonly Vector4 BackdropTop = new(0.05f, 0.19f, 0.10f, 1f);
     private static readonly Vector4 BackdropBottom = new(0.02f, 0.04f, 0.03f, 1f);
     private static readonly Vector4 BloomTop = new(0.20f, 0.78f, 0.35f, 0.20f);
     private static readonly Vector4 BloomBottom = new(0.10f, 0.40f, 0.20f, 0f);
-
     public string Id => "phone";
-
     public string DisplayName => Loc.T(L.Phone.Title);
-
     public string Glyph => "Ph";
-
     public Vector4 Accent => CallGreen;
-
     public int BadgeCount => 0;
-
     private readonly CallHub calls;
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly LodestoneService lodestone;
     private readonly CancellationTokenSource cancellation = new();
-
     private volatile UserDto[] searchResults = Array.Empty<UserDto>();
     private volatile bool searching;
     private string searchDraft = string.Empty;
@@ -74,7 +64,6 @@ internal sealed class PhoneApp : IPhoneApp
         clock += MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var view = calls.Snapshot();
         var inCall = view.State is CallState.Dialing or CallState.Connecting or CallState.Active;
-
         if (inCall && addingToCall && view.State == CallState.Active)
         {
             DrawDialer(context, view, true);
@@ -97,12 +86,9 @@ internal sealed class PhoneApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var content = context.Content;
-
         AppHeader.Draw(context, addMode ? Loc.T(L.Phone.AddToCall) : DisplayName, addMode ? StopAdding : null);
-
         var top = content.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(content.Min.X, top), content.Max);
-
         if (!session.IsSignedIn)
         {
             Typography.DrawCentered(body.Center, Loc.T(L.Phone.SignInPrompt), theme.TextMuted);
@@ -116,26 +102,28 @@ internal sealed class PhoneApp : IPhoneApp
         }
 
         var searchHeight = 52f * scale;
-        DrawSearchBar(new Rect(new Vector2(body.Min.X, top), new Vector2(body.Max.X, top + searchHeight)), theme, scale);
-
+        DrawSearchBar(new Rect(new Vector2(body.Min.X, top), new Vector2(body.Max.X, top + searchHeight)), theme,
+            scale);
         var listRect = new Rect(new Vector2(body.Min.X, top + searchHeight), body.Max);
         var results = searchResults;
         var query = searchDraft.Trim();
-
         using (AppSurface.Begin(listRect))
         {
             if (query.Length > 0)
             {
                 if (results.Length == 0)
                 {
-                    Typography.DrawCentered(listRect.Center, searching ? Loc.T(L.Common.Searching) : Loc.T(L.Phone.NoOneFound), theme.TextMuted);
+                    Typography.DrawCentered(listRect.Center,
+                        searching ? Loc.T(L.Common.Searching) : Loc.T(L.Phone.NoOneFound), theme.TextMuted);
                 }
                 else
                 {
                     for (var index = 0; index < results.Length; index++)
                     {
                         var user = results[index];
-                        DrawCallableRow(user.DisplayName, $"{user.Name}@{user.World}", user.Name, user.World, theme, scale, () => Place(new CallContact(user.Id, user.Name, user.World, user.DisplayName), addMode));
+                        DrawCallableRow(user.DisplayName, $"{user.Name}@{user.World}", user.Name, user.World, theme,
+                            scale,
+                            () => Place(new CallContact(user.Id, user.Name, user.World, user.DisplayName), addMode));
                     }
                 }
             }
@@ -147,7 +135,8 @@ internal sealed class PhoneApp : IPhoneApp
 
         if (!view.Connected)
         {
-            Typography.DrawCentered(new Vector2(body.Center.X, body.Max.Y - 14f * scale), Loc.T(L.Phone.Connecting), theme.TextMuted, 0.8f);
+            Typography.DrawCentered(new Vector2(body.Center.X, body.Max.Y - 14f * scale), Loc.T(L.Phone.Connecting),
+                theme.TextMuted, 0.8f);
         }
     }
 
@@ -157,7 +146,9 @@ internal sealed class PhoneApp : IPhoneApp
         if (recents.Length == 0)
         {
             ImGui.Dummy(new Vector2(0f, 30f * scale));
-            Typography.DrawCentered(new Vector2(ImGui.GetContentRegionAvail().X * 0.5f + ImGui.GetCursorScreenPos().X, ImGui.GetCursorScreenPos().Y), Loc.T(L.Phone.SearchPrompt), theme.TextMuted);
+            Typography.DrawCentered(
+                new Vector2(ImGui.GetContentRegionAvail().X * 0.5f + ImGui.GetCursorScreenPos().X,
+                    ImGui.GetCursorScreenPos().Y), Loc.T(L.Phone.SearchPrompt), theme.TextMuted);
             return;
         }
 
@@ -165,31 +156,30 @@ internal sealed class PhoneApp : IPhoneApp
         for (var index = 0; index < recents.Length; index++)
         {
             var contact = recents[index];
-            DrawCallableRow(contact.DisplayName, $"{contact.Name}@{contact.World}", contact.Name, contact.World, theme, scale, () => Place(contact, addMode));
+            DrawCallableRow(contact.DisplayName, $"{contact.Name}@{contact.World}", contact.Name, contact.World, theme,
+                scale, () => Place(contact, addMode));
         }
     }
 
-    private void DrawCallableRow(string title, string subtitle, string name, string world, PhoneTheme theme, float scale, Action onCall)
+    private void DrawCallableRow(string title, string subtitle, string name, string world, PhoneTheme theme,
+        float scale, Action onCall)
     {
         var rowHeight = 56f * scale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var dl = ImGui.GetWindowDrawList();
-
         var radius = 18f * scale;
         var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
-        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(title), 0.95f, lodestone.Avatar(name, world), 32);
-
+        AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(title), 0.95f, lodestone.Avatar(name, world),
+            32);
         var textLeft = origin.X + radius * 2f + 10f * scale;
         Typography.Draw(new Vector2(textLeft, origin.Y + 9f * scale), title, theme.TextStrong);
         Typography.Draw(new Vector2(textLeft, origin.Y + 30f * scale), subtitle, theme.TextMuted, 0.85f);
-
         var callCenter = new Vector2(origin.X + width - 20f * scale, avatarCenter.Y);
-        var clicked = CircleButton(callCenter, 16f * scale, FontAwesomeIcon.Phone, CallGreen, new Vector4(1f, 1f, 1f, 1f));
-
+        var clicked = CircleButton(callCenter, 16f * scale, FontAwesomeIcon.Phone, CallGreen,
+            new Vector4(1f, 1f, 1f, 1f));
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
-
         if (clicked)
         {
             onCall();
@@ -202,18 +192,15 @@ internal sealed class PhoneApp : IPhoneApp
         var theme = context.Theme;
         var content = context.Content;
         var dl = ImGui.GetWindowDrawList();
-
         var screen = SceneChrome.ScreenFrom(content, theme, scale);
         var rounding = theme.ScreenRounding * scale;
-        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding,
-            ImGui.GetColorU32(BackdropTop), ImGui.GetColorU32(BackdropBottom));
-        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding,
-            ImGui.GetColorU32(BloomTop), ImGui.GetColorU32(BloomBottom));
-
+        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding, ImGui.GetColorU32(BackdropTop),
+            ImGui.GetColorU32(BackdropBottom));
+        Squircle.FillVerticalGradient(dl, screen.Min, screen.Max, rounding, ImGui.GetColorU32(BloomTop),
+            ImGui.GetColorU32(BloomBottom));
         var others = Others(view);
         var centerX = content.Center.X;
         var avatarTop = content.Min.Y + 40f * scale;
-
         if (others.Count <= 1)
         {
             var radius = 52f * scale;
@@ -221,7 +208,8 @@ internal sealed class PhoneApp : IPhoneApp
             if (others.Count == 1)
             {
                 DrawSpeakingHalo(dl, avatarCenter, radius, calls.LevelOf(others[0]), scale);
-                AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(view.PeerLabel), 2.4f, lodestone.Avatar(others[0].Name, others[0].World), 64);
+                AvatarView.Draw(dl, avatarCenter, radius, theme.Accent, Initial(view.PeerLabel), 2.4f,
+                    lodestone.Avatar(others[0].Name, others[0].World), 64);
             }
             else
             {
@@ -236,24 +224,25 @@ internal sealed class PhoneApp : IPhoneApp
 
         var labelY = others.Count <= 1 ? avatarTop + 104f * scale + 22f * scale : avatarTop + 150f * scale;
         Typography.DrawCentered(new Vector2(centerX, labelY), view.PeerLabel, theme.TextStrong, 1.6f);
-        Typography.DrawCentered(new Vector2(centerX, labelY + 28f * scale), StatusLine(view), Palette.WithAlpha(theme.TextStrong, 0.75f), 0.95f);
-
+        Typography.DrawCentered(new Vector2(centerX, labelY + 28f * scale), StatusLine(view),
+            Palette.WithAlpha(theme.TextStrong, 0.75f), 0.95f);
         if (view.State == CallState.Active)
         {
-            Typography.DrawCentered(new Vector2(centerX, labelY + 50f * scale), Loc.T(L.Phone.UseHeadphones), theme.TextMuted, 0.75f);
+            Typography.DrawCentered(new Vector2(centerX, labelY + 50f * scale), Loc.T(L.Phone.UseHeadphones),
+                theme.TextMuted, 0.75f);
         }
 
         DrawCallControls(context, view, scale, theme);
     }
 
-    private void DrawParticipantGrid(Rect content, List<ParticipantInfo> others, PhoneTheme theme, float scale, float top)
+    private void DrawParticipantGrid(Rect content, List<ParticipantInfo> others, PhoneTheme theme, float scale,
+        float top)
     {
         const int columns = 4;
         var radius = 26f * scale;
         var cellWidth = content.Width / columns;
         var rows = (others.Count + columns - 1) / columns;
         var dl = ImGui.GetWindowDrawList();
-
         for (var index = 0; index < others.Count; index++)
         {
             var column = index % columns;
@@ -261,10 +250,11 @@ internal sealed class PhoneApp : IPhoneApp
             var cellCenterX = content.Min.X + column * cellWidth + cellWidth * 0.5f;
             var cellCenterY = top + radius + row * (radius * 2f + 22f * scale);
             var center = new Vector2(cellCenterX, cellCenterY);
-
             DrawSpeakingHalo(dl, center, radius, calls.LevelOf(others[index]), scale);
-            AvatarView.Draw(dl, center, radius, theme.Accent, Initial(others[index].DisplayName), 1.2f, lodestone.Avatar(others[index].Name, others[index].World), 48);
-            Typography.DrawCentered(new Vector2(cellCenterX, cellCenterY + radius + 12f * scale), Truncate(others[index].DisplayName, 10), theme.TextStrong, 0.78f);
+            AvatarView.Draw(dl, center, radius, theme.Accent, Initial(others[index].DisplayName), 1.2f,
+                lodestone.Avatar(others[index].Name, others[index].World), 48);
+            Typography.DrawCentered(new Vector2(cellCenterX, cellCenterY + radius + 12f * scale),
+                Truncate(others[index].DisplayName, 10), theme.TextStrong, 0.78f);
         }
 
         _ = rows;
@@ -275,20 +265,22 @@ internal sealed class PhoneApp : IPhoneApp
         var content = context.Content;
         var centerX = content.Center.X;
         var controlsY = content.Max.Y - 54f * scale;
-
         var muteFill = view.Muted ? CallGreen : Palette.WithAlpha(theme.TextStrong, 0.16f);
-        if (CircleButton(new Vector2(centerX - 76f * scale, controlsY), 24f * scale, view.Muted ? FontAwesomeIcon.MicrophoneSlash : FontAwesomeIcon.Microphone, muteFill, theme.TextStrong))
+        if (CircleButton(new Vector2(centerX - 76f * scale, controlsY), 24f * scale,
+                view.Muted ? FontAwesomeIcon.MicrophoneSlash : FontAwesomeIcon.Microphone, muteFill, theme.TextStrong))
         {
             calls.ToggleMute();
         }
 
-        if (CircleButton(new Vector2(centerX, controlsY), 30f * scale, FontAwesomeIcon.PhoneSlash, theme.Danger, new Vector4(1f, 1f, 1f, 1f)))
+        if (CircleButton(new Vector2(centerX, controlsY), 30f * scale, FontAwesomeIcon.PhoneSlash, theme.Danger,
+                new Vector4(1f, 1f, 1f, 1f)))
         {
             calls.Hangup();
         }
 
         var canAdd = view.State == CallState.Active;
-        if (CircleButton(new Vector2(centerX + 76f * scale, controlsY), 24f * scale, FontAwesomeIcon.UserPlus, Palette.WithAlpha(theme.TextStrong, 0.16f), theme.TextStrong, canAdd) && canAdd)
+        if (CircleButton(new Vector2(centerX + 76f * scale, controlsY), 24f * scale, FontAwesomeIcon.UserPlus,
+                Palette.WithAlpha(theme.TextStrong, 0.16f), theme.TextStrong, canAdd) && canAdd)
         {
             addingToCall = true;
         }
@@ -297,9 +289,10 @@ internal sealed class PhoneApp : IPhoneApp
     private void DrawEnablePrompt(Rect body, PhoneTheme theme, float scale)
     {
         var centerX = body.Center.X;
-        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 30f * scale), Loc.T(L.Phone.EnableTitle), theme.TextStrong, 1.4f);
-        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 4f * scale), Loc.T(L.Phone.EnableBody), theme.TextMuted, 0.85f);
-
+        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 30f * scale), Loc.T(L.Phone.EnableTitle),
+            theme.TextStrong, 1.4f);
+        Typography.DrawCentered(new Vector2(centerX, body.Center.Y - 4f * scale), Loc.T(L.Phone.EnableBody),
+            theme.TextMuted, 0.85f);
         var toggleWidth = 48f * scale;
         var toggleHeight = 28f * scale;
         var toggleMin = new Vector2(centerX - toggleWidth * 0.5f, body.Center.Y + 24f * scale);
@@ -309,7 +302,8 @@ internal sealed class PhoneApp : IPhoneApp
             calls.SetEnabled(!calls.Enabled);
         }
 
-        Typography.DrawCentered(new Vector2(centerX, bounds.Max.Y + 18f * scale), Loc.T(L.Phone.Enable), theme.TextMuted, 0.85f);
+        Typography.DrawCentered(new Vector2(centerX, bounds.Max.Y + 18f * scale), Loc.T(L.Phone.Enable),
+            theme.TextMuted, 0.85f);
     }
 
     private void DrawSearchBar(Rect bar, PhoneTheme theme, float scale)
@@ -318,20 +312,22 @@ internal sealed class PhoneApp : IPhoneApp
         var pillMin = new Vector2(bar.Min.X + 4f * scale, bar.Min.Y + 9f * scale);
         var pillMax = new Vector2(bar.Max.X - 4f * scale, bar.Max.Y - 9f * scale);
         dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(theme.GroupedCard), (pillMax.Y - pillMin.Y) * 0.5f);
-
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale, (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
+            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 28f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            if (ImGui.InputTextWithHint("##phoneSearch", Loc.T(L.Phone.SearchHint), ref searchDraft, 64, ImGuiInputTextFlags.EnterReturnsTrue))
+            if (ImGui.InputTextWithHint("##phoneSearch", Loc.T(L.Phone.SearchHint), ref searchDraft, 64,
+                    ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 StartSearch(searchDraft);
             }
         }
     }
 
-    private static bool CircleButton(Vector2 center, float radius, FontAwesomeIcon icon, Vector4 fill, Vector4 ink, bool enabled = true)
+    private static bool CircleButton(Vector2 center, float radius, FontAwesomeIcon icon, Vector4 fill, Vector4 ink,
+        bool enabled = true)
     {
         var dl = ImGui.GetWindowDrawList();
         var min = center - new Vector2(radius, radius);
@@ -339,7 +335,6 @@ internal sealed class PhoneApp : IPhoneApp
         var hovered = enabled && ImGui.IsMouseHoveringRect(min, max);
         var color = hovered ? Palette.Mix(fill, new Vector4(1f, 1f, 1f, 1f), 0.14f) : fill;
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, enabled ? color.W : 0.4f)), 32);
-
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
             var glyph = icon.ToIconString();

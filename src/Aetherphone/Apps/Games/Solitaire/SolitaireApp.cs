@@ -12,53 +12,29 @@ namespace Aetherphone.Apps.Games.Solitaire;
 internal sealed class SolitaireApp : IMiniGame
 {
     private const string GameId = "solitaire";
-
     private const float DragThreshold = 5f;
-
     private readonly SolitaireBoard board = new();
-
     private readonly SolitaireRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private readonly int[] grabbed = new int[13];
-
     private SolitaireHit grabSource = SolitaireHit.None;
-
     private int grabCount;
-
     private Vector2 grabOffset;
-
     private Vector2 pressPosition;
-
     private bool dragMoved;
-
     private float elapsed;
-
     private int lastSeconds = -1;
-
     private string timeText = "0:00";
-
     private bool finished;
-
     private bool pendingSubmit;
-
     private bool newBestTime;
-
     private int loadedBestTime;
-
     private float resultAppear;
-
     private string resultTimeText = "0:00";
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Solitaire);
-
     public string Genre => Loc.T(L.Games.GenreCards);
-
     public Vector4 Accent => new(0.30f, 0.64f, 0.44f, 1f);
 
     public void Open()
@@ -97,7 +73,6 @@ internal sealed class SolitaireApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (loadedBestTime < 0)
         {
             loadedBestTime = context.Stats.Get(GameId).BestTimeSeconds;
@@ -110,7 +85,6 @@ internal sealed class SolitaireApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         if (pendingSubmit)
         {
             newBestTime = context.Stats.SubmitTime(GameId, (int)elapsed);
@@ -118,10 +92,9 @@ internal sealed class SolitaireApp : IMiniGame
         }
 
         DrawHud(body, theme, scale);
-
-        var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 56f * scale), new Vector2(body.Max.X, body.Max.Y - 6f * scale));
+        var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 56f * scale),
+            new Vector2(body.Max.X, body.Max.Y - 6f * scale));
         var layout = SolitaireLayout.Compute(area, board, scale);
-
         var dropTarget = SolitaireHit.None;
         if (!finished)
         {
@@ -129,7 +102,6 @@ internal sealed class SolitaireApp : IMiniGame
         }
 
         renderer.Draw(board, layout, theme, Accent, scale, grabSource, dropTarget);
-
         if (grabCount > 0)
         {
             var topLeft = ImGui.GetMousePos() - grabOffset;
@@ -139,7 +111,6 @@ internal sealed class SolitaireApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
-
         if (finished)
         {
             DrawResult(theme, body, deltaSeconds);
@@ -157,8 +128,8 @@ internal sealed class SolitaireApp : IMiniGame
         }
 
         GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Time), timeText, Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Moves), GameNumber.Label(board.Moves), Accent, theme);
-
+        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Moves),
+            GameNumber.Label(board.Moves), Accent, theme);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 15f * scale, theme))
         {
             StartNewGame();
@@ -168,7 +139,6 @@ internal sealed class SolitaireApp : IMiniGame
     private SolitaireHit HandleInput(in SolitaireLayout layout, float scale)
     {
         var mouse = ImGui.GetMousePos();
-
         if (grabCount == 0 && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             var hit = layout.Hit(mouse);
@@ -196,7 +166,6 @@ internal sealed class SolitaireApp : IMiniGame
         }
 
         var dropTarget = ComputeDropTarget(layout, mouse);
-
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
             ReleaseGrab(layout, mouse, dropTarget);
@@ -236,7 +205,8 @@ internal sealed class SolitaireApp : IMiniGame
         }
         else if (hit.Kind == SolitairePileKind.Tableau)
         {
-            if (hit.CardIndex < 0 || !board.IsTableauFaceUp(hit.Pile, hit.CardIndex) || !board.IsRunStart(hit.Pile, hit.CardIndex))
+            if (hit.CardIndex < 0 || !board.IsTableauFaceUp(hit.Pile, hit.CardIndex) ||
+                !board.IsRunStart(hit.Pile, hit.CardIndex))
             {
                 return;
             }
@@ -267,8 +237,8 @@ internal sealed class SolitaireApp : IMiniGame
 
         var hit = layout.Hit(mouse);
         var first = grabbed[0];
-
-        if (hit.Kind == SolitairePileKind.Foundation && grabCount == 1 && grabSource.Kind != SolitairePileKind.Foundation && board.CanFoundation(first))
+        if (hit.Kind == SolitairePileKind.Foundation && grabCount == 1 &&
+            grabSource.Kind != SolitairePileKind.Foundation && board.CanFoundation(first))
         {
             return new SolitaireHit(SolitairePileKind.Foundation, SolitaireBoard.Suit(first), -1);
         }
@@ -369,7 +339,6 @@ internal sealed class SolitaireApp : IMiniGame
     {
         var card = grabbed[0];
         var suit = SolitaireBoard.Suit(card);
-
         if (board.FoundationTop(suit) == card)
         {
             var center = layout.FoundationRect(suit).Center;
@@ -399,20 +368,11 @@ internal sealed class SolitaireApp : IMiniGame
         finished = true;
         resultAppear = 0f;
         pendingSubmit = true;
-
         var seconds = (int)elapsed;
         resultTimeText = $"{seconds / 60}:{seconds % 60:D2}";
-
         fx.AddTrauma(0.4f);
         fx.Flash(Accent, 0.4f);
-
-        ReadOnlySpan<Vector4> palette = new[]
-        {
-            Accent,
-            Styling.AccentAmber,
-            Styling.AccentRose,
-            Styling.AccentBlue,
-        };
+        ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentAmber, Styling.AccentRose, Styling.AccentBlue, };
         var top = new Vector2(layout.OriginX + layout.ColumnPitch * 3f, layout.TopRowY);
         particles.Confetti(top, 90, palette, 280f * ImGuiHelpers.GlobalScale, 4.4f, 1.5f);
     }
@@ -420,15 +380,14 @@ internal sealed class SolitaireApp : IMiniGame
     private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
     {
         resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-
         string? secondary = null;
         if (loadedBestTime > 0)
         {
             secondary = $"{Loc.T(L.Games.Best)} {loadedBestTime / 60}:{loadedBestTime % 60:D2}";
         }
 
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary, newBestTime);
-
+        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary,
+            newBestTime);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartNewGame();

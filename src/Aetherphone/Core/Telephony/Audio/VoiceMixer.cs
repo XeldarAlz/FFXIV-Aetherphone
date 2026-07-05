@@ -16,27 +16,21 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
         {
             Buffer = new BufferedWaveProvider(new WaveFormat(OpusAudio.SampleRate, 16, OpusAudio.Channels))
             {
-                BufferDuration = TimeSpan.FromMilliseconds(600),
-                DiscardOnBufferOverflow = true,
-                ReadFully = true,
+                BufferDuration = TimeSpan.FromMilliseconds(600), DiscardOnBufferOverflow = true, ReadFully = true,
             };
-
             Sample = Buffer.ToSampleProvider();
         }
     }
 
     private const float LevelDecay = 0.6f;
-
     private readonly WaveFormat format = WaveFormat.CreateIeeeFloatWaveFormat(OpusAudio.SampleRate, OpusAudio.Channels);
     private readonly object gate = new();
     private readonly Dictionary<int, Playout> playouts = new();
     private readonly short[] decodeBuffer = new short[OpusAudio.FrameSamples * 6];
     private readonly byte[] pcmBytes = new byte[OpusAudio.FrameSamples * 6 * sizeof(short)];
-
     private float[] mixScratch = Array.Empty<float>();
     private WaveOutEvent? output;
     private float volume = 0.85f;
-
     public WaveFormat WaveFormat => format;
 
     public float Volume
@@ -57,16 +51,9 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
     {
         Stop();
         volume = Math.Clamp(startVolume, 0f, 1f);
-
         try
         {
-            var device = new WaveOutEvent
-            {
-                DeviceNumber = deviceNumber,
-                DesiredLatency = 140,
-                Volume = volume,
-            };
-
+            var device = new WaveOutEvent { DeviceNumber = deviceNumber, DesiredLatency = 140, Volume = volume, };
             device.Init(this.ToWaveProvider16());
             device.Play();
             output = device;
@@ -164,7 +151,6 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
     {
         Array.Clear(buffer, offset, count);
         EnsureScratch(count);
-
         lock (gate)
         {
             if (playouts.Count == 0)

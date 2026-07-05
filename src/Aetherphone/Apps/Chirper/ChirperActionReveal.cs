@@ -12,20 +12,14 @@ internal sealed class ChirperActionReveal
     private const float OpenSeconds = 0.22f;
     private const float CloseSeconds = 0.14f;
     private const float StaggerSpread = 0.45f;
-
     private string? postId;
     private Panel current;
     private bool closing;
     private float progress;
-
     public string? PostId => postId;
-
     public Panel Current => current;
-
     public float Progress => progress;
-
     public bool Closing => closing;
-
     public bool IsShowing(string id, Panel panel) => current == panel && postId == id;
 
     public void Open(string id, Panel panel)

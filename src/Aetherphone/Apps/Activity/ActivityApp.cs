@@ -14,32 +14,26 @@ using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin.Services;
 
-namespace Aetherphone.Apps.MyCharacter;
+namespace Aetherphone.Apps.Activity;
 
-internal sealed class MyCharacterApp : IPhoneApp
+internal sealed class ActivityApp : IPhoneApp
 {
     private const float RefreshIntervalSeconds = 3f;
-
     public string Id => "character";
-
     public string DisplayName => Loc.T(L.Character.Activity);
-
     public string Glyph => "Ac";
-
     public Vector4 Accent => ActivityRings.RingOneTint;
-
     public int BadgeCount => 0;
-
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
     private readonly LodestoneService lodestone;
     private readonly CollectService collect;
-
     private LocalCharacter? character;
     private ActivitySnapshot? activity;
     private float sinceRefresh;
 
-    public MyCharacterApp(GameData gameData, ITextureProvider textures, LodestoneService lodestone, CollectService collect)
+    public ActivityApp(GameData gameData, ITextureProvider textures, LodestoneService lodestone,
+        CollectService collect)
     {
         this.gameData = gameData;
         this.textures = textures;
@@ -69,12 +63,10 @@ internal sealed class MyCharacterApp : IPhoneApp
         }
 
         AppHeader.Draw(context, DisplayName);
-
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-
         if (character is not { } profile || activity is not { } snapshot)
         {
             Typography.DrawCentered(body.Center, Loc.T(L.Character.LogInToView), theme.TextMuted);
@@ -103,11 +95,12 @@ internal sealed class MyCharacterApp : IPhoneApp
         var origin = ImGui.GetCursorScreenPos();
         var third = width / 3f;
         var height = 48f * scale;
-
-        DrawLegendItem(new Vector2(origin.X + third * 0.5f, origin.Y), ActivityRings.RingOneTint, Loc.T(L.Character.RingJob), Percent(snapshot.JobFraction), theme);
-        DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), ActivityRings.RingTwoTint, Loc.T(L.Character.RingMastery), Percent(snapshot.MasteryFraction), theme);
-        DrawLegendItem(new Vector2(origin.X + third * 2.5f, origin.Y), ActivityRings.RingThreeTint, Loc.T(L.Character.RingCollection), Percent(snapshot.CollectionFraction), theme);
-
+        DrawLegendItem(new Vector2(origin.X + third * 0.5f, origin.Y), ActivityRings.RingOneTint,
+            Loc.T(L.Character.RingJob), Percent(snapshot.JobFraction), theme);
+        DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), ActivityRings.RingTwoTint,
+            Loc.T(L.Character.RingMastery), Percent(snapshot.MasteryFraction), theme);
+        DrawLegendItem(new Vector2(origin.X + third * 2.5f, origin.Y), ActivityRings.RingThreeTint,
+            Loc.T(L.Character.RingCollection), Percent(snapshot.CollectionFraction), theme);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
@@ -119,30 +112,33 @@ internal sealed class MyCharacterApp : IPhoneApp
         var labelSize = Typography.Measure(label, TextStyles.Callout);
         var dotCenter = new Vector2(top.X - labelSize.X * 0.5f - dot - 5f * scale, top.Y + labelSize.Y * 0.5f);
         ImGui.GetWindowDrawList().AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
-
         Typography.Draw(new Vector2(top.X - labelSize.X * 0.5f, top.Y), label, theme.TextMuted, TextStyles.Callout);
-
         var valueSize = Typography.Measure(value, TextStyles.Title3);
-        Typography.Draw(new Vector2(top.X - valueSize.X * 0.5f, top.Y + labelSize.Y + 5f * scale), value, theme.TextStrong, TextStyles.Title3);
+        Typography.Draw(new Vector2(top.X - valueSize.X * 0.5f, top.Y + labelSize.Y + 5f * scale), value,
+            theme.TextStrong, TextStyles.Title3);
     }
 
     private void DrawActivitySummary(PhoneTheme theme, ActivitySnapshot snapshot)
     {
         SettingsSection.Header(Loc.T(L.Character.Summary), theme);
         var card = GroupCard.Begin(theme, 3, ActivityStatRow.RowHeight);
-
-        var jobLabel = snapshot.JobName.Length > 0 ? $"{snapshot.JobName} · Lv {snapshot.Level}" : $"Lv {snapshot.Level}";
+        var jobLabel = snapshot.JobName.Length > 0
+            ? $"{snapshot.JobName} · Lv {snapshot.Level}"
+            : $"Lv {snapshot.Level}";
         var jobValue = snapshot.MaxLevel ? Loc.T(L.Character.JobLevelMax) : Percent(snapshot.JobFraction);
         var jobDetail = JobDetail(snapshot);
-        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingOneTint, FontAwesomeIcon.Bolt, jobLabel, jobValue, snapshot.JobFraction, jobDetail);
-
-        var masteryDetail = snapshot.JobsTotal > 0 ? Loc.T(L.Character.JobsAtMax, snapshot.JobsAtMax, snapshot.JobsTotal) : string.Empty;
-        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingTwoTint, FontAwesomeIcon.Crown, Loc.T(L.Character.JobMastery), Percent(snapshot.MasteryFraction), snapshot.MasteryFraction, masteryDetail);
-
+        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingOneTint, FontAwesomeIcon.Bolt, jobLabel,
+            jobValue, snapshot.JobFraction, jobDetail);
+        var masteryDetail = snapshot.JobsTotal > 0
+            ? Loc.T(L.Character.JobsAtMax, snapshot.JobsAtMax, snapshot.JobsTotal)
+            : string.Empty;
+        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingTwoTint, FontAwesomeIcon.Crown,
+            Loc.T(L.Character.JobMastery), Percent(snapshot.MasteryFraction), snapshot.MasteryFraction, masteryDetail);
         var collectionValue = $"{Number(snapshot.CollectionOwned)} / {Number(snapshot.CollectionTotal)}";
-        var collectionDetail = $"{Loc.T(L.Character.Mounts)} {Number(snapshot.MountsOwned)} · {Loc.T(L.Character.Minions)} {Number(snapshot.MinionsOwned)}";
-        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingThreeTint, FontAwesomeIcon.Dragon, Loc.T(L.Character.Collection), collectionValue, snapshot.CollectionFraction, collectionDetail);
-
+        var collectionDetail =
+            $"{Loc.T(L.Character.Mounts)} {Number(snapshot.MountsOwned)} · {Loc.T(L.Character.Minions)} {Number(snapshot.MinionsOwned)}";
+        ActivityStatRow.DrawProgress(card.NextRow(), theme, ActivityRings.RingThreeTint, FontAwesomeIcon.Dragon,
+            Loc.T(L.Character.Collection), collectionValue, snapshot.CollectionFraction, collectionDetail);
         card.End();
     }
 
@@ -155,7 +151,8 @@ internal sealed class MyCharacterApp : IPhoneApp
 
         SettingsSection.Header(Loc.T(L.Character.Retainers), theme);
         var card = GroupCard.Begin(theme, 1, ActivityStatRow.RowHeight);
-        ActivityStatRow.Draw(card.NextRow(), theme, Styling.AccentBlue, FontAwesomeIcon.Briefcase, Loc.T(L.Character.Retainers), Number(snapshot.RetainerCount), RetainerDetail(snapshot));
+        ActivityStatRow.Draw(card.NextRow(), theme, Styling.AccentBlue, FontAwesomeIcon.Briefcase,
+            Loc.T(L.Character.Retainers), Number(snapshot.RetainerCount), RetainerDetail(snapshot));
         card.End();
     }
 
@@ -176,12 +173,11 @@ internal sealed class MyCharacterApp : IPhoneApp
 
         SettingsSection.Header(Loc.T(L.Character.Achievements), theme);
         var card = GroupCard.Begin(theme, 1, ActivityStatRow.RowHeight);
-
         var fraction = achievements.Total <= 0 ? 0f : (float)((double)achievements.Count / achievements.Total);
         var value = $"{Number(achievements.Count)} / {Number(achievements.Total)}";
         var detail = $"{Number(achievements.Points)} {Loc.T(L.Character.AchievementPoints)}";
-        ActivityStatRow.DrawProgress(card.NextRow(), theme, Styling.AccentViolet, FontAwesomeIcon.Trophy, $"{Loc.T(L.Character.Achievements)} · {value}", detail, fraction);
-
+        ActivityStatRow.DrawProgress(card.NextRow(), theme, Styling.AccentViolet, FontAwesomeIcon.Trophy,
+            $"{Loc.T(L.Character.Achievements)} · {value}", detail, fraction);
         card.End();
     }
 
@@ -189,7 +185,6 @@ internal sealed class MyCharacterApp : IPhoneApp
     {
         SettingsSection.Header(Loc.T(L.Character.Profile), theme);
         CharacterHeader.Draw(profile, theme, lodestone);
-
         var card = GroupCard.Begin(theme, 7, ProfileRow.RowHeight);
         ProfileRow.Stacked(card.NextRow(), Loc.T(L.Character.Race), profile.Race, theme);
         ProfileRow.Stacked(card.NextRow(), Loc.T(L.Character.Clan), profile.Clan, theme);
@@ -199,7 +194,6 @@ internal sealed class MyCharacterApp : IPhoneApp
         ProfileRow.Stacked(card.NextRow(), Loc.T(L.Character.CityState), profile.CityState, theme);
         ProfileRow.Stacked(card.NextRow(), Loc.T(L.Character.GrandCompany), profile.GrandCompany, theme);
         card.End();
-
         if (profile.Gear.Count > 0)
         {
             SettingsSection.Header(Loc.T(L.Character.Equipment), theme);
@@ -253,7 +247,6 @@ internal sealed class MyCharacterApp : IPhoneApp
     }
 
     private static string Percent(float fraction) => $"{(int)MathF.Round(Math.Clamp(fraction, 0f, 1f) * 100f)}%";
-
     private static string Number(long value) => value.ToString("N0", Loc.Culture);
 
     public void Dispose()

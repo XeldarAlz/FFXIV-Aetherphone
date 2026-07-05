@@ -12,55 +12,30 @@ namespace Aetherphone.Apps.Games.Reversi;
 internal sealed class ReversiApp : IMiniGame
 {
     private const string GameId = "reversi";
-
     private const float FlipDuration = 0.26f;
-
     private const float PlaceDuration = 0.28f;
-
     private const float StaggerStep = 0.04f;
-
     private const float AiDelay = 0.45f;
-
     private readonly ReversiBoard board = new();
-
     private readonly ReversiRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private readonly float[] flipTimer = new float[ReversiBoard.CellCount];
-
     private readonly int[] flipFrom = new int[ReversiBoard.CellCount];
-
     private readonly float[] placeTimer = new float[ReversiBoard.CellCount];
-
     private readonly List<int> flipped = new(24);
-
     private int current = ReversiBoard.Dark;
-
     private float aiThinkTimer;
-
     private bool over;
-
     private int outcome;
-
     private bool pendingResult;
-
     private bool newBest;
-
     private int streak;
-
     private bool statsLoaded;
-
     private float resultAppear;
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Reversi);
-
     public string Genre => Loc.T(L.Games.GenreStrategy);
-
     public Vector4 Accent => new(0.36f, 0.78f, 0.56f, 1f);
 
     public void Open()
@@ -99,7 +74,6 @@ internal sealed class ReversiApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (!statsLoaded)
         {
             streak = context.Stats.Get(GameId).Streak;
@@ -109,13 +83,11 @@ internal sealed class ReversiApp : IMiniGame
         UpdateTimers(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         board.Counts(out var dark, out var light);
         DrawHud(body, theme, scale, dark, light);
-
-        var area = new Rect(new Vector2(body.Min.X + 4f * scale, body.Min.Y + 62f * scale), new Vector2(body.Max.X - 4f * scale, body.Max.Y - 8f * scale));
+        var area = new Rect(new Vector2(body.Min.X + 4f * scale, body.Min.Y + 62f * scale),
+            new Vector2(body.Max.X - 4f * scale, body.Max.Y - 8f * scale));
         var grid = GameGrid.Centered(area, ReversiBoard.Size, ReversiBoard.Size, 0f);
-
         if (pendingResult)
         {
             ResolveResult(context, grid, scale);
@@ -135,12 +107,11 @@ internal sealed class ReversiApp : IMiniGame
         }
 
         var showHints = !over && !animating && current == ReversiBoard.Dark;
-        renderer.Draw(board, grid, flipTimer, flipFrom, placeTimer, FlipDuration, PlaceDuration, showHints, ReversiBoard.Dark, Accent, scale);
-
+        renderer.Draw(board, grid, flipTimer, flipFrom, placeTimer, FlipDuration, PlaceDuration, showHints,
+            ReversiBoard.Dark, Accent, scale);
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
         fx.DrawText();
-
         if (over)
         {
             DrawResult(theme, body, deltaSeconds, dark, light);
@@ -150,9 +121,10 @@ internal sealed class ReversiApp : IMiniGame
     private void DrawHud(Rect body, PhoneTheme theme, float scale, int dark, int light)
     {
         var rowY = body.Min.Y + 30f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 52f * scale, rowY), Loc.T(L.Games.You), GameNumber.Label(dark), Accent, theme, current == ReversiBoard.Dark && !over);
-        GameHud.Pill(new Vector2(body.Center.X + 52f * scale, rowY), Loc.T(L.Games.Cpu), GameNumber.Label(light), Accent, theme, current == ReversiBoard.Light && !over);
-
+        GameHud.Pill(new Vector2(body.Center.X - 52f * scale, rowY), Loc.T(L.Games.You), GameNumber.Label(dark), Accent,
+            theme, current == ReversiBoard.Dark && !over);
+        GameHud.Pill(new Vector2(body.Center.X + 52f * scale, rowY), Loc.T(L.Games.Cpu), GameNumber.Label(light),
+            Accent, theme, current == ReversiBoard.Light && !over);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
             StartNewGame();
@@ -205,7 +177,6 @@ internal sealed class ReversiApp : IMiniGame
         var placedRow = cell / ReversiBoard.Size;
         var placedColumn = cell % ReversiBoard.Size;
         var opponent = ReversiBoard.Opponent(player);
-
         for (var index = 0; index < flipped.Count; index++)
         {
             var flippedCell = flipped[index];
@@ -218,7 +189,6 @@ internal sealed class ReversiApp : IMiniGame
 
         var center = grid.CellCenter(placedColumn, placedRow);
         particles.Burst(center, 8, Accent, 130f * scale, 2.8f, 0.45f, 220f);
-
         if (cell == 0 || cell == 7 || cell == 56 || cell == 63)
         {
             particles.Burst(center, 18, Styling.AccentAmber, 220f * scale, 3.6f, 0.7f, 300f);
@@ -260,8 +230,8 @@ internal sealed class ReversiApp : IMiniGame
     private void ResolveResult(in GameContext context, GameGrid grid, float scale)
     {
         board.Counts(out var dark, out var light);
-        outcome = dark > light ? 1 : light > dark ? 2 : 0;
-
+        outcome = dark > light ? 1 :
+            light > dark ? 2 : 0;
         if (outcome == 1)
         {
             var previous = streak;
@@ -269,13 +239,9 @@ internal sealed class ReversiApp : IMiniGame
             newBest = streak > previous;
             fx.AddTrauma(0.4f);
             fx.Flash(Accent, 0.35f);
-
             ReadOnlySpan<Vector4> palette = new[]
             {
-                Accent,
-                Styling.AccentAmber,
-                Styling.AccentBlue,
-                Styling.AccentPink,
+                Accent, Styling.AccentAmber, Styling.AccentBlue, Styling.AccentPink,
             };
             particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 80, palette, 260f * scale, 4f, 1.4f);
         }
@@ -340,13 +306,13 @@ internal sealed class ReversiApp : IMiniGame
     private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds, int dark, int light)
     {
         resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-
-        var title = outcome == 1 ? Loc.T(L.Games.YouWin) : outcome == 2 ? Loc.T(L.Games.Lose) : Loc.T(L.Games.Draw);
-        var titleColor = outcome == 1 ? Accent : outcome == 2 ? theme.Danger : theme.TextStrong;
+        var title = outcome == 1 ? Loc.T(L.Games.YouWin) :
+            outcome == 2 ? Loc.T(L.Games.Lose) : Loc.T(L.Games.Draw);
+        var titleColor = outcome == 1 ? Accent :
+            outcome == 2 ? theme.Danger : theme.TextStrong;
         var secondary = streak > 1 ? $"{Loc.T(L.Games.Streak)} {GameNumber.Label(streak)}" : null;
-
-        var result = new GameResult(title, titleColor, $"{Loc.T(L.Games.You)} · {Loc.T(L.Games.Cpu)}", $"{dark} : {light}", secondary, newBest);
-
+        var result = new GameResult(title, titleColor, $"{Loc.T(L.Games.You)} · {Loc.T(L.Games.Cpu)}",
+            $"{dark} : {light}", secondary, newBest);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartNewGame();

@@ -1,6 +1,4 @@
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 
@@ -11,14 +9,11 @@ internal sealed class MarketAlertService : IDisposable
     private static readonly TimeSpan StartupDelay = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMinutes(3);
     private static readonly Vector4 Accent = new(0.95f, 0.74f, 0.26f, 1f);
-
     private readonly MarketboardService market;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly object sync = new();
-
     private readonly CancellationTokenSource cancellation = new();
-
     private volatile int triggeredCount;
 
     public MarketAlertService(MarketboardService market, NotificationService notifications, Configuration configuration)
@@ -30,7 +25,6 @@ internal sealed class MarketAlertService : IDisposable
     }
 
     public int TriggeredCount => triggeredCount;
-
     public int Count => configuration.MarketAlerts.Count;
 
     public void CopyInto(List<MarketAlert> buffer)
@@ -191,7 +185,8 @@ internal sealed class MarketAlertService : IDisposable
     {
         var title = alert.HqOnly ? $"{alert.ItemName} ({Loc.T(L.Common.Hq)})" : alert.ItemName;
         var arrow = alert.Below ? "≤" : "≥";
-        var body = Loc.T(L.Market.AlertBody, arrow, MarketFormat.Gil(alert.Threshold), MarketFormat.Gil(price), alert.ScopeName);
+        var body = Loc.T(L.Market.AlertBody, arrow, MarketFormat.Gil(alert.Threshold), MarketFormat.Gil(price),
+            alert.ScopeName);
         notifications.Notify(new PhoneNotification("market", title, body, DateTime.Now, Accent));
     }
 

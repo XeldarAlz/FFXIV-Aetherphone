@@ -12,22 +12,17 @@ namespace Aetherphone.Apps.Notifications;
 internal sealed class NotificationsApp : IPhoneApp
 {
     public string Id => "notifications";
-
     public string DisplayName => Loc.T(L.Apps.Notifications);
-
     public string Glyph => "N";
-
     public Vector4 Accent => new(0.92f, 0.30f, 0.34f, 1f);
-
     public int BadgeCount => notifications.UnreadCount;
-
     private readonly NotificationService notifications;
     private readonly MessageLauncher messageLauncher;
     private readonly VelvetLauncher velvetLauncher;
-
     private NotificationCenter? center;
 
-    public NotificationsApp(NotificationService notifications, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher)
+    public NotificationsApp(NotificationService notifications, MessageLauncher messageLauncher,
+        VelvetLauncher velvetLauncher)
     {
         this.notifications = notifications;
         this.messageLauncher = messageLauncher;
@@ -45,9 +40,8 @@ internal sealed class NotificationsApp : IPhoneApp
     public void Draw(in PhoneContext context)
     {
         AppHeader.Draw(context, DisplayName);
-
-        center ??= new NotificationCenter(notifications, new NotificationRouter(context.Navigation, messageLauncher, velvetLauncher));
-
+        center ??= new NotificationCenter(notifications,
+            new NotificationRouter(context.Navigation, messageLauncher, velvetLauncher));
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);

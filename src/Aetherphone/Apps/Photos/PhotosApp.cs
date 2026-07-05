@@ -1,8 +1,5 @@
 using System.Collections.Concurrent;
-using System.IO;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -20,23 +17,16 @@ namespace Aetherphone.Apps.Photos;
 internal sealed class PhotosApp : IPhoneApp
 {
     private const int Columns = 3;
-
     public string Id => "photos";
-
     public string DisplayName => Loc.T(L.Apps.Photos);
-
     public string Glyph => "P";
-
     public Vector4 Accent => new(0.95f, 0.62f, 0.25f, 1f);
-
     public int BadgeCount => 0;
-
     private readonly PhotoLibrary library;
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
     private readonly CancellationTokenSource cancellation = new();
-
     private string[] paths = Array.Empty<string>();
     private int? viewerIndex;
 
@@ -72,12 +62,11 @@ internal sealed class PhotosApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var content = context.Content;
-
-        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 2f * scale), Loc.T(L.Apps.Photos), theme.TextStrong, 1.7f, FontWeight.Bold);
-
+        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 2f * scale), Loc.T(L.Apps.Photos),
+            theme.TextStrong, 1.7f, FontWeight.Bold);
         var countLabel = Loc.Plural(L.Photos.Count, paths.Length);
-        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 34f * scale), countLabel, theme.TextMuted, 0.85f);
-
+        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 34f * scale), countLabel,
+            theme.TextMuted, 0.85f);
         if (paths.Length == 0)
         {
             DrawEmpty(content, theme, scale);
@@ -98,7 +87,6 @@ internal sealed class PhotosApp : IPhoneApp
             var gap = 6f * scale;
             var avail = ImGui.GetContentRegionAvail().X;
             var cell = (avail - gap * (Columns - 1)) / Columns;
-
             for (var index = 0; index < paths.Length; index++)
             {
                 using (ImRaii.PushId(index))
@@ -124,17 +112,16 @@ internal sealed class PhotosApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
         var texture = Get(path);
-
         if (texture is null)
         {
             dl.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(0.14f, 0.15f, 0.18f, 1f)), rounding);
-            dl.AddRect(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), rounding, ImDrawFlags.RoundCornersAll, 1f);
+            dl.AddRect(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), rounding,
+                ImDrawFlags.RoundCornersAll, 1f);
             return;
         }
 
         var (uv0, uv1) = CenterCrop(texture.Size, 1f);
         dl.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
-
         if (ImGui.IsItemHovered())
         {
             dl.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), rounding);
@@ -150,16 +137,16 @@ internal sealed class PhotosApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
         var path = paths[index];
         var texture = Get(path);
-
-        var stage = new Rect(new Vector2(content.Min.X, content.Min.Y + 44f * scale), new Vector2(content.Max.X, content.Max.Y - 36f * scale));
-
+        var stage = new Rect(new Vector2(content.Min.X, content.Min.Y + 44f * scale),
+            new Vector2(content.Max.X, content.Max.Y - 36f * scale));
         if (texture is not null)
         {
             var fit = MathF.Min(stage.Width / texture.Size.X, stage.Height / texture.Size.Y);
             var drawn = new Vector2(texture.Size.X * fit, texture.Size.Y * fit);
             var min = stage.Center - drawn * 0.5f;
             var max = stage.Center + drawn * 0.5f;
-            dl.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, 8f * scale, ImDrawFlags.RoundCornersAll);
+            dl.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, 8f * scale,
+                ImDrawFlags.RoundCornersAll);
         }
         else
         {
@@ -167,8 +154,10 @@ internal sealed class PhotosApp : IPhoneApp
         }
 
         var backCenter = new Vector2(content.Min.X + 18f * scale, content.Min.Y + 20f * scale);
-        var backHovered = ImGui.IsMouseHoveringRect(backCenter - new Vector2(18f * scale, 18f * scale), backCenter + new Vector2(18f * scale, 18f * scale));
-        if (BackButton.Draw("photos.viewer.back", backCenter, 15f * scale, new Vector4(1f, 1f, 1f, 1f), backHovered, scale, shadow: true))
+        var backHovered = ImGui.IsMouseHoveringRect(backCenter - new Vector2(18f * scale, 18f * scale),
+            backCenter + new Vector2(18f * scale, 18f * scale));
+        if (BackButton.Draw("photos.viewer.back", backCenter, 15f * scale, new Vector4(1f, 1f, 1f, 1f), backHovered,
+                scale, shadow: true))
         {
             viewerIndex = null;
             return;
@@ -180,8 +169,8 @@ internal sealed class PhotosApp : IPhoneApp
             return;
         }
 
-        Typography.DrawCentered(new Vector2(content.Center.X, content.Max.Y - 16f * scale), $"{index + 1} / {paths.Length}", theme.TextMuted, 0.85f);
-
+        Typography.DrawCentered(new Vector2(content.Center.X, content.Max.Y - 16f * scale),
+            $"{index + 1} / {paths.Length}", theme.TextMuted, 0.85f);
         if (paths.Length <= 1)
         {
             return;
@@ -204,14 +193,16 @@ internal sealed class PhotosApp : IPhoneApp
         var glyphCenter = center - new Vector2(0f, 18f * scale);
         AppIconArt.TryDraw("photos", glyphCenter, 64f * scale, theme.TextMuted, theme.AppBackground);
         Typography.DrawCentered(center + new Vector2(0f, 34f * scale), Loc.T(L.Photos.NoPhotos), theme.TextMuted, 1.1f);
-        Typography.DrawCentered(center + new Vector2(0f, 58f * scale), Loc.T(L.Photos.UseCameraHint), theme.TextMuted with { W = 0.7f }, 0.8f);
+        Typography.DrawCentered(center + new Vector2(0f, 58f * scale), Loc.T(L.Photos.UseCameraHint),
+            theme.TextMuted with { W = 0.7f }, 0.8f);
     }
 
     private static bool DrawChevron(Vector2 center, Vector4 color, bool pointsLeft, float scale)
     {
         var dl = ImGui.GetWindowDrawList();
         var radius = 16f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         var ink = ImGui.GetColorU32(hovered ? color : color with { W = 0.85f });
         var size = 6f * scale;
         var direction = pointsLeft ? -1f : 1f;
@@ -225,7 +216,8 @@ internal sealed class PhotosApp : IPhoneApp
     {
         var dl = ImGui.GetWindowDrawList();
         var radius = 18f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.5f : 0.32f)), 28);
         return DrawChevron(center, color, pointsLeft, scale) || Tapped(hovered);
     }
@@ -234,16 +226,18 @@ internal sealed class PhotosApp : IPhoneApp
     {
         var dl = ImGui.GetWindowDrawList();
         var radius = 16f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         var color = theme.Danger;
         var ink = ImGui.GetColorU32(hovered ? color : color with { W = 0.85f });
         var extent = 7f * scale;
         var bodyMin = new Vector2(center.X - extent * 0.7f, center.Y - extent * 0.4f);
         var bodyMax = new Vector2(center.X + extent * 0.7f, center.Y + extent);
         dl.AddRect(bodyMin, bodyMax, ink, 2f * scale, ImDrawFlags.RoundCornersBottom, 1.6f * scale);
-        dl.AddLine(new Vector2(center.X - extent, center.Y - extent * 0.4f), new Vector2(center.X + extent, center.Y - extent * 0.4f), ink, 1.6f * scale);
-        dl.AddLine(new Vector2(center.X - extent * 0.4f, center.Y - extent), new Vector2(center.X + extent * 0.4f, center.Y - extent), ink, 1.6f * scale);
-
+        dl.AddLine(new Vector2(center.X - extent, center.Y - extent * 0.4f),
+            new Vector2(center.X + extent, center.Y - extent * 0.4f), ink, 1.6f * scale);
+        dl.AddLine(new Vector2(center.X - extent * 0.4f, center.Y - extent),
+            new Vector2(center.X + extent * 0.4f, center.Y - extent), ink, 1.6f * scale);
         if (hovered)
         {
             DrawTooltip(center, radius, Loc.T(L.Photos.Delete), theme, scale);
@@ -260,10 +254,10 @@ internal sealed class PhotosApp : IPhoneApp
         var padY = 5f * scale;
         var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
         var gap = 9f * scale;
-
         var windowMin = ImGui.GetWindowPos();
         var windowMax = windowMin + ImGui.GetWindowSize();
-        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale, windowMax.X - bubbleSize.X - 4f * scale);
+        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale,
+            windowMax.X - bubbleSize.X - 4f * scale);
         var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
         if (minY < windowMin.Y + 4f * scale)
         {
@@ -274,7 +268,8 @@ internal sealed class PhotosApp : IPhoneApp
         var max = min + bubbleSize;
         var bubble = Palette.WithAlpha(Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f), 0.97f);
         Squircle.Fill(dl, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(dl, new Vector2(min.X + padX, min.Y + padY), text, theme.AppBackground, 0.78f, FontWeight.Medium);
+        Typography.Draw(dl, new Vector2(min.X + padX, min.Y + padY), text, theme.AppBackground, 0.78f,
+            FontWeight.Medium);
     }
 
     private static bool Tapped(bool hovered)

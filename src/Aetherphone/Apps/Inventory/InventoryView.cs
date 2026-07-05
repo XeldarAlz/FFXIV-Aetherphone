@@ -23,5 +23,6 @@ internal readonly struct InventoryView
 
     public static InventoryView Root() => new(InventoryViewKind.Root, InventorySourceKind.Inventory, string.Empty);
 
-    public static InventoryView ForSource(InventorySourceKind source, string title) => new(InventoryViewKind.Source, source, title);
+    public static InventoryView ForSource(InventorySourceKind source, string title) =>
+        new(InventoryViewKind.Source, source, title);
 }

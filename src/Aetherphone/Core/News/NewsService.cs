@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.News;
@@ -24,9 +22,7 @@ internal sealed class NewsEntry
 internal sealed class NewsService : IDisposable
 {
     private const string ApiRoot = "https://lodestonenews.com/news";
-
     private static readonly TimeSpan FreshFor = TimeSpan.FromMinutes(5);
-
     private readonly HttpService http;
     private readonly CancellationTokenSource cancellation = new();
     private readonly ConcurrentDictionary<string, NewsEntry> entries = new();
@@ -40,7 +36,6 @@ internal sealed class NewsService : IDisposable
     {
         var key = string.Concat(NewsCategories.Path(category), ":", locale);
         var entry = entries.GetOrAdd(key, static _ => new NewsEntry());
-
         if (entry.State == NewsState.Loading)
         {
             return entry;
@@ -62,7 +57,8 @@ internal sealed class NewsService : IDisposable
         {
             var token = cancellation.Token;
             var url = string.Concat(ApiRoot, "/", NewsCategories.Path(category), "?locale=", locale);
-            var items = await http.GetJsonAsync(url, LodestoneNewsJsonContext.Default.NewsItems, null, token).ConfigureAwait(false);
+            var items = await http.GetJsonAsync(url, LodestoneNewsJsonContext.Default.NewsItems, null, token)
+                .ConfigureAwait(false);
             if (items is null)
             {
                 entry.FetchedUtc = DateTime.UtcNow;

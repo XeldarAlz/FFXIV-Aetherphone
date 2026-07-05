@@ -40,11 +40,7 @@ internal sealed class DailyCheckStore
         var periodReset = CurrentPeriodResetUnix(item.Cadence, utcNow);
         if (record is null)
         {
-            configuration.DailyChecks.Add(new DailyCheckRecord
-            {
-                ItemId = item.Id,
-                PeriodResetUnix = periodReset,
-            });
+            configuration.DailyChecks.Add(new DailyCheckRecord { ItemId = item.Id, PeriodResetUnix = periodReset, });
             configuration.Save();
             return;
         }

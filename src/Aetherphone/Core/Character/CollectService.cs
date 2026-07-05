@@ -1,6 +1,4 @@
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Character;
@@ -23,11 +21,9 @@ internal sealed class CollectEntry
 internal sealed class CollectService : IDisposable
 {
     private const string ApiRoot = "https://ffxivcollect.com/api/characters";
-
     private static readonly TimeSpan MemoryFreshFor = TimeSpan.FromHours(6);
     private static readonly TimeSpan DiskFreshFor = TimeSpan.FromHours(24);
     private static readonly TimeSpan UnavailableRetryFor = TimeSpan.FromMinutes(2);
-
     private readonly HttpService http;
     private readonly DiskCache disk;
     private readonly RequestThrottle throttle;
@@ -68,11 +64,14 @@ internal sealed class CollectService : IDisposable
 
         var freshFor = entry.State == CollectState.Unavailable ? UnavailableRetryFor : MemoryFreshFor;
         var stale = entry.State == CollectState.Idle || DateTime.UtcNow - entry.FetchedUtc >= freshFor;
-        if (stale)
+
+        if (!stale)
         {
-            entry.State = CollectState.Loading;
-            _ = LoadAsync(lodestoneId, entry);
+            return entry;
         }
+
+        entry.State = CollectState.Loading;
+        _ = LoadAsync(lodestoneId, entry);
 
         return entry;
     }
@@ -83,8 +82,8 @@ internal sealed class CollectService : IDisposable
         {
             var token = cancellation.Token;
             var cacheKey = $"ffxivcollect:{lodestoneId}";
-
             var cached = disk.Get(cacheKey, DiskFreshFor);
+
             if (cached is not null && TryDeserialize(cached, out var fromDisk))
             {
                 Apply(entry, fromDisk);
@@ -126,6 +125,7 @@ internal sealed class CollectService : IDisposable
     private static bool TryDeserialize(byte[] bytes, out CollectCharacter character)
     {
         character = default!;
+
         try
         {
             var reader = new Utf8JsonReader(bytes);

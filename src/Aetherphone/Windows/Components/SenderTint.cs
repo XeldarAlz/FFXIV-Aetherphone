@@ -28,7 +28,6 @@ internal static class SenderTint
         var p = value * (1f - saturation);
         var q = value * (1f - fraction * saturation);
         var t = value * (1f - (1f - fraction) * saturation);
-
         return (sector % 6) switch
         {
             0 => new Vector4(value, t, p, 1f),

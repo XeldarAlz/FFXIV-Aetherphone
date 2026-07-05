@@ -10,7 +10,6 @@ internal static class PlayBadge
     {
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.95f)), 32);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.35f)), 32, 1.5f);
-
         var ink = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 1f));
         var size = radius * 0.46f;
         if (playing)

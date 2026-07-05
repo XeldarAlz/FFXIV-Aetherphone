@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Net;

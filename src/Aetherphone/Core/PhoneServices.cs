@@ -1,4 +1,3 @@
-using System.IO;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Character;
@@ -27,82 +26,54 @@ namespace Aetherphone.Core;
 internal sealed class PhoneServices : IDisposable
 {
     public Configuration Configuration { get; }
-
     public ThemeProvider Themes { get; }
-
     public GameData GameData { get; }
-
     public MapData Maps { get; }
-
     public ITextureProvider Textures { get; }
-
     public WeatherService Weather { get; }
-
     public NotificationService Notifications { get; }
-
     public IRingtone Ringtone { get; }
-
     public MessageStore Messages { get; }
-
     public ChatBridge ChatBridge { get; }
-
     public MessageLauncher MessageLauncher { get; }
-
     public VelvetLauncher VelvetLauncher { get; }
-
     public LinkshellStore Linkshells { get; }
-
     public LinkshellBridge LinkshellBridge { get; }
-
     public HttpService Http { get; }
-
     public MediaCache Media { get; }
-
     public LodestoneService Lodestone { get; }
-
     public CollectService Collect { get; }
-
     public LookupService Lookup { get; }
-
     public AethernetSession AethernetSession { get; }
-
     public AethernetClient AethernetClient { get; }
-
     public IAnalyticsService Analytics { get; }
-
     public MarketItemIndex MarketIndex { get; }
-
     public MarketboardService Market { get; }
-
     public MarketLauncher MarketLauncher { get; }
-
     public MarketAlertService MarketAlerts { get; }
-
     public NewsService News { get; }
-
     public RadioService Radio { get; }
-
     public RadioPlayer RadioPlayer { get; }
-
     public SongSearchService SongSearch { get; }
-
     public SongPlayer SongPlayer { get; }
-
     public SongHistory SongHistory { get; }
-
     public PlaybackHub Playback { get; }
-
     public GameStatsStore GameStats { get; }
-
     public VenuesService Venues { get; }
-
     public CollectionsCatalogService Collections { get; }
-
     public InventoryCaptureService InventoryCapture { get; }
-
     public CallHub Calls { get; }
 
-    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps, ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone, MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher, LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http, MediaCache media, LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession, AethernetClient aethernetClient, IAnalyticsService analytics, MarketItemIndex marketIndex, MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news, RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer, SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues, CollectionsCatalogService collections, InventoryCaptureService inventoryCapture, CallHub calls)
+    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps,
+        ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone,
+        MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
+        LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http, MediaCache media,
+        LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession,
+        AethernetClient aethernetClient, IAnalyticsService analytics, MarketItemIndex marketIndex,
+        MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news,
+        RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer,
+        SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues,
+        CollectionsCatalogService collections, InventoryCaptureService inventoryCapture, CallHub calls)
     {
         Configuration = configuration;
         Themes = themes;
@@ -144,7 +115,9 @@ internal sealed class PhoneServices : IDisposable
         Calls = calls;
     }
 
-    public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager, IObjectTable objectTable, IClientState clientState, IFramework framework, ITextureProvider textures, DirectoryInfo configDirectory)
+    public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
+        IObjectTable objectTable, IClientState clientState, IFramework framework, ITextureProvider textures,
+        DirectoryInfo configDirectory)
     {
         var themes = new ThemeProvider(configuration);
         var gameData = new GameData(dataManager, objectTable);
@@ -158,7 +131,6 @@ internal sealed class PhoneServices : IDisposable
         var velvetLauncher = new VelvetLauncher();
         var linkshells = new LinkshellStore();
         var linkshellBridge = new LinkshellBridge(linkshells, notifications, chatGui, gameData);
-
         var cacheRoot = new DirectoryInfo(Path.Combine(configDirectory.FullName, "cache"));
         cacheRoot.Create();
         var mediaRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "media"));
@@ -203,8 +175,11 @@ internal sealed class PhoneServices : IDisposable
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
         var calls = new CallHub(configuration, aethernetSession, notifications, ringtone, playback);
-
-        return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, ringtone, messages, chatBridge, messageLauncher, velvetLauncher, linkshells, linkshellBridge, http, media, lodestone, collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher, marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues, collections, inventoryCapture, calls);
+        return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, ringtone,
+            messages, chatBridge, messageLauncher, velvetLauncher, linkshells, linkshellBridge, http, media, lodestone,
+            collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher,
+            marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
+            collections, inventoryCapture, calls);
     }
 
     public void Dispose()

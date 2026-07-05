@@ -7,7 +7,6 @@ internal sealed class AethernetSession
 {
     private readonly Configuration configuration;
     private readonly IFramework framework;
-
     private volatile bool tokenRejected;
 
     public AethernetSession(Configuration configuration, IFramework framework)
@@ -16,16 +15,15 @@ internal sealed class AethernetSession
         this.framework = framework;
     }
 
-    public string BaseUrl => string.IsNullOrWhiteSpace(configuration.AethernetBaseUrl) ? Configuration.DefaultAethernetBaseUrl : configuration.AethernetBaseUrl;
+    public string BaseUrl =>
+        string.IsNullOrWhiteSpace(configuration.AethernetBaseUrl)
+            ? Configuration.DefaultAethernetBaseUrl
+            : configuration.AethernetBaseUrl;
 
     public string? Token => string.IsNullOrEmpty(configuration.AethernetToken) ? null : configuration.AethernetToken;
-
     public bool IsSignedIn => Token is not null && !tokenRejected;
-
     public bool TokenRejected => tokenRejected;
-
     public UserDto? CurrentUser { get; private set; }
-
     public event Action? Changed;
 
     public void SignIn(string token, UserDto user)
@@ -63,15 +61,17 @@ internal sealed class AethernetSession
 
     public void ReportAuthStatus(int statusCode)
     {
-        if (statusCode == 401 && !tokenRejected)
+        if (statusCode != 401 || tokenRejected)
         {
-            tokenRejected = true;
-            AepLog.Warning("Aethernet token was rejected; sign in again to reconnect.");
-            _ = framework.RunOnFrameworkThread(() =>
-            {
-                CurrentUser = null;
-                Changed?.Invoke();
-            });
+            return;
         }
+
+        tokenRejected = true;
+        AepLog.Warning("Aethernet token was rejected; sign in again to reconnect.");
+        _ = framework.RunOnFrameworkThread(() =>
+        {
+            CurrentUser = null;
+            Changed?.Invoke();
+        });
     }
 }

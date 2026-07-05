@@ -11,35 +11,20 @@ namespace Aetherphone.Apps.Games.Whack;
 internal sealed class WhackApp : IMiniGame
 {
     private const string GameId = "whack";
-
     private readonly WhackBoard board = new();
-
     private readonly WhackRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private bool statsLoaded;
-
     private int bestScore;
-
     private bool wasOver;
-
     private bool pendingSubmit;
-
     private bool newBest;
-
     private int finalScore;
-
     private float resultAppear;
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Whack);
-
     public string Genre => Loc.T(L.Games.GenreArcade);
-
     public Vector4 Accent => new(0.46f, 0.78f, 0.46f, 1f);
 
     public void Open()
@@ -73,7 +58,6 @@ internal sealed class WhackApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (!statsLoaded)
         {
             bestScore = context.Stats.Get(GameId).BestScore;
@@ -83,7 +67,6 @@ internal sealed class WhackApp : IMiniGame
         board.Step(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         if (board.Over && !wasOver)
         {
             wasOver = true;
@@ -103,22 +86,19 @@ internal sealed class WhackApp : IMiniGame
         }
 
         DrawHud(body, theme, scale);
-
-        var area = new Rect(new Vector2(body.Min.X + 8f * scale, body.Min.Y + 60f * scale), new Vector2(body.Max.X - 8f * scale, body.Max.Y - 10f * scale));
+        var area = new Rect(new Vector2(body.Min.X + 8f * scale, body.Min.Y + 60f * scale),
+            new Vector2(body.Max.X - 8f * scale, body.Max.Y - 10f * scale));
         var grid = GameGrid.Centered(area, WhackBoard.Columns, WhackBoard.Rows, 0.12f);
-
         if (!board.Over)
         {
             HandleInput(grid, scale);
         }
 
         renderer.Draw(board, grid, theme, scale);
-
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
         fx.DrawText();
-
         if (board.Over)
         {
             DrawResult(theme, body, deltaSeconds);
@@ -128,12 +108,12 @@ internal sealed class WhackApp : IMiniGame
     private void DrawHud(Rect body, PhoneTheme theme, float scale)
     {
         var rowY = body.Min.Y + 30f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), GameNumber.Label(board.Score), Accent, theme);
-
+        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score),
+            GameNumber.Label(board.Score), Accent, theme);
         var low = board.TimeLeft <= 10f;
         var timeAccent = low ? theme.Danger : Accent;
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Time), GameNumber.Label((int)MathF.Ceiling(board.TimeLeft)), timeAccent, theme, low);
-
+        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Time),
+            GameNumber.Label((int)MathF.Ceiling(board.TimeLeft)), timeAccent, theme, low);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
             StartGame();
@@ -158,7 +138,8 @@ internal sealed class WhackApp : IMiniGame
             return;
         }
 
-        var moleCenter = grid.CellCenter(hole % WhackBoard.Columns, hole / WhackBoard.Columns) + new Vector2(0f, -grid.Pitch * 0.12f);
+        var moleCenter = grid.CellCenter(hole % WhackBoard.Columns, hole / WhackBoard.Columns) +
+                         new Vector2(0f, -grid.Pitch * 0.12f);
         var result = board.Whack(hole);
         if (result == WhackResult.Mole)
         {
@@ -197,15 +178,14 @@ internal sealed class WhackApp : IMiniGame
     private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)
     {
         resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
-
         string? secondary = null;
         if (bestScore > 0)
         {
             secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestScore)}";
         }
 
-        var result = new GameResult(Loc.T(L.Games.GameOver), Accent, Loc.T(L.Games.Score), GameNumber.Label(finalScore), secondary, newBest);
-
+        var result = new GameResult(Loc.T(L.Games.GameOver), Accent, Loc.T(L.Games.Score), GameNumber.Label(finalScore),
+            secondary, newBest);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartGame();

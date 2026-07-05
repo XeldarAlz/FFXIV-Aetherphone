@@ -45,28 +45,20 @@ internal sealed class FindPeopleApp : IPhoneApp
     }
 
     public string Id => "findpeople";
-
     public string DisplayName => Loc.T(L.Apps.FindPeople);
-
     public string Glyph => "Fp";
-
     public Vector4 Accent => new(0.36f, 0.68f, 0.92f, 1f);
-
     public int BadgeCount => 0;
-
     private readonly LookupService lookup;
     private readonly LodestoneService lodestone;
     private readonly MessageLauncher launcher;
     private readonly GameData gameData;
-
     private readonly ViewRouter<View> router;
     private readonly RouterDraw<View> drawView;
     private readonly Action back;
     private readonly string[] segmentLabels = new string[2];
-
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
-
     private LookupKind kind = LookupKind.Character;
     private string nameInput = string.Empty;
     private string worldInput = string.Empty;
@@ -83,7 +75,6 @@ internal sealed class FindPeopleApp : IPhoneApp
         this.lodestone = lodestone;
         this.launcher = launcher;
         this.gameData = gameData;
-
         router = new ViewRouter<View>(View.SearchRoot);
         drawView = DrawView;
         back = () => router.Pop();
@@ -131,13 +122,12 @@ internal sealed class FindPeopleApp : IPhoneApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, DisplayName);
-
         var scale = ImGuiHelpers.GlobalScale;
         var theme = frameTheme;
         var pad = 16f * scale;
         var top = area.Min.Y + AppHeader.Height * scale;
-
-        var segmentRow = new Rect(new Vector2(area.Min.X + pad, top), new Vector2(area.Max.X - pad, top + SegmentRowHeight * scale));
+        var segmentRow = new Rect(new Vector2(area.Min.X + pad, top),
+            new Vector2(area.Max.X - pad, top + SegmentRowHeight * scale));
         segmentLabels[0] = Loc.T(L.FindPeople.Character);
         segmentLabels[1] = Loc.T(L.FindPeople.FreeCompany);
         var selected = SegmentStrip.Draw("findpeople.kind", segmentRow, segmentLabels, (int)kind, theme);
@@ -151,20 +141,21 @@ internal sealed class FindPeopleApp : IPhoneApp
         }
 
         var nameTop = segmentRow.Max.Y + 8f * scale;
-        var nameBar = new Rect(new Vector2(area.Min.X + pad, nameTop), new Vector2(area.Max.X - pad, nameTop + FieldRowHeight * scale));
-        var nameChanged = SubmitField.Draw(nameBar, "##findNameField", Loc.T(L.FindPeople.NameHint), ref nameInput, theme);
-
+        var nameBar = new Rect(new Vector2(area.Min.X + pad, nameTop),
+            new Vector2(area.Max.X - pad, nameTop + FieldRowHeight * scale));
+        var nameChanged =
+            SubmitField.Draw(nameBar, "##findNameField", Loc.T(L.FindPeople.NameHint), ref nameInput, theme);
         var worldTop = nameBar.Max.Y + 8f * scale;
-        var worldBar = new Rect(new Vector2(area.Min.X + pad, worldTop), new Vector2(area.Max.X - pad, worldTop + FieldRowHeight * scale));
-        var worldChanged = SubmitField.Draw(worldBar, "##findWorldField", Loc.T(L.FindPeople.WorldHint), ref worldInput, theme);
-
+        var worldBar = new Rect(new Vector2(area.Min.X + pad, worldTop),
+            new Vector2(area.Max.X - pad, worldTop + FieldRowHeight * scale));
+        var worldChanged = SubmitField.Draw(worldBar, "##findWorldField", Loc.T(L.FindPeople.WorldHint), ref worldInput,
+            theme);
         if (nameChanged || worldChanged)
         {
             SubmitSearch();
         }
 
         var body = new Rect(new Vector2(area.Min.X, worldBar.Max.Y + 4f * scale), area.Max);
-
         if (!hasQuery)
         {
             DrawPrompt(body, theme, scale);
@@ -193,16 +184,18 @@ internal sealed class FindPeopleApp : IPhoneApp
     private void DrawPrompt(Rect body, PhoneTheme theme, float scale)
     {
         var center = body.Center;
-        ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Users, theme.TextMuted, 36f * scale);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.FindPeople.Prompt), theme.TextStrong, 1.0f, FontWeight.SemiBold);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 42f * scale), Loc.T(L.FindPeople.PromptHint), theme.TextMuted, 0.85f, FontWeight.Regular);
+        ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Users, theme.TextMuted,
+            36f * scale);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.FindPeople.Prompt),
+            theme.TextStrong, 1.0f, FontWeight.SemiBold);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 42f * scale), Loc.T(L.FindPeople.PromptHint),
+            theme.TextMuted, 0.85f, FontWeight.Regular);
     }
 
     private void DrawCharacterResults(Rect body, PhoneTheme theme, float scale)
     {
         var result = lookup.SearchCharacters(submittedName, submittedRegion, submittedRegionIsDataCenter, forceSearch);
         forceSearch = false;
-
         var matches = result.Matches;
         if (matches.Length == 0)
         {
@@ -235,9 +228,9 @@ internal sealed class FindPeopleApp : IPhoneApp
 
     private void DrawFreeCompanyResults(Rect body, PhoneTheme theme, float scale)
     {
-        var result = lookup.SearchFreeCompanies(submittedName, submittedRegion, submittedRegionIsDataCenter, forceSearch);
+        var result =
+            lookup.SearchFreeCompanies(submittedName, submittedRegion, submittedRegionIsDataCenter, forceSearch);
         forceSearch = false;
-
         var matches = result.Matches;
         if (matches.Length == 0)
         {
@@ -256,7 +249,8 @@ internal sealed class FindPeopleApp : IPhoneApp
             for (var index = 0; index < matches.Length; index++)
             {
                 var match = matches[index];
-                if (DrawResultRow(card.NextRow(), theme, scale, match.Name, match.Subtitle, lodestone.Remote(match.CrestKey, match.Crest)))
+                if (DrawResultRow(card.NextRow(), theme, scale, match.Name, match.Subtitle,
+                        lodestone.Remote(match.CrestKey, match.Crest)))
                 {
                     router.Push(new View(ViewKind.FreeCompanyDetail, match.Id, match.Name, match.World));
                 }
@@ -266,24 +260,25 @@ internal sealed class FindPeopleApp : IPhoneApp
         }
     }
 
-    private static bool DrawResultRow(Rect row, PhoneTheme theme, float scale, string title, string subtitle, AvatarHandle image)
+    private static bool DrawResultRow(Rect row, PhoneTheme theme, float scale, string title, string subtitle,
+        AvatarHandle image)
     {
         var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         var drawList = ImGui.GetWindowDrawList();
-
         var avatarRadius = 20f * scale;
         var avatarCenter = new Vector2(row.Min.X + avatarRadius, row.Center.Y);
         AvatarView.Draw(drawList, avatarCenter, avatarRadius, theme.SurfaceMuted, Initials.Of(title), 1.4f, image, 48);
-
         var textX = avatarCenter.X + avatarRadius + 12f * scale;
-        Typography.Draw(new Vector2(textX, row.Center.Y - 16f * scale), title, theme.TextStrong, 0.95f, FontWeight.Medium);
+        Typography.Draw(new Vector2(textX, row.Center.Y - 16f * scale), title, theme.TextStrong, 0.95f,
+            FontWeight.Medium);
         if (subtitle.Length > 0)
         {
-            Typography.Draw(new Vector2(textX, row.Center.Y + 3f * scale), subtitle, theme.TextMuted, 0.8f, FontWeight.Regular);
+            Typography.Draw(new Vector2(textX, row.Center.Y + 3f * scale), subtitle, theme.TextMuted, 0.8f,
+                FontWeight.Regular);
         }
 
-        DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale, hovered ? theme.TextStrong : theme.TextMuted);
-
+        DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale,
+            hovered ? theme.TextStrong : theme.TextMuted);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -296,11 +291,9 @@ internal sealed class FindPeopleApp : IPhoneApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.FindPeople.CharacterTitle), back);
-
         var scale = ImGuiHelpers.GlobalScale;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-
         var result = lookup.CharacterDetail(view.Id, view.Name, view.World, forceDetail);
         forceDetail = false;
         var detail = result.Detail;
@@ -319,7 +312,6 @@ internal sealed class FindPeopleApp : IPhoneApp
             DrawCharacterHero(detail, theme, scale);
             ImGui.Dummy(new Vector2(0f, 12f * scale));
             DrawCharacterActions(detail, theme, scale);
-
             DrawInfoCard(detail, theme);
             DrawJobsCard(detail.Jobs, JobCategory.Combat, Loc.T(L.FindPeople.Combat), theme);
             DrawJobsCard(detail.Jobs, JobCategory.Crafter, Loc.T(L.FindPeople.Crafter), theme);
@@ -334,27 +326,23 @@ internal sealed class FindPeopleApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-
         var hasTitle = detail.Title.Length > 0;
         var heroHeight = (hasTitle ? 196f : 178f) * scale;
         var heroMax = new Vector2(origin.X + width, origin.Y + heroHeight);
         var rounding = 22f * scale;
-
         Elevation.Card(drawList, origin, heroMax, rounding, scale);
         Squircle.Fill(drawList, origin, heroMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
         Material.TopGlow(drawList, origin, heroMax, rounding, theme.Accent, 0.82f, 0.16f);
         Material.EdgeSquircle(drawList, origin, heroMax, rounding, scale);
-
         var centerX = origin.X + width * 0.5f;
         var avatarRadius = 40f * scale;
         var avatarCenter = new Vector2(centerX, origin.Y + 22f * scale + avatarRadius);
         ProgressRing.Glow(avatarCenter, avatarRadius, theme.Accent, 0.4f);
-        AvatarView.Draw(drawList, avatarCenter, avatarRadius, theme.SurfaceMuted, Initials.Of(detail.Name), 2.0f, lodestone.Remote(detail.PortraitKey, detail.Portrait), 72);
-
+        AvatarView.Draw(drawList, avatarCenter, avatarRadius, theme.SurfaceMuted, Initials.Of(detail.Name), 2.0f,
+            lodestone.Remote(detail.PortraitKey, detail.Portrait), 72);
         var cursorY = avatarCenter.Y + avatarRadius + 16f * scale;
         Typography.DrawCentered(new Vector2(centerX, cursorY), detail.Name, theme.TextStrong, TextStyles.Title2);
         cursorY += 24f * scale;
-
         if (hasTitle)
         {
             Typography.DrawCentered(new Vector2(centerX, cursorY), detail.Title, theme.Accent, TextStyles.Footnote);
@@ -362,7 +350,6 @@ internal sealed class FindPeopleApp : IPhoneApp
         }
 
         Typography.DrawCentered(new Vector2(centerX, cursorY), detail.World, theme.TextMuted, TextStyles.Subheadline);
-
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, heroHeight));
     }
@@ -373,8 +360,9 @@ internal sealed class FindPeopleApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var radius = 26f * scale;
         var rowHeight = radius * 2f + 30f * scale;
-
-        if (QuickAction.Draw("findpeople.message", new Vector2(origin.X + width * 0.5f, origin.Y + radius + 2f * scale), radius, FontAwesomeIcon.CommentDots, new Vector4(0.30f, 0.78f, 0.42f, 1f), Loc.T(L.FindPeople.Message), theme))
+        if (QuickAction.Draw("findpeople.message", new Vector2(origin.X + width * 0.5f, origin.Y + radius + 2f * scale),
+                radius, FontAwesomeIcon.CommentDots, new Vector4(0.30f, 0.78f, 0.42f, 1f), Loc.T(L.FindPeople.Message),
+                theme))
         {
             launcher.Request(detail.Name, SendTarget(detail.Name, detail.World));
             frameNavigation.Open("messages");
@@ -469,11 +457,9 @@ internal sealed class FindPeopleApp : IPhoneApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.FindPeople.FreeCompanyTitle), back);
-
         var scale = ImGuiHelpers.GlobalScale;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-
         var result = lookup.FreeCompanyDetail(view.Id, forceDetail);
         forceDetail = false;
         var detail = result.Detail;
@@ -491,7 +477,6 @@ internal sealed class FindPeopleApp : IPhoneApp
         {
             DrawFreeCompanyHero(detail, theme, scale);
             ImGui.Dummy(new Vector2(0f, 12f * scale));
-
             if (detail.Slogan.Length > 0)
             {
                 SettingsSection.Header(Loc.T(L.FindPeople.Slogan), theme);
@@ -510,37 +495,34 @@ internal sealed class FindPeopleApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-
         var heroHeight = 192f * scale;
         var heroMax = new Vector2(origin.X + width, origin.Y + heroHeight);
         var rounding = 22f * scale;
-
         Elevation.Card(drawList, origin, heroMax, rounding, scale);
         Squircle.Fill(drawList, origin, heroMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
         Material.TopGlow(drawList, origin, heroMax, rounding, theme.Accent, 0.82f, 0.16f);
         Material.EdgeSquircle(drawList, origin, heroMax, rounding, scale);
-
         var centerX = origin.X + width * 0.5f;
         var crestSize = 64f * scale;
         var crestCenter = new Vector2(centerX, origin.Y + 22f * scale + crestSize * 0.5f);
         DrawCrest(drawList, crestCenter, crestSize, detail, theme, scale);
-
         var cursorY = crestCenter.Y + crestSize * 0.5f + 14f * scale;
         Typography.DrawCentered(new Vector2(centerX, cursorY), detail.Heading, theme.TextStrong, TextStyles.Title3);
         cursorY += 22f * scale;
         Typography.DrawCentered(new Vector2(centerX, cursorY), detail.World, theme.TextMuted, TextStyles.Subheadline);
         cursorY += 22f * scale;
-
         var recruitColor = detail.Recruiting ? new Vector4(0.30f, 0.78f, 0.46f, 1f) : theme.TextMuted;
         var recruit = detail.Recruiting ? Loc.T(L.FindPeople.Recruiting) : Loc.T(L.FindPeople.Closed);
-        Typography.DrawCentered(new Vector2(centerX - 44f * scale, cursorY), detail.MembersLabel, theme.TextMuted, TextStyles.Footnote);
-        Typography.DrawCentered(new Vector2(centerX + 52f * scale, cursorY), recruit, recruitColor, TextStyles.Footnote);
-
+        Typography.DrawCentered(new Vector2(centerX - 44f * scale, cursorY), detail.MembersLabel, theme.TextMuted,
+            TextStyles.Footnote);
+        Typography.DrawCentered(new Vector2(centerX + 52f * scale, cursorY), recruit, recruitColor,
+            TextStyles.Footnote);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, heroHeight));
     }
 
-    private void DrawCrest(ImDrawListPtr drawList, Vector2 center, float size, FreeCompanyDetail detail, PhoneTheme theme, float scale)
+    private void DrawCrest(ImDrawListPtr drawList, Vector2 center, float size, FreeCompanyDetail detail,
+        PhoneTheme theme, float scale)
     {
         var handle = lodestone.Remote(detail.CrestKey, detail.Crest);
         var half = new Vector2(size * 0.5f, size * 0.5f);
@@ -557,7 +539,8 @@ internal sealed class FindPeopleApp : IPhoneApp
 
     private static void DrawSloganRow(Rect row, string slogan, PhoneTheme theme, float scale)
     {
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - Typography.Measure(slogan, 0.86f).Y * 0.5f), slogan, theme.TextMuted, 0.86f, FontWeight.Regular);
+        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - Typography.Measure(slogan, 0.86f).Y * 0.5f), slogan,
+            theme.TextMuted, 0.86f, FontWeight.Regular);
     }
 
     private void DrawRoster(string companyId, FreeCompanyDetailResult result, PhoneTheme theme, float scale)
@@ -569,39 +552,40 @@ internal sealed class FindPeopleApp : IPhoneApp
         }
 
         SettingsSection.Header(Loc.T(L.FindPeople.Roster), theme);
-
         var card = GroupCard.Begin(theme, roster.Members.Length, ResultRowHeight);
         for (var index = 0; index < roster.Members.Length; index++)
         {
             var member = roster.Members[index];
-            if (DrawResultRow(card.NextRow(), theme, scale, member.Name, member.Subtitle, lodestone.Remote(member.AvatarKey, member.Avatar)))
+            if (DrawResultRow(card.NextRow(), theme, scale, member.Name, member.Subtitle,
+                    lodestone.Remote(member.AvatarKey, member.Avatar)))
             {
                 router.Push(new View(ViewKind.CharacterDetail, member.Id, member.Name, member.World));
             }
         }
 
         card.End();
-
         if (roster.PageCount > 1)
         {
             DrawRosterPager(companyId, result, roster, theme, scale);
         }
     }
 
-    private void DrawRosterPager(string companyId, FreeCompanyDetailResult result, RosterSnapshot roster, PhoneTheme theme, float scale)
+    private void DrawRosterPager(string companyId, FreeCompanyDetailResult result, RosterSnapshot roster,
+        PhoneTheme theme, float scale)
     {
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var center = new Vector2(origin.X + width * 0.5f, origin.Y + 16f * scale);
         var loading = result.RosterLoading;
-
-        if (DrawPagerButton(new Vector2(origin.X + 40f * scale, center.Y), FontAwesomeIcon.ChevronLeft, roster.Page > 0 && !loading, theme, scale))
+        if (DrawPagerButton(new Vector2(origin.X + 40f * scale, center.Y), FontAwesomeIcon.ChevronLeft,
+                roster.Page > 0 && !loading, theme, scale))
         {
             lookup.RequestRosterPage(companyId, result, roster.Page - 1);
         }
 
-        if (DrawPagerButton(new Vector2(origin.X + width - 40f * scale, center.Y), FontAwesomeIcon.ChevronRight, roster.Page < roster.PageCount - 1 && !loading, theme, scale))
+        if (DrawPagerButton(new Vector2(origin.X + width - 40f * scale, center.Y), FontAwesomeIcon.ChevronRight,
+                roster.Page < roster.PageCount - 1 && !loading, theme, scale))
         {
             lookup.RequestRosterPage(companyId, result, roster.Page + 1);
         }
@@ -612,20 +596,22 @@ internal sealed class FindPeopleApp : IPhoneApp
         }
         else
         {
-            Typography.DrawCentered(center, Loc.T(L.FindPeople.PageOf, roster.Page + 1, roster.PageCount), theme.TextMuted, 0.82f, FontWeight.Medium);
+            Typography.DrawCentered(center, Loc.T(L.FindPeople.PageOf, roster.Page + 1, roster.PageCount),
+                theme.TextMuted, 0.82f, FontWeight.Medium);
         }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, 32f * scale));
     }
 
-    private static bool DrawPagerButton(Vector2 center, FontAwesomeIcon icon, bool enabled, PhoneTheme theme, float scale)
+    private static bool DrawPagerButton(Vector2 center, FontAwesomeIcon icon, bool enabled, PhoneTheme theme,
+        float scale)
     {
         var box = 16f * scale;
-        var hovered = enabled && ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
+        var hovered = enabled &&
+                      ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
         var color = enabled ? (hovered ? theme.TextStrong : theme.Accent) : Palette.WithAlpha(theme.TextMuted, 0.35f);
         ProgressRing.CenterIcon(center, icon, color, 16f * scale);
-
         if (!enabled)
         {
             return false;
@@ -644,20 +630,27 @@ internal sealed class FindPeopleApp : IPhoneApp
         var center = body.Center;
         if (state == LookupState.Failed)
         {
-            ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.CloudDownloadAlt, theme.TextMuted, 34f * scale);
-            Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.FindPeople.Failed), theme.TextMuted, 0.95f, FontWeight.Medium);
-            return DrawTextButton(new Vector2(center.X, center.Y + 48f * scale), Loc.T(L.FindPeople.TryAgain), Accent, scale);
+            ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.CloudDownloadAlt,
+                theme.TextMuted, 34f * scale);
+            Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.FindPeople.Failed),
+                theme.TextMuted, 0.95f, FontWeight.Medium);
+            return DrawTextButton(new Vector2(center.X, center.Y + 48f * scale), Loc.T(L.FindPeople.TryAgain), Accent,
+                scale);
         }
 
         if (state == LookupState.Empty)
         {
-            ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 24f * scale), FontAwesomeIcon.UserSlash, theme.TextMuted, 34f * scale);
-            Typography.DrawCentered(new Vector2(center.X, center.Y + 20f * scale), Loc.T(L.FindPeople.NoResults), theme.TextMuted, 0.95f, FontWeight.Medium);
+            ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 24f * scale), FontAwesomeIcon.UserSlash,
+                theme.TextMuted, 34f * scale);
+            Typography.DrawCentered(new Vector2(center.X, center.Y + 20f * scale), Loc.T(L.FindPeople.NoResults),
+                theme.TextMuted, 0.95f, FontWeight.Medium);
             return false;
         }
 
-        ProgressRing.Sweep(new Vector2(center.X, center.Y - 6f * scale), 13f * scale, 2.4f * scale, Accent, 900.0, 1.8f, 0.95f);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Searching), theme.TextMuted, 0.9f);
+        ProgressRing.Sweep(new Vector2(center.X, center.Y - 6f * scale), 13f * scale, 2.4f * scale, Accent, 900.0, 1.8f,
+            0.95f);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 24f * scale), Loc.T(L.Common.Searching),
+            theme.TextMuted, 0.9f);
         return false;
     }
 
@@ -667,11 +660,10 @@ internal sealed class FindPeopleApp : IPhoneApp
         var hitMin = new Vector2(center.X - size.X * 0.5f - 12f * scale, center.Y - size.Y * 0.5f - 6f * scale);
         var hitMax = new Vector2(center.X + size.X * 0.5f + 12f * scale, center.Y + size.Y * 0.5f + 6f * scale);
         var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(hitMin, hitMax, ImGui.GetColorU32(Palette.WithAlpha(color, hovered ? 0.22f : 0.14f)), (hitMax.Y - hitMin.Y) * 0.5f);
+        drawList.AddRectFilled(hitMin, hitMax, ImGui.GetColorU32(Palette.WithAlpha(color, hovered ? 0.22f : 0.14f)),
+            (hitMax.Y - hitMin.Y) * 0.5f);
         Typography.DrawCentered(center, label, color, 0.9f, FontWeight.SemiBold);
-
         if (!hovered)
         {
             return false;
@@ -689,7 +681,8 @@ internal sealed class FindPeopleApp : IPhoneApp
         drawList.AddLine(tip, new Vector2(tip.X - size, tip.Y + size), packed, thickness);
     }
 
-    private static string SendTarget(string name, string world) => world.Length > 0 ? string.Concat(name, "@", world) : name;
+    private static string SendTarget(string name, string world) =>
+        world.Length > 0 ? string.Concat(name, "@", world) : name;
 
     public void Dispose()
     {

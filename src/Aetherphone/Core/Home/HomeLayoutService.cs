@@ -7,12 +7,10 @@ internal sealed class HomeLayoutService
     public const int Columns = 4;
     public const int Rows = 8;
     public const int Capacity = Columns * Rows;
-
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly Configuration configuration;
     private readonly Dictionary<string, IPhoneApp> byId = new();
     private readonly List<List<HomeTile>> pages = new();
-
     private int folderCounter;
 
     public HomeLayoutService(IReadOnlyList<IPhoneApp> apps, Configuration configuration)
@@ -28,7 +26,6 @@ internal sealed class HomeLayoutService
     }
 
     public int PageCount => pages.Count;
-
     public IReadOnlyList<HomeTile> Page(int index) => pages[index];
 
     public (int Page, int Slot) Locate(HomeTile tile)
@@ -146,7 +143,6 @@ internal sealed class HomeLayoutService
     {
         pages.Clear();
         var placed = new HashSet<string>();
-
         if (configuration.Home is { } saved && saved.Pages.Count > 0)
         {
             for (var pageIndex = 0; pageIndex < saved.Pages.Count; pageIndex++)

@@ -15,9 +15,7 @@ internal enum SolitairePileKind
 internal readonly struct SolitaireHit
 {
     public readonly SolitairePileKind Kind;
-
     public readonly int Pile;
-
     public readonly int CardIndex;
 
     public SolitaireHit(SolitairePileKind kind, int pile, int cardIndex)
@@ -33,24 +31,17 @@ internal readonly struct SolitaireHit
 internal readonly struct SolitaireLayout
 {
     private readonly SolitaireBoard board;
-
     public readonly float OriginX;
-
     public readonly float ColumnPitch;
-
     public readonly float CardWidth;
-
     public readonly float CardHeight;
-
     public readonly float TopRowY;
-
     public readonly float TableauTop;
-
     public readonly float FanUp;
-
     public readonly float FanDown;
 
-    private SolitaireLayout(SolitaireBoard board, float originX, float columnPitch, float cardWidth, float cardHeight, float topRowY, float tableauTop, float fanUp, float fanDown)
+    private SolitaireLayout(SolitaireBoard board, float originX, float columnPitch, float cardWidth, float cardHeight,
+        float topRowY, float tableauTop, float fanUp, float fanDown)
     {
         this.board = board;
         OriginX = originX;
@@ -72,14 +63,11 @@ internal readonly struct SolitaireLayout
         var cardHeight = cardWidth * 1.4f;
         var columnPitch = cardWidth + gap;
         var originX = area.Min.X + sidePad;
-
         var topRowY = area.Min.Y + 4f * scale;
         var tableauTop = topRowY + cardHeight + 14f * scale;
         var bottomLimit = area.Max.Y - 4f * scale;
-
         var fanUp = cardHeight * 0.30f;
         var fanDown = cardHeight * 0.15f;
-
         var maxOffset = 0f;
         for (var pile = 0; pile < SolitaireBoard.TableauPiles; pile++)
         {
@@ -107,7 +95,8 @@ internal readonly struct SolitaireLayout
             fanDown *= shrink;
         }
 
-        return new SolitaireLayout(board, originX, columnPitch, cardWidth, cardHeight, topRowY, tableauTop, fanUp, fanDown);
+        return new SolitaireLayout(board, originX, columnPitch, cardWidth, cardHeight, topRowY, tableauTop, fanUp,
+            fanDown);
     }
 
     public Vector2 CardSize => new(CardWidth, CardHeight);
@@ -119,11 +108,8 @@ internal readonly struct SolitaireLayout
     }
 
     public Rect StockRect => TopSlot(0);
-
     public Rect WasteRect => TopSlot(1);
-
     public Rect FoundationRect(int suit) => TopSlot(3 + suit);
-
     public float TableauColumnX(int pile) => OriginX + pile * ColumnPitch;
 
     public Vector2 TableauCardPosition(int pile, int index)

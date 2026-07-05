@@ -21,14 +21,12 @@ internal sealed class InventorySearch
 {
     private readonly GameData gameData;
     private readonly Dictionary<uint, InventoryItemInfo> itemCache = new();
-
     private readonly List<InventoryStack> bags = new();
     private readonly List<InventoryStack> armoury = new();
     private readonly List<InventoryStack> crystals = new();
     private readonly List<InventoryStack> saddlebag = new();
     private readonly List<InventoryStack> equipped = new();
     private readonly List<StoredSource> cached = new();
-
     private readonly Dictionary<long, InventoryResultRow> rowLookup = new();
 
     public InventorySearch(GameData gameData)
@@ -37,13 +35,9 @@ internal sealed class InventorySearch
     }
 
     public int LocalItemCount { get; private set; }
-
     public DateTime RetainerCapturedUtc { get; private set; }
-
     public DateTime FreeCompanyCapturedUtc { get; private set; }
-
     public bool HasRetainerCache { get; private set; }
-
     public bool HasFreeCompanyCache { get; private set; }
 
     public void Build(InventoryCaptureService capture, string query, List<InventoryResultGroup> groups)
@@ -51,18 +45,14 @@ internal sealed class InventorySearch
         groups.Clear();
         capture.SnapshotLocal(bags, armoury, crystals, saddlebag, equipped);
         capture.CopyCachedSources(cached);
-
         LocalItemCount = bags.Count + armoury.Count + crystals.Count + saddlebag.Count + equipped.Count;
         RefreshCacheTimestamps();
-
         var needle = query.Trim().ToLowerInvariant();
-
         AppendLocal(groups, InventorySourceKind.Inventory, Loc.T(L.Inventory.SourceInventory), bags, needle);
         AppendLocal(groups, InventorySourceKind.Armoury, Loc.T(L.Inventory.SourceArmoury), armoury, needle);
         AppendLocal(groups, InventorySourceKind.Crystals, Loc.T(L.Inventory.SourceCrystals), crystals, needle);
         AppendLocal(groups, InventorySourceKind.Saddlebag, Loc.T(L.Inventory.SourceSaddlebag), saddlebag, needle);
         AppendLocal(groups, InventorySourceKind.Equipped, Loc.T(L.Inventory.SourceEquipped), equipped, needle);
-
         for (var sourceIndex = 0; sourceIndex < cached.Count; sourceIndex++)
         {
             AppendCached(groups, cached[sourceIndex], needle);
@@ -75,7 +65,6 @@ internal sealed class InventorySearch
         HasFreeCompanyCache = false;
         RetainerCapturedUtc = default;
         FreeCompanyCapturedUtc = default;
-
         for (var index = 0; index < cached.Count; index++)
         {
             var source = cached[index];
@@ -99,7 +88,8 @@ internal sealed class InventorySearch
         }
     }
 
-    private void AppendLocal(List<InventoryResultGroup> groups, InventorySourceKind kind, string title, List<InventoryStack> stacks, string needle)
+    private void AppendLocal(List<InventoryResultGroup> groups, InventorySourceKind kind, string title,
+        List<InventoryStack> stacks, string needle)
     {
         if (stacks.Count == 0)
         {
@@ -140,7 +130,9 @@ internal sealed class InventorySearch
     {
         if (source.OwnerName.Length == 0)
         {
-            return source.Kind == InventorySourceKind.Retainer ? Loc.T(L.Inventory.SourceRetainer) : Loc.T(L.Inventory.SourceFreeCompany);
+            return source.Kind == InventorySourceKind.Retainer
+                ? Loc.T(L.Inventory.SourceRetainer)
+                : Loc.T(L.Inventory.SourceFreeCompany);
         }
 
         return source.Kind == InventorySourceKind.Retainer
@@ -183,7 +175,8 @@ internal sealed class InventorySearch
             return;
         }
 
-        group.Rows.Sort(static (left, right) => string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase));
+        group.Rows.Sort(static (left, right) =>
+            string.Compare(left.Name, right.Name, StringComparison.OrdinalIgnoreCase));
         groups.Add(group);
     }
 

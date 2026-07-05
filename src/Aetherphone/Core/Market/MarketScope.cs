@@ -23,11 +23,8 @@ internal readonly struct MarketScope
     }
 
     public bool IsValid => ApiName.Length > 0;
-
     public bool IsMultiWorld => Kind != MarketScopeKind.World;
-
     public string Key => $"{(byte)Kind}:{ApiName}";
-
     public static readonly MarketScope None = new(MarketScopeKind.World, string.Empty, "Unknown");
 }
 
@@ -36,7 +33,6 @@ internal static class MarketScopes
     public static void Build(List<MarketScope> scopes, GameData gameData)
     {
         scopes.Clear();
-
         var worldId = gameData.LocalCurrentWorldId;
         if (worldId == 0)
         {

@@ -10,25 +10,15 @@ internal enum CardState
 internal sealed class PairsBoard
 {
     public const int Columns = 4;
-
     public const int Rows = 4;
-
     public const int CardCount = Columns * Rows;
-
     private readonly int[] symbols = new int[CardCount];
-
     private readonly CardState[] states = new CardState[CardCount];
-
     private readonly Random random = new();
-
     public int Attempts { get; private set; }
-
     public int FirstCard { get; private set; } = -1;
-
     public int SecondCard { get; private set; } = -1;
-
     public int Symbol(int index) => symbols[index];
-
     public CardState State(int index) => states[index];
 
     public void Reset()
@@ -70,7 +60,6 @@ internal sealed class PairsBoard
     }
 
     public bool HasPair => FirstCard >= 0 && SecondCard >= 0;
-
     public bool SelectionMatches => HasPair && symbols[FirstCard] == symbols[SecondCard];
 
     public void ConfirmMatch()

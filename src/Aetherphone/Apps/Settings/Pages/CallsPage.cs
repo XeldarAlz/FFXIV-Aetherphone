@@ -14,13 +14,9 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class CallsPage : ISettingsPage
 {
     public string Title => Loc.T(L.Phone.SettingsTitle);
-
     public string Summary => calls.Enabled ? Loc.T(L.Phone.SummaryOn) : Loc.T(L.Phone.SummaryOff);
-
     public string Glyph => "Ph";
-
     public Vector4 Tint => new(0.20f, 0.78f, 0.35f, 1f);
-
     private readonly CallHub calls;
     private readonly Configuration configuration;
 
@@ -34,14 +30,12 @@ internal sealed class CallsPage : ISettingsPage
     {
         var theme = context.Theme;
         var scale = ImGuiHelpers.GlobalScale;
-
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Phone.Calls), theme);
             var toggleCard = GroupCard.Begin(theme, 1);
             var enabled = SettingsRow.Bool(toggleCard.NextRow(), Loc.T(L.Phone.EnablePhoneCalls), calls.Enabled, theme);
             toggleCard.End();
-
             if (enabled != calls.Enabled)
             {
                 calls.SetEnabled(enabled);
@@ -51,8 +45,8 @@ internal sealed class CallsPage : ISettingsPage
             var inputs = AudioDevices.InputNames();
             var current = configuration.CallInputDevice;
             var micCard = GroupCard.Begin(theme, inputs.Length + 1);
-
-            if (SettingsRow.Selectable(micCard.NextRow(), Loc.T(L.Phone.SystemDefault), string.IsNullOrEmpty(current), theme))
+            if (SettingsRow.Selectable(micCard.NextRow(), Loc.T(L.Phone.SystemDefault), string.IsNullOrEmpty(current),
+                    theme))
             {
                 SetInput(string.Empty);
             }
@@ -67,7 +61,6 @@ internal sealed class CallsPage : ISettingsPage
             }
 
             micCard.End();
-
             ImGui.Dummy(new Vector2(0f, 10f * scale));
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
             {

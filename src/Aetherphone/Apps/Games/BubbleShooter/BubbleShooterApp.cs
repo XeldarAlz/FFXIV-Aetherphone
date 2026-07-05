@@ -11,37 +11,21 @@ namespace Aetherphone.Apps.Games.BubbleShooter;
 internal sealed class BubbleShooterApp : IMiniGame
 {
     private const string GameId = "bubbles";
-
     private readonly BubbleBoard board = new();
-
     private readonly BubbleRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private bool started;
-
     private bool finished;
-
     private bool pendingSubmit;
-
     private bool newBest;
-
     private int loadedBest;
-
     private int displayBest;
-
     private float resultAppear;
-
     private float lastFieldHeight = 1.7f;
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Bubbles);
-
     public string Genre => Loc.T(L.Games.GenreArcade);
-
     public Vector4 Accent => new(0.30f, 0.82f, 0.74f, 1f);
 
     public void Open()
@@ -77,7 +61,6 @@ internal sealed class BubbleShooterApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (loadedBest == 0)
         {
             loadedBest = context.Stats.Get(GameId).BestScore;
@@ -86,20 +69,17 @@ internal sealed class BubbleShooterApp : IMiniGame
 
         var rowY = body.Min.Y + 30f * scale;
         var pad = 6f * scale;
-        var field = new Rect(
-            new Vector2(body.Min.X + pad, rowY + 26f * scale),
+        var field = new Rect(new Vector2(body.Min.X + pad, rowY + 26f * scale),
             new Vector2(body.Max.X - pad, body.Max.Y - pad));
         var factor = field.Width;
         var fieldHeight = field.Height / factor;
         lastFieldHeight = fieldHeight;
-
         if (!started)
         {
             StartNewGame(fieldHeight);
         }
 
         board.SetFieldHeight(fieldHeight);
-
         if (pendingSubmit)
         {
             context.Stats.SubmitScore(GameId, board.Score);
@@ -107,7 +87,6 @@ internal sealed class BubbleShooterApp : IMiniGame
         }
 
         var aim = ComputeAim(field, factor);
-
         if (!finished)
         {
             if (board.GameOver)
@@ -127,14 +106,15 @@ internal sealed class BubbleShooterApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         if (board.Score > displayBest)
         {
             displayBest = board.Score;
         }
 
-        GameHud.Pill(new Vector2(body.Center.X - 62f * scale, rowY), Loc.T(L.Games.Score), GameNumber.Label(board.Score), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 26f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest), Accent, theme, displayBest > loadedBest);
+        GameHud.Pill(new Vector2(body.Center.X - 62f * scale, rowY), Loc.T(L.Games.Score),
+            GameNumber.Label(board.Score), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 26f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
+            Accent, theme, displayBest > loadedBest);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
             StartNewGame(fieldHeight);
@@ -142,12 +122,10 @@ internal sealed class BubbleShooterApp : IMiniGame
         }
 
         renderer.Draw(board, field, scale, finished ? Vector2.Zero : aim, theme);
-
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, field, 0f);
         particles.Draw(drawList, scale);
         fx.DrawText();
-
         if (finished)
         {
             DrawResult(theme, body);
@@ -209,11 +187,10 @@ internal sealed class BubbleShooterApp : IMiniGame
     private void DrawResult(PhoneTheme theme, Rect body)
     {
         resultAppear = MathF.Min(1f, resultAppear + ImGui.GetIO().DeltaTime * 3.4f);
-
         var bestValue = board.Score > displayBest ? board.Score : displayBest;
         var secondary = $"{Loc.T(L.Games.Best)} {GameNumber.Label(bestValue)}";
-        var result = new GameResult(Loc.T(L.Games.GameOver), theme.TextStrong, Loc.T(L.Games.Score), GameNumber.Label(board.Score), secondary, newBest);
-
+        var result = new GameResult(Loc.T(L.Games.GameOver), theme.TextStrong, Loc.T(L.Games.Score),
+            GameNumber.Label(board.Score), secondary, newBest);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartNewGame(lastFieldHeight);

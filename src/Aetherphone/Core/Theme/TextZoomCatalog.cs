@@ -3,7 +3,6 @@ namespace Aetherphone.Core.Theme;
 internal static class TextZoomCatalog
 {
     public static readonly IReadOnlyList<float> Scales = new[] { 1.0f, 1.15f, 1.3f, 1.5f };
-
     public static readonly IReadOnlyList<string> Labels = new[] { "100%", "115%", "130%", "150%" };
 
     public static int IndexOf(float scale)

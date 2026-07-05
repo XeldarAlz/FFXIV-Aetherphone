@@ -21,7 +21,6 @@ internal sealed class NotificationBanner : IDisposable
     private const float EnterSmoothTime = 0.18f;
     private const float HoldSeconds = 1.3f;
     private const float ExitSmoothTime = 0.12f;
-
     private const float SideMargin = 8f;
     private const float BannerHeight = 64f;
     private const float RestTopOffset = 40f;
@@ -32,13 +31,11 @@ internal sealed class NotificationBanner : IDisposable
     private const float TextGap = 11f;
     private const float BodyOffset = 20f;
     private const int MaxQueued = 4;
-
     private readonly NotificationService notifications;
     private readonly Func<string?> currentAppId;
     private readonly NotificationRouter router;
     private readonly Queue<PhoneNotification> pending = new();
     private Spring slide;
-
     private PhoneNotification? active;
     private Stage stage = Stage.Idle;
     private float holdElapsed;
@@ -114,12 +111,10 @@ internal sealed class NotificationBanner : IDisposable
         var scale = ImGuiHelpers.GlobalScale;
         var bounds = CurrentBounds(screen, scale, out var opacity);
         var hovered = stage != Stage.Exit && ImGui.IsMouseHoveringRect(bounds.Min, bounds.Max);
-
         var dl = ImGui.GetForegroundDrawList();
         dl.PushClipRect(screen.Min, screen.Max, true);
         DrawCard(dl, notification, theme, bounds.Min, bounds.Max, scale, opacity, hovered);
         dl.PopClipRect();
-
         if (!hovered)
         {
             return;
@@ -138,7 +133,6 @@ internal sealed class NotificationBanner : IDisposable
         var height = BannerHeight * scale;
         var restTop = screen.Min.Y + RestTopOffset * scale;
         var hiddenTop = screen.Min.Y - height - HiddenGap * scale;
-
         float top;
         if (stage == Stage.Enter)
         {
@@ -161,25 +155,25 @@ internal sealed class NotificationBanner : IDisposable
         return new Rect(min, max);
     }
 
-    private static void DrawCard(ImDrawListPtr dl, PhoneNotification notification, PhoneTheme theme, Vector2 min, Vector2 max, float scale, float opacity, bool hovered)
+    private static void DrawCard(ImDrawListPtr dl, PhoneNotification notification, PhoneTheme theme, Vector2 min,
+        Vector2 max, float scale, float opacity, bool hovered)
     {
         var rounding = CornerRadius * scale;
-
         Elevation.Floating(dl, min, max, rounding, scale, opacity);
-
         var cardColor = Palette.Mix(theme.GroupedCard, theme.TextStrong, hovered ? 0.11f : 0.06f);
         Squircle.Fill(dl, min, max, rounding, Color(Palette.WithAlpha(cardColor, 0.99f), opacity));
-        var strokeColor = hovered ? Palette.WithAlpha(notification.Accent, 0.55f) : Palette.WithAlpha(theme.TextStrong, 0.10f);
+        var strokeColor = hovered
+            ? Palette.WithAlpha(notification.Accent, 0.55f)
+            : Palette.WithAlpha(theme.TextStrong, 0.10f);
         Squircle.Stroke(dl, min, max, rounding, Color(strokeColor, opacity), (hovered ? 1.5f : 1f) * scale);
-
         var iconExtent = IconSize * scale * 0.5f;
         var iconCenter = new Vector2(min.X + Padding * scale + iconExtent, (min.Y + max.Y) * 0.5f);
         var iconMin = new Vector2(iconCenter.X - iconExtent, iconCenter.Y - iconExtent);
         var iconMax = new Vector2(iconCenter.X + iconExtent, iconCenter.Y + iconExtent);
         Squircle.Fill(dl, iconMin, iconMax, iconExtent * 0.52f, Color(notification.Accent, opacity));
-
         var ink = Palette.WithAlpha(theme.TextStrong, opacity);
-        if (!AppIconArt.TryDraw(dl, notification.AppId, iconCenter, IconSize * scale, ink, Palette.WithAlpha(notification.Accent, opacity)))
+        if (!AppIconArt.TryDraw(dl, notification.AppId, iconCenter, IconSize * scale, ink,
+                Palette.WithAlpha(notification.Accent, opacity)))
         {
             var initial = notification.Title.Length > 0 ? notification.Title.Substring(0, 1) : "?";
             Typography.DrawCentered(dl, iconCenter, initial, ink, 1.1f);
@@ -188,17 +182,16 @@ internal sealed class NotificationBanner : IDisposable
         var textLeft = iconMax.X + TextGap * scale;
         var textRight = max.X - Padding * scale;
         var titleTop = min.Y + Padding * scale;
-
         var time = NotificationCard.RelativeTime(notification.ReceivedAt);
         var timeSize = Typography.Measure(time, 0.78f);
-        Typography.Draw(dl, new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time, Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
-
+        Typography.Draw(dl, new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time,
+            Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 6f * scale, max.Y), true);
         Typography.Draw(dl, new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f, FontWeight.SemiBold);
         dl.PopClipRect();
-
         dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
-        Typography.Draw(dl, new Vector2(textLeft, titleTop + BodyOffset * scale), notification.Body, Palette.WithAlpha(theme.TextMuted, opacity), 0.88f);
+        Typography.Draw(dl, new Vector2(textLeft, titleTop + BodyOffset * scale), notification.Body,
+            Palette.WithAlpha(theme.TextMuted, opacity), 0.88f);
         dl.PopClipRect();
     }
 
@@ -236,8 +229,6 @@ internal sealed class NotificationBanner : IDisposable
     }
 
     private static uint Color(Vector4 color, float opacity) => ImGui.GetColorU32(color with { W = color.W * opacity });
-
     private static float Lerp(float from, float to, float amount) => from + (to - from) * amount;
-
     public void Dispose() => notifications.Presented -= OnPresented;
 }

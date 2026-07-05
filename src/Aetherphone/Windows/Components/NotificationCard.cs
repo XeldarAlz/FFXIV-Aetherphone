@@ -10,19 +10,17 @@ namespace Aetherphone.Windows.Components;
 internal static class NotificationCard
 {
     public const float Height = 66f;
-
     private const float Rounding = 16f;
     private const float TileSize = 38f;
     private const float TileLeftPad = 13f;
-
     private static readonly Vector4 Ink = new(0.99f, 0.99f, 1f, 1f);
 
-    public static void DrawBase(ImDrawListPtr drawList, Rect rect, PhoneNotification notification, PhoneTheme theme, float scale, float opacity, float shadowStrength)
+    public static void DrawBase(ImDrawListPtr drawList, Rect rect, PhoneNotification notification, PhoneTheme theme,
+        float scale, float opacity, float shadowStrength)
     {
         var min = rect.Min;
         var max = rect.Max;
         var rounding = Rounding * scale;
-
         if (shadowStrength > 0f)
         {
             Elevation.Card(drawList, min, max, rounding, scale, shadowStrength * opacity);
@@ -30,17 +28,15 @@ internal static class NotificationCard
 
         Squircle.Fill(drawList, min, max, rounding, Color(theme.GroupedCard, opacity));
         Material.EdgeSquircle(drawList, min, max, rounding, scale, opacity);
-
         var tileSize = TileSize * scale;
         var tileMin = new Vector2(min.X + TileLeftPad * scale, min.Y + (rect.Height - tileSize) * 0.5f);
         var tileMax = tileMin + new Vector2(tileSize, tileSize);
         var tileRounding = tileSize * 0.28f;
         var tint = notification.Accent;
         Squircle.Fill(drawList, tileMin, tileMax, tileRounding, Color(tint, opacity));
-
         var gloss = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.18f * opacity));
-        drawList.AddLine(new Vector2(tileMin.X + tileRounding, tileMin.Y + 1f * scale), new Vector2(tileMax.X - tileRounding, tileMin.Y + 1f * scale), gloss, 1f * scale);
-
+        drawList.AddLine(new Vector2(tileMin.X + tileRounding, tileMin.Y + 1f * scale),
+            new Vector2(tileMax.X - tileRounding, tileMin.Y + 1f * scale), gloss, 1f * scale);
         var iconCenter = (tileMin + tileMax) * 0.5f;
         var ink = Palette.WithAlpha(Ink, opacity);
         var hole = Palette.WithAlpha(Palette.Mix(tint, new Vector4(0f, 0f, 0f, 1f), 0.25f), opacity);
@@ -51,17 +47,18 @@ internal static class NotificationCard
 
         var textLeft = tileMax.X + 12f * scale;
         var textRight = max.X - 14f * scale;
-
         var time = RelativeTime(notification.ReceivedAt);
         var timeSize = Typography.Measure(time, TextStyles.Caption1);
-        Typography.Draw(drawList, new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time, Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Caption1.Scale, TextStyles.Caption1.Weight);
-
-        drawList.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 8f * scale, max.Y), true);
-        Typography.Draw(drawList, new Vector2(textLeft, min.Y + 12f * scale), notification.Title, Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.Headline.Scale, TextStyles.Headline.Weight);
+        Typography.Draw(drawList, new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
+            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Caption1.Scale, TextStyles.Caption1.Weight);
+        drawList.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 8f * scale, max.Y),
+            true);
+        Typography.Draw(drawList, new Vector2(textLeft, min.Y + 12f * scale), notification.Title,
+            Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.Headline.Scale, TextStyles.Headline.Weight);
         drawList.PopClipRect();
-
         drawList.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
-        Typography.Draw(drawList, new Vector2(textLeft, min.Y + 35f * scale), notification.Body, Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight);
+        Typography.Draw(drawList, new Vector2(textLeft, min.Y + 35f * scale), notification.Body,
+            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight);
         drawList.PopClipRect();
     }
 
@@ -72,7 +69,8 @@ internal static class NotificationCard
         return new Vector2(rect.Min.X + TileLeftPad * scale + tileSize, tileTop);
     }
 
-    public static void DrawCountBadge(ImDrawListPtr drawList, Vector2 anchor, int count, PhoneTheme theme, float scale, float opacity)
+    public static void DrawCountBadge(ImDrawListPtr drawList, Vector2 anchor, int count, PhoneTheme theme, float scale,
+        float opacity)
     {
         if (count <= 1 || opacity <= 0.01f)
         {
@@ -85,10 +83,10 @@ internal static class NotificationCard
         var width = MathF.Max(radius * 2f, textSize.X + 9f * scale);
         var min = new Vector2(anchor.X - width * 0.5f, anchor.Y - radius);
         var max = new Vector2(anchor.X + width * 0.5f, anchor.Y + radius);
-
         Squircle.Fill(drawList, min, max, radius, Color(theme.Danger, opacity));
         Squircle.Stroke(drawList, min, max, radius, Color(theme.AppBackground, opacity), 1.5f * scale);
-        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, Palette.WithAlpha(Ink, opacity), TextStyles.Caption2.Scale, TextStyles.Caption2.Weight);
+        Typography.DrawCentered(drawList, (min + max) * 0.5f, label, Palette.WithAlpha(Ink, opacity),
+            TextStyles.Caption2.Scale, TextStyles.Caption2.Weight);
     }
 
     public static string RelativeTime(DateTime time)

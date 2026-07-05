@@ -11,6 +11,5 @@ internal sealed record PhoneNotification(
     string? GroupKey = null)
 {
     public long Id { get; init; }
-
     public string StackKey => string.IsNullOrEmpty(GroupKey) ? AppId : GroupKey;
 }

@@ -1,7 +1,5 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 
@@ -57,11 +55,13 @@ internal sealed class AnalyticsService : IAnalyticsService
 
     private static string EnsureInstallId(Configuration configuration)
     {
-        if (string.IsNullOrEmpty(configuration.AnalyticsInstallId))
+        if (!string.IsNullOrEmpty(configuration.AnalyticsInstallId))
         {
-            configuration.AnalyticsInstallId = Guid.NewGuid().ToString("N");
-            configuration.Save();
+            return configuration.AnalyticsInstallId;
         }
+
+        configuration.AnalyticsInstallId = Guid.NewGuid().ToString("N");
+        configuration.Save();
 
         return configuration.AnalyticsInstallId;
     }
@@ -80,6 +80,7 @@ internal sealed class AnalyticsService : IAnalyticsService
     private async Task RunFlushLoopAsync(CancellationToken token)
     {
         using var timer = new PeriodicTimer(FlushInterval);
+
         try
         {
             while (await timer.WaitForNextTickAsync(token).ConfigureAwait(false))

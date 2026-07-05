@@ -1,45 +1,27 @@
-using System.IO;
 using Newtonsoft.Json;
 
 namespace Aetherphone.Core.Inventory;
 
 internal sealed class StoredStack
 {
-    [JsonProperty("i")]
-    public uint ItemId { get; set; }
-
-    [JsonProperty("q")]
-    public int Quantity { get; set; }
-
-    [JsonProperty("h")]
-    public bool HighQuality { get; set; }
-
-    [JsonProperty("s")]
-    public int Slot { get; set; }
+    [JsonProperty("i")] public uint ItemId { get; set; }
+    [JsonProperty("q")] public int Quantity { get; set; }
+    [JsonProperty("h")] public bool HighQuality { get; set; }
+    [JsonProperty("s")] public int Slot { get; set; }
 }
 
 internal sealed class StoredSource
 {
-    [JsonProperty("kind")]
-    public InventorySourceKind Kind { get; set; }
-
-    [JsonProperty("ownerName")]
-    public string OwnerName { get; set; } = string.Empty;
-
-    [JsonProperty("ownerId")]
-    public ulong OwnerId { get; set; }
-
-    [JsonProperty("capturedUnix")]
-    public long CapturedUnix { get; set; }
-
-    [JsonProperty("stacks")]
-    public StoredStack[] Stacks { get; set; } = Array.Empty<StoredStack>();
+    [JsonProperty("kind")] public InventorySourceKind Kind { get; set; }
+    [JsonProperty("ownerName")] public string OwnerName { get; set; } = string.Empty;
+    [JsonProperty("ownerId")] public ulong OwnerId { get; set; }
+    [JsonProperty("capturedUnix")] public long CapturedUnix { get; set; }
+    [JsonProperty("stacks")] public StoredStack[] Stacks { get; set; } = Array.Empty<StoredStack>();
 }
 
 internal sealed class StoredCharacter
 {
-    [JsonProperty("sources")]
-    public List<StoredSource> Sources { get; set; } = new();
+    [JsonProperty("sources")] public List<StoredSource> Sources { get; set; } = new();
 }
 
 internal sealed class InventoryStore
@@ -152,5 +134,6 @@ internal sealed class InventoryStore
         }
     }
 
-    private string PathFor(ulong characterId) => Path.Combine(root.FullName, string.Concat(characterId.ToString("x16"), ".json"));
+    private string PathFor(ulong characterId) =>
+        Path.Combine(root.FullName, string.Concat(characterId.ToString("x16"), ".json"));
 }

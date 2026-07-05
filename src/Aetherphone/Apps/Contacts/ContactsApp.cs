@@ -21,28 +21,19 @@ internal sealed class ContactsApp : IPhoneApp
     private const float PostRequestReadIntervalSeconds = 0.5f;
     private const float PostRequestPollWindowSeconds = 6f;
     private const float RequestCooldownSeconds = 5f;
-
     private const float RowHeight = 60f;
-
     public string Id => "contacts";
-
     public string DisplayName => Loc.T(L.Apps.Contacts);
-
     public string Glyph => "C";
-
     public Vector4 Accent => new(0.45f, 0.55f, 0.95f, 1f);
-
     public int BadgeCount => 0;
-
     private readonly GameData gameData;
     private readonly MessageLauncher launcher;
     private readonly LodestoneService lodestone;
     private readonly List<FriendEntry> friends = new();
-
     private readonly ViewRouter<FriendEntry?> router;
     private readonly RouterDraw<FriendEntry?> drawView;
     private readonly Action backToList;
-
     private float sinceRead;
     private float sinceRequest = RequestCooldownSeconds;
     private float pollWindowRemaining;
@@ -55,7 +46,6 @@ internal sealed class ContactsApp : IPhoneApp
         this.gameData = gameData;
         this.launcher = launcher;
         this.lodestone = lodestone;
-
         router = new ViewRouter<FriendEntry?>(null);
         drawView = DrawView;
         backToList = () => router.Pop();
@@ -76,7 +66,8 @@ internal sealed class ContactsApp : IPhoneApp
 
     private void RequestRefresh()
     {
-        if (gameData.LocalPlayer != null && sinceRequest >= RequestCooldownSeconds && FriendListReader.RequestServerData())
+        if (gameData.LocalPlayer != null && sinceRequest >= RequestCooldownSeconds &&
+            FriendListReader.RequestServerData())
         {
             sinceRequest = 0f;
             pollWindowRemaining = PostRequestPollWindowSeconds;
@@ -107,7 +98,6 @@ internal sealed class ContactsApp : IPhoneApp
         var delta = ImGui.GetIO().DeltaTime;
         sinceRead += delta;
         sinceRequest += delta;
-
         var readInterval = pollWindowRemaining > 0f ? PostRequestReadIntervalSeconds : IdleReadIntervalSeconds;
         if (pollWindowRemaining > 0f)
         {
@@ -146,7 +136,6 @@ internal sealed class ContactsApp : IPhoneApp
         }
 
         var scale = ImGuiHelpers.GlobalScale;
-
         if (friends.Count == 0)
         {
             var emptyBody = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
@@ -156,9 +145,9 @@ internal sealed class ContactsApp : IPhoneApp
 
         var pad = 16f * scale;
         var searchTop = area.Min.Y + AppHeader.Height * scale;
-        var searchBar = new Rect(new Vector2(area.Min.X + pad, searchTop), new Vector2(area.Max.X - pad, searchTop + 44f * scale));
+        var searchBar = new Rect(new Vector2(area.Min.X + pad, searchTop),
+            new Vector2(area.Max.X - pad, searchTop + 44f * scale));
         SearchField.Draw(searchBar, "##contactsSearch", Loc.T(L.Common.Search), ref search, frameTheme);
-
         var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -201,25 +190,24 @@ internal sealed class ContactsApp : IPhoneApp
         card.End();
     }
 
-    private bool Matches(FriendEntry friend) => search.Length == 0 || friend.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
+    private bool Matches(FriendEntry friend) =>
+        search.Length == 0 || friend.Name.Contains(search, StringComparison.OrdinalIgnoreCase);
 
     private void DrawDetail(Rect area, FriendEntry friend)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.Contacts.Detail), backToList);
-
         var scale = ImGuiHelpers.GlobalScale;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-
         using (AppSurface.Begin(body))
         {
             DrawHero(friend, theme, lodestone);
             ImGui.Dummy(new Vector2(0f, 12f * scale));
             DrawActions(friend, theme);
-
             var card = GroupCard.Begin(theme, 1);
-            if (SettingsRow.Link(card.NextRow(), "i", new Vector4(0.40f, 0.42f, 0.50f, 1f), Loc.T(L.Contacts.SearchInfo), string.Empty, theme))
+            if (SettingsRow.Link(card.NextRow(), "i", new Vector4(0.40f, 0.42f, 0.50f, 1f),
+                    Loc.T(L.Contacts.SearchInfo), string.Empty, theme))
             {
                 FriendActions.OpenSearchInfo(friend.ContentId);
             }
@@ -234,20 +222,16 @@ internal sealed class ContactsApp : IPhoneApp
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-
         var hasLocation = friend.Online && friend.Location.Length > 0;
         var heroHeight = (hasLocation ? 184f : 164f) * scale;
         var heroMin = origin;
         var heroMax = new Vector2(origin.X + width, origin.Y + heroHeight);
         var rounding = 22f * scale;
-
         Elevation.Card(dl, heroMin, heroMax, rounding, scale);
         Squircle.Fill(dl, heroMin, heroMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
-
         var tint = friend.Online ? theme.Accent : theme.SurfaceMuted;
         Material.TopGlow(dl, heroMin, heroMax, rounding, tint, 0.82f, 0.15f);
         Material.EdgeSquircle(dl, heroMin, heroMax, rounding, scale);
-
         var centerX = heroMin.X + width * 0.5f;
         var avatarRadius = 36f * scale;
         var avatarCenter = new Vector2(centerX, heroMin.Y + 20f * scale + avatarRadius);
@@ -257,19 +241,20 @@ internal sealed class ContactsApp : IPhoneApp
         }
 
         var baseColor = friend.Online ? theme.Accent : theme.SurfaceMuted;
-        AvatarView.Draw(dl, avatarCenter, avatarRadius, baseColor, Initials.Of(friend.Name), 2.0f, lodestone.Avatar(friend.Name, friend.WorldName), 64);
-
-        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 18f * scale), friend.Name, theme.TextStrong, TextStyles.Title2);
-
+        AvatarView.Draw(dl, avatarCenter, avatarRadius, baseColor, Initials.Of(friend.Name), 2.0f,
+            lodestone.Avatar(friend.Name, friend.WorldName), 64);
+        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 18f * scale), friend.Name,
+            theme.TextStrong, TextStyles.Title2);
         var statusWord = friend.Online ? Loc.T(L.Contacts.Online) : Loc.T(L.Contacts.Offline);
         var status = friend.Online && friend.JobName.Length > 0
             ? $"{friend.WorldName} · {friend.JobName} · {statusWord}"
             : $"{friend.WorldName} · {statusWord}";
-        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 42f * scale), status, theme.TextMuted, TextStyles.Subheadline);
-
+        Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 42f * scale), status,
+            theme.TextMuted, TextStyles.Subheadline);
         if (hasLocation)
         {
-            Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 63f * scale), friend.Location, theme.TextMuted, TextStyles.Footnote);
+            Typography.DrawCentered(new Vector2(centerX, avatarCenter.Y + avatarRadius + 63f * scale), friend.Location,
+                theme.TextMuted, TextStyles.Footnote);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -281,25 +266,24 @@ internal sealed class ContactsApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-
         var canInvite = friend.Online;
         var canVisit = friend.HomeWorldId != 0 && gameData.LocalCurrentWorldId == friend.HomeWorldId;
         var count = 2 + (canInvite ? 1 : 0) + (canVisit ? 1 : 0);
-
         var radius = 26f * scale;
         var rowHeight = radius * 2f + 30f * scale;
         var spacing = width / count;
         var centerY = origin.Y + radius + 2f * scale;
         var slot = 0;
-
-        if (QuickAction.Draw("contact.message", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius, FontAwesomeIcon.CommentDots, new Vector4(0.30f, 0.78f, 0.42f, 1f), Loc.T(L.Contacts.Message), theme))
+        if (QuickAction.Draw("contact.message", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius,
+                FontAwesomeIcon.CommentDots, new Vector4(0.30f, 0.78f, 0.42f, 1f), Loc.T(L.Contacts.Message), theme))
         {
             launcher.Request(friend.Name, SendTarget(friend));
             frameNavigation.Open("messages");
         }
 
         slot++;
-        if (QuickAction.Draw("contact.plate", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius, FontAwesomeIcon.IdCard, new Vector4(0.45f, 0.55f, 0.95f, 1f), Loc.T(L.Contacts.Plate), theme))
+        if (QuickAction.Draw("contact.plate", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius,
+                FontAwesomeIcon.IdCard, new Vector4(0.45f, 0.55f, 0.95f, 1f), Loc.T(L.Contacts.Plate), theme))
         {
             FriendActions.OpenAdventurerPlate(friend.ContentId);
         }
@@ -307,7 +291,8 @@ internal sealed class ContactsApp : IPhoneApp
         slot++;
         if (canInvite)
         {
-            if (QuickAction.Draw("contact.party", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius, FontAwesomeIcon.UserPlus, theme.Accent, Loc.T(L.Contacts.Party), theme))
+            if (QuickAction.Draw("contact.party", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius,
+                    FontAwesomeIcon.UserPlus, theme.Accent, Loc.T(L.Contacts.Party), theme))
             {
                 FriendActions.InviteToParty(friend.ContentId, friend.CurrentWorldId);
             }
@@ -315,7 +300,8 @@ internal sealed class ContactsApp : IPhoneApp
             slot++;
         }
 
-        if (canVisit && QuickAction.Draw("contact.visit", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY), radius, FontAwesomeIcon.Home, new Vector4(0.96f, 0.65f, 0.20f, 1f), Loc.T(L.Contacts.Visit), theme))
+        if (canVisit && QuickAction.Draw("contact.visit", new Vector2(origin.X + (slot + 0.5f) * spacing, centerY),
+                radius, FontAwesomeIcon.Home, new Vector4(0.96f, 0.65f, 0.20f, 1f), Loc.T(L.Contacts.Visit), theme))
         {
             FriendActions.VisitEstate(friend.ContentId);
         }
@@ -329,8 +315,8 @@ internal sealed class ContactsApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var center = new Vector2(content.Max.X - 14f * scale, content.Min.Y + AppHeader.Height * scale * 0.5f);
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(16f * scale, 16f * scale), center + new Vector2(16f * scale, 16f * scale));
-
+        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(16f * scale, 16f * scale),
+            center + new Vector2(16f * scale, 16f * scale));
         var glyph = FontAwesomeIcon.Sync.ToIconString();
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
@@ -350,7 +336,8 @@ internal sealed class ContactsApp : IPhoneApp
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private static string SendTarget(FriendEntry friend) => friend.WorldName.Length > 0 ? $"{friend.Name}@{friend.WorldName}" : friend.Name;
+    private static string SendTarget(FriendEntry friend) =>
+        friend.WorldName.Length > 0 ? $"{friend.Name}@{friend.WorldName}" : friend.Name;
 
     public void Dispose()
     {

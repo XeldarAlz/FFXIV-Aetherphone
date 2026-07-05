@@ -13,15 +13,10 @@ namespace Aetherphone.Apps.Games.Pairs;
 internal sealed class PairsApp : IMiniGame
 {
     private const string GameId = "memory";
-
     private const string AttemptsStatId = "memory.attempts";
-
     private const float FlipDuration = 0.22f;
-
     private const float RevealDelay = 0.55f;
-
     private const float CelebrateDuration = 0.45f;
-
     private const float ShakeDuration = 0.35f;
 
     private enum Phase
@@ -35,49 +30,27 @@ internal sealed class PairsApp : IMiniGame
     }
 
     private readonly PairsBoard board = new();
-
     private readonly PairsRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private readonly float[] flipProgress = new float[PairsBoard.CardCount];
-
     private readonly float[] flipTarget = new float[PairsBoard.CardCount];
-
     private readonly float[] matchGlow = new float[PairsBoard.CardCount];
-
     private readonly float[] shakePhase = new float[PairsBoard.CardCount];
-
     private Phase phase;
-
     private float phaseTimer;
-
     private float elapsed;
-
     private bool matchBurstPending;
-
     private int streak;
-
     private float resultAppear;
-
     private string resultTimeText = "0:00";
-
     private bool newBestTime;
-
     private bool pendingWinSubmit;
-
     private bool statsLoaded;
-
     private GameStats loadedStats;
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Pairs);
-
     public string Genre => Loc.T(L.Games.GenreMemory);
-
     public Vector4 Accent => Styling.AccentAmber;
 
     public void Open()
@@ -122,7 +95,6 @@ internal sealed class PairsApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (!statsLoaded)
         {
             loadedStats = context.Stats.Get(GameId);
@@ -147,10 +119,11 @@ internal sealed class PairsApp : IMiniGame
         UpdateAnimations(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         var rowY = body.Min.Y + 32f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 58f * scale, rowY), Loc.T(L.Games.Attempts), GameNumber.Label(board.Attempts), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 38f * scale, rowY), Loc.T(L.Games.Time), GameNumber.Label((int)elapsed), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X - 58f * scale, rowY), Loc.T(L.Games.Attempts),
+            GameNumber.Label(board.Attempts), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 38f * scale, rowY), Loc.T(L.Games.Time),
+            GameNumber.Label((int)elapsed), Accent, theme);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
             if (phase != Phase.Won)
@@ -163,9 +136,9 @@ internal sealed class PairsApp : IMiniGame
             return;
         }
 
-        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 70f * scale), new Vector2(body.Max.X, body.Max.Y - 8f * scale));
+        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 70f * scale),
+            new Vector2(body.Max.X, body.Max.Y - 8f * scale));
         var grid = GameGrid.Centered(gridArea, PairsBoard.Columns, PairsBoard.Rows, 0.10f);
-
         if (matchBurstPending)
         {
             EmitMatchBurst(grid);
@@ -173,11 +146,9 @@ internal sealed class PairsApp : IMiniGame
         }
 
         DrawCards(grid, theme, scale);
-
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
         fx.DrawText();
-
         if (phase == Phase.Won)
         {
             DrawResult(context, theme, body);
@@ -192,18 +163,13 @@ internal sealed class PairsApp : IMiniGame
             {
                 var index = row * PairsBoard.Columns + column;
                 var cell = grid.Cell(column, row);
-
-                var hovered = phase == Phase.Selecting
-                    && board.CanReveal(index)
-                    && flipProgress[index] < 0.02f
-                    && ImGui.IsMouseHoveringRect(cell.Min, cell.Max);
-
+                var hovered = phase == Phase.Selecting && board.CanReveal(index) && flipProgress[index] < 0.02f &&
+                              ImGui.IsMouseHoveringRect(cell.Min, cell.Max);
                 var shakeX = shakePhase[index] > 0f
                     ? MathF.Sin(shakePhase[index] * MathF.PI * 8f) * 5f * scale * shakePhase[index]
                     : 0f;
-
-                renderer.DrawCard(cell, board.Symbol(index), board.State(index), flipProgress[index], matchGlow[index], shakeX, hovered, theme, scale);
-
+                renderer.DrawCard(cell, board.Symbol(index), board.State(index), flipProgress[index], matchGlow[index],
+                    shakeX, hovered, theme, scale);
                 if (hovered)
                 {
                     ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -278,7 +244,6 @@ internal sealed class PairsApp : IMiniGame
                 }
 
                 break;
-
             case Phase.Celebrating:
                 phaseTimer += deltaSeconds;
                 if (phaseTimer >= CelebrateDuration)
@@ -295,7 +260,6 @@ internal sealed class PairsApp : IMiniGame
                 }
 
                 break;
-
             case Phase.Shaking:
                 phaseTimer += deltaSeconds;
                 if (phaseTimer >= ShakeDuration)
@@ -306,7 +270,6 @@ internal sealed class PairsApp : IMiniGame
                 }
 
                 break;
-
             case Phase.FlippingBack:
                 if (flipProgress[board.FirstCard] <= 0.001f && flipProgress[board.SecondCard] <= 0.001f)
                 {
@@ -315,7 +278,6 @@ internal sealed class PairsApp : IMiniGame
                 }
 
                 break;
-
             case Phase.Won:
                 resultAppear = MathF.Min(1f, resultAppear + deltaSeconds * 3.4f);
                 break;
@@ -354,7 +316,8 @@ internal sealed class PairsApp : IMiniGame
         }
 
         var center = grid.CellCenter(index % PairsBoard.Columns, index / PairsBoard.Columns);
-        particles.Burst(center, 14, PairsRenderer.ColorFor(board.Symbol(index)), 170f * ImGuiHelpers.GlobalScale, 3.2f, 0.6f, 240f);
+        particles.Burst(center, 14, PairsRenderer.ColorFor(board.Symbol(index)), 170f * ImGuiHelpers.GlobalScale, 3.2f,
+            0.6f, 240f);
     }
 
     private void OnWin()
@@ -362,7 +325,6 @@ internal sealed class PairsApp : IMiniGame
         phase = Phase.Won;
         resultAppear = 0f;
         pendingWinSubmit = true;
-
         var seconds = (int)elapsed;
         var minutes = seconds / 60;
         resultTimeText = $"{minutes}:{seconds % 60:D2}";
@@ -370,9 +332,10 @@ internal sealed class PairsApp : IMiniGame
 
     private void DrawResult(in GameContext context, PhoneTheme theme, Rect body)
     {
-        var secondaryParts = $"{Loc.Plural(L.Games.AttemptsCount, board.Attempts)}  ·  {Loc.T(L.Games.Streak)} {GameNumber.Label(streak)}";
-        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondaryParts, newBestTime);
-
+        var secondaryParts =
+            $"{Loc.Plural(L.Games.AttemptsCount, board.Attempts)}  ·  {Loc.T(L.Games.Streak)} {GameNumber.Label(streak)}";
+        var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondaryParts,
+            newBestTime);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartNewGame();

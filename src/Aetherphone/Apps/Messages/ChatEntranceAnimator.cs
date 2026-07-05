@@ -11,7 +11,6 @@ internal sealed class ChatEntranceAnimator
     }
 
     private readonly List<Entrance> active = new();
-
     private object? tracked;
     private int settledCount;
 

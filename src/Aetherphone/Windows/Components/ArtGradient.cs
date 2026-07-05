@@ -57,7 +57,6 @@ internal static class ArtGradient
         var bottom = ImGui.GetColorU32(Palette.WithAlpha(swatch.Bottom, alpha));
         var top = ImGui.GetColorU32(Palette.WithAlpha(swatch.Top, alpha));
         var glow = ImGui.GetColorU32(Palette.WithAlpha(swatch.Glow, 0.55f * alpha));
-
         drawList.AddCircleFilled(center, radius, bottom, 48);
         drawList.AddCircleFilled(center - new Vector2(0f, radius * 0.34f), radius * 0.76f, top, 48);
         drawList.AddCircleFilled(center - new Vector2(radius * 0.32f, radius * 0.40f), radius * 0.40f, glow, 32);
@@ -71,7 +70,6 @@ internal static class ArtGradient
         var p = value * (1f - saturation);
         var q = value * (1f - saturation * fraction);
         var t = value * (1f - saturation * (1f - fraction));
-
         return index switch
         {
             0 => new Vector4(value, t, p, 1f),

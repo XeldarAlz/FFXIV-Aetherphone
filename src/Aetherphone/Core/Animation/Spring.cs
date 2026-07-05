@@ -3,7 +3,6 @@ namespace Aetherphone.Core.Animation;
 internal struct Spring
 {
     public float Value;
-
     public float Velocity;
 
     public Spring(float value)

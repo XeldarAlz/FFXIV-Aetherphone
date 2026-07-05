@@ -26,11 +26,8 @@ internal sealed class CommandsPage : ISettingsPage
     };
 
     public string Title => Loc.T(L.Settings.Commands);
-
     public string Summary => Loc.T(L.Settings.CommandsSummary);
-
     public string Glyph => "/";
-
     public Vector4 Tint => new(0.46f, 0.62f, 0.92f, 1f);
 
     public void Draw(in PhoneContext context, Rect body)
@@ -40,7 +37,6 @@ internal sealed class CommandsPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.Commands), theme);
-
             var card = GroupCard.Begin(theme, Entries.Length, RowHeight);
             for (var index = 0; index < Entries.Length; index++)
             {
@@ -48,7 +44,6 @@ internal sealed class CommandsPage : ISettingsPage
             }
 
             card.End();
-
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
             using (Plugin.Fonts.Push(0.8f))
@@ -62,9 +57,10 @@ internal sealed class CommandsPage : ISettingsPage
     private static void DrawRow(Rect row, CommandEntry entry, Core.Theme.PhoneTheme theme, float scale)
     {
         var syntaxHeight = Typography.Measure(entry.Syntax, 0.92f, FontWeight.SemiBold).Y;
-        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale), entry.Syntax, theme.Accent, 0.92f, FontWeight.SemiBold);
-
+        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale), entry.Syntax, theme.Accent, 0.92f,
+            FontWeight.SemiBold);
         var description = Loc.T(entry.Description);
-        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale + syntaxHeight + 4f * scale), description, theme.TextMuted, 0.8f);
+        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale + syntaxHeight + 4f * scale), description,
+            theme.TextMuted, 0.8f);
     }
 }

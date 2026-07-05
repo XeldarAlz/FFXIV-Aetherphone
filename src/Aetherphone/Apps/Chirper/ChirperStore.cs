@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -17,34 +15,26 @@ internal enum ChirperFeedScope
 internal sealed class ChirperStore : IDisposable
 {
     private const int AvatarSize = 512;
-
     private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
-
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly CancellationTokenSource cancellation = new();
-
     private DateTime lastMeAttemptUtc = DateTime.MinValue;
-
     private volatile UserDto? me;
-
     private volatile PostDto[] forYou = Array.Empty<PostDto>();
     private volatile PostDto[] following = Array.Empty<PostDto>();
     private volatile bool loadingForYou;
     private volatile bool loadingFollowing;
-
     private volatile string? profileUserId;
     private volatile UserDto? profileUser;
     private volatile PostDto[] profilePosts = Array.Empty<PostDto>();
     private volatile bool profileLoading;
     private volatile bool profileFailed;
-
     private volatile string? detailPostId;
     private volatile PostDto? detailPost;
     private volatile CommentDto[] detailComments = Array.Empty<CommentDto>();
     private volatile bool detailLoading;
     private volatile bool commenting;
-
     private volatile UserDto[] discoverResults = Array.Empty<UserDto>();
     private volatile bool searching;
     private volatile bool posting;
@@ -58,37 +48,24 @@ internal sealed class ChirperStore : IDisposable
     }
 
     public bool IsSignedIn => session.IsSignedIn;
-
     public UserDto? Me => me;
-
     public PostDto[] Feed(ChirperFeedScope scope) => scope == ChirperFeedScope.ForYou ? forYou : following;
 
-    public bool IsLoading(ChirperFeedScope scope) => scope == ChirperFeedScope.ForYou ? loadingForYou : loadingFollowing;
+    public bool IsLoading(ChirperFeedScope scope) =>
+        scope == ChirperFeedScope.ForYou ? loadingForYou : loadingFollowing;
 
     public string? ProfileUserId => profileUserId;
-
     public UserDto? ProfileUser => profileUser;
-
     public PostDto[] ProfilePosts => profilePosts;
-
     public bool ProfileLoading => profileLoading;
-
     public bool ProfileFailed => profileFailed;
-
     public PostDto? DetailPost => detailPost;
-
     public CommentDto[] DetailComments => detailComments;
-
     public bool DetailLoading => detailLoading;
-
     public bool Commenting => commenting;
-
     public UserDto[] DiscoverResults => discoverResults;
-
     public bool Searching => searching;
-
     public bool Posting => posting;
-
     public bool AvatarBusy => avatarBusy;
 
     public void EnsureMe()
@@ -134,7 +111,8 @@ internal sealed class ChirperStore : IDisposable
 
         RunGuarded("feed refresh", async token =>
         {
-            var page = await client.FeedAsync(scope == ChirperFeedScope.ForYou ? "explore" : "following", null, token).ConfigureAwait(false);
+            var page = await client.FeedAsync(scope == ChirperFeedScope.ForYou ? "explore" : "following", null, token)
+                .ConfigureAwait(false);
             if (page is not null)
             {
                 if (scope == ChirperFeedScope.ForYou)
@@ -207,7 +185,6 @@ internal sealed class ChirperStore : IDisposable
         var target = post.MyReaction == kind ? -1 : kind;
         var optimistic = ApplyReaction(post, target);
         ReplacePost(optimistic);
-
         RunGuarded("reaction", async token =>
         {
             var result = target < 0
@@ -226,7 +203,6 @@ internal sealed class ChirperStore : IDisposable
         detailPost = post;
         detailComments = Array.Empty<CommentDto>();
         detailLoading = true;
-
         RunGuarded("comments load", async token =>
         {
             var page = await client.CommentsAsync(post.Id, null, token).ConfigureAwait(false);
@@ -298,7 +274,8 @@ internal sealed class ChirperStore : IDisposable
         }
 
         BumpCommentCount(postId, -1);
-        RunGuarded("comment delete", async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
+        RunGuarded("comment delete",
+            async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
     public void DeleteComment(string postId, string commentId, Action<bool> onComplete)
@@ -337,7 +314,6 @@ internal sealed class ChirperStore : IDisposable
     public void SetFollow(string userId, bool follow)
     {
         UpdateUserEverywhere(userId, follow);
-
         RunGuarded("follow", async token =>
         {
             if (follow)
@@ -415,7 +391,6 @@ internal sealed class ChirperStore : IDisposable
         profilePosts = Array.Empty<PostDto>();
         profileFailed = false;
         profileLoading = true;
-
         RunGuarded("profile open", async token =>
         {
             var user = await client.UserAsync(userId, token).ConfigureAwait(false);
@@ -463,7 +438,8 @@ internal sealed class ChirperStore : IDisposable
             var succeeded = false;
             try
             {
-                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token).ConfigureAwait(false);
+                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token)
+                    .ConfigureAwait(false);
                 if (updated is not null)
                 {
                     me = updated;
@@ -510,13 +486,16 @@ internal sealed class ChirperStore : IDisposable
                     return;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false);
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
                 if (!uploaded)
                 {
                     return;
                 }
 
-                var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token).ConfigureAwait(false);
+                var updated = await client
+                    .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
+                    .ConfigureAwait(false);
                 if (updated is null)
                 {
                     return;
@@ -659,7 +638,10 @@ internal sealed class ChirperStore : IDisposable
 
         if (profileUser is { } current && current.Id == userId)
         {
-            profileUser = current with { IsFollowing = follow, Followers = Math.Max(0, current.Followers + (follow ? 1 : -1)) };
+            profileUser = current with
+            {
+                IsFollowing = follow, Followers = Math.Max(0, current.Followers + (follow ? 1 : -1))
+            };
         }
     }
 
@@ -710,7 +692,10 @@ internal sealed class ChirperStore : IDisposable
             var user = source[index];
             if (user.Id == userId && user.IsFollowing != follow)
             {
-                result[index] = user with { IsFollowing = follow, Followers = Math.Max(0, user.Followers + (follow ? 1 : -1)) };
+                result[index] = user with
+                {
+                    IsFollowing = follow, Followers = Math.Max(0, user.Followers + (follow ? 1 : -1))
+                };
                 changed = true;
             }
             else

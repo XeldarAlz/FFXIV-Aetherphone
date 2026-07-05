@@ -18,31 +18,21 @@ internal sealed class MapsApp : IPhoneApp
     private const float LocationCardHeight = 64f;
     private const float DestinationRowHeight = 50f;
     private const float ExpansionHeaderHeight = 40f;
-
     private static readonly Vector4 MapAccent = new(0.20f, 0.62f, 0.86f, 1f);
     private static readonly Vector4 FavoriteStar = new(1f, 0.78f, 0.25f, 1f);
-
     public string Id => "maps";
-
     public string DisplayName => Loc.T(L.Apps.Maps);
-
     public string Glyph => "Ma";
-
     public Vector4 Accent => MapAccent;
-
     public int BadgeCount => 0;
-
     private readonly MapData maps;
     private readonly Configuration configuration;
-
     private readonly List<MapAetheryte> favoriteDestinations = new();
     private readonly List<MapAetheryte> searchResults = new();
     private readonly HashSet<uint> favorites = new();
     private readonly HashSet<byte> expandedExpansions = new();
-
     private string search = string.Empty;
     private bool lifestreamAvailable;
-
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
@@ -78,21 +68,20 @@ internal sealed class MapsApp : IPhoneApp
     {
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
-        SceneCompositor.DrawLayer(context.Content, new SceneCompositor.Layer("maps", Vector2.Zero, 0f, DrawRoot, context.Theme.AppBackground));
+        SceneCompositor.DrawLayer(context.Content,
+            new SceneCompositor.Layer("maps", Vector2.Zero, 0f, DrawRoot, context.Theme.AppBackground));
     }
 
     private void DrawRoot(Rect area)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, DisplayName);
-
         var scale = ImGuiHelpers.GlobalScale;
         var pad = 16f * scale;
         var top = area.Min.Y + AppHeader.Height * scale;
-
-        var searchBar = new Rect(new Vector2(area.Min.X + pad, top), new Vector2(area.Max.X - pad, top + SearchHeight * scale));
+        var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
+            new Vector2(area.Max.X - pad, top + SearchHeight * scale));
         SearchField.Draw(searchBar, "##mapsSearch", Loc.T(L.Maps.Search), ref search, frameTheme, 60);
-
         var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -117,9 +106,7 @@ internal sealed class MapsApp : IPhoneApp
         var location = maps.CurrentLocation();
         var zoneName = location.Zone.Length > 0 ? location.Zone : Loc.T(L.Maps.Unknown);
         var regionName = location.Region.Length > 0 ? location.Region : Loc.T(L.Maps.Unknown);
-
         SettingsSection.Header(Loc.T(L.Maps.CurrentLocation), frameTheme);
-
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var cardMin = origin;
@@ -127,14 +114,13 @@ internal sealed class MapsApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, cardMin, cardMax, 14f * scale, ImGui.GetColorU32(frameTheme.GroupedCard));
         Material.EdgeSquircle(drawList, cardMin, cardMax, 14f * scale, scale);
-
         var pinCenter = new Vector2(cardMin.X + 28f * scale, cardMin.Y + LocationCardHeight * scale * 0.5f);
         DrawPin(drawList, pinCenter, 12f * scale, frameTheme.Accent);
-
         var textLeft = pinCenter.X + 24f * scale;
-        Typography.Draw(new Vector2(textLeft, cardMin.Y + 14f * scale), zoneName, frameTheme.TextStrong, TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, cardMin.Y + 36f * scale), regionName, frameTheme.TextMuted, TextStyles.Footnote);
-
+        Typography.Draw(new Vector2(textLeft, cardMin.Y + 14f * scale), zoneName, frameTheme.TextStrong,
+            TextStyles.Headline);
+        Typography.Draw(new Vector2(textLeft, cardMin.Y + 36f * scale), regionName, frameTheme.TextMuted,
+            TextStyles.Footnote);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, LocationCardHeight * scale + 4f * scale));
     }
@@ -179,7 +165,6 @@ internal sealed class MapsApp : IPhoneApp
         {
             var expansion = expansions[expansionIndex];
             var expanded = expandedExpansions.Contains(expansion.Order);
-
             if (DrawExpansionHeader(expansion, expanded))
             {
                 if (expanded)
@@ -265,7 +250,6 @@ internal sealed class MapsApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.Dummy(new Vector2(0f, 12f * scale));
-
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var height = ExpansionHeaderHeight * scale;
@@ -273,22 +257,20 @@ internal sealed class MapsApp : IPhoneApp
         var max = new Vector2(origin.X + width, origin.Y + height);
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         var drawList = ImGui.GetWindowDrawList();
-
         if (hovered)
         {
-            Squircle.Fill(drawList, new Vector2(min.X - 8f * scale, min.Y), new Vector2(max.X + 8f * scale, max.Y), 10f * scale, ImGui.GetColorU32(Palette.WithAlpha(frameTheme.TextStrong, 0.06f)));
+            Squircle.Fill(drawList, new Vector2(min.X - 8f * scale, min.Y), new Vector2(max.X + 8f * scale, max.Y),
+                10f * scale, ImGui.GetColorU32(Palette.WithAlpha(frameTheme.TextStrong, 0.06f)));
         }
 
         var disclosureCenter = new Vector2(min.X + 19f * scale, min.Y + height * 0.5f);
         var ink = hovered ? frameTheme.TextStrong : frameTheme.TextMuted;
         DrawDisclosure(drawList, disclosureCenter, 5f * scale, 2.2f * scale, expanded, ink);
-
         var titleSize = Typography.Measure(expansion.Name, TextStyles.Headline);
-        Typography.Draw(new Vector2(disclosureCenter.X + 16f * scale, min.Y + height * 0.5f - titleSize.Y * 0.5f), expansion.Name, frameTheme.TextStrong, TextStyles.Headline);
-
+        Typography.Draw(new Vector2(disclosureCenter.X + 16f * scale, min.Y + height * 0.5f - titleSize.Y * 0.5f),
+            expansion.Name, frameTheme.TextStrong, TextStyles.Headline);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
-
         if (!hovered)
         {
             return false;
@@ -302,28 +284,28 @@ internal sealed class MapsApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-
         var starRadius = 9f * scale;
         var starCenter = new Vector2(row.Min.X + starRadius, row.Center.Y);
-        var starHovered = ImGui.IsMouseHoveringRect(new Vector2(row.Min.X, row.Min.Y), new Vector2(starCenter.X + starRadius + 6f * scale, row.Max.Y));
+        var starHovered = ImGui.IsMouseHoveringRect(new Vector2(row.Min.X, row.Min.Y),
+            new Vector2(starCenter.X + starRadius + 6f * scale, row.Max.Y));
         var rowHovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         var actionHovered = rowHovered && !starHovered;
-
         if (actionHovered)
         {
-            Squircle.Fill(drawList, new Vector2(row.Min.X - 8f * scale, row.Min.Y + 3f * scale), new Vector2(row.Max.X + 8f * scale, row.Max.Y - 3f * scale), 10f * scale, ImGui.GetColorU32(Palette.WithAlpha(frameTheme.Accent, 0.16f)));
+            Squircle.Fill(drawList, new Vector2(row.Min.X - 8f * scale, row.Min.Y + 3f * scale),
+                new Vector2(row.Max.X + 8f * scale, row.Max.Y - 3f * scale), 10f * scale,
+                ImGui.GetColorU32(Palette.WithAlpha(frameTheme.Accent, 0.16f)));
         }
 
         var isFavorite = favorites.Contains(aetheryte.RowId);
-        DrawStar(drawList, starCenter, starRadius, isFavorite, FavoriteStar, Palette.WithAlpha(frameTheme.TextMuted, 0.6f), scale);
-
+        DrawStar(drawList, starCenter, starRadius, isFavorite, FavoriteStar,
+            Palette.WithAlpha(frameTheme.TextMuted, 0.6f), scale);
         var textLeft = starCenter.X + starRadius + 12f * scale;
         var labelSize = Typography.Measure(aetheryte.Name, TextStyles.Body);
-        Typography.Draw(new Vector2(textLeft, row.Center.Y - labelSize.Y * 0.5f), aetheryte.Name, frameTheme.TextStrong, TextStyles.Body);
-
+        Typography.Draw(new Vector2(textLeft, row.Center.Y - labelSize.Y * 0.5f), aetheryte.Name, frameTheme.TextStrong,
+            TextStyles.Body);
         var arrowTip = new Vector2(row.Max.X, row.Center.Y);
         DrawChevronRight(arrowTip, 6f * scale, 2.2f * scale, actionHovered ? frameTheme.Accent : frameTheme.TextMuted);
-
         if (starHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -382,11 +364,13 @@ internal sealed class MapsApp : IPhoneApp
     private void DrawEmptyState(string message)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 16f * scale), message, frameTheme.TextMuted, TextStyles.Footnote);
+        Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 16f * scale), message,
+            frameTheme.TextMuted, TextStyles.Footnote);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 40f * scale));
     }
 
-    private static void DrawStar(ImDrawListPtr drawList, Vector2 center, float radius, bool filled, Vector4 fill, Vector4 outline, float scale)
+    private static void DrawStar(ImDrawListPtr drawList, Vector2 center, float radius, bool filled, Vector4 fill,
+        Vector4 outline, float scale)
     {
         Span<Vector2> points = stackalloc Vector2[10];
         var innerRadius = radius * 0.44f;
@@ -394,7 +378,8 @@ internal sealed class MapsApp : IPhoneApp
         {
             var pointRadius = (index & 1) == 0 ? radius : innerRadius;
             var angle = -MathF.PI / 2f + index * (MathF.PI / 5f);
-            points[index] = new Vector2(center.X + MathF.Cos(angle) * pointRadius, center.Y + MathF.Sin(angle) * pointRadius);
+            points[index] = new Vector2(center.X + MathF.Cos(angle) * pointRadius,
+                center.Y + MathF.Sin(angle) * pointRadius);
         }
 
         if (filled)
@@ -422,11 +407,13 @@ internal sealed class MapsApp : IPhoneApp
         var headCenter = new Vector2(center.X, center.Y - radius * 0.35f);
         drawList.AddCircleFilled(headCenter, radius * 0.7f, packed, 24);
         var tip = new Vector2(center.X, center.Y + radius);
-        drawList.AddTriangleFilled(new Vector2(headCenter.X - radius * 0.55f, headCenter.Y + radius * 0.2f), new Vector2(headCenter.X + radius * 0.55f, headCenter.Y + radius * 0.2f), tip, packed);
+        drawList.AddTriangleFilled(new Vector2(headCenter.X - radius * 0.55f, headCenter.Y + radius * 0.2f),
+            new Vector2(headCenter.X + radius * 0.55f, headCenter.Y + radius * 0.2f), tip, packed);
         drawList.AddCircleFilled(headCenter, radius * 0.28f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.95f)), 16);
     }
 
-    private static void DrawDisclosure(ImDrawListPtr drawList, Vector2 center, float size, float thickness, bool expanded, Vector4 color)
+    private static void DrawDisclosure(ImDrawListPtr drawList, Vector2 center, float size, float thickness,
+        bool expanded, Vector4 color)
     {
         var packed = ImGui.GetColorU32(color);
         if (expanded)

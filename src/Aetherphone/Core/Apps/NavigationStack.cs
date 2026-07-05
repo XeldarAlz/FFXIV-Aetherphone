@@ -7,17 +7,15 @@ internal enum ShellMotion
 {
     None,
     Present,
-    Dismiss,
+    Dismiss
 }
 
 internal sealed class NavigationStack : INavigator
 {
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly Stack<IPhoneApp> history = new();
-
     private Spring cover;
     private float targetCover;
-
     private IPhoneApp? current;
     private IPhoneApp? motionOver;
     private IPhoneApp? motionUnder;
@@ -29,19 +27,12 @@ internal sealed class NavigationStack : INavigator
     }
 
     public event Action<string>? AppOpened;
-
     public IPhoneApp? Current => current;
-
     public bool AtHome => current is null;
-
     public bool IsTransitioning => motion != ShellMotion.None;
-
     public ShellMotion Motion => motion;
-
     public float MotionProgress => cover.Value;
-
     public IPhoneApp MotionOver => motionOver!;
-
     public IPhoneApp? MotionUnder => motionUnder;
 
     public void Advance(float deltaSeconds)
@@ -51,14 +42,19 @@ internal sealed class NavigationStack : INavigator
             return;
         }
 
-        var smoothTime = motion == ShellMotion.Present ? TransitionTiming.PresentSmoothTime : TransitionTiming.DismissSmoothTime;
+        var smoothTime = motion == ShellMotion.Present
+            ? TransitionTiming.PresentSmoothTime
+            : TransitionTiming.DismissSmoothTime;
+
         cover.Step(targetCover, smoothTime, deltaSeconds);
 
-        if (cover.IsResting(targetCover, TransitionTiming.RestPositionEpsilon, TransitionTiming.RestVelocityEpsilon))
+        if (!cover.IsResting(targetCover, TransitionTiming.RestPositionEpsilon, TransitionTiming.RestVelocityEpsilon))
         {
-            cover.SnapTo(targetCover);
-            FinalizeMotion();
+            return;
         }
+
+        cover.SnapTo(targetCover);
+        FinalizeMotion();
     }
 
     public void OpenApp(IPhoneApp app)
@@ -75,8 +71,8 @@ internal sealed class NavigationStack : INavigator
         }
 
         SettleAny();
-
         var under = current;
+
         if (under is not null)
         {
             history.Push(under);
@@ -120,7 +116,6 @@ internal sealed class NavigationStack : INavigator
         }
 
         SettleAny();
-
         var leaving = current;
         var under = history.Count > 0 ? history.Pop() : null;
         current = under;
@@ -176,6 +171,7 @@ internal sealed class NavigationStack : INavigator
     private void ReverseToDismiss()
     {
         var under = motionUnder;
+
         if (under is not null && history.Count > 0 && ReferenceEquals(history.Peek(), under))
         {
             history.Pop();
@@ -207,7 +203,7 @@ internal sealed class NavigationStack : INavigator
         {
             motionOver?.OnClosed();
         }
-
+        
         motion = ShellMotion.None;
         motionOver = null;
         motionUnder = null;

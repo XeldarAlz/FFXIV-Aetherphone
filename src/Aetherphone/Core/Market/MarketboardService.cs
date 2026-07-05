@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Market;
@@ -27,15 +25,12 @@ internal sealed class MarketboardService : IDisposable
     private const int ListingCount = 20;
     private const int HistoryCount = 25;
     private const int AggregatedBatch = 80;
-
     private static readonly TimeSpan FreshFor = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan AggregatedFreshFor = TimeSpan.FromMinutes(2);
     private static readonly MarketEntry Invalid = new() { State = MarketState.Idle };
-
     private readonly HttpService http;
     private readonly RequestThrottle throttle;
     private readonly CancellationTokenSource cancellation = new();
-
     private readonly ConcurrentDictionary<string, MarketEntry> items = new();
     private readonly ConcurrentDictionary<string, AggregatedEntry> aggregated = new();
     private readonly ConcurrentDictionary<string, byte> aggregatedInFlight = new();
@@ -55,7 +50,6 @@ internal sealed class MarketboardService : IDisposable
 
         var key = $"{itemId}:{scope.Key}";
         var entry = items.GetOrAdd(key, static _ => new MarketEntry());
-
         if (entry.State == MarketState.Loading)
         {
             return entry;
@@ -129,7 +123,8 @@ internal sealed class MarketboardService : IDisposable
         using (await throttle.EnterAsync(token).ConfigureAwait(false))
         {
             var url = $"{ApiRoot}/{Uri.EscapeDataString(scope.ApiName)}/{itemId}?listings=1&entries=1";
-            var data = await http.GetJsonAsync(url, UniversalisJsonContext.Default.UniversalisCurrentData, null, token).ConfigureAwait(false);
+            var data = await http.GetJsonAsync(url, UniversalisJsonContext.Default.UniversalisCurrentData, null, token)
+                .ConfigureAwait(false);
             return data is null ? null : BuildSnapshot(itemId, scope, data);
         }
     }
@@ -141,8 +136,11 @@ internal sealed class MarketboardService : IDisposable
             var token = cancellation.Token;
             using (await throttle.EnterAsync(token).ConfigureAwait(false))
             {
-                var url = $"{ApiRoot}/{Uri.EscapeDataString(scope.ApiName)}/{itemId}?listings={ListingCount}&entries={HistoryCount}";
-                var data = await http.GetJsonAsync(url, UniversalisJsonContext.Default.UniversalisCurrentData, null, token).ConfigureAwait(false);
+                var url =
+                    $"{ApiRoot}/{Uri.EscapeDataString(scope.ApiName)}/{itemId}?listings={ListingCount}&entries={HistoryCount}";
+                var data = await http
+                    .GetJsonAsync(url, UniversalisJsonContext.Default.UniversalisCurrentData, null, token)
+                    .ConfigureAwait(false);
                 if (data is null)
                 {
                     entry.FetchedUtc = DateTime.UtcNow;
@@ -153,7 +151,9 @@ internal sealed class MarketboardService : IDisposable
                 var snapshot = BuildSnapshot(itemId, scope, data);
                 entry.Snapshot = snapshot;
                 entry.FetchedUtc = DateTime.UtcNow;
-                entry.State = snapshot.Listings.Length == 0 && snapshot.Sales.Length == 0 ? MarketState.Empty : MarketState.Ready;
+                entry.State = snapshot.Listings.Length == 0 && snapshot.Sales.Length == 0
+                    ? MarketState.Empty
+                    : MarketState.Ready;
             }
         }
         catch (OperationCanceledException)
@@ -181,7 +181,9 @@ internal sealed class MarketboardService : IDisposable
             using (await throttle.EnterAsync(token).ConfigureAwait(false))
             {
                 var url = $"{ApiRoot}/aggregated/{Uri.EscapeDataString(scope.ApiName)}/{string.Join(',', ids)}";
-                var response = await http.GetJsonAsync(url, UniversalisJsonContext.Default.UniversalisAggregatedResponse, null, token).ConfigureAwait(false);
+                var response = await http
+                    .GetJsonAsync(url, UniversalisJsonContext.Default.UniversalisAggregatedResponse, null, token)
+                    .ConfigureAwait(false);
                 var now = DateTime.UtcNow;
                 var results = response?.Results;
                 if (results is not null)
@@ -225,7 +227,8 @@ internal sealed class MarketboardService : IDisposable
         {
             var listing = rawListings[index];
             hasHq |= listing.Hq;
-            listings[index] = new MarketListing(listing.PricePerUnit, listing.Quantity, listing.Total, listing.Hq, listing.WorldName ?? string.Empty, listing.RetainerName ?? string.Empty);
+            listings[index] = new MarketListing(listing.PricePerUnit, listing.Quantity, listing.Total, listing.Hq,
+                listing.WorldName ?? string.Empty, listing.RetainerName ?? string.Empty);
         }
 
         var rawSales = data.RecentHistory ?? Array.Empty<UniversalisSale>();
@@ -234,27 +237,14 @@ internal sealed class MarketboardService : IDisposable
         {
             var sale = rawSales[index];
             hasHq |= sale.Hq;
-            sales[index] = new MarketSale(sale.PricePerUnit, sale.Quantity, sale.Hq, MarketFormat.FromUnix(sale.Timestamp), sale.WorldName ?? string.Empty, sale.BuyerName ?? string.Empty);
+            sales[index] = new MarketSale(sale.PricePerUnit, sale.Quantity, sale.Hq,
+                MarketFormat.FromUnix(sale.Timestamp), sale.WorldName ?? string.Empty, sale.BuyerName ?? string.Empty);
         }
 
         hasHq |= data.MinPriceHq > 0 || data.MaxPriceHq > 0 || data.HqSaleVelocity > 0;
-
-        return new MarketSnapshot(
-            itemId,
-            MarketFormat.FromUnix(data.LastUploadTime),
-            scope.IsMultiWorld,
-            hasHq,
-            listings,
-            sales,
-            data.MinPriceNq,
-            data.MinPriceHq,
-            data.AveragePriceNq,
-            data.AveragePriceHq,
-            data.MaxPriceNq,
-            data.MaxPriceHq,
-            data.NqSaleVelocity,
-            data.HqSaleVelocity,
-            data.UnitsForSale,
+        return new MarketSnapshot(itemId, MarketFormat.FromUnix(data.LastUploadTime), scope.IsMultiWorld, hasHq,
+            listings, sales, data.MinPriceNq, data.MinPriceHq, data.AveragePriceNq, data.AveragePriceHq,
+            data.MaxPriceNq, data.MaxPriceHq, data.NqSaleVelocity, data.HqSaleVelocity, data.UnitsForSale,
             data.UnitsSold);
     }
 
@@ -283,7 +273,6 @@ internal sealed class MarketboardService : IDisposable
             MarketScopeKind.DataCenter => field.Dc,
             _ => field.Region,
         };
-
         return value?.Price ?? 0;
     }
 

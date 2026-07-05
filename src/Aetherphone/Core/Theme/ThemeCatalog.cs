@@ -8,10 +8,8 @@ internal static class ThemeCatalog
 {
     public static readonly IReadOnlyList<NamedColor> Accents = new NamedColor[]
     {
-        new("Violet", new Vector4(0.55f, 0.45f, 0.95f, 1f)),
-        new("Blue", new Vector4(0.30f, 0.55f, 0.98f, 1f)),
-        new("Green", new Vector4(0.20f, 0.78f, 0.45f, 1f)),
-        new("Pink", new Vector4(0.95f, 0.40f, 0.65f, 1f)),
+        new("Violet", new Vector4(0.55f, 0.45f, 0.95f, 1f)), new("Blue", new Vector4(0.30f, 0.55f, 0.98f, 1f)),
+        new("Green", new Vector4(0.20f, 0.78f, 0.45f, 1f)), new("Pink", new Vector4(0.95f, 0.40f, 0.65f, 1f)),
         new("Amber", new Vector4(0.96f, 0.65f, 0.20f, 1f)),
     };
 

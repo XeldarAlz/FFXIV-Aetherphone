@@ -18,22 +18,18 @@ internal static class CurrencyRow
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-
         var iconSize = 30f * scale;
         var iconMin = new Vector2(row.Min.X, row.Center.Y - iconSize * 0.5f);
         var iconMax = iconMin + new Vector2(iconSize, iconSize);
         DrawIcon(drawList, entry.IconId, iconMin, iconMax, scale, textures);
-
         var textLeft = iconMax.X + 12f * scale;
         var gap = 10f * scale;
         var amountText = Format(entry.Amount);
-
         if (entry.Cap <= 0)
         {
             var amountSize = Typography.Measure(amountText, 1.1f);
             var amountX = row.Max.X - amountSize.X;
             Typography.Draw(new Vector2(amountX, row.Center.Y - amountSize.Y * 0.5f), amountText, theme.Accent, 1.1f);
-
             var name = Fit(entry.Name, amountX - gap - textLeft, 1f);
             var nameSize = Typography.Measure(name);
             Typography.Draw(new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), name, theme.TextStrong);
@@ -47,16 +43,13 @@ internal static class CurrencyRow
         var amountX2 = row.Max.X - capSize.X - amountSize2.X;
         Typography.Draw(new Vector2(amountX2, topY), amountText, theme.Accent, 1.1f);
         Typography.Draw(new Vector2(row.Max.X - capSize.X, topY + 3f * scale), capText, theme.TextMuted, 0.82f);
-
         var fittedName = Fit(entry.Name, amountX2 - gap - textLeft, 1f);
         Typography.Draw(new Vector2(textLeft, topY), fittedName, theme.TextStrong);
-
         var barTop = row.Max.Y - 14f * scale;
         var barMin = new Vector2(textLeft, barTop);
         var barMax = new Vector2(row.Max.X, barTop + 5f * scale);
         var rounding = (barMax.Y - barMin.Y) * 0.5f;
         drawList.AddRectFilled(barMin, barMax, ImGui.GetColorU32(theme.SurfaceMuted), rounding);
-
         var fraction = Math.Clamp((float)((double)entry.Amount / entry.Cap), 0f, 1f);
         if (fraction > 0.001f)
         {
@@ -73,7 +66,6 @@ internal static class CurrencyRow
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
         var centerX = origin.X + width * 0.5f;
-
         var height = 104f * scale;
         var cardMin = origin;
         var cardMax = new Vector2(origin.X + width, origin.Y + height);
@@ -82,9 +74,8 @@ internal static class CurrencyRow
         Squircle.Fill(drawList, cardMin, cardMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
         Material.TopGlow(drawList, cardMin, cardMax, rounding, theme.Accent, 0.82f, 0.15f);
         Material.EdgeSquircle(drawList, cardMin, cardMax, rounding, scale);
-
-        Typography.DrawCentered(new Vector2(centerX, cardMin.Y + 22f * scale), Loc.T(L.Wallet.GilBalance), theme.TextMuted, TextStyles.Caption1);
-
+        Typography.DrawCentered(new Vector2(centerX, cardMin.Y + 22f * scale), Loc.T(L.Wallet.GilBalance),
+            theme.TextMuted, TextStyles.Caption1);
         var amountText = Format(gil.Amount);
         var amountSize = Typography.Measure(amountText, TextStyles.LargeTitle);
         var iconSize = 30f * scale;
@@ -93,7 +84,6 @@ internal static class CurrencyRow
         var totalWidth = amountSize.X + (hasIcon ? iconSize + gap : 0f);
         var rowCenterY = cardMin.Y + height * 0.60f;
         var startX = centerX - totalWidth * 0.5f;
-
         if (hasIcon)
         {
             var iconMin = new Vector2(startX, rowCenterY - iconSize * 0.5f);
@@ -101,13 +91,14 @@ internal static class CurrencyRow
             startX += iconSize + gap;
         }
 
-        Typography.Draw(new Vector2(startX, rowCenterY - amountSize.Y * 0.5f), amountText, theme.TextStrong, TextStyles.LargeTitle);
-
+        Typography.Draw(new Vector2(startX, rowCenterY - amountSize.Y * 0.5f), amountText, theme.TextStrong,
+            TextStyles.LargeTitle);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + 4f * scale));
     }
 
-    private static void DrawIcon(ImDrawListPtr drawList, uint iconId, Vector2 min, Vector2 max, float scale, ITextureProvider textures)
+    private static void DrawIcon(ImDrawListPtr drawList, uint iconId, Vector2 min, Vector2 max, float scale,
+        ITextureProvider textures)
     {
         if (iconId == 0)
         {

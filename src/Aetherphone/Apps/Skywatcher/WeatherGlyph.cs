@@ -6,10 +6,10 @@ namespace Aetherphone.Apps.Skywatcher;
 
 internal static class WeatherGlyph
 {
-    public static void Draw(WeatherKind kind, Vector2 center, float radius, in SkyPalette palette, bool isDay, Vector4 sky)
+    public static void Draw(WeatherKind kind, Vector2 center, float radius, in SkyPalette palette, bool isDay,
+        Vector4 sky)
     {
         var drawList = ImGui.GetWindowDrawList();
-
         switch (kind)
         {
             case WeatherKind.Clear:
@@ -24,11 +24,13 @@ internal static class WeatherGlyph
 
                 break;
             case WeatherKind.Clouds:
-                DrawLuminary(drawList, center - new Vector2(radius * 0.30f, radius * 0.34f), radius * 0.62f, palette.Glow, sky, isDay);
+                DrawLuminary(drawList, center - new Vector2(radius * 0.30f, radius * 0.34f), radius * 0.62f,
+                    palette.Glow, sky, isDay);
                 DrawCloud(drawList, center + new Vector2(0f, radius * 0.10f), radius, CloudFill(isDay), true);
                 break;
             case WeatherKind.Fog:
-                DrawLuminary(drawList, center - new Vector2(radius * 0.20f, radius * 0.40f), radius * 0.50f, palette.Glow with { W = 0.5f }, sky, isDay);
+                DrawLuminary(drawList, center - new Vector2(radius * 0.20f, radius * 0.40f), radius * 0.50f,
+                    palette.Glow with { W = 0.5f }, sky, isDay);
                 DrawFog(drawList, center, radius, CloudFill(isDay));
                 break;
             case WeatherKind.Rain:
@@ -43,7 +45,8 @@ internal static class WeatherGlyph
                 DrawWind(drawList, center, radius, Lighten(palette.Glow, 0.1f));
                 break;
             case WeatherKind.Sand:
-                DrawLuminary(drawList, center - new Vector2(radius * 0.18f, radius * 0.40f), radius * 0.46f, palette.Glow with { W = 0.7f }, sky, isDay);
+                DrawLuminary(drawList, center - new Vector2(radius * 0.18f, radius * 0.40f), radius * 0.46f,
+                    palette.Glow with { W = 0.7f }, sky, isDay);
                 DrawWind(drawList, center, radius, palette.Glow);
                 DrawDust(drawList, center, radius, palette.Glow);
                 break;
@@ -56,7 +59,8 @@ internal static class WeatherGlyph
                 DrawSnow(drawList, center, radius, new Vector4(0.97f, 0.99f, 1.00f, 1f));
                 break;
             default:
-                DrawCloud(drawList, center - new Vector2(0f, radius * 0.06f), radius, Darken(CloudFill(isDay), 0.45f), true);
+                DrawCloud(drawList, center - new Vector2(0f, radius * 0.06f), radius, Darken(CloudFill(isDay), 0.45f),
+                    true);
                 DrawDust(drawList, center, radius, palette.Glow);
                 break;
         }
@@ -77,21 +81,23 @@ internal static class WeatherGlyph
         }
 
         drawList.AddCircleFilled(center, radius * 0.46f, rayColor, 40);
-        drawList.AddCircleFilled(center - new Vector2(radius * 0.10f, radius * 0.12f), radius * 0.30f, ImGui.GetColorU32(Lighten(glow, 0.4f)), 32);
+        drawList.AddCircleFilled(center - new Vector2(radius * 0.10f, radius * 0.12f), radius * 0.30f,
+            ImGui.GetColorU32(Lighten(glow, 0.4f)), 32);
     }
 
     private static void DrawMoon(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow, Vector4 sky)
     {
         drawList.AddCircleFilled(center, radius * 0.48f, ImGui.GetColorU32(glow), 40);
-        drawList.AddCircleFilled(center + new Vector2(radius * 0.30f, -radius * 0.16f), radius * 0.44f, ImGui.GetColorU32(sky), 40);
-
+        drawList.AddCircleFilled(center + new Vector2(radius * 0.30f, -radius * 0.16f), radius * 0.44f,
+            ImGui.GetColorU32(sky), 40);
         var crater = ImGui.GetColorU32(Darken(glow, 0.14f));
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.20f, radius * 0.18f), radius * 0.075f, crater, 12);
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.04f, radius * 0.30f), radius * 0.05f, crater, 12);
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.26f, -radius * 0.04f), radius * 0.045f, crater, 12);
     }
 
-    private static void DrawLuminary(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow, Vector4 sky, bool isDay)
+    private static void DrawLuminary(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow, Vector4 sky,
+        bool isDay)
     {
         if (isDay)
         {
@@ -111,7 +117,8 @@ internal static class WeatherGlyph
         }
 
         CloudShape(drawList, center, radius, fill);
-        CloudShape(drawList, center - new Vector2(radius * 0.08f, radius * 0.14f), radius * 0.92f, Lighten(fill, 0.10f));
+        CloudShape(drawList, center - new Vector2(radius * 0.08f, radius * 0.14f), radius * 0.92f,
+            Lighten(fill, 0.10f));
     }
 
     private static void CloudShape(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 fill)
@@ -120,7 +127,8 @@ internal static class WeatherGlyph
         drawList.AddCircleFilled(At(center, radius, -0.46f, 0.06f), radius * 0.34f, color, 28);
         drawList.AddCircleFilled(At(center, radius, 0.06f, -0.18f), radius * 0.50f, color, 32);
         drawList.AddCircleFilled(At(center, radius, 0.52f, 0.02f), radius * 0.36f, color, 28);
-        drawList.AddRectFilled(At(center, radius, -0.78f, 0.06f), At(center, radius, 0.76f, 0.46f), color, radius * 0.28f);
+        drawList.AddRectFilled(At(center, radius, -0.78f, 0.06f), At(center, radius, 0.76f, 0.46f), color,
+            radius * 0.28f);
     }
 
     private static void DrawRain(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 drop)
@@ -147,25 +155,21 @@ internal static class WeatherGlyph
             var sway = MathF.Sin((fall + index) * MathF.PI * 2f) * 0.05f;
             var position = At(center, radius, offsets[index] + sway, 0.32f + fall * 0.54f);
             var alpha = MathF.Min(1f, (1f - fall) * 2.6f);
-            drawList.AddCircleFilled(position, radius * (0.05f + (index % 2) * 0.02f), ImGui.GetColorU32(flake with { W = alpha }), 10);
+            drawList.AddCircleFilled(position, radius * (0.05f + (index % 2) * 0.02f),
+                ImGui.GetColorU32(flake with { W = alpha }), 10);
         }
     }
 
     private static void DrawBolt(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow)
     {
         var flash = MathF.Pow(Styling.Pulse(1500.0), 3f);
-        drawList.AddCircleFilled(At(center, radius, -0.02f, 0.34f), radius * 0.42f, ImGui.GetColorU32(glow with { W = 0.10f + 0.32f * flash }), 24);
-
+        drawList.AddCircleFilled(At(center, radius, -0.02f, 0.34f), radius * 0.42f,
+            ImGui.GetColorU32(glow with { W = 0.10f + 0.32f * flash }), 24);
         Span<Vector2> bolt = stackalloc Vector2[6]
         {
-            At(center, radius, 0.12f, -0.04f),
-            At(center, radius, -0.16f, 0.26f),
-            At(center, radius, 0.02f, 0.26f),
-            At(center, radius, -0.14f, 0.66f),
-            At(center, radius, 0.20f, 0.16f),
-            At(center, radius, 0.02f, 0.16f),
+            At(center, radius, 0.12f, -0.04f), At(center, radius, -0.16f, 0.26f), At(center, radius, 0.02f, 0.26f),
+            At(center, radius, -0.14f, 0.66f), At(center, radius, 0.20f, 0.16f), At(center, radius, 0.02f, 0.16f),
         };
-
         var boltColor = ImGui.GetColorU32(Lighten(glow, 0.15f * flash));
         FillConvex(drawList, boltColor, bolt[..4]);
         for (var index = 0; index < bolt.Length - 1; index++)
@@ -188,7 +192,6 @@ internal static class WeatherGlyph
             var alpha = 0.55f + 0.35f * Styling.Pulse(speeds[index] + 900.0);
             var color = ImGui.GetColorU32(stroke with { W = alpha });
             var thickness = radius * 0.075f;
-
             var lineStart = At(center, radius, startX, rowY);
             var hookCenter = At(center, radius, endX, rowY - 0.14f);
             drawList.AddLine(lineStart, At(center, radius, endX, rowY), color, thickness);
@@ -249,7 +252,8 @@ internal static class WeatherGlyph
         }
     }
 
-    private static void DrawArc(ImDrawListPtr drawList, Vector2 center, float radius, float fromAngle, float toAngle, uint color, float thickness)
+    private static void DrawArc(ImDrawListPtr drawList, Vector2 center, float radius, float fromAngle, float toAngle,
+        uint color, float thickness)
     {
         const int segments = 10;
         var previous = center + new Vector2(MathF.Cos(fromAngle), MathF.Sin(fromAngle)) * radius;
@@ -262,22 +266,22 @@ internal static class WeatherGlyph
         }
     }
 
-    private static Vector4 CloudFill(bool isDay)
-        => isDay ? new Vector4(0.97f, 0.98f, 1.00f, 1f) : new Vector4(0.80f, 0.84f, 0.92f, 1f);
+    private static Vector4 CloudFill(bool isDay) =>
+        isDay ? new Vector4(0.97f, 0.98f, 1.00f, 1f) : new Vector4(0.80f, 0.84f, 0.92f, 1f);
 
-    private static Vector4 Lighten(Vector4 color, float amount)
-        => Vector4.Lerp(color, new Vector4(1f, 1f, 1f, color.W), amount);
+    private static Vector4 Lighten(Vector4 color, float amount) =>
+        Vector4.Lerp(color, new Vector4(1f, 1f, 1f, color.W), amount);
 
-    private static Vector4 Darken(Vector4 color, float amount)
-        => Vector4.Lerp(color, new Vector4(0f, 0f, 0f, color.W), amount);
+    private static Vector4 Darken(Vector4 color, float amount) =>
+        Vector4.Lerp(color, new Vector4(0f, 0f, 0f, color.W), amount);
 
     private static float Frac(float value) => value - MathF.Floor(value);
 
-    private static Vector2 At(Vector2 center, float radius, float unitX, float unitY)
-        => new(center.X + unitX * radius, center.Y + unitY * radius);
+    private static Vector2 At(Vector2 center, float radius, float unitX, float unitY) =>
+        new(center.X + unitX * radius, center.Y + unitY * radius);
 
-    private static Vector2 Polar(Vector2 center, float radius, float distance, float angle)
-        => new(center.X + MathF.Cos(angle) * distance * radius, center.Y + MathF.Sin(angle) * distance * radius);
+    private static Vector2 Polar(Vector2 center, float radius, float distance, float angle) =>
+        new(center.X + MathF.Cos(angle) * distance * radius, center.Y + MathF.Sin(angle) * distance * radius);
 
     private static void FillConvex(ImDrawListPtr drawList, uint color, ReadOnlySpan<Vector2> points)
     {

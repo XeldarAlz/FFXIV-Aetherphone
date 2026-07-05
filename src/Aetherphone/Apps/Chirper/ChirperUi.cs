@@ -17,16 +17,13 @@ internal sealed class ChirperUi
     public static readonly Vector4 BodyInk = new(0.85f, 0.90f, 0.97f, 0.96f);
     public static readonly Vector4 MutedInk = new(0.64f, 0.73f, 0.85f, 0.85f);
     public static readonly Vector4 HeaderInk = new(0.66f, 0.83f, 0.99f, 0.95f);
-
     private static readonly Vector4 BackdropTop = new(0.06f, 0.13f, 0.28f, 1f);
     private static readonly Vector4 BackdropBottom = new(0.02f, 0.04f, 0.10f, 1f);
     private static readonly Vector4 BloomTop = new(0.16f, 0.52f, 0.92f, 0.24f);
     private static readonly Vector4 BloomBottom = new(0.10f, 0.30f, 0.60f, 0f);
-
     public static readonly Vector4 Surface = new(1f, 1f, 1f, 0.05f);
     public static readonly Vector4 SurfaceStroke = new(1f, 1f, 1f, 0.06f);
     public static readonly Vector4 FieldSurface = new(1f, 1f, 1f, 0.10f);
-
     public PhoneTheme Theme { get; set; } = PhoneTheme.Default;
 
     public void Backdrop(Rect screen)
@@ -64,16 +61,13 @@ internal sealed class ChirperUi
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
-
         var fill = filled
             ? (hovered ? Palette.Mix(Accent, Theme.TextStrong, 0.12f) : Accent)
             : (hovered ? new Vector4(1f, 1f, 1f, 0.16f) : FieldSurface);
         var ink = filled ? new Vector4(1f, 1f, 1f, 1f) : TitleInk;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -89,10 +83,8 @@ internal sealed class ChirperUi
         var radius = rect.Height * 0.5f;
         var fill = hovered ? Palette.Mix(Theme.Danger, Theme.TextStrong, 0.12f) : Theme.Danger;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, new Vector4(1f, 1f, 1f, 1f), 0.9f, FontWeight.SemiBold);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -114,7 +106,6 @@ internal sealed class ChirperUi
         Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.28f)), 1f);
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, TitleInk, 0.9f, FontWeight.SemiBold);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -123,17 +114,19 @@ internal sealed class ChirperUi
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background, float glyphScale)
+    public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
+        float glyphScale)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius), center + new Vector2(hitRadius, hitRadius));
+        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius),
+            center + new Vector2(hitRadius, hitRadius));
         if (background.W > 0f)
         {
-            drawList.AddCircleFilled(center, hitRadius, ImGui.GetColorU32(hovered ? Palette.Mix(background, Theme.TextStrong, 0.08f) : background), 24);
+            drawList.AddCircleFilled(center, hitRadius,
+                ImGui.GetColorU32(hovered ? Palette.Mix(background, Theme.TextStrong, 0.08f) : background), 24);
         }
 
         Icon(center, glyph, hovered ? Palette.Mix(color, Theme.TextStrong, 0.2f) : color, glyphScale);
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -172,8 +165,11 @@ internal sealed class ChirperUi
         var drawList = ImGui.GetWindowDrawList();
         var barWidth = 3f * scale;
         var barHeight = 14f * scale;
-        Squircle.Fill(drawList, new Vector2(origin.X, origin.Y + 2f * scale), new Vector2(origin.X + barWidth, origin.Y + 2f * scale + barHeight), barWidth * 0.5f, ImGui.GetColorU32(Accent));
-        Typography.Draw(new Vector2(origin.X + barWidth + 9f * scale, origin.Y), label, new Vector4(0.92f, 0.96f, 1f, 1f), 0.95f, FontWeight.SemiBold);
+        Squircle.Fill(drawList, new Vector2(origin.X, origin.Y + 2f * scale),
+            new Vector2(origin.X + barWidth, origin.Y + 2f * scale + barHeight), barWidth * 0.5f,
+            ImGui.GetColorU32(Accent));
+        Typography.Draw(new Vector2(origin.X + barWidth + 9f * scale, origin.Y), label,
+            new Vector4(0.92f, 0.96f, 1f, 1f), 0.95f, FontWeight.SemiBold);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, barHeight + 10f * scale));
     }
@@ -189,16 +185,18 @@ internal sealed class ChirperUi
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var height = (multiline ? 88f : 34f) * scale;
-        Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale, ImGui.GetColorU32(FieldSurface));
-
-        ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale, origin.Y + (multiline ? 8f * scale : height * 0.5f - ImGui.GetFrameHeight() * 0.5f)));
+        Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale,
+            ImGui.GetColorU32(FieldSurface));
+        ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale,
+            origin.Y + (multiline ? 8f * scale : height * 0.5f - ImGui.GetFrameHeight() * 0.5f)));
         ImGui.SetNextItemWidth(width - 24f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, TitleInk))
         {
             if (multiline)
             {
-                ImGui.InputTextMultiline(id, ref value, maxLength, new Vector2(width - 24f * scale, height - 16f * scale), ImGuiInputTextFlags.None);
+                ImGui.InputTextMultiline(id, ref value, maxLength,
+                    new Vector2(width - 24f * scale, height - 16f * scale), ImGuiInputTextFlags.None);
             }
             else
             {
@@ -220,7 +218,8 @@ internal sealed class ChirperUi
             size = ImGui.CalcTextSize(glyph) * scale;
         }
 
-        ImGui.GetWindowDrawList().AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(color), glyph, 0f);
+        ImGui.GetWindowDrawList().AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(color),
+            glyph, 0f);
     }
 
     public static bool HoverClick(Vector2 min, Vector2 max)

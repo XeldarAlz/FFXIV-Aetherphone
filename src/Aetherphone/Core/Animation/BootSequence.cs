@@ -4,14 +4,7 @@ internal sealed class BootSequence
 {
     private const float EmblemStartScale = 0.7f;
 
-    private static readonly string[] Greetings =
-    {
-        "Hello!",
-        "Bonjour!",
-        "Hola!",
-        "Ciao!",
-        "Olá!",
-    };
+    private static readonly string[] Greetings = { "Hello!", "Bonjour!", "Hola!", "Ciao!", "Olá!", };
 
     private bool full;
     private float elapsed;
@@ -27,23 +20,14 @@ internal sealed class BootSequence
     private float totalSeconds;
 
     public bool IsActive { get; private set; }
-
     public float BackdropAlpha { get; private set; }
-
     public float EmblemAlpha { get; private set; }
-
     public float EmblemScale { get; private set; } = 1f;
-
     public float EmblemRingProgress { get; private set; }
-
     public float EmblemRingAlpha { get; private set; }
-
     public string? Greeting { get; private set; }
-
     public float GreetingReveal { get; private set; }
-
     public float GreetingAlpha { get; private set; }
-
     public float GreetingDrift { get; private set; }
 
     public void Begin(bool fullSequence)
@@ -51,7 +35,6 @@ internal sealed class BootSequence
         full = fullSequence;
         elapsed = 0f;
         IsActive = true;
-
         powerOnSeconds = fullSequence ? BootTiming.PowerOnSeconds : BootTiming.ShortPowerOnSeconds;
         emblemInSeconds = fullSequence ? BootTiming.EmblemInSeconds : BootTiming.ShortEmblemInSeconds;
         emblemHoldSeconds = fullSequence ? BootTiming.EmblemHoldSeconds : BootTiming.ShortEmblemHoldSeconds;
@@ -61,7 +44,6 @@ internal sealed class BootSequence
         greetingOutSeconds = BootTiming.GreetingOutSeconds;
         greetingCount = fullSequence ? Greetings.Length : 0;
         revealSeconds = fullSequence ? BootTiming.RevealSeconds : BootTiming.ShortRevealSeconds;
-
         totalSeconds = powerOnSeconds + EmblemDuration + GreetingsDuration + revealSeconds;
         Recompute();
     }
@@ -82,6 +64,7 @@ internal sealed class BootSequence
         }
 
         elapsed += deltaSeconds;
+
         if (elapsed >= totalSeconds)
         {
             Complete();
@@ -92,11 +75,8 @@ internal sealed class BootSequence
     }
 
     private float EmblemDuration => emblemInSeconds + emblemHoldSeconds + emblemExitSeconds;
-
     private float NonLastGreetingLife => greetingInSeconds + greetingHoldSeconds + greetingOutSeconds;
-
     private float LastGreetingLife => greetingInSeconds + greetingHoldSeconds;
-
     private float GreetingsDuration => greetingCount == 0 ? 0f : (greetingCount - 1) * NonLastGreetingLife + LastGreetingLife;
 
     private void Complete()
@@ -105,18 +85,19 @@ internal sealed class BootSequence
         ClearChannels();
         BackdropAlpha = 0f;
 
-        if (full && !Plugin.Cfg.WelcomeShown)
+        if (!full || Plugin.Cfg.WelcomeShown)
         {
-            Plugin.Cfg.WelcomeShown = true;
-            Plugin.Cfg.Save();
+            return;
         }
+
+        Plugin.Cfg.WelcomeShown = true;
+        Plugin.Cfg.Save();
     }
 
     private void Recompute()
     {
         ClearChannels();
         BackdropAlpha = 1f;
-
         var emblemStart = powerOnSeconds;
         var greetingsStart = emblemStart + EmblemDuration;
         var revealStart = greetingsStart + GreetingsDuration;
@@ -154,7 +135,8 @@ internal sealed class BootSequence
         else if (phase < holdEnd)
         {
             EmblemAlpha = 1f;
-            EmblemScale = 1f + BootTiming.EmblemBreatheAmplitude * MathF.Sin((phase - emblemInSeconds) * BootTiming.EmblemBreatheFrequency);
+            EmblemScale = 1f + BootTiming.EmblemBreatheAmplitude *
+                MathF.Sin((phase - emblemInSeconds) * BootTiming.EmblemBreatheFrequency);
         }
         else
         {
@@ -163,17 +145,20 @@ internal sealed class BootSequence
             EmblemScale = Lerp(1f, BootTiming.EmblemExitGrowth, Easing.EaseInCubic(exit));
         }
 
-        if (phase < holdEnd)
+        if (!(phase < holdEnd))
         {
-            EmblemRingProgress = phase % BootTiming.EmblemRingPeriod / BootTiming.EmblemRingPeriod;
-            EmblemRingAlpha = (1f - EmblemRingProgress) * EmblemAlpha;
+            return;
         }
+
+        EmblemRingProgress = phase % BootTiming.EmblemRingPeriod / BootTiming.EmblemRingPeriod;
+        EmblemRingAlpha = (1f - EmblemRingProgress) * EmblemAlpha;
     }
 
     private void ComputeGreeting(float phase)
     {
         var index = 0;
         var local = phase;
+
         while (index < greetingCount - 1 && local >= NonLastGreetingLife)
         {
             local -= NonLastGreetingLife;
@@ -192,6 +177,7 @@ internal sealed class BootSequence
         }
 
         var outStart = greetingInSeconds + greetingHoldSeconds;
+
         if (local <= outStart)
         {
             GreetingAlpha = 1f;
@@ -233,6 +219,5 @@ internal sealed class BootSequence
     }
 
     private static float Lerp(float from, float to, float amount) => from + (to - from) * amount;
-
     private static float Clamp01(float value) => Math.Clamp(value, 0f, 1f);
 }

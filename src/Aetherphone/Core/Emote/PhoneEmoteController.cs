@@ -11,58 +11,36 @@ namespace Aetherphone.Core.Emote;
 internal sealed class PhoneEmoteController : IDisposable
 {
     private const ushort TomescrollEmoteId = 295;
-
     private const ushort TomestoneEmoteId = 191;
-
     private const long StillnessDelayMilliseconds = 400;
-
     private const long RecastCooldownMilliseconds = 1000;
-
     private const float MovementThreshold = 0.0025f;
-
     private const float RotationThreshold = 0.02f;
 
     private static readonly ConditionFlag[] BlockingConditions =
     {
-        ConditionFlag.InCombat,
-        ConditionFlag.BetweenAreas,
-        ConditionFlag.BetweenAreas51,
-        ConditionFlag.OccupiedInCutSceneEvent,
-        ConditionFlag.WatchingCutscene,
-        ConditionFlag.WatchingCutscene78,
-        ConditionFlag.OccupiedInQuestEvent,
-        ConditionFlag.Casting,
+        ConditionFlag.InCombat, ConditionFlag.BetweenAreas, ConditionFlag.BetweenAreas51,
+        ConditionFlag.OccupiedInCutSceneEvent, ConditionFlag.WatchingCutscene, ConditionFlag.WatchingCutscene78,
+        ConditionFlag.OccupiedInQuestEvent, ConditionFlag.Casting,
     };
 
     private readonly Configuration configuration;
-
     private readonly IFramework framework;
-
     private readonly IObjectTable objectTable;
-
     private readonly ICondition condition;
-
     private readonly IDataManager dataManager;
-
     private readonly Func<bool> isPhoneVisible;
-
     private bool commandsResolved;
-
     private string loopCommand = string.Empty;
-
     private string onceCommand = string.Empty;
-
     private Vector3 lastPosition;
-
     private float lastRotation;
-
     private bool hasSample;
-
     private long stillSinceMilliseconds;
-
     private long lastCastMilliseconds;
 
-    public PhoneEmoteController(Configuration configuration, IFramework framework, IObjectTable objectTable, ICondition condition, IDataManager dataManager, Func<bool> isPhoneVisible)
+    public PhoneEmoteController(Configuration configuration, IFramework framework, IObjectTable objectTable,
+        ICondition condition, IDataManager dataManager, Func<bool> isPhoneVisible)
     {
         this.configuration = configuration;
         this.framework = framework;
@@ -153,7 +131,6 @@ internal sealed class PhoneEmoteController : IDisposable
         var rotationDelta = MathF.Abs(WrapAngle(rotation - lastRotation));
         lastPosition = position;
         lastRotation = rotation;
-
         if (distanceSquared > MovementThreshold || rotationDelta > RotationThreshold)
         {
             stillSinceMilliseconds = now;
@@ -166,7 +143,6 @@ internal sealed class PhoneEmoteController : IDisposable
     private bool TrySelectCommand(out string command)
     {
         EnsureCommandsResolved();
-
         if (loopCommand.Length > 0 && IsUnlocked(TomescrollEmoteId))
         {
             command = loopCommand;
@@ -197,7 +173,8 @@ internal sealed class PhoneEmoteController : IDisposable
 
     private string BuildCommand(ushort emoteId)
     {
-        if (!dataManager.GetExcelSheet<Lumina.Excel.Sheets.Emote>().TryGetRow(emoteId, out var emote) || emote.TextCommand.RowId == 0)
+        if (!dataManager.GetExcelSheet<Lumina.Excel.Sheets.Emote>().TryGetRow(emoteId, out var emote) ||
+            emote.TextCommand.RowId == 0)
         {
             return string.Empty;
         }

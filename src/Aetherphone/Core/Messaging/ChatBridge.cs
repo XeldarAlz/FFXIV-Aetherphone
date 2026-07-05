@@ -12,7 +12,6 @@ namespace Aetherphone.Core.Messaging;
 internal sealed class ChatBridge : IDisposable
 {
     private static readonly Vector4 MessagesAccent = new(0.30f, 0.78f, 0.42f, 1f);
-
     private readonly MessageStore store;
     private readonly NotificationService notifications;
     private readonly IChatGui chatGui;
@@ -58,11 +57,12 @@ internal sealed class ChatBridge : IDisposable
 
         var incoming = kind == XivChatType.TellIncoming;
         var text = message.Message.TextValue;
-        store.Append(display, sendTarget, new ChatLine(incoming ? MessageDirection.Incoming : MessageDirection.Outgoing, text, DateTime.Now));
-
+        store.Append(display, sendTarget,
+            new ChatLine(incoming ? MessageDirection.Incoming : MessageDirection.Outgoing, text, DateTime.Now));
         if (incoming)
         {
-            notifications.Notify(new PhoneNotification("messages", display, text, DateTime.Now, MessagesAccent, sendTarget));
+            notifications.Notify(new PhoneNotification("messages", display, text, DateTime.Now, MessagesAccent,
+                sendTarget));
         }
     }
 

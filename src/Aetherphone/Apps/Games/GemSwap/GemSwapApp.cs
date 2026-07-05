@@ -12,59 +12,32 @@ namespace Aetherphone.Apps.Games.GemSwap;
 internal sealed class GemSwapApp : IMiniGame
 {
     private const string GameId = "match3";
-
     private const float SwapDuration = 0.14f;
-
     private const float SwapBackDuration = 0.12f;
-
     private const float ClearDuration = 0.26f;
-
     private const float FallDuration = 0.30f;
-
     private const float HintDelay = 6f;
-
     private readonly GemSwapBoard board = new();
-
     private readonly GemSwapRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private GemPhase phase;
-
     private int swapA = -1;
-
     private int swapB = -1;
-
     private float swapTimer;
-
     private float clearTimer;
-
     private float fallTimer;
-
     private int selectedIndex = -1;
-
     private int chain;
-
     private float idleTime;
-
     private int hintA = -1;
-
     private int hintB = -1;
-
     private int loadedBest;
-
     private int displayBest;
-
     private GameStatsStore? statsRef;
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.GemSwap);
-
     public string Genre => Loc.T(L.Games.GenreMatch);
-
     public Vector4 Accent => new(0.72f, 0.46f, 0.96f, 1f);
 
     public void Open()
@@ -112,7 +85,6 @@ internal sealed class GemSwapApp : IMiniGame
         var theme = context.Theme;
         var body = context.Body;
         statsRef = context.Stats;
-
         if (loadedBest == 0)
         {
             loadedBest = context.Stats.Get(GameId).BestScore;
@@ -121,14 +93,12 @@ internal sealed class GemSwapApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         var rowY = body.Min.Y + 30f * scale;
         var comboText = chain > 1 ? $"x{chain}" : string.Empty;
-        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 64f * scale), new Vector2(body.Max.X, body.Max.Y - 6f * scale));
+        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 64f * scale),
+            new Vector2(body.Max.X, body.Max.Y - 6f * scale));
         var grid = GameGrid.Centered(gridArea, GemSwapBoard.Columns, GemSwapBoard.Rows, 0.06f);
-
         AdvanceAnimation(deltaSeconds, grid);
-
         if (phase == GemPhase.Idle)
         {
             HandleInput(grid, deltaSeconds);
@@ -139,8 +109,10 @@ internal sealed class GemSwapApp : IMiniGame
             displayBest = board.Score;
         }
 
-        GameHud.Pill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score), GameNumber.Label(board.Score), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 20f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest), Accent, theme, displayBest > loadedBest);
+        GameHud.Pill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score),
+            GameNumber.Label(board.Score), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 20f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
+            Accent, theme, displayBest > loadedBest);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
             StartNewGame();
@@ -149,12 +121,13 @@ internal sealed class GemSwapApp : IMiniGame
 
         if (chain > 1)
         {
-            Typography.DrawCentered(new Vector2(body.Center.X, rowY + 28f * scale), comboText, Accent, TextStyles.Headline);
+            Typography.DrawCentered(new Vector2(body.Center.X, rowY + 28f * scale), comboText, Accent,
+                TextStyles.Headline);
         }
 
-        var anim = new GemAnim(phase, swapA, swapB, MathF.Min(1f, swapTimer), MathF.Min(1f, clearTimer), MathF.Min(1f, fallTimer), selectedIndex, hintA, hintB, idleTime);
+        var anim = new GemAnim(phase, swapA, swapB, MathF.Min(1f, swapTimer), MathF.Min(1f, clearTimer),
+            MathF.Min(1f, fallTimer), selectedIndex, hintA, hintB, idleTime);
         renderer.Draw(board, grid, anim, theme, scale);
-
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
         fx.DrawText();
@@ -172,7 +145,6 @@ internal sealed class GemSwapApp : IMiniGame
                 }
 
                 break;
-
             case GemPhase.SwapBack:
                 swapTimer += deltaSeconds / SwapBackDuration;
                 if (swapTimer >= 1f)
@@ -185,7 +157,6 @@ internal sealed class GemSwapApp : IMiniGame
                 }
 
                 break;
-
             case GemPhase.Clearing:
                 clearTimer += deltaSeconds / ClearDuration;
                 if (clearTimer >= 1f)
@@ -197,7 +168,6 @@ internal sealed class GemSwapApp : IMiniGame
                 }
 
                 break;
-
             case GemPhase.Falling:
                 fallTimer += deltaSeconds / FallDuration;
                 if (fallTimer >= 1f)
@@ -220,7 +190,6 @@ internal sealed class GemSwapApp : IMiniGame
                 }
 
                 break;
-
             case GemPhase.Idle:
                 idleTime += deltaSeconds;
                 if (idleTime >= HintDelay && hintA < 0)
@@ -252,10 +221,8 @@ internal sealed class GemSwapApp : IMiniGame
     {
         phase = GemPhase.Clearing;
         clearTimer = 0f;
-
         var cleared = board.LastClearCount;
         fx.AddTrauma(MathF.Min(0.55f, 0.05f + cleared * 0.03f));
-
         for (var index = 0; index < GemSwapBoard.CellCount; index++)
         {
             if (!board.Matched(index) || board.Color(index) < 0)
@@ -264,7 +231,8 @@ internal sealed class GemSwapApp : IMiniGame
             }
 
             var center = grid.CellCenter(index % GemSwapBoard.Columns, index / GemSwapBoard.Columns);
-            particles.Burst(center, 7, GemSwapRenderer.ColorOf(board.Color(index)), 140f * ImGuiHelpers.GlobalScale, 2.8f, 0.5f, 260f);
+            particles.Burst(center, 7, GemSwapRenderer.ColorOf(board.Color(index)), 140f * ImGuiHelpers.GlobalScale,
+                2.8f, 0.5f, 260f);
         }
 
         if (chain > 1)
@@ -299,7 +267,6 @@ internal sealed class GemSwapApp : IMiniGame
         idleTime = 0f;
         hintA = -1;
         hintB = -1;
-
         if (selectedIndex < 0)
         {
             selectedIndex = index;

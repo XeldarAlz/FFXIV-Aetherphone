@@ -33,12 +33,8 @@ internal static class ChirperReactions
     };
 
     public static int Count => Kinds.Length;
-
     public static ChirperReaction Get(int kind) => Kinds[Math.Clamp(kind, 0, Kinds.Length - 1)];
-
     public static string Glyph(int kind) => Get(kind).Icon.ToIconString();
-
     public static Vector4 Color(int kind) => Get(kind).Color;
-
     public static string Label(int kind) => Loc.T(Get(kind).Label);
 }

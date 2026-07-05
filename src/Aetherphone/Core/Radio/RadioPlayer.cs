@@ -1,6 +1,3 @@
-using System.IO;
-using System.Net.Http;
-using System.Threading;
 using NAudio.Wave;
 
 namespace Aetherphone.Core.Radio;
@@ -18,10 +15,8 @@ internal sealed class RadioPlayer : IDisposable
     private static readonly TimeSpan BufferDuration = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PrebufferThreshold = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan BackpressureThreshold = TimeSpan.FromSeconds(15);
-
     private readonly HttpClient client;
     private readonly object gate = new();
-
     private CancellationTokenSource? cancellation;
     private Thread? worker;
     private HttpResponseMessage? activeResponse;
@@ -29,20 +24,18 @@ internal sealed class RadioPlayer : IDisposable
     private volatile RadioPlaybackState state = RadioPlaybackState.Stopped;
     private volatile string currentStation = string.Empty;
     private float volume = 0.6f;
-
     private RadioStation[] queue = Array.Empty<RadioStation>();
     private int queueIndex = -1;
 
     public RadioPlayer()
     {
         client = new HttpClient();
-        client.DefaultRequestHeaders.UserAgent.ParseAdd($"Aetherphone/{AepConstants.Version} (+https://github.com/XeldarAlz/FFXIV-Aetherphone)");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd(
+            $"Aetherphone/{AepConstants.Version} (+https://github.com/XeldarAlz/FFXIV-Aetherphone)");
     }
 
     public RadioPlaybackState State => state;
-
     public string CurrentStation => currentStation;
-
     public bool HasQueue => queue.Length > 1;
 
     public float Volume
@@ -69,7 +62,6 @@ internal sealed class RadioPlayer : IDisposable
     }
 
     public void Next() => Skip(1);
-
     public void Previous() => Skip(-1);
 
     private void Skip(int direction)
@@ -92,7 +84,6 @@ internal sealed class RadioPlayer : IDisposable
     private void StartStation(RadioStation station)
     {
         Stop();
-
         lock (gate)
         {
             currentStation = station.Name;
@@ -103,8 +94,7 @@ internal sealed class RadioPlayer : IDisposable
             var workerSession = session;
             worker = new Thread(() => Stream(url, token, workerSession))
             {
-                IsBackground = true,
-                Name = "Aetherphone.Radio",
+                IsBackground = true, Name = "Aetherphone.Radio",
             };
             worker.Start();
         }
@@ -163,7 +153,6 @@ internal sealed class RadioPlayer : IDisposable
         BufferedWaveProvider? buffer = null;
         HttpResponseMessage? response = null;
         var decoded = new byte[16384 * 4];
-
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -174,10 +163,8 @@ internal sealed class RadioPlayer : IDisposable
             }
 
             response.EnsureSuccessStatusCode();
-
             using var network = response.Content.ReadAsStream(token);
             var source = new ReadFullyStream(network);
-
             while (!token.IsCancellationRequested)
             {
                 if (buffer is not null && buffer.BufferedDuration > BackpressureThreshold)
@@ -211,14 +198,12 @@ internal sealed class RadioPlayer : IDisposable
                     decompressor = CreateDecompressor(frame);
                     buffer = new BufferedWaveProvider(decompressor.OutputFormat)
                     {
-                        BufferDuration = BufferDuration,
-                        DiscardOnBufferOverflow = true,
+                        BufferDuration = BufferDuration, DiscardOnBufferOverflow = true,
                     };
                 }
 
                 var count = decompressor.DecompressFrame(frame, decoded, 0);
                 buffer!.AddSamples(decoded, 0, count);
-
                 if (output is null && buffer.BufferedDuration >= PrebufferThreshold)
                 {
                     output = new WaveOutEvent { Volume = volume };
@@ -268,7 +253,8 @@ internal sealed class RadioPlayer : IDisposable
 
     private static IMp3FrameDecompressor CreateDecompressor(Mp3Frame frame)
     {
-        var format = new Mp3WaveFormat(frame.SampleRate, frame.ChannelMode == ChannelMode.Mono ? 1 : 2, frame.FrameLength, frame.BitRate);
+        var format = new Mp3WaveFormat(frame.SampleRate, frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
+            frame.FrameLength, frame.BitRate);
         return new AcmMp3FrameDecompressor(format);
     }
 
@@ -289,11 +275,8 @@ internal sealed class ReadFullyStream : Stream
     }
 
     public override bool CanRead => true;
-
     public override bool CanSeek => false;
-
     public override bool CanWrite => false;
-
     public override long Length => throw new NotSupportedException();
 
     public override long Position
@@ -320,10 +303,7 @@ internal sealed class ReadFullyStream : Stream
     }
 
     public override void Flush() => throw new NotSupportedException();
-
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
     public override void SetLength(long value) => throw new NotSupportedException();
-
     public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }

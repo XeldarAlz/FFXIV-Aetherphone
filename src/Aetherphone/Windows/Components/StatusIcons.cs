@@ -21,14 +21,14 @@ internal static class StatusIcons
     public static float MeasureWidth(float scale, int percent)
     {
         var labelWidth = Typography.Measure(percent + "%", LabelScale).X;
-        return (NubWidth + BodyWidth) * scale + LabelGap * scale + labelWidth + SignalGap * scale + SignalClusterWidth(scale);
+        return (NubWidth + BodyWidth) * scale + LabelGap * scale + labelWidth + SignalGap * scale +
+               SignalClusterWidth(scale);
     }
 
     public static void Draw(Rect screen, PhoneTheme theme, float rowCenterY, float minClusterLeft)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var device = Plugin.Device;
-
         var clusterWidth = MeasureWidth(scale, device.BatteryPercent);
         var nubRight = screen.Max.X - RightPadding * scale;
         if (nubRight - clusterWidth < minClusterLeft)
@@ -47,27 +47,20 @@ internal static class StatusIcons
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
-
         var nubWidth = NubWidth * scale;
         var nubHeight = 4.5f * scale;
         var bodyWidth = BodyWidth * scale;
         var bodyHeight = 11f * scale;
         var rounding = 3f * scale;
-
         var bodyMax = new Vector2(nubRight - nubWidth, rowCenterY + bodyHeight * 0.5f);
         var bodyMin = new Vector2(bodyMax.X - bodyWidth, rowCenterY - bodyHeight * 0.5f);
-
         var shell = Palette.WithAlpha(theme.TextStrong, 0.6f);
         dl.AddRect(bodyMin, bodyMax, ImGui.GetColorU32(shell), rounding, ImDrawFlags.RoundCornersAll, 1.2f * scale);
-
         var nubMin = new Vector2(bodyMax.X, rowCenterY - nubHeight * 0.5f);
         var nubMax = new Vector2(bodyMax.X + nubWidth, rowCenterY + nubHeight * 0.5f);
         dl.AddRectFilled(nubMin, nubMax, ImGui.GetColorU32(shell), nubWidth * 0.5f);
-
-        var fillColor = charging
-            ? theme.ToggleOn
-            : percent <= 20 ? theme.Danger : theme.TextStrong;
-
+        var fillColor = charging ? theme.ToggleOn :
+            percent <= 20 ? theme.Danger : theme.TextStrong;
         var inset = 1.8f * scale;
         var trackLeft = bodyMin.X + inset;
         var trackWidth = bodyMax.X - inset - trackLeft;
@@ -75,7 +68,6 @@ internal static class StatusIcons
         var fillMin = new Vector2(trackLeft, bodyMin.Y + inset);
         var fillMax = new Vector2(trackLeft + fillWidth, bodyMax.Y - inset);
         dl.AddRectFilled(fillMin, fillMax, ImGui.GetColorU32(fillColor), rounding * 0.5f);
-
         return bodyMin.X;
     }
 
@@ -93,12 +85,10 @@ internal static class StatusIcons
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
-
         var barWidth = BarWidth * scale;
         var barGap = BarGap * scale;
         var clusterLeft = labelLeft - SignalGap * scale - SignalClusterWidth(scale);
         var baseline = rowCenterY + 6.5f * scale;
-
         Span<float> heights = stackalloc float[4] { 5f, 7.8f, 10.6f, 13.4f };
         for (var index = 0; index < heights.Length; index++)
         {

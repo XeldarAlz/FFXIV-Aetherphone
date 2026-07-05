@@ -12,7 +12,8 @@ internal static class SceneChrome
     public static Rect ScreenFrom(Rect content, PhoneTheme theme, float scale)
     {
         var min = new Vector2(content.Min.X - theme.SidePadding * scale, content.Min.Y - theme.TopZoneHeight * scale);
-        var max = new Vector2(content.Max.X + theme.SidePadding * scale, content.Max.Y + theme.BottomZoneHeight * scale);
+        var max = new Vector2(content.Max.X + theme.SidePadding * scale,
+            content.Max.Y + theme.BottomZoneHeight * scale);
         return new Rect(min, max);
     }
 
@@ -23,7 +24,6 @@ internal static class SceneChrome
         var hitMax = new Vector2(content.Min.X + 46f * scale, content.Min.Y + 40f * scale);
         UiAnchors.Report("chrome.back", new Rect(hitMin, hitMax));
         var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-
         var center = new Vector2(content.Min.X + 15f * scale, rowCenterY);
         if (BackButton.Draw("chrome.back", center, 15f * scale, ink, hovered, scale, shadow: true))
         {

@@ -13,43 +13,24 @@ namespace Aetherphone.Apps.Games.Sweeper;
 internal sealed class SweeperApp : IMiniGame
 {
     private const string GameId = "minesweeper";
-
     private const float FlagPopSpeed = 7f;
-
     private readonly SweeperBoard board = new();
-
     private readonly SweeperRenderer renderer = new();
-
     private readonly ParticleSystem particles = new();
-
     private readonly FeedbackFx fx = new();
-
     private readonly float[] flagAnim = new float[SweeperBoard.MaxCells];
-
     private readonly string[] difficultyLabels = new string[3];
-
     private Difficulty difficulty = Difficulty.Easy;
-
     private SweeperState previousState = SweeperState.Playing;
-
     private float elapsed;
-
     private float resultAppear;
-
     private bool pendingResultSubmit;
-
     private bool newBestTime;
-
     private int loadedBestTime;
-
     private string resultTimeText = "0:00";
-
     public string Id => GameId;
-
     public string Title => Loc.T(L.Games.Sweeper);
-
     public string Genre => Loc.T(L.Games.GenreLogic);
-
     public Vector4 Accent => Styling.AccentBlue;
 
     public void Open()
@@ -86,7 +67,6 @@ internal sealed class SweeperApp : IMiniGame
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var body = context.Body;
-
         if (loadedBestTime < 0)
         {
             loadedBestTime = context.Stats.Get(StatId(difficulty)).BestTimeSeconds;
@@ -100,7 +80,6 @@ internal sealed class SweeperApp : IMiniGame
         UpdateFlagAnim(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
-
         if (pendingResultSubmit)
         {
             newBestTime = context.Stats.SubmitTime(StatId(difficulty), (int)elapsed);
@@ -109,10 +88,9 @@ internal sealed class SweeperApp : IMiniGame
 
         DrawDifficultyRow(body, theme, scale);
         DrawStatsRow(body, theme, scale);
-
-        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 96f * scale), new Vector2(body.Max.X, body.Max.Y - 8f * scale));
+        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 96f * scale),
+            new Vector2(body.Max.X, body.Max.Y - 8f * scale));
         var grid = GameGrid.Centered(gridArea, board.Columns, board.Rows, 0.10f);
-
         var hoveredIndex = ResolveHover(grid);
         if (board.State == SweeperState.Playing)
         {
@@ -120,13 +98,10 @@ internal sealed class SweeperApp : IMiniGame
         }
 
         DetectStateChange(grid);
-
         renderer.Draw(board, grid, hoveredIndex, flagAnim, theme, scale);
-
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
-
         if (board.State != SweeperState.Playing)
         {
             DrawResult(context, theme, body);
@@ -138,12 +113,9 @@ internal sealed class SweeperApp : IMiniGame
         difficultyLabels[0] = Loc.T(L.Games.Easy);
         difficultyLabels[1] = Loc.T(L.Games.Medium);
         difficultyLabels[2] = Loc.T(L.Games.Hard);
-
         var rowY = body.Min.Y + 22f * scale;
-        var segmentRow = new Rect(
-            new Vector2(body.Min.X + 4f * scale, rowY - 13f * scale),
+        var segmentRow = new Rect(new Vector2(body.Min.X + 4f * scale, rowY - 13f * scale),
             new Vector2(body.Max.X - 44f * scale, rowY + 13f * scale));
-
         var selected = SegmentStrip.Draw("sweeper.difficulty", segmentRow, difficultyLabels, (int)difficulty, theme);
         if (selected != (int)difficulty)
         {
@@ -160,8 +132,10 @@ internal sealed class SweeperApp : IMiniGame
     private void DrawStatsRow(Rect body, PhoneTheme theme, float scale)
     {
         var rowY = body.Min.Y + 64f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Mines), GameNumber.Label(board.MinesRemaining), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Time), GameNumber.Label((int)elapsed), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Mines),
+            GameNumber.Label(board.MinesRemaining), Accent, theme);
+        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Time),
+            GameNumber.Label((int)elapsed), Accent, theme);
     }
 
     private int ResolveHover(GameGrid grid)
@@ -193,7 +167,6 @@ internal sealed class SweeperApp : IMiniGame
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             if (board.IsRevealed(hoveredIndex))
@@ -234,7 +207,8 @@ internal sealed class SweeperApp : IMiniGame
             if (board.ClickedBomb >= 0)
             {
                 var center = grid.CellCenter(board.ClickedBomb % board.Columns, board.ClickedBomb / board.Columns);
-                particles.Burst(center, 40, new Vector4(0.98f, 0.45f, 0.32f, 1f), 360f * ImGuiHelpers.GlobalScale, 4.5f, 0.85f, 420f);
+                particles.Burst(center, 40, new Vector4(0.98f, 0.45f, 0.32f, 1f), 360f * ImGuiHelpers.GlobalScale, 4.5f,
+                    0.85f, 420f);
             }
         }
         else if (board.State == SweeperState.Won)
@@ -244,12 +218,10 @@ internal sealed class SweeperApp : IMiniGame
             BuildResultTime();
             ReadOnlySpan<Vector4> palette = new[]
             {
-                Accent,
-                Styling.AccentMint,
-                Styling.AccentAmber,
-                Styling.AccentPink,
+                Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink,
             };
-            particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 70, palette, 260f * ImGuiHelpers.GlobalScale, 4f, 1.3f);
+            particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 70, palette,
+                260f * ImGuiHelpers.GlobalScale, 4f, 1.3f);
         }
 
         previousState = board.State;
@@ -275,7 +247,6 @@ internal sealed class SweeperApp : IMiniGame
     private void DrawResult(in GameContext context, PhoneTheme theme, Rect body)
     {
         resultAppear = MathF.Min(1f, resultAppear + context.DeltaSeconds * 3.4f);
-
         var won = board.State == SweeperState.Won;
         var title = won ? Loc.T(L.Games.YouWin) : Loc.T(L.Games.Boom);
         var titleColor = won ? Accent : theme.Danger;
@@ -285,8 +256,8 @@ internal sealed class SweeperApp : IMiniGame
             secondary = $"{Loc.T(L.Games.Best)} {loadedBestTime / 60}:{loadedBestTime % 60:D2}";
         }
 
-        var result = new GameResult(title, titleColor, Loc.T(L.Games.Time), resultTimeText, secondary, won && newBestTime);
-
+        var result = new GameResult(title, titleColor, Loc.T(L.Games.Time), resultTimeText, secondary,
+            won && newBestTime);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
             StartNewGame(difficulty);

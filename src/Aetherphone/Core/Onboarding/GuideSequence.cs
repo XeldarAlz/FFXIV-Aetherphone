@@ -8,7 +8,8 @@ internal readonly struct GuideSequence
     public readonly GuideStep[] Steps;
     public readonly string[]? CompletesOnFinish;
 
-    public GuideSequence(string id, int contentVersion, string? requiredAppId, GuideStep[] steps, string[]? completesOnFinish = null)
+    public GuideSequence(string id, int contentVersion, string? requiredAppId, GuideStep[] steps,
+        string[]? completesOnFinish = null)
     {
         Id = id;
         ContentVersion = contentVersion;

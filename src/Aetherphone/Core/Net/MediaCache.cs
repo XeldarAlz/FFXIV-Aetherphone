@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 
@@ -22,15 +20,12 @@ internal sealed class MediaCache : IDisposable
 {
     private static readonly TimeSpan MaxAge = TimeSpan.FromDays(30);
     private static readonly TimeSpan FailureRetryFor = TimeSpan.FromMinutes(2);
-
     private readonly ITextureProvider textures;
     private readonly DiskCache disk;
     private readonly CancellationTokenSource cancellation = new();
-
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
     private readonly ConcurrentDictionary<string, byte> inFlight = new();
     private readonly ConcurrentDictionary<string, DateTime> failed = new();
-
     private volatile bool disposed;
 
     public MediaCache(ITextureProvider textures, DiskCache disk)

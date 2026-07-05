@@ -18,14 +18,14 @@ internal static class MediaFrame
         return frame;
     }
 
-    public static bool TryParse(ReadOnlySpan<byte> frame, out Guid callId, out byte slot, out ushort sequence, out int payloadOffset, out int payloadLength)
+    public static bool TryParse(ReadOnlySpan<byte> frame, out Guid callId, out byte slot, out ushort sequence,
+        out int payloadOffset, out int payloadLength)
     {
         callId = default;
         slot = 0;
         sequence = 0;
         payloadOffset = 0;
         payloadLength = 0;
-
         if (frame.Length < HeaderSize || frame[0] != Version)
         {
             return false;

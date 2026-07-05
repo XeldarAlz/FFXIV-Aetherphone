@@ -5,9 +5,7 @@ namespace Aetherphone.Core.Social;
 internal static class SocialTimeZone
 {
     public const int MinOffsetMinutes = -720;
-
     public const int MaxOffsetMinutes = 840;
-
     public const int StepMinutes = 15;
 
     public static int DeviceOffsetMinutes()
@@ -37,9 +35,7 @@ internal static class SocialTimeZone
         var absolute = Math.Abs(minutes);
         var hours = absolute / 60;
         var remainder = absolute % 60;
-        return remainder == 0
-            ? $"UTC{sign}{hours}"
-            : $"UTC{sign}{hours}:{remainder:D2}";
+        return remainder == 0 ? $"UTC{sign}{hours}" : $"UTC{sign}{hours}:{remainder:D2}";
     }
 
     public static string ClockLabel(int minutes)

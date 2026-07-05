@@ -10,17 +10,14 @@ internal sealed class AudioCapture : IDisposable
     private const float GateOpenRms = 0.018f;
     private const float GateCloseRms = 0.010f;
     private const int HangoverFrames = 12;
-
     private readonly object gate = new();
     private readonly IOpusEncoder encoder;
     private readonly byte[] accumulator = new byte[OpusAudio.FrameBytes * 4];
     private readonly byte[] packet = new byte[OpusAudio.MaxPacketBytes];
     private readonly List<byte[]> pending = new(4);
-
     private int accumulated;
     private int hangover;
     private bool gateOpen;
-
     private WaveInEvent? waveIn;
     private volatile bool muted;
     private volatile float level;
@@ -43,7 +40,6 @@ internal sealed class AudioCapture : IDisposable
     public void Start(int deviceIndex)
     {
         Stop();
-
         try
         {
             var capture = new WaveInEvent
@@ -53,7 +49,6 @@ internal sealed class AudioCapture : IDisposable
                 BufferMilliseconds = 20,
                 NumberOfBuffers = 4,
             };
-
             capture.DataAvailable += OnData;
             capture.StartRecording();
             waveIn = capture;
@@ -98,7 +93,6 @@ internal sealed class AudioCapture : IDisposable
     private void OnData(object? sender, WaveInEventArgs args)
     {
         pending.Clear();
-
         lock (gate)
         {
             if (waveIn is null)
@@ -149,7 +143,6 @@ internal sealed class AudioCapture : IDisposable
         var pcm = MemoryMarshal.Cast<byte, short>(accumulator.AsSpan(0, OpusAudio.FrameBytes));
         var rms = Rms(pcm);
         level = rms;
-
         UpdateGate(rms);
         if (muted || !gateOpen)
         {

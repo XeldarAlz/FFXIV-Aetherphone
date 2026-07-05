@@ -15,12 +15,14 @@ internal static unsafe class LocalCharacterReader
     public static LocalCharacter? Read(GameData gameData)
     {
         var player = gameData.LocalPlayer;
+
         if (player is null)
         {
             return null;
         }
 
         var playerState = PlayerState.Instance();
+
         if (playerState is null)
         {
             return null;
@@ -30,32 +32,26 @@ internal static unsafe class LocalCharacterReader
         var gear = new List<EquippedItem>();
         var averageItemLevel = ReadGear(gear, gameData);
 
-        return new LocalCharacter(
-            player.Name.TextValue,
-            gameData.WorldName(player.HomeWorld.RowId),
-            gameData.DataCenterName(player.HomeWorld.RowId),
-            gameData.JobName(player.ClassJob.RowId),
-            player.Level,
-            averageItemLevel,
-            gameData.RaceName(playerState->Race, female),
-            gameData.ClanName(playerState->Tribe, female),
-            female ? "♀" : "♂",
+        return new LocalCharacter(player.Name.TextValue, gameData.WorldName(player.HomeWorld.RowId),
+            gameData.DataCenterName(player.HomeWorld.RowId), gameData.JobName(player.ClassJob.RowId), player.Level,
+            averageItemLevel, gameData.RaceName(playerState->Race, female),
+            gameData.ClanName(playerState->Tribe, female), female ? "♀" : "♂",
             FormatNameday(playerState->BirthMonth, playerState->BirthDay),
-            gameData.GuardianDeityName(playerState->GuardianDeity),
-            gameData.CityStateName(playerState->StartTown),
-            gameData.GrandCompanyName(playerState->GrandCompany),
-            gear);
+            gameData.GuardianDeityName(playerState->GuardianDeity), gameData.CityStateName(playerState->StartTown),
+            gameData.GrandCompanyName(playerState->GrandCompany), gear);
     }
 
     private static int ReadGear(List<EquippedItem> into, GameData gameData)
     {
         var manager = InventoryManager.Instance();
+
         if (manager is null)
         {
             return 0;
         }
 
         var container = manager->GetInventoryContainer(InventoryType.EquippedItems);
+
         if (container is null)
         {
             return 0;
@@ -65,9 +61,11 @@ internal static unsafe class LocalCharacterReader
         var mainHandItemLevel = 0;
         var hasOffHand = false;
         var size = (int)container->Size;
+
         for (var slotIndex = 0; slotIndex < size; slotIndex++)
         {
             var slot = container->GetInventorySlot(slotIndex);
+
             if (slot is null || slot->ItemId == 0 || slotIndex == WaistSlot)
             {
                 continue;
@@ -86,6 +84,7 @@ internal static unsafe class LocalCharacterReader
             }
 
             sum += itemLevel;
+
             if (slotIndex == MainHandSlot)
             {
                 mainHandItemLevel = itemLevel;

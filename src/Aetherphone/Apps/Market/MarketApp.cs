@@ -22,17 +22,11 @@ internal sealed class MarketApp : IPhoneApp
     private const int MaxResults = 50;
     private const int MaxRecents = 12;
     private const int MaxRowsPerSection = 12;
-
     public string Id => "market";
-
     public string DisplayName => Loc.T(L.Apps.Market);
-
     public string Glyph => "$";
-
     public Vector4 Accent => new(0.92f, 0.62f, 0.18f, 1f);
-
     public int BadgeCount => alerts.TriggeredCount;
-
     private readonly MarketboardService market;
     private readonly MarketItemIndex index;
     private readonly MarketAlertService alerts;
@@ -40,11 +34,9 @@ internal sealed class MarketApp : IPhoneApp
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
     private readonly Configuration configuration;
-
     private readonly ViewRouter<MarketView?> router;
     private readonly RouterDraw<MarketView?> drawView;
     private readonly Action backToList;
-
     private readonly List<MarketScope> scopes = new();
     private readonly List<MarketItemRef> results = new();
     private readonly List<MarketItemRef> sectionBuffer = new();
@@ -52,25 +44,23 @@ internal sealed class MarketApp : IPhoneApp
     private readonly List<MarketAlert> alertBuffer = new();
     private readonly List<string> scopeLabels = new();
     private readonly string[] alertDirLabels = new string[2];
-
     private int scopeIndex = -1;
     private bool showHq;
     private string search = string.Empty;
     private string lastSearch = " ";
     private bool lastIndexReady;
-
     private uint pendingOpenId;
     private MarketItemRef lastHovered;
     private bool hasHovered;
     private bool showAlertEditor;
     private int alertThreshold = 1;
     private bool alertBelow = true;
-
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
     private readonly MarketUi ui = new();
 
-    public MarketApp(MarketboardService market, MarketItemIndex index, MarketAlertService alerts, MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration)
+    public MarketApp(MarketboardService market, MarketItemIndex index, MarketAlertService alerts,
+        MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration)
     {
         this.market = market;
         this.index = index;
@@ -79,7 +69,6 @@ internal sealed class MarketApp : IPhoneApp
         this.gameData = gameData;
         this.textures = textures;
         this.configuration = configuration;
-
         router = new ViewRouter<MarketView?>(null);
         drawView = DrawView;
         backToList = () => router.Pop();
@@ -109,7 +98,8 @@ internal sealed class MarketApp : IPhoneApp
         scopeIndex = MarketScopes.IndexOfKind(scopes, configuration.MarketScope);
     }
 
-    private MarketScope CurrentScope => scopeIndex >= 0 && scopeIndex < scopes.Count ? scopes[scopeIndex] : MarketScope.None;
+    private MarketScope CurrentScope =>
+        scopeIndex >= 0 && scopeIndex < scopes.Count ? scopes[scopeIndex] : MarketScope.None;
 
     public void Draw(in PhoneContext context)
     {
@@ -122,7 +112,6 @@ internal sealed class MarketApp : IPhoneApp
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
         ui.Theme = frameTheme;
-
         if (launcher.TryConsume(out var requestedItem, out var requestedSearch))
         {
             if (requestedItem != 0)
@@ -169,19 +158,15 @@ internal sealed class MarketApp : IPhoneApp
     private void DrawRoot(Rect area)
     {
         UpdateHovered();
-
         var scale = ImGuiHelpers.GlobalScale;
         DrawRootTopBar(area, scale);
-
         var top = area.Min.Y + AppHeader.Height * scale;
-
         var scopeBar = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + ScopeBarHeight * scale));
         DrawBrandedScopeBar(scopeBar);
-
         var searchTop = scopeBar.Max.Y + 2f * scale;
-        var searchBar = new Rect(new Vector2(area.Min.X + 16f * scale, searchTop), new Vector2(area.Max.X - 16f * scale, searchTop + SearchHeight * scale));
+        var searchBar = new Rect(new Vector2(area.Min.X + 16f * scale, searchTop),
+            new Vector2(area.Max.X - 16f * scale, searchTop + SearchHeight * scale));
         DrawSearch(searchBar);
-
         var query = search.Trim();
         if (!string.Equals(query, lastSearch, StringComparison.Ordinal) || (index.Ready && !lastIndexReady))
         {
@@ -190,7 +175,6 @@ internal sealed class MarketApp : IPhoneApp
         }
 
         lastIndexReady = index.Ready;
-
         var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -209,7 +193,8 @@ internal sealed class MarketApp : IPhoneApp
     {
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var displaySize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
-        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - displaySize.Y * 0.5f), DisplayName, MarketUi.TitleInk, 1.3f, FontWeight.Bold);
+        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - displaySize.Y * 0.5f), DisplayName,
+            MarketUi.TitleInk, 1.3f, FontWeight.Bold);
     }
 
     private void DrawBrandedScopeBar(Rect bar)
@@ -254,10 +239,8 @@ internal sealed class MarketApp : IPhoneApp
         }
 
         market.PrefetchAggregated(prefetchBuffer, scope);
-
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.Dummy(new Vector2(0f, 4f * scale));
-
         var card = GroupCard.Begin(frameTheme, results.Count, MarketRowViews.ItemRowHeight);
         for (var resultIndex = 0; resultIndex < results.Count; resultIndex++)
         {
@@ -282,9 +265,7 @@ internal sealed class MarketApp : IPhoneApp
         var favorites = configuration.MarketFavorites;
         var recents = configuration.MarketRecents;
         var scope = CurrentScope;
-
         alerts.CopyInto(alertBuffer);
-
         if (!hasHovered && alertBuffer.Count == 0 && favorites.Count == 0 && recents.Count == 0)
         {
             CenteredHint(body, Loc.T(L.Market.SearchHint));
@@ -308,7 +289,6 @@ internal sealed class MarketApp : IPhoneApp
         }
 
         market.PrefetchAggregated(prefetchBuffer, scope);
-
         if (hasHovered)
         {
             DrawHoveredSection(scope);
@@ -392,11 +372,9 @@ internal sealed class MarketApp : IPhoneApp
     private void DrawDetail(Rect area, MarketView view)
     {
         var scale = ImGuiHelpers.GlobalScale;
-
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, MarketFormat.Clip(view.Name, 18), backToList);
         DrawHeaderButtons(area, view, out var forceRefresh);
-
         var scope = CurrentScope;
         if (!scope.IsValid)
         {
@@ -406,14 +384,10 @@ internal sealed class MarketApp : IPhoneApp
 
         var entry = market.RequestItem(view.ItemId, scope, forceRefresh);
         var snapshot = entry.Snapshot;
-
         var top = area.Min.Y + AppHeader.Height * scale;
-
         var scopeBar = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + ScopeBarHeight * scale));
         DrawBrandedScopeBar(scopeBar);
-
         var bodyTop = scopeBar.Max.Y + 4f * scale;
-
         if (snapshot is null)
         {
             var message = entry.State == MarketState.Failed ? Loc.T(L.Market.CouldntReach) : Loc.T(L.Common.Loading);
@@ -422,12 +396,10 @@ internal sealed class MarketApp : IPhoneApp
         }
 
         var body = new Rect(new Vector2(area.Min.X, bodyTop), area.Max);
-
         using (AppSurface.Begin(body))
         {
             var hasHq = snapshot.HasHq;
             var effectiveHq = hasHq && showHq;
-
             DrawHero(view, snapshot, effectiveHq, hasHq);
             DrawPrices(snapshot, effectiveHq);
             DrawAlertEditor(view, snapshot, effectiveHq, scope);
@@ -443,44 +415,41 @@ internal sealed class MarketApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
-
         var iconSize = 56f * scale;
         var leftPad = 14f * scale;
         var cardHeight = iconSize + 24f * scale;
         var cardRounding = 14f * scale;
-
         var cardMin = new Vector2(origin.X, origin.Y);
         var cardMax = new Vector2(origin.X + width, origin.Y + cardHeight);
         Squircle.Fill(drawList, cardMin, cardMax, cardRounding, ImGui.GetColorU32(frameTheme.GroupedCard));
         Material.EdgeSquircle(drawList, cardMin, cardMax, cardRounding, scale);
-
         var tileRounding = 13f * scale;
         var iconMin = new Vector2(origin.X + leftPad, origin.Y + (cardHeight - iconSize) * 0.5f);
         var iconMax = iconMin + new Vector2(iconSize, iconSize);
-
         Elevation.Card(drawList, iconMin, iconMax, tileRounding, scale, 0.5f);
         Squircle.Fill(drawList, iconMin, iconMax, tileRounding, ImGui.GetColorU32(MarketUi.Surface));
         if (view.IconId != 0)
         {
             var texture = textures.GetFromGameIcon(new GameIconLookup(view.IconId)).GetWrapOrEmpty();
             var inset = 4f * scale;
-            drawList.AddImageRounded(texture.Handle, iconMin + new Vector2(inset, inset), iconMax - new Vector2(inset, inset), Vector2.Zero, Vector2.One, 0xFFFFFFFFu, tileRounding - inset);
+            drawList.AddImageRounded(texture.Handle, iconMin + new Vector2(inset, inset),
+                iconMax - new Vector2(inset, inset), Vector2.Zero, Vector2.One, 0xFFFFFFFFu, tileRounding - inset);
         }
 
         Material.EdgeSquircle(drawList, iconMin, iconMax, tileRounding, scale);
-
         var textX = iconMax.X + 14f * scale;
         var textTop = iconMin.Y + 4f * scale;
-        Typography.Draw(new Vector2(textX, textTop), MarketFormat.Clip(view.Name, 18), frameTheme.TextStrong, TextStyles.Title3);
-
+        Typography.Draw(new Vector2(textX, textTop), MarketFormat.Clip(view.Name, 18), frameTheme.TextStrong,
+            TextStyles.Title3);
         var min = snapshot.Min(hq);
         var priceText = min > 0 ? MarketFormat.Gil(min) : "\u2014";
         var priceSize = Typography.Measure(priceText, 1.4f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(textX, textTop + 26f * scale), priceText, MarketUi.Accent, 1.4f, FontWeight.SemiBold);
-
+        Typography.Draw(new Vector2(textX, textTop + 26f * scale), priceText, MarketUi.Accent, 1.4f,
+            FontWeight.SemiBold);
         var cheapestLabel = hq ? Loc.T(L.Market.CheapestHq) : Loc.T(L.Market.Cheapest);
-        Typography.Draw(new Vector2(textX + priceSize.X + 8f * scale, textTop + 28f * scale + priceSize.Y * 0.5f - 6f * scale), cheapestLabel, frameTheme.TextMuted, 0.78f);
-
+        Typography.Draw(
+            new Vector2(textX + priceSize.X + 8f * scale, textTop + 28f * scale + priceSize.Y * 0.5f - 6f * scale),
+            cheapestLabel, frameTheme.TextMuted, 0.78f);
         if (hasHq)
         {
             var pillGap = 6f * scale;
@@ -490,10 +459,10 @@ internal sealed class MarketApp : IPhoneApp
             var pillY = iconMax.Y - pillHeight - 2f * scale;
             var pillTotalWidth = nqWidth + pillGap + hqWidth;
             var pillStartX = origin.X + width - 16f * scale - pillTotalWidth;
-
-            var nqRect = new Rect(new Vector2(pillStartX, pillY), new Vector2(pillStartX + nqWidth, pillY + pillHeight));
-            var hqRect = new Rect(new Vector2(pillStartX + nqWidth + pillGap, pillY), new Vector2(pillStartX + nqWidth + pillGap + hqWidth, pillY + pillHeight));
-
+            var nqRect = new Rect(new Vector2(pillStartX, pillY),
+                new Vector2(pillStartX + nqWidth, pillY + pillHeight));
+            var hqRect = new Rect(new Vector2(pillStartX + nqWidth + pillGap, pillY),
+                new Vector2(pillStartX + nqWidth + pillGap + hqWidth, pillY + pillHeight));
             if (ui.PillButton(nqRect, Loc.T(L.Common.Nq), !showHq))
             {
                 SetQuality(false);
@@ -513,13 +482,14 @@ internal sealed class MarketApp : IPhoneApp
     {
         var hasVendor = index.TryGet(snapshot.ItemId, out var itemRef) && itemRef.VendorPrice > 0;
         var rowCount = hasVendor ? 6 : 5;
-
         MarketUi.SectionLabel(Loc.T(L.Market.Prices));
         var card = GroupCard.Begin(frameTheme, rowCount);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Market.Average), PriceOrDash(snapshot.Average(hq)), frameTheme);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Market.Highest), PriceOrDash(snapshot.Max(hq)), frameTheme);
-        SettingsRow.Info(card.NextRow(), Loc.T(L.Market.SalesPerDay), MarketFormat.Velocity(snapshot.Velocity(hq)), frameTheme);
-        SettingsRow.Info(card.NextRow(), Loc.T(L.Market.UpSold), $"{snapshot.UnitsForSale} / {snapshot.UnitsSold}", frameTheme);
+        SettingsRow.Info(card.NextRow(), Loc.T(L.Market.SalesPerDay), MarketFormat.Velocity(snapshot.Velocity(hq)),
+            frameTheme);
+        SettingsRow.Info(card.NextRow(), Loc.T(L.Market.UpSold), $"{snapshot.UnitsForSale} / {snapshot.UnitsSold}",
+            frameTheme);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Market.Updated), MarketFormat.Ago(snapshot.LastUpload), frameTheme);
         if (hasVendor)
         {
@@ -541,7 +511,8 @@ internal sealed class MarketApp : IPhoneApp
         MarketUi.SectionLabel(Loc.T(L.Market.PriceAlert));
         var card = GroupCard.Begin(frameTheme, 1);
         var existing = alerts.HasAlertFor(view.ItemId);
-        var label = showAlertEditor ? Loc.T(L.Common.Cancel) : existing ? Loc.T(L.Market.AddAnotherAlert) : Loc.T(L.Market.SetPriceAlert);
+        var label = showAlertEditor ? Loc.T(L.Common.Cancel) :
+            existing ? Loc.T(L.Market.AddAnotherAlert) : Loc.T(L.Market.SetPriceAlert);
         if (SettingsRow.Link(card.NextRow(), "!", frameTheme.Accent, label, string.Empty, frameTheme))
         {
             showAlertEditor = !showAlertEditor;
@@ -554,7 +525,6 @@ internal sealed class MarketApp : IPhoneApp
         }
 
         card.End();
-
         if (!showAlertEditor)
         {
             return;
@@ -562,23 +532,20 @@ internal sealed class MarketApp : IPhoneApp
 
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.Dummy(new Vector2(0f, 8f * scale));
-
         DrawThresholdField();
-
         ImGui.Dummy(new Vector2(0f, 8f * scale));
-
         var dirOrigin = ImGui.GetCursorScreenPos();
         var toggleWidth = 220f * scale;
         var toggleHeight = 30f * scale;
         alertDirLabels[0] = Loc.T(L.Market.AtOrBelow);
         alertDirLabels[1] = Loc.T(L.Market.AtOrAbove);
-        var dirIndex = SegmentStrip.Draw("market.alertDir", new Rect(dirOrigin, new Vector2(dirOrigin.X + toggleWidth, dirOrigin.Y + toggleHeight)), alertDirLabels, alertBelow ? 0 : 1, frameTheme);
+        var dirIndex = SegmentStrip.Draw("market.alertDir",
+            new Rect(dirOrigin, new Vector2(dirOrigin.X + toggleWidth, dirOrigin.Y + toggleHeight)), alertDirLabels,
+            alertBelow ? 0 : 1, frameTheme);
         alertBelow = dirIndex == 0;
         ImGui.SetCursorScreenPos(dirOrigin);
         ImGui.Dummy(new Vector2(toggleWidth, toggleHeight));
-
         ImGui.Dummy(new Vector2(0f, 10f * scale));
-
         if (DrawPrimaryButton(Loc.T(L.Market.CreateAlert)))
         {
             alerts.Add(new MarketAlert
@@ -608,10 +575,9 @@ internal sealed class MarketApp : IPhoneApp
         var pillMax = new Vector2(origin.X + width, origin.Y + height);
         Squircle.Fill(drawList, pillMin, pillMax, 12f * scale, ImGui.GetColorU32(frameTheme.GroupedCard));
         Material.EdgeSquircle(drawList, pillMin, pillMax, 12f * scale, scale);
-
         var labelSize = Typography.Measure("Gil", TextStyles.FootnoteEmphasized);
-        Typography.Draw(new Vector2(pillMin.X + 14f * scale, pillMin.Y + height * 0.5f - labelSize.Y * 0.5f), "Gil", frameTheme.TextMuted, TextStyles.FootnoteEmphasized);
-
+        Typography.Draw(new Vector2(pillMin.X + 14f * scale, pillMin.Y + height * 0.5f - labelSize.Y * 0.5f), "Gil",
+            frameTheme.TextMuted, TextStyles.FootnoteEmphasized);
         var inputLeft = pillMin.X + 48f * scale;
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, pillMin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - inputLeft - 14f * scale);
@@ -641,20 +607,16 @@ internal sealed class MarketApp : IPhoneApp
         var max = new Vector2(origin.X + width, origin.Y + height);
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-
-        var fill = pressed
-            ? Palette.Mix(frameTheme.Accent, new Vector4(0f, 0f, 0f, 1f), 0.14f)
-            : hovered
-                ? Palette.Mix(frameTheme.Accent, frameTheme.TextStrong, 0.10f)
-                : frameTheme.Accent;
+        var fill = pressed ? Palette.Mix(frameTheme.Accent, new Vector4(0f, 0f, 0f, 1f), 0.14f) :
+            hovered ? Palette.Mix(frameTheme.Accent, frameTheme.TextStrong, 0.10f) : frameTheme.Accent;
         Elevation.Card(drawList, min, max, 12f * scale, scale, 0.6f);
         Squircle.Fill(drawList, min, max, 12f * scale, ImGui.GetColorU32(fill));
-        drawList.AddLine(new Vector2(min.X + 12f * scale, min.Y + 1f * scale), new Vector2(max.X - 12f * scale, min.Y + 1f * scale), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.12f)), 1f * scale);
+        drawList.AddLine(new Vector2(min.X + 12f * scale, min.Y + 1f * scale),
+            new Vector2(max.X - 12f * scale, min.Y + 1f * scale), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.12f)),
+            1f * scale);
         Typography.DrawCentered((min + max) * 0.5f, label, new Vector4(0.99f, 0.99f, 1f, 1f), TextStyles.Headline);
-
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
-
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -678,7 +640,6 @@ internal sealed class MarketApp : IPhoneApp
         var origin = ImGui.GetCursorScreenPos();
         var height = 60f * scale;
         var graph = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-
         Span<float> values = count <= 64 ? stackalloc float[count] : new float[count];
         var cursor = 0;
         for (var saleIndex = sales.Length - 1; saleIndex >= 0; saleIndex--)
@@ -690,7 +651,6 @@ internal sealed class MarketApp : IPhoneApp
         }
 
         Sparkline.Draw(graph, values, MarketUi.Accent, Palette.WithAlpha(MarketUi.Accent, 0.18f));
-
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
@@ -700,7 +660,6 @@ internal sealed class MarketApp : IPhoneApp
         var listings = snapshot.Listings;
         var count = CountListings(listings, hq);
         MarketUi.SectionLabel(count > 0 ? Loc.T(L.Market.ListingsCount, count) : Loc.T(L.Market.Listings));
-
         if (count == 0)
         {
             DrawEmptyCard(hq ? Loc.T(L.Market.NoHqListings) : Loc.T(L.Market.NoListings));
@@ -729,7 +688,6 @@ internal sealed class MarketApp : IPhoneApp
         var sales = snapshot.Sales;
         var count = CountQuality(sales, hq);
         MarketUi.SectionLabel(count > 0 ? Loc.T(L.Market.RecentSalesCount, count) : Loc.T(L.Market.RecentSales));
-
         if (count == 0)
         {
             DrawEmptyCard(hq ? Loc.T(L.Market.NoHqSales) : Loc.T(L.Market.NoRecentSales));
@@ -758,7 +716,8 @@ internal sealed class MarketApp : IPhoneApp
         var card = GroupCard.Begin(frameTheme, 1);
         var row = card.NextRow();
         var size = Typography.Measure(message);
-        Typography.Draw(new Vector2(row.Center.X - size.X * 0.5f, row.Center.Y - size.Y * 0.5f), message, frameTheme.TextMuted);
+        Typography.Draw(new Vector2(row.Center.X - size.X * 0.5f, row.Center.Y - size.Y * 0.5f), message,
+            frameTheme.TextMuted);
         card.End();
     }
 
@@ -773,7 +732,6 @@ internal sealed class MarketApp : IPhoneApp
         var midY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var starCenter = new Vector2(area.Max.X - 18f * scale, midY);
         var refreshCenter = new Vector2(area.Max.X - 46f * scale, midY);
-
         var favorite = IsFavorite(view.ItemId);
         if (IconButton(starCenter, FontAwesomeIcon.Star, favorite ? frameTheme.Accent : frameTheme.TextMuted))
         {
@@ -788,7 +746,6 @@ internal sealed class MarketApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var box = 14f * scale;
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
-
         var glyph = icon.ToIconString();
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
@@ -910,7 +867,6 @@ internal sealed class MarketApp : IPhoneApp
     }
 
     private static string PriceOrDash(double value) => value > 0 ? MarketFormat.Gil(value) : "\u2014";
-
     private static string PriceOrDash(long value) => value > 0 ? MarketFormat.Gil(value) : "\u2014";
 
     public void Dispose()

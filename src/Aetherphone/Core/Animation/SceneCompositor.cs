@@ -8,8 +8,8 @@ internal delegate void LayerPainter(Rect target);
 
 internal static class SceneCompositor
 {
-    private const ImGuiWindowFlags LayerFlags =
-        ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoBackground;
+    private const ImGuiWindowFlags LayerFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
+                                                ImGuiWindowFlags.NoBackground;
 
     internal readonly struct Layer
     {
@@ -20,7 +20,8 @@ internal static class SceneCompositor
         public readonly bool Shield;
         public readonly LayerPainter Paint;
 
-        public Layer(string id, Vector2 offset, float dim, LayerPainter paint, Vector4 background = default, bool shield = false)
+        public Layer(string id, Vector2 offset, float dim, LayerPainter paint, Vector4 background = default,
+            bool shield = false)
         {
             Id = id;
             Offset = offset;
@@ -45,6 +46,7 @@ internal static class SceneCompositor
         }
 
         ImGui.SetCursorScreenPos(clip.Min);
+
         using (ImRaii.Child("clip", clip.Size, false, LayerFlags | ImGuiWindowFlags.NoInputs))
         using (InputShield.Engage(true))
         {
@@ -52,7 +54,8 @@ internal static class SceneCompositor
 
             if (dim > 0f)
             {
-                ImGui.GetWindowDrawList().AddRectFilled(paintTarget.Min, paintTarget.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)));
+                ImGui.GetWindowDrawList().AddRectFilled(paintTarget.Min, paintTarget.Max,
+                    ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)));
             }
         }
     }
@@ -60,8 +63,8 @@ internal static class SceneCompositor
     public static void DrawLayer(Rect clip, in Layer layer)
     {
         var shifted = new Rect(clip.Min + layer.Offset, clip.Max + layer.Offset);
-
         ImGui.SetCursorScreenPos(clip.Min);
+
         using (ImRaii.PushId(layer.Id))
         using (ImRaii.Child("layer", clip.Size, false, LayerFlags))
         {
@@ -69,19 +72,23 @@ internal static class SceneCompositor
             {
                 if (layer.Background.W > 0f)
                 {
-                    ImGui.GetWindowDrawList().AddRectFilled(shifted.Min, shifted.Max, ImGui.GetColorU32(layer.Background));
+                    ImGui.GetWindowDrawList()
+                        .AddRectFilled(shifted.Min, shifted.Max, ImGui.GetColorU32(layer.Background));
                 }
 
                 layer.Paint(shifted);
             }
 
-            if (layer.Dim > 0f)
+            if (!(layer.Dim > 0f))
             {
-                ImGui.SetCursorScreenPos(clip.Min);
-                using (ImRaii.Child("dim", clip.Size, false, LayerFlags | ImGuiWindowFlags.NoInputs))
-                {
-                    ImGui.GetWindowDrawList().AddRectFilled(shifted.Min, shifted.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, layer.Dim)));
-                }
+                return;
+            }
+            
+            ImGui.SetCursorScreenPos(clip.Min);
+            using (ImRaii.Child("dim", clip.Size, false, LayerFlags | ImGuiWindowFlags.NoInputs))
+            {
+                ImGui.GetWindowDrawList().AddRectFilled(shifted.Min, shifted.Max,
+                    ImGui.GetColorU32(new Vector4(0f, 0f, 0f, layer.Dim)));
             }
         }
     }

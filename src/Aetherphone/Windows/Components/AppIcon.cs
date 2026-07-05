@@ -12,7 +12,6 @@ internal static class AppIcon
 {
     private const float PressedScale = 0.88f;
     private const float PressSmoothTime = 0.09f;
-
     private static readonly Vector4 PressTint = new(0f, 0f, 0f, 1f);
     private static readonly Dictionary<string, Spring> PressSprings = new();
     private static string pressedId = string.Empty;
@@ -24,14 +23,12 @@ internal static class AppIcon
         var min = center - new Vector2(half, half);
         var max = center + new Vector2(half, half);
         var hovered = ImGui.IsMouseHoveringRect(min, max);
-
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             pressedId = app.Id;
         }
 
         var pressing = pressedId == app.Id && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-
         var opened = false;
         if (pressedId == app.Id && ImGui.IsMouseReleased(ImGuiMouseButton.Left))
         {
@@ -43,13 +40,10 @@ internal static class AppIcon
         var drawHalf = half * pressScale;
         var drawMin = new Vector2(center.X - drawHalf, center.Y - drawHalf);
         var drawMax = new Vector2(center.X + drawHalf, center.Y + drawHalf);
-
         var drawList = ImGui.GetWindowDrawList();
-        var fill = pressing
-            ? Palette.Mix(app.Accent, PressTint, 0.14f)
-            : hovered ? Palette.Mix(app.Accent, theme.TextStrong, 0.14f) : app.Accent;
+        var fill = pressing ? Palette.Mix(app.Accent, PressTint, 0.14f) :
+            hovered ? Palette.Mix(app.Accent, theme.TextStrong, 0.14f) : app.Accent;
         Squircle.Fill(drawList, drawMin, drawMax, size * 0.26f * pressScale, ImGui.GetColorU32(fill));
-
         if (!AppIconArt.TryDraw(app.Id, center, size * pressScale, theme.TextStrong, fill))
         {
             var glyphHeight = Typography.Measure(app.Glyph).Y;
@@ -57,8 +51,8 @@ internal static class AppIcon
             Typography.DrawCentered(center, app.Glyph, theme.TextStrong, glyphScale);
         }
 
-        Typography.DrawCentered(new Vector2(center.X, max.Y + 11f * scale), app.DisplayName, Palette.WithAlpha(theme.TextStrong, 0.95f), 0.85f, FontWeight.Medium);
-
+        Typography.DrawCentered(new Vector2(center.X, max.Y + 11f * scale), app.DisplayName,
+            Palette.WithAlpha(theme.TextStrong, 0.95f), 0.85f, FontWeight.Medium);
         if (app.BadgeCount > 0)
         {
             DrawBadge(new Vector2(max.X - 5f * scale, min.Y + 5f * scale), app.BadgeCount, theme, scale);

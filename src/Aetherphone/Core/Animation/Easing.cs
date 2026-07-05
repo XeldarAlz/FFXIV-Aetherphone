@@ -5,9 +5,7 @@ internal delegate float EasingFunction(float progress);
 internal static class Easing
 {
     public static float Linear(float progress) => progress;
-
     public static float SmoothStep(float progress) => progress * progress * (3f - 2f * progress);
-
     public static float EaseInCubic(float progress) => progress * progress * progress;
 
     public static float EaseOutCubic(float progress)
