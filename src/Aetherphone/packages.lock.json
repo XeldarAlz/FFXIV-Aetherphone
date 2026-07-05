@@ -57,9 +57,12 @@
       },
       "SixLabors.ImageSharp": {
         "type": "Direct",
-        "requested": "[3.1.*, )",
-        "resolved": "3.1.12",
-        "contentHash": "iAg6zifihXEFS/t7fiHhZBGAdCp3FavsF4i2ZIDp0JfeYeDVzvmlbY1CNhhIKimaIzrzSi5M/NBFcWvZT2rB/A=="
+        "requested": "[4.0.*, )",
+        "resolved": "4.0.0",
+        "contentHash": "6Ft5sclM1t5bY+P0SsLLGwXIAgmDASFFD9hD0tlEcfFCU8Yj9nR7ZzaqCL/p+SIfqoe8jLKFHD7LFPRJPGXZ5w==",
+        "dependencies": {
+          "System.IO.Hashing": "8.0.0"
+        }
       },
       "Vortice.Direct3D11": {
         "type": "Direct",
@@ -121,6 +124,11 @@
         "dependencies": {
           "SharpGen.Runtime": "2.4.2-beta"
         }
+      },
+      "System.IO.Hashing": {
+        "type": "Transitive",
+        "resolved": "8.0.0",
+        "contentHash": "ne1843evDugl0md7Fjzy6QjJrzsjh46ZKbhf8GwBXb5f/gw97J4bxMs0NQKifDuThh/f0bZ0e62NPl1jzTuRqA=="
       },
       "Vortice.DirectX": {
         "type": "Transitive",
