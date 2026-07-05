@@ -369,19 +369,8 @@ internal sealed partial class ChirperApp : IPhoneApp
             actions.Open(post.Id, ChirperActionReveal.Panel.Picker);
         }
 
-        cursorX = triggerCenter.X + 20f * scale;
         var chipLimit = left + width - 34f * scale;
-        var shown = 0;
-        for (var kind = 0; kind < ChirperReactions.Count && shown < 3; kind++)
-        {
-            if (post.ReactionCounts[kind] <= 0 || cursorX >= chipLimit)
-            {
-                continue;
-            }
-
-            cursorX += DrawReactionChip(post, cursorX, centerY, kind);
-            shown++;
-        }
+        DrawReactionSummary(post, triggerCenter.X + 20f * scale, centerY, chipLimit);
 
         var ellipsisCenter = new Vector2(left + width - 12f * scale, centerY);
         if (DrawIconButton(ellipsisCenter, 13f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), AppPalettes.Chirper.BodyInk,
@@ -389,6 +378,78 @@ internal sealed partial class ChirperApp : IPhoneApp
         {
             actions.Open(post.Id, ChirperActionReveal.Panel.Menu);
         }
+    }
+
+    private void DrawReactionSummary(PostDto post, float startX, float centerY, float chipLimit)
+    {
+        Span<int> order = stackalloc int[ChirperReactions.Count];
+        var active = 0;
+        for (var kind = 0; kind < ChirperReactions.Count; kind++)
+        {
+            if (post.ReactionCounts[kind] > 0)
+            {
+                order[active++] = kind;
+            }
+        }
+
+        OrderReactions(post, order[..active]);
+        var cursorX = startX;
+        for (var index = 0; index < active; index++)
+        {
+            var kind = order[index];
+            if (cursorX + ReactionChipWidth(post, kind) > chipLimit)
+            {
+                break;
+            }
+
+            cursorX += DrawReactionChip(post, cursorX, centerY, kind);
+        }
+    }
+
+    private static void OrderReactions(PostDto post, Span<int> order)
+    {
+        for (var index = 1; index < order.Length; index++)
+        {
+            var kind = order[index];
+            var position = index;
+            while (position > 0 && ReactionComesBefore(post, kind, order[position - 1]))
+            {
+                order[position] = order[position - 1];
+                position--;
+            }
+
+            order[position] = kind;
+        }
+    }
+
+    private static bool ReactionComesBefore(PostDto post, int candidate, int existing)
+    {
+        var candidateMine = post.MyReaction == candidate;
+        var existingMine = post.MyReaction == existing;
+        if (candidateMine != existingMine)
+        {
+            return candidateMine;
+        }
+
+        var candidateCount = post.ReactionCounts[candidate];
+        var existingCount = post.ReactionCounts[existing];
+        if (candidateCount != existingCount)
+        {
+            return candidateCount > existingCount;
+        }
+
+        return candidate < existing;
+    }
+
+    private static float ReactionChipWidth(PostDto post, int kind)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var countText = post.ReactionCounts[kind].ToString(Loc.Culture);
+        var countSize = Typography.Measure(countText, 0.82f, FontWeight.Medium);
+        var glyphWidth = 11f * scale;
+        var padX = 7f * scale;
+        var gap = 4f * scale;
+        return padX + glyphWidth + gap + countSize.X + padX;
     }
 
     private float DrawReactionChip(PostDto post, float x, float centerY, int kind)
@@ -401,7 +462,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var glyphWidth = 11f * scale;
         var padX = 7f * scale;
         var gap = 4f * scale;
-        var chipWidth = padX + glyphWidth + gap + countSize.X + padX;
+        var chipWidth = ReactionChipWidth(post, kind);
         var chipHeight = 22f * scale;
         var min = new Vector2(x, centerY - chipHeight * 0.5f);
         var max = new Vector2(x + chipWidth, centerY + chipHeight * 0.5f);
