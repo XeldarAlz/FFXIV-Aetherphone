@@ -400,8 +400,9 @@ internal sealed partial class VelvetApp
         {
             if (multiline)
             {
-                ImGui.InputTextMultiline(id, ref value, maxLength,
-                    new Vector2(rect.Width - 24f * scale, rect.Height - 16f * scale), ImGuiInputTextFlags.None);
+                var fieldSize = new Vector2(rect.Width - 24f * scale, rect.Height - 16f * scale);
+                var wrapWidth = fieldSize.X - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
+                SoftWrapField.Multiline(id, ref value, maxLength, fieldSize, wrapWidth);
             }
             else
             {

@@ -238,9 +238,9 @@ internal sealed class AppSkin
         {
             if (multiline)
             {
-                ImGui.InputTextMultiline(id, ref value, maxLength,
-                    new Vector2(width - Metrics.Space.Md * 2f * scale, height - Metrics.Space.Lg * scale),
-                    ImGuiInputTextFlags.None);
+                var fieldSize = new Vector2(width - Metrics.Space.Md * 2f * scale, height - Metrics.Space.Lg * scale);
+                var wrapWidth = fieldSize.X - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
+                SoftWrapField.Multiline(id, ref value, maxLength, fieldSize, wrapWidth);
             }
             else
             {

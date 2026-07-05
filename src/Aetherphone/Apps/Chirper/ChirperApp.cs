@@ -24,7 +24,6 @@ internal sealed partial class ChirperApp : IPhoneApp
 {
     private const float FeedRefreshSeconds = 25f;
     private const int MaxPostLength = 500;
-    private const int ComposeBufferBytes = MaxPostLength * 4 + 1024;
     private const int DisplayNameMax = 40;
     private const int HandleMax = 15;
     private const int BioMax = 200;
@@ -52,8 +51,6 @@ internal sealed partial class ChirperApp : IPhoneApp
     private float sinceFollowing;
     private string draft = string.Empty;
     private bool composeFocus;
-    private float composeWrapWidth;
-    private readonly ImGui.ImGuiInputTextCallbackPtrDelegate composeCallback;
     private string composeStatus = string.Empty;
     private volatile int composeOutcome;
     private string searchDraft = string.Empty;
@@ -81,7 +78,6 @@ internal sealed partial class ChirperApp : IPhoneApp
         avatar = new ChirperAvatarComposer(store, library);
         router = new ViewRouter<ChirperRoute>(ChirperRoute.Home, Id);
         drawView = DrawView;
-        composeCallback = ComposeTextCallback;
         back = () => router.Pop();
     }
 

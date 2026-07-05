@@ -20,8 +20,8 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
-// The compose flow: the floating compose button, the compose card, and the text wrapping/length
-// bookkeeping that keeps the chirp within limits. Split from the main feed for readability.
+// The compose flow: the floating compose button and the compose card. The body field wraps and stays
+// within its limit through the shared SoftWrapField. Split from the main feed for readability.
 internal sealed partial class ChirperApp
 {
     private void DrawComposeFab(Rect area)
@@ -131,14 +131,13 @@ internal sealed partial class ChirperApp
             }
 
             var framePadding = ImGui.GetStyle().FramePadding.X;
-            composeWrapWidth = inputWidth - framePadding * 2f - 4f * scale;
+            var composeWrapWidth = inputWidth - framePadding * 2f - 4f * scale;
             using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.TitleInk))
             using (Plugin.Fonts.Push(1.15f))
             {
-                ImGui.InputTextMultiline("##chirpBody", ref draft, ComposeBufferBytes,
-                    new Vector2(inputWidth, inputHeight),
-                    ImGuiInputTextFlags.CallbackEdit | ImGuiInputTextFlags.CallbackCharFilter, composeCallback);
+                SoftWrapField.Multiline("##chirpBody", ref draft, MaxPostLength,
+                    new Vector2(inputWidth, inputHeight), composeWrapWidth);
             }
 
             if (draft.Length == 0)
@@ -155,7 +154,7 @@ internal sealed partial class ChirperApp
                     composeStatus, theme.Danger, 0.85f);
             }
 
-            var remaining = MaxPostLength - ComposeLogicalLength(draft);
+            var remaining = MaxPostLength - draft.Length;
             var counterColor = remaining < 40
                 ? (remaining < 0 ? theme.Danger : new Vector4(0.95f, 0.65f, 0.20f, 1f))
                 : AppPalettes.Chirper.MutedInk;
@@ -166,183 +165,6 @@ internal sealed partial class ChirperApp
         }
     }
 
-    private int ComposeTextCallback(ImGuiInputTextCallbackDataPtr data)
-    {
-        if (data.EventFlag == ImGuiInputTextFlags.CallbackCharFilter)
-        {
-            if (data.EventChar is '\n' or '\r')
-            {
-                data.EventChar = 0;
-            }
-
-            return 0;
-        }
-
-        var current = System.Text.Encoding.UTF8.GetString(data.BufSpan[..data.BufTextLen]);
-        var charCursor = ByteIndexToCharIndex(current, data.CursorPos);
-        var logicalCursor = charCursor - CountNewlines(current, charCursor);
-
-        var logical = StripNewlines(current);
-        if (logical.Length > MaxPostLength)
-        {
-            logical = logical[..MaxPostLength];
-            if (logicalCursor > MaxPostLength)
-            {
-                logicalCursor = MaxPostLength;
-            }
-        }
-
-        var wrapped = WrapText(logical, composeWrapWidth);
-        if (string.Equals(wrapped, current, StringComparison.Ordinal))
-        {
-            return 0;
-        }
-
-        var wrappedCursor = LogicalToWrappedIndex(wrapped, logicalCursor);
-        var byteCursor = System.Text.Encoding.UTF8.GetByteCount(wrapped.AsSpan(0, wrappedCursor));
-
-        data.DeleteChars(0, data.BufTextLen);
-        data.InsertChars(0, wrapped);
-        data.CursorPos = byteCursor;
-        data.SelectionStart = byteCursor;
-        data.SelectionEnd = byteCursor;
-        return 0;
-    }
-
-    private static string WrapText(string text, float wrapWidth)
-    {
-        if (text.Length == 0 || wrapWidth <= 0f)
-        {
-            return text;
-        }
-
-        var builder = new System.Text.StringBuilder(text.Length + 16);
-        var lineWidth = 0f;
-        var lineStart = 0;
-        var wordStart = 0;
-        var index = 0;
-        while (index < text.Length)
-        {
-            var runeLength = char.IsHighSurrogate(text[index]) && index + 1 < text.Length &&
-                             char.IsLowSurrogate(text[index + 1])
-                ? 2
-                : 1;
-            var isSpace = runeLength == 1 && text[index] is ' ' or '\t';
-            var characterWidth = ImGui.CalcTextSize(text.Substring(index, runeLength)).X;
-
-            if (!isSpace && lineWidth > 0f && lineWidth + characterWidth > wrapWidth)
-            {
-                if (wordStart > lineStart)
-                {
-                    builder.Insert(wordStart, '\n');
-                    lineStart = wordStart + 1;
-                    lineWidth = MeasureRange(builder, lineStart);
-                    wordStart = lineStart;
-                }
-                else
-                {
-                    builder.Append('\n');
-                    lineStart = builder.Length;
-                    lineWidth = 0f;
-                    wordStart = builder.Length;
-                }
-            }
-
-            builder.Append(text, index, runeLength);
-            lineWidth += characterWidth;
-            if (isSpace)
-            {
-                wordStart = builder.Length;
-            }
-
-            index += runeLength;
-        }
-
-        return builder.ToString();
-    }
-
-    private static float MeasureRange(System.Text.StringBuilder builder, int start)
-    {
-        if (start >= builder.Length)
-        {
-            return 0f;
-        }
-
-        return ImGui.CalcTextSize(builder.ToString(start, builder.Length - start)).X;
-    }
-
-    private static string StripNewlines(string text)
-    {
-        return text.IndexOf('\n') < 0 ? text : text.Replace("\n", string.Empty);
-    }
-
-    private static int ComposeLogicalLength(string text)
-    {
-        var length = text.Length;
-        for (var index = 0; index < text.Length; index++)
-        {
-            if (text[index] == '\n')
-            {
-                length--;
-            }
-        }
-
-        return length;
-    }
-
-    private static int CountNewlines(string text, int limit)
-    {
-        var count = 0;
-        for (var index = 0; index < limit; index++)
-        {
-            if (text[index] == '\n')
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
-    private static int ByteIndexToCharIndex(string text, int byteIndex)
-    {
-        if (byteIndex <= 0)
-        {
-            return 0;
-        }
-
-        var bytes = 0;
-        var index = 0;
-        while (index < text.Length && bytes < byteIndex)
-        {
-            var runeLength = char.IsHighSurrogate(text[index]) && index + 1 < text.Length &&
-                             char.IsLowSurrogate(text[index + 1])
-                ? 2
-                : 1;
-            bytes += System.Text.Encoding.UTF8.GetByteCount(text.AsSpan(index, runeLength));
-            index += runeLength;
-        }
-
-        return index;
-    }
-
-    private static int LogicalToWrappedIndex(string wrapped, int logicalCursor)
-    {
-        var seen = 0;
-        var index = 0;
-        while (index < wrapped.Length && seen < logicalCursor)
-        {
-            if (wrapped[index] != '\n')
-            {
-                seen++;
-            }
-
-            index++;
-        }
-
-        return index;
-    }
-
     private void Submit()
     {
         if (string.IsNullOrWhiteSpace(draft) || store.Posting)
@@ -351,6 +173,6 @@ internal sealed partial class ChirperApp
         }
 
         composeStatus = string.Empty;
-        store.Compose(StripNewlines(draft), ok => composeOutcome = ok ? 1 : 2);
+        store.Compose(draft, ok => composeOutcome = ok ? 1 : 2);
     }
 }

@@ -370,11 +370,11 @@ internal sealed partial class AethergramApp
             captionFocus = false;
         }
 
+        var wrapWidth = inputSize.X - ImGui.GetStyle().FramePadding.X * 2f - 4f * scale;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            ImGui.InputTextMultiline("##gramCaption", ref caption, MaxCaptionLength, inputSize,
-                ImGuiInputTextFlags.None);
+            SoftWrapField.Multiline("##gramCaption", ref caption, MaxCaptionLength, inputSize, wrapWidth);
         }
 
         if (caption.Length == 0)
