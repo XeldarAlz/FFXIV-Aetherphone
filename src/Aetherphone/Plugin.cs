@@ -189,7 +189,7 @@ public sealed class Plugin : IDalamudPlugin
     private void UpdateDtrBadge()
     {
         var unread = services.Notifications.UnreadCount;
-        dtrEntry.Text = unread > 0 ? Loc.T(L.Plugin.DtrBadge, unread) : Loc.T(L.Plugin.Dtr);
+        dtrEntry.Text = unread > 0 ? $"{AepConstants.Name} ({unread})" : AepConstants.Name;
     }
 
     private void OnCommand(string command, string arguments)

@@ -299,6 +299,7 @@ internal static class L
             new("changelog.r0850.23", "Added a volume control for ringtones and notification sounds"),
             new("changelog.r0850.24", "The phone now remembers its position, keeping separate spots for the full phone and the minimized view"),
             new("changelog.r0850.25", "Velvet now alerts you to new connection requests and when yours are accepted"),
+            new("changelog.r0850.26", "The server info bar entry now shows Aetherphone with your unread notification count and always stays in English"),
         };
 
         public static readonly LocString[] Release0840 =
@@ -1209,9 +1210,7 @@ internal static class L
 
     internal static class Plugin
     {
-        public static readonly LocString Dtr = new("plugin.dtr", "Phone");
-        public static readonly LocString DtrBadge = new("plugin.dtrBadge", "Phone {0}");
-        public static readonly LocString CommandHelp = new("plugin.commandHelp", "Toggle the Aetherphone. /phone market [item] opens the market board, /phone about opens credits & links, /phone reset recenters the phone, /phone test sends a sample notification.");
+        public static readonly LocString CommandHelp =new("plugin.commandHelp", "Toggle the Aetherphone. /phone market [item] opens the market board, /phone about opens credits & links, /phone reset recenters the phone, /phone test sends a sample notification.");
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /phone.");
         public static readonly LocString SearchTheMarket = new("plugin.searchTheMarket", "Search the Market");
         public static readonly LocString SideButtonHint = new("plugin.sideButtonHint", "Tap to minimize · Hold to turn off");
