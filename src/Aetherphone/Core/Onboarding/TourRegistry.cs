@@ -20,10 +20,6 @@ internal static class TourRegistry
                 "skywatcher.forecast"),
             GuideStep.Tap(L.Onboarding.ReturnHomeTitle, L.Onboarding.ReturnHomeBody, "chrome.home",
                 static nav => nav.GoHome()),
-            GuideStep.Tap(L.Onboarding.OpenTimersTitle, L.Onboarding.OpenTimersBody, "home.app.timers",
-                static nav => nav.Open("timers", AppOpenSource.Onboarding)),
-            GuideStep.Tap(L.Onboarding.GoBackTitle, L.Onboarding.GoBackBody, "chrome.back",
-                static nav => nav.Back()),
             GuideStep.Point(L.Onboarding.LockTitle, L.Onboarding.LockBody, "chrome.lock"),
         }, new[] { "skywatcher" });
 
@@ -85,6 +81,19 @@ internal static class TourRegistry
         Add(tours, "wallet", 1, new[] { GuideStep.Note(L.Apps.Wallet, L.Onboarding.WalletBody), });
         Add(tours, "inventory", 1, new[] { GuideStep.Note(L.Apps.Inventory, L.Onboarding.InventoryBody), });
         Add(tours, "clock", 1, new[] { GuideStep.Note(L.Apps.Clock, L.Onboarding.ClockBody), });
+        Add(tours, "calendar", 1,
+            new[]
+            {
+                GuideStep.Note(L.Calendar.Title, L.Onboarding.CalendarBody),
+                GuideStep.Note(L.Calendar.NewEvent, L.Onboarding.CalendarAddBody),
+            });
+        Add(tours, "notes", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.Notes, L.Onboarding.NotesBody),
+                GuideStep.Note(L.Notes.TabReminders, L.Onboarding.NotesRemindersBody),
+            });
+        Add(tours, "calculator", 1, new[] { GuideStep.Note(L.Apps.Calculator, L.Onboarding.CalculatorBody), });
         Add(tours, "timers", 1, new[] { GuideStep.Note(L.Apps.Timers, L.Onboarding.TimersBody), });
         Add(tours, "dailies", 1, new[] { GuideStep.Note(L.Apps.Dailies, L.Onboarding.DailiesBody), });
         Add(tours, "fishing", 1, new[] { GuideStep.Note(L.Apps.Fishing, L.Onboarding.FishingBody), });

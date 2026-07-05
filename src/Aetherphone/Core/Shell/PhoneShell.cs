@@ -39,6 +39,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly OnboardingDirector director;
     private bool closeRequested;
     private bool minimizeRequested;
+    private bool analyticsConsentRequested;
     private CallState lastCallState;
 
     public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications,
@@ -65,19 +66,25 @@ internal sealed class PhoneShell : IDisposable
     public void OnOpened()
     {
         Plugin.Loading.BeginSession();
-        MaybeAskAnalyticsConsent();
         director.OnPhoneOpened();
     }
 
-    private static void MaybeAskAnalyticsConsent()
+    private void MaybeAskAnalyticsConsent(bool busy)
     {
-        if (Plugin.Cfg.AnalyticsConsentPrompted)
+        if (analyticsConsentRequested || Plugin.Cfg.AnalyticsConsentPrompted)
         {
             return;
         }
 
+        if (busy || director.CapturesPointer || !WelcomeOnboardingSettled())
+        {
+            return;
+        }
+
+        analyticsConsentRequested = true;
         Plugin.Confirm.Ask(new ConfirmRequest
         {
+            Title = Loc.T(L.Settings.ConsentTitle),
             Message = Loc.T(L.Settings.ConsentMessage),
             ConfirmLabel = Loc.T(L.Settings.ConsentAccept),
             CancelLabel = Loc.T(L.Settings.ConsentDecline),
@@ -85,6 +92,17 @@ internal sealed class PhoneShell : IDisposable
             Confirm = () => SetAnalyticsConsent(true),
             Cancel = () => SetAnalyticsConsent(false),
         });
+    }
+
+    private static bool WelcomeOnboardingSettled()
+    {
+        if (!OnboardingState.Enabled)
+        {
+            return true;
+        }
+
+        var welcome = TourRegistry.GetWelcome();
+        return OnboardingState.HasCompleted(welcome.Id, welcome.ContentVersion);
     }
 
     private static void SetAnalyticsConsent(bool enabled)
@@ -165,6 +183,7 @@ internal sealed class PhoneShell : IDisposable
                               (!director.CapturesPointer && banner.CapturesPointer(screen)));
         var busy = loading.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning;
         director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
+        MaybeAskAnalyticsConsent(busy);
         UiAnchors.BeginFrame(director.WantsAnchors);
         using (InputShield.Engage(loading.IsActive || islandCaptures || overlaysCapture || ringing || confirming ||
                                   director.CapturesPointer))

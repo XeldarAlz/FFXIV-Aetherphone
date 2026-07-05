@@ -255,6 +255,7 @@ internal static class L
         public static readonly LocString PrivacyOff = new("settings.privacyOff", "Private");
         public static readonly LocString PrivacyAnalytics = new("settings.privacyAnalytics", "Share anonymous usage");
         public static readonly LocString PrivacyHint = new("settings.privacyHint", "Aetherphone is made by one solo developer. Sharing anonymous usage, which apps you open and for how long plus your region, helps me see what to build next. It never includes your character name, your messages, or any personal data.");
+        public static readonly LocString ConsentTitle = new("settings.consentTitle", "Analytics & Consent");
         public static readonly LocString ConsentMessage = new("settings.consentMessage", "Aetherphone is made by one solo developer. To keep making it better for everyone, it really helps to know which apps people use and where to focus next.\n\nWith your OK, the app shares anonymous usage only: which apps you open and for how long, plus your region. It never includes your character name, your messages, or any personal data.\n\nYou can change this anytime in Settings, under Privacy. Thank you for helping shape Aetherphone.");
         public static readonly LocString ConsentAccept = new("settings.consentAccept", "Sure, count me in");
         public static readonly LocString ConsentDecline = new("settings.consentDecline", "No thanks");
@@ -1386,10 +1387,6 @@ internal static class L
         public static readonly LocString BeginBody = new("onboarding.beginBody", "Tap the app icon to dive in. You can replay any tip later from Settings.");
         public static readonly LocString ReturnHomeTitle = new("onboarding.returnHomeTitle", "Back to home");
         public static readonly LocString ReturnHomeBody = new("onboarding.returnHomeBody", "This bar takes you home from any app. Tap it to head back.");
-        public static readonly LocString OpenTimersTitle = new("onboarding.openTimersTitle", "Open Timers");
-        public static readonly LocString OpenTimersBody = new("onboarding.openTimersBody", "One more app to try. Tap Timers to open it.");
-        public static readonly LocString GoBackTitle = new("onboarding.goBackTitle", "Step back");
-        public static readonly LocString GoBackBody = new("onboarding.goBackBody", "The arrow in the top left goes back a screen. Give it a tap.");
         public static readonly LocString LockTitle = new("onboarding.lockTitle", "Lock it in place");
         public static readonly LocString LockBody = new("onboarding.lockBody", "Tap this to lock or unlock the phone's position on your screen, so it stays put while you play. That's the tour: enjoy your Aetherphone.");
         public static readonly LocString MessagesTitle = new("onboarding.messagesTitle", "Messages");
@@ -1461,5 +1458,10 @@ internal static class L
         public static readonly LocString PhoneGroupBody = new("onboarding.phoneGroupBody", "While a call is active, add more people to bring everyone into the same conversation. Group calls are supported too.");
         public static readonly LocString PhoneVoiceTitle = new("onboarding.phoneVoiceTitle", "Voice settings");
         public static readonly LocString PhoneVoiceBody = new("onboarding.phoneVoiceBody", "You can pick your microphone and adjust voice input options from Settings.");
+        public static readonly LocString CalendarBody = new("onboarding.calendarBody", "A month view of community events across Eorzea, right beside your own plans. Tap any day to see what's on.");
+        public static readonly LocString CalendarAddBody = new("onboarding.calendarAddBody", "Tap the plus to save your own event with its date and time. It sits on the calendar alongside everything else.");
+        public static readonly LocString NotesBody = new("onboarding.notesBody", "A quick place to jot things down. Tap the plus to start a note, and it saves itself as you type.");
+        public static readonly LocString NotesRemindersBody = new("onboarding.notesRemindersBody", "Switch to the Reminders tab for a simple to-do list. Give one a due date and the phone nudges you when it's time.");
+        public static readonly LocString CalculatorBody = new("onboarding.calculatorBody", "A simple calculator for quick everyday sums, with a running tape of your recent results to scroll back through.");
     }
 }
