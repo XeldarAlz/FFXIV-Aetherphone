@@ -31,6 +31,7 @@ internal sealed class SimonApp : IMiniGame
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
     private readonly float[] lit = new float[SimonBoard.PadCount];
+    private RollingValue scoreRoll;
     private Phase phase;
     private int showStep;
     private bool showOn;
@@ -68,6 +69,7 @@ internal sealed class SimonApp : IMiniGame
         Array.Clear(lit, 0, lit.Length);
         particles.Clear();
         fx.Clear();
+        scoreRoll.Snap(0);
         score = 0;
         pendingSubmit = false;
         newBest = false;
@@ -98,6 +100,11 @@ internal sealed class SimonApp : IMiniGame
         if (pendingSubmit)
         {
             newBest = context.Stats.SubmitScore(GameId, score);
+            if (newBest)
+            {
+                bestScore = score;
+            }
+
             pendingSubmit = false;
         }
 
@@ -108,10 +115,14 @@ internal sealed class SimonApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
+        var drawList = ImGui.GetWindowDrawList();
+        GameScene.Ambient(drawList, body, Accent);
         var rowY = body.Min.Y + 30f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), GameNumber.Label(score),
-            Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(bestScore),
+        var beatingBest = score > 0 && score > bestScore;
+        GameHud.ScorePill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll, score,
+            Accent, theme, deltaSeconds, beatingBest);
+        var bestShown = score > bestScore ? score : bestScore;
+        GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(bestShown),
             Accent, theme);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
         {
@@ -119,8 +130,9 @@ internal sealed class SimonApp : IMiniGame
             return;
         }
 
-        var area = new Rect(new Vector2(body.Min.X + 10f * scale, rowY + 28f * scale),
-            new Vector2(body.Max.X - 10f * scale, body.Max.Y - 10f * scale));
+        var shake = fx.ShakeOffset(scale);
+        var area = new Rect(new Vector2(body.Min.X + 10f * scale, rowY + 28f * scale) + shake,
+            new Vector2(body.Max.X - 10f * scale, body.Max.Y - 10f * scale) + shake);
         var grid = GameGrid.Centered(area, 2, 2, 0.08f);
         if (phase == Phase.Showing)
         {
@@ -142,10 +154,12 @@ internal sealed class SimonApp : IMiniGame
         }
 
         var hubLabel = phase == Phase.Showing ? Loc.T(L.Games.Watch) : Loc.T(L.Games.YourTurn);
-        renderer.Draw(grid, lit, GameNumber.Label(board.Length), hubLabel, Accent, theme, scale);
-        var drawList = ImGui.GetWindowDrawList();
+        renderer.Draw(grid, lit, GameNumber.Label(board.Length), hubLabel, Accent, theme, scale,
+            phase == Phase.Showing ? 0.16f : 0f, phase == Phase.Input);
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
+        fx.DrawText();
         if (phase == Phase.Over)
         {
             DrawResult(theme, body, deltaSeconds);
@@ -185,7 +199,8 @@ internal sealed class SimonApp : IMiniGame
             phaseTimer = OnDuration;
             var pad = board.PadAt(showStep);
             lit[pad] = 1f;
-            BurstPad(grid, pad, 8, scale);
+            var center = SimonRenderer.PadRect(grid, pad).Center;
+            fx.Shockwave(center, grid.Pitch * 0.42f, SimonRenderer.ColorOf(pad) with { W = 0.7f }, 0.42f, 2.4f);
         }
     }
 
@@ -210,6 +225,8 @@ internal sealed class SimonApp : IMiniGame
         }
 
         BurstPad(grid, hovered, 10, scale);
+        fx.Shockwave(SimonRenderer.PadRect(grid, hovered).Center, grid.Pitch * 0.5f,
+            SimonRenderer.ColorOf(hovered) with { W = 0.8f }, 0.36f, 2.4f);
         inputIndex++;
         if (inputIndex < board.Length)
         {
@@ -220,6 +237,10 @@ internal sealed class SimonApp : IMiniGame
         phase = Phase.Reward;
         rewardTimer = RewardDuration;
         fx.AddTrauma(0.12f);
+        particles.Sparkle(grid.Center, 14, new Vector4(1f, 0.95f, 0.65f, 1f), 160f * scale, 2.6f, 0.8f);
+        fx.Shockwave(grid.Center, grid.Pitch * 0.9f, GamePalette.Lighten(Accent, 0.3f), 0.55f, 3f);
+        fx.AddText($"+{GameNumber.Label(board.Length)}", grid.Center - new Vector2(0f, grid.Pitch * 0.3f), Accent,
+            1.15f);
     }
 
     private void OnFail(GameGrid grid, float scale)
@@ -228,7 +249,9 @@ internal sealed class SimonApp : IMiniGame
         pendingSubmit = true;
         resultAppear = 0f;
         fx.AddTrauma(0.7f);
+        fx.HitStop(0.1f);
         fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.45f);
+        fx.Shockwave(grid.Center, grid.Pitch * 1.3f, new Vector4(0.95f, 0.4f, 0.4f, 1f), 0.6f, 3.4f);
         for (var pad = 0; pad < SimonBoard.PadCount; pad++)
         {
             BurstPad(grid, pad, 14, scale);

@@ -39,6 +39,7 @@ internal sealed class PairsApp : IMiniGame
     private readonly float[] matchGlow = new float[PairsBoard.CardCount];
     private readonly float[] shakePhase = new float[PairsBoard.CardCount];
     private Phase phase;
+    private float entrance;
     private float phaseTimer;
     private float elapsed;
     private bool matchBurstPending;
@@ -81,6 +82,7 @@ internal sealed class PairsApp : IMiniGame
         }
 
         phase = Phase.Selecting;
+        entrance = 0f;
         phaseTimer = 0f;
         elapsed = 0f;
         matchBurstPending = false;
@@ -119,6 +121,8 @@ internal sealed class PairsApp : IMiniGame
         UpdateAnimations(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
+        entrance = GameJuice.Advance(entrance, deltaSeconds);
+        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         var rowY = body.Min.Y + 32f * scale;
         GameHud.Pill(new Vector2(body.Center.X - 58f * scale, rowY), Loc.T(L.Games.Attempts),
             GameNumber.Label(board.Attempts), Accent, theme);
@@ -148,6 +152,7 @@ internal sealed class PairsApp : IMiniGame
         DrawCards(grid, theme, scale);
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
         if (phase == Phase.Won)
         {
@@ -162,7 +167,15 @@ internal sealed class PairsApp : IMiniGame
             for (var column = 0; column < PairsBoard.Columns; column++)
             {
                 var index = row * PairsBoard.Columns + column;
-                var cell = grid.Cell(column, row);
+                var pop = GameJuice.PopIn(GameJuice.Stagger(entrance, index, PairsBoard.CardCount));
+                if (pop <= 0.01f)
+                {
+                    continue;
+                }
+
+                var fullCell = grid.Cell(column, row);
+                var half = fullCell.Size * 0.5f * pop;
+                var cell = new Rect(fullCell.Center - half, fullCell.Center + half);
                 var hovered = phase == Phase.Selecting && board.CanReveal(index) && flipProgress[index] < 0.02f &&
                               ImGui.IsMouseHoveringRect(cell.Min, cell.Max);
                 var shakeX = shakePhase[index] > 0f
@@ -298,6 +311,7 @@ internal sealed class PairsApp : IMiniGame
 
         shakePhase[board.FirstCard] = 1f;
         shakePhase[board.SecondCard] = 1f;
+        fx.AddTrauma(0.12f);
         phase = Phase.Shaking;
         phaseTimer = 0f;
     }
@@ -315,9 +329,12 @@ internal sealed class PairsApp : IMiniGame
             return;
         }
 
+        var scale = ImGuiHelpers.GlobalScale;
         var center = grid.CellCenter(index % PairsBoard.Columns, index / PairsBoard.Columns);
-        particles.Burst(center, 14, PairsRenderer.ColorFor(board.Symbol(index)), 170f * ImGuiHelpers.GlobalScale, 3.2f,
-            0.6f, 240f);
+        var color = PairsRenderer.ColorFor(board.Symbol(index));
+        particles.Burst(center, 14, color, 170f * scale, 3.2f, 0.6f, 240f);
+        particles.Sparkle(center, 6, GamePalette.Lighten(color, 0.35f), 130f * scale, 2.2f, 0.7f);
+        fx.Shockwave(center, grid.Pitch * 0.7f, GamePalette.Lighten(color, 0.3f), 0.4f, 2.4f);
     }
 
     private void OnWin()

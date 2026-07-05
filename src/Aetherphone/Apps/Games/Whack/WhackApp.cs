@@ -4,6 +4,8 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -16,6 +18,7 @@ internal sealed class WhackApp : IMiniGame
     private readonly WhackRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
+    private RollingValue scoreRoll;
     private bool statsLoaded;
     private int bestScore;
     private bool wasOver;
@@ -46,6 +49,7 @@ internal sealed class WhackApp : IMiniGame
         board.Reset();
         particles.Clear();
         fx.Clear();
+        scoreRoll.Snap(0);
         wasOver = false;
         pendingSubmit = false;
         newBest = false;
@@ -85,9 +89,12 @@ internal sealed class WhackApp : IMiniGame
             }
         }
 
-        DrawHud(body, theme, scale);
-        var area = new Rect(new Vector2(body.Min.X + 8f * scale, body.Min.Y + 60f * scale),
-            new Vector2(body.Max.X - 8f * scale, body.Max.Y - 10f * scale));
+        var drawList = ImGui.GetWindowDrawList();
+        GameScene.Ambient(drawList, body, Accent);
+        DrawHud(body, theme, scale, deltaSeconds);
+        var shake = fx.ShakeOffset(scale);
+        var area = new Rect(new Vector2(body.Min.X + 8f * scale, body.Min.Y + 60f * scale) + shake,
+            new Vector2(body.Max.X - 8f * scale, body.Max.Y - 10f * scale) + shake);
         var grid = GameGrid.Centered(area, WhackBoard.Columns, WhackBoard.Rows, 0.12f);
         if (!board.Over)
         {
@@ -95,21 +102,35 @@ internal sealed class WhackApp : IMiniGame
         }
 
         renderer.Draw(board, grid, theme, scale);
-        var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
+        if (!board.Over && board.TimeLeft <= 10f)
+        {
+            DrawUrgency(drawList, body, scale);
+        }
+
         if (board.Over)
         {
             DrawResult(theme, body, deltaSeconds);
         }
     }
 
-    private void DrawHud(Rect body, PhoneTheme theme, float scale)
+    private static void DrawUrgency(ImDrawListPtr drawList, Rect body, float scale)
+    {
+        var pulse = 0.10f + 0.14f * Styling.Pulse(Styling.PulseFast);
+        var color = ImGui.GetColorU32(new Vector4(0.95f, 0.30f, 0.30f, pulse));
+        drawList.AddRect(body.Min + new Vector2(2f * scale, 2f * scale), body.Max - new Vector2(2f * scale, 2f * scale),
+            color, 14f * scale, ImDrawFlags.RoundCornersAll, 5f * scale);
+    }
+
+    private void DrawHud(Rect body, PhoneTheme theme, float scale, float deltaSeconds)
     {
         var rowY = body.Min.Y + 30f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), Accent, theme);
+        var beatingBest = board.Score > 0 && board.Score > bestScore;
+        GameHud.ScorePill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
+            board.Score, Accent, theme, deltaSeconds, beatingBest);
         var low = board.TimeLeft <= 10f;
         var timeAccent = low ? theme.Danger : Accent;
         GameHud.Pill(new Vector2(body.Center.X + 50f * scale, rowY), Loc.T(L.Games.Time),
@@ -144,12 +165,16 @@ internal sealed class WhackApp : IMiniGame
         if (result == WhackResult.Mole)
         {
             particles.Burst(moleCenter, 12, new Vector4(0.95f, 0.82f, 0.45f, 1f), 170f * scale, 3f, 0.5f, 320f);
+            particles.Sparkle(moleCenter, 7, new Vector4(1f, 0.95f, 0.65f, 1f), 130f * scale, 2.4f, 0.6f);
+            fx.Shockwave(moleCenter, 44f * scale, new Vector4(1f, 0.9f, 0.5f, 0.9f), 0.38f, 2.6f);
             fx.AddText($"+{10 * board.Combo}", moleCenter, Accent, 1.1f);
-            fx.AddTrauma(0.06f);
+            fx.AddTrauma(0.08f);
         }
         else if (result == WhackResult.Bomb)
         {
             particles.Burst(moleCenter, 24, new Vector4(0.95f, 0.4f, 0.32f, 1f), 280f * scale, 4f, 0.7f, 360f);
+            particles.Streaks(moleCenter, 12, new Vector4(1f, 0.7f, 0.4f, 1f), 420f * scale, 2.6f, 0.5f);
+            fx.Shockwave(moleCenter, 100f * scale, new Vector4(1f, 0.6f, 0.35f, 1f), 0.55f, 3.4f);
             fx.AddText("-30", moleCenter, new Vector4(0.95f, 0.4f, 0.4f, 1f), 1.2f);
             fx.AddTrauma(0.6f);
             fx.Flash(new Vector4(0.95f, 0.3f, 0.3f, 1f), 0.4f);

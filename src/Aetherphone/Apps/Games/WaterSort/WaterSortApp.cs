@@ -86,6 +86,7 @@ internal sealed class WaterSortApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
+        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         var lift = liftSpring.Step(board.Selected >= 0 ? 10f * scale : 0f, 0.06f, deltaSeconds);
         if (pouring)
         {
@@ -128,6 +129,7 @@ internal sealed class WaterSortApp : IMiniGame
 
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
         if (finished)
         {
@@ -176,6 +178,7 @@ internal sealed class WaterSortApp : IMiniGame
         pourTimer = 0f;
         var splash = new Vector2(pourTo.Center.X, pourTo.Min.Y + pourTo.Height * 0.2f);
         particles.Burst(splash, 9, pourColor, 130f * scale, 2.6f, 0.45f, 320f);
+        fx.Shockwave(splash, 30f * scale, GamePalette.Lighten(pourColor, 0.25f), 0.35f, 2.2f);
         if (board.IsSolved())
         {
             OnSolved(area, scale);
@@ -195,8 +198,10 @@ internal sealed class WaterSortApp : IMiniGame
 
         pendingSubmit = true;
         fx.AddTrauma(0.25f);
+        fx.Shockwave(area.Center, area.Width * 0.45f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
         ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink, };
         particles.Confetti(new Vector2(area.Center.X, area.Min.Y), 64, palette, 260f * scale, 4f, 1.3f);
+        particles.Sparkle(area.Center, 18, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * scale, 2.8f, 1f);
     }
 
     private void DrawResult(PhoneTheme theme, Rect body, float scale)

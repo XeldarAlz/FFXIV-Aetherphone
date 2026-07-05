@@ -91,6 +91,7 @@ internal sealed class SolitaireApp : IMiniGame
             pendingSubmit = false;
         }
 
+        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         DrawHud(body, theme, scale);
         var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 56f * scale),
             new Vector2(body.Max.X, body.Max.Y - 6f * scale));
@@ -111,6 +112,7 @@ internal sealed class SolitaireApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         if (finished)
         {
             DrawResult(theme, body, deltaSeconds);
@@ -341,8 +343,11 @@ internal sealed class SolitaireApp : IMiniGame
         var suit = SolitaireBoard.Suit(card);
         if (board.FoundationTop(suit) == card)
         {
+            var scale = ImGuiHelpers.GlobalScale;
             var center = layout.FoundationRect(suit).Center;
-            particles.Burst(center, 12, Accent, 150f * ImGuiHelpers.GlobalScale, 3f, 0.5f, 220f);
+            particles.Burst(center, 12, Accent, 150f * scale, 3f, 0.5f, 220f);
+            particles.Sparkle(center, 5, new Vector4(1f, 0.95f, 0.65f, 1f), 110f * scale, 2f, 0.6f);
+            fx.Shockwave(center, 40f * scale, GamePalette.Lighten(Accent, 0.3f), 0.4f, 2.4f);
             fx.AddTrauma(0.08f);
         }
 
@@ -375,6 +380,8 @@ internal sealed class SolitaireApp : IMiniGame
         ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentAmber, Styling.AccentRose, Styling.AccentBlue, };
         var top = new Vector2(layout.OriginX + layout.ColumnPitch * 3f, layout.TopRowY);
         particles.Confetti(top, 90, palette, 280f * ImGuiHelpers.GlobalScale, 4.4f, 1.5f);
+        particles.Sparkle(top + new Vector2(0f, 60f * ImGuiHelpers.GlobalScale), 18, new Vector4(1f, 0.95f, 0.7f, 1f),
+            210f * ImGuiHelpers.GlobalScale, 2.8f, 1f);
     }
 
     private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)

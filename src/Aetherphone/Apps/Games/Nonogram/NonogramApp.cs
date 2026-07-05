@@ -98,6 +98,7 @@ internal sealed class NonogramApp : IMiniGame
             pendingSubmit = false;
         }
 
+        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         DrawDifficultyRow(body, theme, scale);
         DrawStatsRow(body, theme, scale);
         var area = new Rect(new Vector2(body.Min.X + 6f * scale, body.Min.Y + 96f * scale),
@@ -113,6 +114,7 @@ internal sealed class NonogramApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         DetectSolved(layout);
         if (board.Solved)
         {
@@ -254,7 +256,10 @@ internal sealed class NonogramApp : IMiniGame
         ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink, };
         var gridTop = layout.GridOrigin;
         var gridCenterX = gridTop.X + board.Size * layout.CellSize * 0.5f;
+        var gridCenter = new Vector2(gridCenterX, gridTop.Y + board.Size * layout.CellSize * 0.5f);
         particles.Confetti(new Vector2(gridCenterX, gridTop.Y), 72, palette, 260f * ImGuiHelpers.GlobalScale, 4f, 1.3f);
+        particles.Sparkle(gridCenter, 16, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * ImGuiHelpers.GlobalScale, 2.6f, 0.9f);
+        fx.Shockwave(gridCenter, board.Size * layout.CellSize * 0.6f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
     }
 
     private void UpdateFillAnimation(float deltaSeconds)

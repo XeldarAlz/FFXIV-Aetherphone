@@ -53,20 +53,29 @@ internal sealed class Twenty48Renderer
         return TileColors[rank];
     }
 
-    public void Draw(Twenty48Board board, GameGrid grid, in TileAnim anim, float scale)
+    public void Draw(Twenty48Board board, GameGrid grid, in TileAnim anim, float scale, Vector4 accent, float entrance)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 7f * scale;
         var boardPad = grid.Gap;
         var boardMin = grid.Origin - new Vector2(boardPad, boardPad);
         var boardMax = grid.Origin + new Vector2(grid.Width, grid.Height) + new Vector2(boardPad, boardPad);
-        Squircle.Fill(drawList, boardMin, boardMax, rounding + boardPad, ImGui.GetColorU32(GamePalette.Board));
+        GameScene.Arena(drawList, new Rect(boardMin, boardMax), rounding + boardPad, scale, accent);
         for (var row = 0; row < Twenty48Board.Size; row++)
         {
             for (var column = 0; column < Twenty48Board.Size; column++)
             {
+                var index = row * Twenty48Board.Size + column;
+                var pop = GameJuice.PopIn(GameJuice.Stagger(entrance, index, Twenty48Board.CellCount));
+                if (pop <= 0f)
+                {
+                    continue;
+                }
+
                 var cell = grid.Cell(column, row);
-                Squircle.Fill(drawList, cell.Min, cell.Max, rounding, ImGui.GetColorU32(GamePalette.CellSunken));
+                var half = cell.Size * 0.5f * pop;
+                Squircle.Fill(drawList, cell.Center - half, cell.Center + half, rounding * pop,
+                    ImGui.GetColorU32(GamePalette.CellSunken));
             }
         }
 
@@ -78,12 +87,12 @@ internal sealed class Twenty48Renderer
                 continue;
             }
 
-            DrawTile(drawList, board, grid, anim, index, value, rounding, scale);
+            DrawTile(drawList, board, grid, anim, index, value, rounding, scale, entrance);
         }
     }
 
     private void DrawTile(ImDrawListPtr drawList, Twenty48Board board, GameGrid grid, in TileAnim anim, int index,
-        int value, float rounding, float scale)
+        int value, float rounding, float scale, float entrance)
     {
         var column = index % Twenty48Board.Size;
         var row = index / Twenty48Board.Size;
@@ -95,7 +104,13 @@ internal sealed class Twenty48Renderer
             center = Vector2.Lerp(fromCenter, center, Easing.EaseOutCubic(anim.Slide));
         }
 
-        var tileScale = 1f;
+        var tileScale = GameJuice.PopIn(GameJuice.Stagger(entrance, index, Twenty48Board.CellCount));
+        if (tileScale <= 0.01f)
+        {
+            return;
+        }
+
+        var merging = board.Merged(index) && !anim.Sliding && anim.Resolve < 1f;
         if (index == anim.SpawnIndex)
         {
             if (anim.Sliding)
@@ -103,24 +118,35 @@ internal sealed class Twenty48Renderer
                 return;
             }
 
-            tileScale = Easing.EaseOutBack(anim.Spawn);
+            tileScale *= Easing.EaseOutBack(anim.Spawn);
             if (tileScale <= 0.01f)
             {
                 return;
             }
         }
-        else if (board.Merged(index) && !anim.Sliding && anim.Resolve < 1f)
+        else if (merging)
         {
-            tileScale = 1f + 0.16f * MathF.Sin(anim.Resolve * MathF.PI);
+            tileScale *= 1f + 0.16f * MathF.Sin(anim.Resolve * MathF.PI);
         }
 
         var halfPitch = (grid.Pitch - grid.Gap) * 0.5f * tileScale;
         var min = new Vector2(center.X - halfPitch, center.Y - halfPitch);
         var max = new Vector2(center.X + halfPitch, center.Y + halfPitch);
         var color = ColorFor(value);
-        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(color));
+        if (merging)
+        {
+            ProgressRing.Glow(center, halfPitch * 1.15f, GamePalette.Lighten(color, 0.3f),
+                0.8f * MathF.Sin(anim.Resolve * MathF.PI));
+        }
+
+        drawList.AddRectFilled(min + new Vector2(0f, 2f * scale), max + new Vector2(0f, 2f * scale),
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)), rounding);
+        Squircle.FillVerticalGradient(drawList, min, max, rounding,
+            ImGui.GetColorU32(GamePalette.Lighten(color, 0.10f)), ImGui.GetColorU32(GamePalette.Darken(color, 0.10f)));
         Squircle.Fill(drawList, min, new Vector2(max.X, min.Y + halfPitch * 0.7f), rounding,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)));
+        Squircle.Stroke(drawList, min, max, rounding,
+            ImGui.GetColorU32(GamePalette.Lighten(color, 0.35f) with { W = 0.4f }), 1f * scale);
         var label = GameNumber.Label(value);
         var textScale = value >= 1000 ? 1.05f :
             value >= 100 ? 1.3f : 1.55f;

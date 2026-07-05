@@ -23,6 +23,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -37,15 +38,31 @@ internal sealed class GamesApp : IPhoneApp
         Playing,
     }
 
-    private const int Columns = 2;
+    private readonly struct Section
+    {
+        public readonly int Start;
+        public readonly int Count;
+
+        public Section(int start, int count)
+        {
+            Start = start;
+            Count = count;
+        }
+    }
+
     private const float HeaderHeight = 42f;
+    private const float HeroHeight = 168f;
+    private const float SectionHeaderHeight = 30f;
+    private const float GameRowHeight = 64f;
+    private const int FeaturedStep = 5;
     private readonly GameStatsStore stats;
     private readonly IMiniGame[] games;
-    private readonly Spring[] cardScale;
     private readonly int[] tileOrder;
     private readonly ViewRouter<GameRoute> router;
     private readonly RouterDraw<GameRoute> drawView;
     private readonly Action back;
+    private Section[] sections = Array.Empty<Section>();
+    private Spring heroScale = new(1f);
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private IMiniGame? currentGame;
@@ -53,6 +70,8 @@ internal sealed class GamesApp : IPhoneApp
     private string? activeGameId;
     private int preGameBestScore;
     private int preGameBestTime;
+    private int featuredIndex;
+    private float entrance;
     public string Id => "games";
     public string DisplayName => Loc.T(L.Apps.Games);
     public string Glyph => ">";
@@ -67,19 +86,22 @@ internal sealed class GamesApp : IPhoneApp
             new WaterSortApp(), new BreakoutApp(), new BubbleShooterApp(), new NonogramApp(), new FlowApp(),
             new SolitaireApp(), new SimonApp(), new FlapApp(), new ReversiApp(), new WhackApp(), new SnakeApp(),
         };
-        cardScale = new Spring[games.Length];
-        for (var index = 0; index < cardScale.Length; index++)
-        {
-            cardScale[index] = new Spring(1f);
-        }
-
-        tileOrder = BuildDisplayOrder();
+        tileOrder = new int[games.Length];
+        RebuildLayout();
         router = new ViewRouter<GameRoute>(GameRoute.Launcher, Id);
         drawView = DrawView;
         back = () => router.Pop();
     }
 
-    private int[] BuildDisplayOrder()
+    private void RebuildLayout()
+    {
+        BuildDisplayOrder();
+        BuildSections();
+        var day = (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay);
+        featuredIndex = day * FeaturedStep % games.Length;
+    }
+
+    private void BuildDisplayOrder()
     {
         var distinct = new string[games.Length];
         var distinctCount = 0;
@@ -102,7 +124,6 @@ internal sealed class GamesApp : IPhoneApp
             }
         }
 
-        var order = new int[games.Length];
         var cursor = 0;
         for (var section = 0; section < distinctCount; section++)
         {
@@ -113,16 +134,47 @@ internal sealed class GamesApp : IPhoneApp
                     continue;
                 }
 
-                order[cursor++] = index;
+                tileOrder[cursor++] = index;
+            }
+        }
+    }
+
+    private void BuildSections()
+    {
+        var count = 0;
+        for (var index = 0; index < tileOrder.Length; index++)
+        {
+            if (index == 0 || !string.Equals(games[tileOrder[index]].Genre, games[tileOrder[index - 1]].Genre,
+                    StringComparison.Ordinal))
+            {
+                count++;
             }
         }
 
-        return order;
+        if (sections.Length != count)
+        {
+            sections = new Section[count];
+        }
+
+        var sectionIndex = 0;
+        var start = 0;
+        for (var index = 1; index <= tileOrder.Length; index++)
+        {
+            if (index == tileOrder.Length || !string.Equals(games[tileOrder[index]].Genre,
+                    games[tileOrder[index - 1]].Genre, StringComparison.Ordinal))
+            {
+                sections[sectionIndex++] = new Section(start, index - start);
+                start = index;
+            }
+        }
     }
 
     public void OnOpened()
     {
         router.Reset();
+        RebuildLayout();
+        entrance = 0f;
+        heroScale.SnapTo(1f);
     }
 
     public void OnClosed()
@@ -185,78 +237,163 @@ internal sealed class GamesApp : IPhoneApp
         using (AppSurface.Begin(body))
         {
             var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+            entrance = GameJuice.Advance(entrance, deltaSeconds, 1.6f);
+            var drawList = ImGui.GetWindowDrawList();
+            var featured = games[featuredIndex];
+            GameScene.Ambient(drawList, body, featured.Accent);
             var origin = ImGui.GetCursorScreenPos();
             var availableWidth = ImGui.GetContentRegionAvail().X;
-            var spacing = 12f * scale;
-            var cardWidth = (availableWidth - spacing * (Columns - 1)) / Columns;
-            var cardHeight = cardWidth * 1.18f;
-            var topPadding = 4f * scale;
-            for (var member = 0; member < tileOrder.Length; member++)
+            var y = origin.Y + Metrics.Space.Xxs * scale;
+            var heroRect = new Rect(new Vector2(origin.X, y),
+                new Vector2(origin.X + availableWidth, y + HeroHeight * scale));
+            if (DrawHero(heroRect, featured, Easing.EaseOutCubic(entrance), deltaSeconds, scale))
             {
-                var gameIndex = tileOrder[member];
-                var column = member % Columns;
-                var row = member / Columns;
-                var cardMin = new Vector2(origin.X + column * (cardWidth + spacing),
-                    origin.Y + topPadding + row * (cardHeight + spacing));
-                var cardRect = new Rect(cardMin, cardMin + new Vector2(cardWidth, cardHeight));
-                if (DrawCard(cardRect, games[gameIndex], gameIndex, deltaSeconds, context.Theme, scale))
-                {
-                    OpenGame(games[gameIndex]);
-                }
+                OpenGame(featured);
             }
 
-            var totalRows = (tileOrder.Length + Columns - 1) / Columns;
-            var totalHeight = topPadding + totalRows * cardHeight + MathF.Max(0, totalRows - 1) * spacing;
-            ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + totalHeight));
-            ImGui.Dummy(new Vector2(availableWidth, 6f * scale));
+            y = heroRect.Max.Y;
+            for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
+            {
+                var section = sections[sectionIndex];
+                y += Metrics.Space.Xl * scale;
+                Typography.Draw(new Vector2(origin.X + Metrics.Space.Xxs * scale, y),
+                    games[tileOrder[section.Start]].Genre, theme.TextStrong, TextStyles.Title3);
+                y += SectionHeaderHeight * scale;
+                ImGui.SetCursorScreenPos(new Vector2(origin.X, y));
+                var card = GroupCard.Begin(theme, section.Count, GameRowHeight);
+                for (var item = 0; item < section.Count; item++)
+                {
+                    var gameIndex = tileOrder[section.Start + item];
+                    if (DrawGameRow(card.NextRow(), games[gameIndex], scale))
+                    {
+                        OpenGame(games[gameIndex]);
+                    }
+                }
+
+                card.End();
+                y += section.Count * GameRowHeight * scale;
+            }
+
+            ImGui.SetCursorScreenPos(new Vector2(origin.X, y));
+            ImGui.Dummy(new Vector2(availableWidth, Metrics.Space.Lg * scale));
         }
     }
 
-    private bool DrawCard(Rect rect, IMiniGame game, int index, float deltaSeconds, PhoneTheme theme, float scale)
+    private bool DrawGameRow(Rect row, IMiniGame game, float scale)
     {
+        var drawList = ImGui.GetWindowDrawList();
+        var hitMin = new Vector2(row.Min.X - Metrics.Space.Lg * scale, row.Min.Y);
+        var hitMax = new Vector2(row.Max.X + Metrics.Space.Lg * scale, row.Max.Y);
+        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
+        if (hovered)
+        {
+            drawList.AddRectFilled(hitMin, hitMax, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f)),
+                Metrics.Radius.Md * scale);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var accent = game.Accent;
+        var iconSize = 42f * scale;
+        var iconCenter = new Vector2(row.Min.X + iconSize * 0.5f, row.Center.Y);
+        var iconHalf = new Vector2(iconSize * 0.5f, iconSize * 0.5f);
+        var iconMin = iconCenter - iconHalf;
+        var iconMax = iconCenter + iconHalf;
+        var iconRounding = iconSize * Metrics.Radius.TileFactor;
+        Squircle.FillVerticalGradient(drawList, iconMin, iconMax, iconRounding,
+            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.16f)),
+            ImGui.GetColorU32(GamePalette.Darken(accent, 0.18f)));
+        Squircle.Stroke(drawList, iconMin, iconMax, iconRounding,
+            ImGui.GetColorU32(GamePalette.Lighten(accent, 0.4f) with { W = 0.35f }), Metrics.Stroke.Hairline * scale);
+        var ink = new Vector4(0.99f, 0.99f, 1f, 1f);
+        if (!AppIconArt.TryDraw(game.Id, iconCenter, iconSize * 0.62f, ink, accent))
+        {
+            Typography.DrawCentered(iconCenter, game.Title, ink, TextStyles.Caption2);
+        }
+
+        var textX = iconMax.X + Metrics.Space.Md * scale;
+        Typography.Draw(new Vector2(textX, row.Center.Y - 17f * scale), game.Title, theme.TextStrong,
+            TextStyles.Headline);
+        var best = StatValue(game.Id);
+        var subtitle = string.IsNullOrEmpty(best) ? game.Genre : $"{Loc.T(L.Games.Best)} · {best}";
+        Typography.Draw(new Vector2(textX, row.Center.Y + 2f * scale), subtitle, theme.TextMuted, TextStyles.Footnote);
+        DrawPlayPill(drawList, row, accent, scale);
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    private static void DrawPlayPill(ImDrawListPtr drawList, Rect row, Vector4 accent, float scale)
+    {
+        var label = Loc.T(L.Games.Play);
+        var labelSize = Typography.Measure(label, TextStyles.FootnoteEmphasized);
+        var pillWidth = MathF.Max(labelSize.X + 24f * scale, 54f * scale);
+        var pillHeight = 26f * scale;
+        var pillMax = new Vector2(row.Max.X, row.Center.Y + pillHeight * 0.5f);
+        var pillMin = new Vector2(row.Max.X - pillWidth, row.Center.Y - pillHeight * 0.5f);
+        var pillHovered = ImGui.IsMouseHoveringRect(pillMin, pillMax);
+        Squircle.Fill(drawList, pillMin, pillMax, pillHeight * 0.5f,
+            ImGui.GetColorU32(accent with { W = pillHovered ? 0.32f : 0.18f }));
+        Typography.DrawCentered((pillMin + pillMax) * 0.5f, label, GamePalette.Lighten(accent, 0.38f),
+            TextStyles.FootnoteEmphasized);
+    }
+
+    private bool DrawHero(Rect rect, IMiniGame game, float phase, float deltaSeconds, float scale)
+    {
+        if (phase <= 0f)
+        {
+            return false;
+        }
+
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var target = pressed ? 0.965f :
-            hovered ? 1.035f : 1f;
-        var grow = cardScale[index].Step(target, 0.085f, deltaSeconds);
-        var center = rect.Center;
+        var target = pressed ? 0.975f :
+            hovered ? 1.012f : 1f;
+        var grow = heroScale.Step(target, 0.085f, deltaSeconds) * (0.94f + 0.06f * Easing.EaseOutBack(phase));
+        var lift = (1f - Easing.EaseOutCubic(phase)) * 18f * scale;
+        var center = rect.Center + new Vector2(0f, lift);
         var half = rect.Size * 0.5f * grow;
         var min = center - half;
         var max = center + half;
         var height = max.Y - min.Y;
-        var rounding = 26f * scale;
-        var inset = rounding;
+        var rounding = 28f * scale;
         var accent = game.Accent;
-        var baseColor = GamePalette.Darken(accent, 0.16f);
-        Elevation.Floating(drawList, min, max, rounding, scale, hovered ? 1f : 0.7f);
-        var topTone = ImGui.GetColorU32(GamePalette.Lighten(accent, 0.30f));
-        var bottomTone = ImGui.GetColorU32(GamePalette.Darken(accent, 0.44f));
+        Elevation.Floating(drawList, min, max, rounding, scale, phase * (hovered ? 1f : 0.8f));
+        var topTone = ImGui.GetColorU32(GamePalette.Lighten(accent, 0.34f));
+        var bottomTone = ImGui.GetColorU32(GamePalette.Darken(accent, 0.48f));
         Squircle.FillVerticalGradient(drawList, min, max, rounding, topTone, bottomTone);
-        var iconCenter = new Vector2(center.X, min.Y + height * 0.40f);
-        if (hovered)
-        {
-            ProgressRing.Glow(iconCenter, height * 0.24f, GamePalette.Lighten(accent, 0.45f), 0.6f);
-        }
-
+        drawList.PushClipRect(min, max, true);
+        DrawHeroGlow(drawList, min, max, accent);
+        DrawSheen(drawList, min, max, Styling.Phase(5600.0), 0.05f, scale);
+        drawList.PopClipRect();
+        var iconCenter = new Vector2(min.X + height * 0.40f,
+            center.Y + MathF.Sin((float)ImGui.GetTime() * 1.6f) * 3f * scale);
+        var iconSize = height * 0.52f;
+        drawList.AddCircleFilled(iconCenter + new Vector2(0f, iconSize * 0.10f), iconSize * 0.52f,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.22f)));
+        ProgressRing.Glow(iconCenter, iconSize * 0.5f, GamePalette.Lighten(accent, 0.45f), hovered ? 0.9f : 0.55f);
         var ink = new Vector4(0.99f, 0.99f, 1f, 1f);
-        if (!AppIconArt.TryDraw(game.Id, iconCenter, height * 0.46f * grow, ink, baseColor))
+        if (!AppIconArt.TryDraw(game.Id, iconCenter, iconSize, ink, GamePalette.Darken(accent, 0.16f)))
         {
             Typography.DrawCentered(iconCenter, game.Title, ink, TextStyles.Title1);
         }
 
+        var textX = min.X + height * 0.72f;
+        Typography.Draw(new Vector2(textX, center.Y - 34f * scale), Loc.T(L.Games.Featured).ToUpperInvariant(),
+            GamePalette.Lighten(accent, 0.62f), TextStyles.Caption2);
+        Typography.Draw(new Vector2(textX, center.Y - 18f * scale), game.Title, ink, TextStyles.Title2);
+        Typography.Draw(new Vector2(textX, center.Y + 8f * scale), game.Genre, ink with { W = 0.72f },
+            TextStyles.Footnote);
+        var playCenter = new Vector2(textX + 34f * scale, center.Y + 38f * scale);
+        var playClicked = GameHud.Button(playCenter, new Vector2(68f * scale, 28f * scale), Loc.T(L.Games.Play),
+            new Vector4(0.97f, 0.97f, 0.99f, 1f), theme);
         Squircle.Stroke(drawList, min, max, rounding,
             ImGui.GetColorU32(GamePalette.Lighten(accent, 0.4f) with { W = 0.42f }), 1f * scale);
-        drawList.AddLine(new Vector2(min.X + inset, min.Y + 1.5f * scale),
-            new Vector2(max.X - inset, min.Y + 1.5f * scale), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.2f)),
+        drawList.AddLine(new Vector2(min.X + rounding, min.Y + 1.5f * scale),
+            new Vector2(max.X - rounding, min.Y + 1.5f * scale), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f)),
             1f * scale);
-        Typography.DrawCentered(new Vector2(center.X, max.Y - height * 0.235f), game.Title, ink, TextStyles.Headline);
-        Typography.DrawCentered(new Vector2(center.X, max.Y - height * 0.115f), game.Genre.ToUpperInvariant(),
-            new Vector4(1f, 1f, 1f, 0.68f), TextStyles.Caption2);
         var best = StatValue(game.Id);
         if (!string.IsNullOrEmpty(best))
         {
-            DrawBestChip(drawList, new Vector2(max.X - 9f * scale, min.Y + 9f * scale), best, scale);
+            DrawBestChip(drawList, new Vector2(max.X - 11f * scale, min.Y + 11f * scale), best, scale);
         }
 
         if (hovered)
@@ -264,7 +401,39 @@ internal sealed class GamesApp : IPhoneApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
+        if (playClicked)
+        {
+            return true;
+        }
+
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    private static void DrawHeroGlow(ImDrawListPtr drawList, Vector2 min, Vector2 max, Vector4 accent)
+    {
+        var size = max - min;
+        var topLeft = new Vector2(min.X + size.X * 0.16f, min.Y + size.Y * 0.14f);
+        var bottomRight = new Vector2(min.X + size.X * 0.86f, min.Y + size.Y * 0.95f);
+        for (var layer = 3; layer >= 1; layer--)
+        {
+            var alphaScale = (4 - layer) * 0.34f;
+            drawList.AddCircleFilled(topLeft, size.Y * (0.24f + layer * 0.16f),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f * alphaScale)));
+            drawList.AddCircleFilled(bottomRight, size.Y * (0.30f + layer * 0.20f),
+                ImGui.GetColorU32(GamePalette.Lighten(accent, 0.55f) with { W = 0.06f * alphaScale }));
+        }
+    }
+
+    private static void DrawSheen(ImDrawListPtr drawList, Vector2 min, Vector2 max, float sweep, float alpha,
+        float scale)
+    {
+        var width = max.X - min.X;
+        var band = 26f * scale;
+        var sweepX = min.X + (width + band * 4f) * sweep - band * 2f;
+        var skew = 18f * scale;
+        drawList.AddQuadFilled(new Vector2(sweepX - band * 0.5f, max.Y), new Vector2(sweepX + skew - band * 0.5f, min.Y),
+            new Vector2(sweepX + skew + band * 0.5f, min.Y), new Vector2(sweepX + band * 0.5f, max.Y),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
     }
 
     private static void DrawBestChip(ImDrawListPtr drawList, Vector2 topRight, string text, float scale)

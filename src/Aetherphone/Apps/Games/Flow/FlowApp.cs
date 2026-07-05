@@ -74,6 +74,7 @@ internal sealed class FlowApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
+        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         var rowY = body.Min.Y + 30f * scale;
         GameHud.Pill(new Vector2(body.Center.X - 52f * scale, rowY), Loc.T(L.Games.Level),
             GameNumber.Label(currentLevel), Accent, theme);
@@ -98,6 +99,7 @@ internal sealed class FlowApp : IMiniGame
         var drawList = ImGui.GetWindowDrawList();
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         if (finished)
         {
             DrawResult(theme, body, deltaSeconds);
@@ -160,6 +162,8 @@ internal sealed class FlowApp : IMiniGame
         var head = board.PathCell(color, board.PathLength(color) - 1);
         var center = grid.CellCenter(head % board.Size, head / board.Size);
         particles.Burst(center, 14, FlowRenderer.ColorOf(color), 150f * scale, 3f, 0.5f, 240f);
+        particles.Sparkle(center, 6, GamePalette.Lighten(FlowRenderer.ColorOf(color), 0.4f), 120f * scale, 2.2f, 0.6f);
+        fx.Shockwave(center, grid.Pitch * 0.9f, GamePalette.Lighten(FlowRenderer.ColorOf(color), 0.25f), 0.42f, 2.6f);
         fx.AddTrauma(0.12f);
         if (board.IsSolved())
         {
@@ -180,7 +184,9 @@ internal sealed class FlowApp : IMiniGame
 
         pendingSubmit = true;
         fx.AddTrauma(0.3f);
+        fx.HitStop(0.06f);
         fx.Flash(Accent, 0.35f);
+        fx.Shockwave(grid.Center, grid.Width * 0.6f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3.2f);
         ReadOnlySpan<Vector4> palette = new[]
         {
             FlowRenderer.ColorOf(0), FlowRenderer.ColorOf(1), FlowRenderer.ColorOf(2), FlowRenderer.ColorOf(3),

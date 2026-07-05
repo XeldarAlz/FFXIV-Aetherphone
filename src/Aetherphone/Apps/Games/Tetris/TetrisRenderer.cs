@@ -20,8 +20,7 @@ internal sealed class TetrisRenderer
     public void Draw(TetrisBoard board, GameGrid grid, Vector4 accent, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
-        Elevation.Card(drawList, grid.Bounds.Min, grid.Bounds.Max, 18f * scale, scale, 0.8f);
-        Squircle.Fill(drawList, grid.Bounds.Min, grid.Bounds.Max, 18f * scale, ImGui.GetColorU32(GamePalette.Board));
+        GameScene.Arena(drawList, grid.Bounds, 18f * scale, scale, accent);
         DrawGridLines(drawList, grid, scale);
         for (var row = 0; row < TetrisBoard.Rows; row++)
         {
@@ -114,10 +113,13 @@ internal sealed class TetrisRenderer
     {
         var rect = grid.Cell(column, row);
         var rounding = MathF.Max(2f * scale, rect.Height * 0.2f);
-        var fill = color with { W = color.W * alpha };
-        Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(fill));
+        Squircle.FillVerticalGradient(drawList, rect.Min, rect.Max, rounding,
+            ImGui.GetColorU32(GamePalette.Lighten(color, 0.10f) with { W = color.W * alpha }),
+            ImGui.GetColorU32(GamePalette.Darken(color, 0.14f) with { W = color.W * alpha }));
         Squircle.Fill(drawList, rect.Min, new Vector2(rect.Max.X, rect.Center.Y), rounding,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.18f * alpha)));
+        Squircle.Stroke(drawList, rect.Min, rect.Max, rounding,
+            ImGui.GetColorU32(GamePalette.Darken(color, 0.35f) with { W = 0.45f * alpha }), 1f * scale);
     }
 
     private static void DrawPiecePreview(ImDrawListPtr drawList, Rect rect, TetrisPieceKind kind, float scale)

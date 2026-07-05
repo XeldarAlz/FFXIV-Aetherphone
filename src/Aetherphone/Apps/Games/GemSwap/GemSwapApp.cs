@@ -4,6 +4,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -22,6 +23,9 @@ internal sealed class GemSwapApp : IMiniGame
     private readonly GemSwapRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
+    private RollingValue scoreRoll;
+    private float entrance;
+    private int previousScore;
     private GemPhase phase;
     private int swapA = -1;
     private int swapB = -1;
@@ -64,9 +68,17 @@ internal sealed class GemSwapApp : IMiniGame
     private void StartNewGame()
     {
         PersistBest();
+        if (board.Score > loadedBest)
+        {
+            loadedBest = board.Score;
+        }
+
         board.Reset();
         particles.Clear();
         fx.Clear();
+        scoreRoll.Snap(0);
+        entrance = 0f;
+        previousScore = 0;
         phase = GemPhase.Idle;
         swapA = -1;
         swapB = -1;
@@ -93,12 +105,14 @@ internal sealed class GemSwapApp : IMiniGame
 
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
+        entrance = GameJuice.Advance(entrance, deltaSeconds);
         var rowY = body.Min.Y + 30f * scale;
         var comboText = chain > 1 ? $"x{chain}" : string.Empty;
-        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 64f * scale),
-            new Vector2(body.Max.X, body.Max.Y - 6f * scale));
+        var shake = fx.ShakeOffset(scale);
+        var gridArea = new Rect(new Vector2(body.Min.X, body.Min.Y + 64f * scale) + shake,
+            new Vector2(body.Max.X, body.Max.Y - 6f * scale) + shake);
         var grid = GameGrid.Centered(gridArea, GemSwapBoard.Columns, GemSwapBoard.Rows, 0.06f);
-        AdvanceAnimation(deltaSeconds, grid);
+        AdvanceAnimation(fx.ScaleDelta(deltaSeconds), grid);
         if (phase == GemPhase.Idle)
         {
             HandleInput(grid, deltaSeconds);
@@ -109,8 +123,11 @@ internal sealed class GemSwapApp : IMiniGame
             displayBest = board.Score;
         }
 
-        GameHud.Pill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), Accent, theme);
+        var drawList = ImGui.GetWindowDrawList();
+        GameScene.Ambient(drawList, body, Accent);
+        var beatingBest = board.Score > 0 && board.Score > loadedBest;
+        GameHud.ScorePill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
+            board.Score, Accent, theme, deltaSeconds, beatingBest);
         GameHud.Pill(new Vector2(body.Center.X + 20f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
             Accent, theme, displayBest > loadedBest);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
@@ -121,15 +138,16 @@ internal sealed class GemSwapApp : IMiniGame
 
         if (chain > 1)
         {
+            var comboPulse = 1f + 0.08f * Styling.Pulse(Styling.PulseFast);
             Typography.DrawCentered(new Vector2(body.Center.X, rowY + 28f * scale), comboText, Accent,
-                TextStyles.Headline);
+                TextStyles.Headline.Scale * comboPulse, TextStyles.Headline.Weight);
         }
 
         var anim = new GemAnim(phase, swapA, swapB, MathF.Min(1f, swapTimer), MathF.Min(1f, clearTimer),
             MathF.Min(1f, fallTimer), selectedIndex, hintA, hintB, idleTime);
-        renderer.Draw(board, grid, anim, theme, scale);
-        var drawList = ImGui.GetWindowDrawList();
+        renderer.Draw(board, grid, anim, theme, scale, Accent, entrance);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
     }
 
@@ -221,6 +239,7 @@ internal sealed class GemSwapApp : IMiniGame
     {
         phase = GemPhase.Clearing;
         clearTimer = 0f;
+        var scale = ImGuiHelpers.GlobalScale;
         var cleared = board.LastClearCount;
         fx.AddTrauma(MathF.Min(0.55f, 0.05f + cleared * 0.03f));
         for (var index = 0; index < GemSwapBoard.CellCount; index++)
@@ -231,13 +250,24 @@ internal sealed class GemSwapApp : IMiniGame
             }
 
             var center = grid.CellCenter(index % GemSwapBoard.Columns, index / GemSwapBoard.Columns);
-            particles.Burst(center, 7, GemSwapRenderer.ColorOf(board.Color(index)), 140f * ImGuiHelpers.GlobalScale,
-                2.8f, 0.5f, 260f);
+            var color = GemSwapRenderer.ColorOf(board.Color(index));
+            particles.Burst(center, 7, color, 140f * scale, 2.8f, 0.5f, 260f);
+            particles.Sparkle(center, 3, GamePalette.Lighten(color, 0.4f), 110f * scale, 2f, 0.6f);
         }
 
+        var scoreDelta = board.Score - previousScore;
+        if (scoreDelta > 0)
+        {
+            fx.AddText($"+{GameNumber.Label(scoreDelta)}",
+                new Vector2(grid.Center.X, grid.Bounds.Min.Y - 14f * scale), Accent, 1.1f);
+        }
+
+        previousScore = board.Score;
         if (chain > 1)
         {
             fx.AddText($"x{chain}", grid.Center, Accent, 1.5f);
+            fx.Shockwave(grid.Center, grid.Pitch * (1.2f + 0.3f * chain), GamePalette.Lighten(Accent, 0.3f), 0.55f, 3f);
+            fx.HitStop(MathF.Min(0.08f, 0.03f + chain * 0.01f));
         }
     }
 

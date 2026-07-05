@@ -27,6 +27,9 @@ internal sealed class Twenty48App : IMiniGame
     private readonly Twenty48Renderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
+    private RollingValue scoreRoll;
+    private float entrance;
+    private int previousScore;
     private Phase phase;
     private float slideTimer;
     private float resolveTimer;
@@ -62,6 +65,9 @@ internal sealed class Twenty48App : IMiniGame
         board.Reset();
         particles.Clear();
         fx.Clear();
+        scoreRoll.Snap(0);
+        entrance = 0f;
+        previousScore = 0;
         phase = Phase.Idle;
         slideTimer = 0f;
         resolveTimer = 0f;
@@ -90,15 +96,21 @@ internal sealed class Twenty48App : IMiniGame
         if (pendingSubmit)
         {
             context.Stats.SubmitScore(GameId, board.Score);
+            if (board.Score > loadedBest)
+            {
+                loadedBest = board.Score;
+            }
+
             pendingSubmit = false;
         }
 
+        entrance = GameJuice.Advance(entrance, deltaSeconds);
         var rowY = body.Min.Y + 32f * scale;
         var shake = fx.ShakeOffset(scale);
         var gridArea = new Rect(new Vector2(body.Min.X + shake.X, body.Min.Y + 70f * scale + shake.Y),
             new Vector2(body.Max.X + shake.X, body.Max.Y - 8f * scale + shake.Y));
         var grid = GameGrid.Centered(gridArea, Twenty48Board.Size, Twenty48Board.Size, 0.06f);
-        AdvanceAnimation(deltaSeconds, grid);
+        AdvanceAnimation(fx.ScaleDelta(deltaSeconds), grid);
         if (!finished && phase == Phase.Idle)
         {
             HandleSwipe(grid);
@@ -109,8 +121,11 @@ internal sealed class Twenty48App : IMiniGame
             displayBest = board.Score;
         }
 
-        GameHud.Pill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), Accent, theme);
+        var drawList = ImGui.GetWindowDrawList();
+        GameScene.Ambient(drawList, body, Accent);
+        var beatingBest = board.Score > 0 && board.Score > loadedBest;
+        GameHud.ScorePill(new Vector2(body.Center.X - 68f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
+            board.Score, Accent, theme, deltaSeconds, beatingBest);
         GameHud.Pill(new Vector2(body.Center.X + 20f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
             Accent, theme, displayBest > loadedBest);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
@@ -120,9 +135,9 @@ internal sealed class Twenty48App : IMiniGame
         }
 
         var anim = BuildAnim();
-        renderer.Draw(board, grid, anim, scale);
-        var drawList = ImGui.GetWindowDrawList();
+        renderer.Draw(board, grid, anim, scale, Accent, entrance);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
         if (finished)
         {
@@ -160,6 +175,7 @@ internal sealed class Twenty48App : IMiniGame
 
     private void OnSlideResolved(GameGrid grid)
     {
+        var scale = ImGuiHelpers.GlobalScale;
         for (var index = 0; index < Twenty48Board.CellCount; index++)
         {
             if (!board.Merged(index))
@@ -169,11 +185,21 @@ internal sealed class Twenty48App : IMiniGame
 
             var center = grid.CellCenter(index % Twenty48Board.Size, index / Twenty48Board.Size);
             var color = Twenty48Renderer.ColorFor(board.Value(index));
-            particles.Burst(center, 9, color, 150f * ImGuiHelpers.GlobalScale, 3f, 0.5f, 280f);
+            particles.Burst(center, 9, color, 150f * scale, 3f, 0.5f, 280f);
+            fx.Shockwave(center, grid.Pitch * 0.62f, GamePalette.Lighten(color, 0.25f), 0.36f, 2.4f);
         }
 
+        var scoreDelta = board.Score - previousScore;
+        if (scoreDelta > 0)
+        {
+            fx.AddText($"+{GameNumber.Label(scoreDelta)}",
+                new Vector2(grid.Center.X, grid.Bounds.Min.Y - 16f * scale), Accent, 1.15f);
+        }
+
+        previousScore = board.Score;
         if (board.LastMergeMax >= MilestoneFloor)
         {
+            fx.HitStop(0.05f);
             CelebrateMilestone(grid, board.LastMergeMax);
         }
     }
@@ -184,8 +210,10 @@ internal sealed class Twenty48App : IMiniGame
         var center = grid.Center;
         fx.AddTrauma(value >= Twenty48Board.WinValue ? 0.7f : 0.4f);
         fx.AddText(GameNumber.Label(value) + "!", center, color, 1.6f);
+        fx.Shockwave(center, grid.Pitch * 1.6f, GamePalette.Lighten(color, 0.3f), 0.6f, 3.4f);
         particles.Burst(center, value >= Twenty48Board.WinValue ? 60 : 34, color, 320f * ImGuiHelpers.GlobalScale, 4f,
             0.9f, 360f);
+        particles.Sparkle(center, 16, new Vector4(1f, 0.95f, 0.7f, 1f), 220f * ImGuiHelpers.GlobalScale, 2.8f, 0.9f);
     }
 
     private void CheckEndState()

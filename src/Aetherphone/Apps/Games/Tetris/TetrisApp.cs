@@ -12,10 +12,18 @@ namespace Aetherphone.Apps.Games.Tetris;
 internal sealed class TetrisApp : IMiniGame
 {
     private const string GameId = "tetris";
+    private static readonly Vector4[] TetrisPalette =
+    {
+        new(0.40f, 0.82f, 0.98f, 1f), new(0.95f, 0.84f, 0.36f, 1f), new(0.72f, 0.52f, 0.98f, 1f),
+        new(0.96f, 0.62f, 0.32f, 1f), new(0.50f, 0.86f, 0.58f, 1f), new(0.95f, 0.48f, 0.52f, 1f),
+    };
+
     private readonly TetrisBoard board = new();
     private readonly TetrisRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
+    private RollingValue scoreRoll;
+    private int previousLevel;
     private bool started;
     private bool statsLoaded;
     private int bestScore;
@@ -47,6 +55,8 @@ internal sealed class TetrisApp : IMiniGame
         board.Reset();
         particles.Clear();
         fx.Clear();
+        scoreRoll.Snap(0);
+        previousLevel = board.Level;
         wasOver = false;
         pendingSubmit = false;
         newBest = false;
@@ -82,7 +92,7 @@ internal sealed class TetrisApp : IMiniGame
             pendingSubmit = false;
         }
 
-        board.Update(deltaSeconds);
+        board.Update(fx.ScaleDelta(deltaSeconds));
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
         if (board.GameOver && !wasOver)
@@ -95,6 +105,7 @@ internal sealed class TetrisApp : IMiniGame
             fx.Flash(new Vector4(0.95f, 0.34f, 0.34f, 1f), 0.35f);
         }
 
+        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         var slotSize = 76f * scale;
         var slotTop = body.Min.Y + 14f * scale;
         var holdRect = new Rect(new Vector2(body.Min.X + 12f * scale, slotTop),
@@ -113,10 +124,12 @@ internal sealed class TetrisApp : IMiniGame
         }
 
         renderer.DrawNextSlot(board, nextRect, theme, Accent, scale);
-        GameHud.Pill(new Vector2(body.Center.X - 44f * scale, body.Min.Y + 32f * scale), Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), Accent, theme);
+        var beatingBest = board.Score > 0 && board.Score > bestScore;
+        GameHud.ScorePill(new Vector2(body.Center.X - 44f * scale, body.Min.Y + 32f * scale), Loc.T(L.Games.Score),
+            ref scoreRoll, board.Score, Accent, theme, deltaSeconds, beatingBest);
+        var bestShown = board.Score > bestScore ? board.Score : bestScore;
         GameHud.Pill(new Vector2(body.Center.X + 44f * scale, body.Min.Y + 32f * scale), Loc.T(L.Games.Best),
-            GameNumber.Label(bestScore), Accent, theme, bestScore > 0 && board.Score < bestScore);
+            GameNumber.Label(bestShown), Accent, theme, bestScore > 0 && board.Score < bestScore);
         GameHud.Pill(new Vector2(body.Center.X - 30f * scale, body.Min.Y + 82f * scale), Loc.T(L.Games.Level),
             GameNumber.Label(board.Level), Accent, theme);
         if (GameHud.RestartButton(new Vector2(body.Center.X + 52f * scale, body.Min.Y + 82f * scale), 15f * scale,
@@ -164,7 +177,7 @@ internal sealed class TetrisApp : IMiniGame
         var dropCenter = new Vector2(centerX + (controlWidth + controlSpacing) * 2f, controlY);
         if (GameHud.Button(dropCenter, controlSize, string.Empty, Accent, theme))
         {
-            board.HardDrop();
+            HardDrop();
         }
 
         DrawDropIcon(drawList, dropCenter, scale, iconColor);
@@ -177,12 +190,32 @@ internal sealed class TetrisApp : IMiniGame
             new Vector2(body.Max.X - 12f * scale, body.Max.Y - 52f * scale));
         if (board.ClearedLinesThisFrame > 0)
         {
-            fx.AddTrauma(MathF.Min(0.28f, 0.06f * board.ClearedLinesThisFrame));
+            var lines = board.ClearedLinesThisFrame;
+            fx.AddTrauma(MathF.Min(0.45f, 0.08f * lines));
+            fx.HitStop(0.03f + 0.02f * lines);
             fx.Flash(new Vector4(0.95f, 0.92f, 1f, 1f), 0.16f);
-            particles.Burst(field.Center, 10 * board.ClearedLinesThisFrame, GamePalette.Lighten(Accent, 0.2f),
-                170f * scale, 2.8f, 0.5f, 320f);
+            fx.Shockwave(field.Center, field.Width * (0.3f + 0.1f * lines), GamePalette.Lighten(Accent, 0.3f), 0.5f,
+                3f);
+            particles.Burst(field.Center, 10 * lines, GamePalette.Lighten(Accent, 0.2f), 170f * scale, 2.8f, 0.5f,
+                320f);
+            particles.Streaks(field.Center, 5 * lines, new Vector4(1f, 1f, 1f, 0.8f), 380f * scale, 2.4f, 0.45f);
+            if (lines >= 4)
+            {
+                particles.Confetti(new Vector2(field.Center.X, field.Min.Y + field.Height * 0.25f), 60, TetrisPalette,
+                    280f * scale, 4f, 1.4f);
+            }
+
             fx.AddText($"+{GameNumber.Label(board.LastLockScore)}",
                 new Vector2(field.Center.X, field.Min.Y + field.Height * 0.3f), Accent, 1.2f);
+        }
+
+        if (board.Level > previousLevel && !board.GameOver)
+        {
+            previousLevel = board.Level;
+            fx.AddText($"{Loc.T(L.Games.Level)} {GameNumber.Label(board.Level)}",
+                new Vector2(field.Center.X, field.Min.Y + field.Height * 0.2f), GamePalette.Lighten(Accent, 0.3f),
+                1.35f);
+            fx.Flash(GamePalette.Lighten(Accent, 0.4f), 0.14f);
         }
 
         var shake = fx.ShakeOffset(scale);
@@ -191,6 +224,7 @@ internal sealed class TetrisApp : IMiniGame
         renderer.Draw(board, grid, Accent, scale);
         fx.DrawFlash(drawList, body, 0f);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
         if (board.GameOver)
         {
@@ -228,13 +262,19 @@ internal sealed class TetrisApp : IMiniGame
 
         if (ImGui.IsKeyPressed(ImGuiKey.Space, false))
         {
-            board.HardDrop();
+            HardDrop();
         }
 
         if (ImGui.IsKeyPressed(ImGuiKey.C, false))
         {
             board.HoldPiece();
         }
+    }
+
+    private void HardDrop()
+    {
+        board.HardDrop();
+        fx.AddTrauma(0.14f);
     }
 
     private static void DrawMoveIcon(ImDrawListPtr drawList, Vector2 center, int direction, float scale, uint color)

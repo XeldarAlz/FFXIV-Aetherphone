@@ -83,6 +83,7 @@ internal sealed class ReversiApp : IMiniGame
         UpdateTimers(deltaSeconds);
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
+        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         board.Counts(out var dark, out var light);
         DrawHud(body, theme, scale, dark, light);
         var area = new Rect(new Vector2(body.Min.X + 4f * scale, body.Min.Y + 62f * scale),
@@ -111,6 +112,7 @@ internal sealed class ReversiApp : IMiniGame
             ReversiBoard.Dark, Accent, scale);
         var drawList = ImGui.GetWindowDrawList();
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
         if (over)
         {
@@ -189,9 +191,16 @@ internal sealed class ReversiApp : IMiniGame
 
         var center = grid.CellCenter(placedColumn, placedRow);
         particles.Burst(center, 8, Accent, 130f * scale, 2.8f, 0.45f, 220f);
+        fx.Shockwave(center, grid.Pitch * 0.9f, GamePalette.Lighten(Accent, 0.3f) with { W = 0.7f }, 0.4f, 2.4f);
+        if (flipped.Count >= 4)
+        {
+            fx.AddTrauma(MathF.Min(0.3f, 0.05f * flipped.Count));
+        }
+
         if (cell == 0 || cell == 7 || cell == 56 || cell == 63)
         {
             particles.Burst(center, 18, Styling.AccentAmber, 220f * scale, 3.6f, 0.7f, 300f);
+            particles.Sparkle(center, 8, new Vector4(1f, 0.9f, 0.55f, 1f), 140f * scale, 2.4f, 0.7f);
             fx.AddTrauma(0.2f);
         }
     }
@@ -244,6 +253,8 @@ internal sealed class ReversiApp : IMiniGame
                 Accent, Styling.AccentAmber, Styling.AccentBlue, Styling.AccentPink,
             };
             particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 80, palette, 260f * scale, 4f, 1.4f);
+            particles.Sparkle(grid.Center, 16, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * scale, 2.6f, 0.9f);
+            fx.Shockwave(grid.Center, grid.Width * 0.55f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
         }
         else
         {

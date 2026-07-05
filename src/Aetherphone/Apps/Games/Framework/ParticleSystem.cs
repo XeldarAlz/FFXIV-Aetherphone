@@ -3,6 +3,15 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Games.Framework;
 
+internal enum ParticleShape : byte
+{
+    Circle,
+    GlowCircle,
+    Square,
+    Star,
+    Streak,
+}
+
 internal sealed class ParticleSystem
 {
     private struct Particle
@@ -17,7 +26,7 @@ internal sealed class ParticleSystem
         public float Spin;
         public float Rotation;
         public Vector4 Color;
-        public bool Square;
+        public ParticleShape Shape;
     }
 
     private readonly Particle[] particles;
@@ -37,7 +46,8 @@ internal sealed class ParticleSystem
     }
 
     public void Burst(Vector2 origin, int count, Vector4 color, float speed, float size, float life,
-        float gravity = 360f, float spread = MathF.PI * 2f, float direction = 0f, bool square = false)
+        float gravity = 360f, float spread = MathF.PI * 2f, float direction = 0f,
+        ParticleShape shape = ParticleShape.Circle)
     {
         for (var index = 0; index < count; index++)
         {
@@ -60,9 +70,42 @@ internal sealed class ParticleSystem
             particle.Spin = ((float)random.NextDouble() - 0.5f) * 12f;
             particle.Rotation = (float)random.NextDouble() * MathF.PI * 2f;
             particle.Color = color;
-            particle.Square = square;
+            particle.Shape = shape;
             active++;
         }
+    }
+
+    public void Sparkle(Vector2 origin, int count, Vector4 color, float speed, float size, float life)
+    {
+        for (var index = 0; index < count; index++)
+        {
+            if (active >= particles.Length)
+            {
+                return;
+            }
+
+            var angle = (float)random.NextDouble() * MathF.PI * 2f;
+            var velocityScale = 0.2f + (float)random.NextDouble() * 0.8f;
+            ref var particle = ref particles[active];
+            particle.Position = origin;
+            particle.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed * velocityScale;
+            particle.MaxLife = life * (0.6f + (float)random.NextDouble() * 0.8f);
+            particle.Life = particle.MaxLife;
+            particle.Size = size * (0.6f + (float)random.NextDouble() * 0.8f);
+            particle.Gravity = 40f;
+            particle.Drag = 2.4f;
+            particle.Spin = ((float)random.NextDouble() - 0.5f) * 6f;
+            particle.Rotation = (float)random.NextDouble() * MathF.PI * 2f;
+            particle.Color = color;
+            particle.Shape = ParticleShape.Star;
+            active++;
+        }
+    }
+
+    public void Streaks(Vector2 origin, int count, Vector4 color, float speed, float size, float life,
+        float spread = MathF.PI * 2f, float direction = 0f)
+    {
+        Burst(origin, count, color, speed, size, life, 220f, spread, direction, ParticleShape.Streak);
     }
 
     public void Confetti(Vector2 origin, int count, ReadOnlySpan<Vector4> palette, float speed, float size, float life)
@@ -88,7 +131,7 @@ internal sealed class ParticleSystem
             particle.Spin = ((float)random.NextDouble() - 0.5f) * 16f;
             particle.Rotation = (float)random.NextDouble() * MathF.PI * 2f;
             particle.Color = color;
-            particle.Square = true;
+            particle.Shape = ParticleShape.Square;
             active++;
         }
     }
@@ -127,17 +170,69 @@ internal sealed class ParticleSystem
             var alpha = fade > 0.7f ? 1f : fade / 0.7f;
             var color = ImGui.GetColorU32(particle.Color with { W = particle.Color.W * alpha });
             var radius = particle.Size * scale * (0.4f + 0.6f * fade);
-            if (particle.Square)
+            switch (particle.Shape)
             {
-                var right = new Vector2(MathF.Cos(particle.Rotation), MathF.Sin(particle.Rotation)) * radius;
-                var up = new Vector2(-right.Y, right.X);
-                drawList.AddQuadFilled(particle.Position - right - up, particle.Position + right - up,
-                    particle.Position + right + up, particle.Position - right + up, color);
-            }
-            else
-            {
-                drawList.AddCircleFilled(particle.Position, radius, color);
+                case ParticleShape.Square:
+                    DrawSquare(drawList, particle, radius, color);
+                    break;
+                case ParticleShape.Star:
+                    DrawStar(drawList, particle, radius, color, alpha);
+                    break;
+                case ParticleShape.Streak:
+                    DrawStreak(drawList, particle, radius, color);
+                    break;
+                case ParticleShape.GlowCircle:
+                    DrawGlowCircle(drawList, particle, radius, color, alpha);
+                    break;
+                default:
+                    drawList.AddCircleFilled(particle.Position, radius, color);
+                    break;
             }
         }
+    }
+
+    private static void DrawSquare(ImDrawListPtr drawList, in Particle particle, float radius, uint color)
+    {
+        var right = new Vector2(MathF.Cos(particle.Rotation), MathF.Sin(particle.Rotation)) * radius;
+        var up = new Vector2(-right.Y, right.X);
+        drawList.AddQuadFilled(particle.Position - right - up, particle.Position + right - up,
+            particle.Position + right + up, particle.Position - right + up, color);
+    }
+
+    private static void DrawStar(ImDrawListPtr drawList, in Particle particle, float radius, uint color, float alpha)
+    {
+        var twinkle = 0.55f + 0.45f * MathF.Sin(particle.Rotation * 3f);
+        var arm = radius * (1.6f + twinkle);
+        var thickness = MathF.Max(1f, radius * 0.42f);
+        var axisA = new Vector2(MathF.Cos(particle.Rotation), MathF.Sin(particle.Rotation)) * arm;
+        var axisB = new Vector2(-axisA.Y, axisA.X);
+        drawList.AddLine(particle.Position - axisA, particle.Position + axisA, color, thickness);
+        drawList.AddLine(particle.Position - axisB, particle.Position + axisB, color, thickness);
+        var core = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.85f * alpha));
+        drawList.AddCircleFilled(particle.Position, thickness * 0.7f, core);
+    }
+
+    private static void DrawStreak(ImDrawListPtr drawList, in Particle particle, float radius, uint color)
+    {
+        var speed = particle.Velocity.Length();
+        if (speed < 1f)
+        {
+            drawList.AddCircleFilled(particle.Position, radius, color);
+            return;
+        }
+
+        var stretch = MathF.Min(4.5f, 0.8f + speed * 0.012f);
+        var tail = particle.Position - particle.Velocity / speed * radius * 2f * stretch;
+        drawList.AddLine(tail, particle.Position, color, MathF.Max(1f, radius * 0.9f));
+    }
+
+    private static void DrawGlowCircle(ImDrawListPtr drawList, in Particle particle, float radius, uint color,
+        float alpha)
+    {
+        var halo = ImGui.GetColorU32(particle.Color with { W = particle.Color.W * alpha * 0.22f });
+        drawList.AddCircleFilled(particle.Position, radius * 2.4f, halo);
+        drawList.AddCircleFilled(particle.Position, radius, color);
+        var hot = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.6f * alpha));
+        drawList.AddCircleFilled(particle.Position, radius * 0.45f, hot);
     }
 }

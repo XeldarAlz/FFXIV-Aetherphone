@@ -16,6 +16,7 @@ internal sealed class BubbleShooterApp : IMiniGame
     private readonly BubbleRenderer renderer = new();
     private readonly ParticleSystem particles = new();
     private readonly FeedbackFx fx = new();
+    private RollingValue scoreRoll;
     private bool started;
     private bool finished;
     private bool pendingSubmit;
@@ -47,6 +48,7 @@ internal sealed class BubbleShooterApp : IMiniGame
         board.Reset(fieldHeight);
         particles.Clear();
         fx.Clear();
+        scoreRoll.Snap(0);
         finished = false;
         pendingSubmit = false;
         newBest = false;
@@ -83,6 +85,11 @@ internal sealed class BubbleShooterApp : IMiniGame
         if (pendingSubmit)
         {
             context.Stats.SubmitScore(GameId, board.Score);
+            if (board.Score > loadedBest)
+            {
+                loadedBest = board.Score;
+            }
+
             pendingSubmit = false;
         }
 
@@ -99,7 +106,7 @@ internal sealed class BubbleShooterApp : IMiniGame
             else
             {
                 HandleInput(field, aim);
-                board.Update(deltaSeconds);
+                board.Update(fx.ScaleDelta(deltaSeconds));
                 ReactToEvents(field, factor, scale);
             }
         }
@@ -111,8 +118,11 @@ internal sealed class BubbleShooterApp : IMiniGame
             displayBest = board.Score;
         }
 
-        GameHud.Pill(new Vector2(body.Center.X - 62f * scale, rowY), Loc.T(L.Games.Score),
-            GameNumber.Label(board.Score), Accent, theme);
+        var drawList = ImGui.GetWindowDrawList();
+        GameScene.Ambient(drawList, body, Accent);
+        var beatingBest = board.Score > 0 && board.Score > loadedBest;
+        GameHud.ScorePill(new Vector2(body.Center.X - 62f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
+            board.Score, Accent, theme, deltaSeconds, beatingBest);
         GameHud.Pill(new Vector2(body.Center.X + 26f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
             Accent, theme, displayBest > loadedBest);
         if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
@@ -121,10 +131,13 @@ internal sealed class BubbleShooterApp : IMiniGame
             return;
         }
 
-        renderer.Draw(board, field, scale, finished ? Vector2.Zero : aim, theme);
-        var drawList = ImGui.GetWindowDrawList();
+        var shake = fx.ShakeOffset(scale);
+        var shakenField = new Rect(field.Min + shake, field.Max + shake);
+        GameScene.Arena(drawList, shakenField, 14f * scale, scale, Accent);
+        renderer.Draw(board, shakenField, scale, finished ? Vector2.Zero : aim, theme);
         fx.DrawFlash(drawList, field, 0f);
         particles.Draw(drawList, scale);
+        fx.DrawRings(drawList, scale);
         fx.DrawText();
         if (finished)
         {
@@ -175,12 +188,18 @@ internal sealed class BubbleShooterApp : IMiniGame
         {
             var center = field.Min + board.PopPosition(index) * factor;
             sum += center;
-            particles.Burst(center, 9, BubbleRenderer.ColorOf(board.PopColor(index)), 150f * scale, 2.8f, 0.5f, 280f);
+            var color = BubbleRenderer.ColorOf(board.PopColor(index));
+            particles.Burst(center, 9, color, 150f * scale, 2.8f, 0.5f, 280f);
+            fx.Shockwave(center, 26f * scale, GamePalette.Lighten(color, 0.3f), 0.3f, 2f);
         }
 
+        fx.AddTrauma(MathF.Min(0.35f, 0.04f * board.PopCount));
         if (board.PopCount >= 5)
         {
-            fx.AddText($"{board.PopCount}!", sum / board.PopCount, Accent, 1.4f);
+            var burstCenter = sum / board.PopCount;
+            fx.AddText($"{board.PopCount}!", burstCenter, Accent, 1.4f);
+            fx.HitStop(0.05f);
+            particles.Sparkle(burstCenter, 10, new Vector4(1f, 0.95f, 0.7f, 1f), 160f * scale, 2.4f, 0.7f);
         }
     }
 
