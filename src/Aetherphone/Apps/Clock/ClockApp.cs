@@ -1,124 +1,165 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Clock;
 
-internal sealed class ClockApp : IPhoneApp
+internal sealed partial class ClockApp : IPhoneApp
 {
-    private const double EorzeaRate = 144.0 / 7.0;
-    private const float WorldRowHeight = 76f;
+    private enum ClockScreen : byte
+    {
+        Root,
+        EditAlarm,
+        AddCity,
+    }
+
+    private const int TabWorld = 0;
+    private const int TabAlarms = 1;
+    private const int TabStopwatch = 2;
+    private const int TabTimer = 3;
+
     public string Id => "clock";
     public string DisplayName => Loc.T(L.Apps.Clock);
     public string Glyph => "T";
-    public Vector4 Accent => new(0.18f, 0.18f, 0.22f, 1f);
+    public Vector4 Accent => AppAccents.For("clock");
     public int BadgeCount => 0;
+
+    private readonly Configuration configuration;
+    private readonly AppSkin ui = new(AppPalettes.Clock);
+    private readonly ViewRouter<ClockScreen> router;
+    private readonly RouterDraw<ClockScreen> drawView;
+    private readonly Action back;
+    private readonly string[] tabOptions = new string[4];
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private int activeTab;
+
+    public ClockApp(Configuration configuration)
+    {
+        this.configuration = configuration;
+        router = new ViewRouter<ClockScreen>(ClockScreen.Root, Id);
+        drawView = DrawView;
+        back = () => router.Pop();
+        swLaps = new List<double>();
+    }
 
     public void OnOpened()
     {
+        router.Reset();
     }
 
     public void OnClosed()
     {
+        router.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
-        AppHeader.Draw(context, DisplayName);
+        theme = context.Theme;
+        navigation = context.Navigation;
+        ui.Theme = context.Theme;
         var scale = ImGuiHelpers.GlobalScale;
-        var theme = context.Theme;
-        var content = context.Content;
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
-        var local = DateTime.Now;
-        var utc = DateTime.UtcNow;
-        var eorzea = EorzeaSeconds();
-        var localSeconds = local.Second + local.Millisecond / 1000f;
-        var utcSeconds = utc.Second + utc.Millisecond / 1000f;
-        var eorzeaTime = EorzeaTime.Now();
-        var eorzeaSecondsOfMinute = (float)(eorzea % 60.0);
-        using (AppSurface.Begin(body))
+        var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
+        ui.Backdrop(screen);
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+    }
+
+    private void DrawView(ClockScreen screen, Rect area, int depth)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        ui.Body(area);
+        switch (screen)
         {
-            var available = ImGui.GetContentRegionAvail().Y;
-            var spacer = 14f * scale;
-            var worldHeight = 2f * WorldRowHeight * scale;
-            var heroHeight = Math.Clamp(available - worldHeight - spacer, 132f * scale, 208f * scale);
-            DrawHero(theme, local, localSeconds, heroHeight);
-            ImGui.Dummy(new Vector2(0f, spacer));
-            var card = GroupCard.Begin(theme, 2, WorldRowHeight);
-            DrawWorldRow(card.NextRow(), theme, "Eorzea", Loc.T(L.Clock.InGame), eorzeaTime.Formatted, eorzeaTime.Hour,
-                eorzeaTime.Minute, eorzeaSecondsOfMinute);
-            DrawWorldRow(card.NextRow(), theme, Loc.T(L.Clock.Server), "UTC", utc.ToString("HH:mm"), utc.Hour,
-                utc.Minute, utcSeconds);
-            card.End();
+            case ClockScreen.EditAlarm:
+                DrawAlarmEditor(area, scale);
+                return;
+            case ClockScreen.AddCity:
+                DrawCityPicker(area, scale);
+                return;
+            default:
+                DrawRoot(area, scale);
+                return;
         }
     }
 
-    private static void DrawHero(PhoneTheme theme, DateTime local, float localSeconds, float heroHeight)
+    private void DrawRoot(Rect content, float scale)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var context = new PhoneContext(content, theme, navigation);
+        AppHeader.Draw(context, DisplayName);
+        DrawRootAction(content, scale);
+
+        var segMargin = Metrics.Space.Lg * scale;
+        var segTop = content.Min.Y + AppHeader.Height * scale + Metrics.Space.Sm * scale;
+        var segRow = new Rect(new Vector2(content.Min.X + segMargin, segTop),
+            new Vector2(content.Max.X - segMargin, segTop + 30f * scale));
+        tabOptions[TabWorld] = Loc.T(L.Clock.TabWorld);
+        tabOptions[TabAlarms] = Loc.T(L.Clock.TabAlarms);
+        tabOptions[TabStopwatch] = Loc.T(L.Clock.TabStopwatch);
+        tabOptions[TabTimer] = Loc.T(L.Clock.TabTimer);
+        activeTab = SegmentStrip.Draw("clock.tabs", segRow, tabOptions, activeTab, theme);
+
+        var body = new Rect(new Vector2(content.Min.X, segRow.Max.Y + 10f * scale), content.Max);
+        switch (activeTab)
+        {
+            case TabAlarms:
+                DrawAlarms(body, scale);
+                return;
+            case TabStopwatch:
+                DrawStopwatch(body, scale);
+                return;
+            case TabTimer:
+                DrawTimer(body, scale);
+                return;
+            default:
+                DrawWorld(body, scale);
+                return;
+        }
+    }
+
+    private void DrawRootAction(Rect content, float scale)
+    {
+        if (activeTab != TabWorld && activeTab != TabAlarms)
+        {
+            return;
+        }
+
+        var radius = 15f * scale;
+        var center = new Vector2(content.Max.X - Metrics.Space.Lg * scale - radius,
+            content.Min.Y + AppHeader.Height * scale * 0.5f);
+        var tooltip = activeTab == TabWorld ? Loc.T(L.Clock.AddCity) : Loc.T(L.Clock.NewAlarm);
+        if (ui.IconButton(center, radius, FontAwesomeIcon.Plus.ToIconString(), ui.TitleInk,
+                Palette.WithAlpha(ui.TitleInk, 0.12f), 0.6f, tooltip))
+        {
+            if (activeTab == TabWorld)
+            {
+                router.Push(ClockScreen.AddCity);
+            }
+            else
+            {
+                StartNewAlarm();
+            }
+        }
+    }
+
+    private bool DrawPillButton(Rect rect, string label, Vector4 fill, Vector4 ink)
+    {
         var drawList = ImGui.GetWindowDrawList();
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var heroMin = origin;
-        var heroMax = new Vector2(origin.X + width, origin.Y + heroHeight);
-        var rounding = 24f * scale;
-        Elevation.Card(drawList, heroMin, heroMax, rounding, scale);
-        Squircle.Fill(drawList, heroMin, heroMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
-        Material.EdgeSquircle(drawList, heroMin, heroMax, rounding, scale);
-        var pad = 20f * scale;
-        var clockRadius = (heroHeight - pad * 2f) * 0.5f;
-        var clockCenter = new Vector2(heroMin.X + pad + clockRadius, heroMin.Y + heroHeight * 0.5f);
-        ProgressRing.Glow(clockCenter, clockRadius * 0.92f, theme.Accent, 0.45f);
-        AnalogClock.Draw(clockCenter, clockRadius, local.Hour, local.Minute, localSeconds, theme);
-        var textX = clockCenter.X + clockRadius + 22f * scale;
-        var digital = local.ToString("HH:mm");
-        var date = local.ToString("ddd d MMM", Loc.Culture);
-        var zone = $"{Loc.T(L.Clock.Local)} · {LocalOffsetLabel()}";
-        var digitalSize = Typography.Measure(digital, TextStyles.LargeTitle);
-        var dateSize = Typography.Measure(date, TextStyles.Subheadline);
-        var zoneSize = Typography.Measure(zone, TextStyles.FootnoteEmphasized);
-        var stackHeight = digitalSize.Y + 6f * scale + dateSize.Y + 4f * scale + zoneSize.Y;
-        var startY = clockCenter.Y - stackHeight * 0.5f;
-        Typography.Draw(new Vector2(textX, startY), digital, theme.TextStrong, TextStyles.LargeTitle);
-        Typography.Draw(new Vector2(textX, startY + digitalSize.Y + 6f * scale), date, theme.TextMuted,
-            TextStyles.Subheadline);
-        Typography.Draw(new Vector2(textX, startY + digitalSize.Y + dateSize.Y + 10f * scale), zone, theme.Accent,
-            TextStyles.FootnoteEmphasized);
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, heroHeight));
-    }
+        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var shown = hovered ? Palette.Mix(fill, new Vector4(1f, 1f, 1f, 1f), 0.12f) : fill;
+        Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(shown));
+        Typography.DrawCentered(drawList, rect.Center, label, ink, TextStyles.Headline.Scale, TextStyles.Headline.Weight);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
 
-    private static void DrawWorldRow(Rect row, PhoneTheme theme, string name, string sublabel, string digital,
-        float hours, float minutes, float seconds)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var dialRadius = (row.Height - 22f * scale) * 0.5f;
-        var dialCenter = new Vector2(row.Min.X + dialRadius, row.Center.Y);
-        AnalogClock.Draw(dialCenter, dialRadius, hours, minutes, seconds, theme);
-        var textLeft = dialCenter.X + dialRadius + 16f * scale;
-        Typography.Draw(new Vector2(textLeft, row.Center.Y - 17f * scale), name, theme.TextStrong, TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, row.Center.Y + 4f * scale), sublabel, theme.TextMuted,
-            TextStyles.Footnote);
-        var digitalSize = Typography.Measure(digital, TextStyles.Title1);
-        Typography.Draw(new Vector2(row.Max.X - digitalSize.X, row.Center.Y - digitalSize.Y * 0.5f), digital,
-            theme.TextStrong, TextStyles.Title1);
-    }
-
-    private static double EorzeaSeconds() => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0 * EorzeaRate;
-
-    private static string LocalOffsetLabel()
-    {
-        var offset = DateTimeOffset.Now.Offset;
-        var sign = offset < TimeSpan.Zero ? "-" : "+";
-        return offset.Minutes == 0
-            ? $"UTC{sign}{Math.Abs(offset.Hours)}"
-            : $"UTC{sign}{Math.Abs(offset.Hours)}:{Math.Abs(offset.Minutes):D2}";
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     public void Dispose()
