@@ -45,6 +45,10 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(VelvetCommentDto))]
 [JsonSerializable(typeof(VelvetCommentPage))]
 [JsonSerializable(typeof(CreateVelvetCommentRequest))]
+[JsonSerializable(typeof(CreateFeedbackRequest))]
+[JsonSerializable(typeof(FeedbackDto))]
+[JsonSerializable(typeof(NotificationDto))]
+[JsonSerializable(typeof(NotificationPage))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 internal sealed partial class AethernetJsonContext : JsonSerializerContext
 {

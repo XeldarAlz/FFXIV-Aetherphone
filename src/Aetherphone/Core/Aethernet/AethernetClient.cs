@@ -372,5 +372,15 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/blocks/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
     }
 
+    public Task<FeedbackDto?> CreateFeedbackAsync(string text, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/feedback"), new CreateFeedbackRequest(text), AethernetJsonContext.Default.CreateFeedbackRequest, AethernetJsonContext.Default.FeedbackDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<NotificationPage?> NotificationsAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/notifications"), AethernetJsonContext.Default.NotificationPage, session.Token, token, authStatusSink);
+    }
+
     private string Url(string path) => $"{session.BaseUrl.TrimEnd('/')}{path}";
 }

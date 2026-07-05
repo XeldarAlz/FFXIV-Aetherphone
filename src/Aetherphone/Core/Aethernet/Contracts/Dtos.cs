@@ -220,3 +220,31 @@ internal sealed record SendVelvetMessageRequest(
 internal sealed record VelvetMediaUrlDto(string Url, long ExpiresAtUnix);
 
 internal sealed record VelvetTypingDto(bool OtherTyping);
+
+internal sealed record NotificationDto(
+    string Id,
+    int Type,
+    string App,
+    string? PostId,
+    string ActorId,
+    string ActorName,
+    string ActorDisplayName,
+    string ActorHandle,
+    string? ActorAvatarUrl,
+    string? Preview,
+    long CreatedAtUnix);
+
+internal sealed record NotificationPage(NotificationDto[] Items);
+
+internal sealed record CreateFeedbackRequest(string Text);
+
+internal sealed record FeedbackDto(
+    string Id,
+    string AuthorId,
+    string AuthorName,
+    string AuthorWorld,
+    string AuthorDisplayName,
+    string AuthorHandle,
+    string? AuthorAvatarUrl,
+    string Text,
+    long CreatedAtUnix);
