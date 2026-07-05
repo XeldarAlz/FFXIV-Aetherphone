@@ -37,8 +37,6 @@ internal sealed class Configuration : IPluginConfiguration
     public float TextZoom { get; set; } = 1.15f;
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = 1.25f;
-    public System.Numerics.Vector2? MaximizedCenter { get; set; }
-    public System.Numerics.Vector2? MinimizedCenter { get; set; }
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
