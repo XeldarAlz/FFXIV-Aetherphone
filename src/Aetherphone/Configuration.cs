@@ -1,7 +1,11 @@
+using Aetherphone.Apps.Calendar;
+using Aetherphone.Apps.Clock;
+using Aetherphone.Apps.Notes;
 using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Market;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
@@ -21,6 +25,7 @@ internal sealed class Configuration : IPluginConfiguration
     public Dictionary<string, int> OnboardingCompleted { get; set; } = new();
     public bool LockPosition { get; set; }
     public bool DoNotDisturb { get; set; }
+    public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();
     public bool NotifyDailyReset { get; set; }
     public bool NotifyWeeklyReset { get; set; }
     public bool NotifyGrandCompanyReset { get; set; }
@@ -30,7 +35,10 @@ internal sealed class Configuration : IPluginConfiguration
     public bool ScrollWhileIdle { get; set; } = true;
     public bool ShowLodestonePortraits { get; set; } = true;
     public float TextZoom { get; set; } = 1.15f;
+    public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = 1.25f;
+    public System.Numerics.Vector2? MaximizedCenter { get; set; }
+    public System.Numerics.Vector2? MinimizedCenter { get; set; }
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
@@ -38,11 +46,17 @@ internal sealed class Configuration : IPluginConfiguration
     public string DarkWallpaperId { get; set; } = "ShadowDark";
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
     public uint RingtoneId { get; set; } = 7;
+    public string RingtoneSound { get; set; } = SoundTokens.DefaultGame;
+    public string NotificationSound { get; set; } = SoundTokens.DefaultGame;
+    public float RingtoneVolume { get; set; } = 0.8f;
+    public float NotificationVolume { get; set; } = 0.8f;
+    public bool SoundSettingsMigrated { get; set; }
     public const string DefaultAethernetBaseUrl = "https://ffxiv-aethernet-production.up.railway.app";
     public string AethernetBaseUrl { get; set; } = DefaultAethernetBaseUrl;
     public string AethernetToken { get; set; } = string.Empty;
     public string AnalyticsInstallId { get; set; } = string.Empty;
     public bool AnalyticsEnabled { get; set; } = true;
+    public bool AnalyticsConsentPrompted { get; set; }
     public bool CallsEnabled { get; set; }
     public string CallInputDevice { get; set; } = string.Empty;
     public string CallOutputDevice { get; set; } = string.Empty;
@@ -67,6 +81,58 @@ internal sealed class Configuration : IPluginConfiguration
     public bool VelvetBlurByDefault { get; set; } = true;
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
+    public long LastFeedbackSentUnix { get; set; }
+    public List<CalendarCustomEvent> CalendarCustomEvents { get; set; } = new();
+    public List<PhoneNote> Notes { get; set; } = new();
+    public List<ReminderItem> Reminders { get; set; } = new();
+    public List<WorldClockEntry> WorldClocks { get; set; } = new();
+    public List<AlarmEntry> Alarms { get; set; } = new();
+    public DateTime? TimerEndsAtUtc { get; set; }
+    public int TimerDurationSeconds { get; set; }
+    public bool TimerNotified { get; set; }
+
+    public bool IsAppNotificationEnabled(string appId) =>
+        !NotificationSettings.TryGetValue(appId, out var setting) || setting.Enabled;
+
+    public string? AppSoundOverride(string appId) =>
+        NotificationSettings.TryGetValue(appId, out var setting) && !string.IsNullOrEmpty(setting.Sound)
+            ? setting.Sound
+            : null;
+
+    public string ResolveNotificationToken(string appId) => AppSoundOverride(appId) ?? NotificationSound;
+
+    public void MigrateSoundSettings()
+    {
+        if (SoundSettingsMigrated)
+        {
+            return;
+        }
+
+        RingtoneSound = SoundTokens.Game(RingtoneId);
+        NotificationSound = SoundTokens.Game(RingtoneId);
+        foreach (var pair in NotificationSettings)
+        {
+            var setting = pair.Value;
+            if (setting.SoundId.HasValue && string.IsNullOrEmpty(setting.Sound))
+            {
+                setting.Sound = SoundTokens.Game(setting.SoundId.Value);
+            }
+        }
+
+        SoundSettingsMigrated = true;
+        Save();
+    }
+
+    public AppNotificationSetting NotificationSettingFor(string appId)
+    {
+        if (!NotificationSettings.TryGetValue(appId, out var setting))
+        {
+            setting = new AppNotificationSetting();
+            NotificationSettings[appId] = setting;
+        }
+
+        return setting;
+    }
 
     public void NormalizeAethernetBaseUrl()
     {

@@ -32,7 +32,8 @@ internal sealed class PhoneServices : IDisposable
     public ITextureProvider Textures { get; }
     public WeatherService Weather { get; }
     public NotificationService Notifications { get; }
-    public IRingtone Ringtone { get; }
+    public SocialNotificationService SocialNotifications { get; }
+    public SoundService Sound { get; }
     public MessageStore Messages { get; }
     public ChatBridge ChatBridge { get; }
     public MessageLauncher MessageLauncher { get; }
@@ -65,7 +66,7 @@ internal sealed class PhoneServices : IDisposable
     public CallHub Calls { get; }
 
     private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps,
-        ITextureProvider textures, WeatherService weather, NotificationService notifications, IRingtone ringtone,
+        ITextureProvider textures, WeatherService weather, NotificationService notifications, SoundService sound,
         MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
         LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http, MediaCache media,
         LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession,
@@ -73,7 +74,8 @@ internal sealed class PhoneServices : IDisposable
         MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news,
         RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer,
         SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues,
-        CollectionsCatalogService collections, InventoryCaptureService inventoryCapture, CallHub calls)
+        CollectionsCatalogService collections, InventoryCaptureService inventoryCapture, CallHub calls,
+        SocialNotificationService socialNotifications)
     {
         Configuration = configuration;
         Themes = themes;
@@ -82,7 +84,8 @@ internal sealed class PhoneServices : IDisposable
         Textures = textures;
         Weather = weather;
         Notifications = notifications;
-        Ringtone = ringtone;
+        SocialNotifications = socialNotifications;
+        Sound = sound;
         Messages = messages;
         ChatBridge = chatBridge;
         MessageLauncher = messageLauncher;
@@ -123,8 +126,12 @@ internal sealed class PhoneServices : IDisposable
         var gameData = new GameData(dataManager, objectTable);
         var maps = new MapData(dataManager, clientState);
         var weather = new WeatherService(dataManager, clientState);
-        var ringtone = new GameSoundRingtone(configuration);
-        var notifications = new NotificationService(ringtone, configuration, framework);
+        var soundBundledDirectory = new DirectoryInfo(
+            Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Sounds"));
+        var soundUserDirectory = new DirectoryInfo(Path.Combine(configDirectory.FullName, "Sounds"));
+        var soundLibrary = new SoundLibrary(soundBundledDirectory, soundUserDirectory);
+        var sound = new SoundService(configuration, soundLibrary, new SoundEffectPlayer(), framework);
+        var notifications = new NotificationService(sound, configuration, framework);
         var messages = new MessageStore();
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
         var messageLauncher = new MessageLauncher();
@@ -174,16 +181,18 @@ internal sealed class PhoneServices : IDisposable
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
-        var calls = new CallHub(configuration, aethernetSession, notifications, ringtone, playback);
-        return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, ringtone,
+        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback);
+        var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, framework);
+        return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
             messages, chatBridge, messageLauncher, velvetLauncher, linkshells, linkshellBridge, http, media, lodestone,
             collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher,
             marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
-            collections, inventoryCapture, calls);
+            collections, inventoryCapture, calls, socialNotifications);
     }
 
     public void Dispose()
     {
+        SocialNotifications.Dispose();
         Calls.Dispose();
         Collections.Dispose();
         InventoryCapture.Dispose();
@@ -201,6 +210,7 @@ internal sealed class PhoneServices : IDisposable
         Market.Dispose();
         News.Dispose();
         Notifications.Dispose();
+        Sound.Dispose();
         Media.Dispose();
         Analytics.Dispose();
         Http.Dispose();

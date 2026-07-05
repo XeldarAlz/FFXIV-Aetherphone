@@ -38,6 +38,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
+    internal static LoadingScreen Loading { get; private set; } = null!;
     internal static WallpaperLibrary Wallpapers { get; private set; } = null!;
     internal static WallpaperImageCache WallpaperImages { get; private set; } = null!;
     internal static DeviceStatus Device { get; private set; } = null!;
@@ -50,6 +51,10 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AboutWindow aboutWindow;
     private readonly PhoneEmoteController phoneEmote;
     private readonly TimerNotifier timerNotifier;
+    private readonly CalendarReminderService calendarReminders;
+    private readonly ClockAlarmService clockAlarms;
+    private readonly ReminderService reminders;
+    private readonly DateTime sessionStartedAt;
     private readonly IDtrBarEntry dtrEntry;
     private int sampleCounter;
 
@@ -58,8 +63,10 @@ public sealed class Plugin : IDalamudPlugin
         Instance = this;
         Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Cfg.NormalizeAethernetBaseUrl();
+        Cfg.MigrateSoundSettings();
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
+        Loading = new LoadingScreen();
         var builtInWallpaperDirectory =
             new DirectoryInfo(
                 Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
@@ -70,16 +77,26 @@ public sealed class Plugin : IDalamudPlugin
         Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
         services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, TextureProvider,
             PluginInterface.ConfigDirectory);
+        sessionStartedAt = DateTime.UtcNow;
         Analytics = services.Analytics;
-        Analytics.Track(AnalyticsEvents.SessionStart());
+        if (Analytics.IsFirstRun)
+        {
+            Analytics.Track(AnalyticsEvents.FirstRun());
+        }
+
+        Analytics.Track(AnalyticsEvents.SessionStart(BuildSessionProperties()));
         aboutWindow = new AboutWindow();
         Confirm = new ConfirmService();
         shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
             services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher, Confirm);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
-        if (Cfg.OpenOnStartup && Cfg.OpenMinimizedOnStartup)
+        if (Cfg.OpenOnStartup)
         {
-            phoneWindow.StartMinimized();
+            phoneWindow.MarkOpenTrigger("startup");
+            if (Cfg.OpenMinimizedOnStartup)
+            {
+                phoneWindow.StartMinimized();
+            }
         }
 
         windowSystem.AddWindow(phoneWindow);
@@ -87,6 +104,9 @@ public sealed class Plugin : IDalamudPlugin
         phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
             () => phoneWindow.IsOpen);
         timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
+        calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
+        clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
+        reminders = new ReminderService(Cfg, Framework, services.Notifications);
         services.AethernetClient.EnsureCurrentUser();
         services.Calls.IncomingCallPresented += OnIncomingCall;
         services.Calls.Start();
@@ -115,7 +135,12 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.RemoveAllWindows();
         phoneEmote.Dispose();
         timerNotifier.Dispose();
+        calendarReminders.Dispose();
+        clockAlarms.Dispose();
+        reminders.Dispose();
         shell.Dispose();
+        var sessionDuration = (DateTime.UtcNow - sessionStartedAt).TotalSeconds;
+        Analytics.Track(AnalyticsEvents.SessionEnd(sessionDuration));
         services.Dispose();
         Device.Dispose();
         Fonts.Dispose();
@@ -200,9 +225,30 @@ public sealed class Plugin : IDalamudPlugin
 
     private void ShowAbout() => aboutWindow.IsOpen = true;
 
+    private Dictionary<string, string> BuildSessionProperties()
+    {
+        var properties = new Dictionary<string, string>(8);
+
+        if (Cfg.Language.Length > 0)
+        {
+            properties["language"] = Cfg.Language;
+        }
+
+        properties["theme"] = Cfg.ThemeMode.ToString().ToLowerInvariant();
+        properties["scale"] = Cfg.PhoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+        properties["wallpaper"] = Cfg.DarkWallpaperId;
+        properties["tutorials"] = Cfg.TutorialsEnabled ? "1" : "0";
+        properties["logged_in"] = Cfg.AethernetToken.Length > 0 ? "1" : "0";
+        properties["dnd"] = Cfg.DoNotDisturb ? "1" : "0";
+        properties["calls"] = Cfg.CallsEnabled ? "1" : "0";
+
+        return properties;
+    }
+
     private void OnIncomingCall()
     {
         phoneWindow.Maximize();
+        phoneWindow.MarkOpenTrigger("call");
         phoneWindow.IsOpen = true;
     }
 
@@ -233,8 +279,9 @@ public sealed class Plugin : IDalamudPlugin
     {
         services.MarketLauncher.RequestItem(itemId);
         phoneWindow.Maximize();
+        phoneWindow.MarkOpenTrigger("command");
         phoneWindow.IsOpen = true;
-        shell.OpenApp("market");
+        shell.OpenApp("market", AppOpenSource.Command);
     }
 
     private void OpenMarket(string query)
@@ -245,8 +292,9 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         phoneWindow.Maximize();
+        phoneWindow.MarkOpenTrigger("command");
         phoneWindow.IsOpen = true;
-        shell.OpenApp("market");
+        shell.OpenApp("market", AppOpenSource.Command);
     }
 
     private static readonly string[] SampleSenders = { "Alisaie", "Y'shtola", "Thancred" };

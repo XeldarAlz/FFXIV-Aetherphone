@@ -1,3 +1,4 @@
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Songs;
@@ -6,9 +7,12 @@ namespace Aetherphone.Core.Playback;
 
 internal sealed class PlaybackHub
 {
+    private const long MinListenTicks = 3000;
     private readonly RadioPlayer radio;
     private readonly SongPlayer songs;
     private float volume = 0.6f;
+    private string listenStation = string.Empty;
+    private long listenStartTicks;
 
     public PlaybackHub(RadioPlayer radio, SongPlayer songs)
     {
@@ -44,12 +48,15 @@ internal sealed class PlaybackHub
 
     public void PlayStations(RadioStation[] stations, int index)
     {
+        FlushRadioListen();
         songs.Stop();
         radio.Play(stations, index);
+        BeginRadioListen();
     }
 
     public void PlaySongs(Song[] list, int index)
     {
+        FlushRadioListen();
         radio.Stop();
         songs.Play(list, index);
     }
@@ -59,11 +66,12 @@ internal sealed class PlaybackHub
         if (SongActive)
         {
             songs.Next();
+            return;
         }
-        else
-        {
-            radio.Next();
-        }
+
+        FlushRadioListen();
+        radio.Next();
+        BeginRadioListen();
     }
 
     public void Previous()
@@ -71,17 +79,40 @@ internal sealed class PlaybackHub
         if (SongActive)
         {
             songs.Previous();
+            return;
         }
-        else
-        {
-            radio.Previous();
-        }
+
+        FlushRadioListen();
+        radio.Previous();
+        BeginRadioListen();
     }
 
     public void Stop()
     {
+        FlushRadioListen();
         radio.Stop();
         songs.Stop();
+    }
+
+    private void BeginRadioListen()
+    {
+        listenStation = radio.CurrentStation;
+        listenStartTicks = Environment.TickCount64;
+    }
+
+    private void FlushRadioListen()
+    {
+        if (listenStartTicks == 0)
+        {
+            return;
+        }
+
+        var elapsedTicks = Environment.TickCount64 - listenStartTicks;
+        listenStartTicks = 0;
+        if (elapsedTicks >= MinListenTicks && listenStation.Length > 0)
+        {
+            Plugin.Analytics.Track(AnalyticsEvents.MusicListen(listenStation, elapsedTicks / 1000d));
+        }
     }
 
     private string SongSubtitle()
