@@ -18,7 +18,9 @@ internal static class HomeTileView
         var drawHalf = size * 0.5f * drawScale;
         var drawMin = new Vector2(center.X - drawHalf, center.Y - drawHalf);
         var drawMax = new Vector2(center.X + drawHalf, center.Y + drawHalf);
-        Squircle.Fill(dl, drawMin, drawMax, size * 0.26f * drawScale, ImGui.GetColorU32(app.Accent));
+        var radius = size * 0.26f * drawScale;
+        Elevation.Icon(dl, drawMin, drawMax, radius, drawHalf);
+        Squircle.Fill(dl, drawMin, drawMax, radius, ImGui.GetColorU32(app.Accent));
         if (!AppIconArt.TryDraw(app.Id, center, size * drawScale, theme.TextStrong, app.Accent))
         {
             var glyphHeight = Typography.Measure(app.Glyph).Y;
@@ -43,6 +45,7 @@ internal static class HomeTileView
         var min = new Vector2(center.X - drawHalf, center.Y - drawHalf);
         var max = new Vector2(center.X + drawHalf, center.Y + drawHalf);
         var radius = size * 0.26f * drawScale;
+        Elevation.Icon(dl, min, max, radius, drawHalf);
         Squircle.Fill(dl, min, max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f)));
         Material.EdgeSquircle(dl, min, max, radius, scale);
         var pad = drawHalf * 0.28f;
@@ -75,10 +78,8 @@ internal static class HomeTileView
         }
 
         var labelCenter = new Vector2(center.X, center.Y + size * 0.5f + 11f * scale);
-        var shadowOffset = new Vector2(0f, 1f * scale);
-        Typography.DrawCentered(labelCenter + shadowOffset, label,
-            Palette.WithAlpha(new Vector4(0f, 0f, 0f, 1f), 0.45f * labelAlpha), 0.85f, FontWeight.Medium);
-        Typography.DrawCentered(labelCenter, label, Palette.WithAlpha(theme.TextStrong, 0.95f * labelAlpha), 0.85f,
-            FontWeight.Medium);
+        var halo = Palette.WithAlpha(new Vector4(0f, 0f, 0f, 1f), 0.22f * labelAlpha);
+        var text = Palette.WithAlpha(theme.TextStrong, 0.98f * labelAlpha);
+        Typography.DrawCenteredHalo(labelCenter, label, text, halo, 1.3f * scale, 0.85f, FontWeight.Medium);
     }
 }
