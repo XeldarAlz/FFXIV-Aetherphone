@@ -6,7 +6,7 @@
   -->
 
   <PropertyGroup Label="Identity">
-    <Version>0.8.5.0</Version>
+    <Version>0.8.5.1</Version>
     <Authors>XeldarAlz</Authors>
     <Copyright>Copyright (c) XeldarAlz</Copyright>
     <PackageProjectUrl>https://github.com/XeldarAlz/FFXIV-Aetherphone</PackageProjectUrl>
