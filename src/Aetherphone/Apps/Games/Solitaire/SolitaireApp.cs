@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
@@ -33,10 +34,9 @@ internal sealed class SolitaireApp : IMiniGame
     private float resultAppear;
     private string resultTimeText = "0:00";
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Solitaire);
     public string Genre => Loc.T(L.Games.GenreCards);
-    public Vector4 Accent => new(0.30f, 0.64f, 0.44f, 1f);
-
     public void Open()
     {
         StartNewGame();

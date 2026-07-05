@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -24,10 +25,9 @@ internal sealed class TetrisApp : IMiniGame
     private int finalScore;
     private float resultAppear;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Tetris);
     public string Genre => Loc.T(L.Games.GenrePuzzle);
-    public Vector4 Accent => new(0.52f, 0.78f, 0.98f, 1f);
-
     public void Open()
     {
         started = false;

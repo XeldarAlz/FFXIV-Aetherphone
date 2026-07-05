@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
@@ -29,10 +30,9 @@ internal sealed class SweeperApp : IMiniGame
     private int loadedBestTime;
     private string resultTimeText = "0:00";
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Sweeper);
     public string Genre => Loc.T(L.Games.GenreLogic);
-    public Vector4 Accent => Styling.AccentBlue;
-
     public void Open()
     {
         StartNewGame(difficulty);

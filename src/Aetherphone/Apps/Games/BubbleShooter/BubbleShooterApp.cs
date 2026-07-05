@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -24,10 +25,9 @@ internal sealed class BubbleShooterApp : IMiniGame
     private float resultAppear;
     private float lastFieldHeight = 1.7f;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Bubbles);
     public string Genre => Loc.T(L.Games.GenreArcade);
-    public Vector4 Accent => new(0.30f, 0.82f, 0.74f, 1f);
-
     public void Open()
     {
         loadedBest = 0;

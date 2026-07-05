@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
@@ -34,10 +35,9 @@ internal sealed class ReversiApp : IMiniGame
     private bool statsLoaded;
     private float resultAppear;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Reversi);
     public string Genre => Loc.T(L.Games.GenreStrategy);
-    public Vector4 Accent => new(0.36f, 0.78f, 0.56f, 1f);
-
     public void Open()
     {
         statsLoaded = false;

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -39,10 +40,9 @@ internal sealed class Twenty48App : IMiniGame
     private bool swipeActive;
     private Vector2 swipeStart;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => "2048";
     public string Genre => Loc.T(L.Games.GenrePuzzle);
-    public Vector4 Accent => new(0.96f, 0.58f, 0.39f, 1f);
-
     public void Open()
     {
         loadedBest = 0;

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -27,10 +28,9 @@ internal sealed class FlapApp : IMiniGame
     private int finalScore;
     private float resultAppear;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Flap);
     public string Genre => Loc.T(L.Games.GenreArcade);
-    public Vector4 Accent => new(0.40f, 0.68f, 0.98f, 1f);
-
     public void Open()
     {
         started = false;

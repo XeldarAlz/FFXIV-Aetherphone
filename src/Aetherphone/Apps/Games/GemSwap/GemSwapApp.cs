@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
@@ -36,10 +37,9 @@ internal sealed class GemSwapApp : IMiniGame
     private int displayBest;
     private GameStatsStore? statsRef;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.GemSwap);
     public string Genre => Loc.T(L.Games.GenreMatch);
-    public Vector4 Accent => new(0.72f, 0.46f, 0.96f, 1f);
-
     public void Open()
     {
         loadedBest = 0;

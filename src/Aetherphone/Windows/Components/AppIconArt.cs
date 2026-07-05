@@ -10,6 +10,11 @@ internal static class AppIconArt
 
     public static bool TryDraw(ImDrawListPtr dl, string id, Vector2 center, float size, Vector4 ink, Vector4 hole)
     {
+        if (AppIconTextures.TryDraw(dl, id, center, size, ink))
+        {
+            return true;
+        }
+
         var extent = size * 0.30f;
         var inkColor = ImGui.GetColorU32(ink);
         var holeColor = ImGui.GetColorU32(hole);
@@ -140,6 +145,18 @@ internal static class AppIconArt
                 return true;
             case "phone":
                 DrawPhone(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "calendar":
+                DrawCalendar(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "notes":
+                DrawNotes(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "calculator":
+                DrawCalculator(dl, center, extent, inkColor, holeColor);
+                return true;
+            case "feedback":
+                DrawFeedback(dl, center, extent, inkColor, holeColor);
                 return true;
             default:
                 return false;
@@ -885,6 +902,96 @@ internal static class AppIconArt
         };
         FillConvex(dl, ink, tail);
         dl.AddCircleFilled(At(center, extent, -0.52f, -0.14f), extent * 0.13f, hole, 20);
+    }
+
+    private static void DrawCalendar(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var ringWidth = extent * 0.15f;
+        var ringRounding = ringWidth * 0.5f;
+        var ringTopY = At(center, extent, 0f, -0.98f).Y;
+        var ringBottomY = At(center, extent, 0f, -0.44f).Y;
+        var leftRingX = At(center, extent, -0.40f, 0f).X;
+        var rightRingX = At(center, extent, 0.40f, 0f).X;
+        dl.AddRectFilled(new Vector2(leftRingX - ringWidth * 0.5f, ringTopY),
+            new Vector2(leftRingX + ringWidth * 0.5f, ringBottomY), ink, ringRounding);
+        dl.AddRectFilled(new Vector2(rightRingX - ringWidth * 0.5f, ringTopY),
+            new Vector2(rightRingX + ringWidth * 0.5f, ringBottomY), ink, ringRounding);
+
+        var rounding = extent * 0.20f;
+        var bodyMin = At(center, extent, -0.82f, -0.66f);
+        var bodyMax = At(center, extent, 0.82f, 0.92f);
+        dl.AddRectFilled(bodyMin, bodyMax, ink, rounding);
+
+        var headerMin = At(center, extent, -0.82f, -0.66f);
+        var headerMax = At(center, extent, 0.82f, -0.20f);
+        dl.AddRectFilled(headerMin, headerMax, hole, rounding, ImDrawFlags.RoundCornersTop);
+
+        Span<float> columns = stackalloc float[3] { -0.44f, 0f, 0.44f };
+        Span<float> rows = stackalloc float[2] { 0.14f, 0.58f };
+        var dotRadius = extent * 0.11f;
+        for (var row = 0; row < rows.Length; row++)
+        {
+            for (var column = 0; column < columns.Length; column++)
+            {
+                dl.AddCircleFilled(At(center, extent, columns[column], rows[row]), dotRadius, hole, 16);
+            }
+        }
+    }
+
+    private static void DrawNotes(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var bodyMin = At(center, extent, -0.80f, -0.92f);
+        var bodyMax = At(center, extent, 0.80f, 0.92f);
+        dl.AddRectFilled(bodyMin, bodyMax, ink, extent * 0.20f);
+        var headerMin = At(center, extent, -0.80f, -0.92f);
+        var headerMax = At(center, extent, 0.80f, -0.50f);
+        dl.AddRectFilled(headerMin, headerMax, hole, extent * 0.20f, ImDrawFlags.RoundCornersTop);
+        var lineHeight = extent * 0.11f;
+        var lineRounding = extent * 0.05f;
+        Span<float> rows = stackalloc float[3] { -0.14f, 0.24f, 0.62f };
+        for (var row = 0; row < rows.Length; row++)
+        {
+            var right = row == rows.Length - 1 ? 0.28f : 0.56f;
+            var min = new Vector2(At(center, extent, -0.56f, rows[row]).X, center.Y + rows[row] * extent - lineHeight);
+            var max = new Vector2(At(center, extent, right, rows[row]).X, center.Y + rows[row] * extent + lineHeight);
+            dl.AddRectFilled(min, max, hole, lineRounding);
+        }
+    }
+
+    private static void DrawCalculator(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var bodyMin = At(center, extent, -0.80f, -0.96f);
+        var bodyMax = At(center, extent, 0.80f, 0.96f);
+        dl.AddRectFilled(bodyMin, bodyMax, ink, extent * 0.24f);
+        var screenMin = At(center, extent, -0.58f, -0.74f);
+        var screenMax = At(center, extent, 0.58f, -0.42f);
+        dl.AddRectFilled(screenMin, screenMax, hole, extent * 0.08f);
+        Span<float> columns = stackalloc float[3] { -0.42f, 0f, 0.42f };
+        Span<float> keyRows = stackalloc float[3] { -0.10f, 0.30f, 0.70f };
+        var keyRadius = extent * 0.13f;
+        for (var row = 0; row < keyRows.Length; row++)
+        {
+            for (var column = 0; column < columns.Length; column++)
+            {
+                dl.AddCircleFilled(At(center, extent, columns[column], keyRows[row]), keyRadius, hole, 20);
+            }
+        }
+    }
+
+    private static void DrawFeedback(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var bubbleMin = At(center, extent, -0.95f, -0.86f);
+        var bubbleMax = At(center, extent, 0.95f, 0.40f);
+        dl.AddRectFilled(bubbleMin, bubbleMax, ink, extent * 0.34f);
+        Span<Vector2> tail = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.18f, 0.26f), At(center, extent, 0.58f, 0.26f), At(center, extent, 0.66f, 1.00f),
+        };
+        FillConvex(dl, ink, tail);
+        var lineThickness = extent * 0.13f;
+        dl.AddLine(At(center, extent, -0.58f, -0.44f), At(center, extent, 0.58f, -0.44f), hole, lineThickness);
+        dl.AddLine(At(center, extent, -0.58f, -0.08f), At(center, extent, 0.58f, -0.08f), hole, lineThickness);
+        dl.AddLine(At(center, extent, -0.58f, 0.28f), At(center, extent, 0.16f, 0.28f), hole, lineThickness);
     }
 
     private static void DrawPhone(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

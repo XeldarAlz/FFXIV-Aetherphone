@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -43,10 +44,9 @@ internal sealed class SimonApp : IMiniGame
     private bool newBest;
     private float resultAppear;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Simon);
     public string Genre => Loc.T(L.Games.GenreMemory);
-    public Vector4 Accent => new(0.46f, 0.86f, 0.66f, 1f);
-
     public void Open()
     {
         statsLoaded = false;

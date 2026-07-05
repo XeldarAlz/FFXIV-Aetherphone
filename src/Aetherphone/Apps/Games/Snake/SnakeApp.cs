@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -24,10 +25,9 @@ internal sealed class SnakeApp : IMiniGame
     private int finalScore;
     private float resultAppear;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Snake);
     public string Genre => Loc.T(L.Games.GenreArcade);
-    public Vector4 Accent => new(0.42f, 0.84f, 0.48f, 1f);
-
     public void Open()
     {
         started = false;

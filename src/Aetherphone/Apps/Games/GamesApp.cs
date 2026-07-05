@@ -17,6 +17,7 @@ using Aetherphone.Apps.Games.Twenty48;
 using Aetherphone.Apps.Games.WaterSort;
 using Aetherphone.Apps.Games.Whack;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
@@ -30,17 +31,31 @@ namespace Aetherphone.Apps.Games;
 
 internal sealed class GamesApp : IPhoneApp
 {
+    private enum GameRoute : byte
+    {
+        Launcher,
+        Playing,
+    }
+
     private const int Columns = 2;
     private const float HeaderHeight = 42f;
     private readonly GameStatsStore stats;
     private readonly IMiniGame[] games;
     private readonly Spring[] cardScale;
     private readonly int[] tileOrder;
+    private readonly ViewRouter<GameRoute> router;
+    private readonly RouterDraw<GameRoute> drawView;
+    private readonly Action back;
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
     private IMiniGame? currentGame;
+    private DateTime gameStartedAt;
+    private string? activeGameId;
+    private int preGameBestScore;
+    private int preGameBestTime;
     public string Id => "games";
     public string DisplayName => Loc.T(L.Apps.Games);
     public string Glyph => ">";
-    public Vector4 Accent => new(0.32f, 0.78f, 0.50f, 1f);
     public int BadgeCount => 0;
 
     public GamesApp(GameStatsStore stats)
@@ -59,6 +74,9 @@ internal sealed class GamesApp : IPhoneApp
         }
 
         tileOrder = BuildDisplayOrder();
+        router = new ViewRouter<GameRoute>(GameRoute.Launcher, Id);
+        drawView = DrawView;
+        back = () => router.Pop();
     }
 
     private int[] BuildDisplayOrder()
@@ -104,11 +122,13 @@ internal sealed class GamesApp : IPhoneApp
 
     public void OnOpened()
     {
+        router.Reset();
     }
 
     public void OnClosed()
     {
         CloseCurrentGame();
+        router.Reset();
     }
 
     public void Dispose()
@@ -121,20 +141,31 @@ internal sealed class GamesApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        if (currentGame is not null)
+        theme = context.Theme;
+        navigation = context.Navigation;
+        router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawView);
+        if (!router.IsTransitioning && router.Current == GameRoute.Launcher && currentGame is not null)
+        {
+            CloseCurrentGame();
+        }
+    }
+
+    private void DrawView(GameRoute route, Rect area, int depth)
+    {
+        var context = new PhoneContext(area, theme, navigation);
+        if (route == GameRoute.Playing)
         {
             DrawActiveGame(context);
+            return;
         }
-        else
-        {
-            DrawLauncher(context);
-        }
+
+        DrawLauncher(context);
     }
 
     private void DrawActiveGame(in PhoneContext context)
     {
         var game = currentGame!;
-        AppHeader.Draw(context, game.Title, CloseCurrentGame);
+        AppHeader.Draw(context, game.Title, back);
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
@@ -301,7 +332,14 @@ internal sealed class GamesApp : IPhoneApp
     private void OpenGame(IMiniGame game)
     {
         currentGame = game;
+        var gameStats = stats.Get(game.Id);
+        preGameBestScore = gameStats.BestScore;
+        preGameBestTime = gameStats.BestTimeSeconds;
+        gameStartedAt = DateTime.UtcNow;
+        activeGameId = game.Id;
         game.Open();
+        Plugin.Analytics.Track(AnalyticsEvents.GameStarted(game.Id));
+        router.Push(GameRoute.Playing);
     }
 
     private void CloseCurrentGame()
@@ -312,6 +350,17 @@ internal sealed class GamesApp : IPhoneApp
         }
 
         currentGame.Close();
+
+        if (activeGameId is not null)
+        {
+            var durationMs = (DateTime.UtcNow - gameStartedAt).TotalMilliseconds;
+            var finalStats = stats.Get(activeGameId);
+            var improved = finalStats.BestScore > preGameBestScore
+                || (finalStats.BestTimeSeconds > 0 && (preGameBestTime == 0 || finalStats.BestTimeSeconds < preGameBestTime));
+            Plugin.Analytics.Track(AnalyticsEvents.GameEnded(activeGameId, finalStats.BestScore, durationMs, improved));
+            activeGameId = null;
+        }
+
         currentGame = null;
     }
 }

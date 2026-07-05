@@ -4,3 +4,6 @@ obj/
 bin/
 docs/
 *.user
+
+# Node tooling (tools/icon-generator)
+node_modules/

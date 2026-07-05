@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -49,10 +50,9 @@ internal sealed class PairsApp : IMiniGame
     private bool statsLoaded;
     private GameStats loadedStats;
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Pairs);
     public string Genre => Loc.T(L.Games.GenreMemory);
-    public Vector4 Accent => Styling.AccentAmber;
-
     public void Open()
     {
         statsLoaded = false;

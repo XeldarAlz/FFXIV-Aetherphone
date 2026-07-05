@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
@@ -40,10 +41,9 @@ internal sealed class NonogramApp : IMiniGame
     private float resultAppear;
     private string resultTimeText = "0:00";
     public string Id => GameId;
+    public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Nonogram);
     public string Genre => Loc.T(L.Games.GenreLogic);
-    public Vector4 Accent => new(0.40f, 0.78f, 0.82f, 1f);
-
     public void Open()
     {
         StartNewGame(difficulty);
