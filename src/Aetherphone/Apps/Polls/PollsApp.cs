@@ -30,6 +30,7 @@ internal sealed class PollsApp : IPhoneApp
     private readonly PollsStore store;
     private readonly AppSkin ui = new(AppPalettes.Polls);
     private readonly Dictionary<string, PollMotion> motions = new();
+    private readonly Dictionary<string, LocalizedPoll> localized = new();
 
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
@@ -129,7 +130,8 @@ internal sealed class PollsApp : IPhoneApp
         var contentRight = origin.X + width - pad;
         var contentWidth = contentRight - contentLeft;
 
-        var questionHeight = MeasureWrapped(poll.Question, contentWidth, 1.08f, FontWeight.SemiBold);
+        var text = LocalizedFor(poll);
+        var questionHeight = MeasureWrapped(text.Question, contentWidth, 1.08f, FontWeight.SemiBold);
         var optionHeight = 44f * scale;
         var optionGap = 10f * scale;
         var footerHeight = 18f * scale;
@@ -146,7 +148,7 @@ internal sealed class PollsApp : IPhoneApp
         using (Plugin.Fonts.Push(1.08f, FontWeight.SemiBold))
         using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
-            ImGui.TextWrapped(poll.Question);
+            ImGui.TextWrapped(text.Question);
         }
 
         ImGui.PopTextWrapPos();
@@ -156,8 +158,8 @@ internal sealed class PollsApp : IPhoneApp
         for (var index = 0; index < poll.Options.Length; index++)
         {
             var rowTop = optionsTop + index * (optionHeight + optionGap);
-            DrawOption(drawList, poll, motion, index, contentLeft, rowTop, contentWidth, optionHeight, scale,
-                deltaSeconds);
+            DrawOption(drawList, poll, text.Options[index], motion, index, contentLeft, rowTop, contentWidth,
+                optionHeight, scale, deltaSeconds);
         }
 
         var votesLabel = Loc.Plural(L.Polls.Votes, poll.TotalVotes);
@@ -170,8 +172,8 @@ internal sealed class PollsApp : IPhoneApp
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y));
     }
 
-    private void DrawOption(ImDrawListPtr drawList, PollDto poll, PollMotion motion, int optionIndex, float left,
-        float top, float width, float height, float scale, float deltaSeconds)
+    private void DrawOption(ImDrawListPtr drawList, PollDto poll, string optionLabel, PollMotion motion,
+        int optionIndex, float left, float top, float width, float height, float scale, float deltaSeconds)
     {
         var selected = poll.MyVote == optionIndex;
         var interactive = !poll.Closed;
@@ -210,7 +212,7 @@ internal sealed class PollsApp : IPhoneApp
         var countLeft = left + width - countSize.X;
         var labelInk = selected ? ui.TitleInk : ui.BodyInk;
         var labelMax = countLeft - labelLeft - 8f * scale;
-        var label = TruncateLabel(poll.Options[optionIndex], labelMax, 0.98f,
+        var label = TruncateLabel(optionLabel, labelMax, 0.98f,
             selected ? FontWeight.SemiBold : FontWeight.Medium);
         var labelSize = Typography.Measure(label, 0.98f, selected ? FontWeight.SemiBold : FontWeight.Medium);
         Typography.Draw(new Vector2(labelLeft, labelCenterY - labelSize.Y * 0.5f), label,
@@ -239,6 +241,64 @@ internal sealed class PollsApp : IPhoneApp
         {
             store.Vote(poll, optionIndex);
         }
+    }
+
+    private LocalizedPoll LocalizedFor(PollDto poll)
+    {
+        if (!localized.TryGetValue(poll.Id, out var cached))
+        {
+            cached = new LocalizedPoll();
+            localized[poll.Id] = cached;
+        }
+
+        var code = Loc.Current.Code;
+        if (ReferenceEquals(cached.Source, poll) && cached.LangCode == code)
+        {
+            return cached;
+        }
+
+        cached.Source = poll;
+        cached.LangCode = code;
+        cached.Question = poll.Question;
+        cached.Options = poll.Options;
+
+        var translations = poll.Translations ?? Array.Empty<PollTranslationDto>();
+        for (var index = 0; index < translations.Length; index++)
+        {
+            var translation = translations[index];
+            if (translation.Lang != code)
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrEmpty(translation.Question))
+            {
+                cached.Question = translation.Question;
+            }
+
+            var count = Math.Min(poll.Options.Length, translation.Options.Length);
+            var merged = (string[])poll.Options.Clone();
+            var replaced = false;
+            for (var optionIndex = 0; optionIndex < count; optionIndex++)
+            {
+                if (string.IsNullOrEmpty(translation.Options[optionIndex]))
+                {
+                    continue;
+                }
+
+                merged[optionIndex] = translation.Options[optionIndex];
+                replaced = true;
+            }
+
+            if (replaced)
+            {
+                cached.Options = merged;
+            }
+
+            break;
+        }
+
+        return cached;
     }
 
     private PollMotion MotionFor(PollDto poll)
@@ -313,6 +373,14 @@ internal sealed class PollsApp : IPhoneApp
     {
         public Spring[] Fills = Array.Empty<Spring>();
         public Spring[] Checks = Array.Empty<Spring>();
+    }
+
+    private sealed class LocalizedPoll
+    {
+        public PollDto? Source;
+        public string LangCode = string.Empty;
+        public string Question = string.Empty;
+        public string[] Options = Array.Empty<string>();
     }
 
     public void Dispose()

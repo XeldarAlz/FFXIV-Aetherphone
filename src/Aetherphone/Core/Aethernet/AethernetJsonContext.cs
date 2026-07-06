@@ -54,6 +54,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(NotificationDto))]
 [JsonSerializable(typeof(NotificationPage))]
 [JsonSerializable(typeof(PollDto))]
+[JsonSerializable(typeof(PollTranslationDto))]
 [JsonSerializable(typeof(PollPage))]
 [JsonSerializable(typeof(PollVoteRequest))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
