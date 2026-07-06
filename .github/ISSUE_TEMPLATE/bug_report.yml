@@ -46,7 +46,6 @@ body:
         - 0.8.5.1
         - 0.8.5.0
         - 0.8.4.0
-        - 0.8.3.0
         - Older / not sure
     validations:
       required: true
