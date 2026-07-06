@@ -9,6 +9,7 @@ internal interface IPhoneApp : IDisposable
     string Glyph { get; }
     Vector4 Accent => AppAccents.For(Id);
     int BadgeCount { get; }
+    bool BadgeAsDot => false;
     bool WantsTransparentScreen => false;
     Rect? TransparentViewport(Rect screen, float scale) => null;
     bool IsAvailable => true;

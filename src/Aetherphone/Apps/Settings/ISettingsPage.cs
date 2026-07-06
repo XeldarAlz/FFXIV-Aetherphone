@@ -10,5 +10,6 @@ internal interface ISettingsPage
     string Summary { get; }
     string Glyph { get; }
     Vector4 Tint { get; }
+    bool ShowsBadge => false;
     void Draw(in PhoneContext context, Rect body);
 }

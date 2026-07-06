@@ -26,4 +26,6 @@ internal static class ChangelogData
         new ChangelogEntry("0.1.1.0", "2026-06-21", L.Changelog.Release0110),
         new ChangelogEntry("0.1.0.0", "2026-06-21", L.Changelog.Release0100),
     };
+
+    public static string LatestVersion => Entries[0].Version;
 }

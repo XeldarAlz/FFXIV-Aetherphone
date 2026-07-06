@@ -34,8 +34,15 @@ internal static class HomeTileView
         DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, labelWidth);
         if (app.BadgeCount > 0)
         {
-            AppBadge.Draw(new Vector2(center.X + size * 0.5f - 5f * scale, center.Y - size * 0.5f + 5f * scale),
-                app.BadgeCount, theme, scale);
+            var badgeCenter = new Vector2(center.X + size * 0.5f - 5f * scale, center.Y - size * 0.5f + 5f * scale);
+            if (app.BadgeAsDot)
+            {
+                AppBadge.DrawDot(badgeCenter, theme, scale);
+            }
+            else
+            {
+                AppBadge.Draw(badgeCenter, app.BadgeCount, theme, scale);
+            }
         }
     }
 

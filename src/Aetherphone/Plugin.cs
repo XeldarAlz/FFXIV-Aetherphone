@@ -64,6 +64,7 @@ public sealed class Plugin : IDalamudPlugin
         Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
         Cfg.NormalizeAethernetBaseUrl();
         Cfg.MigrateSoundSettings();
+        Cfg.MigrateChangelogSeen();
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
         Loading = new LoadingScreen();

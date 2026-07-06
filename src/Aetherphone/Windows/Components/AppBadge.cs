@@ -8,6 +8,7 @@ namespace Aetherphone.Windows.Components;
 internal static class AppBadge
 {
     private const float Radius = 9f;
+    private const float DotRadius = 5.5f;
     private const float BorderThickness = 1.5f;
     private const int ShadowLayerCount = 4;
     private const float ShadowSpread = 1.4f;
@@ -24,6 +25,15 @@ internal static class AppBadge
         drawList.AddCircle(center, radius, ImGui.GetColorU32(BorderColor), 24, BorderThickness * scale);
         var label = count > 99 ? "99+" : count.ToString();
         Typography.DrawCentered(center, label, theme.TextStrong, 0.7f, FontWeight.SemiBold);
+    }
+
+    public static void DrawDot(Vector2 center, PhoneTheme theme, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = DotRadius * scale;
+        DrawShadow(drawList, center, radius, scale);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(theme.Danger), 24);
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(BorderColor), 24, BorderThickness * scale);
     }
 
     private static void DrawShadow(ImDrawListPtr drawList, Vector2 center, float radius, float scale)

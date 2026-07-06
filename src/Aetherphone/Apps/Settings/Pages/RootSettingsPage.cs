@@ -42,7 +42,8 @@ internal sealed class RootSettingsPage : ISettingsPage
                 for (var index = 0; index < group.Count; index++)
                 {
                     var page = group[index];
-                    if (SettingsRow.Link(card.NextRow(), page.Glyph, page.Tint, page.Title, page.Summary, theme))
+                    if (SettingsRow.Link(card.NextRow(), page.Glyph, page.Tint, page.Title, page.Summary, theme,
+                            page.ShowsBadge))
                     {
                         navigator.Open(page);
                     }

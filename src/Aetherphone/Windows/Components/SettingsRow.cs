@@ -26,7 +26,8 @@ internal static class SettingsRow
             theme.TextMuted);
     }
 
-    public static bool Link(Rect row, string glyph, Vector4 tint, string label, string value, PhoneTheme theme)
+    public static bool Link(Rect row, string glyph, Vector4 tint, string label, string value, PhoneTheme theme,
+        bool badge = false)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
@@ -45,6 +46,10 @@ internal static class SettingsRow
         var glyphScale = glyphHeight > 0f ? tileSize * 0.5f / glyphHeight : 1f;
         Typography.DrawCentered(new Vector2(tileMin.X + tileSize * 0.5f, row.Center.Y), glyph, theme.TextStrong,
             glyphScale);
+        if (badge)
+        {
+            AppBadge.DrawDot(new Vector2(tileMin.X + tileSize, tileMin.Y), theme, scale);
+        }
         DrawLabel(new Rect(new Vector2(tileMin.X + tileSize + Metrics.Space.Md * scale, row.Min.Y), row.Max), label,
             theme.TextStrong);
         var chevronWidth = Metrics.Space.Xs * scale;

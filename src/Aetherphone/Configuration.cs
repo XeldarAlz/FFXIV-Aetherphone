@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Calendar;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.Notes;
+using Aetherphone.Core.Changelog;
 using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
@@ -91,6 +92,33 @@ internal sealed class Configuration : IPluginConfiguration
     public DateTime? TimerEndsAtUtc { get; set; }
     public int TimerDurationSeconds { get; set; }
     public bool TimerNotified { get; set; }
+    public string LastSeenChangelogVersion { get; set; } = string.Empty;
+    public bool ChangelogSeenInitialized { get; set; }
+
+    public bool HasUnseenChangelog => LastSeenChangelogVersion != ChangelogData.LatestVersion;
+
+    public void MarkChangelogSeen()
+    {
+        if (LastSeenChangelogVersion == ChangelogData.LatestVersion)
+        {
+            return;
+        }
+
+        LastSeenChangelogVersion = ChangelogData.LatestVersion;
+        Save();
+    }
+
+    public void MigrateChangelogSeen()
+    {
+        if (ChangelogSeenInitialized)
+        {
+            return;
+        }
+
+        LastSeenChangelogVersion = ChangelogData.LatestVersion;
+        ChangelogSeenInitialized = true;
+        Save();
+    }
 
     public bool IsAppNotificationEnabled(string appId) =>
         !NotificationSettings.TryGetValue(appId, out var setting) || setting.Enabled;

@@ -20,7 +20,9 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     public string Id => "settings";
     public string DisplayName => Loc.T(L.Apps.Settings);
     public string Glyph => "S";
-    public int BadgeCount => 0;
+    public int BadgeCount => configuration.HasUnseenChangelog ? 1 : 0;
+    public bool BadgeAsDot => true;
+    private readonly Configuration configuration;
     private readonly ViewRouter<ISettingsPage> router;
     private readonly RouterDraw<ISettingsPage> drawPage;
     private readonly Action popBack;
@@ -29,14 +31,16 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private INavigator frameNavigation = null!;
     private readonly AccountPage accountPage;
     private readonly ProfilePage profilePage;
+    private readonly ChangelogPage changelogPage;
 
     public SettingsApp(Configuration configuration, ThemeProvider themes, SoundService sound,
         AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
         PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
     {
         this.sound = sound;
+        this.configuration = configuration;
         accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
-        profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient);
+        profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient, gameData);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
@@ -69,20 +73,28 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var commands = new CommandsPage();
         var privacy = new PrivacyPage(configuration);
         var about = new AboutPage(showAbout);
-        var changelog = new ChangelogPage();
+        changelogPage = new ChangelogPage(configuration);
         var groups = new IReadOnlyList<ISettingsPage>[]
         {
             new ISettingsPage[] { accountPage, profilePage },
             new ISettingsPage[] { appearance, language, immersion, tutorials }, new ISettingsPage[] { callsPage },
             new ISettingsPage[] { notifications, ringtonePage },
-            new ISettingsPage[] { commands, privacy, about, changelog },
+            new ISettingsPage[] { commands, privacy, about, changelogPage },
         };
         router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups), Id);
         drawPage = DrawPage;
         popBack = PopBack;
     }
 
-    public void Open(ISettingsPage page) => router.Push(page);
+    public void Open(ISettingsPage page)
+    {
+        if (page == changelogPage)
+        {
+            configuration.MarkChangelogSeen();
+        }
+
+        router.Push(page);
+    }
 
     public void Back()
     {
