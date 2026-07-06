@@ -1538,5 +1538,8 @@ internal static class L
         public static readonly LocString NotesBody = new("onboarding.notesBody", "A quick place to jot things down. Tap the plus to start a note, and it saves itself as you type.");
         public static readonly LocString NotesRemindersBody = new("onboarding.notesRemindersBody", "Switch to the Reminders tab for a simple to-do list. Give one a due date and the phone nudges you when it's time.");
         public static readonly LocString CalculatorBody = new("onboarding.calculatorBody", "A simple calculator for quick everyday sums, with a running tape of your recent results to scroll back through.");
+        public static readonly LocString PollsBody = new("onboarding.pollsBody", "Community polls from across Aethernet. Tap an option to cast your vote and see where everyone stands.");
+        public static readonly LocString PollsResultsTitle = new("onboarding.pollsResultsTitle", "Live results");
+        public static readonly LocString PollsResultsBody = new("onboarding.pollsResultsBody", "Every vote updates the bars in real time. Once a poll closes, you'll see the final tally.");
     }
 }

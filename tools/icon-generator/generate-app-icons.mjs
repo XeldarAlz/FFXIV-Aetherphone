@@ -54,6 +54,8 @@ const map = {
   games: "device-gamepad-2",
   calendar: "calendar",
   feedback: "message-report",
+  dev: "terminal-2",
+  polls: "chart-bar-popular",
 };
 
 function recolor(svg) {

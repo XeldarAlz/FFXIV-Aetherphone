@@ -121,6 +121,12 @@ internal static class TourRegistry
                 GuideStep.Note(L.Onboarding.FeedbackWriteTitle, L.Onboarding.FeedbackWriteBody),
                 GuideStep.Note(L.Onboarding.FeedbackPrivacyTitle, L.Onboarding.FeedbackPrivacyBody),
             });
+        Add(tours, "polls", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.Polls, L.Onboarding.PollsBody),
+                GuideStep.Note(L.Onboarding.PollsResultsTitle, L.Onboarding.PollsResultsBody),
+            });
         return tours;
     }
 
