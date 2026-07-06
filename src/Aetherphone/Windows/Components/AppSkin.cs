@@ -122,6 +122,31 @@ internal sealed class AppSkin
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
+    public bool DangerGhostButton(Rect rect, string label)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var radius = rect.Height * 0.5f;
+        var danger = Theme.Danger;
+        if (hovered)
+        {
+            Squircle.Fill(drawList, rect.Min, rect.Max, radius,
+                ImGui.GetColorU32(Core.Theme.Palette.WithAlpha(danger, 0.14f)));
+        }
+
+        Squircle.Stroke(drawList, rect.Min, rect.Max, radius,
+            ImGui.GetColorU32(Core.Theme.Palette.WithAlpha(danger, 0.55f)), 1.4f);
+        var ink = Core.Theme.Palette.Mix(danger, White, 0.18f);
+        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
     public bool GhostButton(Rect rect, string label)
     {
         var drawList = ImGui.GetWindowDrawList();

@@ -192,52 +192,19 @@ internal sealed partial class DevApp
 
         using (AppSurface.Begin(body))
         {
-            var origin = ImGui.GetCursorScreenPos();
             var width = ImGui.GetContentRegionAvail().X;
-            ImGui.Dummy(new Vector2(0f, 6f * scale));
-            var segmentRect = new Rect(ImGui.GetCursorScreenPos(),
-                ImGui.GetCursorScreenPos() + new Vector2(width, 34f * scale));
+            ImGui.Dummy(new Vector2(0f, 4f * scale));
+            var segmentOrigin = ImGui.GetCursorScreenPos();
+            var segmentRect = new Rect(segmentOrigin, segmentOrigin + new Vector2(width, 34f * scale));
             DrawSegmentStrip(segmentRect, ColumnLabels, card.Status, ref detailSegmentAnim,
                 status => store.MoveCard(cardId, status, null));
             ImGui.Dummy(new Vector2(width, 34f * scale + 16f * scale));
-            ImGui.PushTextWrapPos(origin.X + width);
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-            using (Plugin.Fonts.Push(1.2f, FontWeight.SemiBold))
-            {
-                ImGui.TextWrapped(card.Title);
-            }
 
-            ImGui.PopTextWrapPos();
-            ImGui.Dummy(new Vector2(0f, 6f * scale));
-            var metaOrigin = ImGui.GetCursorScreenPos();
-            var avatarRadius = 10f * scale;
-            var avatarCenter = new Vector2(metaOrigin.X + avatarRadius, metaOrigin.Y + avatarRadius);
-            AvatarView.Draw(ImGui.GetWindowDrawList(), avatarCenter, avatarRadius, Accent,
-                Monogram(card.CreatedByDisplayName, card.CreatedByHandle), 0.65f,
-                AvatarFor(card.CreatedById, card.CreatedByAvatarUrl), 28);
-            var author = string.IsNullOrEmpty(card.CreatedByDisplayName)
-                ? card.CreatedByHandle
-                : card.CreatedByDisplayName;
-            var meta = card.UpdatedAtUnix > card.CreatedAtUnix
-                ? $"{author} · {RelativeTime(card.CreatedAtUnix)} · edited {RelativeTime(card.UpdatedAtUnix)}"
-                : $"{author} · {RelativeTime(card.CreatedAtUnix)}";
-            Typography.Draw(new Vector2(avatarCenter.X + avatarRadius + 7f * scale, metaOrigin.Y + 3f * scale), meta,
-                AppPalettes.Dev.MutedInk, 0.8f);
-            ImGui.Dummy(new Vector2(0f, avatarRadius * 2f + 14f * scale));
-            if (card.Body.Length > 0)
-            {
-                ImGui.PushTextWrapPos(origin.X + width);
-                using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Dev.BodyInk))
-                {
-                    ImGui.TextWrapped(card.Body);
-                }
+            DrawCardDetailPanel(card, width, scale);
+            ImGui.Dummy(new Vector2(0f, 18f * scale));
 
-                ImGui.PopTextWrapPos();
-                ImGui.Dummy(new Vector2(0f, 18f * scale));
-            }
-
-            var buttonHeight = 40f * scale;
-            var gap = 10f * scale;
+            var buttonHeight = 42f * scale;
+            var gap = 12f * scale;
             var buttonWidth = (width - gap) * 0.5f;
             var buttonsOrigin = ImGui.GetCursorScreenPos();
             var editRect = new Rect(buttonsOrigin, buttonsOrigin + new Vector2(buttonWidth, buttonHeight));
@@ -249,13 +216,95 @@ internal sealed partial class DevApp
                 router.Push(DevRoute.CardEdit(cardId));
             }
 
-            if (ui.DangerPillButton(deleteRect, "Delete"))
+            if (ui.DangerGhostButton(deleteRect, "Delete"))
             {
                 AskDeleteCard(cardId);
             }
 
             ImGui.Dummy(new Vector2(width, buttonHeight + 24f * scale));
         }
+    }
+
+    private void DrawCardDetailPanel(DevBoardCardDto card, float width, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var cardPad = 18f * scale;
+        var innerWidth = width - cardPad * 2f;
+        var hasBody = card.Body.Length > 0;
+        var titleStyle = TextStyles.Title2;
+        var nameStyle = TextStyles.Headline;
+        var metaStyle = TextStyles.Footnote;
+        var author = string.IsNullOrEmpty(card.CreatedByDisplayName)
+            ? card.CreatedByHandle
+            : card.CreatedByDisplayName;
+        var authorLabel = UiText.Truncate(author, 24);
+        var when = card.UpdatedAtUnix > card.CreatedAtUnix
+            ? $"{RelativeTime(card.CreatedAtUnix)} · edited {RelativeTime(card.UpdatedAtUnix)}"
+            : RelativeTime(card.CreatedAtUnix);
+        float titleHeight;
+        using (Plugin.Fonts.Push(titleStyle.Scale, titleStyle.Weight))
+        {
+            titleHeight = ImGui.CalcTextSize(card.Title, false, innerWidth).Y;
+        }
+
+        var nameSize = Typography.Measure(authorLabel, nameStyle);
+        var whenSize = Typography.Measure(when, metaStyle);
+        var metaLineGap = 3f * scale;
+        var metaBlockHeight = nameSize.Y + metaLineGap + whenSize.Y;
+        var avatarRadius = 14f * scale;
+        var metaHeight = MathF.Max(avatarRadius * 2f, metaBlockHeight);
+        var titleMetaGap = 16f * scale;
+        var dividerTopGap = 16f * scale;
+        var dividerBottomGap = 16f * scale;
+        var bodyHeight = hasBody ? ImGui.CalcTextSize(card.Body, false, innerWidth).Y : 0f;
+        var panelHeight = cardPad * 2f + titleHeight + titleMetaGap + metaHeight +
+                          (hasBody ? dividerTopGap + 1f * scale + dividerBottomGap + bodyHeight : 0f);
+        var panelMin = ImGui.GetCursorScreenPos();
+        var panelMax = new Vector2(panelMin.X + width, panelMin.Y + panelHeight);
+        ui.Card(drawList, panelMin, panelMax, Metrics.Radius.Lg * scale, true);
+
+        var contentX = panelMin.X + cardPad;
+        var cursorY = panelMin.Y + cardPad;
+        ImGui.SetCursorScreenPos(new Vector2(contentX, cursorY));
+        ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + innerWidth);
+        using (Plugin.Fonts.Push(titleStyle.Scale, titleStyle.Weight))
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        {
+            ImGui.TextWrapped(card.Title);
+        }
+
+        ImGui.PopTextWrapPos();
+        cursorY += titleHeight + titleMetaGap;
+
+        var avatarCenter = new Vector2(contentX + avatarRadius, cursorY + metaHeight * 0.5f);
+        AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent,
+            Monogram(card.CreatedByDisplayName, card.CreatedByHandle), 0.72f,
+            AvatarFor(card.CreatedById, card.CreatedByAvatarUrl), 32);
+        var metaTextX = avatarCenter.X + avatarRadius + 12f * scale;
+        var metaBlockTop = avatarCenter.Y - metaBlockHeight * 0.5f;
+        Typography.Draw(new Vector2(metaTextX, metaBlockTop), authorLabel, theme.TextStrong, nameStyle);
+        Typography.Draw(new Vector2(metaTextX, metaBlockTop + nameSize.Y + metaLineGap), when,
+            AppPalettes.Dev.MutedInk, metaStyle);
+        cursorY += metaHeight;
+
+        if (hasBody)
+        {
+            cursorY += dividerTopGap;
+            drawList.AddLine(new Vector2(contentX, cursorY), new Vector2(panelMax.X - cardPad, cursorY),
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), 1f);
+            cursorY += 1f * scale + dividerBottomGap;
+            ImGui.SetCursorScreenPos(new Vector2(contentX, cursorY));
+            ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + innerWidth);
+            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Dev.BodyInk))
+            {
+                ImGui.TextWrapped(card.Body);
+            }
+
+            ImGui.PopTextWrapPos();
+        }
+
+        ImGui.SetCursorScreenPos(panelMin);
+        ImGui.Dummy(new Vector2(width, panelHeight));
     }
 
     private void AskDeleteCard(string cardId)
