@@ -48,6 +48,7 @@ internal sealed partial class VelvetApp : IPhoneApp
     public int BadgeCount => store.UnreadCount + store.RequestCount;
     private readonly VelvetStore store;
     private readonly VelvetLauncher launcher;
+    private readonly SocialLauncher socialLauncher;
     private readonly LodestoneService lodestone;
     private readonly Configuration configuration;
     private readonly PhotoLibrary library;
@@ -112,13 +113,15 @@ internal sealed partial class VelvetApp : IPhoneApp
     private volatile bool imageSaveBusy;
     private string commentsPostId = string.Empty;
     private string commentDraft = string.Empty;
+    private bool sentExpanded;
 
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, NotificationService notifications,
-        VelvetLauncher launcher)
+        VelvetLauncher launcher, SocialLauncher socialLauncher)
     {
         store = new VelvetStore(session, client, notifications, configuration);
         this.launcher = launcher;
+        this.socialLauncher = socialLauncher;
         this.lodestone = lodestone;
         this.configuration = configuration;
         this.library = library;
@@ -913,12 +916,7 @@ internal sealed partial class VelvetApp : IPhoneApp
 
             if (sentRequests.Length > 0)
             {
-                ui.SectionLabel($"{Loc.T(L.Velvet.SentRequests)} ({sentRequests.Length})");
-                for (var index = 0; index < sentRequests.Length; index++)
-                {
-                    DrawSentRequestRow(sentRequests[index]);
-                }
-
+                DrawSentRequestsSection(sentRequests);
                 ImGui.Dummy(new Vector2(0f, 8f * scale));
             }
 
@@ -988,6 +986,64 @@ internal sealed partial class VelvetApp : IPhoneApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
+    }
+
+    private void DrawSentRequestsSection(VelvetConnectionDto[] requests)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var rowHeight = 44f * scale;
+        var centerY = origin.Y + rowHeight * 0.5f;
+        var hovered = ImGui.IsMouseHoveringRect(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
+        if (hovered)
+        {
+            Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + rowHeight), 12f * scale,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)));
+        }
+
+        var label = $"{Loc.T(L.Velvet.SentRequests)} ({requests.Length})".ToUpperInvariant();
+        var labelSize = Typography.Measure(label, 0.78f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(origin.X + 2f * scale, centerY - labelSize.Y * 0.5f), label,
+            AppPalettes.Velvet.HeaderInk, 0.78f, FontWeight.SemiBold);
+
+        var chevronCenter = new Vector2(origin.X + width - 10f * scale, centerY);
+        var chevron = sentExpanded ? FontAwesomeIcon.ChevronUp : FontAwesomeIcon.ChevronDown;
+        AppSkin.Icon(chevronCenter, chevron.ToIconString(), AppPalettes.Velvet.MutedInk, 0.72f);
+
+        if (!sentExpanded)
+        {
+            var stackRadius = 13f * scale;
+            var stackStep = stackRadius * 1.15f;
+            var stackCount = Math.Min(requests.Length, 3);
+            var rightmostX = chevronCenter.X - 22f * scale - stackRadius;
+            for (var index = stackCount - 1; index >= 0; index--)
+            {
+                var request = requests[index];
+                var center = new Vector2(rightmostX - (stackCount - 1 - index) * stackStep, centerY);
+                drawList.AddCircleFilled(center, stackRadius + 2f * scale, ImGui.GetColorU32(theme.AppBackground), 28);
+                AvatarView.Draw(drawList, center, stackRadius, Accent, Monogram(request.DisplayName, request.Handle),
+                    0.78f, lodestone.Remote(request.UserId, ToUri(request.AvatarUrl)), 28);
+            }
+        }
+
+        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
+        {
+            sentExpanded = !sentExpanded;
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, rowHeight));
+        if (!sentExpanded)
+        {
+            return;
+        }
+
+        for (var index = 0; index < requests.Length; index++)
+        {
+            DrawSentRequestRow(requests[index]);
+        }
     }
 
     private void DrawSentRequestRow(VelvetConnectionDto request)
