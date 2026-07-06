@@ -55,6 +55,7 @@ internal static class L
         public static readonly LocString Settings = new("app.settings", "Settings");
         public static readonly LocString FindPeople = new("app.findpeople", "Find People");
         public static readonly LocString Feedback = new("app.feedback", "Feedback");
+        public static readonly LocString Polls = new("app.polls", "Polls");
         public static readonly LocString Calendar = new("app.calendar", "Calendar");
         public static readonly LocString Notes = new("app.notes", "Notes");
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
@@ -1292,6 +1293,15 @@ internal static class L
         public static readonly LocString AddPhotos = new("feedback.addPhotos", "Add photos");
         public static readonly LocString ImportFromPc = new("feedback.importFromPc", "Import from PC");
         public static readonly LocString NoGallery = new("feedback.noGallery", "No photos in your gallery yet");
+    }
+
+    internal static class Polls
+    {
+        public static readonly LocString SignInRequired = new("polls.signInRequired", "Sign in to Aethernet in Settings to see polls");
+        public static readonly LocString Empty = new("polls.empty", "No polls yet");
+        public static readonly LocString EmptySubtitle = new("polls.emptySubtitle", "New polls will land here.");
+        public static readonly LocString FinalResults = new("polls.finalResults", "Final results");
+        public static readonly LocPlural Votes = new("polls.votes", "{0} vote", "{0} votes");
     }
 
     internal static class About

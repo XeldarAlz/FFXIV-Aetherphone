@@ -1238,5 +1238,12 @@
   "calendar.deleteEvent": "Удалить событие",
   "calendar.deleteConfirmMessage": "Вы уверены, что хотите удалить это событие?",
   "calendar.deleteConfirm": "Удалить",
-  "calendar.deleteCancel": "Отмена"
+  "calendar.deleteCancel": "Отмена",
+  "app.polls": "Опросы",
+  "polls.signInRequired": "Войдите в Aethernet в Настройках, чтобы видеть опросы",
+  "polls.empty": "Пока нет опросов",
+  "polls.emptySubtitle": "Новые опросы появятся здесь.",
+  "polls.finalResults": "Итоговые результаты",
+  "polls.votes.one": "{0} голос",
+  "polls.votes.other": "{0} голосов"
 }

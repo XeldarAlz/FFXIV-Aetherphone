@@ -1238,5 +1238,12 @@
   "calendar.deleteEvent": "イベントを削除",
   "calendar.deleteConfirmMessage": "このイベントを削除してもよろしいですか？",
   "calendar.deleteConfirm": "削除",
-  "calendar.deleteCancel": "キャンセル"
+  "calendar.deleteCancel": "キャンセル",
+  "app.polls": "投票",
+  "polls.signInRequired": "投票を見るには設定からAethernetにログインしてください",
+  "polls.empty": "まだ投票はありません",
+  "polls.emptySubtitle": "新しい投票はここに表示されます。",
+  "polls.finalResults": "最終結果",
+  "polls.votes.one": "{0}票",
+  "polls.votes.other": "{0}票"
 }

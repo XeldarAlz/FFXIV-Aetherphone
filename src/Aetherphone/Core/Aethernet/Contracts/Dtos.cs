@@ -254,6 +254,20 @@ internal sealed record NotificationPage(NotificationDto[] Items);
 
 internal sealed record CreateFeedbackRequest(string Text, string[] ImageKeys);
 
+internal sealed record PollDto(
+    string Id,
+    string Question,
+    string[] Options,
+    int[] VoteCounts,
+    int TotalVotes,
+    int MyVote,
+    long CreatedAtUnix,
+    bool Closed);
+
+internal sealed record PollPage(PollDto[] Items);
+
+internal sealed record PollVoteRequest(int Option);
+
 internal sealed record FeedbackDto(
     string Id,
     string AuthorId,

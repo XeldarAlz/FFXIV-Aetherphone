@@ -38,6 +38,7 @@ internal static class AppAccents
         ["notifications"] = new(0.80f, 0.16f, 0.24f, 1f),
         ["settings"] = new(0.56f, 0.57f, 0.63f, 1f),
         ["feedback"] = new(0.08f, 0.66f, 0.55f, 1f),
+        ["polls"] = new(0.56f, 0.44f, 0.96f, 1f),
         ["games"] = new(0.32f, 0.78f, 0.50f, 1f),
         ["memory"] = new(0.92f, 0.74f, 0.34f, 1f),
         ["bubbles"] = new(0.30f, 0.82f, 0.74f, 1f),

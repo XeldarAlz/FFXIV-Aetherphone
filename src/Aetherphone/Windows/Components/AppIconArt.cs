@@ -158,6 +158,9 @@ internal static class AppIconArt
             case "feedback":
                 DrawFeedback(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "polls":
+                DrawPolls(dl, center, extent, inkColor);
+                return true;
             default:
                 return false;
         }
@@ -992,6 +995,14 @@ internal static class AppIconArt
         dl.AddLine(At(center, extent, -0.58f, -0.44f), At(center, extent, 0.58f, -0.44f), hole, lineThickness);
         dl.AddLine(At(center, extent, -0.58f, -0.08f), At(center, extent, 0.58f, -0.08f), hole, lineThickness);
         dl.AddLine(At(center, extent, -0.58f, 0.28f), At(center, extent, 0.16f, 0.28f), hole, lineThickness);
+    }
+
+    private static void DrawPolls(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        var rounding = extent * 0.16f;
+        dl.AddRectFilled(At(center, extent, -0.85f, -0.82f), At(center, extent, 0.85f, -0.46f), ink, rounding);
+        dl.AddRectFilled(At(center, extent, -0.85f, -0.18f), At(center, extent, 0.12f, 0.18f), ink, rounding);
+        dl.AddRectFilled(At(center, extent, -0.85f, 0.46f), At(center, extent, 0.48f, 0.82f), ink, rounding);
     }
 
     private static void DrawPhone(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

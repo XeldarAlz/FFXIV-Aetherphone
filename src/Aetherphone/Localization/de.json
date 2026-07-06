@@ -1244,5 +1244,12 @@
   "calendar.deleteEvent": "Ereignis l\u00f6schen",
   "calendar.deleteConfirmMessage": "M\u00f6chtest du dieses Ereignis wirklich l\u00f6schen?",
   "calendar.deleteConfirm": "L\u00f6schen",
-  "calendar.deleteCancel": "Abbrechen"
+  "calendar.deleteCancel": "Abbrechen",
+  "app.polls": "Umfragen",
+  "polls.signInRequired": "Melde dich in den Einstellungen bei Aethernet an, um Umfragen zu sehen",
+  "polls.empty": "Noch keine Umfragen",
+  "polls.emptySubtitle": "Neue Umfragen erscheinen hier.",
+  "polls.finalResults": "Endergebnis",
+  "polls.votes.one": "{0} Stimme",
+  "polls.votes.other": "{0} Stimmen"
 }

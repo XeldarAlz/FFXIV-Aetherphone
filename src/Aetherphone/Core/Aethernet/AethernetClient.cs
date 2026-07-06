@@ -416,5 +416,20 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url("/notifications"), AethernetJsonContext.Default.NotificationPage, session.Token, token, authStatusSink);
     }
 
+    public Task<PollPage?> PollsAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/polls"), AethernetJsonContext.Default.PollPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<PollDto?> VoteAsync(string pollId, int option, CancellationToken token)
+    {
+        return http.SendJsonAsync(HttpMethod.Put, Url($"/polls/{pollId}/vote"), new PollVoteRequest(option), AethernetJsonContext.Default.PollVoteRequest, AethernetJsonContext.Default.PollDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<PollDto?> ClearVoteAsync(string pollId, CancellationToken token)
+    {
+        return http.RequestJsonAsync(HttpMethod.Delete, Url($"/polls/{pollId}/vote"), AethernetJsonContext.Default.PollDto, session.Token, token, authStatusSink);
+    }
+
     private string Url(string path) => $"{session.BaseUrl.TrimEnd('/')}{path}";
 }

@@ -1238,5 +1238,12 @@
   "calendar.deleteEvent": "Eliminar evento",
   "calendar.deleteConfirmMessage": "\u00bfEst\u00e1s seguro de que quieres eliminar este evento?",
   "calendar.deleteConfirm": "Eliminar",
-  "calendar.deleteCancel": "Cancelar"
+  "calendar.deleteCancel": "Cancelar",
+  "app.polls": "Encuestas",
+  "polls.signInRequired": "Inicia sesión en Aethernet en Configuración para ver las encuestas",
+  "polls.empty": "Aún no hay encuestas",
+  "polls.emptySubtitle": "Las nuevas encuestas aparecerán aquí.",
+  "polls.finalResults": "Resultados finales",
+  "polls.votes.one": "{0} voto",
+  "polls.votes.other": "{0} votos"
 }

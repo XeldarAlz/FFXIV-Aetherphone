@@ -1171,5 +1171,12 @@
   "calendar.deleteEvent": "Delete Event",
   "calendar.deleteConfirmMessage": "Are you sure you want to delete this event?",
   "calendar.deleteConfirm": "Delete",
-  "calendar.deleteCancel": "Cancel"
+  "calendar.deleteCancel": "Cancel",
+  "app.polls": "Polls",
+  "polls.signInRequired": "Sign in to Aethernet in Settings to see polls",
+  "polls.empty": "No polls yet",
+  "polls.emptySubtitle": "New polls will land here.",
+  "polls.finalResults": "Final results",
+  "polls.votes.one": "{0} vote",
+  "polls.votes.other": "{0} votes"
 }
