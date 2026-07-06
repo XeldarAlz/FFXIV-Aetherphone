@@ -44,7 +44,7 @@ internal sealed class PhoneShell : IDisposable
 
     public PhoneShell(ThemeProvider themes, IReadOnlyList<IPhoneApp> apps, NotificationService notifications,
         PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
-        ConfirmService confirm)
+        SocialLauncher socialLauncher, ConfirmService confirm)
     {
         this.themes = themes;
         this.apps = apps;
@@ -52,7 +52,7 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
-        var router = new NotificationRouter(navigation, messageLauncher, velvetLauncher);
+        var router = new NotificationRouter(navigation, notifications, messageLauncher, velvetLauncher, socialLauncher);
         banner = new NotificationBanner(notifications, () => navigation.Current?.Id, router);
         nowPlaying = new NowPlayingIsland(playback);
         controlCenter = new ControlCenter(themes, playback, calls, navigation, notifications, router);

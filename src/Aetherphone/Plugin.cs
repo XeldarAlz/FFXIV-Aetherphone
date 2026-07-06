@@ -88,7 +88,8 @@ public sealed class Plugin : IDalamudPlugin
         aboutWindow = new AboutWindow();
         Confirm = new ConfirmService();
         shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
-            services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher, Confirm);
+            services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
+            services.SocialLauncher, Confirm);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
         if (Cfg.OpenOnStartup)
         {

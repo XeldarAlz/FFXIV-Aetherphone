@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -45,6 +46,7 @@ internal sealed class MessagesApp : IPhoneApp
     private readonly LinkshellBridge linkshellBridge;
     private readonly MessageLauncher launcher;
     private readonly LodestoneService lodestone;
+    private readonly NotificationService notifications;
     private readonly ViewRouter<MessagesView> router;
     private readonly RouterDraw<MessagesView> drawView;
     private readonly Action backToList;
@@ -61,7 +63,8 @@ internal sealed class MessagesApp : IPhoneApp
     private bool composerFocus;
 
     public MessagesApp(MessageStore store, LinkshellStore linkshells, ChatBridge bridge,
-        LinkshellBridge linkshellBridge, MessageLauncher launcher, LodestoneService lodestone)
+        LinkshellBridge linkshellBridge, MessageLauncher launcher, LodestoneService lodestone,
+        NotificationService notifications)
     {
         this.store = store;
         this.linkshells = linkshells;
@@ -69,6 +72,7 @@ internal sealed class MessagesApp : IPhoneApp
         this.linkshellBridge = linkshellBridge;
         this.launcher = launcher;
         this.lodestone = lodestone;
+        this.notifications = notifications;
         router = new ViewRouter<MessagesView>(default, Id);
         drawView = DrawView;
         backToList = () => router.Pop();
@@ -238,6 +242,7 @@ internal sealed class MessagesApp : IPhoneApp
     private void DrawDirectThread(Rect area, Conversation conversation)
     {
         conversation.MarkRead();
+        notifications.RemoveGroup(conversation.SendTarget);
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, conversation.Contact, backToList);
         var bubbles = BubbleArea(area, out var composerBar);
@@ -265,6 +270,7 @@ internal sealed class MessagesApp : IPhoneApp
     private void DrawLinkshellThread(Rect area, LinkshellThread thread)
     {
         thread.MarkRead();
+        notifications.RemoveGroup(thread.Channel.Key);
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, LinkshellLabel.Of(thread.Channel, thread.Name), backToList);
         var bubbles = BubbleArea(area, out var composerBar);

@@ -118,7 +118,12 @@ internal sealed class SocialNotificationService : IDisposable
             return;
         }
 
-        notifications.Notify(new PhoneNotification(item.App, ActorLabel(item), body, DateTime.Now, AccentFor(item.App)));
+        notifications.Notify(new PhoneNotification(item.App, ActorLabel(item), body, DateTime.Now, AccentFor(item.App))
+        {
+            ActorId = item.ActorId,
+            PostId = item.PostId,
+            SocialType = item.Type,
+        });
     }
 
     private static string ActorLabel(NotificationDto item)

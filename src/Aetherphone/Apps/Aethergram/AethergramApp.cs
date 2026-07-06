@@ -5,9 +5,11 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
@@ -43,6 +45,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     public string Glyph => "Ag";
     public int BadgeCount => 0;
     private readonly AethergramStore store;
+    private readonly SocialLauncher launcher;
+    private readonly GameData gameData;
+    private readonly Configuration configuration;
     private readonly LodestoneService lodestone;
     private readonly PhotoLibrary library;
     private readonly RemoteImageCache images;
@@ -96,9 +101,12 @@ internal sealed partial class AethergramApp : IPhoneApp
     private string deferredTooltipText = string.Empty;
 
     public AethergramApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, HttpService http,
-        PhotoLibrary library)
+        PhotoLibrary library, SocialLauncher launcher, GameData gameData, Configuration configuration)
     {
         store = new AethergramStore(session, client);
+        this.launcher = launcher;
+        this.gameData = gameData;
+        this.configuration = configuration;
         this.lodestone = lodestone;
         this.library = library;
         images = new RemoteImageCache(http);
@@ -121,6 +129,18 @@ internal sealed partial class AethergramApp : IPhoneApp
         {
             store.RefreshFeed(AethergramFeedScope.ForYou);
             store.RefreshFeed(AethergramFeedScope.Following);
+        }
+
+        if (store.IsSignedIn && launcher.TryConsume(Id, out var link))
+        {
+            if (link.Kind == SocialLinkKind.Profile)
+            {
+                OpenProfile(link.Id);
+            }
+            else
+            {
+                OpenDetailFromLink(link.Id);
+            }
         }
     }
 
@@ -166,6 +186,9 @@ internal sealed partial class AethergramApp : IPhoneApp
                 break;
             case AethergramScreen.Discover:
                 DrawDiscover(area);
+                break;
+            case AethergramScreen.UserList:
+                DrawUserList(area, route.Id!, route.Kind);
                 break;
             default:
                 DrawHome(area);
@@ -279,7 +302,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var pad = 14f * scale;
         var innerX = origin.X + pad;
         var innerWidth = width - pad * 2f;
-        var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
+        var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var headerBlock = 40f * scale;
         var avatarRadius = 18f * scale;
         var imageTop = origin.Y + pad + headerBlock + 12f * scale;
@@ -298,7 +321,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 2f * scale), displayName, theme.TextStrong, 0.92f,
             FontWeight.SemiBold);
-        var subline = $"{post.AuthorWorld} · {RelativeTime(post.CreatedAtUnix)}";
+        var subline = SocialIdentity.FeedMeta(post.AuthorHandle, RelativeTime(post.CreatedAtUnix));
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), subline, AppPalettes.Aethergram.MutedInk, 0.76f);
         if (HoverClick(new Vector2(innerX, origin.Y + pad),
                 new Vector2(origin.X + width - pad - 30f * scale, origin.Y + pad + headerBlock)))
@@ -637,6 +660,20 @@ internal sealed partial class AethergramApp : IPhoneApp
         commentDraft = string.Empty;
         commentFocusPending = focusComment;
         router.Push(AethergramRoute.Detail(post.Id));
+    }
+
+    private void OpenDetailFromLink(string postId)
+    {
+        store.OpenDetailById(postId);
+        commentDraft = string.Empty;
+        commentFocusPending = false;
+        router.Push(AethergramRoute.Detail(postId));
+    }
+
+    private void OpenUserList(string sourceId, UserListKind kind)
+    {
+        store.OpenUserList(sourceId, kind);
+        router.Push(AethergramRoute.UserList(sourceId, kind));
     }
 
     private void EnsureLoaded(AethergramFeedScope scope)

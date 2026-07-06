@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
@@ -51,6 +52,7 @@ internal sealed partial class VelvetApp : IPhoneApp
     private readonly SocialLauncher socialLauncher;
     private readonly LodestoneService lodestone;
     private readonly Configuration configuration;
+    private readonly GameData gameData;
     private readonly PhotoLibrary library;
     private readonly AppSkin ui = new(AppPalettes.Velvet);
     private readonly VelvetAvatarComposer avatar;
@@ -117,13 +119,14 @@ internal sealed partial class VelvetApp : IPhoneApp
 
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, NotificationService notifications,
-        VelvetLauncher launcher, SocialLauncher socialLauncher)
+        VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData)
     {
         store = new VelvetStore(session, client, notifications, configuration);
         this.launcher = launcher;
         this.socialLauncher = socialLauncher;
         this.lodestone = lodestone;
         this.configuration = configuration;
+        this.gameData = gameData;
         this.library = library;
         avatar = new VelvetAvatarComposer(store, library);
         post = new VelvetPostComposer(store, library);
@@ -156,6 +159,20 @@ internal sealed partial class VelvetApp : IPhoneApp
         {
             activeTab = VelvetTab.Messages;
             OpenThreadWith(targetUserId);
+        }
+
+        if (socialLauncher.TryConsume(Id, out var link) && GateAccepted && configuration.VelvetOnboarded &&
+            store.IsSignedIn)
+        {
+            if (link.Kind == SocialLinkKind.Profile)
+            {
+                OpenProfile(link.Id);
+            }
+            else
+            {
+                store.EnsurePost(link.Id);
+                router.Push(VelvetRoute.PostDetail(link.Id));
+            }
         }
     }
 
@@ -239,6 +256,9 @@ internal sealed partial class VelvetApp : IPhoneApp
                 break;
             case VelvetScreen.PostDetail:
                 DrawPostDetail(area, route.Id!);
+                break;
+            case VelvetScreen.Likers:
+                DrawLikers(area, route.Id!);
                 break;
             default:
                 DrawRoot(area);
@@ -1149,6 +1169,71 @@ internal sealed partial class VelvetApp : IPhoneApp
     {
         store.OpenProfile(userId);
         router.Push(VelvetRoute.Profile(userId));
+    }
+
+    private void OpenLikers(string postId)
+    {
+        store.OpenLikers(postId);
+        router.Push(VelvetRoute.Likers(postId));
+    }
+
+    private void DrawLikers(Rect area, string postId)
+    {
+        store.OpenLikers(postId);
+        var context = new PhoneContext(area, theme, navigation);
+        AppHeader.Draw(context, Loc.T(L.Social.LikedByTitle), back);
+        var scale = ImGuiHelpers.GlobalScale;
+        var top = area.Min.Y + AppHeader.Height * scale;
+        var listRect = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var snapshot = store.Likers;
+        using (AppSurface.Begin(listRect))
+        {
+            if (snapshot.Length == 0)
+            {
+                var message = store.LikersLoading ? Loc.T(L.Common.Loading) : Loc.T(L.Social.ListEmpty);
+                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale), message,
+                    AppPalettes.Velvet.MutedInk);
+            }
+            else
+            {
+                ImGui.Dummy(new Vector2(0f, 6f * scale));
+                for (var index = 0; index < snapshot.Length; index++)
+                {
+                    DrawLikerRow(snapshot[index]);
+                }
+
+                ImGui.Dummy(new Vector2(0f, 16f * scale));
+            }
+        }
+    }
+
+    private void DrawLikerRow(UserDto user)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var rowHeight = 58f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var radius = 20f * scale;
+        var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
+        AvatarView.Draw(ImGui.GetWindowDrawList(), avatarCenter, radius, Accent, Monogram(user.DisplayName, user.Handle),
+            0.95f, lodestone.Remote(user.Id, ToUri(user.AvatarUrl)), 32);
+        var textLeft = origin.X + radius * 2f + 12f * scale;
+        var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Handle : user.DisplayName;
+        Typography.Draw(new Vector2(textLeft, origin.Y + 11f * scale), displayName, theme.TextStrong, 1f,
+            FontWeight.SemiBold);
+        if (user.Handle.Length > 0)
+        {
+            Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), $"@{user.Handle}", AppPalettes.Velvet.MutedInk,
+                0.82f);
+        }
+
+        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
+        {
+            OpenProfile(user.Id);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, rowHeight));
     }
 
     private void OpenThreadWith(string userId)

@@ -5,9 +5,11 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Social;
@@ -36,6 +38,9 @@ internal sealed partial class ChirperApp : IPhoneApp
     public string Glyph => "Ch";
     public int BadgeCount => 0;
     private readonly ChirperStore store;
+    private readonly SocialLauncher launcher;
+    private readonly GameData gameData;
+    private readonly Configuration configuration;
     private readonly LodestoneService lodestone;
     private readonly RemoteImageCache images;
     private readonly ChirperAvatarComposer avatar;
@@ -70,9 +75,12 @@ internal sealed partial class ChirperApp : IPhoneApp
     private volatile bool reportSubmitting;
 
     public ChirperApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, HttpService http,
-        PhotoLibrary library)
+        PhotoLibrary library, SocialLauncher launcher, GameData gameData, Configuration configuration)
     {
         store = new ChirperStore(session, client);
+        this.launcher = launcher;
+        this.gameData = gameData;
+        this.configuration = configuration;
         this.lodestone = lodestone;
         images = new RemoteImageCache(http);
         avatar = new ChirperAvatarComposer(store, library);
@@ -90,6 +98,18 @@ internal sealed partial class ChirperApp : IPhoneApp
             store.EnsureMe();
             store.RefreshFeed(ChirperFeedScope.ForYou);
             store.RefreshFeed(ChirperFeedScope.Following);
+        }
+
+        if (store.IsSignedIn && launcher.TryConsume(Id, out var link))
+        {
+            if (link.Kind == SocialLinkKind.Profile)
+            {
+                OpenProfile(link.Id);
+            }
+            else
+            {
+                OpenThreadFromLink(link.Id);
+            }
         }
     }
 
@@ -140,6 +160,9 @@ internal sealed partial class ChirperApp : IPhoneApp
                 break;
             case ChirperScreen.Thread:
                 DrawThread(area, route.PostId!);
+                break;
+            case ChirperScreen.UserList:
+                DrawUserList(area, route.UserId!, route.Kind);
                 break;
             default:
                 DrawHome(area);
@@ -254,7 +277,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var contentLeft = avatarCenter.X + radius + 12f * scale;
         var contentRight = origin.X + width - pad;
         var contentWidth = contentRight - contentLeft;
-        var displayName = string.IsNullOrEmpty(post.AuthorDisplayName) ? post.AuthorName : post.AuthorDisplayName;
+        var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var nameSize = Typography.Measure(displayName, 1.05f, FontWeight.SemiBold);
         var textTop = origin.Y + pad + nameSize.Y + 6f * scale;
         var textHeight = post.Text.Length > 0 ? MeasureWrapped(post.Text, contentWidth, 1.05f) : 0f;
@@ -271,9 +294,7 @@ internal sealed partial class ChirperApp : IPhoneApp
 
         Typography.Draw(new Vector2(contentLeft, origin.Y + pad), displayName, theme.TextStrong, 1.05f,
             FontWeight.SemiBold);
-        var meta = post.AuthorHandle.Length > 0
-            ? $"@{post.AuthorHandle} · {RelativeTime(post.CreatedAtUnix)}"
-            : $"{post.AuthorWorld} · {RelativeTime(post.CreatedAtUnix)}";
+        var meta = SocialIdentity.FeedMeta(post.AuthorHandle, RelativeTime(post.CreatedAtUnix));
         var metaSize = Typography.Measure(meta, 0.9f);
         Typography.Draw(
             new Vector2(contentLeft + nameSize.X + 7f * scale, origin.Y + pad + (nameSize.Y - metaSize.Y) * 0.5f), meta,
@@ -603,6 +624,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         {
             ImGui.Dummy(new Vector2(0f, FeedTopPadding * scale));
             DrawPost(post, true);
+            if (post.TotalReactions > 0)
+            {
+                DrawLikersLink(post);
+            }
+
             var comments = store.DetailComments;
             ImGui.Dummy(new Vector2(0f, 2f * scale));
             ui.SectionHeading(comments.Length > 0
@@ -647,9 +673,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         }
 
         var textLeft = origin.X + radius * 2f + 10f * scale;
-        var displayName = string.IsNullOrEmpty(comment.AuthorDisplayName)
-            ? comment.AuthorName
-            : comment.AuthorDisplayName;
+        var displayName = SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle);
         var nameSize = Typography.Measure(displayName, 0.95f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(textLeft, origin.Y), displayName, theme.TextStrong, 0.95f, FontWeight.SemiBold);
         var meta = comment.AuthorHandle.Length > 0
@@ -830,12 +854,43 @@ internal sealed partial class ChirperApp : IPhoneApp
         router.Push(ChirperRoute.Profile(userId));
     }
 
+    private void DrawLikersLink(PostDto post)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var label = Loc.Plural(L.Chirper.Likes, post.TotalReactions);
+        var origin = ImGui.GetCursorScreenPos();
+        var pad = 16f * scale;
+        var pos = new Vector2(origin.X + pad, origin.Y);
+        var size = Typography.Measure(label, 0.9f, FontWeight.Medium);
+        var hovered = ImGui.IsMouseHoveringRect(pos, pos + size);
+        Typography.Draw(pos, label, hovered ? theme.Accent : AppPalettes.Chirper.MutedInk, 0.9f, FontWeight.Medium);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                OpenUserList(post.Id, UserListKind.Likers);
+            }
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(size.X + pad, size.Y + 6f * scale));
+    }
+
     private void OpenThread(PostDto post)
     {
         actions.Reset();
         commentDraft = string.Empty;
         store.OpenDetail(post);
         router.Push(ChirperRoute.Thread(post.Id));
+    }
+
+    private void OpenThreadFromLink(string postId)
+    {
+        actions.Reset();
+        commentDraft = string.Empty;
+        store.OpenThreadById(postId);
+        router.Push(ChirperRoute.Thread(postId));
     }
 
     private void EnsureLoaded(ChirperFeedScope scope)

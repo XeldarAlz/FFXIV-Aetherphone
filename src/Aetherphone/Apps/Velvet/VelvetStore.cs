@@ -69,6 +69,12 @@ internal sealed class VelvetStore : IDisposable
     private volatile bool commenting;
     private volatile bool feedLoaded;
     private volatile bool posting;
+    private volatile VelvetPostDto? fetchedPost;
+    private volatile string? fetchingPostId;
+    private volatile string? likersPostId;
+    private volatile UserDto[] likers = Array.Empty<UserDto>();
+    private volatile bool likersLoading;
+    private volatile bool likersFailed;
 
     public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications,
         Configuration configuration)
@@ -84,6 +90,7 @@ internal sealed class VelvetStore : IDisposable
     {
         viewingThreadUserId = userId;
         lastViewingUtc = DateTime.UtcNow;
+        notifications.RemoveGroup(userId);
     }
 
     private void OnFrameworkTick(IFramework framework)
@@ -182,6 +189,10 @@ internal sealed class VelvetStore : IDisposable
     public bool LoadingFeed => loadingFeed;
     public bool FeedLoaded => feedLoaded;
     public bool Posting => posting;
+    public VelvetPostDto? FetchedPost => fetchedPost;
+    public UserDto[] Likers => likers;
+    public bool LikersLoading => likersLoading;
+    public bool LikersFailed => likersFailed;
 
     public int UnreadCount
     {
@@ -860,6 +871,61 @@ internal sealed class VelvetStore : IDisposable
     public bool LoadingComments => loadingComments;
     public bool Commenting => commenting;
 
+    public void EnsurePost(string postId)
+    {
+        if (fetchingPostId == postId || fetchedPost?.Id == postId)
+        {
+            return;
+        }
+
+        fetchingPostId = postId;
+        fetchedPost = null;
+        RunGuarded("post by id", async token =>
+        {
+            var post = await client.VelvetPostAsync(postId, token).ConfigureAwait(false);
+            if (fetchingPostId == postId && post is not null)
+            {
+                fetchedPost = post;
+            }
+        });
+    }
+
+    public void OpenLikers(string postId)
+    {
+        if (likersPostId == postId && (likers.Length > 0 || likersLoading))
+        {
+            return;
+        }
+
+        likersPostId = postId;
+        likers = Array.Empty<UserDto>();
+        likersFailed = false;
+        likersLoading = true;
+        RunGuarded("likers", async token =>
+        {
+            var page = await client.VelvetPostLikersAsync(postId, null, token).ConfigureAwait(false);
+            if (likersPostId != postId)
+            {
+                return;
+            }
+
+            if (page is null)
+            {
+                likersFailed = true;
+            }
+            else
+            {
+                likers = page.Items;
+            }
+        }, () =>
+        {
+            if (likersPostId == postId)
+            {
+                likersLoading = false;
+            }
+        });
+    }
+
     public void OpenComments(string postId)
     {
         detailPostId = postId;
@@ -955,6 +1021,10 @@ internal sealed class VelvetStore : IDisposable
             if (result is not null)
             {
                 feed = Replace(feed, result);
+                if (fetchedPost?.Id == result.Id)
+                {
+                    fetchedPost = result;
+                }
             }
         });
     }

@@ -1,3 +1,5 @@
+using Aetherphone.Core.Social;
+
 namespace Aetherphone.Apps.Aethergram;
 
 internal enum AethergramScreen
@@ -8,9 +10,13 @@ internal enum AethergramScreen
     Profile,
     EditProfile,
     Discover,
+    UserList,
 }
 
-internal readonly record struct AethergramRoute(AethergramScreen Screen, string? Id = null)
+internal readonly record struct AethergramRoute(
+    AethergramScreen Screen,
+    string? Id = null,
+    UserListKind Kind = UserListKind.Followers)
 {
     public static readonly AethergramRoute Home = new(AethergramScreen.Home);
     public static readonly AethergramRoute Compose = new(AethergramScreen.Compose);
@@ -18,4 +24,7 @@ internal readonly record struct AethergramRoute(AethergramScreen Screen, string?
     public static readonly AethergramRoute Discover = new(AethergramScreen.Discover);
     public static AethergramRoute Detail(string postId) => new(AethergramScreen.Detail, postId);
     public static AethergramRoute Profile(string userId) => new(AethergramScreen.Profile, userId);
+
+    public static AethergramRoute UserList(string sourceId, UserListKind kind) =>
+        new(AethergramScreen.UserList, sourceId, kind);
 }

@@ -1,3 +1,5 @@
+using Aetherphone.Core.Social;
+
 namespace Aetherphone.Apps.Chirper;
 
 internal enum ChirperScreen
@@ -9,9 +11,14 @@ internal enum ChirperScreen
     Avatar,
     Discover,
     Thread,
+    UserList,
 }
 
-internal readonly record struct ChirperRoute(ChirperScreen Screen, string? UserId = null, string? PostId = null)
+internal readonly record struct ChirperRoute(
+    ChirperScreen Screen,
+    string? UserId = null,
+    string? PostId = null,
+    UserListKind Kind = UserListKind.Followers)
 {
     public static readonly ChirperRoute Home = new(ChirperScreen.Home);
     public static readonly ChirperRoute Compose = new(ChirperScreen.Compose);
@@ -20,4 +27,7 @@ internal readonly record struct ChirperRoute(ChirperScreen Screen, string? UserI
     public static readonly ChirperRoute Discover = new(ChirperScreen.Discover);
     public static ChirperRoute Profile(string userId) => new(ChirperScreen.Profile, userId);
     public static ChirperRoute Thread(string postId) => new(ChirperScreen.Thread, PostId: postId);
+
+    public static ChirperRoute UserList(string sourceId, UserListKind kind) =>
+        new(ChirperScreen.UserList, UserId: sourceId, Kind: kind);
 }

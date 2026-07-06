@@ -25,6 +25,10 @@ internal static class L
         public static readonly LocString Followed = new("social.followed", "started following you");
         public static readonly LocString ConnectionRequest = new("social.connectionRequest", "wants to connect with you");
         public static readonly LocString ConnectionAccepted = new("social.connectionAccepted", "accepted your connection request");
+        public static readonly LocString FollowersTitle = new("social.followersTitle", "Followers");
+        public static readonly LocString FollowingTitle = new("social.followingTitle", "Following");
+        public static readonly LocString LikedByTitle = new("social.likedByTitle", "Liked by");
+        public static readonly LocString ListEmpty = new("social.listEmpty", "No one here yet");
     }
 
     internal static class Apps

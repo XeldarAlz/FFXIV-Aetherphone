@@ -11,6 +11,7 @@ using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -50,7 +51,7 @@ internal sealed partial class VelvetApp
             var displayName = string.IsNullOrEmpty(me.DisplayName) ? me.Handle : me.DisplayName;
             y += DrawCenteredLine(drawList, centerX, y, displayName, theme.TextStrong, 1.45f, FontWeight.SemiBold) +
                  3f * scale;
-            var meta = me.Handle.Length > 0 ? $"@{me.Handle}" : me.World;
+            var meta = SocialIdentity.ProfileMeta(me.Handle, SocialRegion.EffectiveCode(configuration, gameData));
             if (meta.Length > 0)
             {
                 y += DrawCenteredLine(drawList, centerX, y, meta, AppPalettes.Velvet.MutedInk, 0.92f, FontWeight.Regular) +

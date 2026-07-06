@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 
 namespace Aetherphone.Apps.Aethergram;
@@ -42,6 +43,10 @@ internal sealed class AethergramStore : IDisposable
     private volatile bool searching;
     private volatile bool posting;
     private volatile bool loadingMe;
+    private volatile string? userListKey;
+    private volatile UserDto[] userListResults = Array.Empty<UserDto>();
+    private volatile bool userListLoading;
+    private volatile bool userListFailed;
 
     public AethergramStore(AethernetSession session, AethernetClient client)
     {
@@ -67,6 +72,9 @@ internal sealed class AethergramStore : IDisposable
     public UserDto[] DiscoverResults => discoverResults;
     public bool Searching => searching;
     public bool Posting => posting;
+    public UserDto[] UserListResults => userListResults;
+    public bool UserListLoading => userListLoading;
+    public bool UserListFailed => userListFailed;
 
     public void EnsureMe()
     {
@@ -515,6 +523,81 @@ internal sealed class AethergramStore : IDisposable
         OpenProfile(current);
     }
 
+    public void OpenUserList(string sourceId, UserListKind kind)
+    {
+        var key = $"{(int)kind}:{sourceId}";
+        if (userListKey == key && (userListResults.Length > 0 || userListLoading))
+        {
+            return;
+        }
+
+        userListKey = key;
+        userListResults = Array.Empty<UserDto>();
+        userListFailed = false;
+        userListLoading = true;
+        RunGuarded("user list", async token =>
+        {
+            var page = kind switch
+            {
+                UserListKind.Followers => await client.FollowersAsync(sourceId, null, token).ConfigureAwait(false),
+                UserListKind.Following => await client.FollowingAsync(sourceId, null, token).ConfigureAwait(false),
+                _ => await client.PostLikersAsync(sourceId, null, token).ConfigureAwait(false),
+            };
+            if (userListKey != key)
+            {
+                return;
+            }
+
+            if (page is null)
+            {
+                userListFailed = true;
+            }
+            else
+            {
+                userListResults = page.Items;
+            }
+        }, () =>
+        {
+            if (userListKey == key)
+            {
+                userListLoading = false;
+            }
+        });
+    }
+
+    public void OpenDetailById(string postId)
+    {
+        detailPostId = postId;
+        detailPost = null;
+        detailComments = Array.Empty<CommentDto>();
+        detailLoading = true;
+        RunGuarded("detail by id", async token =>
+        {
+            var post = await client.PostAsync(postId, token).ConfigureAwait(false);
+            if (detailPostId != postId)
+            {
+                return;
+            }
+
+            if (post is not null)
+            {
+                detailPost = post;
+            }
+
+            var page = await client.CommentsAsync(postId, null, token).ConfigureAwait(false);
+            if (detailPostId == postId && page is not null)
+            {
+                detailComments = Oldest(page.Items);
+            }
+        }, () =>
+        {
+            if (detailPostId == postId)
+            {
+                detailLoading = false;
+            }
+        });
+    }
+
     public void UpdateProfile(string? displayName, string? handle, string? bio, Action<bool, string> onResult)
     {
         var token = cancellation.Token;
@@ -659,6 +742,7 @@ internal sealed class AethergramStore : IDisposable
     private void UpdateUserEverywhere(string userId, bool follow)
     {
         discoverResults = MapUsers(discoverResults, userId, follow);
+        userListResults = MapUsers(userListResults, userId, follow);
         if (profileUser is { } current && current.Id == userId)
         {
             profileUser = current with

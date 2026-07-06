@@ -100,8 +100,7 @@ internal sealed partial class ChirperApp
             var pad = 14f * scale;
             var radius = 20f * scale;
             var me = store.Me;
-            var displayName =
-                me is null ? string.Empty : (string.IsNullOrEmpty(me.DisplayName) ? me.Name : me.DisplayName);
+            var displayName = me is null ? string.Empty : SocialIdentity.Name(me.DisplayName, me.Handle);
             if (me is not null)
             {
                 DrawAvatar(drawList, new Vector2(cardMin.X + pad + radius, cardMin.Y + pad + radius), radius, me.Name,

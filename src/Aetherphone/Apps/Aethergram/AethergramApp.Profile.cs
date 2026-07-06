@@ -35,17 +35,16 @@ internal sealed partial class AethergramApp
         var pad = 16f * scale;
         var innerLeft = origin.X + pad;
         var innerWidth = width - pad * 2f;
-        var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Name : user.DisplayName;
+        var displayName = SocialIdentity.Name(user.DisplayName, user.Handle);
         var avatarRadius = 40f * scale;
-        var handleLine = user.Handle.Length > 0 ? $"@{user.Handle}" : string.Empty;
-        var worldLine = $"{user.Name} · {user.World}";
+        var regionCode = user.IsMe ? SocialRegion.EffectiveCode(configuration, gameData) : gameData.RegionCodeForWorld(user.World);
+        var metaLine = SocialIdentity.ProfileMeta(user.Handle, regionCode);
         var lineGap = 3f * scale;
         var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
-        var handleH = handleLine.Length > 0 ? Typography.Measure(handleLine, 0.95f).Y + lineGap : 0f;
-        var worldH = Typography.Measure(worldLine, 0.95f).Y;
+        var metaH = metaLine.Length > 0 ? Typography.Measure(metaLine, 0.95f).Y : 0f;
         var bioH = user.Bio.Length > 0 ? 8f * scale + MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
         var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
-        var cardBottom = textTop + nameH + lineGap + handleH + worldH + bioH + pad;
+        var cardBottom = textTop + nameH + lineGap + metaH + bioH + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
         var avatarCenter = new Vector2(innerLeft + avatarRadius, origin.Y + pad + avatarRadius);
         drawList.AddCircleFilled(avatarCenter, avatarRadius + 2.5f * scale,
@@ -77,14 +76,12 @@ internal sealed partial class AethergramApp
 
         Typography.Draw(new Vector2(innerLeft, textTop), displayName, theme.TextStrong, 1.4f, FontWeight.Bold);
         var textY = textTop + nameH + lineGap;
-        if (handleLine.Length > 0)
+        if (metaLine.Length > 0)
         {
-            Typography.Draw(new Vector2(innerLeft, textY), handleLine, AppPalettes.Aethergram.MutedInk, 0.95f);
-            textY += handleH;
+            Typography.Draw(new Vector2(innerLeft, textY), metaLine, AppPalettes.Aethergram.MutedInk, 0.95f);
+            textY += metaH;
         }
 
-        Typography.Draw(new Vector2(innerLeft, textY), worldLine, AppPalettes.Aethergram.MutedInk, 0.95f);
-        textY += worldH;
         if (user.Bio.Length > 0)
         {
             ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
@@ -138,6 +135,8 @@ internal sealed partial class AethergramApp
         ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 18f * scale);
         var third = width / 3f;
         var centerY = origin.Y + height * 0.5f;
+        DrawStatHover(drawList, origin, third * 1f, third, height, scale);
+        DrawStatHover(drawList, origin, third * 2f, third, height, scale);
         var dividerColor = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f));
         for (var index = 1; index < 3; index++)
         {
@@ -151,6 +150,16 @@ internal sealed partial class AethergramApp
         DrawStatColumn(origin.X + third * 1f, third, centerY, user.Followers.ToString(Loc.Culture), followersLabel);
         DrawStatColumn(origin.X + third * 2f, third, centerY, user.Following.ToString(Loc.Culture),
             Loc.T(L.Aethergram.Following));
+        if (HoverClick(new Vector2(origin.X + third, origin.Y), new Vector2(origin.X + third * 2f, origin.Y + height)))
+        {
+            OpenUserList(user.Id, UserListKind.Followers);
+        }
+
+        if (HoverClick(new Vector2(origin.X + third * 2f, origin.Y), new Vector2(origin.X + width, origin.Y + height)))
+        {
+            OpenUserList(user.Id, UserListKind.Following);
+        }
+
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
@@ -162,6 +171,16 @@ internal sealed partial class AethergramApp
         Typography.DrawCentered(new Vector2(center, centerY - 10f * scale), value, theme.TextStrong, 1.25f,
             FontWeight.Bold);
         Typography.DrawCentered(new Vector2(center, centerY + 13f * scale), label, AppPalettes.Aethergram.MutedInk, 0.8f);
+    }
+
+    private static void DrawStatHover(ImDrawListPtr drawList, Vector2 origin, float columnOffset, float columnWidth,
+        float height, float scale)
+    {
+        var padX = 6f * scale;
+        var padY = 8f * scale;
+        var min = new Vector2(origin.X + columnOffset + padX, origin.Y + padY);
+        var max = new Vector2(origin.X + columnOffset + columnWidth - padX, origin.Y + height - padY);
+        UiInteract.HoverHighlight(drawList, min, max, 12f * scale);
     }
 
     private void DrawProfileGrid()
@@ -351,6 +370,45 @@ internal sealed partial class AethergramApp
         }
     }
 
+    private void DrawUserList(Rect area, string sourceId, UserListKind kind)
+    {
+        store.OpenUserList(sourceId, kind);
+        var context = new PhoneContext(area, theme, navigation);
+        AppHeader.Draw(context, UserListTitle(kind), back);
+        var scale = ImGuiHelpers.GlobalScale;
+        var top = area.Min.Y + AppHeader.Height * scale;
+        var listRect = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var snapshot = store.UserListResults;
+        using (AppSurface.Begin(listRect))
+        {
+            if (snapshot.Length == 0)
+            {
+                var message = store.UserListLoading ? Loc.T(L.Common.Loading)
+                    : store.UserListFailed ? Loc.T(L.Aethergram.ProfileError)
+                    : Loc.T(L.Social.ListEmpty);
+                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale), message,
+                    AppPalettes.Aethergram.MutedInk);
+            }
+            else
+            {
+                ImGui.Dummy(new Vector2(0f, 4f * scale));
+                for (var index = 0; index < snapshot.Length; index++)
+                {
+                    DrawUserRow(snapshot[index]);
+                }
+
+                ImGui.Dummy(new Vector2(0f, 12f * scale));
+            }
+        }
+    }
+
+    private static string UserListTitle(UserListKind kind) => kind switch
+    {
+        UserListKind.Followers => Loc.T(L.Social.FollowersTitle),
+        UserListKind.Following => Loc.T(L.Social.FollowingTitle),
+        _ => Loc.T(L.Social.LikedByTitle),
+    };
+
     private void DrawUserRow(UserDto user)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -361,10 +419,11 @@ internal sealed partial class AethergramApp
         var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
         DrawAvatar(avatarCenter, radius, user.Name, user.World, user.AvatarUrl, 0.95f, 32);
         var textLeft = origin.X + radius * 2f + 12f * scale;
-        var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Name : user.DisplayName;
+        var displayName = SocialIdentity.Name(user.DisplayName, user.Handle);
         Typography.Draw(new Vector2(textLeft, origin.Y + 9f * scale), displayName, theme.TextStrong, 1f,
             FontWeight.SemiBold);
-        var sub = user.Handle.Length > 0 ? $"@{user.Handle} · {user.World}" : $"{user.Name} · {user.World}";
+        var regionCode = user.IsMe ? SocialRegion.EffectiveCode(configuration, gameData) : gameData.RegionCodeForWorld(user.World);
+        var sub = SocialIdentity.ProfileMeta(user.Handle, regionCode);
         Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), sub, AppPalettes.Aethergram.MutedInk, 0.85f);
         var buttonWidth = 96f * scale;
         var buttonHeight = 30f * scale;

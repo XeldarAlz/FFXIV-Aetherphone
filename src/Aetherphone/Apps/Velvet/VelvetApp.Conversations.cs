@@ -289,10 +289,13 @@ internal sealed partial class VelvetApp
         var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
         AvatarView.Draw(drawList, avatarCenter, radius, Accent, MonogramFor(profile), 1.05f, AvatarFor(profile), 40);
         var textLeft = origin.X + radius * 2f + 12f * scale;
-        var displayName = string.IsNullOrEmpty(profile.DisplayName) ? profile.Handle : profile.DisplayName;
+        var displayName = SocialIdentity.Name(profile.DisplayName, profile.Handle);
         Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale), displayName, theme.TextStrong, 1f,
             FontWeight.SemiBold);
-        var sub = $"{VelvetLookingFor.Label(profile.LookingFor)} · {profile.DataCenter}";
+        var regionCode = gameData.RegionCodeForWorld(profile.World);
+        var sub = regionCode.Length > 0
+            ? $"{VelvetLookingFor.Label(profile.LookingFor)} · {regionCode}"
+            : VelvetLookingFor.Label(profile.LookingFor);
         Typography.Draw(new Vector2(textLeft, origin.Y + 32f * scale), sub, AppPalettes.Velvet.MutedInk, 0.82f);
         DrawTagsLine(new Vector2(textLeft, origin.Y + 50f * scale), profile.Tags);
         var buttonWidth = 92f * scale;
@@ -444,13 +447,13 @@ internal sealed partial class VelvetApp
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var name = ThreadTitle(threadId);
         var avatar = ThreadAvatar(threadId, out var monogram, out var presence);
-        var avatarRadius = 13f * scale;
+        var avatarRadius = 18f * scale;
         var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
         var gap = 9f * scale;
         var groupWidth = avatarRadius * 2f + gap + nameSize.X;
         var startX = MathF.Max(area.Center.X - groupWidth * 0.5f, area.Min.X + 48f * scale);
         var avatarCenter = new Vector2(startX + avatarRadius, rowCenterY);
-        AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent, monogram, 0.85f, avatar, 28);
+        AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent, monogram, 0.95f, avatar, 32);
         DrawPresenceDot(
             new Vector2(avatarCenter.X + avatarRadius - 3f * scale, avatarCenter.Y + avatarRadius - 3f * scale),
             presence);

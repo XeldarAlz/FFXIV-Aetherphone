@@ -42,8 +42,14 @@ internal sealed partial class VelvetApp
             }
         }
 
+        if (found is null && store.FetchedPost is { } fetched && fetched.Id == postId)
+        {
+            found = fetched;
+        }
+
         if (found is not { } post)
         {
+            store.EnsurePost(postId);
             Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), AppPalettes.Velvet.MutedInk);
             return;
         }
@@ -109,9 +115,21 @@ internal sealed partial class VelvetApp
             if (post.TotalReactions > 0)
             {
                 var likeText = post.TotalReactions.ToString(Loc.Culture);
-                Typography.Draw(new Vector2(actionCursorX, actionsY - 7f * scale), likeText, AppPalettes.Velvet.BodyInk, 0.85f,
+                var likeSize = Typography.Measure(likeText, 0.85f, FontWeight.Medium);
+                var likePos = new Vector2(actionCursorX, actionsY - 7f * scale);
+                var likeHovered = ImGui.IsMouseHoveringRect(likePos, likePos + likeSize);
+                Typography.Draw(likePos, likeText, likeHovered ? theme.Accent : AppPalettes.Velvet.BodyInk, 0.85f,
                     FontWeight.Medium);
-                actionCursorX += Typography.Measure(likeText, 0.85f, FontWeight.Medium).X + 16f * scale;
+                if (likeHovered)
+                {
+                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                    {
+                        OpenLikers(post.Id);
+                    }
+                }
+
+                actionCursorX += likeSize.X + 16f * scale;
             }
             else
             {

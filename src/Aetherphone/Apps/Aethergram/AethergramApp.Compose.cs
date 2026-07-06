@@ -351,7 +351,7 @@ internal sealed partial class AethergramApp
             var radius = 11f * scale;
             var avatarCenter = new Vector2(card.Min.X + padding + radius, card.Min.Y + padding + radius);
             DrawAvatar(avatarCenter, radius, me.Name, me.World, me.AvatarUrl, 0.7f, 24);
-            var displayName = string.IsNullOrEmpty(me.DisplayName) ? me.Name : me.DisplayName;
+            var displayName = SocialIdentity.Name(me.DisplayName, me.Handle);
             Typography.Draw(new Vector2(avatarCenter.X + radius + 8f * scale, avatarCenter.Y - 8f * scale), displayName,
                 theme.TextStrong, 0.88f, FontWeight.SemiBold);
             inputTop = avatarCenter.Y + radius + 6f * scale;

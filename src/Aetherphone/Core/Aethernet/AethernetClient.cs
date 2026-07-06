@@ -131,6 +131,46 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/users/{userId}/posts"), AethernetJsonContext.Default.FeedPage, session.Token, token, authStatusSink);
     }
 
+    public Task<UserListPage?> FollowersAsync(string userId, string? cursor, CancellationToken token)
+    {
+        return UserListAsync($"/users/{Uri.EscapeDataString(userId)}/followers", cursor, token);
+    }
+
+    public Task<UserListPage?> FollowingAsync(string userId, string? cursor, CancellationToken token)
+    {
+        return UserListAsync($"/users/{Uri.EscapeDataString(userId)}/following", cursor, token);
+    }
+
+    public Task<UserListPage?> PostLikersAsync(string postId, string? cursor, CancellationToken token)
+    {
+        return UserListAsync($"/posts/{Uri.EscapeDataString(postId)}/likers", cursor, token);
+    }
+
+    public Task<UserListPage?> VelvetPostLikersAsync(string postId, string? cursor, CancellationToken token)
+    {
+        return UserListAsync($"/velvet/posts/{Uri.EscapeDataString(postId)}/reactions", cursor, token);
+    }
+
+    private Task<UserListPage?> UserListAsync(string path, string? cursor, CancellationToken token)
+    {
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.UserListPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<PostDto?> PostAsync(string postId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/posts/{Uri.EscapeDataString(postId)}"), AethernetJsonContext.Default.PostDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetPostDto?> VelvetPostAsync(string postId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/posts/{Uri.EscapeDataString(postId)}"), AethernetJsonContext.Default.VelvetPostDto, session.Token, token, authStatusSink);
+    }
+
     public Task<bool> FollowAsync(string userId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Post, Url($"/follows/{userId}"), session.Token, token, authStatusSink);
