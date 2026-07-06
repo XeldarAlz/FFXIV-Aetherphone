@@ -46,6 +46,9 @@ internal sealed class VelvetStore : IDisposable
     private volatile VelvetConnectionDto[] requests = Array.Empty<VelvetConnectionDto>();
     private volatile bool loadingRequests;
     private volatile bool requestsLoaded;
+    private volatile VelvetConnectionDto[] sentRequests = Array.Empty<VelvetConnectionDto>();
+    private volatile bool loadingSentRequests;
+    private volatile bool sentRequestsLoaded;
     private volatile string? profileUserId;
     private volatile VelvetProfileDto? profileUser;
     private volatile bool profileLoading;
@@ -160,6 +163,9 @@ internal sealed class VelvetStore : IDisposable
     public bool LoadingRequests => loadingRequests;
     public bool RequestsLoaded => requestsLoaded;
     public int RequestCount => requests.Length;
+    public VelvetConnectionDto[] SentRequests => sentRequests;
+    public bool LoadingSentRequests => loadingSentRequests;
+    public bool SentRequestsLoaded => sentRequestsLoaded;
     public string? ProfileUserId => profileUserId;
     public VelvetProfileDto? ProfileUser => profileUser;
     public bool ProfileLoading => profileLoading;
@@ -447,17 +453,49 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
+    public void RefreshSentRequests()
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        loadingSentRequests = true;
+        RunGuarded("sent requests", async token =>
+        {
+            var page = await client.VelvetSentRequestsAsync(token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                sentRequests = page.Items;
+            }
+        }, () =>
+        {
+            loadingSentRequests = false;
+            sentRequestsLoaded = true;
+        });
+    }
+
     public void AcceptRequest(string userId)
     {
         requests = RemoveConnection(requests, userId);
         connectionsLoaded = false;
+        SetConnectionStateEverywhere(userId, VelvetConnectionState.Connected);
         RunGuarded("accept", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
     }
 
     public void DeclineRequest(string userId)
     {
         requests = RemoveConnection(requests, userId);
+        SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
         RunGuarded("decline", async token => await client.DeclineRequestAsync(userId, token).ConfigureAwait(false));
+    }
+
+    public void CancelRequest(string userId)
+    {
+        sentRequests = RemoveConnection(sentRequests, userId);
+        SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
+        RunGuarded("cancel request",
+            async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
     }
 
     public void RefreshFeed()
@@ -520,12 +558,14 @@ internal sealed class VelvetStore : IDisposable
 
     public void Connect(string userId)
     {
+        sentRequestsLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
         RunGuarded("connect", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
     }
 
     public void Disconnect(string userId)
     {
+        connections = RemoveConnection(connections, userId);
         SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
         RunGuarded("disconnect", async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
     }
@@ -1021,6 +1061,7 @@ internal sealed class VelvetStore : IDisposable
         connectionsLoaded = false;
         threadsLoaded = false;
         requestsLoaded = false;
+        sentRequestsLoaded = false;
         feedLoaded = false;
     }
 

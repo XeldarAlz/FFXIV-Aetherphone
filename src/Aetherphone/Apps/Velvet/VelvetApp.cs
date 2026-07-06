@@ -877,6 +877,11 @@ internal sealed partial class VelvetApp : IPhoneApp
             store.RefreshRequests();
         }
 
+        if (!store.SentRequestsLoaded && !store.LoadingSentRequests)
+        {
+            store.RefreshSentRequests();
+        }
+
         if (!store.ThreadsLoaded && !store.LoadingThreads)
         {
             store.RefreshThreads();
@@ -889,6 +894,7 @@ internal sealed partial class VelvetApp : IPhoneApp
 
         var scale = ImGuiHelpers.GlobalScale;
         var requests = store.Requests;
+        var sentRequests = store.SentRequests;
         var connections = store.Connections;
         var threads = store.Threads;
         using (AppSurface.Begin(area))
@@ -900,6 +906,17 @@ internal sealed partial class VelvetApp : IPhoneApp
                 for (var index = 0; index < requests.Length; index++)
                 {
                     DrawRequestRow(requests[index]);
+                }
+
+                ImGui.Dummy(new Vector2(0f, 8f * scale));
+            }
+
+            if (sentRequests.Length > 0)
+            {
+                ui.SectionLabel($"{Loc.T(L.Velvet.SentRequests)} ({sentRequests.Length})");
+                for (var index = 0; index < sentRequests.Length; index++)
+                {
+                    DrawSentRequestRow(sentRequests[index]);
                 }
 
                 ImGui.Dummy(new Vector2(0f, 8f * scale));
@@ -965,6 +982,42 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
 
         if (UiInteract.HoverClick(origin, new Vector2(declineCenter.X - declineWidth, origin.Y + rowHeight)))
+        {
+            OpenProfile(request.UserId);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, rowHeight));
+    }
+
+    private void DrawSentRequestRow(VelvetConnectionDto request)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var rowHeight = 60f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var radius = 20f * scale;
+        var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
+        AvatarView.Draw(ImGui.GetWindowDrawList(), avatarCenter, radius, Accent,
+            Monogram(request.DisplayName, request.Handle), 0.95f,
+            lodestone.Remote(request.UserId, ToUri(request.AvatarUrl)), 32);
+        var textLeft = origin.X + radius * 2f + 12f * scale;
+        var displayName = string.IsNullOrEmpty(request.DisplayName) ? request.Handle : request.DisplayName;
+        Typography.Draw(new Vector2(textLeft, origin.Y + 11f * scale), displayName, theme.TextStrong, 1f,
+            FontWeight.SemiBold);
+        var sub = request.Handle.Length > 0 ? $"@{request.Handle}" : RelativePostTime(request.ConnectedAtUnix);
+        Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), sub, AppPalettes.Velvet.MutedInk, 0.82f);
+        var label = Loc.T(L.Velvet.Requested);
+        var buttonHeight = 30f * scale;
+        var buttonWidth = MathF.Max(92f * scale, Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 24f * scale);
+        var buttonMin = new Vector2(origin.X + width - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f);
+        var buttonRect = new Rect(buttonMin, new Vector2(buttonMin.X + buttonWidth, buttonMin.Y + buttonHeight));
+        if (ui.PillButton(buttonRect, label, false))
+        {
+            store.CancelRequest(request.UserId);
+        }
+
+        if (UiInteract.HoverClick(origin, new Vector2(buttonMin.X - 6f * scale, origin.Y + rowHeight)))
         {
             OpenProfile(request.UserId);
         }

@@ -855,6 +855,9 @@ internal static class L
         public static readonly LocString Accept = new("velvet.accept", "Accept");
         public static readonly LocString Decline = new("velvet.decline", "Decline");
         public static readonly LocString WantsToConnect = new("velvet.wantsToConnect", "wants to connect");
+        public static readonly LocString SentRequests = new("velvet.sentRequests", "Sent");
+        public static readonly LocString Disconnect = new("velvet.disconnect", "Disconnect");
+        public static readonly LocString DisconnectConfirmMessage = new("velvet.disconnectConfirmMessage", "Remove this connection?");
         public static readonly LocString StartChat = new("velvet.startChat", "Start a chat");
         public static readonly LocString PeopleToMeet = new("velvet.peopleToMeet", "People to meet");
         public static readonly LocString RelationshipLabel = new("velvet.relationshipLabel", "Relationship");

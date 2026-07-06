@@ -312,6 +312,11 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/velvet/requests/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
     }
 
+    public Task<VelvetConnectionPage?> VelvetSentRequestsAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/velvet/requests/sent"), AethernetJsonContext.Default.VelvetConnectionPage, session.Token, token, authStatusSink);
+    }
+
     public Task<VelvetConnectionPage?> VelvetConnectionsAsync(string? cursor, CancellationToken token)
     {
         var path = "/velvet/connections";

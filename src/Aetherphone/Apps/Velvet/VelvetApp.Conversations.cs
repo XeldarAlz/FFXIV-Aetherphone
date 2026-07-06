@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Platform;
@@ -99,7 +100,8 @@ internal sealed partial class VelvetApp
         }
 
         y += 18f * scale;
-        var actionWidth = MathF.Min(220f * scale, width);
+        var connected = user.ConnectionState == VelvetConnectionState.Connected;
+        var actionWidth = MathF.Min((connected ? 280f : 220f) * scale, width);
         var actionHeight = 42f * scale;
         var actionRect = new Rect(new Vector2(centerX - actionWidth * 0.5f, y),
             new Vector2(centerX + actionWidth * 0.5f, y + actionHeight));
@@ -162,26 +164,49 @@ internal sealed partial class VelvetApp
     {
         if (user.ConnectionState == VelvetConnectionState.Connected)
         {
-            if (ui.PillButton(rect, Loc.T(L.Velvet.Message), true))
+            var gap = 8f * ImGuiHelpers.GlobalScale;
+            var half = (rect.Width - gap) * 0.5f;
+            var messageRect = new Rect(rect.Min, new Vector2(rect.Min.X + half, rect.Max.Y));
+            var connectedRect = new Rect(new Vector2(rect.Max.X - half, rect.Min.Y), rect.Max);
+            if (ui.PillButton(messageRect, Loc.T(L.Velvet.Message), true))
             {
                 OpenThreadWith(user.UserId);
+            }
+
+            if (ui.PillButton(connectedRect, Loc.T(L.Velvet.Connected), false))
+            {
+                AskDisconnect(user.UserId);
             }
         }
         else if (user.ConnectionState == VelvetConnectionState.OutgoingRequest)
         {
-            ui.PillButton(rect, Loc.T(L.Velvet.Requested), false);
+            if (ui.PillButton(rect, Loc.T(L.Velvet.Requested), false))
+            {
+                store.CancelRequest(user.UserId);
+            }
         }
         else if (user.ConnectionState == VelvetConnectionState.IncomingRequest)
         {
             if (ui.PillButton(rect, Loc.T(L.Velvet.Accept), true))
             {
-                store.Connect(user.UserId);
+                store.AcceptRequest(user.UserId);
             }
         }
         else if (ui.PillButton(rect, Loc.T(L.Velvet.Connect), true))
         {
             store.Connect(user.UserId);
         }
+    }
+
+    private void AskDisconnect(string userId)
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Velvet.DisconnectConfirmMessage),
+            ConfirmLabel = Loc.T(L.Velvet.Disconnect),
+            CancelLabel = Loc.T(L.Velvet.DeleteCancel),
+            Confirm = () => store.Disconnect(userId),
+        });
     }
 
     private static float DrawCenteredLine(ImDrawListPtr drawList, float centerX, float top, string text, Vector4 color,
@@ -297,12 +322,16 @@ internal sealed partial class VelvetApp
 
                 break;
             case VelvetConnectionState.OutgoingRequest:
-                ui.PillButton(rect, Loc.T(L.Velvet.Requested), false);
+                if (ui.PillButton(rect, Loc.T(L.Velvet.Requested), false))
+                {
+                    store.CancelRequest(profile.UserId);
+                }
+
                 break;
             case VelvetConnectionState.IncomingRequest:
                 if (ui.PillButton(rect, Loc.T(L.Velvet.Accept), true))
                 {
-                    store.Connect(profile.UserId);
+                    store.AcceptRequest(profile.UserId);
                 }
 
                 break;
