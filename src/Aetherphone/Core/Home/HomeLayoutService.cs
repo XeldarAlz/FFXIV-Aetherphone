@@ -11,15 +11,18 @@ internal sealed class HomeLayoutService
     private readonly Configuration configuration;
     private readonly Dictionary<string, IPhoneApp> byId = new();
     private readonly List<List<HomeTile>> pages = new();
+    private readonly bool[] availability;
     private int folderCounter;
 
     public HomeLayoutService(IReadOnlyList<IPhoneApp> apps, Configuration configuration)
     {
         this.apps = apps;
         this.configuration = configuration;
+        availability = new bool[apps.Count];
         for (var index = 0; index < apps.Count; index++)
         {
             byId[apps[index].Id] = apps[index];
+            availability[index] = apps[index].IsAvailable;
         }
 
         Load();
@@ -27,6 +30,25 @@ internal sealed class HomeLayoutService
 
     public int PageCount => pages.Count;
     public IReadOnlyList<HomeTile> Page(int index) => pages[index];
+
+    public void EnsureAvailability()
+    {
+        var changed = false;
+        for (var index = 0; index < apps.Count; index++)
+        {
+            var available = apps[index].IsAvailable;
+            if (availability[index] != available)
+            {
+                availability[index] = available;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            Load();
+        }
+    }
 
     public (int Page, int Slot) Locate(HomeTile tile)
     {
@@ -164,7 +186,7 @@ internal sealed class HomeLayoutService
                             ? HomeTile.ForApp(contents[0])
                             : HomeTile.ForFolder(NextFolderKey(), item.FolderName, contents));
                     }
-                    else if (byId.TryGetValue(item.AppId, out var app) && placed.Add(app.Id))
+                    else if (byId.TryGetValue(item.AppId, out var app) && app.IsAvailable && placed.Add(app.Id))
                     {
                         page.Add(HomeTile.ForApp(app));
                     }
@@ -179,7 +201,7 @@ internal sealed class HomeLayoutService
 
         for (var index = 0; index < apps.Count; index++)
         {
-            if (placed.Add(apps[index].Id))
+            if (apps[index].IsAvailable && placed.Add(apps[index].Id))
             {
                 Append(HomeTile.ForApp(apps[index]));
             }
@@ -196,7 +218,7 @@ internal sealed class HomeLayoutService
         var contents = new List<IPhoneApp>(ids.Count);
         for (var index = 0; index < ids.Count; index++)
         {
-            if (byId.TryGetValue(ids[index], out var app) && placed.Add(app.Id))
+            if (byId.TryGetValue(ids[index], out var app) && app.IsAvailable && placed.Add(app.Id))
             {
                 contents.Add(app);
             }

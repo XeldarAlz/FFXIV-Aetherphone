@@ -10,6 +10,7 @@ internal interface IPhoneApp : IDisposable
     Vector4 Accent => AppAccents.For(Id);
     int BadgeCount { get; }
     bool WantsTransparentScreen => false;
+    bool IsAvailable => true;
     void OnOpened();
     void OnClosed();
     void Draw(in PhoneContext context);

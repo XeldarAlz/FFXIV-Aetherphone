@@ -77,6 +77,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool VelvetOnboarded { get; set; }
     public int VelvetAcknowledgedGateVersion { get; set; }
     public bool VelvetBlurByDefault { get; set; } = true;
+    public long DevChatLastSeenUnix { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
     public long LastFeedbackSentUnix { get; set; }

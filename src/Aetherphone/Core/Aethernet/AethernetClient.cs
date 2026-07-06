@@ -421,5 +421,82 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url("/notifications"), AethernetJsonContext.Default.NotificationPage, session.Token, token, authStatusSink);
     }
 
+    public async Task<bool?> DevAccessAsync(CancellationToken token)
+    {
+        var status = 0;
+        var granted = await http.SendAsync(HttpMethod.Get, Url("/devspace/access"), session.Token, token, statusCode =>
+        {
+            status = statusCode;
+            authStatusSink(statusCode);
+        }).ConfigureAwait(false);
+        if (granted)
+        {
+            return true;
+        }
+
+        return status == 404 ? false : null;
+    }
+
+    public Task<DevBoardCards?> DevBoardCardsAsync(CancellationToken token, Action<int>? onStatus = null)
+    {
+        return http.GetJsonAsync(Url("/devspace/board/cards"), AethernetJsonContext.Default.DevBoardCards, session.Token, token, Combine(onStatus));
+    }
+
+    public Task<DevBoardCardDto?> CreateDevCardAsync(string title, string body, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/devspace/board/cards"), new CreateDevCardRequest(title, body), AethernetJsonContext.Default.CreateDevCardRequest, AethernetJsonContext.Default.DevBoardCardDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<DevBoardCardDto?> UpdateDevCardAsync(string cardId, string? title, string? body, CancellationToken token)
+    {
+        return http.SendJsonAsync(HttpMethod.Patch, Url($"/devspace/board/cards/{Uri.EscapeDataString(cardId)}"), new UpdateDevCardRequest(title, body), AethernetJsonContext.Default.UpdateDevCardRequest, AethernetJsonContext.Default.DevBoardCardDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<DevBoardCardDto?> MoveDevCardAsync(string cardId, int status, string? beforeId, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url($"/devspace/board/cards/{Uri.EscapeDataString(cardId)}/move"), new MoveDevCardRequest(status, beforeId), AethernetJsonContext.Default.MoveDevCardRequest, AethernetJsonContext.Default.DevBoardCardDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteDevCardAsync(string cardId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/devspace/board/cards/{Uri.EscapeDataString(cardId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<DevChatPage?> DevChatMessagesAsync(long afterUnix, CancellationToken token, Action<int>? onStatus = null)
+    {
+        var path = afterUnix > 0 ? $"/devspace/chat/messages?afterUnix={afterUnix}" : "/devspace/chat/messages";
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.DevChatPage, session.Token, token, Combine(onStatus));
+    }
+
+    public Task<DevChatMessageDto?> SendDevChatMessageAsync(string body, string? mediaKey, int mediaWidth, int mediaHeight, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/devspace/chat/messages"), new SendDevChatMessageRequest(body, mediaKey, mediaWidth, mediaHeight), AethernetJsonContext.Default.SendDevChatMessageRequest, AethernetJsonContext.Default.DevChatMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<DevMediaUrlDto?> DevChatMediaUrlAsync(string messageId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/devspace/chat/media/{Uri.EscapeDataString(messageId)}/url"), AethernetJsonContext.Default.DevMediaUrlDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteDevChatMessageAsync(string messageId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/devspace/chat/messages/{Uri.EscapeDataString(messageId)}"), session.Token, token, authStatusSink);
+    }
+
+    private Action<int> Combine(Action<int>? onStatus)
+    {
+        if (onStatus is null)
+        {
+            return authStatusSink;
+        }
+
+        var sink = authStatusSink;
+        return statusCode =>
+        {
+            sink(statusCode);
+            onStatus(statusCode);
+        };
+    }
+
     private string Url(string path) => $"{session.BaseUrl.TrimEnd('/')}{path}";
 }

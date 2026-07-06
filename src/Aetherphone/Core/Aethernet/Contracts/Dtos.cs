@@ -264,3 +264,42 @@ internal sealed record FeedbackDto(
     string? AuthorAvatarUrl,
     string Text,
     long CreatedAtUnix);
+
+internal sealed record DevBoardCardDto(
+    string Id,
+    string Title,
+    string Body,
+    int Status,
+    int SortOrder,
+    string CreatedById,
+    string CreatedByDisplayName,
+    string CreatedByHandle,
+    string? CreatedByAvatarUrl,
+    long CreatedAtUnix,
+    long UpdatedAtUnix);
+
+internal sealed record DevBoardCards(DevBoardCardDto[] Items);
+
+internal sealed record CreateDevCardRequest(string Title, string Body);
+
+internal sealed record UpdateDevCardRequest(string? Title, string? Body);
+
+internal sealed record MoveDevCardRequest(int Status, string? BeforeId);
+
+internal sealed record DevChatMessageDto(
+    string Id,
+    string SenderId,
+    string SenderDisplayName,
+    string SenderHandle,
+    string? SenderAvatarUrl,
+    string Body,
+    int Kind,
+    int MediaWidth,
+    int MediaHeight,
+    long CreatedAtUnix);
+
+internal sealed record DevChatPage(DevChatMessageDto[] Items, string? NextCursor);
+
+internal sealed record SendDevChatMessageRequest(string Body, string? MediaKey = null, int MediaWidth = 0, int MediaHeight = 0);
+
+internal sealed record DevMediaUrlDto(string Url, long ExpiresAtUnix);
