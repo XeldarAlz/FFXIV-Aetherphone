@@ -21,6 +21,7 @@ using Aetherphone.Apps.Notes;
 using Aetherphone.Apps.Notifications;
 using Aetherphone.Apps.Phone;
 using Aetherphone.Apps.Photos;
+using Aetherphone.Apps.Polls;
 using Aetherphone.Apps.Settings;
 using Aetherphone.Apps.Skywatcher;
 using Aetherphone.Apps.Timers;
@@ -52,6 +53,7 @@ internal static class AppRegistry
         apps.Add(new VelvetApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.Notifications, services.VelvetLauncher));
         apps.Add(new FeedbackApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "feedback"), photoLibrary));
         apps.Add(new DevApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "dev"), services.Lodestone, services.Configuration, photoLibrary, services.Http));
+        apps.Add(new PollsApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "polls")));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));
         apps.Add(new PhotosApp(photoLibrary));
         apps.Add(new SkywatcherApp(services.Weather));

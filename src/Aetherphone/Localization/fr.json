@@ -1247,5 +1247,12 @@
   "calendar.deleteEvent": "Supprimer l'\u00e9v\u00e9nement",
   "calendar.deleteConfirmMessage": "Voulez-vous vraiment supprimer cet \u00e9v\u00e9nement ?",
   "calendar.deleteConfirm": "Supprimer",
-  "calendar.deleteCancel": "Annuler"
+  "calendar.deleteCancel": "Annuler",
+  "app.polls": "Sondages",
+  "polls.signInRequired": "Connectez-vous à Aethernet dans les Paramètres pour voir les sondages",
+  "polls.empty": "Aucun sondage pour le moment",
+  "polls.emptySubtitle": "Les nouveaux sondages apparaîtront ici.",
+  "polls.finalResults": "Résultats définitifs",
+  "polls.votes.one": "{0} vote",
+  "polls.votes.other": "{0} votes"
 }

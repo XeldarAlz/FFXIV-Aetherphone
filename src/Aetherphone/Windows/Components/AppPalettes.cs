@@ -119,6 +119,24 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    public static readonly AppPalette Polls = new()
+    {
+        Accent = AppAccents.For("polls"),
+        TitleInk = new(0.97f, 0.96f, 1f, 1f),
+        BodyInk = new(0.89f, 0.87f, 0.97f, 0.96f),
+        MutedInk = new(0.71f, 0.68f, 0.85f, 0.85f),
+        HeaderInk = new(0.80f, 0.72f, 0.99f, 0.95f),
+        HeadingInk = new(0.95f, 0.93f, 1f, 1f),
+        BackdropTop = new(0.13f, 0.10f, 0.28f, 1f),
+        BackdropBottom = new(0.03f, 0.02f, 0.09f, 1f),
+        BloomTop = new(0.56f, 0.44f, 0.96f, 0.22f),
+        BloomBottom = new(0.28f, 0.18f, 0.55f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static readonly AppPalette News = new()
     {
         Accent = new(0.28f, 0.28f, 0.34f, 1f),

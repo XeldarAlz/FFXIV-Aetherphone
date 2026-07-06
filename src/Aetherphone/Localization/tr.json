@@ -1247,5 +1247,12 @@
   "calendar.deleteEvent": "Etkinli\u011fi Sil",
   "calendar.deleteConfirmMessage": "Bu etkinli\u011fi silmek istedi\u011finize emin misiniz?",
   "calendar.deleteConfirm": "Sil",
-  "calendar.deleteCancel": "\u0130ptal"
+  "calendar.deleteCancel": "\u0130ptal",
+  "app.polls": "Anketler",
+  "polls.signInRequired": "Anketleri görmek için Ayarlar'dan Aethernet'e giriş yapın",
+  "polls.empty": "Henüz anket yok",
+  "polls.emptySubtitle": "Yeni anketler burada görünecek.",
+  "polls.finalResults": "Kesin sonuçlar",
+  "polls.votes.one": "{0} oy",
+  "polls.votes.other": "{0} oy"
 }

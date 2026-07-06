@@ -62,6 +62,10 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(DevChatPage))]
 [JsonSerializable(typeof(SendDevChatMessageRequest))]
 [JsonSerializable(typeof(DevMediaUrlDto))]
+[JsonSerializable(typeof(PollDto))]
+[JsonSerializable(typeof(PollTranslationDto))]
+[JsonSerializable(typeof(PollPage))]
+[JsonSerializable(typeof(PollVoteRequest))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 internal sealed partial class AethernetJsonContext : JsonSerializerContext
 {

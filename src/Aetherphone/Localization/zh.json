@@ -1241,5 +1241,12 @@
   "calendar.deleteEvent": "删除事件",
   "calendar.deleteConfirmMessage": "确定要删除此事件吗？",
   "calendar.deleteConfirm": "删除",
-  "calendar.deleteCancel": "取消"
+  "calendar.deleteCancel": "取消",
+  "app.polls": "投票",
+  "polls.signInRequired": "请在设置中登录Aethernet以查看投票",
+  "polls.empty": "暂无投票",
+  "polls.emptySubtitle": "新投票会出现在这里。",
+  "polls.finalResults": "最终结果",
+  "polls.votes.one": "{0} 票",
+  "polls.votes.other": "{0} 票"
 }
