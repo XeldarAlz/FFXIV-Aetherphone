@@ -31,6 +31,8 @@ internal sealed class PhoneWindow : Window
         RespectCloseHotkey = false;
     }
 
+    public bool IsMinimized => minimized;
+
     public void Maximize() => minimized = false;
     public void StartMinimized() => minimized = true;
 

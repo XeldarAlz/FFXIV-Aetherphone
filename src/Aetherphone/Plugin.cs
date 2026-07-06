@@ -104,7 +104,7 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.AddWindow(phoneWindow);
         windowSystem.AddWindow(aboutWindow);
         phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
-            () => phoneWindow.IsOpen);
+            () => phoneWindow.IsOpen && !phoneWindow.IsMinimized);
         timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
         calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
         clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
