@@ -74,6 +74,7 @@ internal sealed class HomeScreen
 
     public void Draw(Rect content, PhoneTheme theme, INavigator navigation)
     {
+        layout.EnsureAvailability();
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         editClock += delta;
         magnifyEnabled = false;

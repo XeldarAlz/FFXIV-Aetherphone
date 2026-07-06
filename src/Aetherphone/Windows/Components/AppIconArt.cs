@@ -158,6 +158,9 @@ internal static class AppIconArt
             case "feedback":
                 DrawFeedback(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "dev":
+                DrawDev(dl, center, extent, inkColor);
+                return true;
             default:
                 return false;
         }
@@ -976,6 +979,14 @@ internal static class AppIconArt
                 dl.AddCircleFilled(At(center, extent, columns[column], keyRows[row]), keyRadius, hole, 20);
             }
         }
+    }
+
+    private static void DrawDev(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        var thickness = extent * 0.20f;
+        dl.AddLine(At(center, extent, -0.74f, -0.60f), At(center, extent, -0.08f, -0.04f), ink, thickness);
+        dl.AddLine(At(center, extent, -0.08f, -0.04f), At(center, extent, -0.74f, 0.52f), ink, thickness);
+        dl.AddLine(At(center, extent, 0.14f, 0.60f), At(center, extent, 0.80f, 0.60f), ink, thickness);
     }
 
     private static void DrawFeedback(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

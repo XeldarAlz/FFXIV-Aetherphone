@@ -8,6 +8,7 @@ internal sealed class AethernetSession
     private readonly Configuration configuration;
     private readonly IFramework framework;
     private volatile bool tokenRejected;
+    private volatile bool hasDevAccess;
 
     public AethernetSession(Configuration configuration, IFramework framework)
     {
@@ -23,8 +24,20 @@ internal sealed class AethernetSession
     public string? Token => string.IsNullOrEmpty(configuration.AethernetToken) ? null : configuration.AethernetToken;
     public bool IsSignedIn => Token is not null && !tokenRejected;
     public bool TokenRejected => tokenRejected;
+    public bool HasDevAccess => hasDevAccess && IsSignedIn;
     public UserDto? CurrentUser { get; private set; }
     public event Action? Changed;
+
+    public void SetDevAccess(bool granted)
+    {
+        if (hasDevAccess == granted)
+        {
+            return;
+        }
+
+        hasDevAccess = granted;
+        _ = framework.RunOnFrameworkThread(() => Changed?.Invoke());
+    }
 
     public void SignIn(string token, UserDto user)
     {
@@ -52,6 +65,7 @@ internal sealed class AethernetSession
         _ = framework.RunOnFrameworkThread(() =>
         {
             tokenRejected = false;
+            hasDevAccess = false;
             configuration.AethernetToken = string.Empty;
             CurrentUser = null;
             configuration.Save();
@@ -67,6 +81,7 @@ internal sealed class AethernetSession
         }
 
         tokenRejected = true;
+        hasDevAccess = false;
         AepLog.Warning("Aethernet token was rejected; sign in again to reconnect.");
         _ = framework.RunOnFrameworkThread(() =>
         {

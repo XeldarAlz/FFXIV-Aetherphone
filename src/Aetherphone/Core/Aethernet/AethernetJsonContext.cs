@@ -53,6 +53,15 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(FeedbackDto))]
 [JsonSerializable(typeof(NotificationDto))]
 [JsonSerializable(typeof(NotificationPage))]
+[JsonSerializable(typeof(DevBoardCardDto))]
+[JsonSerializable(typeof(DevBoardCards))]
+[JsonSerializable(typeof(CreateDevCardRequest))]
+[JsonSerializable(typeof(UpdateDevCardRequest))]
+[JsonSerializable(typeof(MoveDevCardRequest))]
+[JsonSerializable(typeof(DevChatMessageDto))]
+[JsonSerializable(typeof(DevChatPage))]
+[JsonSerializable(typeof(SendDevChatMessageRequest))]
+[JsonSerializable(typeof(DevMediaUrlDto))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 internal sealed partial class AethernetJsonContext : JsonSerializerContext
 {
