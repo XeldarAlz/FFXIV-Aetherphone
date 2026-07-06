@@ -133,7 +133,7 @@ internal sealed partial class VelvetApp
 
         if (user.Dynamic.Length > 0 || user.Tags.Length > 0)
         {
-            y += DrawCenteredChips(centerX, y, contentWidth, user.Dynamic, user.Tags) + 6f * scale;
+            y += DrawCenteredChips(centerX, y, contentWidth, SplitTokens(user.Dynamic), user.Tags) + 6f * scale;
         }
 
         if (user.Limits.Length > 0)
@@ -217,10 +217,10 @@ internal sealed partial class VelvetApp
         return size.Y;
     }
 
-    private float DrawCenteredChips(float centerX, float top, float maxWidth, string vibe, string[] tags)
+    private float DrawCenteredChips(float centerX, float top, float maxWidth, string[] vibeTokens, string[] tags)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var total = tags.Length + (vibe.Length > 0 ? 1 : 0);
+        var total = vibeTokens.Length + tags.Length;
         if (total == 0)
         {
             return 0f;
@@ -239,7 +239,7 @@ internal sealed partial class VelvetApp
             var rowEnd = index;
             while (rowEnd < total)
             {
-                var next = ChipWidth(rowEnd, vibe, tags, padX);
+                var next = ChipWidth(rowEnd, vibeTokens, tags, padX);
                 var candidate = rowEnd == index ? next : rowWidth + chipGap + next;
                 if (rowEnd > index && candidate > maxWidth)
                 {
@@ -253,9 +253,9 @@ internal sealed partial class VelvetApp
             var cursorX = centerX - rowWidth * 0.5f;
             for (var chip = index; chip < rowEnd; chip++)
             {
-                var label = ChipLabel(chip, vibe, tags);
-                var filled = chip == 0 && vibe.Length > 0;
-                var chipWidth = ChipWidth(chip, vibe, tags, padX);
+                var label = ChipLabel(chip, vibeTokens, tags);
+                var filled = chip < vibeTokens.Length;
+                var chipWidth = ChipWidth(chip, vibeTokens, tags, padX);
                 var chipMin = new Vector2(cursorX, y);
                 var chipMax = new Vector2(cursorX + chipWidth, y + chipHeight);
                 var fill = filled ? Palette.WithAlpha(Accent, 0.9f) : Palette.WithAlpha(Accent, 0.16f);
@@ -272,11 +272,11 @@ internal sealed partial class VelvetApp
         return y - top - rowGap;
     }
 
-    private static string ChipLabel(int index, string vibe, string[] tags) =>
-        vibe.Length > 0 ? (index == 0 ? vibe : tags[index - 1]) : tags[index];
+    private static string ChipLabel(int index, string[] vibeTokens, string[] tags) =>
+        index < vibeTokens.Length ? vibeTokens[index] : tags[index - vibeTokens.Length];
 
-    private static float ChipWidth(int index, string vibe, string[] tags, float padX) =>
-        Typography.Measure(ChipLabel(index, vibe, tags), 0.82f, FontWeight.Medium).X + padX * 2f;
+    private static float ChipWidth(int index, string[] vibeTokens, string[] tags, float padX) =>
+        Typography.Measure(ChipLabel(index, vibeTokens, tags), 0.82f, FontWeight.Medium).X + padX * 2f;
 
     private void DrawProfileRow(VelvetProfileDto profile)
     {

@@ -83,7 +83,7 @@ internal sealed partial class VelvetApp
 
             if (me.Dynamic.Length > 0 || me.Tags.Length > 0)
             {
-                y += DrawCenteredChips(centerX, y, contentWidth, me.Dynamic, me.Tags) + 6f * scale;
+                y += DrawCenteredChips(centerX, y, contentWidth, SplitTokens(me.Dynamic), me.Tags) + 6f * scale;
             }
 
             y += 26f * scale;
@@ -173,8 +173,11 @@ internal sealed partial class VelvetApp
             editIntro = me.Intro;
             editPronouns = me.Pronouns;
             editVibe = me.Dynamic;
+            editVibeAdd = string.Empty;
             editTags = VelvetTags.Join(me.Tags);
+            editTagsAdd = string.Empty;
             editLimits = VelvetTags.Join(me.Limits);
+            editLimitsAdd = string.Empty;
             editLookingFor = me.LookingFor;
             editRelationship = me.RelationshipStatus;
             editDiscoverable = me.Discoverable;
@@ -199,19 +202,21 @@ internal sealed partial class VelvetApp
             ImGui.Dummy(new Vector2(0f, 10f * scale));
             ui.Field(Loc.T(L.Velvet.PronounsLabel), "##vPronouns", ref editPronouns, ShortFieldMax, false);
             ImGui.Dummy(new Vector2(0f, 16f * scale));
-            ui.SectionLabel(Loc.T(L.Velvet.DynamicLabel));
-            ui.Field(Loc.T(L.Velvet.DynamicLabel), "##vVibe", ref editVibe, ShortFieldMax, false);
-            DrawSuggestionRow(VibeSuggestions, ref editVibe, false);
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            ui.Field(Loc.T(L.Velvet.TagsLabel), "##vTags", ref editTags, TagsMax, false);
-            DrawSuggestionRow(TagSuggestions, ref editTags, true);
-            ImGui.Dummy(new Vector2(0f, 16f * scale));
-            ui.SectionLabel(Loc.T(L.Velvet.WantHeader));
-            DrawChipPicker(Loc.T(L.Velvet.LookingForLabel), VelvetLookingFor.All, ref editLookingFor, true);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-            DrawChipPicker(Loc.T(L.Velvet.RelationshipLabel), VelvetRelationship.All, ref editRelationship, false);
+            ImGui.Dummy(new Vector2(0f, 18f * scale));
+            DrawTokenCard(FontAwesomeIcon.Fire, Loc.T(L.Velvet.DynamicLabel), Loc.T(L.Velvet.VibeCardHelp),
+                ref editVibe, ref editVibeAdd, VibeSuggestions, Loc.T(L.Velvet.AddVibeHint), "##vVibeAdd", VibeMax, false);
             ImGui.Dummy(new Vector2(0f, 12f * scale));
-            ui.Field(Loc.T(L.Velvet.LimitsLabel), "##vLimits", ref editLimits, TagsMax, false);
+            DrawTokenCard(FontAwesomeIcon.Hashtag, Loc.T(L.Velvet.TagsHeading), Loc.T(L.Velvet.TagsCardHelp),
+                ref editTags, ref editTagsAdd, TagSuggestions, Loc.T(L.Velvet.AddTagHint), "##vTagsAdd", TagsMax, false);
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            DrawChoiceCard(FontAwesomeIcon.Compass, Loc.T(L.Velvet.LookingForLabel), Loc.T(L.Velvet.LookingForHelp),
+                VelvetLookingFor.All, ref editLookingFor, true, false);
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            DrawChoiceCard(FontAwesomeIcon.Heart, Loc.T(L.Velvet.RelationshipLabel), Loc.T(L.Velvet.RelationshipHelp),
+                VelvetRelationship.All, ref editRelationship, false, true);
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            DrawTokenCard(FontAwesomeIcon.ShieldAlt, Loc.T(L.Velvet.LimitsLabel), Loc.T(L.Velvet.LimitsCardHelp),
+                ref editLimits, ref editLimitsAdd, LimitSuggestions, Loc.T(L.Velvet.AddLimitHint), "##vLimitsAdd", TagsMax, true);
             ImGui.Dummy(new Vector2(0f, 30f * scale));
         }
     }
@@ -293,52 +298,467 @@ internal sealed partial class VelvetApp
         }
     }
 
-    private void DrawChipPicker(string label, int[] values, ref int selected, bool skipFirst)
+    private void DrawTokenCard(FontAwesomeIcon icon, string title, string help, ref string field, ref string addBuffer,
+        string[] suggestions, string addHint, string addId, int maxTotal, bool safety)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.MutedInk))
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var pad = 14f * scale;
+        var innerX = origin.X + pad;
+        var innerWidth = width - pad * 2f;
+        var accent = safety ? theme.Danger : Accent;
+        var tokens = SplitTokens(field);
+        var hasPicks = tokens.Length > 0;
+
+        var headerH = 22f * scale;
+        var afterHeader = 8f * scale;
+        var helpH = MeasureWrapped(help, innerWidth, 0.82f);
+        var afterHelp = 12f * scale;
+        var labelH = 15f * scale;
+        var afterLabel = 6f * scale;
+        var pillsH = hasPicks ? MeasurePills(tokens, innerWidth) : 0f;
+        var afterPicks = 12f * scale;
+        var addH = 34f * scale;
+        var afterAdd = 12f * scale;
+        var suggH = MeasureChips(suggestions, innerWidth, 0.85f, 13f * scale, 30f * scale);
+
+        var contentH = pad + headerH + afterHeader + helpH + afterHelp +
+                       (hasPicks ? labelH + afterLabel + pillsH + afterPicks : 0f) +
+                       addH + afterAdd + labelH + afterLabel + suggH + pad;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + contentH), 18f * scale);
+
+        var y = origin.Y + pad;
+        DrawCardHeader(drawList, new Vector2(innerX, y), icon, title, accent);
+        y += headerH + afterHeader;
+        DrawWrappedHelp(innerX, y, innerWidth, help);
+        y += helpH + afterHelp;
+        if (hasPicks)
         {
-            ImGui.TextUnformatted(label);
+            DrawMiniLabel(new Vector2(innerX, y), Loc.T(L.Velvet.SelectedLabel));
+            y += labelH + afterLabel;
+            var removed = DrawPills(new Vector2(innerX, y), innerWidth, tokens, accent);
+            if (removed >= 0)
+            {
+                field = RemoveTokenAt(field, removed);
+            }
+
+            y += pillsH + afterPicks;
         }
 
+        DrawAddInput(new Vector2(innerX, y), innerWidth, addId, addHint, ref addBuffer, ref field, maxTotal);
+        y += addH + afterAdd;
+        DrawMiniLabel(new Vector2(innerX, y), Loc.T(L.Velvet.SuggestionsLabel));
+        y += labelH + afterLabel;
+        DrawSuggestions(new Vector2(innerX, y), innerWidth, suggestions, ref field, maxTotal);
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, contentH));
+    }
+
+    private void DrawChoiceCard(FontAwesomeIcon icon, string title, string help, int[] values, ref int selected,
+        bool skipFirst, bool relationship)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var cursorX = origin.X;
-        var cursorY = origin.Y + 2f * scale;
-        var maxX = origin.X + ImGui.GetContentRegionAvail().X;
-        var chipHeight = 30f * scale;
-        for (var index = skipFirst ? 1 : 0; index < values.Length; index++)
+        var width = ImGui.GetContentRegionAvail().X;
+        var pad = 14f * scale;
+        var innerX = origin.X + pad;
+        var innerWidth = width - pad * 2f;
+        var start = skipFirst ? 1 : 0;
+
+        var headerH = 22f * scale;
+        var afterHeader = 8f * scale;
+        var helpH = MeasureWrapped(help, innerWidth, 0.82f);
+        var afterHelp = 12f * scale;
+        var chipsH = MeasureChoice(values, start, relationship, innerWidth);
+
+        var contentH = pad + headerH + afterHeader + helpH + afterHelp + chipsH + pad;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + contentH), 18f * scale);
+
+        var y = origin.Y + pad;
+        DrawCardHeader(drawList, new Vector2(innerX, y), icon, title, Accent);
+        y += headerH + afterHeader;
+        DrawWrappedHelp(innerX, y, innerWidth, help);
+        y += helpH + afterHelp;
+        var picked = DrawChoice(new Vector2(innerX, y), innerWidth, values, start, relationship, selected);
+        if (picked >= 0)
         {
-            var value = values[index];
-            var text = label == Loc.T(L.Velvet.RelationshipLabel)
-                ? VelvetRelationship.Label(value)
-                : VelvetLookingFor.Label(value);
-            var chipWidth = Typography.Measure(text, 0.85f, FontWeight.Medium).X + 22f * scale;
-            if (cursorX + chipWidth > maxX)
-            {
-                cursorX = origin.X;
-                cursorY += chipHeight + 6f * scale;
-            }
-
-            var rect = new Rect(new Vector2(cursorX, cursorY), new Vector2(cursorX + chipWidth, cursorY + chipHeight));
-            if (ui.Chip(rect, text, selected == value))
-            {
-                selected = value;
-            }
-
-            cursorX += chipWidth + 6f * scale;
+            selected = picked;
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, cursorY - origin.Y + chipHeight + 4f * scale));
+        ImGui.Dummy(new Vector2(width, contentH));
     }
 
-    private void DrawSuggestionRow(string[] suggestions, ref string field, bool commaSeparated)
+    private void DrawCardHeader(ImDrawListPtr drawList, Vector2 pos, FontAwesomeIcon icon, string title, Vector4 accent)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        ImGui.Dummy(new Vector2(0f, 4f * scale));
-        ui.HelpText(Loc.T(L.Velvet.Suggestions));
-        var origin = ImGui.GetCursorScreenPos();
-        DrawSuggestionChips(origin, ImGui.GetContentRegionAvail().X, suggestions, ref field, commaSeparated);
+        var tileSize = 22f * scale;
+        var tileMin = pos;
+        var tileMax = new Vector2(pos.X + tileSize, pos.Y + tileSize);
+        Squircle.Fill(drawList, tileMin, tileMax, 7f * scale, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.20f)));
+        AppSkin.Icon((tileMin + tileMax) * 0.5f, icon.ToIconString(), accent, 0.72f);
+        var titleSize = Typography.Measure(title, 0.98f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(tileMax.X + 10f * scale, pos.Y + tileSize * 0.5f - titleSize.Y * 0.5f), title,
+            AppPalettes.Velvet.TitleInk, 0.98f, FontWeight.SemiBold);
+    }
+
+    private void DrawWrappedHelp(float x, float y, float wrapWidth, string text)
+    {
+        ImGui.SetCursorScreenPos(new Vector2(x, y));
+        ImGui.PushTextWrapPos(x + wrapWidth - ImGui.GetWindowPos().X);
+        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.MutedInk))
+        using (Plugin.Fonts.Push(0.82f))
+        {
+            ImGui.TextWrapped(text);
+        }
+
+        ImGui.PopTextWrapPos();
+    }
+
+    private static void DrawMiniLabel(Vector2 pos, string text)
+    {
+        Typography.Draw(pos, text.ToUpperInvariant(), AppPalettes.Velvet.HeaderInk, 0.72f, FontWeight.SemiBold);
+    }
+
+    private int DrawPills(Vector2 origin, float maxWidth, string[] tokens, Vector4 accent)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var pillHeight = 28f * scale;
+        Span<float> widths = stackalloc float[tokens.Length];
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            widths[index] = PillWidth(tokens[index], scale);
+        }
+
+        Span<Vector2> positions = stackalloc Vector2[tokens.Length];
+        FlowLayout(widths, maxWidth, pillHeight, 8f * scale, 8f * scale, positions);
+        var removed = -1;
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            var min = origin + positions[index];
+            var max = new Vector2(min.X + widths[index], min.Y + pillHeight);
+            var hovered = ImGui.IsMouseHoveringRect(min, max);
+            Squircle.Fill(drawList, min, max, pillHeight * 0.5f,
+                ImGui.GetColorU32(Palette.WithAlpha(accent, hovered ? 0.42f : 0.30f)));
+            var textSize = Typography.Measure(tokens[index], 0.82f, FontWeight.Medium);
+            Typography.Draw(new Vector2(min.X + 12f * scale, min.Y + pillHeight * 0.5f - textSize.Y * 0.5f),
+                tokens[index], new Vector4(1f, 0.96f, 0.98f, 1f), 0.82f, FontWeight.Medium);
+            AppSkin.Icon(new Vector2(max.X - 16f * scale, min.Y + pillHeight * 0.5f),
+                FontAwesomeIcon.Times.ToIconString(), new Vector4(1f, 0.92f, 0.95f, hovered ? 1f : 0.72f), 0.58f);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                removed = index;
+            }
+        }
+
+        return removed;
+    }
+
+    private void DrawSuggestions(Vector2 origin, float maxWidth, string[] labels, ref string field, int maxTotal)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var chipHeight = 30f * scale;
+        var padX = 13f * scale;
+        Span<float> widths = stackalloc float[labels.Length];
+        for (var index = 0; index < labels.Length; index++)
+        {
+            widths[index] = Typography.Measure(labels[index], 0.85f, FontWeight.Medium).X + padX * 2f;
+        }
+
+        Span<Vector2> positions = stackalloc Vector2[labels.Length];
+        FlowLayout(widths, maxWidth, chipHeight, 8f * scale, 8f * scale, positions);
+        var toggled = -1;
+        for (var index = 0; index < labels.Length; index++)
+        {
+            var min = origin + positions[index];
+            var max = new Vector2(min.X + widths[index], min.Y + chipHeight);
+            if (ui.Chip(new Rect(min, max), labels[index], HasToken(field, labels[index])))
+            {
+                toggled = index;
+            }
+        }
+
+        if (toggled >= 0)
+        {
+            field = ToggleToken(field, labels[toggled], maxTotal);
+        }
+    }
+
+    private void DrawAddInput(Vector2 origin, float width, string id, string hint, ref string buffer, ref string field,
+        int maxTotal)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var height = 34f * scale;
+        var max = new Vector2(origin.X + width, origin.Y + height);
+        Squircle.Fill(drawList, origin, max, 9f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)));
+        Squircle.Stroke(drawList, origin, max, 9f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), 1f);
+        AppSkin.Icon(new Vector2(origin.X + 16f * scale, origin.Y + height * 0.5f), FontAwesomeIcon.Plus.ToIconString(),
+            AppPalettes.Velvet.MutedInk, 0.66f);
+        ImGui.SetCursorScreenPos(new Vector2(origin.X + 30f * scale,
+            origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(width - 42f * scale);
+        if (pendingTokenFocus == id)
+        {
+            ImGui.SetKeyboardFocusHere();
+            pendingTokenFocus = null;
+        }
+
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
+        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.TitleInk))
+        {
+            if (ImGui.InputTextWithHint(id, hint, ref buffer, 40, ImGuiInputTextFlags.EnterReturnsTrue))
+            {
+                CommitTokens(ref field, ref buffer, maxTotal);
+                pendingTokenFocus = id;
+            }
+        }
+    }
+
+    private int DrawChoice(Vector2 origin, float maxWidth, int[] values, int start, bool relationship, int selected)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var chipHeight = 34f * scale;
+        var count = values.Length - start;
+        Span<float> widths = stackalloc float[count];
+        for (var index = 0; index < count; index++)
+        {
+            widths[index] = ChoiceWidth(values[start + index], relationship, scale);
+        }
+
+        Span<Vector2> positions = stackalloc Vector2[count];
+        FlowLayout(widths, maxWidth, chipHeight, 8f * scale, 8f * scale, positions);
+        var picked = -1;
+        for (var index = 0; index < count; index++)
+        {
+            var value = values[start + index];
+            var label = relationship ? VelvetRelationship.Label(value) : VelvetLookingFor.Label(value);
+            var glyph = relationship ? RelationshipIcon(value) : LookingForIcon(value);
+            var active = selected == value;
+            var min = origin + positions[index];
+            var max = new Vector2(min.X + widths[index], min.Y + chipHeight);
+            var hovered = ImGui.IsMouseHoveringRect(min, max);
+            var fill = active
+                ? Palette.WithAlpha(Accent, 0.28f)
+                : new Vector4(1f, 1f, 1f, hovered ? 0.14f : 0.08f);
+            Squircle.Fill(drawList, min, max, chipHeight * 0.5f, ImGui.GetColorU32(fill));
+            if (active)
+            {
+                Squircle.Stroke(drawList, min, max, chipHeight * 0.5f, ImGui.GetColorU32(Accent), 1.4f);
+            }
+
+            var ink = active ? new Vector4(0.99f, 0.85f, 0.91f, 1f) : AppPalettes.Velvet.BodyInk;
+            var iconInk = active ? new Vector4(0.99f, 0.85f, 0.91f, 1f) : AppPalettes.Velvet.MutedInk;
+            AppSkin.Icon(new Vector2(min.X + 18f * scale, min.Y + chipHeight * 0.5f), glyph.ToIconString(), iconInk, 0.72f);
+            var labelSize = Typography.Measure(label, 0.85f, FontWeight.Medium);
+            Typography.Draw(new Vector2(min.X + 32f * scale, min.Y + chipHeight * 0.5f - labelSize.Y * 0.5f), label, ink,
+                0.85f, FontWeight.Medium);
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                picked = value;
+            }
+        }
+
+        return picked;
+    }
+
+    private static float MeasurePills(string[] tokens, float maxWidth)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        Span<float> widths = stackalloc float[tokens.Length];
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            widths[index] = PillWidth(tokens[index], scale);
+        }
+
+        Span<Vector2> positions = stackalloc Vector2[tokens.Length];
+        return FlowLayout(widths, maxWidth, 28f * scale, 8f * scale, 8f * scale, positions);
+    }
+
+    private static float MeasureChips(string[] labels, float maxWidth, float fontScale, float padX, float chipHeight)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        Span<float> widths = stackalloc float[labels.Length];
+        for (var index = 0; index < labels.Length; index++)
+        {
+            widths[index] = Typography.Measure(labels[index], fontScale, FontWeight.Medium).X + padX * 2f;
+        }
+
+        Span<Vector2> positions = stackalloc Vector2[labels.Length];
+        return FlowLayout(widths, maxWidth, chipHeight, 8f * scale, 8f * scale, positions);
+    }
+
+    private static float MeasureChoice(int[] values, int start, bool relationship, float maxWidth)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var count = values.Length - start;
+        Span<float> widths = stackalloc float[count];
+        for (var index = 0; index < count; index++)
+        {
+            widths[index] = ChoiceWidth(values[start + index], relationship, scale);
+        }
+
+        Span<Vector2> positions = stackalloc Vector2[count];
+        return FlowLayout(widths, maxWidth, 34f * scale, 8f * scale, 8f * scale, positions);
+    }
+
+    private static float ChoiceWidth(int value, bool relationship, float scale)
+    {
+        var label = relationship ? VelvetRelationship.Label(value) : VelvetLookingFor.Label(value);
+        return 32f * scale + Typography.Measure(label, 0.85f, FontWeight.Medium).X + 14f * scale;
+    }
+
+    private static float PillWidth(string token, float scale) =>
+        12f * scale + Typography.Measure(token, 0.82f, FontWeight.Medium).X + 6f * scale + 12f * scale + 10f * scale;
+
+    private static float FlowLayout(ReadOnlySpan<float> widths, float maxWidth, float chipHeight, float rowGap,
+        float chipGap, Span<Vector2> positions)
+    {
+        if (widths.Length == 0)
+        {
+            return 0f;
+        }
+
+        var x = 0f;
+        var y = 0f;
+        for (var index = 0; index < widths.Length; index++)
+        {
+            if (index > 0)
+            {
+                if (x + chipGap + widths[index] <= maxWidth)
+                {
+                    x += chipGap;
+                }
+                else
+                {
+                    x = 0f;
+                    y += chipHeight + rowGap;
+                }
+            }
+
+            positions[index] = new Vector2(x, y);
+            x += widths[index];
+        }
+
+        return y + chipHeight;
+    }
+
+    private static FontAwesomeIcon LookingForIcon(int value) =>
+        value switch
+        {
+            VelvetLookingFor.Erp => FontAwesomeIcon.Comments,
+            VelvetLookingFor.Gpose => FontAwesomeIcon.Camera,
+            VelvetLookingFor.Relationship => FontAwesomeIcon.Heart,
+            VelvetLookingFor.Collab => FontAwesomeIcon.Feather,
+            VelvetLookingFor.Friends => FontAwesomeIcon.Users,
+            VelvetLookingFor.Sharing => FontAwesomeIcon.Image,
+            VelvetLookingFor.Wandering => FontAwesomeIcon.Moon,
+            _ => FontAwesomeIcon.Compass,
+        };
+
+    private static FontAwesomeIcon RelationshipIcon(int value) =>
+        value switch
+        {
+            VelvetRelationship.Single => FontAwesomeIcon.User,
+            VelvetRelationship.Taken => FontAwesomeIcon.Heart,
+            VelvetRelationship.Open => FontAwesomeIcon.LockOpen,
+            VelvetRelationship.Complicated => FontAwesomeIcon.HandHoldingHeart,
+            _ => FontAwesomeIcon.Lock,
+        };
+
+    private static string[] SplitTokens(string raw) =>
+        raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    private static bool HasToken(string raw, string token)
+    {
+        var tokens = SplitTokens(raw);
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            if (string.Equals(tokens[index], token, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static string AddToken(string raw, string token, int maxTotal)
+    {
+        token = token.Trim();
+        if (token.Length == 0 || HasToken(raw, token))
+        {
+            return raw;
+        }
+
+        var trimmed = raw.Trim().TrimEnd(',').TrimEnd();
+        var result = trimmed.Length == 0 ? token : trimmed + ", " + token;
+        return result.Length > maxTotal ? raw : result;
+    }
+
+    private static string ToggleToken(string raw, string token, int maxTotal) =>
+        HasToken(raw, token) ? RemoveTokenByValue(raw, token) : AddToken(raw, token, maxTotal);
+
+    private static string RemoveTokenAt(string raw, int removeIndex)
+    {
+        var tokens = SplitTokens(raw);
+        if (removeIndex < 0 || removeIndex >= tokens.Length)
+        {
+            return raw;
+        }
+
+        var kept = new List<string>(tokens.Length);
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            if (index != removeIndex)
+            {
+                kept.Add(tokens[index]);
+            }
+        }
+
+        return string.Join(", ", kept);
+    }
+
+    private static string RemoveTokenByValue(string raw, string token)
+    {
+        var tokens = SplitTokens(raw);
+        var kept = new List<string>(tokens.Length);
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            if (!string.Equals(tokens[index], token, StringComparison.OrdinalIgnoreCase))
+            {
+                kept.Add(tokens[index]);
+            }
+        }
+
+        return string.Join(", ", kept);
+    }
+
+    private static void CommitTokens(ref string field, ref string buffer, int maxTotal)
+    {
+        var parts = buffer.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        for (var index = 0; index < parts.Length; index++)
+        {
+            field = AddToken(field, parts[index].ToLowerInvariant(), maxTotal);
+        }
+
+        buffer = string.Empty;
     }
 
     private void DrawSuggestionChips(Vector2 origin, float maxWidth, string[] suggestions, ref string field,

@@ -25,6 +25,7 @@ internal sealed partial class VelvetApp : IPhoneApp
 {
     private const int IntroMax = 400;
     private const int ShortFieldMax = 40;
+    private const int VibeMax = 140;
     private const int TagsMax = 200;
     private const int MessageMax = 1000;
     private const int HandleMax = 15;
@@ -34,12 +35,20 @@ internal sealed partial class VelvetApp : IPhoneApp
 
     private static readonly string[] VibeSuggestions =
     {
-        "soft", "switch", "service", "playful", "dom", "sub", "gentle", "brat"
+        "soft", "dom", "sub", "switch", "service", "brat", "gentle", "playful",
+        "sensual", "primal", "romantic", "nurturing", "experimental", "curious"
     };
 
     private static readonly string[] TagSuggestions =
     {
-        "gpose", "romance", "cuddles", "roleplay", "teasing", "praise", "lingerie", "bondage"
+        "gpose", "romance", "cuddles", "roleplay", "teasing", "praise", "lingerie", "bondage",
+        "aftercare", "worship", "sensory", "slowburn", "fluff", "flirty", "latenight", "storytelling"
+    };
+
+    private static readonly string[] LimitSuggestions =
+    {
+        "no irl details", "no pain", "no degradation", "no humiliation",
+        "no gore", "no scat", "no permanent marks", "no public scenes"
     };
 
     public string Id => "velvet";
@@ -85,8 +94,12 @@ internal sealed partial class VelvetApp : IPhoneApp
     private string editIntro = string.Empty;
     private string editPronouns = string.Empty;
     private string editVibe = string.Empty;
+    private string editVibeAdd = string.Empty;
     private string editTags = string.Empty;
+    private string editTagsAdd = string.Empty;
     private string editLimits = string.Empty;
+    private string editLimitsAdd = string.Empty;
+    private string? pendingTokenFocus;
     private int editLookingFor = VelvetLookingFor.Sharing;
     private int editRelationship = VelvetRelationship.NotSaying;
     private bool editDiscoverable = true;

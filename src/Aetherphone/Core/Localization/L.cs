@@ -909,6 +909,17 @@ internal static class L
         public static readonly LocString SavedToGallery = new("velvet.savedToGallery", "Saved to gallery");
         public static readonly LocString NoPhotos = new("velvet.noPhotos", "No photos in your gallery yet");
         public static readonly LocString Use = new("velvet.use", "Use");
+        public static readonly LocString VibeCardHelp = new("velvet.vibeCardHelp", "Pick the roles and moods that fit you.");
+        public static readonly LocString TagsHeading = new("velvet.tagsHeading", "Tags");
+        public static readonly LocString TagsCardHelp = new("velvet.tagsCardHelp", "Add themes so the right people can find you.");
+        public static readonly LocString LimitsCardHelp = new("velvet.limitsCardHelp", "Anything off the table, no exceptions.");
+        public static readonly LocString LookingForHelp = new("velvet.lookingForHelp", "What you're mainly here for right now.");
+        public static readonly LocString RelationshipHelp = new("velvet.relationshipHelp", "Shown on your profile so people know where you stand.");
+        public static readonly LocString SelectedLabel = new("velvet.selectedLabel", "Your picks");
+        public static readonly LocString SuggestionsLabel = new("velvet.suggestionsLabel", "Popular");
+        public static readonly LocString AddVibeHint = new("velvet.addVibeHint", "Add your own, then Enter");
+        public static readonly LocString AddTagHint = new("velvet.addTagHint", "Add your own, then Enter");
+        public static readonly LocString AddLimitHint = new("velvet.addLimitHint", "Add a limit, then Enter");
     }
 
     internal static class Clock
