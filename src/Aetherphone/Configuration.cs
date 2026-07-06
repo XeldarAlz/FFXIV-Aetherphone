@@ -41,8 +41,8 @@ internal sealed class Configuration : IPluginConfiguration
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
-    public string LightWallpaperId { get; set; } = "ShadowDark";
-    public string DarkWallpaperId { get; set; } = "ShadowDark";
+    public string LightWallpaperId { get; set; } = "DuskLight";
+    public string DarkWallpaperId { get; set; } = "DuskDark";
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
     public uint RingtoneId { get; set; } = 7;
     public string RingtoneSound { get; set; } = SoundTokens.DefaultGame;
