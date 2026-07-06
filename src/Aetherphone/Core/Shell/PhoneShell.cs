@@ -155,7 +155,8 @@ internal sealed class PhoneShell : IDisposable
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         Plugin.Wallpapers.StepDayNight(delta);
         var theme = themes.Chrome;
-        var screen = DeviceChrome.DrawBody(device, theme, !TransparencyActive());
+        var screen = DeviceChrome.ScreenRect(device, theme);
+        DeviceChrome.DrawBody(device, theme, TransparentBand(screen));
         var loading = Plugin.Loading;
         loading.Advance(delta);
         navigation.Advance(delta);
@@ -226,6 +227,23 @@ internal sealed class PhoneShell : IDisposable
         }
 
         return !navigation.AtHome && (navigation.Current?.WantsTransparentScreen ?? false);
+    }
+
+    private Rect? TransparentBand(Rect screen)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        if (navigation.IsTransitioning)
+        {
+            return navigation.MotionOver.TransparentViewport(screen, scale) ??
+                   navigation.MotionUnder?.TransparentViewport(screen, scale);
+        }
+
+        if (navigation.AtHome)
+        {
+            return null;
+        }
+
+        return navigation.Current?.TransparentViewport(screen, scale);
     }
 
     private void SyncCallNavigation()

@@ -25,6 +25,11 @@ internal sealed class CameraApp : IPhoneApp
     public string Glyph => "O";
     public int BadgeCount => 0;
     public bool WantsTransparentScreen => true;
+
+    public Rect? TransparentViewport(Rect screen, float scale) =>
+        new(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
+            new Vector2(screen.Max.X, screen.Max.Y - TrayHeight * scale));
+
     private readonly PhotoCaptureService capture;
     private readonly PhotoLibrary library;
     private int modeIndex = 1;
@@ -57,22 +62,23 @@ internal sealed class CameraApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
+        var rounding = theme.ScreenRounding * scale;
         AdvanceTimers(ImGui.GetIO().DeltaTime);
         var screen = ScreenFrom(context.Content, theme, scale);
         var viewfinder = new Rect(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
             new Vector2(screen.Max.X, screen.Max.Y - TrayHeight * scale));
         var captureRect = CaptureRect(viewfinder);
 
-        var consumed = CameraChrome.TopBar(screen, TopBarHeight, flashEnabled, scale);
+        var consumed = CameraChrome.TopBar(screen, TopBarHeight, flashEnabled, scale, rounding);
         if (consumed)
         {
             flashEnabled = !flashEnabled;
         }
 
         CameraChrome.Viewfinder(viewfinder, captureRect, gridEnabled, reticleAge, ReticleDuration, reticlePos, scale);
-        consumed |= DrawTray(screen, captureRect, context.Navigation, scale);
+        consumed |= DrawTray(screen, captureRect, context.Navigation, scale, rounding);
         HandleFocusTap(viewfinder, consumed);
-        CameraChrome.Flash(screen, flashAge, FlashDuration);
+        CameraChrome.Flash(screen, flashAge, FlashDuration, rounding);
     }
 
     private void AdvanceTimers(float delta)
@@ -93,10 +99,10 @@ internal sealed class CameraApp : IPhoneApp
         }
     }
 
-    private bool DrawTray(Rect screen, Rect captureRect, INavigator navigation, float scale)
+    private bool DrawTray(Rect screen, Rect captureRect, INavigator navigation, float scale, float rounding)
     {
         var trayTop = screen.Max.Y - TrayHeight * scale;
-        CameraChrome.TrayBackground(screen, trayTop);
+        CameraChrome.TrayBackground(screen, trayTop, rounding);
 
         var newMode = CameraChrome.ModeCarousel(screen, trayTop + 22f * scale, Modes, modeIndex, scale);
         var consumed = newMode != modeIndex;

@@ -23,11 +23,11 @@ internal static class CameraChrome
     private static readonly Vector4 BarTint = new(0f, 0f, 0f, 0.42f);
     private static readonly Vector4 TrayTint = new(0f, 0f, 0f, 0.88f);
 
-    public static bool TopBar(Rect screen, float topBarHeight, bool flashEnabled, float scale)
+    public static bool TopBar(Rect screen, float topBarHeight, bool flashEnabled, float scale, float rounding)
     {
         var dl = ImGui.GetWindowDrawList();
         var barMax = new Vector2(screen.Max.X, screen.Min.Y + topBarHeight * scale);
-        dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint));
+        dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint), rounding, ImDrawFlags.RoundCornersTop);
         var rowCenterY = barMax.Y - Metrics.Space.Md * scale;
         return FlashChip(new Vector2(screen.Min.X + 34f * scale, rowCenterY), flashEnabled, scale);
     }
@@ -133,10 +133,11 @@ internal static class CameraChrome
         dl.AddLine(new Vector2(max.X, reticlePos.Y), new Vector2(max.X - tick, reticlePos.Y), color, 1.6f * scale);
     }
 
-    public static void TrayBackground(Rect screen, float trayTop)
+    public static void TrayBackground(Rect screen, float trayTop, float rounding)
     {
         ImGui.GetWindowDrawList()
-            .AddRectFilled(new Vector2(screen.Min.X, trayTop), screen.Max, ImGui.GetColorU32(TrayTint));
+            .AddRectFilled(new Vector2(screen.Min.X, trayTop), screen.Max, ImGui.GetColorU32(TrayTint), rounding,
+                ImDrawFlags.RoundCornersBottom);
     }
 
     public static int ModeCarousel(Rect screen, float rowCenterY, LocString[] modes, int modeIndex, float scale)
@@ -264,7 +265,7 @@ internal static class CameraChrome
         return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public static void Flash(Rect screen, float flashAge, float flashDuration)
+    public static void Flash(Rect screen, float flashAge, float flashDuration, float rounding)
     {
         if (flashAge > flashDuration)
         {
@@ -273,6 +274,6 @@ internal static class CameraChrome
 
         var alpha = 0.85f * (1f - flashAge / flashDuration);
         ImGui.GetWindowDrawList()
-            .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
+            .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)), rounding);
     }
 }

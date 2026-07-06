@@ -25,37 +25,48 @@ internal static class DeviceChrome
         return new Rect(new Vector2(device.Max.X - 2f * scale, top), new Vector2(window.Max.X, top + height));
     }
 
-    public static Rect DrawBody(Rect window, PhoneTheme theme, bool fillScreen = true)
+    public static Rect ScreenRect(Rect window, PhoneTheme theme) =>
+        BodyRect(window).Inset(theme.BezelThickness * ImGuiHelpers.GlobalScale);
+
+    public static Rect DrawBody(Rect window, PhoneTheme theme, Rect? transparentBand = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         var device = BodyRect(window);
         var deviceRounding = theme.DeviceRounding * scale;
+        var screenRounding = theme.ScreenRounding * scale;
         var screen = device.Inset(theme.BezelThickness * scale);
-        if (fillScreen)
+        var bezel = ImGui.GetColorU32(theme.BezelOuter);
+        var rim = ImGui.GetColorU32(theme.BezelRim);
+        var screenBase = ImGui.GetColorU32(theme.ScreenBase);
+        if (transparentBand is not { } band)
         {
-            dl.AddRectFilled(device.Min, device.Max, ImGui.GetColorU32(theme.BezelOuter), deviceRounding);
-            dl.AddRect(device.Min, device.Max, ImGui.GetColorU32(theme.BezelRim), deviceRounding);
-            dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(theme.ScreenBase), theme.ScreenRounding * scale);
+            dl.AddRectFilled(device.Min, device.Max, bezel, deviceRounding);
+            dl.AddRect(device.Min, device.Max, rim, deviceRounding);
+            dl.AddRectFilled(screen.Min, screen.Max, screenBase, screenRounding);
             return screen;
         }
 
-        DrawBezelFrame(dl, device, screen, deviceRounding, ImGui.GetColorU32(theme.BezelOuter),
-            ImGui.GetColorU32(theme.BezelRim));
+        DrawViewportBody(dl, device, screen, band, deviceRounding, screenRounding, bezel, rim, screenBase);
         return screen;
     }
 
-    private static void DrawBezelFrame(ImDrawListPtr dl, Rect device, Rect screen, float deviceRounding, uint bezel,
-        uint rim)
+    private static void DrawViewportBody(ImDrawListPtr dl, Rect device, Rect screen, Rect band, float deviceRounding,
+        float screenRounding, uint bezel, uint rim, uint screenBase)
     {
-        dl.AddRectFilled(device.Min, new Vector2(device.Max.X, screen.Min.Y), bezel, deviceRounding,
-            ImDrawFlags.RoundCornersTop);
-        dl.AddRectFilled(new Vector2(device.Min.X, screen.Max.Y), device.Max, bezel, deviceRounding,
+        var top = Math.Clamp(band.Min.Y, screen.Min.Y, screen.Max.Y);
+        var bottom = Math.Clamp(band.Max.Y, top, screen.Max.Y);
+        dl.AddRectFilled(device.Min, new Vector2(device.Max.X, top), bezel, deviceRounding, ImDrawFlags.RoundCornersTop);
+        dl.AddRectFilled(new Vector2(device.Min.X, bottom), device.Max, bezel, deviceRounding,
             ImDrawFlags.RoundCornersBottom);
-        dl.AddRectFilled(new Vector2(device.Min.X, screen.Min.Y), new Vector2(screen.Min.X, screen.Max.Y), bezel, 0f,
+        dl.AddRectFilled(new Vector2(device.Min.X, top), new Vector2(screen.Min.X, bottom), bezel, 0f,
             ImDrawFlags.RoundCornersNone);
-        dl.AddRectFilled(new Vector2(screen.Max.X, screen.Min.Y), new Vector2(device.Max.X, screen.Max.Y), bezel, 0f,
+        dl.AddRectFilled(new Vector2(screen.Max.X, top), new Vector2(device.Max.X, bottom), bezel, 0f,
             ImDrawFlags.RoundCornersNone);
+        dl.AddRectFilled(screen.Min, new Vector2(screen.Max.X, top), screenBase, screenRounding,
+            ImDrawFlags.RoundCornersTop);
+        dl.AddRectFilled(new Vector2(screen.Min.X, bottom), screen.Max, screenBase, screenRounding,
+            ImDrawFlags.RoundCornersBottom);
         dl.AddRect(device.Min, device.Max, rim, deviceRounding);
     }
 
