@@ -80,6 +80,8 @@ internal sealed class Configuration : IPluginConfiguration
     public long DevChatLastSeenUnix { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
+    public bool RegionManual { get; set; }
+    public string ManualRegion { get; set; } = string.Empty;
     public long LastFeedbackSentUnix { get; set; }
     public List<CalendarCustomEvent> CalendarCustomEvents { get; set; } = new();
     public List<PhoneNote> Notes { get; set; } = new();

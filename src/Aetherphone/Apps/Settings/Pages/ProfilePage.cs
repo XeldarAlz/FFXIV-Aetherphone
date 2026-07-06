@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -16,20 +17,22 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class ProfilePage : ISettingsPage, IDisposable
 {
     public string Title => Loc.T(L.Profile.Title);
-    public string Summary => SocialTimeZone.FormatOffset(SocialTimeZone.EffectiveOffsetMinutes(configuration));
+    public string Summary => SocialRegion.EffectiveCode(configuration, gameData);
     public string Glyph => "P";
     public Vector4 Tint => new(0.42f, 0.58f, 0.86f, 1f);
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AethernetClient client;
+    private readonly GameData gameData;
     private readonly CancellationTokenSource cancellation = new();
     private bool initialSynced;
 
-    public ProfilePage(Configuration configuration, AethernetSession session, AethernetClient client)
+    public ProfilePage(Configuration configuration, AethernetSession session, AethernetClient client, GameData gameData)
     {
         this.configuration = configuration;
         this.session = session;
         this.client = client;
+        this.gameData = gameData;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -44,6 +47,8 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
                 PushTimeZone(null);
             }
 
+            DrawRegionSection(theme, scale);
+            ImGui.Dummy(new Vector2(0f, 18f * scale));
             SettingsSection.Header(Loc.T(L.Profile.TimeZoneSection), theme);
             Hint(Loc.T(L.Profile.TimeZoneHelp), theme);
             ImGui.Dummy(new Vector2(0f, 8f * scale));
@@ -90,6 +95,36 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
                 }
             }
         }
+    }
+
+    private void DrawRegionSection(PhoneTheme theme, float scale)
+    {
+        SettingsSection.Header(Loc.T(L.Profile.RegionSection), theme);
+        Hint(Loc.T(L.Profile.RegionHelp), theme);
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        var card = GroupCard.Begin(theme, SocialRegion.Codes.Length + 1);
+        var autoLabel = $"{Loc.T(L.Profile.RegionAutomatic)}  ({SocialRegion.AutoCode(gameData)})";
+        if (SettingsRow.Selectable(card.NextRow(), autoLabel, !configuration.RegionManual, theme) &&
+            configuration.RegionManual)
+        {
+            configuration.RegionManual = false;
+            configuration.Save();
+        }
+
+        for (var index = 0; index < SocialRegion.Codes.Length; index++)
+        {
+            var code = SocialRegion.Codes[index];
+            var selected = configuration.RegionManual &&
+                           string.Equals(configuration.ManualRegion, code, StringComparison.Ordinal);
+            if (SettingsRow.Selectable(card.NextRow(), code, selected, theme) && !selected)
+            {
+                configuration.RegionManual = true;
+                configuration.ManualRegion = code;
+                configuration.Save();
+            }
+        }
+
+        card.End();
     }
 
     private void DrawOffsetStepper(Rect row, PhoneTheme theme)

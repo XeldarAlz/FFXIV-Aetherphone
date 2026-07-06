@@ -12,6 +12,7 @@ internal sealed class GameData
     private readonly IObjectTable objectTable;
     private uint[]? collectableMountIds;
     private uint[]? collectableMinionIds;
+    private Dictionary<string, string>? worldRegionCodes;
 
     public GameData(IDataManager data, IObjectTable objectTable)
     {
@@ -138,6 +139,57 @@ internal sealed class GameData
             2 => "North-America",
             3 => "Europe",
             4 => "Oceania",
+            _ => string.Empty,
+        };
+
+    public string LocalRegionCode() => RegionCodeFromId(RegionId());
+
+    public string RegionCodeForWorld(string worldName)
+    {
+        if (string.IsNullOrEmpty(worldName))
+        {
+            return string.Empty;
+        }
+
+        var map = worldRegionCodes ??= BuildWorldRegionCodes();
+        return map.TryGetValue(worldName, out var code) ? code : string.Empty;
+    }
+
+    private Dictionary<string, string> BuildWorldRegionCodes()
+    {
+        var map = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var world in data.GetExcelSheet<World>())
+        {
+            if (world.RowId == 0 || world.DataCenter.RowId == 0)
+            {
+                continue;
+            }
+
+            var code = RegionCodeFromId(world.DataCenter.Value.Region.RowId);
+            if (code.Length == 0)
+            {
+                continue;
+            }
+
+            var name = world.Name.ExtractText();
+            if (name.Length == 0)
+            {
+                continue;
+            }
+
+            map[name] = code;
+        }
+
+        return map;
+    }
+
+    private static string RegionCodeFromId(uint region) =>
+        region switch
+        {
+            1 => "JP",
+            2 => "NA",
+            3 => "EU",
+            4 => "OCE",
             _ => string.Empty,
         };
 
