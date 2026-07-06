@@ -277,6 +277,24 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0870 =
+        {
+            new("changelog.r0870.0", "Added Polls, a new app for voting in single-choice polls"),
+            new("changelog.r0870.1", "Notifications now take you straight to the post or profile they're about in Chirper, Aethergram, and Velvet"),
+            new("changelog.r0870.2", "Added tappable follower and following lists on profiles, and a liked-by list on posts"),
+            new("changelog.r0870.10", "Refined the comment section in Aethergram"),
+            new("changelog.r0870.3", "Velvet now lets you cancel connection requests you've sent, review them in a compact Sent section, and disconnect from people you're connected with"),
+            new("changelog.r0870.11", "Made the contact's profile picture bigger in Velvet chats"),
+            new("changelog.r0870.12", "Refined the edit profile screen in Velvet"),
+            new("changelog.r0870.13", "Social apps now show your username and region only, instead of your character name and home world"),
+            new("changelog.r0870.4", "You can now choose the region shown on your social profiles in Settings, instead of it always being detected for you"),
+            new("changelog.r0870.5", "Settings now shows a badge when there's a new changelog entry you haven't read yet"),
+            new("changelog.r0870.6", "Changed the default wallpaper to Dusk"),
+            new("changelog.r0870.7", "Fixed the Camera screen corners so they're rounded to match the rest of the phone"),
+            new("changelog.r0870.8", "Fixed the phone-scrolling emote continuing to play while the phone is minimized"),
+            new("changelog.r0870.9", "Fixed a crash in the Music app on Linux"),
+        };
+
         public static readonly LocString[] Release0860 =
         {
             new("changelog.r0860.0", "Added Sign in with XIVAuth so you can link your account by approving in your browser instead of pasting a Lodestone code"),
