@@ -34,6 +34,7 @@ internal sealed class PhotosApp : IPhoneApp
     private readonly CancellationTokenSource cancellation = new();
     private string[] paths = Array.Empty<string>();
     private int? viewerIndex;
+    private readonly PhotoZoomView zoomView = new();
     private readonly ViewRouter<PhotoRoute> router;
     private readonly RouterDraw<PhotoRoute> drawView;
     private PhoneTheme theme = PhoneTheme.Default;
@@ -123,6 +124,7 @@ internal sealed class PhotosApp : IPhoneApp
                     if (clicked)
                     {
                         viewerIndex = index;
+                        zoomView.Reset();
                         router.Push(PhotoRoute.Viewer);
                     }
                 }
@@ -146,7 +148,7 @@ internal sealed class PhotosApp : IPhoneApp
             new Vector2(content.Max.X, content.Max.Y - 36f * scale));
         if (texture is not null)
         {
-            PhotosChrome.ViewerImage(texture, stage, scale);
+            zoomView.Draw(stage, texture, theme, Metrics.Radius.Sm * scale);
         }
         else
         {
@@ -181,12 +183,14 @@ internal sealed class PhotosApp : IPhoneApp
                 scale))
         {
             viewerIndex = (index - 1 + paths.Length) % paths.Length;
+            zoomView.Reset();
         }
 
         if (PhotosChrome.Arrow(new Vector2(content.Max.X - 16f * scale, content.Center.Y), theme.TextStrong, false,
                 scale))
         {
             viewerIndex = (index + 1) % paths.Length;
+            zoomView.Reset();
         }
     }
 

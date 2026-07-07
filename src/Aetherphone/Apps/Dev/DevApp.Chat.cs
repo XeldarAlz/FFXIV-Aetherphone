@@ -16,6 +16,8 @@ namespace Aetherphone.Apps.Dev;
 
 internal sealed partial class DevApp
 {
+    private readonly PhotoZoomView imageZoom = new();
+
     private void DrawChat(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -510,6 +512,7 @@ internal sealed partial class DevApp
         {
             imageViewId = messageId;
             imageSaveOutcome = 0;
+            imageZoom.Reset();
         }
 
         var scale = ImGuiHelpers.GlobalScale;
@@ -528,13 +531,7 @@ internal sealed partial class DevApp
         }
         else
         {
-            var size = texture.Size;
-            var factor = MathF.Min((fitMax.X - fitMin.X) / MathF.Max(size.X, 1f),
-                (fitMax.Y - fitMin.Y) / MathF.Max(size.Y, 1f));
-            var half = new Vector2(size.X * factor * 0.5f, size.Y * factor * 0.5f);
-            var center = new Vector2((fitMin.X + fitMax.X) * 0.5f, (fitMin.Y + fitMax.Y) * 0.5f);
-            drawList.AddImageRounded(texture.Handle, center - half, center + half, Vector2.Zero, Vector2.One,
-                0xFFFFFFFFu, 10f * scale, ImDrawFlags.RoundCornersAll);
+            imageZoom.Draw(new Rect(fitMin, fitMax), texture, theme, 10f * scale);
         }
 
         var context = new PhoneContext(area, theme, navigation);

@@ -38,15 +38,6 @@ internal static class PhotosChrome
         }
     }
 
-    public static void ViewerImage(IDalamudTextureWrap texture, Rect stage, float scale)
-    {
-        var fit = MathF.Min(stage.Width / texture.Size.X, stage.Height / texture.Size.Y);
-        var drawn = new Vector2(texture.Size.X * fit, texture.Size.Y * fit);
-        var min = stage.Center - drawn * 0.5f;
-        var max = stage.Center + drawn * 0.5f;
-        ImGui.GetWindowDrawList().AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu,
-            Metrics.Radius.Sm * scale, ImDrawFlags.RoundCornersAll);
-    }
 
     public static void Empty(Rect content, PhoneTheme theme, float scale)
     {

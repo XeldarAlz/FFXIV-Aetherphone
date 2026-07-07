@@ -51,6 +51,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly LodestoneService lodestone;
     private readonly PhotoLibrary library;
     private readonly RemoteImageCache images;
+    private readonly PhotoViewerOverlay photoViewer = new();
+    private string? pendingViewUrl;
+    private double pendingViewAt;
     private readonly AppSkin ui = new(AppPalettes.Aethergram);
     private readonly ViewRouter<AethergramRoute> router;
     private readonly RouterDraw<AethergramRoute> drawView;
@@ -164,6 +167,13 @@ internal sealed partial class AethergramApp : IPhoneApp
         ui.Theme = theme;
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
+        AdvancePendingPhotoView();
+        if (photoViewer.Active)
+        {
+            photoViewer.Draw(screen, theme);
+            return;
+        }
+
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
@@ -416,19 +426,40 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     private void HandleLikeGesture(Rect imageRect, PostDto post)
     {
-        if (!ImGui.IsMouseHoveringRect(imageRect.Min, imageRect.Max) ||
-            !ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+        if (!ImGui.IsMouseHoveringRect(imageRect.Min, imageRect.Max))
         {
             return;
         }
 
-        if (post.MyReaction < 0)
+        if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
         {
-            store.ToggleLike(post);
+            pendingViewUrl = null;
+            if (post.MyReaction < 0)
+            {
+                store.ToggleLike(post);
+            }
+
+            likeBurstPostId = post.Id;
+            likeBurstStart = ImGui.GetTime();
+            return;
         }
 
-        likeBurstPostId = post.Id;
-        likeBurstStart = ImGui.GetTime();
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !string.IsNullOrEmpty(post.MediaUrl))
+        {
+            pendingViewUrl = post.MediaUrl;
+            pendingViewAt = ImGui.GetTime();
+        }
+    }
+
+    private void AdvancePendingPhotoView()
+    {
+        if (pendingViewUrl is not { } url || ImGui.GetTime() - pendingViewAt < 0.30)
+        {
+            return;
+        }
+
+        pendingViewUrl = null;
+        photoViewer.Open(() => images.Get(url));
     }
 
     private void DrawLikeBurst(Rect imageRect, string postId)
