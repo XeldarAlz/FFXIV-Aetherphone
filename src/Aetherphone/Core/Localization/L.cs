@@ -1111,6 +1111,23 @@ internal static class L
     {
         public static readonly LocString Done = new("home.done", "Done");
         public static readonly LocString NewFolder = new("home.newFolder", "Folder");
+        public static readonly LocString Widgets = new("home.widgets", "Widgets");
+        public static readonly LocString AddWidget = new("home.addWidget", "Add Widget");
+        public static readonly LocString Remove = new("home.remove", "Remove");
+        public static readonly LocString SizeSmall = new("home.sizeSmall", "Small");
+        public static readonly LocString SizeMedium = new("home.sizeMedium", "Medium");
+        public static readonly LocString SizeLarge = new("home.sizeLarge", "Large");
+        public static readonly LocString Local = new("home.local", "Local");
+        public static readonly LocString Eorzea = new("home.eorzea", "Eorzea");
+        public static readonly LocString NoEvents = new("home.noEvents", "No upcoming events");
+        public static readonly LocString HomeScreen = new("home.homeScreen", "Home Screen");
+        public static readonly LocString GridComfortable = new("home.gridComfortable", "Comfortable");
+        public static readonly LocString GridStandard = new("home.gridStandard", "Standard");
+        public static readonly LocString GridCompact = new("home.gridCompact", "Compact");
+        public static readonly LocString ResetLayout = new("home.resetLayout", "Reset Home Screen Layout");
+        public static readonly LocString ResetLayoutMessage = new("home.resetLayoutMessage",
+            "Restore the default icon, widget, and dock arrangement? Folders will be removed.");
+        public static readonly LocString ResetLayoutConfirm = new("home.resetLayoutConfirm", "Reset");
     }
 
     internal static class Photos

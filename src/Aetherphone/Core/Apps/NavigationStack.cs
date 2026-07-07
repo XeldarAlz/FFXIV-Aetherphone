@@ -20,6 +20,8 @@ internal sealed class NavigationStack : INavigator
     private IPhoneApp? motionOver;
     private IPhoneApp? motionUnder;
     private ShellMotion motion = ShellMotion.None;
+    private Rect? pendingOrigin;
+    private Rect? motionOrigin;
     private DateTime appOpenedAt;
     private string? trackedAppId;
 
@@ -29,6 +31,7 @@ internal sealed class NavigationStack : INavigator
     }
 
     public event Action<string>? AppOpened;
+    public event Action<string>? ReturningHome;
     public IPhoneApp? Current => current;
     public bool AtHome => current is null;
     public bool IsTransitioning => motion != ShellMotion.None;
@@ -36,6 +39,7 @@ internal sealed class NavigationStack : INavigator
     public float MotionProgress => cover.Value;
     public IPhoneApp MotionOver => motionOver!;
     public IPhoneApp? MotionUnder => motionUnder;
+    public Rect? MotionOrigin => motionOrigin;
 
     public void Advance(float deltaSeconds)
     {
@@ -44,9 +48,10 @@ internal sealed class NavigationStack : INavigator
             return;
         }
 
+        var zoom = motionUnder is null;
         var smoothTime = motion == ShellMotion.Present
-            ? TransitionTiming.PresentSmoothTime
-            : TransitionTiming.DismissSmoothTime;
+            ? zoom ? TransitionTiming.ZoomPresentSmoothTime : TransitionTiming.PresentSmoothTime
+            : zoom ? TransitionTiming.ZoomDismissSmoothTime : TransitionTiming.DismissSmoothTime;
 
         cover.Step(targetCover, smoothTime, deltaSeconds);
 
@@ -60,6 +65,13 @@ internal sealed class NavigationStack : INavigator
     }
 
     public void OpenApp(IPhoneApp app) => OpenApp(app, AppOpenSource.Home);
+
+    public void OpenAppFrom(IPhoneApp app, string source, Rect origin)
+    {
+        pendingOrigin = origin;
+        OpenApp(app, source);
+        pendingOrigin = null;
+    }
 
     public void OpenApp(IPhoneApp app, string source)
     {
@@ -128,6 +140,11 @@ internal sealed class NavigationStack : INavigator
         var under = history.Count > 0 ? history.Pop() : null;
         current = under;
         under?.OnOpened();
+        if (under is null)
+        {
+            ReturningHome?.Invoke(leaving.Id);
+        }
+
         BeginDismiss(leaving, under);
     }
 
@@ -143,6 +160,7 @@ internal sealed class NavigationStack : INavigator
         var leaving = current;
         history.Clear();
         current = null;
+        ReturningHome?.Invoke(leaving.Id);
         BeginDismiss(leaving, null);
     }
 
@@ -151,6 +169,7 @@ internal sealed class NavigationStack : INavigator
         motion = ShellMotion.Present;
         motionOver = over;
         motionUnder = under;
+        motionOrigin = under is null ? pendingOrigin : null;
         cover.SnapTo(0f);
         targetCover = 1f;
     }
@@ -160,6 +179,7 @@ internal sealed class NavigationStack : INavigator
         motion = ShellMotion.Dismiss;
         motionOver = over;
         motionUnder = under;
+        motionOrigin = null;
         cover.SnapTo(1f);
         targetCover = 0f;
     }
@@ -221,5 +241,6 @@ internal sealed class NavigationStack : INavigator
         motion = ShellMotion.None;
         motionOver = null;
         motionUnder = null;
+        motionOrigin = null;
     }
 }

@@ -42,10 +42,10 @@ internal sealed class CalendarApp : IPhoneApp
     private int newEventHour;
     private int newEventMinute;
 
-    public CalendarApp(Configuration configuration)
+    public CalendarApp(Configuration configuration, CalendarEvents events)
     {
         this.configuration = configuration;
-        events = new CalendarEvents();
+        this.events = events;
         selectedDate = DateTime.Today;
         router = new ViewRouter<CalendarScreen>(CalendarScreen.Month, Id);
         drawView = DrawView;

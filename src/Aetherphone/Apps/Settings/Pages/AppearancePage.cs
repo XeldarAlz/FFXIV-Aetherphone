@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
@@ -89,7 +90,64 @@ internal sealed class AppearancePage : ISettingsPage
                 Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("phone_scale", phoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 configuration.Save();
             }
+
+            DrawHomeSection(theme);
         }
+    }
+
+    private void DrawHomeSection(PhoneTheme theme)
+    {
+        SettingsSection.Header(Loc.T(L.Home.HomeScreen), theme);
+        var card = GroupCard.Begin(theme, 2);
+        var densityIndex = SegmentStrip.Draw("settings.homeGrid", card.NextRow(), DensityLabels(),
+            DensityIndex(configuration.HomeGridRows), theme);
+        var rows = GridRowOptions[densityIndex];
+        if (rows != configuration.HomeGridRows)
+        {
+            configuration.HomeGridRows = rows;
+            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("home_grid_rows", rows.ToString()));
+            configuration.Save();
+        }
+
+        if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Home.ResetLayout), string.Empty, theme))
+        {
+            Plugin.Confirm.Ask(new Core.Confirm.ConfirmRequest
+            {
+                Title = Loc.T(L.Home.ResetLayout),
+                Message = Loc.T(L.Home.ResetLayoutMessage),
+                ConfirmLabel = Loc.T(L.Home.ResetLayoutConfirm),
+                CancelLabel = Loc.T(L.Photos.DeleteCancel),
+                Danger = true,
+                Confirm = ResetHomeLayout,
+            });
+        }
+
+        card.End();
+    }
+
+    private void ResetHomeLayout()
+    {
+        configuration.Home = null;
+        configuration.Save();
+        Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("home_layout", "reset"));
+    }
+
+    private static readonly int[] GridRowOptions = { 5, 6, 7 };
+
+    private static string[] DensityLabels() =>
+        new[] { Loc.T(L.Home.GridComfortable), Loc.T(L.Home.GridStandard), Loc.T(L.Home.GridCompact), };
+
+    private static int DensityIndex(int rows)
+    {
+        for (var index = 0; index < GridRowOptions.Length; index++)
+        {
+            if (GridRowOptions[index] == HomeLayoutService.ClampRows(rows))
+            {
+                return index;
+            }
+        }
+
+        return 1;
     }
 
     private static string[] ModeLabels() =>

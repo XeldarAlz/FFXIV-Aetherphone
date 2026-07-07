@@ -32,12 +32,13 @@ using Aetherphone.Apps.Venues;
 using Aetherphone.Apps.Wallet;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Photos;
+using Aetherphone.Windows.Widgets;
 
 namespace Aetherphone.Core.Apps;
 
 internal static class AppRegistry
 {
-    public static IReadOnlyList<IPhoneApp> BuildDefault(PhoneServices services, Action showAbout)
+    public static AppBundle BuildDefault(PhoneServices services, Action showAbout)
     {
         var apps = new List<IPhoneApp>
         {
@@ -75,8 +76,13 @@ internal static class AppRegistry
         apps.Add(new GamesApp(services.GameStats));
         apps.Add(new NotificationsApp(services.Notifications, services.MessageLauncher, services.VelvetLauncher, services.SocialLauncher));
         apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Sound, services.AethernetSession, services.AethernetClient, services.GameData, photoLibrary, services.Calls, showAbout));
-        apps.Add(new CalendarApp(services.Configuration));
+        var calendarEvents = new CalendarEvents();
+        apps.Add(new CalendarApp(services.Configuration, calendarEvents));
 
-        return apps;
+        return new AppBundle
+        {
+            Apps = apps,
+            Widgets = WidgetCatalog.Build(services, photoLibrary, calendarEvents, apps),
+        };
     }
 }

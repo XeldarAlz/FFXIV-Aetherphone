@@ -67,6 +67,7 @@ internal sealed class Configuration : IPluginConfiguration
     public List<SongRecord> SongRecents { get; set; } = new();
     public List<GameStatRecord> GameStats { get; set; } = new();
     public HomeLayout? Home { get; set; }
+    public int HomeGridRows { get; set; } = 6;
     public VenueTimeFilter VenueTimeFilter { get; set; } = VenueTimeFilter.LiveNow;
     public int VenueSourceFilter { get; set; }
     public bool VenueAllDataCenters { get; set; }

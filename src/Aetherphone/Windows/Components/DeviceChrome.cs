@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -79,13 +80,32 @@ internal static class DeviceChrome
 
     public static void DrawWallpaper(Rect screen, PhoneTheme theme)
     {
-        var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
+        DrawWallpaperInto(screen, screen, theme, 1f);
+    }
+
+    public static void DrawWallpaper(Rect screen, PhoneTheme theme, in HomeMotion motion)
+    {
+        if (motion.Zoom == 1f)
+        {
+            DrawWallpaperInto(screen, screen, theme, 1f);
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.PushClipRect(screen.Min, screen.Max, true);
+        DrawWallpaperInto(motion.Warp(screen), screen, theme, motion.Zoom);
+        drawList.PopClipRect();
+    }
+
+    private static void DrawWallpaperInto(Rect destination, Rect screen, PhoneTheme theme, float zoom)
+    {
+        var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale * zoom;
         var library = Plugin.Wallpapers;
         library.CurrentTargetAspect = screen.Height > 0f ? screen.Width / screen.Height : 0.5f;
         var light = library.Resolve(theme.LightWallpaperId);
         var dark = library.Resolve(theme.DarkWallpaperId);
-        WallpaperRenderer.Draw(ImGui.GetWindowDrawList(), screen, rounding, light, dark, library.CurrentTargetAspect,
-            library.Darkness, theme.ScreenBase);
+        WallpaperRenderer.Draw(ImGui.GetWindowDrawList(), destination, rounding, light, dark,
+            library.CurrentTargetAspect, library.Darkness, theme.ScreenBase);
     }
 
     public static void DrawHomeScrim(Rect screen, PhoneTheme theme)

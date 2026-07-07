@@ -14,9 +14,9 @@ internal static class HomeTileView
     private static readonly Vector4 IconTileFrost = new(0.078f, 0.078f, 0.078f, 0.88f);
 
     public static void DrawApp(Vector2 center, float size, IPhoneApp app, PhoneTheme theme, float drawScale,
-        float labelAlpha, float labelWidth)
+        float labelAlpha, float labelWidth, float zoom = 1f)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = ImGuiHelpers.GlobalScale * zoom;
         var dl = ImGui.GetWindowDrawList();
         var drawHalf = size * 0.5f * drawScale;
         var drawMin = new Vector2(center.X - drawHalf, center.Y - drawHalf);
@@ -31,7 +31,7 @@ internal static class HomeTileView
             Typography.DrawCentered(center, app.Glyph, app.Accent, glyphScale);
         }
 
-        DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, labelWidth);
+        DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, labelWidth, zoom);
         if (app.BadgeCount > 0)
         {
             var badgeCenter = new Vector2(center.X + size * 0.5f - 5f * scale, center.Y - size * 0.5f + 5f * scale);
@@ -47,9 +47,9 @@ internal static class HomeTileView
     }
 
     public static void DrawFolder(Vector2 center, float size, HomeTile folder, PhoneTheme theme, float drawScale,
-        float labelAlpha, string fallbackName, float labelWidth)
+        float labelAlpha, string fallbackName, float labelWidth, float zoom = 1f)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = ImGuiHelpers.GlobalScale * zoom;
         var dl = ImGui.GetWindowDrawList();
         var drawHalf = size * 0.5f * drawScale;
         var min = new Vector2(center.X - drawHalf, center.Y - drawHalf);
@@ -75,11 +75,30 @@ internal static class HomeTileView
         }
 
         var name = string.IsNullOrEmpty(folder.FolderName) ? fallbackName : folder.FolderName;
-        DrawLabel(center, size, name, theme, scale, labelAlpha, labelWidth);
+        DrawLabel(center, size, name, theme, scale, labelAlpha, labelWidth, zoom);
+    }
+
+    public static bool RemoveBadge(Vector2 center, float scale, PhoneTheme theme)
+    {
+        var radius = 9f * scale;
+        var dl = ImGui.GetWindowDrawList();
+        var hovered =
+            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, hovered ? 1f : 0.88f)),
+            24);
+        var arm = radius * 0.4f;
+        var ink = ImGui.GetColorU32(new Vector4(0.1f, 0.1f, 0.12f, 1f));
+        dl.AddLine(new Vector2(center.X - arm, center.Y), new Vector2(center.X + arm, center.Y), ink, 1.8f * scale);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private static void DrawLabel(Vector2 center, float size, string label, PhoneTheme theme, float scale,
-        float labelAlpha, float labelWidth)
+        float labelAlpha, float labelWidth, float zoom)
     {
         if (labelAlpha <= 0.01f)
         {
@@ -89,7 +108,9 @@ internal static class HomeTileView
         var labelCenter = new Vector2(center.X, center.Y + size * 0.5f + 11f * scale);
         var halo = Palette.WithAlpha(new Vector4(0f, 0f, 0f, 1f), 0.22f * labelAlpha);
         var text = Palette.WithAlpha(theme.TextStrong, 0.98f * labelAlpha);
-        Typography.DrawCenteredHalo(labelCenter, label, text, halo, 1.3f * scale, labelWidth * 0.92f,
-            TextStyles.IconLabel);
+        var style = zoom == 1f
+            ? TextStyles.IconLabel
+            : new TextStyle(TextStyles.IconLabel.Scale * zoom, TextStyles.IconLabel.Weight);
+        Typography.DrawCenteredHalo(labelCenter, label, text, halo, 1.3f * scale, labelWidth * 0.92f, style);
     }
 }
