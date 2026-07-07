@@ -12,6 +12,36 @@ internal static class SearchField
 {
     private const float PillHalfHeight = 17f;
 
+    public static bool DrawSubmit(Rect bar, string imguiId, string hint, ref string text, PhoneTheme theme,
+        int maxLength = 64, float sideInset = 4f) =>
+        DrawSubmit(bar, imguiId, hint, ref text, theme.GroupedCard, theme.TextMuted, theme.TextStrong, maxLength,
+            sideInset);
+
+    public static bool DrawSubmit(Rect bar, string imguiId, string hint, ref string text, in AppPalette palette,
+        int maxLength = 64, float sideInset = 12f) =>
+        DrawSubmit(bar, imguiId, hint, ref text, palette.FieldSurface, palette.MutedInk, palette.TitleInk, maxLength,
+            sideInset);
+
+    public static bool DrawSubmit(Rect bar, string imguiId, string hint, ref string text, Vector4 fieldSurface,
+        Vector4 mutedInk, Vector4 titleInk, int maxLength, float sideInset)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var pillMin = new Vector2(bar.Min.X + sideInset * scale, bar.Min.Y + 9f * scale);
+        var pillMax = new Vector2(bar.Max.X - sideInset * scale, bar.Max.Y - 9f * scale);
+        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(fieldSurface));
+        AppSkin.Icon(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f),
+            FontAwesomeIcon.Search.ToIconString(), mutedInk, 0.85f);
+        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 32f * scale,
+            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
+        using (ImRaii.PushColor(ImGuiCol.Text, titleInk))
+        {
+            return ImGui.InputTextWithHint(imguiId, hint, ref text, maxLength, ImGuiInputTextFlags.EnterReturnsTrue);
+        }
+    }
+
     public static void Draw(Rect bar, string imguiId, string hint, ref string text, PhoneTheme theme,
         int maxLength = 100)
     {

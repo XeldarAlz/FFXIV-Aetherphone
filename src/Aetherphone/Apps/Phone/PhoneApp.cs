@@ -331,21 +331,9 @@ internal sealed class PhoneApp : IPhoneApp
 
     private void DrawSearchBar(Rect bar, PhoneTheme theme, float scale)
     {
-        var dl = ImGui.GetWindowDrawList();
-        var pillMin = new Vector2(bar.Min.X + 4f * scale, bar.Min.Y + 9f * scale);
-        var pillMax = new Vector2(bar.Max.X - 4f * scale, bar.Max.Y - 9f * scale);
-        dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(theme.GroupedCard), (pillMax.Y - pillMin.Y) * 0.5f);
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 28f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        if (SearchField.DrawSubmit(bar, "##phoneSearch", Loc.T(L.Phone.SearchHint), ref searchDraft, theme))
         {
-            if (ImGui.InputTextWithHint("##phoneSearch", Loc.T(L.Phone.SearchHint), ref searchDraft, 64,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                StartSearch(searchDraft);
-            }
+            StartSearch(searchDraft);
         }
     }
 

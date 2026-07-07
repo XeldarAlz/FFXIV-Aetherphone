@@ -447,25 +447,10 @@ internal sealed partial class AethergramApp
 
     private void DrawSearchBar(Rect bar)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
-        var pillMax = new Vector2(bar.Max.X - 12f * scale, bar.Max.Y - 9f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(AppPalettes.Aethergram.FieldSurface));
-        AppSkin.Icon(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f),
-            FontAwesomeIcon.Search.ToIconString(), AppPalettes.Aethergram.MutedInk, 0.85f);
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 32f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        if (SearchField.DrawSubmit(bar, "##aethergramSearch", Loc.T(L.Aethergram.NameOrWorld), ref searchDraft,
+                AppPalettes.Aethergram))
         {
-            if (ImGui.InputTextWithHint("##aethergramSearch", Loc.T(L.Aethergram.NameOrWorld), ref searchDraft, 64,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                store.Search(searchDraft);
-            }
+            store.Search(searchDraft);
         }
     }
 

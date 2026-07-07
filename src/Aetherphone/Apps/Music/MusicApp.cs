@@ -709,25 +709,8 @@ internal sealed class MusicApp : IPhoneApp
 
     private bool DrawSearchBar(Rect bar, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
-        var pillMin = new Vector2(bar.Min.X + 2f * scale, bar.Min.Y + 9f * scale);
-        var pillMax = new Vector2(bar.Max.X - 2f * scale, bar.Max.Y - 9f * scale);
-        dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(theme.GroupedCard), (pillMax.Y - pillMin.Y) * 0.5f);
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 16f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 32f * scale);
-        var submitted = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            if (ImGui.InputTextWithHint("##songSearch", Loc.T(L.Music.SearchSongs), ref searchDraft, 120,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                submitted = true;
-            }
-        }
-
+        var submitted = SearchField.DrawSubmit(bar, "##songSearch", Loc.T(L.Music.SearchSongs), ref searchDraft,
+            theme, 120, 2f);
         return submitted && !string.IsNullOrWhiteSpace(searchDraft);
     }
 

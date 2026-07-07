@@ -644,25 +644,10 @@ internal sealed partial class ChirperApp
 
     private void DrawSearchBar(Rect bar)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
-        var pillMax = new Vector2(bar.Max.X - 12f * scale, bar.Max.Y - 9f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(AppPalettes.Chirper.FieldSurface));
-        AppSkin.Icon(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f),
-            FontAwesomeIcon.Search.ToIconString(), AppPalettes.Chirper.MutedInk, 0.85f);
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 32f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.TitleInk))
+        if (SearchField.DrawSubmit(bar, "##chirperSearch", Loc.T(L.Chirper.NameOrWorld), ref searchDraft,
+                AppPalettes.Chirper))
         {
-            if (ImGui.InputTextWithHint("##chirperSearch", Loc.T(L.Chirper.NameOrWorld), ref searchDraft, 64,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                store.Search(searchDraft);
-            }
+            store.Search(searchDraft);
         }
     }
 
