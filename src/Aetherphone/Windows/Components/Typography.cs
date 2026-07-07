@@ -46,6 +46,15 @@ internal static class Typography
         }
     }
 
+    public static float MeasureWrapped(string text, float wrapWidth, float fontScale,
+        FontWeight weight = FontWeight.Regular)
+    {
+        using (Plugin.Fonts.Push(fontScale, weight))
+        {
+            return ImGui.CalcTextSize(text, false, wrapWidth).Y;
+        }
+    }
+
     public static void Draw(Vector2 position, string text, Vector4 color, float scale = 1f) =>
         Draw(position, text, color, scale, FontWeight.Regular);
 

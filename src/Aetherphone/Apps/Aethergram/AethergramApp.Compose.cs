@@ -90,7 +90,7 @@ internal sealed partial class AethergramApp
         var importHeight = 46f * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
-        if (DrawPillButton(importRect, Loc.T(L.Aethergram.ImportFromPc), true))
+        if (ui.PillButton(importRect, Loc.T(L.Aethergram.ImportFromPc), true))
         {
             LaunchFileDialog();
         }
@@ -173,7 +173,7 @@ internal sealed partial class AethergramApp
         var actionLabel = composeAvatarMode
             ? (store.Posting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Use))
             : Loc.T(L.Aethergram.Next);
-        if (DrawHeaderAction(area, actionLabel, canAdvance))
+        if (ui.HeaderAction(area, actionLabel, canAdvance))
         {
             if (composeAvatarMode)
             {
@@ -332,7 +332,7 @@ internal sealed partial class AethergramApp
         drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
-        if (HoverClick(preview.Min, preview.Max))
+        if (UiInteract.HoverClick(preview.Min, preview.Max))
         {
             composeStage = ComposeStage.Crop;
         }

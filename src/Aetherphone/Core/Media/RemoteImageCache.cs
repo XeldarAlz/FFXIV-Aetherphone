@@ -89,7 +89,7 @@ internal sealed class RemoteImageCache : IDisposable
         catch (Exception exception)
         {
             failed[url] = DateTime.UtcNow;
-            AepLog.Warning($"[Aethergram] failed to load image {url}: {exception.Message}");
+            AepLog.Warning($"[Media] failed to load image {url}: {exception.Message}");
         }
         finally
         {

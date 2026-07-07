@@ -49,11 +49,11 @@ internal static class AppRegistry
         };
 
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
-        apps.Add(new ChirperApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "chirper"), services.Lodestone, services.Http, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration));
-        apps.Add(new AethergramApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "aethergram"), services.Lodestone, services.Http, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration));
-        apps.Add(new VelvetApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.Notifications, services.VelvetLauncher, services.SocialLauncher, services.GameData));
+        apps.Add(new ChirperApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "chirper"), services.Lodestone, services.RemoteImages, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration));
+        apps.Add(new AethergramApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "aethergram"), services.Lodestone, services.RemoteImages, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration));
+        apps.Add(new VelvetApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages, services.Notifications, services.VelvetLauncher, services.SocialLauncher, services.GameData));
         apps.Add(new FeedbackApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "feedback"), photoLibrary));
-        apps.Add(new DevApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "dev"), services.Lodestone, services.Configuration, photoLibrary, services.Http));
+        apps.Add(new DevApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "dev"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages));
         apps.Add(new PollsApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "polls")));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));
         apps.Add(new PhotosApp(photoLibrary));

@@ -91,7 +91,7 @@ internal sealed partial class ChirperApp
         var lineGap = 3f * scale;
         var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
         var metaH = metaLine.Length > 0 ? Typography.Measure(metaLine, 0.95f).Y : 0f;
-        var bioH = user.Bio.Length > 0 ? 8f * scale + MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
+        var bioH = user.Bio.Length > 0 ? 8f * scale + Typography.MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
         var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
         var cardBottom = textTop + nameH + lineGap + metaH + bioH + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
@@ -106,7 +106,7 @@ internal sealed partial class ChirperApp
         var reportShown = false;
         if (user.IsMe)
         {
-            if (DrawPillButton(buttonRect, Loc.T(L.Chirper.EditProfile), false))
+            if (ui.PillButton(buttonRect, Loc.T(L.Chirper.EditProfile), false))
             {
                 editLoadedFor = null;
                 router.Push(ChirperRoute.EditProfile);
@@ -116,7 +116,7 @@ internal sealed partial class ChirperApp
         {
             var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
             reportShown = DrawReportToggle(reportCenter, buttonHeight * 0.5f, "user", user.Id);
-            if (DrawPillButton(buttonRect, user.IsFollowing ? Loc.T(L.Chirper.Following) : Loc.T(L.Chirper.Follow),
+            if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(L.Chirper.Following) : Loc.T(L.Chirper.Follow),
                     !user.IsFollowing))
             {
                 store.SetFollow(user.Id, !user.IsFollowing);
@@ -200,12 +200,12 @@ internal sealed partial class ChirperApp
             Loc.T(L.Chirper.Following));
         DrawStatColumn(origin.X + third * 1f, third, centerY, user.Followers.ToString(Loc.Culture), followersLabel);
         DrawStatColumn(origin.X + third * 2f, third, centerY, user.Posts.ToString(Loc.Culture), PostsLabel(user.Posts));
-        if (HoverClick(new Vector2(origin.X, origin.Y), new Vector2(origin.X + third, origin.Y + height)))
+        if (UiInteract.HoverClick(new Vector2(origin.X, origin.Y), new Vector2(origin.X + third, origin.Y + height)))
         {
             OpenUserList(user.Id, UserListKind.Following);
         }
 
-        if (HoverClick(new Vector2(origin.X + third, origin.Y), new Vector2(origin.X + third * 2f, origin.Y + height)))
+        if (UiInteract.HoverClick(new Vector2(origin.X + third, origin.Y), new Vector2(origin.X + third * 2f, origin.Y + height)))
         {
             OpenUserList(user.Id, UserListKind.Followers);
         }
@@ -244,7 +244,7 @@ internal sealed partial class ChirperApp
     {
         var active = reportTargetType == targetType && reportTargetId == targetId;
         var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
-        if (DrawIconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f))
+        if (ui.IconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f))
         {
             if (active)
             {
@@ -283,7 +283,7 @@ internal sealed partial class ChirperApp
         var buttonRect = new Rect(new Vector2(left + width - buttonWidth, origin.Y - 2f * scale),
             new Vector2(left + width, origin.Y - 2f * scale + buttonHeight));
         var canSubmit = !reportSubmitting;
-        if (DrawPillButton(buttonRect, reportSubmitting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.ReportSubmit),
+        if (ui.PillButton(buttonRect, reportSubmitting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.ReportSubmit),
                 canSubmit) && canSubmit)
         {
             SubmitReport();
@@ -415,7 +415,7 @@ internal sealed partial class ChirperApp
 
         var handleValid = IsHandleValid(editHandle);
         var canSave = !editBusy && editDisplay.Trim().Length > 0 && handleValid;
-        if (DrawHeaderAction(area, editBusy ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Save), canSave))
+        if (ui.HeaderAction(area, editBusy ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Save), canSave))
         {
             SaveProfile();
         }
@@ -433,7 +433,7 @@ internal sealed partial class ChirperApp
             var changeTop = ImGui.GetCursorScreenPos().Y;
             var changeRect = new Rect(new Vector2(avatarCenter.X - changeWidth * 0.5f, changeTop),
                 new Vector2(avatarCenter.X + changeWidth * 0.5f, changeTop + 30f * scale));
-            if (DrawPillButton(changeRect, Loc.T(L.Chirper.ChangePhoto), false))
+            if (ui.PillButton(changeRect, Loc.T(L.Chirper.ChangePhoto), false))
             {
                 OpenAvatarComposer();
             }
@@ -625,7 +625,7 @@ internal sealed partial class ChirperApp
             new Rect(
                 new Vector2(origin.X + width - pad - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f),
                 new Vector2(origin.X + width - pad, origin.Y + rowHeight * 0.5f + buttonHeight * 0.5f));
-        if (DrawPillButton(buttonRect, user.IsFollowing ? Loc.T(L.Chirper.Following) : Loc.T(L.Chirper.Follow),
+        if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(L.Chirper.Following) : Loc.T(L.Chirper.Follow),
                 !user.IsFollowing))
         {
             store.SetFollow(user.Id, !user.IsFollowing);
@@ -633,7 +633,7 @@ internal sealed partial class ChirperApp
 
         var rowMin = origin;
         var rowMax = new Vector2(origin.X + width - buttonWidth - pad - 6f * scale, origin.Y + rowHeight);
-        if (HoverClick(rowMin, rowMax))
+        if (UiInteract.HoverClick(rowMin, rowMax))
         {
             OpenProfile(user.Id);
         }
@@ -665,13 +665,13 @@ internal sealed partial class ChirperApp
             var radius = 14f * scale;
             var center = new Vector2(area.Max.X - 52f * scale, rowCenterY);
             DrawAvatar(ImGui.GetWindowDrawList(), center, radius, me.Name, me.World, me.AvatarUrl, 0.85f, 24);
-            if (HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
+            if (UiInteract.HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
             {
                 OpenProfile(me.Id);
             }
         }
 
-        if (DrawIconButton(searchCenter, 14f * scale, FontAwesomeIcon.Search.ToIconString(), AppPalettes.Chirper.BodyInk,
+        if (ui.IconButton(searchCenter, 14f * scale, FontAwesomeIcon.Search.ToIconString(), AppPalettes.Chirper.BodyInk,
                 new Vector4(0f, 0f, 0f, 0f), 0.95f) && store.IsSignedIn)
         {
             store.ClearDiscover();

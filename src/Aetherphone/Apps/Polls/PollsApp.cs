@@ -142,7 +142,7 @@ internal sealed class PollsApp : IPhoneApp
         var contentWidth = contentRight - contentLeft;
 
         var text = LocalizedFor(poll);
-        var questionHeight = MeasureWrapped(text.Question, contentWidth, 1.08f, FontWeight.SemiBold);
+        var questionHeight = Typography.MeasureWrapped(text.Question, contentWidth, 1.08f, FontWeight.SemiBold);
         var optionGap = 10f * scale;
         var footerHeight = 18f * scale;
         var optionsTop = origin.Y + pad + questionHeight + 14f * scale;
@@ -370,16 +370,8 @@ internal sealed class PollsApp : IPhoneApp
         var countSize = Typography.Measure(count, CountFontScale, FontWeight.Medium);
         var countLeft = left + width - countSize.X;
         var labelWidth = countLeft - labelLeft - CountGap * scale;
-        var labelHeight = MeasureWrapped(label, labelWidth, OptionFontScale, FontWeight.SemiBold);
+        var labelHeight = Typography.MeasureWrapped(label, labelWidth, OptionFontScale, FontWeight.SemiBold);
         return labelHeight + (RowTopPad + BarGap + BarHeight + RowBottomPad) * scale;
-    }
-
-    private static float MeasureWrapped(string text, float wrapWidth, float fontScale, FontWeight weight)
-    {
-        using (Plugin.Fonts.Push(fontScale, weight))
-        {
-            return ImGui.CalcTextSize(text, false, wrapWidth).Y;
-        }
     }
 
     private sealed class PollMotion

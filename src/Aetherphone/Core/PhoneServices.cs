@@ -8,6 +8,7 @@ using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Market;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.News;
@@ -43,6 +44,7 @@ internal sealed class PhoneServices : IDisposable
     public LinkshellBridge LinkshellBridge { get; }
     public HttpService Http { get; }
     public MediaCache Media { get; }
+    public RemoteImageCache RemoteImages { get; }
     public LodestoneService Lodestone { get; }
     public CollectService Collect { get; }
     public LookupService Lookup { get; }
@@ -70,7 +72,7 @@ internal sealed class PhoneServices : IDisposable
         ITextureProvider textures, WeatherService weather, NotificationService notifications, SoundService sound,
         MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
         SocialLauncher socialLauncher, LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http,
-        MediaCache media,
+        MediaCache media, RemoteImageCache remoteImages,
         LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession,
         AethernetClient aethernetClient, IAnalyticsService analytics, MarketItemIndex marketIndex,
         MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news,
@@ -97,6 +99,7 @@ internal sealed class PhoneServices : IDisposable
         LinkshellBridge = linkshellBridge;
         Http = http;
         Media = media;
+        RemoteImages = remoteImages;
         Lodestone = lodestone;
         Collect = collect;
         Lookup = lookup;
@@ -148,6 +151,7 @@ internal sealed class PhoneServices : IDisposable
         var http = new HttpService();
         var disk = new DiskCache(mediaRoot, 64L * 1024 * 1024);
         var media = new MediaCache(textures, disk);
+        var remoteImages = new RemoteImageCache(http);
         var lodestone = new LodestoneService(configuration, http, media, cacheRoot);
         var collectRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collect"));
         var collectCache = new DiskCache(collectRoot, 8L * 1024 * 1024);
@@ -189,7 +193,7 @@ internal sealed class PhoneServices : IDisposable
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, framework);
         return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
             messages, chatBridge, messageLauncher, velvetLauncher, socialLauncher, linkshells, linkshellBridge, http,
-            media, lodestone,
+            media, remoteImages, lodestone,
             collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher,
             marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
             collections, inventoryCapture, calls, socialNotifications);
@@ -217,6 +221,7 @@ internal sealed class PhoneServices : IDisposable
         Notifications.Dispose();
         Sound.Dispose();
         Media.Dispose();
+        RemoteImages.Dispose();
         Analytics.Dispose();
         Http.Dispose();
     }

@@ -269,7 +269,7 @@ internal sealed partial class VelvetApp
         }
 
         ImGui.PopTextWrapPos();
-        var textHeight = MeasureWrapped(comment.Text, wrapWidth, 0.88f);
+        var textHeight = Typography.MeasureWrapped(comment.Text, wrapWidth, 0.88f);
         var rowHeight = MathF.Max(avatarRadius * 2f, 17f * scale + textHeight);
         if (UiInteract.HoverClick(new Vector2(origin.X, origin.Y), new Vector2(textLeft + nameWidth, textTop)))
         {

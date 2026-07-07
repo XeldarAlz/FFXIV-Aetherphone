@@ -314,7 +314,7 @@ internal sealed partial class VelvetApp
 
         var headerH = 22f * scale;
         var afterHeader = 8f * scale;
-        var helpH = MeasureWrapped(help, innerWidth, 0.82f);
+        var helpH = Typography.MeasureWrapped(help, innerWidth, 0.82f);
         var afterHelp = 12f * scale;
         var labelH = 15f * scale;
         var afterLabel = 6f * scale;
@@ -371,7 +371,7 @@ internal sealed partial class VelvetApp
 
         var headerH = 22f * scale;
         var afterHeader = 8f * scale;
-        var helpH = MeasureWrapped(help, innerWidth, 0.82f);
+        var helpH = Typography.MeasureWrapped(help, innerWidth, 0.82f);
         var afterHelp = 12f * scale;
         var chipsH = MeasureChoice(values, start, relationship, innerWidth);
 

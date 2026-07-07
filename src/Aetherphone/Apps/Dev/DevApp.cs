@@ -71,7 +71,7 @@ internal sealed partial class DevApp : IPhoneApp
     private readonly int[] segmentLabelCounts = { -1, -1, -1 };
 
     public DevApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
-        Configuration configuration, PhotoLibrary library, HttpService http)
+        Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images)
     {
         this.session = session;
         this.client = client;
@@ -79,7 +79,7 @@ internal sealed partial class DevApp : IPhoneApp
         this.library = library;
         this.http = http;
         store = new DevStore(session, client, configuration);
-        images = new RemoteImageCache(http);
+        this.images = images;
         router = new ViewRouter<DevRoute>(DevRoute.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();
@@ -281,7 +281,6 @@ internal sealed partial class DevApp : IPhoneApp
 
     public void Dispose()
     {
-        images.Dispose();
         store.Dispose();
     }
 }

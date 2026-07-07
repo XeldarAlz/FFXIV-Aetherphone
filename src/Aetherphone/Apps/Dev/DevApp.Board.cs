@@ -43,7 +43,12 @@ internal sealed partial class DevApp
             }
         }
 
-        DrawComposeFab(area);
+        if (ComposeFab.Draw(area, ui, "##devComposeFab", Accent, FontAwesomeIcon.Plus.ToIconString(), "New card"))
+        {
+            cardTitleDraft = string.Empty;
+            cardBodyDraft = string.Empty;
+            router.Push(DevRoute.CardCompose);
+        }
     }
 
     private string[] ColumnSegmentLabels()
@@ -136,38 +141,6 @@ internal sealed partial class DevApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardHeight + 10f * scale));
-    }
-
-    private void DrawComposeFab(Rect area)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var radius = 26f * scale;
-        var margin = 18f * scale;
-        var boxSize = radius * 2f + margin;
-        var boxMin = new Vector2(area.Max.X - boxSize, area.Max.Y - boxSize);
-        ImGui.SetCursorScreenPos(boxMin);
-        using var overlay = ImRaii.Child("##devComposeFab", new Vector2(boxSize, boxSize), false,
-            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
-        var center = new Vector2(area.Max.X - radius - margin, area.Max.Y - radius - margin);
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
-        drawList.AddCircleFilled(center, radius,
-            ImGui.GetColorU32(hovered ? Palette.Mix(Accent, new Vector4(1f, 1f, 1f, 1f), 0.12f) : Accent), 32);
-        AppSkin.Icon(center, FontAwesomeIcon.Plus.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 1.1f);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ui.DrawActionTooltip(center, radius, "New card");
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                cardTitleDraft = string.Empty;
-                cardBodyDraft = string.Empty;
-                router.Push(DevRoute.CardCompose);
-            }
-        }
     }
 
     private void DrawCardDetail(Rect area, string cardId)

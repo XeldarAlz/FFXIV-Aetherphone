@@ -42,7 +42,7 @@ internal sealed partial class AethergramApp
         var lineGap = 3f * scale;
         var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
         var metaH = metaLine.Length > 0 ? Typography.Measure(metaLine, 0.95f).Y : 0f;
-        var bioH = user.Bio.Length > 0 ? 8f * scale + MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
+        var bioH = user.Bio.Length > 0 ? 8f * scale + Typography.MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
         var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
         var cardBottom = textTop + nameH + lineGap + metaH + bioH + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
@@ -57,7 +57,7 @@ internal sealed partial class AethergramApp
         var reportShown = false;
         if (user.IsMe)
         {
-            if (DrawPillButton(buttonRect, Loc.T(L.Aethergram.EditProfile), false))
+            if (ui.PillButton(buttonRect, Loc.T(L.Aethergram.EditProfile), false))
             {
                 editLoadedFor = null;
                 router.Push(AethergramRoute.EditProfile);
@@ -67,7 +67,7 @@ internal sealed partial class AethergramApp
         {
             var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
             reportShown = DrawReportToggle(reportCenter, buttonHeight * 0.5f, "user", user.Id);
-            if (DrawPillButton(buttonRect,
+            if (ui.PillButton(buttonRect,
                     user.IsFollowing ? Loc.T(L.Aethergram.Following) : Loc.T(L.Aethergram.Follow), !user.IsFollowing))
             {
                 store.SetFollow(user.Id, !user.IsFollowing);
@@ -150,12 +150,12 @@ internal sealed partial class AethergramApp
         DrawStatColumn(origin.X + third * 1f, third, centerY, user.Followers.ToString(Loc.Culture), followersLabel);
         DrawStatColumn(origin.X + third * 2f, third, centerY, user.Following.ToString(Loc.Culture),
             Loc.T(L.Aethergram.Following));
-        if (HoverClick(new Vector2(origin.X + third, origin.Y), new Vector2(origin.X + third * 2f, origin.Y + height)))
+        if (UiInteract.HoverClick(new Vector2(origin.X + third, origin.Y), new Vector2(origin.X + third * 2f, origin.Y + height)))
         {
             OpenUserList(user.Id, UserListKind.Followers);
         }
 
-        if (HoverClick(new Vector2(origin.X + third * 2f, origin.Y), new Vector2(origin.X + width, origin.Y + height)))
+        if (UiInteract.HoverClick(new Vector2(origin.X + third * 2f, origin.Y), new Vector2(origin.X + width, origin.Y + height)))
         {
             OpenUserList(user.Id, UserListKind.Following);
         }
@@ -282,7 +282,7 @@ internal sealed partial class AethergramApp
 
         var handleValid = IsHandleValid(editHandle);
         var canSave = !editBusy && editDisplay.Trim().Length > 0 && handleValid;
-        if (DrawHeaderAction(area, editBusy ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Save), canSave))
+        if (ui.HeaderAction(area, editBusy ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Save), canSave))
         {
             SaveProfile();
         }
@@ -297,7 +297,7 @@ internal sealed partial class AethergramApp
             var changeWidth = 150f * scale;
             var changeRect = new Rect(new Vector2(avatarCenter.X - changeWidth * 0.5f, ImGui.GetCursorScreenPos().Y),
                 new Vector2(avatarCenter.X + changeWidth * 0.5f, ImGui.GetCursorScreenPos().Y + 30f * scale));
-            if (DrawPillButton(changeRect, Loc.T(L.Aethergram.ChangePhoto), false))
+            if (ui.PillButton(changeRect, Loc.T(L.Aethergram.ChangePhoto), false))
             {
                 StartCompose(true);
             }
@@ -430,13 +430,13 @@ internal sealed partial class AethergramApp
         var buttonRect =
             new Rect(new Vector2(origin.X + width - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f),
                 new Vector2(origin.X + width, origin.Y + rowHeight * 0.5f + buttonHeight * 0.5f));
-        if (DrawPillButton(buttonRect, user.IsFollowing ? Loc.T(L.Aethergram.Following) : Loc.T(L.Aethergram.Follow),
+        if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(L.Aethergram.Following) : Loc.T(L.Aethergram.Follow),
                 !user.IsFollowing))
         {
             store.SetFollow(user.Id, !user.IsFollowing);
         }
 
-        if (HoverClick(origin, new Vector2(origin.X + width - buttonWidth - 6f * scale, origin.Y + rowHeight)))
+        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width - buttonWidth - 6f * scale, origin.Y + rowHeight)))
         {
             OpenProfile(user.Id);
         }

@@ -10,7 +10,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Messaging;
-using Aetherphone.Core.Net;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Social;
@@ -103,8 +102,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     private float deferredTooltipRadius;
     private string deferredTooltipText = string.Empty;
 
-    public AethergramApp(AethernetSession session, AethernetClient client, LodestoneService lodestone, HttpService http,
-        PhotoLibrary library, SocialLauncher launcher, GameData gameData, Configuration configuration)
+    public AethergramApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
+        RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
+        Configuration configuration)
     {
         store = new AethergramStore(session, client);
         this.launcher = launcher;
@@ -112,7 +112,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         this.configuration = configuration;
         this.lodestone = lodestone;
         this.library = library;
-        images = new RemoteImageCache(http);
+        this.images = images;
         router = new ViewRouter<AethergramRoute>(AethergramRoute.Home, Id);
         drawView = DrawView;
         back = () => router.Pop();
@@ -221,7 +221,8 @@ internal sealed partial class AethergramApp : IPhoneApp
         var segmentHeight = 38f * scale;
         var tabsRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 2f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 2f * scale + segmentHeight));
-        var selected = DrawScopeSegments(tabsRect);
+        var selected = SegmentSlider.Draw(tabsRect, Loc.T(L.Aethergram.ForYou), Loc.T(L.Aethergram.Following),
+            (int)activeScope, ref tabSegmentAnim, Accent, AppPalettes.Aethergram.MutedInk);
         if (selected != (int)activeScope)
         {
             activeScope = (SocialFeedScope)selected;
@@ -237,44 +238,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         DrawBottomNav(navRect);
         DrawFeedList(listRect, activeScope);
         FlushDeferredTooltip();
-    }
-
-    private int DrawScopeSegments(Rect rect)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = rect.Height * 0.5f;
-        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)));
-        var target = (int)activeScope == 1 ? 1f : 0f;
-        tabSegmentAnim += (target - tabSegmentAnim) * MathF.Min(1f, ImGui.GetIO().DeltaTime * 14f);
-        var scale = ImGuiHelpers.GlobalScale;
-        var half = rect.Width * 0.5f;
-        var pad = 3f * scale;
-        var thumbMinX = rect.Min.X + pad + tabSegmentAnim * half;
-        var thumbMin = new Vector2(thumbMinX, rect.Min.Y + pad);
-        var thumbMax = new Vector2(thumbMinX + half - pad * 2f, rect.Max.Y - pad);
-        Squircle.Fill(drawList, thumbMin, thumbMax, (thumbMax.Y - thumbMin.Y) * 0.5f, ImGui.GetColorU32(Accent));
-        var forYouRect = new Rect(rect.Min, new Vector2(rect.Min.X + half, rect.Max.Y));
-        var followingRect = new Rect(new Vector2(rect.Min.X + half, rect.Min.Y), rect.Max);
-        DrawSegmentLabel(forYouRect, Loc.T(L.Aethergram.ForYou), activeScope == SocialFeedScope.ForYou);
-        DrawSegmentLabel(followingRect, Loc.T(L.Aethergram.Following), activeScope == SocialFeedScope.Following);
-        var selected = (int)activeScope;
-        if (HoverClick(forYouRect.Min, forYouRect.Max))
-        {
-            selected = 0;
-        }
-
-        if (HoverClick(followingRect.Min, followingRect.Max))
-        {
-            selected = 1;
-        }
-
-        return selected;
-    }
-
-    private static void DrawSegmentLabel(Rect rect, string label, bool active)
-    {
-        var ink = active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Aethergram.MutedInk;
-        Typography.DrawCentered(rect.Center, label, ink, 0.9f, active ? FontWeight.SemiBold : FontWeight.Medium);
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
@@ -320,7 +283,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var actionsTop = imageBottom + 12f * scale;
         var actionsHeight = 22f * scale;
         var textTop = actionsTop + actionsHeight + 10f * scale;
-        var captionHeight = post.Text.Length > 0 ? MeasureWrapped(post.Text, innerWidth, 0.9f) + 6f * scale : 0f;
+        var captionHeight = post.Text.Length > 0 ? Typography.MeasureWrapped(post.Text, innerWidth, 0.9f) + 6f * scale : 0f;
         var commentsHeight = post.CommentCount > 0 ? 20f * scale : 0f;
         var cardBottom = textTop + captionHeight + commentsHeight + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 18f * scale);
@@ -333,14 +296,14 @@ internal sealed partial class AethergramApp : IPhoneApp
             FontWeight.SemiBold);
         var subline = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), subline, AppPalettes.Aethergram.MutedInk, 0.76f);
-        if (HoverClick(new Vector2(innerX, origin.Y + pad),
+        if (UiInteract.HoverClick(new Vector2(innerX, origin.Y + pad),
                 new Vector2(origin.X + width - pad - 30f * scale, origin.Y + pad + headerBlock)))
         {
             OpenProfile(post.AuthorId);
         }
 
         var moreCenter = new Vector2(origin.X + width - pad - 4f * scale, avatarCenter.Y);
-        if (DrawIconButton(moreCenter, 12f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), AppPalettes.Aethergram.BodyInk,
+        if (ui.IconButton(moreCenter, 12f * scale, FontAwesomeIcon.EllipsisH.ToIconString(), AppPalettes.Aethergram.BodyInk,
                 AppSkin.Transparent, 0.85f, Loc.T(L.Aethergram.More)))
         {
             OpenDetail(post, false);
@@ -353,7 +316,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var liked = post.MyReaction >= 0;
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var heartCenter = new Vector2(innerX + 12f * scale, actionCenterY);
-        if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(),
+        if (ui.IconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(),
                 liked ? LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.15f, Loc.T(L.Aethergram.Like)))
         {
             store.ToggleLike(post);
@@ -373,7 +336,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
 
         var commentCenter = new Vector2(cursorX + 12f * scale, actionCenterY);
-        if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Aethergram.BodyInk,
+        if (ui.IconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Aethergram.BodyInk,
                 AppSkin.Transparent, 1.05f, Loc.T(L.Aethergram.Comment)))
         {
             OpenDetail(post, true);
@@ -406,7 +369,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             var labelPos = new Vector2(innerX, y + 2f * scale);
             Typography.Draw(labelPos, commentsLabel, AppPalettes.Aethergram.MutedInk, 0.82f);
             var labelSize = Typography.Measure(commentsLabel, 0.82f);
-            if (HoverClick(labelPos, labelPos + labelSize))
+            if (UiInteract.HoverClick(labelPos, labelPos + labelSize))
             {
                 OpenDetail(post, false);
             }
@@ -414,14 +377,6 @@ internal sealed partial class AethergramApp : IPhoneApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y + 12f * scale));
-    }
-
-    private static float MeasureWrapped(string text, float wrapWidth, float fontScale)
-    {
-        using (Plugin.Fonts.Push(fontScale))
-        {
-            return ImGui.CalcTextSize(text, false, wrapWidth).Y;
-        }
     }
 
     private void HandleLikeGesture(Rect imageRect, PostDto post)
@@ -519,14 +474,14 @@ internal sealed partial class AethergramApp : IPhoneApp
         var none = AppSkin.Transparent;
         var hitRadius = 17f * scale;
         var homeCenter = new Vector2(bar.Min.X + slot * 0.5f, centerY);
-        if (DrawIconButton(homeCenter, hitRadius, FontAwesomeIcon.Home.ToIconString(), AppPalettes.Aethergram.TitleInk, none,
+        if (ui.IconButton(homeCenter, hitRadius, FontAwesomeIcon.Home.ToIconString(), AppPalettes.Aethergram.TitleInk, none,
                 1.15f))
         {
             store.RefreshFeed(activeScope);
         }
 
         var searchCenter = new Vector2(bar.Min.X + slot * 1.5f, centerY);
-        if (DrawIconButton(searchCenter, hitRadius, FontAwesomeIcon.Search.ToIconString(), AppPalettes.Aethergram.MutedInk, none,
+        if (ui.IconButton(searchCenter, hitRadius, FontAwesomeIcon.Search.ToIconString(), AppPalettes.Aethergram.MutedInk, none,
                 1.1f))
         {
             store.ClearDiscover();
@@ -535,7 +490,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
 
         var postCenter = new Vector2(bar.Min.X + slot * 2.5f, centerY);
-        if (DrawIconButton(postCenter, hitRadius, FontAwesomeIcon.PlusSquare.ToIconString(), AppPalettes.Aethergram.MutedInk,
+        if (ui.IconButton(postCenter, hitRadius, FontAwesomeIcon.PlusSquare.ToIconString(), AppPalettes.Aethergram.MutedInk,
                 none, 1.2f))
         {
             StartCompose(false);
@@ -562,7 +517,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         else
         {
             store.EnsureMe();
-            DrawIconButton(profileCenter, hitRadius, FontAwesomeIcon.User.ToIconString(), AppPalettes.Aethergram.MutedInk,
+            ui.IconButton(profileCenter, hitRadius, FontAwesomeIcon.User.ToIconString(), AppPalettes.Aethergram.MutedInk,
                 AppSkin.Transparent, 1.05f);
         }
     }
@@ -612,34 +567,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale),
             Loc.T(L.Aethergram.HandleRules), AppPalettes.Aethergram.MutedInk, 0.78f);
         ImGui.Dummy(new Vector2(width, 16f * scale));
-    }
-
-    private bool DrawHeaderAction(Rect area, string label, bool enabled)
-    {
-        return ui.HeaderAction(area, label, enabled);
-    }
-
-    private bool DrawPillButton(Rect rect, string label, bool filled)
-    {
-        return ui.PillButton(rect, label, filled);
-    }
-
-    private bool DrawIconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
-        float glyphScale, string tooltip = "")
-    {
-        return ui.IconButton(center, hitRadius, glyph, color, background, glyphScale, tooltip);
-    }
-
-
-    private static bool HoverClick(Vector2 min, Vector2 max)
-    {
-        if (!ImGui.IsMouseHoveringRect(min, max))
-        {
-            return false;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private void OpenProfile(string userId)
@@ -735,6 +662,5 @@ internal sealed partial class AethergramApp : IPhoneApp
     public void Dispose()
     {
         store.Dispose();
-        images.Dispose();
     }
 }

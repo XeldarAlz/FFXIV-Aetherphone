@@ -131,8 +131,8 @@ internal sealed partial class VelvetApp : IPhoneApp
     private bool sentExpanded;
 
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
-        Configuration configuration, PhotoLibrary library, HttpService http, NotificationService notifications,
-        VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData)
+        Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
+        NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData)
     {
         store = new VelvetStore(session, client, notifications, configuration);
         this.launcher = launcher;
@@ -144,7 +144,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         avatar = new VelvetAvatarComposer(store, library);
         post = new VelvetPostComposer(store, library);
         report = new VelvetReportControl(store);
-        images = new RemoteImageCache(http);
+        this.images = images;
         this.http = http;
         router = new ViewRouter<VelvetRoute>(VelvetRoute.Root, Id);
         drawView = DrawView;
@@ -370,7 +370,9 @@ internal sealed partial class VelvetApp : IPhoneApp
         var segmentHeight = 38f * scale;
         var segmentRect = new Rect(new Vector2(area.Min.X + 16f * scale, area.Min.Y + 8f * scale),
             new Vector2(area.Max.X - 16f * scale, area.Min.Y + 8f * scale + segmentHeight));
-        DrawHubSegments(segmentRect);
+        var selected = SegmentSlider.Draw(segmentRect, Loc.T(L.Velvet.TabTimeline), Loc.T(L.Velvet.TabDiscover),
+            hubView == VelvetHubView.Discover ? 1 : 0, ref hubSegmentAnim, Accent, AppPalettes.Velvet.MutedInk);
+        hubView = selected == 1 ? VelvetHubView.Discover : VelvetHubView.Timeline;
         var bodyRect = new Rect(new Vector2(area.Min.X, segmentRect.Max.Y + 8f * scale), area.Max);
         if (hubView == VelvetHubView.Discover)
         {
@@ -379,43 +381,13 @@ internal sealed partial class VelvetApp : IPhoneApp
         else
         {
             DrawTimeline(bodyRect);
-            DrawComposeFab(area);
+            if (ComposeFab.Draw(area, ui, "##velvetComposeFab", AppPalettes.Velvet.Accent,
+                    FontAwesomeIcon.Plus.ToIconString(), Loc.T(L.Velvet.NewPost)))
+            {
+                post.Open();
+                router.Push(VelvetRoute.Compose);
+            }
         }
-    }
-
-    private void DrawHubSegments(Rect rect)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var radius = rect.Height * 0.5f;
-        Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)));
-        var target = hubView == VelvetHubView.Discover ? 1f : 0f;
-        hubSegmentAnim += (target - hubSegmentAnim) * MathF.Min(1f, ImGui.GetIO().DeltaTime * 14f);
-        var half = rect.Width * 0.5f;
-        var pad = 3f * scale;
-        var thumbMinX = rect.Min.X + pad + hubSegmentAnim * half;
-        var thumbMin = new Vector2(thumbMinX, rect.Min.Y + pad);
-        var thumbMax = new Vector2(thumbMinX + half - pad * 2f, rect.Max.Y - pad);
-        Squircle.Fill(drawList, thumbMin, thumbMax, (thumbMax.Y - thumbMin.Y) * 0.5f, ImGui.GetColorU32(Accent));
-        var timelineRect = new Rect(rect.Min, new Vector2(rect.Min.X + half, rect.Max.Y));
-        var discoverRect = new Rect(new Vector2(rect.Min.X + half, rect.Min.Y), rect.Max);
-        DrawSegmentLabel(timelineRect, Loc.T(L.Velvet.TabTimeline), hubView == VelvetHubView.Timeline);
-        DrawSegmentLabel(discoverRect, Loc.T(L.Velvet.TabDiscover), hubView == VelvetHubView.Discover);
-        if (UiInteract.HoverClick(timelineRect.Min, timelineRect.Max))
-        {
-            hubView = VelvetHubView.Timeline;
-        }
-
-        if (UiInteract.HoverClick(discoverRect.Min, discoverRect.Max))
-        {
-            hubView = VelvetHubView.Discover;
-        }
-    }
-
-    private static void DrawSegmentLabel(Rect rect, string label, bool active)
-    {
-        var ink = active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Velvet.MutedInk;
-        Typography.DrawCentered(rect.Center, label, ink, 0.9f, active ? FontWeight.SemiBold : FontWeight.Medium);
     }
 
     private void DrawTimeline(Rect area)
@@ -458,7 +430,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         var actionsTop = imageBottom + 12f * scale;
         var actionsHeight = 20f * scale;
         var textTop = actionsTop + actionsHeight + 12f * scale;
-        var captionHeight = post.Caption.Length > 0 ? MeasureWrapped(post.Caption, innerWidth, 0.9f) + 8f * scale : 0f;
+        var captionHeight = post.Caption.Length > 0 ? Typography.MeasureWrapped(post.Caption, innerWidth, 0.9f) + 8f * scale : 0f;
         var tagsHeight = post.Tags.Length > 0 ? 24f * scale : 0f;
         var cardBottom = textTop + captionHeight + tagsHeight + pad;
         var cardHeight = cardBottom - origin.Y;
@@ -558,14 +530,6 @@ internal sealed partial class VelvetApp : IPhoneApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardHeight + 12f * scale));
-    }
-
-    private static float MeasureWrapped(string text, float wrapWidth, float fontScale)
-    {
-        using (Plugin.Fonts.Push(fontScale))
-        {
-            return ImGui.CalcTextSize(text, false, wrapWidth).Y;
-        }
     }
 
     private void DrawDiscover(Rect area)
@@ -707,39 +671,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         if (ImGui.IsItemHovered())
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-    }
-
-    private void DrawComposeFab(Rect area)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var radius = 26f * scale;
-        var margin = 18f * scale;
-        var boxSize = radius * 2f + margin;
-        var boxMin = new Vector2(area.Max.X - boxSize, area.Max.Y - boxSize);
-        ImGui.SetCursorScreenPos(boxMin);
-        using var overlay = ImRaii.Child("##velvetComposeFab", new Vector2(boxSize, boxSize), false,
-            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
-        var center = new Vector2(area.Max.X - radius - margin, area.Max.Y - radius - margin);
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
-        drawList.AddCircleFilled(center, radius,
-            ImGui.GetColorU32(hovered
-                ? Palette.Mix(AppPalettes.Velvet.Accent, new Vector4(1f, 1f, 1f, 1f), 0.12f)
-                : AppPalettes.Velvet.Accent), 32);
-        AppSkin.Icon(center, FontAwesomeIcon.Plus.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 1.1f);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ui.DrawActionTooltip(center, radius, Loc.T(L.Velvet.NewPost));
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                post.Open();
-                router.Push(VelvetRoute.Compose);
-            }
         }
     }
 
@@ -1274,7 +1205,6 @@ internal sealed partial class VelvetApp : IPhoneApp
 
     public void Dispose()
     {
-        images.Dispose();
         store.Dispose();
     }
 }

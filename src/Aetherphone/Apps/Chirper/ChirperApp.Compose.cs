@@ -80,7 +80,7 @@ internal sealed partial class ChirperApp
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Chirper.NewChirp), back);
         var canPost = !string.IsNullOrWhiteSpace(draft) && !store.Posting;
-        if (DrawHeaderAction(area, store.Posting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Post), canPost))
+        if (ui.HeaderAction(area, store.Posting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Post), canPost))
         {
             Submit();
         }

@@ -63,7 +63,7 @@ internal sealed partial class AethergramApp
                 FontWeight.SemiBold);
             Typography.Draw(new Vector2(nameLeft, headerNameY + headerNameSize.Y + headerTextGap), headerMeta,
                 AppPalettes.Aethergram.MutedInk, 0.78f);
-            if (HoverClick(new Vector2(origin.X, origin.Y),
+            if (UiInteract.HoverClick(new Vector2(origin.X, origin.Y),
                     new Vector2(origin.X + width * 0.7f, origin.Y + headerHeight)))
             {
                 OpenProfile(post.AuthorId);
@@ -78,7 +78,7 @@ internal sealed partial class AethergramApp
             var liked = post.MyReaction >= 0;
             var actionsY = imageRect.Max.Y + 22f * scale;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
-            if (DrawIconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(),
+            if (ui.IconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(),
                     liked ? LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.1f, Loc.T(L.Aethergram.Like)))
             {
                 store.ToggleLike(post);
@@ -110,7 +110,7 @@ internal sealed partial class AethergramApp
             }
 
             var commentCenter = new Vector2(actionCursorX + 12f * scale, actionsY);
-            if (DrawIconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Aethergram.BodyInk,
+            if (ui.IconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Aethergram.BodyInk,
                     AppSkin.Transparent, 1.05f, Loc.T(L.Aethergram.Comment)))
             {
                 commentFocusPending = true;
@@ -206,7 +206,7 @@ internal sealed partial class AethergramApp
         var textRight = bubbleRight - padX;
         var displayName = SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle);
         var nameHeight = Typography.Measure(displayName, 0.85f, FontWeight.SemiBold).Y;
-        var textHeight = MeasureWrapped(comment.Text, textRight - textLeft, 0.88f);
+        var textHeight = Typography.MeasureWrapped(comment.Text, textRight - textLeft, 0.88f);
         var bubbleHeight = padTop + nameHeight + 4f * scale + textHeight + padBottom;
         var bubbleTop = origin.Y;
         var bubbleBottom = bubbleTop + bubbleHeight;
@@ -248,7 +248,7 @@ internal sealed partial class AethergramApp
         }
 
         ImGui.PopTextWrapPos();
-        if (HoverClick(new Vector2(origin.X, bubbleTop), new Vector2(textLeft + nameWidth, textTop)))
+        if (UiInteract.HoverClick(new Vector2(origin.X, bubbleTop), new Vector2(textLeft + nameWidth, textTop)))
         {
             OpenProfile(comment.AuthorId);
         }
@@ -307,7 +307,7 @@ internal sealed partial class AethergramApp
         var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, bar.Center.Y);
         drawList.AddCircleFilled(sendCenter, sendRadius, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
         AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.8f);
-        if ((HoverClick(sendCenter - new Vector2(sendRadius, sendRadius),
+        if ((UiInteract.HoverClick(sendCenter - new Vector2(sendRadius, sendRadius),
                 sendCenter + new Vector2(sendRadius, sendRadius)) || submitted) && canSend)
         {
             var text = commentDraft;
@@ -356,7 +356,7 @@ internal sealed partial class AethergramApp
     {
         var active = reportTargetType == targetType && reportTargetId == targetId;
         var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
-        if (DrawIconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f,
+        if (ui.IconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f,
                 Loc.T(L.Aethergram.ReportSubmit)))
         {
             if (active)
@@ -396,7 +396,7 @@ internal sealed partial class AethergramApp
         var buttonRect = new Rect(new Vector2(left + width - buttonWidth, origin.Y - 2f * scale),
             new Vector2(left + width, origin.Y - 2f * scale + buttonHeight));
         var canSubmit = !reportSubmitting;
-        if (DrawPillButton(buttonRect, reportSubmitting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.ReportSubmit),
+        if (ui.PillButton(buttonRect, reportSubmitting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.ReportSubmit),
                 canSubmit) && canSubmit)
         {
             SubmitReport();
@@ -438,7 +438,7 @@ internal sealed partial class AethergramApp
     private void DrawDeleteToggle(Vector2 center, float radius, string postId)
     {
         var background = Palette.WithAlpha(theme.Danger, 0.16f);
-        if (DrawIconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, background, 0.9f,
+        if (ui.IconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, background, 0.9f,
                 Loc.T(L.Aethergram.DeleteConfirm)))
         {
             AskDeletePost(postId);
