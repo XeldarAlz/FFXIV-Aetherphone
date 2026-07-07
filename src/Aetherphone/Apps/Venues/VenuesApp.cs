@@ -116,7 +116,7 @@ internal sealed class VenuesApp : IPhoneApp
         var top = area.Min.Y + AppHeader.Height * scale;
         var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
             new Vector2(area.Max.X - pad, top + SearchHeight * scale));
-        DrawSearch(searchBar);
+        SearchField.Draw(searchBar, "##venueSearch", Loc.T(L.Venues.Search), ref search, frameTheme, 80);
         var segmentBar = new Rect(new Vector2(area.Min.X + pad, searchBar.Max.Y),
             new Vector2(area.Max.X - pad, searchBar.Max.Y + SegmentHeight * scale));
         DrawTimeSegments(segmentBar);
@@ -309,7 +309,7 @@ internal sealed class VenuesApp : IPhoneApp
         if (hasTeleport)
         {
             var rect = new Rect(new Vector2(cursor, origin.Y), new Vector2(cursor + slotWidth, origin.Y + height));
-            if (DrawButton(rect, Loc.T(L.Venues.Teleport), true, lifestreamAvailable))
+            if (AppSkin.PillButton(rect, Loc.T(L.Venues.Teleport), true, lifestreamAvailable, frameTheme))
             {
                 if (lifestreamAvailable)
                 {
@@ -330,7 +330,7 @@ internal sealed class VenuesApp : IPhoneApp
         }
 
         var openRect = new Rect(new Vector2(cursor, origin.Y), new Vector2(cursor + slotWidth, origin.Y + height));
-        if (DrawButton(openRect, Loc.T(L.Venues.Open), !hasTeleport, true))
+        if (AppSkin.PillButton(openRect, Loc.T(L.Venues.Open), !hasTeleport, true, frameTheme))
         {
             UrlActions.OpenInBrowser(venue.Url);
         }
@@ -340,7 +340,7 @@ internal sealed class VenuesApp : IPhoneApp
         {
             var discordRect = new Rect(new Vector2(cursor, origin.Y),
                 new Vector2(cursor + slotWidth, origin.Y + height));
-            if (DrawButton(discordRect, Loc.T(L.Venues.Discord), false, true))
+            if (AppSkin.PillButton(discordRect, Loc.T(L.Venues.Discord), false, true, frameTheme))
             {
                 UrlActions.OpenInBrowser(venue.DiscordUrl!);
             }
@@ -466,23 +466,6 @@ internal sealed class VenuesApp : IPhoneApp
         ImGui.Dummy(new Vector2(0f, 12f * scale));
     }
 
-    private void DrawSearch(Rect bar)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var pillMin = new Vector2(bar.Min.X, bar.Min.Y + 6f * scale);
-        var pillMax = new Vector2(bar.Max.X, bar.Max.Y - 6f * scale);
-        drawList.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(frameTheme.GroupedCard),
-            (pillMax.Y - pillMin.Y) * 0.5f);
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 28f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, frameTheme.TextStrong))
-        {
-            ImGui.InputTextWithHint("##venueSearch", Loc.T(L.Venues.Search), ref search, 80, ImGuiInputTextFlags.None);
-        }
-    }
 
     private void DrawTimeSegments(Rect bar)
     {
@@ -508,14 +491,14 @@ internal sealed class VenuesApp : IPhoneApp
         var centerY = bar.Center.Y;
         var dataCenter = CurrentDataCenter();
         var dcLabel = dataCenter.Length > 0 ? dataCenter : Loc.T(L.Venues.AllDataCenters);
-        if (DrawChip(ref cursor, centerY, gap, dcLabel, !configuration.VenueAllDataCenters && dataCenter.Length > 0))
+        if (AppSkin.FlowChip(ref cursor, centerY, gap, dcLabel, !configuration.VenueAllDataCenters && dataCenter.Length > 0, frameTheme))
         {
             configuration.VenueAllDataCenters = !configuration.VenueAllDataCenters;
             configuration.Save();
         }
 
-        if (DrawChip(ref cursor, centerY, gap, SourceFilterLabel(configuration.VenueSourceFilter),
-                configuration.VenueSourceFilter != VenueFilter.SourceAll))
+        if (AppSkin.FlowChip(ref cursor, centerY, gap, SourceFilterLabel(configuration.VenueSourceFilter),
+                configuration.VenueSourceFilter != VenueFilter.SourceAll, frameTheme))
         {
             configuration.VenueSourceFilter = (configuration.VenueSourceFilter + 1) % 3;
             configuration.Save();
@@ -524,102 +507,25 @@ internal sealed class VenuesApp : IPhoneApp
         var tagsLabel = selectedTags.Count > 0
             ? $"{Loc.T(L.Venues.Tags)} · {selectedTags.Count}"
             : Loc.T(L.Venues.Tags);
-        if (DrawChip(ref cursor, centerY, gap, tagsLabel, showTagSheet || selectedTags.Count > 0))
+        if (AppSkin.FlowChip(ref cursor, centerY, gap, tagsLabel, showTagSheet || selectedTags.Count > 0, frameTheme))
         {
             showTagSheet = !showTagSheet;
         }
 
-        if (DrawChip(ref cursor, centerY, gap, Loc.T(L.Venues.Favorites), favoritesOnly))
+        if (AppSkin.FlowChip(ref cursor, centerY, gap, Loc.T(L.Venues.Favorites), favoritesOnly, frameTheme))
         {
             favoritesOnly = !favoritesOnly;
         }
     }
 
-    private bool DrawChip(ref float cursorX, float centerY, float gap, string label, bool active)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var textSize = Typography.Measure(label, 0.8f, FontWeight.Medium);
-        var height = 28f * scale;
-        var width = textSize.X + 22f * scale;
-        var min = new Vector2(cursorX, centerY - height * 0.5f);
-        var max = new Vector2(cursorX + width, centerY + height * 0.5f);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
-        var fill = active ? Palette.WithAlpha(frameTheme.Accent, 0.92f) : frameTheme.GroupedCard;
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(fill));
-        var ink = active ? frameTheme.TextStrong :
-            hovered ? frameTheme.TextStrong : frameTheme.TextMuted;
-        Typography.Draw(new Vector2(min.X + (width - textSize.X) * 0.5f, centerY - textSize.Y * 0.5f), label, ink, 0.8f,
-            FontWeight.Medium);
-        cursorX = max.X + gap;
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-    }
-
-    private bool DrawButton(Rect rect, string label, bool primary, bool enabled)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-        var rounding = rect.Height * 0.32f;
-        Vector4 fill;
-        Vector4 ink;
-        if (primary)
-        {
-            fill = hovered ? Palette.Mix(frameTheme.Accent, frameTheme.TextStrong, 0.12f) : frameTheme.Accent;
-            ink = new Vector4(1f, 1f, 1f, 0.98f);
-        }
-        else
-        {
-            fill = hovered ? Palette.Mix(frameTheme.GroupedCard, frameTheme.TextStrong, 0.08f) : frameTheme.GroupedCard;
-            ink = frameTheme.TextStrong;
-        }
-
-        if (!enabled)
-        {
-            fill = Palette.WithAlpha(fill, 0.45f);
-            ink = frameTheme.TextMuted;
-        }
-
-        Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(fill));
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-    }
 
     private void DrawReloadButton(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var center = new Vector2(area.Max.X - 18f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
-        var box = 14f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
-        var glyph = FontAwesomeIcon.Sync.ToIconString();
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        {
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, hovered ? frameTheme.TextStrong : frameTheme.TextMuted))
-            {
-                ImGui.TextUnformatted(glyph);
-            }
-        }
-
-        if (!hovered)
-        {
-            return;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (AppSkin.IconButton(center, 14f * scale, FontAwesomeIcon.Sync.ToIconString(), frameTheme.TextMuted,
+                AppSkin.Transparent, 1f, frameTheme))
         {
             venues.EnsureFresh(true);
         }
@@ -629,28 +535,11 @@ internal sealed class VenuesApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var center = new Vector2(area.Max.X - 18f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
-        var box = 14f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
         var favorite = IsFavorite(venue.Id);
-        var glyph = FontAwesomeIcon.Star.ToIconString();
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        if (AppSkin.IconButton(center, 14f * scale, FontAwesomeIcon.Star.ToIconString(),
+                favorite ? frameTheme.Accent : frameTheme.TextMuted, AppSkin.Transparent, 1f, frameTheme))
         {
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, favorite ? frameTheme.Accent :
-                       hovered ? frameTheme.TextStrong : frameTheme.TextMuted))
-            {
-                ImGui.TextUnformatted(glyph);
-            }
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                ToggleFavorite(venue.Id);
-            }
+            ToggleFavorite(venue.Id);
         }
     }
 

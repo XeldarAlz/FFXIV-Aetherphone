@@ -91,6 +91,46 @@ internal sealed class AppSkin
     public static bool PillButton(Rect rect, string label, bool filled, PhoneTheme theme) =>
         PillButtonCore(rect, label, filled, theme.Accent, theme.SurfaceMuted, theme.TextStrong, theme);
 
+    public static bool PillButton(Rect rect, string label, bool filled, bool enabled, PhoneTheme theme)
+    {
+        if (enabled)
+        {
+            return PillButtonCore(rect, label, filled, theme.Accent, theme.GroupedCard, theme.TextStrong, theme);
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var fill = Core.Theme.Palette.WithAlpha(filled ? theme.Accent : theme.GroupedCard, 0.45f);
+        Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));
+        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(rect.Center - textSize * 0.5f, label, theme.TextMuted, 0.9f, FontWeight.SemiBold);
+        return false;
+    }
+
+    public static bool FlowChip(ref float cursorX, float centerY, float gap, string label, bool active,
+        PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var textSize = Typography.Measure(label, 0.8f, FontWeight.Medium);
+        var height = 28f * scale;
+        var width = textSize.X + 22f * scale;
+        var min = new Vector2(cursorX, centerY - height * 0.5f);
+        var max = new Vector2(cursorX + width, centerY + height * 0.5f);
+        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var fill = active ? Core.Theme.Palette.WithAlpha(theme.Accent, 0.92f) : theme.GroupedCard;
+        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(fill));
+        var ink = active || hovered ? theme.TextStrong : theme.TextMuted;
+        Typography.Draw(new Vector2(min.X + (width - textSize.X) * 0.5f, centerY - textSize.Y * 0.5f), label, ink,
+            0.8f, FontWeight.Medium);
+        cursorX = max.X + gap;
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
     private static bool PillButtonCore(Rect rect, string label, bool filled, Vector4 accent, Vector4 surface,
         Vector4 titleInk, PhoneTheme theme)
     {
