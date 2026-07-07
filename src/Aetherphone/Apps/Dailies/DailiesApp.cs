@@ -254,7 +254,7 @@ internal sealed class DailiesApp : IPhoneApp
 
         var tile = TileSize * scale;
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile(tileCenter, tile, item.Accent, item.Icon);
+        IconTile.Draw(tileCenter, tile, item.Accent, item.Icon);
 
         var auto = item.Tracking != DailyTracking.Manual && status.Available;
         var complete = auto ? status.Complete : checkStore.IsChecked(item, utcNow);
@@ -401,14 +401,6 @@ internal sealed class DailiesApp : IPhoneApp
         configuration.Save();
     }
 
-    private static void IconTile(Vector2 center, float size, Vector4 tint, FontAwesomeIcon icon)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        var half = size * 0.5f;
-        Squircle.Fill(dl, center - new Vector2(half, half), center + new Vector2(half, half), size * 0.30f,
-            ImGui.GetColorU32(tint));
-        ProgressRing.CenterIcon(center, icon, new Vector4(1f, 1f, 1f, 1f), size * 0.50f);
-    }
 
     public void Dispose()
     {

@@ -123,7 +123,7 @@ internal sealed class FishingApp : IPhoneApp
     {
         var tile = 30f * scale;
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile(tileCenter, tile, Styling.AccentBlue, FontAwesomeIcon.Fish);
+        IconTile.Draw(tileCenter, tile, Styling.AccentBlue, FontAwesomeIcon.Fish);
         var textLeft = row.Min.X + tile + 12f * scale;
         Typography.Draw(new Vector2(textLeft, row.Center.Y - 16f * scale), fish.Name, theme.TextStrong,
             TextStyles.Headline);
@@ -149,7 +149,7 @@ internal sealed class FishingApp : IPhoneApp
         var plan = OceanRoutes.Resolve(voyage.Destination, voyage.Time);
         var tile = 34f * scale;
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile(tileCenter, tile, TimeOfDayTint(plan.TimeOfDay), TimeOfDayIcon(plan.TimeOfDay));
+        IconTile.Draw(tileCenter, tile, TimeOfDayTint(plan.TimeOfDay), TimeOfDayIcon(plan.TimeOfDay));
         var textLeft = row.Min.X + tile + 12f * scale;
         var heading = $"{plan.RouteName} · {TimeOfDayLabel(plan.TimeOfDay)}";
         Typography.Draw(new Vector2(textLeft, row.Center.Y - 19f * scale), heading, theme.TextStrong,
@@ -177,14 +177,6 @@ internal sealed class FishingApp : IPhoneApp
         }
     }
 
-    private static void IconTile(Vector2 center, float size, Vector4 tint, FontAwesomeIcon icon)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var half = size * 0.5f;
-        Squircle.Fill(drawList, center - new Vector2(half, half), center + new Vector2(half, half), size * 0.30f,
-            ImGui.GetColorU32(tint));
-        ProgressRing.CenterIcon(center, icon, new Vector4(1f, 1f, 1f, 1f), size * 0.50f);
-    }
 
     private static string BlueFishNames(in OceanRoutePlan plan)
     {

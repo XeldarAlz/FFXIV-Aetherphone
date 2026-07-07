@@ -205,7 +205,7 @@ internal sealed class TimersApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var tile = TileSize * scale;
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile(tileCenter, tile, tint, icon);
+        IconTile.Draw(tileCenter, tile, tint, icon);
 
         var valueSize = Typography.Measure(value, TextStyles.SubheadlineEmphasized);
         var valueRight = row.Max.X;
@@ -357,14 +357,6 @@ internal sealed class TimersApp : IPhoneApp
         return $"{totalHours / 24}d";
     }
 
-    private static void IconTile(Vector2 center, float size, Vector4 tint, FontAwesomeIcon icon)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var half = size * 0.5f;
-        Squircle.Fill(drawList, center - new Vector2(half, half), center + new Vector2(half, half), size * 0.30f,
-            ImGui.GetColorU32(tint));
-        ProgressRing.CenterIcon(center, icon, new Vector4(1f, 1f, 1f, 1f), size * 0.50f);
-    }
 
     public void Dispose()
     {
