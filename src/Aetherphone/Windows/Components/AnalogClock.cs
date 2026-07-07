@@ -22,7 +22,7 @@ internal static class AnalogClock
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var face = Vector4.Lerp(NightFace, DayFace, dayFraction);
-        var ink = Luminance(face) > 0.5f ? DayInk : NightInk;
+        var ink = Palette.Luminance(face) > 0.5f ? DayInk : NightInk;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(face), 64);
         drawList.AddCircleFilled(center - new Vector2(0f, radius * 0.4f), radius * 0.62f,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f + 0.05f * dayFraction)), 48);
@@ -60,7 +60,6 @@ internal static class AnalogClock
         drawList.AddCircleFilled(back, thickness * 0.5f, packed, 8);
     }
 
-    private static float Luminance(Vector4 color) => color.X * 0.299f + color.Y * 0.587f + color.Z * 0.114f;
 
     private static float DayFraction(float hours)
     {

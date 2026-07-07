@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -9,7 +10,7 @@ internal static class VenueChips
     private static readonly Vector4 AdultColor = new(0.86f, 0.24f, 0.46f, 1f);
     private static readonly Vector4 SfwColor = new(0.86f, 0.74f, 0.22f, 1f);
 
-    private static readonly Vector4[] Palette =
+    private static readonly Vector4[] TagColors =
     {
         new(0.91f, 0.49f, 0.22f, 1f), new(0.27f, 0.71f, 0.62f, 1f), new(0.36f, 0.55f, 0.92f, 1f),
         new(0.64f, 0.45f, 0.90f, 1f), new(0.32f, 0.74f, 0.42f, 1f), new(0.90f, 0.42f, 0.62f, 1f),
@@ -31,7 +32,7 @@ internal static class VenueChips
         }
 
         var hash = StableHash(tag);
-        return Palette[hash % (uint)Palette.Length];
+        return TagColors[hash % (uint)TagColors.Length];
     }
 
     public static float Measure(string tag, float scale)
@@ -50,13 +51,14 @@ internal static class VenueChips
         var min = position;
         var max = new Vector2(position.X + width, position.Y + height);
         Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(fill with { W = 0.92f }));
-        var ink = Luminance(fill) > 0.62f ? new Vector4(0.08f, 0.08f, 0.10f, 1f) : new Vector4(1f, 1f, 1f, 0.96f);
+        var ink = Palette.Luminance(fill) > 0.62f
+            ? new Vector4(0.08f, 0.08f, 0.10f, 1f)
+            : new Vector4(1f, 1f, 1f, 0.96f);
         var textSize = Typography.Measure(tag, 0.72f);
         var textPosition = new Vector2(min.X + (width - textSize.X) * 0.5f, min.Y + (height - textSize.Y) * 0.5f);
         Typography.Draw(textPosition, tag, ink, 0.72f);
     }
 
-    private static float Luminance(Vector4 color) => 0.299f * color.X + 0.587f * color.Y + 0.114f * color.Z;
 
     private static uint StableHash(string value)
     {

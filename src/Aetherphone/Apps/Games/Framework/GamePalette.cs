@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Theme;
 
 namespace Aetherphone.Apps.Games.Framework;
 
@@ -11,19 +12,7 @@ internal static class GamePalette
     public static readonly Vector4 InkLight = new(0.97f, 0.97f, 0.98f, 1f);
     public static readonly Vector4 InkDark = new(0.12f, 0.13f, 0.16f, 1f);
 
-    public static Vector4 InkOn(Vector4 fill)
-    {
-        var luminance = fill.X * 0.299f + fill.Y * 0.587f + fill.Z * 0.114f;
-        return luminance > 0.62f ? InkDark : InkLight;
-    }
-
-    public static Vector4 Lighten(Vector4 color, float amount)
-    {
-        return Vector4.Lerp(color, new Vector4(1f, 1f, 1f, color.W), amount);
-    }
-
-    public static Vector4 Darken(Vector4 color, float amount)
-    {
-        return Vector4.Lerp(color, new Vector4(0f, 0f, 0f, color.W), amount);
-    }
+    public static Vector4 InkOn(Vector4 fill) => Palette.Luminance(fill) > 0.62f ? InkDark : InkLight;
+    public static Vector4 Lighten(Vector4 color, float amount) => Palette.Lighten(color, amount);
+    public static Vector4 Darken(Vector4 color, float amount) => Palette.Darken(color, amount);
 }
