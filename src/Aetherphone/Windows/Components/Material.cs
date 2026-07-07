@@ -41,6 +41,17 @@ internal static class Material
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)), rounding);
     }
 
+    public static void Glass(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, Vector4 ink,
+        float scale)
+    {
+        var lightScene = ink.X < 0.5f;
+        var fill = lightScene ? new Vector4(0.10f, 0.12f, 0.16f, 0.10f) : new Vector4(1f, 1f, 1f, 0.10f);
+        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(fill));
+        Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(ink with { W = ink.W * 0.14f }), 1f * scale);
+        drawList.AddLine(new Vector2(min.X + rounding, min.Y + 1f), new Vector2(max.X - rounding, min.Y + 1f),
+            ImGui.GetColorU32(ink with { W = ink.W * (lightScene ? 0.05f : 0.18f) }), 1f);
+    }
+
     public static void Frosted(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, float scale,
         float opacity = 1f)
     {

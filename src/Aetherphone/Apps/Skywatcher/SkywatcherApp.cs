@@ -97,8 +97,8 @@ internal sealed class SkywatcherApp : IPhoneApp
         var centerX = origin.X + width * 0.5f;
         if (zone.Length > 0)
         {
-            Typography.DrawCentered(new Vector2(centerX, origin.Y + 16f * scale), zone, palette.Ink, 1.3f,
-                FontWeight.SemiBold);
+            Typography.DrawCentered(new Vector2(centerX, origin.Y + 16f * scale), zone, palette.Ink,
+                TextStyles.Title2.Scale, TextStyles.Title2.Weight);
         }
 
         var glyphCenter = new Vector2(centerX, origin.Y + 100f * scale);
@@ -106,7 +106,8 @@ internal sealed class SkywatcherApp : IPhoneApp
         ProgressRing.Glow(glyphCenter, radius * 1.05f, palette.Glow,
             0.45f + 0.35f * Styling.Pulse(Styling.PulseBreath));
         WeatherGlyph.Draw(kind, glyphCenter, radius, palette, isDay, SampleSky(palette, screen, glyphCenter.Y));
-        Typography.DrawCentered(new Vector2(centerX, origin.Y + 176f * scale), forecast[0].Weather, palette.Ink, 1.9f);
+        Typography.DrawCentered(new Vector2(centerX, origin.Y + 176f * scale), forecast[0].Weather, palette.Ink,
+            TextStyles.LargeTitle.Scale, FontWeight.Regular);
         Typography.DrawCentered(new Vector2(centerX, origin.Y + 210f * scale), Summary(), palette.InkSoft,
             TextStyles.Subheadline);
         ImGui.SetCursorScreenPos(origin);
@@ -214,7 +215,7 @@ internal sealed class SkywatcherApp : IPhoneApp
     {
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 4f * scale);
-        using (Plugin.Fonts.Push(0.8f))
+        using (Plugin.Fonts.Push(TextStyles.FootnoteEmphasized.Scale, TextStyles.FootnoteEmphasized.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, ink))
         {
             ImGui.TextUnformatted(title.ToUpperInvariant());
@@ -225,16 +226,7 @@ internal sealed class SkywatcherApp : IPhoneApp
 
     private static void DrawGlass(Rect card, in SkyPalette palette, float scale)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        var lightSky = palette.Ink.X < 0.5f;
-        var fill = lightSky ? new Vector4(0.10f, 0.12f, 0.16f, 0.10f) : new Vector4(1f, 1f, 1f, 0.10f);
-        var rounding = 18f * scale;
-        Squircle.Fill(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(fill));
-        Squircle.Stroke(drawList, card.Min, card.Max, rounding, ImGui.GetColorU32(palette.Ink with { W = 0.14f }),
-            1f * scale);
-        drawList.AddLine(new Vector2(card.Min.X + rounding, card.Min.Y + 1f),
-            new Vector2(card.Max.X - rounding, card.Min.Y + 1f),
-            ImGui.GetColorU32(palette.Ink with { W = lightSky ? 0.05f : 0.18f }), 1f);
+        Material.Glass(ImGui.GetWindowDrawList(), card.Min, card.Max, Metrics.Radius.Lg * scale, palette.Ink, scale);
     }
 
     private string Summary()
