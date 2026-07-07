@@ -28,7 +28,7 @@ internal sealed class ActivityApp : IPhoneApp
     private readonly CollectService collect;
     private LocalCharacter? character;
     private ActivitySnapshot? activity;
-    private float sinceRefresh;
+    private RefreshCadence refreshCadence;
 
     public ActivityApp(GameData gameData, ITextureProvider textures, LodestoneService lodestone,
         CollectService collect)
@@ -49,13 +49,12 @@ internal sealed class ActivityApp : IPhoneApp
     {
         character = LocalCharacterReader.Read(gameData);
         activity = ActivityReader.Read(gameData);
-        sinceRefresh = 0f;
+        refreshCadence.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
-        sinceRefresh += ImGui.GetIO().DeltaTime;
-        if (sinceRefresh >= RefreshIntervalSeconds)
+        if (refreshCadence.Advance(ImGui.GetIO().DeltaTime, RefreshIntervalSeconds))
         {
             Refresh();
         }

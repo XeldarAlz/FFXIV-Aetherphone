@@ -35,7 +35,7 @@ internal sealed class TimersApp : IPhoneApp
     private readonly AppSkin ui = new(AppPalettes.Timers);
     private readonly List<RetainerVenture> retainers = new();
     private bool retainersAvailable;
-    private float sinceRefresh;
+    private RefreshCadence refreshCadence;
 
     public TimersApp(Configuration configuration)
     {
@@ -51,13 +51,12 @@ internal sealed class TimersApp : IPhoneApp
     private void Refresh()
     {
         retainersAvailable = RetainerReader.TryRead(retainers);
-        sinceRefresh = 0f;
+        refreshCadence.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
-        sinceRefresh += ImGui.GetIO().DeltaTime;
-        if (sinceRefresh >= RefreshIntervalSeconds)
+        if (refreshCadence.Advance(ImGui.GetIO().DeltaTime, RefreshIntervalSeconds))
         {
             Refresh();
         }

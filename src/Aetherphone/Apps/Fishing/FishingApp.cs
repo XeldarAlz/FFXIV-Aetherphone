@@ -25,7 +25,7 @@ internal sealed class FishingApp : IPhoneApp
     public string Glyph => "F";
     public int BadgeCount => 0;
     private readonly OceanVoyageSlot[] voyages = new OceanVoyageSlot[VoyageCount];
-    private float sinceRefresh;
+    private RefreshCadence refreshCadence;
     public void OnOpened() => Refresh();
 
     public void OnClosed()
@@ -35,14 +35,13 @@ internal sealed class FishingApp : IPhoneApp
     private void Refresh()
     {
         GameSchedule.UpcomingOceanVoyages(DateTime.UtcNow, voyages);
-        sinceRefresh = 0f;
+        refreshCadence.Reset();
     }
 
     public void Draw(in PhoneContext context)
     {
         AppHeader.Draw(context, DisplayName);
-        sinceRefresh += ImGui.GetIO().DeltaTime;
-        if (sinceRefresh >= RefreshIntervalSeconds)
+        if (refreshCadence.Advance(ImGui.GetIO().DeltaTime, RefreshIntervalSeconds))
         {
             Refresh();
         }
