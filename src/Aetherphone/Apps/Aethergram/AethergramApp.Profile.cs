@@ -232,7 +232,7 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        var (uv0, uv1) = CenterCropSquare(texture.Size);
+        var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
         drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         if (ImGui.IsItemHovered())

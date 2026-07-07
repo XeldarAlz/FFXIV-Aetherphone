@@ -11,9 +11,18 @@ internal static class SegmentStrip
 {
     private const float TrackHeight = 30f;
     private const float ThumbSmoothTime = 0.13f;
+    private static readonly Vector4 FrostTrack = new(1f, 1f, 1f, 0.08f);
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Dictionary<string, Spring> Thumbs = new(StringComparer.Ordinal);
 
-    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, PhoneTheme theme)
+    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, PhoneTheme theme) =>
+        Draw(id, row, options, selected, theme.ToggleOff, theme.Accent, theme.TextMuted, theme.TextStrong);
+
+    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, in AppPalette palette) =>
+        Draw(id, row, options, selected, FrostTrack, palette.Accent, palette.MutedInk, White);
+
+    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, Vector4 track,
+        Vector4 accent, Vector4 mutedInk, Vector4 activeInk)
     {
         if (options.Count == 0)
         {
@@ -26,7 +35,7 @@ internal static class SegmentStrip
         var trackMin = new Vector2(row.Min.X, row.Center.Y - height * 0.5f);
         var trackMax = new Vector2(row.Max.X, row.Center.Y + height * 0.5f);
         var radius = height * 0.5f;
-        drawList.AddRectFilled(trackMin, trackMax, ImGui.GetColorU32(theme.ToggleOff), radius);
+        drawList.AddRectFilled(trackMin, trackMax, ImGui.GetColorU32(track), radius);
         var segmentWidth = (trackMax.X - trackMin.X) / options.Count;
         var result = selected;
         for (var index = 0; index < options.Count; index++)
@@ -55,7 +64,7 @@ internal static class SegmentStrip
         var shadow = new Vector2(0f, 1.5f * scale);
         drawList.AddRectFilled(thumbMin + shadow, thumbMax + shadow, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.28f)),
             thumbRadius);
-        Squircle.Fill(drawList, thumbMin, thumbMax, thumbRadius, ImGui.GetColorU32(theme.Accent));
+        Squircle.Fill(drawList, thumbMin, thumbMax, thumbRadius, ImGui.GetColorU32(accent));
         var gloss = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f));
         drawList.AddLine(new Vector2(thumbMin.X + thumbRadius, thumbMin.Y + 1f * scale),
             new Vector2(thumbMax.X - thumbRadius, thumbMin.Y + 1f * scale), gloss, 1f * scale);
@@ -63,7 +72,7 @@ internal static class SegmentStrip
         {
             var center = new Vector2(trackMin.X + (index + 0.5f) * segmentWidth, row.Center.Y);
             var proximity = 1f - Math.Clamp(MathF.Abs(position - index), 0f, 1f);
-            var color = Vector4.Lerp(theme.TextMuted, theme.TextStrong, proximity);
+            var color = Vector4.Lerp(mutedInk, activeInk, proximity);
             Typography.DrawCentered(center, options[index], color, 0.82f, FontWeight.SemiBold);
         }
 

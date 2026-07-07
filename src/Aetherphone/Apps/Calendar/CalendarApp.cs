@@ -196,7 +196,7 @@ internal sealed class CalendarApp : IPhoneApp
         var dateTop = dateLabelY + labelHeight + 4f * scale;
         var dateRect = new Rect(new Vector2(content.Min.X + margin, dateTop),
             new Vector2(content.Max.X - margin, dateTop + fieldHeight));
-        DrawChevronField(dateRect, newEventDate.ToString("dddd, MMM d", Loc.Culture), scale, () => newEventDate = newEventDate.AddDays(-1),
+        StepperField.Draw(ui, dateRect, newEventDate.ToString("dddd, MMM d", Loc.Culture), scale, () => newEventDate = newEventDate.AddDays(-1),
             () => newEventDate = newEventDate.AddDays(1));
 
         var timeLabelY = dateRect.Max.Y + gap;
@@ -208,9 +208,9 @@ internal sealed class CalendarApp : IPhoneApp
         var half = timeRowRect.Width * 0.5f - gap * 0.5f;
         var hourRect = new Rect(timeRowRect.Min, new Vector2(timeRowRect.Min.X + half, timeRowRect.Max.Y));
         var minuteRect = new Rect(new Vector2(timeRowRect.Max.X - half, timeRowRect.Min.Y), timeRowRect.Max);
-        DrawChevronField(hourRect, newEventHour.ToString("D2"), scale, () => newEventHour = (newEventHour + 23) % 24,
+        StepperField.Draw(ui, hourRect, newEventHour.ToString("D2"), scale, () => newEventHour = (newEventHour + 23) % 24,
             () => newEventHour = (newEventHour + 1) % 24);
-        DrawChevronField(minuteRect, newEventMinute.ToString("D2"), scale,
+        StepperField.Draw(ui, minuteRect, newEventMinute.ToString("D2"), scale,
             () => newEventMinute = (newEventMinute + 55) % 60, () => newEventMinute = (newEventMinute + 5) % 60);
 
         var saveHeight = 46f * scale;
@@ -236,40 +236,6 @@ internal sealed class CalendarApp : IPhoneApp
             ImGui.InputTextWithHint("##calNewEventTitle", Loc.T(L.Calendar.TitlePlaceholder), ref newEventTitle,
                 TitleMaxLength, ImGuiInputTextFlags.None);
         }
-    }
-
-    private void DrawChevronField(Rect rect, string valueText, float scale, Action onDecrement, Action onIncrement)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        ui.Card(drawList, rect.Min, rect.Max, 12f * scale);
-        var chevronWidth = 34f * scale;
-        var leftRect = new Rect(rect.Min, new Vector2(rect.Min.X + chevronWidth, rect.Max.Y));
-        var rightRect = new Rect(new Vector2(rect.Max.X - chevronWidth, rect.Min.Y), rect.Max);
-        if (DrawChevronHit(drawList, leftRect, "<", scale))
-        {
-            onDecrement();
-        }
-
-        if (DrawChevronHit(drawList, rightRect, ">", scale))
-        {
-            onIncrement();
-        }
-
-        Typography.DrawCentered(drawList, rect.Center, valueText, ui.TitleInk, TextStyles.Headline.Scale,
-            TextStyles.Headline.Weight);
-    }
-
-    private bool DrawChevronHit(ImDrawListPtr drawList, Rect rect, string chevron, float scale)
-    {
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-        if (hovered)
-        {
-            Squircle.Fill(drawList, rect.Min, rect.Max, 10f * scale, ImGui.GetColorU32(ui.HoverTint));
-        }
-
-        Typography.DrawCentered(drawList, rect.Center, chevron, ui.MutedInk, TextStyles.Headline.Scale,
-            TextStyles.Headline.Weight);
-        return UiInteract.HoverClick(rect.Min, rect.Max);
     }
 
     private bool DrawSaveButton(Rect rect, float scale, bool enabled)

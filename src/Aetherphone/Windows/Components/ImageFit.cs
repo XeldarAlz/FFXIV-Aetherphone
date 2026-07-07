@@ -28,4 +28,7 @@ internal static class ImageFit
 
     public static (Vector2 Uv0, Vector2 Uv1) CoverSquare(float imageWidth, float imageHeight) =>
         Cover(imageWidth, imageHeight, 1f, 1f);
+
+    public static (Vector2 Uv0, Vector2 Uv1) CoverSquare(Vector2 imageSize) =>
+        Cover(imageSize.X, imageSize.Y, 1f, 1f);
 }

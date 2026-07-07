@@ -801,7 +801,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             if (texture is not null)
             {
                 drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(theme.SurfaceMuted), segments);
-                var (uv0, uv1) = CenterCropSquare(texture.Size);
+                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
                 var corner = new Vector2(radius, radius);
                 drawList.AddImageRounded(texture.Handle, center - corner, center + corner, uv0, uv1, 0xFFFFFFFFu,
                     radius, ImDrawFlags.RoundCornersAll);
@@ -813,28 +813,6 @@ internal sealed partial class ChirperApp : IPhoneApp
             lodestone.Avatar(name, world), segments);
     }
 
-    private static (Vector2 Uv0, Vector2 Uv1) CenterCropSquare(Vector2 size)
-    {
-        if (size.X <= 0f || size.Y <= 0f)
-        {
-            return (Vector2.Zero, Vector2.One);
-        }
-
-        var aspect = size.X / size.Y;
-        if (aspect > 1f)
-        {
-            var inset = (1f - 1f / aspect) * 0.5f;
-            return (new Vector2(inset, 0f), new Vector2(1f - inset, 1f));
-        }
-
-        if (aspect < 1f)
-        {
-            var inset = (1f - aspect) * 0.5f;
-            return (new Vector2(0f, inset), new Vector2(1f, 1f - inset));
-        }
-
-        return (Vector2.Zero, Vector2.One);
-    }
 
     private static bool HoverClick(Vector2 min, Vector2 max)
     {

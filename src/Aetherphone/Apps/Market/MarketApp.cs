@@ -237,7 +237,7 @@ internal sealed class MarketApp : IPhoneApp
             scopeLabels.Add(MarketFormat.Clip(scopes[scopeIdx].ApiName, 11));
         }
 
-        var newIndex = MarketScopeTabs.Draw("market.scope", bar, scopeLabels, scopeIndex, AppPalettes.Market);
+        var newIndex = SegmentStrip.Draw("market.scope", bar, scopeLabels, scopeIndex, AppPalettes.Market);
         if (newIndex != scopeIndex && newIndex >= 0)
         {
             SetScope(newIndex);
