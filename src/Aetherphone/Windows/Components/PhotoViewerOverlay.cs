@@ -10,11 +10,13 @@ namespace Aetherphone.Windows.Components;
 
 internal sealed class PhotoViewerOverlay
 {
+    private const float RevealSmoothTime = 0.15f;
     private readonly PhotoZoomView zoomView = new();
+    private Aetherphone.Core.Animation.Spring reveal;
     private Func<IDalamudTextureWrap?>? source;
     private bool open;
 
-    public bool Active => open;
+    public bool Active => open || reveal.Value > 0.01f;
 
     public void Open(Func<IDalamudTextureWrap?> textureSource)
     {
@@ -23,28 +25,35 @@ internal sealed class PhotoViewerOverlay
         open = true;
     }
 
-    public void Close()
-    {
-        open = false;
-        source = null;
-    }
+    public void Close() => open = false;
 
     public void Draw(Rect area, PhoneTheme theme)
     {
-        if (!open)
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, Aetherphone.Core.Animation.TransitionTiming.MaxFrameSeconds);
+        reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
+        var eased = Math.Clamp(reveal.Value, 0f, 1f);
+        if (eased <= 0.01f)
         {
+            if (!open)
+            {
+                source = null;
+            }
+
             return;
         }
 
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.96f)));
-        var stage = new Rect(new Vector2(area.Min.X, area.Min.Y + 44f * scale),
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.96f * eased)));
+        var grow = 0.94f + 0.06f * Aetherphone.Core.Animation.Easing.EaseOutCubic(eased);
+        var stageTarget = new Rect(new Vector2(area.Min.X, area.Min.Y + 44f * scale),
             new Vector2(area.Max.X, area.Max.Y - 16f * scale));
+        var stageHalf = stageTarget.Size * 0.5f * grow;
+        var stage = new Rect(stageTarget.Center - stageHalf, stageTarget.Center + stageHalf);
         var texture = source?.Invoke();
         if (texture is not null)
         {
-            zoomView.Draw(stage, texture, theme, Metrics.Radius.Sm * scale);
+            zoomView.Draw(stage, texture, theme, Metrics.Radius.Sm * scale, open && eased > 0.9f);
         }
         else
         {

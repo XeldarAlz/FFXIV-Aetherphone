@@ -194,7 +194,7 @@ internal sealed class CoachmarkOverlay
         var emblemCenter = new Vector2(card.Center.X, card.Min.Y + 92f * scale - contentRise);
         Emblem(dl, emblemCenter, theme.Accent, scale, contentAlpha, contentAlpha);
         var titleCenter = new Vector2(card.Center.X, card.Min.Y + screen.Height * 0.18f + 92f * scale - contentRise);
-        DrawCentered(dl, titleCenter, Loc.T(step.Title), theme.TextStrong with { W = contentAlpha },
+        Typography.DrawCentered(dl, titleCenter, Loc.T(step.Title), theme.TextStrong with { W = contentAlpha },
             TextStyles.Title1);
         var bodyWidth = card.Width * 0.86f;
         var bodyTop = titleCenter.Y + LineHeight(TextStyles.Title1) * 0.5f + 14f * scale;
@@ -248,7 +248,7 @@ internal sealed class CoachmarkOverlay
         var titleLine = LineHeight(TextStyles.Title3);
         var bodyLine = LineHeight(TextStyles.Body);
         var cursorY = card.Min.Y + 22f * scale - contentRise;
-        DrawCentered(dl, new Vector2(card.Center.X, cursorY + titleLine * 0.5f), Loc.T(step.Title),
+        Typography.DrawCentered(dl, new Vector2(card.Center.X, cursorY + titleLine * 0.5f), Loc.T(step.Title),
             theme.TextStrong with { W = contentAlpha }, TextStyles.Title3);
         cursorY += titleLine + 10f * scale;
         cursorY = DrawWrapped(dl, Loc.T(step.Body), TextStyles.Body, theme.TextMuted with { W = contentAlpha },
@@ -264,7 +264,7 @@ internal sealed class CoachmarkOverlay
         var action = CoachmarkAction.None;
         if (isTap)
         {
-            DrawCentered(dl, new Vector2(card.Center.X, cursorY + bodyLine * 0.5f), Loc.T(L.Onboarding.TapToContinue),
+            Typography.DrawCentered(dl, new Vector2(card.Center.X, cursorY + bodyLine * 0.5f), Loc.T(L.Onboarding.TapToContinue),
                 theme.Accent with { W = contentAlpha }, TextStyles.FootnoteEmphasized);
         }
         else
@@ -384,7 +384,7 @@ internal sealed class CoachmarkOverlay
         var hovered = live && ImGui.IsMouseHoveringRect(min, max);
         var fill = hovered ? Palette.Mix(accent, Vector4.One, 0.14f) : accent;
         Squircle.Fill(dl, min, max, radius, ImGui.GetColorU32(fill with { W = fill.W * alpha }));
-        DrawCentered(dl, center, label, Ink with { W = contentAlpha }, TextStyles.Headline);
+        Typography.DrawCentered(dl, center, label, Ink with { W = contentAlpha }, TextStyles.Headline);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -413,7 +413,7 @@ internal sealed class CoachmarkOverlay
             if (Typography.Measure(candidate, style).X > maxWidth && lastSpace > lineStart)
             {
                 var line = text.Substring(lineStart, lastSpace - lineStart);
-                DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), line, color, style);
+                Typography.DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), line, color, style);
                 y += lineHeight;
                 lineStart = lastSpace + 1;
             }
@@ -422,7 +422,7 @@ internal sealed class CoachmarkOverlay
             if (atEnd)
             {
                 var tail = text.Substring(lineStart);
-                DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), tail, color, style);
+                Typography.DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), tail, color, style);
                 y += lineHeight;
             }
         }
@@ -455,16 +455,6 @@ internal sealed class CoachmarkOverlay
         }
 
         return lines;
-    }
-
-    private static void DrawCentered(ImDrawListPtr dl, Vector2 center, string text, Vector4 color, in TextStyle style)
-    {
-        using (Plugin.Fonts.Push(style.Scale, style.Weight))
-        {
-            var size = ImGui.CalcTextSize(text);
-            var font = ImGui.GetFont();
-            dl.AddText(font, ImGui.GetFontSize(), center - size * 0.5f, ImGui.GetColorU32(color), text);
-        }
     }
 
     private static float LineHeight(in TextStyle style) => Typography.Measure("Ay", style).Y;

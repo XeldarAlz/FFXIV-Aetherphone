@@ -201,6 +201,10 @@ internal static class L
         public static readonly LocString DeviceFallback = new("phone.deviceFallback", "Microphone {0}");
         public static readonly LocString AudioHint = new("phone.audioHint", "Audio plays on your system default output device. Use headphones to avoid echo. A device change applies to your next call.");
         public static readonly LocString IncomingCallBody = new("phone.incomingCallBody", "Incoming call");
+        public static readonly LocString Decline = new("phone.decline", "Decline");
+        public static readonly LocString Accept = new("phone.accept", "Accept");
+        public static readonly LocString AudioCall = new("phone.audioCall", "Aetherphone audio call");
+        public static readonly LocString PlusOthers = new("phone.plusOthers", "+{0} others");
         public static readonly LocString NoAnswerTitle = new("phone.noAnswerTitle", "No answer");
         public static readonly LocString NoAnswerBody = new("phone.noAnswerBody", "The call was not answered");
         public static readonly LocString CallEnded = new("phone.callEnded", "Call ended");
