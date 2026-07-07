@@ -15,7 +15,7 @@ internal sealed class FeedbackStore : IDisposable
 
     private readonly AethernetSession session;
     private readonly AethernetClient client;
-    private readonly CancellationTokenSource cancellation = new();
+    private readonly StoreWork work = new StoreWork("Feedback");
 
     private volatile bool posting;
 
@@ -38,32 +38,17 @@ internal sealed class FeedbackStore : IDisposable
         }
 
         posting = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("compose", async token =>
         {
-            var succeeded = false;
-            try
+            var keys = await UploadImagesAsync(imagePaths, token).ConfigureAwait(false);
+            if (keys is null)
             {
-                var keys = await UploadImagesAsync(imagePaths, token).ConfigureAwait(false);
-                if (keys is not null)
-                {
-                    var created = await client.CreateFeedbackAsync(trimmed, keys, token).ConfigureAwait(false);
-                    succeeded = created is not null;
-                }
+                return false;
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Feedback] compose failed: {exception.Message}");
-            }
-            finally
-            {
-                posting = false;
-                onComplete(succeeded);
-            }
-        });
+
+            var created = await client.CreateFeedbackAsync(trimmed, keys, token).ConfigureAwait(false);
+            return created is not null;
+        }, onComplete, () => posting = false);
     }
 
     private async Task<string[]?> UploadImagesAsync(IReadOnlyList<string> imagePaths, CancellationToken token)
@@ -98,7 +83,6 @@ internal sealed class FeedbackStore : IDisposable
 
     public void Dispose()
     {
-        cancellation.Cancel();
-        cancellation.Dispose();
+        work.Dispose();
     }
 }

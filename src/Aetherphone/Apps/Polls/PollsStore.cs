@@ -11,7 +11,7 @@ internal sealed class PollsStore : IDisposable
 
     private readonly AethernetSession session;
     private readonly AethernetClient client;
-    private readonly CancellationTokenSource cancellation = new();
+    private readonly StoreWork work = new StoreWork("Polls");
 
     private volatile PollDto[] polls = Array.Empty<PollDto>();
     private volatile bool loading;
@@ -64,7 +64,7 @@ internal sealed class PollsStore : IDisposable
         }
 
         loading = true;
-        RunGuarded("polls refresh", async token =>
+        work.Run("polls refresh", async token =>
         {
             var page = await client.PollsAsync(token).ConfigureAwait(false);
             if (page is not null)
@@ -83,15 +83,15 @@ internal sealed class PollsStore : IDisposable
         }
 
         var target = poll.MyVote == optionIndex ? -1 : optionIndex;
-        ReplacePoll(ApplyVote(poll, target));
-        RunGuarded("vote", async token =>
+        polls = CopyOnWrite.Replace(polls, ApplyVote(poll, target));
+        work.Run("vote", async token =>
         {
             var result = target < 0
                 ? await client.ClearVoteAsync(poll.Id, token).ConfigureAwait(false)
                 : await client.VoteAsync(poll.Id, target, token).ConfigureAwait(false);
             if (result is not null)
             {
-                ReplacePoll(result);
+                polls = CopyOnWrite.Replace(polls, result);
             }
         });
     }
@@ -135,57 +135,9 @@ internal sealed class PollsStore : IDisposable
         return poll with { VoteCounts = counts, TotalVotes = total, MyVote = newVote };
     }
 
-    private void ReplacePoll(PollDto updated)
-    {
-        var snapshot = polls;
-        var next = new PollDto[snapshot.Length];
-        var changed = false;
-        for (var index = 0; index < snapshot.Length; index++)
-        {
-            if (snapshot[index].Id == updated.Id)
-            {
-                next[index] = updated;
-                changed = true;
-            }
-            else
-            {
-                next[index] = snapshot[index];
-            }
-        }
-
-        if (changed)
-        {
-            polls = next;
-        }
-    }
-
-    private void RunGuarded(string operation, Func<CancellationToken, Task> action, Action? cleanup = null)
-    {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await action(token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Polls] {operation} failed: {exception.Message}");
-            }
-            finally
-            {
-                cleanup?.Invoke();
-            }
-        });
-    }
-
     public void Dispose()
     {
         Plugin.Framework.Update -= OnFrameworkUpdate;
-        cancellation.Cancel();
-        cancellation.Dispose();
+        work.Dispose();
     }
 }

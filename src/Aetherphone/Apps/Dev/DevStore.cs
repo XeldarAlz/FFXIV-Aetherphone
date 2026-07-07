@@ -18,7 +18,7 @@ internal sealed class DevStore : IDisposable
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly Configuration configuration;
-    private readonly CancellationTokenSource cancellation = new();
+    private readonly StoreWork work = new StoreWork("Dev");
     private readonly ConcurrentDictionary<string, DevMediaUrlDto> mediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> mediaLoading = new();
     private readonly DevBoardCardDto[][] columns =
@@ -139,7 +139,7 @@ internal sealed class DevStore : IDisposable
         }
 
         probing = true;
-        RunGuarded("access probe", async token =>
+        work.Run("access probe", async token =>
         {
             var granted = await client.DevAccessAsync(token).ConfigureAwait(false);
             if (granted is { } value)
@@ -170,7 +170,7 @@ internal sealed class DevStore : IDisposable
         }
 
         loadingBoard = true;
-        RunGuarded("board load", async token =>
+        work.Run("board load", async token =>
         {
             var board = await client.DevBoardCardsAsync(token, OnDevStatus).ConfigureAwait(false);
             if (board is not null)
@@ -189,7 +189,7 @@ internal sealed class DevStore : IDisposable
         }
 
         loadingChat = true;
-        RunGuarded("chat load", async token =>
+        work.Run("chat load", async token =>
         {
             var page = await client.DevChatMessagesAsync(0, token, OnDevStatus).ConfigureAwait(false);
             if (page is not null)
@@ -208,7 +208,7 @@ internal sealed class DevStore : IDisposable
         }
 
         pollingChat = true;
-        RunGuarded("chat poll", async token =>
+        work.Run("chat poll", async token =>
         {
             var snapshot = messages;
             var after = configuration.DevChatLastSeenUnix;
@@ -332,7 +332,7 @@ internal sealed class DevStore : IDisposable
         }
 
         sending = true;
-        RunGuarded("send", async token =>
+        work.Run("send", async token =>
         {
             var sent = await client.SendDevChatMessageAsync(trimmed, null, 0, 0, token).ConfigureAwait(false);
             if (sent is not null)
@@ -352,7 +352,7 @@ internal sealed class DevStore : IDisposable
         }
 
         sending = true;
-        RunGuarded("send image", async token =>
+        work.Run("send image", async token =>
         {
             var baked = ImageProcessor.BakeJpeg(sourcePath, ImageMaxDimension);
             var upload = await client.UploadUrlAsync("image/jpeg", "dev", token).ConfigureAwait(false);
@@ -384,12 +384,12 @@ internal sealed class DevStore : IDisposable
 
     public void DeleteMessage(string messageId, Action<bool> onComplete)
     {
-        RunGuarded("message delete", async token =>
+        work.Run("message delete", async token =>
         {
             var deleted = await client.DeleteDevChatMessageAsync(messageId, token).ConfigureAwait(false);
             if (deleted)
             {
-                RemoveMessage(messageId);
+                messages = CopyOnWrite.RemoveById(messages, messageId);
             }
 
             onComplete(deleted);
@@ -414,7 +414,7 @@ internal sealed class DevStore : IDisposable
             return null;
         }
 
-        RunGuarded("media url", async token =>
+        work.Run("media url", async token =>
         {
             var result = await client.DevChatMediaUrlAsync(messageId, token).ConfigureAwait(false);
             if (result is not null)
@@ -508,26 +508,7 @@ internal sealed class DevStore : IDisposable
     {
         for (var status = 0; status < ColumnCount; status++)
         {
-            var column = columns[status];
-            var found = -1;
-            for (var index = 0; index < column.Length; index++)
-            {
-                if (string.Equals(column[index].Id, cardId, StringComparison.Ordinal))
-                {
-                    found = index;
-                    break;
-                }
-            }
-
-            if (found < 0)
-            {
-                continue;
-            }
-
-            var result = new DevBoardCardDto[column.Length - 1];
-            Array.Copy(column, 0, result, 0, found);
-            Array.Copy(column, found + 1, result, found, column.Length - found - 1);
-            columns[status] = result;
+            columns[status] = CopyOnWrite.RemoveById(columns[status], cardId);
         }
     }
 
@@ -563,30 +544,6 @@ internal sealed class DevStore : IDisposable
         messages = merged.ToArray();
     }
 
-    private void RemoveMessage(string messageId)
-    {
-        var current = messages;
-        var found = -1;
-        for (var index = 0; index < current.Length; index++)
-        {
-            if (string.Equals(current[index].Id, messageId, StringComparison.Ordinal))
-            {
-                found = index;
-                break;
-            }
-        }
-
-        if (found < 0)
-        {
-            return;
-        }
-
-        var result = new DevChatMessageDto[current.Length - 1];
-        Array.Copy(current, 0, result, 0, found);
-        Array.Copy(current, found + 1, result, found, current.Length - found - 1);
-        messages = result;
-    }
-
     private static int CompareMessages(DevChatMessageDto left, DevChatMessageDto right)
     {
         var byTime = left.CreatedAtUnix.CompareTo(right.CreatedAtUnix);
@@ -595,41 +552,17 @@ internal sealed class DevStore : IDisposable
 
     private void RunCardOp(string operation, Action<bool>? onComplete, Func<CancellationToken, Task<bool>> action)
     {
-        RunGuarded(operation, async token =>
+        work.Run(operation, async token =>
         {
             var succeeded = await action(token).ConfigureAwait(false);
             onComplete?.Invoke(succeeded);
         }, () => cardBusy = false);
     }
 
-    private void RunGuarded(string operation, Func<CancellationToken, Task> action, Action? cleanup = null)
-    {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await action(token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Dev] {operation} failed: {exception.Message}");
-            }
-            finally
-            {
-                cleanup?.Invoke();
-            }
-        });
-    }
-
     public void Dispose()
     {
         Plugin.Framework.Update -= OnFrameworkTick;
         session.Changed -= OnSessionChanged;
-        cancellation.Cancel();
-        cancellation.Dispose();
+        work.Dispose();
     }
 }

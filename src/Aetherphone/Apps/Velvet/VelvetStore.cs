@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
@@ -16,7 +17,6 @@ internal sealed class VelvetStore : IDisposable
 {
     private const int AvatarSize = 512;
     private const int PostSize = 1080;
-    private static readonly TimeSpan MeRetryCooldown = TimeSpan.FromSeconds(30);
     private const int DmImageMaxDimension = 1280;
     private static readonly TimeSpan InboxPollInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
@@ -24,7 +24,7 @@ internal sealed class VelvetStore : IDisposable
     private readonly AethernetClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
-    private readonly CancellationTokenSource cancellation = new();
+    private readonly StoreWork work = new StoreWork("Velvet");
     private readonly Dictionary<string, long> inboxLastAt = new();
     private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
@@ -33,7 +33,7 @@ internal sealed class VelvetStore : IDisposable
     private DateTime lastInboxPollUtc = DateTime.MinValue;
     private volatile string? viewingThreadUserId;
     private DateTime lastViewingUtc = DateTime.MinValue;
-    private DateTime lastMeAttemptUtc = DateTime.MinValue;
+    private readonly RetryGate meGate = new RetryGate(TimeSpan.FromSeconds(30));
     private volatile VelvetProfileDto? me;
     private volatile bool loadingMe;
     private volatile bool avatarBusy;
@@ -119,7 +119,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         inboxPolling = true;
-        RunGuarded("inbox poll", async token =>
+        work.Run("inbox poll", async token =>
         {
             var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
@@ -216,15 +216,13 @@ internal sealed class VelvetStore : IDisposable
             return;
         }
 
-        var now = DateTime.UtcNow;
-        if (now - lastMeAttemptUtc < MeRetryCooldown)
+        if (!meGate.TryPass())
         {
             return;
         }
 
-        lastMeAttemptUtc = now;
         loadingMe = true;
-        RunGuarded("profile load", async token =>
+        work.Run("profile load", async token =>
         {
             var profile = await client.VelvetMeAsync(token).ConfigureAwait(false);
             if (profile is not null)
@@ -236,31 +234,17 @@ internal sealed class VelvetStore : IDisposable
 
     public void AcceptGate(int gateVersion, Action<bool> onComplete)
     {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("gate accept", async token =>
         {
-            var succeeded = false;
-            try
+            var profile = await client.AcceptGateAsync(gateVersion, token).ConfigureAwait(false);
+            if (profile is null)
             {
-                var profile = await client.AcceptGateAsync(gateVersion, token).ConfigureAwait(false);
-                if (profile is not null)
-                {
-                    me = profile;
-                    succeeded = true;
-                }
+                return false;
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] gate accept failed: {exception.Message}");
-            }
-            finally
-            {
-                onComplete(succeeded);
-            }
-        });
+
+            me = profile;
+            return true;
+        }, onComplete);
     }
 
     public void UpdateAvatar(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
@@ -271,120 +255,75 @@ internal sealed class VelvetStore : IDisposable
         }
 
         avatarBusy = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("avatar update", async token =>
         {
-            var succeeded = false;
-            try
+            var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarSize);
+            var upload = await client.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
+            if (upload is null)
             {
-                var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarSize);
-                var upload = await client.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
-                if (upload is null)
-                {
-                    return;
-                }
-
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-                    .ConfigureAwait(false);
-                if (!uploaded)
-                {
-                    return;
-                }
-
-                var updated = await client
-                    .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
-                    .ConfigureAwait(false);
-                if (updated is null)
-                {
-                    return;
-                }
-
-                var current = me;
-                if (current is not null)
-                {
-                    me = current with { AvatarUrl = upload.PublicUrl };
-                }
-
-                succeeded = true;
+                return false;
             }
-            catch (OperationCanceledException)
+
+            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                .ConfigureAwait(false);
+            if (!uploaded)
             {
+                return false;
             }
-            catch (Exception exception)
+
+            var updated = await client
+                .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
+                .ConfigureAwait(false);
+            if (updated is null)
             {
-                AepLog.Warning($"[Velvet] avatar update failed: {exception.Message}");
+                return false;
             }
-            finally
+
+            var current = me;
+            if (current is not null)
             {
-                avatarBusy = false;
-                onComplete(succeeded);
+                me = current with { AvatarUrl = upload.PublicUrl };
             }
-        });
+
+            return true;
+        }, onComplete, () => avatarBusy = false);
     }
 
     public void UpdateIdentity(string displayName, string handle, Action<bool> onComplete)
     {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("identity update", async token =>
         {
-            var succeeded = false;
-            try
+            var request = new UpdateProfileRequest(displayName.Length > 0 ? displayName : null,
+                handle.Length > 0 ? handle : null, null);
+            var updated = await client.UpdateProfileAsync(request, token).ConfigureAwait(false);
+            if (updated is null)
             {
-                var request = new UpdateProfileRequest(displayName.Length > 0 ? displayName : null,
-                    handle.Length > 0 ? handle : null, null);
-                var updated = await client.UpdateProfileAsync(request, token).ConfigureAwait(false);
-                if (updated is not null)
-                {
-                    var current = me;
-                    if (current is not null)
-                    {
-                        me = current with { DisplayName = updated.DisplayName, Handle = updated.Handle };
-                    }
+                return false;
+            }
 
-                    succeeded = true;
-                }
-            }
-            catch (OperationCanceledException)
+            var current = me;
+            if (current is not null)
             {
+                me = current with { DisplayName = updated.DisplayName, Handle = updated.Handle };
             }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] identity update failed: {exception.Message}");
-            }
-            finally
-            {
-                onComplete(succeeded);
-            }
-        });
+
+            return true;
+        }, onComplete);
     }
 
     public void UpdateProfile(UpdateVelvetProfileRequest request, Action<bool> onComplete)
     {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("profile update", async token =>
         {
-            var succeeded = false;
-            try
+            var updated = await client.UpdateVelvetProfileAsync(request, token).ConfigureAwait(false);
+            if (updated is null)
             {
-                var updated = await client.UpdateVelvetProfileAsync(request, token).ConfigureAwait(false);
-                if (updated is not null)
-                {
-                    me = updated;
-                    succeeded = true;
-                }
+                return false;
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] profile update failed: {exception.Message}");
-            }
-            finally
-            {
-                onComplete(succeeded);
-            }
-        });
+
+            me = updated;
+            return true;
+        }, onComplete);
     }
 
     public void RefreshDiscover(int lookingFor, string tags)
@@ -395,7 +334,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         loadingDiscover = true;
-        RunGuarded("discover", async token =>
+        work.Run("discover", async token =>
         {
             var page = await client.VelvetDiscoverAsync(lookingFor, tags, null, token).ConfigureAwait(false);
             if (page is not null)
@@ -417,7 +356,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         loadingConnections = true;
-        RunGuarded("connections", async token =>
+        work.Run("connections", async token =>
         {
             var page = await client.VelvetConnectionsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
@@ -439,7 +378,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         var offset = SocialTimeZone.EffectiveOffsetMinutes(configuration);
-        RunGuarded("heartbeat", async token => await client.VelvetHeartbeatAsync(offset, token).ConfigureAwait(false));
+        work.Run("heartbeat", async token => await client.VelvetHeartbeatAsync(offset, token).ConfigureAwait(false));
     }
 
     public void RefreshRequests()
@@ -450,7 +389,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         loadingRequests = true;
-        RunGuarded("requests", async token =>
+        work.Run("requests", async token =>
         {
             var page = await client.VelvetRequestsAsync(token).ConfigureAwait(false);
             if (page is not null)
@@ -472,7 +411,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         loadingSentRequests = true;
-        RunGuarded("sent requests", async token =>
+        work.Run("sent requests", async token =>
         {
             var page = await client.VelvetSentRequestsAsync(token).ConfigureAwait(false);
             if (page is not null)
@@ -491,21 +430,21 @@ internal sealed class VelvetStore : IDisposable
         requests = RemoveConnection(requests, userId);
         connectionsLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.Connected);
-        RunGuarded("accept", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
+        work.Run("accept", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
     }
 
     public void DeclineRequest(string userId)
     {
         requests = RemoveConnection(requests, userId);
         SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
-        RunGuarded("decline", async token => await client.DeclineRequestAsync(userId, token).ConfigureAwait(false));
+        work.Run("decline", async token => await client.DeclineRequestAsync(userId, token).ConfigureAwait(false));
     }
 
     public void CancelRequest(string userId)
     {
         sentRequests = RemoveConnection(sentRequests, userId);
         SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
-        RunGuarded("cancel request",
+        work.Run("cancel request",
             async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
     }
 
@@ -517,7 +456,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         loadingFeed = true;
-        RunGuarded("feed", async token =>
+        work.Run("feed", async token =>
         {
             var page = await client.VelvetFeedAsync("explore", null, token).ConfigureAwait(false);
             if (page is not null)
@@ -542,7 +481,7 @@ internal sealed class VelvetStore : IDisposable
         profileUser = null;
         profileFailed = false;
         profileLoading = true;
-        RunGuarded("profile open", async token =>
+        work.Run("profile open", async token =>
         {
             var user = await client.VelvetUserAsync(userId, token).ConfigureAwait(false);
             if (profileUserId != userId)
@@ -571,39 +510,20 @@ internal sealed class VelvetStore : IDisposable
     {
         sentRequestsLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
-        RunGuarded("connect", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
+        work.Run("connect", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
     }
 
     public void Disconnect(string userId)
     {
         connections = RemoveConnection(connections, userId);
         SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
-        RunGuarded("disconnect", async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
+        work.Run("disconnect", async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
     }
 
     public void Block(string userId, Action<bool> onComplete)
     {
         SetConnectionStateEverywhere(userId, VelvetConnectionState.Blocked);
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            var succeeded = false;
-            try
-            {
-                succeeded = await client.BlockAsync(userId, token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] block failed: {exception.Message}");
-            }
-            finally
-            {
-                onComplete(succeeded);
-            }
-        });
+        work.Run("block", async token => await client.BlockAsync(userId, token).ConfigureAwait(false), onComplete);
     }
 
     public void RefreshThreads()
@@ -614,7 +534,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         loadingThreads = true;
-        RunGuarded("threads", async token =>
+        work.Run("threads", async token =>
         {
             var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
@@ -639,7 +559,7 @@ internal sealed class VelvetStore : IDisposable
         messages = Array.Empty<VelvetMessageDto>();
         otherTyping = false;
         loadingThread = true;
-        RunGuarded("thread open", async token =>
+        work.Run("thread open", async token =>
         {
             var page = await client.VelvetMessagesAsync(id, null, token).ConfigureAwait(false);
             if (threadId == id && page is not null)
@@ -663,7 +583,7 @@ internal sealed class VelvetStore : IDisposable
             return;
         }
 
-        RunGuarded("thread refresh", async token =>
+        work.Run("thread refresh", async token =>
         {
             var page = await client.VelvetMessagesAsync(current, null, token).ConfigureAwait(false);
             if (threadId == current && page is not null)
@@ -675,12 +595,12 @@ internal sealed class VelvetStore : IDisposable
 
     public void SendTyping(string id)
     {
-        RunGuarded("typing", async token => await client.SendVelvetTypingAsync(id, token).ConfigureAwait(false));
+        work.Run("typing", async token => await client.SendVelvetTypingAsync(id, token).ConfigureAwait(false));
     }
 
     public void RefreshTyping(string id)
     {
-        RunGuarded("typing state", async token =>
+        work.Run("typing state", async token =>
         {
             var result = await client.VelvetTypingAsync(id, token).ConfigureAwait(false);
             if (threadId == id && result is not null)
@@ -699,38 +619,23 @@ internal sealed class VelvetStore : IDisposable
         }
 
         sending = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("send", async token =>
         {
-            var succeeded = false;
-            try
+            var sent = await client.SendVelvetMessageAsync(id, trimmed, 0, null, token).ConfigureAwait(false);
+            if (sent is null)
             {
-                var sent = await client.SendVelvetMessageAsync(id, trimmed, 0, null, token).ConfigureAwait(false);
-                if (sent is not null)
-                {
-                    if (threadId == id)
-                    {
-                        messages = Append(messages, sent);
-                    }
+                return false;
+            }
 
-                    threadsLoaded = false;
-                    succeeded = true;
-                    Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
-                }
-            }
-            catch (OperationCanceledException)
+            if (threadId == id)
             {
+                messages = CopyOnWrite.Append(messages, sent);
             }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] send failed: {exception.Message}");
-            }
-            finally
-            {
-                sending = false;
-                onComplete(succeeded);
-            }
-        });
+
+            threadsLoaded = false;
+            Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
+            return true;
+        }, onComplete, () => sending = false);
     }
 
     public void SendImageMessage(string id, string sourcePath, string caption, Action<bool> onComplete)
@@ -741,54 +646,39 @@ internal sealed class VelvetStore : IDisposable
         }
 
         sending = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("send image", async token =>
         {
-            var succeeded = false;
-            try
+            var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
+            var upload = await client.UploadUrlAsync("image/jpeg", "velvet-dm", token).ConfigureAwait(false);
+            if (upload is null)
             {
-                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
-                var upload = await client.UploadUrlAsync("image/jpeg", "velvet-dm", token).ConfigureAwait(false);
-                if (upload is null)
-                {
-                    return;
-                }
+                return false;
+            }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-                    .ConfigureAwait(false);
-                if (!uploaded)
-                {
-                    return;
-                }
+            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                .ConfigureAwait(false);
+            if (!uploaded)
+            {
+                return false;
+            }
 
-                var sent = await client
-                    .SendVelvetMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height)
-                    .ConfigureAwait(false);
-                if (sent is not null)
-                {
-                    if (threadId == id)
-                    {
-                        messages = Append(messages, sent);
-                    }
+            var sent = await client
+                .SendVelvetMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height)
+                .ConfigureAwait(false);
+            if (sent is null)
+            {
+                return false;
+            }
 
-                    threadsLoaded = false;
-                    succeeded = true;
-                    Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
-                }
-            }
-            catch (OperationCanceledException)
+            if (threadId == id)
             {
+                messages = CopyOnWrite.Append(messages, sent);
             }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] send image failed: {exception.Message}");
-            }
-            finally
-            {
-                sending = false;
-                onComplete(succeeded);
-            }
-        });
+
+            threadsLoaded = false;
+            Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
+            return true;
+        }, onComplete, () => sending = false);
     }
 
     public string? DmMediaUrl(string messageId)
@@ -803,7 +693,7 @@ internal sealed class VelvetStore : IDisposable
             return null;
         }
 
-        RunGuarded("dm media url", async token =>
+        work.Run("dm media url", async token =>
         {
             var result = await client.VelvetDmMediaUrlAsync(messageId, token).ConfigureAwait(false);
             if (result is not null)
@@ -823,48 +713,33 @@ internal sealed class VelvetStore : IDisposable
         }
 
         posting = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("create post", async token =>
         {
-            var succeeded = false;
-            try
+            var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, PostSize);
+            var upload = await client.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
+            if (upload is null)
             {
-                var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, PostSize);
-                var upload = await client.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
-                if (upload is null)
-                {
-                    return;
-                }
+                return false;
+            }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-                    .ConfigureAwait(false);
-                if (!uploaded)
-                {
-                    return;
-                }
+            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                .ConfigureAwait(false);
+            if (!uploaded)
+            {
+                return false;
+            }
 
-                var request =
-                    new CreateVelvetPostRequest(upload.Key, baked.Width, baked.Height, caption, tags, visibility);
-                var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
-                succeeded = created is not null;
-                if (succeeded)
-                {
-                    Plugin.Analytics.Track(AnalyticsEvents.PostCreated("velvet"));
-                }
-            }
-            catch (OperationCanceledException)
+            var request =
+                new CreateVelvetPostRequest(upload.Key, baked.Width, baked.Height, caption, tags, visibility);
+            var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
+            if (created is null)
             {
+                return false;
             }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] create post failed: {exception.Message}");
-            }
-            finally
-            {
-                posting = false;
-                onComplete(succeeded);
-            }
-        });
+
+            Plugin.Analytics.Track(AnalyticsEvents.PostCreated("velvet"));
+            return true;
+        }, onComplete, () => posting = false);
     }
 
     public VelvetCommentDto[] DetailComments => detailComments;
@@ -880,7 +755,7 @@ internal sealed class VelvetStore : IDisposable
 
         fetchingPostId = postId;
         fetchedPost = null;
-        RunGuarded("post by id", async token =>
+        work.Run("post by id", async token =>
         {
             var post = await client.VelvetPostAsync(postId, token).ConfigureAwait(false);
             if (fetchingPostId == postId && post is not null)
@@ -901,7 +776,7 @@ internal sealed class VelvetStore : IDisposable
         likers = Array.Empty<UserDto>();
         likersFailed = false;
         likersLoading = true;
-        RunGuarded("likers", async token =>
+        work.Run("likers", async token =>
         {
             var page = await client.VelvetPostLikersAsync(postId, null, token).ConfigureAwait(false);
             if (likersPostId != postId)
@@ -931,7 +806,7 @@ internal sealed class VelvetStore : IDisposable
         detailPostId = postId;
         detailComments = Array.Empty<VelvetCommentDto>();
         loadingComments = true;
-        RunGuarded("comments", async token =>
+        work.Run("comments", async token =>
         {
             var page = await client.VelvetCommentsAsync(postId, token).ConfigureAwait(false);
             if (detailPostId == postId && page is not null)
@@ -956,52 +831,28 @@ internal sealed class VelvetStore : IDisposable
         }
 
         commenting = true;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("comment", async token =>
         {
-            var succeeded = false;
-            try
+            var created = await client.AddVelvetCommentAsync(postId, trimmed, token).ConfigureAwait(false);
+            if (created is null)
             {
-                var created = await client.AddVelvetCommentAsync(postId, trimmed, token).ConfigureAwait(false);
-                if (created is not null)
-                {
-                    if (detailPostId == postId)
-                    {
-                        detailComments = Append(detailComments, created);
-                    }
+                return false;
+            }
 
-                    succeeded = true;
-                    Plugin.Analytics.Track(AnalyticsEvents.Comment("velvet"));
-                }
-            }
-            catch (OperationCanceledException)
+            if (detailPostId == postId)
             {
+                detailComments = CopyOnWrite.Append(detailComments, created);
             }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] comment failed: {exception.Message}");
-            }
-            finally
-            {
-                commenting = false;
-                onComplete(succeeded);
-            }
-        });
+
+            Plugin.Analytics.Track(AnalyticsEvents.Comment("velvet"));
+            return true;
+        }, onComplete, () => commenting = false);
     }
 
     public void DeletePost(string postId)
     {
-        var source = feed;
-        var index = Array.FindIndex(source, item => item.Id == postId);
-        if (index >= 0)
-        {
-            var result = new VelvetPostDto[source.Length - 1];
-            Array.Copy(source, 0, result, 0, index);
-            Array.Copy(source, index + 1, result, index, source.Length - index - 1);
-            feed = result;
-        }
-
-        RunGuarded("delete post",
+        RemovePost(postId);
+        work.Run("delete post",
             async token => await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false));
     }
 
@@ -1013,14 +864,14 @@ internal sealed class VelvetStore : IDisposable
             Plugin.Analytics.Track(AnalyticsEvents.Reaction("velvet"));
         }
 
-        RunGuarded("reaction", async token =>
+        work.Run("reaction", async token =>
         {
             var result = target < 0
                 ? await client.VelvetRemoveReactionAsync(post.Id, token).ConfigureAwait(false)
                 : await client.VelvetReactAsync(post.Id, target, token).ConfigureAwait(false);
             if (result is not null)
             {
-                feed = Replace(feed, result);
+                feed = CopyOnWrite.Replace(feed, result);
                 if (fetchedPost?.Id == result.Id)
                 {
                     fetchedPost = result;
@@ -1031,96 +882,48 @@ internal sealed class VelvetStore : IDisposable
 
     public void Report(string targetType, string targetId, string? reason, Action<bool> onComplete)
     {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            var succeeded = false;
-            try
-            {
-                succeeded = await client.ReportAsync(targetType, targetId, reason, token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] report failed: {exception.Message}");
-            }
-            finally
-            {
-                onComplete(succeeded);
-            }
-        });
+        work.Run("report",
+            async token => await client.ReportAsync(targetType, targetId, reason, token).ConfigureAwait(false),
+            onComplete);
     }
 
     public void DeletePost(string postId, Action<bool> onComplete)
     {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("delete post", async token =>
         {
-            var succeeded = false;
-            try
+            var succeeded = await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false);
+            if (succeeded)
             {
-                succeeded = await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false);
-                if (succeeded)
-                {
-                    RemovePost(postId);
-                }
+                RemovePost(postId);
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] delete post failed: {exception.Message}");
-            }
-            finally
-            {
-                onComplete(succeeded);
-            }
-        });
+
+            return succeeded;
+        }, onComplete);
     }
 
     public void DeleteComment(string postId, string commentId)
     {
         if (detailPostId == postId)
         {
-            detailComments = RemoveComment(detailComments, commentId);
+            detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
         }
 
-        RunGuarded("comment delete",
+        work.Run("comment delete",
             async token => await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
     public void DeleteComment(string postId, string commentId, Action<bool> onComplete)
     {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
+        work.Run("comment delete", async token =>
         {
-            var succeeded = false;
-            try
+            var succeeded = await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false);
+            if (succeeded && detailPostId == postId)
             {
-                succeeded = await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false);
-                if (succeeded)
-                {
-                    if (detailPostId == postId)
-                    {
-                        detailComments = RemoveComment(detailComments, commentId);
-                    }
-                }
+                detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] comment delete failed: {exception.Message}");
-            }
-            finally
-            {
-                onComplete(succeeded);
-            }
-        });
+
+            return succeeded;
+        }, onComplete);
     }
 
     public void ClearDiscover() => discoverResults = Array.Empty<VelvetProfileDto>();
@@ -1169,123 +972,14 @@ internal sealed class VelvetStore : IDisposable
         }
     }
 
-    private void RunGuarded(string operation, Func<CancellationToken, Task> action, Action? cleanup = null)
-    {
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await action(token).ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"[Velvet] {operation} failed: {exception.Message}");
-            }
-            finally
-            {
-                cleanup?.Invoke();
-            }
-        });
-    }
-
     private void RemovePost(string postId)
     {
-        feed = RemoveById(feed, postId);
-    }
-
-    private static VelvetCommentDto[] RemoveComment(VelvetCommentDto[] source, string commentId)
-    {
-        var index = -1;
-        for (var i = 0; i < source.Length; i++)
-        {
-            if (source[i].Id == commentId)
-            {
-                index = i;
-                break;
-            }
-        }
-
-        if (index < 0)
-        {
-            return source;
-        }
-
-        var result = new VelvetCommentDto[source.Length - 1];
-        Array.Copy(source, 0, result, 0, index);
-        Array.Copy(source, index + 1, result, index, source.Length - index - 1);
-        return result;
-    }
-
-    private static VelvetPostDto[] RemoveById(VelvetPostDto[] source, string postId)
-    {
-        var count = 0;
-        for (var index = 0; index < source.Length; index++)
-        {
-            if (source[index].Id != postId)
-            {
-                count++;
-            }
-        }
-
-        if (count == source.Length)
-        {
-            return source;
-        }
-
-        var result = new VelvetPostDto[count];
-        var resultIndex = 0;
-        for (var index = 0; index < source.Length; index++)
-        {
-            if (source[index].Id != postId)
-            {
-                result[resultIndex++] = source[index];
-            }
-        }
-
-        return result;
-    }
-
-    private static VelvetPostDto[] Replace(VelvetPostDto[] source, VelvetPostDto updated)
-    {
-        for (var index = 0; index < source.Length; index++)
-        {
-            if (source[index].Id != updated.Id)
-            {
-                continue;
-            }
-
-            var result = (VelvetPostDto[])source.Clone();
-            result[index] = updated;
-            return result;
-        }
-
-        return source;
-    }
-
-    private static VelvetMessageDto[] Append(VelvetMessageDto[] source, VelvetMessageDto message)
-    {
-        var result = new VelvetMessageDto[source.Length + 1];
-        Array.Copy(source, result, source.Length);
-        result[source.Length] = message;
-        return result;
-    }
-
-    private static VelvetCommentDto[] Append(VelvetCommentDto[] source, VelvetCommentDto comment)
-    {
-        var result = new VelvetCommentDto[source.Length + 1];
-        Array.Copy(source, result, source.Length);
-        result[source.Length] = comment;
-        return result;
+        feed = CopyOnWrite.RemoveById(feed, postId);
     }
 
     public void Dispose()
     {
         Plugin.Framework.Update -= OnFrameworkTick;
-        cancellation.Cancel();
-        cancellation.Dispose();
+        work.Dispose();
     }
 }

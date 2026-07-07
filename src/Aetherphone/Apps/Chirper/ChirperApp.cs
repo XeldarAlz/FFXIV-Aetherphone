@@ -50,7 +50,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly Action back;
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
-    private ChirperFeedScope activeScope = ChirperFeedScope.ForYou;
+    private SocialFeedScope activeScope = SocialFeedScope.ForYou;
     private float tabSegmentAnim;
     private float sinceForYou;
     private float sinceFollowing;
@@ -96,8 +96,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (store.IsSignedIn)
         {
             store.EnsureMe();
-            store.RefreshFeed(ChirperFeedScope.ForYou);
-            store.RefreshFeed(ChirperFeedScope.Following);
+            store.RefreshFeed(SocialFeedScope.ForYou);
+            store.RefreshFeed(SocialFeedScope.Following);
         }
 
         if (store.IsSignedIn && launcher.TryConsume(Id, out var link))
@@ -188,7 +188,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var selected = DrawScopeSegments(tabsRect);
         if (selected != (int)activeScope)
         {
-            activeScope = (ChirperFeedScope)selected;
+            activeScope = (SocialFeedScope)selected;
             actions.Reset();
             EnsureLoaded(activeScope);
         }
@@ -217,8 +217,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         Squircle.Fill(drawList, thumbMin, thumbMax, (thumbMax.Y - thumbMin.Y) * 0.5f, ImGui.GetColorU32(Accent));
         var forYouRect = new Rect(rect.Min, new Vector2(rect.Min.X + half, rect.Max.Y));
         var followingRect = new Rect(new Vector2(rect.Min.X + half, rect.Min.Y), rect.Max);
-        DrawSegmentLabel(forYouRect, Loc.T(L.Chirper.ForYou), activeScope == ChirperFeedScope.ForYou);
-        DrawSegmentLabel(followingRect, Loc.T(L.Chirper.Following), activeScope == ChirperFeedScope.Following);
+        DrawSegmentLabel(forYouRect, Loc.T(L.Chirper.ForYou), activeScope == SocialFeedScope.ForYou);
+        DrawSegmentLabel(followingRect, Loc.T(L.Chirper.Following), activeScope == SocialFeedScope.Following);
         var selected = (int)activeScope;
         if (HoverClick(forYouRect.Min, forYouRect.Max))
         {
@@ -239,7 +239,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         Typography.DrawCentered(rect.Center, label, ink, 0.9f, active ? FontWeight.SemiBold : FontWeight.Medium);
     }
 
-    private void DrawFeedList(Rect listRect, ChirperFeedScope scope)
+    private void DrawFeedList(Rect listRect, SocialFeedScope scope)
     {
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
@@ -247,7 +247,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
-                    scope == ChirperFeedScope.Following ? Loc.T(L.Chirper.FollowingEmpty) :
+                    scope == SocialFeedScope.Following ? Loc.T(L.Chirper.FollowingEmpty) :
                     Loc.T(L.Chirper.ExploreEmpty);
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 90f * ImGuiHelpers.GlobalScale),
                     message, AppPalettes.Chirper.MutedInk);
@@ -853,11 +853,11 @@ internal sealed partial class ChirperApp : IPhoneApp
     {
         actions.Reset();
         commentDraft = string.Empty;
-        store.OpenThreadById(postId);
+        store.OpenDetailById(postId);
         router.Push(ChirperRoute.Thread(postId));
     }
 
-    private void EnsureLoaded(ChirperFeedScope scope)
+    private void EnsureLoaded(SocialFeedScope scope)
     {
         if (store.Feed(scope).Length == 0 && !store.IsLoading(scope))
         {
@@ -865,19 +865,19 @@ internal sealed partial class ChirperApp : IPhoneApp
         }
     }
 
-    private void TickRefresh(ChirperFeedScope scope)
+    private void TickRefresh(SocialFeedScope scope)
     {
         if (store.IsLoading(scope))
         {
             return;
         }
 
-        if (scope == ChirperFeedScope.ForYou && sinceForYou >= FeedRefreshSeconds)
+        if (scope == SocialFeedScope.ForYou && sinceForYou >= FeedRefreshSeconds)
         {
             sinceForYou = 0f;
             store.RefreshFeed(scope);
         }
-        else if (scope == ChirperFeedScope.Following && sinceFollowing >= FeedRefreshSeconds)
+        else if (scope == SocialFeedScope.Following && sinceFollowing >= FeedRefreshSeconds)
         {
             sinceFollowing = 0f;
             store.RefreshFeed(scope);

@@ -39,7 +39,7 @@ internal sealed record UserDto(
     string? AvatarUrl,
     int Grams,
     int? UtcOffsetMinutes = null,
-    bool ShareTimeZone = true);
+    bool ShareTimeZone = true) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
 
@@ -67,7 +67,7 @@ internal sealed record PostDto(
     int MediaHeight,
     string? AuthorAvatarUrl,
     int CommentCount,
-    bool IsFollowing);
+    bool IsFollowing) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
@@ -90,7 +90,7 @@ internal sealed record CommentDto(
     string AuthorHandle,
     string? AuthorAvatarUrl,
     string Text,
-    long CreatedAtUnix);
+    long CreatedAtUnix) : IIdentified;
 
 internal sealed record CreateCommentRequest(string Text);
 
@@ -160,7 +160,7 @@ internal sealed record VelvetPostDto(
     int[] ReactionCounts,
     int TotalReactions,
     int MyReaction,
-    int CommentCount);
+    int CommentCount) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
 
@@ -180,7 +180,7 @@ internal sealed record VelvetCommentDto(
     string AuthorHandle,
     string? AuthorAvatarUrl,
     string Text,
-    long CreatedAtUnix);
+    long CreatedAtUnix) : IIdentified;
 
 internal sealed record VelvetCommentPage(VelvetCommentDto[] Items, string? NextCursor);
 
@@ -210,7 +210,7 @@ internal sealed record VelvetThreadDto(
     string LastMessagePreview,
     int UnreadCount,
     int Presence,
-    int? UtcOffsetMinutes = null);
+    int? UtcOffsetMinutes = null) : IIdentified;
 
 internal sealed record VelvetThreadPage(VelvetThreadDto[] Items, string? NextCursor);
 
@@ -223,7 +223,7 @@ internal sealed record VelvetMessageDto(
     long CreatedAtUnix,
     long? ExpiresAtUnix,
     int MediaWidth = 0,
-    int MediaHeight = 0);
+    int MediaHeight = 0) : IIdentified;
 
 internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
 
@@ -250,7 +250,7 @@ internal sealed record NotificationDto(
     string ActorHandle,
     string? ActorAvatarUrl,
     string? Preview,
-    long CreatedAtUnix);
+    long CreatedAtUnix) : IIdentified;
 
 internal sealed record NotificationPage(NotificationDto[] Items);
 
@@ -267,7 +267,7 @@ internal sealed record PollDto(
     int TotalVotes,
     int MyVote,
     long CreatedAtUnix,
-    bool Closed);
+    bool Closed) : IIdentified;
 
 internal sealed record PollPage(PollDto[] Items);
 
@@ -282,7 +282,7 @@ internal sealed record FeedbackDto(
     string AuthorHandle,
     string? AuthorAvatarUrl,
     string Text,
-    long CreatedAtUnix);
+    long CreatedAtUnix) : IIdentified;
 
 internal sealed record DevBoardCardDto(
     string Id,
@@ -295,7 +295,7 @@ internal sealed record DevBoardCardDto(
     string CreatedByHandle,
     string? CreatedByAvatarUrl,
     long CreatedAtUnix,
-    long UpdatedAtUnix);
+    long UpdatedAtUnix) : IIdentified;
 
 internal sealed record DevBoardCards(DevBoardCardDto[] Items);
 
@@ -315,7 +315,7 @@ internal sealed record DevChatMessageDto(
     int Kind,
     int MediaWidth,
     int MediaHeight,
-    long CreatedAtUnix);
+    long CreatedAtUnix) : IIdentified;
 
 internal sealed record DevChatPage(DevChatMessageDto[] Items, string? NextCursor);
 
