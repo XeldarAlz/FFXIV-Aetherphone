@@ -795,22 +795,8 @@ internal sealed partial class ChirperApp : IPhoneApp
     private void DrawAvatar(ImDrawListPtr drawList, Vector2 center, float radius, string name, string world,
         string? avatarUrl, float monogramScale, int segments)
     {
-        if (!string.IsNullOrEmpty(avatarUrl))
-        {
-            var texture = images.Get(avatarUrl);
-            if (texture is not null)
-            {
-                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(theme.SurfaceMuted), segments);
-                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-                var corner = new Vector2(radius, radius);
-                drawList.AddImageRounded(texture.Handle, center - corner, center + corner, uv0, uv1, 0xFFFFFFFFu,
-                    radius, ImDrawFlags.RoundCornersAll);
-                return;
-            }
-        }
-
-        AvatarView.Draw(drawList, center, radius, theme.Accent, Initials.Of(name), monogramScale,
-            lodestone.Avatar(name, world), segments);
+        AvatarView.DrawRemote(drawList, center, radius, theme, name, world, avatarUrl, images, lodestone,
+            monogramScale, segments);
     }
 
 

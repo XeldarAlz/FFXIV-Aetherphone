@@ -539,23 +539,8 @@ internal sealed partial class AethergramApp : IPhoneApp
     private void DrawAvatar(Vector2 center, float radius, string name, string world, string? avatarUrl,
         float monogramScale, int segments)
     {
-        var drawList = ImGui.GetWindowDrawList();
-        if (!string.IsNullOrEmpty(avatarUrl))
-        {
-            var texture = images.Get(avatarUrl);
-            if (texture is not null)
-            {
-                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(theme.SurfaceMuted), segments);
-                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-                var corner = new Vector2(radius, radius);
-                drawList.AddImageRounded(texture.Handle, center - corner, center + corner, uv0, uv1, 0xFFFFFFFFu,
-                    radius, ImDrawFlags.RoundCornersAll);
-                return;
-            }
-        }
-
-        AvatarView.Draw(drawList, center, radius, theme.Accent, Initials.Of(name), monogramScale,
-            lodestone.Avatar(name, world), segments);
+        AvatarView.DrawRemote(ImGui.GetWindowDrawList(), center, radius, theme, name, world, avatarUrl, images,
+            lodestone, monogramScale, segments);
     }
 
     private void DrawField(string label, string id, ref string value, int maxLength, bool multiline)

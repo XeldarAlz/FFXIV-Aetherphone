@@ -1,6 +1,8 @@
 using System.Numerics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -13,6 +15,28 @@ internal static class AvatarView
     private const float SettleOvershoot = 0.06f;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Dictionary<string, float> fadeByKey = new(StringComparer.Ordinal);
+
+    public static void DrawRemote(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme theme, string name,
+        string world, string? avatarUrl, RemoteImageCache images, LodestoneService lodestone, float monogramScale,
+        int segments)
+    {
+        if (!string.IsNullOrEmpty(avatarUrl))
+        {
+            var texture = images.Get(avatarUrl);
+            if (texture is not null)
+            {
+                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(theme.SurfaceMuted), segments);
+                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+                var corner = new Vector2(radius, radius);
+                drawList.AddImageRounded(texture.Handle, center - corner, center + corner, uv0, uv1, 0xFFFFFFFFu,
+                    radius, ImDrawFlags.RoundCornersAll);
+                return;
+            }
+        }
+
+        Draw(drawList, center, radius, theme.Accent, Initials.Of(name), monogramScale, lodestone.Avatar(name, world),
+            segments);
+    }
 
     public static void Draw(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 baseColor, string monogram,
         float monogramScale, AvatarHandle handle, int segments)
