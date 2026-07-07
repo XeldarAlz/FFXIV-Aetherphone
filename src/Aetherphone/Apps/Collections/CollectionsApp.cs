@@ -862,29 +862,10 @@ internal sealed class CollectionsApp : IPhoneApp
             frameTheme.TextMuted, 32f * scale);
         Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.Collections.Failed),
             frameTheme.TextMuted, 0.92f, FontWeight.Medium);
-        if (DrawTextButton(new Vector2(center.X, center.Y + 50f * scale), Loc.T(L.Collections.TryAgain), scale))
+        if (TextButton.Draw(new Vector2(center.X, center.Y + 50f * scale), Loc.T(L.Collections.TryAgain), Accent, scale))
         {
             catalog.Retry(category);
         }
-    }
-
-    private bool DrawTextButton(Vector2 center, string label, float scale)
-    {
-        var size = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        var hitMin = new Vector2(center.X - size.X * 0.5f - 12f * scale, center.Y - size.Y * 0.5f - 6f * scale);
-        var hitMax = new Vector2(center.X + size.X * 0.5f + 12f * scale, center.Y + size.Y * 0.5f + 6f * scale);
-        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(hitMin, hitMax, ImGui.GetColorU32(Palette.WithAlpha(Accent, hovered ? 0.22f : 0.14f)),
-            (hitMax.Y - hitMin.Y) * 0.5f);
-        Typography.DrawCentered(center, label, Accent, 0.9f, FontWeight.SemiBold);
-        if (!hovered)
-        {
-            return false;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private void DrawSpinnerState(Rect body)

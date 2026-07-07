@@ -634,7 +634,7 @@ internal sealed class FindPeopleApp : IPhoneApp
                 theme.TextMuted, 34f * scale);
             Typography.DrawCentered(new Vector2(center.X, center.Y + 18f * scale), Loc.T(L.FindPeople.Failed),
                 theme.TextMuted, 0.95f, FontWeight.Medium);
-            return DrawTextButton(new Vector2(center.X, center.Y + 48f * scale), Loc.T(L.FindPeople.TryAgain), Accent,
+            return TextButton.Draw(new Vector2(center.X, center.Y + 48f * scale), Loc.T(L.FindPeople.TryAgain), Accent,
                 scale);
         }
 
@@ -650,25 +650,6 @@ internal sealed class FindPeopleApp : IPhoneApp
         LoadingPulse.Draw(new Vector2(center.X, center.Y - 14f * scale), 13f * scale, Accent, theme.TextMuted,
             Loc.T(L.Common.Searching));
         return false;
-    }
-
-    private static bool DrawTextButton(Vector2 center, string label, Vector4 color, float scale)
-    {
-        var size = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        var hitMin = new Vector2(center.X - size.X * 0.5f - 12f * scale, center.Y - size.Y * 0.5f - 6f * scale);
-        var hitMax = new Vector2(center.X + size.X * 0.5f + 12f * scale, center.Y + size.Y * 0.5f + 6f * scale);
-        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(hitMin, hitMax, ImGui.GetColorU32(Palette.WithAlpha(color, hovered ? 0.22f : 0.14f)),
-            (hitMax.Y - hitMin.Y) * 0.5f);
-        Typography.DrawCentered(center, label, color, 0.9f, FontWeight.SemiBold);
-        if (!hovered)
-        {
-            return false;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private static void DrawChevronRight(Vector2 tip, float size, float thickness, Vector4 color)
