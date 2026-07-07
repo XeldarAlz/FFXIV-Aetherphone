@@ -150,7 +150,7 @@ internal static class BootScreen
             {
                 var letterStart = length <= 1 ? 0f : index / (length - 1f) * LetterStaggerWindow;
                 var letterProgress =
-                    Easing.EaseOutCubic(Clamp01((boot.GreetingReveal - letterStart) / LetterRevealSpan));
+                    Easing.EaseOutCubic(Easing.Clamp01((boot.GreetingReveal - letterStart) / LetterRevealSpan));
                 var letterAlpha = letterProgress * boot.GreetingAlpha;
                 if (letterAlpha > 0.01f)
                 {
@@ -179,6 +179,4 @@ internal static class BootScreen
 
         dl.AddText(font, fontSize, position, ImGui.GetColorU32(Palette.WithAlpha(color, alpha)), glyph);
     }
-
-    private static float Clamp01(float value) => Math.Clamp(value, 0f, 1f);
 }

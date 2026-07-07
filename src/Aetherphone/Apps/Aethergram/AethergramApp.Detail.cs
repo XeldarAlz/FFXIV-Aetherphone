@@ -54,7 +54,7 @@ internal sealed partial class AethergramApp
                 0.85f, 32);
             var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
             var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
-            var headerMeta = SocialIdentity.FeedMeta(post.AuthorHandle, RelativeTime(post.CreatedAtUnix));
+            var headerMeta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
             var headerNameSize = Typography.Measure(displayName, 0.95f, FontWeight.SemiBold);
             var headerMetaSize = Typography.Measure(headerMeta, 0.78f);
             var headerTextGap = 3f * scale;
@@ -228,7 +228,7 @@ internal sealed partial class AethergramApp
         var nameTop = bubbleTop + padTop;
         Typography.Draw(new Vector2(textLeft, nameTop), displayName, theme.TextStrong, 0.85f, FontWeight.SemiBold);
         var nameWidth = Typography.Measure(displayName, 0.85f, FontWeight.SemiBold).X;
-        var meta = RelativeTime(comment.CreatedAtUnix);
+        var meta = TimeText.Short(comment.CreatedAtUnix);
         var metaSize = Typography.Measure(meta, 0.76f);
         var metaLeft = textLeft + nameWidth + 8f * scale;
         var metaRightBound = mine ? textRight - 14f * scale : textRight;

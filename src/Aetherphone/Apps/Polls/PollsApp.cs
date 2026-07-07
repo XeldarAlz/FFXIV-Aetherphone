@@ -188,7 +188,7 @@ internal sealed class PollsApp : IPhoneApp
         var votesLabel = Loc.Plural(L.Polls.Votes, poll.TotalVotes);
         var footer = poll.Closed
             ? $"{votesLabel} · {Loc.T(L.Polls.FinalResults)}"
-            : $"{votesLabel} · {RelativeTime(poll.CreatedAtUnix)}";
+            : $"{votesLabel} · {TimeText.Short(poll.CreatedAtUnix)}";
         Typography.Draw(new Vector2(contentLeft, footerTop), footer, ui.MutedInk, 0.85f);
 
         ImGui.SetCursorScreenPos(origin);
@@ -380,33 +380,6 @@ internal sealed class PollsApp : IPhoneApp
         {
             return ImGui.CalcTextSize(text, false, wrapWidth).Y;
         }
-    }
-
-    private static string RelativeTime(long unixSeconds)
-    {
-        var moment = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
-        var span = DateTime.UtcNow - moment;
-        if (span.TotalSeconds < 60)
-        {
-            return Loc.T(L.Time.Now);
-        }
-
-        if (span.TotalMinutes < 60)
-        {
-            return Loc.T(L.Time.MinutesShort, (int)span.TotalMinutes);
-        }
-
-        if (span.TotalHours < 24)
-        {
-            return Loc.T(L.Time.HoursShort, (int)span.TotalHours);
-        }
-
-        if (span.TotalDays < 7)
-        {
-            return Loc.T(L.Time.DaysShort, (int)span.TotalDays);
-        }
-
-        return moment.ToString("MMM d", Loc.Culture);
     }
 
     private sealed class PollMotion

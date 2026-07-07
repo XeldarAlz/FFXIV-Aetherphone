@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
@@ -40,7 +41,7 @@ internal static class LinkshellRow
         var hasUnread = unread > 0;
         if (last is not null)
         {
-            var time = NotificationCard.RelativeTime(thread!.LastActivity);
+            var time = TimeText.Short(thread!.LastActivity);
             var timeSize = Typography.Measure(time, TextStyles.Caption1);
             Typography.Draw(new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
                 hasUnread ? theme.Accent : theme.TextMuted, TextStyles.Caption1);

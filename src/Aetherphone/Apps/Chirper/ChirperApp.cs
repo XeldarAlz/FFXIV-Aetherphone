@@ -294,7 +294,7 @@ internal sealed partial class ChirperApp : IPhoneApp
 
         Typography.Draw(new Vector2(contentLeft, origin.Y + pad), displayName, theme.TextStrong, 1.05f,
             FontWeight.SemiBold);
-        var meta = SocialIdentity.FeedMeta(post.AuthorHandle, RelativeTime(post.CreatedAtUnix));
+        var meta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
         var metaSize = Typography.Measure(meta, 0.9f);
         Typography.Draw(
             new Vector2(contentLeft + nameSize.X + 7f * scale, origin.Y + pad + (nameSize.Y - metaSize.Y) * 0.5f), meta,
@@ -677,8 +677,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         var nameSize = Typography.Measure(displayName, 0.95f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(textLeft, origin.Y), displayName, theme.TextStrong, 0.95f, FontWeight.SemiBold);
         var meta = comment.AuthorHandle.Length > 0
-            ? $"@{comment.AuthorHandle} · {RelativeTime(comment.CreatedAtUnix)}"
-            : RelativeTime(comment.CreatedAtUnix);
+            ? $"@{comment.AuthorHandle} · {TimeText.Short(comment.CreatedAtUnix)}"
+            : TimeText.Short(comment.CreatedAtUnix);
         var metaSize = Typography.Measure(meta, 0.82f);
         Typography.Draw(new Vector2(textLeft + nameSize.X + 7f * scale, origin.Y + (nameSize.Y - metaSize.Y) * 0.5f),
             meta, AppPalettes.Chirper.MutedInk, 0.82f);
@@ -910,33 +910,6 @@ internal sealed partial class ChirperApp : IPhoneApp
         var plural = Loc.Plural(L.Chirper.Posts, count);
         var parts = plural.Split(' ', 2);
         return parts.Length > 1 ? parts[1] : plural;
-    }
-
-    private static string RelativeTime(long unixSeconds)
-    {
-        var moment = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
-        var span = DateTime.UtcNow - moment;
-        if (span.TotalSeconds < 60)
-        {
-            return Loc.T(L.Time.Now);
-        }
-
-        if (span.TotalMinutes < 60)
-        {
-            return Loc.T(L.Time.MinutesShort, (int)span.TotalMinutes);
-        }
-
-        if (span.TotalHours < 24)
-        {
-            return Loc.T(L.Time.HoursShort, (int)span.TotalHours);
-        }
-
-        if (span.TotalDays < 7)
-        {
-            return Loc.T(L.Time.DaysShort, (int)span.TotalDays);
-        }
-
-        return moment.ToString("MMM d", Loc.Culture);
     }
 
     public void Dispose()

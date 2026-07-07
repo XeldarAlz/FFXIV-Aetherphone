@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -111,7 +112,7 @@ internal sealed partial class DevApp
             AvatarFor(card.CreatedById, card.CreatedByAvatarUrl), 24);
         var author = string.IsNullOrEmpty(card.CreatedByDisplayName) ? card.CreatedByHandle : card.CreatedByDisplayName;
         Typography.Draw(new Vector2(avatarCenter.X + avatarRadius + 6f * scale, metaY),
-            $"{UiText.Truncate(author, 18)} · {RelativeTime(card.UpdatedAtUnix)}", AppPalettes.Dev.MutedInk, 0.76f);
+            $"{UiText.Truncate(author, 18)} · {TimeText.Short(card.UpdatedAtUnix)}", AppPalettes.Dev.MutedInk, 0.76f);
         var chevronX = origin.X + width - chevronZone * 0.5f;
         var upCenter = new Vector2(chevronX, origin.Y + cardHeight * 0.30f);
         var downCenter = new Vector2(chevronX, origin.Y + cardHeight * 0.70f);
@@ -239,8 +240,8 @@ internal sealed partial class DevApp
             : card.CreatedByDisplayName;
         var authorLabel = UiText.Truncate(author, 24);
         var when = card.UpdatedAtUnix > card.CreatedAtUnix
-            ? $"{RelativeTime(card.CreatedAtUnix)} · edited {RelativeTime(card.UpdatedAtUnix)}"
-            : RelativeTime(card.CreatedAtUnix);
+            ? $"{TimeText.Short(card.CreatedAtUnix)} · edited {TimeText.Short(card.UpdatedAtUnix)}"
+            : TimeText.Short(card.CreatedAtUnix);
         float titleHeight;
         using (Plugin.Fonts.Push(titleStyle.Scale, titleStyle.Weight))
         {

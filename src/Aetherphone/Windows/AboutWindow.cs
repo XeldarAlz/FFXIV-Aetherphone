@@ -1,3 +1,4 @@
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -97,7 +98,7 @@ public sealed class AboutWindow : Window, IDisposable
         const float stagger = 95f;
         var elapsed = Environment.TickCount64 - openTick;
         var x = (elapsed - index * stagger) / dur;
-        return Smooth01(Math.Clamp((float)x, 0f, 1f));
+        return Easing.SmoothStep(Math.Clamp((float)x, 0f, 1f));
     }
 
     private void RevealSection(int index, Action draw)
@@ -304,7 +305,7 @@ public sealed class AboutWindow : Window, IDisposable
         ProgressRing.Glow(medC, medR, accent, 0.4f + 0.7f * beat);
         dl.AddCircleFilled(medC, medR, ImGui.GetColorU32(Vector4.Lerp(Styling.CardBg, accent, 0.28f)));
         ProgressRing.Track(medC, medR, 1.5f * s, Palette.WithAlpha(accent, 0.85f));
-        ProgressRing.CenterIcon(medC, FontAwesomeIcon.Heart, Lighten(accent, 0.25f), medR * (0.80f + 0.22f * beat));
+        ProgressRing.CenterIcon(medC, FontAwesomeIcon.Heart, Palette.Lighten(accent, 0.25f), medR * (0.80f + 0.22f * beat));
         ImGui.SetCursorScreenPos(new Vector2(slotOrigin.X, origin.Y + pad + medR * 2f + 12f * s));
         Styling.TextCentered(title, Styling.TextStrong, 1.12f);
         foreach (var ln in bodyLines) Styling.TextCentered(ln, Styling.TextSecondary);
@@ -344,7 +345,7 @@ public sealed class AboutWindow : Window, IDisposable
         var end = origin + size;
         var hover = ImGui.IsMouseHoveringRect(origin, end);
         var rounding = size.Y * 0.5f;
-        var fill = (hover ? Lighten(accent, 0.16f) : accent) with { W = 1f };
+        var fill = (hover ? Palette.Lighten(accent, 0.16f) : accent) with { W = 1f };
         var glowPulse = 0.5f + 0.5f * Styling.Pulse(Styling.PulseBreath);
         for (var i = 3; i >= 1; i--)
         {
@@ -547,7 +548,7 @@ public sealed class AboutWindow : Window, IDisposable
         Styling.CenterNextItem(total);
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text,
-                   Vector4.Lerp(Styling.AccentBlue, Lighten(Styling.AccentBlueSoft, 0.3f), twinkle)))
+                   Vector4.Lerp(Styling.AccentBlue, Palette.Lighten(Styling.AccentBlueSoft, 0.3f), twinkle)))
             ImGui.TextUnformatted(glyph);
         ImGui.SameLine(0, gap);
         using (ImRaii.PushColor(ImGuiCol.Text, Styling.TextDim)) ImGui.TextUnformatted(madeBy);
@@ -663,8 +664,6 @@ public sealed class AboutWindow : Window, IDisposable
     private static float Wave(double periodMs) =>
         MathF.Sin((float)(Environment.TickCount % periodMs / periodMs) * MathF.PI * 2f);
 
-    private static float Smooth01(float x) => x * x * (3f - 2f * x);
-
     private static float Heartbeat(double periodMs)
     {
         var p = Styling.Phase(periodMs);
@@ -677,9 +676,6 @@ public sealed class AboutWindow : Window, IDisposable
         if (d < -1f || d > 1f) return 0f;
         return 0.5f * (1f + MathF.Cos(d * MathF.PI));
     }
-
-    private static Vector4 Lighten(Vector4 c, float t) =>
-        Vector4.Lerp(c, new Vector4(1f, 1f, 1f, 1f), t) with { W = c.W };
 
     private static void OpenUrl(string url) =>
         UrlActions.OpenInBrowser(url,

@@ -471,13 +471,25 @@ internal sealed class GamesApp : IPhoneApp
                 return bestLevel > 0 ? $"{Loc.T(L.Games.Level)} {GameNumber.Label(bestLevel)}" : string.Empty;
             }
             case "memory":
-                return FormatTime(stats.Get("memory").BestTimeSeconds);
+            {
+                var bestSeconds = stats.Get("memory").BestTimeSeconds;
+                return bestSeconds > 0 ? TimeText.MinutesSeconds(bestSeconds) : string.Empty;
+            }
             case "solitaire":
-                return FormatTime(stats.Get("solitaire").BestTimeSeconds);
+            {
+                var bestSeconds = stats.Get("solitaire").BestTimeSeconds;
+                return bestSeconds > 0 ? TimeText.MinutesSeconds(bestSeconds) : string.Empty;
+            }
             case "minesweeper":
-                return FormatTime(stats.Get("minesweeper.easy").BestTimeSeconds);
+            {
+                var bestSeconds = stats.Get("minesweeper.easy").BestTimeSeconds;
+                return bestSeconds > 0 ? TimeText.MinutesSeconds(bestSeconds) : string.Empty;
+            }
             case "nonogram":
-                return FormatTime(stats.Get("nonogram.easy").BestTimeSeconds);
+            {
+                var bestSeconds = stats.Get("nonogram.easy").BestTimeSeconds;
+                return bestSeconds > 0 ? TimeText.MinutesSeconds(bestSeconds) : string.Empty;
+            }
             case "reversi":
             {
                 var wins = stats.Get("reversi").Streak;
@@ -486,16 +498,6 @@ internal sealed class GamesApp : IPhoneApp
             default:
                 return string.Empty;
         }
-    }
-
-    private static string FormatTime(int seconds)
-    {
-        if (seconds <= 0)
-        {
-            return string.Empty;
-        }
-
-        return $"{seconds / 60}:{seconds % 60:D2}";
     }
 
     private void OpenGame(IMiniGame game)

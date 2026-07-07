@@ -337,7 +337,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var wrapWidth = MathF.Max(40f * scale, available - badgeDiameter - gap);
         var badgeCenter = new Vector2(start.X + badgeDiameter * 0.5f, start.Y + lineHeight * 0.5f);
         drawList.AddCircleFilled(badgeCenter, badgeDiameter * 0.5f, ImGui.GetColorU32(theme.Accent));
-        var luminance = (theme.Accent.X * 0.299f) + (theme.Accent.Y * 0.587f) + (theme.Accent.Z * 0.114f);
+        var luminance = Palette.Luminance(theme.Accent);
         var ink = luminance > 0.6f ? new Vector4(0.10f, 0.10f, 0.12f, 1f) : new Vector4(1f, 1f, 1f, 1f);
         var numberSize = Typography.Measure(number, 0.85f, FontWeight.Bold);
         Typography.Draw(badgeCenter - (numberSize * 0.5f), number, ink, 0.85f, FontWeight.Bold);

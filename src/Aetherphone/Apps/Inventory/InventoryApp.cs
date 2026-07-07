@@ -210,7 +210,7 @@ internal sealed class InventoryApp : IPhoneApp
             for (var index = 0; index < cachedScratch.Count; index++)
             {
                 var group = cachedScratch[index];
-                var subtitle = Loc.T(L.Inventory.Updated, RelativeTime.Ago(group.CapturedUtc));
+                var subtitle = Loc.T(L.Inventory.Updated, TimeText.Ago(group.CapturedUtc));
                 if (DrawStorageRow(card.NextRow(), IconFor(group.Kind), group.Title, subtitle, group.Rows.Count, true,
                         theme))
                 {
@@ -388,7 +388,7 @@ internal sealed class InventoryApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
-        var label = Loc.T(L.Inventory.Updated, RelativeTime.Ago(capturedUtc));
+        var label = Loc.T(L.Inventory.Updated, TimeText.Ago(capturedUtc));
         Typography.Draw(ImGui.GetCursorScreenPos(), label, theme.TextMuted, TextStyles.Caption1);
         ImGui.Dummy(new Vector2(0f, 16f * scale));
     }

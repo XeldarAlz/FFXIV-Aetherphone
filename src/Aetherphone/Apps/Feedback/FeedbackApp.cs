@@ -472,7 +472,7 @@ internal sealed class FeedbackApp : IPhoneApp
     {
         if (seconds >= 60)
         {
-            return string.Format(Loc.Culture, "{0}:{1:D2}", seconds / 60, seconds % 60);
+            return TimeText.MinutesSeconds(seconds);
         }
 
         return string.Format(Loc.Culture, "{0}s", seconds);

@@ -978,9 +978,7 @@ internal sealed class MusicApp : IPhoneApp
             return cached;
         }
 
-        var minutes = totalSeconds / 60;
-        var seconds = totalSeconds % 60;
-        var formatted = $"{minutes}:{seconds:D2}";
+        var formatted = TimeText.MinutesSeconds(totalSeconds);
         TimeCache[totalSeconds] = formatted;
         return formatted;
     }

@@ -434,7 +434,7 @@ internal sealed class PhoneApp : IPhoneApp
         {
             CallState.Dialing => Loc.T(L.Phone.StatusCalling),
             CallState.Connecting => Loc.T(L.Phone.StatusConnecting),
-            CallState.Active => CallFormat.Duration(view.Seconds),
+            CallState.Active => TimeText.Duration(view.Seconds),
             _ => string.Empty,
         };
     }

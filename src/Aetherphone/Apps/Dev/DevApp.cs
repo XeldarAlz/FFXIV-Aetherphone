@@ -262,38 +262,6 @@ internal sealed partial class DevApp : IPhoneApp
         }
     }
 
-    private static string RelativeTime(long unixSeconds)
-    {
-        if (unixSeconds <= 0)
-        {
-            return string.Empty;
-        }
-
-        var moment = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
-        var span = DateTime.UtcNow - moment;
-        if (span.TotalSeconds < 60)
-        {
-            return "now";
-        }
-
-        if (span.TotalMinutes < 60)
-        {
-            return $"{(int)span.TotalMinutes}m";
-        }
-
-        if (span.TotalHours < 24)
-        {
-            return $"{(int)span.TotalHours}h";
-        }
-
-        if (span.TotalDays < 7)
-        {
-            return $"{(int)span.TotalDays}d";
-        }
-
-        return moment.ToString("MMM d");
-    }
-
     private AvatarHandle AvatarFor(string userId, string? avatarUrl) => lodestone.Remote(userId, ToUri(avatarUrl));
 
     private static string Monogram(string displayName, string handle)

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
@@ -36,7 +37,7 @@ internal static class ConversationRow
         var textLeft = avatarCenter.X + avatarRadius + Metrics.Space.Md * scale;
         var textRight = max.X - 14f * scale;
         var hasUnread = conversation.Unread > 0;
-        var time = NotificationCard.RelativeTime(conversation.LastActivity);
+        var time = TimeText.Short(conversation.LastActivity);
         var timeSize = Typography.Measure(time, TextStyles.Caption1);
         Typography.Draw(new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
             hasUnread ? theme.Accent : theme.TextMuted, TextStyles.Caption1);

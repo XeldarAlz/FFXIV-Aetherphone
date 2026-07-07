@@ -343,8 +343,7 @@ internal sealed class PairsApp : IMiniGame
         resultAppear = 0f;
         pendingWinSubmit = true;
         var seconds = (int)elapsed;
-        var minutes = seconds / 60;
-        resultTimeText = $"{minutes}:{seconds % 60:D2}";
+        resultTimeText = TimeText.MinutesSeconds(seconds);
     }
 
     private void DrawResult(in GameContext context, PhoneTheme theme, Rect body)

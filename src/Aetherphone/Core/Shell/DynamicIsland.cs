@@ -115,10 +115,10 @@ internal sealed class DynamicIsland
         var compact = Expand(rest, CompactPadX * scale, CompactPadY * scale);
         var expanded = ExpandedBounds(screen, rest, scale);
         var morphed = LerpRect(rest, compact, presenceValue);
-        var hoverBounds = LerpRect(morphed, expanded, SmoothStep(Math.Clamp(expand.Value, 0f, 1f)));
+        var hoverBounds = LerpRect(morphed, expanded, Easing.SmoothStep(Math.Clamp(expand.Value, 0f, 1f)));
         var hovered = ImGui.IsMouseHoveringRect(hoverBounds.Min, hoverBounds.Max);
         expand.Step(hovered && presenceValue > 0.6f ? 1f : 0f, ExpandSmoothTime, delta);
-        var expandEased = SmoothStep(Math.Clamp(expand.Value, 0f, 1f));
+        var expandEased = Easing.SmoothStep(Math.Clamp(expand.Value, 0f, 1f));
         var bounds = LerpRect(morphed, expanded, expandEased);
         lastBounds = bounds;
         var accent = shownKind == ActivityKind.Call ? CallAccent : MusicAccent;
@@ -366,7 +366,7 @@ internal sealed class DynamicIsland
         {
             CallState.Dialing => Loc.T(L.Phone.StatusCalling),
             CallState.Connecting => Loc.T(L.Phone.StatusConnecting),
-            CallState.Active => CallFormat.Duration(view.Seconds),
+            CallState.Active => TimeText.Duration(view.Seconds),
             _ => string.Empty,
         };
     }
@@ -376,6 +376,4 @@ internal sealed class DynamicIsland
 
     private static Rect LerpRect(Rect from, Rect to, float amount) =>
         new(Vector2.Lerp(from.Min, to.Min, amount), Vector2.Lerp(from.Max, to.Max, amount));
-
-    private static float SmoothStep(float value) => value * value * (3f - 2f * value);
 }

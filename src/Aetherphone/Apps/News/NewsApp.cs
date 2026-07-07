@@ -272,7 +272,7 @@ internal sealed class NewsApp : IPhoneApp
         }
 
         cursorY += 8f * scale;
-        Typography.Draw(new Vector2(textX, cursorY), NewsFormat.Ago(item.Time), theme.TextMuted, MetaScale,
+        Typography.Draw(new Vector2(textX, cursorY), TimeText.Ago(item.Time), theme.TextMuted, MetaScale,
             FontWeight.Medium);
         Material.EdgeSquircle(drawList, origin, cardMax, rounding, scale);
         InteractCard(new Rect(origin, cardMax), rounding, item.Url, drawList);
@@ -315,7 +315,7 @@ internal sealed class NewsApp : IPhoneApp
         var clippedTitle = PixelEllipsize(item.Title, maxTitleWidth, RowTitleScale, FontWeight.Medium);
         Typography.Draw(new Vector2(row.Min.X, titleY), clippedTitle, theme.TextStrong, RowTitleScale,
             FontWeight.Medium);
-        Typography.Draw(new Vector2(row.Min.X, titleY + 23f * scale), NewsFormat.Ago(item.Time), theme.TextMuted,
+        Typography.Draw(new Vector2(row.Min.X, titleY + 23f * scale), TimeText.Ago(item.Time), theme.TextMuted,
             MetaScale, FontWeight.Regular);
         DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale,
             hovered ? theme.TextStrong : theme.TextMuted);
@@ -337,7 +337,7 @@ internal sealed class NewsApp : IPhoneApp
             FontWeight.Medium);
         var sub = item.Start is { } start && item.End is { } end
             ? NewsFormat.Window(start, end)
-            : NewsFormat.Ago(item.Time);
+            : TimeText.Ago(item.Time);
         var subWidth = Typography.Measure(sub, MetaScale, FontWeight.Regular).X;
         var maxSubWidth = row.Width - rightPadding;
         if (subWidth > maxSubWidth)

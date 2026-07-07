@@ -126,7 +126,7 @@ internal sealed class SolitaireApp : IMiniGame
         if (seconds != lastSeconds)
         {
             lastSeconds = seconds;
-            timeText = $"{seconds / 60}:{seconds % 60:D2}";
+            timeText = TimeText.MinutesSeconds(seconds);
         }
 
         GameHud.Pill(new Vector2(body.Center.X - 50f * scale, rowY), Loc.T(L.Games.Time), timeText, Accent, theme);
@@ -374,7 +374,7 @@ internal sealed class SolitaireApp : IMiniGame
         resultAppear = 0f;
         pendingSubmit = true;
         var seconds = (int)elapsed;
-        resultTimeText = $"{seconds / 60}:{seconds % 60:D2}";
+        resultTimeText = TimeText.MinutesSeconds(seconds);
         fx.AddTrauma(0.4f);
         fx.Flash(Accent, 0.4f);
         ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentAmber, Styling.AccentRose, Styling.AccentBlue, };
@@ -390,7 +390,7 @@ internal sealed class SolitaireApp : IMiniGame
         string? secondary = null;
         if (loadedBestTime > 0)
         {
-            secondary = $"{Loc.T(L.Games.Best)} {loadedBestTime / 60}:{loadedBestTime % 60:D2}";
+            secondary = $"{Loc.T(L.Games.Best)} {TimeText.MinutesSeconds(loadedBestTime)}";
         }
 
         var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary,

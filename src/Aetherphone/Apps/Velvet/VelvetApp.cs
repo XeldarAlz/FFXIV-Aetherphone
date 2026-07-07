@@ -474,7 +474,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 2f * scale), displayName, theme.TextStrong, 0.92f,
             FontWeight.SemiBold);
         var handleText = post.OwnerHandle.Length > 0 ? $"@{post.OwnerHandle}" : string.Empty;
-        var timeText = RelativePostTime(post.CreatedAtUnix);
+        var timeText = TimeText.Short(post.CreatedAtUnix);
         var sub = handleText.Length > 0 ? $"{handleText} · {timeText}" : timeText;
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), sub, AppPalettes.Velvet.MutedInk, 0.76f);
         if (UiInteract.HoverClick(new Vector2(innerX, origin.Y + pad),
@@ -566,38 +566,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         {
             return ImGui.CalcTextSize(text, false, wrapWidth).Y;
         }
-    }
-
-    private static string RelativePostTime(long unixSeconds)
-    {
-        if (unixSeconds <= 0)
-        {
-            return string.Empty;
-        }
-
-        var moment = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
-        var span = DateTime.UtcNow - moment;
-        if (span.TotalSeconds < 60)
-        {
-            return Loc.T(L.Time.Now);
-        }
-
-        if (span.TotalMinutes < 60)
-        {
-            return Loc.T(L.Time.MinutesShort, (int)span.TotalMinutes);
-        }
-
-        if (span.TotalHours < 24)
-        {
-            return Loc.T(L.Time.HoursShort, (int)span.TotalHours);
-        }
-
-        if (span.TotalDays < 7)
-        {
-            return Loc.T(L.Time.DaysShort, (int)span.TotalDays);
-        }
-
-        return moment.ToString("MMM d", Loc.Culture);
     }
 
     private void DrawDiscover(Rect area)
@@ -1094,7 +1062,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         var displayName = string.IsNullOrEmpty(request.DisplayName) ? request.Handle : request.DisplayName;
         Typography.Draw(new Vector2(textLeft, origin.Y + 11f * scale), displayName, theme.TextStrong, 1f,
             FontWeight.SemiBold);
-        var sub = request.Handle.Length > 0 ? $"@{request.Handle}" : RelativePostTime(request.ConnectedAtUnix);
+        var sub = request.Handle.Length > 0 ? $"@{request.Handle}" : TimeText.Short(request.ConnectedAtUnix);
         Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), sub, AppPalettes.Velvet.MutedInk, 0.82f);
         var label = Loc.T(L.Velvet.Requested);
         var buttonHeight = 30f * scale;

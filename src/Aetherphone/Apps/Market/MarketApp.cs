@@ -526,7 +526,7 @@ internal sealed class MarketApp : IPhoneApp
             frameTheme);
         SettingsRow.Info(card.NextRow(), Loc.T(L.Market.UpSold), $"{snapshot.UnitsForSale} / {snapshot.UnitsSold}",
             frameTheme);
-        SettingsRow.Info(card.NextRow(), Loc.T(L.Market.Updated), MarketFormat.Ago(snapshot.LastUpload), frameTheme);
+        SettingsRow.Info(card.NextRow(), Loc.T(L.Market.Updated), TimeText.Ago(snapshot.LastUpload), frameTheme);
         if (hasVendor)
         {
             var marketMin = snapshot.Min(hq);

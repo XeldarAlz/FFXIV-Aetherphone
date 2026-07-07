@@ -1,3 +1,5 @@
+using Aetherphone.Core.Animation;
+
 namespace Aetherphone.Apps.Games.Whack;
 
 internal enum WhackResult
@@ -45,7 +47,7 @@ internal sealed class WhackBoard
         var current = age[hole];
         if (current < rise)
         {
-            return EaseOut(current / rise);
+            return Easing.EaseOutCubic(current / rise);
         }
 
         if (current < rise + hold)
@@ -54,7 +56,7 @@ internal sealed class WhackBoard
         }
 
         var fallProgress = (current - rise - hold) / fall;
-        return MathF.Max(0f, 1f - EaseIn(fallProgress));
+        return MathF.Max(0f, 1f - Easing.EaseInCubic(fallProgress));
     }
 
     public void Reset()
@@ -175,12 +177,4 @@ internal sealed class WhackBoard
         fall = total * 0.22f;
         hold = total - rise - fall;
     }
-
-    private static float EaseOut(float progress)
-    {
-        var inverse = 1f - progress;
-        return 1f - inverse * inverse * inverse;
-    }
-
-    private static float EaseIn(float progress) => progress * progress * progress;
 }

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 
@@ -42,7 +43,7 @@ internal static class WeatherGlyph
                 DrawBolt(drawList, center, radius, palette.Glow);
                 break;
             case WeatherKind.Wind:
-                DrawWind(drawList, center, radius, Lighten(palette.Glow, 0.1f));
+                DrawWind(drawList, center, radius, Palette.Lighten(palette.Glow, 0.1f));
                 break;
             case WeatherKind.Sand:
                 DrawLuminary(drawList, center - new Vector2(radius * 0.18f, radius * 0.40f), radius * 0.46f,
@@ -59,7 +60,7 @@ internal static class WeatherGlyph
                 DrawSnow(drawList, center, radius, new Vector4(0.97f, 0.99f, 1.00f, 1f));
                 break;
             default:
-                DrawCloud(drawList, center - new Vector2(0f, radius * 0.06f), radius, Darken(CloudFill(isDay), 0.45f),
+                DrawCloud(drawList, center - new Vector2(0f, radius * 0.06f), radius, Palette.Darken(CloudFill(isDay), 0.45f),
                     true);
                 DrawDust(drawList, center, radius, palette.Glow);
                 break;
@@ -82,7 +83,7 @@ internal static class WeatherGlyph
 
         drawList.AddCircleFilled(center, radius * 0.46f, rayColor, 40);
         drawList.AddCircleFilled(center - new Vector2(radius * 0.10f, radius * 0.12f), radius * 0.30f,
-            ImGui.GetColorU32(Lighten(glow, 0.4f)), 32);
+            ImGui.GetColorU32(Palette.Lighten(glow, 0.4f)), 32);
     }
 
     private static void DrawMoon(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow, Vector4 sky)
@@ -90,7 +91,7 @@ internal static class WeatherGlyph
         drawList.AddCircleFilled(center, radius * 0.48f, ImGui.GetColorU32(glow), 40);
         drawList.AddCircleFilled(center + new Vector2(radius * 0.30f, -radius * 0.16f), radius * 0.44f,
             ImGui.GetColorU32(sky), 40);
-        var crater = ImGui.GetColorU32(Darken(glow, 0.14f));
+        var crater = ImGui.GetColorU32(Palette.Darken(glow, 0.14f));
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.20f, radius * 0.18f), radius * 0.075f, crater, 12);
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.04f, radius * 0.30f), radius * 0.05f, crater, 12);
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.26f, -radius * 0.04f), radius * 0.045f, crater, 12);
@@ -113,12 +114,12 @@ internal static class WeatherGlyph
     {
         if (withShadow)
         {
-            CloudShape(drawList, center + new Vector2(0f, radius * 0.10f), radius, Darken(fill, 0.16f));
+            CloudShape(drawList, center + new Vector2(0f, radius * 0.10f), radius, Palette.Darken(fill, 0.16f));
         }
 
         CloudShape(drawList, center, radius, fill);
         CloudShape(drawList, center - new Vector2(radius * 0.08f, radius * 0.14f), radius * 0.92f,
-            Lighten(fill, 0.10f));
+            Palette.Lighten(fill, 0.10f));
     }
 
     private static void CloudShape(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 fill)
@@ -170,7 +171,7 @@ internal static class WeatherGlyph
             At(center, radius, 0.12f, -0.04f), At(center, radius, -0.16f, 0.26f), At(center, radius, 0.02f, 0.26f),
             At(center, radius, -0.14f, 0.66f), At(center, radius, 0.20f, 0.16f), At(center, radius, 0.02f, 0.16f),
         };
-        var boltColor = ImGui.GetColorU32(Lighten(glow, 0.15f * flash));
+        var boltColor = ImGui.GetColorU32(Palette.Lighten(glow, 0.15f * flash));
         FillConvex(drawList, boltColor, bolt[..4]);
         for (var index = 0; index < bolt.Length - 1; index++)
         {
@@ -268,12 +269,6 @@ internal static class WeatherGlyph
 
     private static Vector4 CloudFill(bool isDay) =>
         isDay ? new Vector4(0.97f, 0.98f, 1.00f, 1f) : new Vector4(0.80f, 0.84f, 0.92f, 1f);
-
-    private static Vector4 Lighten(Vector4 color, float amount) =>
-        Vector4.Lerp(color, new Vector4(1f, 1f, 1f, color.W), amount);
-
-    private static Vector4 Darken(Vector4 color, float amount) =>
-        Vector4.Lerp(color, new Vector4(0f, 0f, 0f, color.W), amount);
 
     private static float Frac(float value) => value - MathF.Floor(value);
 

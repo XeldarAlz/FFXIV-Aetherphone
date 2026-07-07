@@ -249,7 +249,7 @@ internal sealed class SweeperApp : IMiniGame
     private void BuildResultTime()
     {
         var seconds = (int)elapsed;
-        resultTimeText = $"{seconds / 60}:{seconds % 60:D2}";
+        resultTimeText = TimeText.MinutesSeconds(seconds);
     }
 
     private void UpdateFlagAnim(float deltaSeconds)
@@ -272,7 +272,7 @@ internal sealed class SweeperApp : IMiniGame
         string? secondary = null;
         if (won && loadedBestTime > 0)
         {
-            secondary = $"{Loc.T(L.Games.Best)} {loadedBestTime / 60}:{loadedBestTime % 60:D2}";
+            secondary = $"{Loc.T(L.Games.Best)} {TimeText.MinutesSeconds(loadedBestTime)}";
         }
 
         var result = new GameResult(title, titleColor, Loc.T(L.Games.Time), resultTimeText, secondary,

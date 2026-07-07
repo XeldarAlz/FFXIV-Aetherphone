@@ -250,7 +250,7 @@ internal sealed class NonogramApp : IMiniGame
         resultAppear = 0f;
         pendingSubmit = true;
         var seconds = (int)elapsed;
-        resultTimeText = $"{seconds / 60}:{seconds % 60:D2}";
+        resultTimeText = TimeText.MinutesSeconds(seconds);
         fx.AddTrauma(0.35f);
         fx.Flash(Accent, 0.4f);
         ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink, };
@@ -279,7 +279,7 @@ internal sealed class NonogramApp : IMiniGame
         string? secondary = null;
         if (loadedBestTime > 0)
         {
-            secondary = $"{Loc.T(L.Games.Best)} {loadedBestTime / 60}:{loadedBestTime % 60:D2}";
+            secondary = $"{Loc.T(L.Games.Best)} {TimeText.MinutesSeconds(loadedBestTime)}";
         }
 
         var result = new GameResult(Loc.T(L.Games.YouWin), Accent, Loc.T(L.Games.Time), resultTimeText, secondary,

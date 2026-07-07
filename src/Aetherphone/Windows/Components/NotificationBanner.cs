@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -233,12 +234,12 @@ internal sealed class NotificationBanner : IDisposable
         float top;
         if (stage == Stage.Enter)
         {
-            top = Lerp(hiddenTop, restTop, enter.Value);
+            top = Easing.Lerp(hiddenTop, restTop, enter.Value);
             opacity = Math.Clamp(enter.Value * 1.8f, 0f, 1f);
         }
         else if (stage == Stage.Exit)
         {
-            top = Lerp(restTop + exitFromOffset, hiddenTop, exit.Value);
+            top = Easing.Lerp(restTop + exitFromOffset, hiddenTop, exit.Value);
             opacity = 1f - exit.Value;
         }
         else
@@ -279,7 +280,7 @@ internal sealed class NotificationBanner : IDisposable
         var textLeft = iconMax.X + TextGap * scale;
         var textRight = max.X - Padding * scale;
         var titleTop = min.Y + Padding * scale;
-        var time = NotificationCard.RelativeTime(notification.ReceivedAt);
+        var time = TimeText.Short(notification.ReceivedAt);
         var timeSize = Typography.Measure(time, 0.78f);
         Typography.Draw(dl, new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time,
             Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
@@ -331,6 +332,5 @@ internal sealed class NotificationBanner : IDisposable
     }
 
     private static uint Color(Vector4 color, float opacity) => ImGui.GetColorU32(color with { W = color.W * opacity });
-    private static float Lerp(float from, float to, float amount) => from + (to - from) * amount;
     public void Dispose() => notifications.Presented -= OnPresented;
 }

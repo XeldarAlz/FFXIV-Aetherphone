@@ -4,6 +4,8 @@ internal delegate float EasingFunction(float progress);
 
 internal static class Easing
 {
+    public static float Lerp(float from, float to, float amount) => from + (to - from) * amount;
+    public static float Clamp01(float value) => Math.Clamp(value, 0f, 1f);
     public static float Linear(float progress) => progress;
     public static float SmoothStep(float progress) => progress * progress * (3f - 2f * progress);
     public static float EaseInCubic(float progress) => progress * progress * progress;

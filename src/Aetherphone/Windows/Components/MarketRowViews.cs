@@ -158,7 +158,7 @@ internal static class MarketRowViews
             DrawHqBadge(new Vector2(row.Min.X + priceWidth + 8f * scale, topY), scale);
         }
 
-        var ago = MarketFormat.Ago(sale.Time);
+        var ago = TimeText.Ago(sale.Time);
         var agoSize = Typography.Measure(ago, 0.9f);
         Typography.Draw(new Vector2(row.Max.X - agoSize.X, topY + 1f * scale), ago, theme.TextMuted, 0.9f);
         var sub = BuildSub(sale.Quantity, multiWorld ? sale.World : string.Empty, sale.Buyer);

@@ -147,7 +147,7 @@ internal sealed class BootSequence
         {
             var progress = Easing.EaseOutCubic(phase / emblemInSeconds);
             EmblemAlpha = progress;
-            EmblemScale = Lerp(EmblemStartScale, 1f, progress);
+            EmblemScale = Easing.Lerp(EmblemStartScale, 1f, progress);
         }
         else if (phase < holdEnd)
         {
@@ -159,7 +159,7 @@ internal sealed class BootSequence
         {
             var exit = (phase - holdEnd) / emblemExitSeconds;
             EmblemAlpha = 1f - Easing.SmoothStep(exit);
-            EmblemScale = Lerp(1f, BootTiming.EmblemExitGrowth, Easing.EaseInCubic(exit));
+            EmblemScale = Easing.Lerp(1f, BootTiming.EmblemExitGrowth, Easing.EaseInCubic(exit));
         }
 
         if (!(phase < holdEnd))
@@ -184,7 +184,7 @@ internal sealed class BootSequence
 
         var isLast = index == greetingCount - 1;
         Greeting = Greetings[index];
-        GreetingReveal = Clamp01(local / greetingInSeconds);
+        GreetingReveal = Easing.Clamp01(local / greetingInSeconds);
 
         if (isLast)
         {
@@ -234,7 +234,4 @@ internal sealed class BootSequence
         GreetingAlpha = 0f;
         GreetingDrift = 0f;
     }
-
-    private static float Lerp(float from, float to, float amount) => from + (to - from) * amount;
-    private static float Clamp01(float value) => Math.Clamp(value, 0f, 1f);
 }

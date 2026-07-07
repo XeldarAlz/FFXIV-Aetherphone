@@ -331,7 +331,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 2f * scale), displayName, theme.TextStrong, 0.92f,
             FontWeight.SemiBold);
-        var subline = SocialIdentity.FeedMeta(post.AuthorHandle, RelativeTime(post.CreatedAtUnix));
+        var subline = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), subline, AppPalettes.Aethergram.MutedInk, 0.76f);
         if (HoverClick(new Vector2(innerX, origin.Y + pad),
                 new Vector2(origin.X + width - pad - 30f * scale, origin.Y + pad + headerBlock)))
@@ -730,33 +730,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         var plural = Loc.Plural(L.Account.Followers, count);
         var parts = plural.Split(' ', 2);
         return parts.Length > 1 ? parts[1] : plural;
-    }
-
-    private static string RelativeTime(long unixSeconds)
-    {
-        var moment = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).UtcDateTime;
-        var span = DateTime.UtcNow - moment;
-        if (span.TotalSeconds < 60)
-        {
-            return Loc.T(L.Time.Now);
-        }
-
-        if (span.TotalMinutes < 60)
-        {
-            return Loc.T(L.Time.MinutesShort, (int)span.TotalMinutes);
-        }
-
-        if (span.TotalHours < 24)
-        {
-            return Loc.T(L.Time.HoursShort, (int)span.TotalHours);
-        }
-
-        if (span.TotalDays < 7)
-        {
-            return Loc.T(L.Time.DaysShort, (int)span.TotalDays);
-        }
-
-        return moment.ToString("MMM d", Loc.Culture);
     }
 
     public void Dispose()

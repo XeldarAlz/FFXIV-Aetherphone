@@ -74,7 +74,7 @@ internal sealed partial class VelvetApp
             var nameLeft = avatarCenter.X + avatarRadius + 10f * scale;
             var displayName = string.IsNullOrEmpty(post.OwnerDisplayName) ? post.OwnerHandle : post.OwnerDisplayName;
             var ownerSub = post.OwnerHandle.Length > 0 ? $"@{post.OwnerHandle}" : string.Empty;
-            var ownerTime = RelativePostTime(post.CreatedAtUnix);
+            var ownerTime = TimeText.Short(post.CreatedAtUnix);
             if (ownerTime.Length > 0)
             {
                 ownerSub = ownerSub.Length > 0 ? $"{ownerSub} · {ownerTime}" : ownerTime;
@@ -252,7 +252,7 @@ internal sealed partial class VelvetApp
         var name = string.IsNullOrEmpty(comment.AuthorDisplayName) ? comment.AuthorHandle : comment.AuthorDisplayName;
         Typography.Draw(new Vector2(textLeft, origin.Y), name, theme.TextStrong, 0.85f, FontWeight.SemiBold);
         var nameWidth = Typography.Measure(name, 0.85f, FontWeight.SemiBold).X;
-        var time = RelativePostTime(comment.CreatedAtUnix);
+        var time = TimeText.Short(comment.CreatedAtUnix);
         if (time.Length > 0)
         {
             Typography.Draw(new Vector2(textLeft + nameWidth + 8f * scale, origin.Y + 1f * scale), time,

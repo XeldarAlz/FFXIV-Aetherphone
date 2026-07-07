@@ -47,7 +47,7 @@ internal static class NotificationCard
 
         var textLeft = tileMax.X + 12f * scale;
         var textRight = max.X - 14f * scale;
-        var time = RelativeTime(notification.ReceivedAt);
+        var time = TimeText.Short(notification.ReceivedAt);
         var timeSize = Typography.Measure(time, TextStyles.Caption1);
         Typography.Draw(drawList, new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
             Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Caption1.Scale, TextStyles.Caption1.Weight);
@@ -87,27 +87,6 @@ internal static class NotificationCard
         Squircle.Stroke(drawList, min, max, radius, Color(theme.AppBackground, opacity), 1.5f * scale);
         Typography.DrawCentered(drawList, (min + max) * 0.5f, label, Palette.WithAlpha(Ink, opacity),
             TextStyles.Caption2.Scale, TextStyles.Caption2.Weight);
-    }
-
-    public static string RelativeTime(DateTime time)
-    {
-        var delta = DateTime.Now - time;
-        if (delta.TotalMinutes < 1)
-        {
-            return Loc.T(L.Time.Now);
-        }
-
-        if (delta.TotalHours < 1)
-        {
-            return Loc.T(L.Time.MinutesShort, (int)delta.TotalMinutes);
-        }
-
-        if (delta.TotalDays < 1)
-        {
-            return Loc.T(L.Time.HoursShort, (int)delta.TotalHours);
-        }
-
-        return Loc.T(L.Time.DaysShort, (int)delta.TotalDays);
     }
 
     private static uint Color(Vector4 color, float opacity) => ImGui.GetColorU32(color with { W = color.W * opacity });
