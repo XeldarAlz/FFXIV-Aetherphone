@@ -9,10 +9,13 @@ namespace Aetherphone.Core.Onboarding;
 
 internal sealed class OnboardingDirector
 {
-    private const float EnterSeconds = 0.34f;
+    private const float TextSeconds = 0.38f;
+    private const float PresenceFrequency = 2.9f;
+    private const float PresenceDamping = 0.80f;
     private const float AnchorMissGrace = 0.4f;
     private const float AnchorSmoothing = 16f;
     private readonly INavigator navigation;
+    private readonly CoachmarkOverlay coachmark = new();
     private GuideSequence? active;
     private int stepIndex;
     private GuideSequence? suspended;
@@ -22,7 +25,10 @@ internal sealed class OnboardingDirector
     private string? pendingAppId;
     private bool suppressed = true;
     private float frameDelta;
-    private float enterClock;
+    private DampedSpring presence;
+    private bool exiting;
+    private bool exitCompletes;
+    private float textClock;
     private Vector2 anchorMin;
     private Vector2 anchorMax;
     private bool anchorInitialized;
@@ -83,9 +89,16 @@ internal sealed class OnboardingDirector
             return;
         }
 
+        if (exiting)
+        {
+            CompleteExit();
+            return;
+        }
+
         suspended = active;
         suspendedIndex = stepIndex;
         active = null;
+        presence.SnapTo(0f);
     }
 
     public void Advance(float delta, bool busy, bool atHome, string? currentAppId)
@@ -99,6 +112,8 @@ internal sealed class OnboardingDirector
             pendingResume = false;
             pendingAppId = null;
             suppressed = true;
+            exiting = false;
+            presence.SnapTo(0f);
             return;
         }
 
@@ -108,13 +123,25 @@ internal sealed class OnboardingDirector
             var current = active.Value;
             if (current.RequiredAppId is not null && currentAppId != current.RequiredAppId)
             {
+                if (exiting)
+                {
+                    CompleteExit();
+                }
+
                 active = null;
+                exiting = false;
+                presence.SnapTo(0f);
                 return;
             }
 
             if (!busy)
             {
-                enterClock = MathF.Min(enterClock + frameDelta, EnterSeconds);
+                presence.Step(exiting ? 0f : 1f, PresenceFrequency, PresenceDamping, frameDelta);
+                textClock = MathF.Min(textClock + frameDelta, TextSeconds);
+                if (exiting && presence.IsResting(0f, 0.01f, 0.05f))
+                {
+                    CompleteExit();
+                }
             }
 
             return;
@@ -136,7 +163,7 @@ internal sealed class OnboardingDirector
             stepIndex = suspendedIndex;
             suspended = null;
             pendingResume = false;
-            ResetForStep();
+            ResetForTour();
             return;
         }
 
@@ -168,9 +195,21 @@ internal sealed class OnboardingDirector
 
         var sequence = active.Value;
         var step = sequence.Steps[stepIndex];
-        var progress = Math.Clamp(enterClock / EnterSeconds, 0f, 1f);
+        var presenceValue = Math.Clamp(presence.Value, 0f, 1.15f);
+        if (presenceValue <= 0.005f && exiting)
+        {
+            return;
+        }
+
+        var textProgress = Math.Clamp(textClock / TextSeconds, 0f, 1f);
         var anchor = ResolveAnchor(step);
-        var result = CoachmarkOverlay.Draw(screen, theme, step, anchor, progress, stepIndex, sequence.Steps.Length);
+        var result = coachmark.Draw(screen, theme, step, anchor, presenceValue, textProgress, stepIndex,
+            sequence.Steps.Length, !exiting);
+        if (exiting)
+        {
+            return;
+        }
+
         switch (result)
         {
             case CoachmarkAction.Advance:
@@ -178,7 +217,8 @@ internal sealed class OnboardingDirector
                 stepIndex++;
                 if (stepIndex >= sequence.Steps.Length)
                 {
-                    Finish(sequence);
+                    stepIndex = sequence.Steps.Length - 1;
+                    BeginExit(true);
                     TrackStep(sequence, sequence.Steps.Length, OnboardingAction.Complete);
                 }
                 else
@@ -189,7 +229,7 @@ internal sealed class OnboardingDirector
 
                 break;
             case CoachmarkAction.Skip:
-                Complete(sequence);
+                BeginExit(false);
                 TrackStep(sequence, stepIndex, OnboardingAction.Skip);
                 break;
         }
@@ -199,7 +239,7 @@ internal sealed class OnboardingDirector
     {
         active = sequence;
         stepIndex = 0;
-        ResetForStep();
+        ResetForTour();
         TrackStep(sequence, 0, OnboardingAction.Begin);
     }
 
@@ -208,16 +248,23 @@ internal sealed class OnboardingDirector
         Plugin.Analytics.Track(AnalyticsEvents.OnboardingStep(sequence.Id, step, sequence.Steps.Length, action));
     }
 
-    private void Complete(GuideSequence sequence)
+    private void BeginExit(bool completesCoveredTours)
     {
-        OnboardingState.MarkCompleted(sequence.Id, sequence.ContentVersion);
-        active = null;
+        exiting = true;
+        exitCompletes = completesCoveredTours;
+        textClock = TextSeconds;
     }
 
-    private void Finish(GuideSequence sequence)
+    private void CompleteExit()
     {
+        exiting = false;
+        if (active is not { } sequence)
+        {
+            return;
+        }
+
         OnboardingState.MarkCompleted(sequence.Id, sequence.ContentVersion);
-        if (sequence.CompletesOnFinish is { } covered)
+        if (exitCompletes && sequence.CompletesOnFinish is { } covered)
         {
             for (var index = 0; index < covered.Length; index++)
             {
@@ -231,10 +278,19 @@ internal sealed class OnboardingDirector
         active = null;
     }
 
+    private void ResetForTour()
+    {
+        presence.SnapTo(0f);
+        exiting = false;
+        anchorInitialized = false;
+        missTimer = 0f;
+        textClock = 0f;
+        coachmark.Reset();
+    }
+
     private void ResetForStep()
     {
-        enterClock = 0f;
-        anchorInitialized = false;
+        textClock = 0f;
         missTimer = 0f;
     }
 
@@ -260,9 +316,9 @@ internal sealed class OnboardingDirector
             }
             else
             {
-                var t = 1f - MathF.Exp(-AnchorSmoothing * frameDelta);
-                anchorMin = Vector2.Lerp(anchorMin, rect.Min, t);
-                anchorMax = Vector2.Lerp(anchorMax, rect.Max, t);
+                var blend = 1f - MathF.Exp(-AnchorSmoothing * frameDelta);
+                anchorMin = Vector2.Lerp(anchorMin, rect.Min, blend);
+                anchorMax = Vector2.Lerp(anchorMax, rect.Max, blend);
             }
 
             return new Rect(anchorMin, anchorMax);
