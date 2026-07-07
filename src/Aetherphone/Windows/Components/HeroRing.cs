@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -47,7 +48,7 @@ internal static class HeroRing
         var radius = Radius * scale;
         var thickness = Thickness * scale;
         var clamped = Math.Clamp(fraction, 0f, 1f);
-        ProgressRing.Glow(ringCenter, radius, accent, 0.45f + 0.30f * Styling.Pulse(Styling.PulseBreath));
+        ProgressRing.Glow(ringCenter, radius, accent, 0.45f + 0.30f * Pulse.Wave(Pulse.Breath));
         ProgressRing.Track(ringCenter, radius, thickness, Palette.WithAlpha(titleInk, 0.10f));
         ProgressRing.Fill(ringCenter, radius, thickness, clamped, accent);
         return (ringCenter, radius);

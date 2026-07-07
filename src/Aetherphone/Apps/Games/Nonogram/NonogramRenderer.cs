@@ -2,7 +2,6 @@ using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -111,7 +110,7 @@ internal sealed class NonogramRenderer
         {
             var center = (innerMin + innerMax) * 0.5f;
             var reach = (innerMax.X - innerMin.X) * 0.24f;
-            var color = ImGui.GetColorU32(Styling.TextDim);
+            var color = ImGui.GetColorU32(ChromeInk.TextDim);
             var thickness = MathF.Max(1.5f, reach * 0.34f);
             drawList.AddLine(center - new Vector2(reach, reach), center + new Vector2(reach, reach), color, thickness);
             drawList.AddLine(center - new Vector2(reach, -reach), center + new Vector2(reach, -reach), color,

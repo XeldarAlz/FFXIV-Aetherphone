@@ -1,7 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -38,7 +38,7 @@ internal sealed class FlapRenderer
         var sunRadius = area.Height * 0.05f;
         ProgressRing.Glow(sun, sunRadius * 2.6f, SunColor, 0.8f);
         drawList.AddCircleFilled(sun, sunRadius, ImGui.GetColorU32(SunColor), 28);
-        var drift = Styling.Phase(26000.0) * area.Width;
+        var drift = Pulse.Phase(26000.0) * area.Width;
         var cloud = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.5f));
         for (var index = 0; index < 3; index++)
         {
@@ -52,10 +52,10 @@ internal sealed class FlapRenderer
     private static void DrawHills(ImDrawListPtr drawList, Rect area, Vector2 shake)
     {
         var farColor = ImGui.GetColorU32(FarHill);
-        var farDrift = Styling.Phase(52000.0) * area.Width;
+        var farDrift = Pulse.Phase(52000.0) * area.Width;
         DrawHillLayer(drawList, area, farColor, area.Height * 0.085f, farDrift * 0.4f, 0.062f, shake * 0.4f);
         var nearColor = ImGui.GetColorU32(NearHill);
-        var nearDrift = Styling.Phase(34000.0) * area.Width;
+        var nearDrift = Pulse.Phase(34000.0) * area.Width;
         DrawHillLayer(drawList, area, nearColor, area.Height * 0.12f, nearDrift * 0.7f, 0.035f, shake);
         var grass = ImGui.GetColorU32(GamePalette.Darken(NearHill, 0.18f));
         drawList.AddRectFilled(new Vector2(area.Min.X, area.Max.Y - area.Height * 0.018f) + shake, area.Max + shake,
@@ -140,7 +140,7 @@ internal sealed class FlapRenderer
         drawList.AddCircleFilled(center - new Vector2(radius * 0.28f, radius * 0.34f), radius * 0.34f,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.35f)), 18);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(GamePalette.Darken(BirdBody, 0.28f)), 28, 1.6f * scale);
-        var wingFlap = MathF.Sin(Styling.Phase(360.0) * MathF.PI * 2f) * radius * 0.22f;
+        var wingFlap = MathF.Sin(Pulse.Phase(360.0) * MathF.PI * 2f) * radius * 0.22f;
         var wing = Rotate(center, new Vector2(-radius * 0.15f, wingFlap), tilt);
         drawList.AddCircleFilled(wing, radius * 0.5f, ImGui.GetColorU32(GamePalette.Lighten(BirdBody, 0.18f)), 20);
         var eye = Rotate(center, new Vector2(radius * 0.4f, -radius * 0.32f), tilt);

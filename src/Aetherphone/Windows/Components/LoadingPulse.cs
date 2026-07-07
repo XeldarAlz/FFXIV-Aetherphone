@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -44,7 +45,7 @@ internal static class LoadingPulse
         dl.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.18f * alpha)), 72, thickness);
         ProgressRing.Sweep(center, radius, thickness, accent, CometPeriodMs, CometArcRadians, alpha, dl);
         var core = Palette.Mix(accent, Vector4.One, 0.7f);
-        var pulse = 0.9f + 0.1f * Styling.Pulse(CorePulsePeriodMs);
+        var pulse = 0.9f + 0.1f * Pulse.Wave(CorePulsePeriodMs);
         dl.AddCircleFilled(center, radius * 0.26f * pulse, ImGui.GetColorU32(Palette.WithAlpha(core, alpha)), 32);
     }
 
@@ -64,7 +65,7 @@ internal static class LoadingPulse
             var gap = 9f * scale;
             var totalWidth = labelSize.X + gap + 3f * dotSpacing;
             var startX = center.X - totalWidth * 0.5f;
-            var wordBreath = 0.78f + 0.12f * Styling.Pulse(WordBreathPeriodMs);
+            var wordBreath = 0.78f + 0.12f * Pulse.Wave(WordBreathPeriodMs);
             dl.AddText(font, fontSize, new Vector2(startX, center.Y - labelSize.Y * 0.5f),
                 ImGui.GetColorU32(Palette.WithAlpha(textColor, alpha * wordBreath)), label);
             Dots(new Vector2(startX + labelSize.X + gap + dotRadius, center.Y), dotSpacing, dotRadius, accent, alpha,

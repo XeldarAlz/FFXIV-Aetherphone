@@ -1,3 +1,4 @@
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -59,7 +60,7 @@ internal static class ProgressRing
         float headAlpha, ImDrawListPtr? drawList = null)
     {
         var dl = drawList ?? ImGui.GetWindowDrawList();
-        var head = Top + Styling.Phase(periodMs) * MathF.PI * 2f;
+        var head = Top + Pulse.Phase(periodMs) * MathF.PI * 2f;
         var tail = head - arcLen;
         var steps = Math.Max(10, (int)MathF.Ceiling(arcLen / (MathF.PI / 36f)));
         var prev = c + Dir(tail) * r;
@@ -127,18 +128,18 @@ internal static class ProgressRing
         var min = c - new Vector2(radius, radius);
         var max = c + new Vector2(radius, radius);
         var hovered = enabled && ImGui.IsMouseHoveringRect(min, max);
-        var accent = Styling.AccentViolet;
+        var accent = Accent.Violet;
         var thickness = 4.5f * ImGuiHelpers.GlobalScale;
         if (enabled)
-            Glow(c, radius, accent, 0.85f + (hovered ? 1.0f : 0f) + 0.55f * Styling.Pulse(Styling.PulseBreath));
+            Glow(c, radius, accent, 0.85f + (hovered ? 1.0f : 0f) + 0.55f * Pulse.Wave(Pulse.Breath));
         dl.AddCircleFilled(c, radius - thickness * 0.5f,
             ImGui.GetColorU32(enabled
-                ? Vector4.Lerp(Styling.CardBg, accent, hovered ? 0.30f : 0.15f)
-                : Styling.CardBgSoft));
+                ? Vector4.Lerp(ChromeInk.CardBackground, accent, hovered ? 0.30f : 0.15f)
+                : ChromeInk.CardBackgroundSoft));
         Track(c, radius, thickness,
-            enabled ? Palette.WithAlpha(accent, hovered ? 1f : 0.78f) : Palette.WithAlpha(Styling.BorderDim, 0.85f));
+            enabled ? Palette.WithAlpha(accent, hovered ? 1f : 0.78f) : Palette.WithAlpha(ChromeInk.Border, 0.85f));
         var glyph = enabled ? FontAwesomeIcon.Play : FontAwesomeIcon.Lock;
-        var glyphCol = enabled ? (hovered ? Styling.TextStrong : Styling.AccentVioletSoft) : Styling.TextMuted;
+        var glyphCol = enabled ? (hovered ? ChromeInk.TextStrong : Accent.VioletSoft) : ChromeInk.TextMuted;
         // A play triangle is visually heavier on its left edge; nudge right so it reads centred.
         var nudge = enabled ? new Vector2(radius * 0.07f, 0f) : Vector2.Zero;
         CenterIcon(c + nudge, glyph, glyphCol, radius * (enabled ? 0.78f : 0.62f));

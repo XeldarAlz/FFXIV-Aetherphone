@@ -2,7 +2,6 @@ using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -71,7 +70,7 @@ internal sealed class SweeperRenderer
         Squircle.Fill(drawList, cell.Min, cell.Max, rounding, ImGui.GetColorU32(fill));
         Squircle.Fill(drawList, cell.Min, new Vector2(cell.Max.X, cell.Min.Y + cell.Height * 0.5f), rounding,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f)));
-        Squircle.Stroke(drawList, cell.Min, cell.Max, rounding, ImGui.GetColorU32(Styling.BorderDim), 1f * scale);
+        Squircle.Stroke(drawList, cell.Min, cell.Max, rounding, ImGui.GetColorU32(ChromeInk.Border), 1f * scale);
         if (board.IsFlagged(index))
         {
             var pop = 1f + flagPop * 0.25f;

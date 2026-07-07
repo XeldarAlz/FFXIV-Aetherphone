@@ -1,10 +1,10 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -138,7 +138,7 @@ internal sealed class GemSwapApp : IMiniGame
 
         if (chain > 1)
         {
-            var comboPulse = 1f + 0.08f * Styling.Pulse(Styling.PulseFast);
+            var comboPulse = 1f + 0.08f * Pulse.Wave(Pulse.Fast);
             Typography.DrawCentered(new Vector2(body.Center.X, rowY + 28f * scale), comboText, Accent,
                 TextStyles.Headline.Scale * comboPulse, TextStyles.Headline.Weight);
         }

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -40,7 +41,7 @@ internal static class ActivityRings
         ProgressRing.Track(center, radius, thickness, trackColor);
         if (fraction >= 0.999f)
         {
-            ProgressRing.Glow(center, radius, tint, 0.30f + 0.20f * Styling.Pulse(Styling.PulseBreath));
+            ProgressRing.Glow(center, radius, tint, 0.30f + 0.20f * Pulse.Wave(Pulse.Breath));
         }
 
         ProgressRing.Fill(center, radius, thickness, fraction, tint);

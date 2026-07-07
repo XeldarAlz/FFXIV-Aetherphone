@@ -5,7 +5,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -123,7 +122,7 @@ internal sealed class FlapApp : IMiniGame
         var displayY = board.BirdY;
         if (board.State == FlapState.Ready)
         {
-            displayY += MathF.Sin(Styling.Phase(1700.0) * MathF.PI * 2f) * area.Height * 0.02f;
+            displayY += MathF.Sin(Pulse.Phase(1700.0) * MathF.PI * 2f) * area.Height * 0.02f;
         }
 
         var shake = fx.ShakeOffset(scale);
@@ -218,7 +217,7 @@ internal sealed class FlapApp : IMiniGame
 
         if (board.State == FlapState.Ready)
         {
-            var pulse = 1f + 0.05f * Styling.Pulse(Styling.PulseCalm);
+            var pulse = 1f + 0.05f * Pulse.Wave(Pulse.Calm);
             var hintCenter = new Vector2(area.Center.X, area.Center.Y - area.Height * 0.16f);
             Typography.DrawCentered(hintCenter, Loc.T(L.Games.TapToStart), new Vector4(1f, 1f, 1f, 0.95f),
                 TextStyles.Title2.Scale * pulse, TextStyles.Title2.Weight);

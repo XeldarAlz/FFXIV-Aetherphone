@@ -1,10 +1,10 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -119,7 +119,7 @@ internal sealed class WhackApp : IMiniGame
 
     private static void DrawUrgency(ImDrawListPtr drawList, Rect body, float scale)
     {
-        var pulse = 0.10f + 0.14f * Styling.Pulse(Styling.PulseFast);
+        var pulse = 0.10f + 0.14f * Pulse.Wave(Pulse.Fast);
         var color = ImGui.GetColorU32(new Vector4(0.95f, 0.30f, 0.30f, pulse));
         drawList.AddRect(body.Min + new Vector2(2f * scale, 2f * scale), body.Max - new Vector2(2f * scale, 2f * scale),
             color, 14f * scale, ImDrawFlags.RoundCornersAll, 5f * scale);

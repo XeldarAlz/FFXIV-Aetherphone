@@ -5,7 +5,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -199,7 +198,7 @@ internal sealed class WaterSortApp : IMiniGame
         pendingSubmit = true;
         fx.AddTrauma(0.25f);
         fx.Shockwave(area.Center, area.Width * 0.45f, GamePalette.Lighten(Accent, 0.3f), 0.6f, 3f);
-        ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink, };
+        ReadOnlySpan<Vector4> palette = new[] { Accent, Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink, };
         particles.Confetti(new Vector2(area.Center.X, area.Min.Y), 64, palette, 260f * scale, 4f, 1.3f);
         particles.Sparkle(area.Center, 18, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * scale, 2.8f, 1f);
     }

@@ -1,10 +1,10 @@
 using System.Numerics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -76,7 +76,7 @@ internal sealed class FishingApp : IPhoneApp
             ? 1f
             : 1f - (float)Math.Clamp(remaining.TotalSeconds / VoyagePeriodSeconds, 0f, 1f);
         var tint = current.BoardingNow ? theme.Accent : OceanTint;
-        ProgressRing.Glow(ringCenter, radius, tint, 0.45f + 0.30f * Styling.Pulse(Styling.PulseBreath));
+        ProgressRing.Glow(ringCenter, radius, tint, 0.45f + 0.30f * Pulse.Wave(Pulse.Breath));
         ProgressRing.Track(ringCenter, radius, thickness, Palette.WithAlpha(theme.TextStrong, 0.10f));
         ProgressRing.Fill(ringCenter, radius, thickness, fraction, tint);
         ProgressRing.CenterIcon(ringCenter, FontAwesomeIcon.Fish, tint, radius * 0.52f);
@@ -123,7 +123,7 @@ internal sealed class FishingApp : IPhoneApp
     {
         var tile = 30f * scale;
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
-        IconTile.Draw(tileCenter, tile, Styling.AccentBlue, FontAwesomeIcon.Fish);
+        IconTile.Draw(tileCenter, tile, Accent.Blue, FontAwesomeIcon.Fish);
         var textLeft = row.Min.X + tile + 12f * scale;
         Typography.Draw(new Vector2(textLeft, row.Center.Y - 16f * scale), fish.Name, theme.TextStrong,
             TextStyles.Headline);
@@ -191,9 +191,9 @@ internal sealed class FishingApp : IPhoneApp
     private static Vector4 TimeOfDayTint(OceanTimeOfDay timeOfDay) =>
         timeOfDay switch
         {
-            OceanTimeOfDay.Sunset => Styling.AccentAmber,
-            OceanTimeOfDay.Night => Styling.AccentViolet,
-            _ => Styling.AccentBlue,
+            OceanTimeOfDay.Sunset => Accent.Amber,
+            OceanTimeOfDay.Night => Accent.Violet,
+            _ => Accent.Blue,
         };
 
     private static FontAwesomeIcon TimeOfDayIcon(OceanTimeOfDay timeOfDay) =>

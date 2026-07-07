@@ -1,7 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -89,7 +88,7 @@ internal sealed class WaterSortRenderer
 
         drawList.AddRectFilled(new Vector2(left, innerTop), new Vector2(left + wall * 0.9f, innerBottom),
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f)), 0f);
-        drawList.AddRect(rect.Min, rect.Max, ImGui.GetColorU32(lifted ? theme.Accent : Styling.BorderDim), rounding,
+        drawList.AddRect(rect.Min, rect.Max, ImGui.GetColorU32(lifted ? theme.Accent : ChromeInk.Border), rounding,
             ImDrawFlags.RoundCornersBottom, (lifted ? 2.2f : 1.4f) * scale);
     }
 

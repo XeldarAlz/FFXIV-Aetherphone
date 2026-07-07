@@ -3,7 +3,6 @@ using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -157,7 +156,7 @@ internal sealed class GemSwapRenderer
 
         if (index == anim.SelectedIndex)
         {
-            ProgressRing.Glow(center, gemHalf * 1.05f, theme.Accent, 0.35f + 0.3f * Styling.Pulse(Styling.PulseFast));
+            ProgressRing.Glow(center, gemHalf * 1.05f, theme.Accent, 0.35f + 0.3f * Pulse.Wave(Pulse.Fast));
             Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(theme.Accent), 2.5f * scale);
         }
     }

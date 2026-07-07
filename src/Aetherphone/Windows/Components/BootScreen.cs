@@ -52,7 +52,7 @@ internal static class BootScreen
     {
         var baseColor = new Vector4(0.015f, 0.019f, 0.038f, alpha);
         dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(baseColor), rounding);
-        var breath = 0.8f + 0.2f * Styling.Pulse(5200);
+        var breath = 0.8f + 0.2f * Pulse.Wave(5200);
         dl.PushClipRect(screen.Min, screen.Max, true);
         for (var ring = 3; ring >= 1; ring--)
         {

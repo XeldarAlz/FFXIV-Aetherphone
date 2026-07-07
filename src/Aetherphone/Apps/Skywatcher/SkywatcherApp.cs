@@ -1,11 +1,11 @@
 using System.Numerics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -104,7 +104,7 @@ internal sealed class SkywatcherApp : IPhoneApp
         var glyphCenter = new Vector2(centerX, origin.Y + 100f * scale);
         var radius = 50f * scale;
         ProgressRing.Glow(glyphCenter, radius * 1.05f, palette.Glow,
-            0.45f + 0.35f * Styling.Pulse(Styling.PulseBreath));
+            0.45f + 0.35f * Pulse.Wave(Pulse.Breath));
         WeatherGlyph.Draw(kind, glyphCenter, radius, palette, isDay, SampleSky(palette, screen, glyphCenter.Y));
         Typography.DrawCentered(new Vector2(centerX, origin.Y + 176f * scale), forecast[0].Weather, palette.Ink,
             TextStyles.LargeTitle.Scale, FontWeight.Regular);

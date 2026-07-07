@@ -23,7 +23,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -362,7 +361,7 @@ internal sealed class GamesApp : IPhoneApp
         Squircle.FillVerticalGradient(drawList, min, max, rounding, topTone, bottomTone);
         drawList.PushClipRect(min, max, true);
         DrawHeroGlow(drawList, min, max, accent);
-        DrawSheen(drawList, min, max, Styling.Phase(5600.0), 0.05f, scale);
+        DrawSheen(drawList, min, max, Pulse.Phase(5600.0), 0.05f, scale);
         drawList.PopClipRect();
         var iconCenter = new Vector2(min.X + height * 0.40f,
             center.Y + MathF.Sin((float)ImGui.GetTime() * 1.6f) * 3f * scale);

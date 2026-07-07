@@ -4,7 +4,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -101,16 +100,16 @@ internal sealed class TimersApp : IPhoneApp
         var card = BeginCard(3, scale);
 
         var daily = GameSchedule.NextDailyReset(utcNow);
-        DrawTimerRow(CardRow(card, 0, scale), Styling.AccentAmber, FontAwesomeIcon.Sun, Loc.T(L.Timers.DailyReset),
+        DrawTimerRow(CardRow(card, 0, scale), Accent.Amber, FontAwesomeIcon.Sun, Loc.T(L.Timers.DailyReset),
             LocalTime(daily), TimeFormat.Relative(daily - utcNow), AppPalettes.Timers.TitleInk);
 
         var grandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
-        DrawTimerRow(CardRow(card, 1, scale), Styling.AccentRose, FontAwesomeIcon.ShieldAlt,
+        DrawTimerRow(CardRow(card, 1, scale), Accent.Rose, FontAwesomeIcon.ShieldAlt,
             Loc.T(L.Timers.GrandCompanyReset), LocalTime(grandCompany), TimeFormat.Relative(grandCompany - utcNow),
             AppPalettes.Timers.TitleInk);
 
         var weekly = GameSchedule.NextWeeklyReset(utcNow);
-        DrawTimerRow(CardRow(card, 2, scale), Styling.AccentBlue, FontAwesomeIcon.CalendarAlt,
+        DrawTimerRow(CardRow(card, 2, scale), Accent.Blue, FontAwesomeIcon.CalendarAlt,
             Loc.T(L.Timers.WeeklyReset), LocalTime(weekly), TimeFormat.Relative(weekly - utcNow), AppPalettes.Timers.TitleInk);
 
         EndCard(card, scale);
@@ -123,12 +122,12 @@ internal sealed class TimersApp : IPhoneApp
 
         var fashion = GameSchedule.FashionReport(utcNow);
         var fashionState = fashion.Active ? Loc.T(L.Timers.Open) : Loc.T(L.Timers.Closed);
-        DrawTimerRow(CardRow(card, 0, scale), Styling.AccentPink, FontAwesomeIcon.Tshirt,
+        DrawTimerRow(CardRow(card, 0, scale), Accent.Pink, FontAwesomeIcon.Tshirt,
             Loc.T(L.Timers.FashionReport), fashionState, TimeFormat.Relative(fashion.NextChangeUtc - utcNow),
             AppPalettes.Timers.TitleInk);
 
         var cactpot = GameSchedule.NextJumboCactpot(utcNow);
-        DrawTimerRow(CardRow(card, 1, scale), Styling.AccentAmberSoft, FontAwesomeIcon.Dice,
+        DrawTimerRow(CardRow(card, 1, scale), Accent.AmberSoft, FontAwesomeIcon.Dice,
             Loc.T(L.Timers.JumboCactpot), LocalDay(cactpot), TimeFormat.Relative(cactpot - utcNow), AppPalettes.Timers.TitleInk);
 
         var ocean = GameSchedule.OceanFishing(utcNow);
@@ -137,7 +136,7 @@ internal sealed class TimersApp : IPhoneApp
             ? Loc.T(L.Timers.BoardingNow)
             : TimeFormat.Relative(ocean.NextBoardingUtc - utcNow);
         var oceanColor = ocean.BoardingNow ? AppPalettes.Timers.Accent : AppPalettes.Timers.TitleInk;
-        DrawTimerRow(CardRow(card, 2, scale), Styling.AccentMint, FontAwesomeIcon.Fish, Loc.T(L.Timers.OceanFishing),
+        DrawTimerRow(CardRow(card, 2, scale), Accent.Mint, FontAwesomeIcon.Fish, Loc.T(L.Timers.OceanFishing),
             route, oceanValue, oceanColor);
 
         EndCard(card, scale);
@@ -195,7 +194,7 @@ internal sealed class TimersApp : IPhoneApp
             return;
         }
 
-        DrawTimerRow(row, Styling.AccentMint, FontAwesomeIcon.Briefcase, venture.Name, LocalTime(venture.CompleteUtc),
+        DrawTimerRow(row, Accent.Mint, FontAwesomeIcon.Briefcase, venture.Name, LocalTime(venture.CompleteUtc),
             TimeFormat.Relative(remaining), AppPalettes.Timers.TitleInk);
     }
 

@@ -4,7 +4,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -234,7 +233,7 @@ internal sealed class SweeperApp : IMiniGame
             BuildResultTime();
             ReadOnlySpan<Vector4> palette = new[]
             {
-                Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink,
+                Accent, Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink,
             };
             particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 70, palette,
                 260f * ImGuiHelpers.GlobalScale, 4f, 1.3f);

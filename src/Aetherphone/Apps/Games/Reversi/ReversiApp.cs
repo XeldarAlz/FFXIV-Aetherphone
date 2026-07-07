@@ -4,7 +4,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -199,7 +198,7 @@ internal sealed class ReversiApp : IMiniGame
 
         if (cell == 0 || cell == 7 || cell == 56 || cell == 63)
         {
-            particles.Burst(center, 18, Styling.AccentAmber, 220f * scale, 3.6f, 0.7f, 300f);
+            particles.Burst(center, 18, Core.Theme.Accent.Amber, 220f * scale, 3.6f, 0.7f, 300f);
             particles.Sparkle(center, 8, new Vector4(1f, 0.9f, 0.55f, 1f), 140f * scale, 2.4f, 0.7f);
             fx.AddTrauma(0.2f);
         }
@@ -250,7 +249,7 @@ internal sealed class ReversiApp : IMiniGame
             fx.Flash(Accent, 0.35f);
             ReadOnlySpan<Vector4> palette = new[]
             {
-                Accent, Styling.AccentAmber, Styling.AccentBlue, Styling.AccentPink,
+                Accent, Core.Theme.Accent.Amber, Core.Theme.Accent.Blue, Core.Theme.Accent.Pink,
             };
             particles.Confetti(new Vector2(grid.Center.X, grid.Bounds.Min.Y), 80, palette, 260f * scale, 4f, 1.4f);
             particles.Sparkle(grid.Center, 16, new Vector4(1f, 0.95f, 0.7f, 1f), 200f * scale, 2.6f, 0.9f);

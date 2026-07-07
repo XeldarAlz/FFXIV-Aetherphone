@@ -4,7 +4,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -358,7 +357,7 @@ internal sealed class SolitaireApp : IMiniGame
             if (top >= 0)
             {
                 var center = layout.TableauCardRect(pile, top).Center;
-                particles.Burst(center, 8, Styling.AccentAmber, 120f * ImGuiHelpers.GlobalScale, 2.6f, 0.45f, 220f);
+                particles.Burst(center, 8, Core.Theme.Accent.Amber, 120f * ImGuiHelpers.GlobalScale, 2.6f, 0.45f, 220f);
             }
         }
 
@@ -377,7 +376,7 @@ internal sealed class SolitaireApp : IMiniGame
         resultTimeText = TimeText.MinutesSeconds(seconds);
         fx.AddTrauma(0.4f);
         fx.Flash(Accent, 0.4f);
-        ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentAmber, Styling.AccentRose, Styling.AccentBlue, };
+        ReadOnlySpan<Vector4> palette = new[] { Accent, Core.Theme.Accent.Amber, Core.Theme.Accent.Rose, Core.Theme.Accent.Blue, };
         var top = new Vector2(layout.OriginX + layout.ColumnPitch * 3f, layout.TopRowY);
         particles.Confetti(top, 90, palette, 280f * ImGuiHelpers.GlobalScale, 4.4f, 1.5f);
         particles.Sparkle(top + new Vector2(0f, 60f * ImGuiHelpers.GlobalScale), 18, new Vector4(1f, 0.95f, 0.7f, 1f),

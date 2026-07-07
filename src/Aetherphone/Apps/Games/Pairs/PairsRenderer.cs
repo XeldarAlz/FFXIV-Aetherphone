@@ -2,7 +2,6 @@ using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -69,7 +68,7 @@ internal sealed class PairsRenderer
         }
         else
         {
-            Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(Styling.BorderDim), 1f * scale);
+            Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(ChromeInk.Border), 1f * scale);
         }
 
         Typography.DrawCentered((min + max) * 0.5f, "?", theme.TextMuted, 1.3f, FontWeight.Bold);

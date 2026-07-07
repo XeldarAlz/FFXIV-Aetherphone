@@ -1,7 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -45,7 +45,7 @@ internal sealed class FlowRenderer
             DrawPath(drawList, board, grid, color, thickness);
         }
 
-        var pulse = 0.4f + 0.6f * Styling.Pulse(Styling.PulseFast);
+        var pulse = 0.4f + 0.6f * Pulse.Wave(Pulse.Fast);
         for (var color = 0; color < board.ColorCount; color++)
         {
             DrawEndpoints(drawList, board, grid, color, thickness, pulse);

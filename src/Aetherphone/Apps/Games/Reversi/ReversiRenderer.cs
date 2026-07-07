@@ -1,7 +1,6 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core.Animation;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -24,7 +23,7 @@ internal sealed class ReversiRenderer
             6f * scale, ImGui.GetColorU32(Felt));
         DrawGridLines(drawList, grid, scale);
         var radius = grid.Pitch * 0.40f;
-        var hintPulse = 0.3f + 0.4f * Styling.Pulse(Styling.PulseCalm);
+        var hintPulse = 0.3f + 0.4f * Pulse.Wave(Pulse.Calm);
         for (var row = 0; row < ReversiBoard.Size; row++)
         {
             for (var column = 0; column < ReversiBoard.Size; column++)

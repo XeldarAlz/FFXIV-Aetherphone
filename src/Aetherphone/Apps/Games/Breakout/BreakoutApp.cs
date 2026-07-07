@@ -1,10 +1,10 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -246,7 +246,7 @@ internal sealed class BreakoutApp : IMiniGame
         {
             var center = new Vector2(body.Min.X + (12f + index * 15f) * scale, rowY);
             var color = lastLife
-                ? new Vector4(0.95f, 0.35f, 0.35f, 0.6f + 0.4f * Styling.Pulse(Styling.PulseFast))
+                ? new Vector4(0.95f, 0.35f, 0.35f, 0.6f + 0.4f * Pulse.Wave(Pulse.Fast))
                 : Accent;
             drawList.AddCircleFilled(center, 4.5f * scale, ImGui.GetColorU32(color));
         }

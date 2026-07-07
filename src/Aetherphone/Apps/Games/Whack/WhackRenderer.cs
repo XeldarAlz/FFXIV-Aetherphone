@@ -1,8 +1,8 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -134,7 +134,7 @@ internal sealed class WhackRenderer
         var fuseStart = center + new Vector2(radius * 0.4f, -radius * 0.8f);
         var fuseEnd = center + new Vector2(radius * 0.8f, -radius * 1.3f);
         drawList.AddLine(fuseStart, fuseEnd, ImGui.GetColorU32(new Vector4(0.7f, 0.6f, 0.4f, 1f)), 2.4f * scale);
-        var spark = 0.6f + 0.4f * Styling.Pulse(Styling.PulseFast);
+        var spark = 0.6f + 0.4f * Pulse.Wave(Pulse.Fast);
         drawList.AddCircleFilled(fuseEnd, radius * 0.18f * spark, ImGui.GetColorU32(new Vector4(1f, 0.7f, 0.25f, 1f)),
             12);
     }

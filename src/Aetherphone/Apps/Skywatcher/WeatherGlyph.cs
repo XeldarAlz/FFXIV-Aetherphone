@@ -1,6 +1,6 @@
 using System.Numerics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Skywatcher;
@@ -69,7 +69,7 @@ internal static class WeatherGlyph
 
     private static void DrawSun(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow)
     {
-        var rotation = Styling.Phase(26000.0) * MathF.PI * 2f;
+        var rotation = Pulse.Phase(26000.0) * MathF.PI * 2f;
         var rayColor = ImGui.GetColorU32(glow);
         var rayThickness = radius * 0.085f;
         for (var ray = 0; ray < 8; ray++)
@@ -137,7 +137,7 @@ internal static class WeatherGlyph
         Span<float> offsets = stackalloc float[5] { -0.46f, -0.20f, 0.06f, 0.32f, 0.56f };
         for (var index = 0; index < offsets.Length; index++)
         {
-            var fall = Frac(Styling.Phase(820.0) + index * 0.21f);
+            var fall = Frac(Pulse.Phase(820.0) + index * 0.21f);
             var headY = 0.30f + fall * 0.56f;
             var top = At(center, radius, offsets[index] + 0.06f, headY);
             var bottom = At(center, radius, offsets[index], headY + 0.18f);
@@ -152,7 +152,7 @@ internal static class WeatherGlyph
         Span<float> offsets = stackalloc float[6] { -0.50f, -0.28f, -0.04f, 0.20f, 0.42f, 0.62f };
         for (var index = 0; index < offsets.Length; index++)
         {
-            var fall = Frac(Styling.Phase(2600.0) + index * 0.17f);
+            var fall = Frac(Pulse.Phase(2600.0) + index * 0.17f);
             var sway = MathF.Sin((fall + index) * MathF.PI * 2f) * 0.05f;
             var position = At(center, radius, offsets[index] + sway, 0.32f + fall * 0.54f);
             var alpha = MathF.Min(1f, (1f - fall) * 2.6f);
@@ -163,7 +163,7 @@ internal static class WeatherGlyph
 
     private static void DrawBolt(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow)
     {
-        var flash = MathF.Pow(Styling.Pulse(1500.0), 3f);
+        var flash = MathF.Pow(Pulse.Wave(1500.0), 3f);
         drawList.AddCircleFilled(At(center, radius, -0.02f, 0.34f), radius * 0.42f,
             ImGui.GetColorU32(glow with { W = 0.10f + 0.32f * flash }), 24);
         Span<Vector2> bolt = stackalloc Vector2[6]
@@ -186,11 +186,11 @@ internal static class WeatherGlyph
         Span<float> speeds = stackalloc float[3] { 5200.0f, 6400.0f, 4600.0f };
         for (var index = 0; index < rows.Length; index++)
         {
-            var drift = MathF.Sin(Styling.Phase(speeds[index]) * MathF.PI * 2f) * 0.10f;
+            var drift = MathF.Sin(Pulse.Phase(speeds[index]) * MathF.PI * 2f) * 0.10f;
             var rowY = rows[index];
             var startX = -0.62f + drift;
             var endX = startX + lengths[index];
-            var alpha = 0.55f + 0.35f * Styling.Pulse(speeds[index] + 900.0);
+            var alpha = 0.55f + 0.35f * Pulse.Wave(speeds[index] + 900.0);
             var color = ImGui.GetColorU32(stroke with { W = alpha });
             var thickness = radius * 0.075f;
             var lineStart = At(center, radius, startX, rowY);
@@ -207,11 +207,11 @@ internal static class WeatherGlyph
         Span<float> speeds = stackalloc float[4] { 4200.0f, 5600.0f, 3800.0f, 6200.0f };
         for (var index = 0; index < rows.Length; index++)
         {
-            var drift = MathF.Sin(Styling.Phase(speeds[index]) * MathF.PI * 2f) * 0.12f;
+            var drift = MathF.Sin(Pulse.Phase(speeds[index]) * MathF.PI * 2f) * 0.12f;
             var halfWidth = widths[index];
             var barMin = At(center, radius, -halfWidth + drift, rows[index] - 0.07f);
             var barMax = At(center, radius, halfWidth + drift, rows[index] + 0.07f);
-            var alpha = 0.45f + 0.20f * Styling.Pulse(speeds[index] + 700.0);
+            var alpha = 0.45f + 0.20f * Pulse.Wave(speeds[index] + 700.0);
             drawList.AddRectFilled(barMin, barMax, ImGui.GetColorU32(fill with { W = alpha }), radius * 0.07f);
         }
     }
@@ -222,7 +222,7 @@ internal static class WeatherGlyph
         Span<float> baseY = stackalloc float[7] { -0.1f, 0.2f, -0.25f, 0.1f, 0.35f, 0.4f, -0.45f };
         for (var index = 0; index < baseX.Length; index++)
         {
-            var drift = Frac(Styling.Phase(3400.0) + index * 0.13f);
+            var drift = Frac(Pulse.Phase(3400.0) + index * 0.13f);
             var position = At(center, radius, baseX[index] + drift * 0.4f - 0.2f, baseY[index]);
             var alpha = (0.3f + 0.4f * MathF.Sin(drift * MathF.PI)) * 0.7f;
             drawList.AddCircleFilled(position, radius * 0.045f, ImGui.GetColorU32(tint with { W = alpha }), 8);
@@ -234,7 +234,7 @@ internal static class WeatherGlyph
         Span<Vector2> wave = stackalloc Vector2[9];
         for (var row = 0; row < 3; row++)
         {
-            var phase = Styling.Phase(2600.0 + row * 400.0) * MathF.PI * 2f;
+            var phase = Pulse.Phase(2600.0 + row * 400.0) * MathF.PI * 2f;
             var baseY = 0.42f + row * 0.16f;
             var halfWidth = 0.5f - row * 0.06f;
             for (var point = 0; point < wave.Length; point++)
@@ -244,7 +244,7 @@ internal static class WeatherGlyph
                 wave[point] = At(center, radius, unitX, unitY);
             }
 
-            var alpha = 0.4f + 0.3f * Styling.Pulse(2200.0 + row * 300.0);
+            var alpha = 0.4f + 0.3f * Pulse.Wave(2200.0 + row * 300.0);
             var color = ImGui.GetColorU32(tint with { W = alpha });
             for (var point = 0; point < wave.Length - 1; point++)
             {

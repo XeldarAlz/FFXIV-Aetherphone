@@ -1,8 +1,8 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -70,7 +70,7 @@ internal sealed class SimonRenderer
     {
         if (inputPulse)
         {
-            ProgressRing.Glow(center, radius * 1.05f, color, 0.35f + 0.35f * Styling.Pulse(Styling.PulseBreath));
+            ProgressRing.Glow(center, radius * 1.05f, color, 0.35f + 0.35f * Pulse.Wave(Pulse.Breath));
         }
 
         drawList.AddCircleFilled(center + new Vector2(0f, 3f * scale), radius + 5f * scale,

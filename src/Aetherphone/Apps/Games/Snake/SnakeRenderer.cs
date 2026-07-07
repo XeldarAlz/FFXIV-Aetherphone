@@ -1,7 +1,7 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -46,7 +46,7 @@ internal sealed class SnakeRenderer
     {
         var center = board.Food + shake;
         var radius = SnakeBoard.FoodRadiusOf(area);
-        var pulse = 0.85f + 0.15f * Styling.Pulse(Styling.PulseFast);
+        var pulse = 0.85f + 0.15f * Pulse.Wave(Pulse.Fast);
         ProgressRing.Glow(center, radius * 2f, FoodColor, 0.7f);
         drawList.AddCircleFilled(center, radius * pulse, ImGui.GetColorU32(FoodColor), 24);
         drawList.AddCircleFilled(center - new Vector2(radius * 0.3f, radius * 0.3f), radius * 0.34f,

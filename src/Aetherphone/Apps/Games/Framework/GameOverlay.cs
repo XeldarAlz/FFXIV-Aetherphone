@@ -4,7 +4,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -168,7 +167,7 @@ internal static class GameOverlay
         Squircle.Fill(drawList, min, max, badgeHalf.Y, ImGui.GetColorU32(accent with { W = 0.24f * phase }));
         Squircle.Stroke(drawList, min, max, badgeHalf.Y, ImGui.GetColorU32(accent with { W = 0.45f * phase }),
             1f * scale);
-        var sweep = Styling.Phase(2400.0);
+        var sweep = Pulse.Phase(2400.0);
         var sweepX = min.X + (max.X - min.X + 24f * scale) * sweep - 12f * scale;
         drawList.PushClipRect(min, max, true);
         drawList.AddQuadFilled(new Vector2(sweepX - 5f * scale, max.Y), new Vector2(sweepX + 1f * scale, min.Y),

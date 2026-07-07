@@ -320,7 +320,7 @@ internal sealed class CoachmarkOverlay
 
     private static void SpotlightRing(ImDrawListPtr dl, Rect hole, Vector4 accent, float alpha, float scale)
     {
-        var pulse = Styling.Pulse(Styling.PulseCalm);
+        var pulse = Pulse.Wave(Pulse.Calm);
         var ringRadius = MathF.Min(hole.Width, hole.Height) * 0.34f;
         var glow = accent with { W = (0.12f + 0.10f * pulse) * alpha };
         Squircle.Stroke(dl, hole.Min - new Vector2(4f * scale, 4f * scale),

@@ -4,7 +4,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -253,7 +252,7 @@ internal sealed class NonogramApp : IMiniGame
         resultTimeText = TimeText.MinutesSeconds(seconds);
         fx.AddTrauma(0.35f);
         fx.Flash(Accent, 0.4f);
-        ReadOnlySpan<Vector4> palette = new[] { Accent, Styling.AccentMint, Styling.AccentAmber, Styling.AccentPink, };
+        ReadOnlySpan<Vector4> palette = new[] { Accent, Core.Theme.Accent.Mint, Core.Theme.Accent.Amber, Core.Theme.Accent.Pink, };
         var gridTop = layout.GridOrigin;
         var gridCenterX = gridTop.X + board.Size * layout.CellSize * 0.5f;
         var gridCenter = new Vector2(gridCenterX, gridTop.Y + board.Size * layout.CellSize * 0.5f);

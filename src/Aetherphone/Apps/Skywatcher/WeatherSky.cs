@@ -1,6 +1,6 @@
 using System.Numerics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
-using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -200,7 +200,7 @@ internal static class WeatherSky
         {
             var position = new Vector2(screen.Min.X + StarX[index] * screen.Width,
                 screen.Min.Y + StarY[index] * screen.Height);
-            var twinkle = 0.35f + 0.45f * Styling.Pulse(2200.0 + index * 240.0);
+            var twinkle = 0.35f + 0.45f * Pulse.Wave(2200.0 + index * 240.0);
             var radius = (0.7f + (index % 3) * 0.35f) * scale;
             drawList.AddCircleFilled(position, radius, ImGui.GetColorU32(glow with { W = twinkle }), 8);
         }

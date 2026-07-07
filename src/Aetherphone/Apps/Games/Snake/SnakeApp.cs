@@ -1,10 +1,10 @@
 using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -185,7 +185,7 @@ internal sealed class SnakeApp : IMiniGame
 
         if (board.State == SnakeState.Ready)
         {
-            var pulse = 1f + 0.05f * Styling.Pulse(Styling.PulseCalm);
+            var pulse = 1f + 0.05f * Pulse.Wave(Pulse.Calm);
             Typography.DrawCentered(new Vector2(area.Center.X, area.Center.Y - area.Height * 0.16f),
                 Loc.T(L.Games.TapToStart), new Vector4(1f, 1f, 1f, 0.92f), TextStyles.Title2.Scale * pulse,
                 TextStyles.Title2.Weight);

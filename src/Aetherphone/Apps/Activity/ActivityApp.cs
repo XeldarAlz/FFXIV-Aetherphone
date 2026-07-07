@@ -6,7 +6,6 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -150,7 +149,7 @@ internal sealed class ActivityApp : IPhoneApp
 
         SettingsSection.Header(Loc.T(L.Character.Retainers), theme);
         var card = GroupCard.Begin(theme, 1, ActivityStatRow.RowHeight);
-        ActivityStatRow.Draw(card.NextRow(), theme, Styling.AccentBlue, FontAwesomeIcon.Briefcase,
+        ActivityStatRow.Draw(card.NextRow(), theme, Accent.Blue, FontAwesomeIcon.Briefcase,
             Loc.T(L.Character.Retainers), Number(snapshot.RetainerCount), RetainerDetail(snapshot));
         card.End();
     }
@@ -175,7 +174,7 @@ internal sealed class ActivityApp : IPhoneApp
         var fraction = achievements.Total <= 0 ? 0f : (float)((double)achievements.Count / achievements.Total);
         var value = $"{Number(achievements.Count)} / {Number(achievements.Total)}";
         var detail = $"{Number(achievements.Points)} {Loc.T(L.Character.AchievementPoints)}";
-        ActivityStatRow.DrawProgress(card.NextRow(), theme, Styling.AccentViolet, FontAwesomeIcon.Trophy,
+        ActivityStatRow.DrawProgress(card.NextRow(), theme, Accent.Violet, FontAwesomeIcon.Trophy,
             $"{Loc.T(L.Character.Achievements)} · {value}", detail, fraction);
         card.End();
     }
