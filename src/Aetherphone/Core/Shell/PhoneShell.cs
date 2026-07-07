@@ -32,13 +32,12 @@ internal sealed class PhoneShell : IDisposable
     private readonly WidgetRegistry widgets;
     private readonly NavigationStack navigation;
     private readonly NotificationBanner banner;
-    private readonly NowPlayingIsland nowPlaying;
+    private readonly DynamicIsland island;
     private readonly ControlCenter controlCenter;
     private readonly MinimizedPhone minimizedView;
     private readonly HomeScreen home;
     private readonly SideButton sideButton = new();
     private readonly CallHub calls;
-    private readonly CallIsland callIsland;
     private readonly IncomingCallOverlay incomingOverlay;
     private readonly ConfirmOverlay confirmOverlay;
     private readonly OnboardingDirector director;
@@ -63,12 +62,11 @@ internal sealed class PhoneShell : IDisposable
         navigation.AppOpened += director.OnAppOpened;
         var router = new NotificationRouter(navigation, notifications, messageLauncher, velvetLauncher, socialLauncher);
         banner = new NotificationBanner(notifications, () => navigation.Current?.Id, router);
-        nowPlaying = new NowPlayingIsland(playback);
+        island = new DynamicIsland(playback, calls);
         controlCenter = new ControlCenter(themes, playback, calls, navigation, notifications, router);
         minimizedView = new MinimizedPhone(notifications);
         home = new HomeScreen(apps, bundle.Widgets);
         navigation.ReturningHome += home.PrepareReveal;
-        callIsland = new CallIsland(calls);
         incomingOverlay = new IncomingCallOverlay(calls);
         confirmOverlay = new ConfirmOverlay(confirm);
     }
@@ -195,7 +193,7 @@ internal sealed class PhoneShell : IDisposable
         var overlaysCapture = !loading.IsActive && controlCenter.CapturesPointer;
         var ringing = !loading.IsActive && incomingOverlay.IsRinging;
         var islandCaptures = !loading.IsActive && !overlaysCapture && !ringing && !confirming &&
-                             (nowPlaying.CapturesPointer(screen) || callIsland.CapturesPointer(screen) ||
+                             (island.CapturesPointer(screen) ||
                               (!director.CapturesPointer && banner.CapturesPointer(screen)));
         var busy = loading.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning;
         director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
@@ -219,8 +217,7 @@ internal sealed class PhoneShell : IDisposable
             banner.Draw(screen, theme);
             if (!controlCenter.IsActive)
             {
-                nowPlaying.Draw(screen, theme, navigation);
-                callIsland.Draw(screen, theme, navigation);
+                island.Draw(screen, theme, navigation);
             }
 
             incomingOverlay.Draw(screen, theme);

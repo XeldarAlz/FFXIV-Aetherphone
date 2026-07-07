@@ -109,7 +109,7 @@ internal sealed class PhotosWidget : IHomeWidget
         }
 
         var bounds = context.Bounds;
-        var (uv0, uv1) = CoverCrop(wrap.Width, wrap.Height, bounds.Width, bounds.Height);
+        var (uv0, uv1) = ImageFit.Cover(wrap.Width, wrap.Height, bounds.Width, bounds.Height);
         var tint = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha));
         context.DrawList.AddImageRounded(wrap.Handle, bounds.Min, bounds.Max, uv0, uv1, tint, radius,
             ImDrawFlags.RoundCornersAll);
@@ -124,28 +124,6 @@ internal sealed class PhotosWidget : IHomeWidget
         Typography.DrawCentered(context.DrawList, new Vector2(bounds.Center.X, bounds.Center.Y + 20f * scale),
             Loc.T(L.Photos.NoPhotos), Palette.WithAlpha(context.Theme.TextMuted, context.Opacity),
             TextStyles.Caption1);
-    }
-
-    private static (Vector2 Uv0, Vector2 Uv1) CoverCrop(float imageWidth, float imageHeight, float rectWidth,
-        float rectHeight)
-    {
-        if (imageWidth <= 0f || imageHeight <= 0f || rectWidth <= 0f || rectHeight <= 0f)
-        {
-            return (Vector2.Zero, Vector2.One);
-        }
-
-        var imageAspect = imageWidth / imageHeight;
-        var rectAspect = rectWidth / rectHeight;
-        if (imageAspect > rectAspect)
-        {
-            var span = rectAspect / imageAspect;
-            var inset = (1f - span) * 0.5f;
-            return (new Vector2(inset, 0f), new Vector2(1f - inset, 1f));
-        }
-
-        var verticalSpan = imageAspect / rectAspect;
-        var verticalInset = (1f - verticalSpan) * 0.5f;
-        return (new Vector2(0f, verticalInset), new Vector2(1f, 1f - verticalInset));
     }
 
     private IDalamudTextureWrap? Get(string path)

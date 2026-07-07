@@ -85,15 +85,22 @@ internal sealed class AppSkin
         Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(Palette.CardStroke), 1f);
     }
 
-    public bool PillButton(Rect rect, string label, bool filled)
+    public bool PillButton(Rect rect, string label, bool filled) =>
+        PillButtonCore(rect, label, filled, Palette.Accent, Palette.FieldSurface, Palette.TitleInk, Theme);
+
+    public static bool PillButton(Rect rect, string label, bool filled, PhoneTheme theme) =>
+        PillButtonCore(rect, label, filled, theme.Accent, theme.SurfaceMuted, theme.TextStrong, theme);
+
+    private static bool PillButtonCore(Rect rect, string label, bool filled, Vector4 accent, Vector4 surface,
+        Vector4 titleInk, PhoneTheme theme)
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         var fill = filled
-            ? (hovered ? Core.Theme.Palette.Mix(Palette.Accent, Theme.TextStrong, 0.12f) : Palette.Accent)
-            : (hovered ? HoverFill : Palette.FieldSurface);
-        var ink = filled ? White : Palette.TitleInk;
+            ? (hovered ? Core.Theme.Palette.Mix(accent, theme.TextStrong, 0.12f) : accent)
+            : (hovered ? HoverFill : surface);
+        var ink = filled ? White : titleInk;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
@@ -105,12 +112,14 @@ internal sealed class AppSkin
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public bool DangerPillButton(Rect rect, string label)
+    public bool DangerPillButton(Rect rect, string label) => DangerPillButton(rect, label, Theme);
+
+    public static bool DangerPillButton(Rect rect, string label, PhoneTheme theme)
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
-        var fill = hovered ? Core.Theme.Palette.Mix(Theme.Danger, Theme.TextStrong, 0.12f) : Theme.Danger;
+        var fill = hovered ? Core.Theme.Palette.Mix(theme.Danger, theme.TextStrong, 0.12f) : theme.Danger;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         Typography.Draw(rect.Center - textSize * 0.5f, label, White, 0.9f, FontWeight.SemiBold);
@@ -147,7 +156,12 @@ internal sealed class AppSkin
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public bool GhostButton(Rect rect, string label)
+    public bool GhostButton(Rect rect, string label) => GhostButtonCore(rect, label, Palette.TitleInk);
+
+    public static bool GhostButton(Rect rect, string label, PhoneTheme theme) =>
+        GhostButtonCore(rect, label, theme.TextStrong);
+
+    private static bool GhostButtonCore(Rect rect, string label, Vector4 titleInk)
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
@@ -159,7 +173,7 @@ internal sealed class AppSkin
 
         Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(GhostStroke), 1f);
         var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, Palette.TitleInk, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(rect.Center - textSize * 0.5f, label, titleInk, 0.9f, FontWeight.SemiBold);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -169,7 +183,11 @@ internal sealed class AppSkin
     }
 
     public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
-        float glyphScale, string tooltip = "")
+        float glyphScale, string tooltip = "") =>
+        IconButton(center, hitRadius, glyph, color, background, glyphScale, Theme, tooltip);
+
+    public static bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
+        float glyphScale, PhoneTheme theme, string tooltip = "")
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius),
@@ -177,36 +195,43 @@ internal sealed class AppSkin
         if (background.W > 0f)
         {
             drawList.AddCircleFilled(center, hitRadius,
-                ImGui.GetColorU32(hovered ? Core.Theme.Palette.Mix(background, Theme.TextStrong, 0.08f) : background),
+                ImGui.GetColorU32(hovered ? Core.Theme.Palette.Mix(background, theme.TextStrong, 0.08f) : background),
                 24);
         }
 
-        Icon(center, glyph, hovered ? Core.Theme.Palette.Mix(color, Theme.TextStrong, 0.2f) : color, glyphScale);
+        Icon(center, glyph, hovered ? Core.Theme.Palette.Mix(color, theme.TextStrong, 0.2f) : color, glyphScale);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (tooltip.Length > 0)
             {
-                DrawActionTooltip(center, hitRadius, tooltip);
+                DrawActionTooltip(center, hitRadius, tooltip, theme);
             }
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    public bool Chip(Rect rect, string label, bool active)
+    public bool Chip(Rect rect, string label, bool active) =>
+        ChipCore(rect, label, active, Palette.Accent, ChipActiveInk, Palette.BodyInk);
+
+    public static bool Chip(Rect rect, string label, bool active, PhoneTheme theme) =>
+        ChipCore(rect, label, active, theme.Accent, theme.TextStrong, theme.TextStrong);
+
+    private static bool ChipCore(Rect rect, string label, bool active, Vector4 accent, Vector4 activeInk,
+        Vector4 bodyInk)
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
-        var fill = active ? Core.Theme.Palette.WithAlpha(Palette.Accent, 0.28f) : ChipInactive;
+        var fill = active ? Core.Theme.Palette.WithAlpha(accent, 0.28f) : ChipInactive;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         if (active)
         {
-            Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(Palette.Accent), 1.4f);
+            Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(accent), 1.4f);
         }
 
-        var ink = active ? ChipActiveInk : Palette.BodyInk;
+        var ink = active ? activeInk : bodyInk;
         Typography.DrawCentered(rect.Center, label, ink, 0.85f, FontWeight.Medium);
         if (hovered)
         {
@@ -352,7 +377,10 @@ internal sealed class AppSkin
         ImGui.PopTextWrapPos();
     }
 
-    public void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text)
+    public void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text) =>
+        DrawActionTooltip(iconCenter, hitRadius, text, Theme);
+
+    public static void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetForegroundDrawList();
@@ -379,10 +407,10 @@ internal sealed class AppSkin
 
         var min = new Vector2(minX, minY);
         var max = min + bubbleSize;
-        var bubble = Core.Theme.Palette.WithAlpha(Core.Theme.Palette.Mix(Theme.AppBackground, Theme.TextStrong, 0.9f),
+        var bubble = Core.Theme.Palette.WithAlpha(Core.Theme.Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f),
             0.97f);
         Squircle.Fill(drawList, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, Theme.AppBackground, 0.78f,
+        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, theme.AppBackground, 0.78f,
             FontWeight.Medium);
     }
 
