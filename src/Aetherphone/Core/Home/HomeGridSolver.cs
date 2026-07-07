@@ -6,7 +6,7 @@ internal static class HomeGridSolver
 {
     public const int MaxCells = 64;
 
-    public static int Solve(IReadOnlyList<HomeTile> tiles, int columns, int rows, List<GridCell> cells)
+    public static int Solve(IReadOnlyList<IGridTile> tiles, int columns, int rows, List<GridCell> cells)
     {
         cells.Clear();
         Span<bool> occupied = stackalloc bool[MaxCells];
@@ -26,7 +26,7 @@ internal static class HomeGridSolver
         return tiles.Count;
     }
 
-    public static bool Fits(IReadOnlyList<HomeTile> tiles, int columns, int rows)
+    public static bool Fits(IReadOnlyList<IGridTile> tiles, int columns, int rows)
     {
         var scratch = new List<GridCell>(tiles.Count);
         return Solve(tiles, columns, rows, scratch) == tiles.Count;

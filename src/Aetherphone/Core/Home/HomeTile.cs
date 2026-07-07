@@ -2,7 +2,7 @@ using Aetherphone.Core.Apps;
 
 namespace Aetherphone.Core.Home;
 
-internal sealed class HomeTile
+internal sealed class HomeTile : IGridTile
 {
     public required string Key { get; init; }
     public IPhoneApp? App { get; init; }

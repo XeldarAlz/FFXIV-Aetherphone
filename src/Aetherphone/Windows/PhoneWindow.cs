@@ -16,9 +16,7 @@ internal sealed class PhoneWindow : Window
                                                ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoBackground;
 
     private const int RecenterFrameCount = 3;
-    private static readonly Vector2 MinimizedSize = new(78f, 152f);
     private readonly PhoneShell shell;
-    private bool minimized;
     private int recenterFrames;
     private string pendingOpenTrigger = "toggle";
     private DateTime shellOpenedAt;
@@ -31,16 +29,16 @@ internal sealed class PhoneWindow : Window
         RespectCloseHotkey = false;
     }
 
-    public bool IsMinimized => minimized;
+    public bool IsMinimized => shell.MinimizedResting;
 
-    public void Maximize() => minimized = false;
-    public void StartMinimized() => minimized = true;
+    public void Maximize() => shell.ForceMaximize();
+    public void StartMinimized() => shell.ForceMinimized();
 
     public void MarkOpenTrigger(string trigger) => pendingOpenTrigger = trigger;
 
     public void Recenter()
     {
-        minimized = false;
+        shell.ForceMaximize();
         recenterFrames = RecenterFrameCount;
         pendingOpenTrigger = "command";
         IsOpen = true;
@@ -54,7 +52,7 @@ internal sealed class PhoneWindow : Window
             return;
         }
 
-        minimized = false;
+        shell.ForceMaximize();
         pendingOpenTrigger = "toggle";
         IsOpen = true;
     }
@@ -76,7 +74,8 @@ internal sealed class PhoneWindow : Window
 
     public override void PreDraw()
     {
-        var size = minimized ? MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        var minimized = shell.MinimizedResting;
+        var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
         Size = size;
         SizeCondition = ImGuiCond.Always;
         Flags = !minimized && Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
@@ -107,32 +106,12 @@ internal sealed class PhoneWindow : Window
             var available = ImGui.GetContentRegionAvail();
             ImGui.Dummy(available);
             var device = new Rect(origin, origin + available);
-            if (minimized)
-            {
-                if (shell.DrawMinimized(device))
-                {
-                    minimized = false;
-                }
-
-                return;
-            }
-
             shell.Draw(device);
         }
 
         if (shell.ConsumeCloseRequest())
         {
             IsOpen = false;
-        }
-
-        if (shell.ConsumeMinimizeRequest())
-        {
-            minimized = true;
-            if (Plugin.Cfg.LockPosition)
-            {
-                Plugin.Cfg.LockPosition = false;
-                Plugin.Cfg.Save();
-            }
         }
     }
 }

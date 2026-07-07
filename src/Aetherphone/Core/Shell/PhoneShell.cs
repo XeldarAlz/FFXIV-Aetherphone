@@ -35,6 +35,8 @@ internal sealed class PhoneShell : IDisposable
     private readonly DynamicIsland island;
     private readonly ControlCenter controlCenter;
     private readonly MinimizedPhone minimizedView;
+    private readonly MinimizeTransition minimize = new();
+    private readonly NotificationService notifications;
     private readonly HomeScreen home;
     private readonly SideButton sideButton = new();
     private readonly CallHub calls;
@@ -42,7 +44,6 @@ internal sealed class PhoneShell : IDisposable
     private readonly ConfirmOverlay confirmOverlay;
     private readonly OnboardingDirector director;
     private bool closeRequested;
-    private bool minimizeRequested;
     private bool analyticsConsentRequested;
     private bool indicatorPressActive;
     private Vector2 indicatorPressPos;
@@ -57,6 +58,7 @@ internal sealed class PhoneShell : IDisposable
         apps = bundle.Apps;
         widgets = bundle.Widgets;
         this.calls = calls;
+        this.notifications = notifications;
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
@@ -143,24 +145,31 @@ internal sealed class PhoneShell : IDisposable
         return requested;
     }
 
-    public bool ConsumeMinimizeRequest()
-    {
-        var requested = minimizeRequested;
-        minimizeRequested = false;
-        return requested;
-    }
+    public bool MinimizedResting => minimize.MinimizedResting;
 
-    public bool DrawMinimized(Rect device)
-    {
-        var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        minimizedView.IsShowing = true;
-        return minimizedView.Draw(device, themes.Chrome, delta);
-    }
+    public void ForceMaximize() => minimize.SnapFull();
+
+    public void ForceMinimized() => minimize.SnapMinimized();
 
     public void Draw(Rect device)
     {
-        minimizedView.IsShowing = false;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        minimize.Advance(delta);
+        if (minimize.Phase != MinimizePhase.None)
+        {
+            if (minimize.MorphActive)
+            {
+                DrawMinimizeMorph(device, delta);
+            }
+            else
+            {
+                DrawMinimizedFace(device, delta);
+            }
+
+            return;
+        }
+
+        minimizedView.IsShowing = false;
         Plugin.Wallpapers.StepDayNight(delta);
         var theme = themes.Chrome;
         var screen = DeviceChrome.ScreenRect(device, theme);
@@ -180,7 +189,13 @@ internal sealed class PhoneShell : IDisposable
             switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta))
             {
                 case SideButtonAction.Minimize:
-                    minimizeRequested = true;
+                    minimize.BeginCollapse();
+                    if (Plugin.Cfg.LockPosition)
+                    {
+                        Plugin.Cfg.LockPosition = false;
+                        Plugin.Cfg.Save();
+                    }
+
                     break;
                 case SideButtonAction.Close:
                     closeRequested = true;
@@ -269,6 +284,34 @@ internal sealed class PhoneShell : IDisposable
         lastCallState = state;
     }
 
+    private void DrawMinimizeMorph(Rect device, float delta)
+    {
+        minimizedView.IsShowing = false;
+        var scale = ImGuiHelpers.GlobalScale;
+        var theme = themes.Chrome;
+        var startBody = DeviceChrome.BodyRect(device);
+        var endBody = MinimizedRect(device, scale).Inset(scale);
+        minimize.DrawMorph(ImGui.GetForegroundDrawList(), startBody, endBody, theme, scale, notifications.UnreadCount);
+    }
+
+    private void DrawMinimizedFace(Rect device, float delta)
+    {
+        minimizedView.IsShowing = true;
+        var mini = MinimizedRect(device, ImGuiHelpers.GlobalScale);
+        switch (minimizedView.Draw(mini, themes.Chrome, delta))
+        {
+            case MinimizedAction.Expand:
+                minimize.BeginExpand();
+                break;
+            case MinimizedAction.Close:
+                closeRequested = true;
+                break;
+        }
+    }
+
+    private static Rect MinimizedRect(Rect device, float scale) =>
+        new(device.Min, device.Min + MinimizeTransition.MinimizedSize * scale);
+
     private void DrawContent(Rect screen, PhoneTheme theme)
     {
         if (navigation.IsTransitioning)
@@ -312,10 +355,9 @@ internal sealed class PhoneShell : IDisposable
             Plugin.Cfg.Save();
         }
 
-        if (ImGui.IsMouseHoveringRect(center - new Vector2(radius), center + new Vector2(radius)))
-        {
-            ImGui.SetTooltip(Loc.T(Plugin.Cfg.LockPosition ? L.Plugin.UnlockPositionHint : L.Plugin.LockPositionHint));
-        }
+        HoverTooltip.Show(new Rect(center - new Vector2(radius), center + new Vector2(radius)),
+            Loc.T(Plugin.Cfg.LockPosition ? L.Plugin.UnlockPositionHint : L.Plugin.LockPositionHint),
+            HoverLabelSide.Above);
     }
 
     private void DrawTransition(Rect screen, PhoneTheme theme)

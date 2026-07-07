@@ -322,7 +322,7 @@ internal sealed class MapsApp : IPhoneApp
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (!lifestreamAvailable)
         {
-            ImGui.SetTooltip(Loc.T(L.Maps.NeedsLifestream));
+            HoverTooltip.Show(row, Loc.T(L.Maps.NeedsLifestream), HoverLabelSide.Above);
         }
 
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))

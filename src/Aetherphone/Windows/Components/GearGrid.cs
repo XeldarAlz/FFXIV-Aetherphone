@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Character;
 using Aetherphone.Core.Theme;
@@ -56,10 +57,7 @@ internal static class GearGrid
             var texture = textures.GetFromGameIcon(new GameIconLookup(gear[index].IconId)).GetWrapOrEmpty();
             dl.AddImageRounded(texture.Handle, tileMin, tileMax, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding);
             Material.EdgeSquircle(dl, tileMin, tileMax, rounding, scale);
-            if (hovered)
-            {
-                ImGui.SetTooltip(gear[index].Name);
-            }
+            HoverTooltip.Show(new Rect(tileMin, tileMax), gear[index].Name);
         }
 
         var rows = (gear.Count + Columns - 1) / Columns;

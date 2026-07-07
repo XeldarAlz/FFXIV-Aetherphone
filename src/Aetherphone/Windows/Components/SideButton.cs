@@ -61,9 +61,9 @@ internal sealed class SideButton
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ImGui.SetTooltip(Loc.T(L.Plugin.SideButtonHint));
         }
 
+        HoverTooltip.Show(bounds, Loc.T(L.Plugin.SideButtonHint));
         return action;
     }
 

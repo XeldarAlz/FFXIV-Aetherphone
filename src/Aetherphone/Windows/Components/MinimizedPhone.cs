@@ -9,12 +9,21 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
+internal enum MinimizedAction : byte
+{
+    None,
+    Expand,
+    Close,
+}
+
 internal sealed class MinimizedPhone : IDisposable
 {
     private const float ShakeDuration = 0.55f;
     private const float ShakeFrequency = 44f;
     private const float ShakeAmplitude = 5f;
     private static readonly Vector4 BadgeTone = new(0.90f, 0.22f, 0.19f, 1f);
+    private static readonly Vector4 CloseTint = new(1f, 1f, 1f, 0.16f);
+    private static readonly Vector4 IconInk = new(1f, 1f, 1f, 1f);
     private readonly NotificationService notifications;
     private float shake;
 
@@ -26,7 +35,7 @@ internal sealed class MinimizedPhone : IDisposable
 
     public bool IsShowing { get; set; }
 
-    public bool Draw(Rect device, PhoneTheme theme, float delta)
+    public MinimizedAction Draw(Rect device, PhoneTheme theme, float delta)
     {
         if (shake > 0f)
         {
@@ -39,39 +48,104 @@ internal sealed class MinimizedPhone : IDisposable
             : 0f;
         var frame = new Rect(device.Min + new Vector2(offset, 0f), device.Max + new Vector2(offset, 0f));
         var dl = ImGui.GetForegroundDrawList();
-        var body = frame.Inset(scale);
-        var rounding = body.Width * 0.30f;
-        var bezel = body.Width * 0.09f;
-        var screen = body.Inset(bezel);
-        var screenRounding = MathF.Max(rounding - bezel, 0f);
-        dl.AddRectFilled(body.Min, body.Max, ImGui.GetColorU32(theme.BezelOuter), rounding);
-        dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(theme.ScreenBase), screenRounding);
-        dl.AddRect(body.Min, body.Max, ImGui.GetColorU32(theme.BezelRim), rounding);
-        var radius = MathF.Min(screen.Width, screen.Height) * 0.32f;
-        var clicked = LockButton.Draw(dl, screen.Center, radius, FontAwesomeIcon.Expand, true, theme);
-        DrawBadge(dl, body, scale);
-        if (ImGui.IsMouseHoveringRect(frame.Min, frame.Max))
+        var geometry = Geometry.From(frame.Inset(scale));
+        DrawShell(dl, geometry, theme);
+        var action = MinimizedAction.None;
+        if (HoverButton.Circle(dl, "minimized.expand", geometry.Screen.Center, ExpandRadius(geometry.Screen),
+                FontAwesomeIcon.Expand, theme.Accent, IconInk, delta, 1f, true, Loc.T(L.Plugin.MaximizeHint)))
         {
-            ImGui.SetTooltip(Loc.T(L.Plugin.MaximizeHint));
+            action = MinimizedAction.Expand;
         }
 
-        return clicked;
+        if (HoverButton.Circle(dl, "minimized.close", CloseCenter(geometry.Screen, scale),
+                CloseRadius(geometry.Screen), FontAwesomeIcon.Times, CloseTint, theme.TextStrong, delta, 1f, true,
+                Loc.T(L.Common.Close)))
+        {
+            action = MinimizedAction.Close;
+        }
+
+        DrawBadge(dl, geometry.Body, scale, 1f, notifications.UnreadCount);
+        return action;
     }
 
-    private void DrawBadge(ImDrawListPtr dl, Rect body, float scale)
+    public readonly struct Geometry
     {
-        var unread = notifications.UnreadCount;
+        public readonly Rect Body;
+        public readonly Rect Screen;
+        public readonly float Rounding;
+        public readonly float ScreenRounding;
+
+        private Geometry(Rect body, Rect screen, float rounding, float screenRounding)
+        {
+            Body = body;
+            Screen = screen;
+            Rounding = rounding;
+            ScreenRounding = screenRounding;
+        }
+
+        public static Geometry From(Rect body)
+        {
+            var rounding = body.Width * 0.30f;
+            var bezel = body.Width * 0.09f;
+            var screen = body.Inset(bezel);
+            return new Geometry(body, screen, rounding, MathF.Max(rounding - bezel, 0f));
+        }
+
+        public static Geometry Lerp(Rect body, float bezel, float rounding)
+        {
+            var screen = body.Inset(bezel);
+            return new Geometry(body, screen, rounding, MathF.Max(rounding - bezel, 0f));
+        }
+    }
+
+    public static void DrawShell(ImDrawListPtr dl, in Geometry geometry, PhoneTheme theme)
+    {
+        dl.AddRectFilled(geometry.Body.Min, geometry.Body.Max, ImGui.GetColorU32(theme.BezelOuter), geometry.Rounding);
+        dl.AddRectFilled(geometry.Screen.Min, geometry.Screen.Max, ImGui.GetColorU32(theme.ScreenBase),
+            geometry.ScreenRounding);
+        dl.AddRect(geometry.Body.Min, geometry.Body.Max, ImGui.GetColorU32(theme.BezelRim), geometry.Rounding);
+    }
+
+    public static void DrawFace(ImDrawListPtr dl, in Geometry geometry, PhoneTheme theme, float scale, float alpha,
+        int unread)
+    {
+        if (alpha <= 0.001f)
+        {
+            return;
+        }
+
+        var screen = geometry.Screen;
+        HoverButton.CircleStatic(dl, screen.Center, ExpandRadius(screen), FontAwesomeIcon.Expand, theme.Accent, IconInk,
+            alpha);
+        HoverButton.CircleStatic(dl, CloseCenter(screen, scale), CloseRadius(screen), FontAwesomeIcon.Times, CloseTint,
+            theme.TextStrong, alpha);
+        DrawBadge(dl, geometry.Body, scale, alpha, unread);
+    }
+
+    private static float ExpandRadius(Rect screen) => MathF.Min(screen.Width, screen.Height) * 0.27f;
+
+    private static float CloseRadius(Rect screen) => MathF.Min(screen.Width, screen.Height) * 0.15f;
+
+    private static Vector2 CloseCenter(Rect screen, float scale)
+    {
+        var radius = CloseRadius(screen);
+        var inset = radius + 5f * scale;
+        return new Vector2(screen.Max.X - inset, screen.Min.Y + inset);
+    }
+
+    private static void DrawBadge(ImDrawListPtr dl, Rect body, float scale, float alpha, int unread)
+    {
         if (unread <= 0)
         {
             return;
         }
 
         var label = unread > 99 ? "99+" : unread.ToString(Loc.Culture);
-        var radius = body.Width * 0.22f;
-        var center = new Vector2(body.Max.X - radius * 0.55f, body.Min.Y + radius * 0.55f);
-        dl.AddCircleFilled(center, radius + 1.5f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.95f)), 24);
-        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(BadgeTone), 24);
-        Typography.DrawCentered(dl, center, label, new Vector4(1f, 1f, 1f, 1f), 0.7f, FontWeight.Bold);
+        var radius = body.Width * 0.20f;
+        var center = new Vector2(body.Min.X + radius * 0.7f, body.Min.Y + radius * 0.7f);
+        dl.AddCircleFilled(center, radius + 1.5f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.95f * alpha)), 24);
+        dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(BadgeTone, alpha)), 24);
+        Typography.DrawCentered(dl, center, label, new Vector4(1f, 1f, 1f, alpha), 0.66f, FontWeight.Bold);
     }
 
     private void OnPresented(PhoneNotification _)

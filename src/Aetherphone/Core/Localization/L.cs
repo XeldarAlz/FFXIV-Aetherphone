@@ -1109,6 +1109,13 @@ internal static class L
         public static readonly LocString Volume = new("controlCenter.volume", "Volume");
         public static readonly LocString Brightness = new("controlCenter.brightness", "Brightness");
         public static readonly LocString Notifications = new("controlCenter.notifications", "Notification Center");
+        public static readonly LocString Accent = new("controlCenter.accent", "Accent");
+        public static readonly LocString NotPlaying = new("controlCenter.notPlaying", "Not Playing");
+        public static readonly LocString Customize = new("controlCenter.customize", "Customize");
+        public static readonly LocString Done = new("controlCenter.done", "Done");
+        public static readonly LocString AddControls = new("controlCenter.addControls", "Add a Control");
+        public static readonly LocString AllControlsAdded = new("controlCenter.allControlsAdded", "Every control is in place");
+        public static readonly LocString EditHint = new("controlCenter.editHint", "Drag to rearrange · tap ⤢ to resize");
     }
 
     internal static class Home

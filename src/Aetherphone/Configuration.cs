@@ -2,6 +2,7 @@ using Aetherphone.Apps.Calendar;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.Notes;
 using Aetherphone.Core.Changelog;
+using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
@@ -68,6 +69,7 @@ internal sealed class Configuration : IPluginConfiguration
     public List<GameStatRecord> GameStats { get; set; } = new();
     public HomeLayout? Home { get; set; }
     public int HomeGridRows { get; set; } = 6;
+    public ControlLayout? ControlPanel { get; set; }
     public VenueTimeFilter VenueTimeFilter { get; set; } = VenueTimeFilter.LiveNow;
     public int VenueSourceFilter { get; set; }
     public bool VenueAllDataCenters { get; set; }

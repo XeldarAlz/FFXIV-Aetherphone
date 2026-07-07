@@ -321,9 +321,9 @@ internal sealed class VenuesApp : IPhoneApp
                 }
             }
 
-            if (!lifestreamAvailable && ImGui.IsMouseHoveringRect(rect.Min, rect.Max))
+            if (!lifestreamAvailable)
             {
-                ImGui.SetTooltip(Loc.T(L.Venues.NeedsLifestream));
+                HoverTooltip.Show(rect, Loc.T(L.Venues.NeedsLifestream), HoverLabelSide.Above);
             }
 
             cursor += slotWidth + gap;
