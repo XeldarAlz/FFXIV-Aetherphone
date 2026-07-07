@@ -5,7 +5,7 @@ namespace Aetherphone.Core.Inventory;
 internal sealed class InventoryCaptureService : IDisposable
 {
     private const long TickIntervalMilliseconds = 1000;
-    private readonly IFramework framework;
+    private readonly FrameworkTicker ticker;
     private readonly InventoryStore store;
     private readonly object sync = new();
     private readonly List<InventoryStack> scratchBags = new();
@@ -19,20 +19,18 @@ internal sealed class InventoryCaptureService : IDisposable
     private InventoryStack[] localCrystals = Array.Empty<InventoryStack>();
     private InventoryStack[] localSaddlebag = Array.Empty<InventoryStack>();
     private InventoryStack[] localEquipped = Array.Empty<InventoryStack>();
-    private long lastTickMilliseconds;
     private ulong activeCharacterId;
     private bool hasLocal;
 
     public InventoryCaptureService(IFramework framework, InventoryStore store)
     {
-        this.framework = framework;
         this.store = store;
-        this.framework.Update += OnUpdate;
+        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
     }
 
     public void Dispose()
     {
-        framework.Update -= OnUpdate;
+        ticker.Dispose();
     }
 
     public ulong ActiveCharacterId => activeCharacterId;
@@ -61,15 +59,8 @@ internal sealed class InventoryCaptureService : IDisposable
         store.CopySources(activeCharacterId, into);
     }
 
-    private void OnUpdate(IFramework owner)
+    private void OnTick()
     {
-        var now = Environment.TickCount64;
-        if (now - lastTickMilliseconds < TickIntervalMilliseconds)
-        {
-            return;
-        }
-
-        lastTickMilliseconds = now;
         activeCharacterId = InventoryReader.ReadLocalContentId();
         RefreshLocal();
         CaptureRetainer();

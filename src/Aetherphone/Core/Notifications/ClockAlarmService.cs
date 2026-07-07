@@ -10,32 +10,23 @@ internal sealed class ClockAlarmService : IDisposable
     private const long TickIntervalMilliseconds = 1000;
     private static readonly Vector4 Accent = new(1.00f, 0.58f, 0.00f, 1f);
     private readonly Configuration configuration;
-    private readonly IFramework framework;
+    private readonly FrameworkTicker ticker;
     private readonly NotificationService notifications;
-    private long lastTickMilliseconds;
 
     public ClockAlarmService(Configuration configuration, IFramework framework, NotificationService notifications)
     {
         this.configuration = configuration;
-        this.framework = framework;
         this.notifications = notifications;
-        this.framework.Update += OnUpdate;
+        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
     }
 
     public void Dispose()
     {
-        framework.Update -= OnUpdate;
+        ticker.Dispose();
     }
 
-    private void OnUpdate(IFramework owner)
+    private void OnTick()
     {
-        var now = Environment.TickCount64;
-        if (now - lastTickMilliseconds < TickIntervalMilliseconds)
-        {
-            return;
-        }
-
-        lastTickMilliseconds = now;
         var dirty = CheckAlarms(DateTime.Now);
         dirty |= CheckTimer(DateTime.UtcNow);
         if (dirty)

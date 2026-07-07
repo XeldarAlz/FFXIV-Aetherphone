@@ -10,7 +10,7 @@ internal sealed class TimerNotifier : IDisposable
     private const long TickIntervalMilliseconds = 1000;
     private static readonly Vector4 Accent = new(0.40f, 0.45f, 0.92f, 1f);
     private readonly Configuration configuration;
-    private readonly IFramework framework;
+    private readonly FrameworkTicker ticker;
     private readonly NotificationService notifications;
     private readonly List<RetainerVenture> retainers = new();
     private readonly Dictionary<ulong, long> seenPendingComplete = new();
@@ -18,34 +18,25 @@ internal sealed class TimerNotifier : IDisposable
     private DateTime nextDaily;
     private DateTime nextWeekly;
     private DateTime nextGrandCompany;
-    private long lastTickMilliseconds;
 
     public TimerNotifier(Configuration configuration, IFramework framework, NotificationService notifications)
     {
         this.configuration = configuration;
-        this.framework = framework;
         this.notifications = notifications;
         var utcNow = DateTime.UtcNow;
         nextDaily = GameSchedule.NextDailyReset(utcNow);
         nextWeekly = GameSchedule.NextWeeklyReset(utcNow);
         nextGrandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
-        this.framework.Update += OnUpdate;
+        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
     }
 
     public void Dispose()
     {
-        framework.Update -= OnUpdate;
+        ticker.Dispose();
     }
 
-    private void OnUpdate(IFramework owner)
+    private void OnTick()
     {
-        var now = Environment.TickCount64;
-        if (now - lastTickMilliseconds < TickIntervalMilliseconds)
-        {
-            return;
-        }
-
-        lastTickMilliseconds = now;
         var utcNow = DateTime.UtcNow;
         CheckResets(utcNow);
         CheckRetainers(utcNow);
