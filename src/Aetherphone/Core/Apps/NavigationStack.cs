@@ -14,9 +14,9 @@ internal sealed class NavigationStack : INavigator
 {
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly Stack<IPhoneApp> history = new();
-    private float phase;
-    private float cover;
-    private float coverDuration;
+    private Spring cover;
+    private float coverTarget;
+    private float coverSmoothTime;
     private IPhoneApp? current;
     private IPhoneApp? motionOver;
     private IPhoneApp? motionUnder;
@@ -37,7 +37,7 @@ internal sealed class NavigationStack : INavigator
     public bool AtHome => current is null;
     public bool IsTransitioning => motion != ShellMotion.None;
     public ShellMotion Motion => motion;
-    public float MotionProgress => cover;
+    public float MotionProgress => cover.Value;
     public IPhoneApp MotionOver => motionOver!;
     public IPhoneApp? MotionUnder => motionUnder;
     public Rect? MotionOrigin => motionOrigin;
@@ -49,24 +49,13 @@ internal sealed class NavigationStack : INavigator
             return;
         }
 
-        var step = coverDuration <= 0.0001f ? 1f : deltaSeconds / coverDuration;
-        phase = MathF.Min(1f, phase + step);
-        cover = CoverFromPhase();
-
-        if (phase < 1f)
+        cover.Step(coverTarget, coverSmoothTime, deltaSeconds);
+        if (MathF.Abs(cover.Value - coverTarget) <= TransitionTiming.MotionSettleEpsilon)
         {
-            return;
+            cover.SnapTo(coverTarget);
+            FinalizeMotion();
         }
-
-        cover = motion == ShellMotion.Present ? 1f : 0f;
-        FinalizeMotion();
     }
-
-    private float CoverFromPhase() =>
-        motion == ShellMotion.Present ? Easing.EaseOutQuint(phase) : 1f - Easing.EaseOutQuint(phase);
-
-    private static float InvertEaseOutQuint(float value) =>
-        1f - MathF.Pow(1f - Math.Clamp(value, 0f, 1f), 0.2f);
 
     public void OpenApp(IPhoneApp app) => OpenApp(app, AppOpenSource.Home);
 
@@ -174,9 +163,9 @@ internal sealed class NavigationStack : INavigator
         motionOver = over;
         motionUnder = under;
         motionOrigin = under is null ? pendingOrigin : null;
-        phase = 0f;
-        cover = 0f;
-        coverDuration = under is null ? TransitionTiming.ZoomPresentDuration : TransitionTiming.PresentDuration;
+        cover.SnapTo(0f);
+        coverTarget = 1f;
+        coverSmoothTime = under is null ? TransitionTiming.ZoomPresentSmoothTime : TransitionTiming.PresentSmoothTime;
     }
 
     private void BeginDismiss(IPhoneApp over, IPhoneApp? under)
@@ -185,9 +174,9 @@ internal sealed class NavigationStack : INavigator
         motionOver = over;
         motionUnder = under;
         motionOrigin = null;
-        phase = 0f;
-        cover = 1f;
-        coverDuration = under is null ? TransitionTiming.ZoomDismissDuration : TransitionTiming.DismissDuration;
+        cover.SnapTo(1f);
+        coverTarget = 0f;
+        coverSmoothTime = under is null ? TransitionTiming.ZoomDismissSmoothTime : TransitionTiming.DismissSmoothTime;
     }
 
     private void ReverseToPresent()
@@ -199,8 +188,8 @@ internal sealed class NavigationStack : INavigator
 
         current = motionOver;
         motion = ShellMotion.Present;
-        phase = InvertEaseOutQuint(cover);
-        coverDuration = motionUnder is null ? TransitionTiming.ZoomPresentDuration : TransitionTiming.PresentDuration;
+        coverTarget = 1f;
+        coverSmoothTime = motionUnder is null ? TransitionTiming.ZoomPresentSmoothTime : TransitionTiming.PresentSmoothTime;
     }
 
     private void ReverseToDismiss()
@@ -214,8 +203,8 @@ internal sealed class NavigationStack : INavigator
 
         current = under;
         motion = ShellMotion.Dismiss;
-        phase = InvertEaseOutQuint(1f - cover);
-        coverDuration = motionUnder is null ? TransitionTiming.ZoomDismissDuration : TransitionTiming.DismissDuration;
+        coverTarget = 0f;
+        coverSmoothTime = motionUnder is null ? TransitionTiming.ZoomDismissSmoothTime : TransitionTiming.DismissSmoothTime;
     }
 
     private void SettleAny()
@@ -225,8 +214,7 @@ internal sealed class NavigationStack : INavigator
             return;
         }
 
-        phase = 1f;
-        cover = motion == ShellMotion.Present ? 1f : 0f;
+        cover.SnapTo(motion == ShellMotion.Present ? 1f : 0f);
         FinalizeMotion();
     }
 

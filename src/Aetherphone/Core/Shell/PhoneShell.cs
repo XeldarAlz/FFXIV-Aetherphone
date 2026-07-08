@@ -496,7 +496,7 @@ internal sealed class PhoneShell : IDisposable
         var rest = navigation.MotionOrigin ?? home.RevealRect(over.Id, content) ?? CenterOrigin(content);
         var motion = new HomeMotion(1f + TransitionTiming.HomeZoomDepth * recede, rest.Center, recede, false);
         SceneCompositor.DrawLayer(screen, new SceneCompositor.Layer("home", Vector2.Zero,
-            TransitionTiming.ShellDimMax * recede, target => PaintHome(target, theme, motion), default, true));
+            TransitionTiming.HomeRecedeDim * recede, target => PaintHome(target, theme, motion), default, true));
         var warped = motion.Warp(rest);
         var card = new Rect(Vector2.Lerp(warped.Min, screen.Min, raw), Vector2.Lerp(warped.Max, screen.Max, raw));
         if (card.Width < 4f || card.Height < 4f)
@@ -519,16 +519,17 @@ internal sealed class PhoneShell : IDisposable
     {
         const ImGuiWindowFlags cardFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                            ImGuiWindowFlags.NoBackground;
+        var appReady = navigation.Motion == ShellMotion.Present && raw >= TransitionTiming.AppInteractiveProgress;
         ImGui.SetCursorScreenPos(card.Min);
         using (ImRaii.PushId("zoomcard"))
         using (ImRaii.Child("card", card.Size, false, cardFlags))
-        using (InputShield.Engage(true))
+        using (InputShield.Engage(!appReady))
         {
-            var reveal = Easing.SmootherStep(Easing.Segment(raw, 0.45f, 0.95f));
-            if (raw > 0.35f)
+            var reveal = Easing.SmootherStep(Easing.Segment(raw, 0.45f, 0.85f));
+            if (reveal > 0.001f)
             {
-                var offset = (card.Center - screen.Center) * 0.9f;
-                var rise = (1f - reveal) * 10f * ImGuiHelpers.GlobalScale;
+                var offset = card.Center - screen.Center;
+                var rise = (1f - reveal) * 8f * ImGuiHelpers.GlobalScale;
                 var target = new Rect(screen.Min + offset + new Vector2(0f, rise),
                     screen.Max + offset + new Vector2(0f, rise));
                 using (ImRaii.PushId(over.Id))
@@ -543,13 +544,13 @@ internal sealed class PhoneShell : IDisposable
             {
                 var surface = IconTile.Surface(over.Accent);
                 var background = themes.Current.AppBackground;
-                var settle = Easing.SmootherStep(Easing.Segment(raw, 0f, 0.5f));
+                var settle = Easing.SmootherStep(Easing.Segment(raw, 0f, 0.4f));
                 var veil = Vector4.Lerp(surface, background, settle);
                 Squircle.Fill(cardDrawList, card.Min, card.Max, rounding,
                     ImGui.GetColorU32(veil with { W = veil.W * veilAlpha }));
             }
 
-            var glyphAlpha = 1f - Easing.Segment(raw, 0.08f, 0.42f);
+            var glyphAlpha = 1f - Easing.Segment(raw, 0.12f, 0.5f);
             if (glyphAlpha > 0.001f)
             {
                 DrawZoomGlyph(cardDrawList, over, card, rest, raw, Easing.SmootherStep(glyphAlpha));
