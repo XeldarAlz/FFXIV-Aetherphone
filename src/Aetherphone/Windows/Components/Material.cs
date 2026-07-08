@@ -9,6 +9,8 @@ internal static class Material
     private const float BorderAlpha = 0.09f;
     private const float HighlightAlpha = 0.11f;
     private static readonly Vector4 FrostedFill = new(0.12f, 0.12f, 0.15f, 0.86f);
+    private static readonly Vector4 DockGlassCalm = new(0.90f, 0.92f, 0.98f, 0.26f);
+    private static readonly Vector4 DockGlassHarsh = new(0.56f, 0.58f, 0.64f, 0.42f);
 
     public static void TopGlow(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, Vector4 accent,
         float coverage, float strength)
@@ -62,6 +64,33 @@ internal static class Material
 
         Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(FrostedFill with { W = FrostedFill.W * opacity }));
         EdgeSquircle(drawList, min, max, radius, scale, opacity);
+    }
+
+    public static void Dock(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, float scale,
+        float brightness, float opacity = 1f)
+    {
+        if (opacity <= 0f)
+        {
+            return;
+        }
+
+        var harsh = Math.Clamp(brightness, 0f, 1f);
+        var fill = Vector4.Lerp(DockGlassCalm, DockGlassHarsh, harsh);
+        Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(fill with { W = fill.W * opacity }));
+
+        var inset = MathF.Max(radius, 1f);
+        var sheen = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f * opacity));
+        var sheenClear = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0f));
+        var sheenBottom = min.Y + (max.Y - min.Y) * 0.5f;
+        drawList.AddRectFilledMultiColor(new Vector2(min.X + inset, min.Y + 1f * scale),
+            new Vector2(max.X - inset, sheenBottom), sheen, sheen, sheenClear, sheenClear);
+
+        Squircle.Stroke(drawList, min, max, radius,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.42f * opacity)), 1.4f * scale);
+        var innerOffset = 1.6f * scale;
+        Squircle.Stroke(drawList, new Vector2(min.X + innerOffset, min.Y + innerOffset),
+            new Vector2(max.X - innerOffset, max.Y - innerOffset), radius - innerOffset,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.12f * opacity)), 1f * scale);
     }
 
     public static void Card(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, Vector4 fill, float scale,

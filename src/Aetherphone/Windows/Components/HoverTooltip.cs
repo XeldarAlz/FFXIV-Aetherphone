@@ -11,9 +11,34 @@ internal static class HoverTooltip
     private const float SmoothTime = 0.11f;
     private const float MaxFrameSeconds = 0.1f;
     private static readonly Dictionary<string, Spring> springs = new();
+    private static readonly List<PendingLabel> pending = new();
+    private static int frame = -1;
 
-    public static void Show(Rect target, string label, HoverLabelSide side = HoverLabelSide.Below) =>
+    private readonly struct PendingLabel
+    {
+        public readonly Rect Target;
+        public readonly string Label;
+        public readonly float Alpha;
+        public readonly HoverLabelSide Side;
+
+        public PendingLabel(Rect target, string label, float alpha, HoverLabelSide side)
+        {
+            Target = target;
+            Label = label;
+            Alpha = alpha;
+            Side = side;
+        }
+    }
+
+    public static void Show(Rect target, string label, HoverLabelSide side = HoverLabelSide.Below)
+    {
+        if (string.IsNullOrEmpty(label))
+        {
+            return;
+        }
+
         Show(Key(target), target, label, side);
+    }
 
     public static void Show(string id, Rect target, string label, HoverLabelSide side = HoverLabelSide.Below)
     {
@@ -22,14 +47,45 @@ internal static class HoverTooltip
             return;
         }
 
-        var hovered = ImGui.IsMouseHoveringRect(target.Min, target.Max);
+        var hovered = UiInteract.Hover(target.Min, target.Max);
         var eased = Step(id, hovered);
         if (eased <= 0.001f)
         {
             return;
         }
 
-        DrawLabel(ImGui.GetForegroundDrawList(), target, label, eased, side);
+        Sync();
+        pending.Add(new PendingLabel(target, label, eased, side));
+    }
+
+    public static void Flush()
+    {
+        Sync();
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        var dl = ImGui.GetForegroundDrawList();
+        for (var index = 0; index < pending.Count; index++)
+        {
+            var label = pending[index];
+            DrawLabel(dl, label.Target, label.Label, label.Alpha, label.Side);
+        }
+
+        pending.Clear();
+    }
+
+    private static void Sync()
+    {
+        var current = ImGui.GetFrameCount();
+        if (current == frame)
+        {
+            return;
+        }
+
+        frame = current;
+        pending.Clear();
     }
 
     public static void DrawLabel(ImDrawListPtr dl, Rect target, string label, float alpha, HoverLabelSide side)
@@ -40,10 +96,10 @@ internal static class HoverTooltip
         }
 
         var scale = ImGuiHelpers.GlobalScale;
-        const float textScale = 0.7f;
-        var textSize = Typography.Measure(label, textScale, FontWeight.SemiBold);
-        var padX = 9f * scale;
-        var padY = 5f * scale;
+        var style = TextStyles.SubheadlineEmphasized;
+        var textSize = Typography.Measure(label, style);
+        var padX = 11f * scale;
+        var padY = 7f * scale;
         var width = textSize.X + 2f * padX;
         var height = textSize.Y + 2f * padY;
         var gap = 7f * scale;
@@ -58,8 +114,7 @@ internal static class HoverTooltip
         Elevation.Floating(dl, min, max, rounding, scale, alpha);
         Squircle.Fill(dl, min, max, rounding, ImGui.GetColorU32(new Vector4(0.10f, 0.10f, 0.12f, 0.96f * alpha)));
         Material.EdgeSquircle(dl, min, max, rounding, scale, alpha);
-        Typography.DrawCentered(dl, center, label, new Vector4(0.96f, 0.96f, 0.98f, alpha), textScale,
-            FontWeight.SemiBold);
+        Typography.DrawCentered(dl, center, label, new Vector4(0.96f, 0.96f, 0.98f, alpha), style);
     }
 
     private static float Step(string id, bool hovered)

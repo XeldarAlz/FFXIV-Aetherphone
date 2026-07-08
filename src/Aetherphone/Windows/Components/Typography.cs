@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Text;
 using Aetherphone.Core;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility.Raii;
@@ -34,6 +35,20 @@ internal static class Typography
     }
 
     private static readonly Dictionary<string, FitEntry> FitCache = new();
+
+    private readonly struct WrapEntry
+    {
+        public readonly float Width;
+        public readonly string[] Lines;
+
+        public WrapEntry(float width, string[] lines)
+        {
+            Width = width;
+            Lines = lines;
+        }
+    }
+
+    private static readonly Dictionary<string, WrapEntry> WrapCache = new();
 
     public static Vector2 Measure(string text, float scale = 1f) => Measure(text, scale, FontWeight.Regular);
     public static Vector2 Measure(string text, in TextStyle style) => Measure(text, style.Scale, style.Weight);
@@ -140,6 +155,97 @@ internal static class Typography
 
             drawList.AddText(font, fontSize, origin, ImGui.GetColorU32(color), display);
         }
+    }
+
+    public static float DrawWrappedCentered(Vector2 topCenter, string text, Vector4 color, in TextStyle style,
+        float maxWidth)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            var lines = WrapLines(text, maxWidth);
+            var drawList = ImGui.GetWindowDrawList();
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
+            var lineHeight = ImGui.GetTextLineHeightWithSpacing();
+            var packed = ImGui.GetColorU32(color);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var size = ImGui.CalcTextSize(lines[index]);
+                drawList.AddText(font, fontSize, new Vector2(topCenter.X - size.X * 0.5f, topCenter.Y + index * lineHeight),
+                    packed, lines[index]);
+            }
+
+            return lines.Length * lineHeight;
+        }
+    }
+
+    public static void DrawWrappedCentered(ImDrawListPtr drawList, Vector2 center, string text, Vector4 color,
+        in TextStyle style, float maxWidth)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            var lines = WrapLines(text, maxWidth);
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
+            var lineHeight = ImGui.GetTextLineHeightWithSpacing();
+            var packed = ImGui.GetColorU32(color);
+            var top = center.Y - lines.Length * lineHeight * 0.5f;
+            for (var index = 0; index < lines.Length; index++)
+            {
+                var size = ImGui.CalcTextSize(lines[index]);
+                drawList.AddText(font, fontSize, new Vector2(center.X - size.X * 0.5f, top + index * lineHeight), packed,
+                    lines[index]);
+            }
+        }
+    }
+
+    private static string[] WrapLines(string text, float maxWidth)
+    {
+        if (WrapCache.TryGetValue(text, out var cached) && cached.Width == maxWidth)
+        {
+            return cached.Lines;
+        }
+
+        var lines = Wrap(text, maxWidth);
+        WrapCache[text] = new WrapEntry(maxWidth, lines);
+        return lines;
+    }
+
+    private static string[] Wrap(string text, float maxWidth)
+    {
+        if (maxWidth <= 0f || ImGui.CalcTextSize(text).X <= maxWidth)
+        {
+            return new[] { text };
+        }
+
+        var lines = new List<string>();
+        var builder = new StringBuilder();
+        var words = text.Split(' ');
+        for (var index = 0; index < words.Length; index++)
+        {
+            var word = words[index];
+            if (builder.Length == 0)
+            {
+                builder.Append(word);
+                continue;
+            }
+
+            builder.Append(' ').Append(word);
+            if (ImGui.CalcTextSize(builder.ToString()).X > maxWidth)
+            {
+                builder.Length -= word.Length + 1;
+                lines.Add(builder.ToString());
+                builder.Clear();
+                builder.Append(word);
+            }
+        }
+
+        if (builder.Length > 0)
+        {
+            lines.Add(builder.ToString());
+        }
+
+        return lines.ToArray();
     }
 
     private static string Fit(string text, float maxWidth)

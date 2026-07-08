@@ -16,12 +16,11 @@ internal sealed class IncomingCallOverlay
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoInputs;
 
-    private const float PresenceFrequency = 3.0f;
-    private const float PresenceDamping = 0.82f;
+    private const float PresenceSmoothTime = 0.14f;
     private static readonly Vector4 Green = new(0.20f, 0.78f, 0.35f, 1f);
     private static readonly Vector4 Ink = new(0.98f, 0.98f, 0.99f, 1f);
     private readonly CallHub calls;
-    private DampedSpring presence;
+    private Spring presence;
     private float clock;
 
     public IncomingCallOverlay(CallHub calls)
@@ -36,7 +35,7 @@ internal sealed class IncomingCallOverlay
         var view = calls.Snapshot();
         var ringing = view.State == CallState.Ringing;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
-        presence.Step(ringing ? 1f : 0f, PresenceFrequency, PresenceDamping, delta);
+        presence.Step(ringing ? 1f : 0f, PresenceSmoothTime, delta);
         if (presence.Value <= 0.01f)
         {
             if (!ringing)
@@ -51,7 +50,7 @@ internal sealed class IncomingCallOverlay
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##incomingCall", screen.Size, false, OverlayFlags))
         {
-            DrawContent(screen, theme, view, Math.Clamp(presence.Value, 0f, 1.1f), ringing);
+            DrawContent(screen, theme, view, Math.Clamp(presence.Value, 0f, 1f), ringing);
         }
     }
 
@@ -60,12 +59,12 @@ internal sealed class IncomingCallOverlay
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         var alpha = Math.Clamp(reveal * 1.4f, 0f, 1f);
-        var rise = (1f - MathF.Min(reveal, 1f)) * 26f * scale;
+        var rise = (1f - reveal) * 26f * scale;
         dl.AddRectFilled(screen.Min, screen.Max,
             ImGui.GetColorU32(new Vector4(0.02f, 0.03f, 0.05f, 0.78f * alpha)));
         var centerX = screen.Center.X;
         var caller = view.IncomingFrom?.DisplayName ?? view.PeerLabel;
-        var avatarRadius = 50f * scale * (0.9f + 0.1f * MathF.Min(reveal, 1.1f));
+        var avatarRadius = 50f * scale * (0.9f + 0.1f * reveal);
         var avatarCenter = new Vector2(centerX, screen.Min.Y + 150f * scale + rise);
         var pulse = 0.5f + 0.5f * MathF.Sin(clock * 2.2f);
         dl.AddCircle(avatarCenter, avatarRadius + (6f + 7f * pulse) * scale,

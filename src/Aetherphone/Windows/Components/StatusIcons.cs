@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -39,6 +40,24 @@ internal static class StatusIcons
         var batteryLeft = DrawBattery(theme, rowCenterY, nubRight, device.BatteryPercent, device.Charging);
         var labelLeft = DrawBatteryLabel(theme, rowCenterY, batteryLeft, device.BatteryPercent);
         DrawSignal(theme, rowCenterY, labelLeft, device.SignalBars);
+        ReportAnchors(scale, rowCenterY, nubRight, labelLeft);
+    }
+
+    private static void ReportAnchors(float scale, float rowCenterY, float nubRight, float labelLeft)
+    {
+        if (!UiAnchors.Recording)
+        {
+            return;
+        }
+
+        var top = rowCenterY - 9f * scale;
+        var bottom = rowCenterY + 9f * scale;
+        UiAnchors.Report("chrome.battery",
+            new Rect(new Vector2(labelLeft - 2f * scale, top), new Vector2(nubRight, bottom)));
+        var signalWidth = SignalClusterWidth(scale);
+        var signalLeft = labelLeft - SignalGap * scale - signalWidth;
+        UiAnchors.Report("chrome.signal",
+            new Rect(new Vector2(signalLeft, top), new Vector2(signalLeft + signalWidth, bottom)));
     }
 
     private static float SignalClusterWidth(float scale) => (BarWidth * 4f + BarGap * 3f) * scale;

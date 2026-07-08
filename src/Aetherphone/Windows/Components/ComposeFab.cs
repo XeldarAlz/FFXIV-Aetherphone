@@ -9,7 +9,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class ComposeFab
 {
-    public static bool Draw(Rect area, AppSkin ui, string childId, Vector4 accent, string glyph, string tooltip)
+    public static bool Draw(Rect area, string childId, Vector4 accent, string glyph, string tooltip)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var radius = 26f * scale;
@@ -22,19 +22,20 @@ internal static class ComposeFab
         var center = new Vector2(area.Max.X - radius - margin, area.Max.Y - radius - margin);
         var drawList = ImGui.GetWindowDrawList();
         var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+            UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
         drawList.AddCircleFilled(center, radius,
             ImGui.GetColorU32(hovered ? Palette.Mix(accent, new Vector4(1f, 1f, 1f, 1f), 0.12f) : accent), 32);
         AppSkin.Icon(center, glyph, new Vector4(1f, 1f, 1f, 1f), 1.1f);
+        HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+            tooltip, HoverLabelSide.Above);
         if (!hovered)
         {
             return false;
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        ui.DrawActionTooltip(center, radius, tooltip);
         return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 }

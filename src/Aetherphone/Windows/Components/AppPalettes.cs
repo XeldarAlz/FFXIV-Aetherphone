@@ -50,15 +50,15 @@ internal static class AppPalettes
     public static readonly AppPalette Aethergram = new()
     {
         Accent = AppAccents.For("aethergram"),
-        TitleInk = new(0.99f, 0.95f, 0.97f, 1f),
-        BodyInk = new(0.93f, 0.85f, 0.90f, 0.96f),
-        MutedInk = new(0.78f, 0.66f, 0.76f, 0.85f),
-        HeaderInk = new(0.99f, 0.72f, 0.82f, 0.95f),
-        HeadingInk = new(0.99f, 0.90f, 0.94f, 1f),
-        BackdropTop = new(0.20f, 0.08f, 0.32f, 1f),
-        BackdropBottom = new(0.04f, 0.02f, 0.10f, 1f),
-        BloomTop = new(0.92f, 0.30f, 0.38f, 0.22f),
-        BloomBottom = new(0.45f, 0.16f, 0.55f, 0f),
+        TitleInk = new(0.99f, 0.96f, 0.94f, 1f),
+        BodyInk = new(0.95f, 0.87f, 0.85f, 0.96f),
+        MutedInk = new(0.83f, 0.68f, 0.66f, 0.85f),
+        HeaderInk = new(0.99f, 0.76f, 0.62f, 0.95f),
+        HeadingInk = new(0.99f, 0.92f, 0.88f, 1f),
+        BackdropTop = new(0.29f, 0.09f, 0.14f, 1f),
+        BackdropBottom = new(0.08f, 0.03f, 0.04f, 1f),
+        BloomTop = new(0.99f, 0.53f, 0.24f, 0.22f),
+        BloomBottom = new(0.87f, 0.27f, 0.52f, 0f),
         CardFill = GlassFill,
         CardStroke = GlassStroke,
         FieldSurface = GlassField,
@@ -77,6 +77,78 @@ internal static class AppPalettes
         BackdropBottom = new(0.05f, 0.02f, 0.09f, 1f),
         BloomTop = new(0.82f, 0.16f, 0.42f, 0.26f),
         BloomBottom = new(0.42f, 0.10f, 0.44f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Phone = new()
+    {
+        Accent = AppAccents.For("phone"),
+        TitleInk = new(0.96f, 0.99f, 0.97f, 1f),
+        BodyInk = new(0.86f, 0.94f, 0.89f, 0.96f),
+        MutedInk = new(0.64f, 0.80f, 0.70f, 0.85f),
+        HeaderInk = new(0.58f, 0.95f, 0.72f, 0.95f),
+        HeadingInk = new(0.94f, 0.99f, 0.96f, 1f),
+        BackdropTop = new(0.05f, 0.19f, 0.10f, 1f),
+        BackdropBottom = new(0.02f, 0.04f, 0.03f, 1f),
+        BloomTop = new(0.20f, 0.78f, 0.35f, 0.20f),
+        BloomBottom = new(0.10f, 0.40f, 0.20f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Messenger = new()
+    {
+        Accent = AppAccents.For("dm"),
+        TitleInk = new(0.96f, 0.98f, 1f, 1f),
+        BodyInk = new(0.86f, 0.90f, 0.97f, 0.96f),
+        MutedInk = new(0.64f, 0.71f, 0.82f, 0.85f),
+        HeaderInk = new(0.62f, 0.80f, 0.99f, 0.95f),
+        HeadingInk = new(0.94f, 0.97f, 1f, 1f),
+        BackdropTop = new(0.05f, 0.11f, 0.22f, 1f),
+        BackdropBottom = new(0.02f, 0.03f, 0.06f, 1f),
+        BloomTop = new(0.20f, 0.48f, 0.92f, 0.22f),
+        BloomBottom = new(0.10f, 0.24f, 0.52f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Friends = new()
+    {
+        Accent = AppAccents.For("friends"),
+        TitleInk = new(0.96f, 0.99f, 0.97f, 1f),
+        BodyInk = new(0.86f, 0.93f, 0.89f, 0.96f),
+        MutedInk = new(0.64f, 0.78f, 0.71f, 0.85f),
+        HeaderInk = new(0.62f, 0.94f, 0.80f, 0.95f),
+        HeadingInk = new(0.94f, 0.99f, 0.96f, 1f),
+        BackdropTop = new(0.05f, 0.18f, 0.14f, 1f),
+        BackdropBottom = new(0.02f, 0.05f, 0.05f, 1f),
+        BloomTop = new(0.20f, 0.68f, 0.52f, 0.22f),
+        BloomBottom = new(0.10f, 0.36f, 0.32f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Venues = new()
+    {
+        Accent = AppAccents.For("venues"),
+        TitleInk = new(0.99f, 0.96f, 0.98f, 1f),
+        BodyInk = new(0.96f, 0.92f, 0.97f, 0.98f),
+        MutedInk = new(0.83f, 0.76f, 0.87f, 0.94f),
+        HeaderInk = new(0.99f, 0.74f, 0.86f, 0.97f),
+        HeadingInk = new(0.99f, 0.95f, 0.98f, 1f),
+        BackdropTop = new(0.17f, 0.06f, 0.24f, 1f),
+        BackdropBottom = new(0.05f, 0.02f, 0.09f, 1f),
+        BloomTop = new(0.90f, 0.24f, 0.52f, 0.24f),
+        BloomBottom = new(0.36f, 0.14f, 0.52f, 0f),
         CardFill = GlassFill,
         CardStroke = GlassStroke,
         FieldSurface = GlassField,

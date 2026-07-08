@@ -106,6 +106,32 @@ internal sealed class AppSkin
         return false;
     }
 
+    public bool FlowChip(ref float cursorX, float centerY, float gap, string label, bool active)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var textSize = Typography.Measure(label, 0.85f, FontWeight.Medium);
+        var height = 32f * scale;
+        var width = textSize.X + 26f * scale;
+        var min = new Vector2(cursorX, centerY - height * 0.5f);
+        var max = new Vector2(cursorX + width, centerY + height * 0.5f);
+        var hovered = UiInteract.Hover(min, max);
+        var fill = active
+            ? (hovered ? Core.Theme.Palette.Mix(Palette.Accent, White, 0.10f) : Palette.Accent)
+            : (hovered ? HoverFill : Palette.FieldSurface);
+        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(fill));
+        var ink = active ? White : hovered ? Palette.TitleInk : Palette.BodyInk;
+        Typography.Draw(new Vector2(min.X + (width - textSize.X) * 0.5f, centerY - textSize.Y * 0.5f), label, ink,
+            0.85f, FontWeight.Medium);
+        cursorX = max.X + gap;
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
     public static bool FlowChip(ref float cursorX, float centerY, float gap, string label, bool active,
         PhoneTheme theme)
     {
@@ -116,7 +142,7 @@ internal sealed class AppSkin
         var width = textSize.X + 22f * scale;
         var min = new Vector2(cursorX, centerY - height * 0.5f);
         var max = new Vector2(cursorX + width, centerY + height * 0.5f);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var fill = active ? Core.Theme.Palette.WithAlpha(theme.Accent, 0.92f) : theme.GroupedCard;
         Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(fill));
         var ink = active || hovered ? theme.TextStrong : theme.TextMuted;
@@ -135,7 +161,7 @@ internal sealed class AppSkin
         Vector4 titleInk, PhoneTheme theme)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         var fill = filled
             ? (hovered ? Core.Theme.Palette.Mix(accent, theme.TextStrong, 0.12f) : accent)
@@ -157,7 +183,7 @@ internal sealed class AppSkin
     public static bool DangerPillButton(Rect rect, string label, PhoneTheme theme)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         var fill = hovered ? Core.Theme.Palette.Mix(theme.Danger, theme.TextStrong, 0.12f) : theme.Danger;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
@@ -174,7 +200,7 @@ internal sealed class AppSkin
     public bool DangerGhostButton(Rect rect, string label)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         var danger = Theme.Danger;
         if (hovered)
@@ -204,7 +230,7 @@ internal sealed class AppSkin
     private static bool GhostButtonCore(Rect rect, string label, Vector4 titleInk)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         if (hovered)
         {
@@ -223,15 +249,15 @@ internal sealed class AppSkin
     }
 
     public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
-        float glyphScale, string tooltip = "") =>
-        IconButton(center, hitRadius, glyph, color, background, glyphScale, Theme, tooltip);
+        float glyphScale, string tooltip = "", HoverLabelSide tooltipSide = HoverLabelSide.Above) =>
+        IconButton(center, hitRadius, glyph, color, background, glyphScale, Theme, tooltip, tooltipSide);
 
     public static bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
-        float glyphScale, PhoneTheme theme, string tooltip = "")
+        float glyphScale, PhoneTheme theme, string tooltip = "", HoverLabelSide tooltipSide = HoverLabelSide.Above)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius),
-            center + new Vector2(hitRadius, hitRadius));
+        var hit = new Vector2(hitRadius, hitRadius);
+        var hovered = UiInteract.Hover(center - hit, center + hit);
         if (background.W > 0f)
         {
             drawList.AddCircleFilled(center, hitRadius,
@@ -243,12 +269,9 @@ internal sealed class AppSkin
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (tooltip.Length > 0)
-            {
-                DrawActionTooltip(center, hitRadius, tooltip, theme);
-            }
         }
 
+        HoverTooltip.Show(new Rect(center - hit, center + hit), tooltip, tooltipSide);
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
@@ -262,7 +285,7 @@ internal sealed class AppSkin
         Vector4 bodyInk)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         var fill = active ? Core.Theme.Palette.WithAlpha(accent, 0.28f) : ChipInactive;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
@@ -454,7 +477,10 @@ internal sealed class AppSkin
             FontWeight.Medium);
     }
 
-    public static void Icon(Vector2 center, string glyph, Vector4 color, float scale)
+    public static void Icon(Vector2 center, string glyph, Vector4 color, float scale) =>
+        Icon(ImGui.GetWindowDrawList(), center, glyph, color, scale);
+
+    public static void Icon(ImDrawListPtr drawList, Vector2 center, string glyph, Vector4 color, float scale)
     {
         float fontSize;
         Vector2 size;
@@ -464,7 +490,6 @@ internal sealed class AppSkin
             size = ImGui.CalcTextSize(glyph) * scale;
         }
 
-        ImGui.GetWindowDrawList().AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(color),
-            glyph, 0f);
+        drawList.AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(color), glyph, 0f);
     }
 }

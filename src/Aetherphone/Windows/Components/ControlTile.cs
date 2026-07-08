@@ -28,11 +28,13 @@ internal static class ControlTile
         Squircle.Fill(dl, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         Material.EdgeSquircle(dl, rect.Min, rect.Max, radius, scale, opacity);
         var iconColor = Palette.WithAlpha(active ? new Vector4(1f, 1f, 1f, 1f) : theme.TextStrong, opacity);
-        var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + rect.Height * 0.40f);
+        var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + rect.Height * 0.34f);
         ProgressRing.CenterIcon(dl, iconCenter, icon, iconColor, MathF.Min(rect.Height, rect.Width) * 0.26f);
-        var labelColor = active ? new Vector4(1f, 1f, 1f, opacity) : Palette.WithAlpha(theme.TextMuted, opacity);
-        Typography.DrawCentered(dl, new Vector2(rect.Center.X, rect.Max.Y - rect.Height * 0.22f), label, labelColor,
-            0.68f, FontWeight.Medium);
+        var labelColor = active
+            ? new Vector4(1f, 1f, 1f, opacity)
+            : Palette.WithAlpha(theme.TextStrong, opacity * 0.85f);
+        Typography.DrawWrappedCentered(dl, new Vector2(rect.Center.X, rect.Max.Y - rect.Height * 0.26f), label,
+            labelColor, TextStyles.FootnoteEmphasized, rect.Width - 20f * scale);
         return released;
     }
 
@@ -112,14 +114,14 @@ internal static class ControlTile
             armedOrigin = ImGui.GetMousePos();
         }
 
-        if (!ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+        if (!hovered || !ImGui.IsMouseReleased(ImGuiMouseButton.Left))
         {
             return false;
         }
 
         var scale = ImGuiHelpers.GlobalScale;
         var moved = (ImGui.GetMousePos() - armedOrigin).Length() > PressSlop * scale;
-        var fire = armed && hovered && !moved;
+        var fire = armed && !moved;
         armed = false;
         return fire;
     }

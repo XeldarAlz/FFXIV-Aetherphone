@@ -18,11 +18,12 @@ internal static class SegmentStrip
     public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, PhoneTheme theme) =>
         Draw(id, row, options, selected, theme.ToggleOff, theme.Accent, theme.TextMuted, theme.TextStrong);
 
-    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, in AppPalette palette) =>
-        Draw(id, row, options, selected, FrostTrack, palette.Accent, palette.MutedInk, White);
+    public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, in AppPalette palette,
+        float trackHeight = TrackHeight, float textScale = 0.82f) =>
+        Draw(id, row, options, selected, FrostTrack, palette.Accent, palette.MutedInk, White, trackHeight, textScale);
 
     public static int Draw(string id, Rect row, IReadOnlyList<string> options, int selected, Vector4 track,
-        Vector4 accent, Vector4 mutedInk, Vector4 activeInk)
+        Vector4 accent, Vector4 mutedInk, Vector4 activeInk, float trackHeight = TrackHeight, float textScale = 0.82f)
     {
         if (options.Count == 0)
         {
@@ -31,7 +32,7 @@ internal static class SegmentStrip
 
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var height = TrackHeight * scale;
+        var height = trackHeight * scale;
         var trackMin = new Vector2(row.Min.X, row.Center.Y - height * 0.5f);
         var trackMax = new Vector2(row.Max.X, row.Center.Y + height * 0.5f);
         var radius = height * 0.5f;
@@ -73,7 +74,7 @@ internal static class SegmentStrip
             var center = new Vector2(trackMin.X + (index + 0.5f) * segmentWidth, row.Center.Y);
             var proximity = 1f - Math.Clamp(MathF.Abs(position - index), 0f, 1f);
             var color = Vector4.Lerp(mutedInk, activeInk, proximity);
-            Typography.DrawCentered(center, options[index], color, 0.82f, FontWeight.SemiBold);
+            Typography.DrawCentered(center, options[index], color, textScale, FontWeight.SemiBold);
         }
 
         return result;

@@ -89,7 +89,7 @@ internal static class ChatBubble
         float bubbleHeight, float padding, float wrap, bool outgoing, Vector4 fillColor, Vector4 textColor,
         float entrance)
     {
-        var pop = 0.78f + 0.22f * Easing.EaseOutBack(entrance);
+        var pop = 0.78f + 0.22f * Easing.EaseOutQuint(entrance);
         var alpha = MathF.Min(entrance * 1.8f, 1f);
         var rise = new Vector2(0f, (1f - Easing.EaseOutCubic(entrance)) * 10f * scale);
         ImGui.SetCursorPos(start);

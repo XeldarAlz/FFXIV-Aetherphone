@@ -51,7 +51,7 @@ internal sealed class ConfirmOverlay
         }
 
         var opacity = Math.Clamp(reveal.Value, 0f, 1f);
-        var cardScale = MinCardScale + (1f - MinCardScale) * Easing.EaseOutBack(opacity);
+        var cardScale = MinCardScale + (1f - MinCardScale) * Easing.EaseOutQuint(opacity);
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##confirmOverlay", screen.Size, false, OverlayFlags))
         {

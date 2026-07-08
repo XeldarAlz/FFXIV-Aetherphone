@@ -5,9 +5,18 @@ namespace Aetherphone.Windows.Components;
 
 internal static class UiInteract
 {
+    private static int blockedFrame = -1;
+
+    public static void BlockThisFrame() => blockedFrame = ImGui.GetFrameCount();
+
+    public static bool InputBlocked => blockedFrame == ImGui.GetFrameCount();
+
+    public static bool Hover(Vector2 min, Vector2 max) =>
+        !InputBlocked && ImGui.IsMouseHoveringRect(min, max);
+
     public static bool HoverClick(Vector2 min, Vector2 max)
     {
-        if (!ImGui.IsMouseHoveringRect(min, max))
+        if (!Hover(min, max))
         {
             return false;
         }
@@ -18,7 +27,7 @@ internal static class UiInteract
 
     public static void HoverHighlight(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding)
     {
-        if (!ImGui.IsMouseHoveringRect(min, max))
+        if (!Hover(min, max))
         {
             return;
         }

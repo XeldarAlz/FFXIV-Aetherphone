@@ -152,8 +152,8 @@ internal static class Squircle
         for (var index = 0; index <= CornerSegments; index++)
         {
             var angle = MathF.PI * 0.5f * index / CornerSegments;
-            var cosine = MathF.Cos(angle);
-            var sine = MathF.Sin(angle);
+            var cosine = MathF.Max(MathF.Cos(angle), 0f);
+            var sine = MathF.Max(MathF.Sin(angle), 0f);
             points[index] = new Vector2(MathF.Pow(cosine, power), MathF.Pow(sine, power));
         }
 
