@@ -30,6 +30,9 @@ internal sealed class HomeScreen
     private const float WidgetTapDepth = 0.03f;
     private const float TapPressInSeconds = 0.11f;
     private const float TapPopSeconds = 0.34f;
+    private const float MagnifyBoost = 0.26f;
+    private const float MagnifyRadiusCells = 1.35f;
+    private const float MagnifyFadeTime = 0.13f;
 
     private struct TilePose
     {
@@ -63,6 +66,9 @@ internal sealed class HomeScreen
     private bool tapHolding;
     private float tapReleaseFrom;
     private float tapScale = 1f;
+
+    private Spring magnifyGate;
+    private Vector2 hoverPos;
 
     private bool editing;
     private float editClock;
@@ -115,6 +121,7 @@ internal sealed class HomeScreen
         }
 
         AdvanceTap(delta);
+        UpdateMagnify(content, motion, delta);
         widgetAnchorReported = false;
         var labelAlpha = chromeAlpha * (folder.Active ? 0.35f : 1f);
         DrawPages(metrics, theme, delta, labelAlpha, motion);
@@ -815,8 +822,8 @@ internal sealed class HomeScreen
 
         if (tile.IsFolder)
         {
-            HomeTileView.DrawFolder(center, rect.Width, tile, theme, TapScale(tile), labelAlpha,
-                Loc.T(L.Home.NewFolder), metrics.CellWidth, zoom);
+            HomeTileView.DrawFolder(center, rect.Width, tile, theme, TapScale(tile) * Magnify(center, metrics.CellWidth),
+                labelAlpha, Loc.T(L.Home.NewFolder), metrics.CellWidth, zoom);
             if (editing && motion.Interactive &&
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
             {
@@ -828,8 +835,8 @@ internal sealed class HomeScreen
             return;
         }
 
-        HomeTileView.DrawApp(center, rect.Width, tile.App!, theme, TapScale(tile), labelAlpha, metrics.CellWidth,
-            zoom);
+        HomeTileView.DrawApp(center, rect.Width, tile.App!, theme, TapScale(tile) * Magnify(center, metrics.CellWidth),
+            labelAlpha, metrics.CellWidth, zoom);
         ReportIconAnchor(tile, center, rect.Width, motion);
     }
 
@@ -886,8 +893,8 @@ internal sealed class HomeScreen
             }
 
             var jiggle = Jiggle(tile, metrics.Scale);
-            HomeTileView.DrawApp(rect.Center + jiggle, rect.Width, tile.App!, theme, TapScale(tile), 0f, 0f,
-                motion.Zoom);
+            HomeTileView.DrawApp(rect.Center + jiggle, rect.Width, tile.App!, theme,
+                TapScale(tile) * Magnify(rect.Center, metrics.CellWidth), 0f, 0f, motion.Zoom);
             ReportIconAnchor(tile, rect.Center, rect.Width, motion);
         }
     }
@@ -1054,6 +1061,34 @@ internal sealed class HomeScreen
         var x = MathF.Sin(editClock * 11f + phase);
         var y = MathF.Cos(editClock * 13f + phase * 1.3f);
         return new Vector2(x, y) * 1.1f * scale;
+    }
+
+    private void UpdateMagnify(Rect content, in HomeMotion motion, float delta)
+    {
+        hoverPos = ImGui.GetMousePos();
+        var active = motion.Interactive && !editing && dragTile is null && settleTile is null &&
+                     !folder.Active && !gallery.Active && !sizeMenu.Active && !pager.Dragging &&
+                     content.Contains(hoverPos);
+        magnifyGate.Step(active ? 1f : 0f, MagnifyFadeTime, delta);
+    }
+
+    private float Magnify(Vector2 center, float cellWidth)
+    {
+        var strength = magnifyGate.Value;
+        if (strength <= 0.001f)
+        {
+            return 1f;
+        }
+
+        var radius = cellWidth * MagnifyRadiusCells;
+        var normalized = Math.Clamp(Vector2.Distance(center, hoverPos) / radius, 0f, 1f);
+        if (normalized >= 1f)
+        {
+            return 1f;
+        }
+
+        var falloff = 0.5f * (1f + MathF.Cos(MathF.PI * normalized));
+        return 1f + MagnifyBoost * falloff * strength;
     }
 
     private float TapScale(HomeTile tile) => ReferenceEquals(tile, tapTile) ? tapScale : 1f;
