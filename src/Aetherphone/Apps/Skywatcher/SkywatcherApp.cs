@@ -56,8 +56,9 @@ internal sealed class SkywatcherApp : IPhoneApp
         var theme = context.Theme;
         var content = context.Content;
         var screen = SceneChrome.ScreenFrom(content, theme, scale);
-        var bell = EorzeaTime.Now().Hour;
-        var isDay = bell >= 6 && bell < 19;
+        var bell = EorzeaTime.Now();
+        var daylight = WeatherSky.Daylight(bell.Hour + bell.Minute / 60f);
+        var isDay = daylight >= 0.5f;
         if (forecast.Count == 0)
         {
             DrawEmpty(screen, scale);
@@ -67,8 +68,10 @@ internal sealed class SkywatcherApp : IPhoneApp
         }
 
         var kind = WeatherSky.Classify(forecast[0].Weather);
-        var palette = WeatherSky.Resolve(kind, isDay);
+        var palette = WeatherSky.Blend(kind, daylight);
         WeatherSky.Paint(screen, theme.ScreenRounding * scale, palette, kind, isDay);
+        WeatherAmbience.Draw(ImGui.GetWindowDrawList(), screen, theme.ScreenRounding * scale, kind, isDay, palette,
+            scale, 1f, false);
         SceneChrome.BackChevron(content, context.Navigation, palette.Ink, scale);
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + 40f * scale), content.Max);
         ImGui.SetCursorScreenPos(body.Min);
@@ -103,9 +106,9 @@ internal sealed class SkywatcherApp : IPhoneApp
 
         var glyphCenter = new Vector2(centerX, origin.Y + 100f * scale);
         var radius = 50f * scale;
-        ProgressRing.Glow(glyphCenter, radius * 1.05f, palette.Glow,
-            0.45f + 0.35f * Pulse.Wave(Pulse.Breath));
         WeatherGlyph.Draw(kind, glyphCenter, radius, palette, isDay, SampleSky(palette, screen, glyphCenter.Y));
+        WeatherAmbience.Halo(ImGui.GetWindowDrawList(), glyphCenter, radius * 1.05f, palette.Glow,
+            0.65f + 0.40f * Pulse.Wave(Pulse.Breath));
         Typography.DrawCentered(new Vector2(centerX, origin.Y + 176f * scale), forecast[0].Weather, palette.Ink,
             TextStyles.LargeTitle.Scale, FontWeight.Regular);
         Typography.DrawCentered(new Vector2(centerX, origin.Y + 210f * scale), Summary(), palette.InkSoft,

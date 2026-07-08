@@ -71,7 +71,7 @@ internal static class WeatherGlyph
     {
         var rotation = Pulse.Phase(26000.0) * MathF.PI * 2f;
         var rayColor = ImGui.GetColorU32(glow);
-        var rayThickness = radius * 0.085f;
+        var rayThickness = MathF.Max(radius * 0.085f, 1.25f);
         for (var ray = 0; ray < 8; ray++)
         {
             var angle = ray * (MathF.PI / 4f) + rotation;
@@ -88,9 +88,14 @@ internal static class WeatherGlyph
 
     private static void DrawMoon(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 glow, Vector4 sky)
     {
-        drawList.AddCircleFilled(center, radius * 0.48f, ImGui.GetColorU32(glow), 40);
-        drawList.AddCircleFilled(center + new Vector2(radius * 0.30f, -radius * 0.16f), radius * 0.44f,
+        drawList.AddCircleFilled(center, radius * 0.50f, ImGui.GetColorU32(glow), 40);
+        drawList.AddCircleFilled(center + new Vector2(radius * 0.34f, -radius * 0.18f), radius * 0.42f,
             ImGui.GetColorU32(sky), 40);
+        if (radius < 20f)
+        {
+            return;
+        }
+
         var crater = ImGui.GetColorU32(Palette.Darken(glow, 0.14f));
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.20f, radius * 0.18f), radius * 0.075f, crater, 12);
         drawList.AddCircleFilled(center + new Vector2(-radius * 0.04f, radius * 0.30f), radius * 0.05f, crater, 12);
@@ -142,8 +147,10 @@ internal static class WeatherGlyph
             var top = At(center, radius, offsets[index] + 0.06f, headY);
             var bottom = At(center, radius, offsets[index], headY + 0.18f);
             var alpha = MathF.Min(1f, (1f - fall) * 2.4f) * 0.9f;
-            drawList.AddLine(top, bottom, ImGui.GetColorU32(drop with { W = alpha }), radius * 0.055f);
-            drawList.AddCircleFilled(bottom, radius * 0.045f, ImGui.GetColorU32(drop with { W = alpha }), 8);
+            drawList.AddLine(top, bottom, ImGui.GetColorU32(drop with { W = alpha }),
+                MathF.Max(radius * 0.055f, 1f));
+            drawList.AddCircleFilled(bottom, MathF.Max(radius * 0.045f, 0.8f),
+                ImGui.GetColorU32(drop with { W = alpha }), 8);
         }
     }
 
@@ -156,7 +163,7 @@ internal static class WeatherGlyph
             var sway = MathF.Sin((fall + index) * MathF.PI * 2f) * 0.05f;
             var position = At(center, radius, offsets[index] + sway, 0.32f + fall * 0.54f);
             var alpha = MathF.Min(1f, (1f - fall) * 2.6f);
-            drawList.AddCircleFilled(position, radius * (0.05f + (index % 2) * 0.02f),
+            drawList.AddCircleFilled(position, MathF.Max(radius * (0.05f + (index % 2) * 0.02f), 0.9f),
                 ImGui.GetColorU32(flake with { W = alpha }), 10);
         }
     }
@@ -192,7 +199,7 @@ internal static class WeatherGlyph
             var endX = startX + lengths[index];
             var alpha = 0.55f + 0.35f * Pulse.Wave(speeds[index] + 900.0);
             var color = ImGui.GetColorU32(stroke with { W = alpha });
-            var thickness = radius * 0.075f;
+            var thickness = MathF.Max(radius * 0.075f, 1.1f);
             var lineStart = At(center, radius, startX, rowY);
             var hookCenter = At(center, radius, endX, rowY - 0.14f);
             drawList.AddLine(lineStart, At(center, radius, endX, rowY), color, thickness);

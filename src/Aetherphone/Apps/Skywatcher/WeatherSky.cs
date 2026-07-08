@@ -31,6 +31,8 @@ internal static class WeatherSky
 {
     private static readonly Vector4 InkLight = new(0.98f, 0.99f, 1.00f, 1f);
     private static readonly Vector4 InkDark = new(0.12f, 0.15f, 0.21f, 1f);
+    private static readonly Vector4 TwilightHorizon = new(1.00f, 0.56f, 0.32f, 1f);
+    private static readonly Vector4 TwilightGlow = new(1.00f, 0.74f, 0.46f, 1f);
 
     private static readonly float[] StarX =
     {
@@ -165,6 +167,48 @@ internal static class WeatherSky
                 return new SkyPalette(new(0.08f, 0.07f, 0.12f, 1f), new(0.19f, 0.16f, 0.24f, 1f),
                     new(0.52f, 0.44f, 0.62f, 1f), InkLight);
         }
+    }
+
+    public static float Daylight(float bell)
+    {
+        var sunrise = SmoothStep(5.25f, 6.75f, bell);
+        var sunset = SmoothStep(18.25f, 19.75f, bell);
+        return sunrise * (1f - sunset);
+    }
+
+    public static SkyPalette Blend(WeatherKind kind, float daylight)
+    {
+        if (daylight <= 0f)
+        {
+            return Resolve(kind, false);
+        }
+
+        if (daylight >= 1f)
+        {
+            return Resolve(kind, true);
+        }
+
+        var night = Resolve(kind, false);
+        var day = Resolve(kind, true);
+        var twilight = daylight * (1f - daylight) * 4f * TwilightStrength(kind);
+        var bottom = Vector4.Lerp(Vector4.Lerp(night.Bottom, day.Bottom, daylight), TwilightHorizon, twilight);
+        var glow = Vector4.Lerp(Vector4.Lerp(night.Glow, day.Glow, daylight), TwilightGlow, twilight * 0.6f);
+        return new SkyPalette(Vector4.Lerp(night.Top, day.Top, daylight), bottom, glow,
+            Vector4.Lerp(night.Ink, day.Ink, daylight));
+    }
+
+    private static float TwilightStrength(WeatherKind kind) => kind switch
+    {
+        WeatherKind.Clear => 0.45f,
+        WeatherKind.Clouds or WeatherKind.Wind or WeatherKind.Snow => 0.24f,
+        WeatherKind.Fog or WeatherKind.Rain => 0.12f,
+        _ => 0f,
+    };
+
+    private static float SmoothStep(float edgeStart, float edgeEnd, float value)
+    {
+        var fraction = Math.Clamp((value - edgeStart) / (edgeEnd - edgeStart), 0f, 1f);
+        return fraction * fraction * (3f - 2f * fraction);
     }
 
     public static void Paint(Rect screen, float rounding, in SkyPalette palette, WeatherKind kind, bool isDay)
