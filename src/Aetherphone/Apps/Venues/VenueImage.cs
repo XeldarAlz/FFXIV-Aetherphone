@@ -16,10 +16,10 @@ internal static class VenueImage
         if (!string.IsNullOrEmpty(url))
         {
             var result = media.GetOrRequest(url, token => http.GetBytesAsync(new Uri(url), token));
-            if (result.Texture is not null)
+            if (result.Texture is { } texture)
             {
-                drawList.AddImageRounded(result.Texture.Handle, rect.Min, rect.Max, Vector2.Zero, Vector2.One,
-                    0xFFFFFFFFu, rounding);
+                var (uv0, uv1) = ImageFit.Cover(texture.Width, texture.Height, rect.Width, rect.Height);
+                drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding);
                 return;
             }
         }
