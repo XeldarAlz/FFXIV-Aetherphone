@@ -46,7 +46,10 @@ internal sealed class PhotoViewerOverlay
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.96f * eased)));
         var grow = 0.94f + 0.06f * Aetherphone.Core.Animation.Easing.EaseOutCubic(eased);
-        var stageTarget = new Rect(new Vector2(area.Min.X, area.Min.Y + 44f * scale),
+        var contentTop = area.Min.Y + theme.TopZoneHeight * scale;
+        var contentLeft = area.Min.X + theme.SidePadding * scale;
+        var headerBottom = contentTop + AppHeader.Height * scale;
+        var stageTarget = new Rect(new Vector2(area.Min.X, headerBottom),
             new Vector2(area.Max.X, area.Max.Y - 16f * scale));
         var stageHalf = stageTarget.Size * 0.5f * grow;
         var stage = new Rect(stageTarget.Center - stageHalf, stageTarget.Center + stageHalf);
@@ -61,23 +64,13 @@ internal sealed class PhotoViewerOverlay
                 theme.TextMuted, Loc.T(L.Common.Loading));
         }
 
-        var closeCenter = new Vector2(area.Min.X + 20f * scale, area.Min.Y + 22f * scale);
-        var closeRadius = 14f * scale;
-        var hovered = ImGui.IsMouseHoveringRect(closeCenter - new Vector2(closeRadius),
-            closeCenter + new Vector2(closeRadius));
-        drawList.AddCircleFilled(closeCenter, closeRadius,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, hovered ? 0.26f : 0.15f)), 28);
-        var arm = closeRadius * 0.4f;
-        var ink = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.95f));
-        drawList.AddLine(closeCenter + new Vector2(-arm, -arm), closeCenter + new Vector2(arm, arm), ink, 2f * scale);
-        drawList.AddLine(closeCenter + new Vector2(-arm, arm), closeCenter + new Vector2(arm, -arm), ink, 2f * scale);
-        if (!hovered)
-        {
-            return;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var rowCenterY = contentTop + AppHeader.Height * scale * 0.5f;
+        var hitMin = new Vector2(contentLeft, contentTop);
+        var hitMax = new Vector2(contentLeft + 44f * scale, headerBottom);
+        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
+        var backCenter = new Vector2(contentLeft + 13f * scale, rowCenterY);
+        if (BackButton.Draw("photoviewer.back", backCenter, 15f * scale, new Vector4(1f, 1f, 1f, 0.95f), hovered, scale,
+                shadow: true))
         {
             Close();
         }
