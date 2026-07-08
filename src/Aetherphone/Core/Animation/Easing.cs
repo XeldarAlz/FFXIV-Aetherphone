@@ -33,6 +33,18 @@ internal static class Easing
         return 1f - inverse * inverse * inverse * inverse * inverse;
     }
 
+    public static float EaseInQuint(float progress) =>
+        progress * progress * progress * progress * progress;
+
+    public static float SmootherStep(float progress)
+    {
+        var value = Clamp01(progress);
+        return value * value * value * (value * (value * 6f - 15f) + 10f);
+    }
+
+    public static float Segment(float value, float start, float end) =>
+        end <= start ? (value >= end ? 1f : 0f) : Clamp01((value - start) / (end - start));
+
     public static float EaseOutBack(float progress)
     {
         const float overshoot = 1.70158f;
