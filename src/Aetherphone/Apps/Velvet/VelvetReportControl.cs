@@ -33,6 +33,14 @@ internal sealed class VelvetReportControl
         status = string.Empty;
     }
 
+    public void Arm(string type, string id)
+    {
+        targetType = type;
+        targetId = id;
+        reasonDraft = string.Empty;
+        status = string.Empty;
+    }
+
     public bool Toggle(AppSkin ui, Vector2 center, float radius, string type, string id, string tooltip = "")
     {
         var active = targetType == type && targetId == id;
@@ -47,10 +55,7 @@ internal sealed class VelvetReportControl
             }
             else
             {
-                targetType = type;
-                targetId = id;
-                reasonDraft = string.Empty;
-                status = string.Empty;
+                Arm(type, id);
                 active = true;
             }
         }

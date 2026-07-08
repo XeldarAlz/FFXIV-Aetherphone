@@ -78,20 +78,20 @@ internal sealed partial class AethergramApp
             var liked = post.MyReaction >= 0;
             var actionsY = imageRect.Max.Y + 22f * scale;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
-            if (ui.IconButton(heartCenter, 14f * scale, FontAwesomeIcon.Heart.ToIconString(),
-                    liked ? LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.1f, Loc.T(L.Aethergram.Like)))
+            if (ui.IconButton(heartCenter, 15f * scale, FontAwesomeIcon.Heart.ToIconString(),
+                    liked ? LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Aethergram.Like)))
             {
                 store.ToggleLike(post);
             }
 
-            var actionCursorX = heartCenter.X + 18f * scale;
+            var actionCursorX = heartCenter.X + 20f * scale;
             if (post.TotalReactions > 0)
             {
                 var likeText = post.TotalReactions.ToString(Loc.Culture);
-                var likeSize = Typography.Measure(likeText, 0.85f, FontWeight.Medium);
-                var likePos = new Vector2(actionCursorX, actionsY - 7f * scale);
-                var likeHovered = ImGui.IsMouseHoveringRect(likePos, likePos + likeSize);
-                Typography.Draw(likePos, likeText, likeHovered ? theme.Accent : AppPalettes.Aethergram.BodyInk, 0.85f,
+                var likeSize = Typography.Measure(likeText, 0.9f, FontWeight.Medium);
+                var likePos = new Vector2(actionCursorX, actionsY - 8f * scale);
+                var likeHovered = UiInteract.Hover(likePos, likePos + likeSize);
+                Typography.Draw(likePos, likeText, likeHovered ? theme.Accent : AppPalettes.Aethergram.BodyInk, 0.9f,
                     FontWeight.Medium);
                 if (likeHovered)
                 {
@@ -109,32 +109,30 @@ internal sealed partial class AethergramApp
                 actionCursorX += 6f * scale;
             }
 
-            var commentCenter = new Vector2(actionCursorX + 12f * scale, actionsY);
-            if (ui.IconButton(commentCenter, 14f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Aethergram.BodyInk,
-                    AppSkin.Transparent, 1.05f, Loc.T(L.Aethergram.Comment)))
+            var commentCenter = new Vector2(actionCursorX + 13f * scale, actionsY);
+            if (ui.IconButton(commentCenter, 15f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Aethergram.BodyInk,
+                    AppSkin.Transparent, 1.2f, Loc.T(L.Aethergram.Comment)))
             {
                 commentFocusPending = true;
             }
 
             if (post.CommentCount > 0)
             {
-                Typography.Draw(new Vector2(commentCenter.X + 18f * scale, actionsY - 7f * scale),
-                    post.CommentCount.ToString(Loc.Culture), AppPalettes.Aethergram.BodyInk, 0.85f, FontWeight.Medium);
+                Typography.Draw(new Vector2(commentCenter.X + 20f * scale, actionsY - 8f * scale),
+                    post.CommentCount.ToString(Loc.Culture), AppPalettes.Aethergram.BodyInk, 0.9f, FontWeight.Medium);
             }
 
-            var mine = store.Me is { } me && me.Id == post.AuthorId;
-            var reportShown = false;
-            if (mine)
+            var moreCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
+            var moreRadius = 14f * scale;
+            if (ui.IconButton(moreCenter, moreRadius, FontAwesomeIcon.EllipsisH.ToIconString(),
+                    AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1f, Loc.T(L.Aethergram.More)))
             {
-                var deleteCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
-                DrawDeleteToggle(deleteCenter, 14f * scale, post.Id);
-            }
-            else
-            {
-                var reportCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
-                reportShown = DrawReportToggle(reportCenter, 14f * scale, "post", post.Id);
+                menuPost = post;
+                postMenu.Toggle(post.Id, new Rect(moreCenter - new Vector2(moreRadius, moreRadius),
+                    moreCenter + new Vector2(moreRadius, moreRadius)));
             }
 
+            var reportShown = reportTargetType == "post" && reportTargetId == post.Id;
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
             if (reportShown)
             {
@@ -185,6 +183,7 @@ internal sealed partial class AethergramApp
         }
 
         DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), postId);
+        DrawPostMenu(area, false);
     }
 
     private void DrawComment(CommentDto comment)
@@ -205,8 +204,8 @@ internal sealed partial class AethergramApp
         var textLeft = bubbleLeft + padX;
         var textRight = bubbleRight - padX;
         var displayName = SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle);
-        var nameHeight = Typography.Measure(displayName, 0.85f, FontWeight.SemiBold).Y;
-        var textHeight = Typography.MeasureWrapped(comment.Text, textRight - textLeft, 0.88f);
+        var nameHeight = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).Y;
+        var textHeight = Typography.MeasureWrapped(comment.Text, textRight - textLeft, 0.9f);
         var bubbleHeight = padTop + nameHeight + 4f * scale + textHeight + padBottom;
         var bubbleTop = origin.Y;
         var bubbleBottom = bubbleTop + bubbleHeight;
@@ -226,23 +225,23 @@ internal sealed partial class AethergramApp
             0.8f, 28);
 
         var nameTop = bubbleTop + padTop;
-        Typography.Draw(new Vector2(textLeft, nameTop), displayName, theme.TextStrong, 0.85f, FontWeight.SemiBold);
-        var nameWidth = Typography.Measure(displayName, 0.85f, FontWeight.SemiBold).X;
+        Typography.Draw(new Vector2(textLeft, nameTop), displayName, theme.TextStrong, 0.9f, FontWeight.SemiBold);
+        var nameWidth = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).X;
         var meta = TimeText.Short(comment.CreatedAtUnix);
-        var metaSize = Typography.Measure(meta, 0.76f);
+        var metaSize = Typography.Measure(meta, 0.8f);
         var metaLeft = textLeft + nameWidth + 8f * scale;
         var metaRightBound = mine ? textRight - 14f * scale : textRight;
         if (metaLeft + metaSize.X <= metaRightBound)
         {
             Typography.Draw(new Vector2(metaLeft, nameTop + (nameHeight - metaSize.Y) * 0.5f), meta,
-                AppPalettes.Aethergram.MutedInk, 0.76f);
+                AppPalettes.Aethergram.MutedInk, 0.8f);
         }
 
         var textTop = nameTop + nameHeight + 4f * scale;
         ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop));
         ImGui.PushTextWrapPos(textRight - ImGui.GetWindowPos().X);
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
-        using (Plugin.Fonts.Push(0.88f))
+        using (Plugin.Fonts.Push(0.9f))
         {
             ImGui.TextWrapped(comment.Text);
         }
@@ -256,18 +255,10 @@ internal sealed partial class AethergramApp
         if (mine)
         {
             var trashCenter = new Vector2(bubbleRight - 13f * scale, bubbleTop + 13f * scale);
-            var trashHitRadius = 10f * scale;
-            if (ui.IconButton(trashCenter, trashHitRadius, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Aethergram.MutedInk,
-                    AppSkin.Transparent, 0.7f) && store.DetailPost is { } post)
+            if (ui.IconButton(trashCenter, 11f * scale, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Aethergram.MutedInk,
+                    AppSkin.Transparent, 0.85f, Loc.T(L.Aethergram.DeleteComment)) && store.DetailPost is { } post)
             {
                 AskDeleteComment(post.Id, comment.Id);
-            }
-
-            var trashHovered = ImGui.IsMouseHoveringRect(trashCenter - new Vector2(trashHitRadius, trashHitRadius),
-                trashCenter + new Vector2(trashHitRadius, trashHitRadius));
-            if (trashHovered)
-            {
-                DrawDeleteCommentTooltip(trashCenter, trashHitRadius, scale);
             }
         }
 
@@ -331,13 +322,23 @@ internal sealed partial class AethergramApp
         AppHeader.Draw(context, title, back);
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+        DrawProfileBody(new Rect(new Vector2(area.Min.X, top), area.Max), userId);
+    }
+
+    private void DrawProfileBody(Rect body, string userId)
+    {
+        if (store.ProfileUserId != userId)
+        {
+            store.OpenProfile(userId);
+        }
+
         if (store.ProfileFailed)
         {
             Typography.DrawCentered(body.Center, Loc.T(L.Aethergram.ProfileError), AppPalettes.Aethergram.MutedInk);
             return;
         }
 
+        var user = store.ProfileUser;
         if (user is null)
         {
             Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), AppPalettes.Aethergram.MutedInk);
@@ -435,16 +436,6 @@ internal sealed partial class AethergramApp
         });
     }
 
-    private void DrawDeleteToggle(Vector2 center, float radius, string postId)
-    {
-        var background = Palette.WithAlpha(theme.Danger, 0.16f);
-        if (ui.IconButton(center, radius, FontAwesomeIcon.Trash.ToIconString(), theme.Danger, background, 0.9f,
-                Loc.T(L.Aethergram.DeleteConfirm)))
-        {
-            AskDeletePost(postId);
-        }
-    }
-
     private void AskDeletePost(string postId)
     {
         Plugin.Confirm.Ask(new ConfirmRequest
@@ -479,24 +470,4 @@ internal sealed partial class AethergramApp
         });
     }
 
-    private void DeferTooltip(Vector2 center, float hitRadius, string text)
-    {
-        deferredTooltipActive = true;
-        deferredTooltipCenter = center;
-        deferredTooltipRadius = hitRadius;
-        deferredTooltipText = text;
-    }
-
-    private void FlushDeferredTooltip()
-    {
-        if (deferredTooltipActive && deferredTooltipText.Length > 0)
-        {
-            ui.DrawActionTooltip(deferredTooltipCenter, deferredTooltipRadius, deferredTooltipText);
-        }
-    }
-
-    private void DrawDeleteCommentTooltip(Vector2 iconCenter, float hitRadius, float scale)
-    {
-        ui.DrawActionTooltip(iconCenter, hitRadius, Loc.T(L.Aethergram.DeleteComment));
-    }
 }

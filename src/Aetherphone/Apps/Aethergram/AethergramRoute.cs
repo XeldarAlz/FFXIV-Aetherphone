@@ -2,6 +2,14 @@ using Aetherphone.Core.Social;
 
 namespace Aetherphone.Apps.Aethergram;
 
+internal enum AethergramTab
+{
+    Home,
+    Search,
+    Activity,
+    Profile,
+}
+
 internal enum AethergramScreen
 {
     Home,
@@ -9,7 +17,6 @@ internal enum AethergramScreen
     Detail,
     Profile,
     EditProfile,
-    Discover,
     UserList,
 }
 
@@ -21,7 +28,6 @@ internal readonly record struct AethergramRoute(
     public static readonly AethergramRoute Home = new(AethergramScreen.Home);
     public static readonly AethergramRoute Compose = new(AethergramScreen.Compose);
     public static readonly AethergramRoute EditProfile = new(AethergramScreen.EditProfile);
-    public static readonly AethergramRoute Discover = new(AethergramScreen.Discover);
     public static AethergramRoute Detail(string postId) => new(AethergramScreen.Detail, postId);
     public static AethergramRoute Profile(string userId) => new(AethergramScreen.Profile, userId);
 

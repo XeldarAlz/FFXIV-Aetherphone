@@ -39,12 +39,16 @@ internal sealed partial class AethergramApp
         var avatarRadius = 40f * scale;
         var regionCode = user.IsMe ? SocialRegion.EffectiveCode(configuration, gameData) : gameData.RegionCodeForWorld(user.World);
         var metaLine = SocialIdentity.ProfileMeta(user.Handle, regionCode);
+        var timeLine = user.UtcOffsetMinutes is { } offsetMinutes ? SocialTimeZone.Describe(offsetMinutes) : string.Empty;
         var lineGap = 3f * scale;
+        var timeGap = 2f * scale;
         var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
         var metaH = metaLine.Length > 0 ? Typography.Measure(metaLine, 0.95f).Y : 0f;
+        var timeTextH = timeLine.Length > 0 ? Typography.Measure(timeLine, 0.85f).Y : 0f;
+        var timeH = timeLine.Length > 0 ? timeGap + timeTextH : 0f;
         var bioH = user.Bio.Length > 0 ? 8f * scale + Typography.MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
         var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
-        var cardBottom = textTop + nameH + lineGap + metaH + bioH + pad;
+        var cardBottom = textTop + nameH + lineGap + metaH + timeH + bioH + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
         var avatarCenter = new Vector2(innerLeft + avatarRadius, origin.Y + pad + avatarRadius);
         drawList.AddCircleFilled(avatarCenter, avatarRadius + 2.5f * scale,
@@ -82,6 +86,13 @@ internal sealed partial class AethergramApp
             textY += metaH;
         }
 
+        if (timeLine.Length > 0)
+        {
+            textY += timeGap;
+            Typography.Draw(new Vector2(innerLeft, textY), timeLine, AppPalettes.Aethergram.MutedInk, 0.85f);
+            textY += timeTextH;
+        }
+
         if (user.Bio.Length > 0)
         {
             ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
@@ -103,26 +114,7 @@ internal sealed partial class AethergramApp
         }
 
         DrawProfileStats(user);
-        DrawProfileTimeZone(user);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
-    }
-
-    private void DrawProfileTimeZone(UserDto user)
-    {
-        if (user.UtcOffsetMinutes is not { } offset)
-        {
-            return;
-        }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
-        var text = $"{Loc.T(L.Profile.LocalTimeLabel)}  {SocialTimeZone.Describe(offset)}";
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var textSize = Typography.Measure(text, 0.85f);
-        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + textSize.Y * 0.5f), text,
-            AppPalettes.Aethergram.MutedInk, 0.85f);
-        ImGui.Dummy(new Vector2(width, textSize.Y));
     }
 
     private void DrawProfileStats(UserDto user)
@@ -342,15 +334,12 @@ internal sealed partial class AethergramApp
         });
     }
 
-    private void DrawDiscover(Rect area)
+    private void DrawSearchTab(Rect area)
     {
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Aethergram.FindPeople), back);
         var scale = ImGuiHelpers.GlobalScale;
-        var top = area.Min.Y + AppHeader.Height * scale;
         var searchHeight = 52f * scale;
-        DrawSearchBar(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)));
-        var listRect = new Rect(new Vector2(area.Min.X, top + searchHeight), area.Max);
+        DrawSearchBar(new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + searchHeight)));
+        var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + searchHeight), area.Max);
         var snapshot = store.DiscoverResults;
         using (AppSurface.Begin(listRect))
         {
@@ -459,7 +448,29 @@ internal sealed partial class AethergramApp
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var logoSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
-        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f), DisplayName,
-            AppPalettes.Aethergram.TitleInk, 1.3f, FontWeight.Bold);
+        var logoPos = new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f);
+        Typography.Draw(logoPos, DisplayName, AppPalettes.Aethergram.TitleInk, 1.3f, FontWeight.Bold);
+        if (!store.IsSignedIn)
+        {
+            return;
+        }
+
+        var chevronCenter = new Vector2(logoPos.X + logoSize.X + 17f * scale, rowCenterY + 2f * scale);
+        var chevron = scopeMenu.IsOpenFor(ScopeMenuId) ? FontAwesomeIcon.ChevronUp : FontAwesomeIcon.ChevronDown;
+        var anchor = new Rect(new Vector2(logoPos.X, rowCenterY - 12f * scale),
+            chevronCenter + new Vector2(12f * scale, 12f * scale));
+        if (ui.IconButton(chevronCenter, 12f * scale, chevron.ToIconString(), AppPalettes.Aethergram.MutedInk,
+                AppSkin.Transparent, 0.85f))
+        {
+            scopeMenu.Toggle(ScopeMenuId, anchor);
+        }
+
+        var composeCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);
+        if (ui.IconButton(composeCenter, 16f * scale, FontAwesomeIcon.PlusSquare.ToIconString(),
+                AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Aethergram.NewPost),
+                HoverLabelSide.Below))
+        {
+            StartCompose(false);
+        }
     }
 }

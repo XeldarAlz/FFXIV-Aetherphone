@@ -12,6 +12,7 @@ internal enum ChirperScreen
     Discover,
     Thread,
     UserList,
+    Activity,
 }
 
 internal readonly record struct ChirperRoute(
@@ -25,6 +26,7 @@ internal readonly record struct ChirperRoute(
     public static readonly ChirperRoute EditProfile = new(ChirperScreen.EditProfile);
     public static readonly ChirperRoute Avatar = new(ChirperScreen.Avatar);
     public static readonly ChirperRoute Discover = new(ChirperScreen.Discover);
+    public static readonly ChirperRoute Activity = new(ChirperScreen.Activity);
     public static ChirperRoute Profile(string userId) => new(ChirperScreen.Profile, userId);
     public static ChirperRoute Thread(string postId) => new(ChirperScreen.Thread, PostId: postId);
 

@@ -88,12 +88,16 @@ internal sealed partial class ChirperApp
         var avatarRadius = 40f * scale;
         var regionCode = user.IsMe ? SocialRegion.EffectiveCode(configuration, gameData) : gameData.RegionCodeForWorld(user.World);
         var metaLine = SocialIdentity.ProfileMeta(user.Handle, regionCode);
+        var timeLine = user.UtcOffsetMinutes is { } offsetMinutes ? SocialTimeZone.Describe(offsetMinutes) : string.Empty;
         var lineGap = 3f * scale;
+        var timeGap = 2f * scale;
         var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
         var metaH = metaLine.Length > 0 ? Typography.Measure(metaLine, 0.95f).Y : 0f;
+        var timeTextH = timeLine.Length > 0 ? Typography.Measure(timeLine, 0.85f).Y : 0f;
+        var timeH = timeLine.Length > 0 ? timeGap + timeTextH : 0f;
         var bioH = user.Bio.Length > 0 ? 8f * scale + Typography.MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
         var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
-        var cardBottom = textTop + nameH + lineGap + metaH + bioH + pad;
+        var cardBottom = textTop + nameH + lineGap + metaH + timeH + bioH + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
         var avatarCenter = new Vector2(innerLeft + avatarRadius, origin.Y + pad + avatarRadius);
         drawList.AddCircleFilled(avatarCenter, avatarRadius + 2.5f * scale,
@@ -131,6 +135,13 @@ internal sealed partial class ChirperApp
             textY += metaH;
         }
 
+        if (timeLine.Length > 0)
+        {
+            textY += timeGap;
+            Typography.Draw(new Vector2(innerLeft, textY), timeLine, AppPalettes.Chirper.MutedInk, 0.85f);
+            textY += timeTextH;
+        }
+
         if (user.Bio.Length > 0)
         {
             ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
@@ -153,26 +164,7 @@ internal sealed partial class ChirperApp
         }
 
         DrawProfileStats(user);
-        DrawProfileTimeZone(user);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
-    }
-
-    private void DrawProfileTimeZone(UserDto user)
-    {
-        if (user.UtcOffsetMinutes is not { } offset)
-        {
-            return;
-        }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
-        var text = $"{Loc.T(L.Profile.LocalTimeLabel)}  {SocialTimeZone.Describe(offset)}";
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var textSize = Typography.Measure(text, 0.85f);
-        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + textSize.Y * 0.5f), text,
-            AppPalettes.Chirper.MutedInk, 0.85f);
-        ImGui.Dummy(new Vector2(width, textSize.Y));
     }
 
     private void DrawProfileStats(UserDto user)
@@ -333,33 +325,6 @@ internal sealed partial class ChirperApp
             FailedMessage = Loc.T(L.Chirper.DeleteCommentFailed),
             ConfirmAsync = done => store.DeleteComment(postId, commentId, done),
         });
-    }
-
-    private void DrawDeleteCommentTooltip(Vector2 iconCenter, float hitRadius, float scale)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        var tooltipText = Loc.T(L.Chirper.DeleteComment);
-        var textSize = Typography.Measure(tooltipText, 0.78f, FontWeight.Medium);
-        var padX = 9f * scale;
-        var padY = 5f * scale;
-        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
-        var gap = 9f * scale;
-        var windowMin = ImGui.GetWindowPos();
-        var windowMax = windowMin + ImGui.GetWindowSize();
-        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale,
-            windowMax.X - bubbleSize.X - 4f * scale);
-        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
-        if (minY < windowMin.Y + 4f * scale)
-        {
-            minY = iconCenter.Y + hitRadius + gap;
-        }
-
-        var min = new Vector2(minX, minY);
-        var max = min + bubbleSize;
-        var bubble = Palette.WithAlpha(Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f), 0.97f);
-        Squircle.Fill(dl, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(dl, new Vector2(min.X + padX, min.Y + padY), tooltipText, theme.AppBackground, 0.78f,
-            FontWeight.Medium);
     }
 
     private void AskDeletePost(string postId)
@@ -655,28 +620,37 @@ internal sealed partial class ChirperApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        var logoSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
-        Typography.Draw(new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f), DisplayName,
-            AppPalettes.Chirper.TitleInk, 1.3f, FontWeight.Bold);
-        var me = store.Me;
-        var searchCenter = new Vector2(area.Max.X - 22f * scale, rowCenterY);
-        if (me is not null)
+        Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), DisplayName, AppPalettes.Chirper.TitleInk,
+            1.3f, FontWeight.Bold);
+        if (store.Me is { } me)
         {
-            var radius = 14f * scale;
-            var center = new Vector2(area.Max.X - 52f * scale, rowCenterY);
-            DrawAvatar(ImGui.GetWindowDrawList(), center, radius, me.Name, me.World, me.AvatarUrl, 0.85f, 24);
+            var radius = 16f * scale;
+            var center = new Vector2(area.Min.X + 16f * scale + radius, rowCenterY);
+            DrawAvatar(ImGui.GetWindowDrawList(), center, radius, me.Name, me.World, me.AvatarUrl, 0.9f, 28);
             if (UiInteract.HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
             {
                 OpenProfile(me.Id);
             }
         }
 
-        if (ui.IconButton(searchCenter, 14f * scale, FontAwesomeIcon.Search.ToIconString(), AppPalettes.Chirper.BodyInk,
-                new Vector4(0f, 0f, 0f, 0f), 0.95f) && store.IsSignedIn)
+        var searchCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);
+        if (ui.IconButton(searchCenter, 16f * scale, FontAwesomeIcon.Search.ToIconString(), AppPalettes.Chirper.BodyInk,
+                new Vector4(0f, 0f, 0f, 0f), 1.2f, Loc.T(L.Chirper.FindPeople), HoverLabelSide.Below) &&
+            store.IsSignedIn)
         {
             store.ClearDiscover();
             searchDraft = string.Empty;
             router.Push(ChirperRoute.Discover);
         }
+
+        var bellCenter = new Vector2(area.Max.X - 60f * scale, rowCenterY);
+        if (ui.IconButton(bellCenter, 16f * scale, FontAwesomeIcon.Bell.ToIconString(), AppPalettes.Chirper.BodyInk,
+                new Vector4(0f, 0f, 0f, 0f), 1.2f, Loc.T(L.Social.ActivityTitle), HoverLabelSide.Below) &&
+            store.IsSignedIn)
+        {
+            OpenActivity();
+        }
+
+        ActivityBadge.Draw(bellCenter + new Vector2(10f * scale, -10f * scale), social.UnseenCount(Id), theme, scale);
     }
 }

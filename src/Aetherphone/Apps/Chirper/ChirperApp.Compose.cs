@@ -20,44 +20,10 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Chirper;
 
-// The compose flow: the floating compose button and the compose card. The body field wraps and stays
+// The compose flow: the compose card behind the shared ComposeFab. The body field wraps and stays
 // within its limit through the shared SoftWrapField. Split from the main feed for readability.
 internal sealed partial class ChirperApp
 {
-    private void DrawComposeFab(Rect area)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var radius = 26f * scale;
-        var center = new Vector2(area.Max.X - radius - 16f * scale, area.Max.Y - radius - 18f * scale);
-        var drawList = ImGui.GetWindowDrawList();
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
-        drawList.AddCircleFilled(center, radius,
-            ImGui.GetColorU32(hovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent), 32);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        {
-            var glyph = FontAwesomeIcon.Feather.ToIconString();
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f)))
-            {
-                ImGui.TextUnformatted(glyph);
-            }
-        }
-
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                composeFocus = true;
-                router.Push(ChirperRoute.Compose);
-            }
-        }
-    }
-
     private void DrawCompose(Rect area)
     {
         if (composeOutcome == 1)

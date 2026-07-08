@@ -75,6 +75,9 @@ internal sealed class VelvetStore : IDisposable
     private volatile UserDto[] likers = Array.Empty<UserDto>();
     private volatile bool likersLoading;
     private volatile bool likersFailed;
+    private volatile UserDto[] blocked = Array.Empty<UserDto>();
+    private volatile bool loadingBlocked;
+    private volatile bool blockedLoaded;
 
     public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications,
         Configuration configuration)
@@ -193,6 +196,9 @@ internal sealed class VelvetStore : IDisposable
     public UserDto[] Likers => likers;
     public bool LikersLoading => likersLoading;
     public bool LikersFailed => likersFailed;
+    public UserDto[] Blocked => blocked;
+    public bool LoadingBlocked => loadingBlocked;
+    public bool BlockedLoaded => blockedLoaded;
 
     public int UnreadCount
     {
@@ -522,8 +528,38 @@ internal sealed class VelvetStore : IDisposable
 
     public void Block(string userId, Action<bool> onComplete)
     {
+        blockedLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.Blocked);
         work.Run("block", async token => await client.BlockAsync(userId, token).ConfigureAwait(false), onComplete);
+    }
+
+    public void Unblock(string userId)
+    {
+        blocked = CopyOnWrite.RemoveById(blocked, userId);
+        SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
+        work.Run("unblock", async token => await client.UnblockAsync(userId, token).ConfigureAwait(false));
+    }
+
+    public void RefreshBlocked()
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        loadingBlocked = true;
+        work.Run("blocked", async token =>
+        {
+            var page = await client.BlockedUsersAsync(token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                blocked = page.Users;
+            }
+        }, () =>
+        {
+            loadingBlocked = false;
+            blockedLoaded = true;
+        });
     }
 
     public void RefreshThreads()
@@ -936,6 +972,7 @@ internal sealed class VelvetStore : IDisposable
         requestsLoaded = false;
         sentRequestsLoaded = false;
         feedLoaded = false;
+        blockedLoaded = false;
     }
 
     private static VelvetConnectionDto[] RemoveConnection(VelvetConnectionDto[] source, string userId)

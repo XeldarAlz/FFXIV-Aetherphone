@@ -134,8 +134,112 @@ internal sealed partial class VelvetApp
                 }
             }
 
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
+            ui.SectionLabel(Loc.T(L.Velvet.SafetyLabel));
+            ImGui.Dummy(new Vector2(0f, 6f * scale));
+            if (DrawNavRow(Loc.T(L.Velvet.BlockedUsers)))
+            {
+                router.Push(VelvetRoute.Blocked);
+            }
+
             ImGui.Dummy(new Vector2(0f, 30f * scale));
         }
+    }
+
+    private bool DrawNavRow(string label)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = 40f * scale;
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = ImGui.IsMouseHoveringRect(origin, new Vector2(origin.X + width, origin.Y + height));
+        if (hovered)
+        {
+            Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 12f * scale,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)));
+        }
+
+        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y + height * 0.5f - 8f * scale), label,
+            theme.TextStrong, 0.95f);
+        AppSkin.Icon(new Vector2(origin.X + width - 12f * scale, origin.Y + height * 0.5f),
+            FontAwesomeIcon.ChevronRight.ToIconString(), AppPalettes.Velvet.MutedInk, 0.72f);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+        return UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + height));
+    }
+
+    private void DrawBlocked(Rect area)
+    {
+        var context = new PhoneContext(area, theme, navigation);
+        AppHeader.Draw(context, Loc.T(L.Velvet.BlockedUsers), back);
+        var scale = ImGuiHelpers.GlobalScale;
+        var top = area.Min.Y + AppHeader.Height * scale;
+        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+        if (!store.BlockedLoaded && !store.LoadingBlocked)
+        {
+            store.RefreshBlocked();
+        }
+
+        var list = store.Blocked;
+        using (AppSurface.Begin(body))
+        {
+            if (list.Length == 0)
+            {
+                var message = store.LoadingBlocked ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.BlockedEmpty);
+                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale), message,
+                    AppPalettes.Velvet.MutedInk);
+            }
+            else
+            {
+                ImGui.Dummy(new Vector2(0f, 6f * scale));
+                for (var index = 0; index < list.Length; index++)
+                {
+                    DrawBlockedRow(list[index]);
+                }
+
+                ImGui.Dummy(new Vector2(0f, 16f * scale));
+            }
+        }
+    }
+
+    private void DrawBlockedRow(UserDto user)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var rowHeight = 60f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var radius = 20f * scale;
+        var avatarCenter = new Vector2(origin.X + radius, origin.Y + rowHeight * 0.5f);
+        AvatarView.Draw(ImGui.GetWindowDrawList(), avatarCenter, radius, Accent, Monogram(user.DisplayName, user.Handle),
+            0.95f, lodestone.Remote(user.Id, ToUri(user.AvatarUrl)), 32);
+        var textLeft = origin.X + radius * 2f + 12f * scale;
+        var displayName = string.IsNullOrEmpty(user.DisplayName) ? user.Handle : user.DisplayName;
+        Typography.Draw(new Vector2(textLeft, origin.Y + 11f * scale), displayName, theme.TextStrong, 1f,
+            FontWeight.SemiBold);
+        if (user.Handle.Length > 0)
+        {
+            Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), $"@{user.Handle}", AppPalettes.Velvet.MutedInk,
+                0.82f);
+        }
+
+        var label = Loc.T(L.Velvet.Unblock);
+        var buttonHeight = 30f * scale;
+        var buttonWidth = MathF.Max(92f * scale, Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 24f * scale);
+        var buttonMin = new Vector2(origin.X + width - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f);
+        var buttonRect = new Rect(buttonMin, new Vector2(buttonMin.X + buttonWidth, buttonMin.Y + buttonHeight));
+        if (ui.PillButton(buttonRect, label, false))
+        {
+            store.Unblock(user.Id);
+        }
+
+        if (UiInteract.HoverClick(origin, new Vector2(buttonMin.X - 6f * scale, origin.Y + rowHeight)))
+        {
+            OpenProfile(user.Id);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, rowHeight));
     }
 
     private void DrawEditProfile(Rect area)

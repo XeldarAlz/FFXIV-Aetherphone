@@ -64,6 +64,7 @@ internal sealed partial class VelvetApp : IPhoneApp
     private readonly GameData gameData;
     private readonly PhotoLibrary library;
     private readonly AppSkin ui = new(AppPalettes.Velvet);
+    private readonly PhotoViewerOverlay photoViewer = new();
     private readonly VelvetAvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly VelvetReportControl report;
@@ -75,8 +76,7 @@ internal sealed partial class VelvetApp : IPhoneApp
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private VelvetTab activeTab = VelvetTab.Hub;
-    private VelvetHubView hubView = VelvetHubView.Timeline;
-    private float hubSegmentAnim;
+    private bool timelineMineOnly;
     private string discoverQuery = string.Empty;
     private string discoverApplied = string.Empty;
     private float discoverDebounce;
@@ -114,25 +114,34 @@ internal sealed partial class VelvetApp : IPhoneApp
     private float sinceThreadPoll;
     private float sinceTypingSend = TypingSendSeconds;
     private string lastTypingDraft = string.Empty;
-    private readonly List<BubbleEntrance> threadEntrances = new();
-    private string? entranceThreadId;
-    private int entranceSettled;
-    private bool entrancePrimed;
-    private string? followThreadId;
-    private bool followThreadBottom;
-    private bool snapThreadToBottom;
-    private float typingReveal;
-    private float typingPhase;
+    private readonly ChatTranscript transcript = new();
+    private VelvetMessageDto[] transcriptSource = Array.Empty<VelvetMessageDto>();
+    private TranscriptMessage[] transcriptCache = Array.Empty<TranscriptMessage>();
+    private Func<string, string?>? threadMediaUrl;
+    private Action<string>? onThreadImageClick;
     private string? imageViewId;
     private volatile int imageSaveOutcome;
     private volatile bool imageSaveBusy;
+    private const string FilterMenuId = "timelineFilter";
     private string commentsPostId = string.Empty;
     private string commentDraft = string.Empty;
     private bool sentExpanded;
+    private readonly SocialNotificationService social;
+    private readonly DropdownMenu filterMenu = new();
+    private readonly DropdownMenu postMenu = new();
+    private readonly DropdownMenu threadMenu = new();
+    private readonly DropdownMenu.Item[] filterItems = new DropdownMenu.Item[2];
+    private readonly DropdownMenu.Item[] postItems = new DropdownMenu.Item[2];
+    private readonly DropdownMenu.Item[] threadItems = new DropdownMenu.Item[1];
+    private readonly Action<NotificationDto> openActivityActor;
+    private readonly Action<NotificationDto> openActivityPost;
+    private VelvetPostDto? menuPost;
+    private string? menuThreadId;
 
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
-        NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData)
+        NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
+        SocialNotificationService social)
     {
         store = new VelvetStore(session, client, notifications, configuration);
         this.launcher = launcher;
@@ -146,17 +155,19 @@ internal sealed partial class VelvetApp : IPhoneApp
         report = new VelvetReportControl(store);
         this.images = images;
         this.http = http;
+        this.social = social;
         router = new ViewRouter<VelvetRoute>(VelvetRoute.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();
+        openActivityActor = item => OpenProfile(item.ActorId);
+        openActivityPost = item => OpenPostFromActivity(item.PostId!);
     }
 
     public void OnOpened()
     {
         router.Reset();
         activeTab = VelvetTab.Hub;
-        hubView = VelvetHubView.Timeline;
-        hubSegmentAnim = 0f;
+        timelineMineOnly = false;
         discoverQuery = string.Empty;
         discoverApplied = string.Empty;
         discoverDebounce = 0f;
@@ -170,7 +181,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         if (launcher.TryConsume(out var targetUserId) && GateAccepted && configuration.VelvetOnboarded &&
             store.IsSignedIn)
         {
-            activeTab = VelvetTab.Messages;
+            router.Push(VelvetRoute.Messages);
             OpenThreadWith(targetUserId);
         }
 
@@ -224,8 +235,17 @@ internal sealed partial class VelvetApp : IPhoneApp
 
         store.EnsureMe();
         TickHeartbeat();
+        filterMenu.Gate();
+        postMenu.Gate();
+        threadMenu.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
+        if (photoViewer.Active)
+        {
+            photoViewer.Draw(screen, theme);
+            return;
+        }
+
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
@@ -246,6 +266,12 @@ internal sealed partial class VelvetApp : IPhoneApp
                 break;
             case VelvetScreen.Settings:
                 DrawSettings(area);
+                break;
+            case VelvetScreen.Blocked:
+                DrawBlocked(area);
+                break;
+            case VelvetScreen.Messages:
+                DrawMessagesScreen(area);
                 break;
             case VelvetScreen.Thread:
                 DrawThread(area, route.Id!);
@@ -290,8 +316,11 @@ internal sealed partial class VelvetApp : IPhoneApp
         DrawRootHeader(headerRect);
         switch (activeTab)
         {
-            case VelvetTab.Messages:
-                DrawMessages(contentArea);
+            case VelvetTab.Discover:
+                DrawDiscoverTab(contentArea);
+                break;
+            case VelvetTab.Activity:
+                DrawActivityTab(contentArea);
                 break;
             case VelvetTab.Me:
                 DrawMe(contentArea);
@@ -302,17 +331,47 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
 
         DrawBottomNav(navRect);
+        DrawFilterMenu(area);
+        DrawVelvetPostMenu(area);
     }
 
     private void DrawRootHeader(Rect area)
     {
+        var scale = ImGuiHelpers.GlobalScale;
         var title = activeTab switch
         {
-            VelvetTab.Messages => Loc.T(L.Velvet.Messages),
+            VelvetTab.Discover => Loc.T(L.Velvet.TabDiscover),
+            VelvetTab.Activity => Loc.T(L.Social.ActivityTitle),
+            VelvetTab.Me => Loc.T(L.Velvet.TabMe),
             _ => Loc.T(L.Apps.Velvet),
         };
         Typography.DrawCentered(new Vector2(area.Center.X, area.Center.Y), title, AppPalettes.Velvet.TitleInk, 1.2f,
             FontWeight.SemiBold);
+        if (activeTab == VelvetTab.Hub)
+        {
+            var titleWidth = Typography.Measure(title, 1.2f, FontWeight.SemiBold).X;
+            var chevronCenter = new Vector2(area.Center.X + titleWidth * 0.5f + 17f * scale,
+                area.Center.Y + 2f * scale);
+            var chevron = filterMenu.IsOpenFor(FilterMenuId) ? FontAwesomeIcon.ChevronUp : FontAwesomeIcon.ChevronDown;
+            var anchor = new Rect(chevronCenter - new Vector2(12f * scale, 12f * scale),
+                chevronCenter + new Vector2(12f * scale, 12f * scale));
+            if (ui.IconButton(chevronCenter, 12f * scale, chevron.ToIconString(), AppPalettes.Velvet.MutedInk,
+                    AppSkin.Transparent, 0.85f))
+            {
+                filterMenu.Toggle(FilterMenuId, anchor);
+            }
+        }
+
+        var messagesCenter = new Vector2(area.Max.X - 24f * scale, area.Center.Y);
+        if (ui.IconButton(messagesCenter, 16f * scale, FontAwesomeIcon.Comment.ToIconString(),
+                AppPalettes.Velvet.BodyInk, AppSkin.Transparent, 1.2f, Loc.T(L.Velvet.Messages),
+                HoverLabelSide.Below))
+        {
+            router.Push(VelvetRoute.Messages);
+        }
+
+        ActivityBadge.Draw(messagesCenter + new Vector2(10f * scale, -10f * scale),
+            store.UnreadCount + store.RequestCount, theme, scale);
     }
 
     private void DrawBottomNav(Rect nav)
@@ -321,13 +380,15 @@ internal sealed partial class VelvetApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddLine(nav.Min, new Vector2(nav.Max.X, nav.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
             1f);
-        var width = nav.Width / 3f;
-        DrawNavItem(new Rect(nav.Min, new Vector2(nav.Min.X + width, nav.Max.Y)), FontAwesomeIcon.Compass,
-            Loc.T(L.Velvet.TabHub), VelvetTab.Hub, 0);
+        var width = nav.Width / 4f;
+        DrawNavItem(new Rect(nav.Min, new Vector2(nav.Min.X + width, nav.Max.Y)), FontAwesomeIcon.Home,
+            Loc.T(L.Velvet.TabHome), VelvetTab.Hub, 0);
         DrawNavItem(new Rect(new Vector2(nav.Min.X + width, nav.Min.Y), new Vector2(nav.Min.X + width * 2f, nav.Max.Y)),
-            FontAwesomeIcon.Comment, Loc.T(L.Velvet.Messages), VelvetTab.Messages,
-            store.UnreadCount + store.RequestCount);
-        DrawNavItem(new Rect(new Vector2(nav.Min.X + width * 2f, nav.Min.Y), nav.Max), FontAwesomeIcon.User,
+            FontAwesomeIcon.Compass, Loc.T(L.Velvet.TabDiscover), VelvetTab.Discover, 0);
+        DrawNavItem(new Rect(new Vector2(nav.Min.X + width * 2f, nav.Min.Y),
+                new Vector2(nav.Min.X + width * 3f, nav.Max.Y)), FontAwesomeIcon.Bell, Loc.T(L.Social.ActivityTab),
+            VelvetTab.Activity, social.UnseenCount(Id));
+        DrawNavItem(new Rect(new Vector2(nav.Min.X + width * 3f, nav.Min.Y), nav.Max), FontAwesomeIcon.User,
             Loc.T(L.Velvet.TabMe), VelvetTab.Me, 0);
     }
 
@@ -337,7 +398,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         var active = activeTab == tab;
         var color = active ? new Vector4(0.99f, 0.72f, 0.82f, 1f) : AppPalettes.Velvet.MutedInk;
         var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + 20f * scale);
-        AppSkin.Icon(iconCenter, icon.ToIconString(), color, 1.05f);
+        AppSkin.Icon(iconCenter, icon.ToIconString(), color, 1.2f);
         Typography.DrawCentered(new Vector2(rect.Center.X, rect.Min.Y + 42f * scale), label, color, 0.72f,
             active ? FontWeight.SemiBold : FontWeight.Regular);
         if (badge > 0)
@@ -350,43 +411,101 @@ internal sealed partial class VelvetApp : IPhoneApp
 
         if (UiInteract.HoverClick(rect.Min, rect.Max))
         {
-            activeTab = tab;
+            SelectTab(tab);
+        }
+    }
+
+    private void SelectTab(VelvetTab tab)
+    {
+        activeTab = tab;
+        filterMenu.Close();
+        postMenu.Close();
+        if (tab == VelvetTab.Activity)
+        {
+            social.RefreshNow();
+            social.MarkSeen(Id);
         }
     }
 
     private void DrawHub(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
         if (!store.FeedLoaded && !store.LoadingFeed)
         {
             store.RefreshFeed();
         }
 
+        DrawTimeline(area);
+        if (ComposeFab.Draw(area, "##velvetComposeFab", AppPalettes.Velvet.Accent,
+                FontAwesomeIcon.Plus.ToIconString(), Loc.T(L.Velvet.NewPost)))
+        {
+            post.Open();
+            router.Push(VelvetRoute.Compose);
+        }
+    }
+
+    private void DrawDiscoverTab(Rect area)
+    {
         if (!store.DiscoverLoaded && !store.LoadingDiscover)
         {
             store.RefreshDiscover(lookingForFilter, discoverApplied);
         }
 
-        var segmentHeight = 38f * scale;
-        var segmentRect = new Rect(new Vector2(area.Min.X + 16f * scale, area.Min.Y + 8f * scale),
-            new Vector2(area.Max.X - 16f * scale, area.Min.Y + 8f * scale + segmentHeight));
-        var selected = SegmentSlider.Draw(segmentRect, Loc.T(L.Velvet.TabTimeline), Loc.T(L.Velvet.TabDiscover),
-            hubView == VelvetHubView.Discover ? 1 : 0, ref hubSegmentAnim, Accent, AppPalettes.Velvet.MutedInk);
-        hubView = selected == 1 ? VelvetHubView.Discover : VelvetHubView.Timeline;
-        var bodyRect = new Rect(new Vector2(area.Min.X, segmentRect.Max.Y + 8f * scale), area.Max);
-        if (hubView == VelvetHubView.Discover)
+        DrawDiscover(area);
+    }
+
+    private void DrawActivityTab(Rect area)
+    {
+        SocialActivityList.Draw(area, ui, AppPalettes.Velvet, theme, social.Latest, Id, images, lodestone,
+            openActivityActor, openActivityPost);
+    }
+
+    private void OpenPostFromActivity(string postId)
+    {
+        store.EnsurePost(postId);
+        router.Push(VelvetRoute.PostDetail(postId));
+    }
+
+    private void DrawFilterMenu(Rect area)
+    {
+        if (!filterMenu.IsOpenFor(FilterMenuId))
         {
-            DrawDiscover(bodyRect);
+            return;
         }
-        else
+
+        filterItems[0] = new DropdownMenu.Item(Loc.T(L.Velvet.AllPosts), Selected: !timelineMineOnly);
+        filterItems[1] = new DropdownMenu.Item(Loc.T(L.Velvet.MyPosts), Selected: timelineMineOnly);
+        var picked = filterMenu.Draw(area, theme, filterItems);
+        if (picked >= 0)
         {
-            DrawTimeline(bodyRect);
-            if (ComposeFab.Draw(area, ui, "##velvetComposeFab", AppPalettes.Velvet.Accent,
-                    FontAwesomeIcon.Plus.ToIconString(), Loc.T(L.Velvet.NewPost)))
-            {
-                post.Open();
-                router.Push(VelvetRoute.Compose);
-            }
+            timelineMineOnly = picked == 1;
+        }
+    }
+
+    private void DrawVelvetPostMenu(Rect area)
+    {
+        if (menuPost is not { } shown || !postMenu.IsOpenFor(shown.Id))
+        {
+            return;
+        }
+
+        var mine = store.Me is { } me && me.UserId == shown.OwnerId;
+        postItems[0] = new DropdownMenu.Item(Loc.T(L.Velvet.ViewProfile), FontAwesomeIcon.User.ToIconString());
+        postItems[1] = mine
+            ? new DropdownMenu.Item(Loc.T(L.Velvet.DeleteConfirm), FontAwesomeIcon.Trash.ToIconString(), true)
+            : new DropdownMenu.Item(Loc.T(L.Velvet.ReportSubmit), FontAwesomeIcon.Flag.ToIconString(), true);
+        var picked = postMenu.Draw(area, theme, postItems);
+        if (picked == 0)
+        {
+            OpenProfile(shown.OwnerId);
+        }
+        else if (picked == 1 && mine)
+        {
+            AskDeletePost(shown.Id);
+        }
+        else if (picked == 1)
+        {
+            report.Arm("post", shown.Id);
+            router.Push(VelvetRoute.PostDetail(shown.Id));
         }
     }
 
@@ -394,10 +513,21 @@ internal sealed partial class VelvetApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var feed = store.Feed;
-        if (feed.Length == 0)
+        var meId = store.Me?.UserId;
+        var visible = 0;
+        for (var index = 0; index < feed.Length; index++)
+        {
+            if (TimelineShows(feed[index], meId))
+            {
+                visible++;
+            }
+        }
+
+        if (visible == 0)
         {
             DrawHubEmpty(area, FontAwesomeIcon.Camera,
-                Loc.T(store.LoadingFeed ? L.Common.Loading : L.Velvet.FeedEmpty));
+                Loc.T(store.LoadingFeed ? L.Common.Loading :
+                    timelineMineOnly ? L.Velvet.MyPostsEmpty : L.Velvet.FeedEmpty));
             return;
         }
 
@@ -406,12 +536,18 @@ internal sealed partial class VelvetApp : IPhoneApp
             ImGui.Dummy(new Vector2(0f, 4f * scale));
             for (var index = 0; index < feed.Length; index++)
             {
-                DrawPostCard(feed[index]);
+                if (TimelineShows(feed[index], meId))
+                {
+                    DrawPostCard(feed[index]);
+                }
             }
 
             ImGui.Dummy(new Vector2(0f, 96f * scale));
         }
     }
+
+    private bool TimelineShows(VelvetPostDto shown, string? meId) =>
+        !timelineMineOnly || (meId is not null && shown.OwnerId == meId);
 
     private void DrawPostCard(VelvetPostDto post)
     {
@@ -428,9 +564,9 @@ internal sealed partial class VelvetApp : IPhoneApp
         var imageSize = innerWidth;
         var imageBottom = imageTop + imageSize;
         var actionsTop = imageBottom + 12f * scale;
-        var actionsHeight = 20f * scale;
+        var actionsHeight = 24f * scale;
         var textTop = actionsTop + actionsHeight + 12f * scale;
-        var captionHeight = post.Caption.Length > 0 ? Typography.MeasureWrapped(post.Caption, innerWidth, 0.9f) + 8f * scale : 0f;
+        var captionHeight = post.Caption.Length > 0 ? Typography.MeasureWrapped(post.Caption, innerWidth, 0.95f) + 8f * scale : 0f;
         var tagsHeight = post.Tags.Length > 0 ? 24f * scale : 0f;
         var cardBottom = textTop + captionHeight + tagsHeight + pad;
         var cardHeight = cardBottom - origin.Y;
@@ -443,16 +579,26 @@ internal sealed partial class VelvetApp : IPhoneApp
             1f, lodestone.Remote(post.OwnerId, ToUri(post.OwnerAvatarUrl)), 40);
         var nameLeft = avatarCenter.X + avatarRadius + 10f * scale;
         var displayName = string.IsNullOrEmpty(post.OwnerDisplayName) ? post.OwnerHandle : post.OwnerDisplayName;
-        Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 2f * scale), displayName, theme.TextStrong, 0.92f,
+        Typography.Draw(new Vector2(nameLeft, origin.Y + pad), displayName, theme.TextStrong, 1f,
             FontWeight.SemiBold);
         var handleText = post.OwnerHandle.Length > 0 ? $"@{post.OwnerHandle}" : string.Empty;
         var timeText = TimeText.Short(post.CreatedAtUnix);
         var sub = handleText.Length > 0 ? $"{handleText} · {timeText}" : timeText;
-        Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), sub, AppPalettes.Velvet.MutedInk, 0.76f);
+        Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), sub, AppPalettes.Velvet.MutedInk, 0.85f);
         if (UiInteract.HoverClick(new Vector2(innerX, origin.Y + pad),
-                new Vector2(origin.X + width - pad, origin.Y + pad + headerBlock)))
+                new Vector2(origin.X + width - pad - 28f * scale, origin.Y + pad + headerBlock)))
         {
             OpenProfile(post.OwnerId);
+        }
+
+        var moreCenter = new Vector2(origin.X + width - pad - 6f * scale, avatarCenter.Y);
+        var moreRadius = 14f * scale;
+        if (ui.IconButton(moreCenter, moreRadius, FontAwesomeIcon.EllipsisH.ToIconString(), AppPalettes.Velvet.BodyInk,
+                AppSkin.Transparent, 1f, Loc.T(L.Velvet.More)))
+        {
+            menuPost = post;
+            postMenu.Toggle(post.Id, new Rect(moreCenter - new Vector2(moreRadius, moreRadius),
+                moreCenter + new Vector2(moreRadius, moreRadius)));
         }
 
         DrawPostThumbnail(post, new Vector2(innerX, imageTop), new Vector2(innerX + imageSize, imageBottom), scale);
@@ -463,49 +609,37 @@ internal sealed partial class VelvetApp : IPhoneApp
 
         var liked = post.MyReaction >= 0;
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
-        var heartCenter = new Vector2(innerX + 11f * scale, actionCenterY);
-        if (ui.IconButton(heartCenter, 12f * scale, FontAwesomeIcon.Heart.ToIconString(),
-                liked ? theme.Danger : AppPalettes.Velvet.BodyInk, AppSkin.Transparent, 1f, Loc.T(L.Velvet.Like)))
+        var heartCenter = new Vector2(innerX + 13f * scale, actionCenterY);
+        if (ui.IconButton(heartCenter, 15f * scale, FontAwesomeIcon.Heart.ToIconString(),
+                liked ? theme.Danger : AppPalettes.Velvet.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Velvet.Like)))
         {
             store.ToggleReaction(post, 0);
         }
 
-        var cursorX = heartCenter.X + 16f * scale;
+        var cursorX = heartCenter.X + 20f * scale;
         if (post.TotalReactions > 0)
         {
             var likeText = post.TotalReactions.ToString(Loc.Culture);
-            Typography.Draw(new Vector2(cursorX, actionCenterY - 7f * scale), likeText, AppPalettes.Velvet.BodyInk, 0.82f,
+            Typography.Draw(new Vector2(cursorX, actionCenterY - 8f * scale), likeText, AppPalettes.Velvet.BodyInk, 0.9f,
                 FontWeight.Medium);
-            cursorX += Typography.Measure(likeText, 0.82f, FontWeight.Medium).X + 14f * scale;
+            cursorX += Typography.Measure(likeText, 0.9f, FontWeight.Medium).X + 14f * scale;
         }
         else
         {
             cursorX += 6f * scale;
         }
 
-        var commentCenter = new Vector2(cursorX + 11f * scale, actionCenterY);
-        if (ui.IconButton(commentCenter, 12f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Velvet.BodyInk,
-                AppSkin.Transparent, 0.95f, Loc.T(L.Velvet.Comment)))
+        var commentCenter = new Vector2(cursorX + 13f * scale, actionCenterY);
+        if (ui.IconButton(commentCenter, 15f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Velvet.BodyInk,
+                AppSkin.Transparent, 1.2f, Loc.T(L.Velvet.Comment)))
         {
             router.Push(VelvetRoute.PostDetail(post.Id));
         }
 
         if (post.CommentCount > 0)
         {
-            Typography.Draw(new Vector2(commentCenter.X + 16f * scale, actionCenterY - 7f * scale),
-                post.CommentCount.ToString(Loc.Culture), AppPalettes.Velvet.BodyInk, 0.82f, FontWeight.Medium);
-        }
-
-        var mine = store.Me is { } me && me.UserId == post.OwnerId;
-        if (mine)
-        {
-            var deleteCenter = new Vector2(origin.X + width - pad - 12f * scale, actionCenterY);
-            var deleteBackground = Palette.WithAlpha(ui.Theme.Danger, 0.16f);
-            if (ui.IconButton(deleteCenter, 12f * scale, FontAwesomeIcon.Trash.ToIconString(), ui.Theme.Danger,
-                    deleteBackground, 0.85f, Loc.T(L.Velvet.DeleteConfirm)))
-            {
-                AskDeletePost(post.Id);
-            }
+            Typography.Draw(new Vector2(commentCenter.X + 20f * scale, actionCenterY - 8f * scale),
+                post.CommentCount.ToString(Loc.Culture), AppPalettes.Velvet.BodyInk, 0.9f, FontWeight.Medium);
         }
 
         var y = textTop;
@@ -514,7 +648,7 @@ internal sealed partial class VelvetApp : IPhoneApp
             ImGui.SetCursorScreenPos(new Vector2(innerX, y));
             ImGui.PushTextWrapPos(innerX + innerWidth);
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.BodyInk))
-            using (Plugin.Fonts.Push(0.9f))
+            using (Plugin.Fonts.Push(0.95f))
             {
                 ImGui.TextWrapped(post.Caption);
             }
@@ -805,6 +939,42 @@ internal sealed partial class VelvetApp : IPhoneApp
         ImGui.Dummy(new Vector2(visibleWidth, trackY + 8f * scale - origin.Y));
     }
 
+    private void DrawMessagesScreen(Rect area)
+    {
+        var context = new PhoneContext(area, theme, navigation);
+        AppHeader.Draw(context, Loc.T(L.Velvet.Messages), back);
+        var top = area.Min.Y + AppHeader.Height * ImGuiHelpers.GlobalScale;
+        DrawMessages(new Rect(new Vector2(area.Min.X, top), area.Max));
+        DrawThreadMenu(area);
+    }
+
+    private void DrawThreadMenu(Rect area)
+    {
+        if (menuThreadId is not { } threadId || !threadMenu.IsOpenFor(threadId))
+        {
+            return;
+        }
+
+        var pinned = configuration.VelvetPinnedThreads.Contains(threadId);
+        threadItems[0] = new DropdownMenu.Item(Loc.T(pinned ? L.Velvet.Unpin : L.Velvet.Pin),
+            FontAwesomeIcon.Thumbtack.ToIconString());
+        if (threadMenu.Draw(area, theme, threadItems) != 0)
+        {
+            return;
+        }
+
+        if (pinned)
+        {
+            configuration.VelvetPinnedThreads.Remove(threadId);
+        }
+        else
+        {
+            configuration.VelvetPinnedThreads.Add(threadId);
+        }
+
+        configuration.Save();
+    }
+
     private void DrawMessages(Rect area)
     {
         if (!store.RequestsLoaded && !store.LoadingRequests)
@@ -869,7 +1039,18 @@ internal sealed partial class VelvetApp : IPhoneApp
             {
                 for (var index = 0; index < threads.Length; index++)
                 {
-                    DrawThreadRow(threads[index]);
+                    if (configuration.VelvetPinnedThreads.Contains(threads[index].OtherUserId))
+                    {
+                        DrawThreadRow(threads[index], true);
+                    }
+                }
+
+                for (var index = 0; index < threads.Length; index++)
+                {
+                    if (!configuration.VelvetPinnedThreads.Contains(threads[index].OtherUserId))
+                    {
+                        DrawThreadRow(threads[index], false);
+                    }
                 }
             }
 
@@ -935,30 +1116,20 @@ internal sealed partial class VelvetApp : IPhoneApp
                 ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.04f)));
         }
 
-        var label = $"{Loc.T(L.Velvet.SentRequests)} ({requests.Length})".ToUpperInvariant();
+        AppSkin.Icon(new Vector2(origin.X + 8f * scale, centerY), FontAwesomeIcon.PaperPlane.ToIconString(),
+            AppPalettes.Velvet.HeaderInk, 0.68f);
+        var label = Loc.T(L.Velvet.SentRequests).ToUpperInvariant();
         var labelSize = Typography.Measure(label, 0.78f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(origin.X + 2f * scale, centerY - labelSize.Y * 0.5f), label,
+        Typography.Draw(new Vector2(origin.X + 22f * scale, centerY - labelSize.Y * 0.5f), label,
             AppPalettes.Velvet.HeaderInk, 0.78f, FontWeight.SemiBold);
 
         var chevronCenter = new Vector2(origin.X + width - 10f * scale, centerY);
         var chevron = sentExpanded ? FontAwesomeIcon.ChevronUp : FontAwesomeIcon.ChevronDown;
         AppSkin.Icon(chevronCenter, chevron.ToIconString(), AppPalettes.Velvet.MutedInk, 0.72f);
-
-        if (!sentExpanded)
-        {
-            var stackRadius = 13f * scale;
-            var stackStep = stackRadius * 1.15f;
-            var stackCount = Math.Min(requests.Length, 3);
-            var rightmostX = chevronCenter.X - 22f * scale - stackRadius;
-            for (var index = stackCount - 1; index >= 0; index--)
-            {
-                var request = requests[index];
-                var center = new Vector2(rightmostX - (stackCount - 1 - index) * stackStep, centerY);
-                drawList.AddCircleFilled(center, stackRadius + 2f * scale, ImGui.GetColorU32(theme.AppBackground), 28);
-                AvatarView.Draw(drawList, center, stackRadius, Accent, Monogram(request.DisplayName, request.Handle),
-                    0.78f, lodestone.Remote(request.UserId, ToUri(request.AvatarUrl)), 28);
-            }
-        }
+        var countText = requests.Length.ToString(Loc.Culture);
+        var countSize = Typography.Measure(countText, 0.78f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(chevronCenter.X - 14f * scale - countSize.X, centerY - countSize.Y * 0.5f),
+            countText, AppPalettes.Velvet.MutedInk, 0.78f, FontWeight.SemiBold);
 
         if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
         {
@@ -1033,7 +1204,7 @@ internal sealed partial class VelvetApp : IPhoneApp
                 connection.Presence);
             var name = string.IsNullOrEmpty(connection.DisplayName) ? connection.Handle : connection.DisplayName;
             Typography.DrawCentered(new Vector2(center.X, origin.Y + radius * 2f + 10f * scale),
-                UiText.Truncate(name, 8), AppPalettes.Velvet.MutedInk, 0.72f);
+                UiText.Truncate(name, 8), AppPalettes.Velvet.MutedInk, 0.78f);
             if (UiInteract.HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
             {
                 OpenThreadWith(connection.UserId);

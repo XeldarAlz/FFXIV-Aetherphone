@@ -61,6 +61,8 @@ internal sealed partial class VelvetApp
             store.OpenComments(postId);
         }
 
+        var composerHeight = 52f * scale;
+        body = new Rect(body.Min, new Vector2(body.Max.X, body.Max.Y - composerHeight));
         using (AppSurface.Begin(body))
         {
             var origin = ImGui.GetCursorScreenPos();
@@ -102,23 +104,29 @@ internal sealed partial class VelvetApp
             var imageRect = new Rect(new Vector2(origin.X, origin.Y + headerHeight),
                 new Vector2(origin.X + width, origin.Y + headerHeight + width));
             DrawPostThumbnail(post, imageRect.Min, imageRect.Max, scale);
+            if (!string.IsNullOrEmpty(post.MediaUrl) && UiInteract.HoverClick(imageRect.Min, imageRect.Max))
+            {
+                var mediaUrl = post.MediaUrl;
+                photoViewer.Open(() => images.Get(mediaUrl));
+            }
+
             var actionsY = imageRect.Max.Y + 22f * scale;
             var liked = post.MyReaction >= 0;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
-            if (ui.IconButton(heartCenter, 13f * scale, FontAwesomeIcon.Heart.ToIconString(),
-                    liked ? theme.Danger : AppPalettes.Velvet.BodyInk, new Vector4(0f, 0f, 0f, 0f), 1.1f, Loc.T(L.Velvet.Like)))
+            if (ui.IconButton(heartCenter, 15f * scale, FontAwesomeIcon.Heart.ToIconString(),
+                    liked ? theme.Danger : AppPalettes.Velvet.BodyInk, new Vector4(0f, 0f, 0f, 0f), 1.25f, Loc.T(L.Velvet.Like)))
             {
                 store.ToggleReaction(post, 0);
             }
 
-            var actionCursorX = heartCenter.X + 16f * scale;
+            var actionCursorX = heartCenter.X + 20f * scale;
             if (post.TotalReactions > 0)
             {
                 var likeText = post.TotalReactions.ToString(Loc.Culture);
-                var likeSize = Typography.Measure(likeText, 0.85f, FontWeight.Medium);
-                var likePos = new Vector2(actionCursorX, actionsY - 7f * scale);
-                var likeHovered = ImGui.IsMouseHoveringRect(likePos, likePos + likeSize);
-                Typography.Draw(likePos, likeText, likeHovered ? theme.Accent : AppPalettes.Velvet.BodyInk, 0.85f,
+                var likeSize = Typography.Measure(likeText, 0.9f, FontWeight.Medium);
+                var likePos = new Vector2(actionCursorX, actionsY - 8f * scale);
+                var likeHovered = UiInteract.Hover(likePos, likePos + likeSize);
+                Typography.Draw(likePos, likeText, likeHovered ? theme.Accent : AppPalettes.Velvet.BodyInk, 0.9f,
                     FontWeight.Medium);
                 if (likeHovered)
                 {
@@ -136,19 +144,14 @@ internal sealed partial class VelvetApp
                 actionCursorX += 6f * scale;
             }
 
-            var commentCenter = new Vector2(actionCursorX + 12f * scale, actionsY);
-            AppSkin.Icon(commentCenter, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Velvet.BodyInk, 1.02f);
-            if (ImGui.IsMouseHoveringRect(commentCenter - new Vector2(12f * scale, 12f * scale),
-                    commentCenter + new Vector2(12f * scale, 12f * scale)))
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                ui.DrawActionTooltip(commentCenter, 12f * scale, Loc.T(L.Velvet.Comment));
-            }
-
+            var commentCenter = new Vector2(actionCursorX + 13f * scale, actionsY);
+            AppSkin.Icon(commentCenter, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Velvet.BodyInk, 1.2f);
+            HoverTooltip.Show(new Rect(commentCenter - new Vector2(14f * scale, 14f * scale),
+                commentCenter + new Vector2(14f * scale, 14f * scale)), Loc.T(L.Velvet.Comment), HoverLabelSide.Above);
             if (post.CommentCount > 0)
             {
-                Typography.Draw(new Vector2(commentCenter.X + 16f * scale, actionsY - 7f * scale),
-                    post.CommentCount.ToString(Loc.Culture), AppPalettes.Velvet.BodyInk, 0.85f, FontWeight.Medium);
+                Typography.Draw(new Vector2(commentCenter.X + 20f * scale, actionsY - 8f * scale),
+                    post.CommentCount.ToString(Loc.Culture), AppPalettes.Velvet.BodyInk, 0.9f, FontWeight.Medium);
             }
 
             var mine = store.Me is { } me && me.UserId == post.OwnerId;
@@ -195,12 +198,14 @@ internal sealed partial class VelvetApp
                 DrawTagChips(post.Tags);
             }
 
-            DrawComments(post.Id, width, scale);
+            DrawComments(width, scale);
             ImGui.Dummy(new Vector2(0f, 20f * scale));
         }
+
+        DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), postId);
     }
 
-    private void DrawComments(string postId, float width, float scale)
+    private void DrawComments(float width, float scale)
     {
         ImGui.Dummy(new Vector2(0f, 10f * scale));
         var linePos = ImGui.GetCursorScreenPos();
@@ -232,9 +237,6 @@ internal sealed partial class VelvetApp
                 }
             }
         }
-
-        ImGui.Dummy(new Vector2(0f, 8f * scale));
-        DrawCommentComposer(postId, width, scale);
     }
 
     private void DrawCommentRow(VelvetCommentDto comment, float scale)
@@ -250,27 +252,27 @@ internal sealed partial class VelvetApp
         var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
         var wrapWidth = origin.X + width - textLeft;
         var name = string.IsNullOrEmpty(comment.AuthorDisplayName) ? comment.AuthorHandle : comment.AuthorDisplayName;
-        Typography.Draw(new Vector2(textLeft, origin.Y), name, theme.TextStrong, 0.85f, FontWeight.SemiBold);
-        var nameWidth = Typography.Measure(name, 0.85f, FontWeight.SemiBold).X;
+        Typography.Draw(new Vector2(textLeft, origin.Y), name, theme.TextStrong, 0.9f, FontWeight.SemiBold);
+        var nameWidth = Typography.Measure(name, 0.9f, FontWeight.SemiBold).X;
         var time = TimeText.Short(comment.CreatedAtUnix);
         if (time.Length > 0)
         {
             Typography.Draw(new Vector2(textLeft + nameWidth + 8f * scale, origin.Y + 1f * scale), time,
-                AppPalettes.Velvet.MutedInk, 0.72f);
+                AppPalettes.Velvet.MutedInk, 0.8f);
         }
 
-        var textTop = origin.Y + 17f * scale;
+        var textTop = origin.Y + 18f * scale;
         ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop));
         ImGui.PushTextWrapPos(textLeft + wrapWidth);
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.BodyInk))
-        using (Plugin.Fonts.Push(0.88f))
+        using (Plugin.Fonts.Push(0.9f))
         {
             ImGui.TextWrapped(comment.Text);
         }
 
         ImGui.PopTextWrapPos();
-        var textHeight = Typography.MeasureWrapped(comment.Text, wrapWidth, 0.88f);
-        var rowHeight = MathF.Max(avatarRadius * 2f, 17f * scale + textHeight);
+        var textHeight = Typography.MeasureWrapped(comment.Text, wrapWidth, 0.9f);
+        var rowHeight = MathF.Max(avatarRadius * 2f, 18f * scale + textHeight);
         if (UiInteract.HoverClick(new Vector2(origin.X, origin.Y), new Vector2(textLeft + nameWidth, textTop)))
         {
             OpenProfile(comment.AuthorId);
@@ -292,16 +294,17 @@ internal sealed partial class VelvetApp
         ImGui.Dummy(new Vector2(width, rowHeight + 14f * scale));
     }
 
-    private void DrawCommentComposer(string postId, float width, float scale)
+    private void DrawCommentComposer(Rect bar, string postId)
     {
-        ImGui.Dummy(new Vector2(0f, 4f * scale));
+        var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
+        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
+            1f);
         var sendRadius = 15f * scale;
-        var origin = ImGui.GetCursorScreenPos();
-        var pillHeight = ImGui.GetFrameHeight() + 8f * scale;
-        var pillMin = origin;
-        var pillMax = new Vector2(origin.X + width - sendRadius * 2f - 12f * scale, origin.Y + pillHeight);
-        Squircle.Fill(drawList, pillMin, pillMax, pillHeight * 0.5f, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
+        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
+        var pillMax = new Vector2(bar.Max.X - 54f * scale, bar.Max.Y - 9f * scale);
+        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
         ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
@@ -317,23 +320,21 @@ internal sealed partial class VelvetApp
         }
 
         var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
-        var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, (pillMin.Y + pillMax.Y) * 0.5f);
+        var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, bar.Center.Y);
         drawList.AddCircleFilled(sendCenter, sendRadius, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
-        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.8f);
-        var sendHovered = ImGui.IsMouseHoveringRect(sendCenter - new Vector2(sendRadius, sendRadius),
+        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
+        var sendRect = new Rect(sendCenter - new Vector2(sendRadius, sendRadius),
             sendCenter + new Vector2(sendRadius, sendRadius));
-        if (sendHovered)
+        HoverTooltip.Show(sendRect, Loc.T(L.Velvet.Send), HoverLabelSide.Above);
+        if (UiInteract.Hover(sendRect.Min, sendRect.Max))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ui.DrawActionTooltip(sendCenter, sendRadius, Loc.T(L.Velvet.Send));
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && canSend)
             {
                 submitted = true;
             }
         }
 
-        ImGui.SetCursorScreenPos(new Vector2(origin.X, pillMax.Y));
-        ImGui.Dummy(new Vector2(0f, 4f * scale));
         if (submitted && canSend)
         {
             store.AddComment(postId, commentDraft, _ => { });

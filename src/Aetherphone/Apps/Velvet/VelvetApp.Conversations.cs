@@ -95,7 +95,7 @@ internal sealed partial class VelvetApp
         if (user.UtcOffsetMinutes is { } profileOffset)
         {
             y += 5f * scale;
-            var timeLine = $"{Loc.T(L.Velvet.LocalTimeLabel)}  {SocialTimeZone.Describe(profileOffset)}";
+            var timeLine = SocialTimeZone.Describe(profileOffset);
             y += DrawCenteredLine(drawList, centerX, y, timeLine, AppPalettes.Velvet.MutedInk, 0.84f, FontWeight.Regular);
         }
 
@@ -150,9 +150,16 @@ internal sealed partial class VelvetApp
         var blockRect = new Rect(new Vector2(centerX - blockWidth * 0.5f, y),
             new Vector2(centerX + blockWidth * 0.5f, y + 34f * scale));
         var isBlocked = user.ConnectionState == VelvetConnectionState.Blocked;
-        if (ui.GhostButton(blockRect, isBlocked ? Loc.T(L.Velvet.Blocked) : Loc.T(L.Velvet.Block)) && !isBlocked)
+        if (ui.GhostButton(blockRect, isBlocked ? Loc.T(L.Velvet.Unblock) : Loc.T(L.Velvet.Block)))
         {
-            store.Block(user.UserId, _ => { });
+            if (isBlocked)
+            {
+                store.Unblock(user.UserId);
+            }
+            else
+            {
+                store.Block(user.UserId, _ => { });
+            }
         }
 
         y += 34f * scale;
@@ -348,7 +355,7 @@ internal sealed partial class VelvetApp
         }
     }
 
-    private void DrawThreadRow(VelvetThreadDto thread)
+    private void DrawThreadRow(VelvetThreadDto thread, bool pinned)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowHeight = 62f * scale;
@@ -365,18 +372,35 @@ internal sealed partial class VelvetApp
         var displayName = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
         Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale), displayName, theme.TextStrong, 1f,
             FontWeight.SemiBold);
+        if (pinned)
+        {
+            var nameWidth = Typography.Measure(displayName, 1f, FontWeight.SemiBold).X;
+            AppSkin.Icon(new Vector2(textLeft + nameWidth + 12f * scale, origin.Y + 20f * scale),
+                FontAwesomeIcon.Thumbtack.ToIconString(), AppPalettes.Velvet.MutedInk, 0.62f);
+        }
+
         var previewColor = thread.UnreadCount > 0 ? theme.TextStrong : AppPalettes.Velvet.MutedInk;
         Typography.Draw(new Vector2(textLeft, origin.Y + 32f * scale), UiText.Truncate(thread.LastMessagePreview, 42),
             previewColor, 0.85f);
+        var moreCenter = new Vector2(origin.X + width - 12f * scale, origin.Y + rowHeight * 0.5f);
+        var moreRadius = 12f * scale;
+        if (ui.IconButton(moreCenter, moreRadius, FontAwesomeIcon.EllipsisH.ToIconString(), AppPalettes.Velvet.MutedInk,
+                AppSkin.Transparent, 0.95f, Loc.T(L.Velvet.More)))
+        {
+            menuThreadId = thread.OtherUserId;
+            threadMenu.Toggle(thread.OtherUserId, new Rect(moreCenter - new Vector2(moreRadius, moreRadius),
+                moreCenter + new Vector2(moreRadius, moreRadius)));
+        }
+
         if (thread.UnreadCount > 0)
         {
-            var badgeCenter = new Vector2(origin.X + width - 16f * scale, origin.Y + rowHeight * 0.5f);
+            var badgeCenter = new Vector2(origin.X + width - 38f * scale, origin.Y + rowHeight * 0.5f);
             drawList.AddCircleFilled(badgeCenter, 9f * scale, ImGui.GetColorU32(Accent), 20);
             Typography.DrawCentered(badgeCenter, thread.UnreadCount.ToString(Loc.Culture), new Vector4(1f, 1f, 1f, 1f),
                 0.75f, FontWeight.SemiBold);
         }
 
-        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
+        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width - 26f * scale, origin.Y + rowHeight)))
         {
             OpenThreadWith(thread.OtherUserId);
         }
@@ -394,7 +418,6 @@ internal sealed partial class VelvetApp
             lastTypingDraft = string.Empty;
         }
 
-        var delta = ImGui.GetIO().DeltaTime;
         store.NoteThreadViewed(threadId);
         TickThread(threadId);
         DrawThreadHeader(area, threadId);
@@ -402,38 +425,13 @@ internal sealed partial class VelvetApp
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
         var listRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, area.Max.Y - composerHeight));
-        var snapshot = store.Messages;
-        SyncThreadEntrances(threadId, snapshot.Length, delta);
-        var typingTarget = store.OtherTyping ? 1f : 0f;
-        typingReveal += (typingTarget - typingReveal) * MathF.Min(1f, delta * 12f);
-        using (AppSurface.Begin(listRect))
-        {
-            if (snapshot.Length == 0 && typingReveal < 0.01f)
-            {
-                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 60f * scale),
-                    store.LoadingThread ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.ThreadEmpty), AppPalettes.Velvet.MutedInk);
-            }
-            else
-            {
-                SyncThreadFollow(threadId);
-                ImGui.Dummy(new Vector2(0f, 8f * scale));
-                for (var index = 0; index < snapshot.Length; index++)
-                {
-                    DrawMessageBubble(snapshot[index], index);
-                }
-
-                if (typingReveal > 0.01f)
-                {
-                    DrawTypingBubble(typingReveal);
-                }
-
-                ImGui.Dummy(new Vector2(0f, 8f * scale));
-                if (followThreadBottom)
-                {
-                    ImGui.SetScrollHereY(1f);
-                }
-            }
-        }
+        var transcriptMessages = BuildTranscript(store.Messages);
+        threadMediaUrl ??= store.DmMediaUrl;
+        onThreadImageClick ??= id => router.Push(VelvetRoute.ImageView(id));
+        var model = new ChatTranscriptModel(threadId, transcriptMessages, store.Me?.UserId ?? string.Empty, Accent,
+            theme, AppPalettes.Velvet.MutedInk, AppPalettes.Velvet.BodyInk, store.OtherTyping, store.LoadingThread,
+            false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading));
+        transcript.Draw(listRect, model);
 
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), threadId);
     }
@@ -538,81 +536,25 @@ internal sealed partial class VelvetApp
         return AvatarHandle.Disabled;
     }
 
-    private void SyncThreadEntrances(string threadId, int count, float delta)
+    private ReadOnlySpan<TranscriptMessage> BuildTranscript(VelvetMessageDto[] source)
     {
-        if (entranceThreadId != threadId)
+        if (ReferenceEquals(source, transcriptSource))
         {
-            entranceThreadId = threadId;
-            entranceSettled = count;
-            entrancePrimed = count > 0 || !store.LoadingThread;
-            threadEntrances.Clear();
-            return;
+            return transcriptCache;
         }
 
-        if (!entrancePrimed)
+        transcriptSource = source;
+        var mapped = new TranscriptMessage[source.Length];
+        for (var index = 0; index < source.Length; index++)
         {
-            entranceSettled = count;
-            entrancePrimed = count > 0 || !store.LoadingThread;
-            return;
+            var message = source[index];
+            mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
+                message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
+                default);
         }
 
-        if (count < entranceSettled)
-        {
-            entranceSettled = count;
-        }
-
-        while (entranceSettled < count)
-        {
-            threadEntrances.Add(new BubbleEntrance { Line = entranceSettled, Elapsed = 0f });
-            entranceSettled++;
-        }
-
-        for (var index = threadEntrances.Count - 1; index >= 0; index--)
-        {
-            var entrance = threadEntrances[index];
-            entrance.Elapsed += delta;
-            if (entrance.Elapsed >= TransitionTiming.BubbleSeconds || entrance.Line >= count)
-            {
-                threadEntrances.RemoveAt(index);
-            }
-            else
-            {
-                threadEntrances[index] = entrance;
-            }
-        }
-    }
-
-    private float ThreadEntranceProgress(int line)
-    {
-        for (var index = 0; index < threadEntrances.Count; index++)
-        {
-            if (threadEntrances[index].Line == line)
-            {
-                return threadEntrances[index].Elapsed / TransitionTiming.BubbleSeconds;
-            }
-        }
-
-        return 1f;
-    }
-
-    private void SyncThreadFollow(string threadId)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        if (followThreadId == threadId)
-        {
-            followThreadBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 4f * scale;
-        }
-        else
-        {
-            followThreadId = threadId;
-            followThreadBottom = true;
-        }
-
-        if (snapThreadToBottom)
-        {
-            followThreadBottom = true;
-            snapThreadToBottom = false;
-        }
+        transcriptCache = mapped;
+        return transcriptCache;
     }
 
     private void TickThread(string threadId)
@@ -636,202 +578,6 @@ internal sealed partial class VelvetApp
                 store.SendTyping(threadId);
             }
         }
-    }
-
-    private void DrawMessageBubble(VelvetMessageDto message, int index)
-    {
-        if (message.Kind == 1)
-        {
-            DrawImageBubble(message, index);
-            return;
-        }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        var mine = store.Me is { } me && me.UserId == message.SenderId;
-        var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
-        var paddingX = 12f * scale;
-        var paddingY = 8f * scale;
-        var wrap = available * 0.74f - paddingX * 2f;
-        var textSize = ImGui.CalcTextSize(message.Body, false, wrap);
-        var bubbleWidth = textSize.X + paddingX * 2f;
-        var bubbleHeight = textSize.Y + paddingY * 2f;
-        var start = ImGui.GetCursorPos();
-        var offsetX = mine ? available - bubbleWidth : 0f;
-        var fill = mine ? Accent : new Vector4(1f, 1f, 1f, 0.10f);
-        var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : theme.TextStrong;
-        var entrance = ThreadEntranceProgress(index);
-        if (entrance < 1f)
-        {
-            DrawBubbleEntering(message.Body, scale, start, offsetX, bubbleWidth, bubbleHeight, paddingX, paddingY, wrap,
-                mine, fill, ink, entrance);
-        }
-        else
-        {
-            ImGui.SetCursorPos(new Vector2(start.X + offsetX, start.Y));
-            var bubbleScreen = ImGui.GetCursorScreenPos();
-            Squircle.Fill(drawList, bubbleScreen, bubbleScreen + new Vector2(bubbleWidth, bubbleHeight), 14f * scale,
-                ImGui.GetColorU32(fill));
-            ImGui.SetCursorPos(new Vector2(start.X + offsetX + paddingX, start.Y + paddingY));
-            ImGui.PushTextWrapPos(start.X + offsetX + paddingX + wrap);
-            using (ImRaii.PushColor(ImGuiCol.Text, ink))
-            {
-                ImGui.TextUnformatted(message.Body);
-            }
-
-            ImGui.PopTextWrapPos();
-        }
-
-        ImGui.SetCursorPos(new Vector2(start.X, start.Y + bubbleHeight + 6f * scale));
-    }
-
-    private static void DrawBubbleEntering(string text, float scale, Vector2 start, float offsetX, float bubbleWidth,
-        float bubbleHeight, float paddingX, float paddingY, float wrap, bool mine, Vector4 fill, Vector4 ink,
-        float entrance)
-    {
-        var pop = 0.80f + 0.20f * Easing.EaseOutBack(entrance);
-        var alpha = MathF.Min(entrance * 1.8f, 1f);
-        var rise = new Vector2(0f, (1f - Easing.EaseOutCubic(entrance)) * 10f * scale);
-        ImGui.SetCursorPos(start);
-        var screenStart = ImGui.GetCursorScreenPos();
-        var fillMin = screenStart + new Vector2(offsetX, 0f);
-        var fillMax = fillMin + new Vector2(bubbleWidth, bubbleHeight);
-        var anchor = new Vector2(mine ? fillMax.X : fillMin.X, fillMax.Y);
-        var scaledMin = anchor + (fillMin - anchor) * pop + rise;
-        var scaledMax = anchor + (fillMax - anchor) * pop + rise;
-        Squircle.Fill(ImGui.GetWindowDrawList(), scaledMin, scaledMax, 14f * scale * pop,
-            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
-        var textLocal = new Vector2(start.X + offsetX + paddingX, start.Y + paddingY);
-        var anchorLocal = new Vector2(mine ? start.X + offsetX + bubbleWidth : start.X + offsetX,
-            start.Y + bubbleHeight);
-        var scaledTextLocal = anchorLocal + (textLocal - anchorLocal) * pop + rise;
-        ImGui.SetWindowFontScale(pop);
-        ImGui.SetCursorPos(scaledTextLocal);
-        ImGui.PushTextWrapPos(scaledTextLocal.X + wrap * pop);
-        using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, ink.W * alpha)))
-        {
-            ImGui.TextUnformatted(text);
-        }
-
-        ImGui.PopTextWrapPos();
-        ImGui.SetWindowFontScale(1f);
-    }
-
-    private void DrawImageBubble(VelvetMessageDto message, int index)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var mine = store.Me is { } me && me.UserId == message.SenderId;
-        var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
-        var padding = 5f * scale;
-        var aspect = message.MediaWidth > 0 && message.MediaHeight > 0
-            ? (float)message.MediaHeight / message.MediaWidth
-            : 1f;
-        var imageWidth = available * 0.62f;
-        var imageHeight = imageWidth * aspect;
-        var maxHeight = 280f * scale;
-        if (imageHeight > maxHeight)
-        {
-            imageHeight = maxHeight;
-            imageWidth = imageHeight / aspect;
-        }
-
-        var caption = message.Body ?? string.Empty;
-        var captionHeight = caption.Length > 0 ? Typography.Measure(caption, 0.9f).Y + 6f * scale : 0f;
-        var bubbleWidth = imageWidth + padding * 2f;
-        var bubbleHeight = imageHeight + padding * 2f + captionHeight;
-        var start = ImGui.GetCursorPos();
-        var offsetX = mine ? available - bubbleWidth : 0f;
-        var fill = mine ? Accent : new Vector4(1f, 1f, 1f, 0.10f);
-        var entrance = ThreadEntranceProgress(index);
-        var pop = entrance < 1f ? 0.80f + 0.20f * Easing.EaseOutBack(entrance) : 1f;
-        var alpha = entrance < 1f ? MathF.Min(entrance * 1.8f, 1f) : 1f;
-        var rise = new Vector2(0f, entrance < 1f ? (1f - Easing.EaseOutCubic(entrance)) * 10f * scale : 0f);
-        ImGui.SetCursorPos(start);
-        var screen = ImGui.GetCursorScreenPos();
-        var bubbleMin = screen + new Vector2(offsetX, 0f);
-        var bubbleMax = bubbleMin + new Vector2(bubbleWidth, bubbleHeight);
-        var anchor = new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y);
-        var scaledMin = anchor + (bubbleMin - anchor) * pop + rise;
-        var scaledMax = anchor + (bubbleMax - anchor) * pop + rise;
-        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * pop,
-            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
-        var imageMin = scaledMin + new Vector2(padding * pop, padding * pop);
-        var imageMax = imageMin + new Vector2(imageWidth * pop, imageHeight * pop);
-        var rounding = 10f * scale * pop;
-        var texture = images.Get(store.DmMediaUrl(message.Id));
-        if (texture is null)
-        {
-            Squircle.Fill(drawList, imageMin, imageMax, rounding,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * alpha)));
-            AppSkin.Icon((imageMin + imageMax) * 0.5f, FontAwesomeIcon.Image.ToIconString(),
-                Palette.WithAlpha(AppPalettes.Velvet.MutedInk, alpha), 1.2f);
-        }
-        else
-        {
-            drawList.AddImageRounded(texture.Handle, imageMin, imageMax, Vector2.Zero, Vector2.One,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)), rounding, ImDrawFlags.RoundCornersAll);
-            if (entrance >= 1f && ImGui.IsMouseHoveringRect(imageMin, imageMax))
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    router.Push(VelvetRoute.ImageView(message.Id));
-                }
-            }
-        }
-
-        if (caption.Length > 0)
-        {
-            var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : theme.TextStrong;
-            Typography.Draw(drawList, new Vector2(imageMin.X, imageMax.Y + 4f * scale * pop),
-                UiText.Truncate(caption, 60), Palette.WithAlpha(ink, alpha), 0.9f);
-        }
-
-        ImGui.SetCursorPos(new Vector2(start.X, start.Y + bubbleHeight + 6f * scale));
-    }
-
-    private void DrawTypingBubble(float reveal)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        typingPhase += ImGui.GetIO().DeltaTime;
-        if (typingPhase > 1000f)
-        {
-            typingPhase -= 1000f;
-        }
-
-        var eased = Easing.EaseOutCubic(Math.Clamp(reveal, 0f, 1f));
-        var drawList = ImGui.GetWindowDrawList();
-        var paddingX = 14f * scale;
-        var dotRadius = 3.2f * scale;
-        var dotGap = 7f * scale;
-        var bubbleWidth = paddingX * 2f + dotRadius * 6f + dotGap * 2f;
-        var bubbleHeight = 28f * scale;
-        var start = ImGui.GetCursorPos();
-        var origin = ImGui.GetCursorScreenPos() + new Vector2(0f, (1f - eased) * 6f * scale);
-        var bubbleMax = new Vector2(origin.X + bubbleWidth, origin.Y + bubbleHeight);
-        Squircle.Fill(drawList, origin, bubbleMax, bubbleHeight * 0.5f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f * eased)));
-        var baseY = (origin.Y + bubbleMax.Y) * 0.5f;
-        var firstDotX = origin.X + paddingX + dotRadius;
-        for (var dot = 0; dot < 3; dot++)
-        {
-            var wave = MathF.Max(0f, MathF.Sin(typingPhase * 6f - dot * 0.9f));
-            var offsetY = -wave * 4f * scale;
-            var dotAlpha = (0.35f + 0.5f * wave) * eased;
-            var center = new Vector2(firstDotX + dot * (dotRadius * 2f + dotGap), baseY + offsetY);
-            drawList.AddCircleFilled(center, dotRadius,
-                ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.Velvet.BodyInk, dotAlpha)), 16);
-        }
-
-        ImGui.SetCursorPos(start);
-        ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, (bubbleHeight + 8f * scale) * eased));
-    }
-
-    private struct BubbleEntrance
-    {
-        public int Line;
-        public float Elapsed;
     }
 
     private void DrawMessageComposer(Rect area, string threadId)
@@ -889,13 +635,14 @@ internal sealed partial class VelvetApp
         var canSend = messageDraft.Trim().Length > 0 && !store.Sending;
         var sendCenter = new Vector2(area.Max.X - sendWidth * 0.5f - 8f * scale, area.Center.Y);
         drawList.AddCircleFilled(sendCenter, 16f * scale, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
-        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
+        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.9f);
         var sendHitRadius = 16f * scale;
-        if (ImGui.IsMouseHoveringRect(sendCenter - new Vector2(sendHitRadius, sendHitRadius),
-                sendCenter + new Vector2(sendHitRadius, sendHitRadius)))
+        var sendRect = new Rect(sendCenter - new Vector2(sendHitRadius, sendHitRadius),
+            sendCenter + new Vector2(sendHitRadius, sendHitRadius));
+        HoverTooltip.Show(sendRect, Loc.T(L.Velvet.Send), HoverLabelSide.Above);
+        if (UiInteract.Hover(sendRect.Min, sendRect.Max))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ui.DrawActionTooltip(sendCenter, sendHitRadius, Loc.T(L.Velvet.Send));
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && canSend)
             {
                 submitted = true;
@@ -907,7 +654,7 @@ internal sealed partial class VelvetApp
             store.SendMessage(threadId, messageDraft, _ => { });
             messageDraft = string.Empty;
             lastTypingDraft = string.Empty;
-            snapThreadToBottom = true;
+            transcript.RequestSnapToBottom();
             threadFocus = true;
         }
     }
@@ -1060,7 +807,7 @@ internal sealed partial class VelvetApp
     private void SendChatImage(string threadId, string path)
     {
         store.SendImageMessage(threadId, path, string.Empty, _ => { });
-        snapThreadToBottom = true;
+        transcript.RequestSnapToBottom();
         chatPickerThreadId = null;
         router.Pop();
     }

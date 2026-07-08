@@ -3,14 +3,9 @@ namespace Aetherphone.Apps.Velvet;
 internal enum VelvetTab
 {
     Hub,
-    Messages,
-    Me,
-}
-
-internal enum VelvetHubView
-{
-    Timeline,
     Discover,
+    Activity,
+    Me,
 }
 
 internal enum VelvetScreen
@@ -19,6 +14,8 @@ internal enum VelvetScreen
     Profile,
     EditProfile,
     Settings,
+    Blocked,
+    Messages,
     Thread,
     Avatar,
     Compose,
@@ -33,6 +30,8 @@ internal readonly record struct VelvetRoute(VelvetScreen Screen, string? Id = nu
     public static readonly VelvetRoute Root = new(VelvetScreen.Root);
     public static readonly VelvetRoute EditProfile = new(VelvetScreen.EditProfile);
     public static readonly VelvetRoute Settings = new(VelvetScreen.Settings);
+    public static readonly VelvetRoute Blocked = new(VelvetScreen.Blocked);
+    public static readonly VelvetRoute Messages = new(VelvetScreen.Messages);
     public static readonly VelvetRoute Avatar = new(VelvetScreen.Avatar);
     public static readonly VelvetRoute Compose = new(VelvetScreen.Compose);
     public static VelvetRoute Profile(string userId) => new(VelvetScreen.Profile, userId);

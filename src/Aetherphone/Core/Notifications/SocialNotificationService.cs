@@ -2,40 +2,99 @@ using System.Numerics;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Localization;
+using Aetherphone.Core.Social;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Notifications;
 
 internal sealed class SocialNotificationService : IDisposable
 {
-    private const int TypeLike = 0;
-    private const int TypeComment = 1;
-    private const int TypeFollow = 2;
-    private const int TypeConnectRequest = 3;
-    private const int TypeConnectAccept = 4;
-    private const string ChirperApp = "chirper";
-    private const string AethergramApp = "aethergram";
-    private const string VelvetApp = "velvet";
     private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(20);
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly NotificationService notifications;
+    private readonly Configuration configuration;
     private readonly IFramework framework;
     private readonly CancellationTokenSource cancellation = new();
     private readonly HashSet<string> seenIds = new();
+    private volatile NotificationDto[] latest = Array.Empty<NotificationDto>();
     private volatile bool polling;
     private volatile bool primed;
     private DateTime lastPollUtc = DateTime.MinValue;
 
     public SocialNotificationService(AethernetSession session, AethernetClient client, NotificationService notifications,
-        IFramework framework)
+        Configuration configuration, IFramework framework)
     {
         this.session = session;
         this.client = client;
         this.notifications = notifications;
+        this.configuration = configuration;
         this.framework = framework;
         framework.Update += OnFrameworkTick;
+    }
+
+    public NotificationDto[] Latest => latest;
+
+    public int CountFor(string app)
+    {
+        var items = latest;
+        var count = 0;
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].App == app)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public int UnseenCount(string app)
+    {
+        var items = latest;
+        configuration.SocialActivitySeenUnix.TryGetValue(app, out var seenUnix);
+        var count = 0;
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].App == app && items[index].CreatedAtUnix > seenUnix)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public void MarkSeen(string app)
+    {
+        var items = latest;
+        var newest = 0L;
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].App == app && items[index].CreatedAtUnix > newest)
+            {
+                newest = items[index].CreatedAtUnix;
+            }
+        }
+
+        configuration.SocialActivitySeenUnix.TryGetValue(app, out var seenUnix);
+        if (newest <= seenUnix)
+        {
+            return;
+        }
+
+        configuration.SocialActivitySeenUnix[app] = newest;
+        configuration.Save();
+    }
+
+    public void RefreshNow()
+    {
+        if (session.IsSignedIn)
+        {
+            lastPollUtc = DateTime.UtcNow;
+            Poll();
+        }
     }
 
     private void OnFrameworkTick(IFramework _)
@@ -107,18 +166,20 @@ internal sealed class SocialNotificationService : IDisposable
             seenIds.Add(items[index].Id);
         }
 
+        latest = items;
         primed = true;
     }
 
     private void Present(NotificationDto item)
     {
-        var body = BodyFor(item);
+        var body = SocialActivity.Body(item);
         if (body.Length == 0)
         {
             return;
         }
 
-        notifications.Notify(new PhoneNotification(item.App, ActorLabel(item), body, DateTime.Now, AccentFor(item.App))
+        notifications.Notify(new PhoneNotification(item.App, SocialActivity.ActorLabel(item), body, DateTime.Now,
+            AccentFor(item.App))
         {
             ActorId = item.ActorId,
             PostId = item.PostId,
@@ -126,44 +187,13 @@ internal sealed class SocialNotificationService : IDisposable
         });
     }
 
-    private static string ActorLabel(NotificationDto item)
-    {
-        if (!string.IsNullOrEmpty(item.ActorDisplayName))
-        {
-            return item.ActorDisplayName;
-        }
-
-        return string.IsNullOrEmpty(item.ActorHandle) ? item.ActorName : item.ActorHandle;
-    }
-
-    private static string BodyFor(NotificationDto item)
-    {
-        var isPhoto = item.App != ChirperApp;
-        switch (item.Type)
-        {
-            case TypeLike:
-                return Loc.T(isPhoto ? L.Social.LikedPhoto : L.Social.LikedChirp);
-            case TypeComment:
-                var action = Loc.T(isPhoto ? L.Social.CommentedPhoto : L.Social.CommentedChirp);
-                return string.IsNullOrEmpty(item.Preview) ? action : $"{action}: “{item.Preview}”";
-            case TypeFollow:
-                return Loc.T(L.Social.Followed);
-            case TypeConnectRequest:
-                return Loc.T(L.Social.ConnectionRequest);
-            case TypeConnectAccept:
-                return Loc.T(L.Social.ConnectionAccepted);
-            default:
-                return string.Empty;
-        }
-    }
-
     private static Vector4 AccentFor(string app)
     {
         return app switch
         {
-            AethergramApp => AppAccents.For(AethergramApp),
-            VelvetApp => AppAccents.For(VelvetApp),
-            _ => AppAccents.For(ChirperApp),
+            SocialActivity.AethergramApp => AppAccents.For(SocialActivity.AethergramApp),
+            SocialActivity.VelvetApp => AppAccents.For(SocialActivity.VelvetApp),
+            _ => AppAccents.For(SocialActivity.ChirperApp),
         };
     }
 
