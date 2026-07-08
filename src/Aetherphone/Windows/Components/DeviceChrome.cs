@@ -60,9 +60,9 @@ internal static class DeviceChrome
         var screenBase = ImGui.GetColorU32(theme.ScreenBase);
         if (transparentBand is not { } band)
         {
-            dl.AddRectFilled(device.Min, device.Max, bezel, deviceRounding);
-            dl.AddRect(device.Min, device.Max, rim, deviceRounding);
-            dl.AddRectFilled(screen.Min, screen.Max, screenBase, screenRounding);
+            Squircle.Fill(dl, device.Min, device.Max, deviceRounding, bezel);
+            Squircle.Stroke(dl, device.Min, device.Max, deviceRounding, rim, 1f);
+            Squircle.Fill(dl, screen.Min, screen.Max, screenRounding, screenBase);
             return screen;
         }
 
@@ -75,25 +75,20 @@ internal static class DeviceChrome
     {
         var top = Math.Clamp(band.Min.Y, screen.Min.Y, screen.Max.Y);
         var bottom = Math.Clamp(band.Max.Y, top, screen.Max.Y);
-        dl.AddRectFilled(device.Min, new Vector2(device.Max.X, top), bezel, deviceRounding, ImDrawFlags.RoundCornersTop);
-        dl.AddRectFilled(new Vector2(device.Min.X, bottom), device.Max, bezel, deviceRounding,
-            ImDrawFlags.RoundCornersBottom);
-        dl.AddRectFilled(new Vector2(device.Min.X, top), new Vector2(screen.Min.X, bottom), bezel, 0f,
-            ImDrawFlags.RoundCornersNone);
-        dl.AddRectFilled(new Vector2(screen.Max.X, top), new Vector2(device.Max.X, bottom), bezel, 0f,
-            ImDrawFlags.RoundCornersNone);
-        dl.AddRectFilled(screen.Min, new Vector2(screen.Max.X, top), screenBase, screenRounding,
-            ImDrawFlags.RoundCornersTop);
-        dl.AddRectFilled(new Vector2(screen.Min.X, bottom), screen.Max, screenBase, screenRounding,
-            ImDrawFlags.RoundCornersBottom);
-        dl.AddRect(device.Min, device.Max, rim, deviceRounding);
+        Squircle.FillCap(dl, device.Min, new Vector2(device.Max.X, top), deviceRounding, bezel, true);
+        Squircle.FillCap(dl, new Vector2(device.Min.X, bottom), device.Max, deviceRounding, bezel, false);
+        dl.AddRectFilled(new Vector2(device.Min.X, top), new Vector2(screen.Min.X, bottom), bezel);
+        dl.AddRectFilled(new Vector2(screen.Max.X, top), new Vector2(device.Max.X, bottom), bezel);
+        Squircle.FillCap(dl, screen.Min, new Vector2(screen.Max.X, top), screenRounding, screenBase, true);
+        Squircle.FillCap(dl, new Vector2(screen.Min.X, bottom), screen.Max, screenRounding, screenBase, false);
+        Squircle.Stroke(dl, device.Min, device.Max, deviceRounding, rim, 1f);
     }
 
     public static void FillScreen(Rect screen, PhoneTheme theme, Vector4 color)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        ImGui.GetWindowDrawList()
-            .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(color), theme.ScreenRounding * scale);
+        Squircle.Fill(ImGui.GetWindowDrawList(), screen.Min, screen.Max, theme.ScreenRounding * scale,
+            ImGui.GetColorU32(color));
     }
 
     public static void MaskScreenCorners(Rect screen, PhoneTheme theme)
@@ -104,34 +99,9 @@ internal static class DeviceChrome
             return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
-        var bezel = ImGui.GetColorU32(theme.BezelOuter);
-        NotchCorner(drawList, screen.Min, new Vector2(screen.Min.X + radius, screen.Min.Y + radius), radius, bezel,
-            MathF.PI, MathF.PI * 1.5f);
-        NotchCorner(drawList, new Vector2(screen.Max.X, screen.Min.Y),
-            new Vector2(screen.Max.X - radius, screen.Min.Y + radius), radius, bezel, MathF.PI * 1.5f, MathF.PI * 2f);
-        NotchCorner(drawList, screen.Max, new Vector2(screen.Max.X - radius, screen.Max.Y - radius), radius, bezel, 0f,
-            MathF.PI * 0.5f);
-        NotchCorner(drawList, new Vector2(screen.Min.X, screen.Max.Y),
-            new Vector2(screen.Min.X + radius, screen.Max.Y - radius), radius, bezel, MathF.PI * 0.5f, MathF.PI);
+        Squircle.FillOutsideCorners(ImGui.GetWindowDrawList(), screen.Min, screen.Max, radius,
+            ImGui.GetColorU32(theme.BezelOuter));
     }
-
-    private static void NotchCorner(ImDrawListPtr drawList, Vector2 corner, Vector2 center, float radius, uint color,
-        float angleMin, float angleMax)
-    {
-        var segments = Math.Clamp((int)MathF.Ceiling(radius * 0.5f), 12, 64);
-        var previous = ArcPoint(center, radius, angleMin);
-        for (var index = 1; index <= segments; index++)
-        {
-            var angle = angleMin + (angleMax - angleMin) * index / segments;
-            var next = ArcPoint(center, radius, angle);
-            drawList.AddTriangleFilled(corner, previous, next, color);
-            previous = next;
-        }
-    }
-
-    private static Vector2 ArcPoint(Vector2 center, float radius, float angle) =>
-        new(center.X + MathF.Cos(angle) * radius, center.Y + MathF.Sin(angle) * radius);
 
     public static void DrawWallpaper(Rect screen, PhoneTheme theme)
     {
@@ -183,8 +153,8 @@ internal static class DeviceChrome
         }
 
         var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
-        ImGui.GetForegroundDrawList()
-            .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)), rounding);
+        Squircle.Fill(ImGui.GetForegroundDrawList(), screen.Min, screen.Max, rounding,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)));
     }
 
     public static void DrawIsland(Rect island, PhoneTheme theme)

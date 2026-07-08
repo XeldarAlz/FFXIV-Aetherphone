@@ -93,10 +93,11 @@ internal sealed class MinimizedPhone : IDisposable
 
     public static void DrawShell(ImDrawListPtr dl, in Geometry geometry, PhoneTheme theme)
     {
-        dl.AddRectFilled(geometry.Body.Min, geometry.Body.Max, ImGui.GetColorU32(theme.BezelOuter), geometry.Rounding);
-        dl.AddRectFilled(geometry.Screen.Min, geometry.Screen.Max, ImGui.GetColorU32(theme.ScreenBase),
-            geometry.ScreenRounding);
-        dl.AddRect(geometry.Body.Min, geometry.Body.Max, ImGui.GetColorU32(theme.BezelRim), geometry.Rounding);
+        Squircle.Fill(dl, geometry.Body.Min, geometry.Body.Max, geometry.Rounding, ImGui.GetColorU32(theme.BezelOuter));
+        Squircle.Fill(dl, geometry.Screen.Min, geometry.Screen.Max, geometry.ScreenRounding,
+            ImGui.GetColorU32(theme.ScreenBase));
+        Squircle.Stroke(dl, geometry.Body.Min, geometry.Body.Max, geometry.Rounding,
+            ImGui.GetColorU32(theme.BezelRim), 1f);
     }
 
     public static void DrawFace(ImDrawListPtr dl, in Geometry geometry, PhoneTheme theme, float scale, float alpha,

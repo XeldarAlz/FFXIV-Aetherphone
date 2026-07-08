@@ -366,7 +366,8 @@ internal sealed class PhoneShell : IDisposable
         var fullScreen = DeviceChrome.ScreenRect(device, theme);
         SceneCompositor.DrawClipped(geometry.Screen, fullScreen, 0f, target => PaintCurrentScreen(target, theme));
         var veil = ImGui.GetColorU32(Palette.WithAlpha(theme.ScreenBase, eased));
-        ImGui.GetWindowDrawList().AddRectFilled(geometry.Screen.Min, geometry.Screen.Max, veil, geometry.ScreenRounding);
+        Squircle.Fill(ImGui.GetWindowDrawList(), geometry.Screen.Min, geometry.Screen.Max, geometry.ScreenRounding,
+            veil);
     }
 
     private void PaintCurrentScreen(Rect screen, PhoneTheme theme)

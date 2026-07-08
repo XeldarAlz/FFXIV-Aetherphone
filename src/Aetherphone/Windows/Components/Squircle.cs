@@ -37,6 +37,67 @@ internal static class Squircle
         drawList.PathStroke(color, ImDrawFlags.Closed, thickness);
     }
 
+    public static void FillOutsideCorners(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, uint color)
+    {
+        var box = CornerBox(min, max, radius);
+        if (box <= 0.5f)
+        {
+            return;
+        }
+
+        FillCorner(drawList, min, new Vector2(min.X + box, min.Y + box), box, -1f, -1f, color);
+        FillCorner(drawList, new Vector2(max.X, min.Y), new Vector2(max.X - box, min.Y + box), box, 1f, -1f, color);
+        FillCorner(drawList, max, new Vector2(max.X - box, max.Y - box), box, 1f, 1f, color);
+        FillCorner(drawList, new Vector2(min.X, max.Y), new Vector2(min.X + box, max.Y - box), box, -1f, 1f, color);
+    }
+
+    private static void FillCorner(ImDrawListPtr drawList, Vector2 apex, Vector2 anchor, float box, float signX,
+        float signY, uint color)
+    {
+        var corner = UnitCorner;
+        drawList.PathClear();
+        drawList.PathLineTo(apex);
+        for (var index = 0; index < corner.Length; index++)
+        {
+            var point = corner[index];
+            drawList.PathLineTo(new Vector2(anchor.X + signX * point.X * box, anchor.Y + signY * point.Y * box));
+        }
+
+        drawList.PathFillConvex(color);
+    }
+
+    public static void FillCap(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, uint color, bool top)
+    {
+        var box = CornerBox(min, max, radius);
+        if (box <= 1.5f)
+        {
+            drawList.AddRectFilled(min, max, color, MathF.Max(0f, radius),
+                top ? ImDrawFlags.RoundCornersTop : ImDrawFlags.RoundCornersBottom);
+            return;
+        }
+
+        const float overlap = 1.5f;
+        if (top)
+        {
+            var bodyTop = min.Y + box;
+            if (max.Y > bodyTop)
+            {
+                drawList.AddRectFilled(new Vector2(min.X, bodyTop), max, color);
+            }
+        }
+        else
+        {
+            var bodyBottom = max.Y - box;
+            if (bodyBottom > min.Y)
+            {
+                drawList.AddRectFilled(min, new Vector2(max.X, bodyBottom), color);
+            }
+        }
+
+        TraceCapPath(drawList, min, max, box, top, overlap);
+        drawList.PathFillConvex(color);
+    }
+
     public static void FillVerticalGradient(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius,
         uint topColor, uint bottomColor)
     {
