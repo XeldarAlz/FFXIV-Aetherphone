@@ -373,6 +373,43 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0900 =
+        {
+            new("changelog.r0900.0", "Added Friends, a new app to add people by their phone number and share your own number in-game"),
+            new("changelog.r0900.1", "Added Messages, a new app for private one-to-one and group chats with your friends"),
+            new("changelog.r0900.2", "Calling is now limited to friends who have added each other, so only people you both trust can reach you"),
+            new("changelog.r0900.3", "You can now request a new phone number in Friends if someone you would rather not hear from has your old one"),
+            new("changelog.r0900.4", "Rebuilt the Home screen around a flexible grid of app icons, folders, and resizable widgets"),
+            new("changelog.r0900.5", "Added a dock at the bottom of the Home screen for up to four favorite apps"),
+            new("changelog.r0900.6", "Added Home screen widgets, including a Skywatcher forecast, Clock, Calendar, a Photos shuffle, and Resets"),
+            new("changelog.r0900.7", "Added a gallery to browse widgets and preview their sizes before placing them"),
+            new("changelog.r0900.8", "Added a Home edit mode to rearrange icons, resize widgets, disband folders, and drag items to new pages"),
+            new("changelog.r0900.9", "Apps now open and close by growing from and shrinking back to their icon"),
+            new("changelog.r0900.10", "Swipe up from the home bar to return to the Home screen from any app"),
+            new("changelog.r0900.11", "Added a Home grid density option for five, six, or seven rows, plus a layout reset, in Settings"),
+            new("changelog.r0900.12", "Skywatcher now shows live animated weather in the app and on its widget"),
+            new("changelog.r0900.13", "Redesigned the Venues cards and added a detail page for each venue"),
+            new("changelog.r0900.14", "Added an Activity tab to Chirper, Aethergram, and Velvet that gathers your likes, comments, and follows"),
+            new("changelog.r0900.15", "Added a quick menu to posts for actions like reporting and deleting"),
+            new("changelog.r0900.16", "Velvet now lets you pin conversations to the top of your chats"),
+            new("changelog.r0900.17", "Renamed the old Messages app to Chat, since it covers your linkshell and in-game chat"),
+            new("changelog.r0900.18", "Added a mute bell to each linkshell in Chat so you can silence a busy channel straight from the list"),
+            new("changelog.r0900.19", "Combined calls and now-playing music into one Dynamic Island that splits in two, just like on a real phone"),
+            new("changelog.r0900.20", "Notification banners now spring in, pause while you hover them, and can be flicked upward to dismiss"),
+            new("changelog.r0900.21", "Control Center is now customizable: rearrange, resize, add, and remove its controls like the Home screen"),
+            new("changelog.r0900.22", "The minimized phone now morphs smoothly to and from full size, with expand and close buttons and an unread badge"),
+            new("changelog.r0900.23", "Added photo zoom with panning and double-tap across Photos, Aethergram, Velvet, and Chat"),
+            new("changelog.r0900.24", "Redesigned the phone's side buttons and frame with a machined graphite metal finish"),
+            new("changelog.r0900.25", "Reworked Settings with real icons, an account banner up top, and animated toggles"),
+            new("changelog.r0900.26", "Redesigned the welcome tour with an animated illustration, and tours now glide smoothly between steps"),
+            new("changelog.r0900.27", "Action buttons across the app now show matching animated tooltips when you hover them"),
+            new("changelog.r0900.28", "Smoothed out app open, close, and minimize animations so they feel physical and can be interrupted"),
+            new("changelog.r0900.29", "Tidied up the codebase and shared design system for better performance and a more consistent look"),
+            new("changelog.r0900.30", "Fixed the phone's corners so every screen and app uses one consistent rounded shape"),
+            new("changelog.r0900.31", "Fixed tooltips that could appear behind Control Center tiles"),
+            new("changelog.r0900.32", "Fixed 2048 so swiping slides the tiles instead of leaving duplicates behind"),
+        };
+
         public static readonly LocString[] Release0870 =
         {
             new("changelog.r0870.0", "Added Polls, a new app for voting in single-choice polls"),
