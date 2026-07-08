@@ -199,10 +199,8 @@ internal sealed class MessagesApp : IPhoneApp
                 var thread = linkshells.Find(entry.Channel);
                 var label = LinkshellLabel.Of(entry.Channel,
                     thread?.Name is { Length: > 0 } stored ? stored : entry.Name);
-                if (LinkshellRow.Draw(entry.Channel, label, thread, mutes.IsMuted(entry.Channel), frameTheme))
-                {
-                    OpenLinkshell(entry.Channel, entry.Name);
-                }
+                var action = LinkshellRow.Draw(entry.Channel, label, thread, mutes.IsMuted(entry.Channel), frameTheme);
+                HandleLinkshellRow(action, entry.Channel, entry.Name);
             }
 
             for (var index = 0; index < threads.Count; index++)
@@ -214,11 +212,23 @@ internal sealed class MessagesApp : IPhoneApp
                 }
 
                 var label = LinkshellLabel.Of(thread.Channel, thread.Name);
-                if (LinkshellRow.Draw(thread.Channel, label, thread, mutes.IsMuted(thread.Channel), frameTheme))
-                {
-                    OpenLinkshell(thread.Channel, thread.Name);
-                }
+                var action = LinkshellRow.Draw(thread.Channel, label, thread, mutes.IsMuted(thread.Channel), frameTheme);
+                HandleLinkshellRow(action, thread.Channel, thread.Name);
             }
+        }
+    }
+
+    private void HandleLinkshellRow(LinkshellRowAction action, LinkshellChannel channel, string name)
+    {
+        if (action == LinkshellRowAction.ToggleMute)
+        {
+            mutes.Toggle(channel);
+            return;
+        }
+
+        if (action == LinkshellRowAction.Open)
+        {
+            OpenLinkshell(channel, name);
         }
     }
 
