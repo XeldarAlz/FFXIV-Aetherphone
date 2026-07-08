@@ -75,6 +75,7 @@ internal sealed class Twenty48Board
     public bool TryMove(SwipeDirection direction)
     {
         Array.Copy(values, previous, CellCount);
+        Array.Clear(values, 0, CellCount);
         ClearTransients();
         LastMergeMax = 0;
         for (var line = 0; line < Size; line++)
