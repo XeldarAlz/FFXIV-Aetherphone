@@ -187,6 +187,7 @@ internal sealed class PhoneShell : IDisposable
                 DrawMinimizedFace(device, delta);
             }
 
+            HoverTooltip.Flush();
             return;
         }
 

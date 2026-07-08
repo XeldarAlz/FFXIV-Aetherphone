@@ -58,6 +58,17 @@ internal static class HoverTooltip
         pending.Add(new PendingLabel(target, label, eased, side));
     }
 
+    public static void Enqueue(Rect target, string label, float alpha, HoverLabelSide side)
+    {
+        if (alpha <= 0.001f || string.IsNullOrEmpty(label))
+        {
+            return;
+        }
+
+        Sync();
+        pending.Add(new PendingLabel(target, label, alpha, side));
+    }
+
     public static void Flush()
     {
         Sync();
@@ -88,7 +99,7 @@ internal static class HoverTooltip
         pending.Clear();
     }
 
-    public static void DrawLabel(ImDrawListPtr dl, Rect target, string label, float alpha, HoverLabelSide side)
+    private static void DrawLabel(ImDrawListPtr dl, Rect target, string label, float alpha, HoverLabelSide side)
     {
         if (alpha <= 0.001f || string.IsNullOrEmpty(label))
         {

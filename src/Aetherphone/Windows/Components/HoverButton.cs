@@ -50,7 +50,7 @@ internal static class HoverButton
         {
             var bounds = new Rect(new Vector2(center.X - scaledRadius, center.Y - scaledRadius),
                 new Vector2(center.X + scaledRadius, center.Y + scaledRadius));
-            HoverTooltip.DrawLabel(dl, bounds, label, eased * alpha, side);
+            HoverTooltip.Enqueue(bounds, label, eased * alpha, side);
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
