@@ -7,6 +7,7 @@ internal readonly struct HomeMetrics
 {
     public const float DockHeightUnits = 82f;
     public const float LabelBandUnits = 20f;
+    public const float EditToolbarBandUnits = 40f;
     private const float DotsBandUnits = 24f;
     private const float GridTopPadUnits = 4f;
 
@@ -36,7 +37,8 @@ internal readonly struct HomeMetrics
         Rows = rows;
     }
 
-    public static HomeMetrics Compute(Rect content, int columns, int rows, float baseScale, in HomeMotion motion)
+    public static HomeMetrics Compute(Rect content, int columns, int rows, float baseScale, in HomeMotion motion,
+        float editReserveUnits = 0f)
     {
         var warped = motion.Warp(content);
         var scale = baseScale * motion.Zoom;
@@ -45,7 +47,7 @@ internal readonly struct HomeMetrics
         var dockBar = new Rect(new Vector2(warped.Min.X + 6f * scale, dockBottom - dockHeight),
             new Vector2(warped.Max.X - 6f * scale, dockBottom));
         var dotsCenterY = dockBar.Min.Y - DotsBandUnits * scale * 0.5f - 2f * scale;
-        var gridTop = warped.Min.Y + GridTopPadUnits * scale;
+        var gridTop = warped.Min.Y + (GridTopPadUnits + editReserveUnits) * scale;
         var gridBottom = dockBar.Min.Y - DotsBandUnits * scale;
         var grid = new Rect(new Vector2(warped.Min.X, gridTop), new Vector2(warped.Max.X, gridBottom));
         var cellWidth = grid.Width / columns;

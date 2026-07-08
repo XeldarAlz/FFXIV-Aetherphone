@@ -106,8 +106,9 @@ internal sealed class HomeScreen
         layout.EnsureCurrent();
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         editClock += delta;
+        var editReserve = editing && motion.Interactive ? HomeMetrics.EditToolbarBandUnits : 0f;
         var metrics = HomeMetrics.Compute(content, HomeLayoutService.Columns, layout.Rows, ImGuiHelpers.GlobalScale,
-            motion);
+            motion, editReserve);
         pager.Step(delta, DisplayPageCount());
         var chromeAlpha = Math.Clamp(1f - motion.Progress * 1.6f, 0f, 1f);
         if (motion.Interactive)
@@ -327,6 +328,9 @@ internal sealed class HomeScreen
             pressActive = false;
         }
     }
+
+    private bool RemoveBadgesLive(in HomeMotion motion) =>
+        editing && motion.Interactive && !gallery.Active && !sizeMenu.Active && !folder.Active;
 
     private bool HandleEditChromeClick(Rect content, in HomeMetrics metrics, Vector2 mouse)
     {
@@ -810,7 +814,7 @@ internal sealed class HomeScreen
             tile.Widget!.Draw(new WidgetContext(ImGui.GetWindowDrawList(), drawRect, theme, tile.Size, scale, delta,
                 Math.Clamp(labelAlpha + 0.35f, 0f, 1f)));
             ReportWidgetAnchor(rect, motion);
-            if (editing && motion.Interactive &&
+            if (RemoveBadgesLive(motion) &&
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 4f * scale, rect.Min.Y + 4f * scale), scale, theme))
             {
                 layout.RemoveTile(tile);
@@ -824,7 +828,7 @@ internal sealed class HomeScreen
         {
             HomeTileView.DrawFolder(center, rect.Width, tile, theme, TapScale(tile) * Magnify(center, metrics.CellWidth),
                 labelAlpha, Loc.T(L.Home.NewFolder), metrics.CellWidth, zoom);
-            if (editing && motion.Interactive &&
+            if (RemoveBadgesLive(motion) &&
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
             {
                 layout.DisbandFolder(tile);
