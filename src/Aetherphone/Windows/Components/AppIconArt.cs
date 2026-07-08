@@ -23,8 +23,14 @@ internal static class AppIconArt
             case "messages":
                 DrawMessages(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "dm":
+                DrawDirectMessages(dl, center, extent, inkColor, holeColor);
+                return true;
             case "contacts":
                 DrawContacts(dl, center, extent, inkColor);
+                return true;
+            case "friends":
+                DrawFriends(dl, center, extent, inkColor);
                 return true;
             case "character":
                 DrawCharacter(dl, center, extent, inkColor, holeColor);
@@ -208,11 +214,38 @@ internal static class AppIconArt
         dl.AddCircleFilled(At(center, extent, 0.42f, -0.25f), dotRadius, hole, 16);
     }
 
+    private static void DrawDirectMessages(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        var bubbleMin = At(center, extent, -0.92f, -0.86f);
+        var bubbleMax = At(center, extent, 0.92f, 0.40f);
+        dl.AddRectFilled(bubbleMin, bubbleMax, ink, extent * 0.42f);
+        Span<Vector2> tail = stackalloc Vector2[3]
+        {
+            At(center, extent, 0.30f, 0.20f), At(center, extent, 0.66f, 0.20f), At(center, extent, 0.60f, 0.98f),
+        };
+        FillConvex(dl, ink, tail);
+        var lineThickness = extent * 0.12f;
+        dl.AddLine(At(center, extent, -0.46f, -0.44f), At(center, extent, 0.46f, -0.44f), hole, lineThickness);
+        dl.AddLine(At(center, extent, -0.46f, -0.08f), At(center, extent, 0.20f, -0.08f), hole, lineThickness);
+    }
+
     private static void DrawContacts(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
     {
         dl.AddCircleFilled(At(center, extent, 0f, -0.42f), extent * 0.40f, ink, 32);
         dl.PathClear();
         dl.PathArcTo(At(center, extent, 0f, 1.05f), extent * 0.92f, MathF.PI, MathF.PI * 2f, 32);
+        dl.PathFillConvex(ink);
+    }
+
+    private static void DrawFriends(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
+    {
+        dl.AddCircleFilled(At(center, extent, -0.42f, -0.34f), extent * 0.30f, ink, 32);
+        dl.PathClear();
+        dl.PathArcTo(At(center, extent, -0.42f, 0.80f), extent * 0.68f, MathF.PI, MathF.PI * 2f, 32);
+        dl.PathFillConvex(ink);
+        dl.AddCircleFilled(At(center, extent, 0.50f, -0.50f), extent * 0.26f, ink, 32);
+        dl.PathClear();
+        dl.PathArcTo(At(center, extent, 0.50f, 0.52f), extent * 0.56f, MathF.PI, MathF.PI * 2f, 32);
         dl.PathFillConvex(ink);
     }
 

@@ -90,7 +90,7 @@ public sealed class Plugin : IDalamudPlugin
         Confirm = new ConfirmService();
         shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
             services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
-            services.SocialLauncher, Confirm);
+            services.DmLauncher, services.SocialLauncher, Confirm);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
         if (Cfg.OpenOnStartup)
         {

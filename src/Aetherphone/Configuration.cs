@@ -27,6 +27,7 @@ internal sealed class Configuration : IPluginConfiguration
     public Dictionary<string, int> OnboardingCompleted { get; set; } = new();
     public bool LockPosition { get; set; }
     public bool DoNotDisturb { get; set; }
+    public bool Vibration { get; set; } = true;
     public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();
     public bool NotifyDailyReset { get; set; }
     public bool NotifyWeeklyReset { get; set; }
@@ -81,6 +82,9 @@ internal sealed class Configuration : IPluginConfiguration
     public bool VelvetOnboarded { get; set; }
     public int VelvetAcknowledgedGateVersion { get; set; }
     public bool VelvetBlurByDefault { get; set; } = true;
+    public List<string> VelvetPinnedThreads { get; set; } = new();
+    public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();
+    public List<string> MutedLinkshells { get; set; } = new();
     public long DevChatLastSeenUnix { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }

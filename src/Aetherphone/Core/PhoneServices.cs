@@ -39,7 +39,9 @@ internal sealed class PhoneServices : IDisposable
     public ChatBridge ChatBridge { get; }
     public MessageLauncher MessageLauncher { get; }
     public VelvetLauncher VelvetLauncher { get; }
+    public DmLauncher DmLauncher { get; }
     public SocialLauncher SocialLauncher { get; }
+    public LinkshellMuteStore LinkshellMutes { get; }
     public LinkshellStore Linkshells { get; }
     public LinkshellBridge LinkshellBridge { get; }
     public HttpService Http { get; }
@@ -71,7 +73,8 @@ internal sealed class PhoneServices : IDisposable
     private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps,
         ITextureProvider textures, WeatherService weather, NotificationService notifications, SoundService sound,
         MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
-        SocialLauncher socialLauncher, LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http,
+        DmLauncher dmLauncher, SocialLauncher socialLauncher, LinkshellMuteStore linkshellMutes,
+        LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http,
         MediaCache media, RemoteImageCache remoteImages,
         LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession,
         AethernetClient aethernetClient, IAnalyticsService analytics, MarketItemIndex marketIndex,
@@ -94,7 +97,9 @@ internal sealed class PhoneServices : IDisposable
         ChatBridge = chatBridge;
         MessageLauncher = messageLauncher;
         VelvetLauncher = velvetLauncher;
+        DmLauncher = dmLauncher;
         SocialLauncher = socialLauncher;
+        LinkshellMutes = linkshellMutes;
         Linkshells = linkshells;
         LinkshellBridge = linkshellBridge;
         Http = http;
@@ -138,13 +143,16 @@ internal sealed class PhoneServices : IDisposable
         var soundLibrary = new SoundLibrary(soundBundledDirectory, soundUserDirectory);
         var sound = new SoundService(configuration, soundLibrary, new SoundEffectPlayer(), framework);
         var notifications = new NotificationService(sound, configuration, framework);
-        var messages = new MessageStore();
+        var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
+        var messages = new MessageStore(messageArchive);
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
         var messageLauncher = new MessageLauncher();
         var velvetLauncher = new VelvetLauncher();
+        var dmLauncher = new DmLauncher();
         var socialLauncher = new SocialLauncher();
-        var linkshells = new LinkshellStore();
-        var linkshellBridge = new LinkshellBridge(linkshells, notifications, chatGui, gameData);
+        var linkshellMutes = new LinkshellMuteStore(configuration);
+        var linkshells = new LinkshellStore(linkshellMutes);
+        var linkshellBridge = new LinkshellBridge(linkshells, linkshellMutes, notifications, chatGui, gameData);
         var cacheRoot = new DirectoryInfo(Path.Combine(configDirectory.FullName, "cache"));
         cacheRoot.Create();
         var mediaRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "media"));
@@ -190,10 +198,10 @@ internal sealed class PhoneServices : IDisposable
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
         var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback);
-        var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, framework);
+        var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, configuration, framework);
         return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
-            messages, chatBridge, messageLauncher, velvetLauncher, socialLauncher, linkshells, linkshellBridge, http,
-            media, remoteImages, lodestone,
+            messages, chatBridge, messageLauncher, velvetLauncher, dmLauncher, socialLauncher, linkshellMutes, linkshells,
+            linkshellBridge, http, media, remoteImages, lodestone,
             collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher,
             marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
             collections, inventoryCapture, calls, socialNotifications);

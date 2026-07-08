@@ -10,8 +10,10 @@ internal static class AppAccents
     private static readonly FrozenDictionary<string, Vector4> Accents = new Dictionary<string, Vector4>
     {
         ["messages"] = new(0.30f, 0.78f, 0.42f, 1f),
+        ["dm"] = new(0.22f, 0.58f, 1.00f, 1f),
         ["phone"] = new(0.20f, 0.78f, 0.35f, 1f),
         ["contacts"] = new(0.45f, 0.55f, 0.95f, 1f),
+        ["friends"] = new(0.24f, 0.72f, 0.60f, 1f),
         ["chirper"] = new(0.16f, 0.52f, 0.94f, 1f),
         ["aethergram"] = new(0.92f, 0.30f, 0.38f, 1f),
         ["velvet"] = new(0.84f, 0.16f, 0.40f, 1f),
