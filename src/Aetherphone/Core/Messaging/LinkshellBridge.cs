@@ -12,13 +12,16 @@ internal sealed class LinkshellBridge : IDisposable
 {
     private static readonly Vector4 MessagesAccent = new(0.30f, 0.78f, 0.42f, 1f);
     private readonly LinkshellStore store;
+    private readonly LinkshellMuteStore mutes;
     private readonly NotificationService notifications;
     private readonly IChatGui chatGui;
     private readonly GameData gameData;
 
-    public LinkshellBridge(LinkshellStore store, NotificationService notifications, IChatGui chatGui, GameData gameData)
+    public LinkshellBridge(LinkshellStore store, LinkshellMuteStore mutes, NotificationService notifications,
+        IChatGui chatGui, GameData gameData)
     {
         this.store = store;
+        this.mutes = mutes;
         this.notifications = notifications;
         this.chatGui = chatGui;
         this.gameData = gameData;
@@ -58,6 +61,11 @@ internal sealed class LinkshellBridge : IDisposable
 
         store.Append(channel, display,
             new ChatLine(MessageDirection.Incoming, text, DateTime.Now, new MessageAuthor(name, world)));
+        if (mutes.IsMuted(channel))
+        {
+            return;
+        }
+
         var title = LinkshellLabel.Of(channel, display);
         notifications.Notify(new PhoneNotification("messages", title, $"{name}: {text}", DateTime.Now, MessagesAccent,
             channel.Key));

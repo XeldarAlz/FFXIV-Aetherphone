@@ -43,7 +43,7 @@ internal sealed partial class DevApp
             }
         }
 
-        if (ComposeFab.Draw(area, ui, "##devComposeFab", Accent, FontAwesomeIcon.Plus.ToIconString(), "New card"))
+        if (ComposeFab.Draw(area, "##devComposeFab", Accent, FontAwesomeIcon.Plus.ToIconString(), "New card"))
         {
             cardTitleDraft = string.Empty;
             cardBodyDraft = string.Empty;

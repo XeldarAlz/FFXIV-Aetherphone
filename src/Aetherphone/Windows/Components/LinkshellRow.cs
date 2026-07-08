@@ -4,6 +4,7 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
@@ -12,7 +13,7 @@ internal static class LinkshellRow
 {
     private const float Height = 64f;
 
-    public static bool Draw(LinkshellChannel channel, string label, LinkshellThread? thread, PhoneTheme theme)
+    public static bool Draw(LinkshellChannel channel, string label, LinkshellThread? thread, bool muted, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
@@ -44,7 +45,7 @@ internal static class LinkshellRow
             var time = TimeText.Short(thread!.LastActivity);
             var timeSize = Typography.Measure(time, TextStyles.Caption1);
             Typography.Draw(new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
-                hasUnread ? theme.Accent : theme.TextMuted, TextStyles.Caption1);
+                hasUnread && !muted ? theme.Accent : theme.TextMuted, TextStyles.Caption1);
         }
 
         var titleY = last is null
@@ -54,7 +55,21 @@ internal static class LinkshellRow
         Typography.Draw(new Vector2(textLeft, titleY), label, theme.TextStrong, TextStyles.Headline);
         dl.PopClipRect();
         var previewRight = textRight;
-        if (hasUnread)
+        if (muted)
+        {
+            var glyphCenter = new Vector2(textRight - 9f * scale, min.Y + 42f * scale);
+            AppSkin.Icon(dl, glyphCenter, FontAwesomeIcon.BellSlash.ToIconString(), theme.TextMuted, 0.82f);
+            var indicatorLeft = glyphCenter.X - 9f * scale;
+            if (hasUnread)
+            {
+                var dotCenter = new Vector2(indicatorLeft - 8f * scale, glyphCenter.Y);
+                dl.AddCircleFilled(dotCenter, 3.5f * scale, ImGui.GetColorU32(theme.Accent), 12);
+                indicatorLeft = dotCenter.X - 4f * scale;
+            }
+
+            previewRight = indicatorLeft - 6f * scale;
+        }
+        else if (hasUnread)
         {
             var count = unread > 99 ? "99+" : unread.ToString();
             var countSize = Typography.Measure(count, TextStyles.Caption1);

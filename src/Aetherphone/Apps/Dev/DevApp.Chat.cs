@@ -132,7 +132,7 @@ internal sealed partial class DevApp
         float bubbleHeight, float paddingX, float paddingY, float wrap, bool mine, Vector4 fill, Vector4 ink,
         float entrance)
     {
-        var pop = 0.80f + 0.20f * Easing.EaseOutBack(entrance);
+        var pop = 0.80f + 0.20f * Easing.EaseOutQuint(entrance);
         var alpha = MathF.Min(entrance * 1.8f, 1f);
         var rise = new Vector2(0f, (1f - Easing.EaseOutCubic(entrance)) * 10f * scale);
         ImGui.SetCursorPos(start);
@@ -184,7 +184,7 @@ internal sealed partial class DevApp
         var offsetX = mine ? available - bubbleWidth : 0f;
         var fill = mine ? Accent : new Vector4(1f, 1f, 1f, 0.10f);
         var entrance = ChatEntranceProgress(index);
-        var pop = entrance < 1f ? 0.80f + 0.20f * Easing.EaseOutBack(entrance) : 1f;
+        var pop = entrance < 1f ? 0.80f + 0.20f * Easing.EaseOutQuint(entrance) : 1f;
         var alpha = entrance < 1f ? MathF.Min(entrance * 1.8f, 1f) : 1f;
         var rise = new Vector2(0f, entrance < 1f ? (1f - Easing.EaseOutCubic(entrance)) * 10f * scale : 0f);
         ImGui.SetCursorPos(start);

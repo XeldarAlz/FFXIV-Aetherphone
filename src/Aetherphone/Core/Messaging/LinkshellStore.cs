@@ -4,8 +4,14 @@ internal sealed class LinkshellStore
 {
     private readonly Dictionary<string, LinkshellThread> byChannel = new(StringComparer.Ordinal);
     private readonly List<LinkshellThread> ordered = new();
+    private readonly LinkshellMuteStore mutes;
     public IReadOnlyList<LinkshellThread> Threads => ordered;
     public event Action? Changed;
+
+    public LinkshellStore(LinkshellMuteStore mutes)
+    {
+        this.mutes = mutes;
+    }
 
     public void Append(LinkshellChannel channel, string name, ChatLine line)
     {
@@ -42,7 +48,13 @@ internal sealed class LinkshellStore
         var total = 0;
         for (var index = 0; index < ordered.Count; index++)
         {
-            total += ordered[index].Unread;
+            var thread = ordered[index];
+            if (mutes.IsMuted(thread.Channel))
+            {
+                continue;
+            }
+
+            total += thread.Unread;
         }
 
         return total;
