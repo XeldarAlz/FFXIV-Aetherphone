@@ -4,8 +4,23 @@ internal sealed class MessageStore
 {
     private readonly Dictionary<string, Conversation> byTarget = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Conversation> ordered = new();
+    private readonly MessageArchive archive;
     public IReadOnlyList<Conversation> Conversations => ordered;
     public event Action? Changed;
+
+    public MessageStore(MessageArchive archive)
+    {
+        this.archive = archive;
+        var stored = archive.LoadAll();
+        for (var index = 0; index < stored.Count; index++)
+        {
+            var record = stored[index];
+            var conversation = new Conversation(record.Contact, record.SendTarget);
+            conversation.LoadHistory(record.Lines);
+            byTarget[record.SendTarget] = conversation;
+            ordered.Add(conversation);
+        }
+    }
 
     public void Append(string display, string sendTarget, ChatLine line)
     {
@@ -18,6 +33,15 @@ internal sealed class MessageStore
         conversation.Append(line);
         ordered.Remove(conversation);
         ordered.Insert(0, conversation);
+        archive.Save(conversation.Contact, conversation.SendTarget, conversation.Lines);
+        Changed?.Invoke();
+    }
+
+    public void Remove(Conversation conversation)
+    {
+        byTarget.Remove(conversation.SendTarget);
+        ordered.Remove(conversation);
+        archive.Delete(conversation.SendTarget);
         Changed?.Invoke();
     }
 

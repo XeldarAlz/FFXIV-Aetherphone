@@ -7,6 +7,7 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class NotificationRouter
 {
     private const string MessagesAppId = "messages";
+    private const string DmAppId = "dm";
     private const string VelvetAppId = "velvet";
     private const string ChirperAppId = "chirper";
     private const string AethergramAppId = "aethergram";
@@ -19,15 +20,17 @@ internal sealed class NotificationRouter
     private readonly NotificationService notifications;
     private readonly MessageLauncher messageLauncher;
     private readonly VelvetLauncher velvetLauncher;
+    private readonly DmLauncher dmLauncher;
     private readonly SocialLauncher socialLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications, MessageLauncher messageLauncher,
-        VelvetLauncher velvetLauncher, SocialLauncher socialLauncher)
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
     {
         this.navigation = navigation;
         this.notifications = notifications;
         this.messageLauncher = messageLauncher;
         this.velvetLauncher = velvetLauncher;
+        this.dmLauncher = dmLauncher;
         this.socialLauncher = socialLauncher;
     }
 
@@ -45,6 +48,10 @@ internal sealed class NotificationRouter
             {
                 messageLauncher.Request(notification.Title, notification.GroupKey);
             }
+        }
+        else if (notification.AppId == DmAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            dmLauncher.RequestConversation(notification.GroupKey);
         }
         else if (notification.AppId == VelvetAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {

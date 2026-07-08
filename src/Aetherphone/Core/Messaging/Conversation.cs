@@ -29,5 +29,13 @@ internal sealed class Conversation
         }
     }
 
+    public void LoadHistory(List<ChatLine> history)
+    {
+        lines.Clear();
+        lines.AddRange(history);
+        LastActivity = history.Count > 0 ? history[history.Count - 1].At : LastActivity;
+        Unread = 0;
+    }
+
     public void MarkRead() => Unread = 0;
 }

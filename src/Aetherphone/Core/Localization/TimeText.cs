@@ -88,6 +88,47 @@ internal static class TimeText
         return Loc.T(L.Time.DaysShort, (int)delta.TotalDays);
     }
 
+    public static string Clock(long unixSeconds)
+    {
+        if (unixSeconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        return DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime().ToString("t", Loc.Culture);
+    }
+
+    public static string DayLabel(long unixSeconds)
+    {
+        if (unixSeconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        var day = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime().Date;
+        var today = DateTime.Now.Date;
+        if (day == today)
+        {
+            return Loc.T(L.Time.Today);
+        }
+
+        if (day == today.AddDays(-1))
+        {
+            return Loc.T(L.Time.Yesterday);
+        }
+
+        if (day > today.AddDays(-7) && day < today)
+        {
+            return Loc.Culture.TextInfo.ToTitleCase(day.ToString("dddd", Loc.Culture));
+        }
+
+        return day.ToString("d", Loc.Culture);
+    }
+
+    public static bool SameLocalDay(long firstUnix, long secondUnix) =>
+        DateTimeOffset.FromUnixTimeSeconds(firstUnix).ToLocalTime().Date ==
+        DateTimeOffset.FromUnixTimeSeconds(secondUnix).ToLocalTime().Date;
+
     public static string MinutesSeconds(int totalSeconds)
     {
         if (totalSeconds < 0)

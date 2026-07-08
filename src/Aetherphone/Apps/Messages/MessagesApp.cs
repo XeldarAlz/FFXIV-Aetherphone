@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Messaging;
@@ -37,11 +38,12 @@ internal sealed class MessagesApp : IPhoneApp
     }
 
     public string Id => "messages";
-    public string DisplayName => Loc.T(L.Apps.Messages);
-    public string Glyph => "M";
+    public string DisplayName => Loc.T(L.Apps.Chat);
+    public string Glyph => "Ch";
     public int BadgeCount => store.TotalUnread() + linkshells.TotalUnread();
     private readonly MessageStore store;
     private readonly LinkshellStore linkshells;
+    private readonly LinkshellMuteStore mutes;
     private readonly ChatBridge bridge;
     private readonly LinkshellBridge linkshellBridge;
     private readonly MessageLauncher launcher;
@@ -62,12 +64,13 @@ internal sealed class MessagesApp : IPhoneApp
     private bool snapToBottom;
     private bool composerFocus;
 
-    public MessagesApp(MessageStore store, LinkshellStore linkshells, ChatBridge bridge,
+    public MessagesApp(MessageStore store, LinkshellStore linkshells, LinkshellMuteStore mutes, ChatBridge bridge,
         LinkshellBridge linkshellBridge, MessageLauncher launcher, LodestoneService lodestone,
         NotificationService notifications)
     {
         this.store = store;
         this.linkshells = linkshells;
+        this.mutes = mutes;
         this.bridge = bridge;
         this.linkshellBridge = linkshellBridge;
         this.launcher = launcher;
@@ -196,7 +199,7 @@ internal sealed class MessagesApp : IPhoneApp
                 var thread = linkshells.Find(entry.Channel);
                 var label = LinkshellLabel.Of(entry.Channel,
                     thread?.Name is { Length: > 0 } stored ? stored : entry.Name);
-                if (LinkshellRow.Draw(entry.Channel, label, thread, frameTheme))
+                if (LinkshellRow.Draw(entry.Channel, label, thread, mutes.IsMuted(entry.Channel), frameTheme))
                 {
                     OpenLinkshell(entry.Channel, entry.Name);
                 }
@@ -211,7 +214,7 @@ internal sealed class MessagesApp : IPhoneApp
                 }
 
                 var label = LinkshellLabel.Of(thread.Channel, thread.Name);
-                if (LinkshellRow.Draw(thread.Channel, label, thread, frameTheme))
+                if (LinkshellRow.Draw(thread.Channel, label, thread, mutes.IsMuted(thread.Channel), frameTheme))
                 {
                     OpenLinkshell(thread.Channel, thread.Name);
                 }
@@ -245,6 +248,11 @@ internal sealed class MessagesApp : IPhoneApp
         notifications.RemoveGroup(conversation.SendTarget);
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, conversation.Contact, backToList);
+        if (conversation.Lines.Count > 0 && DrawDeleteHistoryButton(area))
+        {
+            AskDeleteHistory(conversation);
+        }
+
         var bubbles = BubbleArea(area, out var composerBar);
         entrance.Sync(conversation, conversation.Lines.Count, ImGui.GetIO().DeltaTime);
         using (AppSurface.Begin(bubbles))
@@ -267,12 +275,54 @@ internal sealed class MessagesApp : IPhoneApp
         DrawComposer(composerBar, frameTheme, text => bridge.Send(conversation, text));
     }
 
+    private bool DrawDeleteHistoryButton(Rect area)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var center = new Vector2(area.Max.X - 22f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
+        var radius = 16f * scale;
+        var min = center - new Vector2(radius, radius);
+        var max = center + new Vector2(radius, radius);
+        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), center, FontAwesomeIcon.TrashAlt,
+            hovered ? frameTheme.Danger : frameTheme.TextMuted, 15f * scale);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    private void AskDeleteHistory(Conversation conversation)
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Title = conversation.Contact,
+            Message = Loc.T(L.Messages.DeleteHistoryConfirm),
+            ConfirmLabel = Loc.T(L.Messages.DeleteHistoryButton),
+            CancelLabel = Loc.T(L.Messages.DeleteHistoryCancel),
+            Confirm = () => DeleteHistory(conversation),
+        });
+    }
+
+    private void DeleteHistory(Conversation conversation)
+    {
+        store.Remove(conversation);
+        trackedThread = null;
+        router.Pop();
+    }
+
     private void DrawLinkshellThread(Rect area, LinkshellThread thread)
     {
         thread.MarkRead();
         notifications.RemoveGroup(thread.Channel.Key);
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, LinkshellLabel.Of(thread.Channel, thread.Name), backToList);
+        if (DrawMuteButton(area, thread.Channel))
+        {
+            mutes.Toggle(thread.Channel);
+        }
+
         var bubbles = BubbleArea(area, out var composerBar);
         entrance.Sync(thread, thread.Lines.Count, ImGui.GetIO().DeltaTime);
         using (AppSurface.Begin(bubbles))
@@ -293,6 +343,27 @@ internal sealed class MessagesApp : IPhoneApp
         }
 
         DrawComposer(composerBar, frameTheme, text => linkshellBridge.Send(thread, text));
+    }
+
+    private bool DrawMuteButton(Rect area, LinkshellChannel channel)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var center = new Vector2(area.Max.X - 22f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
+        var radius = 16f * scale;
+        var min = center - new Vector2(radius, radius);
+        var max = center + new Vector2(radius, radius);
+        var muted = mutes.IsMuted(channel);
+        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var color = muted ? frameTheme.Accent : hovered ? frameTheme.TextStrong : frameTheme.TextMuted;
+        ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), center,
+            muted ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell, color, 15f * scale);
+        HoverTooltip.Show(new Rect(min, max), Loc.T(muted ? L.Messages.Unmute : L.Messages.Mute));
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private GroupBubble GroupContext(IReadOnlyList<ChatLine> lines, int index)

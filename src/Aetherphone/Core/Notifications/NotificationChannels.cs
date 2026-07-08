@@ -10,7 +10,8 @@ internal static class NotificationChannels
 {
     public static readonly IReadOnlyList<NotificationChannel> All = new NotificationChannel[]
     {
-        new("messages", L.Apps.Messages, AppAccents.For("messages")),
+        new("dm", L.Apps.Messages, AppAccents.For("dm")),
+        new("messages", L.Apps.Chat, AppAccents.For("messages")),
         new("chirper", L.Apps.Chirper, AppAccents.For("chirper")),
         new("aethergram", L.Apps.Aethergram, AppAccents.For("aethergram")),
         new("velvet", L.Apps.Velvet, AppAccents.For("velvet")),
