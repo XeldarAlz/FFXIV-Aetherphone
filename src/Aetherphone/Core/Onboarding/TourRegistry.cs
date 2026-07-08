@@ -7,21 +7,24 @@ internal static class TourRegistry
 {
     public const string WelcomeId = "welcome";
 
-    private static readonly GuideSequence Welcome = new(WelcomeId, 4, null,
+    private static readonly GuideSequence Welcome = new(WelcomeId, 5, null,
         new[]
         {
             GuideStep.Page(L.Onboarding.WelcomeTitle, L.Onboarding.WelcomeBody, L.Onboarding.Continue),
-            GuideStep.Page(L.Onboarding.AllInOneTitle, L.Onboarding.AllInOneBody, L.Onboarding.Continue),
             GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.GetStarted),
-            GuideStep.Tap(L.Onboarding.BeginTitle, L.Onboarding.BeginBody, "home.app.skywatcher",
-                static nav => nav.Open("skywatcher", AppOpenSource.Onboarding)),
-            GuideStep.Note(L.Onboarding.SkywatcherTitle, L.Onboarding.SkywatcherBody),
-            GuideStep.Point(L.Onboarding.SkywatcherForecastTitle, L.Onboarding.SkywatcherForecastBody,
-                "skywatcher.forecast"),
+            GuideStep.Point(L.Onboarding.WidgetTourTitle, L.Onboarding.WidgetTourBody, "home.widget"),
+            GuideStep.Tap(L.Onboarding.FriendsTourTitle, L.Onboarding.FriendsTourBody, "home.app.friends",
+                static nav => nav.Open("friends", AppOpenSource.Onboarding)),
+            GuideStep.Point(L.Onboarding.MyNumberTourTitle, L.Onboarding.MyNumberTourBody, "friends.mynumber"),
             GuideStep.Tap(L.Onboarding.ReturnHomeTitle, L.Onboarding.ReturnHomeBody, "chrome.home",
                 static nav => nav.GoHome()),
+            GuideStep.Note(L.Onboarding.CustomizeTitle, L.Onboarding.CustomizeBody),
+            GuideStep.Point(L.Onboarding.ControlCenterTitle, L.Onboarding.ControlCenterBody, "chrome.controlcenter"),
+            GuideStep.Point(L.Onboarding.SignalTourTitle, L.Onboarding.SignalTourBody, "chrome.signal"),
+            GuideStep.Point(L.Onboarding.BatteryTourTitle, L.Onboarding.BatteryTourBody, "chrome.battery"),
+            GuideStep.Point(L.Onboarding.MinimizeTitle, L.Onboarding.MinimizeBody, "chrome.minimize"),
             GuideStep.Point(L.Onboarding.LockTitle, L.Onboarding.LockBody, "chrome.lock"),
-        }, new[] { "skywatcher" });
+        });
 
     private static readonly Dictionary<string, GuideSequence> Tours = BuildTours();
     public static GuideSequence GetWelcome() => Welcome;

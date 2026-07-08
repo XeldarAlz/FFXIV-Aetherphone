@@ -21,14 +21,13 @@ internal sealed class CoachmarkOverlay
     private static readonly Vector4 Ink = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 CardTone = new(0.12f, 0.12f, 0.15f, 0.92f);
     private const float DimStrength = 0.78f;
-    private const float PoseFrequency = 3.1f;
-    private const float PoseDamping = 0.86f;
+    private const float PoseSmoothTime = 0.14f;
     private const float SizeSmoothTime = 0.16f;
     private const float BlendSmoothTime = 0.14f;
     private const float DotSmoothTime = 0.16f;
 
-    private DampedSpring cardCenterX;
-    private DampedSpring cardTop;
+    private Spring cardCenterX;
+    private Spring cardTop;
     private Spring cardWidth;
     private Spring cardHeight;
     private Spring arrowSlide;
@@ -58,8 +57,10 @@ internal sealed class CoachmarkOverlay
         var contentAlpha = contentProgress * alpha;
         var contentRise = (1f - contentProgress) * 7f * scale;
         var live = interactive && presence > 0.55f && textProgress > 0.45f;
-        var pop = 0.94f + 0.06f * Math.Clamp(presence, 0f, 1.15f);
-        var hole = PadHole(screen, anchor, step, scale);
+        var pop = 0.94f + 0.06f * Math.Clamp(presence, 0f, 1f);
+        var fullCard = step.Surface == GuideSurface.FullCard;
+        var edge = !fullCard && IsEdgeAnchor(screen, step, anchor);
+        var hole = edge ? null : PadHole(screen, anchor, step, scale);
         if (hole is { } holeRect)
         {
             lastHole = holeRect;
@@ -71,19 +72,33 @@ internal sealed class CoachmarkOverlay
         var blend = Math.Clamp(holeBlend.Value, 0f, 1f);
         dl.PushClipRect(screen.Min, screen.Max, true);
         DrawDim(dl, screen, rounding, alpha, blend, scale, theme, step);
-        var fullCard = step.Surface == GuideSurface.FullCard;
         var target = fullCard
             ? FullCardTarget(screen, scale)
-            : CoachmarkTarget(screen, step, hole, scale, out _);
-        StepPose(target, delta);
-        var card = PoseRect(pop);
+            : edge
+                ? EdgeCardTarget(screen, step, anchor!.Value, scale)
+                : CoachmarkTarget(screen, step, hole, scale, out _);
+        StepPose(target, screen.Min, delta);
+        var card = PoseRect(screen.Min, pop);
         var action = fullCard
             ? DrawFullCardContent(dl, screen, theme, step, card, alpha, contentAlpha, contentRise, live, index, count,
                 scale)
-            : DrawCoachmarkContent(dl, screen, theme, step, card, hole, alpha, contentAlpha, contentRise, blend, live,
-                index, count, scale, delta);
+            : edge
+                ? DrawEdgeContent(dl, screen, theme, step, card, anchor!.Value, alpha, contentAlpha, contentRise, live,
+                    index, count, scale)
+                : DrawCoachmarkContent(dl, screen, theme, step, card, hole, alpha, contentAlpha, contentRise, blend,
+                    live, index, count, scale, delta);
         dl.PopClipRect();
         return action;
+    }
+
+    private static bool IsEdgeAnchor(Rect screen, in GuideStep step, Rect? anchor)
+    {
+        if (step.AnchorKey is null || anchor is not { } rect)
+        {
+            return false;
+        }
+
+        return rect.Center.X < screen.Min.X || rect.Center.X > screen.Max.X;
     }
 
     private static Rect? PadHole(Rect screen, Rect? anchor, in GuideStep step, float scale)
@@ -93,9 +108,12 @@ internal sealed class CoachmarkOverlay
             return null;
         }
 
-        var padded = rect.Inset(-7f * scale);
-        return Within(screen, padded) ? padded : null;
+        var padded = Intersect(screen, rect.Inset(-7f * scale));
+        return padded.Width > 1f && padded.Height > 1f ? padded : null;
     }
+
+    private static Rect Intersect(Rect a, Rect b) =>
+        new(Vector2.Max(a.Min, b.Min), Vector2.Min(a.Max, b.Max));
 
     private void DrawDim(ImDrawListPtr dl, Rect screen, float rounding, float alpha, float blend, float scale,
         PhoneTheme theme, in GuideStep step)
@@ -121,19 +139,27 @@ internal sealed class CoachmarkOverlay
         return new Rect(min, max);
     }
 
-    private Rect CoachmarkTarget(Rect screen, in GuideStep step, Rect? hole, float scale, out bool arrowUp)
+    private static Vector2 MeasureCard(Rect screen, in GuideStep step, bool isTap, float scale)
     {
-        var cardWidthTarget = MathF.Min(screen.Width - 24f * scale, 344f * scale);
-        var innerWidth = cardWidthTarget - 44f * scale;
-        var isTap = step.Advance == GuideAdvance.TapTarget && hole.HasValue;
+        var cardWidth = MathF.Min(screen.Width - 24f * scale, 344f * scale);
+        var innerWidth = cardWidth - 44f * scale;
         var titleLine = LineHeight(TextStyles.Title3);
         var bodyLine = LineHeight(TextStyles.Body);
         var bodyLines = CountWrapped(Loc.T(step.Body), TextStyles.Body, innerWidth);
         var bodyBlock = bodyLines * bodyLine * 1.25f;
         var actionHeight = isTap ? bodyLine : 50f * scale;
         var dotsHeight = 16f * scale;
-        var cardHeightTarget = 22f * scale + titleLine + 10f * scale + bodyBlock + 18f * scale + dotsHeight +
-                               actionHeight + 22f * scale;
+        var cardHeight = 22f * scale + titleLine + 10f * scale + bodyBlock + 18f * scale + dotsHeight +
+                         actionHeight + 22f * scale;
+        return new Vector2(cardWidth, cardHeight);
+    }
+
+    private Rect CoachmarkTarget(Rect screen, in GuideStep step, Rect? hole, float scale, out bool arrowUp)
+    {
+        var isTap = step.Advance == GuideAdvance.TapTarget && hole.HasValue;
+        var size = MeasureCard(screen, step, isTap, scale);
+        var cardWidthTarget = size.X;
+        var cardHeightTarget = size.Y;
         var margin = 14f * scale;
         var arrowH = 9f * scale;
         float centerX;
@@ -157,10 +183,25 @@ internal sealed class CoachmarkOverlay
             new Vector2(centerX + cardWidthTarget * 0.5f, top + cardHeightTarget));
     }
 
-    private void StepPose(Rect target, float delta)
+    private Rect EdgeCardTarget(Rect screen, in GuideStep step, Rect anchor, float scale)
     {
-        var centerX = target.Center.X;
-        var top = target.Min.Y;
+        var size = MeasureCard(screen, step, false, scale);
+        var margin = 16f * scale;
+        var left = anchor.Center.X < screen.Center.X;
+        var centerX = left
+            ? screen.Min.X + margin + size.X * 0.5f
+            : screen.Max.X - margin - size.X * 0.5f;
+        var centerY = ClampToRange(anchor.Center.Y, screen.Min.Y + margin + size.Y * 0.5f,
+            screen.Max.Y - margin - size.Y * 0.5f);
+        var half = size * 0.5f;
+        return new Rect(new Vector2(centerX - half.X, centerY - half.Y),
+            new Vector2(centerX + half.X, centerY + half.Y));
+    }
+
+    private void StepPose(Rect target, Vector2 origin, float delta)
+    {
+        var centerX = target.Center.X - origin.X;
+        var top = target.Min.Y - origin.Y;
         var width = target.Width;
         var height = target.Height;
         if (!hasPose)
@@ -173,15 +214,15 @@ internal sealed class CoachmarkOverlay
             return;
         }
 
-        cardCenterX.Step(centerX, PoseFrequency, PoseDamping, delta);
-        cardTop.Step(top, PoseFrequency, PoseDamping, delta);
+        cardCenterX.Step(centerX, PoseSmoothTime, delta);
+        cardTop.Step(top, PoseSmoothTime, delta);
         cardWidth.Step(width, SizeSmoothTime, delta);
         cardHeight.Step(height, SizeSmoothTime, delta);
     }
 
-    private Rect PoseRect(float pop)
+    private Rect PoseRect(Vector2 origin, float pop)
     {
-        var center = new Vector2(cardCenterX.Value, cardTop.Value + cardHeight.Value * 0.5f);
+        var center = origin + new Vector2(cardCenterX.Value, cardTop.Value + cardHeight.Value * 0.5f);
         var half = new Vector2(cardWidth.Value, cardHeight.Value) * 0.5f * pop;
         return new Rect(center - half, center + half);
     }
@@ -228,7 +269,7 @@ internal sealed class CoachmarkOverlay
         if (hole is { } h)
         {
             var arrowUp = card.Center.Y > h.Center.Y;
-            var arrowX = ClampToRange(h.Center.X, card.Min.X + 24f * scale, card.Max.X - 24f * scale);
+            var arrowX = ClampToRange(h.Center.X, card.Min.X + 24f * scale, card.Max.X - 24f * scale) - screen.Min.X;
             if (blend < 0.05f)
             {
                 arrowSlide.SnapTo(arrowX);
@@ -238,15 +279,70 @@ internal sealed class CoachmarkOverlay
                 arrowSlide.Step(arrowX, SizeSmoothTime, delta);
             }
 
-            Arrow(dl, arrowSlide.Value, arrowUp ? card.Min.Y : card.Max.Y, 9f * scale, arrowUp,
+            Arrow(dl, screen.Min.X + arrowSlide.Value, arrowUp ? card.Min.Y : card.Max.Y, 9f * scale, arrowUp,
                 alpha * blend * contentAlpha);
         }
 
         Elevation.Floating(dl, card.Min, card.Max, radius, scale, alpha);
         Material.Frosted(dl, card.Min, card.Max, radius, scale, alpha);
         dl.PushClipRect(card.Min, card.Max, true);
+        var cursorY = DrawCardText(dl, theme, step, card, contentAlpha, contentRise, index, count, scale);
+        var action = CoachmarkAction.None;
+        if (isTap)
+        {
+            var bodyLine = LineHeight(TextStyles.Body);
+            Typography.DrawCentered(dl, new Vector2(card.Center.X, cursorY + bodyLine * 0.5f), Loc.T(L.Onboarding.TapToContinue),
+                theme.Accent with { W = contentAlpha }, TextStyles.FootnoteEmphasized);
+        }
+        else if (DrawCardButton(dl, theme, step, card, cursorY, alpha, contentAlpha, live, scale))
+        {
+            action = CoachmarkAction.Advance;
+        }
+
+        dl.PopClipRect();
+        if (isTap && live && hole is { } tapHole && ImGui.IsMouseHoveringRect(tapHole.Min, tapHole.Max))
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                action = CoachmarkAction.Advance;
+            }
+        }
+
+        return action;
+    }
+
+    private CoachmarkAction DrawEdgeContent(ImDrawListPtr dl, Rect screen, PhoneTheme theme, in GuideStep step,
+        Rect card, Rect anchor, float alpha, float contentAlpha, float contentRise, bool live, int index, int count,
+        float scale)
+    {
+        var radius = 20f * scale;
+        var left = anchor.Center.X < screen.Center.X;
+        var clipMin = new Vector2(MathF.Min(anchor.Min.X, card.Min.X) - 12f * scale, screen.Min.Y);
+        var clipMax = new Vector2(MathF.Max(anchor.Max.X, card.Max.X) + 12f * scale, screen.Max.Y);
+        dl.PushClipRect(clipMin, clipMax, false);
+        var connectorY = ClampToRange(anchor.Center.Y, card.Min.Y + 22f * scale, card.Max.Y - 22f * scale);
+        var connectorFrom = left ? card.Min.X : card.Max.X;
+        var connectorTo = left ? anchor.Max.X + 3f * scale : anchor.Min.X - 3f * scale;
+        HConnector(dl, connectorFrom, connectorTo, connectorY, theme.Accent, alpha * contentAlpha, scale);
+        SpotlightRing(dl, anchor, theme.Accent, alpha * contentAlpha, scale);
+        dl.PopClipRect();
+
+        Elevation.Floating(dl, card.Min, card.Max, radius, scale, alpha);
+        Material.Frosted(dl, card.Min, card.Max, radius, scale, alpha);
+        dl.PushClipRect(card.Min, card.Max, true);
+        var cursorY = DrawCardText(dl, theme, step, card, contentAlpha, contentRise, index, count, scale);
+        var action = DrawCardButton(dl, theme, step, card, cursorY, alpha, contentAlpha, live, scale)
+            ? CoachmarkAction.Advance
+            : CoachmarkAction.None;
+        dl.PopClipRect();
+        return action;
+    }
+
+    private float DrawCardText(ImDrawListPtr dl, PhoneTheme theme, in GuideStep step, Rect card, float contentAlpha,
+        float contentRise, int index, int count, float scale)
+    {
         var titleLine = LineHeight(TextStyles.Title3);
-        var bodyLine = LineHeight(TextStyles.Body);
         var cursorY = card.Min.Y + 22f * scale - contentRise;
         Typography.DrawCentered(dl, new Vector2(card.Center.X, cursorY + titleLine * 0.5f), Loc.T(step.Title),
             theme.TextStrong with { W = contentAlpha }, TextStyles.Title3);
@@ -261,34 +357,32 @@ internal sealed class CoachmarkOverlay
             cursorY += 16f * scale;
         }
 
-        var action = CoachmarkAction.None;
-        if (isTap)
+        return cursorY;
+    }
+
+    private static bool DrawCardButton(ImDrawListPtr dl, PhoneTheme theme, in GuideStep step, Rect card, float cursorY,
+        float alpha, float contentAlpha, bool live, float scale)
+    {
+        var buttonSize = new Vector2(card.Width - 44f * scale, 46f * scale);
+        var buttonCenter = new Vector2(card.Center.X, cursorY + buttonSize.Y * 0.5f);
+        return Button(dl, buttonCenter, buttonSize, Loc.T(step.ButtonLabel), theme.Accent, alpha, contentAlpha, live,
+            scale);
+    }
+
+    private static void HConnector(ImDrawListPtr dl, float fromX, float toX, float y, Vector4 accent, float alpha,
+        float scale)
+    {
+        if (alpha <= 0.001f)
         {
-            Typography.DrawCentered(dl, new Vector2(card.Center.X, cursorY + bodyLine * 0.5f), Loc.T(L.Onboarding.TapToContinue),
-                theme.Accent with { W = contentAlpha }, TextStyles.FootnoteEmphasized);
-        }
-        else
-        {
-            var buttonSize = new Vector2(card.Width - 44f * scale, 46f * scale);
-            var buttonCenter = new Vector2(card.Center.X, cursorY + buttonSize.Y * 0.5f);
-            if (Button(dl, buttonCenter, buttonSize, Loc.T(step.ButtonLabel), theme.Accent, alpha, contentAlpha, live,
-                    scale))
-            {
-                action = CoachmarkAction.Advance;
-            }
+            return;
         }
 
-        dl.PopClipRect();
-        if (isTap && live && hole is { } tapHole && ImGui.IsMouseHoveringRect(tapHole.Min, tapHole.Max))
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                action = CoachmarkAction.Advance;
-            }
-        }
-
-        return action;
+        var color = ImGui.GetColorU32(accent with { W = accent.W * alpha });
+        dl.AddLine(new Vector2(fromX, y), new Vector2(toX, y), color, 2f * scale);
+        var direction = MathF.Sign(toX - fromX);
+        var head = 6f * scale;
+        dl.AddTriangleFilled(new Vector2(toX, y), new Vector2(toX - direction * head, y - head),
+            new Vector2(toX - direction * head, y + head), color);
     }
 
     private static float ClampToRange(float value, float min, float max)

@@ -10,8 +10,7 @@ namespace Aetherphone.Core.Onboarding;
 internal sealed class OnboardingDirector
 {
     private const float TextSeconds = 0.38f;
-    private const float PresenceFrequency = 2.9f;
-    private const float PresenceDamping = 0.80f;
+    private const float PresenceSmoothTime = 0.15f;
     private const float AnchorMissGrace = 0.4f;
     private const float AnchorSmoothing = 16f;
     private readonly INavigator navigation;
@@ -25,7 +24,7 @@ internal sealed class OnboardingDirector
     private string? pendingAppId;
     private bool suppressed = true;
     private float frameDelta;
-    private DampedSpring presence;
+    private Spring presence;
     private bool exiting;
     private bool exitCompletes;
     private float textClock;
@@ -136,7 +135,7 @@ internal sealed class OnboardingDirector
 
             if (!busy)
             {
-                presence.Step(exiting ? 0f : 1f, PresenceFrequency, PresenceDamping, frameDelta);
+                presence.Step(exiting ? 0f : 1f, PresenceSmoothTime, frameDelta);
                 textClock = MathF.Min(textClock + frameDelta, TextSeconds);
                 if (exiting && presence.IsResting(0f, 0.01f, 0.05f))
                 {
@@ -195,7 +194,7 @@ internal sealed class OnboardingDirector
 
         var sequence = active.Value;
         var step = sequence.Steps[stepIndex];
-        var presenceValue = Math.Clamp(presence.Value, 0f, 1.15f);
+        var presenceValue = Math.Clamp(presence.Value, 0f, 1f);
         if (presenceValue <= 0.005f && exiting)
         {
             return;
@@ -292,6 +291,7 @@ internal sealed class OnboardingDirector
     {
         textClock = 0f;
         missTimer = 0f;
+        anchorInitialized = false;
     }
 
     private static bool CanStart(in GuideSequence sequence, bool atHome, string? currentAppId) =>
