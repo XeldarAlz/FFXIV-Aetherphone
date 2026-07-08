@@ -90,38 +90,10 @@ internal static class PhotosChrome
             new Vector2(center.X + extent, center.Y - extent * 0.4f), ink, Metrics.Stroke.Thin * scale);
         dl.AddLine(new Vector2(center.X - extent * 0.4f, center.Y - extent),
             new Vector2(center.X + extent * 0.4f, center.Y - extent), ink, Metrics.Stroke.Thin * scale);
-        if (hovered)
-        {
-            Tooltip(center, radius, Loc.T(L.Photos.Delete), theme, scale);
-        }
+        HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+            Loc.T(L.Photos.Delete));
 
         return Tapped(hovered);
-    }
-
-    private static void Tooltip(Vector2 iconCenter, float hitRadius, string text, PhoneTheme theme, float scale)
-    {
-        var dl = ImGui.GetWindowDrawList();
-        var textSize = Typography.Measure(text, 0.78f, FontWeight.Medium);
-        var padX = 9f * scale;
-        var padY = 5f * scale;
-        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
-        var gap = 9f * scale;
-        var windowMin = ImGui.GetWindowPos();
-        var windowMax = windowMin + ImGui.GetWindowSize();
-        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, windowMin.X + 4f * scale,
-            windowMax.X - bubbleSize.X - 4f * scale);
-        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
-        if (minY < windowMin.Y + 4f * scale)
-        {
-            minY = iconCenter.Y + hitRadius + gap;
-        }
-
-        var min = new Vector2(minX, minY);
-        var max = min + bubbleSize;
-        var bubble = Palette.WithAlpha(Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f), 0.97f);
-        Squircle.Fill(dl, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(dl, new Vector2(min.X + padX, min.Y + padY), text, theme.AppBackground, 0.78f,
-            FontWeight.Medium);
     }
 
     private static bool Tapped(bool hovered)

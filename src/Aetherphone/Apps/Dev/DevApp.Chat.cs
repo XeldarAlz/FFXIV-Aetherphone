@@ -315,10 +315,10 @@ internal sealed partial class DevApp
         drawList.AddCircleFilled(pictureCenter, buttonRadius,
             ImGui.GetColorU32(pictureHovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent), 24);
         AppSkin.Icon(pictureCenter, FontAwesomeIcon.Image.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
+        HoverTooltip.Show(new Rect(pictureMin, pictureMax), "Send picture", HoverLabelSide.Above);
         if (pictureHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ui.DrawActionTooltip(pictureCenter, buttonRadius, "Send picture");
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
                 chatPickerLoaded = false;
@@ -356,11 +356,12 @@ internal sealed partial class DevApp
         drawList.AddCircleFilled(sendCenter, 16f * scale, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
         AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
         var sendHitRadius = 16f * scale;
-        if (ImGui.IsMouseHoveringRect(sendCenter - new Vector2(sendHitRadius, sendHitRadius),
-                sendCenter + new Vector2(sendHitRadius, sendHitRadius)))
+        var sendRect = new Rect(sendCenter - new Vector2(sendHitRadius, sendHitRadius),
+            sendCenter + new Vector2(sendHitRadius, sendHitRadius));
+        HoverTooltip.Show(sendRect, "Send", HoverLabelSide.Above);
+        if (ImGui.IsMouseHoveringRect(sendRect.Min, sendRect.Max))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ui.DrawActionTooltip(sendCenter, sendHitRadius, "Send");
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && canSend)
             {
                 submitted = true;

@@ -114,10 +114,7 @@ internal static class CalendarDayList
             drawList.AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(ui.MutedInk), glyph);
         }
 
-        if (hovered)
-        {
-            ui.DrawActionTooltip(center, radius, Loc.T(L.Calendar.DeleteEvent));
-        }
+        HoverTooltip.Show(new Rect(min, max), Loc.T(L.Calendar.DeleteEvent), HoverLabelSide.Above);
 
         if (UiInteract.HoverClick(min, max))
         {

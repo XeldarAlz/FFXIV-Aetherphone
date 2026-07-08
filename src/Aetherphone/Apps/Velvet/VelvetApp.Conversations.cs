@@ -593,14 +593,10 @@ internal sealed partial class VelvetApp
         drawList.AddCircleFilled(pictureCenter, buttonRadius,
             ImGui.GetColorU32(pictureHovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent), 24);
         AppSkin.Icon(pictureCenter, FontAwesomeIcon.Image.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
+        HoverTooltip.Show(new Rect(pictureMin, pictureMax), Loc.T(L.Velvet.SendPicture), HoverLabelSide.Above);
         if (pictureHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            using (ImRaii.Tooltip())
-            {
-                ImGui.TextUnformatted(Loc.T(L.Velvet.SendPicture));
-            }
-
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
                 router.Push(VelvetRoute.ChatImage(threadId));

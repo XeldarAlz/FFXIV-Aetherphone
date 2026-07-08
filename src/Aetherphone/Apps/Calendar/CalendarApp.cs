@@ -157,8 +157,10 @@ internal sealed class CalendarApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            ui.DrawActionTooltip(center, radius, Loc.T(L.Calendar.NewEvent));
         }
+
+        HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+            Loc.T(L.Calendar.NewEvent));
 
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {

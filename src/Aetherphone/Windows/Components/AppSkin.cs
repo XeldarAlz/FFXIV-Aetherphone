@@ -440,43 +440,6 @@ internal sealed class AppSkin
         ImGui.PopTextWrapPos();
     }
 
-    public void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text) =>
-        DrawActionTooltip(iconCenter, hitRadius, text, Theme);
-
-    public static void DrawActionTooltip(Vector2 iconCenter, float hitRadius, string text, PhoneTheme theme)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetForegroundDrawList();
-        var textSize = Typography.Measure(text, 0.78f, FontWeight.Medium);
-        var padX = 9f * scale;
-        var padY = 5f * scale;
-        var bubbleSize = new Vector2(textSize.X + padX * 2f, textSize.Y + padY * 2f);
-        var gap = 9f * scale;
-        var windowMin = ImGui.GetWindowPos();
-        var windowMax = windowMin + ImGui.GetWindowSize();
-        var minBoundX = windowMin.X + 4f * scale;
-        var maxBoundX = windowMax.X - bubbleSize.X - 4f * scale;
-        if (minBoundX > maxBoundX)
-        {
-            return;
-        }
-
-        var minX = Math.Clamp(iconCenter.X - bubbleSize.X * 0.5f, minBoundX, maxBoundX);
-        var minY = iconCenter.Y - hitRadius - gap - bubbleSize.Y;
-        if (minY < windowMin.Y + 4f * scale)
-        {
-            minY = iconCenter.Y + hitRadius + gap;
-        }
-
-        var min = new Vector2(minX, minY);
-        var max = min + bubbleSize;
-        var bubble = Core.Theme.Palette.WithAlpha(Core.Theme.Palette.Mix(theme.AppBackground, theme.TextStrong, 0.9f),
-            0.97f);
-        Squircle.Fill(drawList, min, max, bubbleSize.Y * 0.5f, ImGui.GetColorU32(bubble));
-        Typography.Draw(drawList, new Vector2(min.X + padX, min.Y + padY), text, theme.AppBackground, 0.78f,
-            FontWeight.Medium);
-    }
-
     public static void Icon(Vector2 center, string glyph, Vector4 color, float scale) =>
         Icon(ImGui.GetWindowDrawList(), center, glyph, color, scale);
 
