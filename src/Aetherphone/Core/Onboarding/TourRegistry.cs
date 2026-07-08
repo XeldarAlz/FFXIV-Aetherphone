@@ -11,7 +11,8 @@ internal static class TourRegistry
         new[]
         {
             GuideStep.Page(L.Onboarding.WelcomeTitle, L.Onboarding.WelcomeBody, L.Onboarding.Continue),
-            GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.GetStarted),
+            GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.GetStarted,
+                HeroMotif.Care),
             GuideStep.Point(L.Onboarding.WidgetTourTitle, L.Onboarding.WidgetTourBody, "home.widget"),
             GuideStep.Tap(L.Onboarding.FriendsTourTitle, L.Onboarding.FriendsTourBody, "home.app.friends",
                 static nav => nav.Open("friends", AppOpenSource.Onboarding)),

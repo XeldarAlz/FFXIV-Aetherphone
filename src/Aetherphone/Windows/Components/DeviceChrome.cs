@@ -98,8 +98,10 @@ internal static class DeviceChrome
         var max = new Vector2(device.Max.X - inset, device.Max.Y - inset);
         var radius = MathF.Min(rounding - inset, MathF.Min(max.X - min.X, max.Y - min.Y) * 0.5f);
         Squircle.Stroke(dl, min, max, radius, ImGui.GetColorU32(new Vector4(0.52f, 0.52f, 0.60f, 0.55f)), 1.4f * scale);
-        var bright = ImGui.GetColorU32(new Vector4(0.86f, 0.86f, 0.92f, 0.85f));
-        var dim = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f));
+        var brightColor = new Vector4(0.86f, 0.86f, 0.92f, 0.85f);
+        var dimColor = new Vector4(0f, 0f, 0f, 0.35f);
+        var bright = ImGui.GetColorU32(brightColor);
+        var dim = ImGui.GetColorU32(dimColor);
         if (max.X - min.X > 2f * radius)
         {
             dl.AddLine(new Vector2(min.X + radius, min.Y), new Vector2(max.X - radius, min.Y), bright, 1.5f * scale);
@@ -111,6 +113,11 @@ internal static class DeviceChrome
             dl.AddLine(new Vector2(min.X, min.Y + radius), new Vector2(min.X, max.Y - radius), bright, 1.2f * scale);
             dl.AddLine(new Vector2(max.X, min.Y + radius), new Vector2(max.X, max.Y - radius), dim, 1.2f * scale);
         }
+
+        Squircle.StrokeCorner(dl, min, max, radius, 0, brightColor, brightColor, 1.35f * scale);
+        Squircle.StrokeCorner(dl, min, max, radius, 1, dimColor, brightColor, 1.35f * scale);
+        Squircle.StrokeCorner(dl, min, max, radius, 2, dimColor, dimColor, 1.35f * scale);
+        Squircle.StrokeCorner(dl, min, max, radius, 3, brightColor, dimColor, 1.35f * scale);
     }
 
     public static void FillScreen(Rect screen, PhoneTheme theme, Vector4 color)

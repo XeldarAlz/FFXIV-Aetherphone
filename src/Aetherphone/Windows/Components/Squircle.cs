@@ -37,6 +37,36 @@ internal static class Squircle
         drawList.PathStroke(color, ImDrawFlags.Closed, thickness);
     }
 
+    public static void StrokeCorner(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, int quadrant,
+        Vector4 startColor, Vector4 endColor, float thickness)
+    {
+        var box = MathF.Max(0f, MathF.Min(radius, MathF.Min(max.X - min.X, max.Y - min.Y) * 0.5f));
+        if (box <= 0.5f)
+        {
+            return;
+        }
+
+        var corner = UnitCorner;
+        var center = quadrant switch
+        {
+            0 => new Vector2(min.X + box, min.Y + box),
+            1 => new Vector2(max.X - box, min.Y + box),
+            2 => new Vector2(max.X - box, max.Y - box),
+            _ => new Vector2(min.X + box, max.Y - box)
+        };
+        var signX = quadrant is 1 or 2 ? 1f : -1f;
+        var signY = quadrant is 2 or 3 ? 1f : -1f;
+        var previous = new Vector2(center.X + signX * corner[0].X * box, center.Y + signY * corner[0].Y * box);
+        for (var index = 1; index < corner.Length; index++)
+        {
+            var point = corner[index];
+            var current = new Vector2(center.X + signX * point.X * box, center.Y + signY * point.Y * box);
+            var blend = ImGui.GetColorU32(Vector4.Lerp(startColor, endColor, (float)index / (corner.Length - 1)));
+            drawList.AddLine(previous, current, blend, thickness);
+            previous = current;
+        }
+    }
+
     public static void FillOutsideCorners(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, uint color)
     {
         var box = CornerBox(min, max, radius);

@@ -15,6 +15,12 @@ internal enum GuideAdvance
     TapTarget,
 }
 
+internal enum HeroMotif
+{
+    Constellation,
+    Care,
+}
+
 internal readonly struct GuideStep
 {
     public readonly LocString Title;
@@ -24,9 +30,10 @@ internal readonly struct GuideStep
     public readonly GuideSurface Surface;
     public readonly GuideAdvance Advance;
     public readonly Action<INavigator>? OnAdvance;
+    public readonly HeroMotif Hero;
 
     public GuideStep(LocString title, LocString body, LocString buttonLabel, string? anchorKey, GuideSurface surface,
-        GuideAdvance advance, Action<INavigator>? onAdvance)
+        GuideAdvance advance, Action<INavigator>? onAdvance, HeroMotif hero = HeroMotif.Constellation)
     {
         Title = title;
         Body = body;
@@ -35,10 +42,12 @@ internal readonly struct GuideStep
         Surface = surface;
         Advance = advance;
         OnAdvance = onAdvance;
+        Hero = hero;
     }
 
-    public static GuideStep Page(LocString title, LocString body, LocString buttonLabel) =>
-        new(title, body, buttonLabel, null, GuideSurface.FullCard, GuideAdvance.Button, null);
+    public static GuideStep Page(LocString title, LocString body, LocString buttonLabel,
+        HeroMotif hero = HeroMotif.Constellation) =>
+        new(title, body, buttonLabel, null, GuideSurface.FullCard, GuideAdvance.Button, null, hero);
 
     public static GuideStep Note(LocString title, LocString body) =>
         new(title, body, L.Onboarding.GotIt, null, GuideSurface.Coachmark, GuideAdvance.Button, null);

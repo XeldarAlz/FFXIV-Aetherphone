@@ -80,8 +80,8 @@ internal sealed class CoachmarkOverlay
         StepPose(target, screen.Min, delta);
         var card = PoseRect(screen.Min, pop);
         var action = fullCard
-            ? DrawFullCardContent(dl, screen, theme, step, card, alpha, contentAlpha, contentRise, live, index, count,
-                scale)
+            ? DrawFullCardContent(dl, screen, theme, step, card, alpha, contentProgress, contentAlpha, contentRise,
+                live, index, count, scale)
             : edge
                 ? DrawEdgeContent(dl, screen, theme, step, card, anchor!.Value, alpha, contentAlpha, contentRise, live,
                     index, count, scale)
@@ -228,12 +228,15 @@ internal sealed class CoachmarkOverlay
     }
 
     private CoachmarkAction DrawFullCardContent(ImDrawListPtr dl, Rect screen, PhoneTheme theme, in GuideStep step,
-        Rect card, float alpha, float contentAlpha, float contentRise, bool live, int index, int count, float scale)
+        Rect card, float alpha, float contentProgress, float contentAlpha, float contentRise, bool live, int index,
+        int count, float scale)
     {
-        Material.Frosted(dl, card.Min, card.Max, 28f * scale, scale, alpha);
+        var radius = 28f * scale;
+        Material.Frosted(dl, card.Min, card.Max, radius, scale, alpha);
+        Material.TopGlow(dl, card.Min, card.Max, radius, theme.Accent, 0.34f, 0.12f * alpha);
         dl.PushClipRect(card.Min - new Vector2(0f, 90f * scale), card.Max + new Vector2(0f, 4f * scale), true);
-        var emblemCenter = new Vector2(card.Center.X, card.Min.Y + 92f * scale - contentRise);
-        Emblem(dl, emblemCenter, theme.Accent, scale, contentAlpha, contentAlpha);
+        var heroCenter = new Vector2(card.Center.X, card.Min.Y + 92f * scale - contentRise);
+        OnboardingHero.Draw(dl, heroCenter, step.Hero, theme.Accent, scale, contentProgress, alpha);
         var titleCenter = new Vector2(card.Center.X, card.Min.Y + screen.Height * 0.18f + 92f * scale - contentRise);
         Typography.DrawCentered(dl, titleCenter, Loc.T(step.Title), theme.TextStrong with { W = contentAlpha },
             TextStyles.Title1);
@@ -422,17 +425,6 @@ internal sealed class CoachmarkOverlay
             5f * scale);
         var ring = accent with { W = (0.65f + 0.35f * pulse) * alpha };
         Squircle.Stroke(dl, hole.Min, hole.Max, ringRadius, ImGui.GetColorU32(ring), 2.4f * scale);
-    }
-
-    private static void Emblem(ImDrawListPtr dl, Vector2 center, Vector4 accent, float scale, float grow, float alpha)
-    {
-        var radius = 34f * scale * (0.82f + 0.18f * grow);
-        dl.AddCircleFilled(center, radius * 2.2f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 64);
-        dl.AddCircleFilled(center, radius * 1.6f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)), 64);
-        dl.AddCircleFilled(center, radius * 1.12f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.14f * alpha)), 64);
-        dl.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(accent, alpha)), 72, 3f * scale);
-        var core = Palette.Mix(accent, Vector4.One, 0.7f);
-        dl.AddCircleFilled(center, radius * 0.30f, ImGui.GetColorU32(Palette.WithAlpha(core, alpha)), 48);
     }
 
     private static void Arrow(ImDrawListPtr dl, float x, float y, float height, bool up, float alpha)

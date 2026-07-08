@@ -28,7 +28,7 @@ internal static class CameraChrome
         var dl = ImGui.GetWindowDrawList();
         var barMax = new Vector2(screen.Max.X, screen.Min.Y + topBarHeight * scale);
         dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint), rounding, ImDrawFlags.RoundCornersTop);
-        var rowCenterY = barMax.Y - Metrics.Space.Md * scale;
+        var rowCenterY = barMax.Y + Metrics.Space.Lg * 3f * scale;
         return FlashChip(new Vector2(screen.Min.X + 34f * scale, rowCenterY), flashEnabled, scale);
     }
 
