@@ -21,8 +21,8 @@ internal static class DeviceChrome
     {
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
-        var top = device.Min.Y + device.Height * 0.255f;
-        var height = device.Height * 0.092f;
+        var top = device.Min.Y + device.Height * 0.250f;
+        var height = device.Height * 0.108f;
         return new Rect(new Vector2(device.Max.X - 2f * scale, top), new Vector2(window.Max.X, top + height));
     }
 
@@ -30,8 +30,8 @@ internal static class DeviceChrome
     {
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
-        var top = device.Min.Y + device.Height * 0.155f;
-        var height = device.Height * 0.048f;
+        var top = device.Min.Y + device.Height * 0.205f;
+        var height = device.Height * 0.082f;
         return new Rect(new Vector2(window.Min.X, top), new Vector2(device.Min.X + 2f * scale, top + height));
     }
 
@@ -39,8 +39,8 @@ internal static class DeviceChrome
     {
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
-        var top = device.Min.Y + device.Height * 0.255f;
-        var height = device.Height * 0.092f;
+        var top = device.Min.Y + device.Height * 0.315f;
+        var height = device.Height * 0.082f;
         return new Rect(new Vector2(window.Min.X, top), new Vector2(device.Min.X + 2f * scale, top + height));
     }
 
@@ -55,33 +55,62 @@ internal static class DeviceChrome
         var deviceRounding = theme.DeviceRounding * scale;
         var screenRounding = theme.ScreenRounding * scale;
         var screen = device.Inset(theme.BezelThickness * scale);
-        var bezel = ImGui.GetColorU32(theme.BezelOuter);
-        var rim = ImGui.GetColorU32(theme.BezelRim);
+        var frame = ImGui.GetColorU32(theme.FrameMetal);
         var screenBase = ImGui.GetColorU32(theme.ScreenBase);
         if (transparentBand is not { } band)
         {
-            Squircle.Fill(dl, device.Min, device.Max, deviceRounding, bezel);
-            Squircle.Stroke(dl, device.Min, device.Max, deviceRounding, rim, 1f);
+            Squircle.Fill(dl, device.Min, device.Max, deviceRounding, frame);
             Squircle.Fill(dl, screen.Min, screen.Max, screenRounding, screenBase);
+            RailFinish(dl, device, screen, deviceRounding, screenRounding, scale);
             return screen;
         }
 
-        DrawViewportBody(dl, device, screen, band, deviceRounding, screenRounding, bezel, rim, screenBase);
+        DrawViewportBody(dl, device, screen, band, deviceRounding, screenRounding, frame, screenBase);
+        RailFinish(dl, device, screen, deviceRounding, screenRounding, scale);
         return screen;
     }
 
     private static void DrawViewportBody(ImDrawListPtr dl, Rect device, Rect screen, Rect band, float deviceRounding,
-        float screenRounding, uint bezel, uint rim, uint screenBase)
+        float screenRounding, uint frame, uint screenBase)
     {
         var top = Math.Clamp(band.Min.Y, screen.Min.Y, screen.Max.Y);
         var bottom = Math.Clamp(band.Max.Y, top, screen.Max.Y);
-        Squircle.FillCap(dl, device.Min, new Vector2(device.Max.X, top), deviceRounding, bezel, true);
-        Squircle.FillCap(dl, new Vector2(device.Min.X, bottom), device.Max, deviceRounding, bezel, false);
-        dl.AddRectFilled(new Vector2(device.Min.X, top), new Vector2(screen.Min.X, bottom), bezel);
-        dl.AddRectFilled(new Vector2(screen.Max.X, top), new Vector2(device.Max.X, bottom), bezel);
+        Squircle.FillCap(dl, device.Min, new Vector2(device.Max.X, top), deviceRounding, frame, true);
+        Squircle.FillCap(dl, new Vector2(device.Min.X, bottom), device.Max, deviceRounding, frame, false);
+        dl.AddRectFilled(new Vector2(device.Min.X, top), new Vector2(screen.Min.X, bottom), frame);
+        dl.AddRectFilled(new Vector2(screen.Max.X, top), new Vector2(device.Max.X, bottom), frame);
         Squircle.FillCap(dl, screen.Min, new Vector2(screen.Max.X, top), screenRounding, screenBase, true);
         Squircle.FillCap(dl, new Vector2(screen.Min.X, bottom), screen.Max, screenRounding, screenBase, false);
-        Squircle.Stroke(dl, device.Min, device.Max, deviceRounding, rim, 1f);
+    }
+
+    internal static void RailFinish(ImDrawListPtr dl, Rect device, Rect screen, float deviceRounding,
+        float screenRounding, float scale)
+    {
+        Chamfer(dl, device, deviceRounding, scale);
+        var recess = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f));
+        Squircle.Stroke(dl, screen.Min, screen.Max, screenRounding, recess, 1.4f * scale);
+    }
+
+    private static void Chamfer(ImDrawListPtr dl, Rect device, float rounding, float scale)
+    {
+        var inset = 1.6f * scale;
+        var min = new Vector2(device.Min.X + inset, device.Min.Y + inset);
+        var max = new Vector2(device.Max.X - inset, device.Max.Y - inset);
+        var radius = MathF.Min(rounding - inset, MathF.Min(max.X - min.X, max.Y - min.Y) * 0.5f);
+        Squircle.Stroke(dl, min, max, radius, ImGui.GetColorU32(new Vector4(0.52f, 0.52f, 0.60f, 0.55f)), 1.4f * scale);
+        var bright = ImGui.GetColorU32(new Vector4(0.86f, 0.86f, 0.92f, 0.85f));
+        var dim = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f));
+        if (max.X - min.X > 2f * radius)
+        {
+            dl.AddLine(new Vector2(min.X + radius, min.Y), new Vector2(max.X - radius, min.Y), bright, 1.5f * scale);
+            dl.AddLine(new Vector2(min.X + radius, max.Y), new Vector2(max.X - radius, max.Y), dim, 1.2f * scale);
+        }
+
+        if (max.Y - min.Y > 2f * radius)
+        {
+            dl.AddLine(new Vector2(min.X, min.Y + radius), new Vector2(min.X, max.Y - radius), bright, 1.2f * scale);
+            dl.AddLine(new Vector2(max.X, min.Y + radius), new Vector2(max.X, max.Y - radius), dim, 1.2f * scale);
+        }
     }
 
     public static void FillScreen(Rect screen, PhoneTheme theme, Vector4 color)

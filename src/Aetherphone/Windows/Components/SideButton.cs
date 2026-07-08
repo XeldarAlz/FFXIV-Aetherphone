@@ -57,7 +57,7 @@ internal sealed class SideButton
         }
 
         var progress = armed ? Math.Clamp(held / HoldSeconds, 0f, 1f) : 0f;
-        DrawButton(bounds, theme, hovered, progress);
+        DrawButton(bounds, theme, hovered, progress, armed);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -67,24 +67,9 @@ internal sealed class SideButton
         return action;
     }
 
-    private static void DrawButton(Rect bounds, PhoneTheme theme, bool hovered, float progress)
+    private static void DrawButton(Rect bounds, PhoneTheme theme, bool hovered, float progress, bool pressing)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var dl = ImGui.GetWindowDrawList();
-        var rounding = bounds.Width * 0.5f;
-        var resting = Palette.Mix(theme.BezelRim, theme.Accent, 0.45f);
-        var fill = hovered ? Palette.Mix(resting, theme.Accent, 0.6f) : resting;
-        dl.AddRectFilled(bounds.Min, bounds.Max, ImGui.GetColorU32(fill), rounding);
-        if (progress > 0f)
-        {
-            var top = bounds.Max.Y - bounds.Height * progress;
-            dl.AddRectFilled(new Vector2(bounds.Min.X, top), bounds.Max, ImGui.GetColorU32(theme.Accent), rounding,
-                ImDrawFlags.RoundCornersBottom);
-        }
-
-        var glowAlpha = hovered || progress > 0f ? 0.95f : 0.6f;
-        var glow = ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, glowAlpha));
-        dl.AddLine(new Vector2(bounds.Max.X - scale, bounds.Min.Y + rounding),
-            new Vector2(bounds.Max.X - scale, bounds.Max.Y - rounding), glow, 2f * scale);
+        var press = pressing ? 0.35f + 0.65f * progress : 0f;
+        HardwareButton.Draw(ImGui.GetWindowDrawList(), bounds, theme, RailSide.Right, hovered, press, 0f);
     }
 }

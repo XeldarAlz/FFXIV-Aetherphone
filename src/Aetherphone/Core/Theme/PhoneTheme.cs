@@ -5,7 +5,8 @@ namespace Aetherphone.Core.Theme;
 internal sealed class PhoneTheme
 {
     public required Vector4 BezelOuter { get; init; }
-    public required Vector4 BezelRim { get; init; }
+    public required Vector4 FrameMetal { get; init; }
+    public required Vector4 RailMetal { get; init; }
     public required Vector4 ScreenBase { get; init; }
     public required string LightWallpaperId { get; init; }
     public required string DarkWallpaperId { get; init; }
@@ -31,7 +32,8 @@ internal sealed class PhoneTheme
         new()
         {
             BezelOuter = new Vector4(0.03f, 0.03f, 0.04f, 1f),
-            BezelRim = new Vector4(0.22f, 0.22f, 0.26f, 1f),
+            FrameMetal = new Vector4(0.145f, 0.145f, 0.170f, 1f),
+            RailMetal = new Vector4(0.175f, 0.175f, 0.205f, 1f),
             ScreenBase = new Vector4(0.06f, 0.06f, 0.10f, 1f),
             LightWallpaperId = lightWallpaperId,
             DarkWallpaperId = darkWallpaperId,
@@ -58,7 +60,8 @@ internal sealed class PhoneTheme
         new()
         {
             BezelOuter = new Vector4(0.03f, 0.03f, 0.04f, 1f),
-            BezelRim = new Vector4(0.22f, 0.22f, 0.26f, 1f),
+            FrameMetal = new Vector4(0.145f, 0.145f, 0.170f, 1f),
+            RailMetal = new Vector4(0.175f, 0.175f, 0.205f, 1f),
             ScreenBase = new Vector4(0.90f, 0.90f, 0.93f, 1f),
             LightWallpaperId = lightWallpaperId,
             DarkWallpaperId = darkWallpaperId,
