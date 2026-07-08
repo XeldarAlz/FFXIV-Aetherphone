@@ -190,6 +190,7 @@ internal sealed class ControlCenter
     private void StepPoses(IReadOnlyList<ControlSlot> slots, IReadOnlyList<GridCell> placements, float delta)
     {
         lift.Step(draggingSlot is not null ? 1f : 0f, LiftSmoothTime, delta);
+        var gridOrigin = metrics.Grid.Min;
         var mouse = ImGui.GetMousePos();
         for (var index = 0; index < slots.Count; index++)
         {
@@ -204,10 +205,11 @@ internal sealed class ControlCenter
                 targetRect = new Rect(min, min + rest.Size);
             }
 
+            var targetMin = targetRect.Min - gridOrigin;
             if (!pose.Initialized)
             {
-                pose.X.SnapTo(targetRect.Min.X);
-                pose.Y.SnapTo(targetRect.Min.Y);
+                pose.X.SnapTo(targetMin.X);
+                pose.Y.SnapTo(targetMin.Y);
                 pose.W.SnapTo(targetRect.Width);
                 pose.H.SnapTo(targetRect.Height);
                 pose.Initialized = true;
@@ -215,21 +217,21 @@ internal sealed class ControlCenter
 
             if (ReferenceEquals(slot, draggingSlot))
             {
-                pose.X.SnapTo(targetRect.Min.X);
-                pose.Y.SnapTo(targetRect.Min.Y);
+                pose.X.SnapTo(targetMin.X);
+                pose.Y.SnapTo(targetMin.Y);
                 pose.W.Step(targetRect.Width, ReflowSmoothTime, delta);
                 pose.H.Step(targetRect.Height, ReflowSmoothTime, delta);
             }
             else
             {
-                pose.X.Step(targetRect.Min.X, ReflowSmoothTime, delta);
-                pose.Y.Step(targetRect.Min.Y, ReflowSmoothTime, delta);
+                pose.X.Step(targetMin.X, ReflowSmoothTime, delta);
+                pose.Y.Step(targetMin.Y, ReflowSmoothTime, delta);
                 pose.W.Step(targetRect.Width, ReflowSmoothTime, delta);
                 pose.H.Step(targetRect.Height, ReflowSmoothTime, delta);
             }
 
-            var origin = new Vector2(pose.X.Value, pose.Y.Value);
-            pose.Current = new Rect(origin, origin + new Vector2(pose.W.Value, pose.H.Value));
+            var posedMin = gridOrigin + new Vector2(pose.X.Value, pose.Y.Value);
+            pose.Current = new Rect(posedMin, posedMin + new Vector2(pose.W.Value, pose.H.Value));
         }
     }
 

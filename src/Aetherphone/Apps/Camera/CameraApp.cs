@@ -13,7 +13,7 @@ namespace Aetherphone.Apps.Camera;
 
 internal sealed class CameraApp : IPhoneApp
 {
-    private const float TopBarHeight = 64f;
+    private const float TopBarHeight = 88f;
     private const float TrayHeight = 172f;
     private const float FlashDuration = 0.42f;
     private const float ReticleDuration = 1.1f;

@@ -19,8 +19,7 @@ internal sealed class NotificationBanner : IDisposable
         Exit,
     }
 
-    private const float EnterFrequency = 2.7f;
-    private const float EnterDamping = 0.74f;
+    private const float EnterSmoothTime = 0.16f;
     private const float HoldSeconds = 4.0f;
     private const float ExitSmoothTime = 0.12f;
     private const float SideMargin = 8f;
@@ -42,7 +41,7 @@ internal sealed class NotificationBanner : IDisposable
     private readonly Func<string?> currentAppId;
     private readonly NotificationRouter router;
     private readonly Queue<PhoneNotification> pending = new();
-    private DampedSpring enter;
+    private Spring enter;
     private Spring exit;
     private PhoneNotification? active;
     private Stage stage = Stage.Idle;
@@ -63,6 +62,8 @@ internal sealed class NotificationBanner : IDisposable
         this.router = router;
         notifications.Presented += OnPresented;
     }
+
+    public event Action? Shown;
 
     public bool CapturesPointer(Rect screen)
     {
@@ -113,7 +114,7 @@ internal sealed class NotificationBanner : IDisposable
 
         if (stage == Stage.Enter)
         {
-            enter.Step(1f, EnterFrequency, EnterDamping, deltaSeconds);
+            enter.Step(1f, EnterSmoothTime, deltaSeconds);
             if (enter.IsResting(1f, 0.004f, 0.05f))
             {
                 enter.SnapTo(1f);
@@ -306,6 +307,7 @@ internal sealed class NotificationBanner : IDisposable
         }
 
         pending.Enqueue(notification);
+        Shown?.Invoke();
         if (stage == Stage.Idle)
         {
             BeginNext();

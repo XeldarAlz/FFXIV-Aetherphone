@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
@@ -25,7 +26,7 @@ internal sealed class MinimizedPhone : IDisposable
     private static readonly Vector4 CloseTint = new(1f, 1f, 1f, 0.16f);
     private static readonly Vector4 IconInk = new(1f, 1f, 1f, 1f);
     private readonly NotificationService notifications;
-    private float shake;
+    private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
 
     public MinimizedPhone(NotificationService notifications)
     {
@@ -37,16 +38,8 @@ internal sealed class MinimizedPhone : IDisposable
 
     public MinimizedAction Draw(Rect device, PhoneTheme theme, float delta)
     {
-        if (shake > 0f)
-        {
-            shake = MathF.Max(0f, shake - delta);
-        }
-
         var scale = ImGuiHelpers.GlobalScale;
-        var offset = shake > 0f
-            ? MathF.Sin(shake * ShakeFrequency) * ShakeAmplitude * scale * (shake / ShakeDuration)
-            : 0f;
-        var frame = new Rect(device.Min + new Vector2(offset, 0f), device.Max + new Vector2(offset, 0f));
+        var frame = device.Translate(new Vector2(shake.Advance(delta), 0f));
         var dl = ImGui.GetForegroundDrawList();
         var geometry = Geometry.From(frame.Inset(scale));
         DrawShell(dl, geometry, theme);
@@ -150,9 +143,9 @@ internal sealed class MinimizedPhone : IDisposable
 
     private void OnPresented(PhoneNotification _)
     {
-        if (IsShowing)
+        if (IsShowing && Plugin.Cfg.Vibration)
         {
-            shake = ShakeDuration;
+            shake.Trigger();
         }
     }
 

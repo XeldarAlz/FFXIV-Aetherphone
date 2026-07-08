@@ -26,10 +26,8 @@ internal sealed class DynamicIsland
         Music,
     }
 
-    private const float PresenceFrequency = 3.1f;
-    private const float PresenceDamping = 0.72f;
-    private const float SplitFrequency = 3.4f;
-    private const float SplitDamping = 0.78f;
+    private const float PresenceSmoothTime = 0.14f;
+    private const float SplitSmoothTime = 0.12f;
     private const float ExpandSmoothTime = 0.16f;
     private const float CompactPadX = 22f;
     private const float CompactPadY = 5f;
@@ -46,8 +44,8 @@ internal sealed class DynamicIsland
 
     private readonly PlaybackHub playback;
     private readonly CallHub calls;
-    private DampedSpring presence;
-    private DampedSpring split;
+    private Spring presence;
+    private Spring split;
     private Spring expand;
     private float clock;
     private ActivityKind shownKind = ActivityKind.None;
@@ -89,9 +87,9 @@ internal sealed class DynamicIsland
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         clock += delta;
-        presence.Step(primary == ActivityKind.None ? 0f : 1f, PresenceFrequency, PresenceDamping, delta);
-        split.Step(callActive && musicActive ? 1f : 0f, SplitFrequency, SplitDamping, delta);
-        var presenceValue = Math.Clamp(presence.Value, 0f, 1.3f);
+        presence.Step(primary == ActivityKind.None ? 0f : 1f, PresenceSmoothTime, delta);
+        split.Step(callActive && musicActive ? 1f : 0f, SplitSmoothTime, delta);
+        var presenceValue = Math.Clamp(presence.Value, 0f, 1f);
         if (primary == ActivityKind.None && presenceValue < 0.02f)
         {
             expand.SnapTo(0f);
@@ -163,7 +161,7 @@ internal sealed class DynamicIsland
     private void DrawBubble(ImDrawListPtr drawList, PhoneTheme theme, INavigator navigation, Rect bounds, Rect rest,
         float scale, float expandEased)
     {
-        var splitValue = Math.Clamp(split.Value, 0f, 1.2f);
+        var splitValue = Math.Clamp(split.Value, 0f, 1f);
         var visible = splitValue > 0.02f && expandEased < 0.6f;
         lastBubbleVisible = visible;
         if (!visible)

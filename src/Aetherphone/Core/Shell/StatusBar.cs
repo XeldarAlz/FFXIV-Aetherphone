@@ -1,6 +1,8 @@
 using System.Numerics;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Core.Shell;
@@ -11,6 +13,9 @@ internal static class StatusBar
     private const FontWeight TimeWeight = FontWeight.SemiBold;
     private const float TimePadding = 24f;
     private const float EarGap = 10f;
+    private const float MoonGap = 6f;
+    private const float MoonHeight = 11f;
+    private static readonly Vector4 DndTone = new(0.58f, 0.55f, 0.96f, 1f);
     private const float IslandSidePadding = 14f;
     private const float MinIslandHalfWidth = 30f;
     private const float MaxIslandHalfWidth = 49f;
@@ -42,16 +47,32 @@ internal static class StatusBar
         var island = BaseIsland(screen);
         DeviceChrome.DrawIsland(island, theme);
         var earGap = EarGap * scale;
-        var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale, island.Min.X - earGap - timeSize.X);
+        var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale,
+            island.Min.X - earGap - timeSize.X - DndWidth(scale));
         Typography.Draw(new Vector2(timeLeft, rowCenterY - timeSize.Y * 0.5f), localTime, theme.TextStrong, TimeScale,
             TimeWeight);
+        DrawDndIndicator(timeLeft + timeSize.X, rowCenterY, scale);
         StatusIcons.Draw(screen, theme, rowCenterY, island.Max.X + earGap);
+    }
+
+    private static float DndWidth(float scale) =>
+        Plugin.Cfg.DoNotDisturb ? (MoonGap + MoonHeight) * scale : 0f;
+
+    private static void DrawDndIndicator(float timeRight, float rowCenterY, float scale)
+    {
+        if (!Plugin.Cfg.DoNotDisturb)
+        {
+            return;
+        }
+
+        var center = new Vector2(timeRight + (MoonGap + MoonHeight * 0.5f) * scale, rowCenterY);
+        ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), center, FontAwesomeIcon.Moon, DndTone, MoonHeight * scale);
     }
 
     internal static Rect BaseIsland(Rect screen)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var timeWidth = Typography.Measure(CurrentTime(), TimeScale, TimeWeight).X;
+        var timeWidth = Typography.Measure(CurrentTime(), TimeScale, TimeWeight).X + DndWidth(scale);
         var clusterWidth = StatusIcons.MeasureWidth(scale, Plugin.Device.BatteryPercent);
         return ComputeIsland(screen, scale, timeWidth, clusterWidth);
     }

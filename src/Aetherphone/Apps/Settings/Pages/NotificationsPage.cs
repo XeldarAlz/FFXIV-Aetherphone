@@ -7,6 +7,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
@@ -39,13 +40,22 @@ internal sealed class NotificationsPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Common.Alerts), theme);
-            var alerts = GroupCard.Begin(theme, 2);
+            var alerts = GroupCard.Begin(theme, 3);
             var doNotDisturb = SettingsRow.Bool(alerts.NextRow(), Loc.T(L.Settings.DoNotDisturb),
                 configuration.DoNotDisturb, theme);
             if (doNotDisturb != configuration.DoNotDisturb)
             {
                 configuration.DoNotDisturb = doNotDisturb;
                 Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("do_not_disturb", doNotDisturb ? "1" : "0"));
+                configuration.Save();
+            }
+
+            var vibration = SettingsRow.Bool(alerts.NextRow(), Loc.T(L.Settings.Vibration),
+                configuration.Vibration, theme);
+            if (vibration != configuration.Vibration)
+            {
+                configuration.Vibration = vibration;
+                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("vibration", vibration ? "1" : "0"));
                 configuration.Save();
             }
 
@@ -56,6 +66,14 @@ internal sealed class NotificationsPage : ISettingsPage
             }
 
             alerts.End();
+
+            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
+            using (Plugin.Fonts.Push(0.8f))
+            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            {
+                ImGui.TextWrapped(Loc.T(L.Settings.VibrationHint));
+            }
 
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
             SettingsSection.Header(Loc.T(L.Settings.NotificationApps), theme);

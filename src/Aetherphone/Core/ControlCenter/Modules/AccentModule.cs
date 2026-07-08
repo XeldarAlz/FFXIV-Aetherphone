@@ -40,13 +40,13 @@ internal sealed class AccentModule : IControlModule
         }
 
         var swatchRadius = MathF.Min(rect.Height * 0.28f, 11f * scale);
-        var innerLeft = rect.Min.X + 20f * scale;
-        var innerRight = rect.Max.X - 20f * scale;
-        var step = accents.Count > 1 ? (innerRight - innerLeft) / (accents.Count - 1) : 0f;
+        var innerLeft = rect.Min.X + 22f * scale;
+        var innerRight = rect.Max.X - 22f * scale;
+        var cell = (innerRight - innerLeft) / accents.Count;
         var centerY = rect.Center.Y;
         for (var index = 0; index < accents.Count; index++)
         {
-            var center = new Vector2(accents.Count > 1 ? innerLeft + index * step : rect.Center.X, centerY);
+            var center = new Vector2(innerLeft + cell * (index + 0.5f), centerY);
             var selected = accents[index].Name == Plugin.Cfg.AccentName;
             if (ControlTile.Swatch(dl, center, swatchRadius, accents[index].Color, selected, opacity,
                     context.Interactive) && !selected)
