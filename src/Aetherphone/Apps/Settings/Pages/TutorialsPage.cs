@@ -8,6 +8,8 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class TutorialsPage : ISettingsPage
@@ -17,7 +19,7 @@ internal sealed class TutorialsPage : ISettingsPage
     public string Summary =>
         configuration.TutorialsEnabled ? Loc.T(L.Settings.TutorialsSummary) : Loc.T(L.Settings.TutorialsOff);
 
-    public string Glyph => "?";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.GraduationCap;
     public Vector4 Tint => new(0.62f, 0.42f, 0.96f, 1f);
     private readonly Configuration configuration;
 

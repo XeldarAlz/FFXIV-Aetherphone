@@ -9,13 +9,15 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class CallsPage : ISettingsPage
 {
     public string Title => Loc.T(L.Phone.SettingsTitle);
     public string Summary => calls.Enabled ? Loc.T(L.Phone.SummaryOn) : Loc.T(L.Phone.SummaryOff);
-    public string Glyph => "Ph";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Phone;
     public Vector4 Tint => new(0.20f, 0.78f, 0.35f, 1f);
     private readonly CallHub calls;
     private readonly Configuration configuration;

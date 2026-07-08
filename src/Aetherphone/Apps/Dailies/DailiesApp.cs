@@ -386,7 +386,8 @@ internal sealed class DailiesApp : IPhoneApp
         var toggleWidth = 46f * scale;
         var toggleHeight = 28f * scale;
         var toggleMin = new Vector2(max.X - padding - toggleWidth, min.Y + height * 0.5f - toggleHeight * 0.5f);
-        var notify = Toggle.Draw(new Rect(toggleMin, toggleMin + new Vector2(toggleWidth, toggleHeight)),
+        var notify = Toggle.Draw("dailies.notifyReset",
+            new Rect(toggleMin, toggleMin + new Vector2(toggleWidth, toggleHeight)),
             configuration.NotifyDailiesReset, PhoneTheme.Default);
 
         ImGui.SetCursorScreenPos(min);

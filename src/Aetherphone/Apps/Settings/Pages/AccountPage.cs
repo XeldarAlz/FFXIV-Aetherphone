@@ -8,6 +8,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
+using Dalamud.Interface;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
@@ -24,7 +25,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             ? session.CurrentUser?.DisplayName ?? Loc.T(L.Account.SignedIn)
             : Loc.T(L.Account.NotSignedIn);
 
-    public string Glyph => "@";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.User;
     public Vector4 Tint => new(0.36f, 0.72f, 0.62f, 1f);
     private readonly AethernetSession session;
     private readonly AethernetClient client;

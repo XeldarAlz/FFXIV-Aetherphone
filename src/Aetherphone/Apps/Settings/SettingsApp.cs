@@ -11,6 +11,7 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Settings;
@@ -47,8 +48,9 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var tutorials = new TutorialsPage(configuration);
         var callsPage = new CallsPage(calls, configuration);
         var appNotifications = new AppNotificationPage(configuration, sound);
-        var notificationSoundPage = new SoundSettingsPage(sound, Loc.T(L.Settings.NotificationSound), "N",
-            new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume", "notification_sound",
+        var notificationSoundPage = new SoundSettingsPage(sound, Loc.T(L.Settings.NotificationSound),
+            FontAwesomeIcon.Bell, new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume",
+            "notification_sound",
             () => configuration.NotificationSound, token =>
             {
                 configuration.NotificationSound = token;
@@ -59,7 +61,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.Save();
             });
         var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage);
-        var ringtonePage = new SoundSettingsPage(sound, Loc.T(L.Settings.Ringtone), "R",
+        var ringtonePage = new SoundSettingsPage(sound, Loc.T(L.Settings.Ringtone), FontAwesomeIcon.Music,
             new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume", "ringtone",
             () => configuration.RingtoneSound, token =>
             {
@@ -74,14 +76,15 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var privacy = new PrivacyPage(configuration);
         var about = new AboutPage(showAbout);
         changelogPage = new ChangelogPage(configuration);
-        var groups = new IReadOnlyList<ISettingsPage>[]
+        var groups = new[]
         {
-            new ISettingsPage[] { accountPage, profilePage },
-            new ISettingsPage[] { appearance, language, immersion, tutorials }, new ISettingsPage[] { callsPage },
-            new ISettingsPage[] { notifications, ringtonePage },
-            new ISettingsPage[] { commands, privacy, about, changelogPage },
+            new SettingsGroup(new ISettingsPage[] { profilePage }),
+            new SettingsGroup(new ISettingsPage[] { appearance, language, immersion, tutorials },
+                L.Settings.GeneralFooter),
+            new SettingsGroup(new ISettingsPage[] { callsPage, notifications, ringtonePage }, L.Settings.AlertsFooter),
+            new SettingsGroup(new ISettingsPage[] { commands, privacy, about, changelogPage }),
         };
-        router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups), Id);
+        router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups, aethernetSession, accountPage), Id);
         drawPage = DrawPage;
         popBack = PopBack;
     }

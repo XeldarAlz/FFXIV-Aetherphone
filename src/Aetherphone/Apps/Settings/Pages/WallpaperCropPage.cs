@@ -9,6 +9,8 @@ using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class WallpaperCropPage : ISettingsPage
@@ -16,7 +18,7 @@ internal sealed class WallpaperCropPage : ISettingsPage
     private const float SmoothTime = 0.10f;
     public string Title => Loc.T(L.Wallpaper.MoveAndScale);
     public string Summary => string.Empty;
-    public string Glyph => "W";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Crop;
     public Vector4 Tint => new(0.55f, 0.45f, 0.95f, 1f);
     private readonly string sourcePath;
     private readonly ISettingsNavigator navigator;

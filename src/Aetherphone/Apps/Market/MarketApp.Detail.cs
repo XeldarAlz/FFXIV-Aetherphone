@@ -168,7 +168,7 @@ internal sealed partial class MarketApp
         var existing = alerts.HasAlertFor(view.ItemId);
         var label = showAlertEditor ? Loc.T(L.Common.Cancel) :
             existing ? Loc.T(L.Market.AddAnotherAlert) : Loc.T(L.Market.SetPriceAlert);
-        if (SettingsRow.Link(card.NextRow(), "!", frameTheme.Accent, label, string.Empty, frameTheme))
+        if (SettingsRow.Link(card.NextRow(), FontAwesomeIcon.Bell, frameTheme.Accent, label, string.Empty, frameTheme))
         {
             showAlertEditor = !showAlertEditor;
             if (showAlertEditor)

@@ -9,13 +9,15 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class NotificationsPage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Notifications);
     public string Summary => configuration.DoNotDisturb ? Loc.T(L.Settings.DoNotDisturb) : string.Empty;
-    public string Glyph => "N";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Bell;
     public Vector4 Tint => new(0.98f, 0.27f, 0.25f, 1f);
     private readonly Configuration configuration;
     private readonly ISettingsNavigator navigator;
@@ -68,12 +70,7 @@ internal sealed class NotificationsPage : ISettingsPage
             alerts.End();
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
-            using (Plugin.Fonts.Push(0.8f))
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                ImGui.TextWrapped(Loc.T(L.Settings.VibrationHint));
-            }
+            SettingsSection.Hint(Loc.T(L.Settings.VibrationHint), theme);
 
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
             SettingsSection.Header(Loc.T(L.Settings.NotificationApps), theme);

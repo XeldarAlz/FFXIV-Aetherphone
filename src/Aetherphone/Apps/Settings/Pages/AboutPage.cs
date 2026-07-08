@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
@@ -10,7 +11,7 @@ internal sealed class AboutPage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.About);
     public string Summary => AepConstants.Version;
-    public string Glyph => "i";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.InfoCircle;
     public Vector4 Tint => new(0.40f, 0.62f, 0.92f, 1f);
     private readonly Action showAbout;
 
@@ -32,7 +33,7 @@ internal sealed class AboutPage : ISettingsPage
             card.End();
             SettingsSection.Header(Loc.T(L.Settings.CreditsLinks), theme);
             var links = GroupCard.Begin(theme, 1);
-            if (SettingsRow.Link(links.NextRow(), Glyph, Tint, Loc.T(L.Settings.AboutAetherphone), string.Empty, theme))
+            if (SettingsRow.Link(links.NextRow(), Icon, Tint, Loc.T(L.Settings.AboutAetherphone), string.Empty, theme))
             {
                 showAbout();
             }

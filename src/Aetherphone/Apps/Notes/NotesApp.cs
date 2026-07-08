@@ -457,7 +457,7 @@ internal sealed class NotesApp : IPhoneApp
         var height = Metrics.Size.ToggleHeight * scale;
         var min = new Vector2(rect.Max.X - Metrics.Space.Md * scale - width, rect.Center.Y - height * 0.5f);
         var toggleRect = new Rect(min, min + new Vector2(width, height));
-        reminderHasDue = Toggle.Draw(toggleRect, reminderHasDue, theme);
+        reminderHasDue = Toggle.Draw("notes.remind", toggleRect, reminderHasDue, theme);
     }
 
     private bool DrawSaveButton(Rect rect, string label, bool enabled)

@@ -7,6 +7,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
@@ -14,7 +15,7 @@ internal sealed class AppearancePage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Appearance);
     public string Summary => CatalogLabels.Accent(configuration.AccentName);
-    public string Glyph => "A";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Palette;
     public Vector4 Tint => new(0.55f, 0.45f, 0.95f, 1f);
     private static readonly ThemeMode[] ModeOrder = { ThemeMode.Light, ThemeMode.Dark, ThemeMode.Auto };
     private readonly Configuration configuration;

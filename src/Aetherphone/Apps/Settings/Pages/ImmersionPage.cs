@@ -8,13 +8,15 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class ImmersionPage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Immersion);
     public string Summary => configuration.ScrollWhileIdle ? Loc.T(L.Settings.ScrollWhileIdle) : string.Empty;
-    public string Glyph => "I";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Magic;
     public Vector4 Tint => new(0.20f, 0.70f, 0.62f, 1f);
     private readonly Configuration configuration;
 
@@ -51,12 +53,7 @@ internal sealed class ImmersionPage : ISettingsPage
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
-            using (Plugin.Fonts.Push(0.8f))
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                ImGui.TextWrapped(Loc.T(L.Settings.ScrollWhileIdleHint));
-            }
+            SettingsSection.Hint(Loc.T(L.Settings.ScrollWhileIdleHint), theme);
 
             ImGui.Dummy(new Vector2(0f, 12f * scale));
             var startupCard = GroupCard.Begin(theme, 2);
@@ -80,12 +77,7 @@ internal sealed class ImmersionPage : ISettingsPage
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
-            using (Plugin.Fonts.Push(0.8f))
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                ImGui.TextWrapped(Loc.T(L.Settings.StartupHint));
-            }
+            SettingsSection.Hint(Loc.T(L.Settings.StartupHint), theme);
         }
     }
 }

@@ -9,6 +9,8 @@ using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class ChangelogPage : ISettingsPage
@@ -23,7 +25,7 @@ internal sealed class ChangelogPage : ISettingsPage
     private readonly Configuration configuration;
     public string Title => Loc.T(L.Settings.Changelog);
     public string Summary => Loc.T(L.Settings.ChangelogSummary);
-    public string Glyph => "C";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Gift;
     public Vector4 Tint => new(0.62f, 0.42f, 0.90f, 1f);
     public bool ShowsBadge => configuration.HasUnseenChangelog;
 

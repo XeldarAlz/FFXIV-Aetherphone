@@ -301,6 +301,8 @@ internal static class L
     internal static class Settings
     {
         public static readonly LocString Title = new("settings.title", "Settings");
+        public static readonly LocString GeneralFooter = new("settings.generalFooter", "Personalize how your phone looks, reads and behaves.");
+        public static readonly LocString AlertsFooter = new("settings.alertsFooter", "Choose how calls and notifications reach you.");
         public static readonly LocString Appearance = new("settings.appearance", "Appearance");
         public static readonly LocString Theme = new("settings.theme", "Theme");
         public static readonly LocString ThemeLight = new("settings.themeLight", "Light");
@@ -610,6 +612,9 @@ internal static class L
     internal static class Account
     {
         public static readonly LocString Title = new("account.title", "Aethernet Account");
+        public static readonly LocString HeroSubtitle = new("account.heroSubtitle", "Aethernet ID, Profile, Region");
+        public static readonly LocString HeroSignInTitle = new("account.heroSignInTitle", "Sign In");
+        public static readonly LocString HeroSignInSubtitle = new("account.heroSignInSubtitle", "Set up your Aethernet account, profile and region");
         public static readonly LocString SignedIn = new("account.signedIn", "Signed in");
         public static readonly LocString NotSignedIn = new("account.notSignedIn", "Not signed in");
         public static readonly LocString LogInFirst = new("account.logInFirst", "Log in to your character first");

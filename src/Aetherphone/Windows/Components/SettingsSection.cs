@@ -13,12 +13,25 @@ internal static class SettingsSection
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Metrics.Space.Lg * scale);
-        using (Plugin.Fonts.Push(0.8f))
+        using (Plugin.Fonts.Push(TextStyles.Footnote.Scale, TextStyles.FootnoteEmphasized.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             ImGui.TextUnformatted(title.ToUpperInvariant());
         }
 
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
+    }
+
+    public static void Hint(string text, PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + Metrics.Space.Lg * scale);
+        using (Plugin.Fonts.Push(TextStyles.Footnote.Scale, TextStyles.Footnote.Weight))
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            ImGui.PushTextWrapPos(0f);
+            ImGui.TextWrapped(text);
+            ImGui.PopTextWrapPos();
+        }
     }
 }

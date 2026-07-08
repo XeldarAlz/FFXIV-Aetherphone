@@ -205,7 +205,7 @@ internal sealed class ContactsApp : IPhoneApp
             ImGui.Dummy(new Vector2(0f, 12f * scale));
             DrawActions(friend, theme);
             var card = GroupCard.Begin(theme, 1);
-            if (SettingsRow.Link(card.NextRow(), "i", new Vector4(0.40f, 0.42f, 0.50f, 1f),
+            if (SettingsRow.Link(card.NextRow(), FontAwesomeIcon.InfoCircle, new Vector4(0.40f, 0.42f, 0.50f, 1f),
                     Loc.T(L.Contacts.SearchInfo), string.Empty, theme))
             {
                 FriendActions.OpenSearchInfo(friend.ContentId);

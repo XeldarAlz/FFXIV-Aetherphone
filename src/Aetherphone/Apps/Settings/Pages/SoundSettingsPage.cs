@@ -5,6 +5,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
+using Dalamud.Interface;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
@@ -15,7 +16,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
 {
     private readonly SoundService sound;
     private readonly string title;
-    private readonly string glyph;
+    private readonly FontAwesomeIcon icon;
     private readonly Vector4 tint;
     private readonly string segmentId;
     private readonly string analyticsKey;
@@ -25,13 +26,13 @@ internal sealed class SoundSettingsPage : ISettingsPage
     private readonly Action<float> setVolume;
     private readonly SoundImport import = new();
 
-    public SoundSettingsPage(SoundService sound, string title, string glyph, Vector4 tint, string segmentId,
+    public SoundSettingsPage(SoundService sound, string title, FontAwesomeIcon icon, Vector4 tint, string segmentId,
         string analyticsKey, Func<string> getToken, Action<string> setToken, Func<float> getVolume,
         Action<float> setVolume)
     {
         this.sound = sound;
         this.title = title;
-        this.glyph = glyph;
+        this.icon = icon;
         this.tint = tint;
         this.segmentId = segmentId;
         this.analyticsKey = analyticsKey;
@@ -43,7 +44,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
 
     public string Title => title;
     public string Summary => sound.Label(getToken());
-    public string Glyph => glyph;
+    public FontAwesomeIcon Icon => icon;
     public Vector4 Tint => tint;
 
     public void Draw(in PhoneContext context, Rect body)
@@ -83,12 +84,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
 
             importCard.End();
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                ImGui.PushTextWrapPos(0f);
-                ImGui.TextWrapped(Loc.T(L.Settings.SoundImportHint));
-                ImGui.PopTextWrapPos();
-            }
+            SettingsSection.Hint(Loc.T(L.Settings.SoundImportHint), theme);
         }
     }
 

@@ -8,6 +8,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
+using Dalamud.Interface;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
@@ -18,7 +19,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
 {
     public string Title => Loc.T(L.Profile.Title);
     public string Summary => SocialRegion.EffectiveCode(configuration, gameData);
-    public string Glyph => "P";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.IdCard;
     public Vector4 Tint => new(0.42f, 0.58f, 0.86f, 1f);
     private readonly Configuration configuration;
     private readonly AethernetSession session;
@@ -213,15 +214,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
         });
     }
 
-    private static void Hint(string text, PhoneTheme theme)
-    {
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * ImGuiHelpers.GlobalScale);
-        using (Plugin.Fonts.Push(0.8f))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-        {
-            ImGui.TextWrapped(text);
-        }
-    }
+    private static void Hint(string text, PhoneTheme theme) => SettingsSection.Hint(text, theme);
 
     public void Dispose()
     {

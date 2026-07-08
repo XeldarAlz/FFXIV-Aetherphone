@@ -9,13 +9,15 @@ using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class AppNotificationPage : ISettingsPage
 {
     public string Title => Loc.T(channel.Name);
     public string Summary => string.Empty;
-    public string Glyph => "N";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Bell;
     public Vector4 Tint => channel.Accent;
     private readonly Configuration configuration;
     private readonly SoundService sound;

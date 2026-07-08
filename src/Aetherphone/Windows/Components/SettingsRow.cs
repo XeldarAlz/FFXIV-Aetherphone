@@ -2,12 +2,15 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
 internal static class SettingsRow
 {
+    private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 1f);
+
     public static bool Bool(Rect row, string label, bool value, PhoneTheme theme)
     {
         DrawLabel(row, label, theme.TextStrong);
@@ -15,7 +18,7 @@ internal static class SettingsRow
         var width = Metrics.Size.ToggleWidth * scale;
         var height = Metrics.Size.ToggleHeight * scale;
         var min = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
-        return Toggle.Draw(new Rect(min, min + new Vector2(width, height)), value, theme);
+        return Toggle.Draw(label, new Rect(min, min + new Vector2(width, height)), value, theme);
     }
 
     public static void Info(Rect row, string label, string value, PhoneTheme theme)
@@ -26,7 +29,7 @@ internal static class SettingsRow
             theme.TextMuted);
     }
 
-    public static bool Link(Rect row, string glyph, Vector4 tint, string label, string value, PhoneTheme theme,
+    public static bool Link(Rect row, FontAwesomeIcon icon, Vector4 tint, string label, string value, PhoneTheme theme,
         bool badge = false)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -39,18 +42,16 @@ internal static class SettingsRow
 
         var tileSize = Metrics.Size.IconTile * scale;
         var tileMin = new Vector2(row.Min.X, row.Center.Y - tileSize * 0.5f);
-        var tileFill = hovered ? Palette.Mix(tint, theme.TextStrong, 0.14f) : tint;
-        Squircle.Fill(dl, tileMin, tileMin + new Vector2(tileSize, tileSize), tileSize * Metrics.Radius.TileFactor,
-            ImGui.GetColorU32(tileFill));
-        var glyphHeight = Typography.Measure(glyph).Y;
-        var glyphScale = glyphHeight > 0f ? tileSize * 0.5f / glyphHeight : 1f;
-        Typography.DrawCentered(new Vector2(tileMin.X + tileSize * 0.5f, row.Center.Y), glyph, theme.TextStrong,
-            glyphScale);
+        var tileMax = tileMin + new Vector2(tileSize, tileSize);
+        var surface = hovered ? Palette.Lighten(tint, 0.08f) : tint;
+        IconTile.FillShaded(dl, tileMin, tileMax, tileSize * Metrics.Radius.TileFactor, surface);
+        ProgressRing.CenterIcon(dl, new Vector2(tileMin.X + tileSize * 0.5f, row.Center.Y), icon, GlyphInk,
+            tileSize * 0.5f);
         if (badge)
         {
-            AppBadge.DrawDot(new Vector2(tileMin.X + tileSize, tileMin.Y), theme, scale);
+            AppBadge.DrawDot(new Vector2(tileMax.X, tileMin.Y), theme, scale);
         }
-        DrawLabel(new Rect(new Vector2(tileMin.X + tileSize + Metrics.Space.Md * scale, row.Min.Y), row.Max), label,
+        DrawLabel(new Rect(new Vector2(tileMax.X + Metrics.Space.Md * scale, row.Min.Y), row.Max), label,
             theme.TextStrong);
         var chevronWidth = Metrics.Space.Xs * scale;
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
@@ -180,8 +181,9 @@ internal static class SettingsRow
 
     private static void DrawLabel(Rect row, string label, Vector4 color)
     {
-        var labelSize = Typography.Measure(label);
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), label, color);
+        var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
+        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), label, color,
+            TextStyles.BodyEmphasized);
     }
 
     private static void DrawChevronRight(Vector2 tip, float size, float thickness, Vector4 color)

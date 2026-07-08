@@ -72,7 +72,7 @@ internal sealed partial class ClockApp
         var height = Metrics.Size.ToggleHeight * scale;
         var toggleMin = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
         var toggleRect = new Rect(toggleMin, toggleMin + new Vector2(width, height));
-        var newValue = Toggle.Draw(toggleRect, alarm.Enabled, theme);
+        var newValue = Toggle.Draw($"alarm.{alarm.Id}", toggleRect, alarm.Enabled, theme);
         if (newValue != alarm.Enabled)
         {
             alarm.Enabled = newValue;

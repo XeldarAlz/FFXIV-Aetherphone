@@ -7,6 +7,8 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class CommandsPage : ISettingsPage
@@ -27,7 +29,7 @@ internal sealed class CommandsPage : ISettingsPage
 
     public string Title => Loc.T(L.Settings.Commands);
     public string Summary => Loc.T(L.Settings.CommandsSummary);
-    public string Glyph => "/";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Terminal;
     public Vector4 Tint => new(0.46f, 0.62f, 0.92f, 1f);
 
     public void Draw(in PhoneContext context, Rect body)
@@ -45,12 +47,7 @@ internal sealed class CommandsPage : ISettingsPage
 
             card.End();
             ImGui.Dummy(new Vector2(0f, 8f * scale));
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
-            using (Plugin.Fonts.Push(0.8f))
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                ImGui.TextWrapped(Loc.T(L.Settings.CommandsHint));
-            }
+            SettingsSection.Hint(Loc.T(L.Settings.CommandsHint), theme);
         }
     }
 

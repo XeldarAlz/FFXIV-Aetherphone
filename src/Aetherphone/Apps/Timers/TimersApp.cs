@@ -238,7 +238,7 @@ internal sealed class TimersApp : IPhoneApp
         var width = 46f * scale;
         var height = 28f * scale;
         var min = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
-        return Toggle.Draw(new Rect(min, min + new Vector2(width, height)), value, PhoneTheme.Default);
+        return Toggle.Draw(label, new Rect(min, min + new Vector2(width, height)), value, PhoneTheme.Default);
     }
 
     private Rect BeginCard(int rowCount, float scale)

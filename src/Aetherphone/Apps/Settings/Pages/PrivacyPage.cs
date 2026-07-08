@@ -8,13 +8,15 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class PrivacyPage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Privacy);
     public string Summary => configuration.AnalyticsEnabled ? Loc.T(L.Settings.PrivacyOn) : Loc.T(L.Settings.PrivacyOff);
-    public string Glyph => "P";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.UserShield;
     public Vector4 Tint => new(0.42f, 0.56f, 0.86f, 1f);
     private readonly Configuration configuration;
 
@@ -46,12 +48,7 @@ internal sealed class PrivacyPage : ISettingsPage
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 16f * scale);
-            using (Plugin.Fonts.Push(0.8f))
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                ImGui.TextWrapped(Loc.T(L.Settings.PrivacyHint));
-            }
+            SettingsSection.Hint(Loc.T(L.Settings.PrivacyHint), theme);
         }
     }
 }

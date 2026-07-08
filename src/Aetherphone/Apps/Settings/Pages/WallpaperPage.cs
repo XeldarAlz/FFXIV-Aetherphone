@@ -12,6 +12,8 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class WallpaperPage : ISettingsPage
@@ -28,7 +30,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     public string Title => Loc.T(L.Wallpaper.Title);
     public string Summary => string.Empty;
-    public string Glyph => "W";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Image;
     public Vector4 Tint => new(0.55f, 0.45f, 0.95f, 1f);
     private readonly Configuration configuration;
     private readonly ThemeProvider themes;

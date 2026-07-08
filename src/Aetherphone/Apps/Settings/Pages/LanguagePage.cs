@@ -5,13 +5,15 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 
+using Dalamud.Interface;
+
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class LanguagePage : ISettingsPage
 {
     public string Title => Loc.T(L.Settings.Language);
     public string Summary => Loc.Current.NativeName;
-    public string Glyph => "L";
+    public FontAwesomeIcon Icon => FontAwesomeIcon.Globe;
     public Vector4 Tint => new(0.30f, 0.62f, 0.95f, 1f);
     private readonly Configuration configuration;
 
