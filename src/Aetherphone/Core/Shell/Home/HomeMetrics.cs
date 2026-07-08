@@ -5,7 +5,7 @@ namespace Aetherphone.Core.Shell.Home;
 
 internal readonly struct HomeMetrics
 {
-    public const float DockHeightUnits = 64f;
+    public const float DockHeightUnits = 82f;
     public const float LabelBandUnits = 20f;
     private const float DotsBandUnits = 24f;
     private const float GridTopPadUnits = 4f;
@@ -102,7 +102,7 @@ internal readonly struct HomeMetrics
         var slotWidth = DockBar.Width / Math.Max(1, slotCount);
         var centerX = DockBar.Min.X + slotWidth * (slot + 0.5f);
         var centerY = DockBar.Center.Y;
-        var half = IconSize * 0.5f;
+        var half = MathF.Min(IconSize, DockBar.Height * 0.70f) * 0.5f;
         return new Rect(new Vector2(centerX - half, centerY - half), new Vector2(centerX + half, centerY + half));
     }
 }

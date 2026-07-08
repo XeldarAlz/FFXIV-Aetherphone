@@ -30,7 +30,6 @@ internal sealed class HomeScreen
     private const float WidgetTapDepth = 0.03f;
     private const float TapPressInSeconds = 0.11f;
     private const float TapPopSeconds = 0.34f;
-    private const float TapPopAmount = 0.05f;
 
     private struct TilePose
     {
@@ -85,6 +84,7 @@ internal sealed class HomeScreen
     private HomeTile? settleTile;
     private Spring settleX;
     private Spring settleY;
+    private bool widgetAnchorReported;
 
     public HomeScreen(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets)
     {
@@ -115,6 +115,7 @@ internal sealed class HomeScreen
         }
 
         AdvanceTap(delta);
+        widgetAnchorReported = false;
         var labelAlpha = chromeAlpha * (folder.Active ? 0.35f : 1f);
         DrawPages(metrics, theme, delta, labelAlpha, motion);
         DrawDock(metrics, theme, delta, chromeAlpha, motion);
@@ -639,16 +640,16 @@ internal sealed class HomeScreen
         else if (overDock && dockAccepts)
         {
             layout.MoveToDock(tile, dockInsertIndex);
-            BeginSettle(tile);
+            BeginSettle(tile, metrics);
         }
         else if (!overDock)
         {
             layout.MoveTile(tile, dragPage, insertIndex);
-            BeginSettle(tile);
+            BeginSettle(tile, metrics);
         }
         else
         {
-            BeginSettle(tile);
+            BeginSettle(tile, metrics);
         }
 
         dragTile = null;
@@ -658,11 +659,11 @@ internal sealed class HomeScreen
         pager.AnimateTo(pager.Page, layout.PageCount);
     }
 
-    private void BeginSettle(HomeTile tile)
+    private void BeginSettle(HomeTile tile, in HomeMetrics metrics)
     {
         settleTile = tile;
-        settleX.SnapTo(dragPos.X);
-        settleY.SnapTo(dragPos.Y);
+        settleX.SnapTo(dragPos.X - metrics.Content.Min.X);
+        settleY.SnapTo(dragPos.Y - metrics.Content.Min.Y);
     }
 
     private Rect? CommittedRect(in HomeMetrics metrics, HomeTile tile)
@@ -740,14 +741,15 @@ internal sealed class HomeScreen
                 continue;
             }
 
-            var localRect = metrics.TileRect(page, page, cells[index], tile);
-            var rect = PoseRect(tile.Key, page, localRect, pageOffset, delta, motion.Interactive);
+            var target = metrics.TileRect(page, page, cells[index], tile);
+            var local = new Rect(target.Min - metrics.Grid.Min, target.Max - metrics.Grid.Min);
+            var rect = PoseRect(tile.Key, page, local, metrics.Grid.Min + pageOffset, delta, motion.Interactive);
             DrawTile(metrics, theme, tile, rect, labelAlpha, delta, motion,
                 ReferenceEquals(tile, folderTarget));
         }
     }
 
-    private Rect PoseRect(string key, int page, Rect localTarget, Vector2 pageOffset, float delta, bool animate)
+    private Rect PoseRect(string key, int page, Rect localTarget, Vector2 origin, float delta, bool animate)
     {
         if (poses.Count > 256)
         {
@@ -774,7 +776,7 @@ internal sealed class HomeScreen
         }
 
         poses[key] = pose;
-        var posed = new Vector2(pose.X.Value, pose.Y.Value) + pageOffset;
+        var posed = new Vector2(pose.X.Value, pose.Y.Value) + origin;
         var half = new Vector2(pose.W.Value, pose.H.Value) * 0.5f;
         return new Rect(posed - half, posed + half);
     }
@@ -800,10 +802,12 @@ internal sealed class HomeScreen
             var drawRect = pressScale == 1f ? rect : ScaleRect(rect, pressScale);
             tile.Widget!.Draw(new WidgetContext(ImGui.GetWindowDrawList(), drawRect, theme, tile.Size, scale, delta,
                 Math.Clamp(labelAlpha + 0.35f, 0f, 1f)));
+            ReportWidgetAnchor(rect, motion);
             if (editing && motion.Interactive &&
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 4f * scale, rect.Min.Y + 4f * scale), scale, theme))
             {
                 layout.RemoveTile(tile);
+                ConsumeEditGesture();
             }
 
             return;
@@ -817,6 +821,7 @@ internal sealed class HomeScreen
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
             {
                 layout.DisbandFolder(tile);
+                ConsumeEditGesture();
             }
 
             ReportIconAnchor(tile, center, rect.Width, motion);
@@ -855,8 +860,11 @@ internal sealed class HomeScreen
 
         var slotCount = slotTileCount + (showGap ? 1 : 0);
         var drawList = ImGui.GetWindowDrawList();
-        var rounding = 30f * metrics.Scale;
-        Material.Frosted(drawList, metrics.DockBar.Min, metrics.DockBar.Max, rounding, metrics.Scale, alpha * 0.9f);
+        var rounding = 34f * metrics.Scale;
+        Elevation.Draw(drawList, metrics.DockBar.Min, metrics.DockBar.Max, rounding, metrics.Scale, 26f, 7f, 0.26f,
+            alpha);
+        Material.Dock(drawList, metrics.DockBar.Min, metrics.DockBar.Max, rounding, metrics.Scale,
+            WallpaperLegibility.Strength(theme), alpha);
         var slot = 0;
         for (var index = 0; index < dock.Count; index++)
         {
@@ -971,10 +979,10 @@ internal sealed class HomeScreen
             return;
         }
 
-        settleX.Step(rect.Center.X, SettleSmoothTime, delta);
-        settleY.Step(rect.Center.Y, SettleSmoothTime, delta);
+        settleX.Step(rect.Center.X - metrics.Content.Min.X, SettleSmoothTime, delta);
+        settleY.Step(rect.Center.Y - metrics.Content.Min.Y, SettleSmoothTime, delta);
         lift.Step(1f, SettleSmoothTime, delta);
-        var position = new Vector2(settleX.Value, settleY.Value);
+        var position = metrics.Content.Min + new Vector2(settleX.Value, settleY.Value);
         if (Vector2.Distance(position, rect.Center) < 0.8f && MathF.Abs(lift.Value - 1f) < 0.01f)
         {
             settleTile = null;
@@ -1076,6 +1084,13 @@ internal sealed class HomeScreen
         tapScale = 1f;
     }
 
+    private void ConsumeEditGesture()
+    {
+        pressActive = false;
+        pressTile = null;
+        CancelTap();
+    }
+
     private void AdvanceTap(float delta)
     {
         if (tapTile is null)
@@ -1101,9 +1116,7 @@ internal sealed class HomeScreen
             return;
         }
 
-        var basis = tapReleaseFrom + (1f - tapReleaseFrom) * Easing.EaseOutCubic(popProgress);
-        var overshoot = TapPopAmount * 4f * popProgress * (1f - popProgress);
-        tapScale = basis + overshoot;
+        tapScale = tapReleaseFrom + (1f - tapReleaseFrom) * Easing.EaseOutQuint(popProgress);
     }
 
     private void ReportIconAnchor(HomeTile tile, Vector2 center, float size, in HomeMotion motion)
@@ -1116,6 +1129,17 @@ internal sealed class HomeScreen
         var half = size * 0.5f;
         UiAnchors.Report(string.Concat("home.app.", tile.App.Id),
             new Rect(new Vector2(center.X - half, center.Y - half), new Vector2(center.X + half, center.Y + half)));
+    }
+
+    private void ReportWidgetAnchor(Rect rect, in HomeMotion motion)
+    {
+        if (widgetAnchorReported || !UiAnchors.Recording || !motion.Interactive)
+        {
+            return;
+        }
+
+        widgetAnchorReported = true;
+        UiAnchors.Report("home.widget", rect);
     }
 
     private static Rect Expand(Rect rect, float amount) =>

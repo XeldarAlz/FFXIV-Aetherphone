@@ -10,8 +10,7 @@ namespace Aetherphone.Windows.Components;
 
 internal static class HomeTileView
 {
-    private static readonly Vector4 IconTileBackground = new(0.078f, 0.078f, 0.078f, 1f);
-    private static readonly Vector4 IconTileFrost = new(0.078f, 0.078f, 0.078f, 0.88f);
+    private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 1f);
 
     public static void DrawApp(Vector2 center, float size, IPhoneApp app, PhoneTheme theme, float drawScale,
         float labelAlpha, float labelWidth, float zoom = 1f)
@@ -22,13 +21,15 @@ internal static class HomeTileView
         var drawMin = new Vector2(center.X - drawHalf, center.Y - drawHalf);
         var drawMax = new Vector2(center.X + drawHalf, center.Y + drawHalf);
         var radius = size * 0.26f * drawScale;
-        Squircle.Fill(dl, drawMin, drawMax, radius, ImGui.GetColorU32(IconTileFrost));
+        var surface = IconTile.Surface(app.Accent);
+        Elevation.IconRest(dl, drawMin, drawMax, radius, scale);
+        IconTile.FillShaded(dl, drawMin, drawMax, radius, surface);
         Material.EdgeSquircle(dl, drawMin, drawMax, radius, scale);
-        if (!AppIconArt.TryDraw(app.Id, center, size * drawScale, app.Accent, IconTileBackground))
+        if (!AppIconArt.TryDraw(app.Id, center, size * drawScale, GlyphInk, Palette.Darken(surface, 0.25f)))
         {
             var glyphHeight = Typography.Measure(app.Glyph).Y;
             var glyphScale = glyphHeight > 0f ? size * drawScale * 0.5f / glyphHeight : 1f;
-            Typography.DrawCentered(center, app.Glyph, app.Accent, glyphScale);
+            Typography.DrawCentered(center, app.Glyph, GlyphInk, glyphScale);
         }
 
         DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, labelWidth, zoom);
@@ -55,6 +56,7 @@ internal static class HomeTileView
         var min = new Vector2(center.X - drawHalf, center.Y - drawHalf);
         var max = new Vector2(center.X + drawHalf, center.Y + drawHalf);
         var radius = size * 0.26f * drawScale;
+        Elevation.IconRest(dl, min, max, radius, scale);
         Squircle.Fill(dl, min, max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f)));
         Material.EdgeSquircle(dl, min, max, radius, scale);
         var pad = drawHalf * 0.28f;
@@ -70,8 +72,9 @@ internal static class HomeTileView
             var miniMin = new Vector2(cellCenter.X - mini * 0.5f, cellCenter.Y - mini * 0.5f);
             var miniMax = new Vector2(cellCenter.X + mini * 0.5f, cellCenter.Y + mini * 0.5f);
             var appItem = folder.Apps[index];
-            Squircle.Fill(dl, miniMin, miniMax, mini * 0.3f, ImGui.GetColorU32(IconTileBackground));
-            AppIconArt.TryDraw(appItem.Id, cellCenter, mini, appItem.Accent, IconTileBackground);
+            var surface = IconTile.Surface(appItem.Accent);
+            Squircle.Fill(dl, miniMin, miniMax, mini * 0.3f, ImGui.GetColorU32(surface));
+            AppIconArt.TryDraw(appItem.Id, cellCenter, mini, GlyphInk, Palette.Darken(surface, 0.25f));
         }
 
         var name = string.IsNullOrEmpty(folder.FolderName) ? fallbackName : folder.FolderName;
@@ -106,11 +109,13 @@ internal static class HomeTileView
         }
 
         var labelCenter = new Vector2(center.X, center.Y + size * 0.5f + 11f * scale);
-        var halo = Palette.WithAlpha(new Vector4(0f, 0f, 0f, 1f), 0.22f * labelAlpha);
+        var strength = WallpaperLegibility.Strength(theme);
+        var halo = Palette.WithAlpha(new Vector4(0f, 0f, 0f, 1f), (0.22f + 0.30f * strength) * labelAlpha);
         var text = Palette.WithAlpha(theme.TextStrong, 0.98f * labelAlpha);
         var style = zoom == 1f
             ? TextStyles.IconLabel
             : new TextStyle(TextStyles.IconLabel.Scale * zoom, TextStyles.IconLabel.Weight);
-        Typography.DrawCenteredHalo(labelCenter, label, text, halo, 1.3f * scale, labelWidth * 0.92f, style);
+        Typography.DrawCenteredHalo(labelCenter, label, text, halo, (1.3f + 0.5f * strength) * scale,
+            labelWidth * 0.92f, style);
     }
 }

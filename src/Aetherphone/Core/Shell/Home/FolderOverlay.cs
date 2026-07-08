@@ -52,6 +52,12 @@ internal sealed class FolderOverlay
             return;
         }
 
+        if (!closing && layout.Locate(folder).Page < 0)
+        {
+            folder = null;
+            return;
+        }
+
         anim.Step(closing ? 0f : 1f, OpenSmoothTime, delta);
         if (closing && anim.Value < 0.02f)
         {

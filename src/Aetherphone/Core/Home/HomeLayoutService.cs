@@ -12,6 +12,15 @@ internal sealed class HomeLayoutService
     private const string DefaultWidgetId = "skywatcher.forecast";
     private static readonly string[] DefaultDockApps = { "phone", "messages", "contacts", "settings" };
 
+    private static readonly string[] DefaultFirstPageApps =
+    {
+        "chirper", "aethergram", "velvet", "polls",
+        "camera", "photos", "friends", "feedback",
+        "music", "maps", "venues", "games",
+    };
+
+    private static readonly string[] DefaultTrailingApps = { "dev" };
+
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly WidgetRegistry widgets;
     private readonly Configuration configuration;
@@ -315,6 +324,10 @@ internal sealed class HomeLayoutService
         {
             LoadPages(saved, placed);
         }
+        else if (saved is null)
+        {
+            SeedDefaultLayout(placed);
+        }
 
         for (var index = 0; index < apps.Count; index++)
         {
@@ -326,7 +339,7 @@ internal sealed class HomeLayoutService
 
         if (saved is null)
         {
-            SeedDefaultWidget();
+            AppendTrailingDefaults();
         }
 
         if (pages.Count == 0)
@@ -411,19 +424,39 @@ internal sealed class HomeLayoutService
             : null;
     }
 
-    private void SeedDefaultWidget()
+    private void SeedDefaultLayout(HashSet<string> placed)
     {
-        if (!widgets.TryGet(DefaultWidgetId, out var widget) || !widgets.IsAvailable(widget))
+        var firstPage = new List<HomeTile>();
+        if (widgets.TryGet(DefaultWidgetId, out var widget) && widgets.IsAvailable(widget))
         {
-            return;
+            firstPage.Add(HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, WidgetSize.Medium));
         }
 
-        if (pages.Count == 0)
+        for (var index = 0; index < DefaultFirstPageApps.Length; index++)
         {
-            pages.Add(new List<HomeTile>());
+            if (byId.TryGetValue(DefaultFirstPageApps[index], out var app) && app.IsAvailable && placed.Add(app.Id))
+            {
+                firstPage.Add(HomeTile.ForApp(app));
+            }
         }
 
-        pages[0].Insert(0, HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, WidgetSize.Medium));
+        pages.Add(firstPage);
+        pages.Add(new List<HomeTile>());
+        for (var index = 0; index < DefaultTrailingApps.Length; index++)
+        {
+            placed.Add(DefaultTrailingApps[index]);
+        }
+    }
+
+    private void AppendTrailingDefaults()
+    {
+        for (var index = 0; index < DefaultTrailingApps.Length; index++)
+        {
+            if (byId.TryGetValue(DefaultTrailingApps[index], out var app) && app.IsAvailable)
+            {
+                Append(HomeTile.ForApp(app));
+            }
+        }
     }
 
     private List<IPhoneApp> ResolveApps(List<string> ids, HashSet<string> placed)

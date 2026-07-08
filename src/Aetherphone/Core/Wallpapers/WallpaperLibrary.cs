@@ -4,6 +4,9 @@ using Aetherphone.Core.Animation;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 
 namespace Aetherphone.Core.Wallpapers;
 
@@ -12,6 +15,9 @@ internal sealed class WallpaperLibrary : IDisposable
     private const int DayStartHour = 7;
     private const int NightStartHour = 19;
     private const float DayNightSmoothTime = 0.6f;
+    private const int BrightnessSampleSize = 24;
+    private const float BrightPixelThreshold = 0.65f;
+    private const float DefaultBrightness = 0.35f;
     private static readonly string[] BuiltInPatterns = { "*.png", "*.jpg", "*.jpeg", "*.bmp" };
 
     private static readonly WallpaperEntry Fallback = new()
@@ -24,6 +30,7 @@ internal sealed class WallpaperLibrary : IDisposable
     private readonly Configuration configuration;
     private readonly IReadOnlyList<WallpaperEntry> builtIns;
     private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
+    private readonly ConcurrentDictionary<string, float> brightness = new();
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
     private readonly CancellationTokenSource cancellation = new();
@@ -94,6 +101,21 @@ internal sealed class WallpaperLibrary : IDisposable
 
     public Vector2 SizeOfPath(string path) => ready.TryGetValue(path, out var wrap) ? wrap.Size : Vector2.Zero;
 
+    public float HomeBrightness(string lightId, string darkId)
+    {
+        var light = BrightnessOfPath(Resolve(lightId).FilePath);
+        if (Darkness <= 0.001f)
+        {
+            return light;
+        }
+
+        var dark = BrightnessOfPath(Resolve(darkId).FilePath);
+        return light + (dark - light) * Darkness;
+    }
+
+    private float BrightnessOfPath(string path) =>
+        brightness.TryGetValue(path, out var value) ? value : DefaultBrightness;
+
     public string AddCustom(string sourcePath, WallpaperCrop crop)
     {
         var id = "custom-" + Guid.NewGuid().ToString("N");
@@ -155,6 +177,7 @@ internal sealed class WallpaperLibrary : IDisposable
             wrap.Dispose();
         }
 
+        brightness.TryRemove(path, out _);
         failed.TryRemove(path, out _);
         Entries = Rebuild();
     }
@@ -268,6 +291,7 @@ internal sealed class WallpaperLibrary : IDisposable
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
             var wrap = await textures.CreateFromImageAsync(bytes, $"Aetherphone.Wallpaper.{path}", token)
                 .ConfigureAwait(false);
+            RecordBrightness(path, bytes);
             if (!ready.TryAdd(path, wrap))
             {
                 wrap.Dispose();
@@ -285,5 +309,46 @@ internal sealed class WallpaperLibrary : IDisposable
         {
             loading.TryRemove(path, out _);
         }
+    }
+
+    private void RecordBrightness(string path, byte[] bytes)
+    {
+        try
+        {
+            brightness[path] = MeasureBrightness(bytes);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Wallpaper] brightness analysis failed for {path}: {exception.Message}");
+        }
+    }
+
+    private static float MeasureBrightness(byte[] bytes)
+    {
+        using var image = Image.Load<Rgba32>(bytes);
+        image.Mutate(context => context.Resize(BrightnessSampleSize, BrightnessSampleSize));
+        var lumaSum = 0f;
+        var brightCount = 0;
+        image.ProcessPixelRows(accessor =>
+        {
+            for (var rowIndex = 0; rowIndex < accessor.Height; rowIndex++)
+            {
+                var row = accessor.GetRowSpan(rowIndex);
+                for (var columnIndex = 0; columnIndex < row.Length; columnIndex++)
+                {
+                    var pixel = row[columnIndex];
+                    var luma = (0.299f * pixel.R + 0.587f * pixel.G + 0.114f * pixel.B) / 255f;
+                    lumaSum += luma;
+                    if (luma >= BrightPixelThreshold)
+                    {
+                        brightCount++;
+                    }
+                }
+            }
+        });
+        const float total = BrightnessSampleSize * BrightnessSampleSize;
+        var mean = lumaSum / total;
+        var brightFraction = brightCount / total;
+        return Math.Clamp(0.5f * mean + 0.5f * brightFraction, 0f, 1f);
     }
 }

@@ -26,6 +26,24 @@ internal static class DeviceChrome
         return new Rect(new Vector2(device.Max.X - 2f * scale, top), new Vector2(window.Max.X, top + height));
     }
 
+    public static Rect MuteButtonRect(Rect window)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var device = BodyRect(window);
+        var top = device.Min.Y + device.Height * 0.155f;
+        var height = device.Height * 0.048f;
+        return new Rect(new Vector2(window.Min.X, top), new Vector2(device.Min.X + 2f * scale, top + height));
+    }
+
+    public static Rect LockButtonRect(Rect window)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var device = BodyRect(window);
+        var top = device.Min.Y + device.Height * 0.255f;
+        var height = device.Height * 0.092f;
+        return new Rect(new Vector2(window.Min.X, top), new Vector2(device.Min.X + 2f * scale, top + height));
+    }
+
     public static Rect ScreenRect(Rect window, PhoneTheme theme) =>
         BodyRect(window).Inset(theme.BezelThickness * ImGuiHelpers.GlobalScale);
 
@@ -78,6 +96,43 @@ internal static class DeviceChrome
             .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(color), theme.ScreenRounding * scale);
     }
 
+    public static void MaskScreenCorners(Rect screen, PhoneTheme theme)
+    {
+        var radius = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
+        if (radius <= 0.5f)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var bezel = ImGui.GetColorU32(theme.BezelOuter);
+        NotchCorner(drawList, screen.Min, new Vector2(screen.Min.X + radius, screen.Min.Y + radius), radius, bezel,
+            MathF.PI, MathF.PI * 1.5f);
+        NotchCorner(drawList, new Vector2(screen.Max.X, screen.Min.Y),
+            new Vector2(screen.Max.X - radius, screen.Min.Y + radius), radius, bezel, MathF.PI * 1.5f, MathF.PI * 2f);
+        NotchCorner(drawList, screen.Max, new Vector2(screen.Max.X - radius, screen.Max.Y - radius), radius, bezel, 0f,
+            MathF.PI * 0.5f);
+        NotchCorner(drawList, new Vector2(screen.Min.X, screen.Max.Y),
+            new Vector2(screen.Min.X + radius, screen.Max.Y - radius), radius, bezel, MathF.PI * 0.5f, MathF.PI);
+    }
+
+    private static void NotchCorner(ImDrawListPtr drawList, Vector2 corner, Vector2 center, float radius, uint color,
+        float angleMin, float angleMax)
+    {
+        var segments = Math.Clamp((int)MathF.Ceiling(radius * 0.5f), 12, 64);
+        var previous = ArcPoint(center, radius, angleMin);
+        for (var index = 1; index <= segments; index++)
+        {
+            var angle = angleMin + (angleMax - angleMin) * index / segments;
+            var next = ArcPoint(center, radius, angle);
+            drawList.AddTriangleFilled(corner, previous, next, color);
+            previous = next;
+        }
+    }
+
+    private static Vector2 ArcPoint(Vector2 center, float radius, float angle) =>
+        new(center.X + MathF.Cos(angle) * radius, center.Y + MathF.Sin(angle) * radius);
+
     public static void DrawWallpaper(Rect screen, PhoneTheme theme)
     {
         DrawWallpaperInto(screen, screen, theme, 1f);
@@ -110,7 +165,9 @@ internal static class DeviceChrome
 
     public static void DrawHomeScrim(Rect screen, PhoneTheme theme)
     {
-        const float dim = 0.11f;
+        const float calmDim = 0.08f;
+        const float harshDim = 0.30f;
+        var dim = calmDim + (harshDim - calmDim) * WallpaperLegibility.Strength(theme);
         var rounding = theme.ScreenRounding * ImGuiHelpers.GlobalScale;
         ImGui.GetWindowDrawList()
             .AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, dim)), rounding);
