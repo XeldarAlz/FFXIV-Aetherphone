@@ -352,29 +352,46 @@ internal sealed class PhoneShell : IDisposable
 
         var raw = Math.Clamp((eased - 0.5f) / 0.4f, 0f, 1f);
         var glyphAlpha = raw * raw * (3f - 2f * raw);
-        MinimizedPhone.DrawFace(ImGui.GetWindowDrawList(), geometry, theme, scale, glyphAlpha,
+        MinimizedPhone.DrawFace(ImGui.GetForegroundDrawList(), geometry, theme, scale, glyphAlpha,
             notifications.UnreadCount);
     }
 
     private void RevealMorphContent(Rect device, PhoneTheme theme, in MinimizedPhone.Geometry geometry, float eased)
     {
-        if (geometry.Screen.Height <= 0.5f)
+        var screen = geometry.Screen;
+        if (screen.Height <= 0.5f)
         {
             return;
         }
 
         var fullScreen = DeviceChrome.ScreenRect(device, theme);
-        SceneCompositor.DrawClipped(geometry.Screen, fullScreen, 0f, target => PaintCurrentScreen(target, theme));
+        var rounding = geometry.ScreenRounding;
         var veil = ImGui.GetColorU32(Palette.WithAlpha(theme.ScreenBase, eased));
-        Squircle.Fill(ImGui.GetWindowDrawList(), geometry.Screen.Min, geometry.Screen.Max, geometry.ScreenRounding,
-            veil);
+        var shrink = ShrinkMotion(fullScreen, screen);
+        SceneCompositor.DrawClipped(screen, fullScreen, 0f, target =>
+        {
+            PaintCurrentScreen(target, theme, shrink);
+            Squircle.Fill(ImGui.GetWindowDrawList(), screen.Min, screen.Max, rounding, veil);
+        });
     }
 
-    private void PaintCurrentScreen(Rect screen, PhoneTheme theme)
+    private static HomeMotion ShrinkMotion(Rect fullScreen, Rect target)
+    {
+        var zoom = fullScreen.Width > 0f ? target.Width / fullScreen.Width : 1f;
+        if (zoom >= 0.999f)
+        {
+            return new HomeMotion(1f, default, 0f, false);
+        }
+
+        var pivot = (target.Min - fullScreen.Min * zoom) / (1f - zoom);
+        return new HomeMotion(zoom, pivot, 0f, false);
+    }
+
+    private void PaintCurrentScreen(Rect screen, PhoneTheme theme, in HomeMotion motion)
     {
         if (navigation.AtHome)
         {
-            PaintHome(screen, theme, HomeMotion.Rest);
+            PaintHome(screen, theme, motion);
             return;
         }
 
