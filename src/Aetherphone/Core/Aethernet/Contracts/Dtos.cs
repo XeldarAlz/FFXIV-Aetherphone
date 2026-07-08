@@ -223,7 +223,8 @@ internal sealed record VelvetMessageDto(
     long CreatedAtUnix,
     long? ExpiresAtUnix,
     int MediaWidth = 0,
-    int MediaHeight = 0) : IIdentified;
+    int MediaHeight = 0,
+    long? ReadAtUnix = null) : IIdentified;
 
 internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
 
@@ -322,3 +323,80 @@ internal sealed record DevChatPage(DevChatMessageDto[] Items, string? NextCursor
 internal sealed record SendDevChatMessageRequest(string Body, string? MediaKey = null, int MediaWidth = 0, int MediaHeight = 0);
 
 internal sealed record DevMediaUrlDto(string Url, long ExpiresAtUnix);
+
+internal sealed record ContactDto(
+    string UserId,
+    string DisplayName,
+    string Handle,
+    string? AvatarUrl,
+    string PhoneNumber,
+    string Alias,
+    bool IsMutual,
+    long CreatedAtUnix);
+
+internal sealed record ContactListResult(ContactDto[] Contacts, string MyNumber);
+
+internal sealed record AddContactRequest(string Number, string? Alias);
+
+internal sealed record NumberChangeStatusDto(string Status, long CreatedAtUnix, long? ResolvedAtUnix);
+
+internal sealed record NumberChangeStatusResult(NumberChangeStatusDto? Request);
+
+internal sealed record CreateNumberChangeRequest(string Reason);
+
+internal sealed record ConversationDto(
+    string Id,
+    bool IsGroup,
+    string Title,
+    string? AvatarUrl,
+    int MemberCount,
+    string OtherUserId,
+    string OtherDisplayName,
+    string OtherHandle,
+    string? OtherAvatarUrl,
+    string LastMessagePreview,
+    int LastMessageKind,
+    long LastMessageAtUnix,
+    int UnreadCount,
+    int Presence,
+    int? UtcOffsetMinutes = null) : IIdentified;
+
+internal sealed record ConversationMemberDto(
+    string UserId,
+    string DisplayName,
+    string Handle,
+    string? AvatarUrl,
+    int Role,
+    bool IsActive);
+
+internal sealed record ChatMessageDto(
+    string Id,
+    string ConversationId,
+    string SenderId,
+    string SenderDisplayName,
+    string SenderHandle,
+    string? SenderAvatarUrl,
+    string Body,
+    int Kind,
+    long CreatedAtUnix,
+    int MediaWidth = 0,
+    int MediaHeight = 0,
+    long? ReadAtUnix = null) : IIdentified;
+
+internal sealed record ConversationPage(ConversationDto[] Items, string? NextCursor);
+
+internal sealed record ChatMessagePage(ChatMessageDto[] Items, string? NextCursor);
+
+internal sealed record ConversationDetailDto(ConversationDto Conversation, ConversationMemberDto[] Members);
+
+internal sealed record CreateConversationRequest(string? TargetUserId, string? Title, string[]? MemberIds);
+
+internal sealed record SendChatMessageRequest(string Body, int Kind, string? MediaKey = null, int MediaWidth = 0, int MediaHeight = 0);
+
+internal sealed record AddMembersRequest(string[] MemberIds);
+
+internal sealed record RenameConversationRequest(string Title);
+
+internal sealed record ChatTypingDto(string[] TypingUserIds);
+
+internal sealed record ChatMediaUrlDto(string Url, long ExpiresAtUnix);

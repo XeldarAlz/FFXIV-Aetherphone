@@ -126,6 +126,100 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/users/search?q={Uri.EscapeDataString(query)}"), AethernetJsonContext.Default.UserSearchResult, session.Token, token, authStatusSink);
     }
 
+    public Task<ContactListResult?> ContactsAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/contacts/"), AethernetJsonContext.Default.ContactListResult, session.Token, token, authStatusSink);
+    }
+
+    public Task<ContactDto?> AddContactAsync(string number, string? alias, CancellationToken token, Action<int>? statusSink = null)
+    {
+        var sink = statusSink is null
+            ? authStatusSink
+            : status =>
+            {
+                authStatusSink(status);
+                statusSink(status);
+            };
+        return http.PostJsonAsync(Url("/contacts/"), new AddContactRequest(number, alias), AethernetJsonContext.Default.AddContactRequest, AethernetJsonContext.Default.ContactDto, session.Token, token, sink);
+    }
+
+    public Task<bool> RemoveContactAsync(string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/contacts/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<NumberChangeStatusResult?> NumberChangeStatusAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/contacts/number-change"), AethernetJsonContext.Default.NumberChangeStatusResult, session.Token, token, authStatusSink);
+    }
+
+    public Task<NumberChangeStatusResult?> RequestNumberChangeAsync(string reason, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/contacts/number-change"), new CreateNumberChangeRequest(reason), AethernetJsonContext.Default.CreateNumberChangeRequest, AethernetJsonContext.Default.NumberChangeStatusResult, session.Token, token, authStatusSink);
+    }
+
+    public Task<ConversationPage?> ConversationsAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/chats/"), AethernetJsonContext.Default.ConversationPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<ConversationDetailDto?> ConversationAsync(string conversationId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}"), AethernetJsonContext.Default.ConversationDetailDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<ConversationDetailDto?> CreateConversationAsync(CreateConversationRequest request, CancellationToken token, Action<int>? statusSink = null)
+    {
+        var sink = statusSink is null
+            ? authStatusSink
+            : status =>
+            {
+                authStatusSink(status);
+                statusSink(status);
+            };
+        return http.PostJsonAsync(Url("/chats/"), request, AethernetJsonContext.Default.CreateConversationRequest, AethernetJsonContext.Default.ConversationDetailDto, session.Token, token, sink);
+    }
+
+    public Task<ChatMessagePage?> ChatMessagesAsync(string conversationId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), AethernetJsonContext.Default.ChatMessagePage, session.Token, token, authStatusSink);
+    }
+
+    public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0)
+    {
+        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), new SendChatMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight), AethernetJsonContext.Default.SendChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<ConversationDetailDto?> AddChatMembersAsync(string conversationId, string[] memberIds, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/members"), new AddMembersRequest(memberIds), AethernetJsonContext.Default.AddMembersRequest, AethernetJsonContext.Default.ConversationDetailDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> RemoveChatMemberAsync(string conversationId, string userId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/chats/{Uri.EscapeDataString(conversationId)}/members/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<ConversationDetailDto?> RenameConversationAsync(string conversationId, string title, CancellationToken token)
+    {
+        return http.SendJsonAsync(HttpMethod.Patch, Url($"/chats/{Uri.EscapeDataString(conversationId)}"), new RenameConversationRequest(title), AethernetJsonContext.Default.RenameConversationRequest, AethernetJsonContext.Default.ConversationDetailDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> SendChatTypingAsync(string conversationId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url($"/chats/{Uri.EscapeDataString(conversationId)}/typing"), session.Token, token, authStatusSink);
+    }
+
+    public Task<ChatTypingDto?> ChatTypingAsync(string conversationId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/typing"), AethernetJsonContext.Default.ChatTypingDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<ChatMediaUrlDto?> ChatDmMediaUrlAsync(string messageId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/chats/media/{Uri.EscapeDataString(messageId)}/url"), AethernetJsonContext.Default.ChatMediaUrlDto, session.Token, token, authStatusSink);
+    }
+
     public Task<FeedPage?> UserPostsAsync(string userId, CancellationToken token)
     {
         return http.GetJsonAsync(Url($"/users/{userId}/posts"), AethernetJsonContext.Default.FeedPage, session.Token, token, authStatusSink);
@@ -449,6 +543,11 @@ internal sealed class AethernetClient
     public Task<bool> UnblockAsync(string userId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Delete, Url($"/blocks/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<UserSearchResult?> BlockedUsersAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/blocks/"), AethernetJsonContext.Default.UserSearchResult, session.Token, token, authStatusSink);
     }
 
     public Task<FeedbackDto?> CreateFeedbackAsync(string text, string[] imageKeys, CancellationToken token)
