@@ -11,6 +11,13 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
+internal static class TranscriptFlags
+{
+    public const byte Encrypted = 1;
+    public const byte Placeholder = 2;
+    public const byte Unverified = 4;
+}
+
 internal readonly struct TranscriptMessage
 {
     public readonly string Id;
@@ -23,9 +30,10 @@ internal readonly struct TranscriptMessage
     public readonly long? ReadAtUnix;
     public readonly string SenderName;
     public readonly Vector4 SenderTint;
+    public readonly byte Flags;
 
     public TranscriptMessage(string id, string senderId, string body, int kind, long createdAtUnix, int mediaWidth,
-        int mediaHeight, long? readAtUnix, string senderName, Vector4 senderTint)
+        int mediaHeight, long? readAtUnix, string senderName, Vector4 senderTint, byte flags = 0)
     {
         Id = id;
         SenderId = senderId;
@@ -37,6 +45,7 @@ internal readonly struct TranscriptMessage
         ReadAtUnix = readAtUnix;
         SenderName = senderName;
         SenderTint = senderTint;
+        Flags = flags;
     }
 }
 
@@ -57,11 +66,12 @@ internal readonly ref struct ChatTranscriptModel
     public readonly Action<string> OnImageClick;
     public readonly string EmptyText;
     public readonly string LoadingText;
+    public readonly Action<string>? OnMessageContext;
 
     public ChatTranscriptModel(string threadId, ReadOnlySpan<TranscriptMessage> messages, string myUserId,
         Vector4 accent, PhoneTheme theme, Vector4 mutedInk, Vector4 bodyInk, bool otherTyping, bool loading,
         bool isGroup, RemoteImageCache images, Func<string, string?> mediaUrl, Action<string> onImageClick,
-        string emptyText, string loadingText)
+        string emptyText, string loadingText, Action<string>? onMessageContext = null)
     {
         ThreadId = threadId;
         Messages = messages;
@@ -78,6 +88,7 @@ internal readonly ref struct ChatTranscriptModel
         OnImageClick = onImageClick;
         EmptyText = emptyText;
         LoadingText = loadingText;
+        OnMessageContext = onMessageContext;
     }
 }
 
@@ -326,8 +337,15 @@ internal sealed class ChatTranscript
         var anchor = new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y);
         var scaledMin = anchor + (bubbleMin - anchor) * pop + rise;
         var scaledMax = anchor + (bubbleMax - anchor) * pop + rise;
+        var placeholder = (message.Flags & TranscriptFlags.Placeholder) != 0;
         var fill = mine ? model.Accent : new Vector4(1f, 1f, 1f, 0.10f);
         var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
+        if (placeholder)
+        {
+            fill = Palette.WithAlpha(fill, fill.W * 0.55f);
+            ink = model.MutedInk;
+        }
+
         Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * pop,
             ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
         var textPos = anchor + (new Vector2(bubbleMin.X + paddingX, bubbleMin.Y + paddingY) - anchor) * pop + rise;
@@ -336,6 +354,13 @@ internal sealed class ChatTranscript
         var timeColor = mine ? new Vector4(1f, 1f, 1f, 0.72f) : Palette.WithAlpha(model.MutedInk, 0.95f);
         DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), anchor, pop, rise,
             alpha, timeColor);
+        if (entrance >= 1f && model.OnMessageContext is not null && message.Kind != KindSystem
+            && ImGui.IsMouseHoveringRect(bubbleMin, bubbleMax)
+            && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+        {
+            model.OnMessageContext(message.Id);
+        }
+
         ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + BubbleGap * scale));
     }
 
@@ -401,6 +426,13 @@ internal sealed class ChatTranscript
                     model.OnImageClick(message.Id);
                 }
             }
+        }
+
+        if (entrance >= 1f && model.OnMessageContext is not null
+            && ImGui.IsMouseHoveringRect(bubbleMin, bubbleMax)
+            && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+        {
+            model.OnMessageContext(message.Id);
         }
 
         if (caption.Length > 0)
@@ -469,9 +501,19 @@ internal sealed class ChatTranscript
     {
         var time = TimeText.Clock(message.CreatedAtUnix);
         var timeSize = Typography.Measure(time, StampTextScale);
+        var encrypted = (message.Flags & TranscriptFlags.Encrypted) != 0;
+        var lockWidth = 0f;
+        if (encrypted)
+        {
+            using (ImRaii.PushFont(UiBuilder.IconFont))
+            {
+                lockWidth = ImGui.CalcTextSize(FontAwesomeIcon.Lock.ToIconString()).X * StampTickScale + 4f * scale;
+            }
+        }
+
         if (!mine)
         {
-            return new BubbleStamp(time, null, false, timeSize.X, timeSize.Y, 0f);
+            return new BubbleStamp(time, null, false, lockWidth + timeSize.X, timeSize.Y, 0f, lockWidth);
         }
 
         var seen = message.ReadAtUnix is not null;
@@ -482,13 +524,23 @@ internal sealed class ChatTranscript
             tickWidth = ImGui.CalcTextSize(glyph).X * StampTickScale;
         }
 
-        return new BubbleStamp(time, glyph, seen, timeSize.X + 4f * scale + tickWidth, timeSize.Y, tickWidth);
+        return new BubbleStamp(time, glyph, seen, lockWidth + timeSize.X + 4f * scale + tickWidth, timeSize.Y,
+            tickWidth, lockWidth);
     }
 
     private static void DrawStamp(ImDrawListPtr drawList, in BubbleStamp stamp, Vector2 bottomRight, Vector2 anchor,
         float pop, Vector2 rise, float alpha, Vector4 timeColor)
     {
         var topLeft = new Vector2(bottomRight.X - stamp.Width, bottomRight.Y - stamp.Height);
+        if (stamp.LockWidth > 0f)
+        {
+            var lockCenter = new Vector2(topLeft.X + stamp.LockWidth * 0.5f, bottomRight.Y - stamp.Height * 0.45f);
+            AppSkin.Icon(drawList, anchor + (lockCenter - anchor) * pop + rise,
+                FontAwesomeIcon.Lock.ToIconString(), Palette.WithAlpha(timeColor, timeColor.W * alpha * 0.9f),
+                StampTickScale * pop);
+            topLeft = new Vector2(topLeft.X + stamp.LockWidth, topLeft.Y);
+        }
+
         var timePos = anchor + (topLeft - anchor) * pop + rise;
         Typography.Draw(drawList, timePos, stamp.Time, Palette.WithAlpha(timeColor, timeColor.W * alpha),
             StampTextScale * pop);
@@ -517,8 +569,10 @@ internal sealed class ChatTranscript
         public readonly float Width;
         public readonly float Height;
         public readonly float TickWidth;
+        public readonly float LockWidth;
 
-        public BubbleStamp(string time, string? tickGlyph, bool seen, float width, float height, float tickWidth)
+        public BubbleStamp(string time, string? tickGlyph, bool seen, float width, float height, float tickWidth,
+            float lockWidth = 0f)
         {
             Time = time;
             TickGlyph = tickGlyph;
@@ -526,6 +580,7 @@ internal sealed class ChatTranscript
             Width = width;
             Height = height;
             TickWidth = tickWidth;
+            LockWidth = lockWidth;
         }
     }
 

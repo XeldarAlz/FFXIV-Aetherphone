@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
@@ -142,9 +143,9 @@ internal sealed partial class VelvetApp : IPhoneApp
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
-        SocialNotificationService social)
+        SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys)
     {
-        store = new VelvetStore(session, client, notifications, configuration);
+        store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys);
         this.launcher = launcher;
         this.socialLauncher = socialLauncher;
         this.lodestone = lodestone;

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
@@ -19,6 +20,10 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetApp
 {
+    private readonly MessageReportControl messageReport = new();
+    private Action<string>? onMessageContext;
+    private Action<string, string?, Action<bool>>? reportSubmit;
+
     private void DrawProfile(Rect area, string userId)
     {
         if (store.ProfileUserId != userId)
@@ -416,6 +421,7 @@ internal sealed partial class VelvetApp
             store.OpenThread(threadId);
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
+            messageReport.Reset();
         }
 
         store.NoteThreadViewed(threadId);
@@ -424,14 +430,26 @@ internal sealed partial class VelvetApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
-        var listRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, area.Max.Y - composerHeight));
+        var reportHeight = messageReport.Height(scale);
+        var listRect = new Rect(new Vector2(area.Min.X, top),
+            new Vector2(area.Max.X, area.Max.Y - composerHeight - reportHeight));
         var transcriptMessages = BuildTranscript(store.Messages);
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(VelvetRoute.ImageView(id));
+        onMessageContext ??= id => messageReport.Arm(id);
         var model = new ChatTranscriptModel(threadId, transcriptMessages, store.Me?.UserId ?? string.Empty, Accent,
             theme, AppPalettes.Velvet.MutedInk, AppPalettes.Velvet.BodyInk, store.OtherTyping, store.LoadingThread,
-            false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading));
+            false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
+            onMessageContext);
         transcript.Draw(listRect, model);
+        if (messageReport.Armed)
+        {
+            reportSubmit ??= (id, reason, done) => store.ReportMessage(id, reason, done);
+            messageReport.Draw(new Rect(
+                    new Vector2(area.Min.X, area.Max.Y - composerHeight - reportHeight),
+                    new Vector2(area.Max.X, area.Max.Y - composerHeight)),
+                theme, AppPalettes.Velvet.MutedInk, reportSubmit);
+        }
 
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), threadId);
     }
@@ -550,11 +568,32 @@ internal sealed partial class VelvetApp
             var message = source[index];
             mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                 message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
-                default);
+                default, MessageFlags(message));
         }
 
         transcriptCache = mapped;
         return transcriptCache;
+    }
+
+    private byte MessageFlags(VelvetMessageDto message)
+    {
+        if (message.EncVersion == 0)
+        {
+            return 0;
+        }
+
+        var state = store.DecryptionState(message.Id);
+        byte flags = TranscriptFlags.Encrypted;
+        if (state.IsPlaceholder)
+        {
+            flags |= TranscriptFlags.Placeholder;
+        }
+        else if (state.State == DmBodyState.Decrypted && !state.Verified)
+        {
+            flags |= TranscriptFlags.Unverified;
+        }
+
+        return flags;
     }
 
     private void TickThread(string threadId)

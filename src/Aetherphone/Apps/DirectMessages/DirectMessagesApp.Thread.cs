@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -15,6 +16,9 @@ namespace Aetherphone.Apps.DirectMessages;
 internal sealed partial class DirectMessagesApp
 {
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private readonly MessageReportControl messageReport = new();
+    private Action<string>? onMessageContext;
+    private Action<string, string?, Action<bool>>? reportSubmit;
 
     private void DrawThread(Rect area, string conversationId)
     {
@@ -23,6 +27,7 @@ internal sealed partial class DirectMessagesApp
             store.OpenConversation(conversationId);
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
+            messageReport.Reset();
         }
 
         store.NoteConversationViewed(conversationId);
@@ -33,15 +38,76 @@ internal sealed partial class DirectMessagesApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
-        var listRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, area.Max.Y - composerHeight));
+        var reportHeight = messageReport.Height(scale);
+        var listRect = new Rect(new Vector2(area.Min.X, top),
+            new Vector2(area.Max.X, area.Max.Y - composerHeight - reportHeight));
+        DrawEncryptionBanner(ref listRect, conversation, isGroup);
         var transcriptMessages = BuildTranscript(store.Messages, isGroup);
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(DmRoute.ImageView(id));
+        onMessageContext ??= id => messageReport.Arm(id);
         var model = new ChatTranscriptModel(conversationId, transcriptMessages, store.MyUserId, ui.Accent, theme,
             AppPalettes.Messenger.MutedInk, AppPalettes.Messenger.BodyInk, store.OtherTyping, store.LoadingThread,
-            isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading));
+            isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
+            onMessageContext);
         transcript.Draw(listRect, model);
+        if (messageReport.Armed)
+        {
+            reportSubmit ??= (id, reason, done) => store.ReportMessage(id, reason, done);
+            messageReport.Draw(new Rect(
+                    new Vector2(area.Min.X, area.Max.Y - composerHeight - reportHeight),
+                    new Vector2(area.Max.X, area.Max.Y - composerHeight)),
+                theme, AppPalettes.Messenger.MutedInk, reportSubmit);
+        }
+
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), conversationId);
+    }
+
+    private void DrawEncryptionBanner(ref Rect listRect, ConversationDto? conversation, bool isGroup)
+    {
+        string? text = null;
+        string? dismissUserId = null;
+        switch (store.VaultState)
+        {
+            case KeyVaultState.NeedsSetup:
+                text = Loc.T(L.Encryption.SetupNudge);
+                break;
+            case KeyVaultState.Locked:
+                text = Loc.T(L.Encryption.LockedPlaceholder);
+                break;
+            case KeyVaultState.Unlocked when !store.CurrentKeyStatus.CanEncrypt
+                                             && store.CurrentKeyStatus.MembersWithoutKeys.Length > 0:
+                text = Loc.T(L.Encryption.PlaintextIndicator);
+                break;
+        }
+
+        if (text is null && !isGroup && conversation is not null
+            && store.HasRotationNotice(conversation.OtherUserId))
+        {
+            text = Loc.T(L.Encryption.SafetyChanged, DirectMessagesStore.DisplayTitle(conversation));
+            dismissUserId = conversation.OtherUserId;
+        }
+
+        if (text is null)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var height = 26f * scale;
+        var min = listRect.Min;
+        var max = new Vector2(listRect.Max.X, listRect.Min.Y + height);
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.14f)));
+        Typography.DrawCentered(drawList, new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
+            text, AppPalettes.Messenger.MutedInk, 0.76f, FontWeight.Medium);
+        if (dismissUserId is not null && ImGui.IsMouseHoveringRect(min, max)
+            && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            store.ClearRotationNotice(dismissUserId);
+        }
+
+        listRect = new Rect(new Vector2(listRect.Min.X, max.Y), listRect.Max);
     }
 
     private void DrawThreadHeader(Rect area, ConversationDto? conversation, bool isGroup)
@@ -116,11 +182,33 @@ internal sealed partial class DirectMessagesApp
             var senderName = isGroup ? message.SenderDisplayName : string.Empty;
             var tint = isGroup ? SenderTint.Of(message.SenderDisplayName) : default;
             mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
-                message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, senderName, tint);
+                message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, senderName, tint,
+                MessageFlags(message));
         }
 
         transcriptCache = mapped;
         return transcriptCache;
+    }
+
+    private byte MessageFlags(ChatMessageDto message)
+    {
+        if (message.EncVersion == 0)
+        {
+            return 0;
+        }
+
+        var state = store.DecryptionState(message.Id);
+        byte flags = TranscriptFlags.Encrypted;
+        if (state.IsPlaceholder)
+        {
+            flags |= TranscriptFlags.Placeholder;
+        }
+        else if (state.State == DmBodyState.Decrypted && !state.Verified)
+        {
+            flags |= TranscriptFlags.Unverified;
+        }
+
+        return flags;
     }
 
     private static string SystemText(ChatMessageDto message)

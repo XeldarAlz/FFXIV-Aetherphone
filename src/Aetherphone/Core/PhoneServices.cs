@@ -2,6 +2,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Character;
 using Aetherphone.Core.Collections;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Inventory;
@@ -52,6 +53,9 @@ internal sealed class PhoneServices : IDisposable
     public LookupService Lookup { get; }
     public AethernetSession AethernetSession { get; }
     public AethernetClient AethernetClient { get; }
+    public KeyVault KeyVault { get; }
+    public PeerKeyDirectory PeerKeys { get; }
+    public ConversationKeyStore ConversationKeys { get; }
     public IAnalyticsService Analytics { get; }
     public MarketItemIndex MarketIndex { get; }
     public MarketboardService Market { get; }
@@ -77,7 +81,8 @@ internal sealed class PhoneServices : IDisposable
         LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http,
         MediaCache media, RemoteImageCache remoteImages,
         LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession,
-        AethernetClient aethernetClient, IAnalyticsService analytics, MarketItemIndex marketIndex,
+        AethernetClient aethernetClient, KeyVault keyVault, PeerKeyDirectory peerKeys,
+        ConversationKeyStore conversationKeys, IAnalyticsService analytics, MarketItemIndex marketIndex,
         MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news,
         RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer,
         SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues,
@@ -110,6 +115,9 @@ internal sealed class PhoneServices : IDisposable
         Lookup = lookup;
         AethernetSession = aethernetSession;
         AethernetClient = aethernetClient;
+        KeyVault = keyVault;
+        PeerKeys = peerKeys;
+        ConversationKeys = conversationKeys;
         Analytics = analytics;
         MarketIndex = marketIndex;
         Market = market;
@@ -167,6 +175,9 @@ internal sealed class PhoneServices : IDisposable
         var lookup = new LookupService(lodestone);
         var aethernetSession = new AethernetSession(configuration, framework);
         var aethernetClient = new AethernetClient(http, aethernetSession);
+        var keyVault = new KeyVault(configuration, aethernetSession, aethernetClient);
+        var peerKeys = new PeerKeyDirectory(configuration, aethernetClient);
+        var conversationKeys = new ConversationKeyStore(aethernetClient, keyVault);
         var gameRegion = clientState.ClientLanguage switch
         {
             Dalamud.Game.ClientLanguage.German => "de",
@@ -202,7 +213,8 @@ internal sealed class PhoneServices : IDisposable
         return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
             messages, chatBridge, messageLauncher, velvetLauncher, dmLauncher, socialLauncher, linkshellMutes, linkshells,
             linkshellBridge, http, media, remoteImages, lodestone,
-            collect, lookup, aethernetSession, aethernetClient, analytics, marketIndex, market, marketLauncher,
+            collect, lookup, aethernetSession, aethernetClient, keyVault, peerKeys, conversationKeys,
+            analytics, marketIndex, market, marketLauncher,
             marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
             collections, inventoryCapture, calls, socialNotifications);
     }
@@ -210,6 +222,7 @@ internal sealed class PhoneServices : IDisposable
     public void Dispose()
     {
         SocialNotifications.Dispose();
+        KeyVault.Dispose();
         Calls.Dispose();
         Collections.Dispose();
         InventoryCapture.Dispose();

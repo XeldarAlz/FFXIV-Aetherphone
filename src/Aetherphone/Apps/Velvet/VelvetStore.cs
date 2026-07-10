@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
+using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
+using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
@@ -24,10 +27,16 @@ internal sealed class VelvetStore : IDisposable
     private readonly AethernetClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
+    private readonly KeyVault vault;
+    private readonly ConversationKeyStore keys;
     private readonly StoreWork work = new StoreWork("Velvet");
     private readonly Dictionary<string, long> inboxLastAt = new();
     private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
+    private readonly ConcurrentDictionary<string, DmDecryptedBody> decryptedBodies = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, (long AtUnix, string Text)> previewCache = new(StringComparer.Ordinal);
+    private volatile bool velvetKeysHydrated;
+    private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
     private volatile bool inboxPolling;
     private bool inboxPrimed;
     private DateTime lastInboxPollUtc = DateTime.MinValue;
@@ -80,13 +89,68 @@ internal sealed class VelvetStore : IDisposable
     private volatile bool blockedLoaded;
 
     public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications,
-        Configuration configuration)
+        Configuration configuration, KeyVault vault, ConversationKeyStore keys)
     {
         this.session = session;
         this.client = client;
         this.notifications = notifications;
         this.configuration = configuration;
+        this.vault = vault;
+        this.keys = keys;
+        vault.Changed += OnVaultChanged;
         Plugin.Framework.Update += OnFrameworkTick;
+    }
+
+    public KeyVaultState VaultState => vault.State;
+    public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
+    public bool EncryptingCurrent => vault.State == KeyVaultState.Unlocked && currentKeyStatus.CanEncrypt;
+
+    public DmDecryptedBody DecryptionState(string messageId)
+    {
+        return decryptedBodies.TryGetValue(messageId, out var state)
+            ? state
+            : new DmDecryptedBody(DmBodyState.Plain, string.Empty, null, false);
+    }
+
+    private void OnVaultChanged()
+    {
+        decryptedBodies.Clear();
+        previewCache.Clear();
+        velvetKeysHydrated = false;
+        if (vault.State != KeyVaultState.Unlocked)
+        {
+            currentKeyStatus = ChatKeyStatus.None;
+            return;
+        }
+
+        work.Run("vault unlocked", async token =>
+        {
+            await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
+            var current = threadId;
+            if (current is not null)
+            {
+                var status = await keys.EnsureVelvetKeysAsync(current, MyUserId, token).ConfigureAwait(false);
+                if (threadId == current)
+                {
+                    currentKeyStatus = status;
+                }
+            }
+
+            threadsLoaded = false;
+        });
+    }
+
+    private string MyUserId => session.CurrentUser?.Id ?? string.Empty;
+
+    private async Task EnsureVelvetHydratedAsync(CancellationToken token)
+    {
+        if (velvetKeysHydrated || vault.State != KeyVaultState.Unlocked)
+        {
+            return;
+        }
+
+        velvetKeysHydrated = true;
+        await keys.HydrateVelvetAsync(token).ConfigureAwait(false);
     }
 
     public void NoteThreadViewed(string userId)
@@ -124,11 +188,13 @@ internal sealed class VelvetStore : IDisposable
         inboxPolling = true;
         work.Run("inbox poll", async token =>
         {
+            await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
             var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
-                threads = page.Items;
-                RaiseInboxNotifications(page.Items);
+                var decorated = DecorateThreads(page.Items);
+                threads = decorated;
+                RaiseInboxNotifications(decorated);
             }
         }, () => inboxPolling = false);
     }
@@ -572,10 +638,11 @@ internal sealed class VelvetStore : IDisposable
         loadingThreads = true;
         work.Run("threads", async token =>
         {
+            await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
             var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
-                threads = page.Items;
+                threads = DecorateThreads(page.Items);
             }
         }, () =>
         {
@@ -595,12 +662,19 @@ internal sealed class VelvetStore : IDisposable
         messages = Array.Empty<VelvetMessageDto>();
         otherTyping = false;
         loadingThread = true;
+        currentKeyStatus = ChatKeyStatus.None;
         work.Run("thread open", async token =>
         {
+            var status = await keys.EnsureVelvetKeysAsync(id, MyUserId, token).ConfigureAwait(false);
+            if (threadId == id)
+            {
+                currentKeyStatus = status;
+            }
+
             var page = await client.VelvetMessagesAsync(id, null, token).ConfigureAwait(false);
             if (threadId == id && page is not null)
             {
-                messages = page.Items;
+                messages = DecorateMessages(id, page.Items);
             }
         }, () =>
         {
@@ -624,7 +698,7 @@ internal sealed class VelvetStore : IDisposable
             var page = await client.VelvetMessagesAsync(current, null, token).ConfigureAwait(false);
             if (threadId == current && page is not null)
             {
-                messages = page.Items;
+                messages = DecorateMessages(current, page.Items);
             }
         });
     }
@@ -657,7 +731,28 @@ internal sealed class VelvetStore : IDisposable
         sending = true;
         work.Run("send", async token =>
         {
-            var sent = await client.SendVelvetMessageAsync(id, trimmed, 0, null, token).ConfigureAwait(false);
+            VelvetMessageDto? sent;
+            var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, id));
+            var generation = keys.CurrentGeneration(scope);
+            if (EncryptingCurrent && threadId == id && generation > 0
+                && keys.TryGetCek(scope, generation, out var cek))
+            {
+                var encoded = EnvelopeCodec.Encode(trimmed, cek, generation, scope, MyUserId);
+                sent = await client.SendVelvetMessageAsync(id, encoded.Envelope, 0, null, token,
+                    encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag)
+                    .ConfigureAwait(false);
+                if (sent is not null)
+                {
+                    decryptedBodies[sent.Id] = new DmDecryptedBody(DmBodyState.Decrypted, trimmed,
+                        encoded.FrankingKeyBase64, true);
+                    sent = sent with { Body = trimmed };
+                }
+            }
+            else
+            {
+                sent = await client.SendVelvetMessageAsync(id, trimmed, 0, null, token).ConfigureAwait(false);
+            }
+
             if (sent is null)
             {
                 return false;
@@ -923,6 +1018,53 @@ internal sealed class VelvetStore : IDisposable
             onComplete);
     }
 
+    public void ReportMessage(string messageId, string? reason, Action<bool> onComplete)
+    {
+        var snapshot = messages;
+        var targetIndex = -1;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id == messageId)
+            {
+                targetIndex = index;
+                break;
+            }
+        }
+
+        if (targetIndex < 0)
+        {
+            onComplete(false);
+            return;
+        }
+
+        var reveals = new List<RevealedMessageDto>(6);
+        AppendReveal(reveals, snapshot[targetIndex]);
+        for (var index = targetIndex - 1; index >= 0 && reveals.Count < 6; index--)
+        {
+            AppendReveal(reveals, snapshot[index]);
+        }
+
+        var revealed = reveals.Count > 0 && reveals[0].MessageId == messageId ? reveals.ToArray() : null;
+        work.Run("report message", async token =>
+            await client.ReportAsync("velvet_message", messageId, reason, token, revealed).ConfigureAwait(false),
+            onComplete);
+    }
+
+    private void AppendReveal(List<RevealedMessageDto> reveals, VelvetMessageDto message)
+    {
+        if (message.EncVersion == 0)
+        {
+            reveals.Add(new RevealedMessageDto(message.Id, message.Body, null));
+            return;
+        }
+
+        var state = DecryptionState(message.Id);
+        if (state.State == DmBodyState.Decrypted)
+        {
+            reveals.Add(new RevealedMessageDto(message.Id, state.Text, state.FrankingKey));
+        }
+    }
+
     public void DeletePost(string postId, Action<bool> onComplete)
     {
         work.Run("delete post", async token =>
@@ -1014,8 +1156,107 @@ internal sealed class VelvetStore : IDisposable
         feed = CopyOnWrite.RemoveById(feed, postId);
     }
 
+    private VelvetMessageDto[] DecorateMessages(string otherId, VelvetMessageDto[] items)
+    {
+        var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, otherId));
+        VelvetMessageDto[]? decorated = null;
+        for (var index = 0; index < items.Length; index++)
+        {
+            var item = items[index];
+            if (item.EncVersion != EnvelopeCodec.VersionEnvelope)
+            {
+                continue;
+            }
+
+            var body = ResolveBody(scope, item);
+            decorated ??= (VelvetMessageDto[])items.Clone();
+            decorated[index] = item with { Body = body.Text };
+        }
+
+        return decorated ?? items;
+    }
+
+    private DmDecryptedBody ResolveBody(string scope, VelvetMessageDto item)
+    {
+        if (decryptedBodies.TryGetValue(item.Id, out var cached)
+            && cached.State is DmBodyState.Decrypted or DmBodyState.Malformed)
+        {
+            return cached;
+        }
+
+        DmDecryptedBody resolved;
+        if (!EnvelopeCodec.TryParseGeneration(item.Body, out var generation))
+        {
+            resolved = new DmDecryptedBody(DmBodyState.Malformed, Loc.T(L.Encryption.NoKeyPlaceholder), null, false);
+        }
+        else if (!keys.TryGetCek(scope, generation, out var cek))
+        {
+            resolved = vault.State == KeyVaultState.Unlocked
+                ? new DmDecryptedBody(DmBodyState.NoKey, Loc.T(L.Encryption.NoKeyPlaceholder), null, false)
+                : new DmDecryptedBody(DmBodyState.Locked, Loc.T(L.Encryption.LockedPlaceholder), null, false);
+        }
+        else
+        {
+            var decoded = EnvelopeCodec.Decode(item.Body, cek, scope, item.SenderId, item.CommitmentTag);
+            resolved = decoded.Status switch
+            {
+                EnvelopeDecodeStatus.Success => new DmDecryptedBody(DmBodyState.Decrypted, decoded.Body,
+                    decoded.FrankingKeyBase64, decoded.CommitmentVerified),
+                EnvelopeDecodeStatus.WrongKey => new DmDecryptedBody(DmBodyState.NoKey,
+                    Loc.T(L.Encryption.NoKeyPlaceholder), null, false),
+                _ => new DmDecryptedBody(DmBodyState.Malformed, Loc.T(L.Encryption.NoKeyPlaceholder), null, false),
+            };
+        }
+
+        decryptedBodies[item.Id] = resolved;
+        return resolved;
+    }
+
+    private VelvetThreadDto[] DecorateThreads(VelvetThreadDto[] items)
+    {
+        VelvetThreadDto[]? decorated = null;
+        for (var index = 0; index < items.Length; index++)
+        {
+            var item = items[index];
+            if (item.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope)
+            {
+                continue;
+            }
+
+            decorated ??= (VelvetThreadDto[])items.Clone();
+            decorated[index] = item with { LastMessagePreview = ResolvePreview(item) };
+        }
+
+        return decorated ?? items;
+    }
+
+    private string ResolvePreview(VelvetThreadDto item)
+    {
+        if (previewCache.TryGetValue(item.OtherUserId, out var cached) && cached.AtUnix == item.LastMessageAtUnix)
+        {
+            return cached.Text;
+        }
+
+        var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, item.OtherUserId));
+        var text = Loc.T(L.Encryption.EncryptedPlaceholder);
+        if (EnvelopeCodec.TryParseGeneration(item.LastMessagePreview, out var generation)
+            && keys.TryGetCek(scope, generation, out var cek))
+        {
+            var decoded = EnvelopeCodec.Decode(item.LastMessagePreview, cek, scope, item.LastMessageSenderId, null);
+            if (decoded.Status == EnvelopeDecodeStatus.Success)
+            {
+                text = decoded.Body;
+            }
+
+            previewCache[item.OtherUserId] = (item.LastMessageAtUnix, text);
+        }
+
+        return text;
+    }
+
     public void Dispose()
     {
+        vault.Changed -= OnVaultChanged;
         Plugin.Framework.Update -= OnFrameworkTick;
         work.Dispose();
     }

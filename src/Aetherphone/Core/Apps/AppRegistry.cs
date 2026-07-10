@@ -56,8 +56,8 @@ internal static class AppRegistry
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
         apps.Add(new ChirperApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "chirper"), services.Lodestone, services.RemoteImages, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration, services.SocialNotifications));
         apps.Add(new AethergramApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "aethergram"), services.Lodestone, services.RemoteImages, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration, services.SocialNotifications));
-        apps.Add(new VelvetApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages, services.Notifications, services.VelvetLauncher, services.SocialLauncher, services.GameData, services.SocialNotifications));
-        apps.Add(new DirectMessagesApp(new DirectMessagesStore(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "dm"), services.Notifications), contactBook, services.AethernetSession, services.RemoteImages, services.Lodestone, services.DmLauncher, photoLibrary, services.Http));
+        apps.Add(new VelvetApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages, services.Notifications, services.VelvetLauncher, services.SocialLauncher, services.GameData, services.SocialNotifications, services.KeyVault, services.ConversationKeys));
+        apps.Add(new DirectMessagesApp(new DirectMessagesStore(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "dm"), services.Notifications, services.KeyVault, services.ConversationKeys, services.PeerKeys), contactBook, services.AethernetSession, services.RemoteImages, services.Lodestone, services.DmLauncher, photoLibrary, services.Http));
         apps.Add(new FeedbackApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "feedback"), photoLibrary));
         apps.Add(new DevApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "dev"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages));
         apps.Add(new PollsApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "polls")));
@@ -81,7 +81,7 @@ internal static class AppRegistry
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats));
         apps.Add(new NotificationsApp(services.Notifications, services.MessageLauncher, services.VelvetLauncher, services.DmLauncher, services.SocialLauncher));
-        apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Sound, services.AethernetSession, services.AethernetClient, services.GameData, photoLibrary, services.Calls, showAbout));
+        apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Sound, services.AethernetSession, services.AethernetClient, services.KeyVault, services.ConversationKeys, services.GameData, photoLibrary, services.Calls, showAbout));
         var calendarEvents = new CalendarEvents();
         apps.Add(new CalendarApp(services.Configuration, calendarEvents));
 

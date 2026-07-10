@@ -721,6 +721,48 @@ internal static class L
         public static readonly LocString FailXivCharacterBody = new("account.fail.xivCharacter.body", "{0} on {1} isn't a verified character on your XIVAuth account. Add and verify it on xivauth.net, then try again.");
     }
 
+    internal static class Encryption
+    {
+        public static readonly LocString Title = new("encryption.title", "Encrypted Chats");
+        public static readonly LocString StateUnlocked = new("encryption.stateUnlocked", "Unlocked");
+        public static readonly LocString StateLocked = new("encryption.stateLocked", "Locked");
+        public static readonly LocString StateSetup = new("encryption.stateSetup", "Not set up");
+        public static readonly LocString StateUnavailable = new("encryption.stateUnavailable", "Sign in required");
+        public static readonly LocString Intro = new("encryption.intro", "End-to-end encryption keeps your chats between you and the people you write to. Not even the Aethernet server can read them.");
+        public static readonly LocString NotSignedIn = new("encryption.notSignedIn", "Sign in to your Aethernet account first.");
+        public static readonly LocString SetupTitle = new("encryption.setupTitle", "Create your encryption passphrase");
+        public static readonly LocString SetupHint = new("encryption.setupHint", "Your passphrase protects your encryption key. You will need it to read your chats on a new computer. It cannot be recovered if you forget it.");
+        public static readonly LocString SetupButton = new("encryption.setupButton", "Turn on encryption");
+        public static readonly LocString PassphraseHint = new("encryption.passphraseHint", "Passphrase");
+        public static readonly LocString PassphraseConfirmHint = new("encryption.passphraseConfirmHint", "Repeat passphrase");
+        public static readonly LocString PassphraseTooShort = new("encryption.passphraseTooShort", "Use at least 8 characters.");
+        public static readonly LocString PassphraseMismatch = new("encryption.passphraseMismatch", "The passphrases do not match.");
+        public static readonly LocString UnlockTitle = new("encryption.unlockTitle", "Unlock encrypted chats");
+        public static readonly LocString UnlockHint = new("encryption.unlockHint", "Enter your encryption passphrase to read and send encrypted messages on this device.");
+        public static readonly LocString UnlockButton = new("encryption.unlockButton", "Unlock");
+        public static readonly LocString WrongPassphrase = new("encryption.wrongPassphrase", "That passphrase does not match.");
+        public static readonly LocString ForgotButton = new("encryption.forgotButton", "Forgot passphrase…");
+        public static readonly LocString ForgotTitle = new("encryption.forgotTitle", "Reset encryption key");
+        public static readonly LocString ForgotBody = new("encryption.forgotBody", "A new key will be created. Messages encrypted with the old key can no longer be read, on any device. This cannot be undone.");
+        public static readonly LocString ForgotConfirm = new("encryption.forgotConfirm", "Reset key");
+        public static readonly LocString ChangeButton = new("encryption.changeButton", "Change passphrase");
+        public static readonly LocString RequireEachSession = new("encryption.requireEachSession", "Ask for passphrase every session");
+        public static readonly LocString LockNow = new("encryption.lockNow", "Lock now");
+        public static readonly LocString UnlockedHint = new("encryption.unlockedHint", "Encrypted chats are unlocked on this device.");
+        public static readonly LocString KeyVersion = new("encryption.keyVersion", "Key version {0}");
+        public static readonly LocString Working = new("encryption.working", "Working…");
+        public static readonly LocString Failed = new("encryption.failed", "Something went wrong. Try again.");
+        public static readonly LocString EncryptedPlaceholder = new("encryption.encryptedPlaceholder", "Encrypted message");
+        public static readonly LocString LockedPlaceholder = new("encryption.lockedPlaceholder", "Unlock encryption to read");
+        public static readonly LocString NoKeyPlaceholder = new("encryption.noKeyPlaceholder", "Can't decrypt this message");
+        public static readonly LocString UnverifiedBadge = new("encryption.unverifiedBadge", "Unverified");
+        public static readonly LocString SafetyChanged = new("encryption.safetyChanged", "{0}'s security key changed.");
+        public static readonly LocString EncryptedIndicator = new("encryption.encryptedIndicator", "End-to-end encrypted");
+        public static readonly LocString PlaintextIndicator = new("encryption.plaintextIndicator", "Not encrypted");
+        public static readonly LocString SetupNudge = new("encryption.setupNudge", "Set an encryption passphrase in Settings to protect your chats.");
+        public static readonly LocString ReportDisclosure = new("encryption.reportDisclosure", "This message and up to 5 previous messages will be shared with the moderators, decrypted.");
+    }
+
     internal static class Music
     {
         public static readonly LocString RadioStations = new("music.radioStations", "Radio stations");

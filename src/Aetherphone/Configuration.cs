@@ -55,6 +55,11 @@ internal sealed class Configuration : IPluginConfiguration
     public const string DefaultAethernetBaseUrl = "https://ffxiv-aethernet-production.up.railway.app";
     public string AethernetBaseUrl { get; set; } = DefaultAethernetBaseUrl;
     public string AethernetToken { get; set; } = string.Empty;
+    public string EncryptionKeyCache { get; set; } = string.Empty;
+    public string EncryptionKeyCacheUserId { get; set; } = string.Empty;
+    public bool EncryptionRequirePassphraseEachSession { get; set; }
+    public bool EncryptionSetupPromptShown { get; set; }
+    public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
     public string AnalyticsInstallId { get; set; } = string.Empty;
     public bool AnalyticsEnabled { get; set; } = true;
     public bool AnalyticsConsentPrompted { get; set; }

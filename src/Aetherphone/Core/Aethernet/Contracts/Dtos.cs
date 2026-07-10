@@ -108,7 +108,13 @@ internal sealed record AnalyticsBatchRequest(
 
 internal sealed record AnalyticsAckDto(int Accepted);
 
-internal sealed record ReportRequest(string TargetType, string TargetId, string? Reason);
+internal sealed record RevealedMessageDto(string MessageId, string PlainText, string? FrankingKey);
+
+internal sealed record ReportRequest(
+    string TargetType,
+    string TargetId,
+    string? Reason,
+    RevealedMessageDto[]? RevealedMessages = null);
 
 internal sealed record VelvetProfileDto(
     string UserId,
@@ -212,7 +218,9 @@ internal sealed record VelvetThreadDto(
     string LastMessagePreview,
     int UnreadCount,
     int Presence,
-    int? UtcOffsetMinutes = null) : IIdentified;
+    int? UtcOffsetMinutes = null,
+    int LastMessageEncVersion = 0,
+    string LastMessageSenderId = "") : IIdentified;
 
 internal sealed record VelvetThreadPage(VelvetThreadDto[] Items, string? NextCursor);
 
@@ -226,7 +234,9 @@ internal sealed record VelvetMessageDto(
     long? ExpiresAtUnix,
     int MediaWidth = 0,
     int MediaHeight = 0,
-    long? ReadAtUnix = null) : IIdentified;
+    long? ReadAtUnix = null,
+    int EncVersion = 0,
+    string? CommitmentTag = null) : IIdentified;
 
 internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
 
@@ -236,7 +246,9 @@ internal sealed record SendVelvetMessageRequest(
     int? TtlSeconds,
     string? MediaKey = null,
     int MediaWidth = 0,
-    int MediaHeight = 0);
+    int MediaHeight = 0,
+    int EncVersion = 0,
+    string? CommitmentTag = null);
 
 internal sealed record VelvetMediaUrlDto(string Url, long ExpiresAtUnix);
 
@@ -361,7 +373,9 @@ internal sealed record ConversationDto(
     long LastMessageAtUnix,
     int UnreadCount,
     int Presence,
-    int? UtcOffsetMinutes = null) : IIdentified;
+    int? UtcOffsetMinutes = null,
+    int LastMessageEncVersion = 0,
+    string LastMessageSenderId = "") : IIdentified;
 
 internal sealed record ConversationMemberDto(
     string UserId,
@@ -383,7 +397,9 @@ internal sealed record ChatMessageDto(
     long CreatedAtUnix,
     int MediaWidth = 0,
     int MediaHeight = 0,
-    long? ReadAtUnix = null) : IIdentified;
+    long? ReadAtUnix = null,
+    int EncVersion = 0,
+    string? CommitmentTag = null) : IIdentified;
 
 internal sealed record ConversationPage(ConversationDto[] Items, string? NextCursor);
 
@@ -393,7 +409,14 @@ internal sealed record ConversationDetailDto(ConversationDto Conversation, Conve
 
 internal sealed record CreateConversationRequest(string? TargetUserId, string? Title, string[]? MemberIds);
 
-internal sealed record SendChatMessageRequest(string Body, int Kind, string? MediaKey = null, int MediaWidth = 0, int MediaHeight = 0);
+internal sealed record SendChatMessageRequest(
+    string Body,
+    int Kind,
+    string? MediaKey = null,
+    int MediaWidth = 0,
+    int MediaHeight = 0,
+    int EncVersion = 0,
+    string? CommitmentTag = null);
 
 internal sealed record AddMembersRequest(string[] MemberIds);
 
@@ -402,3 +425,47 @@ internal sealed record RenameConversationRequest(string Title);
 internal sealed record ChatTypingDto(string[] TypingUserIds);
 
 internal sealed record ChatMediaUrlDto(string Url, long ExpiresAtUnix);
+
+internal sealed record WrappedPrivateKeyDto(string Salt, int Iterations, string Nonce, string Ciphertext);
+
+internal sealed record PutMyKeysRequest(string PublicKey, WrappedPrivateKeyDto PrivateKey);
+
+internal sealed record MyKeysDto(
+    string PublicKey,
+    WrappedPrivateKeyDto PrivateKey,
+    int KeyVersion,
+    long CreatedAtUnix,
+    long? RotatedAtUnix);
+
+internal sealed record UserPublicKeyDto(string UserId, string PublicKey, int KeyVersion);
+
+internal sealed record PublicKeysRequest(string[] UserIds);
+
+internal sealed record PublicKeysDto(UserPublicKeyDto[] Items);
+
+internal sealed record KeyWrapDto(
+    int Generation,
+    string WrappedKey,
+    string CreatedById,
+    int RecipientKeyVersion,
+    long CreatedAtUnix);
+
+internal sealed record NewWrapDto(string RecipientUserId, int RecipientKeyVersion, string WrappedKey);
+
+internal sealed record CreateGenerationRequest(int Generation, NewWrapDto[] Wraps);
+
+internal sealed record AddWrapsRequest(int Generation, NewWrapDto[] Wraps);
+
+internal sealed record ConversationKeysDto(
+    string ConversationId,
+    int CurrentGeneration,
+    KeyWrapDto[] MyWraps,
+    UserPublicKeyDto[] MemberKeys,
+    string[] MembersWithoutKeys,
+    string[] StaleWrapUserIds,
+    string[] MissingWrapUserIds,
+    bool NeedsNewGeneration);
+
+internal sealed record ConversationWrapsDto(string ConversationId, int CurrentGeneration, KeyWrapDto[] Wraps);
+
+internal sealed record MyConversationKeysDto(ConversationWrapsDto[] Items);

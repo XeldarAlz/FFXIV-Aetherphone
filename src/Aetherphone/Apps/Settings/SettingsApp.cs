@@ -3,6 +3,7 @@ using Aetherphone.Apps.Settings.Pages;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -32,16 +33,19 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private INavigator frameNavigation = null!;
     private readonly AccountPage accountPage;
     private readonly ProfilePage profilePage;
+    private readonly EncryptionPage encryptionPage;
     private readonly ChangelogPage changelogPage;
 
     public SettingsApp(Configuration configuration, ThemeProvider themes, SoundService sound,
-        AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
+        AethernetSession aethernetSession, AethernetClient aethernetClient, KeyVault keyVault,
+        ConversationKeyStore conversationKeys, GameData gameData,
         PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
     {
         this.sound = sound;
         this.configuration = configuration;
         accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
         profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient, gameData);
+        encryptionPage = new EncryptionPage(configuration, aethernetSession, keyVault, conversationKeys);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
@@ -82,7 +86,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             new SettingsGroup(new ISettingsPage[] { appearance, language, immersion, tutorials },
                 L.Settings.GeneralFooter),
             new SettingsGroup(new ISettingsPage[] { callsPage, notifications, ringtonePage }, L.Settings.AlertsFooter),
-            new SettingsGroup(new ISettingsPage[] { commands, privacy, about, changelogPage }),
+            new SettingsGroup(new ISettingsPage[] { encryptionPage, commands, privacy, about, changelogPage }),
         };
         router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups, aethernetSession, accountPage), Id);
         drawPage = DrawPage;
@@ -142,5 +146,6 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     {
         accountPage.Dispose();
         profilePage.Dispose();
+        encryptionPage.Dispose();
     }
 }

@@ -185,9 +185,70 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), AethernetJsonContext.Default.ChatMessagePage, session.Token, token, authStatusSink);
     }
 
-    public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0)
+    public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null)
     {
-        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), new SendChatMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight), AethernetJsonContext.Default.SendChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), new SendChatMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag), AethernetJsonContext.Default.SendChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<MyKeysDto?> PutMyKeysAsync(PutMyKeysRequest request, CancellationToken token)
+    {
+        return http.SendJsonAsync(HttpMethod.Put, Url("/keys/me"), request, AethernetJsonContext.Default.PutMyKeysRequest, AethernetJsonContext.Default.MyKeysDto, session.Token, token, authStatusSink);
+    }
+
+    public async Task<(MyKeysDto? Keys, int Status)> MyKeysAsync(CancellationToken token)
+    {
+        var status = 0;
+        var keys = await http.GetJsonAsync(Url("/keys/me"), AethernetJsonContext.Default.MyKeysDto, session.Token, token, Combine(statusCode => status = statusCode)).ConfigureAwait(false);
+        return (keys, status);
+    }
+
+    public Task<PublicKeysDto?> PublicKeysAsync(string[] userIds, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/keys/users"), new PublicKeysRequest(userIds), AethernetJsonContext.Default.PublicKeysRequest, AethernetJsonContext.Default.PublicKeysDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<MyConversationKeysDto?> MyConversationKeysAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/keys/conversations"), AethernetJsonContext.Default.MyConversationKeysDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<ConversationKeysDto?> ConversationKeysAsync(string conversationId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/keys"), AethernetJsonContext.Default.ConversationKeysDto, session.Token, token, authStatusSink);
+    }
+
+    public async Task<(bool Ok, int Status)> CreateConversationGenerationAsync(string conversationId, CreateGenerationRequest request, CancellationToken token)
+    {
+        var status = 0;
+        var ok = await http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/chats/{Uri.EscapeDataString(conversationId)}/keys"), request, AethernetJsonContext.Default.CreateGenerationRequest, session.Token, token, Combine(statusCode => status = statusCode)).ConfigureAwait(false);
+        return (ok, status);
+    }
+
+    public Task<bool> AddConversationWrapsAsync(string conversationId, AddWrapsRequest request, CancellationToken token)
+    {
+        return http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/chats/{Uri.EscapeDataString(conversationId)}/keys/wraps"), request, AethernetJsonContext.Default.AddWrapsRequest, session.Token, token, authStatusSink);
+    }
+
+    public Task<MyConversationKeysDto?> VelvetKeysAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/velvet/keys"), AethernetJsonContext.Default.MyConversationKeysDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<ConversationKeysDto?> VelvetThreadKeysAsync(string otherId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys"), AethernetJsonContext.Default.ConversationKeysDto, session.Token, token, authStatusSink);
+    }
+
+    public async Task<(bool Ok, int Status)> CreateVelvetGenerationAsync(string otherId, CreateGenerationRequest request, CancellationToken token)
+    {
+        var status = 0;
+        var ok = await http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys"), request, AethernetJsonContext.Default.CreateGenerationRequest, session.Token, token, Combine(statusCode => status = statusCode)).ConfigureAwait(false);
+        return (ok, status);
+    }
+
+    public Task<bool> AddVelvetWrapsAsync(string otherId, AddWrapsRequest request, CancellationToken token)
+    {
+        return http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys/wraps"), request, AethernetJsonContext.Default.AddWrapsRequest, session.Token, token, authStatusSink);
     }
 
     public Task<ConversationDetailDto?> AddChatMembersAsync(string conversationId, string[] memberIds, CancellationToken token)
@@ -352,9 +413,9 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/posts/{postId}"), session.Token, token, authStatusSink);
     }
 
-    public Task<bool> ReportAsync(string targetType, string targetId, string? reason, CancellationToken token)
+    public Task<bool> ReportAsync(string targetType, string targetId, string? reason, CancellationToken token, RevealedMessageDto[]? revealedMessages = null)
     {
-        return http.SendJsonForStatusAsync(HttpMethod.Post, Url("/reports"), new ReportRequest(targetType, targetId, reason), AethernetJsonContext.Default.ReportRequest, session.Token, token, authStatusSink);
+        return http.SendJsonForStatusAsync(HttpMethod.Post, Url("/reports"), new ReportRequest(targetType, targetId, reason, revealedMessages), AethernetJsonContext.Default.ReportRequest, session.Token, token, authStatusSink);
     }
 
     public Task<VelvetProfileDto?> VelvetMeAsync(CancellationToken token)
@@ -525,9 +586,9 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetMessagePage, session.Token, token, authStatusSink);
     }
 
-    public Task<VelvetMessageDto?> SendVelvetMessageAsync(string threadId, string body, int kind, int? ttlSeconds, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0)
+    public Task<VelvetMessageDto?> SendVelvetMessageAsync(string threadId, string body, int kind, int? ttlSeconds, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null)
     {
-        return http.PostJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages"), new SendVelvetMessageRequest(body, kind, ttlSeconds, mediaKey, mediaWidth, mediaHeight), AethernetJsonContext.Default.SendVelvetMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages"), new SendVelvetMessageRequest(body, kind, ttlSeconds, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag), AethernetJsonContext.Default.SendVelvetMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
     }
 
     public Task<VelvetMediaUrlDto?> VelvetDmMediaUrlAsync(string messageId, CancellationToken token)
