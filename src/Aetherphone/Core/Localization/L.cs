@@ -388,6 +388,17 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0910 =
+        {
+            new("changelog.r0910.0", "Your one-to-one and group chats in Messages, and your Velvet messages, are now end-to-end encrypted, so only you and the people you're talking to can read them — not even the server can"),
+            new("changelog.r0910.1", "Set an encryption passphrase to protect your messages; you'll enter it to unlock your chats on another computer, and it can't be recovered if you forget it"),
+            new("changelog.r0910.2", "Added an Encrypted Chats page in Settings to turn on encryption and change or reset your passphrase"),
+            new("changelog.r0910.3", "Messages and Velvet now greet you with a setup or unlock screen so you can get your encryption ready before you start chatting"),
+            new("changelog.r0910.4", "Encrypted messages show a small lock, and a banner lets you know when a conversation is end-to-end encrypted or still needs setup"),
+            new("changelog.r0910.5", "You can now report a message: right-click it and choose Report. The message and a few before it are shared with the moderators, decrypted, so they can review it"),
+            new("changelog.r0910.6", "Right-clicking a message now opens a quick menu to report it or copy its text"),
+        };
+
         public static readonly LocString[] Release0900 =
         {
             new("changelog.r0900.0", "Added Friends, a new app to add people by their phone number and share your own number in-game"),
