@@ -6,6 +6,8 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Telephony;
@@ -38,14 +40,15 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 
     public SettingsApp(Configuration configuration, ThemeProvider themes, SoundService sound,
         AethernetSession aethernetSession, AethernetClient aethernetClient, KeyVault keyVault,
-        ConversationKeyStore conversationKeys, GameData gameData,
-        PhotoLibrary photoLibrary, CallHub calls, Action showAbout)
+        GameData gameData, RemoteImageCache remoteImages, LodestoneService lodestone, PhotoLibrary photoLibrary,
+        CallHub calls, Action showAbout)
     {
         this.sound = sound;
         this.configuration = configuration;
-        accountPage = new AccountPage(aethernetSession, aethernetClient, gameData);
         profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient, gameData);
-        encryptionPage = new EncryptionPage(configuration, aethernetSession, keyVault, conversationKeys);
+        encryptionPage = new EncryptionPage(aethernetSession, keyVault);
+        accountPage = new AccountPage(aethernetSession, aethernetClient, gameData, remoteImages, lodestone, this,
+            profilePage, encryptionPage);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
@@ -88,7 +91,8 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             new SettingsGroup(new ISettingsPage[] { callsPage, notifications, ringtonePage }, L.Settings.AlertsFooter),
             new SettingsGroup(new ISettingsPage[] { encryptionPage, commands, privacy, about, changelogPage }),
         };
-        router = new ViewRouter<ISettingsPage>(new RootSettingsPage(this, groups, aethernetSession, accountPage), Id);
+        router = new ViewRouter<ISettingsPage>(
+            new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage), Id);
         drawPage = DrawPage;
         popBack = PopBack;
     }

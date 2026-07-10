@@ -1214,7 +1214,7 @@ internal sealed class VelvetStore : IDisposable
         {
             resolved = vault.State == KeyVaultState.Unlocked
                 ? new DmDecryptedBody(DmBodyState.NoKey, Loc.T(L.Encryption.NoKeyPlaceholder), null, false)
-                : new DmDecryptedBody(DmBodyState.Locked, Loc.T(L.Encryption.LockedPlaceholder), null, false);
+                : new DmDecryptedBody(DmBodyState.Pending, Loc.T(L.Encryption.EncryptedPlaceholder), null, false);
         }
         else
         {

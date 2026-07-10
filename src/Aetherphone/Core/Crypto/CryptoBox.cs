@@ -3,13 +3,9 @@ using System.Text;
 
 namespace Aetherphone.Core.Crypto;
 
-internal readonly record struct WrappedSecret(byte[] Salt, int Iterations, byte[] Nonce, byte[] Ciphertext);
-
 internal static class CryptoBox
 {
-    public const int KdfIterations = 600_000;
     public const int CekBytes = 32;
-    private const int SaltBytes = 16;
     private const int NonceBytes = 12;
     private const int TagBytes = 16;
     private const string WrapPrefix = "EC1.";
@@ -61,47 +57,6 @@ internal static class CryptoBox
     public static byte[] GenerateCek()
     {
         return RandomNumberGenerator.GetBytes(CekBytes);
-    }
-
-    public static WrappedSecret WrapPrivateKey(byte[] pkcs8, string passphrase)
-    {
-        var salt = RandomNumberGenerator.GetBytes(SaltBytes);
-        var wrapKey = Rfc2898DeriveBytes.Pbkdf2(passphrase, salt, KdfIterations, HashAlgorithmName.SHA256, CekBytes);
-        var nonce = RandomNumberGenerator.GetBytes(NonceBytes);
-        var ciphertext = new byte[pkcs8.Length + TagBytes];
-        using (var aes = new AesGcm(wrapKey, TagBytes))
-        {
-            aes.Encrypt(nonce, pkcs8, ciphertext.AsSpan(0, pkcs8.Length), ciphertext.AsSpan(pkcs8.Length, TagBytes));
-        }
-
-        CryptographicOperations.ZeroMemory(wrapKey);
-        return new WrappedSecret(salt, KdfIterations, nonce, ciphertext);
-    }
-
-    public static byte[]? UnwrapPrivateKey(WrappedSecret wrapped, string passphrase)
-    {
-        if (wrapped.Ciphertext.Length <= TagBytes)
-        {
-            return null;
-        }
-
-        var wrapKey = Rfc2898DeriveBytes.Pbkdf2(passphrase, wrapped.Salt, wrapped.Iterations, HashAlgorithmName.SHA256, CekBytes);
-        try
-        {
-            var plaintext = new byte[wrapped.Ciphertext.Length - TagBytes];
-            using var aes = new AesGcm(wrapKey, TagBytes);
-            aes.Decrypt(wrapped.Nonce, wrapped.Ciphertext.AsSpan(0, plaintext.Length),
-                wrapped.Ciphertext.AsSpan(plaintext.Length, TagBytes), plaintext);
-            return plaintext;
-        }
-        catch (CryptographicException)
-        {
-            return null;
-        }
-        finally
-        {
-            CryptographicOperations.ZeroMemory(wrapKey);
-        }
     }
 
     public static string? WrapCek(byte[] cek, string recipientPublicKeyBase64)

@@ -10,13 +10,12 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
-namespace Aetherphone.Apps.DirectMessages;
+namespace Aetherphone.Apps.Message;
 
-internal sealed partial class DirectMessagesApp
+internal sealed partial class MessageApp
 {
     private string renameDraft = string.Empty;
     private string? renameLoadedFor;
-    private volatile bool backToListPending;
 
     private void DrawGroupInfo(Rect area, string conversationId)
     {
@@ -60,7 +59,7 @@ internal sealed partial class DirectMessagesApp
             {
                 selectedContacts.Clear();
                 filter = string.Empty;
-                router.Push(DmRoute.AddMembers(conversationId));
+                router.Push(MessageRoute.AddMembers(conversationId));
             }
 
             ImGui.Dummy(new Vector2(0f, 10f * scale));
@@ -83,7 +82,7 @@ internal sealed partial class DirectMessagesApp
         var gap = 8f * scale;
         var fieldRect = new Rect(new Vector2(origin.X + sideInset, origin.Y),
             new Vector2(origin.X + width - sideInset - buttonWidth - gap, origin.Y + fieldHeight));
-        PillField(fieldRect, "##dmRename", Loc.T(L.DirectMessages.RenameHint), ref renameDraft, 60);
+        PillField(fieldRect, "##msgRename", Loc.T(L.DirectMessages.RenameHint), ref renameDraft, 60);
         var buttonRect = new Rect(new Vector2(fieldRect.Max.X + gap, origin.Y),
             new Vector2(origin.X + width - sideInset, origin.Y + fieldHeight));
         var canSave = renameDraft.Trim().Length > 0 && renameDraft.Trim() != (store.Conversation?.Title ?? string.Empty);
@@ -99,7 +98,7 @@ internal sealed partial class DirectMessagesApp
     private void DrawSectionLabel(string label, float scale)
     {
         var origin = ImGui.GetCursorScreenPos();
-        Typography.Draw(new Vector2(origin.X + 20f * scale, origin.Y), label, AppPalettes.Messenger.MutedInk,
+        Typography.Draw(new Vector2(origin.X + 20f * scale, origin.Y), label, ui.MutedInk,
             TextStyles.FootnoteEmphasized);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 24f * scale));
@@ -126,13 +125,13 @@ internal sealed partial class DirectMessagesApp
             var ownerLabel = Loc.T(L.DirectMessages.Owner);
             Typography.Draw(new Vector2(origin.X + width - pad - Typography.Measure(ownerLabel,
                 TextStyles.Footnote).X, origin.Y + rowHeight * 0.5f - 7f * scale), ownerLabel,
-                AppPalettes.Messenger.MutedInk, TextStyles.Footnote);
+                ui.MutedInk, TextStyles.Footnote);
         }
         else if (viewerIsOwner && member.UserId != store.MyUserId)
         {
             var removeCenter = new Vector2(origin.X + width - pad - 6f * scale, origin.Y + rowHeight * 0.5f);
             if (ui.IconButton(removeCenter, 14f * scale, FontAwesomeIcon.Times.ToIconString(),
-                    AppPalettes.Messenger.MutedInk, AppSkin.Transparent, 0.9f, Loc.T(L.Common.Close)))
+                    ui.MutedInk, AppSkin.Transparent, 0.9f, Loc.T(L.Common.Close)))
             {
                 store.RemoveMember(conversationId, member.UserId, ok =>
                 {
@@ -165,7 +164,7 @@ internal sealed partial class DirectMessagesApp
 
         var searchHeight = 52f * scale;
         SearchField.DrawSubmit(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)),
-            "##dmAddFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Messenger);
+            "##msgAddFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Message);
         var selectedCount = CountSelected(candidates);
         var actionHeight = selectedCount > 0 ? 62f * scale : 0f;
         var listRect = new Rect(new Vector2(area.Min.X, top + searchHeight),
@@ -205,8 +204,6 @@ internal sealed partial class DirectMessagesApp
             }
         }
     }
-
-    private volatile bool backToDetailPending;
 
     private List<ContactDto> AddableContacts()
     {

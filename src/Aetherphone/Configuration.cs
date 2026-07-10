@@ -57,8 +57,6 @@ internal sealed class Configuration : IPluginConfiguration
     public string AethernetToken { get; set; } = string.Empty;
     public string EncryptionKeyCache { get; set; } = string.Empty;
     public string EncryptionKeyCacheUserId { get; set; } = string.Empty;
-    public bool EncryptionRequirePassphraseEachSession { get; set; }
-    public bool EncryptionSetupPromptShown { get; set; }
     public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
     public string AnalyticsInstallId { get; set; } = string.Empty;
     public bool AnalyticsEnabled { get; set; } = true;
@@ -88,6 +86,11 @@ internal sealed class Configuration : IPluginConfiguration
     public int VelvetAcknowledgedGateVersion { get; set; }
     public bool VelvetBlurByDefault { get; set; } = true;
     public List<string> VelvetPinnedThreads { get; set; } = new();
+    public List<string> MessagePinnedChats { get; set; } = new();
+    public List<string> MessageArchivedChats { get; set; } = new();
+    public List<string> MessageFavoriteContacts { get; set; } = new();
+    public Dictionary<string, string> MessageContactNotes { get; set; } = new();
+    public bool MessageMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();
     public List<string> MutedLinkshells { get; set; } = new();
     public long DevChatLastSeenUnix { get; set; }
@@ -130,6 +133,79 @@ internal sealed class Configuration : IPluginConfiguration
         LastSeenChangelogVersion = ChangelogData.LatestVersion;
         ChangelogSeenInitialized = true;
         Save();
+    }
+
+    public void MigrateMessage()
+    {
+        if (MessageMigrated)
+        {
+            return;
+        }
+
+        if (NotificationSettings.TryGetValue("dm", out var dmSetting) &&
+            !NotificationSettings.ContainsKey("message"))
+        {
+            NotificationSettings["message"] = dmSetting;
+        }
+
+        if (Home is not null)
+        {
+            var placed = false;
+            if (Home.Dock is { } dock)
+            {
+                MigrateMessageIds(dock, ref placed);
+            }
+
+            for (var pageIndex = 0; pageIndex < Home.Pages.Count; pageIndex++)
+            {
+                var items = Home.Pages[pageIndex].Items;
+                for (var itemIndex = items.Count - 1; itemIndex >= 0; itemIndex--)
+                {
+                    var item = items[itemIndex];
+                    MigrateMessageIds(item.AppIds, ref placed);
+                    if (!IsLegacyMessageId(item.AppId))
+                    {
+                        continue;
+                    }
+
+                    if (placed)
+                    {
+                        items.RemoveAt(itemIndex);
+                    }
+                    else
+                    {
+                        item.AppId = "message";
+                        placed = true;
+                    }
+                }
+            }
+        }
+
+        MessageMigrated = true;
+        Save();
+    }
+
+    private static bool IsLegacyMessageId(string appId) => appId is "dm" or "friends" or "phone" or "chocochat";
+
+    private static void MigrateMessageIds(List<string> ids, ref bool placed)
+    {
+        for (var index = ids.Count - 1; index >= 0; index--)
+        {
+            if (!IsLegacyMessageId(ids[index]))
+            {
+                continue;
+            }
+
+            if (placed)
+            {
+                ids.RemoveAt(index);
+            }
+            else
+            {
+                ids[index] = "message";
+                placed = true;
+            }
+        }
     }
 
     public bool IsAppNotificationEnabled(string appId) =>

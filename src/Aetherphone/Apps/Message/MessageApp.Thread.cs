@@ -5,23 +5,32 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Aetherphone.Apps.DirectMessages;
+namespace Aetherphone.Apps.Message;
 
-internal sealed partial class DirectMessagesApp
+internal sealed partial class MessageApp
 {
-    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private readonly MessageReportControl messageReport = new();
     private readonly DropdownMenu messageMenu = new();
     private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
     private string? menuMessageId;
     private Action<string>? onMessageContext;
     private Action<string, string?, Action<bool>>? reportSubmit;
+    private string messageDraft = string.Empty;
+    private bool threadFocus;
+    private float sinceThreadPoll;
+    private float sinceTypingSend = TypingSendSeconds;
+    private string lastTypingDraft = string.Empty;
+    private ChatMessageDto[] transcriptSource = Array.Empty<ChatMessageDto>();
+    private TranscriptMessage[] transcriptCache = Array.Empty<TranscriptMessage>();
+    private Func<string, string?>? threadMediaUrl;
+    private Action<string>? onThreadImageClick;
 
     private void DrawThread(Rect area, string conversationId)
     {
@@ -47,10 +56,10 @@ internal sealed partial class DirectMessagesApp
         DrawEncryptionBanner(ref listRect, conversation, isGroup);
         var transcriptMessages = BuildTranscript(store.Messages, isGroup);
         threadMediaUrl ??= store.DmMediaUrl;
-        onThreadImageClick ??= id => router.Push(DmRoute.ImageView(id));
+        onThreadImageClick ??= id => router.Push(MessageRoute.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
         var model = new ChatTranscriptModel(conversationId, transcriptMessages, store.MyUserId, ui.Accent, theme,
-            AppPalettes.Messenger.MutedInk, AppPalettes.Messenger.BodyInk, store.OtherTyping, store.LoadingThread,
+            AppPalettes.Message.MutedInk, AppPalettes.Message.BodyInk, store.OtherTyping, store.LoadingThread,
             isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
             onMessageContext);
         transcript.Draw(listRect, model);
@@ -60,7 +69,7 @@ internal sealed partial class DirectMessagesApp
             messageReport.Draw(new Rect(
                     new Vector2(area.Min.X, area.Max.Y - composerHeight - reportHeight),
                     new Vector2(area.Max.X, area.Max.Y - composerHeight)),
-                theme, AppPalettes.Messenger.MutedInk, reportSubmit);
+                theme, AppPalettes.Message.MutedInk, reportSubmit);
         }
 
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), conversationId);
@@ -123,11 +132,8 @@ internal sealed partial class DirectMessagesApp
         string? dismissUserId = null;
         switch (store.VaultState)
         {
-            case KeyVaultState.NeedsSetup:
-                text = Loc.T(L.Encryption.SetupNudge);
-                break;
-            case KeyVaultState.Locked:
-                text = Loc.T(L.Encryption.LockedPlaceholder);
+            case KeyVaultState.Provisioning:
+                text = Loc.T(L.Encryption.SettingUp);
                 break;
             case KeyVaultState.Unlocked when !store.CurrentKeyStatus.CanEncrypt
                                              && store.CurrentKeyStatus.MembersWithoutKeys.Length > 0:
@@ -154,7 +160,7 @@ internal sealed partial class DirectMessagesApp
         var max = new Vector2(listRect.Max.X, listRect.Min.Y + height);
         drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.14f)));
         Typography.DrawCentered(drawList, new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
-            text, AppPalettes.Messenger.MutedInk, 0.76f, FontWeight.Medium);
+            text, AppPalettes.Message.MutedInk, 0.76f, FontWeight.Medium);
         if (dismissUserId is not null && ImGui.IsMouseHoveringRect(min, max)
             && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
@@ -198,19 +204,28 @@ internal sealed partial class DirectMessagesApp
             var gapY = 1f * scale;
             var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
             Typography.Draw(new Vector2(nameLeft, stackTop), name, theme.TextStrong, 1f, FontWeight.SemiBold);
-            Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), sub, AppPalettes.Messenger.MutedInk,
+            Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), sub, AppPalettes.Message.MutedInk,
                 0.72f);
             var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
             var hitMax = new Vector2(nameLeft + MathF.Max(nameSize.X, subSize.X), area.Min.Y + AppHeader.Height * scale);
             if (UiInteract.HoverClick(hitMin, hitMax))
             {
-                router.Push(DmRoute.GroupInfo(conversation.Id));
+                router.Push(MessageRoute.GroupInfo(conversation.Id));
             }
         }
         else
         {
             Typography.Draw(new Vector2(nameLeft, rowCenterY - nameSize.Y * 0.5f), name, theme.TextStrong, 1f,
                 FontWeight.SemiBold);
+            if (conversation is not null && contacts.Find(conversation.OtherUserId) is not null)
+            {
+                var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
+                var hitMax = new Vector2(nameLeft + nameSize.X, area.Min.Y + AppHeader.Height * scale);
+                if (UiInteract.HoverClick(hitMin, hitMax))
+                {
+                    router.Push(MessageRoute.Contact(conversation.OtherUserId));
+                }
+            }
         }
     }
 
@@ -326,7 +341,7 @@ internal sealed partial class DirectMessagesApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
-                router.Push(DmRoute.ChatImage(conversationId));
+                router.Push(MessageRoute.ChatImage(conversationId));
             }
         }
 
@@ -348,7 +363,7 @@ internal sealed partial class DirectMessagesApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            if (ImGui.InputTextWithHint("##dmMessage", Loc.T(L.Velvet.MessageHint), ref messageDraft, MessageMax,
+            if (ImGui.InputTextWithHint("##messageMessage", Loc.T(L.Velvet.MessageHint), ref messageDraft, MessageMax,
                     ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 submitted = true;

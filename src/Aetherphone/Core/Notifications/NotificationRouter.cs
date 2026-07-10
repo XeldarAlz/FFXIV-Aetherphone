@@ -7,7 +7,7 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class NotificationRouter
 {
     private const string MessagesAppId = "messages";
-    private const string DmAppId = "dm";
+    private const string DmAppId = "message";
     private const string VelvetAppId = "velvet";
     private const string ChirperAppId = "chirper";
     private const string AethergramAppId = "aethergram";

@@ -83,6 +83,7 @@ internal static class L
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
         public static readonly LocString Friends = new("app.friends", "Friends");
         public static readonly LocString Chat = new("app.chat", "Chat");
+        public static readonly LocString Message = new("app.message", "Message");
     }
 
     internal static class DirectMessages
@@ -118,6 +119,28 @@ internal static class L
         public static readonly LocString SysRemoved = new("dm.sysRemoved", "{0} removed {1}");
         public static readonly LocString SysLeft = new("dm.sysLeft", "{0} left");
         public static readonly LocString SysRenamed = new("dm.sysRenamed", "{0} renamed the chat to {1}");
+    }
+
+    internal static class Message
+    {
+        public static readonly LocString TabChats = new("message.tabChats", "Chats");
+        public static readonly LocString Archived = new("message.archived", "Archived");
+        public static readonly LocString Archive = new("message.archive", "Archive");
+        public static readonly LocString Unarchive = new("message.unarchive", "Unarchive");
+        public static readonly LocString NoArchived = new("message.noArchived", "No archived chats");
+        public static readonly LocString FilterDirect = new("message.filterDirect", "Direct");
+        public static readonly LocString FilterGroups = new("message.filterGroups", "Groups");
+        public static readonly LocString Favorites = new("message.favorites", "Favorites");
+        public static readonly LocString AddFavorite = new("message.addFavorite", "Add to favorites");
+        public static readonly LocString RemoveFavorite = new("message.removeFavorite", "Remove from favorites");
+        public static readonly LocString Notes = new("message.notes", "Notes");
+        public static readonly LocString NotesHint = new("message.notesHint", "Add a private note about this contact");
+        public static readonly LocString Number = new("message.number", "Number");
+        public static readonly LocString Handle = new("message.handle", "Handle");
+        public static readonly LocString LocalTime = new("message.localTime", "Local time");
+        public static readonly LocString Added = new("message.added", "Added");
+        public static readonly LocString SignInPrompt = new("message.signInPrompt", "Sign in to Aethernet in Settings to use Message");
+        public static readonly LocString NoContacts = new("message.noContacts", "Add friends by number in the Contacts tab to call them");
     }
 
     internal static class FindPeople
@@ -391,10 +414,10 @@ internal static class L
         public static readonly LocString[] Release0910 =
         {
             new("changelog.r0910.0", "Your one-to-one and group chats in Messages, and your Velvet messages, are now end-to-end encrypted, so only you and the people you're talking to can read them — not even the server can"),
-            new("changelog.r0910.1", "Set an encryption passphrase to protect your messages; you'll enter it to unlock your chats on another computer, and it can't be recovered if you forget it"),
-            new("changelog.r0910.2", "Added an Encrypted Chats page in Settings to turn on encryption and change or reset your passphrase"),
-            new("changelog.r0910.3", "Messages and Velvet now greet you with a setup or unlock screen so you can get your encryption ready before you start chatting"),
-            new("changelog.r0910.4", "Encrypted messages show a small lock, and a banner lets you know when a conversation is end-to-end encrypted or still needs setup"),
+            new("changelog.r0910.1", "Encryption is automatic: your key is created quietly the first time you sign in, with nothing to set up and no passphrase to remember"),
+            new("changelog.r0910.2", "On a new computer a fresh key is created automatically, and older messages become readable again once your chat partners come online"),
+            new("changelog.r0910.3", "Added an Encrypted Chats page in Settings to check your encryption status or reset your key"),
+            new("changelog.r0910.4", "Encrypted messages show a small lock, and a banner lets you know when a conversation is end-to-end encrypted"),
             new("changelog.r0910.5", "You can now report a message: right-click it and choose Report. The message and a few before it are shared with the moderators, decrypted, so they can review it"),
             new("changelog.r0910.6", "Right-clicking a message now opens a quick menu to report it or copy its text"),
         };
@@ -697,6 +720,11 @@ internal static class L
         public static readonly LocString Verifying = new("account.verifying", "Verifying via Lodestone…");
         public static readonly LocString CodeNotFound = new("account.codeNotFound", "Code not found on your profile yet. Save it on Lodestone, then Verify again. Make sure both Profile and Character Search visibility are set to Public/Displayed in Results.");
         public static readonly LocString SignOut = new("account.signOut", "Sign out");
+        public static readonly LocString CharacterLabel = new("account.characterLabel", "Character");
+        public static readonly LocString HomeWorldLabel = new("account.homeWorldLabel", "Home World");
+        public static readonly LocString HandleLabel = new("account.handleLabel", "Username");
+        public static readonly LocString SignOutConfirmTitle = new("account.signOutConfirmTitle", "Sign out?");
+        public static readonly LocString SignOutConfirmBody = new("account.signOutConfirmBody", "You can sign back in anytime. Your account and data stay safe.");
         public static readonly LocString SignIn = new("account.signIn", "Sign in with Lodestone");
         public static readonly LocString XivSignIn = new("account.xivSignIn", "Sign in with XIVAuth");
         public static readonly LocString LodestoneHint = new("account.lodestoneHint", "No XIVAuth account? Verify with a Lodestone code instead.");
@@ -735,47 +763,28 @@ internal static class L
     internal static class Encryption
     {
         public static readonly LocString Title = new("encryption.title", "Encrypted Chats");
-        public static readonly LocString StateUnlocked = new("encryption.stateUnlocked", "Unlocked");
-        public static readonly LocString StateLocked = new("encryption.stateLocked", "Locked");
-        public static readonly LocString StateSetup = new("encryption.stateSetup", "Not set up");
+        public static readonly LocString StateActive = new("encryption.stateActive", "Active");
+        public static readonly LocString StateSettingUp = new("encryption.stateSettingUp", "Setting up…");
         public static readonly LocString StateUnavailable = new("encryption.stateUnavailable", "Sign in required");
         public static readonly LocString Intro = new("encryption.intro", "End-to-end encryption keeps your chats between you and the people you write to. Not even the Aethernet server can read them.");
         public static readonly LocString NotSignedIn = new("encryption.notSignedIn", "Sign in to your Aethernet account first.");
-        public static readonly LocString SetupTitle = new("encryption.setupTitle", "Create your encryption passphrase");
-        public static readonly LocString SetupHint = new("encryption.setupHint", "Your passphrase protects your encryption key. You will need it to read your chats on a new computer. It cannot be recovered if you forget it.");
-        public static readonly LocString SetupButton = new("encryption.setupButton", "Turn on encryption");
-        public static readonly LocString PassphraseHint = new("encryption.passphraseHint", "Passphrase");
-        public static readonly LocString PassphraseConfirmHint = new("encryption.passphraseConfirmHint", "Repeat passphrase");
-        public static readonly LocString PassphraseTooShort = new("encryption.passphraseTooShort", "Use at least 8 characters.");
-        public static readonly LocString PassphraseMismatch = new("encryption.passphraseMismatch", "The passphrases do not match.");
-        public static readonly LocString UnlockTitle = new("encryption.unlockTitle", "Unlock encrypted chats");
-        public static readonly LocString UnlockHint = new("encryption.unlockHint", "Enter your encryption passphrase to read and send encrypted messages on this device.");
-        public static readonly LocString UnlockButton = new("encryption.unlockButton", "Unlock");
-        public static readonly LocString WrongPassphrase = new("encryption.wrongPassphrase", "That passphrase does not match.");
-        public static readonly LocString ForgotButton = new("encryption.forgotButton", "Forgot passphrase…");
+        public static readonly LocString SettingUp = new("encryption.settingUp", "Setting up encryption…");
+        public static readonly LocString ActiveHint = new("encryption.activeHint", "Encryption is active on this device. It works automatically — nothing to set up.");
+        public static readonly LocString NewDeviceHint = new("encryption.newDeviceHint", "On a new computer a fresh key is created automatically. Older messages become readable again once your chat partners come online.");
         public static readonly LocString ForgotTitle = new("encryption.forgotTitle", "Reset encryption key");
-        public static readonly LocString ForgotBody = new("encryption.forgotBody", "A new key will be created. Messages encrypted with the old key can no longer be read, on any device. This cannot be undone.");
+        public static readonly LocString ForgotBody = new("encryption.forgotBody", "A new key will be created. Messages encrypted with the old key become readable again once your chat partners come online.");
         public static readonly LocString ForgotConfirm = new("encryption.forgotConfirm", "Reset key");
-        public static readonly LocString ChangeButton = new("encryption.changeButton", "Change passphrase");
-        public static readonly LocString RequireEachSession = new("encryption.requireEachSession", "Ask for passphrase every session");
-        public static readonly LocString LockNow = new("encryption.lockNow", "Lock now");
-        public static readonly LocString UnlockedHint = new("encryption.unlockedHint", "Encrypted chats are unlocked on this device.");
+        public static readonly LocString ResetButton = new("encryption.resetButton", "Reset encryption key…");
         public static readonly LocString KeyVersion = new("encryption.keyVersion", "Key version {0}");
         public static readonly LocString Working = new("encryption.working", "Working…");
         public static readonly LocString Failed = new("encryption.failed", "Something went wrong. Try again.");
         public static readonly LocString EncryptedPlaceholder = new("encryption.encryptedPlaceholder", "Encrypted message");
-        public static readonly LocString LockedPlaceholder = new("encryption.lockedPlaceholder", "Unlock encryption to read");
         public static readonly LocString NoKeyPlaceholder = new("encryption.noKeyPlaceholder", "Can't decrypt this message");
         public static readonly LocString UnverifiedBadge = new("encryption.unverifiedBadge", "Unverified");
         public static readonly LocString SafetyChanged = new("encryption.safetyChanged", "{0}'s security key changed.");
         public static readonly LocString EncryptedIndicator = new("encryption.encryptedIndicator", "End-to-end encrypted");
         public static readonly LocString PlaintextIndicator = new("encryption.plaintextIndicator", "Not encrypted");
-        public static readonly LocString SetupNudge = new("encryption.setupNudge", "Set an encryption passphrase in Settings to protect your chats.");
         public static readonly LocString ReportDisclosure = new("encryption.reportDisclosure", "This message and up to 5 previous messages will be shared with the moderators, decrypted.");
-        public static readonly LocString GateIntroTitle = new("encryption.gateIntroTitle", "Your chats are end-to-end encrypted");
-        public static readonly LocString GateIntroBody = new("encryption.gateIntroBody", "Set a passphrase to protect your messages so only you and the people you write to can read them. You'll need it to read your chats on another computer.");
-        public static readonly LocString NotNow = new("encryption.notNow", "Not now");
-        public static readonly LocString ContinueWithout = new("encryption.continueWithout", "Continue without unlocking");
         public static readonly LocString ReportMessageAction = new("encryption.reportMessageAction", "Report message");
         public static readonly LocString CopyTextAction = new("encryption.copyTextAction", "Copy text");
     }
@@ -1746,10 +1755,10 @@ internal static class L
         public static readonly LocString BeginBody = new("onboarding.beginBody", "Tap the app icon to dive in. You can replay any tip later from Settings.");
         public static readonly LocString WidgetTourTitle = new("onboarding.widgetTourTitle", "Live at a glance");
         public static readonly LocString WidgetTourBody = new("onboarding.widgetTourBody", "Widgets live on your Home Screen and update on their own. This one shows the Eorzean weather wherever you're standing.");
-        public static readonly LocString FriendsTourTitle = new("onboarding.friendsTourTitle", "Meet your Friends");
-        public static readonly LocString FriendsTourBody = new("onboarding.friendsTourBody", "Give the Friends app a tap. This is where you keep the people you meet in Eorzea. Every app opens like this.");
+        public static readonly LocString MessageTourTitle = new("onboarding.messageTourTitle", "Meet Message");
+        public static readonly LocString MessageTourBody = new("onboarding.messageTourBody", "Give Message a tap. Chats, calls and your contacts all live in one place. Every app opens like this.");
         public static readonly LocString MyNumberTourTitle = new("onboarding.myNumberTourTitle", "Your very own number");
-        public static readonly LocString MyNumberTourBody = new("onboarding.myNumberTourBody", "Every Aetherphone gets its own number. Share yours with new friends so they can add you and give you a call, right here in game.");
+        public static readonly LocString MessageNumberTourBody = new("onboarding.messageNumberTourBody", "Every Aetherphone gets its own number. Find yours in the Contacts tab and share it in-game so friends can add you and give you a call.");
         public static readonly LocString ReturnHomeTitle = new("onboarding.returnHomeTitle", "Head back home");
         public static readonly LocString ReturnHomeBody = new("onboarding.returnHomeBody", "This bar brings you home from any app. Give it a tap to go back.");
         public static readonly LocString CustomizeTitle = new("onboarding.customizeTitle", "Make it your own");
@@ -1828,6 +1837,7 @@ internal static class L
         public static readonly LocString FeedbackWriteBody = new("onboarding.feedbackWriteBody", "Type your message and tap Send. Your feedback goes directly to the developer's dashboard.");
         public static readonly LocString FeedbackPrivacyTitle = new("onboarding.feedbackPrivacyTitle", "Honest and respectful");
         public static readonly LocString FeedbackPrivacyBody = new("onboarding.feedbackPrivacyBody", "Your character name is attached so the developer knows who you are in game. Be constructive and kind.");
+        public static readonly LocString MessageBody = new("onboarding.messageBody", "Message and call your friends in one place. Add friends by number in Contacts, chat in Chats, and talk over voice from Calls.");
         public static readonly LocString PhoneBody = new("onboarding.phoneBody", "Call your friends directly in-game and talk over voice chat. The other person needs the Aetherphone plugin too, and you both need to be signed in to Aethernet from Settings.");
         public static readonly LocString PhoneGroupTitle = new("onboarding.phoneGroupTitle", "Group calls");
         public static readonly LocString PhoneGroupBody = new("onboarding.phoneGroupBody", "While a call is active, add more people to bring everyone into the same conversation. Group calls are supported too.");

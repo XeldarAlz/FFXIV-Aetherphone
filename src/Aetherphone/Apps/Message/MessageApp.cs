@@ -1,0 +1,356 @@
+using System.Numerics;
+using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Net;
+using Aetherphone.Core.Onboarding;
+using Aetherphone.Core.Photos;
+using Aetherphone.Core.Telephony;
+using Aetherphone.Core.Theme;
+using Aetherphone.Apps.DirectMessages;
+using Aetherphone.Windows.Components;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Utility;
+
+namespace Aetherphone.Apps.Message;
+
+internal sealed partial class MessageApp : IPhoneApp
+{
+    private enum MessageTab : byte
+    {
+        Chats,
+        Calls,
+        Contacts,
+    }
+
+    private const float ThreadPollSeconds = 3f;
+    private const float TypingSendSeconds = 2.5f;
+    private const int MessageMax = 1000;
+
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
+    private static readonly Vector4 CallGreen = new(0.20f, 0.78f, 0.35f, 1f);
+
+    public string Id => "message";
+    public string DisplayName => Loc.T(L.Apps.Message);
+    public string Glyph => "Me";
+    public int BadgeCount => store.UnreadTotal;
+
+    private readonly DirectMessagesStore store;
+    private readonly ContactBook contacts;
+    private readonly CallHub calls;
+    private readonly AethernetSession session;
+    private readonly RemoteImageCache images;
+    private readonly LodestoneService lodestone;
+    private readonly DmLauncher launcher;
+    private readonly PhotoLibrary library;
+    private readonly HttpService http;
+    private readonly Configuration configuration;
+    private readonly AppSkin ui = new(AppPalettes.Message);
+    private readonly ViewRouter<MessageRoute> router;
+    private readonly RouterDraw<MessageRoute> drawView;
+    private readonly ChatTranscript transcript = new();
+    private readonly Action back;
+
+    private PhoneTheme theme = PhoneTheme.Default;
+    private INavigator navigation = null!;
+    private MessageTab activeTab = MessageTab.Chats;
+    private CallView currentCall;
+    private string filter = string.Empty;
+
+    public MessageApp(DirectMessagesStore store, ContactBook contacts, CallHub calls, AethernetSession session,
+        RemoteImageCache images, LodestoneService lodestone, DmLauncher launcher, PhotoLibrary library,
+        HttpService http, Configuration configuration)
+    {
+        this.store = store;
+        this.contacts = contacts;
+        this.calls = calls;
+        this.session = session;
+        this.images = images;
+        this.lodestone = lodestone;
+        this.launcher = launcher;
+        this.library = library;
+        this.http = http;
+        this.configuration = configuration;
+        router = new ViewRouter<MessageRoute>(MessageRoute.Root, Id);
+        drawView = DrawView;
+        back = () => router.Pop();
+    }
+
+    public void OnOpened()
+    {
+        router.Reset();
+        activeTab = MessageTab.Chats;
+        filter = string.Empty;
+        searchDraft = string.Empty;
+        addError = string.Empty;
+        contacts.Refresh(force: true);
+        store.RefreshConversations();
+        if (launcher.TryConsumeConversation(out var conversationId))
+        {
+            router.Push(MessageRoute.Thread(conversationId), false);
+        }
+        else if (launcher.TryConsumeUser(out var userId))
+        {
+            store.CreateDirect(userId, id =>
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    composeResult = id;
+                }
+            });
+        }
+    }
+
+    public void OnClosed()
+    {
+        FlushNotes();
+        router.Reset();
+        filter = string.Empty;
+        searchDraft = string.Empty;
+        messageDraft = string.Empty;
+        selectedContacts.Clear();
+        groupTitleDraft = string.Empty;
+    }
+
+    public void Draw(in PhoneContext context)
+    {
+        theme = context.Theme;
+        navigation = context.Navigation;
+        ui.Theme = theme;
+        var delta = ImGui.GetIO().DeltaTime;
+        if (copiedTimer > 0f)
+        {
+            copiedTimer = MathF.Max(0f, copiedTimer - delta);
+        }
+
+        currentCall = calls.Snapshot();
+        if (router.Current.Screen == MessageScreen.AddToCall && currentCall.State != CallState.Active)
+        {
+            router.Pop(false);
+        }
+
+        ProcessPending();
+        messageMenu.Gate();
+        chatMenu.Gate();
+        var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
+        ui.Backdrop(screen);
+        router.Draw(context.Content, AppSkin.Transparent, delta, drawView);
+    }
+
+    private void ProcessPending()
+    {
+        if (backToListPending)
+        {
+            backToListPending = false;
+            router.Reset();
+            store.RefreshConversations();
+        }
+
+        if (backToDetailPending)
+        {
+            backToDetailPending = false;
+            selectedContacts.Clear();
+            if (router.Current.Screen == MessageScreen.AddMembers)
+            {
+                router.Pop();
+            }
+
+            store.RefreshDetail();
+        }
+
+        if (removePending)
+        {
+            removePending = false;
+            if (router.Current.Screen == MessageScreen.ContactDetail)
+            {
+                router.Pop();
+            }
+        }
+
+        ProcessAddOutcomes();
+        var result = composeResult;
+        if (result is null)
+        {
+            return;
+        }
+
+        composeResult = null;
+        selectedContacts.Clear();
+        groupTitleDraft = string.Empty;
+        activeTab = MessageTab.Chats;
+        if (router.Current == MessageRoute.NewChat || router.Current.Screen == MessageScreen.ContactDetail)
+        {
+            router.Pop();
+        }
+
+        router.Push(MessageRoute.Thread(result));
+    }
+
+    private void DrawView(MessageRoute route, Rect area, int depth)
+    {
+        ui.Body(area);
+        switch (route.Screen)
+        {
+            case MessageScreen.Thread:
+                DrawThread(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.NewChat:
+                DrawNewChat(area);
+                break;
+            case MessageScreen.GroupInfo:
+                DrawGroupInfo(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.AddMembers:
+                DrawAddMembers(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.ChatImage:
+                DrawChatImagePicker(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.ImageView:
+                DrawImageViewer(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.Archived:
+                DrawArchived(area);
+                break;
+            case MessageScreen.ContactDetail:
+                DrawContactDetail(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.AddContact:
+                DrawAddContact(area);
+                break;
+            case MessageScreen.Safety:
+                DrawSafety(area);
+                break;
+            case MessageScreen.AddToCall:
+                DrawAddToCall(area);
+                break;
+            default:
+                DrawRoot(area);
+                break;
+        }
+    }
+
+    private void DrawRoot(Rect area)
+    {
+        var view = currentCall;
+        if (view.State is CallState.Dialing or CallState.Connecting or CallState.Active)
+        {
+            DrawCallScreen(new PhoneContext(area, theme, navigation), view);
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var headerRect = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale));
+        var navHeight = 60f * scale;
+        var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - navHeight), area.Max);
+        var content = new Rect(new Vector2(area.Min.X, headerRect.Max.Y), new Vector2(area.Max.X, navRect.Min.Y));
+        DrawRootHeader(headerRect);
+        switch (activeTab)
+        {
+            case MessageTab.Calls:
+                DrawCallsTab(content);
+                break;
+            case MessageTab.Contacts:
+                DrawContactsTab(content);
+                break;
+            default:
+                DrawChatsTab(content);
+                break;
+        }
+
+        DrawBottomNav(navRect);
+        DrawChatMenu(area);
+    }
+
+    private void DrawRootHeader(Rect area)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var title = activeTab switch
+        {
+            MessageTab.Calls => Loc.T(L.Phone.Calls),
+            MessageTab.Contacts => Loc.T(L.Apps.Contacts),
+            _ => Loc.T(L.Message.TabChats),
+        };
+        Typography.DrawCentered(new Vector2(area.Center.X, area.Center.Y), title, ui.TitleInk, 1.3f, FontWeight.Bold);
+        if (activeTab == MessageTab.Chats && configuration.MessageArchivedChats.Count > 0)
+        {
+            var archiveCenter = new Vector2(area.Max.X - 24f * scale, area.Center.Y);
+            if (ui.IconButton(archiveCenter, 16f * scale, FontAwesomeIcon.BoxOpen.ToIconString(), ui.BodyInk,
+                    Transparent, 1.1f, Loc.T(L.Message.Archived), HoverLabelSide.Below))
+            {
+                router.Push(MessageRoute.Archived);
+            }
+        }
+
+        if (activeTab == MessageTab.Contacts)
+        {
+            var shieldCenter = new Vector2(area.Max.X - 24f * scale, area.Center.Y);
+            if (ui.IconButton(shieldCenter, 16f * scale, FontAwesomeIcon.ShieldAlt.ToIconString(), ui.BodyInk,
+                    Transparent, 1.2f, Loc.T(L.Friends.NewNumberTitle), HoverLabelSide.Below) && session.IsSignedIn)
+            {
+                router.Push(MessageRoute.Safety);
+            }
+
+            var request = contacts.NumberChange;
+            if (request is not null && request.Status == "pending")
+            {
+                ImGui.GetWindowDrawList().AddCircleFilled(shieldCenter + new Vector2(10f * scale, -10f * scale),
+                    4f * scale, ImGui.GetColorU32(ui.Accent), 16);
+            }
+        }
+    }
+
+    private void DrawBottomNav(Rect nav)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddLine(nav.Min, new Vector2(nav.Max.X, nav.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
+            1f);
+        var width = nav.Width / 3f;
+        DrawNavItem(new Rect(nav.Min, new Vector2(nav.Min.X + width, nav.Max.Y)), FontAwesomeIcon.Comments,
+            Loc.T(L.Message.TabChats), MessageTab.Chats, store.UnreadTotal);
+        DrawNavItem(new Rect(new Vector2(nav.Min.X + width, nav.Min.Y), new Vector2(nav.Min.X + width * 2f, nav.Max.Y)),
+            FontAwesomeIcon.Phone, Loc.T(L.Phone.Calls), MessageTab.Calls, 0);
+        var contactsRect = new Rect(new Vector2(nav.Min.X + width * 2f, nav.Min.Y), nav.Max);
+        UiAnchors.Report("message.tab.contacts", contactsRect);
+        DrawNavItem(contactsRect, FontAwesomeIcon.AddressBook, Loc.T(L.Apps.Contacts), MessageTab.Contacts, 0);
+    }
+
+    private void DrawNavItem(Rect rect, FontAwesomeIcon icon, string label, MessageTab tab, int badge)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var active = activeTab == tab;
+        var color = active ? ui.Accent : ui.MutedInk;
+        var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + 20f * scale);
+        AppSkin.Icon(iconCenter, icon.ToIconString(), color, 1.2f);
+        Typography.DrawCentered(new Vector2(rect.Center.X, rect.Min.Y + 42f * scale), label, color, 0.72f,
+            active ? FontWeight.SemiBold : FontWeight.Regular);
+        if (badge > 0)
+        {
+            var badgeCenter = new Vector2(iconCenter.X + 12f * scale, iconCenter.Y - 9f * scale);
+            ImGui.GetWindowDrawList().AddCircleFilled(badgeCenter, 7f * scale, ImGui.GetColorU32(theme.Danger), 16);
+            Typography.DrawCentered(badgeCenter, badge > 9 ? "9+" : badge.ToString(Loc.Culture), White, 0.62f,
+                FontWeight.SemiBold);
+        }
+
+        if (UiInteract.HoverClick(rect.Min, rect.Max))
+        {
+            activeTab = tab;
+            chatMenu.Close();
+            filter = string.Empty;
+        }
+    }
+
+    public void Dispose()
+    {
+        store.Dispose();
+        contacts.Dispose();
+    }
+}

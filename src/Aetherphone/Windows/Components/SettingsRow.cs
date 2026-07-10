@@ -168,6 +168,25 @@ internal static class SettingsRow
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
+    public static bool Action(Rect row, string label, Vector4 color, PhoneTheme theme)
+    {
+        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        if (hovered)
+        {
+            DrawRowHighlight(row, theme);
+        }
+
+        var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
+        Typography.Draw(new Vector2(row.Center.X - labelSize.X * 0.5f, row.Center.Y - labelSize.Y * 0.5f), label,
+            color, TextStyles.BodyEmphasized);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
     private static void DrawRowHighlight(Rect row, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;

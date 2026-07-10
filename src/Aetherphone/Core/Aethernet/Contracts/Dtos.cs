@@ -428,11 +428,11 @@ internal sealed record ChatMediaUrlDto(string Url, long ExpiresAtUnix);
 
 internal sealed record WrappedPrivateKeyDto(string Salt, int Iterations, string Nonce, string Ciphertext);
 
-internal sealed record PutMyKeysRequest(string PublicKey, WrappedPrivateKeyDto PrivateKey);
+internal sealed record PutMyKeysRequest(string PublicKey, WrappedPrivateKeyDto? PrivateKey = null);
 
 internal sealed record MyKeysDto(
     string PublicKey,
-    WrappedPrivateKeyDto PrivateKey,
+    WrappedPrivateKeyDto? PrivateKey,
     int KeyVersion,
     long CreatedAtUnix,
     long? RotatedAtUnix);

@@ -215,8 +215,8 @@ internal sealed class DirectMessagesStore : IDisposable
                 continue;
             }
 
-            notifications.Notify(new PhoneNotification("dm", DisplayTitle(item), PreviewText(item), DateTime.Now,
-                AppPalettes.Messenger.Accent, item.Id));
+            notifications.Notify(new PhoneNotification("message", DisplayTitle(item), PreviewText(item), DateTime.Now,
+                AppPalettes.Message.Accent, item.Id));
         }
 
         inboxPrimed = true;
@@ -683,7 +683,7 @@ internal sealed class DirectMessagesStore : IDisposable
         {
             resolved = vault.State == KeyVaultState.Unlocked
                 ? new DmDecryptedBody(DmBodyState.NoKey, Loc.T(L.Encryption.NoKeyPlaceholder), null, false)
-                : new DmDecryptedBody(DmBodyState.Locked, Loc.T(L.Encryption.LockedPlaceholder), null, false);
+                : new DmDecryptedBody(DmBodyState.Pending, Loc.T(L.Encryption.EncryptedPlaceholder), null, false);
         }
         else
         {

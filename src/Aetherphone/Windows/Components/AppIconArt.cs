@@ -26,6 +26,9 @@ internal static class AppIconArt
             case "dm":
                 DrawDirectMessages(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "message":
+                DrawMessage(dl, center, extent, inkColor, holeColor);
+                return true;
             case "contacts":
                 DrawContacts(dl, center, extent, inkColor);
                 return true;
@@ -227,6 +230,33 @@ internal static class AppIconArt
         var lineThickness = extent * 0.12f;
         dl.AddLine(At(center, extent, -0.46f, -0.44f), At(center, extent, 0.46f, -0.44f), hole, lineThickness);
         dl.AddLine(At(center, extent, -0.46f, -0.08f), At(center, extent, 0.20f, -0.08f), hole, lineThickness);
+    }
+
+    private static void DrawMessage(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        dl.AddCircleFilled(At(center, extent, 0f, -0.08f), extent * 0.92f, ink, 48);
+        Span<Vector2> tail = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.72f, 0.40f), At(center, extent, -0.24f, 0.72f), At(center, extent, -0.88f, 0.98f),
+        };
+        FillConvex(dl, ink, tail);
+        const float earX = -0.34f;
+        const float earY = -0.40f;
+        const float mouthX = 0.34f;
+        const float mouthY = 0.28f;
+        const float controlX = -0.44f;
+        const float controlY = 0.38f;
+        const int samples = 12;
+        for (var index = 0; index <= samples; index++)
+        {
+            var t = index / (float)samples;
+            var inverse = 1f - t;
+            var unitX = inverse * inverse * earX + 2f * inverse * t * controlX + t * t * mouthX;
+            var unitY = inverse * inverse * earY + 2f * inverse * t * controlY + t * t * mouthY;
+            var flare = MathF.Abs(2f * t - 1f);
+            var radius = extent * (0.13f + 0.17f * flare * flare);
+            dl.AddCircleFilled(At(center, extent, unitX, unitY), radius, hole, 24);
+        }
     }
 
     private static void DrawContacts(ImDrawListPtr dl, Vector2 center, float extent, uint ink)

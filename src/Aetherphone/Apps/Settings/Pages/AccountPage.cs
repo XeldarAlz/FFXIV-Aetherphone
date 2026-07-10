@@ -1,10 +1,14 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
@@ -30,6 +34,11 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly GameData gameData;
+    private readonly RemoteImageCache images;
+    private readonly LodestoneService lodestone;
+    private readonly ISettingsNavigator navigator;
+    private readonly ISettingsPage profilePage;
+    private readonly ISettingsPage encryptionPage;
     private readonly CancellationTokenSource cancellation = new();
     private volatile string status = string.Empty;
     private volatile string code = string.Empty;
@@ -42,11 +51,18 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private CancellationTokenSource? xivFlowCancellation;
     private bool meRequested;
 
-    public AccountPage(AethernetSession session, AethernetClient client, GameData gameData)
+    public AccountPage(AethernetSession session, AethernetClient client, GameData gameData,
+        RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
+        ISettingsPage profilePage, ISettingsPage encryptionPage)
     {
         this.session = session;
         this.client = client;
         this.gameData = gameData;
+        this.images = images;
+        this.lodestone = lodestone;
+        this.navigator = navigator;
+        this.profilePage = profilePage;
+        this.encryptionPage = encryptionPage;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -85,32 +101,97 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             StartMe();
         }
 
+        var scale = ImGuiHelpers.GlobalScale;
         var user = session.CurrentUser;
-        ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
-        using (Plugin.Fonts.Push(1.4f))
+        if (user is null)
         {
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+            var origin = ImGui.GetCursorScreenPos();
+            var center = new Vector2(origin.X + ImGui.GetContentRegionAvail().X * 0.5f, origin.Y + 88f * scale);
+            LoadingPulse.Draw(center, 14f * scale, theme.Accent, theme.TextMuted, LoadingPulse.SafeLabel());
+            ImGui.Dummy(new Vector2(0f, 168f * scale));
+            var loadingSignOut = GroupCard.Begin(theme, 1);
+            if (SettingsRow.Action(loadingSignOut.NextRow(), Loc.T(L.Account.SignOut), theme.Danger, theme))
             {
-                ImGui.TextUnformatted(user?.DisplayName ?? Loc.T(L.Account.SignedIn));
+                AskSignOut();
             }
+
+            loadingSignOut.End();
+            return;
         }
 
-        if (user is not null)
+        DrawIdentityHeader(user, theme, scale);
+        ImGui.Dummy(new Vector2(0f, 20f * scale));
+        var detailRows = user.Handle.Length > 0 ? 3 : 2;
+        var details = GroupCard.Begin(theme, detailRows);
+        if (user.Handle.Length > 0)
         {
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
-            {
-                ImGui.TextUnformatted($"{user.Name}@{user.World}");
-                ImGui.TextUnformatted(
-                    $"{Loc.Plural(L.Account.Followers, user.Followers)} · {Loc.Plural(L.Account.Following, user.Following)}");
-            }
+            SettingsRow.Info(details.NextRow(), Loc.T(L.Account.HandleLabel), $"@{user.Handle}", theme);
         }
 
-        ImGui.Dummy(new Vector2(0f, 12f * ImGuiHelpers.GlobalScale));
-        if (Button(Loc.T(L.Account.SignOut), theme))
+        SettingsRow.Info(details.NextRow(), Loc.T(L.Account.CharacterLabel), user.Name, theme);
+        SettingsRow.Info(details.NextRow(), Loc.T(L.Account.HomeWorldLabel), user.World, theme);
+        details.End();
+
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+        var links = GroupCard.Begin(theme, 2);
+        if (SettingsRow.Link(links.NextRow(), profilePage.Icon, profilePage.Tint, profilePage.Title,
+                profilePage.Summary, theme))
         {
-            session.SignOut();
-            ResetFlow();
+            navigator.Open(profilePage);
         }
+
+        if (SettingsRow.Link(links.NextRow(), encryptionPage.Icon, encryptionPage.Tint, encryptionPage.Title,
+                encryptionPage.Summary, theme))
+        {
+            navigator.Open(encryptionPage);
+        }
+
+        links.End();
+
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+        var signOut = GroupCard.Begin(theme, 1);
+        if (SettingsRow.Action(signOut.NextRow(), Loc.T(L.Account.SignOut), theme.Danger, theme))
+        {
+            AskSignOut();
+        }
+
+        signOut.End();
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+    }
+
+    private void DrawIdentityHeader(UserDto user, PhoneTheme theme, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var centerX = origin.X + width * 0.5f;
+        var radius = 38f * scale;
+        var avatarCenter = new Vector2(centerX, origin.Y + 10f * scale + radius);
+        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, user.Name, user.World, user.AvatarUrl, images,
+            lodestone, 2.0f, 64);
+        var nameY = avatarCenter.Y + radius + 16f * scale;
+        var title = Typography.FitText(user.DisplayName, width - 24f * scale, TextStyles.Title2);
+        Typography.DrawCentered(new Vector2(centerX, nameY), title, theme.TextStrong, TextStyles.Title2);
+        Typography.DrawCentered(new Vector2(centerX, nameY + 24f * scale), $"{user.Name}@{user.World}",
+            theme.TextMuted, TextStyles.Subheadline);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, nameY + 34f * scale - origin.Y));
+    }
+
+    private void AskSignOut()
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Account.SignOutConfirmTitle),
+            Message = Loc.T(L.Account.SignOutConfirmBody),
+            ConfirmLabel = Loc.T(L.Account.SignOut),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Confirm = () =>
+            {
+                session.SignOut();
+                ResetFlow();
+            },
+        });
     }
 
     private void DrawSignedOut(PhoneTheme theme)

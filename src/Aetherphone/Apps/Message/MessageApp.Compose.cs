@@ -10,11 +10,16 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Aetherphone.Apps.DirectMessages;
+namespace Aetherphone.Apps.Message;
 
-internal sealed partial class DirectMessagesApp
+internal sealed partial class MessageApp
 {
-    private static readonly Vector4 TransparentField = new(0f, 0f, 0f, 0f);
+    private readonly HashSet<string> selectedContacts = new();
+    private string groupTitleDraft = string.Empty;
+    private volatile bool composeBusy;
+    private volatile string? composeResult;
+    private volatile bool backToListPending;
+    private volatile bool backToDetailPending;
 
     private void DrawNewChat(Rect area)
     {
@@ -33,7 +38,7 @@ internal sealed partial class DirectMessagesApp
 
         var searchHeight = 52f * scale;
         SearchField.DrawSubmit(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)),
-            "##dmNewFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Messenger);
+            "##msgNewFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Message);
 
         var selectedCount = CountSelected(mutual);
         var actionHeight = selectedCount >= 2 ? 116f * scale : (selectedCount == 1 ? 62f * scale : 0f);
@@ -65,7 +70,7 @@ internal sealed partial class DirectMessagesApp
             var fieldTop = area.Max.Y - 116f * scale + 8f * scale;
             var fieldRect = new Rect(new Vector2(area.Min.X + sideInset, fieldTop),
                 new Vector2(area.Max.X - sideInset, fieldTop + buttonHeight));
-            PillField(fieldRect, "##dmGroupName", Loc.T(L.DirectMessages.GroupNameHint), ref groupTitleDraft, 60);
+            PillField(fieldRect, "##msgGroupName", Loc.T(L.DirectMessages.GroupNameHint), ref groupTitleDraft, 60);
             var buttonTop = fieldRect.Max.Y + 10f * scale;
             var buttonRect = new Rect(new Vector2(area.Min.X + sideInset, buttonTop),
                 new Vector2(area.Max.X - sideInset, buttonTop + buttonHeight));
@@ -150,7 +155,7 @@ internal sealed partial class DirectMessagesApp
         }
         else
         {
-            drawList.AddCircle(checkCenter, 11f * scale, ImGui.GetColorU32(AppPalettes.Messenger.MutedInk), 24, 1.5f);
+            drawList.AddCircle(checkCenter, 11f * scale, ImGui.GetColorU32(ui.MutedInk), 24, 1.5f);
         }
 
         if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
@@ -231,20 +236,20 @@ internal sealed partial class DirectMessagesApp
         return ids.ToArray();
     }
 
-    private void PillField(Rect rect, string imguiId, string hint, ref string value, int maxLength)
+    private bool PillField(Rect rect, string imguiId, string hint, ref string value, int maxLength)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, rect.Min, rect.Max, (rect.Max.Y - rect.Min.Y) * 0.5f,
-            ImGui.GetColorU32(AppPalettes.Messenger.FieldSurface));
+            ImGui.GetColorU32(ui.FieldSurface));
         ImGui.SetNextItemWidth(rect.Width - 36f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, TransparentField))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Messenger.TitleInk))
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, Transparent))
+        using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
         using (Plugin.Fonts.Push(1.05f))
         {
             ImGui.SetCursorScreenPos(new Vector2(rect.Min.X + 18f * scale,
                 rect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
-            ImGui.InputTextWithHint(imguiId, hint, ref value, maxLength, ImGuiInputTextFlags.None);
+            return ImGui.InputTextWithHint(imguiId, hint, ref value, maxLength, ImGuiInputTextFlags.EnterReturnsTrue);
         }
     }
 }

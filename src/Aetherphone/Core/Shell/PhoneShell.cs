@@ -323,9 +323,9 @@ internal sealed class PhoneShell : IDisposable
     private void SyncCallNavigation()
     {
         var state = calls.Snapshot().State;
-        if (state == CallState.Active && lastCallState != CallState.Active && navigation.Current?.Id != "phone")
+        if (state == CallState.Active && lastCallState != CallState.Active && navigation.Current?.Id != "message")
         {
-            navigation.Open("phone", AppOpenSource.System);
+            navigation.Open("message", AppOpenSource.System);
         }
 
         lastCallState = state;

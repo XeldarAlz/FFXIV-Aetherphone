@@ -154,7 +154,7 @@ internal sealed class DynamicIsland
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (expandEased < 0.5f && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            navigation.Open(shownKind == ActivityKind.Call ? "phone" : "music", AppOpenSource.Island);
+            navigation.Open(shownKind == ActivityKind.Call ? "message" : "music", AppOpenSource.Island);
         }
     }
 

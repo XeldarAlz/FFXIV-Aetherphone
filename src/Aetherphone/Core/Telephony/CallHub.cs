@@ -265,7 +265,7 @@ internal sealed class CallHub : IDisposable
         else if (dialTimeout)
         {
             Hangup();
-            notifications.Notify(new PhoneNotification("phone", Loc.T(L.Phone.NoAnswerTitle), Loc.T(L.Phone.NoAnswerBody), DateTime.Now,
+            notifications.Notify(new PhoneNotification("message", Loc.T(L.Phone.NoAnswerTitle), Loc.T(L.Phone.NoAnswerBody), DateTime.Now,
                 Accent));
         }
     }
@@ -324,7 +324,7 @@ internal sealed class CallHub : IDisposable
         }
 
         sound.StartCallRing();
-        notifications.Notify(new PhoneNotification("phone", message.From.DisplayName, Loc.T(L.Phone.IncomingCallBody), DateTime.Now,
+        notifications.Notify(new PhoneNotification("message", message.From.DisplayName, Loc.T(L.Phone.IncomingCallBody), DateTime.Now,
             Accent));
         IncomingCallPresented?.Invoke();
         Plugin.Analytics.Track(AnalyticsEvents.Call("received"));
@@ -584,7 +584,7 @@ internal sealed class CallHub : IDisposable
         Plugin.Analytics.Track(AnalyticsEvents.CallEnded(durationMs, wasConnected));
         if (notify && reason is not null)
         {
-            notifications.Notify(new PhoneNotification("phone", reason, Loc.T(L.Phone.CallEnded), DateTime.Now, Accent));
+            notifications.Notify(new PhoneNotification("message", reason, Loc.T(L.Phone.CallEnded), DateTime.Now, Accent));
         }
     }
 

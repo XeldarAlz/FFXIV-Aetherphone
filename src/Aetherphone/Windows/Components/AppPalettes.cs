@@ -119,6 +119,24 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    public static readonly AppPalette Message = new()
+    {
+        Accent = AppAccents.For("message"),
+        TitleInk = new(1f, 0.98f, 0.95f, 1f),
+        BodyInk = new(0.95f, 0.89f, 0.82f, 0.96f),
+        MutedInk = new(0.80f, 0.71f, 0.60f, 0.85f),
+        HeaderInk = new(0.98f, 0.80f, 0.55f, 0.95f),
+        HeadingInk = new(0.99f, 0.95f, 0.89f, 1f),
+        BackdropTop = new(0.17f, 0.11f, 0.06f, 1f),
+        BackdropBottom = new(0.05f, 0.03f, 0.02f, 1f),
+        BloomTop = new(0.78f, 0.52f, 0.24f, 0.22f),
+        BloomBottom = new(0.42f, 0.26f, 0.10f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static readonly AppPalette Friends = new()
     {
         Accent = AppAccents.For("friends"),

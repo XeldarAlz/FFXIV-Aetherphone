@@ -3,6 +3,8 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -33,14 +35,18 @@ internal sealed class RootSettingsPage : ISettingsPage
     private readonly ISettingsNavigator navigator;
     private readonly IReadOnlyList<SettingsGroup> groups;
     private readonly AethernetSession session;
+    private readonly RemoteImageCache images;
+    private readonly LodestoneService lodestone;
     private readonly ISettingsPage accountPage;
 
     public RootSettingsPage(ISettingsNavigator navigator, IReadOnlyList<SettingsGroup> groups,
-        AethernetSession session, ISettingsPage accountPage)
+        AethernetSession session, RemoteImageCache images, LodestoneService lodestone, ISettingsPage accountPage)
     {
         this.navigator = navigator;
         this.groups = groups;
         this.session = session;
+        this.images = images;
+        this.lodestone = lodestone;
         this.accountPage = accountPage;
     }
 
@@ -51,7 +57,7 @@ internal sealed class RootSettingsPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             ImGui.Dummy(new Vector2(0f, 6f * scale));
-            if (SettingsHero.Draw(theme, session))
+            if (SettingsHero.Draw(theme, session, images, lodestone))
             {
                 navigator.Open(accountPage);
             }

@@ -8,9 +8,8 @@ namespace Aetherphone.Core.Crypto;
 internal enum KeyVaultState
 {
     Unavailable = 0,
-    NeedsSetup = 1,
-    Locked = 2,
-    Unlocked = 3,
+    Provisioning = 1,
+    Unlocked = 2,
 }
 
 internal sealed class KeyVault : IDisposable
@@ -68,9 +67,8 @@ internal sealed class KeyVault : IDisposable
             var (bundle, status) = await client.MyKeysAsync(token).ConfigureAwait(false);
             if (status == 404)
             {
-                ClearKey();
                 serverBundle = null;
-                SetState(KeyVaultState.NeedsSetup);
+                await ProvisionAsync(token).ConfigureAwait(false);
                 return;
             }
 
@@ -79,29 +77,25 @@ internal sealed class KeyVault : IDisposable
                 return;
             }
 
-            var previousPublicKey = serverBundle?.PublicKey;
             serverBundle = bundle;
-            if (privateKey is not null)
+            if (privateKey is not null
+                && string.Equals(CryptoBox.ExportPublicKey(privateKey), bundle.PublicKey, StringComparison.Ordinal))
             {
-                if (previousPublicKey is not null && !string.Equals(previousPublicKey, bundle.PublicKey, StringComparison.Ordinal))
-                {
-                    ClearKey();
-                    ClearLocalCache();
-                    SetState(KeyVaultState.Locked);
-                    return;
-                }
-
                 SetState(KeyVaultState.Unlocked);
+                await StripEscrowAsync(bundle, token).ConfigureAwait(false);
                 return;
             }
 
-            if (!configuration.EncryptionRequirePassphraseEachSession && TryLoadLocalCache(bundle))
+            ClearKey();
+            if (TryLoadLocalCache(bundle))
             {
                 SetState(KeyVaultState.Unlocked);
+                await StripEscrowAsync(bundle, token).ConfigureAwait(false);
                 return;
             }
 
-            SetState(KeyVaultState.Locked);
+            ClearLocalCache();
+            await ProvisionAsync(token).ConfigureAwait(false);
         }
         finally
         {
@@ -110,114 +104,17 @@ internal sealed class KeyVault : IDisposable
         }
     }
 
-    public async Task<bool> SetupAsync(string passphrase, CancellationToken token)
+    public async Task<bool> ResetAsync(CancellationToken token)
     {
         await gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            var identity = CryptoBox.GenerateIdentity();
-            var stored = await PublishAsync(identity, passphrase, token).ConfigureAwait(false);
-            if (!stored)
-            {
-                identity.Dispose();
-                return false;
-            }
-
-            return true;
+            return await ProvisionAsync(token).ConfigureAwait(false);
         }
         finally
         {
             gate.Release();
         }
-    }
-
-    public async Task<bool> UnlockAsync(string passphrase, CancellationToken token)
-    {
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            var bundle = serverBundle;
-            if (bundle is null)
-            {
-                return false;
-            }
-
-            var wrapped = ToWrappedSecret(bundle.PrivateKey);
-            if (wrapped is null)
-            {
-                return false;
-            }
-
-            var pkcs8 = await Task.Run(() => CryptoBox.UnwrapPrivateKey(wrapped.Value, passphrase), token).ConfigureAwait(false);
-            if (pkcs8 is null)
-            {
-                return false;
-            }
-
-            var imported = CryptoBox.ImportPrivateKey(pkcs8);
-            if (imported is null)
-            {
-                CryptographicOperations.ZeroMemory(pkcs8);
-                return false;
-            }
-
-            ClearKey();
-            privateKey = imported;
-            StoreLocalCache(pkcs8);
-            CryptographicOperations.ZeroMemory(pkcs8);
-            SetState(KeyVaultState.Unlocked);
-            return true;
-        }
-        finally
-        {
-            gate.Release();
-        }
-    }
-
-    public async Task<bool> ChangePassphraseAsync(string passphrase, CancellationToken token)
-    {
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            if (privateKey is null)
-            {
-                return false;
-            }
-
-            return await PublishAsync(privateKey, passphrase, token, keepExisting: true).ConfigureAwait(false);
-        }
-        finally
-        {
-            gate.Release();
-        }
-    }
-
-    public async Task<bool> RekeyAsync(string passphrase, CancellationToken token)
-    {
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
-            var identity = CryptoBox.GenerateIdentity();
-            var stored = await PublishAsync(identity, passphrase, token).ConfigureAwait(false);
-            if (!stored)
-            {
-                identity.Dispose();
-                return false;
-            }
-
-            return true;
-        }
-        finally
-        {
-            gate.Release();
-        }
-    }
-
-    public void Lock()
-    {
-        ClearKey();
-        ClearLocalCache();
-        SetState(serverBundle is null ? KeyVaultState.Unavailable : KeyVaultState.Locked);
     }
 
     public byte[]? UnwrapCek(string wrappedKey)
@@ -232,36 +129,40 @@ internal sealed class KeyVault : IDisposable
         gate.Dispose();
     }
 
-    private async Task<bool> PublishAsync(ECDiffieHellman identity, string passphrase, CancellationToken token, bool keepExisting = false)
+    private async Task<bool> ProvisionAsync(CancellationToken token)
     {
-        var pkcs8 = CryptoBox.ExportPrivateKey(identity);
-        var wrapped = await Task.Run(() => CryptoBox.WrapPrivateKey(pkcs8, passphrase), token).ConfigureAwait(false);
-        var request = new PutMyKeysRequest(
-            CryptoBox.ExportPublicKey(identity),
-            new WrappedPrivateKeyDto(
-                Convert.ToBase64String(wrapped.Salt),
-                wrapped.Iterations,
-                Convert.ToBase64String(wrapped.Nonce),
-                Convert.ToBase64String(wrapped.Ciphertext)));
-
+        SetState(KeyVaultState.Provisioning);
+        var identity = CryptoBox.GenerateIdentity();
+        var request = new PutMyKeysRequest(CryptoBox.ExportPublicKey(identity));
         var stored = await client.PutMyKeysAsync(request, token).ConfigureAwait(false);
         if (stored is null)
         {
-            CryptographicOperations.ZeroMemory(pkcs8);
+            identity.Dispose();
             return false;
         }
 
         serverBundle = stored;
-        if (!keepExisting)
-        {
-            ClearKey();
-            privateKey = identity;
-        }
-
+        ClearKey();
+        privateKey = identity;
+        var pkcs8 = CryptoBox.ExportPrivateKey(identity);
         StoreLocalCache(pkcs8);
         CryptographicOperations.ZeroMemory(pkcs8);
         SetState(KeyVaultState.Unlocked);
         return true;
+    }
+
+    private async Task StripEscrowAsync(MyKeysDto bundle, CancellationToken token)
+    {
+        if (bundle.PrivateKey is null)
+        {
+            return;
+        }
+
+        var stored = await client.PutMyKeysAsync(new PutMyKeysRequest(bundle.PublicKey), token).ConfigureAwait(false);
+        if (stored is not null)
+        {
+            serverBundle = stored;
+        }
     }
 
     private bool TryLoadLocalCache(MyKeysDto bundle)
@@ -291,7 +192,6 @@ internal sealed class KeyVault : IDisposable
         {
             imported.Dispose();
             CryptographicOperations.ZeroMemory(pkcs8);
-            ClearLocalCache();
             return false;
         }
 
@@ -303,7 +203,7 @@ internal sealed class KeyVault : IDisposable
     private void StoreLocalCache(byte[] pkcs8)
     {
         var userId = MyUserId;
-        if (userId is null || configuration.EncryptionRequirePassphraseEachSession)
+        if (userId is null)
         {
             return;
         }
@@ -347,26 +247,12 @@ internal sealed class KeyVault : IDisposable
         State = next;
         Changed?.Invoke();
     }
-
-    private static WrappedSecret? ToWrappedSecret(WrappedPrivateKeyDto dto)
-    {
-        try
-        {
-            return new WrappedSecret(
-                Convert.FromBase64String(dto.Salt),
-                dto.Iterations,
-                Convert.FromBase64String(dto.Nonce),
-                Convert.FromBase64String(dto.Ciphertext));
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
-    }
 }
 
 internal static class LocalKeyProtector
 {
+    private const string RawPrefix = "raw.";
+
     public static string? Protect(byte[] secret, string userId)
     {
         try
@@ -377,16 +263,28 @@ internal static class LocalKeyProtector
         }
         catch (Exception exception)
         {
-            AepLog.Warning($"Encryption key cache unavailable ({exception.GetType().Name}); passphrase will be required each session.");
-            return null;
+            AepLog.Warning($"Key protection unavailable ({exception.GetType().Name}); storing the encryption key unprotected.");
+            return RawPrefix + Convert.ToBase64String(secret);
         }
     }
 
-    public static byte[]? Unprotect(string protectedBase64, string userId)
+    public static byte[]? Unprotect(string stored, string userId)
     {
+        if (stored.StartsWith(RawPrefix, StringComparison.Ordinal))
+        {
+            try
+            {
+                return Convert.FromBase64String(stored[RawPrefix.Length..]);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+        }
+
         try
         {
-            var protectedBytes = Convert.FromBase64String(protectedBase64);
+            var protectedBytes = Convert.FromBase64String(stored);
             var entropy = Encoding.UTF8.GetBytes(userId);
             return System.Security.Cryptography.ProtectedData.Unprotect(protectedBytes, entropy, DataProtectionScope.CurrentUser);
         }

@@ -1,7 +1,10 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -14,9 +17,9 @@ internal static class SettingsHero
     private const float Height = 82f;
     private const float Padding = 14f;
     private const float AvatarRadius = 27f;
-    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
-    public static bool Draw(PhoneTheme theme, AethernetSession session)
+    public static bool Draw(PhoneTheme theme, AethernetSession session, RemoteImageCache images,
+        LodestoneService lodestone)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -31,9 +34,10 @@ internal static class SettingsHero
         Material.EdgeSquircle(drawList, min, max, radius, scale);
 
         var signedIn = session.IsSignedIn;
-        var name = signedIn ? session.CurrentUser?.DisplayName ?? string.Empty : string.Empty;
+        var user = session.CurrentUser;
+        var name = signedIn ? user?.DisplayName ?? string.Empty : string.Empty;
         var avatarCenter = new Vector2(min.X + Padding * scale + AvatarRadius * scale, (min.Y + max.Y) * 0.5f);
-        DrawAvatar(drawList, avatarCenter, AvatarRadius * scale, theme, signedIn, name);
+        DrawAvatar(drawList, avatarCenter, AvatarRadius * scale, theme, signedIn ? user : null, images, lodestone);
 
         var textLeft = avatarCenter.X + AvatarRadius * scale + 14f * scale;
         var chevronTip = new Vector2(max.X - 16f * scale, avatarCenter.Y);
@@ -63,9 +67,9 @@ internal static class SettingsHero
     }
 
     private static void DrawAvatar(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme theme,
-        bool signedIn, string name)
+        UserDto? user, RemoteImageCache images, LodestoneService lodestone)
     {
-        if (!signedIn || name.Length == 0)
+        if (user is null)
         {
             drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.Mix(theme.GroupedCard, theme.TextMuted,
                 0.28f)), 48);
@@ -73,12 +77,8 @@ internal static class SettingsHero
             return;
         }
 
-        var baseColor = IconTile.Surface(theme.Accent);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(baseColor), 48);
-        drawList.AddCircleFilled(new Vector2(center.X, center.Y - radius * 0.35f), radius * 0.62f,
-            ImGui.GetColorU32(Palette.WithAlpha(White, 0.10f)), 40);
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(White, 0.16f)), 48, 1f);
-        Typography.DrawCentered(drawList, center, Initials.Of(name), White, 1.5f, FontWeight.SemiBold);
+        AvatarView.DrawRemote(drawList, center, radius, theme, user.Name, user.World, user.AvatarUrl, images,
+            lodestone, 1.5f, 48);
     }
 
     private static void DrawChevron(ImDrawListPtr drawList, Vector2 tip, float size, float thickness, Vector4 color)

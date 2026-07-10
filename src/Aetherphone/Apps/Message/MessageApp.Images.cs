@@ -8,10 +8,18 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Aetherphone.Apps.DirectMessages;
+namespace Aetherphone.Apps.Message;
 
-internal sealed partial class DirectMessagesApp
+internal sealed partial class MessageApp
 {
+    private string? imageViewId;
+    private volatile int imageSaveOutcome;
+    private volatile bool imageSaveBusy;
+    private string[] chatPickerPaths = Array.Empty<string>();
+    private string? chatPickerConversationId;
+    private string? chatPendingPickedPath;
+    private readonly PhotoZoomView imageZoom = new();
+
     private void DrawChatImagePicker(Rect area, string conversationId)
     {
         var context = new PhoneContext(area, theme, navigation);
@@ -46,7 +54,7 @@ internal sealed partial class DirectMessagesApp
             if (chatPickerPaths.Length == 0)
             {
                 Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
-                    Loc.T(L.Velvet.NoPhotos), AppPalettes.Messenger.MutedInk);
+                    Loc.T(L.Velvet.NoPhotos), ui.MutedInk);
                 return;
             }
 
@@ -59,7 +67,7 @@ internal sealed partial class DirectMessagesApp
                 {
                     using (ImRaii.PushId(index))
                     {
-                        var clicked = ImGui.InvisibleButton("dmpick", new Vector2(cell, cell));
+                        var clicked = ImGui.InvisibleButton("msgpick", new Vector2(cell, cell));
                         DrawPickerThumbnail(chatPickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(),
                             scale);
                         if (clicked)
@@ -155,7 +163,7 @@ internal sealed partial class DirectMessagesApp
         if (texture is null)
         {
             Typography.DrawCentered(new Vector2(area.Center.X, (fitMin.Y + fitMax.Y) * 0.5f), Loc.T(L.Common.Loading),
-                AppPalettes.Messenger.MutedInk);
+                ui.MutedInk);
         }
         else
         {
@@ -173,11 +181,11 @@ internal sealed partial class DirectMessagesApp
             new Vector2(area.Center.X + buttonWidth * 0.5f, buttonTop + buttonHeight));
         if (ui.PillButton(buttonRect, label, !saved) && !saved && !imageSaveBusy && texture is not null)
         {
-            SaveDmImage(url);
+            SaveChatImage(url);
         }
     }
 
-    private void SaveDmImage(string? url)
+    private void SaveChatImage(string? url)
     {
         if (string.IsNullOrEmpty(url) || imageSaveBusy)
         {
@@ -202,7 +210,7 @@ internal sealed partial class DirectMessagesApp
             }
             catch (Exception exception)
             {
-                AepLog.Warning($"[Messages] save image failed: {exception.Message}");
+                AepLog.Warning($"[Message] save image failed: {exception.Message}");
             }
             finally
             {

@@ -14,9 +14,10 @@ internal static class TourRegistry
             GuideStep.Page(L.Onboarding.FeedbackTitle, L.Onboarding.FeedbackBody, L.Onboarding.GetStarted,
                 HeroMotif.Care),
             GuideStep.Point(L.Onboarding.WidgetTourTitle, L.Onboarding.WidgetTourBody, "home.widget"),
-            GuideStep.Tap(L.Onboarding.FriendsTourTitle, L.Onboarding.FriendsTourBody, "home.app.friends",
-                static nav => nav.Open("friends", AppOpenSource.Onboarding)),
-            GuideStep.Point(L.Onboarding.MyNumberTourTitle, L.Onboarding.MyNumberTourBody, "friends.mynumber"),
+            GuideStep.Tap(L.Onboarding.MessageTourTitle, L.Onboarding.MessageTourBody, "home.app.message",
+                static nav => nav.Open("message", AppOpenSource.Onboarding)),
+            GuideStep.Point(L.Onboarding.MyNumberTourTitle, L.Onboarding.MessageNumberTourBody,
+                "message.tab.contacts"),
             GuideStep.Tap(L.Onboarding.ReturnHomeTitle, L.Onboarding.ReturnHomeBody, "chrome.home",
                 static nav => nav.GoHome()),
             GuideStep.Note(L.Onboarding.CustomizeTitle, L.Onboarding.CustomizeBody),
@@ -102,10 +103,10 @@ internal static class TourRegistry
         Add(tours, "dailies", 1, new[] { GuideStep.Note(L.Apps.Dailies, L.Onboarding.DailiesBody), });
         Add(tours, "fishing", 1, new[] { GuideStep.Note(L.Apps.Fishing, L.Onboarding.FishingBody), });
         Add(tours, "notifications", 1, new[] { GuideStep.Note(L.Apps.Notifications, L.Onboarding.NotificationsBody), });
-        Add(tours, "phone", 1,
+        Add(tours, "message", 1,
             new[]
             {
-                GuideStep.Note(L.Phone.Title, L.Onboarding.PhoneBody),
+                GuideStep.Note(L.Apps.Message, L.Onboarding.MessageBody),
                 GuideStep.Note(L.Onboarding.PhoneGroupTitle, L.Onboarding.PhoneGroupBody),
                 GuideStep.Note(L.Onboarding.PhoneVoiceTitle, L.Onboarding.PhoneVoiceBody),
             });
