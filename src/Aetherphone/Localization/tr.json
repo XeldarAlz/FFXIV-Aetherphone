@@ -1418,5 +1418,11 @@
   "encryption.encryptedIndicator": "Uçtan uca şifreli",
   "encryption.plaintextIndicator": "Şifrelenmemiş",
   "encryption.setupNudge": "Sohbetlerinizi korumak için Ayarlar'dan bir şifreleme parolası belirleyin.",
-  "encryption.reportDisclosure": "Bu mesaj ve önceki en fazla 5 mesaj, şifresi çözülmüş olarak moderatörlerle paylaşılacak."
+  "encryption.reportDisclosure": "Bu mesaj ve önceki en fazla 5 mesaj, şifresi çözülmüş olarak moderatörlerle paylaşılacak.",
+  "encryption.gateIntroTitle": "Sohbetleriniz uçtan uca şifreli",
+  "encryption.gateIntroBody": "Mesajlarınızı korumak için bir parola belirleyin; böylece yalnızca siz ve konuştuğunuz kişiler okuyabilir. Sohbetlerinizi başka bir bilgisayarda okumak için gerekir.",
+  "encryption.notNow": "Şimdi değil",
+  "encryption.continueWithout": "Kilidi açmadan devam et",
+  "encryption.reportMessageAction": "Mesajı bildir",
+  "encryption.copyTextAction": "Metni kopyala"
 }

@@ -1412,5 +1412,11 @@
   "encryption.encryptedIndicator": "Cifrado de extremo a extremo",
   "encryption.plaintextIndicator": "Sin cifrar",
   "encryption.setupNudge": "Configura una frase de contraseña de cifrado en Ajustes para proteger tus chats.",
-  "encryption.reportDisclosure": "Este mensaje y hasta 5 mensajes anteriores se compartirán descifrados con los moderadores."
+  "encryption.reportDisclosure": "Este mensaje y hasta 5 mensajes anteriores se compartirán descifrados con los moderadores.",
+  "encryption.gateIntroTitle": "Tus chats tienen cifrado de extremo a extremo",
+  "encryption.gateIntroBody": "Crea una frase de contraseña para proteger tus mensajes, de modo que solo tú y las personas con las que hablas puedan leerlos. La necesitarás para leer tus chats en otro ordenador.",
+  "encryption.notNow": "Ahora no",
+  "encryption.continueWithout": "Continuar sin desbloquear",
+  "encryption.reportMessageAction": "Denunciar mensaje",
+  "encryption.copyTextAction": "Copiar texto"
 }

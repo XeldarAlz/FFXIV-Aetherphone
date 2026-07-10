@@ -70,6 +70,7 @@ internal sealed partial class VelvetApp : IPhoneApp
     private readonly VelvetAvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly VelvetReportControl report;
+    private readonly EncryptionGate encryptionGate;
     private readonly RemoteImageCache images;
     private readonly HttpService http;
     private readonly ViewRouter<VelvetRoute> router;
@@ -146,6 +147,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys)
     {
         store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys);
+        encryptionGate = new EncryptionGate(keyVault, conversationKeys, configuration);
         this.launcher = launcher;
         this.socialLauncher = socialLauncher;
         this.lodestone = lodestone;
@@ -240,6 +242,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         filterMenu.Gate();
         postMenu.Gate();
         threadMenu.Gate();
+        messageMenu.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
         if (photoViewer.Active)
@@ -990,6 +993,12 @@ internal sealed partial class VelvetApp : IPhoneApp
 
     private void DrawMessages(Rect area)
     {
+        if (encryptionGate.ShouldBlock)
+        {
+            encryptionGate.Draw(area, theme, Accent);
+            return;
+        }
+
         if (!store.RequestsLoaded && !store.LoadingRequests)
         {
             store.RefreshRequests();
@@ -1389,6 +1398,7 @@ internal sealed partial class VelvetApp : IPhoneApp
 
     public void Dispose()
     {
+        encryptionGate.Dispose();
         store.Dispose();
     }
 }

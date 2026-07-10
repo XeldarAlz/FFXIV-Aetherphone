@@ -1376,5 +1376,11 @@
   "encryption.encryptedIndicator": "End-to-end encrypted",
   "encryption.plaintextIndicator": "Not encrypted",
   "encryption.setupNudge": "Set an encryption passphrase in Settings to protect your chats.",
-  "encryption.reportDisclosure": "This message and up to 5 previous messages will be shared with the moderators, decrypted."
+  "encryption.reportDisclosure": "This message and up to 5 previous messages will be shared with the moderators, decrypted.",
+  "encryption.gateIntroTitle": "Your chats are end-to-end encrypted",
+  "encryption.gateIntroBody": "Set a passphrase to protect your messages so only you and the people you write to can read them. You'll need it to read your chats on another computer.",
+  "encryption.notNow": "Not now",
+  "encryption.continueWithout": "Continue without unlocking",
+  "encryption.reportMessageAction": "Report message",
+  "encryption.copyTextAction": "Copy text"
 }

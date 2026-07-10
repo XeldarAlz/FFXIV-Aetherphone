@@ -1418,5 +1418,11 @@
   "encryption.encryptedIndicator": "Chiffré de bout en bout",
   "encryption.plaintextIndicator": "Non chiffré",
   "encryption.setupNudge": "Définissez une phrase secrète de chiffrement dans les Réglages pour protéger vos discussions.",
-  "encryption.reportDisclosure": "Ce message et jusqu'à 5 messages précédents seront transmis déchiffrés aux modérateurs."
+  "encryption.reportDisclosure": "Ce message et jusqu'à 5 messages précédents seront transmis déchiffrés aux modérateurs.",
+  "encryption.gateIntroTitle": "Vos discussions sont chiffrées de bout en bout",
+  "encryption.gateIntroBody": "Définissez une phrase secrète pour protéger vos messages afin que vous seul et vos interlocuteurs puissiez les lire. Elle sera nécessaire pour lire vos discussions sur un autre ordinateur.",
+  "encryption.notNow": "Plus tard",
+  "encryption.continueWithout": "Continuer sans déverrouiller",
+  "encryption.reportMessageAction": "Signaler le message",
+  "encryption.copyTextAction": "Copier le texte"
 }

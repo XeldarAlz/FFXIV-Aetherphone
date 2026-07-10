@@ -761,6 +761,12 @@ internal static class L
         public static readonly LocString PlaintextIndicator = new("encryption.plaintextIndicator", "Not encrypted");
         public static readonly LocString SetupNudge = new("encryption.setupNudge", "Set an encryption passphrase in Settings to protect your chats.");
         public static readonly LocString ReportDisclosure = new("encryption.reportDisclosure", "This message and up to 5 previous messages will be shared with the moderators, decrypted.");
+        public static readonly LocString GateIntroTitle = new("encryption.gateIntroTitle", "Your chats are end-to-end encrypted");
+        public static readonly LocString GateIntroBody = new("encryption.gateIntroBody", "Set a passphrase to protect your messages so only you and the people you write to can read them. You'll need it to read your chats on another computer.");
+        public static readonly LocString NotNow = new("encryption.notNow", "Not now");
+        public static readonly LocString ContinueWithout = new("encryption.continueWithout", "Continue without unlocking");
+        public static readonly LocString ReportMessageAction = new("encryption.reportMessageAction", "Report message");
+        public static readonly LocString CopyTextAction = new("encryption.copyTextAction", "Copy text");
     }
 
     internal static class Music

@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
@@ -42,6 +43,7 @@ internal sealed partial class DirectMessagesApp : IPhoneApp
     private readonly ViewRouter<DmRoute> router;
     private readonly RouterDraw<DmRoute> drawView;
     private readonly ChatTranscript transcript = new();
+    private readonly EncryptionGate encryptionGate;
     private readonly Action back;
 
     private PhoneTheme theme = PhoneTheme.Default;
@@ -70,7 +72,8 @@ internal sealed partial class DirectMessagesApp : IPhoneApp
     private readonly PhotoZoomView imageZoom = new();
 
     public DirectMessagesApp(DirectMessagesStore store, ContactBook contacts, AethernetSession session,
-        RemoteImageCache images, LodestoneService lodestone, DmLauncher launcher, PhotoLibrary library, HttpService http)
+        RemoteImageCache images, LodestoneService lodestone, DmLauncher launcher, PhotoLibrary library, HttpService http,
+        KeyVault keyVault, ConversationKeyStore conversationKeys, Configuration configuration)
     {
         this.store = store;
         this.contacts = contacts;
@@ -80,6 +83,7 @@ internal sealed partial class DirectMessagesApp : IPhoneApp
         this.launcher = launcher;
         this.library = library;
         this.http = http;
+        encryptionGate = new EncryptionGate(keyVault, conversationKeys, configuration);
         router = new ViewRouter<DmRoute>(DmRoute.List, Id);
         drawView = DrawView;
         back = () => router.Pop();
@@ -124,6 +128,7 @@ internal sealed partial class DirectMessagesApp : IPhoneApp
         ui.Theme = theme;
         var delta = ImGui.GetIO().DeltaTime;
         ProcessComposeResult();
+        messageMenu.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
         router.Draw(context.Content, AppSkin.Transparent, delta, drawView);
@@ -208,6 +213,13 @@ internal sealed partial class DirectMessagesApp : IPhoneApp
         {
             var body = new Rect(new Vector2(area.Min.X, top), area.Max);
             EmptyState.Draw(body, ui, FontAwesomeIcon.Comments, DisplayName, Loc.T(L.DirectMessages.SignInPrompt));
+            return;
+        }
+
+        var content = new Rect(new Vector2(area.Min.X, top), area.Max);
+        if (encryptionGate.ShouldBlock)
+        {
+            encryptionGate.Draw(content, theme, ui.Accent);
             return;
         }
 
@@ -326,6 +338,7 @@ internal sealed partial class DirectMessagesApp : IPhoneApp
 
     public void Dispose()
     {
+        encryptionGate.Dispose();
         store.Dispose();
     }
 }

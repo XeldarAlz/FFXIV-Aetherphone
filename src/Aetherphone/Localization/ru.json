@@ -1412,5 +1412,11 @@
   "encryption.encryptedIndicator": "Сквозное шифрование",
   "encryption.plaintextIndicator": "Не зашифровано",
   "encryption.setupNudge": "Задайте парольную фразу шифрования в настройках, чтобы защитить свои чаты.",
-  "encryption.reportDisclosure": "Это сообщение и до 5 предыдущих сообщений будут переданы модераторам в расшифрованном виде."
+  "encryption.reportDisclosure": "Это сообщение и до 5 предыдущих сообщений будут переданы модераторам в расшифрованном виде.",
+  "encryption.gateIntroTitle": "Ваши чаты защищены сквозным шифрованием",
+  "encryption.gateIntroBody": "Задайте парольную фразу, чтобы ваши сообщения могли читать только вы и ваши собеседники. Она понадобится, чтобы читать чаты на другом компьютере.",
+  "encryption.notNow": "Не сейчас",
+  "encryption.continueWithout": "Продолжить без разблокировки",
+  "encryption.reportMessageAction": "Пожаловаться на сообщение",
+  "encryption.copyTextAction": "Копировать текст"
 }

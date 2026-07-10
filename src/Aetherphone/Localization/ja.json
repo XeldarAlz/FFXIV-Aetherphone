@@ -1412,5 +1412,11 @@
   "encryption.encryptedIndicator": "エンドツーエンド暗号化",
   "encryption.plaintextIndicator": "暗号化されていません",
   "encryption.setupNudge": "設定で暗号化パスフレーズを設定して、チャットを保護しましょう。",
-  "encryption.reportDisclosure": "このメッセージと直前の最大5件のメッセージが復号された状態でモデレーターに共有されます。"
+  "encryption.reportDisclosure": "このメッセージと直前の最大5件のメッセージが復号された状態でモデレーターに共有されます。",
+  "encryption.gateIntroTitle": "チャットはエンドツーエンドで暗号化されています",
+  "encryption.gateIntroBody": "パスフレーズを設定すると、あなたと相手だけがメッセージを読めるようになります。別のPCでチャットを読むには必要になります。",
+  "encryption.notNow": "後で",
+  "encryption.continueWithout": "ロック解除せずに続ける",
+  "encryption.reportMessageAction": "メッセージを報告",
+  "encryption.copyTextAction": "テキストをコピー"
 }

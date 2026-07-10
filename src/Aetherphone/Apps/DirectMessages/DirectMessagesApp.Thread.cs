@@ -17,6 +17,9 @@ internal sealed partial class DirectMessagesApp
 {
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private readonly MessageReportControl messageReport = new();
+    private readonly DropdownMenu messageMenu = new();
+    private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
+    private string? menuMessageId;
     private Action<string>? onMessageContext;
     private Action<string, string?, Action<bool>>? reportSubmit;
 
@@ -45,7 +48,7 @@ internal sealed partial class DirectMessagesApp
         var transcriptMessages = BuildTranscript(store.Messages, isGroup);
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(DmRoute.ImageView(id));
-        onMessageContext ??= id => messageReport.Arm(id);
+        onMessageContext ??= OpenMessageMenu;
         var model = new ChatTranscriptModel(conversationId, transcriptMessages, store.MyUserId, ui.Accent, theme,
             AppPalettes.Messenger.MutedInk, AppPalettes.Messenger.BodyInk, store.OtherTyping, store.LoadingThread,
             isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
@@ -61,6 +64,57 @@ internal sealed partial class DirectMessagesApp
         }
 
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), conversationId);
+        DrawMessageMenu(area);
+    }
+
+    private void OpenMessageMenu(string messageId)
+    {
+        menuMessageId = messageId;
+        var pos = ImGui.GetMousePos();
+        messageMenu.Toggle(messageId, new Rect(pos, pos + new Vector2(1f, 1f)));
+    }
+
+    private void DrawMessageMenu(Rect area)
+    {
+        if (menuMessageId is not { } id || !messageMenu.IsOpenFor(id))
+        {
+            return;
+        }
+
+        messageMenuItems[0] = new DropdownMenu.Item(Loc.T(L.Encryption.ReportMessageAction),
+            FontAwesomeIcon.Flag.ToIconString(), Danger: true);
+        messageMenuItems[1] = new DropdownMenu.Item(Loc.T(L.Encryption.CopyTextAction),
+            FontAwesomeIcon.Copy.ToIconString());
+        var clicked = messageMenu.Draw(area, theme, messageMenuItems);
+        if (clicked == 0)
+        {
+            messageReport.Arm(id);
+        }
+        else if (clicked == 1)
+        {
+            CopyMessageText(id);
+        }
+    }
+
+    private void CopyMessageText(string id)
+    {
+        var snapshot = store.Messages;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id != id)
+            {
+                continue;
+            }
+
+            var message = snapshot[index];
+            if (message.EncVersion == 1 && store.DecryptionState(id).State != DmBodyState.Decrypted)
+            {
+                return;
+            }
+
+            ImGui.SetClipboardText(message.Body ?? string.Empty);
+            return;
+        }
     }
 
     private void DrawEncryptionBanner(ref Rect listRect, ConversationDto? conversation, bool isGroup)

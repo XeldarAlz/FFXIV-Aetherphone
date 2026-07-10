@@ -1418,5 +1418,11 @@
   "encryption.encryptedIndicator": "Ende-zu-Ende-verschlüsselt",
   "encryption.plaintextIndicator": "Nicht verschlüsselt",
   "encryption.setupNudge": "Lege in den Einstellungen eine Verschlüsselungs-Passphrase fest, um deine Chats zu schützen.",
-  "encryption.reportDisclosure": "Diese Nachricht und bis zu 5 vorherige Nachrichten werden den Moderatoren entschlüsselt übermittelt."
+  "encryption.reportDisclosure": "Diese Nachricht und bis zu 5 vorherige Nachrichten werden den Moderatoren entschlüsselt übermittelt.",
+  "encryption.gateIntroTitle": "Deine Chats sind Ende-zu-Ende-verschlüsselt",
+  "encryption.gateIntroBody": "Lege eine Passphrase fest, damit nur du und deine Gesprächspartner deine Nachrichten lesen können. Du brauchst sie, um deine Chats auf einem anderen Computer zu lesen.",
+  "encryption.notNow": "Nicht jetzt",
+  "encryption.continueWithout": "Ohne Entsperren fortfahren",
+  "encryption.reportMessageAction": "Nachricht melden",
+  "encryption.copyTextAction": "Text kopieren"
 }

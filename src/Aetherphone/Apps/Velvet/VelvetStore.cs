@@ -36,6 +36,7 @@ internal sealed class VelvetStore : IDisposable
     private readonly ConcurrentDictionary<string, DmDecryptedBody> decryptedBodies = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, (long AtUnix, string Text)> previewCache = new(StringComparer.Ordinal);
     private volatile bool velvetKeysHydrated;
+    private volatile bool vaultRefreshRequested;
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
     private volatile bool inboxPolling;
     private bool inboxPrimed;
@@ -165,9 +166,11 @@ internal sealed class VelvetStore : IDisposable
         if (!session.IsSignedIn || !configuration.VelvetOnboarded)
         {
             inboxPrimed = false;
+            vaultRefreshRequested = false;
             return;
         }
 
+        EnsureVaultRefreshed();
         var now = DateTime.UtcNow;
         if (now - lastInboxPollUtc < InboxPollInterval)
         {
@@ -176,6 +179,24 @@ internal sealed class VelvetStore : IDisposable
 
         lastInboxPollUtc = now;
         PollInbox();
+    }
+
+    private void EnsureVaultRefreshed()
+    {
+        if (vaultRefreshRequested || session.CurrentUser is null)
+        {
+            return;
+        }
+
+        vaultRefreshRequested = true;
+        work.Run("vault refresh", async token =>
+        {
+            await vault.RefreshAsync(token).ConfigureAwait(false);
+            if (vault.State == KeyVaultState.Unlocked)
+            {
+                await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
+            }
+        });
     }
 
     private void PollInbox()

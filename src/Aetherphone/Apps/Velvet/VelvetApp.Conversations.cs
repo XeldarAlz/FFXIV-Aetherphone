@@ -21,8 +21,61 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed partial class VelvetApp
 {
     private readonly MessageReportControl messageReport = new();
+    private readonly DropdownMenu messageMenu = new();
+    private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
+    private string? menuMessageId;
     private Action<string>? onMessageContext;
     private Action<string, string?, Action<bool>>? reportSubmit;
+
+    private void OpenMessageMenu(string messageId)
+    {
+        menuMessageId = messageId;
+        var pos = ImGui.GetMousePos();
+        messageMenu.Toggle(messageId, new Rect(pos, pos + new Vector2(1f, 1f)));
+    }
+
+    private void DrawMessageMenu(Rect area)
+    {
+        if (menuMessageId is not { } id || !messageMenu.IsOpenFor(id))
+        {
+            return;
+        }
+
+        messageMenuItems[0] = new DropdownMenu.Item(Loc.T(L.Encryption.ReportMessageAction),
+            FontAwesomeIcon.Flag.ToIconString(), Danger: true);
+        messageMenuItems[1] = new DropdownMenu.Item(Loc.T(L.Encryption.CopyTextAction),
+            FontAwesomeIcon.Copy.ToIconString());
+        var clicked = messageMenu.Draw(area, theme, messageMenuItems);
+        if (clicked == 0)
+        {
+            messageReport.Arm(id);
+        }
+        else if (clicked == 1)
+        {
+            CopyMessageText(id);
+        }
+    }
+
+    private void CopyMessageText(string id)
+    {
+        var snapshot = store.Messages;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id != id)
+            {
+                continue;
+            }
+
+            var message = snapshot[index];
+            if (message.EncVersion == 1 && store.DecryptionState(id).State != DmBodyState.Decrypted)
+            {
+                return;
+            }
+
+            ImGui.SetClipboardText(message.Body ?? string.Empty);
+            return;
+        }
+    }
 
     private void DrawProfile(Rect area, string userId)
     {
@@ -436,7 +489,7 @@ internal sealed partial class VelvetApp
         var transcriptMessages = BuildTranscript(store.Messages);
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(VelvetRoute.ImageView(id));
-        onMessageContext ??= id => messageReport.Arm(id);
+        onMessageContext ??= OpenMessageMenu;
         var model = new ChatTranscriptModel(threadId, transcriptMessages, store.Me?.UserId ?? string.Empty, Accent,
             theme, AppPalettes.Velvet.MutedInk, AppPalettes.Velvet.BodyInk, store.OtherTyping, store.LoadingThread,
             false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
@@ -452,6 +505,7 @@ internal sealed partial class VelvetApp
         }
 
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), threadId);
+        DrawMessageMenu(area);
     }
 
     private void DrawThreadHeader(Rect area, string threadId)

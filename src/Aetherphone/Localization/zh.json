@@ -1412,5 +1412,11 @@
   "encryption.encryptedIndicator": "端到端加密",
   "encryption.plaintextIndicator": "未加密",
   "encryption.setupNudge": "在设置中创建加密口令，保护你的聊天。",
-  "encryption.reportDisclosure": "此消息以及之前最多 5 条消息将以解密形式提交给管理员。"
+  "encryption.reportDisclosure": "此消息以及之前最多 5 条消息将以解密形式提交给管理员。",
+  "encryption.gateIntroTitle": "你的聊天已端到端加密",
+  "encryption.gateIntroBody": "设置口令来保护你的消息，只有你和对方才能阅读。在另一台电脑上阅读聊天时需要它。",
+  "encryption.notNow": "以后再说",
+  "encryption.continueWithout": "不解锁继续",
+  "encryption.reportMessageAction": "举报消息",
+  "encryption.copyTextAction": "复制文本"
 }
