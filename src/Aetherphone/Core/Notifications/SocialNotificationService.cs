@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Dalamud.Plugin.Services;
 
@@ -178,13 +179,23 @@ internal sealed class SocialNotificationService : IDisposable
             return;
         }
 
-        notifications.Notify(new PhoneNotification(item.App, SocialActivity.ActorLabel(item), body, DateTime.Now,
+        var removed = item.Type == SocialActivity.TypePostRemoved;
+        var title = removed ? Loc.T(L.Moderation.RemovedTitle) : SocialActivity.ActorLabel(item);
+        notifications.Notify(new PhoneNotification(item.App, title, body, DateTime.Now,
             AccentFor(item.App))
         {
             ActorId = item.ActorId,
             PostId = item.PostId,
             SocialType = item.Type,
         });
+
+        if (removed)
+        {
+            Plugin.Confirm.Alert(
+                Loc.T(L.Moderation.RemovedTitle),
+                $"{body}\n\n{Loc.T(L.Moderation.RemovedFooter)}",
+                Loc.T(L.Moderation.RemovedDismiss));
+        }
     }
 
     private static Vector4 AccentFor(string app)

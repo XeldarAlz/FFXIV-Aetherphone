@@ -34,6 +34,21 @@ internal static class L
         public static readonly LocString ActivityEmpty = new("social.activityEmpty", "Nothing here yet. Interactions with your posts will show up here");
     }
 
+    internal static class Moderation
+    {
+        public static readonly LocString InReview = new("moderation.inReview", "In review");
+        public static readonly LocString InReviewHint = new("moderation.inReviewHint", "Only you can see this until the review finishes");
+        public static readonly LocString RemovedTitle = new("moderation.removedTitle", "Post removed");
+        public static readonly LocString RemovedAdult = new("moderation.removedAdult", "Your post was removed because it appears to contain adult content, which is not allowed here.");
+        public static readonly LocString RemovedViolence = new("moderation.removedViolence", "Your post was removed because it appears to contain violent or graphic content.");
+        public static readonly LocString RemovedHarassment = new("moderation.removedHarassment", "Your post was removed because it appears to contain abusive or harassing language.");
+        public static readonly LocString RemovedHate = new("moderation.removedHate", "Your post was removed because it appears to contain hateful content.");
+        public static readonly LocString RemovedSelfHarm = new("moderation.removedSelfHarm", "Your post was removed because it appears to reference self-harm.");
+        public static readonly LocString RemovedPolicy = new("moderation.removedPolicy", "Your post was removed for violating the community guidelines.");
+        public static readonly LocString RemovedFooter = new("moderation.removedFooter", "If you believe this is a mistake, let us know through the Feedback app.");
+        public static readonly LocString RemovedDismiss = new("moderation.removedDismiss", "OK");
+    }
+
     internal static class Apps
     {
         public static readonly LocString Messages = new("app.messages", "Messages");

@@ -12,6 +12,7 @@ using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -797,15 +798,26 @@ internal sealed partial class VelvetApp : IPhoneApp
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
+        }
+        else
+        {
+            drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding,
+                ImDrawFlags.RoundCornersAll);
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+        }
+
+        if (!ContentModeration.IsInReview(post.ScanStatus))
+        {
             return;
         }
 
-        drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding,
-            ImDrawFlags.RoundCornersAll);
-        if (ImGui.IsItemHovered())
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
+        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)));
+        var center = new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f);
+        Typography.DrawCentered(center, Loc.T(L.Moderation.InReview), new Vector4(1f, 1f, 1f, 0.95f), 0.9f,
+            FontWeight.SemiBold);
     }
 
     private void DrawFilterChips()

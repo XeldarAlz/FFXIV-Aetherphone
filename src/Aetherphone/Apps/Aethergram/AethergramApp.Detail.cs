@@ -72,7 +72,7 @@ internal sealed partial class AethergramApp
             ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + headerHeight));
             var imageRect = new Rect(new Vector2(origin.X, origin.Y + headerHeight),
                 new Vector2(origin.X + width, origin.Y + headerHeight + width));
-            DrawGramImage(imageRect, post.MediaUrl, 16f * scale);
+            DrawGramImage(imageRect, post.MediaUrl, 16f * scale, post.ScanStatus);
             HandleLikeGesture(imageRect, post);
             DrawLikeBurst(imageRect, post.Id);
             var liked = post.MyReaction >= 0;

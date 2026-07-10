@@ -290,6 +290,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         Typography.Draw(new Vector2(contentLeft, origin.Y + pad), displayName, theme.TextStrong, 1.05f,
             FontWeight.SemiBold);
         var meta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
+        if (ContentModeration.IsInReview(post.ScanStatus))
+        {
+            meta = $"{meta} · {Loc.T(L.Moderation.InReview)}";
+        }
+
         var metaSize = Typography.Measure(meta, 0.95f);
         Typography.Draw(
             new Vector2(contentLeft + nameSize.X + 7f * scale, origin.Y + pad + (nameSize.Y - metaSize.Y) * 0.5f), meta,

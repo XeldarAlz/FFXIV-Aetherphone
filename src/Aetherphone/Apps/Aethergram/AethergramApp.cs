@@ -496,7 +496,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
 
         var imageRect = new Rect(new Vector2(innerX, imageTop), new Vector2(innerX + innerWidth, imageBottom));
-        DrawGramImage(imageRect, post.MediaUrl, 14f * scale);
+        DrawGramImage(imageRect, post.MediaUrl, 14f * scale, post.ScanStatus);
         HandleLikeGesture(imageRect, post);
         DrawLikeBurst(imageRect, post.Id);
         var liked = post.MyReaction >= 0;
@@ -629,7 +629,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         AppSkin.Icon(center, FontAwesomeIcon.Heart.ToIconString(), new Vector4(1f, 1f, 1f, alpha), 4.4f * pop);
     }
 
-    private void DrawGramImage(Rect rect, string? url, float rounding)
+    private void DrawGramImage(Rect rect, string? url, float rounding, string? scanStatus = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -639,12 +639,27 @@ internal sealed partial class AethergramApp : IPhoneApp
             Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(AppPalettes.Aethergram.FieldSurface));
             Typography.DrawCentered(rect.Center,
                 Loc.T(images.Failed(url) ? L.Aethergram.ImageFailed : L.Common.Loading), AppPalettes.Aethergram.MutedInk, 0.85f);
+        }
+        else
+        {
+            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+            drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
+                ImDrawFlags.RoundCornersAll);
+        }
+
+        if (!ContentModeration.IsInReview(scanStatus))
+        {
             return;
         }
 
-        var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-        drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
-            ImDrawFlags.RoundCornersAll);
+        Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)));
+        var center = rect.Center;
+        AppSkin.Icon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Hourglass.ToIconString(),
+            new Vector4(1f, 1f, 1f, 0.92f), 1.6f);
+        Typography.DrawCentered(center, Loc.T(L.Moderation.InReview), new Vector4(1f, 1f, 1f, 0.95f), 1f,
+            FontWeight.SemiBold);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 22f * scale), Loc.T(L.Moderation.InReviewHint),
+            new Vector4(1f, 1f, 1f, 0.75f), 0.8f);
     }
 
     private void DrawBottomNav(Rect bar)

@@ -67,7 +67,8 @@ internal sealed record PostDto(
     int MediaHeight,
     string? AuthorAvatarUrl,
     int CommentCount,
-    bool IsFollowing) : IIdentified;
+    bool IsFollowing,
+    string ScanStatus = "clean") : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
@@ -160,7 +161,8 @@ internal sealed record VelvetPostDto(
     int[] ReactionCounts,
     int TotalReactions,
     int MyReaction,
-    int CommentCount) : IIdentified;
+    int CommentCount,
+    string ScanStatus = "clean") : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
 

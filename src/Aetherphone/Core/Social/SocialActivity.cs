@@ -10,6 +10,7 @@ internal static class SocialActivity
     public const int TypeFollow = 2;
     public const int TypeConnectRequest = 3;
     public const int TypeConnectAccept = 4;
+    public const int TypePostRemoved = 5;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";
@@ -43,6 +44,8 @@ internal static class SocialActivity
                 return Loc.T(L.Social.ConnectionRequest);
             case TypeConnectAccept:
                 return Loc.T(L.Social.ConnectionAccepted);
+            case TypePostRemoved:
+                return ContentModeration.RemovalMessage(item.Preview);
             default:
                 return string.Empty;
         }
