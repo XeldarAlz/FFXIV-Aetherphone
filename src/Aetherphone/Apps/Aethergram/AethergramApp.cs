@@ -11,8 +11,10 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
@@ -36,7 +38,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     private const float CropSmoothTime = 0.10f;
     private const int GridColumns = 3;
     private const float LikeBurstDuration = 0.9f;
-    private const int MaxReportReasonLength = 200;
     private static readonly Vector4 LikeRed = new(0.95f, 0.27f, 0.36f, 1f);
 
     public string Id => "aethergram";
@@ -102,11 +103,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     private string? editLoadedFor;
     private volatile bool editBusy;
     private volatile int editOutcome;
-    private string? reportTargetType;
-    private string? reportTargetId;
-    private string reportReasonDraft = string.Empty;
-    private string reportStatus = string.Empty;
-    private volatile bool reportSubmitting;
 
     public AethergramApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
@@ -163,10 +159,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         caption = string.Empty;
         searchDraft = string.Empty;
         commentDraft = string.Empty;
-        reportTargetType = null;
-        reportTargetId = null;
-        reportReasonDraft = string.Empty;
-        reportStatus = string.Empty;
         store.ClearDiscover();
     }
 
@@ -223,8 +215,20 @@ internal sealed partial class AethergramApp : IPhoneApp
         var contentArea = new Rect(new Vector2(area.Min.X, headerRect.Max.Y), area.Max);
         if (!store.IsSignedIn)
         {
+            TourHolds.Hold(Id);
             Typography.DrawCentered(contentArea.Center, Loc.T(L.Aethergram.SetUpAccount), AppPalettes.Aethergram.MutedInk);
             return;
+        }
+
+        TourHolds.Release(Id);
+        if (GuideIntents.Consume("aethergram.tab.search"))
+        {
+            SelectTab(AethergramTab.Search);
+        }
+
+        if (GuideIntents.Consume("aethergram.tab.profile"))
+        {
+            SelectTab(AethergramTab.Profile);
         }
 
         var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - BottomNavHeight * scale), area.Max);
@@ -384,7 +388,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             postItems[count++] = new DropdownMenu.Item(
                 Loc.T(post.IsFollowing ? L.Aethergram.Unfollow : L.Aethergram.Follow),
                 (post.IsFollowing ? FontAwesomeIcon.UserCheck : FontAwesomeIcon.UserPlus).ToIconString());
-            postItems[count++] = new DropdownMenu.Item(Loc.T(L.Aethergram.ReportSubmit),
+            postItems[count++] = new DropdownMenu.Item(Loc.T(L.Report.Action),
                 FontAwesomeIcon.Flag.ToIconString(), true);
         }
 
@@ -413,14 +417,16 @@ internal sealed partial class AethergramApp : IPhoneApp
             return;
         }
 
-        reportTargetType = "post";
-        reportTargetId = post.Id;
-        reportReasonDraft = string.Empty;
-        reportStatus = string.Empty;
-        if (includeView)
+        OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
+    }
+
+    private void OpenReport(string targetType, string targetId, string title)
+    {
+        Plugin.Report.Open(new ReportPrompt
         {
-            OpenDetail(post);
-        }
+            Title = title,
+            Submit = (reason, done) => store.Report(targetType, targetId, reason, done),
+        });
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
@@ -670,13 +676,19 @@ internal sealed partial class AethergramApp : IPhoneApp
             1f);
         var slot = bar.Width / 4f;
         var centerY = bar.Center.Y;
-        DrawNavIcon(new Vector2(bar.Min.X + slot * 0.5f, centerY), FontAwesomeIcon.Home, AethergramTab.Home);
-        DrawNavIcon(new Vector2(bar.Min.X + slot * 1.5f, centerY), FontAwesomeIcon.Search, AethergramTab.Search);
+        var searchCenter = new Vector2(bar.Min.X + slot * 1.5f, centerY);
         var activityCenter = new Vector2(bar.Min.X + slot * 2.5f, centerY);
+        var profileCenter = new Vector2(bar.Min.X + slot * 3.5f, centerY);
+        var anchorHalf = new Vector2(20f * scale, 20f * scale);
+        UiAnchors.Report("aethergram.tab.search", new Rect(searchCenter - anchorHalf, searchCenter + anchorHalf));
+        UiAnchors.Report("aethergram.tab.activity", new Rect(activityCenter - anchorHalf, activityCenter + anchorHalf));
+        UiAnchors.Report("aethergram.tab.profile", new Rect(profileCenter - anchorHalf, profileCenter + anchorHalf));
+        DrawNavIcon(new Vector2(bar.Min.X + slot * 0.5f, centerY), FontAwesomeIcon.Home, AethergramTab.Home);
+        DrawNavIcon(searchCenter, FontAwesomeIcon.Search, AethergramTab.Search);
         DrawNavIcon(activityCenter, FontAwesomeIcon.Heart, AethergramTab.Activity);
         ActivityBadge.Draw(activityCenter + new Vector2(11f * scale, -10f * scale), social.UnseenCount(Id), theme,
             scale);
-        DrawNavProfile(new Vector2(bar.Min.X + slot * 3.5f, centerY));
+        DrawNavProfile(profileCenter);
     }
 
     private void DrawNavIcon(Vector2 center, FontAwesomeIcon icon, AethergramTab tab)

@@ -9,6 +9,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Social;
@@ -58,7 +59,6 @@ internal sealed partial class AethergramApp
         var buttonWidth = 122f * scale;
         var buttonMax = new Vector2(origin.X + width - pad, avatarCenter.Y + buttonHeight * 0.5f);
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
-        var reportShown = false;
         if (user.IsMe)
         {
             if (ui.PillButton(buttonRect, Loc.T(L.Aethergram.EditProfile), false))
@@ -70,7 +70,12 @@ internal sealed partial class AethergramApp
         else
         {
             var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-            reportShown = DrawReportToggle(reportCenter, buttonHeight * 0.5f, "user", user.Id);
+            if (ui.IconButton(reportCenter, buttonHeight * 0.5f, FontAwesomeIcon.Flag.ToIconString(), theme.Danger,
+                    Palette.WithAlpha(theme.Danger, 0.16f), 0.9f, Loc.T(L.Report.Action)))
+            {
+                OpenReport("user", user.Id, Loc.T(L.Report.UserTitle));
+            }
+
             if (ui.PillButton(buttonRect,
                     user.IsFollowing ? Loc.T(L.Aethergram.Following) : Loc.T(L.Aethergram.Follow), !user.IsFollowing))
             {
@@ -107,12 +112,6 @@ internal sealed partial class AethergramApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y + 10f * scale));
-        if (reportShown)
-        {
-            DrawReportComposer(innerLeft, innerWidth);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-        }
-
         DrawProfileStats(user);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
     }
@@ -466,6 +465,8 @@ internal sealed partial class AethergramApp
         }
 
         var composeCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);
+        UiAnchors.Report("aethergram.compose", new Rect(composeCenter - new Vector2(18f * scale, 18f * scale),
+            composeCenter + new Vector2(18f * scale, 18f * scale)));
         if (ui.IconButton(composeCenter, 16f * scale, FontAwesomeIcon.PlusSquare.ToIconString(),
                 AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Aethergram.NewPost),
                 HoverLabelSide.Below))

@@ -8,6 +8,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -20,12 +21,10 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetApp
 {
-    private readonly MessageReportControl messageReport = new();
     private readonly DropdownMenu messageMenu = new();
     private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
     private string? menuMessageId;
     private Action<string>? onMessageContext;
-    private Action<string, string?, Action<bool>>? reportSubmit;
 
     private void OpenMessageMenu(string messageId)
     {
@@ -48,12 +47,22 @@ internal sealed partial class VelvetApp
         var clicked = messageMenu.Draw(area, theme, messageMenuItems);
         if (clicked == 0)
         {
-            messageReport.Arm(id);
+            OpenReportMessage(id);
         }
         else if (clicked == 1)
         {
             CopyMessageText(id);
         }
+    }
+
+    private void OpenReportMessage(string messageId)
+    {
+        Plugin.Report.Open(new ReportPrompt
+        {
+            Title = Loc.T(L.Encryption.ReportMessageAction),
+            Disclosure = Loc.T(L.Encryption.ReportDisclosure),
+            Submit = (reason, done) => store.ReportMessage(messageId, reason, done),
+        });
     }
 
     private void CopyMessageText(string id)
@@ -120,8 +129,11 @@ internal sealed partial class VelvetApp
         var centerX = origin.X + width * 0.5f;
         var flagRadius = 16f * scale;
         var flagCenter = new Vector2(origin.X + width - flagRadius, origin.Y + flagRadius + 2f * scale);
-        var reportShown = report.Toggle(ui, flagCenter, flagRadius, "velvet_profile", user.UserId,
-            Loc.T(L.Velvet.ReportSubmit));
+        if (ui.IconButton(flagCenter, flagRadius, FontAwesomeIcon.Flag.ToIconString(), ui.Theme.Danger,
+                Palette.WithAlpha(ui.Theme.Danger, 0.16f), 0.9f, Loc.T(L.Report.Action)))
+        {
+            OpenReport("velvet_profile", user.UserId, Loc.T(L.Report.UserTitle));
+        }
         var avatarRadius = 66f * scale;
         var avatarCenter = new Vector2(centerX, origin.Y + 18f * scale + avatarRadius);
         drawList.AddCircleFilled(avatarCenter, avatarRadius + 3f * scale, ImGui.GetColorU32(theme.AppBackground), 72);
@@ -165,13 +177,6 @@ internal sealed partial class VelvetApp
             new Vector2(centerX + actionWidth * 0.5f, y + actionHeight));
         DrawProfileAction(actionRect, user);
         y += actionHeight;
-        if (reportShown)
-        {
-            ImGui.SetCursorScreenPos(new Vector2(origin.X, y + 12f * scale));
-            report.Composer(ui, origin.X, width);
-            y = ImGui.GetCursorScreenPos().Y + 4f * scale;
-        }
-
         var hasDetails = user.Intro.Length > 0 || user.Dynamic.Length > 0 || user.Tags.Length > 0 ||
                          user.Limits.Length > 0;
         if (hasDetails)
@@ -474,7 +479,6 @@ internal sealed partial class VelvetApp
             store.OpenThread(threadId);
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
-            messageReport.Reset();
         }
 
         store.NoteThreadViewed(threadId);
@@ -483,9 +487,8 @@ internal sealed partial class VelvetApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
-        var reportHeight = messageReport.Height(scale);
         var listRect = new Rect(new Vector2(area.Min.X, top),
-            new Vector2(area.Max.X, area.Max.Y - composerHeight - reportHeight));
+            new Vector2(area.Max.X, area.Max.Y - composerHeight));
         var transcriptMessages = BuildTranscript(store.Messages);
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(VelvetRoute.ImageView(id));
@@ -495,15 +498,6 @@ internal sealed partial class VelvetApp
             false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
             onMessageContext);
         transcript.Draw(listRect, model);
-        if (messageReport.Armed)
-        {
-            reportSubmit ??= (id, reason, done) => store.ReportMessage(id, reason, done);
-            messageReport.Draw(new Rect(
-                    new Vector2(area.Min.X, area.Max.Y - composerHeight - reportHeight),
-                    new Vector2(area.Max.X, area.Max.Y - composerHeight)),
-                theme, AppPalettes.Velvet.MutedInk, reportSubmit);
-        }
-
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), threadId);
         DrawMessageMenu(area);
     }

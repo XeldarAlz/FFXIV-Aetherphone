@@ -155,7 +155,6 @@ internal sealed partial class VelvetApp
             }
 
             var mine = store.Me is { } me && me.UserId == post.OwnerId;
-            var reportShown = false;
             if (mine)
             {
                 var deleteCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
@@ -169,17 +168,14 @@ internal sealed partial class VelvetApp
             else
             {
                 var reportCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
-                reportShown = report.Toggle(ui, reportCenter, 14f * scale, "post", post.Id,
-                    Loc.T(L.Velvet.ReportSubmit));
+                if (ui.IconButton(reportCenter, 14f * scale, FontAwesomeIcon.Flag.ToIconString(), ui.Theme.Danger,
+                        Palette.WithAlpha(ui.Theme.Danger, 0.16f), 0.9f, Loc.T(L.Report.Action)))
+                {
+                    OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
+                }
             }
 
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
-            if (reportShown)
-            {
-                report.Composer(ui, origin.X, width);
-                ImGui.Dummy(new Vector2(0f, 6f * scale));
-            }
-
             if (!string.IsNullOrWhiteSpace(post.Caption))
             {
                 ImGui.PushTextWrapPos(origin.X + width);

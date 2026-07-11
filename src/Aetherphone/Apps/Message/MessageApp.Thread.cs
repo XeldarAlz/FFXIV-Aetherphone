@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Theme;
 using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Windows.Components;
@@ -16,12 +17,10 @@ namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
-    private readonly MessageReportControl messageReport = new();
     private readonly DropdownMenu messageMenu = new();
     private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
     private string? menuMessageId;
     private Action<string>? onMessageContext;
-    private Action<string, string?, Action<bool>>? reportSubmit;
     private string messageDraft = string.Empty;
     private bool threadFocus;
     private float sinceThreadPoll;
@@ -39,7 +38,6 @@ internal sealed partial class MessageApp
             store.OpenConversation(conversationId);
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
-            messageReport.Reset();
         }
 
         store.NoteConversationViewed(conversationId);
@@ -50,9 +48,8 @@ internal sealed partial class MessageApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
-        var reportHeight = messageReport.Height(scale);
         var listRect = new Rect(new Vector2(area.Min.X, top),
-            new Vector2(area.Max.X, area.Max.Y - composerHeight - reportHeight));
+            new Vector2(area.Max.X, area.Max.Y - composerHeight));
         DrawEncryptionBanner(ref listRect, conversation, isGroup);
         var transcriptMessages = BuildTranscript(store.Messages, isGroup);
         threadMediaUrl ??= store.DmMediaUrl;
@@ -63,15 +60,6 @@ internal sealed partial class MessageApp
             isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
             onMessageContext);
         transcript.Draw(listRect, model);
-        if (messageReport.Armed)
-        {
-            reportSubmit ??= (id, reason, done) => store.ReportMessage(id, reason, done);
-            messageReport.Draw(new Rect(
-                    new Vector2(area.Min.X, area.Max.Y - composerHeight - reportHeight),
-                    new Vector2(area.Max.X, area.Max.Y - composerHeight)),
-                theme, AppPalettes.Message.MutedInk, reportSubmit);
-        }
-
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), conversationId);
         DrawMessageMenu(area);
     }
@@ -97,12 +85,22 @@ internal sealed partial class MessageApp
         var clicked = messageMenu.Draw(area, theme, messageMenuItems);
         if (clicked == 0)
         {
-            messageReport.Arm(id);
+            OpenReportMessage(id);
         }
         else if (clicked == 1)
         {
             CopyMessageText(id);
         }
+    }
+
+    private void OpenReportMessage(string messageId)
+    {
+        Plugin.Report.Open(new ReportPrompt
+        {
+            Title = Loc.T(L.Encryption.ReportMessageAction),
+            Disclosure = Loc.T(L.Encryption.ReportDisclosure),
+            Submit = (reason, done) => store.ReportMessage(messageId, reason, done),
+        });
     }
 
     private void CopyMessageText(string id)

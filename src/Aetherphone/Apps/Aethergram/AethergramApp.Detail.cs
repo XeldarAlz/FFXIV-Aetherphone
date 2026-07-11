@@ -132,14 +132,7 @@ internal sealed partial class AethergramApp
                     moreCenter + new Vector2(moreRadius, moreRadius)));
             }
 
-            var reportShown = reportTargetType == "post" && reportTargetId == post.Id;
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
-            if (reportShown)
-            {
-                DrawReportComposer(origin.X, width);
-                ImGui.Dummy(new Vector2(0f, 6f * scale));
-            }
-
             if (post.Text.Length > 0)
             {
                 var captionPos = ImGui.GetCursorScreenPos();
@@ -351,89 +344,6 @@ internal sealed partial class AethergramApp
             ui.SectionHeading(Loc.T(L.Aethergram.GramsTitle));
             DrawProfileGrid();
         }
-    }
-
-    private bool DrawReportToggle(Vector2 center, float radius, string targetType, string targetId)
-    {
-        var active = reportTargetType == targetType && reportTargetId == targetId;
-        var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
-        if (ui.IconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f,
-                Loc.T(L.Aethergram.ReportSubmit)))
-        {
-            if (active)
-            {
-                reportTargetType = null;
-                reportTargetId = null;
-                active = false;
-            }
-            else
-            {
-                reportTargetType = targetType;
-                reportTargetId = targetId;
-                reportReasonDraft = string.Empty;
-                reportStatus = string.Empty;
-                active = true;
-            }
-        }
-
-        return active;
-    }
-
-    private void DrawReportComposer(float left, float width)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-        var buttonWidth = 84f * scale;
-        var buttonHeight = 28f * scale;
-        ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
-        ImGui.SetNextItemWidth(width - buttonWidth - 8f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppPalettes.Aethergram.FieldSurface))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.TitleInk))
-        {
-            ImGui.InputTextWithHint("##reportReason", Loc.T(L.Aethergram.ReportReasonHint), ref reportReasonDraft,
-                MaxReportReasonLength);
-        }
-
-        var buttonRect = new Rect(new Vector2(left + width - buttonWidth, origin.Y - 2f * scale),
-            new Vector2(left + width, origin.Y - 2f * scale + buttonHeight));
-        var canSubmit = !reportSubmitting;
-        if (ui.PillButton(buttonRect, reportSubmitting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.ReportSubmit),
-                canSubmit) && canSubmit)
-        {
-            SubmitReport();
-        }
-
-        ImGui.SetCursorScreenPos(new Vector2(left, origin.Y + buttonHeight + 2f * scale));
-        if (reportStatus.Length > 0)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.MutedInk))
-            {
-                ImGui.TextUnformatted(reportStatus);
-            }
-
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-        }
-    }
-
-    private void SubmitReport()
-    {
-        if (reportSubmitting || reportTargetType is not { } targetType || reportTargetId is not { } targetId)
-        {
-            return;
-        }
-
-        reportSubmitting = true;
-        var reason = reportReasonDraft.Trim();
-        store.Report(targetType, targetId, reason.Length > 0 ? reason : null, ok =>
-        {
-            reportSubmitting = false;
-            reportStatus = Loc.T(ok ? L.Aethergram.ReportSent : L.Aethergram.ReportFailed);
-            if (ok)
-            {
-                reportTargetType = null;
-                reportTargetId = null;
-            }
-        });
     }
 
     private void AskDeletePost(string postId)

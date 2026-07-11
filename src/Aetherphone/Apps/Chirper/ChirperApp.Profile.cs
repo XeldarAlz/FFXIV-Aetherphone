@@ -9,7 +9,9 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -107,7 +109,6 @@ internal sealed partial class ChirperApp
         var buttonWidth = 122f * scale;
         var buttonMax = new Vector2(origin.X + width - pad, avatarCenter.Y + buttonHeight * 0.5f);
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
-        var reportShown = false;
         if (user.IsMe)
         {
             if (ui.PillButton(buttonRect, Loc.T(L.Chirper.EditProfile), false))
@@ -119,7 +120,12 @@ internal sealed partial class ChirperApp
         else
         {
             var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-            reportShown = DrawReportToggle(reportCenter, buttonHeight * 0.5f, "user", user.Id);
+            if (ui.IconButton(reportCenter, buttonHeight * 0.5f, FontAwesomeIcon.Flag.ToIconString(), theme.Danger,
+                    Palette.WithAlpha(theme.Danger, 0.16f), 0.9f, Loc.T(L.Report.Action)))
+            {
+                OpenReport("user", user.Id, Loc.T(L.Report.UserTitle));
+            }
+
             if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(L.Chirper.Following) : Loc.T(L.Chirper.Follow),
                     !user.IsFollowing))
             {
@@ -157,12 +163,6 @@ internal sealed partial class ChirperApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y + 10f * scale));
-        if (reportShown)
-        {
-            DrawReportComposer(innerLeft, innerWidth);
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-        }
-
         DrawProfileStats(user);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
     }
@@ -232,85 +232,12 @@ internal sealed partial class ChirperApp
         UiInteract.HoverHighlight(drawList, min, max, 12f * scale);
     }
 
-    private bool DrawReportToggle(Vector2 center, float radius, string targetType, string targetId)
+    private void OpenReport(string targetType, string targetId, string title)
     {
-        var active = reportTargetType == targetType && reportTargetId == targetId;
-        var background = Palette.WithAlpha(theme.Danger, active ? 0.32f : 0.16f);
-        if (ui.IconButton(center, radius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger, background, 0.9f))
+        Plugin.Report.Open(new ReportPrompt
         {
-            if (active)
-            {
-                reportTargetType = null;
-                reportTargetId = null;
-                active = false;
-            }
-            else
-            {
-                reportTargetType = targetType;
-                reportTargetId = targetId;
-                reportReasonDraft = string.Empty;
-                reportStatus = string.Empty;
-                active = true;
-            }
-        }
-
-        return active;
-    }
-
-    private void DrawReportComposer(float left, float width)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var origin = ImGui.GetCursorScreenPos();
-        var buttonWidth = 84f * scale;
-        var buttonHeight = 28f * scale;
-        ImGui.SetCursorScreenPos(new Vector2(left, origin.Y));
-        ImGui.SetNextItemWidth(width - buttonWidth - 8f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppPalettes.Chirper.FieldSurface))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.TitleInk))
-        {
-            ImGui.InputTextWithHint("##reportReason", Loc.T(L.Chirper.ReportReasonHint), ref reportReasonDraft,
-                MaxReportReasonLength);
-        }
-
-        var buttonRect = new Rect(new Vector2(left + width - buttonWidth, origin.Y - 2f * scale),
-            new Vector2(left + width, origin.Y - 2f * scale + buttonHeight));
-        var canSubmit = !reportSubmitting;
-        if (ui.PillButton(buttonRect, reportSubmitting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.ReportSubmit),
-                canSubmit) && canSubmit)
-        {
-            SubmitReport();
-        }
-
-        ImGui.SetCursorScreenPos(new Vector2(left, origin.Y + buttonHeight + 2f * scale));
-        if (reportStatus.Length > 0)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.MutedInk))
-            {
-                ImGui.TextUnformatted(reportStatus);
-            }
-
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-        }
-    }
-
-    private void SubmitReport()
-    {
-        if (reportSubmitting || reportTargetType is not { } targetType || reportTargetId is not { } targetId)
-        {
-            return;
-        }
-
-        reportSubmitting = true;
-        var reason = reportReasonDraft.Trim();
-        store.Report(targetType, targetId, reason.Length > 0 ? reason : null, ok =>
-        {
-            reportSubmitting = false;
-            reportStatus = Loc.T(ok ? L.Chirper.ReportSent : L.Chirper.ReportFailed);
-            if (ok)
-            {
-                reportTargetType = null;
-                reportTargetId = null;
-            }
+            Title = title,
+            Submit = (reason, done) => store.Report(targetType, targetId, reason, done),
         });
     }
 
@@ -634,6 +561,8 @@ internal sealed partial class ChirperApp
         }
 
         var searchCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);
+        UiAnchors.Report("chirper.search", new Rect(searchCenter - new Vector2(18f * scale, 18f * scale),
+            searchCenter + new Vector2(18f * scale, 18f * scale)));
         if (ui.IconButton(searchCenter, 16f * scale, FontAwesomeIcon.Search.ToIconString(), AppPalettes.Chirper.BodyInk,
                 new Vector4(0f, 0f, 0f, 0f), 1.2f, Loc.T(L.Chirper.FindPeople), HoverLabelSide.Below) &&
             store.IsSignedIn)
@@ -644,6 +573,8 @@ internal sealed partial class ChirperApp
         }
 
         var bellCenter = new Vector2(area.Max.X - 60f * scale, rowCenterY);
+        UiAnchors.Report("chirper.activity", new Rect(bellCenter - new Vector2(18f * scale, 18f * scale),
+            bellCenter + new Vector2(18f * scale, 18f * scale)));
         if (ui.IconButton(bellCenter, 16f * scale, FontAwesomeIcon.Bell.ToIconString(), AppPalettes.Chirper.BodyInk,
                 new Vector4(0f, 0f, 0f, 0f), 1.2f, Loc.T(L.Social.ActivityTitle), HoverLabelSide.Below) &&
             store.IsSignedIn)

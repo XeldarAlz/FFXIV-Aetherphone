@@ -11,7 +11,9 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -30,7 +32,6 @@ internal sealed partial class ChirperApp : IPhoneApp
     private const int HandleMax = 15;
     private const int BioMax = 200;
     private const float FeedTopPadding = 8f;
-    private const int MaxReportReasonLength = 200;
     private const int MaxCommentLength = 500;
     public string Id => "chirper";
     public Vector4 Accent => AppAccents.For(Id);
@@ -71,11 +72,6 @@ internal sealed partial class ChirperApp : IPhoneApp
     private string? editLoadedFor;
     private volatile bool editBusy;
     private volatile int editOutcome;
-    private string? reportTargetType;
-    private string? reportTargetId;
-    private string reportReasonDraft = string.Empty;
-    private string reportStatus = string.Empty;
-    private volatile bool reportSubmitting;
 
     public ChirperApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
@@ -127,10 +123,6 @@ internal sealed partial class ChirperApp : IPhoneApp
         searchDraft = string.Empty;
         actions.Reset();
         commentDraft = string.Empty;
-        reportTargetType = null;
-        reportTargetId = null;
-        reportReasonDraft = string.Empty;
-        reportStatus = string.Empty;
         store.ClearDiscover();
     }
 
@@ -187,14 +179,17 @@ internal sealed partial class ChirperApp : IPhoneApp
         var top = area.Min.Y + AppHeader.Height * scale;
         if (!store.IsSignedIn)
         {
+            TourHolds.Hold(Id);
             var body = new Rect(new Vector2(area.Min.X, top), area.Max);
             Typography.DrawCentered(body.Center, Loc.T(L.Chirper.SetUpAccount), AppPalettes.Chirper.MutedInk);
             return;
         }
 
+        TourHolds.Release(Id);
         var segmentHeight = 38f * scale;
         var tabsRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 2f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 2f * scale + segmentHeight));
+        UiAnchors.Report("chirper.tabs", tabsRect);
         var selected = SegmentSlider.Draw(tabsRect, Loc.T(L.Chirper.ForYou), Loc.T(L.Chirper.Following),
             (int)activeScope, ref tabSegmentAnim, Accent, AppPalettes.Chirper.MutedInk);
         if (selected != (int)activeScope)
@@ -210,7 +205,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y + 6f * scale), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(listRect, "##chirperComposeFab", Accent, FontAwesomeIcon.Feather.ToIconString(),
-                Loc.T(L.Chirper.NewChirp)))
+                Loc.T(L.Chirper.NewChirp), "chirper.compose"))
         {
             composeFocus = true;
             router.Push(ChirperRoute.Compose);
@@ -322,15 +317,6 @@ internal sealed partial class ChirperApp : IPhoneApp
         DrawPostActions(post, contentLeft, contentWidth, actionsTop + actionsHeight * 0.5f, isThreadHead);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y));
-        var reportActive = reportTargetType == "post" && reportTargetId == post.Id;
-        if (reportActive)
-        {
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            var composerLeft = origin.X + pad;
-            var composerWidth = width - pad * 2f;
-            DrawReportComposer(composerLeft, composerWidth);
-        }
-
         ImGui.Dummy(new Vector2(0f, 10f * scale));
     }
 
@@ -554,8 +540,6 @@ internal sealed partial class ChirperApp : IPhoneApp
                     ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Chirper.DeleteConfirm),
                     interactive))
             {
-                reportTargetType = null;
-                reportTargetId = null;
                 AskDeletePost(post.Id);
                 actions.Dismiss();
             }
@@ -566,12 +550,9 @@ internal sealed partial class ChirperApp : IPhoneApp
         var reportCenter = new Vector2(anchorX - slot * step, centerY);
         if (DrawRevealIcon(reportCenter, iconRadius, FontAwesomeIcon.Flag.ToIconString(), theme.Danger,
                 Palette.WithAlpha(theme.Danger, 0.16f), 0.95f,
-                ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Chirper.ReportSubmit), interactive))
+                ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Report.Action), interactive))
         {
-            reportTargetType = "post";
-            reportTargetId = post.Id;
-            reportReasonDraft = string.Empty;
-            reportStatus = string.Empty;
+            OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
             actions.Dismiss();
         }
 

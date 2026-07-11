@@ -12,7 +12,9 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -69,7 +71,6 @@ internal sealed partial class VelvetApp : IPhoneApp
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly VelvetAvatarComposer avatar;
     private readonly VelvetPostComposer post;
-    private readonly VelvetReportControl report;
     private readonly RemoteImageCache images;
     private readonly HttpService http;
     private readonly ViewRouter<VelvetRoute> router;
@@ -154,7 +155,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         this.library = library;
         avatar = new VelvetAvatarComposer(store, library);
         post = new VelvetPostComposer(store, library);
-        report = new VelvetReportControl(store);
         this.images = images;
         this.http = http;
         this.social = social;
@@ -208,7 +208,6 @@ internal sealed partial class VelvetApp : IPhoneApp
         messageDraft = string.Empty;
         discoverQuery = string.Empty;
         discoverApplied = string.Empty;
-        report.Reset();
         store.ClearDiscover();
     }
 
@@ -219,22 +218,26 @@ internal sealed partial class VelvetApp : IPhoneApp
         ui.Theme = theme;
         if (!store.IsSignedIn)
         {
+            TourHolds.Hold(Id);
             DrawFullScreenMessage(context.Content, Loc.T(L.Velvet.SetUpAccount));
             return;
         }
 
         if (!GateAccepted)
         {
+            TourHolds.Hold(Id);
             DrawGate(context.Content);
             return;
         }
 
         if (!configuration.VelvetOnboarded)
         {
+            TourHolds.Hold(Id);
             DrawOnboarding(context.Content);
             return;
         }
 
+        TourHolds.Release(Id);
         store.EnsureMe();
         TickHeartbeat();
         filterMenu.Gate();
@@ -310,6 +313,16 @@ internal sealed partial class VelvetApp : IPhoneApp
 
     private void DrawRoot(Rect area)
     {
+        if (GuideIntents.Consume("velvet.tab.discover"))
+        {
+            SelectTab(VelvetTab.Discover);
+        }
+
+        if (GuideIntents.Consume("velvet.tab.me"))
+        {
+            SelectTab(VelvetTab.Me);
+        }
+
         var scale = ImGuiHelpers.GlobalScale;
         var headerHeight = 42f * scale;
         var navHeight = 60f * scale;
@@ -366,6 +379,8 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
 
         var messagesCenter = new Vector2(area.Max.X - 24f * scale, area.Center.Y);
+        UiAnchors.Report("velvet.messages", new Rect(messagesCenter - new Vector2(18f * scale, 18f * scale),
+            messagesCenter + new Vector2(18f * scale, 18f * scale)));
         if (ui.IconButton(messagesCenter, 16f * scale, FontAwesomeIcon.Comment.ToIconString(),
                 AppPalettes.Velvet.BodyInk, AppSkin.Transparent, 1.2f, Loc.T(L.Velvet.Messages),
                 HoverLabelSide.Below))
@@ -384,15 +399,18 @@ internal sealed partial class VelvetApp : IPhoneApp
         drawList.AddLine(nav.Min, new Vector2(nav.Max.X, nav.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
             1f);
         var width = nav.Width / 4f;
+        var discoverRect = new Rect(new Vector2(nav.Min.X + width, nav.Min.Y),
+            new Vector2(nav.Min.X + width * 2f, nav.Max.Y));
+        var meRect = new Rect(new Vector2(nav.Min.X + width * 3f, nav.Min.Y), nav.Max);
+        UiAnchors.Report("velvet.tab.discover", discoverRect);
+        UiAnchors.Report("velvet.tab.me", meRect);
         DrawNavItem(new Rect(nav.Min, new Vector2(nav.Min.X + width, nav.Max.Y)), FontAwesomeIcon.Home,
             Loc.T(L.Velvet.TabHome), VelvetTab.Hub, 0);
-        DrawNavItem(new Rect(new Vector2(nav.Min.X + width, nav.Min.Y), new Vector2(nav.Min.X + width * 2f, nav.Max.Y)),
-            FontAwesomeIcon.Compass, Loc.T(L.Velvet.TabDiscover), VelvetTab.Discover, 0);
+        DrawNavItem(discoverRect, FontAwesomeIcon.Compass, Loc.T(L.Velvet.TabDiscover), VelvetTab.Discover, 0);
         DrawNavItem(new Rect(new Vector2(nav.Min.X + width * 2f, nav.Min.Y),
                 new Vector2(nav.Min.X + width * 3f, nav.Max.Y)), FontAwesomeIcon.Bell, Loc.T(L.Social.ActivityTab),
             VelvetTab.Activity, social.UnseenCount(Id));
-        DrawNavItem(new Rect(new Vector2(nav.Min.X + width * 3f, nav.Min.Y), nav.Max), FontAwesomeIcon.User,
-            Loc.T(L.Velvet.TabMe), VelvetTab.Me, 0);
+        DrawNavItem(meRect, FontAwesomeIcon.User, Loc.T(L.Velvet.TabMe), VelvetTab.Me, 0);
     }
 
     private void DrawNavItem(Rect rect, FontAwesomeIcon icon, string label, VelvetTab tab, int badge)
@@ -439,7 +457,7 @@ internal sealed partial class VelvetApp : IPhoneApp
 
         DrawTimeline(area);
         if (ComposeFab.Draw(area, "##velvetComposeFab", AppPalettes.Velvet.Accent,
-                FontAwesomeIcon.Plus.ToIconString(), Loc.T(L.Velvet.NewPost)))
+                FontAwesomeIcon.Plus.ToIconString(), Loc.T(L.Velvet.NewPost), "velvet.compose"))
         {
             post.Open();
             router.Push(VelvetRoute.Compose);
@@ -495,7 +513,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         postItems[0] = new DropdownMenu.Item(Loc.T(L.Velvet.ViewProfile), FontAwesomeIcon.User.ToIconString());
         postItems[1] = mine
             ? new DropdownMenu.Item(Loc.T(L.Velvet.DeleteConfirm), FontAwesomeIcon.Trash.ToIconString(), true)
-            : new DropdownMenu.Item(Loc.T(L.Velvet.ReportSubmit), FontAwesomeIcon.Flag.ToIconString(), true);
+            : new DropdownMenu.Item(Loc.T(L.Report.Action), FontAwesomeIcon.Flag.ToIconString(), true);
         var picked = postMenu.Draw(area, theme, postItems);
         if (picked == 0)
         {
@@ -507,9 +525,17 @@ internal sealed partial class VelvetApp : IPhoneApp
         }
         else if (picked == 1)
         {
-            report.Arm("post", shown.Id);
-            router.Push(VelvetRoute.PostDetail(shown.Id));
+            OpenReport("post", shown.Id, Loc.T(L.Report.PostTitle));
         }
+    }
+
+    private void OpenReport(string targetType, string targetId, string title)
+    {
+        Plugin.Report.Open(new ReportPrompt
+        {
+            Title = title,
+            Submit = (reason, done) => store.Report(targetType, targetId, reason, done),
+        });
     }
 
     private void DrawTimeline(Rect area)
