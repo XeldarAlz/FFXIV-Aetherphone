@@ -459,6 +459,13 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0931 =
+        {
+            new("changelog.r0931.0", "Fixed encrypted chats being stuck on Setting up encryption: the key exchange now completes, and Message and Velvet conversations lock end-to-end as intended"),
+            new("changelog.r0931.1", "Encryption setup now retries on its own after a connection hiccup instead of staying stuck until you relog"),
+            new("changelog.r0931.2", "An open chat now notices when your contact becomes ready for encryption and locks the conversation without you having to reopen it"),
+        };
+
         public static readonly LocString[] Release0930 =
         {
             new("changelog.r0930.0", "You can now reply to any message in Message: the quoted original shows inside your bubble, and clicking it jumps back to that message"),
