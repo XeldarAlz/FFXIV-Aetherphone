@@ -77,7 +77,7 @@ body:
 
         - **Dalamud log**: open `/xllog`, click the *Open log folder* button at the bottom-right, attach `dalamud.log`. Filter by `Aetherphone` if you want to trim it down.
         - **Screenshots / short clip** if the issue is visual (a misaligned row, wrong colors, a frozen animation, etc.)
-        - **Other plugins active** that touch chat, the message log, or UI — helps rule out conflicts.
+        - **Other plugins active** that touch chat, the message log, or UI. This helps rule out conflicts.
 
   - type: textarea
     id: logs

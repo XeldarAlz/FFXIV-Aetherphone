@@ -1,7 +1,7 @@
 name: Auto-tag on version bump
 
 # Whenever master moves, read the plugin version from Directory.Build.props.
-# If that version has no matching v* tag yet, create one and push it — the
+# If that version has no matching v* tag yet, create one and push it; the
 # existing release.yml fires from the tag push and publishes latest.zip.
 #
 # Bump <Version> in Directory.Build.props before (or inside) your PR and
@@ -60,10 +60,10 @@ jobs:
           tag="${{ steps.version.outputs.tag }}"
           if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Tag $tag already exists — nothing to do."
+            echo "Tag $tag already exists; nothing to do."
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Tag $tag does not exist yet — will create."
+            echo "Tag $tag does not exist yet; will create."
           fi
 
       - name: Create and push tag
@@ -77,7 +77,7 @@ jobs:
           if git push origin "$TAG"; then
             echo "Pushed tag $TAG."
           elif git ls-remote --tags origin "refs/tags/$TAG" | awk '{print $2}' | grep -qx "refs/tags/$TAG"; then
-            echo "Tag $TAG was created by another run — nothing to do."
+            echo "Tag $TAG was created by another run; nothing to do."
           else
             echo "::error::Failed to push tag $TAG"
             exit 1

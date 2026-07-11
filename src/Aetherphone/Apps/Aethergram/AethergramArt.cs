@@ -5,7 +5,7 @@ namespace Aetherphone.Apps.Aethergram;
 
 /// <summary>
 /// Aethergram's signature bespoke artwork: the multi-stop "story" gradient ring drawn around
-/// avatars. Pure drawing — state and layout live in <see cref="AethergramApp"/>.
+/// avatars. Pure drawing; state and layout live in <see cref="AethergramApp"/>.
 /// </summary>
 internal static class AethergramArt
 {

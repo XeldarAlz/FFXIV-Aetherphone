@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  # Cheap gates that don't need the SDK or Dalamud — run them first so a
+  # Cheap gates that don't need the SDK or Dalamud; run them first so a
   # version-sync mistake fails fast without burning the full build.
   guards:
     name: Guards (version sync)
@@ -33,7 +33,7 @@ jobs:
           echo "repo.json AssemblyVersion           = $assembly_ver"
           echo "repo.json TestingAssemblyVersion    = $testing_ver"
           if [ "$build_ver" != "$assembly_ver" ] || [ "$build_ver" != "$testing_ver" ]; then
-            echo "::error::Version mismatch — Directory.Build.props ($build_ver), repo.json AssemblyVersion ($assembly_ver), TestingAssemblyVersion ($testing_ver) must all match."
+            echo "::error::Version mismatch: Directory.Build.props ($build_ver), repo.json AssemblyVersion ($assembly_ver), TestingAssemblyVersion ($testing_ver) must all match."
             exit 1
           fi
 
@@ -55,7 +55,7 @@ jobs:
 
       - name: Download Dalamud dev build
         shell: pwsh
-        # Track staging while API 15 / Patch 7.50 is in beta — the release
+        # Track staging while API 15 / Patch 7.50 is in beta; the release
         # channel is still API 14 and won't satisfy Dalamud.NET.Sdk 15.x.
         # Revert to /latest.zip once Dalamud 15 GAs.
         run: |

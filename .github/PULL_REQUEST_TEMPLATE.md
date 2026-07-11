@@ -19,4 +19,4 @@ Minimum steps a reviewer can run to verify the change. Testing usually means ope
 - [ ] `dotnet build -c Release` passes
 - [ ] Verified in-game: opened the phone and exercised the affected app/screen
 - [ ] If this changes user-visible behavior, README is updated
-- [ ] Matches existing style — uses the shared `Windows/Components/` widgets, no `what` comments
+- [ ] Matches existing style: uses the shared `Windows/Components/` widgets, no `what` comments

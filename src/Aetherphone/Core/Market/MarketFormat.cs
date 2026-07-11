@@ -39,7 +39,7 @@ internal static class MarketFormat
     {
         if (perDay <= 0)
         {
-            return "—";
+            return "-";
         }
 
         if (perDay < 10)

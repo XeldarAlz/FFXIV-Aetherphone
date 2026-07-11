@@ -6,7 +6,7 @@
 #
 # Triggered on the v*.*.* tag push rather than `release: published` on purpose:
 # release.yml publishes the GitHub release with GITHUB_TOKEN, and GitHub does
-# NOT cascade-trigger workflows from GITHUB_TOKEN events — so a release-published
+# NOT cascade-trigger workflows from GITHUB_TOKEN events, so a release-published
 # trigger never fires. The tag itself is pushed by auto-tag.yml using HUB_REPO_PAT,
 # and PAT-pushed tags DO cascade, which is the same path release.yml relies on.
 

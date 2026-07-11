@@ -20,7 +20,7 @@ permissions:
 jobs:
   release:
     runs-on: windows-latest
-    # Job-level so the hub-ping step's `if` can see it — `secrets` can't be used
+    # Job-level so the hub-ping step's `if` can see it; `secrets` can't be used
     # directly in an `if:` condition, but `env` mapped from a secret can.
     env:
       HUB_REPO_PAT: ${{ secrets.HUB_REPO_PAT }}
@@ -38,7 +38,7 @@ jobs:
             target="$ref_name"
           fi
           if [[ ! "$target" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
-            echo "::error::Resolved target '$target' is not a v*.*.* tag — pass the tag input or dispatch on a tag ref."
+            echo "::error::Resolved target '$target' is not a v*.*.* tag; pass the tag input or dispatch on a tag ref."
             exit 1
           fi
           echo "target=$target" >> "$GITHUB_OUTPUT"
@@ -59,7 +59,7 @@ jobs:
 
       - name: Download Dalamud dev build
         shell: pwsh
-        # Track staging while API 15 / Patch 7.50 is in beta — the release
+        # Track staging while API 15 / Patch 7.50 is in beta; the release
         # channel is still API 14 and won't satisfy Dalamud.NET.Sdk 15.x.
         # Revert to /latest.zip once Dalamud 15 GAs.
         run: |

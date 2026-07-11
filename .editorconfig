@@ -19,7 +19,7 @@ trim_trailing_whitespace = false
 indent_size = 2
 
 [*.cs]
-# File-scoped namespaces — matches existing codebase
+# File-scoped namespaces; matches existing codebase
 csharp_style_namespace_declarations = file_scoped:warning
 
 # Microsoft .NET properties

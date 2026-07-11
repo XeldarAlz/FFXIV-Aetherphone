@@ -16,7 +16,7 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 
 ## Project layout
 
-- `src/Aetherphone/Core/`: the device platform — app framework and navigation, theming, messaging, notifications, character/contacts, game data readers.
+- `src/Aetherphone/Core/`: the device platform, meaning app framework and navigation, theming, messaging, notifications, character/contacts, game data readers.
 - `src/Aetherphone/Apps/`: the phone's apps (Messages, Contacts, Settings, and friends), one folder each.
 - `src/Aetherphone/Windows/`: the ImGui window plus a reusable `Components/` UI library.
 - `src/Aetherphone/`: plugin entry point, config, command wiring.

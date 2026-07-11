@@ -6,7 +6,7 @@ internal static class TimeText
     {
         if (utcMoment == default)
         {
-            return "—";
+            return "-";
         }
 
         var delta = DateTime.UtcNow - utcMoment;
