@@ -271,6 +271,27 @@ internal abstract class SocialFeedStore : IDisposable
         }, onComplete);
     }
 
+    public void ToggleCommentLike(CommentDto comment)
+    {
+        var liked = !comment.Liked;
+        detailComments = CopyOnWrite.MapById(detailComments, comment.Id, ApplyCommentLike(liked));
+        work.Run("comment like", async token =>
+        {
+            var updated = liked
+                ? await client.LikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false)
+                : await client.UnlikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false);
+            if (updated is not null && detailPostId == comment.PostId)
+            {
+                detailComments = CopyOnWrite.Replace(detailComments, updated);
+            }
+        });
+    }
+
+    private static Func<CommentDto, CommentDto> ApplyCommentLike(bool liked) =>
+        comment => comment.Liked == liked
+            ? comment
+            : comment with { Liked = liked, LikeCount = Math.Max(0, comment.LikeCount + (liked ? 1 : -1)) };
+
     public void DeletePost(string postId, Action<bool> onComplete)
     {
         work.Run("delete post", async token =>

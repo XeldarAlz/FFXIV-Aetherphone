@@ -246,7 +246,7 @@ internal sealed partial class VelvetApp
             Monogram(comment.AuthorDisplayName, comment.AuthorHandle), 0.9f,
             lodestone.Remote(comment.AuthorId, ToUri(comment.AuthorAvatarUrl)), 28);
         var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
-        var wrapWidth = origin.X + width - textLeft;
+        var wrapWidth = origin.X + width - 28f * scale - textLeft;
         var name = string.IsNullOrEmpty(comment.AuthorDisplayName) ? comment.AuthorHandle : comment.AuthorDisplayName;
         Typography.Draw(new Vector2(textLeft, origin.Y), name, theme.TextStrong, 0.9f, FontWeight.SemiBold);
         var nameWidth = Typography.Measure(name, 0.9f, FontWeight.SemiBold).X;
@@ -286,6 +286,14 @@ internal sealed partial class VelvetApp
             }
         }
 
+        var heartCenter = new Vector2(origin.X + width - 10f * scale, origin.Y + 28f * scale);
+        if (CommentHeart.Draw(ui, heartCenter, comment.Liked, comment.LikeCount, AppPalettes.Velvet.MutedInk,
+                AppPalettes.Velvet.MutedInk, Loc.T(L.Velvet.Like), out var heartBottom))
+        {
+            store.ToggleCommentLike(comment);
+        }
+
+        rowHeight = MathF.Max(rowHeight, heartBottom - origin.Y);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight + 14f * scale));
     }

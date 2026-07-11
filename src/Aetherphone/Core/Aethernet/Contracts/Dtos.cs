@@ -95,7 +95,9 @@ internal sealed record CommentDto(
     string AuthorHandle,
     string? AuthorAvatarUrl,
     string Text,
-    long CreatedAtUnix) : IIdentified;
+    long CreatedAtUnix,
+    int LikeCount,
+    bool Liked) : IIdentified;
 
 internal sealed record CreateCommentRequest(string Text);
 
@@ -192,7 +194,9 @@ internal sealed record VelvetCommentDto(
     string AuthorHandle,
     string? AuthorAvatarUrl,
     string Text,
-    long CreatedAtUnix) : IIdentified;
+    long CreatedAtUnix,
+    int LikeCount,
+    bool Liked) : IIdentified;
 
 internal sealed record VelvetCommentPage(VelvetCommentDto[] Items, string? NextCursor);
 

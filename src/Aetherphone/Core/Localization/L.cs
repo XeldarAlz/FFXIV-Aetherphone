@@ -21,6 +21,7 @@ internal static class L
     {
         public static readonly LocString LikedChirp = new("social.likedChirp", "liked your chirp");
         public static readonly LocString LikedPhoto = new("social.likedPhoto", "liked your photo");
+        public static readonly LocString LikedComment = new("social.likedComment", "liked your comment");
         public static readonly LocString CommentedChirp = new("social.commentedChirp", "commented on your chirp");
         public static readonly LocString CommentedPhoto = new("social.commentedPhoto", "commented on your photo");
         public static readonly LocString Followed = new("social.followed", "started following you");

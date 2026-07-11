@@ -656,7 +656,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         Typography.Draw(new Vector2(textLeft + nameSize.X + 7f * scale, origin.Y + (nameSize.Y - metaSize.Y) * 0.5f),
             meta, AppPalettes.Chirper.MutedInk, 0.85f);
         ImGui.SetCursorScreenPos(new Vector2(textLeft, origin.Y + nameSize.Y + 6f * scale));
-        var commentWrapPos = (origin.X + width - 4f * scale) - ImGui.GetWindowPos().X;
+        var commentWrapPos = (origin.X + width - 30f * scale) - ImGui.GetWindowPos().X;
         ImGui.PushTextWrapPos(commentWrapPos);
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
         {
@@ -674,7 +674,14 @@ internal sealed partial class ChirperApp : IPhoneApp
             }
         }
 
-        var bottom = MathF.Max(ImGui.GetCursorScreenPos().Y, origin.Y + radius * 2f);
+        var heartCenter = new Vector2(origin.X + width - 12f * scale, origin.Y + nameSize.Y + 14f * scale);
+        if (CommentHeart.Draw(ui, heartCenter, comment.Liked, comment.LikeCount, AppPalettes.Chirper.MutedInk,
+                AppPalettes.Chirper.MutedInk, Loc.T(L.Chirper.ReactLike), out var heartBottom))
+        {
+            store.ToggleCommentLike(comment);
+        }
+
+        var bottom = MathF.Max(MathF.Max(ImGui.GetCursorScreenPos().Y, origin.Y + radius * 2f), heartBottom);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, bottom));
         ImGui.Dummy(new Vector2(width, 12f * scale));
     }

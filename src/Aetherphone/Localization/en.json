@@ -2,6 +2,7 @@
   "common.loading": "Loading…",
   "social.likedChirp": "liked your chirp",
   "social.likedPhoto": "liked your photo",
+  "social.likedComment": "liked your comment",
   "social.commentedChirp": "commented on your chirp",
   "social.commentedPhoto": "commented on your photo",
   "social.followed": "started following you",

@@ -1041,6 +1041,24 @@ internal sealed class VelvetStore : IDisposable
         }, onComplete, () => commenting = false);
     }
 
+    public void ToggleCommentLike(VelvetCommentDto comment)
+    {
+        var liked = !comment.Liked;
+        detailComments = CopyOnWrite.MapById(detailComments, comment.Id, stored => stored.Liked == liked
+            ? stored
+            : stored with { Liked = liked, LikeCount = Math.Max(0, stored.LikeCount + (liked ? 1 : -1)) });
+        work.Run("comment like", async token =>
+        {
+            var updated = liked
+                ? await client.LikeVelvetCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false)
+                : await client.UnlikeVelvetCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false);
+            if (updated is not null && detailPostId == comment.PostId)
+            {
+                detailComments = CopyOnWrite.Replace(detailComments, updated);
+            }
+        });
+    }
+
     public void DeletePost(string postId)
     {
         RemovePost(postId);

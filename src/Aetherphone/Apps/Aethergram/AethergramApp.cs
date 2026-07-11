@@ -38,7 +38,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     private const float CropSmoothTime = 0.10f;
     private const int GridColumns = 3;
     private const float LikeBurstDuration = 0.9f;
-    private static readonly Vector4 LikeRed = new(0.95f, 0.27f, 0.36f, 1f);
 
     public string Id => "aethergram";
     public Vector4 Accent => AppAccents.For(Id);
@@ -509,7 +508,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var heartCenter = new Vector2(innerX + 13f * scale, actionCenterY);
         if (ui.IconButton(heartCenter, 15f * scale, FontAwesomeIcon.Heart.ToIconString(),
-                liked ? LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Aethergram.Like)))
+                liked ? CommentHeart.LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Aethergram.Like)))
         {
             store.ToggleLike(post);
         }

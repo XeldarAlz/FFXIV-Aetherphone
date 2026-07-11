@@ -79,7 +79,7 @@ internal sealed partial class AethergramApp
             var actionsY = imageRect.Max.Y + 22f * scale;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
             if (ui.IconButton(heartCenter, 15f * scale, FontAwesomeIcon.Heart.ToIconString(),
-                    liked ? LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Aethergram.Like)))
+                    liked ? CommentHeart.LikeRed : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.25f, Loc.T(L.Aethergram.Like)))
             {
                 store.ToggleLike(post);
             }
@@ -195,7 +195,7 @@ internal sealed partial class AethergramApp
         var padTop = 10f * scale;
         var padBottom = 11f * scale;
         var textLeft = bubbleLeft + padX;
-        var textRight = bubbleRight - padX;
+        var textRight = bubbleRight - padX - 22f * scale;
         var displayName = SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle);
         var nameHeight = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).Y;
         var textHeight = Typography.MeasureWrapped(comment.Text, textRight - textLeft, 0.9f);
@@ -253,6 +253,18 @@ internal sealed partial class AethergramApp
             {
                 AskDeleteComment(post.Id, comment.Id);
             }
+        }
+
+        var heartCenter = new Vector2(bubbleRight - 16f * scale, (bubbleTop + bubbleBottom) * 0.5f);
+        if (mine)
+        {
+            heartCenter.Y = MathF.Max(heartCenter.Y, bubbleTop + 36f * scale);
+        }
+
+        if (CommentHeart.Draw(ui, heartCenter, comment.Liked, comment.LikeCount, AppPalettes.Aethergram.MutedInk,
+                AppPalettes.Aethergram.MutedInk, Loc.T(L.Aethergram.Like), out _))
+        {
+            store.ToggleCommentLike(comment);
         }
 
         ImGui.SetCursorScreenPos(origin);

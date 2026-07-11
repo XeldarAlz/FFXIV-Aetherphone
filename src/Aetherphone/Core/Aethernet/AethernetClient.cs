@@ -438,6 +438,16 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/posts/{postId}/comments/{commentId}"), session.Token, token, authStatusSink);
     }
 
+    public Task<CommentDto?> LikeCommentAsync(string postId, string commentId, CancellationToken token)
+    {
+        return http.RequestJsonAsync(HttpMethod.Post, Url($"/posts/{postId}/comments/{commentId}/like"), AethernetJsonContext.Default.CommentDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<CommentDto?> UnlikeCommentAsync(string postId, string commentId, CancellationToken token)
+    {
+        return http.RequestJsonAsync(HttpMethod.Delete, Url($"/posts/{postId}/comments/{commentId}/like"), AethernetJsonContext.Default.CommentDto, session.Token, token, authStatusSink);
+    }
+
     public Task<bool> DeletePostAsync(string postId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Delete, Url($"/posts/{postId}"), session.Token, token, authStatusSink);
@@ -476,6 +486,16 @@ internal sealed class AethernetClient
     public Task<bool> DeleteVelvetCommentAsync(string postId, string commentId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Delete, Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/comments/{Uri.EscapeDataString(commentId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetCommentDto?> LikeVelvetCommentAsync(string postId, string commentId, CancellationToken token)
+    {
+        return http.RequestJsonAsync(HttpMethod.Post, Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/comments/{Uri.EscapeDataString(commentId)}/like"), AethernetJsonContext.Default.VelvetCommentDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetCommentDto?> UnlikeVelvetCommentAsync(string postId, string commentId, CancellationToken token)
+    {
+        return http.RequestJsonAsync(HttpMethod.Delete, Url($"/velvet/posts/{Uri.EscapeDataString(postId)}/comments/{Uri.EscapeDataString(commentId)}/like"), AethernetJsonContext.Default.VelvetCommentDto, session.Token, token, authStatusSink);
     }
 
     public Task<bool> SendVelvetTypingAsync(string userId, CancellationToken token)
