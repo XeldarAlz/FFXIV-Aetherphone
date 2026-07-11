@@ -96,6 +96,7 @@ internal static class L
         public static readonly LocString NewGroup = new("dm.newGroup", "New group");
         public static readonly LocString GroupFallback = new("dm.groupFallback", "Group");
         public static readonly LocString PhotoPreview = new("dm.photoPreview", "Photo");
+        public static readonly LocString VoicePreview = new("dm.voicePreview", "Voice message");
         public static readonly LocString NoMutualTitle = new("dm.noMutualTitle", "No mutual friends yet");
         public static readonly LocString NoMutualFriends = new("dm.noMutualFriends", "Share numbers in-game to start messaging.");
         public static readonly LocString To = new("dm.to", "To");
@@ -153,6 +154,15 @@ internal static class L
         public static readonly LocString ReadBy = new("message.readBy", "Read by");
         public static readonly LocString SentTo = new("message.sentTo", "Sent to");
         public static readonly LocString NotReadYet = new("message.notReadYet", "Not yet");
+        public static readonly LocString ForwardAction = new("message.forwardAction", "Forward");
+        public static readonly LocString ForwardTitle = new("message.forwardTitle", "Forward to");
+        public static readonly LocString ForwardedLabel = new("message.forwardedLabel", "Forwarded");
+        public static readonly LocString DeleteAction = new("message.deleteAction", "Delete for everyone");
+        public static readonly LocString DeleteConfirm = new("message.deleteConfirm", "Delete this message for everyone in this chat?");
+        public static readonly LocString DeletedBody = new("message.deletedBody", "This message was deleted");
+        public static readonly LocString MuteAction = new("message.muteAction", "Mute");
+        public static readonly LocString UnmuteAction = new("message.unmuteAction", "Unmute");
+        public static readonly LocString RecordVoiceHint = new("message.recordVoiceHint", "Record a voice message");
     }
 
     internal static class FindPeople

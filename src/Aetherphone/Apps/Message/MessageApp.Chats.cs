@@ -19,7 +19,7 @@ internal sealed partial class MessageApp
     private const byte ChatFilterGroups = 2;
 
     private readonly DropdownMenu chatMenu = new();
-    private readonly DropdownMenu.Item[] chatMenuItems = new DropdownMenu.Item[2];
+    private readonly DropdownMenu.Item[] chatMenuItems = new DropdownMenu.Item[3];
     private string? menuConversationId;
     private byte chatFilter = ChatFilterAll;
 
@@ -208,6 +208,13 @@ internal sealed partial class MessageApp
             markerRight -= 20f * scale;
         }
 
+        if (item.Muted)
+        {
+            AppSkin.Icon(new Vector2(markerRight - 12f * scale, origin.Y + 18f * scale),
+                FontAwesomeIcon.BellSlash.ToIconString(), ui.MutedInk, 0.6f);
+            markerRight -= 20f * scale;
+        }
+
         var textLeft = avatarCenter.X + radius + 12f * scale;
         var textWidth = markerRight - 8f * scale - textLeft;
         Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale),
@@ -215,7 +222,12 @@ internal sealed partial class MessageApp
         var previewColor = item.UnreadCount > 0 ? theme.TextStrong : ui.MutedInk;
         var preview = item.LastMessagePreview.Length > 0
             ? item.LastMessagePreview
-            : (item.LastMessageKind == 1 ? Loc.T(L.DirectMessages.PhotoPreview) : string.Empty);
+            : item.LastMessageKind switch
+            {
+                1 => Loc.T(L.DirectMessages.PhotoPreview),
+                3 => Loc.T(L.DirectMessages.VoicePreview),
+                _ => string.Empty,
+            };
         var previewRight = origin.X + width - (item.UnreadCount > 0 ? 40f * scale : pad);
         Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale),
             Typography.FitText(preview, previewRight - textLeft, 0.85f, FontWeight.Regular), previewColor, 0.85f);
@@ -257,10 +269,13 @@ internal sealed partial class MessageApp
 
         var isPinned = configuration.MessagePinnedChats.Contains(id);
         var isArchived = configuration.MessageArchivedChats.Contains(id);
+        var isMuted = FindConversationDto(id)?.Muted ?? false;
         chatMenuItems[0] = new DropdownMenu.Item(Loc.T(isPinned ? L.Velvet.Unpin : L.Velvet.Pin),
             FontAwesomeIcon.Thumbtack.ToIconString());
         chatMenuItems[1] = new DropdownMenu.Item(Loc.T(isArchived ? L.Message.Unarchive : L.Message.Archive),
             FontAwesomeIcon.BoxOpen.ToIconString());
+        chatMenuItems[2] = new DropdownMenu.Item(Loc.T(isMuted ? L.Message.UnmuteAction : L.Message.MuteAction),
+            (isMuted ? FontAwesomeIcon.Bell : FontAwesomeIcon.BellSlash).ToIconString());
         var clicked = chatMenu.Draw(area, theme, chatMenuItems);
         if (clicked == 0)
         {
@@ -270,6 +285,24 @@ internal sealed partial class MessageApp
         {
             ToggleArchived(id);
         }
+        else if (clicked == 2)
+        {
+            store.SetMuted(id, !isMuted, _ => { });
+        }
+    }
+
+    private ConversationDto? FindConversationDto(string id)
+    {
+        var snapshot = store.Conversations;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id == id)
+            {
+                return snapshot[index];
+            }
+        }
+
+        return null;
     }
 
     private void TogglePinned(string conversationId)

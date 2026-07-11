@@ -118,6 +118,10 @@ internal sealed partial class MessageApp : IPhoneApp
         messageDraft = string.Empty;
         selectedContacts.Clear();
         groupTitleDraft = string.Empty;
+        voiceRecorder.Cancel();
+        voicePlayer.Stop();
+        CloseSearch();
+        ClearReplyTarget();
     }
 
     public void Draw(in PhoneContext context)
@@ -261,6 +265,9 @@ internal sealed partial class MessageApp : IPhoneApp
             case MessageScreen.MessageInfo:
                 DrawMessageInfo(area, route.Id ?? string.Empty);
                 break;
+            case MessageScreen.Forward:
+                DrawForwardPicker(area, route.Id ?? string.Empty);
+                break;
             default:
                 DrawRoot(area);
                 break;
@@ -399,6 +406,8 @@ internal sealed partial class MessageApp : IPhoneApp
 
     public void Dispose()
     {
+        voiceRecorder.Dispose();
+        voicePlayer.Dispose();
         store.Dispose();
         contacts.Dispose();
     }

@@ -107,7 +107,10 @@ internal sealed class DirectMessagesStore : IDisposable
             var total = 0;
             for (var index = 0; index < snapshot.Length; index++)
             {
-                total += snapshot[index].UnreadCount;
+                if (!snapshot[index].Muted)
+                {
+                    total += snapshot[index].UnreadCount;
+                }
             }
 
             return total;
@@ -214,7 +217,7 @@ internal sealed class DirectMessagesStore : IDisposable
             var item = items[index];
             var previous = inboxLastAt.GetValueOrDefault(item.Id, 0L);
             inboxLastAt[item.Id] = item.LastMessageAtUnix;
-            if (!primed || item.LastMessageAtUnix <= previous || item.UnreadCount <= 0)
+            if (!primed || item.LastMessageAtUnix <= previous || item.UnreadCount <= 0 || item.Muted)
             {
                 continue;
             }
@@ -248,7 +251,12 @@ internal sealed class DirectMessagesStore : IDisposable
             return item.LastMessagePreview;
         }
 
-        return item.LastMessageKind == 1 ? Loc.T(L.DirectMessages.PhotoPreview) : string.Empty;
+        return item.LastMessageKind switch
+        {
+            1 => Loc.T(L.DirectMessages.PhotoPreview),
+            3 => Loc.T(L.DirectMessages.VoicePreview),
+            _ => string.Empty,
+        };
     }
 
     public void RefreshConversations()
@@ -466,6 +474,271 @@ internal sealed class DirectMessagesStore : IDisposable
             Plugin.Analytics.Track(AnalyticsEvents.DmSent("dm"));
             return true;
         }, onComplete, () => sending = false);
+    }
+
+    public void SendVoiceMessage(string id, byte[] wavBytes, int durationSecs, Action<bool> onComplete)
+    {
+        if (sending)
+        {
+            return;
+        }
+
+        sending = true;
+        work.Run("send voice", async token =>
+        {
+            var upload = await client.UploadUrlAsync("audio/wav", "chat-voice", token).ConfigureAwait(false);
+            if (upload is null)
+            {
+                return false;
+            }
+
+            var uploaded = await client.UploadImageAsync(upload.UploadUrl, wavBytes, "audio/wav", token)
+                .ConfigureAwait(false);
+            if (!uploaded)
+            {
+                return false;
+            }
+
+            var sent = await client.SendChatMessageAsync(id, string.Empty, 3, token, upload.Key,
+                durationSecs: durationSecs).ConfigureAwait(false);
+            if (sent is null)
+            {
+                return false;
+            }
+
+            if (conversationId == id)
+            {
+                messages = CopyOnWrite.Append(messages, sent);
+            }
+
+            conversationsLoaded = false;
+            Plugin.Analytics.Track(AnalyticsEvents.DmSent("dm"));
+            return true;
+        }, onComplete, () => sending = false);
+    }
+
+    public void SetReaction(string messageId, string reactionToken)
+    {
+        messages = ApplyLocalReaction(messages, messageId, reactionToken);
+        work.Run("react", async token =>
+            await client.SetChatReactionAsync(messageId, reactionToken, token).ConfigureAwait(false));
+    }
+
+    public string MyReactionTo(string messageId)
+    {
+        var snapshot = messages;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id != messageId)
+            {
+                continue;
+            }
+
+            var reactions = snapshot[index].Reactions;
+            if (reactions is null)
+            {
+                return string.Empty;
+            }
+
+            for (var reactionIndex = 0; reactionIndex < reactions.Length; reactionIndex++)
+            {
+                if (reactions[reactionIndex].Mine)
+                {
+                    return reactions[reactionIndex].Token;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        return string.Empty;
+    }
+
+    private static ChatMessageDto[] ApplyLocalReaction(ChatMessageDto[] items, string messageId, string reactionToken)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id != messageId)
+            {
+                continue;
+            }
+
+            var current = items[index].Reactions ?? Array.Empty<ReactionSummaryDto>();
+            var next = new List<ReactionSummaryDto>(current.Length + 1);
+            var added = false;
+            for (var summaryIndex = 0; summaryIndex < current.Length; summaryIndex++)
+            {
+                var summary = current[summaryIndex];
+                if (summary.Mine)
+                {
+                    summary = summary with { Count = summary.Count - 1, Mine = false };
+                }
+
+                if (summary.Token == reactionToken)
+                {
+                    summary = summary with { Count = summary.Count + 1, Mine = true };
+                    added = true;
+                }
+
+                if (summary.Count > 0)
+                {
+                    next.Add(summary);
+                }
+            }
+
+            if (!added && reactionToken.Length > 0)
+            {
+                next.Add(new ReactionSummaryDto(reactionToken, 1, true));
+            }
+
+            var updated = (ChatMessageDto[])items.Clone();
+            updated[index] = items[index] with { Reactions = next.Count > 0 ? next.ToArray() : null };
+            return updated;
+        }
+
+        return items;
+    }
+
+    public void DeleteMessage(string messageId, Action<bool> onComplete)
+    {
+        work.Run("delete message", async token =>
+        {
+            var ok = await client.DeleteChatMessageAsync(messageId, token).ConfigureAwait(false);
+            if (!ok)
+            {
+                return false;
+            }
+
+            messages = TombstoneLocal(messages, messageId);
+            conversationsLoaded = false;
+            return true;
+        }, onComplete);
+    }
+
+    private static ChatMessageDto[] TombstoneLocal(ChatMessageDto[] items, string messageId)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id != messageId)
+            {
+                continue;
+            }
+
+            var updated = (ChatMessageDto[])items.Clone();
+            updated[index] = items[index] with
+            {
+                Deleted = true,
+                Body = string.Empty,
+                EncVersion = 0,
+                CommitmentTag = null,
+                Forwarded = false,
+                DurationSecs = 0,
+                Reactions = null,
+            };
+            return updated;
+        }
+
+        return items;
+    }
+
+    public void SetMuted(string id, bool muted, Action<bool> onComplete)
+    {
+        work.Run("mute", async token =>
+        {
+            var ok = await client.MuteConversationAsync(id, muted, token).ConfigureAwait(false);
+            if (!ok)
+            {
+                return false;
+            }
+
+            conversations = ApplyLocalMute(conversations, id, muted);
+            return true;
+        }, onComplete);
+    }
+
+    private static ConversationDto[] ApplyLocalMute(ConversationDto[] items, string id, bool muted)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id != id)
+            {
+                continue;
+            }
+
+            var updated = (ConversationDto[])items.Clone();
+            updated[index] = items[index] with { Muted = muted };
+            return updated;
+        }
+
+        return items;
+    }
+
+    public void ForwardMessage(ChatMessageDto source, string targetId, Action<bool> onComplete)
+    {
+        work.Run("forward", async token =>
+        {
+            ChatMessageDto? sent;
+            if (source.Kind != 0)
+            {
+                sent = await client.SendChatMessageAsync(targetId, source.Body ?? string.Empty, source.Kind, token,
+                    forwardOfId: source.Id).ConfigureAwait(false);
+            }
+            else
+            {
+                var plaintext = source.Body ?? string.Empty;
+                if (source.EncVersion == EnvelopeCodec.VersionEnvelope)
+                {
+                    var state = DecryptionState(source.Id);
+                    if (state.State != DmBodyState.Decrypted)
+                    {
+                        return false;
+                    }
+
+                    plaintext = state.Text;
+                }
+
+                if (plaintext.Trim().Length == 0)
+                {
+                    return false;
+                }
+
+                var scope = ConversationKeyStore.ChatScope(targetId);
+                var status = await keys.EnsureChatKeysAsync(targetId, token).ConfigureAwait(false);
+                if (vault.State == KeyVaultState.Unlocked && status.CanEncrypt
+                    && keys.TryGetCek(scope, status.CurrentGeneration, out var cek))
+                {
+                    var encoded = EnvelopeCodec.Encode(plaintext, cek, status.CurrentGeneration, scope, MyUserId);
+                    sent = await client.SendChatMessageAsync(targetId, encoded.Envelope, 0, token,
+                        encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
+                        forwarded: true).ConfigureAwait(false);
+                    if (sent is not null)
+                    {
+                        decryptedBodies[sent.Id] = new DmDecryptedBody(DmBodyState.Decrypted, plaintext,
+                            encoded.FrankingKeyBase64, true);
+                        sent = sent with { Body = plaintext };
+                    }
+                }
+                else
+                {
+                    sent = await client.SendChatMessageAsync(targetId, plaintext, 0, token, forwarded: true)
+                        .ConfigureAwait(false);
+                }
+            }
+
+            if (sent is null)
+            {
+                return false;
+            }
+
+            if (conversationId == targetId)
+            {
+                messages = CopyOnWrite.Append(messages, sent);
+            }
+
+            conversationsLoaded = false;
+            Plugin.Analytics.Track(AnalyticsEvents.DmSent("dm"));
+            return true;
+        }, onComplete);
     }
 
     public string? DmMediaUrl(string messageId)

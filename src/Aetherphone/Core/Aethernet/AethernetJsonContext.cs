@@ -86,6 +86,8 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(RenameConversationRequest))]
 [JsonSerializable(typeof(ChatTypingDto))]
 [JsonSerializable(typeof(ChatMediaUrlDto))]
+[JsonSerializable(typeof(SetReactionRequest))]
+[JsonSerializable(typeof(MuteConversationRequest))]
 [JsonSerializable(typeof(WrappedPrivateKeyDto))]
 [JsonSerializable(typeof(PutMyKeysRequest))]
 [JsonSerializable(typeof(MyKeysDto))]

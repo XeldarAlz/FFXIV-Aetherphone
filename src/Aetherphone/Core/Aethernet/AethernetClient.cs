@@ -185,9 +185,24 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), AethernetJsonContext.Default.ChatMessagePage, session.Token, token, authStatusSink);
     }
 
-    public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null, string? replyToId = null)
+    public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null, string? replyToId = null, string? forwardOfId = null, bool forwarded = false, int durationSecs = 0)
     {
-        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), new SendChatMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag, replyToId), AethernetJsonContext.Default.SendChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), new SendChatMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag, replyToId, forwardOfId, forwarded, durationSecs), AethernetJsonContext.Default.SendChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> SetChatReactionAsync(string messageId, string reactionToken, CancellationToken token)
+    {
+        return http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/chats/messages/{Uri.EscapeDataString(messageId)}/reactions"), new SetReactionRequest(reactionToken), AethernetJsonContext.Default.SetReactionRequest, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteChatMessageAsync(string messageId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/chats/messages/{Uri.EscapeDataString(messageId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> MuteConversationAsync(string conversationId, bool muted, CancellationToken token)
+    {
+        return http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/chats/{Uri.EscapeDataString(conversationId)}/mute"), new MuteConversationRequest(muted), AethernetJsonContext.Default.MuteConversationRequest, session.Token, token, authStatusSink);
     }
 
     public Task<MyKeysDto?> PutMyKeysAsync(PutMyKeysRequest request, CancellationToken token)

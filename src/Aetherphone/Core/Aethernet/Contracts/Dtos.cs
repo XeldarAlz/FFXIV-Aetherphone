@@ -375,7 +375,8 @@ internal sealed record ConversationDto(
     int Presence,
     int? UtcOffsetMinutes = null,
     int LastMessageEncVersion = 0,
-    string LastMessageSenderId = "") : IIdentified;
+    string LastMessageSenderId = "",
+    bool Muted = false) : IIdentified;
 
 internal sealed record ConversationMemberDto(
     string UserId,
@@ -406,7 +407,17 @@ internal sealed record ChatMessageDto(
     string? ReplySenderName = null,
     string? ReplyBody = null,
     int ReplyKind = 0,
-    int ReplyEncVersion = 0) : IIdentified;
+    int ReplyEncVersion = 0,
+    bool Deleted = false,
+    bool Forwarded = false,
+    int DurationSecs = 0,
+    ReactionSummaryDto[]? Reactions = null) : IIdentified;
+
+internal sealed record ReactionSummaryDto(string Token, int Count, bool Mine);
+
+internal sealed record SetReactionRequest(string Token);
+
+internal sealed record MuteConversationRequest(bool Muted);
 
 internal sealed record ConversationPage(ConversationDto[] Items, string? NextCursor);
 
@@ -424,7 +435,10 @@ internal sealed record SendChatMessageRequest(
     int MediaHeight = 0,
     int EncVersion = 0,
     string? CommitmentTag = null,
-    string? ReplyToId = null);
+    string? ReplyToId = null,
+    string? ForwardOfId = null,
+    bool Forwarded = false,
+    int DurationSecs = 0);
 
 internal sealed record AddMembersRequest(string[] MemberIds);
 
