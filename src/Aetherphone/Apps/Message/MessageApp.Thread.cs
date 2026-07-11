@@ -37,6 +37,7 @@ internal sealed partial class MessageApp
     private bool menuMessageMine;
     private int menuMessageKind;
     private Vector2 menuAnchor;
+    private bool menuOpenPending;
     private string? editTargetId;
     private Action<string>? onMessageContext;
     private Action<string>? onQuoteClick;
@@ -150,17 +151,42 @@ internal sealed partial class MessageApp
         menuMessageMine = message.SenderId == store.MyUserId;
         menuMessageKind = message.Kind;
         menuAnchor = ImGui.GetMousePos();
-        messageMenu.Toggle(messageId, new Rect(menuAnchor, menuAnchor + new Vector2(1f, 1f)));
+        menuOpenPending = true;
+    }
+
+    private Rect ReactionStripRect(Rect area)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var slot = 34f * scale;
+        var padding = 7f * scale;
+        var width = ReactionArt.Tokens.Length * slot + padding * 2f;
+        var height = 38f * scale;
+        var left = Math.Clamp(menuAnchor.X - width * 0.5f, area.Min.X + 8f * scale,
+            MathF.Max(area.Min.X + 8f * scale, area.Max.X - 8f * scale - width));
+        var top = menuAnchor.Y - height - 10f * scale;
+        if (top < area.Min.Y + 8f * scale)
+        {
+            top = menuAnchor.Y + 10f * scale;
+        }
+
+        var min = new Vector2(left, top);
+        return new Rect(min, min + new Vector2(width, height));
     }
 
     private void DrawMessageMenu(Rect area)
     {
+        if (menuOpenPending && menuMessageId is { } pendingId)
+        {
+            menuOpenPending = false;
+            messageMenu.Toggle(pendingId, ReactionStripRect(area));
+        }
+
         if (menuMessageId is not { } id || !messageMenu.IsOpenFor(id))
         {
             return;
         }
 
-        DrawReactionStrip(area, id);
+        DrawReactionStrip(ReactionStripRect(area), id);
         var count = 0;
         messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Message.ReplyAction),
             FontAwesomeIcon.Reply.ToIconString());
@@ -312,24 +338,15 @@ internal sealed partial class MessageApp
         messageDraft = string.Empty;
     }
 
-    private void DrawReactionStrip(Rect area, string messageId)
+    private void DrawReactionStrip(Rect strip, string messageId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetForegroundDrawList();
         var slot = 34f * scale;
         var padding = 7f * scale;
-        var width = ReactionArt.Tokens.Length * slot + padding * 2f;
-        var height = 38f * scale;
-        var left = Math.Clamp(menuAnchor.X - width * 0.5f, area.Min.X + 8f * scale,
-            MathF.Max(area.Min.X + 8f * scale, area.Max.X - 8f * scale - width));
-        var top = menuAnchor.Y - height - 10f * scale;
-        if (top < area.Min.Y + 8f * scale)
-        {
-            top = area.Min.Y + 8f * scale;
-        }
-
-        var min = new Vector2(left, top);
-        var max = min + new Vector2(width, height);
+        var height = strip.Height;
+        var min = strip.Min;
+        var max = strip.Max;
         Elevation.Floating(drawList, min, max, height * 0.5f, scale);
         Squircle.Fill(drawList, min, max, height * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(theme.GroupedCard, MathF.Min(0.98f, theme.GroupedCard.W + 0.4f))));
