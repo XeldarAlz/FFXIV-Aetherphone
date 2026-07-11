@@ -40,7 +40,8 @@ internal static class ChatBubble
         var gutter = grouped ? avatarRadius * 2f + 8f * scale : 0f;
         var headerHeight = grouped && group.ShowHeader ? 16f * scale : 0f;
         var wrap = (available - gutter) * 0.80f - padding * 2f;
-        var textSize = ImGui.CalcTextSize(line.Text, false, wrap);
+        var linkLayout = LinkText.LayoutFor(line.Text, wrap);
+        var textSize = linkLayout is null ? ImGui.CalcTextSize(line.Text, false, wrap) : linkLayout.Size;
         var bubbleWidth = textSize.X + padding * 2f;
         var bubbleHeight = textSize.Y + padding * 2f;
         var start = ImGui.GetCursorPos();
@@ -61,10 +62,11 @@ internal static class ChatBubble
                 group.Avatar, 24);
         }
 
+        var linkInk = outgoing ? textColor : theme.Accent;
         if (entrance < 1f)
         {
-            DrawEntering(line.Text, scale, new Vector2(start.X, bubbleTop), offsetX, bubbleWidth, bubbleHeight, padding,
-                wrap, outgoing, fillColor, textColor, entrance);
+            DrawEntering(line.Text, linkLayout, scale, new Vector2(start.X, bubbleTop), offsetX, bubbleWidth,
+                bubbleHeight, padding, wrap, outgoing, fillColor, textColor, linkInk, entrance);
         }
         else
         {
@@ -72,22 +74,30 @@ internal static class ChatBubble
             var bubbleScreen = ImGui.GetCursorScreenPos();
             Squircle.Fill(ImGui.GetWindowDrawList(), bubbleScreen,
                 bubbleScreen + new Vector2(bubbleWidth, bubbleHeight), 13f * scale, ImGui.GetColorU32(fillColor));
-            ImGui.SetCursorPos(new Vector2(start.X + offsetX + padding, bubbleTop + padding));
-            ImGui.PushTextWrapPos(start.X + offsetX + padding + wrap);
-            using (ImRaii.PushColor(ImGuiCol.Text, textColor))
+            if (linkLayout is null)
             {
-                ImGui.TextUnformatted(line.Text);
-            }
+                ImGui.SetCursorPos(new Vector2(start.X + offsetX + padding, bubbleTop + padding));
+                ImGui.PushTextWrapPos(start.X + offsetX + padding + wrap);
+                using (ImRaii.PushColor(ImGuiCol.Text, textColor))
+                {
+                    ImGui.TextUnformatted(line.Text);
+                }
 
-            ImGui.PopTextWrapPos();
+                ImGui.PopTextWrapPos();
+            }
+            else
+            {
+                LinkText.Draw(ImGui.GetWindowDrawList(), linkLayout, bubbleScreen + new Vector2(padding, padding),
+                    1f, textColor, linkInk, 1f, true);
+            }
         }
 
         ImGui.SetCursorPos(new Vector2(start.X, bubbleTop + bubbleHeight + 6f * scale));
     }
 
-    private static void DrawEntering(string text, float scale, Vector2 start, float offsetX, float bubbleWidth,
-        float bubbleHeight, float padding, float wrap, bool outgoing, Vector4 fillColor, Vector4 textColor,
-        float entrance)
+    private static void DrawEntering(string text, LinkTextLayout? linkLayout, float scale, Vector2 start,
+        float offsetX, float bubbleWidth, float bubbleHeight, float padding, float wrap, bool outgoing,
+        Vector4 fillColor, Vector4 textColor, Vector4 linkInk, float entrance)
     {
         var pop = 0.78f + 0.22f * Easing.EaseOutQuint(entrance);
         var alpha = MathF.Min(entrance * 1.8f, 1f);
@@ -105,6 +115,13 @@ internal static class ChatBubble
         var anchorLocal = new Vector2(outgoing ? start.X + offsetX + bubbleWidth : start.X + offsetX,
             start.Y + bubbleHeight);
         var scaledTextLocal = anchorLocal + (textLocal - anchorLocal) * pop + rise;
+        if (linkLayout is not null)
+        {
+            var textScreen = screenStart + (scaledTextLocal - start);
+            LinkText.Draw(ImGui.GetWindowDrawList(), linkLayout, textScreen, pop, textColor, linkInk, alpha, false);
+            return;
+        }
+
         ImGui.SetWindowFontScale(pop);
         ImGui.SetCursorPos(scaledTextLocal);
         ImGui.PushTextWrapPos(scaledTextLocal.X + wrap * pop);

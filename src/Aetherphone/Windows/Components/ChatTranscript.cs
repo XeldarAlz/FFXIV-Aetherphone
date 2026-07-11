@@ -318,7 +318,8 @@ internal sealed class ChatTranscript
         var paddingX = 11f * scale;
         var paddingY = 7f * scale;
         var wrap = available * 0.74f - paddingX * 2f;
-        var textSize = ImGui.CalcTextSize(message.Body, false, wrap);
+        var linkLayout = LinkText.LayoutFor(message.Body, wrap);
+        var textSize = linkLayout is null ? ImGui.CalcTextSize(message.Body, false, wrap) : linkLayout.Size;
         var stamp = MeasureStamp(message, mine, scale);
         var stampGap = 7f * scale;
         var inline = textSize.Y <= ImGui.GetTextLineHeight() * 1.5f &&
@@ -349,8 +350,16 @@ internal sealed class ChatTranscript
         Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * pop,
             ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
         var textPos = anchor + (new Vector2(bubbleMin.X + paddingX, bubbleMin.Y + paddingY) - anchor) * pop + rise;
-        drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize() * pop, textPos,
-            ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * alpha)), message.Body, wrap * pop);
+        if (linkLayout is null)
+        {
+            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize() * pop, textPos,
+                ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * alpha)), message.Body, wrap * pop);
+        }
+        else
+        {
+            var linkInk = mine || placeholder ? ink : model.Accent;
+            LinkText.Draw(drawList, linkLayout, textPos, pop, ink, linkInk, alpha, entrance >= 1f);
+        }
         var timeColor = mine ? new Vector4(1f, 1f, 1f, 0.72f) : Palette.WithAlpha(model.MutedInk, 0.95f);
         DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), anchor, pop, rise,
             alpha, timeColor);
