@@ -307,7 +307,7 @@ internal sealed class PhoneShell : IDisposable
             banner.Draw(screen, theme);
             if (!controlCenter.IsActive)
             {
-                island.Draw(screen, theme, navigation);
+                island.Draw(screen, theme, navigation, navigation.Current?.Id);
             }
 
             incomingOverlay.Draw(screen, theme);

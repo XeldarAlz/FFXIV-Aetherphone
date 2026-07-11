@@ -38,7 +38,7 @@ internal sealed class DynamicIsland
     private const float MusicExpandedHalfWidth = 142f;
     private const float ControlThreshold = 0.6f;
 
-    private static readonly Vector4 MusicAccent = new(0.99f, 0.42f, 0.58f, 1f);
+    private static readonly Vector4 MusicAccent = AppAccents.For("music");
     private static readonly Vector4 CallAccent = new(0.20f, 0.78f, 0.35f, 1f);
     private static readonly Vector4 Ink = new(0.98f, 0.98f, 0.99f, 1f);
 
@@ -74,7 +74,7 @@ internal sealed class DynamicIsland
         return lastBubbleVisible && ImGui.IsMouseHoveringRect(lastBubble.Min, lastBubble.Max);
     }
 
-    public void Draw(Rect screen, PhoneTheme theme, INavigator navigation)
+    public void Draw(Rect screen, PhoneTheme theme, INavigator navigation, string? foregroundAppId)
     {
         var view = calls.Snapshot();
         var callActive = view.State is CallState.Dialing or CallState.Connecting or CallState.Active;
@@ -101,12 +101,12 @@ internal sealed class DynamicIsland
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("##dynamicIsland", screen.Size, false, IslandFlags))
         {
-            DrawContent(screen, theme, navigation, view, presenceValue, delta);
+            DrawContent(screen, theme, navigation, view, presenceValue, delta, foregroundAppId);
         }
     }
 
     private void DrawContent(Rect screen, PhoneTheme theme, INavigator navigation, CallView view, float presenceValue,
-        float delta)
+        float delta, string? foregroundAppId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rest = StatusBar.BaseIsland(screen);
@@ -115,7 +115,9 @@ internal sealed class DynamicIsland
         var morphed = LerpRect(rest, compact, presenceValue);
         var hoverBounds = LerpRect(morphed, expanded, Easing.SmoothStep(Math.Clamp(expand.Value, 0f, 1f)));
         var hovered = ImGui.IsMouseHoveringRect(hoverBounds.Min, hoverBounds.Max);
-        expand.Step(hovered && presenceValue > 0.6f ? 1f : 0f, ExpandSmoothTime, delta);
+        var suppressExpand = shownKind == ActivityKind.Music &&
+                             string.Equals(foregroundAppId, "music", StringComparison.Ordinal);
+        expand.Step(hovered && presenceValue > 0.6f && !suppressExpand ? 1f : 0f, ExpandSmoothTime, delta);
         var expandEased = Easing.SmoothStep(Math.Clamp(expand.Value, 0f, 1f));
         var bounds = LerpRect(morphed, expanded, expandEased);
         lastBounds = bounds;
@@ -268,10 +270,10 @@ internal sealed class DynamicIsland
             }
         }
 
-        if (TransportButton.Draw(new Vector2(centerX, controlY), 18f * scale, TransportAction.Stop, MusicAccent, Ink,
-                alpha, active))
+        if (TransportButton.Draw(new Vector2(centerX, controlY), 18f * scale,
+                playback.IsPlaying ? TransportAction.Pause : TransportAction.Play, MusicAccent, Ink, alpha, active))
         {
-            playback.Stop();
+            playback.TogglePlayPause();
             consumed = true;
         }
 

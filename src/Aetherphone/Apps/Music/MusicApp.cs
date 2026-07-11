@@ -1,5 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Analytics;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Net;
@@ -10,7 +12,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Music;
@@ -19,39 +20,34 @@ internal sealed partial class MusicApp : IPhoneApp
 {
     private enum View : byte
     {
-        Browse,
+        Home,
         Stations,
         Search,
-        RadioNowPlaying,
-        SongNowPlaying,
     }
 
-    private const float MiniHeight = 58f;
-    private const float TileHeight = 92f;
+    private const float TopBarHeight = 46f;
     private const float SearchBarHeight = 50f;
-    private const int RecentTiles = 4;
+    private const float MiniHeight = 56f;
+    private const float MiniMargin = 8f;
+    private const float MiniSmoothTime = 0.18f;
+    private const float SheetSmoothTime = 0.22f;
+    private const float ArtSmoothTime = 0.20f;
+    private const int RecentTiles = 6;
     private const int FeaturedTiles = 4;
 
-    private readonly struct FeaturedSeed
+    private static readonly string[] FeaturedSeeds =
     {
-        public readonly string Title;
-        public readonly string Query;
+        "final fantasy xiv soundtrack",
+        "final fantasy xiv battle theme ost",
+        "final fantasy xiv endwalker soundtrack",
+        "final fantasy xiv shadowbringers soundtrack",
+        "final fantasy xiv dawntrail soundtrack",
+        "final fantasy xiv city theme music",
+    };
 
-        public FeaturedSeed(string title, string query)
-        {
-            Title = title;
-            Query = query;
-        }
-    }
-
-    private static readonly FeaturedSeed[] FeaturedSeeds =
+    private static readonly string[] FeaturedPlayIds =
     {
-        new("FFXIV soundtrack", "final fantasy xiv soundtrack"),
-        new("FFXIV battle themes", "final fantasy xiv battle theme ost"),
-        new("Endwalker OST", "final fantasy xiv endwalker soundtrack"),
-        new("Shadowbringers OST", "final fantasy xiv shadowbringers soundtrack"),
-        new("Dawntrail OST", "final fantasy xiv dawntrail soundtrack"),
-        new("FFXIV city themes", "final fantasy xiv city theme music"),
+        "music.card0", "music.card1", "music.card2", "music.card3",
     };
 
     public string Id => "music";
@@ -68,6 +64,7 @@ internal sealed partial class MusicApp : IPhoneApp
     private readonly ArtworkCache artwork;
     private readonly ViewRouter<View> router;
     private readonly RouterDraw<View> drawView;
+    private readonly AppSkin ui = new(AppPalettes.Music);
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private int categoryIndex = -1;
@@ -79,13 +76,18 @@ internal sealed partial class MusicApp : IPhoneApp
     private bool hasSearched;
     private CancellationTokenSource? search;
     private string searchDraft = string.Empty;
+    private bool focusSearch;
     private Song[] featured = Array.Empty<Song>();
     private volatile bool featuredLoading;
     private bool featuredRequested;
     private int featuredIndex = -1;
-    private string featuredTitle = "Featured";
     private CancellationTokenSource? featuredFetch;
     private string lastRecordedVideoId = string.Empty;
+    private string playSource = string.Empty;
+    private bool nowPlayingOpen;
+    private Spring miniPresence;
+    private Spring sheetPresence;
+    private Spring artBreath;
     private float clock;
 
     public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history,
@@ -98,13 +100,17 @@ internal sealed partial class MusicApp : IPhoneApp
         this.media = media;
         this.http = http;
         artwork = new ArtworkCache(textures);
-        router = new ViewRouter<View>(View.Browse, Id);
+        router = new ViewRouter<View>(View.Home, Id);
         drawView = DrawView;
+        artBreath = new Spring(1f);
     }
 
     public void OnOpened()
     {
         router.Reset();
+        nowPlayingOpen = false;
+        sheetPresence.SnapTo(0f);
+        miniPresence.SnapTo(playback.IsActive ? 1f : 0f);
         featuredIndex = (featuredIndex + 1) % FeaturedSeeds.Length;
         featuredRequested = false;
         featuredLoading = false;
@@ -115,27 +121,44 @@ internal sealed partial class MusicApp : IPhoneApp
     public void OnClosed()
     {
         router.Reset();
+        nowPlayingOpen = false;
+        sheetPresence.SnapTo(0f);
     }
 
     public void Draw(in PhoneContext context)
     {
-        clock += MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
+        clock += delta;
         theme = context.Theme;
         navigation = context.Navigation;
+        ui.Theme = theme;
         CaptureRecent();
-        var current = router.Current;
-        if ((current == View.RadioNowPlaying && !playback.RadioActive) ||
-            (current == View.SongNowPlaying && !playback.SongActive))
+        if (!playback.IsActive)
         {
-            router.Pop(false);
+            nowPlayingOpen = false;
+            sheetPresence.SnapTo(0f);
         }
 
-        MusicArt.Backdrop(context);
-        router.Draw(context.Content, default, ImGui.GetIO().DeltaTime, drawView);
+        var scale = ImGuiHelpers.GlobalScale;
+        var content = context.Content;
+        miniPresence.Step(playback.IsActive && !nowPlayingOpen ? 1f : 0f, MiniSmoothTime, delta);
+        sheetPresence.Step(nowPlayingOpen ? 1f : 0f, SheetSmoothTime, delta);
+        var sheetValue = Math.Clamp(sheetPresence.Value, 0f, 1f);
+
+        var screen = SceneChrome.ScreenFrom(content, theme, scale);
+        ui.Backdrop(screen);
+        using (InputShield.Engage(sheetValue > 0.15f))
+        {
+            router.Draw(content, AppSkin.Transparent, delta, drawView);
+        }
+
+        DrawMiniPlayer(content, scale);
+        DrawNowPlayingSheet(content, scale, sheetValue, delta);
     }
 
     private void DrawView(View view, Rect area, int depth)
     {
+        ui.Body(area);
         var context = new PhoneContext(area, theme, navigation);
         switch (view)
         {
@@ -145,28 +168,40 @@ internal sealed partial class MusicApp : IPhoneApp
             case View.Search:
                 DrawSearch(context);
                 break;
-            case View.RadioNowPlaying:
-                DrawRadioNowPlaying(context);
-                break;
-            case View.SongNowPlaying:
-                DrawSongNowPlaying(context);
-                break;
             default:
-                DrawBrowse(context);
+                DrawHome(context);
                 break;
         }
     }
 
-    private bool DrawSearchBar(Rect bar, PhoneTheme theme)
+    private void DrawTopBar(in PhoneContext context, string title, Action? onBack)
     {
-        var submitted = SearchField.DrawSubmit(bar, "##songSearch", Loc.T(L.Music.SearchSongs), ref searchDraft,
-            theme, 120, 2f);
-        return submitted && !string.IsNullOrWhiteSpace(searchDraft);
-    }
+        var scale = ImGuiHelpers.GlobalScale;
+        var content = context.Content;
+        var rowCenterY = content.Min.Y + TopBarHeight * scale * 0.5f;
+        var hitMin = content.Min;
+        var hitMax = new Vector2(content.Min.X + 40f * scale, content.Min.Y + TopBarHeight * scale);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
+        var clicked = BackButton.Draw("music.back", new Vector2(content.Min.X + 18f * scale, rowCenterY), 15f * scale,
+            ui.TitleInk, hovered, scale);
+        var textLeft = content.Min.X + 38f * scale;
+        var fitted = Typography.FitText(title, content.Max.X - 16f * scale - textLeft, TextStyles.Title2);
+        var titleSize = Typography.Measure(fitted, TextStyles.Title2);
+        Typography.Draw(new Vector2(textLeft, rowCenterY - titleSize.Y * 0.5f), fitted, ui.TitleInk,
+            TextStyles.Title2);
+        if (!clicked)
+        {
+            return;
+        }
 
-    private void DrawThumb(ImDrawListPtr dl, Vector2 min, Vector2 max, string url, string fallbackName, float rounding)
-    {
-        MusicArt.Thumb(dl, min, max, Thumb(url).Texture, fallbackName, rounding);
+        if (onBack is not null)
+        {
+            onBack();
+        }
+        else
+        {
+            context.Navigation.Back();
+        }
     }
 
     private MediaResult Thumb(string url)
@@ -179,21 +214,45 @@ internal sealed partial class MusicApp : IPhoneApp
         return media.GetOrRequest(url, token => http.GetBytesAsync(new Uri(url), token));
     }
 
+    private void DrawCover(ImDrawListPtr drawList, Vector2 min, Vector2 max, string url, string fallbackName,
+        float rounding)
+    {
+        MusicRenderer.Cover(drawList, min, max, Thumb(url).Texture, fallbackName, rounding);
+    }
+
     private Rect ScrollBody(Rect content, float scale)
     {
-        var top = content.Min.Y + AppHeader.Height * scale;
+        var top = content.Min.Y + TopBarHeight * scale;
         return new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, BodyBottom(content, scale)));
     }
 
     private Rect SearchBarRect(Rect content, float scale)
     {
-        var top = content.Min.Y + AppHeader.Height * scale;
+        var top = content.Min.Y + TopBarHeight * scale;
         return new Rect(new Vector2(content.Min.X, top), new Vector2(content.Max.X, top + SearchBarHeight * scale));
     }
 
     private float BodyBottom(Rect content, float scale)
     {
-        return content.Max.Y - (playback.IsActive ? MiniHeight * scale + 4f * scale : 0f);
+        var inset = (MiniHeight + MiniMargin * 2f) * scale * Math.Clamp(miniPresence.Value, 0f, 1f);
+        return content.Max.Y - inset;
+    }
+
+    private string Greeting()
+    {
+        var hour = DateTime.Now.Hour;
+        if (hour is >= 5 and < 12)
+        {
+            return Loc.T(L.Music.GoodMorning);
+        }
+
+        return hour is >= 12 and < 18 ? Loc.T(L.Music.GoodAfternoon) : Loc.T(L.Music.GoodEvening);
+    }
+
+    private void OpenSearch()
+    {
+        focusSearch = true;
+        router.Push(View.Search);
     }
 
     private void OpenCategory(int index)
@@ -202,6 +261,19 @@ internal sealed partial class MusicApp : IPhoneApp
         router.Push(View.Stations);
         BeginFetch(RadioService.Categories[index].Tag);
     }
+
+    private void OpenNowPlaying()
+    {
+        if (nowPlayingOpen || !playback.IsActive)
+        {
+            return;
+        }
+
+        nowPlayingOpen = true;
+        Plugin.Analytics.Track(AnalyticsEvents.ScreenView(Id, "NowPlaying"));
+    }
+
+    private void CloseNowPlaying() => nowPlayingOpen = false;
 
     private void BeginFetch(string tag)
     {
@@ -255,10 +327,16 @@ internal sealed partial class MusicApp : IPhoneApp
         searching = false;
     }
 
-    private void PlaySong(Song[] list, int index)
+    private void PlaySong(Song[] list, int index, string source)
     {
+        playSource = source;
         playback.PlaySongs(list, index);
-        router.Push(View.SongNowPlaying);
+    }
+
+    private void PlayStation(int index)
+    {
+        playSource = CategoryTitle();
+        playback.PlayStations(stations, index);
     }
 
     private void CaptureRecent()
@@ -294,12 +372,11 @@ internal sealed partial class MusicApp : IPhoneApp
         }
 
         var seed = FeaturedSeeds[featuredIndex < 0 ? 0 : featuredIndex % FeaturedSeeds.Length];
-        featuredTitle = seed.Title;
         featuredRequested = true;
         featuredLoading = true;
         featuredFetch?.Dispose();
         featuredFetch = new CancellationTokenSource();
-        _ = FetchFeaturedAsync(seed.Query, featuredFetch.Token);
+        _ = FetchFeaturedAsync(seed, featuredFetch.Token);
     }
 
     private async Task FetchFeaturedAsync(string query, CancellationToken token)
@@ -317,7 +394,7 @@ internal sealed partial class MusicApp : IPhoneApp
         featuredLoading = false;
     }
 
-    private void GoToBrowse()
+    private void GoToHome()
     {
         fetch?.Cancel();
         search?.Cancel();
@@ -325,8 +402,6 @@ internal sealed partial class MusicApp : IPhoneApp
         searching = false;
         router.Pop();
     }
-
-    private void GoToReturnView() => router.Pop();
 
     private bool IsCurrentStation(RadioStation station)
     {
@@ -336,6 +411,13 @@ internal sealed partial class MusicApp : IPhoneApp
     private bool IsCurrentSong(Song song)
     {
         return playback.SongActive && playback.Songs.CurrentVideoId == song.VideoId;
+    }
+
+    private string CategoryTitle()
+    {
+        return categoryIndex >= 0
+            ? CatalogLabels.RadioCategory(RadioService.Categories[categoryIndex].Display)
+            : DisplayName;
     }
 
     private static readonly Dictionary<(string, int), string> SongSubtitleCache = new();
@@ -361,24 +443,33 @@ internal sealed partial class MusicApp : IPhoneApp
         return formatted;
     }
 
-    private static readonly Dictionary<(string, int), string> TruncateCache = new();
-
-    private static string Truncate(string value, int max)
+    private static string SongRowSubtitle(Song song)
     {
-        if (string.IsNullOrEmpty(value) || value.Length <= max)
-        {
-            return value ?? string.Empty;
-        }
-
-        var key = (value, max);
-        if (TruncateCache.TryGetValue(key, out var cached))
+        var key = (song.Author, song.DurationSeconds);
+        if (SongSubtitleCache.TryGetValue(key, out var cached))
         {
             return cached;
         }
 
-        var result = value.Substring(0, max - 1) + "…";
-        TruncateCache[key] = result;
-        return result;
+        var subtitle = string.IsNullOrEmpty(song.Author)
+            ? FormatTime(song.DurationSeconds)
+            : $"{song.Author} · {FormatTime(song.DurationSeconds)}";
+        SongSubtitleCache[key] = subtitle;
+        return subtitle;
+    }
+
+    private static string StationSubtitle(RadioStation station)
+    {
+        var key = (Loc.Current.Code, station.Bitrate, station.Country);
+        if (StationSubtitleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var bitrate = station.Bitrate > 0 ? $"{station.Bitrate}kbps" : Loc.T(L.Music.LiveLower);
+        var subtitle = string.IsNullOrEmpty(station.Country) ? bitrate : $"{bitrate} · {station.Country}";
+        StationSubtitleCache[key] = subtitle;
+        return subtitle;
     }
 
     public void Dispose()

@@ -8,6 +8,7 @@ internal enum RadioPlaybackState : byte
     Stopped,
     Buffering,
     Playing,
+    Paused,
     Failed,
 }
 
@@ -103,6 +104,47 @@ internal sealed class RadioPlayer : IDisposable
 
     public void Stop()
     {
+        Suspend();
+        state = RadioPlaybackState.Stopped;
+        currentStation = string.Empty;
+    }
+
+    public void Pause()
+    {
+        if (state is not (RadioPlaybackState.Buffering or RadioPlaybackState.Playing))
+        {
+            return;
+        }
+
+        var station = currentStation;
+        Suspend();
+        state = RadioPlaybackState.Paused;
+        currentStation = station;
+    }
+
+    public void Resume()
+    {
+        if (state != RadioPlaybackState.Paused)
+        {
+            return;
+        }
+
+        RadioStation station;
+        lock (gate)
+        {
+            if (queueIndex < 0 || queue.Length == 0)
+            {
+                return;
+            }
+
+            station = queue[queueIndex];
+        }
+
+        StartStation(station);
+    }
+
+    private void Suspend()
+    {
         CancellationTokenSource? toCancel;
         HttpResponseMessage? toAbort;
         lock (gate)
@@ -118,8 +160,6 @@ internal sealed class RadioPlayer : IDisposable
         toCancel?.Cancel();
         toAbort?.Dispose();
         toCancel?.Dispose();
-        state = RadioPlaybackState.Stopped;
-        currentStation = string.Empty;
     }
 
     private void TrySetState(int workerSession, RadioPlaybackState value)

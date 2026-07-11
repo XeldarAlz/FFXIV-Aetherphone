@@ -26,6 +26,7 @@ internal sealed class SongPlayer : IDisposable
     private Thread? worker;
     private int session;
     private volatile SongPlaybackState state = SongPlaybackState.Stopped;
+    private volatile bool paused;
     private volatile string currentVideoId = string.Empty;
     private volatile string currentTitle = string.Empty;
     private volatile string currentAuthor = string.Empty;
@@ -45,6 +46,7 @@ internal sealed class SongPlayer : IDisposable
     }
 
     public SongPlaybackState State => state;
+    public bool IsPaused => paused;
     public string CurrentVideoId => currentVideoId;
     public string CurrentTitle => currentTitle;
     public string CurrentAuthor => currentAuthor;
@@ -102,6 +104,10 @@ internal sealed class SongPlayer : IDisposable
         Interlocked.Exchange(ref pendingSeekMs, milliseconds);
     }
 
+    public void Pause() => paused = true;
+
+    public void Resume() => paused = false;
+
     private void StartSong(Song song)
     {
         CancelWorker();
@@ -113,6 +119,7 @@ internal sealed class SongPlayer : IDisposable
             currentThumbnail = song.ThumbnailUrl;
             positionSeconds = 0f;
             durationSeconds = song.DurationSeconds;
+            paused = false;
             Interlocked.Exchange(ref pendingSeekMs, -1);
             state = SongPlaybackState.Resolving;
             cancellation = new CancellationTokenSource();
@@ -130,6 +137,7 @@ internal sealed class SongPlayer : IDisposable
     public void Stop()
     {
         CancelWorker();
+        paused = false;
         state = SongPlaybackState.Stopped;
         currentVideoId = string.Empty;
         currentTitle = string.Empty;
@@ -226,6 +234,18 @@ internal sealed class SongPlayer : IDisposable
                     var clamped = Math.Min(seek, reader.TotalTime.TotalMilliseconds);
                     output.Pause();
                     reader.CurrentTime = TimeSpan.FromMilliseconds(clamped);
+                    if (!paused)
+                    {
+                        output.Play();
+                    }
+                }
+
+                if (paused && output.PlaybackState == NAudio.Wave.PlaybackState.Playing)
+                {
+                    output.Pause();
+                }
+                else if (!paused && output.PlaybackState == NAudio.Wave.PlaybackState.Paused)
+                {
                     output.Play();
                 }
 

@@ -849,16 +849,23 @@ internal static class L
         public static readonly LocString TuningIn = new("music.tuningIn", "Tuning in…");
         public static readonly LocString NoStations = new("music.noStations", "No stations found");
         public static readonly LocString NoResults = new("music.noResults", "No results");
-        public static readonly LocString SearchForSong = new("music.searchForSong", "Search for a song");
-        public static readonly LocString NowPlaying = new("music.nowPlaying", "Now Playing");
+        public static readonly LocString NoResultsSub = new("music.noResultsSub", "Check the spelling or try different keywords");
+        public static readonly LocString SearchEmptyTitle = new("music.searchEmptyTitle", "Play what you love");
+        public static readonly LocString SearchEmptySub = new("music.searchEmptySub", "Search for songs and artists");
         public static readonly LocString SearchSongs = new("music.searchSongs", "Search songs");
         public static readonly LocString LiveLower = new("music.liveLower", "live");
         public static readonly LocString Buffering = new("music.buffering", "Buffering…");
-        public static readonly LocString Playing = new("music.playing", "Playing");
+        public static readonly LocString Paused = new("music.paused", "Paused");
         public static readonly LocString ConnectionLost = new("music.connectionLost", "Connection lost");
         public static readonly LocString CouldntPlay = new("music.couldntPlay", "Couldn't play this track");
         public static readonly LocString NowPlayingState = new("music.nowPlayingState", "Now playing");
         public static readonly LocString PlaybackFailed = new("music.playbackFailed", "Playback failed");
+        public static readonly LocString GoodMorning = new("music.goodMorning", "Good morning");
+        public static readonly LocString GoodAfternoon = new("music.goodAfternoon", "Good afternoon");
+        public static readonly LocString GoodEvening = new("music.goodEvening", "Good evening");
+        public static readonly LocString MadeForYou = new("music.madeForYou", "Made for you");
+        public static readonly LocString PlayingFrom = new("music.playingFrom", "Playing from");
+        public static readonly LocString SourceSearch = new("music.sourceSearch", "Search results");
     }
 
     internal static class Messages

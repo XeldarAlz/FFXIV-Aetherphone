@@ -29,7 +29,11 @@ internal sealed class PlaybackHub
     public bool IsActive => SongActive || RadioActive;
 
     public bool IsPlaying =>
-        SongActive ? songs.State == SongPlaybackState.Playing : radio.State == RadioPlaybackState.Playing;
+        SongActive
+            ? songs.State == SongPlaybackState.Playing && !songs.IsPaused
+            : radio.State == RadioPlaybackState.Playing;
+
+    public bool IsPaused => SongActive ? songs.IsPaused : radio.State == RadioPlaybackState.Paused;
 
     public string Title => SongActive ? songs.CurrentTitle : radio.CurrentStation;
     public string Subtitle => SongActive ? SongSubtitle() : RadioStateLabel(radio.State);
@@ -94,6 +98,36 @@ internal sealed class PlaybackHub
         songs.Stop();
     }
 
+    public void TogglePlayPause()
+    {
+        if (SongActive)
+        {
+            if (songs.IsPaused)
+            {
+                songs.Resume();
+            }
+            else
+            {
+                songs.Pause();
+            }
+
+            return;
+        }
+
+        if (radio.State == RadioPlaybackState.Paused)
+        {
+            radio.Resume();
+            BeginRadioListen();
+            return;
+        }
+
+        if (RadioActive)
+        {
+            FlushRadioListen();
+            radio.Pause();
+        }
+    }
+
     private void BeginRadioListen()
     {
         listenStation = radio.CurrentStation;
@@ -132,6 +166,7 @@ internal sealed class PlaybackHub
         {
             RadioPlaybackState.Buffering => Loc.T(L.Music.Buffering),
             RadioPlaybackState.Playing => Loc.T(L.Music.NowPlayingState),
+            RadioPlaybackState.Paused => Loc.T(L.Music.Paused),
             RadioPlaybackState.Failed => Loc.T(L.Music.ConnectionLost),
             _ => string.Empty,
         };

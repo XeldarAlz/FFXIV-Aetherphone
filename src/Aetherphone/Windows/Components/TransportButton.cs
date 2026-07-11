@@ -10,6 +10,7 @@ internal enum TransportAction : byte
     Stop,
     Next,
     Play,
+    Pause,
 }
 
 internal static class TransportButton
@@ -42,6 +43,9 @@ internal static class TransportButton
                 break;
             case TransportAction.Play:
                 MediaGlyph.Play(drawList, center, size, color);
+                break;
+            case TransportAction.Pause:
+                MediaGlyph.Pause(drawList, center, size, color);
                 break;
         }
 
