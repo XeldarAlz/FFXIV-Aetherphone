@@ -16,6 +16,8 @@ internal enum MessageScreen : byte
     Call,
     AddToCall,
     NewCall,
+    Encryption,
+    MessageInfo,
 }
 
 internal readonly record struct MessageRoute(MessageScreen Screen, string? Id = null)
@@ -40,4 +42,8 @@ internal readonly record struct MessageRoute(MessageScreen Screen, string? Id = 
     public static MessageRoute ImageView(string messageId) => new(MessageScreen.ImageView, messageId);
 
     public static MessageRoute Contact(string userId) => new(MessageScreen.ContactDetail, userId);
+
+    public static MessageRoute Encryption(string conversationId) => new(MessageScreen.Encryption, conversationId);
+
+    public static MessageRoute MessageInfo(string messageId) => new(MessageScreen.MessageInfo, messageId);
 }

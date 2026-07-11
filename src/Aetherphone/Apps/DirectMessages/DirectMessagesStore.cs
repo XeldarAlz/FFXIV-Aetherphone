@@ -78,6 +78,15 @@ internal sealed class DirectMessagesStore : IDisposable
     public KeyVaultState VaultState => vault.State;
     public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
     public bool EncryptingCurrent => vault.State == KeyVaultState.Unlocked && currentKeyStatus.CanEncrypt;
+    public string? MyPublicKey => vault.PublicKey;
+    public int MyKeyVersion => vault.KeyVersion;
+
+    public UserPublicKeyDto? PeerKey(string userId) => peers.Cached(userId);
+
+    public void RequestPeerKeys(string[] userIds)
+    {
+        work.Run("peer keys", async token => await peers.ResolveAsync(userIds, token).ConfigureAwait(false));
+    }
 
     public DmDecryptedBody DecryptionState(string messageId)
     {
@@ -360,7 +369,7 @@ internal sealed class DirectMessagesStore : IDisposable
         });
     }
 
-    public void SendMessage(string id, string body, Action<bool> onComplete)
+    public void SendMessage(string id, string body, Action<bool> onComplete, string? replyToId = null)
     {
         var trimmed = body.Trim();
         if (trimmed.Length == 0 || sending)
@@ -379,7 +388,8 @@ internal sealed class DirectMessagesStore : IDisposable
             {
                 var encoded = EnvelopeCodec.Encode(trimmed, cek, generation, scope, MyUserId);
                 sent = await client.SendChatMessageAsync(id, encoded.Envelope, 0, token,
-                    encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag)
+                    encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
+                    replyToId: replyToId)
                     .ConfigureAwait(false);
                 if (sent is not null)
                 {
@@ -390,12 +400,18 @@ internal sealed class DirectMessagesStore : IDisposable
             }
             else
             {
-                sent = await client.SendChatMessageAsync(id, trimmed, 0, token).ConfigureAwait(false);
+                sent = await client.SendChatMessageAsync(id, trimmed, 0, token, replyToId: replyToId)
+                    .ConfigureAwait(false);
             }
 
             if (sent is null)
             {
                 return false;
+            }
+
+            if (sent.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
+            {
+                sent = sent with { ReplyBody = ResolveQuotedBody(scope, sent) };
             }
 
             if (conversationId == id)
@@ -653,17 +669,58 @@ internal sealed class DirectMessagesStore : IDisposable
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            if (item.EncVersion != EnvelopeCodec.VersionEnvelope)
+            var encryptedBody = item.EncVersion == EnvelopeCodec.VersionEnvelope;
+            var encryptedReply = item.ReplyEncVersion == EnvelopeCodec.VersionEnvelope;
+            if (!encryptedBody && !encryptedReply)
             {
                 continue;
             }
 
-            var body = ResolveBody(scope, item);
             decorated ??= (ChatMessageDto[])items.Clone();
-            decorated[index] = item with { Body = body.Text };
+            var updated = item;
+            if (encryptedBody)
+            {
+                var body = ResolveBody(scope, item);
+                updated = updated with { Body = body.Text };
+            }
+
+            if (encryptedReply)
+            {
+                updated = updated with { ReplyBody = ResolveQuotedBody(scope, item) };
+            }
+
+            decorated[index] = updated;
         }
 
         return decorated ?? items;
+    }
+
+    private string ResolveQuotedBody(string scope, ChatMessageDto item)
+    {
+        if (item.ReplyToId is null || string.IsNullOrEmpty(item.ReplyBody))
+        {
+            return Loc.T(L.Encryption.NoKeyPlaceholder);
+        }
+
+        if (decryptedBodies.TryGetValue(item.ReplyToId, out var cached) && cached.State == DmBodyState.Decrypted)
+        {
+            return cached.Text;
+        }
+
+        if (!EnvelopeCodec.TryParseGeneration(item.ReplyBody, out var generation))
+        {
+            return Loc.T(L.Encryption.NoKeyPlaceholder);
+        }
+
+        if (!keys.TryGetCek(scope, generation, out var cek))
+        {
+            return vault.State == KeyVaultState.Unlocked
+                ? Loc.T(L.Encryption.NoKeyPlaceholder)
+                : Loc.T(L.Encryption.EncryptedPlaceholder);
+        }
+
+        var decoded = EnvelopeCodec.Decode(item.ReplyBody, cek, scope, item.ReplySenderId ?? string.Empty, null);
+        return decoded.Status == EnvelopeDecodeStatus.Success ? decoded.Body : Loc.T(L.Encryption.NoKeyPlaceholder);
     }
 
     private DmDecryptedBody ResolveBody(string scope, ChatMessageDto item)

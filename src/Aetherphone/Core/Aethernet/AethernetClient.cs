@@ -185,9 +185,9 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), AethernetJsonContext.Default.ChatMessagePage, session.Token, token, authStatusSink);
     }
 
-    public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null)
+    public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null, string? replyToId = null)
     {
-        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), new SendChatMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag), AethernetJsonContext.Default.SendChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), new SendChatMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag, replyToId), AethernetJsonContext.Default.SendChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
     }
 
     public Task<MyKeysDto?> PutMyKeysAsync(PutMyKeysRequest request, CancellationToken token)

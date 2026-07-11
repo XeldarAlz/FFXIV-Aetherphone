@@ -383,7 +383,8 @@ internal sealed record ConversationMemberDto(
     string Handle,
     string? AvatarUrl,
     int Role,
-    bool IsActive);
+    bool IsActive,
+    long? LastReadAtUnix = null);
 
 internal sealed record ChatMessageDto(
     string Id,
@@ -399,7 +400,13 @@ internal sealed record ChatMessageDto(
     int MediaHeight = 0,
     long? ReadAtUnix = null,
     int EncVersion = 0,
-    string? CommitmentTag = null) : IIdentified;
+    string? CommitmentTag = null,
+    string? ReplyToId = null,
+    string? ReplySenderId = null,
+    string? ReplySenderName = null,
+    string? ReplyBody = null,
+    int ReplyKind = 0,
+    int ReplyEncVersion = 0) : IIdentified;
 
 internal sealed record ConversationPage(ConversationDto[] Items, string? NextCursor);
 
@@ -416,7 +423,8 @@ internal sealed record SendChatMessageRequest(
     int MediaWidth = 0,
     int MediaHeight = 0,
     int EncVersion = 0,
-    string? CommitmentTag = null);
+    string? CommitmentTag = null,
+    string? ReplyToId = null);
 
 internal sealed record AddMembersRequest(string[] MemberIds);
 

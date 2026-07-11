@@ -142,6 +142,17 @@ internal static class L
         public static readonly LocString Added = new("message.added", "Added");
         public static readonly LocString SignInPrompt = new("message.signInPrompt", "Sign in to Aethernet in Settings to use Message");
         public static readonly LocString NoContacts = new("message.noContacts", "Add friends by number in the Contacts tab to call them");
+        public static readonly LocString ReplyAction = new("message.replyAction", "Reply");
+        public static readonly LocString InfoAction = new("message.infoAction", "Info");
+        public static readonly LocString InfoTitle = new("message.infoTitle", "Message info");
+        public static readonly LocString You = new("message.you", "You");
+        public static readonly LocString ReplyingTo = new("message.replyingTo", "Replying to {0}");
+        public static readonly LocString OriginalUnavailable = new("message.originalUnavailable", "Original message unavailable");
+        public static readonly LocString ReadSection = new("message.readSection", "Read");
+        public static readonly LocString SentSection = new("message.sentSection", "Sent");
+        public static readonly LocString ReadBy = new("message.readBy", "Read by");
+        public static readonly LocString SentTo = new("message.sentTo", "Sent to");
+        public static readonly LocString NotReadYet = new("message.notReadYet", "Not yet");
     }
 
     internal static class FindPeople
@@ -820,6 +831,14 @@ internal static class L
         public static readonly LocString ReportDisclosure = new("encryption.reportDisclosure", "This message and up to 5 previous messages will be shared with the moderators, decrypted.");
         public static readonly LocString ReportMessageAction = new("encryption.reportMessageAction", "Report message");
         public static readonly LocString CopyTextAction = new("encryption.copyTextAction", "Copy text");
+        public static readonly LocString InfoTitle = new("encryption.infoTitle", "Encryption");
+        public static readonly LocString WaitingMembers = new("encryption.waitingMembers", "{0} can't receive encrypted messages yet. Messages stay unencrypted until everyone has an encryption key.");
+        public static readonly LocString SecurityCode = new("encryption.securityCode", "Security code");
+        public static readonly LocString SecurityCodeHint = new("encryption.securityCodeHint", "Compare this code with {0}. If both phones show the same code, this chat is end-to-end encrypted.");
+        public static readonly LocString SecurityCodeUnavailable = new("encryption.securityCodeUnavailable", "The security code appears once both of you have encryption keys.");
+        public static readonly LocString CopyCode = new("encryption.copyCode", "Copy code");
+        public static readonly LocString MemberReady = new("encryption.memberReady", "Ready for encryption");
+        public static readonly LocString MemberNoKey = new("encryption.memberNoKey", "No encryption key yet");
     }
 
     internal static class Report

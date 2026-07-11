@@ -18,9 +18,11 @@ namespace Aetherphone.Apps.Message;
 internal sealed partial class MessageApp
 {
     private readonly DropdownMenu messageMenu = new();
-    private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
+    private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[3];
     private string? menuMessageId;
+    private bool menuMessageMine;
     private Action<string>? onMessageContext;
+    private Action<string>? onQuoteClick;
     private string messageDraft = string.Empty;
     private bool threadFocus;
     private float sinceThreadPoll;
@@ -30,6 +32,9 @@ internal sealed partial class MessageApp
     private TranscriptMessage[] transcriptCache = Array.Empty<TranscriptMessage>();
     private Func<string, string?>? threadMediaUrl;
     private Action<string>? onThreadImageClick;
+    private string? replyTargetId;
+    private string replyBarName = string.Empty;
+    private string replyBarPreview = string.Empty;
 
     private void DrawThread(Rect area, string conversationId)
     {
@@ -38,6 +43,7 @@ internal sealed partial class MessageApp
             store.OpenConversation(conversationId);
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
+            ClearReplyTarget();
         }
 
         store.NoteConversationViewed(conversationId);
@@ -48,18 +54,26 @@ internal sealed partial class MessageApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
+        var replyBarHeight = replyTargetId is not null ? 46f * scale : 0f;
         var listRect = new Rect(new Vector2(area.Min.X, top),
-            new Vector2(area.Max.X, area.Max.Y - composerHeight));
+            new Vector2(area.Max.X, area.Max.Y - composerHeight - replyBarHeight));
         DrawEncryptionBanner(ref listRect, conversation, isGroup);
         var transcriptMessages = BuildTranscript(store.Messages, isGroup);
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(MessageRoute.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
+        onQuoteClick ??= transcript.RequestScrollTo;
         var model = new ChatTranscriptModel(conversationId, transcriptMessages, store.MyUserId, ui.Accent, theme,
             AppPalettes.Message.MutedInk, AppPalettes.Message.BodyInk, store.OtherTyping, store.LoadingThread,
             isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
-            onMessageContext);
+            onMessageContext, onQuoteClick);
         transcript.Draw(listRect, model);
+        if (replyBarHeight > 0f)
+        {
+            DrawReplyBar(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight - replyBarHeight),
+                new Vector2(area.Max.X, area.Max.Y - composerHeight)));
+        }
+
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), conversationId);
         DrawMessageMenu(area);
     }
@@ -67,6 +81,7 @@ internal sealed partial class MessageApp
     private void OpenMessageMenu(string messageId)
     {
         menuMessageId = messageId;
+        menuMessageMine = FindMessage(messageId)?.SenderId == store.MyUserId;
         var pos = ImGui.GetMousePos();
         messageMenu.Toggle(messageId, new Rect(pos, pos + new Vector2(1f, 1f)));
     }
@@ -78,18 +93,104 @@ internal sealed partial class MessageApp
             return;
         }
 
-        messageMenuItems[0] = new DropdownMenu.Item(Loc.T(L.Encryption.ReportMessageAction),
-            FontAwesomeIcon.Flag.ToIconString(), Danger: true);
+        messageMenuItems[0] = new DropdownMenu.Item(Loc.T(L.Message.ReplyAction),
+            FontAwesomeIcon.Reply.ToIconString());
         messageMenuItems[1] = new DropdownMenu.Item(Loc.T(L.Encryption.CopyTextAction),
             FontAwesomeIcon.Copy.ToIconString());
+        messageMenuItems[2] = menuMessageMine
+            ? new DropdownMenu.Item(Loc.T(L.Message.InfoAction), FontAwesomeIcon.InfoCircle.ToIconString())
+            : new DropdownMenu.Item(Loc.T(L.Encryption.ReportMessageAction), FontAwesomeIcon.Flag.ToIconString(),
+                Danger: true);
         var clicked = messageMenu.Draw(area, theme, messageMenuItems);
-        if (clicked == 0)
+        switch (clicked)
         {
-            OpenReportMessage(id);
+            case 0:
+                BeginReply(id);
+                break;
+            case 1:
+                CopyMessageText(id);
+                break;
+            case 2 when menuMessageMine:
+                store.RefreshDetail();
+                router.Push(MessageRoute.MessageInfo(id));
+                break;
+            case 2:
+                OpenReportMessage(id);
+                break;
         }
-        else if (clicked == 1)
+    }
+
+    private ChatMessageDto? FindMessage(string messageId)
+    {
+        var snapshot = store.Messages;
+        for (var index = 0; index < snapshot.Length; index++)
         {
-            CopyMessageText(id);
+            if (snapshot[index].Id == messageId)
+            {
+                return snapshot[index];
+            }
+        }
+
+        return null;
+    }
+
+    private void BeginReply(string messageId)
+    {
+        var message = FindMessage(messageId);
+        if (message is null || message.Kind == 2)
+        {
+            return;
+        }
+
+        replyTargetId = messageId;
+        replyBarName = message.SenderId == store.MyUserId
+            ? Loc.T(L.Message.You)
+            : message.SenderDisplayName;
+        replyBarPreview = QuotePreview(message.Body, message.Kind);
+        threadFocus = true;
+    }
+
+    private void ClearReplyTarget()
+    {
+        replyTargetId = null;
+        replyBarName = string.Empty;
+        replyBarPreview = string.Empty;
+    }
+
+    private static string QuotePreview(string? body, int kind)
+    {
+        var text = body ?? string.Empty;
+        if (kind == 1 && text.Length == 0)
+        {
+            return Loc.T(L.DirectMessages.PhotoPreview);
+        }
+
+        return UiText.Truncate(text.Replace('\n', ' ').Replace('\r', ' '), 90);
+    }
+
+    private void DrawReplyBar(Rect area)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)));
+        drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
+        var barMin = new Vector2(area.Min.X + 14f * scale, area.Min.Y + 8f * scale);
+        var barMax = new Vector2(barMin.X + 3f * scale, area.Max.Y - 8f * scale);
+        Squircle.Fill(drawList, barMin, barMax, 1.5f * scale, ImGui.GetColorU32(ui.Accent));
+        var textLeft = barMax.X + 9f * scale;
+        var closeRadius = 13f * scale;
+        var textWidth = area.Max.X - 20f * scale - closeRadius * 2f - textLeft;
+        Typography.Draw(new Vector2(textLeft, area.Min.Y + 7f * scale),
+            Typography.FitText(Loc.T(L.Message.ReplyingTo, replyBarName), textWidth, 0.78f, FontWeight.SemiBold),
+            ui.Accent, 0.78f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(textLeft, area.Min.Y + 24f * scale),
+            Typography.FitText(replyBarPreview, textWidth, 0.82f, FontWeight.Regular), ui.MutedInk, 0.82f);
+        var closeCenter = new Vector2(area.Max.X - 14f * scale - closeRadius, area.Center.Y);
+        if (ui.IconButton(closeCenter, closeRadius, FontAwesomeIcon.Times.ToIconString(), ui.MutedInk,
+                Transparent, 0.9f, Loc.T(L.Common.Cancel))
+            || ImGui.IsKeyPressed(ImGuiKey.Escape))
+        {
+            ClearReplyTarget();
         }
     }
 
@@ -128,19 +229,7 @@ internal sealed partial class MessageApp
     {
         string? text = null;
         string? dismissUserId = null;
-        switch (store.VaultState)
-        {
-            case KeyVaultState.Provisioning:
-                text = Loc.T(L.Encryption.SettingUp);
-                break;
-            case KeyVaultState.Unlocked when !store.CurrentKeyStatus.CanEncrypt
-                                             && store.CurrentKeyStatus.MembersWithoutKeys.Length > 0:
-                text = Loc.T(L.Encryption.PlaintextIndicator);
-                break;
-        }
-
-        if (text is null && !isGroup && conversation is not null
-            && store.HasRotationNotice(conversation.OtherUserId))
+        if (!isGroup && conversation is not null && store.HasRotationNotice(conversation.OtherUserId))
         {
             text = Loc.T(L.Encryption.SafetyChanged, DirectMessagesStore.DisplayTitle(conversation));
             dismissUserId = conversation.OtherUserId;
@@ -175,6 +264,7 @@ internal sealed partial class MessageApp
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
+        DrawEncryptionStatusIcon(area, conversation, rowCenterY, scale);
         var name = conversation is null ? DisplayName : DirectMessagesStore.DisplayTitle(conversation);
         var avatarRadius = 18f * scale;
         var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
@@ -227,6 +317,23 @@ internal sealed partial class MessageApp
         }
     }
 
+    private void DrawEncryptionStatusIcon(Rect area, ConversationDto? conversation, float rowCenterY, float scale)
+    {
+        var encrypted = store.EncryptingCurrent;
+        var tooltip = encrypted
+            ? Loc.T(L.Encryption.EncryptedIndicator)
+            : store.VaultState == KeyVaultState.Provisioning
+                ? Loc.T(L.Encryption.SettingUp)
+                : Loc.T(L.Encryption.PlaintextIndicator);
+        var glyph = encrypted ? FontAwesomeIcon.Lock : FontAwesomeIcon.LockOpen;
+        var center = new Vector2(area.Max.X - 24f * scale, rowCenterY);
+        if (ui.IconButton(center, 16f * scale, glyph.ToIconString(), encrypted ? ui.Accent : ui.MutedInk,
+                Transparent, 1f, tooltip, HoverLabelSide.Below) && conversation is not null)
+        {
+            router.Push(MessageRoute.Encryption(conversation.Id));
+        }
+    }
+
     private ReadOnlySpan<TranscriptMessage> BuildTranscript(ChatMessageDto[] source, bool isGroup)
     {
         if (ReferenceEquals(source, transcriptSource))
@@ -248,9 +355,19 @@ internal sealed partial class MessageApp
 
             var senderName = isGroup ? message.SenderDisplayName : string.Empty;
             var tint = isGroup ? SenderTint.Of(message.SenderDisplayName) : default;
+            var replySender = string.Empty;
+            var replyBody = string.Empty;
+            if (message.ReplyToId is not null)
+            {
+                replySender = message.ReplySenderId == store.MyUserId
+                    ? Loc.T(L.Message.You)
+                    : message.ReplySenderName ?? Loc.T(L.Message.OriginalUnavailable);
+                replyBody = QuotePreview(message.ReplyBody, message.ReplyKind);
+            }
+
             mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                 message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, senderName, tint,
-                MessageFlags(message));
+                MessageFlags(message), message.ReplyToId, replySender, replyBody, message.ReplyKind);
         }
 
         transcriptCache = mapped;
@@ -388,9 +505,10 @@ internal sealed partial class MessageApp
 
         if (submitted && canSend)
         {
-            store.SendMessage(conversationId, messageDraft, _ => { });
+            store.SendMessage(conversationId, messageDraft, _ => { }, replyTargetId);
             messageDraft = string.Empty;
             lastTypingDraft = string.Empty;
+            ClearReplyTarget();
             transcript.RequestSnapToBottom();
             threadFocus = true;
         }

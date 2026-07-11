@@ -255,6 +255,12 @@ internal sealed partial class MessageApp : IPhoneApp
             case MessageScreen.NewCall:
                 DrawNewCall(area);
                 break;
+            case MessageScreen.Encryption:
+                DrawEncryptionInfo(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.MessageInfo:
+                DrawMessageInfo(area, route.Id ?? string.Empty);
+                break;
             default:
                 DrawRoot(area);
                 break;
