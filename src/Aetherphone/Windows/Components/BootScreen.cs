@@ -48,7 +48,7 @@ internal static class BootScreen
         }
     }
 
-    private static void DrawBackdrop(ImDrawListPtr dl, Rect screen, PhoneTheme theme, float alpha, float rounding)
+    public static void DrawBackdrop(ImDrawListPtr dl, Rect screen, PhoneTheme theme, float alpha, float rounding)
     {
         var baseColor = new Vector4(0.015f, 0.019f, 0.038f, alpha);
         dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(baseColor), rounding);

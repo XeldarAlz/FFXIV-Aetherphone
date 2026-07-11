@@ -48,7 +48,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient, gameData);
         encryptionPage = new EncryptionPage(aethernetSession, keyVault);
         accountPage = new AccountPage(aethernetSession, aethernetClient, gameData, remoteImages, lodestone, this,
-            profilePage, encryptionPage);
+            profilePage, encryptionPage, photoLibrary);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
@@ -85,11 +85,10 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         changelogPage = new ChangelogPage(configuration);
         var groups = new[]
         {
-            new SettingsGroup(new ISettingsPage[] { profilePage }),
             new SettingsGroup(new ISettingsPage[] { appearance, language, immersion, tutorials },
                 L.Settings.GeneralFooter),
             new SettingsGroup(new ISettingsPage[] { callsPage, notifications, ringtonePage }, L.Settings.AlertsFooter),
-            new SettingsGroup(new ISettingsPage[] { encryptionPage, commands, privacy, about, changelogPage }),
+            new SettingsGroup(new ISettingsPage[] { commands, privacy, about, changelogPage }),
         };
         router = new ViewRouter<ISettingsPage>(
             new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage), Id);
@@ -133,6 +132,12 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private void DrawPage(ISettingsPage page, Rect area, int depth)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
+        if (page.OwnsChrome)
+        {
+            page.Draw(context, area);
+            return;
+        }
+
         var onBack = depth > 1 ? popBack : null;
         AppHeader.Draw(context, page.Title, onBack);
         var scale = ImGuiHelpers.GlobalScale;

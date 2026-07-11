@@ -217,7 +217,7 @@ internal static class ConfirmDialog
         }
     }
 
-    private static bool DrawPillButton(Rect rect, string label, bool enabled, PhoneTheme theme, float cardScale,
+    public static bool DrawPillButton(Rect rect, string label, bool enabled, PhoneTheme theme, float cardScale,
         float opacity, ConfirmButtonTone tone = ConfirmButtonTone.Neutral)
     {
         var drawList = ImGui.GetWindowDrawList();

@@ -7,6 +7,7 @@ using Aetherphone.Core.Device;
 using Aetherphone.Core.Emote;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
@@ -44,6 +45,7 @@ public sealed class Plugin : IDalamudPlugin
     internal static DeviceStatus Device { get; private set; } = null!;
     internal static IAnalyticsService Analytics { get; private set; } = null!;
     internal static ConfirmService Confirm { get; private set; } = null!;
+    internal static ReportService Report { get; private set; } = null!;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
     private readonly PhoneShell shell;
@@ -67,6 +69,7 @@ public sealed class Plugin : IDalamudPlugin
         Cfg.MigrateChangelogSeen();
         Cfg.MigrateMessage();
         Cfg.MigrateMessagesMerge();
+        Cfg.MigrateSetupCompleted();
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
         Loading = new LoadingScreen();
@@ -90,9 +93,11 @@ public sealed class Plugin : IDalamudPlugin
         Analytics.Track(AnalyticsEvents.SessionStart(BuildSessionProperties()));
         aboutWindow = new AboutWindow();
         Confirm = new ConfirmService();
+        Report = new ReportService();
         shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
             services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
-            services.DmLauncher, services.SocialLauncher, Confirm);
+            services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
+            services.AethernetClient, services.GameData, services.RemoteImages, services.Lodestone);
         phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
         if (Cfg.OpenOnStartup)
         {

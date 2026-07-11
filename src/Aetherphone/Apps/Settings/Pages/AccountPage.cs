@@ -2,14 +2,15 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
@@ -39,21 +40,15 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private readonly ISettingsNavigator navigator;
     private readonly ISettingsPage profilePage;
     private readonly ISettingsPage encryptionPage;
+    private readonly PhotoLibrary photoLibrary;
+    private readonly SignInFlow flow;
     private readonly CancellationTokenSource cancellation = new();
-    private volatile string status = string.Empty;
-    private volatile string code = string.Empty;
-    private volatile string? challengeId;
-    private volatile string? failureReason;
-    private volatile bool busy;
-    private volatile bool xivAuthActive;
-    private volatile string xivUserCode = string.Empty;
-    private volatile string? xivVerificationUri;
-    private CancellationTokenSource? xivFlowCancellation;
+    private volatile bool avatarBusy;
     private bool meRequested;
 
     public AccountPage(AethernetSession session, AethernetClient client, GameData gameData,
         RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
-        ISettingsPage profilePage, ISettingsPage encryptionPage)
+        ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary)
     {
         this.session = session;
         this.client = client;
@@ -63,6 +58,8 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.navigator = navigator;
         this.profilePage = profilePage;
         this.encryptionPage = encryptionPage;
+        this.photoLibrary = photoLibrary;
+        flow = new SignInFlow(session, client);
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -79,23 +76,22 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                 DrawSignedOut(theme);
             }
 
-            if (failureReason is not null)
+            if (flow.ConsumeFailure() is { } failureReason)
             {
-                ShowFailureAlert();
+                ShowFailureAlert(failureReason);
             }
         }
     }
 
-    private void ShowFailureAlert()
+    private void ShowFailureAlert(string failureReason)
     {
-        var (title, message) = FailureText();
-        failureReason = null;
+        var (title, message) = SignInFailureText.Resolve(failureReason, gameData);
         Plugin.Confirm.Alert(title, message, Loc.T(L.Account.FailDismiss));
     }
 
     private void DrawSignedIn(PhoneTheme theme)
     {
-        if (session.CurrentUser is null && !meRequested && !busy)
+        if (session.CurrentUser is null && !meRequested && !flow.Busy)
         {
             meRequested = true;
             StartMe();
@@ -121,13 +117,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
         DrawIdentityHeader(user, theme, scale);
         ImGui.Dummy(new Vector2(0f, 20f * scale));
-        var detailRows = user.Handle.Length > 0 ? 3 : 2;
-        var details = GroupCard.Begin(theme, detailRows);
-        if (user.Handle.Length > 0)
-        {
-            SettingsRow.Info(details.NextRow(), Loc.T(L.Account.HandleLabel), $"@{user.Handle}", theme);
-        }
-
+        var details = GroupCard.Begin(theme, 2);
         SettingsRow.Info(details.NextRow(), Loc.T(L.Account.CharacterLabel), user.Name, theme);
         SettingsRow.Info(details.NextRow(), Loc.T(L.Account.HomeWorldLabel), user.World, theme);
         details.End();
@@ -169,13 +159,52 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var avatarCenter = new Vector2(centerX, origin.Y + 10f * scale + radius);
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, user.Name, user.World, user.AvatarUrl, images,
             lodestone, 2.0f, 64);
-        var nameY = avatarCenter.Y + radius + 16f * scale;
+        var avatarExtent = new Vector2(radius, radius);
+        var avatarHovered = ImGui.IsMouseHoveringRect(avatarCenter - avatarExtent, avatarCenter + avatarExtent);
+        var changeLabel = Loc.T(L.Account.ChangePhoto);
+        var changeSize = Typography.Measure(changeLabel, TextStyles.Subheadline);
+        var changeCenter = new Vector2(centerX, avatarCenter.Y + radius + 12f * scale + changeSize.Y * 0.5f);
+        var changePadding = new Vector2(6f * scale, 4f * scale);
+        var changeHovered = ImGui.IsMouseHoveringRect(changeCenter - changeSize * 0.5f - changePadding,
+            changeCenter + changeSize * 0.5f + changePadding);
+        var changeInk = changeHovered ? Palette.Mix(theme.Accent, theme.TextStrong, 0.25f) : theme.Accent;
+        Typography.DrawCentered(changeCenter, changeLabel, changeInk, TextStyles.Subheadline);
+        if (avatarHovered || changeHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                OpenPhotoPicker();
+            }
+        }
+
+        var nameY = changeCenter.Y + changeSize.Y * 0.5f + 18f * scale;
         var title = Typography.FitText(user.DisplayName, width - 24f * scale, TextStyles.Title2);
         Typography.DrawCentered(new Vector2(centerX, nameY), title, theme.TextStrong, TextStyles.Title2);
         Typography.DrawCentered(new Vector2(centerX, nameY + 24f * scale), $"{user.Name}@{user.World}",
             theme.TextMuted, TextStyles.Subheadline);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, nameY + 34f * scale - origin.Y));
+    }
+
+    private void OpenPhotoPicker()
+    {
+        navigator.Open(new AvatarPhotoPage(photoLibrary, navigator, () => avatarBusy, UploadAvatar));
+    }
+
+    private void UploadAvatar(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
+    {
+        if (avatarBusy)
+        {
+            return;
+        }
+
+        avatarBusy = true;
+        AvatarUploader.Upload(client, session, sourcePath, crop, cancellation.Token, uploaded =>
+        {
+            avatarBusy = false;
+            onComplete(uploaded);
+        });
     }
 
     private void AskSignOut()
@@ -206,13 +235,13 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             return;
         }
 
-        if (xivAuthActive)
+        if (flow.XivAuthActive)
         {
             DrawXivAuthStep(theme);
             return;
         }
 
-        if (challengeId is not null)
+        if (flow.LodestoneActive)
         {
             DrawVerifyStep(theme);
             return;
@@ -221,7 +250,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var scale = ImGuiHelpers.GlobalScale;
         var name = player.Name.TextValue;
         var world = gameData.WorldName(gameData.LocalHomeWorldId);
-        var ready = !busy && name.Length > 0 && world.Length > 0;
+        var ready = !flow.Busy && name.Length > 0 && world.Length > 0;
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -233,13 +262,13 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 14f * scale));
         if (PrimaryButton(Loc.T(L.Account.XivSignIn), theme) && ready)
         {
-            StartXivAuth(name, world);
+            flow.StartXivAuth(name, world);
         }
 
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         if (Button(Loc.T(L.Account.SignIn), theme) && ready)
         {
-            StartChallenge(name, world);
+            flow.StartLodestone(name, world);
         }
 
         ImGui.Dummy(new Vector2(0f, 6f * scale));
@@ -269,6 +298,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             ImGui.TextWrapped(Loc.T(L.Account.XivIntro));
         }
 
+        var xivUserCode = flow.XivUserCode;
         if (xivUserCode.Length > 0)
         {
             ImGui.Dummy(new Vector2(0f, 10f * scale));
@@ -287,15 +317,15 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         var spacing = 8f * scale;
         var half = (ImGui.GetContentRegionAvail().X - spacing) * 0.5f;
-        if (Button(Loc.T(L.Account.XivOpen), theme, half) && xivVerificationUri is not null)
+        if (Button(Loc.T(L.Account.XivOpen), theme, half) && flow.XivVerificationUri is { } verificationUri)
         {
-            UrlActions.OpenInBrowser(xivVerificationUri);
+            UrlActions.OpenInBrowser(verificationUri);
         }
 
         ImGui.SameLine(0f, spacing);
-        if (Button(Loc.T(L.Common.Cancel), theme, half) && failureReason is null)
+        if (Button(Loc.T(L.Common.Cancel), theme, half))
         {
-            CancelXivFlow();
+            flow.CancelXivAuth();
         }
     }
 
@@ -317,6 +347,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             ImGui.TextWrapped(Loc.T(L.Account.VerifyIntro));
         }
 
+        var code = flow.LodestoneCode;
         ImGui.Dummy(new Vector2(0f, 10f * scale));
         if (DrawCodeCard(theme, code))
         {
@@ -343,13 +374,13 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         ImGui.Dummy(new Vector2(0f, 8f * scale));
-        if (PrimaryButton(Loc.T(L.Account.VerifyAdded), theme) && !busy && failureReason is null)
+        if (PrimaryButton(Loc.T(L.Account.VerifyAdded), theme) && !flow.Busy)
         {
-            StartVerify();
+            flow.VerifyLodestone();
         }
 
         ImGui.Dummy(new Vector2(0f, 2f * scale));
-        if (GhostButton(Loc.T(L.Common.Cancel), theme) && failureReason is null)
+        if (GhostButton(Loc.T(L.Common.Cancel), theme))
         {
             ResetFlow();
         }
@@ -449,7 +480,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void DrawStatus(PhoneTheme theme)
     {
-        var message = status;
+        var message = flow.Status;
         if (message.Length == 0)
         {
             return;
@@ -460,254 +491,6 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             ImGui.TextWrapped(message);
         }
-    }
-
-    private (string Title, string Message) FailureText()
-    {
-        switch (failureReason)
-        {
-            case VerifyFailure.CharacterNotFound:
-                var player = gameData.LocalPlayer;
-                var name = player?.Name.TextValue ?? string.Empty;
-                var world = gameData.WorldName(gameData.LocalHomeWorldId);
-                return (Loc.T(L.Account.FailCharacterNotFoundTitle),
-                    Loc.T(L.Account.FailCharacterNotFoundBody, name, world));
-            case VerifyFailure.CodeNotFound:
-                return (Loc.T(L.Account.FailCodeNotFoundTitle), Loc.T(L.Account.FailCodeNotFoundBody));
-            case VerifyFailure.Timeout:
-                return (Loc.T(L.Account.FailTimeoutTitle), Loc.T(L.Account.FailTimeoutBody));
-            case VerifyFailure.ChallengeExpired:
-                return (Loc.T(L.Account.FailChallengeExpiredTitle), Loc.T(L.Account.FailChallengeExpiredBody));
-            case VerifyFailure.Banned:
-                return (Loc.T(L.Account.FailBannedTitle), Loc.T(L.Account.FailBannedBody));
-            case VerifyFailure.RateLimited:
-                return (Loc.T(L.Account.FailRateLimitedTitle), Loc.T(L.Account.FailRateLimitedBody));
-            case VerifyFailure.Network:
-                return (Loc.T(L.Account.FailNetworkTitle), Loc.T(L.Account.FailNetworkBody));
-            case VerifyFailure.AccessDenied:
-                return (Loc.T(L.Account.FailAccessDeniedTitle), Loc.T(L.Account.FailAccessDeniedBody));
-            case VerifyFailure.XivAuthUnavailable:
-                return (Loc.T(L.Account.FailXivUnavailableTitle), Loc.T(L.Account.FailXivUnavailableBody));
-            case VerifyFailure.XivCharacterNotVerified:
-                var xivPlayer = gameData.LocalPlayer;
-                var xivName = xivPlayer?.Name.TextValue ?? string.Empty;
-                var xivWorld = gameData.WorldName(gameData.LocalHomeWorldId);
-                return (Loc.T(L.Account.FailXivCharacterTitle),
-                    Loc.T(L.Account.FailXivCharacterBody, xivName, xivWorld));
-            default:
-                return (Loc.T(L.Account.FailLodestoneUnavailableTitle), Loc.T(L.Account.FailLodestoneUnavailableBody));
-        }
-    }
-
-    private void StartChallenge(string name, string world)
-    {
-        busy = true;
-        status = Loc.T(L.Account.RequestingCode);
-        Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Began));
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var response = await client.ChallengeAsync(name, world, token).ConfigureAwait(false);
-                if (response is null)
-                {
-                    status = Loc.T(L.Account.CannotReach);
-                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
-                    return;
-                }
-
-                code = response.Code;
-                challengeId = response.ChallengeId;
-                status = string.Empty;
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.CodeShown));
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"Aethernet challenge failed: {exception.Message}");
-                status = Loc.T(L.Account.CannotReach);
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
-            }
-            finally
-            {
-                busy = false;
-            }
-        });
-    }
-
-    private void StartVerify()
-    {
-        var id = challengeId;
-        if (id is null)
-        {
-            return;
-        }
-
-        busy = true;
-        status = Loc.T(L.Account.Verifying);
-        Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.VerifyPending));
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var result = await client.VerifyAsync(id, token).ConfigureAwait(false);
-                if (result.Auth is { } auth)
-                {
-                    session.SignIn(auth.Token, auth.User);
-                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
-                    ResetFlow();
-                    return;
-                }
-
-                var reason = result.FailureReason ?? VerifyFailure.CodeNotFound;
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
-                status = string.Empty;
-                failureReason = reason;
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"Aethernet verify failed: {exception.Message}");
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, VerifyFailure.Network));
-                status = string.Empty;
-                failureReason = VerifyFailure.Network;
-            }
-            finally
-            {
-                busy = false;
-            }
-        });
-    }
-
-    private void StartXivAuth(string name, string world)
-    {
-        busy = true;
-        status = Loc.T(L.Account.XivConnecting);
-        Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Began));
-        var flowCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
-        Interlocked.Exchange(ref xivFlowCancellation, flowCancellation)?.Dispose();
-        var token = flowCancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var response = await client.StartXivAuthAsync(name, world, token).ConfigureAwait(false);
-                if (response is null || !response.Ok || response.FlowId is null || response.VerificationUri is null)
-                {
-                    var reason = response?.Reason ?? VerifyFailure.Network;
-                    status = string.Empty;
-                    failureReason = reason;
-                    Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
-                    busy = false;
-                    return;
-                }
-
-                xivUserCode = response.UserCode ?? string.Empty;
-                xivVerificationUri = response.VerificationUriComplete ?? response.VerificationUri;
-                xivAuthActive = true;
-                status = string.Empty;
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.CodeShown));
-                UrlActions.OpenInBrowser(xivVerificationUri);
-                await PollXivLoopAsync(response.FlowId, response.IntervalSeconds, response.ExpiresInSeconds, token)
-                    .ConfigureAwait(false);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"XIVAuth sign-in failed: {exception.Message}");
-                status = string.Empty;
-                failureReason = VerifyFailure.Network;
-                ResetXivFlow();
-            }
-        });
-    }
-
-    private async Task PollXivLoopAsync(string flowId, int intervalSeconds, int expiresInSeconds, CancellationToken token)
-    {
-        var interval = Math.Max(3, intervalSeconds);
-        var deadline = DateTime.UtcNow.AddSeconds(expiresInSeconds > 0 ? expiresInSeconds : 600);
-        var consecutiveNetworkFailures = 0;
-        while (!token.IsCancellationRequested && DateTime.UtcNow < deadline)
-        {
-            await Task.Delay(TimeSpan.FromSeconds(interval), token).ConfigureAwait(false);
-            var result = await client.PollXivAuthAsync(flowId, token).ConfigureAwait(false);
-            if (result.Auth is { } auth)
-            {
-                session.SignIn(auth.Token, auth.User);
-                Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
-                ResetFlow();
-                return;
-            }
-
-            var reason = result.FailureReason ?? VerifyFailure.Pending;
-            if (reason == VerifyFailure.Pending)
-            {
-                consecutiveNetworkFailures = 0;
-                continue;
-            }
-
-            if (reason == VerifyFailure.RateLimited)
-            {
-                consecutiveNetworkFailures = 0;
-                interval += 2;
-                continue;
-            }
-
-            if (reason == VerifyFailure.Network && ++consecutiveNetworkFailures < 5)
-            {
-                continue;
-            }
-
-            if (reason == VerifyFailure.CharacterNotFound)
-            {
-                reason = VerifyFailure.XivCharacterNotVerified;
-            }
-
-            Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
-            status = string.Empty;
-            failureReason = reason;
-            ResetXivFlow();
-            return;
-        }
-
-        if (!token.IsCancellationRequested)
-        {
-            Plugin.Analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, VerifyFailure.Timeout));
-            status = string.Empty;
-            failureReason = VerifyFailure.Timeout;
-            ResetXivFlow();
-        }
-    }
-
-    private void CancelXivFlow()
-    {
-        var flowCancellation = xivFlowCancellation;
-        try
-        {
-            flowCancellation?.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-        }
-
-        ResetXivFlow();
-    }
-
-    private void ResetXivFlow()
-    {
-        xivAuthActive = false;
-        xivUserCode = string.Empty;
-        xivVerificationUri = null;
-        busy = false;
-        Interlocked.Exchange(ref xivFlowCancellation, null)?.Dispose();
     }
 
     private void StartMe()
@@ -735,16 +518,8 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void ResetFlow()
     {
-        challengeId = null;
-        code = string.Empty;
-        status = string.Empty;
-        failureReason = null;
-        busy = false;
+        flow.Reset();
         meRequested = false;
-        xivAuthActive = false;
-        xivUserCode = string.Empty;
-        xivVerificationUri = null;
-        Interlocked.Exchange(ref xivFlowCancellation, null)?.Dispose();
     }
 
     private static bool Button(string label, PhoneTheme theme, float width = -1f)
@@ -782,7 +557,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     public void Dispose()
     {
         cancellation.Cancel();
-        Interlocked.Exchange(ref xivFlowCancellation, null)?.Dispose();
+        flow.Dispose();
         cancellation.Dispose();
     }
 }

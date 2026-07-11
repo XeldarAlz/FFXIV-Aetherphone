@@ -1,14 +1,19 @@
 using System.Numerics;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Playback;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
@@ -44,7 +49,9 @@ internal sealed class PhoneShell : IDisposable
     private readonly CallHub calls;
     private readonly IncomingCallOverlay incomingOverlay;
     private readonly ConfirmOverlay confirmOverlay;
+    private readonly ReportOverlay reportOverlay;
     private readonly OnboardingDirector director;
+    private readonly SetupOverlay setup;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
     private bool closeRequested;
     private bool analyticsConsentRequested;
@@ -55,7 +62,9 @@ internal sealed class PhoneShell : IDisposable
 
     public PhoneShell(ThemeProvider themes, AppBundle bundle, NotificationService notifications,
         PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
-        DmLauncher dmLauncher, SocialLauncher socialLauncher, ConfirmService confirm)
+        DmLauncher dmLauncher, SocialLauncher socialLauncher, ConfirmService confirm, ReportService report,
+        AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
+        RemoteImageCache remoteImages, LodestoneService lodestone)
     {
         this.themes = themes;
         apps = bundle.Apps;
@@ -75,6 +84,9 @@ internal sealed class PhoneShell : IDisposable
         navigation.ReturningHome += home.PrepareReveal;
         incomingOverlay = new IncomingCallOverlay(calls);
         confirmOverlay = new ConfirmOverlay(confirm);
+        reportOverlay = new ReportOverlay(report);
+        setup = new SetupOverlay(aethernetSession, aethernetClient, gameData, remoteImages, lodestone,
+            bundle.Photos, navigation);
     }
 
     public void OnOpened()
@@ -241,13 +253,17 @@ internal sealed class PhoneShell : IDisposable
         }
 
         SyncCallNavigation();
-        var confirming = !loading.IsActive && confirmOverlay.CapturesPointer;
-        var overlaysCapture = !loading.IsActive && controlCenter.CapturesPointer;
+        var setupActive = setup.IsActive;
+        var confirming = !loading.IsActive && (confirmOverlay.CapturesPointer || reportOverlay.CapturesPointer);
+        var controlCenterCaptures = !loading.IsActive && controlCenter.CapturesPointer;
+        var overlaysCapture = controlCenterCaptures && !director.WantsControlCenter;
         var ringing = !loading.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !loading.IsActive && !overlaysCapture && !ringing && !confirming &&
+        var islandCaptures = !loading.IsActive && !controlCenterCaptures && !ringing && !confirming &&
+                             !setupActive &&
                              (island.CapturesPointer(screen) ||
                               (!director.CapturesPointer && banner.CapturesPointer(screen)));
-        var busy = loading.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning;
+        var busy = loading.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning ||
+                   setupActive;
         director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
         MaybeAskAnalyticsConsent(busy);
         UiAnchors.BeginFrame(director.WantsAnchors);
@@ -255,8 +271,8 @@ internal sealed class PhoneShell : IDisposable
         UiAnchors.Report("chrome.minimize", DeviceChrome.SideButtonRect(device));
         UiAnchors.Report("chrome.controlcenter",
             new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * ImGuiHelpers.GlobalScale)));
-        using (InputShield.Engage(loading.IsActive || islandCaptures || overlaysCapture || ringing || confirming ||
-                                  director.CapturesPointer))
+        using (InputShield.Engage(loading.IsActive || islandCaptures || controlCenterCaptures || ringing ||
+                                  confirming || director.CapturesPointer || setupActive))
         {
             DrawContent(screen, theme);
             if (!navigation.AtHome || navigation.IsTransitioning)
@@ -267,9 +283,22 @@ internal sealed class PhoneShell : IDisposable
             DrawChrome(screen, theme);
         }
 
+        if (setupActive)
+        {
+            setup.Draw(screen, theme, delta, !loading.IsActive && !confirming);
+        }
+
         if (loading.IsActive)
         {
             loading.Draw(screen, theme);
+            return;
+        }
+
+        if (setupActive)
+        {
+            HoverTooltip.Flush();
+            confirmOverlay.Draw(screen, theme);
+            DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);
             return;
         }
 
@@ -284,9 +313,21 @@ internal sealed class PhoneShell : IDisposable
             incomingOverlay.Draw(screen, theme);
         }
 
+        if (GuideIntents.Consume(TourRegistry.ControlCenterOpenIntent))
+        {
+            controlCenter.Open();
+        }
+
+        if (GuideIntents.Consume(TourRegistry.ControlCenterCloseIntent))
+        {
+            controlCenter.Dismiss();
+        }
+
         controlCenter.Draw(screen, theme, delta,
-            !navigation.IsTransitioning && !director.CapturesPointer && !islandCaptures);
+            !navigation.IsTransitioning && !director.CapturesPointer && !islandCaptures,
+            !director.CapturesPointer);
         HoverTooltip.Flush();
+        reportOverlay.Draw(screen, theme);
         confirmOverlay.Draw(screen, theme);
         director.Draw(screen, theme);
         DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);
@@ -323,8 +364,11 @@ internal sealed class PhoneShell : IDisposable
     private void SyncCallNavigation()
     {
         var state = calls.Snapshot().State;
-        if (state == CallState.Active && lastCallState != CallState.Active && navigation.Current?.Id != "message")
+        var engaged = state is CallState.Connecting or CallState.Active;
+        var wasEngaged = lastCallState is CallState.Connecting or CallState.Active;
+        if (engaged && !wasEngaged && navigation.Current?.Id != "message")
         {
+            calls.RequestCallScreen();
             navigation.Open("message", AppOpenSource.System);
         }
 
@@ -668,6 +712,7 @@ internal sealed class PhoneShell : IDisposable
         banner.Shown -= OnBannerShown;
         banner.Dispose();
         minimizedView.Dispose();
+        setup.Dispose();
         for (var index = 0; index < apps.Count; index++)
         {
             apps[index].Dispose();
