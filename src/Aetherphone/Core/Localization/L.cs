@@ -84,6 +84,7 @@ internal static class L
         public static readonly LocString Friends = new("app.friends", "Friends");
         public static readonly LocString Chat = new("app.chat", "Chat");
         public static readonly LocString Message = new("app.message", "Message");
+        public static readonly LocString KupoAi = new("app.kupoai", "KupoAI");
     }
 
     internal static class DirectMessages
@@ -1596,6 +1597,29 @@ internal static class L
         public static readonly LocString AddPhotos = new("feedback.addPhotos", "Add photos");
         public static readonly LocString ImportFromPc = new("feedback.importFromPc", "Import from PC");
         public static readonly LocString NoGallery = new("feedback.noGallery", "No photos in your gallery yet");
+    }
+
+    internal static class KupoAi
+    {
+        public static readonly LocString NewChat = new("kupoai.newChat", "New chat");
+        public static readonly LocString EmptyTitle = new("kupoai.emptyTitle", "Ask me anything about Eorzea");
+        public static readonly LocString EmptyHint = new("kupoai.emptyHint", "Quests, items, jobs, mechanics, lore. All from the wiki, kupo!");
+        public static readonly LocString AskHint = new("kupoai.askHint", "Ask about FFXIV…");
+        public static readonly LocString ThreadEmpty = new("kupoai.threadEmpty", "Ask your first question, kupo!");
+        public static readonly LocString QuotaLeft = new("kupoai.quotaLeft", "{0} of {1} questions left today");
+        public static readonly LocString QuotaExhausted = new("kupoai.quotaExhausted", "All {0} daily questions used. Resets at midnight UTC, kupo!");
+        public static readonly LocString GlobalQuota = new("kupoai.globalQuota", "KupoAI needs a rest today. Try again tomorrow, kupo!");
+        public static readonly LocString Indexing = new("kupoai.indexing", "KupoAI is still reading the wiki. Check back soon!");
+        public static readonly LocString NoMatch = new("kupoai.noMatch", "Nothing found in the wiki. Try different words, kupo!");
+        public static readonly LocString Offline = new("kupoai.offline", "Couldn't reach Aethernet. Please try again later.");
+        public static readonly LocString RateLimited = new("kupoai.rateLimited", "Slow down a little, kupo! Try again in a minute.");
+        public static readonly LocString Error = new("kupoai.error", "Something went wrong. Please try again.");
+        public static readonly LocString SourcesLabel = new("kupoai.sourcesLabel", "Sources:");
+        public static readonly LocString OpenSource = new("kupoai.openSource", "Open {0}");
+        public static readonly LocString CopyAnswer = new("kupoai.copyAnswer", "Copy text");
+        public static readonly LocString Delete = new("kupoai.delete", "Delete chat");
+        public static readonly LocString DeleteConfirm = new("kupoai.deleteConfirm", "Delete this chat? This can't be undone.");
+        public static readonly LocString SignedOut = new("kupoai.signedOut", "Sign in to Aethernet in Settings to chat with KupoAI");
     }
 
     internal static class Polls

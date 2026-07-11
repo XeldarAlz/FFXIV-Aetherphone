@@ -28,6 +28,7 @@ using Aetherphone.Apps.Timers;
 using Aetherphone.Apps.Dev;
 using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Apps.Feedback;
+using Aetherphone.Apps.KupoAi;
 using Aetherphone.Apps.Velvet;
 using Aetherphone.Apps.Venues;
 using Aetherphone.Apps.Wallet;
@@ -56,6 +57,7 @@ internal static class AppRegistry
         apps.Add(new AethergramApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "aethergram"), services.Lodestone, services.RemoteImages, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration, services.SocialNotifications));
         apps.Add(new VelvetApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages, services.Notifications, services.VelvetLauncher, services.SocialLauncher, services.GameData, services.SocialNotifications, services.KeyVault, services.ConversationKeys));
         apps.Add(new FeedbackApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "feedback"), photoLibrary));
+        apps.Add(new KupoAiApp(new KupoAiStore(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "kupoai"), new KupoAiArchive(new DirectoryInfo(Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "KupoAI")))), services.RemoteImages));
         apps.Add(new DevApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "dev"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages));
         apps.Add(new PollsApp(services.AethernetSession, new AethernetClient(services.Http, services.AethernetSession, "polls")));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));

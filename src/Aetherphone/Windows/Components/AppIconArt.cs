@@ -167,6 +167,9 @@ internal static class AppIconArt
             case "feedback":
                 DrawFeedback(dl, center, extent, inkColor, holeColor);
                 return true;
+            case "kupoai":
+                DrawKupoAi(dl, center, extent, inkColor, holeColor);
+                return true;
             case "dev":
                 DrawDev(dl, center, extent, inkColor);
                 return true;
@@ -1069,6 +1072,24 @@ internal static class AppIconArt
         dl.AddLine(At(center, extent, -0.58f, -0.44f), At(center, extent, 0.58f, -0.44f), hole, lineThickness);
         dl.AddLine(At(center, extent, -0.58f, -0.08f), At(center, extent, 0.58f, -0.08f), hole, lineThickness);
         dl.AddLine(At(center, extent, -0.58f, 0.28f), At(center, extent, 0.16f, 0.28f), hole, lineThickness);
+    }
+
+    private static void DrawKupoAi(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
+    {
+        dl.AddLine(At(center, extent, 0.0f, -0.55f), At(center, extent, 0.0f, -0.76f), ink, extent * 0.10f);
+        dl.AddCircleFilled(At(center, extent, 0.0f, -0.88f), extent * 0.15f, ink, 20);
+        var bubbleMin = At(center, extent, -0.92f, -0.52f);
+        var bubbleMax = At(center, extent, 0.92f, 0.60f);
+        dl.AddRectFilled(bubbleMin, bubbleMax, ink, extent * 0.34f);
+        Span<Vector2> tail = stackalloc Vector2[3]
+        {
+            At(center, extent, -0.55f, 0.48f), At(center, extent, -0.15f, 0.48f), At(center, extent, -0.52f, 0.98f),
+        };
+        FillConvex(dl, ink, tail);
+        var dotRadius = extent * 0.09f;
+        dl.AddCircleFilled(At(center, extent, -0.42f, 0.04f), dotRadius, hole, 16);
+        dl.AddCircleFilled(At(center, extent, 0.0f, 0.04f), dotRadius, hole, 16);
+        dl.AddCircleFilled(At(center, extent, 0.42f, 0.04f), dotRadius, hole, 16);
     }
 
     private static void DrawPolls(ImDrawListPtr dl, Vector2 center, float extent, uint ink)

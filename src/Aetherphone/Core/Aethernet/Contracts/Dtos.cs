@@ -469,3 +469,18 @@ internal sealed record ConversationKeysDto(
 internal sealed record ConversationWrapsDto(string ConversationId, int CurrentGeneration, KeyWrapDto[] Wraps);
 
 internal sealed record MyConversationKeysDto(ConversationWrapsDto[] Items);
+
+internal sealed record AssistantTurnDto(string Role, string Text);
+
+internal sealed record AssistantAskRequest(string Question, AssistantTurnDto[]? History = null, string? ConversationId = null);
+
+internal sealed record AssistantSourceDto(string Title, string Url);
+
+internal sealed record AssistantAskResponse(
+    string Status,
+    string? Answer,
+    AssistantSourceDto[] Sources,
+    int RemainingToday,
+    int DailyLimit);
+
+internal sealed record AssistantStatusResponse(bool Ready, int RemainingToday, int DailyLimit);

@@ -713,5 +713,22 @@ internal sealed class AethernetClient
         return http.RequestJsonAsync(HttpMethod.Delete, Url($"/polls/{pollId}/vote"), AethernetJsonContext.Default.PollDto, session.Token, token, authStatusSink);
     }
 
+    public Task<AssistantStatusResponse?> AssistantStatusAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/assistant/status"), AethernetJsonContext.Default.AssistantStatusResponse, session.Token, token, authStatusSink);
+    }
+
+    public Task<AssistantAskResponse?> AssistantAskAsync(AssistantAskRequest request, CancellationToken token, Action<int>? statusSink = null)
+    {
+        var sink = statusSink is null
+            ? authStatusSink
+            : status =>
+            {
+                authStatusSink(status);
+                statusSink(status);
+            };
+        return http.PostJsonAsync(Url("/assistant/ask"), request, AethernetJsonContext.Default.AssistantAskRequest, AethernetJsonContext.Default.AssistantAskResponse, session.Token, token, sink);
+    }
+
     private string Url(string path) => $"{session.BaseUrl.TrimEnd('/')}{path}";
 }
