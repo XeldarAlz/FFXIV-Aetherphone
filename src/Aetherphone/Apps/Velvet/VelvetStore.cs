@@ -23,6 +23,8 @@ internal sealed class VelvetStore : IDisposable
     private const int DmImageMaxDimension = 1280;
     private static readonly TimeSpan InboxPollInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly NotificationService notifications;
@@ -37,6 +39,10 @@ internal sealed class VelvetStore : IDisposable
     private readonly ConcurrentDictionary<string, (long AtUnix, string Text)> previewCache = new(StringComparer.Ordinal);
     private volatile bool velvetKeysHydrated;
     private volatile bool vaultRefreshRequested;
+    private volatile bool vaultRefreshInFlight;
+    private DateTime nextVaultRetryUtc = DateTime.MinValue;
+    private volatile bool keyStatusRefreshing;
+    private DateTime lastKeyStatusUtc = DateTime.MinValue;
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
     private volatile bool inboxPolling;
     private bool inboxPrimed;
@@ -172,6 +178,7 @@ internal sealed class VelvetStore : IDisposable
 
         EnsureVaultRefreshed();
         var now = DateTime.UtcNow;
+        EnsureThreadKeysFresh(now);
         if (now - lastInboxPollUtc < InboxPollInterval)
         {
             return;
@@ -183,12 +190,19 @@ internal sealed class VelvetStore : IDisposable
 
     private void EnsureVaultRefreshed()
     {
-        if (vaultRefreshRequested || session.CurrentUser is null)
+        if (session.CurrentUser is null || vaultRefreshInFlight)
+        {
+            return;
+        }
+
+        if (vaultRefreshRequested
+            && (vault.State == KeyVaultState.Unlocked || DateTime.UtcNow < nextVaultRetryUtc))
         {
             return;
         }
 
         vaultRefreshRequested = true;
+        vaultRefreshInFlight = true;
         work.Run("vault refresh", async token =>
         {
             await vault.RefreshAsync(token).ConfigureAwait(false);
@@ -196,7 +210,32 @@ internal sealed class VelvetStore : IDisposable
             {
                 await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
             }
+        }, () =>
+        {
+            nextVaultRetryUtc = DateTime.UtcNow + VaultRetryInterval;
+            vaultRefreshInFlight = false;
         });
+    }
+
+    private void EnsureThreadKeysFresh(DateTime now)
+    {
+        var id = threadId;
+        if (id is null || keyStatusRefreshing || vault.State != KeyVaultState.Unlocked
+            || currentKeyStatus.CanEncrypt || now - lastKeyStatusUtc < KeyStatusRetryInterval)
+        {
+            return;
+        }
+
+        keyStatusRefreshing = true;
+        lastKeyStatusUtc = now;
+        work.Run("key status refresh", async token =>
+        {
+            var status = await keys.EnsureVelvetKeysAsync(id, MyUserId, token).ConfigureAwait(false);
+            if (threadId == id)
+            {
+                currentKeyStatus = status;
+            }
+        }, () => keyStatusRefreshing = false);
     }
 
     private void PollInbox()
@@ -684,6 +723,7 @@ internal sealed class VelvetStore : IDisposable
         otherTyping = false;
         loadingThread = true;
         currentKeyStatus = ChatKeyStatus.None;
+        lastKeyStatusUtc = DateTime.UtcNow;
         work.Run("thread open", async token =>
         {
             var status = await keys.EnsureVelvetKeysAsync(id, MyUserId, token).ConfigureAwait(false);

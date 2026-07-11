@@ -17,6 +17,8 @@ internal sealed class DirectMessagesStore : IDisposable
     private const int DmImageMaxDimension = 1280;
     private static readonly TimeSpan InboxPollInterval = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
+    private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
 
     private readonly AethernetSession session;
     private readonly AethernetClient client;
@@ -48,6 +50,10 @@ internal sealed class DirectMessagesStore : IDisposable
     private volatile string? viewingConversationId;
     private DateTime lastViewingUtc = DateTime.MinValue;
     private volatile bool vaultRefreshRequested;
+    private volatile bool vaultRefreshInFlight;
+    private DateTime nextVaultRetryUtc = DateTime.MinValue;
+    private volatile bool keyStatusRefreshing;
+    private DateTime lastKeyStatusUtc = DateTime.MinValue;
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
 
     public DirectMessagesStore(AethernetSession session, AethernetClient client, NotificationService notifications,
@@ -135,6 +141,7 @@ internal sealed class DirectMessagesStore : IDisposable
 
         EnsureVaultRefreshed();
         var now = DateTime.UtcNow;
+        EnsureConversationKeysFresh(now);
         if (now - lastInboxPollUtc < InboxPollInterval)
         {
             return;
@@ -146,12 +153,19 @@ internal sealed class DirectMessagesStore : IDisposable
 
     private void EnsureVaultRefreshed()
     {
-        if (vaultRefreshRequested || session.CurrentUser is null)
+        if (session.CurrentUser is null || vaultRefreshInFlight)
+        {
+            return;
+        }
+
+        if (vaultRefreshRequested
+            && (vault.State == KeyVaultState.Unlocked || DateTime.UtcNow < nextVaultRetryUtc))
         {
             return;
         }
 
         vaultRefreshRequested = true;
+        vaultRefreshInFlight = true;
         work.Run("vault refresh", async token =>
         {
             await vault.RefreshAsync(token).ConfigureAwait(false);
@@ -159,7 +173,32 @@ internal sealed class DirectMessagesStore : IDisposable
             {
                 await keys.HydrateAsync(token).ConfigureAwait(false);
             }
+        }, () =>
+        {
+            nextVaultRetryUtc = DateTime.UtcNow + VaultRetryInterval;
+            vaultRefreshInFlight = false;
         });
+    }
+
+    private void EnsureConversationKeysFresh(DateTime now)
+    {
+        var id = conversationId;
+        if (id is null || keyStatusRefreshing || vault.State != KeyVaultState.Unlocked
+            || currentKeyStatus.CanEncrypt || now - lastKeyStatusUtc < KeyStatusRetryInterval)
+        {
+            return;
+        }
+
+        keyStatusRefreshing = true;
+        lastKeyStatusUtc = now;
+        work.Run("key status refresh", async token =>
+        {
+            var status = await keys.EnsureChatKeysAsync(id, token).ConfigureAwait(false);
+            if (conversationId == id)
+            {
+                currentKeyStatus = status;
+            }
+        }, () => keyStatusRefreshing = false);
     }
 
     private void OnVaultChanged()
@@ -294,6 +333,7 @@ internal sealed class DirectMessagesStore : IDisposable
         otherTyping = false;
         loadingThread = true;
         currentKeyStatus = ChatKeyStatus.None;
+        lastKeyStatusUtc = DateTime.UtcNow;
         work.Run("thread open", async token =>
         {
             var detail = await client.ConversationAsync(id, token).ConfigureAwait(false);
