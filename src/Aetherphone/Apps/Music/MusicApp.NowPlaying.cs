@@ -135,45 +135,48 @@ internal sealed partial class MusicApp
 
     private void DrawNowPlayingSheet(Rect content, float scale, float presence, float delta)
     {
-        if (presence <= 0.003f)
+        if (presence <= 0.003f || !playback.IsActive)
         {
             return;
         }
 
-        ImGui.SetCursorScreenPos(content.Min);
-        using (ImRaii.Child("##musicNowPlaying", content.Size, false, OverlayFlags))
+        var screen = SceneChrome.ScreenFrom(content, theme, scale);
+        ImGui.SetCursorScreenPos(screen.Min);
+        using (ImRaii.Child("##musicNowPlaying", screen.Size, false, OverlayFlags))
         {
             var drawList = ImGui.GetWindowDrawList();
-            var top = content.Min.Y + (1f - presence) * content.Height;
-            drawList.AddRectFilled(content.Min, new Vector2(content.Max.X, top),
+            var slide = (1f - presence) * screen.Height;
+            var backdropTop = screen.Min.Y + slide;
+            drawList.AddRectFilled(screen.Min, new Vector2(screen.Max.X, backdropTop),
                 ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.45f * presence)));
-            var sheet = new Rect(new Vector2(content.Min.X, top), content.Max);
             var swatch = ArtGradient.FromName(playback.Title);
             var tint = Palette.Mix(swatch.Bottom, AppPalettes.Music.BackdropTop, 0.55f);
-            Squircle.FillVerticalGradient(drawList, sheet.Min, sheet.Max, 0f, ImGui.GetColorU32(tint),
+            Squircle.FillVerticalGradient(drawList, new Vector2(screen.Min.X, backdropTop),
+                new Vector2(screen.Max.X, backdropTop + screen.Height), 0f, ImGui.GetColorU32(tint),
                 ImGui.GetColorU32(AppPalettes.Music.BackdropBottom));
-            DrawSheetTopBar(drawList, sheet, scale);
-            DrawSheetBody(drawList, sheet, scale, delta);
+            var frame = content.Translate(new Vector2(0f, slide));
+            DrawSheetTopBar(drawList, frame, scale);
+            DrawSheetBody(drawList, frame, scale, delta);
         }
     }
 
-    private void DrawSheetTopBar(ImDrawListPtr drawList, Rect sheet, float scale)
+    private void DrawSheetTopBar(ImDrawListPtr drawList, Rect frame, float scale)
     {
-        var barCenterY = sheet.Min.Y + 24f * scale;
-        if (MusicRenderer.ChevronDown("music.sheetClose", new Vector2(sheet.Min.X + 26f * scale, barCenterY),
+        var barCenterY = frame.Min.Y + 24f * scale;
+        if (MusicRenderer.ChevronDown("music.sheetClose", new Vector2(frame.Min.X + 26f * scale, barCenterY),
                 13f * scale, ui.TitleInk, scale))
         {
             CloseNowPlaying();
         }
 
         var caption = Loc.T(L.Music.PlayingFrom).ToUpperInvariant();
-        Typography.DrawCentered(drawList, new Vector2(sheet.Center.X, barCenterY - 8f * scale), caption,
+        Typography.DrawCentered(drawList, new Vector2(frame.Center.X, barCenterY - 8f * scale), caption,
             ui.HeaderInk, TextStyles.Caption2);
         var source = playSource.Length > 0 ? playSource : DisplayName;
-        var fitted = Typography.FitText(source, sheet.Width - 140f * scale, TextStyles.FootnoteEmphasized);
-        Typography.DrawCentered(drawList, new Vector2(sheet.Center.X, barCenterY + 8f * scale), fitted, ui.TitleInk,
+        var fitted = Typography.FitText(source, frame.Width - 140f * scale, TextStyles.FootnoteEmphasized);
+        Typography.DrawCentered(drawList, new Vector2(frame.Center.X, barCenterY + 8f * scale), fitted, ui.TitleInk,
             TextStyles.FootnoteEmphasized);
-        if (ui.IconButton(new Vector2(sheet.Max.X - 26f * scale, barCenterY), 14f * scale,
+        if (ui.IconButton(new Vector2(frame.Max.X - 26f * scale, barCenterY), 14f * scale,
                 FontAwesomeIcon.Stop.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.72f))
         {
             playback.Stop();
@@ -181,21 +184,21 @@ internal sealed partial class MusicApp
         }
     }
 
-    private void DrawSheetBody(ImDrawListPtr drawList, Rect sheet, float scale, float delta)
+    private void DrawSheetBody(ImDrawListPtr drawList, Rect frame, float scale, float delta)
     {
         var songActive = playback.SongActive;
         var songs = playback.Songs;
         var pad = 24f * scale;
-        var centerX = sheet.Center.X;
-        var volumeY = sheet.Max.Y - 40f * scale;
+        var centerX = frame.Center.X;
+        var volumeY = frame.Max.Y - 40f * scale;
         var transportY = volumeY - 74f * scale;
         var progressY = transportY - 56f * scale;
         var artistY = progressY - 42f * scale;
         var titleY = artistY - 27f * scale;
-        var artTop = sheet.Min.Y + 52f * scale;
+        var artTop = frame.Min.Y + 52f * scale;
         var artBottom = titleY - 18f * scale;
         var artSpace = MathF.Max(artBottom - artTop, 40f * scale);
-        var artSize = MathF.Min(sheet.Width - pad * 2f, artSpace);
+        var artSize = MathF.Min(frame.Width - pad * 2f, artSpace);
         artBreath.Step(playback.IsPlaying ? 1f : 0.92f, ArtSmoothTime, delta);
         var drawnArt = artSize * Math.Clamp(artBreath.Value, 0.85f, 1f);
         var artCenter = new Vector2(centerX, artTop + artSpace * 0.5f);
@@ -222,15 +225,15 @@ internal sealed partial class MusicApp
                 clock, White, 1f, playback.IsPlaying);
         }
 
-        var textWidth = sheet.Width - pad * 2f;
+        var textWidth = frame.Width - pad * 2f;
         var title = Typography.FitText(playback.Title, textWidth, TextStyles.Title3);
-        Typography.Draw(drawList, new Vector2(sheet.Min.X + pad, titleY), title, ui.TitleInk, TextStyles.Title3);
+        Typography.Draw(drawList, new Vector2(frame.Min.X + pad, titleY), title, ui.TitleInk, TextStyles.Title3);
         var statusLine = SheetStatusLine(out var statusColor);
         var status = Typography.FitText(statusLine, textWidth, TextStyles.Subheadline);
-        Typography.Draw(drawList, new Vector2(sheet.Min.X + pad, artistY), status, statusColor,
+        Typography.Draw(drawList, new Vector2(frame.Min.X + pad, artistY), status, statusColor,
             TextStyles.Subheadline);
-        var trackRect = new Rect(new Vector2(sheet.Min.X + pad, progressY - 2f * scale),
-            new Vector2(sheet.Max.X - pad, progressY + 2f * scale));
+        var trackRect = new Rect(new Vector2(frame.Min.X + pad, progressY - 2f * scale),
+            new Vector2(frame.Max.X - pad, progressY + 2f * scale));
         if (songActive)
         {
             DrawSongProgress(drawList, trackRect, progressY, scale, songs);
@@ -261,7 +264,7 @@ internal sealed partial class MusicApp
             playback.TogglePlayPause();
         }
 
-        DrawVolumeRow(sheet, volumeY, pad, scale);
+        DrawVolumeRow(frame, volumeY, pad, scale);
     }
 
     private void DrawSongProgress(ImDrawListPtr drawList, Rect trackRect, float progressY, float scale,
@@ -300,10 +303,10 @@ internal sealed partial class MusicApp
         Typography.Draw(drawList, labelPosition, label, ui.TitleInk, TextStyles.FootnoteEmphasized);
     }
 
-    private void DrawVolumeRow(Rect sheet, float volumeY, float pad, float scale)
+    private void DrawVolumeRow(Rect frame, float volumeY, float pad, float scale)
     {
-        var leftIcon = new Vector2(sheet.Min.X + pad + 6f * scale, volumeY);
-        var rightIcon = new Vector2(sheet.Max.X - pad - 6f * scale, volumeY);
+        var leftIcon = new Vector2(frame.Min.X + pad + 6f * scale, volumeY);
+        var rightIcon = new Vector2(frame.Max.X - pad - 6f * scale, volumeY);
         AppSkin.Icon(leftIcon, FontAwesomeIcon.VolumeDown.ToIconString(), ui.MutedInk, 0.70f);
         AppSkin.Icon(rightIcon, FontAwesomeIcon.VolumeUp.ToIconString(), ui.MutedInk, 0.70f);
         var track = new Rect(new Vector2(leftIcon.X + 22f * scale, volumeY - 1.5f * scale),
