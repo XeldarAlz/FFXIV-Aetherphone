@@ -9,6 +9,7 @@ internal static class SignalType
     public const string Decline = "call.decline";
     public const string Cancel = "call.cancel";
     public const string Leave = "call.leave";
+    public const string Rejoin = "call.rejoin";
     public const string Mute = "call.mute";
     public const string Incoming = "call.incoming";
     public const string Ringing = "call.ringing";

@@ -134,7 +134,7 @@ internal sealed partial class MessageApp
         }
 
         if (ComposeFab.Draw(listRect, "##msgAddFab", ui.Accent, FontAwesomeIcon.UserPlus.ToIconString(),
-                Loc.T(L.Friends.AddFriend)))
+                Loc.T(L.Friends.AddFriend), "message.addcontact"))
         {
             addError = string.Empty;
             router.Push(MessageRoute.AddContact);
@@ -218,41 +218,22 @@ internal sealed partial class MessageApp
         var rowHeight = ContactRowHeight * scale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
+        var rowMax = new Vector2(origin.X + width, origin.Y + rowHeight);
         var drawList = ImGui.GetWindowDrawList();
-        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + rowHeight), 16f * scale);
+        ui.Card(drawList, origin, rowMax, 16f * scale);
+        if (UiInteract.Hover(origin, rowMax))
+        {
+            Squircle.Fill(drawList, origin, rowMax, 16f * scale, ImGui.GetColorU32(ui.HoverTint));
+        }
+
         var pad = 12f * scale;
         var radius = 20f * scale;
         var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, ContactBook.DisplayLabel(contact), string.Empty,
             contact.AvatarUrl, images, lodestone, 0.95f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale), ContactBook.DisplayLabel(contact),
-            theme.TextStrong, 1f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale), ContactBook.Format(contact.PhoneNumber),
-            ui.MutedInk, 0.85f);
-
-        float actionLeft;
-        if (contact.IsMutual)
-        {
-            var callCenter = new Vector2(origin.X + width - pad - 16f * scale, origin.Y + rowHeight * 0.5f);
-            if (ui.IconButton(callCenter, 16f * scale, FontAwesomeIcon.Phone.ToIconString(), White,
-                    CallGreen, 0.85f, Loc.T(L.Friends.Call), HoverLabelSide.Above))
-            {
-                StartCall(contact);
-                return;
-            }
-
-            var messageCenter = new Vector2(callCenter.X - 44f * scale, callCenter.Y);
-            if (ui.IconButton(messageCenter, 16f * scale, FontAwesomeIcon.Comment.ToIconString(), White,
-                    ui.Accent, 0.8f, Loc.T(L.DirectMessages.StartChat), HoverLabelSide.Above))
-            {
-                StartMessage(contact);
-                return;
-            }
-
-            actionLeft = messageCenter.X - 22f * scale;
-        }
-        else
+        var actionLeft = origin.X + width - pad;
+        if (!contact.IsMutual)
         {
             var label = Loc.T(L.Friends.PendingShort);
             var labelSize = Typography.Measure(label, TextStyles.FootnoteEmphasized);
@@ -266,7 +247,14 @@ internal sealed partial class MessageApp
             actionLeft = chipMin.X - 6f * scale;
         }
 
-        if (UiInteract.HoverClick(origin, new Vector2(actionLeft, origin.Y + rowHeight)))
+        var textWidth = actionLeft - textLeft;
+        Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale),
+            Typography.FitText(ContactBook.DisplayLabel(contact), textWidth, 1f, FontWeight.SemiBold),
+            theme.TextStrong, 1f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale),
+            Typography.FitText(ContactBook.Format(contact.PhoneNumber), textWidth, 0.85f, FontWeight.Regular),
+            ui.MutedInk, 0.85f);
+        if (UiInteract.HoverClick(origin, rowMax))
         {
             router.Push(MessageRoute.Contact(contact.UserId));
         }
@@ -421,8 +409,7 @@ internal sealed partial class MessageApp
     {
         calls.StartCall(new CallContact(contact.UserId, string.Empty, string.Empty,
             ContactBook.DisplayLabel(contact)));
-        router.Reset();
-        activeTab = MessageTab.Calls;
+        ShowCallScreen();
     }
 
     private void StartMessage(ContactDto contact)

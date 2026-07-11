@@ -13,7 +13,9 @@ internal enum MessageScreen : byte
     ContactDetail,
     AddContact,
     Safety,
+    Call,
     AddToCall,
+    NewCall,
 }
 
 internal readonly record struct MessageRoute(MessageScreen Screen, string? Id = null)
@@ -23,7 +25,9 @@ internal readonly record struct MessageRoute(MessageScreen Screen, string? Id = 
     public static readonly MessageRoute Archived = new(MessageScreen.Archived);
     public static readonly MessageRoute AddContact = new(MessageScreen.AddContact);
     public static readonly MessageRoute Safety = new(MessageScreen.Safety);
+    public static readonly MessageRoute Call = new(MessageScreen.Call);
     public static readonly MessageRoute AddToCall = new(MessageScreen.AddToCall);
+    public static readonly MessageRoute NewCall = new(MessageScreen.NewCall);
 
     public static MessageRoute Thread(string conversationId) => new(MessageScreen.Thread, conversationId);
 

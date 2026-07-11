@@ -40,7 +40,7 @@ internal sealed partial class MessageApp : IPhoneApp
     public string Id => "message";
     public string DisplayName => Loc.T(L.Apps.Message);
     public string Glyph => "Me";
-    public int BadgeCount => store.UnreadTotal;
+    public int BadgeCount => store.UnreadTotal + calls.UnseenMissed;
 
     private readonly DirectMessagesStore store;
     private readonly ContactBook contacts;
@@ -62,6 +62,7 @@ internal sealed partial class MessageApp : IPhoneApp
     private INavigator navigation = null!;
     private MessageTab activeTab = MessageTab.Chats;
     private CallView currentCall;
+    private CallState lastCallState;
     private string filter = string.Empty;
 
     public MessageApp(DirectMessagesStore store, ContactBook contacts, CallHub calls, AethernetSession session,
@@ -131,17 +132,34 @@ internal sealed partial class MessageApp : IPhoneApp
         }
 
         currentCall = calls.Snapshot();
-        if (router.Current.Screen == MessageScreen.AddToCall && currentCall.State != CallState.Active)
-        {
-            router.Pop(false);
-        }
-
+        SyncCallRoute();
         ProcessPending();
         messageMenu.Gate();
         chatMenu.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
         router.Draw(context.Content, AppSkin.Transparent, delta, drawView);
+    }
+
+    private void SyncCallRoute()
+    {
+        var state = currentCall.State;
+        var inCall = state is CallState.Dialing or CallState.Connecting or CallState.Active;
+        var requested = calls.ConsumeCallScreenRequest();
+        if (!inCall)
+        {
+            if (router.Current.Screen is MessageScreen.Call or MessageScreen.AddToCall)
+            {
+                router.Pop(false);
+            }
+        }
+        else if ((requested || lastCallState is CallState.Idle or CallState.Ringing or CallState.Ended)
+                 && router.Current.Screen is not MessageScreen.Call and not MessageScreen.AddToCall)
+        {
+            router.Push(MessageRoute.Call, false);
+        }
+
+        lastCallState = state;
     }
 
     private void ProcessPending()
@@ -228,8 +246,14 @@ internal sealed partial class MessageApp : IPhoneApp
             case MessageScreen.Safety:
                 DrawSafety(area);
                 break;
+            case MessageScreen.Call:
+                DrawCallRoute(area);
+                break;
             case MessageScreen.AddToCall:
                 DrawAddToCall(area);
+                break;
+            case MessageScreen.NewCall:
+                DrawNewCall(area);
                 break;
             default:
                 DrawRoot(area);
@@ -239,19 +263,29 @@ internal sealed partial class MessageApp : IPhoneApp
 
     private void DrawRoot(Rect area)
     {
-        var view = currentCall;
-        if (view.State is CallState.Dialing or CallState.Connecting or CallState.Active)
+        if (GuideIntents.Consume("message.tab.calls"))
         {
-            DrawCallScreen(new PhoneContext(area, theme, navigation), view);
-            return;
+            SelectTab(MessageTab.Calls);
+        }
+
+        if (GuideIntents.Consume("message.tab.contacts"))
+        {
+            SelectTab(MessageTab.Contacts);
         }
 
         var scale = ImGuiHelpers.GlobalScale;
         var headerRect = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale));
         var navHeight = 60f * scale;
         var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - navHeight), area.Max);
-        var content = new Rect(new Vector2(area.Min.X, headerRect.Max.Y), new Vector2(area.Max.X, navRect.Min.Y));
+        var contentTop = headerRect.Max.Y;
         DrawRootHeader(headerRect);
+        if (currentCall.State is CallState.Dialing or CallState.Connecting or CallState.Active)
+        {
+            contentTop = DrawReturnToCallBanner(new Rect(new Vector2(area.Min.X, contentTop),
+                new Vector2(area.Max.X, contentTop + ReturnBannerHeight * scale)));
+        }
+
+        var content = new Rect(new Vector2(area.Min.X, contentTop), new Vector2(area.Max.X, navRect.Min.Y));
         switch (activeTab)
         {
             case MessageTab.Calls:
@@ -314,12 +348,16 @@ internal sealed partial class MessageApp : IPhoneApp
         drawList.AddLine(nav.Min, new Vector2(nav.Max.X, nav.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
             1f);
         var width = nav.Width / 3f;
-        DrawNavItem(new Rect(nav.Min, new Vector2(nav.Min.X + width, nav.Max.Y)), FontAwesomeIcon.Comments,
-            Loc.T(L.Message.TabChats), MessageTab.Chats, store.UnreadTotal);
-        DrawNavItem(new Rect(new Vector2(nav.Min.X + width, nav.Min.Y), new Vector2(nav.Min.X + width * 2f, nav.Max.Y)),
-            FontAwesomeIcon.Phone, Loc.T(L.Phone.Calls), MessageTab.Calls, 0);
+        var chatsRect = new Rect(nav.Min, new Vector2(nav.Min.X + width, nav.Max.Y));
+        var callsRect = new Rect(new Vector2(nav.Min.X + width, nav.Min.Y),
+            new Vector2(nav.Min.X + width * 2f, nav.Max.Y));
         var contactsRect = new Rect(new Vector2(nav.Min.X + width * 2f, nav.Min.Y), nav.Max);
+        UiAnchors.Report("message.tab.chats", chatsRect);
+        UiAnchors.Report("message.tab.calls", callsRect);
         UiAnchors.Report("message.tab.contacts", contactsRect);
+        DrawNavItem(chatsRect, FontAwesomeIcon.Comments, Loc.T(L.Message.TabChats), MessageTab.Chats,
+            store.UnreadTotal);
+        DrawNavItem(callsRect, FontAwesomeIcon.Phone, Loc.T(L.Phone.Calls), MessageTab.Calls, calls.UnseenMissed);
         DrawNavItem(contactsRect, FontAwesomeIcon.AddressBook, Loc.T(L.Apps.Contacts), MessageTab.Contacts, 0);
     }
 
@@ -342,10 +380,15 @@ internal sealed partial class MessageApp : IPhoneApp
 
         if (UiInteract.HoverClick(rect.Min, rect.Max))
         {
-            activeTab = tab;
-            chatMenu.Close();
-            filter = string.Empty;
+            SelectTab(tab);
         }
+    }
+
+    private void SelectTab(MessageTab tab)
+    {
+        activeTab = tab;
+        chatMenu.Close();
+        filter = string.Empty;
     }
 
     public void Dispose()

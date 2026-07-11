@@ -154,6 +154,11 @@ internal sealed class DynamicIsland
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (expandEased < 0.5f && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
+            if (shownKind == ActivityKind.Call)
+            {
+                calls.RequestCallScreen();
+            }
+
             navigation.Open(shownKind == ActivityKind.Call ? "message" : "music", AppOpenSource.Island);
         }
     }
@@ -360,6 +365,11 @@ internal sealed class DynamicIsland
 
     private static string CallLabel(CallView view)
     {
+        if (!view.Connected)
+        {
+            return Loc.T(L.Phone.Reconnecting);
+        }
+
         return view.State switch
         {
             CallState.Dialing => Loc.T(L.Phone.StatusCalling),

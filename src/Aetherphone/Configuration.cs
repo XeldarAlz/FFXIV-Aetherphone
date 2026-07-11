@@ -9,6 +9,7 @@ using Aetherphone.Core.Home;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Songs;
+using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Core.Wallpapers;
@@ -23,6 +24,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool OpenOnStartup { get; set; }
     public bool OpenMinimizedOnStartup { get; set; }
     public bool WelcomeShown { get; set; }
+    public bool SetupCompleted { get; set; }
     public bool TutorialsEnabled { get; set; } = true;
     public Dictionary<string, int> OnboardingCompleted { get; set; } = new();
     public bool LockPosition { get; set; }
@@ -64,6 +66,8 @@ internal sealed class Configuration : IPluginConfiguration
     public bool CallsEnabled { get; set; }
     public string CallInputDevice { get; set; } = string.Empty;
     public string CallOutputDevice { get; set; } = string.Empty;
+    public List<CallLogEntry> CallLog { get; set; } = new();
+    public long CallLogSeenUnix { get; set; }
     public MarketScopeKind MarketScope { get; set; } = MarketScopeKind.DataCenter;
     public bool MarketHqOnly { get; set; }
     public List<uint> MarketFavorites { get; set; } = new();
@@ -133,6 +137,17 @@ internal sealed class Configuration : IPluginConfiguration
 
         LastSeenChangelogVersion = ChangelogData.LatestVersion;
         ChangelogSeenInitialized = true;
+        Save();
+    }
+
+    public void MigrateSetupCompleted()
+    {
+        if (SetupCompleted || !WelcomeShown)
+        {
+            return;
+        }
+
+        SetupCompleted = true;
         Save();
     }
 

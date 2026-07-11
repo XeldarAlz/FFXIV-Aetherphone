@@ -75,6 +75,8 @@ internal sealed class RealtimeConnection : IDisposable
             try
             {
                 using var ws = new ClientWebSocket();
+                ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                ws.Options.KeepAliveTimeout = TimeSpan.FromSeconds(20);
                 var bearer = session.Token;
                 if (!string.IsNullOrEmpty(bearer))
                 {
@@ -115,7 +117,7 @@ internal sealed class RealtimeConnection : IDisposable
             }
 
             attempt++;
-            var seconds = Math.Min(15d, Math.Pow(2, Math.Min(attempt, 4)));
+            var seconds = attempt == 1 ? 0.5d : Math.Min(15d, Math.Pow(2, Math.Min(attempt - 1, 4)));
             try
             {
                 await Task.Delay(TimeSpan.FromSeconds(seconds), token).ConfigureAwait(false);

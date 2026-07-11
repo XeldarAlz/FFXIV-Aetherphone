@@ -14,7 +14,8 @@ internal sealed class CallHub : IDisposable
     private const float RingIntervalSeconds = 3f;
     private const float IncomingTimeoutSeconds = 60f;
     private const float DialingTimeoutSeconds = 60f;
-    private const int MaxRecents = 8;
+    private const long ReconnectGraceMs = 20_000;
+    private const int MaxCallLog = 50;
     private static readonly Vector4 Accent = new(0.20f, 0.78f, 0.35f, 1f);
     private readonly Configuration configuration;
     private readonly AethernetSession session;
@@ -35,7 +36,9 @@ internal sealed class CallHub : IDisposable
     private long callStartTicks;
     private float ringTimer;
     private float stateTimer;
-    private CallContact[] recents = Array.Empty<CallContact>();
+    private long connectionLostTicks;
+    private volatile bool callScreenRequested;
+    private CallLogEntry[] callLog = Array.Empty<CallLogEntry>();
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
         SoundService sound, PlaybackHub playback)
@@ -46,6 +49,7 @@ internal sealed class CallHub : IDisposable
         this.sound = sound;
         this.playback = playback;
         connection = new RealtimeConnection(session);
+        callLog = configuration.CallLog.ToArray();
     }
 
     public event Action? IncomingCallPresented;
@@ -53,7 +57,37 @@ internal sealed class CallHub : IDisposable
     public bool SignedIn => session.IsSignedIn;
     public bool Connected => connection.Connected;
     public string LocalUserId => session.CurrentUser?.Id ?? string.Empty;
-    public CallContact[] Recents => recents;
+    public CallLogEntry[] CallLog => callLog;
+
+    public int UnseenMissed
+    {
+        get
+        {
+            var seen = configuration.CallLogSeenUnix;
+            var log = callLog;
+            var total = 0;
+            for (var index = 0; index < log.Length; index++)
+            {
+                if (log[index].Direction == CallDirection.Missed && log[index].TimestampUnix > seen)
+                {
+                    total += log[index].Count;
+                }
+            }
+
+            return total;
+        }
+    }
+
+    public void MarkLogSeen()
+    {
+        if (UnseenMissed == 0)
+        {
+            return;
+        }
+
+        configuration.CallLogSeenUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        configuration.Save();
+    }
 
     public void Start()
     {
@@ -81,7 +115,7 @@ internal sealed class CallHub : IDisposable
                 ? (int)((Environment.TickCount64 - callStartTicks) / 1000)
                 : 0;
             return new CallView(state, muted, volume, activeSession?.MicLevel ?? 0f, seconds, roster, incomingFrom,
-                connection.Connected, localId, BuildPeerLabel(localId), others);
+                connection.Connected && connectionLostTicks == 0, localId, BuildPeerLabel(localId), others);
         }
     }
 
@@ -96,11 +130,51 @@ internal sealed class CallHub : IDisposable
         return current?.LevelOf(participant.Slot) ?? 0f;
     }
 
+    public void RequestCallScreen()
+    {
+        callScreenRequested = true;
+    }
+
+    public bool ConsumeCallScreenRequest()
+    {
+        if (!callScreenRequested)
+        {
+            return false;
+        }
+
+        callScreenRequested = false;
+        return true;
+    }
+
     public void StartCall(CallContact target)
     {
         if (!configuration.CallsEnabled || !session.IsSignedIn)
         {
             return;
+        }
+
+        var switching = false;
+        lock (gate)
+        {
+            if (state == CallState.Ringing)
+            {
+                return;
+            }
+
+            if (state != CallState.Idle)
+            {
+                if (InvolvesLocked(target.UserId))
+                {
+                    return;
+                }
+
+                switching = true;
+            }
+        }
+
+        if (switching)
+        {
+            Hangup();
         }
 
         Guid id;
@@ -120,12 +194,30 @@ internal sealed class CallHub : IDisposable
             stateTimer = 0f;
         }
 
-        AddRecent(target);
+        AddLog(target, CallDirection.Outgoing);
         Send(new CallControl
         {
             Type = SignalType.Start, CallId = id.ToString("D"), InviteeIds = new[] { target.UserId },
         });
         Plugin.Analytics.Track(AnalyticsEvents.Call("placed"));
+    }
+
+    private bool InvolvesLocked(string userId)
+    {
+        if (dialingTo is not null && dialingTo.UserId == userId)
+        {
+            return true;
+        }
+
+        for (var index = 0; index < roster.Length; index++)
+        {
+            if (roster[index].UserId == userId)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void AddParticipant(CallContact target)
@@ -141,13 +233,14 @@ internal sealed class CallHub : IDisposable
             id = callId.ToString("D");
         }
 
-        AddRecent(target);
+        AddLog(target, CallDirection.Outgoing);
         Send(new CallControl { Type = SignalType.Invite, CallId = id, InviteeIds = new[] { target.UserId }, });
     }
 
     public void Accept()
     {
         string? id;
+        ParticipantInfo? from;
         lock (gate)
         {
             if (state != CallState.Ringing)
@@ -157,15 +250,23 @@ internal sealed class CallHub : IDisposable
 
             state = CallState.Connecting;
             id = callId.ToString("D");
+            from = incomingFrom;
         }
 
         sound.StopCallRing();
         Send(new CallControl { Type = SignalType.Accept, CallId = id });
+        if (from is not null)
+        {
+            AddLog(new CallContact(from.UserId, from.Name, from.World, from.DisplayName), CallDirection.Incoming);
+        }
     }
 
-    public void Decline()
+    public void Decline() => DeclineInternal(timedOut: false);
+
+    private void DeclineInternal(bool timedOut)
     {
         string? id;
+        ParticipantInfo? from;
         lock (gate)
         {
             if (state != CallState.Ringing)
@@ -174,10 +275,12 @@ internal sealed class CallHub : IDisposable
             }
 
             id = callId.ToString("D");
+            from = incomingFrom;
         }
 
         Send(new CallControl { Type = SignalType.Decline, CallId = id });
         EndCall(notify: false, reason: null);
+        LogMissed(from, notify: timedOut);
     }
 
     public void Hangup()
@@ -226,8 +329,15 @@ internal sealed class CallHub : IDisposable
         var ring = false;
         var declineTimeout = false;
         var dialTimeout = false;
+        var reconnectTimeout = false;
         lock (gate)
         {
+            if (state != CallState.Idle && connectionLostTicks != 0
+                && Environment.TickCount64 - connectionLostTicks >= ReconnectGraceMs)
+            {
+                reconnectTimeout = true;
+            }
+
             if (state == CallState.Ringing)
             {
                 stateTimer += deltaSeconds;
@@ -253,6 +363,12 @@ internal sealed class CallHub : IDisposable
             }
         }
 
+        if (reconnectTimeout)
+        {
+            EndCall(notify: true, reason: Loc.T(L.Phone.ConnectionLost));
+            return;
+        }
+
         if (ring)
         {
             sound.PulseCallRing();
@@ -260,7 +376,7 @@ internal sealed class CallHub : IDisposable
 
         if (declineTimeout)
         {
-            Decline();
+            DeclineInternal(timedOut: true);
         }
         else if (dialTimeout)
         {
@@ -320,6 +436,7 @@ internal sealed class CallHub : IDisposable
         if (busy)
         {
             Send(new CallControl { Type = SignalType.Decline, CallId = message.CallId, Reason = "busy" });
+            LogMissed(message.From, notify: true);
             return;
         }
 
@@ -348,6 +465,7 @@ internal sealed class CallHub : IDisposable
                 return;
             }
 
+            connectionLostTicks = 0;
             roster = participants;
             var localSlot = -1;
             var activeOthers = 0;
@@ -458,14 +576,20 @@ internal sealed class CallHub : IDisposable
         }
 
         var matched = false;
+        ParticipantInfo? missedFrom = null;
         lock (gate)
         {
             matched = id == callId && state != CallState.Idle;
+            if (matched && state == CallState.Ringing)
+            {
+                missedFrom = incomingFrom;
+            }
         }
 
         if (matched)
         {
             EndCall(notify: false, reason: null);
+            LogMissed(missedFrom, notify: true);
         }
     }
 
@@ -473,18 +597,63 @@ internal sealed class CallHub : IDisposable
     {
         if (isConnected)
         {
+            OnReconnected();
             return;
         }
 
-        var inCall = false;
+        var abandonRinging = false;
+        ParticipantInfo? missedFrom = null;
         lock (gate)
         {
-            inCall = state != CallState.Idle;
+            if (state == CallState.Idle)
+            {
+                return;
+            }
+
+            if (state == CallState.Ringing)
+            {
+                abandonRinging = true;
+                missedFrom = incomingFrom;
+            }
+            else if (connectionLostTicks == 0)
+            {
+                connectionLostTicks = Environment.TickCount64;
+            }
         }
 
-        if (inCall)
+        if (abandonRinging)
         {
-            EndCall(notify: true, reason: "Connection lost");
+            EndCall(notify: false, reason: null);
+            LogMissed(missedFrom, notify: false);
+        }
+    }
+
+    private void OnReconnected()
+    {
+        string? id = null;
+        var resendAccept = false;
+        lock (gate)
+        {
+            if (state is CallState.Dialing or CallState.Connecting or CallState.Active)
+            {
+                id = callId.ToString("D");
+                resendAccept = state == CallState.Connecting;
+            }
+            else
+            {
+                connectionLostTicks = 0;
+            }
+        }
+
+        if (id is null)
+        {
+            return;
+        }
+
+        Send(new CallControl { Type = SignalType.Rejoin, CallId = id });
+        if (resendAccept)
+        {
+            Send(new CallControl { Type = SignalType.Accept, CallId = id });
         }
     }
 
@@ -599,6 +768,7 @@ internal sealed class CallHub : IDisposable
         remoteSlots.Clear();
         muted = false;
         callStartTicks = 0;
+        connectionLostTicks = 0;
         ringTimer = 0f;
         stateTimer = 0f;
     }
@@ -645,20 +815,67 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void AddRecent(CallContact contact)
+    private void AddLog(CallContact contact, CallDirection direction)
     {
         lock (gate)
         {
-            var list = new List<CallContact>(recents.Length + 1) { contact };
-            for (var index = 0; index < recents.Length && list.Count < MaxRecents; index++)
+            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var current = callLog;
+            if (current.Length > 0 && current[0].UserId == contact.UserId && current[0].Direction == direction)
             {
-                if (recents[index].UserId != contact.UserId)
+                var merged = (CallLogEntry[])current.Clone();
+                merged[0] = new CallLogEntry
                 {
-                    list.Add(recents[index]);
+                    UserId = contact.UserId,
+                    Name = contact.Name,
+                    World = contact.World,
+                    DisplayName = contact.DisplayName,
+                    Direction = direction,
+                    TimestampUnix = now,
+                    Count = current[0].Count + 1,
+                };
+                callLog = merged;
+            }
+            else
+            {
+                var length = Math.Min(current.Length + 1, MaxCallLog);
+                var next = new CallLogEntry[length];
+                next[0] = new CallLogEntry
+                {
+                    UserId = contact.UserId,
+                    Name = contact.Name,
+                    World = contact.World,
+                    DisplayName = contact.DisplayName,
+                    Direction = direction,
+                    TimestampUnix = now,
+                };
+                for (var index = 1; index < length; index++)
+                {
+                    next[index] = current[index - 1];
                 }
+
+                callLog = next;
             }
 
-            recents = list.ToArray();
+            configuration.CallLog.Clear();
+            configuration.CallLog.AddRange(callLog);
+        }
+
+        configuration.Save();
+    }
+
+    private void LogMissed(ParticipantInfo? from, bool notify)
+    {
+        if (from is null)
+        {
+            return;
+        }
+
+        AddLog(new CallContact(from.UserId, from.Name, from.World, from.DisplayName), CallDirection.Missed);
+        if (notify)
+        {
+            notifications.Notify(new PhoneNotification("message", from.DisplayName, Loc.T(L.Phone.MissedCallBody),
+                DateTime.Now, Accent));
         }
     }
 
