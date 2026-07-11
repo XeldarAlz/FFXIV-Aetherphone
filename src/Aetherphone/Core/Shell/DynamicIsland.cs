@@ -154,7 +154,7 @@ internal sealed class DynamicIsland
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (expandEased < 0.5f && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             if (shownKind == ActivityKind.Call)
             {
@@ -284,6 +284,10 @@ internal sealed class DynamicIsland
                 new Vector2(bounds.Max.X - 22f * scale, trackY + 2.5f * scale));
             playback.Volume = Scrubber.Draw(track, playback.Volume, MusicAccent,
                 Palette.WithAlpha(theme.TextStrong, 0.18f), alpha);
+            if (Scrubber.IsHovered(track))
+            {
+                consumed = true;
+            }
         }
 
         return consumed;

@@ -17,9 +17,7 @@ internal static class Scrubber
         var width = track.Width;
         var thickness = track.Height;
         var result = Math.Clamp(value, 0f, 1f);
-        var hitMin = new Vector2(left - 6f * scale, midY - 14f * scale);
-        var hitMax = new Vector2(track.Max.X + 6f * scale, midY + 14f * scale);
-        if (ImGui.IsMouseHoveringRect(hitMin, hitMax))
+        if (IsHovered(track))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseDown(ImGuiMouseButton.Left) && width > 0f)
@@ -37,5 +35,14 @@ internal static class Scrubber
         drawList.AddCircleFilled(new Vector2(knobX, midY), thickness * 0.5f + 4f * scale,
             ImGui.GetColorU32(Palette.WithAlpha(new Vector4(1f, 1f, 1f, 1f), alpha)), 24);
         return result;
+    }
+
+    public static bool IsHovered(Rect track)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var midY = track.Center.Y;
+        var hitMin = new Vector2(track.Min.X - 6f * scale, midY - 14f * scale);
+        var hitMax = new Vector2(track.Max.X + 6f * scale, midY + 14f * scale);
+        return ImGui.IsMouseHoveringRect(hitMin, hitMax);
     }
 }
