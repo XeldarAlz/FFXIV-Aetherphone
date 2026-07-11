@@ -108,9 +108,16 @@ internal static class HoverTooltip
 
         var scale = ImGuiHelpers.GlobalScale;
         var style = TextStyles.SubheadlineEmphasized;
-        var textSize = Typography.Measure(label, style);
         var padX = 11f * scale;
         var padY = 7f * scale;
+        var margin = 8f * scale;
+        var windowLeft = ImGui.GetWindowPos().X;
+        var left = windowLeft + ImGui.GetWindowContentRegionMin().X + margin;
+        var right = windowLeft + ImGui.GetWindowContentRegionMax().X - margin;
+        var maxTextWidth = right - left - 2f * padX;
+        var lineSize = Typography.Measure(label, style);
+        var wrapped = maxTextWidth > 0f && lineSize.X > maxTextWidth;
+        var textSize = wrapped ? Typography.MeasureWrappedBlock(label, style, maxTextWidth) : lineSize;
         var width = textSize.X + 2f * padX;
         var height = textSize.Y + 2f * padY;
         var gap = 7f * scale;
@@ -118,14 +125,25 @@ internal static class HoverTooltip
         var centerY = side == HoverLabelSide.Above
             ? target.Min.Y - gap - height * 0.5f + rise
             : target.Max.Y + gap + height * 0.5f - rise;
-        var center = new Vector2(target.Center.X, centerY);
+        var centerX = right - left > width
+            ? Math.Clamp(target.Center.X, left + width * 0.5f, right - width * 0.5f)
+            : (left + right) * 0.5f;
+        var center = new Vector2(centerX, centerY);
         var min = new Vector2(center.X - width * 0.5f, center.Y - height * 0.5f);
         var max = new Vector2(center.X + width * 0.5f, center.Y + height * 0.5f);
-        var rounding = height * 0.5f;
+        var rounding = MathF.Min(height, lineSize.Y + 2f * padY) * 0.5f;
         Elevation.Floating(dl, min, max, rounding, scale, alpha);
         Squircle.Fill(dl, min, max, rounding, ImGui.GetColorU32(new Vector4(0.10f, 0.10f, 0.12f, 0.96f * alpha)));
         Material.EdgeSquircle(dl, min, max, rounding, scale, alpha);
-        Typography.DrawCentered(dl, center, label, new Vector4(0.96f, 0.96f, 0.98f, alpha), style);
+        var color = new Vector4(0.96f, 0.96f, 0.98f, alpha);
+        if (wrapped)
+        {
+            Typography.DrawWrappedCentered(dl, center, label, color, style, maxTextWidth);
+        }
+        else
+        {
+            Typography.DrawCentered(dl, center, label, color, style);
+        }
     }
 
     private static float Step(string id, bool hovered)

@@ -75,6 +75,22 @@ internal static class Typography
         }
     }
 
+    public static Vector2 MeasureWrappedBlock(string text, in TextStyle style, float maxWidth)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            var lines = WrapLines(text, maxWidth);
+            var lineHeight = ImGui.GetTextLineHeightWithSpacing();
+            var width = 0f;
+            for (var index = 0; index < lines.Length; index++)
+            {
+                width = MathF.Max(width, ImGui.CalcTextSize(lines[index]).X);
+            }
+
+            return new Vector2(width, lines.Length * lineHeight);
+        }
+    }
+
     public static void Draw(Vector2 position, string text, Vector4 color, float scale = 1f) =>
         Draw(position, text, color, scale, FontWeight.Regular);
 
