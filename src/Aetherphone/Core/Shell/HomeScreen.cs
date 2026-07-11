@@ -127,7 +127,7 @@ internal sealed class HomeScreen
         var labelAlpha = chromeAlpha * (folder.Active ? 0.35f : 1f);
         DrawPages(metrics, theme, delta, labelAlpha, motion);
         DrawDock(metrics, theme, delta, chromeAlpha, motion);
-        DrawPageDots(metrics, theme, chromeAlpha, motion.Interactive);
+        DrawPageControls(metrics, theme, chromeAlpha, motion.Interactive);
         if (editing && motion.Interactive)
         {
             DrawEditChrome(content, metrics, theme);
@@ -903,7 +903,7 @@ internal sealed class HomeScreen
         }
     }
 
-    private void DrawPageDots(in HomeMetrics metrics, PhoneTheme theme, float alpha, bool interactive)
+    private void DrawPageControls(in HomeMetrics metrics, PhoneTheme theme, float alpha, bool interactive)
     {
         var pageCount = DisplayPageCount();
         if (pageCount <= 1 || alpha <= 0.01f)
@@ -933,6 +933,65 @@ internal sealed class HomeScreen
                 pager.AnimateTo(index, pageCount);
                 pressActive = false;
             }
+        }
+
+        DrawPageArrow(metrics, theme, alpha, interactive, -1, pageCount);
+        DrawPageArrow(metrics, theme, alpha, interactive, 1, pageCount);
+    }
+
+    private void DrawPageArrow(in HomeMetrics metrics, PhoneTheme theme, float alpha, bool interactive, int direction,
+        int pageCount)
+    {
+        var target = pager.Page + direction;
+        if (target < 0 || target > pageCount - 1)
+        {
+            return;
+        }
+
+        var scale = metrics.Scale;
+        var tabWidth = 20f * scale;
+        var tabHalfHeight = 30f * scale;
+        var centerY = metrics.Grid.Center.Y;
+        var leftEdge = metrics.Content.Min.X - theme.SidePadding * scale;
+        var rightEdge = metrics.Content.Max.X + theme.SidePadding * scale;
+        var tab = direction < 0
+            ? new Rect(new Vector2(leftEdge, centerY - tabHalfHeight),
+                new Vector2(leftEdge + tabWidth, centerY + tabHalfHeight))
+            : new Rect(new Vector2(rightEdge - tabWidth, centerY - tabHalfHeight),
+                new Vector2(rightEdge, centerY + tabHalfHeight));
+        var hit = Expand(tab, 4f * scale);
+        var hovered = interactive && dragTile is null && ImGui.IsMouseHoveringRect(hit.Min, hit.Max);
+        var drawList = ImGui.GetWindowDrawList();
+        var rounding = 7f * scale;
+        var corners = direction < 0 ? ImDrawFlags.RoundCornersRight : ImDrawFlags.RoundCornersLeft;
+        drawList.AddRectFilled(tab.Min, tab.Max,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, (hovered ? 0.42f : 0.28f) * alpha)), rounding, corners);
+        drawList.AddRect(tab.Min, tab.Max,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, (hovered ? 0.35f : 0.18f) * alpha)), rounding, corners,
+            1f * scale);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        var center = tab.Center;
+        var reach = 4.2f * scale;
+        var thickness = 2.2f * scale;
+        var tip = new Vector2(center.X + reach * 0.55f * direction, center.Y);
+        var upper = new Vector2(tip.X - reach * direction, tip.Y - reach);
+        var lower = new Vector2(tip.X - reach * direction, tip.Y + reach);
+        var ink = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, (hovered ? 1f : 0.85f) * alpha));
+        drawList.AddLine(upper, tip, ink, thickness);
+        drawList.AddLine(tip, lower, ink, thickness);
+        var cap = thickness * 0.5f;
+        drawList.AddCircleFilled(upper, cap, ink, 8);
+        drawList.AddCircleFilled(tip, cap, ink, 8);
+        drawList.AddCircleFilled(lower, cap, ink, 8);
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            pager.AnimateTo(target, pageCount);
+            pressActive = false;
+            CancelTap();
         }
     }
 
