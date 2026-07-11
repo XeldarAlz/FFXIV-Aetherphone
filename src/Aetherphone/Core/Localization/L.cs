@@ -423,6 +423,22 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0920 =
+        {
+            new("changelog.r0920.0", "Added KupoAI, a new app that answers your questions about Final Fantasy XIV straight from the wiki, complete with sources to read more"),
+            new("changelog.r0920.1", "Combined Friends, Phone, and your direct messages into a single app called ChocoChat, so your chats, contacts, and calls all live in one place"),
+            new("changelog.r0920.2", "The Calls tab now keeps a full call history like a real phone, and badges any calls you missed"),
+            new("changelog.r0920.3", "A brief connection drop no longer ends your call: it quietly reconnects on its own within a short grace period"),
+            new("changelog.r0920.4", "You can now reopen an ongoing call from the Dynamic Island at the top of the screen"),
+            new("changelog.r0920.5", "You can browse your chats and contacts during a call, and switch to another call without hanging up first"),
+            new("changelog.r0920.6", "Merged the Chat, Contacts, and Find People apps into one in-game messaging app and renamed it Linkpearl, with a new pearl icon"),
+            new("changelog.r0920.7", "Added a guided setup after the welcome screen that walks you through signing in, setting up your profile and photo, and choosing your analytics preference"),
+            new("changelog.r0920.8", "Reporting now happens through one consistent popup everywhere, where you pick a category and add details, instead of a different form in each app"),
+            new("changelog.r0920.9", "The welcome tour now points right at the real buttons and widgets on screen as it guides you around the phone"),
+            new("changelog.r0920.10", "Links in your messages are now underlined and open in your browser when you click them"),
+            new("changelog.r0920.11", "New automatic moderation reviews everything posted to the social apps and flags or removes anything inappropriate to keep the feeds safe"),
+        };
+
         public static readonly LocString[] Release0910 =
         {
             new("changelog.r0910.0", "Your one-to-one and group chats in Messages, and your Velvet messages, are now end-to-end encrypted, so only you and the people you're talking to can read them. Not even the server can"),
