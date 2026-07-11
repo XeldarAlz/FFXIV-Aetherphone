@@ -20,7 +20,7 @@ internal static class AppIconTextures
             return false;
         }
 
-        var texture = Plugin.TextureProvider.GetFromFile(path).GetWrapOrEmpty();
+        var texture = Plugin.TextureProvider.GetFromFile(path).GetWrapOrDefault();
         if (texture is null || texture.Handle == nint.Zero)
         {
             return false;
@@ -41,8 +41,13 @@ internal static class AppIconTextures
         }
 
         var candidate = Path.Combine(IconDirectory, id + ".png");
-        var resolved = File.Exists(candidate) ? candidate : null;
-        ResolvedPaths[id] = resolved;
-        return resolved;
+        if (!File.Exists(candidate))
+        {
+            return null;
+        }
+
+        Plugin.TextureSubstitution.InvalidatePaths(new[] { candidate });
+        ResolvedPaths[id] = candidate;
+        return candidate;
     }
 }
