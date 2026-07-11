@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -107,12 +108,20 @@ internal sealed class NotesApp : IPhoneApp
 
     private void DrawList(Rect content, float scale)
     {
+        if (GuideIntents.Consume("notes.tab.reminders"))
+        {
+            activeTab = 1;
+        }
+
         DrawTopBar(content, scale);
 
         var segMargin = Metrics.Space.Lg * scale;
         var segTop = content.Min.Y + AppHeader.Height * scale + Metrics.Space.Sm * scale;
         var segRow = new Rect(new Vector2(content.Min.X + segMargin, segTop),
             new Vector2(content.Max.X - segMargin, segTop + 30f * scale));
+        UiAnchors.Report("notes.tabs", segRow);
+        UiAnchors.Report("notes.tab.reminders",
+            new Rect(new Vector2(segRow.Center.X, segRow.Min.Y), segRow.Max));
         tabOptions[0] = Loc.T(L.Notes.TabNotes);
         tabOptions[1] = Loc.T(L.Notes.TabReminders);
         activeTab = SegmentStrip.Draw("notes.tabs", segRow, tabOptions, activeTab, theme);
@@ -140,6 +149,8 @@ internal sealed class NotesApp : IPhoneApp
             FontWeight.SemiBold);
         var radius = 15f * scale;
         var buttonCenter = new Vector2(content.Max.X - Metrics.Space.Lg * scale - radius, centerY);
+        UiAnchors.Report("notes.new",
+            new Rect(buttonCenter - new Vector2(radius, radius), buttonCenter + new Vector2(radius, radius)));
         var tooltip = activeTab == 0 ? Loc.T(L.Notes.NewNote) : Loc.T(L.Notes.NewReminder);
         if (ui.IconButton(buttonCenter, radius, FontAwesomeIcon.Plus.ToIconString(), ui.TitleInk,
                 Palette.WithAlpha(ui.TitleInk, 0.12f), 0.6f, tooltip))

@@ -21,6 +21,7 @@ internal sealed class TutorialsPage : ISettingsPage
 
     public FontAwesomeIcon Icon => FontAwesomeIcon.GraduationCap;
     public Vector4 Tint => new(0.62f, 0.42f, 0.96f, 1f);
+    public string? GuideAnchor => "settings.row.tutorials";
     private readonly Configuration configuration;
 
     public TutorialsPage(Configuration configuration)

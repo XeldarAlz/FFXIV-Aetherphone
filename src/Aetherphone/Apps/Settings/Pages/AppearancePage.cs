@@ -17,6 +17,7 @@ internal sealed class AppearancePage : ISettingsPage
     public string Summary => CatalogLabels.Accent(configuration.AccentName);
     public FontAwesomeIcon Icon => FontAwesomeIcon.Palette;
     public Vector4 Tint => new(0.55f, 0.45f, 0.95f, 1f);
+    public string? GuideAnchor => "settings.row.appearance";
     private static readonly ThemeMode[] ModeOrder = { ThemeMode.Light, ThemeMode.Dark, ThemeMode.Auto };
     private readonly Configuration configuration;
     private readonly ThemeProvider themes;

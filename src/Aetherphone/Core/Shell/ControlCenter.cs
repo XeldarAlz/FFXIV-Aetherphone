@@ -80,7 +80,7 @@ internal sealed class ControlCenter
     public bool IsActive => open || offset.Value > 0.01f;
     public bool CapturesPointer => IsActive;
 
-    public void Draw(Rect screen, PhoneTheme theme, float delta, bool gesturesEnabled)
+    public void Draw(Rect screen, PhoneTheme theme, float delta, bool gesturesEnabled, bool inputEnabled = true)
     {
         var busy = editing || draggingSlot is not null || gallery.Active || pressSlot is not null;
         HandleGesture(screen, delta, gesturesEnabled, !busy);
@@ -102,7 +102,7 @@ internal sealed class ControlCenter
         Material.Frosted(dl, new Vector2(screen.Min.X, panelTop), new Vector2(screen.Max.X, panelTop + height),
             rounding, scale, 1f);
         var opacity = Math.Clamp(eased * 1.7f, 0f, 1f);
-        var interactive = open && !drag.Active && offset.Value > 0.96f;
+        var interactive = open && !drag.Active && offset.Value > 0.96f && inputEnabled;
         DrawContents(dl, screen, theme, panelTop, scale, delta, opacity, interactive);
         dl.PopClipRect();
     }
@@ -509,7 +509,7 @@ internal sealed class ControlCenter
         notificationCenter.DrawOverlay(dl, inner, theme, opacity, interactive && !editing);
     }
 
-    private void Open()
+    public void Open()
     {
         open = true;
         target = 1f;
@@ -517,7 +517,7 @@ internal sealed class ControlCenter
         notificationCenter.Reset();
     }
 
-    private void Dismiss()
+    public void Dismiss()
     {
         open = false;
         target = 0f;

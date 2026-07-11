@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -104,6 +105,7 @@ internal sealed class InventoryApp : IPhoneApp
         var searchTop = area.Min.Y + AppHeader.Height * scale;
         var searchBar = new Rect(new Vector2(area.Min.X + pad, searchTop),
             new Vector2(area.Max.X - pad, searchTop + SearchHeight * scale));
+        UiAnchors.Report("inventory.search", searchBar);
         SearchField.Draw(searchBar, "##inventorySearch", Loc.T(L.Inventory.Search), ref query, frameTheme);
         var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))
@@ -231,6 +233,7 @@ internal sealed class InventoryApp : IPhoneApp
             }
 
             card.End();
+            UiAnchors.Report("inventory.sources", new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()));
         }
 
         DrawFooterHint(theme);
@@ -327,6 +330,7 @@ internal sealed class InventoryApp : IPhoneApp
         var height = 92f * scale;
         var cardMin = origin;
         var cardMax = new Vector2(origin.X + width, origin.Y + height);
+        UiAnchors.Report("inventory.summary", new Rect(cardMin, cardMax));
         var rounding = 20f * scale;
         Elevation.Card(drawList, cardMin, cardMax, rounding, scale, 0.7f);
         Squircle.Fill(drawList, cardMin, cardMax, rounding, ImGui.GetColorU32(theme.GroupedCard));

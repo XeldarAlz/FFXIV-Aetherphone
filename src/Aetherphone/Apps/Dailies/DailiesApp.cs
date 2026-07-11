@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
@@ -107,6 +108,11 @@ internal sealed class DailiesApp : IPhoneApp
             RefreshAuto();
         }
 
+        if (GuideIntents.Consume("dailies.tab.weekly"))
+        {
+            cadenceIndex = 1;
+        }
+
         var scale = ImGuiHelpers.GlobalScale;
         var theme = context.Theme;
         var content = context.Content;
@@ -124,6 +130,7 @@ internal sealed class DailiesApp : IPhoneApp
             DrawHero(utcNow, scale);
 
             var stripRect = NextRowRect(36f, scale);
+            UiAnchors.Report("dailies.cadence", stripRect);
             var cadenceLabels = new[] { Loc.T(L.Dailies.Daily), Loc.T(L.Dailies.Weekly) };
             cadenceIndex = SegmentStrip.Draw("dailies.cadence", stripRect, cadenceLabels, cadenceIndex, theme);
             ImGui.SetCursorScreenPos(stripRect.Min);
@@ -376,6 +383,7 @@ internal sealed class DailiesApp : IPhoneApp
         var max = origin + new Vector2(width, height);
         var drawList = ImGui.GetWindowDrawList();
         ui.Card(drawList, min, max, 16f * scale, elevated: true);
+        UiAnchors.Report("dailies.notify", new Rect(min, max));
 
         var padding = 16f * scale;
         var label = Loc.T(L.Dailies.NotifyReset);

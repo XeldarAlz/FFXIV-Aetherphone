@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -38,6 +39,7 @@ internal static class CameraChrome
         var half = new Vector2(16f * scale, 16f * scale);
         var min = center - half;
         var max = center + half;
+        UiAnchors.Report("camera.flash", new Rect(min, max));
         var hovered = ImGui.IsMouseHoveringRect(min, max);
         var rounding = Metrics.Radius.Field * scale;
         var fill = flashEnabled
@@ -157,6 +159,9 @@ internal static class CameraChrome
         }
 
         var cursorX = screen.Center.X - total * 0.5f;
+        UiAnchors.Report("camera.modes",
+            new Rect(new Vector2(cursorX - gap * 0.4f, rowCenterY - 14f * scale),
+                new Vector2(cursorX + total + gap * 0.4f, rowCenterY + 14f * scale)));
         var result = modeIndex;
         for (var index = 0; index < modes.Length; index++)
         {
@@ -186,6 +191,8 @@ internal static class CameraChrome
     {
         var dl = ImGui.GetWindowDrawList();
         var outerRadius = ShutterRadius * scale;
+        UiAnchors.Report("camera.shutter",
+            new Rect(center - new Vector2(outerRadius, outerRadius), center + new Vector2(outerRadius, outerRadius)));
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(outerRadius, outerRadius),
             center + new Vector2(outerRadius, outerRadius));
         dl.AddCircle(center, outerRadius, ImGui.GetColorU32(ShutterRing), 48, 3f * scale);

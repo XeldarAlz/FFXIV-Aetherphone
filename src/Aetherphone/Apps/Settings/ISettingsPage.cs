@@ -12,5 +12,7 @@ internal interface ISettingsPage
     FontAwesomeIcon Icon { get; }
     Vector4 Tint { get; }
     bool ShowsBadge => false;
+    bool OwnsChrome => false;
+    string? GuideAnchor => null;
     void Draw(in PhoneContext context, Rect body);
 }

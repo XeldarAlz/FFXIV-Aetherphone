@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Collections;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -75,7 +76,13 @@ internal sealed partial class CollectionsApp
             var rowIndex = index / columns;
             var min = new Vector2(origin.X + column * (tileWidth + gap), origin.Y + rowIndex * (tileHeight + gap));
             var max = new Vector2(min.X + tileWidth, min.Y + tileHeight);
-            if (DrawTile(new Rect(min, max), category, scale))
+            var tileRect = new Rect(min, max);
+            if (category == CollectionCategory.Mounts)
+            {
+                UiAnchors.Report("collections.tile.mounts", tileRect);
+            }
+
+            if (DrawTile(tileRect, category, scale))
             {
                 OpenCategory(category);
             }
@@ -108,7 +115,7 @@ internal sealed partial class CollectionsApp
             new Vector2(ringCenter.X - ringRadius - 10f * scale, rect.Max.Y), true);
         Typography.Draw(new Vector2(left, rect.Center.Y - 19f * scale), CategoryLabel(category), frameTheme.TextStrong,
             1f, FontWeight.SemiBold);
-        var countLabel = total > 0 ? total.ToString() : "—";
+        var countLabel = total > 0 ? total.ToString() : "-";
         Typography.Draw(new Vector2(left, rect.Center.Y + 3f * scale), countLabel, frameTheme.TextMuted, 0.82f,
             FontWeight.Medium);
         drawList.PopClipRect();
@@ -149,6 +156,7 @@ internal sealed partial class CollectionsApp
         var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
         var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
             new Vector2(area.Max.X - pad, top + SearchHeight * scale));
+        UiAnchors.Report("collections.search", searchBar);
         SearchField.Draw(searchBar, "##collectSearch", Loc.T(L.Collections.Search), ref search, frameTheme, 60);
         if (search != lastSearch)
         {
@@ -163,6 +171,7 @@ internal sealed partial class CollectionsApp
         {
             var segmentBar = new Rect(new Vector2(area.Min.X + pad, rowTop),
                 new Vector2(area.Max.X - pad, rowTop + SegmentHeight * scale));
+            UiAnchors.Report("collections.filters", segmentBar);
             DrawOwnershipSegments(segmentBar);
             rowTop = segmentBar.Max.Y + 2f * scale;
         }

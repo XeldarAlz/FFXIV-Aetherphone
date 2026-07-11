@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -46,6 +47,8 @@ internal static class CalendarMonthView
         DrawDayHeaders(ui, drawList, origin, cellWidth, dayHeaderY, scale);
 
         var gridTop = dayHeaderY + DayHeaderHeight * scale;
+        UiAnchors.Report("calendar.grid",
+            new Rect(new Vector2(area.Min.X, gridTop), new Vector2(area.Max.X, gridTop + totalRows * rowHeight)));
         drawList.AddLine(new Vector2(area.Min.X, gridTop), new Vector2(area.Max.X, gridTop),
             ImGui.GetColorU32(ui.Theme.Separator), 1f);
 

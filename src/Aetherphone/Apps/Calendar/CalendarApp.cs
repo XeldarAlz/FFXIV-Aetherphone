@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -124,6 +125,7 @@ internal sealed class CalendarApp : IPhoneApp
             ImGui.Dummy(new Vector2(0f, 8f * scale));
 
             var detailArea = new Rect(new Vector2(body.Min.X, monthBottom), new Vector2(body.Max.X, body.Max.Y));
+            UiAnchors.Report("calendar.agenda", detailArea);
             CalendarDayList.Draw(ui, detailArea, selectedDate, merged, scale, AskDeleteCustomEvent);
         }
     }
@@ -137,6 +139,9 @@ internal sealed class CalendarApp : IPhoneApp
 
         var buttonRadius = 15f * scale;
         var buttonCenter = new Vector2(content.Max.X - 16f * scale - buttonRadius, centerY);
+        UiAnchors.Report("calendar.new",
+            new Rect(buttonCenter - new Vector2(buttonRadius, buttonRadius),
+                buttonCenter + new Vector2(buttonRadius, buttonRadius)));
         DrawAddButton(buttonCenter, buttonRadius);
     }
 

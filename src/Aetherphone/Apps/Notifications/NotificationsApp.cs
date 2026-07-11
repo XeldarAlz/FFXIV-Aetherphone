@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Messaging;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface.Utility;
 
@@ -49,6 +50,7 @@ internal sealed class NotificationsApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);
+        UiAnchors.Report("notifications.list", body);
         center.Draw(context, body);
     }
 

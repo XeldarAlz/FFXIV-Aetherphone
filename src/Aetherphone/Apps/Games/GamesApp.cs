@@ -22,6 +22,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -245,6 +246,7 @@ internal sealed class GamesApp : IPhoneApp
             var y = origin.Y + Metrics.Space.Xxs * scale;
             var heroRect = new Rect(new Vector2(origin.X, y),
                 new Vector2(origin.X + availableWidth, y + HeroHeight * scale));
+            UiAnchors.Report("games.featured", heroRect);
             if (DrawHero(heroRect, featured, Easing.EaseOutCubic(entrance), deltaSeconds, scale))
             {
                 OpenGame(featured);
@@ -259,6 +261,12 @@ internal sealed class GamesApp : IPhoneApp
                     games[tileOrder[section.Start]].Genre, theme.TextStrong, TextStyles.Title3);
                 y += SectionHeaderHeight * scale;
                 ImGui.SetCursorScreenPos(new Vector2(origin.X, y));
+                if (sectionIndex == 0)
+                {
+                    UiAnchors.Report("games.library", new Rect(new Vector2(origin.X, y),
+                        new Vector2(origin.X + availableWidth, y + section.Count * GameRowHeight * scale)));
+                }
+
                 var card = GroupCard.Begin(theme, section.Count, GameRowHeight);
                 for (var item = 0; item < section.Count; item++)
                 {

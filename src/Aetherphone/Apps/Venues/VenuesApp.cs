@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Net;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows;
@@ -122,12 +123,15 @@ internal sealed partial class VenuesApp : IPhoneApp
         var top = area.Min.Y + AppHeader.Height * scale;
         var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
             new Vector2(area.Max.X - pad, top + SearchHeight * scale));
+        UiAnchors.Report("venues.search", searchBar);
         SearchField.Draw(searchBar, "##venueSearch", Loc.T(L.Venues.Search), ref search, AppPalettes.Venues, 80);
         var segmentBar = new Rect(new Vector2(area.Min.X + pad, searchBar.Max.Y),
             new Vector2(area.Max.X - pad, searchBar.Max.Y + SegmentHeight * scale));
+        UiAnchors.Report("venues.time", segmentBar);
         DrawTimeSegments(segmentBar);
         var chipBar = new Rect(new Vector2(area.Min.X + pad, segmentBar.Max.Y + 2f * scale),
             new Vector2(area.Max.X - pad, segmentBar.Max.Y + 2f * scale + ChipRowHeight * scale));
+        UiAnchors.Report("venues.chips", chipBar);
         DrawFilterChips(chipBar);
         var body = new Rect(new Vector2(area.Min.X, chipBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))

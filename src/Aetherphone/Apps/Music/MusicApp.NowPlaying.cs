@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Theme;
@@ -155,6 +156,7 @@ internal sealed partial class MusicApp
         var height = MiniHeight * scale;
         var min = new Vector2(content.Min.X + 2f * scale, content.Max.Y - height);
         var max = new Vector2(content.Max.X - 2f * scale, content.Max.Y - 2f * scale);
+        UiAnchors.Report("music.miniplayer", new Rect(min, max));
         var rounding = 16f * scale;
         var dl = ImGui.GetWindowDrawList();
         var hovered = ImGui.IsMouseHoveringRect(min, max);

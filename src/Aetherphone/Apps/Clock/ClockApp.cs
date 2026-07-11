@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -90,6 +91,11 @@ internal sealed partial class ClockApp : IPhoneApp
 
     private void DrawRoot(Rect content, float scale)
     {
+        if (GuideIntents.Consume("clock.tab.alarms"))
+        {
+            activeTab = TabAlarms;
+        }
+
         var context = new PhoneContext(content, theme, navigation);
         AppHeader.Draw(context, DisplayName);
         DrawRootAction(content, scale);
@@ -98,6 +104,7 @@ internal sealed partial class ClockApp : IPhoneApp
         var segTop = content.Min.Y + AppHeader.Height * scale + Metrics.Space.Sm * scale;
         var segRow = new Rect(new Vector2(content.Min.X + segMargin, segTop),
             new Vector2(content.Max.X - segMargin, segTop + 30f * scale));
+        UiAnchors.Report("clock.tabs", segRow);
         tabOptions[TabWorld] = Loc.T(L.Clock.TabWorld);
         tabOptions[TabAlarms] = Loc.T(L.Clock.TabAlarms);
         tabOptions[TabStopwatch] = Loc.T(L.Clock.TabStopwatch);
@@ -132,6 +139,8 @@ internal sealed partial class ClockApp : IPhoneApp
         var radius = 15f * scale;
         var center = new Vector2(content.Max.X - Metrics.Space.Lg * scale - radius,
             content.Min.Y + AppHeader.Height * scale * 0.5f);
+        UiAnchors.Report("clock.add",
+            new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)));
         var tooltip = activeTab == TabWorld ? Loc.T(L.Clock.AddCity) : Loc.T(L.Clock.NewAlarm);
         if (ui.IconButton(center, radius, FontAwesomeIcon.Plus.ToIconString(), ui.TitleInk,
                 Palette.WithAlpha(ui.TitleInk, 0.12f), 0.6f, tooltip))

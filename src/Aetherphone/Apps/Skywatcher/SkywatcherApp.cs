@@ -113,6 +113,11 @@ internal sealed class SkywatcherApp : IPhoneApp
             TextStyles.LargeTitle.Scale, FontWeight.Regular);
         Typography.DrawCentered(new Vector2(centerX, origin.Y + 210f * scale), Summary(), palette.InkSoft,
             TextStyles.Subheadline);
+        if (UiAnchors.Recording)
+        {
+            UiAnchors.Report("skywatcher.current", new Rect(origin, origin + new Vector2(width, 234f * scale)));
+        }
+
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, 234f * scale));
     }

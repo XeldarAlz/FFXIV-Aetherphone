@@ -5,6 +5,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
@@ -98,7 +99,7 @@ internal sealed class PollsApp : IPhoneApp
             ImGui.Dummy(new Vector2(0f, 2f * scale));
             for (var index = 0; index < polls.Length; index++)
             {
-                DrawPollCard(polls[index], scale);
+                DrawPollCard(polls[index], scale, index == 0);
                 ImGui.Dummy(new Vector2(0f, 12f * scale));
             }
         }
@@ -131,7 +132,7 @@ internal sealed class PollsApp : IPhoneApp
             ui.MutedInk, 0.9f);
     }
 
-    private void DrawPollCard(PollDto poll, float scale)
+    private void DrawPollCard(PollDto poll, float scale, bool isFirstCard)
     {
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
@@ -163,6 +164,10 @@ internal sealed class PollsApp : IPhoneApp
         var cardBottom = footerTop + footerHeight + pad * 0.75f;
 
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 18f * scale, true);
+        if (isFirstCard)
+        {
+            UiAnchors.Report("polls.card", new Rect(origin, new Vector2(origin.X + width, cardBottom)));
+        }
 
         ImGui.SetCursorScreenPos(new Vector2(contentLeft, origin.Y + pad));
         var wrapPos = contentRight - ImGui.GetWindowPos().X;

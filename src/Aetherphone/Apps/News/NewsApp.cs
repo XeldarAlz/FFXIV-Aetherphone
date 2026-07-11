@@ -5,6 +5,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.News;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
@@ -88,6 +89,7 @@ internal sealed class NewsApp : IPhoneApp
         var segmentTop = top + RegionRowHeight * scale;
         var segmentRow = new Rect(new Vector2(area.Min.X + 16f * scale, segmentTop),
             new Vector2(area.Max.X - 16f * scale, segmentTop + SegmentRowHeight * scale));
+        UiAnchors.Report("news.categories", segmentRow);
         FillCategoryLabels();
         var selected = SegmentStrip.Draw("news.category", segmentRow, categoryLabels, categoryIndex, theme);
         if (selected != categoryIndex)
@@ -103,6 +105,7 @@ internal sealed class NewsApp : IPhoneApp
         DrawRefreshControl(new Vector2(area.Max.X - 20f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f),
             entry.State, scale);
         var body = new Rect(new Vector2(area.Min.X, segmentRow.Max.Y), area.Max);
+        UiAnchors.Report("news.feed", body);
         var hasItems = entry.Items.Length > 0;
         if (!hasItems)
         {
@@ -399,6 +402,7 @@ internal sealed class NewsApp : IPhoneApp
         }
 
         var box = 14f * scale;
+        UiAnchors.Report("news.refresh", new Rect(center - new Vector2(box, box), center + new Vector2(box, box)));
         var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
         var glyph = FontAwesomeIcon.Sync.ToIconString();
         using (ImRaii.PushFont(UiBuilder.IconFont))

@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Wallet;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -81,6 +82,8 @@ internal sealed class WalletApp : IPhoneApp
         using (AppSurface.Begin(body))
         {
             CurrencyRow.Hero(gil, textures, theme);
+            UiAnchors.Report("wallet.gil", new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()));
+            var currenciesAnchored = false;
             for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
             {
                 var section = sections[sectionIndex];
@@ -97,6 +100,11 @@ internal sealed class WalletApp : IPhoneApp
                 }
 
                 card.End();
+                if (!currenciesAnchored)
+                {
+                    UiAnchors.Report("wallet.currencies", new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()));
+                    currenciesAnchored = true;
+                }
             }
         }
     }

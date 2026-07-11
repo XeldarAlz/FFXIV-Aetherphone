@@ -4,6 +4,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -94,14 +95,15 @@ internal sealed class PhotosApp : IPhoneApp
         var countLabel = Loc.Plural(L.Photos.Count, paths.Length);
         Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 34f * scale), countLabel,
             theme.TextMuted, 0.85f);
+        var bodyTop = content.Min.Y + 58f * scale;
+        var body = new Rect(new Vector2(content.Min.X, bodyTop), content.Max);
+        UiAnchors.Report("photos.grid", body);
         if (paths.Length == 0)
         {
             PhotosChrome.Empty(content, theme, scale);
             return;
         }
 
-        var bodyTop = content.Min.Y + 58f * scale;
-        var body = new Rect(new Vector2(content.Min.X, bodyTop), content.Max);
         ImGui.SetCursorScreenPos(body.Min);
         using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(6f * scale, 6f * scale)))
         using (var child = ImRaii.Child("##grid", body.Size, false, ImGuiWindowFlags.NoBackground))

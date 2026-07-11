@@ -5,6 +5,7 @@ using Aetherphone.Core.Character;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -82,6 +83,10 @@ internal sealed class ActivityApp : IPhoneApp
 
     private static void DrawRings(PhoneTheme theme, ActivitySnapshot snapshot, float scale)
     {
+        var ringsOrigin = ImGui.GetCursorScreenPos();
+        var ringsWidth = ImGui.GetContentRegionAvail().X;
+        UiAnchors.Report("character.rings",
+            new Rect(ringsOrigin, ringsOrigin + new Vector2(ringsWidth, ActivityRings.Height * scale)));
         ActivityRings.Draw(theme, snapshot.JobFraction, snapshot.MasteryFraction, snapshot.CollectionFraction);
         DrawLegend(theme, scale, snapshot);
     }
@@ -118,6 +123,10 @@ internal sealed class ActivityApp : IPhoneApp
     private void DrawActivitySummary(PhoneTheme theme, ActivitySnapshot snapshot)
     {
         SettingsSection.Header(Loc.T(L.Character.Summary), theme);
+        var summaryOrigin = ImGui.GetCursorScreenPos();
+        var summaryWidth = ImGui.GetContentRegionAvail().X;
+        UiAnchors.Report("character.summary", new Rect(summaryOrigin,
+            summaryOrigin + new Vector2(summaryWidth, 3f * ActivityStatRow.RowHeight * ImGuiHelpers.GlobalScale)));
         var card = GroupCard.Begin(theme, 3, ActivityStatRow.RowHeight);
         var jobLabel = snapshot.JobName.Length > 0
             ? $"{snapshot.JobName} · Lv {snapshot.Level}"

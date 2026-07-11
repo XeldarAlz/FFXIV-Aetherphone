@@ -145,7 +145,7 @@ internal sealed class CoachmarkOverlay
         var innerWidth = cardWidth - 44f * scale;
         var titleLine = LineHeight(TextStyles.Title3);
         var bodyLine = LineHeight(TextStyles.Body);
-        var bodyLines = CountWrapped(Loc.T(step.Body), TextStyles.Body, innerWidth);
+        var bodyLines = Typography.CountWrappedLines(Loc.T(step.Body), TextStyles.Body, innerWidth);
         var bodyBlock = bodyLines * bodyLine * 1.25f;
         var actionHeight = isTap ? bodyLine : 50f * scale;
         var dotsHeight = 16f * scale;
@@ -167,9 +167,26 @@ internal sealed class CoachmarkOverlay
         arrowUp = true;
         if (hole is { } h)
         {
-            var below = h.Max.Y + arrowH + cardHeightTarget + margin <= screen.Max.Y;
-            arrowUp = below;
-            top = below ? h.Max.Y + arrowH : h.Min.Y - arrowH - cardHeightTarget;
+            var fitsBelow = h.Max.Y + arrowH + cardHeightTarget + margin <= screen.Max.Y;
+            var fitsAbove = h.Min.Y - arrowH - cardHeightTarget - margin >= screen.Min.Y;
+            if (fitsBelow)
+            {
+                arrowUp = true;
+                top = h.Max.Y + arrowH;
+            }
+            else if (fitsAbove)
+            {
+                arrowUp = false;
+                top = h.Min.Y - arrowH - cardHeightTarget;
+            }
+            else
+            {
+                var spaceBelow = screen.Max.Y - h.Max.Y;
+                var spaceAbove = h.Min.Y - screen.Min.Y;
+                arrowUp = spaceBelow >= spaceAbove;
+                top = arrowUp ? h.Max.Y + arrowH : h.Min.Y - arrowH - cardHeightTarget;
+            }
+
             centerX = ClampToRange(h.Center.X, screen.Min.X + margin + cardWidthTarget * 0.5f,
                 screen.Max.X - margin - cardWidthTarget * 0.5f);
         }
@@ -178,6 +195,8 @@ internal sealed class CoachmarkOverlay
             centerX = screen.Center.X;
             top = screen.Center.Y - cardHeightTarget * 0.5f;
         }
+
+        top = ClampToRange(top, screen.Min.Y + margin, screen.Max.Y - margin - cardHeightTarget);
 
         return new Rect(new Vector2(centerX - cardWidthTarget * 0.5f, top),
             new Vector2(centerX + cardWidthTarget * 0.5f, top + cardHeightTarget));
@@ -242,8 +261,8 @@ internal sealed class CoachmarkOverlay
             TextStyles.Title1);
         var bodyWidth = card.Width * 0.86f;
         var bodyTop = titleCenter.Y + LineHeight(TextStyles.Title1) * 0.5f + 14f * scale;
-        DrawWrapped(dl, Loc.T(step.Body), TextStyles.Body, theme.TextMuted with { W = contentAlpha },
-            new Vector2(card.Center.X, bodyTop), bodyWidth, scale);
+        Typography.DrawWrappedCentered(dl, Loc.T(step.Body), TextStyles.Body, theme.TextMuted with { W = contentAlpha },
+            new Vector2(card.Center.X, bodyTop), bodyWidth);
         var buttonSize = new Vector2(MathF.Min(card.Width - 28f * scale, 230f * scale), 46f * scale);
         var buttonCenter = new Vector2(card.Center.X, card.Max.Y - 22f * scale - buttonSize.Y * 0.5f);
         if (count > 1)
@@ -269,7 +288,7 @@ internal sealed class CoachmarkOverlay
     {
         var radius = 20f * scale;
         var isTap = step.Advance == GuideAdvance.TapTarget && hole.HasValue;
-        if (hole is { } h)
+        if (hole is { } h && (card.Min.Y >= h.Max.Y || card.Max.Y <= h.Min.Y))
         {
             var arrowUp = card.Center.Y > h.Center.Y;
             var arrowX = ClampToRange(h.Center.X, card.Min.X + 24f * scale, card.Max.X - 24f * scale) - screen.Min.X;
@@ -350,8 +369,8 @@ internal sealed class CoachmarkOverlay
         Typography.DrawCentered(dl, new Vector2(card.Center.X, cursorY + titleLine * 0.5f), Loc.T(step.Title),
             theme.TextStrong with { W = contentAlpha }, TextStyles.Title3);
         cursorY += titleLine + 10f * scale;
-        cursorY = DrawWrapped(dl, Loc.T(step.Body), TextStyles.Body, theme.TextMuted with { W = contentAlpha },
-            new Vector2(card.Center.X, cursorY), card.Width - 44f * scale, scale);
+        cursorY = Typography.DrawWrappedCentered(dl, Loc.T(step.Body), TextStyles.Body,
+            theme.TextMuted with { W = contentAlpha }, new Vector2(card.Center.X, cursorY), card.Width - 44f * scale);
         cursorY += 18f * scale;
         if (count > 1)
         {
@@ -477,70 +496,6 @@ internal sealed class CoachmarkOverlay
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-    }
-
-    private static float DrawWrapped(ImDrawListPtr dl, string text, in TextStyle style, Vector4 color,
-        Vector2 topCenter, float maxWidth, float scale)
-    {
-        var lineHeight = LineHeight(style) * 1.25f;
-        var y = topCenter.Y;
-        var length = text.Length;
-        var lineStart = 0;
-        var lastSpace = -1;
-        for (var index = 0; index <= length; index++)
-        {
-            var atEnd = index == length;
-            if (!atEnd && text[index] != ' ')
-            {
-                continue;
-            }
-
-            var candidate = text.Substring(lineStart, index - lineStart);
-            if (Typography.Measure(candidate, style).X > maxWidth && lastSpace > lineStart)
-            {
-                var line = text.Substring(lineStart, lastSpace - lineStart);
-                Typography.DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), line, color, style);
-                y += lineHeight;
-                lineStart = lastSpace + 1;
-            }
-
-            lastSpace = index;
-            if (atEnd)
-            {
-                var tail = text.Substring(lineStart);
-                Typography.DrawCentered(dl, new Vector2(topCenter.X, y + lineHeight * 0.5f), tail, color, style);
-                y += lineHeight;
-            }
-        }
-
-        return y;
-    }
-
-    private static int CountWrapped(string text, in TextStyle style, float maxWidth)
-    {
-        var length = text.Length;
-        var lines = 1;
-        var lineStart = 0;
-        var lastSpace = -1;
-        for (var index = 0; index <= length; index++)
-        {
-            var atEnd = index == length;
-            if (!atEnd && text[index] != ' ')
-            {
-                continue;
-            }
-
-            var candidate = text.Substring(lineStart, index - lineStart);
-            if (Typography.Measure(candidate, style).X > maxWidth && lastSpace > lineStart)
-            {
-                lines++;
-                lineStart = lastSpace + 1;
-            }
-
-            lastSpace = index;
-        }
-
-        return lines;
     }
 
     private static float LineHeight(in TextStyle style) => Typography.Measure("Ay", style).Y;

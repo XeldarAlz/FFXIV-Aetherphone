@@ -6,6 +6,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Net;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -99,6 +100,11 @@ internal sealed partial class CollectionsApp : IPhoneApp
     {
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
+        if (GuideIntents.Consume("collections.category.mounts"))
+        {
+            OpenCategory(CollectionCategory.Mounts);
+        }
+
         router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawView);
     }
 

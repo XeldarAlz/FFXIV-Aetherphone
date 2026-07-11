@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Market;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -17,10 +18,12 @@ internal sealed partial class MarketApp
         DrawRootTopBar(area, scale);
         var top = area.Min.Y + AppHeader.Height * scale;
         var scopeBar = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + ScopeBarHeight * scale));
+        UiAnchors.Report("market.scope", scopeBar);
         DrawBrandedScopeBar(scopeBar);
         var searchTop = scopeBar.Max.Y + 2f * scale;
         var searchBar = new Rect(new Vector2(area.Min.X + 16f * scale, searchTop),
             new Vector2(area.Max.X - 16f * scale, searchTop + SearchHeight * scale));
+        UiAnchors.Report("market.search", searchBar);
         DrawSearch(searchBar);
         var query = search.Trim();
         if (!string.Equals(query, lastSearch, StringComparison.Ordinal) || (index.Ready && !lastIndexReady))

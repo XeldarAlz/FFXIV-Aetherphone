@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Theme;
@@ -21,6 +22,7 @@ internal sealed partial class MusicApp
         AppHeader.Draw(context, DisplayName);
         EnsureFeatured();
         var barRect = SearchBarRect(content, scale);
+        UiAnchors.Report("music.search", barRect);
         if (DrawSearchBar(barRect, theme))
         {
             router.Push(View.Search);
@@ -176,6 +178,8 @@ internal sealed partial class MusicApp
         var tileHeight = TileHeight * scale;
         var origin = ImGui.GetCursorScreenPos();
         var rows = (categories.Length + 1) / 2;
+        UiAnchors.Report("music.categories",
+            new Rect(origin, origin + new Vector2(available, rows * tileHeight + (rows - 1) * gap)));
         var dl = ImGui.GetWindowDrawList();
         for (var index = 0; index < categories.Length; index++)
         {

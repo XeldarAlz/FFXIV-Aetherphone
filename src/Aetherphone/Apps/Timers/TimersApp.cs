@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -97,6 +98,7 @@ internal sealed class TimersApp : IPhoneApp
     {
         ui.SectionLabel(Loc.T(L.Timers.ServerResets), TextStyles.FootnoteEmphasized, 6f);
         var card = BeginCard(3, scale);
+        UiAnchors.Report("timers.resets", card);
 
         var daily = GameSchedule.NextDailyReset(utcNow);
         DrawTimerRow(CardRow(card, 0, scale), Accent.Amber, FontAwesomeIcon.Sun, Loc.T(L.Timers.DailyReset),
@@ -163,6 +165,7 @@ internal sealed class TimersApp : IPhoneApp
     {
         ui.SectionLabel(Loc.T(L.Timers.Reminders), TextStyles.FootnoteEmphasized, 6f);
         var card = BeginCard(4, scale);
+        UiAnchors.Report("timers.reminders", card);
 
         ApplyDaily(DrawNotifyRow(CardRow(card, 0, scale), Loc.T(L.Timers.DailyReset), configuration.NotifyDailyReset,
             scale));

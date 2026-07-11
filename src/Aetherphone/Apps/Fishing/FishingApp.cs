@@ -4,6 +4,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -90,6 +91,7 @@ internal sealed class FishingApp : IPhoneApp
             : $"{LocalTime(current.BoardingUtc)} · {Relative(remaining)}";
         Typography.DrawCentered(new Vector2(centerX, ringCenter.Y + radius + 70f * scale), when, theme.TextMuted,
             TextStyles.Subheadline);
+        UiAnchors.Report("fishing.hero", new Rect(origin, origin + new Vector2(width, 218f * scale)));
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, 218f * scale));
         DrawBlueFish(theme, plan, scale);
@@ -106,6 +108,7 @@ internal sealed class FishingApp : IPhoneApp
             Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), Loc.T(L.Fishing.NoBlueFish),
                 theme.TextMuted, TextStyles.Subheadline);
             card.End();
+            UiAnchors.Report("fishing.bluefish", new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()));
             return;
         }
 
@@ -116,6 +119,7 @@ internal sealed class FishingApp : IPhoneApp
         }
 
         fishCard.End();
+        UiAnchors.Report("fishing.bluefish", new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()));
     }
 
     private static void DrawBlueFishRow(Rect row, PhoneTheme theme, in OceanBlueFish fish, float scale)
@@ -136,7 +140,13 @@ internal sealed class FishingApp : IPhoneApp
         var card = GroupCard.Begin(theme, VoyageCount - 1, UpcomingRowHeight);
         for (var index = 1; index < VoyageCount; index++)
         {
-            DrawVoyageRow(card.NextRow(), theme, voyages[index], utcNow, scale);
+            var row = card.NextRow();
+            if (index == 1)
+            {
+                UiAnchors.Report("fishing.upcoming", row);
+            }
+
+            DrawVoyageRow(row, theme, voyages[index], utcNow, scale);
         }
 
         card.End();

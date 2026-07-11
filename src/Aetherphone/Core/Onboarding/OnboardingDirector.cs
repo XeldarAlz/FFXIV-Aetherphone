@@ -40,6 +40,7 @@ internal sealed class OnboardingDirector
 
     public bool CapturesPointer => active.HasValue && !suppressed;
     public bool WantsAnchors => active.HasValue && !suppressed;
+    public bool WantsControlCenter => active is { } sequence && sequence.Steps[stepIndex].OverControlCenter;
 
     public void OnPhoneOpened()
     {
@@ -113,6 +114,7 @@ internal sealed class OnboardingDirector
             suppressed = true;
             exiting = false;
             presence.SnapTo(0f);
+            GuideIntents.Clear();
             return;
         }
 
@@ -130,6 +132,7 @@ internal sealed class OnboardingDirector
                 active = null;
                 exiting = false;
                 presence.SnapTo(0f);
+                GuideIntents.Clear();
                 return;
             }
 
@@ -173,7 +176,7 @@ internal sealed class OnboardingDirector
             return;
         }
 
-        if (pendingAppId is not null && currentAppId == pendingAppId)
+        if (pendingAppId is not null && currentAppId == pendingAppId && !TourHolds.IsHeld(pendingAppId))
         {
             var appId = pendingAppId;
             pendingAppId = null;

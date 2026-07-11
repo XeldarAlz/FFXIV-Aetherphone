@@ -31,9 +31,11 @@ internal readonly struct GuideStep
     public readonly GuideAdvance Advance;
     public readonly Action<INavigator>? OnAdvance;
     public readonly HeroMotif Hero;
+    public readonly bool OverControlCenter;
 
     public GuideStep(LocString title, LocString body, LocString buttonLabel, string? anchorKey, GuideSurface surface,
-        GuideAdvance advance, Action<INavigator>? onAdvance, HeroMotif hero = HeroMotif.Constellation)
+        GuideAdvance advance, Action<INavigator>? onAdvance, HeroMotif hero = HeroMotif.Constellation,
+        bool overControlCenter = false)
     {
         Title = title;
         Body = body;
@@ -43,6 +45,7 @@ internal readonly struct GuideStep
         Advance = advance;
         OnAdvance = onAdvance;
         Hero = hero;
+        OverControlCenter = overControlCenter;
     }
 
     public static GuideStep Page(LocString title, LocString body, LocString buttonLabel,
@@ -57,4 +60,12 @@ internal readonly struct GuideStep
 
     public static GuideStep Tap(LocString title, LocString body, string anchorKey, Action<INavigator> onAdvance) =>
         new(title, body, L.Onboarding.Continue, anchorKey, GuideSurface.Coachmark, GuideAdvance.TapTarget, onAdvance);
+
+    public static GuideStep Tap(LocString title, LocString body, string anchorKey, string intent) =>
+        new(title, body, L.Onboarding.Continue, anchorKey, GuideSurface.Coachmark, GuideAdvance.TapTarget,
+            _ => GuideIntents.Post(intent));
+
+    public static GuideStep ControlCenterNote(LocString title, LocString body, string closeIntent) =>
+        new(title, body, L.Onboarding.Continue, null, GuideSurface.Coachmark, GuideAdvance.Button,
+            _ => GuideIntents.Post(closeIntent), HeroMotif.Constellation, true);
 }

@@ -4,6 +4,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
@@ -80,6 +81,7 @@ internal sealed class MapsApp : IPhoneApp
         var top = area.Min.Y + AppHeader.Height * scale;
         var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
             new Vector2(area.Max.X - pad, top + SearchHeight * scale));
+        UiAnchors.Report("maps.search", searchBar);
         SearchField.Draw(searchBar, "##mapsSearch", Loc.T(L.Maps.Search), ref search, frameTheme, 60);
         var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))
@@ -110,6 +112,7 @@ internal sealed class MapsApp : IPhoneApp
         var width = ImGui.GetContentRegionAvail().X;
         var cardMin = origin;
         var cardMax = new Vector2(origin.X + width, origin.Y + LocationCardHeight * scale);
+        UiAnchors.Report("maps.location", new Rect(cardMin, cardMax));
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, cardMin, cardMax, 14f * scale, ImGui.GetColorU32(frameTheme.GroupedCard));
         Material.EdgeSquircle(drawList, cardMin, cardMax, 14f * scale, scale);

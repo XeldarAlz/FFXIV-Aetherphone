@@ -5,6 +5,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -57,7 +58,9 @@ internal sealed class RootSettingsPage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             ImGui.Dummy(new Vector2(0f, 6f * scale));
-            if (SettingsHero.Draw(theme, session, images, lodestone))
+            var accountOpened = SettingsHero.Draw(theme, session, images, lodestone);
+            UiAnchors.Report("settings.account", new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax()));
+            if (accountOpened)
             {
                 navigator.Open(accountPage);
             }
@@ -71,7 +74,13 @@ internal sealed class RootSettingsPage : ISettingsPage
                 for (var index = 0; index < pages.Count; index++)
                 {
                     var page = pages[index];
-                    if (SettingsRow.Link(card.NextRow(), page.Icon, page.Tint, page.Title, page.Summary, theme,
+                    var row = card.NextRow();
+                    if (page.GuideAnchor is { } anchorKey)
+                    {
+                        UiAnchors.Report(anchorKey, row);
+                    }
+
+                    if (SettingsRow.Link(row, page.Icon, page.Tint, page.Title, page.Summary, theme,
                             page.ShowsBadge))
                     {
                         navigator.Open(page);

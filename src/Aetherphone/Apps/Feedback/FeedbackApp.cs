@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
@@ -107,7 +108,9 @@ internal sealed class FeedbackApp : IPhoneApp
         if (!sent)
         {
             var canSend = !string.IsNullOrWhiteSpace(draft) && !store.Posting && CooldownRemaining() == 0;
-            if (ui.HeaderAction(area, store.Posting ? Loc.T(L.Feedback.Sending) : Loc.T(L.Feedback.Send), canSend))
+            var sendLabel = store.Posting ? Loc.T(L.Feedback.Sending) : Loc.T(L.Feedback.Send);
+            ReportSendAnchor(area, sendLabel, scale);
+            if (ui.HeaderAction(area, sendLabel, canSend))
             {
                 AskSend();
             }
@@ -149,6 +152,8 @@ internal sealed class FeedbackApp : IPhoneApp
         var tile = (inputWidth - gap * MaxAttachments) / (MaxAttachments + 1);
         var stripHeight = tile + 10f * scale;
         var inputHeight = cardMax.Y - inputTop - pad - stripHeight;
+        UiAnchors.Report("feedback.input",
+            new Rect(new Vector2(inputX, inputTop), new Vector2(inputX + inputWidth, inputTop + inputHeight)));
 
         ImGui.SetCursorScreenPos(new Vector2(inputX, inputTop));
         ImGui.SetNextItemWidth(inputWidth);
@@ -429,6 +434,20 @@ internal sealed class FeedbackApp : IPhoneApp
         {
             sent = false;
         }
+    }
+
+    private static void ReportSendAnchor(Rect area, string label, float scale)
+    {
+        if (!UiAnchors.Recording)
+        {
+            return;
+        }
+
+        var height = 28f * scale;
+        var width = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 26f * scale;
+        var max = new Vector2(area.Max.X - 12f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f + height * 0.5f);
+        var min = new Vector2(max.X - width, max.Y - height);
+        UiAnchors.Report("feedback.send", new Rect(min, max));
     }
 
     private void AskSend()

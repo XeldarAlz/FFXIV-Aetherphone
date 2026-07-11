@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -60,6 +61,7 @@ internal sealed class CalculatorApp : IPhoneApp
 
         var displayRect = new Rect(new Vector2(gridLeft, top + 6f * scale),
             new Vector2(gridRight, gridTop - gap));
+        UiAnchors.Report("calculator.display", displayRect);
         DrawDisplayArea(displayRect, scale);
         DrawKeypad(gridLeft, gridTop, button, gap, scale);
     }
