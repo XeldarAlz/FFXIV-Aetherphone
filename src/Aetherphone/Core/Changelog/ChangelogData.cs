@@ -6,6 +6,7 @@ internal static class ChangelogData
 {
     public static readonly IReadOnlyList<ChangelogEntry> Entries = new[]
     {
+        new ChangelogEntry("0.9.3.0", "2026-07-11", L.Changelog.Release0930),
         new ChangelogEntry("0.9.2.0", "2026-07-11", L.Changelog.Release0920),
         new ChangelogEntry("0.9.1.0", "2026-07-10", L.Changelog.Release0910),
         new ChangelogEntry("0.9.0.0", "2026-07-08", L.Changelog.Release0900),

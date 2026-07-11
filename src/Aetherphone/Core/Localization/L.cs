@@ -459,6 +459,38 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0930 =
+        {
+            new("changelog.r0930.0", "You can now reply to any message in Message: the quoted original shows inside your bubble, and clicking it jumps back to that message"),
+            new("changelog.r0930.1", "React to messages with a quick emoji strip; reaction counts appear under the bubble, and clicking a count shows who reacted"),
+            new("changelog.r0930.2", "You can now edit a text you already sent, and edited messages show a small marker next to the time"),
+            new("changelog.r0930.3", "Delete a message for everyone in the chat; it is replaced by a quiet placeholder"),
+            new("changelog.r0930.4", "Forward a message to another chat: it arrives with a Forwarded label and you land in that conversation right away"),
+            new("changelog.r0930.5", "Record voice notes with the mic button and send them as playable bubbles with progress and duration"),
+            new("changelog.r0930.6", "Search inside a conversation from the chat header and jump between matches"),
+            new("changelog.r0930.7", "Star messages you want to keep and find them all in the new Starred screen"),
+            new("changelog.r0930.8", "Mute a busy chat from the list: its banners stop and it no longer counts toward the app badge"),
+            new("changelog.r0930.9", "Chats now show when the other person is online or when they were last seen"),
+            new("changelog.r0930.10", "Text you typed but never sent is kept as a draft and previewed in the chat list"),
+            new("changelog.r0930.11", "Message info on your own messages shows when they were sent and read, member by member in groups"),
+            new("changelog.r0930.12", "The encryption banner is now a lock in the chat header: click it to see a security code you can compare with your contact"),
+            new("changelog.r0930.13", "New privacy toggles in Settings let you turn off read receipts and hide when you were last online"),
+            new("changelog.r0930.14", "Rebuilt Music as a Spotify-style experience with a dark look, a personalized home screen, a dedicated search screen, and radio categories"),
+            new("changelog.r0930.15", "Playing a song no longer switches screens: a mini player slides in at the bottom instead"),
+            new("changelog.r0930.16", "Now Playing opens as a full-screen sheet with album art, drag-to-seek, and a volume slider"),
+            new("changelog.r0930.17", "You can now pause and resume playback, including radio stations, from Music, the mini player, or the Dynamic Island"),
+            new("changelog.r0930.18", "Folders on the Home screen now show a badge with the total unread count of the apps inside"),
+            new("changelog.r0930.19", "Added page-flip buttons at the left and right edges of the Home screen as an alternative to swiping"),
+            new("changelog.r0930.20", "Fresh installs now start with a curated two-page Home layout and a stocked dock"),
+            new("changelog.r0930.21", "Repacked Control Center into a tidy grid with no empty cells; existing layouts move over automatically"),
+            new("changelog.r0930.22", "The media control in Control Center is now a large square tile with artwork, title, and playback buttons"),
+            new("changelog.r0930.23", "Darkened the backdrop behind Control Center so Home icons no longer show through the tiles"),
+            new("changelog.r0930.24", "Tapping the Dynamic Island now opens the app it is showing, even while the island is expanded"),
+            new("changelog.r0930.25", "A burst of messages from one conversation now updates a single banner instead of playing one banner per message"),
+            new("changelog.r0930.26", "Fixed new-message alerts never appearing while the phone was closed or minimized with Message left open"),
+            new("changelog.r0930.27", "Fixed long tooltips spilling past the window edge; they now wrap and stay inside"),
+        };
+
         public static readonly LocString[] Release0920 =
         {
             new("changelog.r0920.0", "Added KupoAI, a new app that answers your questions about Final Fantasy XIV straight from the wiki, complete with sources to read more"),
