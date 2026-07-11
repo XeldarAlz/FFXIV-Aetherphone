@@ -39,11 +39,15 @@ internal sealed record UserDto(
     string? AvatarUrl,
     int Grams,
     int? UtcOffsetMinutes = null,
-    bool ShareTimeZone = true) : IIdentified;
+    bool ShareTimeZone = true,
+    bool ShareReadReceipts = true,
+    bool SharePresence = true) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
 
 internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffsetMinutes);
+
+internal sealed record UpdateChatPrivacyRequest(bool? ShareReadReceipts, bool? SharePresence);
 
 internal sealed record CreatePostRequest(string Text);
 
@@ -376,7 +380,8 @@ internal sealed record ConversationDto(
     int? UtcOffsetMinutes = null,
     int LastMessageEncVersion = 0,
     string LastMessageSenderId = "",
-    bool Muted = false) : IIdentified;
+    bool Muted = false,
+    long? LastSeenAtUnix = null) : IIdentified;
 
 internal sealed record ConversationMemberDto(
     string UserId,
@@ -411,13 +416,26 @@ internal sealed record ChatMessageDto(
     bool Deleted = false,
     bool Forwarded = false,
     int DurationSecs = 0,
-    ReactionSummaryDto[]? Reactions = null) : IIdentified;
+    ReactionSummaryDto[]? Reactions = null,
+    long? EditedAtUnix = null) : IIdentified;
 
 internal sealed record ReactionSummaryDto(string Token, int Count, bool Mine);
 
 internal sealed record SetReactionRequest(string Token);
 
 internal sealed record MuteConversationRequest(bool Muted);
+
+internal sealed record EditChatMessageRequest(string Body, int EncVersion = 0, string? CommitmentTag = null);
+
+internal sealed record ReactorDto(
+    string UserId,
+    string DisplayName,
+    string Handle,
+    string? AvatarUrl,
+    string Token,
+    long CreatedAtUnix);
+
+internal sealed record ReactionListDto(ReactorDto[] Items);
 
 internal sealed record ConversationPage(ConversationDto[] Items, string? NextCursor);
 

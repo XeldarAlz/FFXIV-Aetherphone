@@ -599,6 +599,87 @@ internal sealed class DirectMessagesStore : IDisposable
         return items;
     }
 
+    public void EditMessage(string id, string messageId, string body, Action<bool> onComplete)
+    {
+        var trimmed = body.Trim();
+        if (trimmed.Length == 0)
+        {
+            return;
+        }
+
+        work.Run("edit message", async token =>
+        {
+            ChatMessageDto? edited;
+            var scope = ConversationKeyStore.ChatScope(id);
+            var generation = keys.CurrentGeneration(scope);
+            if (EncryptingCurrent && conversationId == id && generation > 0
+                && keys.TryGetCek(scope, generation, out var cek))
+            {
+                var encoded = EnvelopeCodec.Encode(trimmed, cek, generation, scope, MyUserId);
+                edited = await client.EditChatMessageAsync(messageId, encoded.Envelope, token,
+                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
+                if (edited is not null)
+                {
+                    decryptedBodies[edited.Id] = new DmDecryptedBody(DmBodyState.Decrypted, trimmed,
+                        encoded.FrankingKeyBase64, true);
+                    edited = edited with { Body = trimmed };
+                }
+            }
+            else
+            {
+                edited = await client.EditChatMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
+                if (edited is not null)
+                {
+                    decryptedBodies.TryRemove(messageId, out _);
+                }
+            }
+
+            if (edited is null)
+            {
+                return false;
+            }
+
+            if (edited.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
+            {
+                edited = edited with { ReplyBody = ResolveQuotedBody(scope, edited) };
+            }
+
+            if (conversationId == id)
+            {
+                messages = ReplaceMessage(messages, edited);
+            }
+
+            conversationsLoaded = false;
+            return true;
+        }, onComplete);
+    }
+
+    private static ChatMessageDto[] ReplaceMessage(ChatMessageDto[] items, ChatMessageDto updated)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id != updated.Id)
+            {
+                continue;
+            }
+
+            var next = (ChatMessageDto[])items.Clone();
+            next[index] = updated with { Reactions = items[index].Reactions, ReadAtUnix = items[index].ReadAtUnix };
+            return next;
+        }
+
+        return items;
+    }
+
+    public void LoadReactions(string messageId, Action<ReactorDto[]?> onResult)
+    {
+        work.Run("reaction list", async token =>
+        {
+            var result = await client.ChatReactionsAsync(messageId, token).ConfigureAwait(false);
+            onResult(result?.Items);
+        });
+    }
+
     public void DeleteMessage(string messageId, Action<bool> onComplete)
     {
         work.Run("delete message", async token =>

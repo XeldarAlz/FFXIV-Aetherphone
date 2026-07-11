@@ -112,6 +112,11 @@ internal sealed partial class MessageApp : IPhoneApp
     public void OnClosed()
     {
         FlushNotes();
+        if (editTargetId is null && store.ConversationId is { } openConversation)
+        {
+            SaveDraft(openConversation);
+        }
+
         router.Reset();
         filter = string.Empty;
         searchDraft = string.Empty;
@@ -122,6 +127,7 @@ internal sealed partial class MessageApp : IPhoneApp
         voicePlayer.Stop();
         CloseSearch();
         ClearReplyTarget();
+        ClearEditTarget();
     }
 
     public void Draw(in PhoneContext context)
@@ -268,6 +274,12 @@ internal sealed partial class MessageApp : IPhoneApp
             case MessageScreen.Forward:
                 DrawForwardPicker(area, route.Id ?? string.Empty);
                 break;
+            case MessageScreen.Starred:
+                DrawStarred(area);
+                break;
+            case MessageScreen.Reactions:
+                DrawReactions(area, route.Id ?? string.Empty);
+                break;
             default:
                 DrawRoot(area);
                 break;
@@ -333,6 +345,16 @@ internal sealed partial class MessageApp : IPhoneApp
                     Transparent, 1.1f, Loc.T(L.Message.Archived), HoverLabelSide.Below))
             {
                 router.Push(MessageRoute.Archived);
+            }
+        }
+
+        if (activeTab == MessageTab.Chats && configuration.MessageStarredMessages.Count > 0)
+        {
+            var starCenter = new Vector2(area.Min.X + 24f * scale, area.Center.Y);
+            if (ui.IconButton(starCenter, 16f * scale, FontAwesomeIcon.Star.ToIconString(), ui.BodyInk,
+                    Transparent, 1.05f, Loc.T(L.Message.StarredTitle), HoverLabelSide.Below))
+            {
+                router.Push(MessageRoute.Starred);
             }
         }
 

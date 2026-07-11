@@ -1,5 +1,6 @@
 using Aetherphone.Apps.Calendar;
 using Aetherphone.Apps.Clock;
+using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Apps.Notes;
 using Aetherphone.Core.Changelog;
 using Aetherphone.Core.ControlCenter;
@@ -95,6 +96,8 @@ internal sealed class Configuration : IPluginConfiguration
     public List<string> MessageArchivedChats { get; set; } = new();
     public List<string> MessageFavoriteContacts { get; set; } = new();
     public Dictionary<string, string> MessageContactNotes { get; set; } = new();
+    public Dictionary<string, string> MessageDrafts { get; set; } = new();
+    public List<StarredMessage> MessageStarredMessages { get; set; } = new();
     public bool MessageMigrated { get; set; }
     public bool MessagesMergeMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();

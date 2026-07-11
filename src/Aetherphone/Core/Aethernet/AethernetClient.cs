@@ -195,6 +195,21 @@ internal sealed class AethernetClient
         return http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/chats/messages/{Uri.EscapeDataString(messageId)}/reactions"), new SetReactionRequest(reactionToken), AethernetJsonContext.Default.SetReactionRequest, session.Token, token, authStatusSink);
     }
 
+    public Task<ReactionListDto?> ChatReactionsAsync(string messageId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/chats/messages/{Uri.EscapeDataString(messageId)}/reactions"), AethernetJsonContext.Default.ReactionListDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<ChatMessageDto?> EditChatMessageAsync(string messageId, string body, CancellationToken token, int encVersion = 0, string? commitmentTag = null)
+    {
+        return http.SendJsonAsync(HttpMethod.Patch, Url($"/chats/messages/{Uri.EscapeDataString(messageId)}"), new EditChatMessageRequest(body, encVersion, commitmentTag), AethernetJsonContext.Default.EditChatMessageRequest, AethernetJsonContext.Default.ChatMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<UserDto?> UpdateChatPrivacyAsync(UpdateChatPrivacyRequest request, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/me/chat-privacy"), request, AethernetJsonContext.Default.UpdateChatPrivacyRequest, AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);
+    }
+
     public Task<bool> DeleteChatMessageAsync(string messageId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Delete, Url($"/chats/messages/{Uri.EscapeDataString(messageId)}"), session.Token, token, authStatusSink);

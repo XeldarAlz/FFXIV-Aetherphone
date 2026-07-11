@@ -21,11 +21,23 @@ namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
+    private const byte MenuActReply = 0;
+    private const byte MenuActForward = 1;
+    private const byte MenuActCopy = 2;
+    private const byte MenuActStar = 3;
+    private const byte MenuActEdit = 4;
+    private const byte MenuActInfo = 5;
+    private const byte MenuActDelete = 6;
+    private const byte MenuActReport = 7;
+
     private readonly DropdownMenu messageMenu = new();
-    private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[5];
+    private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[7];
+    private readonly byte[] messageMenuActions = new byte[7];
     private string? menuMessageId;
     private bool menuMessageMine;
+    private int menuMessageKind;
     private Vector2 menuAnchor;
+    private string? editTargetId;
     private Action<string>? onMessageContext;
     private Action<string>? onQuoteClick;
     private Action<string, string>? onReactionClick;
@@ -60,13 +72,20 @@ internal sealed partial class MessageApp
     {
         if (store.ConversationId != conversationId)
         {
+            if (editTargetId is null && store.ConversationId is { } previousId)
+            {
+                SaveDraft(previousId);
+            }
+
             store.OpenConversation(conversationId);
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
             ClearReplyTarget();
+            ClearEditTarget();
             CloseSearch();
             voiceRecorder.Cancel();
             voicePlayer.Stop();
+            messageDraft = configuration.MessageDrafts.GetValueOrDefault(conversationId, string.Empty);
         }
 
         store.NoteConversationViewed(conversationId);
@@ -77,7 +96,7 @@ internal sealed partial class MessageApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
-        var replyBarHeight = replyTargetId is not null ? 46f * scale : 0f;
+        var replyBarHeight = replyTargetId is not null || editTargetId is not null ? 46f * scale : 0f;
         if (searchOpen)
         {
             var searchHeight = 44f * scale;
@@ -93,7 +112,7 @@ internal sealed partial class MessageApp
         onThreadImageClick ??= id => router.Push(MessageRoute.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
         onQuoteClick ??= transcript.RequestScrollTo;
-        onReactionClick ??= store.SetReaction;
+        onReactionClick ??= (messageId, _) => router.Push(MessageRoute.Reactions(messageId));
         voiceStateFor ??= voicePlayer.StateFor;
         onVoiceToggle ??= ToggleVoice;
         var model = new ChatTranscriptModel(conversationId, transcriptMessages, store.MyUserId, ui.Accent, theme,
@@ -103,8 +122,16 @@ internal sealed partial class MessageApp
         transcript.Draw(listRect, model);
         if (replyBarHeight > 0f)
         {
-            DrawReplyBar(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight - replyBarHeight),
-                new Vector2(area.Max.X, area.Max.Y - composerHeight)));
+            var barRect = new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight - replyBarHeight),
+                new Vector2(area.Max.X, area.Max.Y - composerHeight));
+            if (editTargetId is not null)
+            {
+                DrawEditBar(barRect);
+            }
+            else
+            {
+                DrawReplyBar(barRect);
+            }
         }
 
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), conversationId);
@@ -121,6 +148,7 @@ internal sealed partial class MessageApp
 
         menuMessageId = messageId;
         menuMessageMine = message.SenderId == store.MyUserId;
+        menuMessageKind = message.Kind;
         menuAnchor = ImGui.GetMousePos();
         messageMenu.Toggle(messageId, new Rect(menuAnchor, menuAnchor + new Vector2(1f, 1f)));
     }
@@ -134,48 +162,154 @@ internal sealed partial class MessageApp
 
         DrawReactionStrip(area, id);
         var count = 0;
-        messageMenuItems[count++] = new DropdownMenu.Item(Loc.T(L.Message.ReplyAction),
+        messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Message.ReplyAction),
             FontAwesomeIcon.Reply.ToIconString());
-        messageMenuItems[count++] = new DropdownMenu.Item(Loc.T(L.Message.ForwardAction),
+        messageMenuActions[count++] = MenuActReply;
+        messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Message.ForwardAction),
             FontAwesomeIcon.Share.ToIconString());
-        messageMenuItems[count++] = new DropdownMenu.Item(Loc.T(L.Encryption.CopyTextAction),
+        messageMenuActions[count++] = MenuActForward;
+        messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Encryption.CopyTextAction),
             FontAwesomeIcon.Copy.ToIconString());
+        messageMenuActions[count++] = MenuActCopy;
+        messageMenuItems[count] = new DropdownMenu.Item(
+            Loc.T(IsStarred(id) ? L.Message.UnstarAction : L.Message.StarAction),
+            FontAwesomeIcon.Star.ToIconString());
+        messageMenuActions[count++] = MenuActStar;
         if (menuMessageMine)
         {
-            messageMenuItems[count++] = new DropdownMenu.Item(Loc.T(L.Message.InfoAction),
+            if (menuMessageKind == 0)
+            {
+                messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Message.EditAction),
+                    FontAwesomeIcon.Pen.ToIconString());
+                messageMenuActions[count++] = MenuActEdit;
+            }
+
+            messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Message.InfoAction),
                 FontAwesomeIcon.InfoCircle.ToIconString());
-            messageMenuItems[count++] = new DropdownMenu.Item(Loc.T(L.Message.DeleteAction),
+            messageMenuActions[count++] = MenuActInfo;
+            messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Message.DeleteAction),
                 FontAwesomeIcon.TrashAlt.ToIconString(), Danger: true);
+            messageMenuActions[count++] = MenuActDelete;
         }
         else
         {
-            messageMenuItems[count++] = new DropdownMenu.Item(Loc.T(L.Encryption.ReportMessageAction),
+            messageMenuItems[count] = new DropdownMenu.Item(Loc.T(L.Encryption.ReportMessageAction),
                 FontAwesomeIcon.Flag.ToIconString(), Danger: true);
+            messageMenuActions[count++] = MenuActReport;
         }
 
         var clicked = messageMenu.Draw(area, theme, messageMenuItems.AsSpan(0, count));
-        switch (clicked)
+        if (clicked < 0)
         {
-            case 0:
+            return;
+        }
+
+        switch (messageMenuActions[clicked])
+        {
+            case MenuActReply:
                 BeginReply(id);
                 break;
-            case 1:
+            case MenuActForward:
                 router.Push(MessageRoute.Forward(id));
                 break;
-            case 2:
+            case MenuActCopy:
                 CopyMessageText(id);
                 break;
-            case 3 when menuMessageMine:
+            case MenuActStar:
+                ToggleStar(id);
+                break;
+            case MenuActEdit:
+                BeginEdit(id);
+                break;
+            case MenuActInfo:
                 store.RefreshDetail();
                 router.Push(MessageRoute.MessageInfo(id));
                 break;
-            case 3:
-                OpenReportMessage(id);
-                break;
-            case 4:
+            case MenuActDelete:
                 AskDeleteMessage(id);
                 break;
+            case MenuActReport:
+                OpenReportMessage(id);
+                break;
         }
+    }
+
+    private bool IsStarred(string messageId)
+    {
+        var starred = configuration.MessageStarredMessages;
+        for (var index = 0; index < starred.Count; index++)
+        {
+            if (starred[index].MessageId == messageId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void ToggleStar(string messageId)
+    {
+        var starred = configuration.MessageStarredMessages;
+        for (var index = 0; index < starred.Count; index++)
+        {
+            if (starred[index].MessageId == messageId)
+            {
+                starred.RemoveAt(index);
+                configuration.Save();
+                return;
+            }
+        }
+
+        var message = FindMessage(messageId);
+        var conversation = store.Conversation;
+        if (message is null || message.Deleted || conversation is null)
+        {
+            return;
+        }
+
+        starred.Add(new StarredMessage
+        {
+            ConversationId = conversation.Id,
+            MessageId = messageId,
+            ConversationTitle = DirectMessagesStore.DisplayTitle(conversation),
+            SenderName = message.SenderId == store.MyUserId ? Loc.T(L.Message.You) : message.SenderDisplayName,
+            Preview = QuotePreview(message.Body, message.Kind),
+            Kind = message.Kind,
+            CreatedAtUnix = message.CreatedAtUnix,
+            StarredAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+        });
+        configuration.Save();
+    }
+
+    private void BeginEdit(string messageId)
+    {
+        var message = FindMessage(messageId);
+        if (message is null || message.Kind != 0 || message.Deleted)
+        {
+            return;
+        }
+
+        if (message.EncVersion != 0 && store.DecryptionState(messageId).State != DmBodyState.Decrypted)
+        {
+            return;
+        }
+
+        ClearReplyTarget();
+        editTargetId = messageId;
+        messageDraft = message.Body ?? string.Empty;
+        threadFocus = true;
+    }
+
+    private void ClearEditTarget()
+    {
+        if (editTargetId is null)
+        {
+            return;
+        }
+
+        editTargetId = null;
+        messageDraft = string.Empty;
     }
 
     private void DrawReactionStrip(Rect area, string messageId)
@@ -331,6 +465,7 @@ internal sealed partial class MessageApp
             return;
         }
 
+        ClearEditTarget();
         replyTargetId = messageId;
         replyBarName = message.SenderId == store.MyUserId
             ? Loc.T(L.Message.You)
@@ -472,6 +607,64 @@ internal sealed partial class MessageApp
         }
     }
 
+    private void SaveDraft(string conversationId)
+    {
+        var trimmed = messageDraft.Trim();
+        var drafts = configuration.MessageDrafts;
+        if (trimmed.Length == 0)
+        {
+            if (drafts.Remove(conversationId))
+            {
+                configuration.Save();
+            }
+
+            return;
+        }
+
+        if (drafts.GetValueOrDefault(conversationId) == trimmed)
+        {
+            return;
+        }
+
+        drafts[conversationId] = trimmed;
+        configuration.Save();
+    }
+
+    private void ClearDraft(string conversationId)
+    {
+        if (configuration.MessageDrafts.Remove(conversationId))
+        {
+            configuration.Save();
+        }
+    }
+
+    private void DrawEditBar(Rect area)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.05f)));
+        drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
+        var iconCenter = new Vector2(area.Min.X + 22f * scale, area.Center.Y);
+        AppSkin.Icon(iconCenter, FontAwesomeIcon.Pen.ToIconString(), ui.Accent, 0.9f);
+        var textLeft = iconCenter.X + 16f * scale;
+        var closeRadius = 13f * scale;
+        var textWidth = area.Max.X - 20f * scale - closeRadius * 2f - textLeft;
+        Typography.Draw(new Vector2(textLeft, area.Min.Y + 7f * scale),
+            Typography.FitText(Loc.T(L.Message.EditingLabel), textWidth, 0.78f, FontWeight.SemiBold),
+            ui.Accent, 0.78f, FontWeight.SemiBold);
+        var original = editTargetId is { } id ? FindMessage(id) : null;
+        Typography.Draw(new Vector2(textLeft, area.Min.Y + 24f * scale),
+            Typography.FitText(QuotePreview(original?.Body, 0), textWidth, 0.82f, FontWeight.Regular),
+            ui.MutedInk, 0.82f);
+        var closeCenter = new Vector2(area.Max.X - 14f * scale - closeRadius, area.Center.Y);
+        if (ui.IconButton(closeCenter, closeRadius, FontAwesomeIcon.Times.ToIconString(), ui.MutedInk,
+                Transparent, 0.9f, Loc.T(L.Common.Cancel))
+            || (!searchOpen && ImGui.IsKeyPressed(ImGuiKey.Escape)))
+        {
+            ClearEditTarget();
+        }
+    }
+
     private void DrawReplyBar(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -607,8 +800,22 @@ internal sealed partial class MessageApp
         }
         else
         {
-            Typography.Draw(new Vector2(nameLeft, rowCenterY - nameSize.Y * 0.5f), name, theme.TextStrong, 1f,
-                FontWeight.SemiBold);
+            var presence = PresenceText(conversation);
+            if (presence.Length > 0)
+            {
+                var subSize = Typography.Measure(presence, 0.72f, FontWeight.Regular);
+                var gapY = 1f * scale;
+                var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
+                Typography.Draw(new Vector2(nameLeft, stackTop), name, theme.TextStrong, 1f, FontWeight.SemiBold);
+                Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), presence,
+                    conversation!.Presence == 1 ? ui.Accent : AppPalettes.Message.MutedInk, 0.72f);
+            }
+            else
+            {
+                Typography.Draw(new Vector2(nameLeft, rowCenterY - nameSize.Y * 0.5f), name, theme.TextStrong, 1f,
+                    FontWeight.SemiBold);
+            }
+
             if (conversation is not null && contacts.Find(conversation.OtherUserId) is not null)
             {
                 var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
@@ -619,6 +826,26 @@ internal sealed partial class MessageApp
                 }
             }
         }
+    }
+
+    private string PresenceText(ConversationDto? conversation)
+    {
+        if (conversation is null)
+        {
+            return string.Empty;
+        }
+
+        if (conversation.Presence == 1)
+        {
+            return Loc.T(L.Message.PresenceOnline);
+        }
+
+        if (conversation.LastSeenAtUnix is { } lastSeen)
+        {
+            return Loc.T(L.Message.PresenceLastSeen, FormatStamp(lastSeen));
+        }
+
+        return string.Empty;
     }
 
     private void DrawEncryptionStatusIcon(Rect area, ConversationDto? conversation, float rowCenterY, float scale)
@@ -721,6 +948,11 @@ internal sealed partial class MessageApp
         if (message.Forwarded)
         {
             flags |= TranscriptFlags.Forwarded;
+        }
+
+        if (message.EditedAtUnix is not null)
+        {
+            flags |= TranscriptFlags.Edited;
         }
 
         if (message.EncVersion == 0)
@@ -877,11 +1109,21 @@ internal sealed partial class MessageApp
 
         if (submitted && canSend)
         {
-            store.SendMessage(conversationId, messageDraft, _ => { }, replyTargetId);
-            messageDraft = string.Empty;
+            if (editTargetId is { } editId)
+            {
+                store.EditMessage(conversationId, editId, messageDraft, _ => { });
+                ClearEditTarget();
+            }
+            else
+            {
+                store.SendMessage(conversationId, messageDraft, _ => { }, replyTargetId);
+                messageDraft = string.Empty;
+                ClearReplyTarget();
+                transcript.RequestSnapToBottom();
+            }
+
             lastTypingDraft = string.Empty;
-            ClearReplyTarget();
-            transcript.RequestSnapToBottom();
+            ClearDraft(conversationId);
             threadFocus = true;
         }
     }

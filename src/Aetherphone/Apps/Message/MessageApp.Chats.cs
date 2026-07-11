@@ -220,17 +220,31 @@ internal sealed partial class MessageApp
         Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale),
             Typography.FitText(title, textWidth, 1f, FontWeight.SemiBold), theme.TextStrong, 1f, FontWeight.SemiBold);
         var previewColor = item.UnreadCount > 0 ? theme.TextStrong : ui.MutedInk;
-        var preview = item.LastMessagePreview.Length > 0
-            ? item.LastMessagePreview
-            : item.LastMessageKind switch
-            {
-                1 => Loc.T(L.DirectMessages.PhotoPreview),
-                3 => Loc.T(L.DirectMessages.VoicePreview),
-                _ => string.Empty,
-            };
         var previewRight = origin.X + width - (item.UnreadCount > 0 ? 40f * scale : pad);
-        Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale),
-            Typography.FitText(preview, previewRight - textLeft, 0.85f, FontWeight.Regular), previewColor, 0.85f);
+        var draft = configuration.MessageDrafts.GetValueOrDefault(item.Id, string.Empty);
+        if (draft.Length > 0)
+        {
+            var prefix = Loc.T(L.Message.DraftPrefix);
+            var prefixSize = Typography.Measure(prefix, 0.85f, FontWeight.SemiBold);
+            Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale), prefix, ui.Accent, 0.85f,
+                FontWeight.SemiBold);
+            Typography.Draw(new Vector2(textLeft + prefixSize.X + 4f * scale, origin.Y + 33f * scale),
+                Typography.FitText(draft, previewRight - textLeft - prefixSize.X - 4f * scale, 0.85f,
+                    FontWeight.Regular), ui.MutedInk, 0.85f);
+        }
+        else
+        {
+            var preview = item.LastMessagePreview.Length > 0
+                ? item.LastMessagePreview
+                : item.LastMessageKind switch
+                {
+                    1 => Loc.T(L.DirectMessages.PhotoPreview),
+                    3 => Loc.T(L.DirectMessages.VoicePreview),
+                    _ => string.Empty,
+                };
+            Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale),
+                Typography.FitText(preview, previewRight - textLeft, 0.85f, FontWeight.Regular), previewColor, 0.85f);
+        }
         if (item.UnreadCount > 0)
         {
             var badgeCenter = new Vector2(origin.X + width - 22f * scale, origin.Y + rowHeight - 20f * scale);

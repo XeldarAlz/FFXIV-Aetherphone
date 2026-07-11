@@ -163,6 +163,18 @@ internal static class L
         public static readonly LocString MuteAction = new("message.muteAction", "Mute");
         public static readonly LocString UnmuteAction = new("message.unmuteAction", "Unmute");
         public static readonly LocString RecordVoiceHint = new("message.recordVoiceHint", "Record a voice message");
+        public static readonly LocString EditAction = new("message.editAction", "Edit");
+        public static readonly LocString EditingLabel = new("message.editingLabel", "Editing message");
+        public static readonly LocString EditedLabel = new("message.editedLabel", "edited");
+        public static readonly LocString StarAction = new("message.starAction", "Star");
+        public static readonly LocString UnstarAction = new("message.unstarAction", "Unstar");
+        public static readonly LocString StarredTitle = new("message.starredTitle", "Starred messages");
+        public static readonly LocString NoStarred = new("message.noStarred", "No starred messages yet");
+        public static readonly LocString ReactionsTitle = new("message.reactionsTitle", "Reactions");
+        public static readonly LocString TapToRemove = new("message.tapToRemove", "Click to remove");
+        public static readonly LocString DraftPrefix = new("message.draftPrefix", "Draft:");
+        public static readonly LocString PresenceOnline = new("message.presenceOnline", "online");
+        public static readonly LocString PresenceLastSeen = new("message.presenceLastSeen", "last seen {0}");
     }
 
     internal static class FindPeople
@@ -427,6 +439,9 @@ internal static class L
         public static readonly LocString PrivacyOff = new("settings.privacyOff", "Private");
         public static readonly LocString PrivacyAnalytics = new("settings.privacyAnalytics", "Share anonymous usage");
         public static readonly LocString PrivacyHint = new("settings.privacyHint", "Aetherphone is made by one solo developer. Sharing anonymous usage, which apps you open and for how long plus your region, helps me see what to build next. It never includes your character name, your messages, or any personal data.");
+        public static readonly LocString ReadReceipts = new("settings.readReceipts", "Read receipts");
+        public static readonly LocString LastSeenOnline = new("settings.lastSeenOnline", "Last seen online");
+        public static readonly LocString ChatPrivacyHint = new("settings.chatPrivacyHint", "These apply to the Message app. If you turn read receipts or last seen off, you will not send them and you will not see them from others either.");
         public static readonly LocString ConsentTitle = new("settings.consentTitle", "Analytics & Consent");
         public static readonly LocString ConsentMessage = new("settings.consentMessage", "Aetherphone is made by one solo developer. To keep making it better for everyone, it really helps to know which apps people use and where to focus next.\n\nWith your OK, the app shares anonymous usage only: which apps you open and for how long, plus your region. It never includes your character name, your messages, or any personal data.\n\nYou can change this anytime in Settings, under Privacy. Thank you for helping shape Aetherphone.");
         public static readonly LocString ConsentAccept = new("settings.consentAccept", "Sure, count me in");

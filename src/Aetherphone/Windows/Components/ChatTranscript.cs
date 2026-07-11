@@ -18,6 +18,7 @@ internal static class TranscriptFlags
     public const byte Unverified = 4;
     public const byte Deleted = 8;
     public const byte Forwarded = 16;
+    public const byte Edited = 32;
 }
 
 internal readonly struct TranscriptReaction
@@ -962,6 +963,11 @@ internal sealed class ChatTranscript
     private static BubbleStamp MeasureStamp(TranscriptMessage message, bool mine, float scale)
     {
         var time = TimeText.Clock(message.CreatedAtUnix);
+        if ((message.Flags & TranscriptFlags.Edited) != 0)
+        {
+            time = string.Concat(Loc.T(L.Message.EditedLabel), " ", time);
+        }
+
         var timeSize = Typography.Measure(time, StampTextScale);
         if ((message.Flags & TranscriptFlags.Deleted) != 0)
         {
