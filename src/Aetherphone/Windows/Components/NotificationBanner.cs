@@ -301,6 +301,15 @@ internal sealed class NotificationBanner : IDisposable
             return;
         }
 
+        if (active is { } showing && showing.StackKey == notification.StackKey && stage is Stage.Enter or Stage.Hold)
+        {
+            active = notification;
+            holdElapsed = 0f;
+            Shown?.Invoke();
+            return;
+        }
+
+        RemoveQueuedGroup(notification.StackKey);
         if (pending.Count >= MaxQueued)
         {
             return;
@@ -311,6 +320,19 @@ internal sealed class NotificationBanner : IDisposable
         if (stage == Stage.Idle)
         {
             BeginNext();
+        }
+    }
+
+    private void RemoveQueuedGroup(string stackKey)
+    {
+        var count = pending.Count;
+        for (var index = 0; index < count; index++)
+        {
+            var queued = pending.Dequeue();
+            if (queued.StackKey != stackKey)
+            {
+                pending.Enqueue(queued);
+            }
         }
     }
 

@@ -6,11 +6,14 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class NotificationService : IDisposable
 {
     private const int MaxRetained = 50;
+    private const double SoundRepeatSeconds = 3.0;
+    private const int SoundHistoryPruneSize = 64;
     private readonly SoundService sound;
     private readonly Configuration configuration;
     private readonly IFramework framework;
     private readonly ConcurrentQueue<PhoneNotification> pending = new();
     private readonly List<PhoneNotification> recent = new();
+    private readonly Dictionary<string, DateTime> lastSoundAt = new();
     private long sequence;
     public int UnreadCount { get; private set; }
     public IReadOnlyList<PhoneNotification> Recent => recent;
@@ -56,10 +59,47 @@ internal sealed class NotificationService : IDisposable
         if (!configuration.DoNotDisturb)
         {
             Presented?.Invoke(stamped);
-            sound.PlayNotification(notification.AppId);
+            if (ShouldPlaySound(stamped.StackKey))
+            {
+                sound.PlayNotification(notification.AppId);
+            }
         }
 
         Changed?.Invoke();
+    }
+
+    private bool ShouldPlaySound(string stackKey)
+    {
+        var now = DateTime.UtcNow;
+        if (lastSoundAt.TryGetValue(stackKey, out var previous) && (now - previous).TotalSeconds < SoundRepeatSeconds)
+        {
+            return false;
+        }
+
+        if (lastSoundAt.Count >= SoundHistoryPruneSize)
+        {
+            PruneSoundHistory(now);
+        }
+
+        lastSoundAt[stackKey] = now;
+        return true;
+    }
+
+    private void PruneSoundHistory(DateTime now)
+    {
+        var expired = new List<string>(lastSoundAt.Count);
+        foreach (var entry in lastSoundAt)
+        {
+            if ((now - entry.Value).TotalSeconds >= SoundRepeatSeconds)
+            {
+                expired.Add(entry.Key);
+            }
+        }
+
+        for (var index = 0; index < expired.Count; index++)
+        {
+            lastSoundAt.Remove(expired[index]);
+        }
     }
 
     public void MarkAllRead()

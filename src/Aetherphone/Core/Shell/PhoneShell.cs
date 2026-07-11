@@ -33,6 +33,7 @@ internal sealed class PhoneShell : IDisposable
     private const float ShakeDuration = 0.4f;
     private const float ShakeFrequency = 48f;
     private const float ShakeAmplitude = 3f;
+    private static readonly TimeSpan ScreenVisibleGrace = TimeSpan.FromSeconds(0.5);
 
     private readonly ThemeProvider themes;
     private readonly IReadOnlyList<IPhoneApp> apps;
@@ -59,6 +60,7 @@ internal sealed class PhoneShell : IDisposable
     private Vector2 indicatorPressPos;
     private string? zoomPreparedFor;
     private CallState lastCallState;
+    private DateTime lastVisibleDrawUtc = DateTime.MinValue;
 
     public PhoneShell(ThemeProvider themes, AppBundle bundle, NotificationService notifications,
         PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
@@ -75,7 +77,7 @@ internal sealed class PhoneShell : IDisposable
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
         var router = new NotificationRouter(navigation, notifications, messageLauncher, velvetLauncher, dmLauncher, socialLauncher);
-        banner = new NotificationBanner(notifications, () => navigation.Current?.Id, router);
+        banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         island = new DynamicIsland(playback, calls);
         controlCenter = new ControlCenter(themes, playback, calls, navigation, notifications, router);
@@ -179,6 +181,16 @@ internal sealed class PhoneShell : IDisposable
         }
     }
 
+    private string? VisibleAppId()
+    {
+        if (DateTime.UtcNow - lastVisibleDrawUtc >= ScreenVisibleGrace)
+        {
+            return null;
+        }
+
+        return navigation.Current?.Id;
+    }
+
     public void Draw(Rect device)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
@@ -204,6 +216,7 @@ internal sealed class PhoneShell : IDisposable
         }
 
         minimizedView.IsShowing = false;
+        lastVisibleDrawUtc = DateTime.UtcNow;
         device = device.Translate(new Vector2(shake.Advance(delta), 0f));
         Plugin.Wallpapers.StepDayNight(delta);
         var theme = themes.Chrome;
