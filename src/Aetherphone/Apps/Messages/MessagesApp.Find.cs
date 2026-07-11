@@ -1,67 +1,26 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
-namespace Aetherphone.Apps.FindPeople;
+namespace Aetherphone.Apps.Messages;
 
-internal sealed class FindPeopleApp : IPhoneApp
+internal sealed partial class MessagesApp
 {
-    private const float SegmentRowHeight = 36f;
-    private const float FieldRowHeight = 44f;
-    private const float ResultRowHeight = 60f;
-
-    private enum ViewKind : byte
-    {
-        Search,
-        CharacterDetail,
-        FreeCompanyDetail,
-    }
-
-    private readonly struct View
-    {
-        public readonly ViewKind Kind;
-        public readonly string Id;
-        public readonly string Name;
-        public readonly string World;
-
-        public View(ViewKind kind, string id, string name, string world)
-        {
-            Kind = kind;
-            Id = id;
-            Name = name;
-            World = world;
-        }
-
-        public static readonly View SearchRoot = new(ViewKind.Search, string.Empty, string.Empty, string.Empty);
-    }
-
-    public string Id => "findpeople";
-    public Vector4 Accent => AppAccents.For(Id);
-    public string DisplayName => Loc.T(L.Apps.FindPeople);
-    public string Glyph => "Fp";
-    public int BadgeCount => 0;
-    private readonly LookupService lookup;
-    private readonly LodestoneService lodestone;
-    private readonly MessageLauncher launcher;
-    private readonly GameData gameData;
-    private readonly ViewRouter<View> router;
-    private readonly RouterDraw<View> drawView;
-    private readonly Action back;
-    private readonly string[] segmentLabels = new string[2];
-    private PhoneTheme frameTheme = PhoneTheme.Default;
-    private INavigator frameNavigation = null!;
-    private LookupKind kind = LookupKind.Character;
-    private string nameInput = string.Empty;
-    private string worldInput = string.Empty;
+    private const float FindSegmentRowHeight = 36f;
+    private const float FindFieldRowHeight = 44f;
+    private const float FindResultRowHeight = 60f;
+    private readonly string[] findSegmentLabels = new string[2];
+    private LookupKind findKind = LookupKind.Character;
+    private string findNameInput = string.Empty;
+    private string findWorldInput = string.Empty;
     private string submittedName = string.Empty;
     private string submittedRegion = string.Empty;
     private bool submittedRegionIsDataCenter;
@@ -69,22 +28,11 @@ internal sealed class FindPeopleApp : IPhoneApp
     private bool forceSearch;
     private bool forceDetail;
 
-    public FindPeopleApp(LookupService lookup, LodestoneService lodestone, MessageLauncher launcher, GameData gameData)
+    private void ResetFindState()
     {
-        this.lookup = lookup;
-        this.lodestone = lodestone;
-        this.launcher = launcher;
-        this.gameData = gameData;
-        router = new ViewRouter<View>(View.SearchRoot, Id);
-        drawView = DrawView;
-        back = () => router.Pop();
-    }
-
-    public void OnOpened()
-    {
-        router.Reset();
-        nameInput = string.Empty;
-        worldInput = gameData.DataCenterName(gameData.LocalHomeWorldId);
+        findKind = LookupKind.Character;
+        findNameInput = string.Empty;
+        findWorldInput = gameData.DataCenterName(gameData.LocalHomeWorldId);
         submittedName = string.Empty;
         submittedRegion = string.Empty;
         submittedRegionIsDataCenter = false;
@@ -93,47 +41,20 @@ internal sealed class FindPeopleApp : IPhoneApp
         forceDetail = false;
     }
 
-    public void OnClosed() => router.Reset();
-
-    public void Draw(in PhoneContext context)
+    private void DrawFindTab(Rect content)
     {
-        frameTheme = context.Theme;
-        frameNavigation = context.Navigation;
-        router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawView);
-    }
-
-    private void DrawView(View view, Rect area, int depth)
-    {
-        switch (view.Kind)
-        {
-            case ViewKind.CharacterDetail:
-                DrawCharacterDetail(area, view);
-                break;
-            case ViewKind.FreeCompanyDetail:
-                DrawFreeCompanyDetail(area, view);
-                break;
-            default:
-                DrawSearch(area);
-                break;
-        }
-    }
-
-    private void DrawSearch(Rect area)
-    {
-        var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, DisplayName);
         var scale = ImGuiHelpers.GlobalScale;
         var theme = frameTheme;
         var pad = 16f * scale;
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var segmentRow = new Rect(new Vector2(area.Min.X + pad, top),
-            new Vector2(area.Max.X - pad, top + SegmentRowHeight * scale));
-        segmentLabels[0] = Loc.T(L.FindPeople.Character);
-        segmentLabels[1] = Loc.T(L.FindPeople.FreeCompany);
-        var selected = SegmentStrip.Draw("findpeople.kind", segmentRow, segmentLabels, (int)kind, theme);
-        if (selected != (int)kind)
+        var segmentRow = new Rect(new Vector2(content.Min.X + pad, content.Min.Y),
+            new Vector2(content.Max.X - pad, content.Min.Y + FindSegmentRowHeight * scale));
+        UiAnchors.Report("findpeople.kind", segmentRow);
+        findSegmentLabels[0] = Loc.T(L.FindPeople.Character);
+        findSegmentLabels[1] = Loc.T(L.FindPeople.FreeCompany);
+        var selected = SegmentStrip.Draw("findpeople.kind", segmentRow, findSegmentLabels, (int)findKind, theme);
+        if (selected != (int)findKind)
         {
-            kind = (LookupKind)selected;
+            findKind = (LookupKind)selected;
             if (hasQuery)
             {
                 SubmitSearch();
@@ -141,28 +62,29 @@ internal sealed class FindPeopleApp : IPhoneApp
         }
 
         var nameTop = segmentRow.Max.Y + 8f * scale;
-        var nameBar = new Rect(new Vector2(area.Min.X + pad, nameTop),
-            new Vector2(area.Max.X - pad, nameTop + FieldRowHeight * scale));
+        var nameBar = new Rect(new Vector2(content.Min.X + pad, nameTop),
+            new Vector2(content.Max.X - pad, nameTop + FindFieldRowHeight * scale));
+        UiAnchors.Report("findpeople.name", nameBar);
         var nameChanged =
-            SubmitField.Draw(nameBar, "##findNameField", Loc.T(L.FindPeople.NameHint), ref nameInput, theme);
+            SubmitField.Draw(nameBar, "##findNameField", Loc.T(L.FindPeople.NameHint), ref findNameInput, theme);
         var worldTop = nameBar.Max.Y + 8f * scale;
-        var worldBar = new Rect(new Vector2(area.Min.X + pad, worldTop),
-            new Vector2(area.Max.X - pad, worldTop + FieldRowHeight * scale));
-        var worldChanged = SubmitField.Draw(worldBar, "##findWorldField", Loc.T(L.FindPeople.WorldHint), ref worldInput,
-            theme);
+        var worldBar = new Rect(new Vector2(content.Min.X + pad, worldTop),
+            new Vector2(content.Max.X - pad, worldTop + FindFieldRowHeight * scale));
+        var worldChanged = SubmitField.Draw(worldBar, "##findWorldField", Loc.T(L.FindPeople.WorldHint),
+            ref findWorldInput, theme);
         if (nameChanged || worldChanged)
         {
             SubmitSearch();
         }
 
-        var body = new Rect(new Vector2(area.Min.X, worldBar.Max.Y + 4f * scale), area.Max);
+        var body = new Rect(new Vector2(content.Min.X, worldBar.Max.Y + 4f * scale), content.Max);
         if (!hasQuery)
         {
-            DrawPrompt(body, theme, scale);
+            DrawFindPrompt(body, theme, scale);
             return;
         }
 
-        if (kind == LookupKind.Character)
+        if (findKind == LookupKind.Character)
         {
             DrawCharacterResults(body, theme, scale);
         }
@@ -174,14 +96,14 @@ internal sealed class FindPeopleApp : IPhoneApp
 
     private void SubmitSearch()
     {
-        submittedName = nameInput.Trim();
-        submittedRegion = worldInput.Trim();
+        submittedName = findNameInput.Trim();
+        submittedRegion = findWorldInput.Trim();
         submittedRegionIsDataCenter = gameData.IsDataCenterName(submittedRegion);
         hasQuery = submittedName.Length > 0;
         forceSearch = false;
     }
 
-    private void DrawPrompt(Rect body, PhoneTheme theme, float scale)
+    private void DrawFindPrompt(Rect body, PhoneTheme theme, float scale)
     {
         var center = body.Center;
         ProgressRing.CenterIcon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Users, theme.TextMuted,
@@ -199,7 +121,7 @@ internal sealed class FindPeopleApp : IPhoneApp
         var matches = result.Matches;
         if (matches.Length == 0)
         {
-            if (DrawState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, theme, scale))
             {
                 forceSearch = true;
             }
@@ -211,14 +133,14 @@ internal sealed class FindPeopleApp : IPhoneApp
         using (AppSurface.Begin(body))
         {
             ImGui.Dummy(new Vector2(0f, 4f * scale));
-            var card = GroupCard.Begin(theme, matches.Length, ResultRowHeight);
+            var card = GroupCard.Begin(theme, matches.Length, FindResultRowHeight);
             for (var index = 0; index < matches.Length; index++)
             {
                 var match = matches[index];
                 var world = match.World.Length > 0 ? match.World : hintWorld;
                 if (DrawResultRow(card.NextRow(), theme, scale, match.Name, world, lodestone.Avatar(match.Name, world)))
                 {
-                    router.Push(new View(ViewKind.CharacterDetail, match.Id, match.Name, world));
+                    router.Push(MessagesRoute.Character(match.Id, match.Name, world));
                 }
             }
 
@@ -234,7 +156,7 @@ internal sealed class FindPeopleApp : IPhoneApp
         var matches = result.Matches;
         if (matches.Length == 0)
         {
-            if (DrawState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, theme, scale))
             {
                 forceSearch = true;
             }
@@ -245,14 +167,14 @@ internal sealed class FindPeopleApp : IPhoneApp
         using (AppSurface.Begin(body))
         {
             ImGui.Dummy(new Vector2(0f, 4f * scale));
-            var card = GroupCard.Begin(theme, matches.Length, ResultRowHeight);
+            var card = GroupCard.Begin(theme, matches.Length, FindResultRowHeight);
             for (var index = 0; index < matches.Length; index++)
             {
                 var match = matches[index];
                 if (DrawResultRow(card.NextRow(), theme, scale, match.Name, match.Subtitle,
                         lodestone.Remote(match.CrestKey, match.Crest)))
                 {
-                    router.Push(new View(ViewKind.FreeCompanyDetail, match.Id, match.Name, match.World));
+                    router.Push(MessagesRoute.FreeCompany(match.Id, match.Name, match.World));
                 }
             }
 
@@ -287,19 +209,19 @@ internal sealed class FindPeopleApp : IPhoneApp
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private void DrawCharacterDetail(Rect area, View view)
+    private void DrawCharacterDetail(Rect area, MessagesRoute route)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(L.FindPeople.CharacterTitle), back);
+        AppHeader.Draw(context, Loc.T(L.FindPeople.CharacterTitle), backToList);
         var scale = ImGuiHelpers.GlobalScale;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var result = lookup.CharacterDetail(view.Id, view.Name, view.World, forceDetail);
+        var result = lookup.CharacterDetail(route.LookupId, route.LookupName, route.LookupWorld, forceDetail);
         forceDetail = false;
         var detail = result.Detail;
         if (detail is null)
         {
-            if (DrawState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, theme, scale))
             {
                 forceDetail = true;
             }
@@ -364,8 +286,7 @@ internal sealed class FindPeopleApp : IPhoneApp
                 radius, FontAwesomeIcon.CommentDots, new Vector4(0.30f, 0.78f, 0.42f, 1f), Loc.T(L.FindPeople.Message),
                 theme))
         {
-            launcher.Request(detail.Name, SendTarget(detail.Name, detail.World));
-            frameNavigation.Open("messages");
+            OpenDirectThread(detail.Name, SendTarget(detail.Name, detail.World));
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -453,19 +374,19 @@ internal sealed class FindPeopleApp : IPhoneApp
         card.End();
     }
 
-    private void DrawFreeCompanyDetail(Rect area, View view)
+    private void DrawFreeCompanyDetail(Rect area, MessagesRoute route)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, Loc.T(L.FindPeople.FreeCompanyTitle), back);
+        AppHeader.Draw(context, Loc.T(L.FindPeople.FreeCompanyTitle), backToList);
         var scale = ImGuiHelpers.GlobalScale;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        var result = lookup.FreeCompanyDetail(view.Id, forceDetail);
+        var result = lookup.FreeCompanyDetail(route.LookupId, forceDetail);
         forceDetail = false;
         var detail = result.Detail;
         if (detail is null)
         {
-            if (DrawState(body, result.State, theme, scale))
+            if (DrawLookupState(body, result.State, theme, scale))
             {
                 forceDetail = true;
             }
@@ -481,11 +402,11 @@ internal sealed class FindPeopleApp : IPhoneApp
             {
                 SettingsSection.Header(Loc.T(L.FindPeople.Slogan), theme);
                 var sloganCard = GroupCard.Begin(theme, 1, 56f);
-                DrawSloganRow(sloganCard.NextRow(), detail.Slogan, theme, scale);
+                DrawSloganRow(sloganCard.NextRow(), detail.Slogan, theme);
                 sloganCard.End();
             }
 
-            DrawRoster(view.Id, result, theme, scale);
+            DrawRoster(route.LookupId, result, theme, scale);
             ImGui.Dummy(new Vector2(0f, 16f * scale));
         }
     }
@@ -505,7 +426,7 @@ internal sealed class FindPeopleApp : IPhoneApp
         var centerX = origin.X + width * 0.5f;
         var crestSize = 64f * scale;
         var crestCenter = new Vector2(centerX, origin.Y + 22f * scale + crestSize * 0.5f);
-        DrawCrest(drawList, crestCenter, crestSize, detail, theme, scale);
+        DrawCrest(drawList, crestCenter, crestSize, detail, theme);
         var cursorY = crestCenter.Y + crestSize * 0.5f + 14f * scale;
         Typography.DrawCentered(new Vector2(centerX, cursorY), detail.Heading, theme.TextStrong, TextStyles.Title3);
         cursorY += 22f * scale;
@@ -522,7 +443,7 @@ internal sealed class FindPeopleApp : IPhoneApp
     }
 
     private void DrawCrest(ImDrawListPtr drawList, Vector2 center, float size, FreeCompanyDetail detail,
-        PhoneTheme theme, float scale)
+        PhoneTheme theme)
     {
         var handle = lodestone.Remote(detail.CrestKey, detail.Crest);
         var half = new Vector2(size * 0.5f, size * 0.5f);
@@ -537,7 +458,7 @@ internal sealed class FindPeopleApp : IPhoneApp
         Typography.DrawCentered(center, initial, theme.TextStrong, 1.8f, FontWeight.SemiBold);
     }
 
-    private static void DrawSloganRow(Rect row, string slogan, PhoneTheme theme, float scale)
+    private static void DrawSloganRow(Rect row, string slogan, PhoneTheme theme)
     {
         Typography.Draw(new Vector2(row.Min.X, row.Center.Y - Typography.Measure(slogan, 0.86f).Y * 0.5f), slogan,
             theme.TextMuted, 0.86f, FontWeight.Regular);
@@ -552,14 +473,14 @@ internal sealed class FindPeopleApp : IPhoneApp
         }
 
         SettingsSection.Header(Loc.T(L.FindPeople.Roster), theme);
-        var card = GroupCard.Begin(theme, roster.Members.Length, ResultRowHeight);
+        var card = GroupCard.Begin(theme, roster.Members.Length, FindResultRowHeight);
         for (var index = 0; index < roster.Members.Length; index++)
         {
             var member = roster.Members[index];
             if (DrawResultRow(card.NextRow(), theme, scale, member.Name, member.Subtitle,
                     lodestone.Remote(member.AvatarKey, member.Avatar)))
             {
-                router.Push(new View(ViewKind.CharacterDetail, member.Id, member.Name, member.World));
+                router.Push(MessagesRoute.Character(member.Id, member.Name, member.World));
             }
         }
 
@@ -625,7 +546,7 @@ internal sealed class FindPeopleApp : IPhoneApp
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private bool DrawState(Rect body, LookupState state, PhoneTheme theme, float scale)
+    private bool DrawLookupState(Rect body, LookupState state, PhoneTheme theme, float scale)
     {
         var center = body.Center;
         if (state == LookupState.Failed)
@@ -662,8 +583,4 @@ internal sealed class FindPeopleApp : IPhoneApp
 
     private static string SendTarget(string name, string world) =>
         world.Length > 0 ? string.Concat(name, "@", world) : name;
-
-    public void Dispose()
-    {
-    }
 }

@@ -813,6 +813,7 @@ internal static class L
     {
         public static readonly LocString Empty = new("messages.empty", "No messages yet");
         public static readonly LocString Placeholder = new("messages.placeholder", "Message");
+        public static readonly LocString TabChats = new("messages.tabChats", "Chats");
         public static readonly LocString TabDirect = new("messages.tabDirect", "Direct");
         public static readonly LocString TabLinkshells = new("messages.tabLinkshells", "Linkshells");
         public static readonly LocString LinkshellsEmpty = new("messages.linkshellsEmpty", "No linkshell chatter yet");

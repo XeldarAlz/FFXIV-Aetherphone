@@ -66,6 +66,7 @@ public sealed class Plugin : IDalamudPlugin
         Cfg.MigrateSoundSettings();
         Cfg.MigrateChangelogSeen();
         Cfg.MigrateMessage();
+        Cfg.MigrateMessagesMerge();
         InitializeLocalization();
         Fonts = new FontService(PluginInterface, Cfg.TextZoom);
         Loading = new LoadingScreen();

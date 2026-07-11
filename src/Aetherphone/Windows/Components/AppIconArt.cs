@@ -29,9 +29,6 @@ internal static class AppIconArt
             case "message":
                 DrawMessage(dl, center, extent, inkColor, holeColor);
                 return true;
-            case "contacts":
-                DrawContacts(dl, center, extent, inkColor);
-                return true;
             case "friends":
                 DrawFriends(dl, center, extent, inkColor);
                 return true;
@@ -52,9 +49,6 @@ internal static class AppIconArt
                 return true;
             case "maps":
                 DrawMaps(dl, center, extent, inkColor, holeColor);
-                return true;
-            case "findpeople":
-                DrawFindPeople(dl, center, extent, inkColor, holeColor);
                 return true;
             case "chirper":
                 DrawChirper(dl, center, extent, inkColor, holeColor);
@@ -260,14 +254,6 @@ internal static class AppIconArt
             var radius = extent * (0.13f + 0.17f * flare * flare);
             dl.AddCircleFilled(At(center, extent, unitX, unitY), radius, hole, 24);
         }
-    }
-
-    private static void DrawContacts(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
-    {
-        dl.AddCircleFilled(At(center, extent, 0f, -0.42f), extent * 0.40f, ink, 32);
-        dl.PathClear();
-        dl.PathArcTo(At(center, extent, 0f, 1.05f), extent * 0.92f, MathF.PI, MathF.PI * 2f, 32);
-        dl.PathFillConvex(ink);
     }
 
     private static void DrawFriends(ImDrawListPtr dl, Vector2 center, float extent, uint ink)
@@ -872,21 +858,6 @@ internal static class AppIconArt
         };
         FillConvex(dl, hole, pinTip);
         dl.AddCircleFilled(pinHead, pinRadius * 0.42f, ink, 16);
-    }
-
-    private static void DrawFindPeople(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)
-    {
-        var lens = At(center, extent, -0.16f, -0.16f);
-        var lensRadius = extent * 0.66f;
-        var handleStart = Polar(lens, extent, 0.66f, MathF.PI / 4f);
-        var handleEnd = Polar(lens, extent, 1.20f, MathF.PI / 4f);
-        dl.AddLine(handleStart, handleEnd, ink, extent * 0.26f);
-        dl.AddCircleFilled(lens, lensRadius, ink, 40);
-        var headCenter = new Vector2(lens.X, lens.Y - lensRadius * 0.34f);
-        dl.AddCircleFilled(headCenter, lensRadius * 0.26f, hole, 24);
-        dl.PathClear();
-        dl.PathArcTo(new Vector2(lens.X, lens.Y + lensRadius * 0.58f), lensRadius * 0.52f, MathF.PI, MathF.PI * 2f, 32);
-        dl.PathFillConvex(hole);
     }
 
     private static void DrawChirper(ImDrawListPtr dl, Vector2 center, float extent, uint ink, uint hole)

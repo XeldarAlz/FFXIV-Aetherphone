@@ -5,9 +5,7 @@ using Aetherphone.Apps.Chirper;
 using Aetherphone.Apps.Message;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.Collections;
-using Aetherphone.Apps.Contacts;
 using Aetherphone.Apps.Dailies;
-using Aetherphone.Apps.FindPeople;
 using Aetherphone.Apps.Fishing;
 using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Inventory;
@@ -46,8 +44,7 @@ internal static class AppRegistry
         var contactBook = new ContactBook(services.AethernetClient, services.AethernetSession);
         var apps = new List<IPhoneApp>
         {
-            new MessagesApp(services.Messages, services.Linkshells, services.LinkshellMutes, services.ChatBridge, services.LinkshellBridge, services.MessageLauncher, services.Lodestone, services.Notifications),
-            new ContactsApp(services.GameData, services.MessageLauncher, services.Lodestone),
+            new MessagesApp(services.Messages, services.Linkshells, services.LinkshellMutes, services.ChatBridge, services.LinkshellBridge, services.MessageLauncher, services.Lodestone, services.Notifications, services.GameData, services.Lookup),
             new ActivityApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
         };
 
@@ -65,7 +62,6 @@ internal static class AppRegistry
         apps.Add(new SkywatcherApp(services.Weather));
         apps.Add(new VenuesApp(services.Venues, services.Media, services.Http, services.Textures, services.GameData, services.Configuration));
         apps.Add(new MapsApp(services.Maps, services.Configuration));
-        apps.Add(new FindPeopleApp(services.Lookup, services.Lodestone, services.MessageLauncher, services.GameData));
         apps.Add(new NewsApp(services.News, services.Media, services.Http, services.GameData));
         apps.Add(new CollectionsApp(services.Collections, services.Lodestone, services.Media, services.Http, services.GameData));
         apps.Add(new MarketApp(services.Market, services.MarketIndex, services.MarketAlerts, services.MarketLauncher, services.GameData, services.Textures, services.Configuration));

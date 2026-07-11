@@ -91,6 +91,7 @@ internal sealed class Configuration : IPluginConfiguration
     public List<string> MessageFavoriteContacts { get; set; } = new();
     public Dictionary<string, string> MessageContactNotes { get; set; } = new();
     public bool MessageMigrated { get; set; }
+    public bool MessagesMergeMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();
     public List<string> MutedLinkshells { get; set; } = new();
     public long DevChatLastSeenUnix { get; set; }
@@ -183,6 +184,100 @@ internal sealed class Configuration : IPluginConfiguration
 
         MessageMigrated = true;
         Save();
+    }
+
+    public void MigrateMessagesMerge()
+    {
+        if (MessagesMergeMigrated)
+        {
+            return;
+        }
+
+        if (Home is not null)
+        {
+            var placed = HomeContains("messages");
+            if (Home.Dock is { } dock)
+            {
+                MigrateMessagesMergeIds(dock, ref placed);
+            }
+
+            for (var pageIndex = 0; pageIndex < Home.Pages.Count; pageIndex++)
+            {
+                var items = Home.Pages[pageIndex].Items;
+                for (var itemIndex = items.Count - 1; itemIndex >= 0; itemIndex--)
+                {
+                    var item = items[itemIndex];
+                    MigrateMessagesMergeIds(item.AppIds, ref placed);
+                    if (!IsLegacyMessagesId(item.AppId))
+                    {
+                        continue;
+                    }
+
+                    if (placed)
+                    {
+                        items.RemoveAt(itemIndex);
+                    }
+                    else
+                    {
+                        item.AppId = "messages";
+                        placed = true;
+                    }
+                }
+            }
+        }
+
+        MessagesMergeMigrated = true;
+        Save();
+    }
+
+    private bool HomeContains(string appId)
+    {
+        if (Home is null)
+        {
+            return false;
+        }
+
+        if (Home.Dock is { } dock && dock.Contains(appId))
+        {
+            return true;
+        }
+
+        for (var pageIndex = 0; pageIndex < Home.Pages.Count; pageIndex++)
+        {
+            var items = Home.Pages[pageIndex].Items;
+            for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
+            {
+                if (items[itemIndex].AppId == appId || items[itemIndex].AppIds.Contains(appId))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsLegacyMessagesId(string appId) => appId is "contacts" or "findpeople";
+
+    private static void MigrateMessagesMergeIds(List<string> ids, ref bool placed)
+    {
+        for (var index = ids.Count - 1; index >= 0; index--)
+        {
+            if (!IsLegacyMessagesId(ids[index]))
+            {
+                continue;
+            }
+
+            if (placed)
+            {
+                ids.RemoveAt(index);
+            }
+            else
+            {
+                ids[index] = "messages";
+                placed = true;
+            }
+        }
     }
 
     private static bool IsLegacyMessageId(string appId) => appId is "dm" or "friends" or "phone" or "chocochat";
