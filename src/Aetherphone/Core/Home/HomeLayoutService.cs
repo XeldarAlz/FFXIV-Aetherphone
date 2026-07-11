@@ -10,13 +10,21 @@ internal sealed class HomeLayoutService
     public const int MaxRows = 8;
     public const int DefaultRows = 6;
     private const string DefaultWidgetId = "skywatcher.forecast";
-    private static readonly string[] DefaultDockApps = { "message", "messages", "chirper", "settings" };
+    private static readonly string[] DefaultDockApps = { "message", "messages", "kupoai", "settings" };
 
     private static readonly string[] DefaultFirstPageApps =
     {
-        "aethergram", "velvet", "polls",
-        "camera", "photos", "feedback",
-        "music", "maps", "venues", "games",
+        "chirper", "aethergram", "velvet", "polls",
+        "camera", "photos", "feedback", "music",
+        "maps", "venues", "games", "market",
+    };
+
+    private static readonly string[] DefaultSecondPageApps =
+    {
+        "skywatcher", "collections", "inventory", "fishing",
+        "clock", "notes", "calculator", "timers",
+        "wallet", "dailies", "calendar", "news",
+        "character", "notifications",
     };
 
     private static readonly string[] DefaultTrailingApps = { "dev" };
@@ -432,19 +440,25 @@ internal sealed class HomeLayoutService
             firstPage.Add(HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, WidgetSize.Medium));
         }
 
-        for (var index = 0; index < DefaultFirstPageApps.Length; index++)
-        {
-            if (byId.TryGetValue(DefaultFirstPageApps[index], out var app) && app.IsAvailable && placed.Add(app.Id))
-            {
-                firstPage.Add(HomeTile.ForApp(app));
-            }
-        }
-
+        AppendSeedApps(firstPage, DefaultFirstPageApps, placed);
+        var secondPage = new List<HomeTile>();
+        AppendSeedApps(secondPage, DefaultSecondPageApps, placed);
         pages.Add(firstPage);
-        pages.Add(new List<HomeTile>());
+        pages.Add(secondPage);
         for (var index = 0; index < DefaultTrailingApps.Length; index++)
         {
             placed.Add(DefaultTrailingApps[index]);
+        }
+    }
+
+    private void AppendSeedApps(List<HomeTile> page, string[] ids, HashSet<string> placed)
+    {
+        for (var index = 0; index < ids.Length; index++)
+        {
+            if (byId.TryGetValue(ids[index], out var app) && app.IsAvailable && placed.Add(app.Id))
+            {
+                page.Add(HomeTile.ForApp(app));
+            }
         }
     }
 
