@@ -16,6 +16,7 @@ internal sealed partial class MessageApp
 {
     private string forwardFilter = string.Empty;
     private bool forwardBusy;
+    private string? forwardOpenPending;
 
     private void DrawForwardPicker(Rect area, string messageId)
     {
@@ -94,7 +95,7 @@ internal sealed partial class MessageApp
         {
             forwardBusy = true;
             store.ForwardMessage(message, item.Id, _ => forwardBusy = false);
-            router.Pop();
+            forwardOpenPending = item.Id;
         }
 
         ImGui.SetCursorScreenPos(origin);

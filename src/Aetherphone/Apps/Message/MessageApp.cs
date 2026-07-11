@@ -202,6 +202,14 @@ internal sealed partial class MessageApp : IPhoneApp
             }
         }
 
+        if (forwardOpenPending is { } forwardTarget)
+        {
+            forwardOpenPending = null;
+            activeTab = MessageTab.Chats;
+            router.Reset();
+            router.Push(MessageRoute.Thread(forwardTarget));
+        }
+
         ProcessAddOutcomes();
         var result = composeResult;
         if (result is null)
