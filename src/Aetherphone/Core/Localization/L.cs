@@ -14,6 +14,7 @@ internal static class L
         public static readonly LocString Hq = new("common.hq", "HQ");
         public static readonly LocString Nq = new("common.nq", "NQ");
         public static readonly LocString ComingSoon = new("common.comingSoon", "Coming soon");
+        public static readonly LocString OpenInBrowser = new("common.openInBrowser", "Click to open in browser");
     }
 
     internal static class Social
@@ -51,7 +52,6 @@ internal static class L
 
     internal static class Apps
     {
-        public static readonly LocString Messages = new("app.messages", "Messages");
         public static readonly LocString Contacts = new("app.contacts", "Contacts");
         public static readonly LocString Character = new("app.character", "Character");
         public static readonly LocString Chirper = new("app.chirper", "Chirper");
@@ -82,7 +82,7 @@ internal static class L
         public static readonly LocString Notes = new("app.notes", "Notes");
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
         public static readonly LocString Friends = new("app.friends", "Friends");
-        public static readonly LocString Chat = new("app.chat", "Chat");
+        public static readonly LocString Linkpearl = new("app.linkpearl", "Linkpearl");
         public static readonly LocString Message = new("app.message", "Message");
         public static readonly LocString KupoAi = new("app.kupoai", "KupoAI");
     }
@@ -274,6 +274,9 @@ internal static class L
         public static readonly LocString SearchHint = new("phone.searchHint", "Name or Name@World");
         public static readonly LocString StatusCalling = new("phone.statusCalling", "Calling…");
         public static readonly LocString StatusConnecting = new("phone.statusConnecting", "Connecting…");
+        public static readonly LocString Reconnecting = new("phone.reconnecting", "Reconnecting…");
+        public static readonly LocString ConnectionLost = new("phone.connectionLost", "Connection lost");
+        public static readonly LocString ReturnToCall = new("phone.returnToCall", "Tap to return to call");
         public static readonly LocString SettingsTitle = new("phone.settingsTitle", "Phone Calls");
         public static readonly LocString SummaryOn = new("phone.summaryOn", "On");
         public static readonly LocString SummaryOff = new("phone.summaryOff", "Off");
@@ -298,6 +301,14 @@ internal static class L
         public static readonly LocString SignInTitle = new("phone.signInTitle", "Sign in to call");
         public static readonly LocString FilterHint = new("phone.filterHint", "Search contacts");
         public static readonly LocString NotMutual = new("phone.notMutual", "Waiting for them to add you back");
+        public static readonly LocString NewCall = new("phone.newCall", "New Call");
+        public static readonly LocString Outgoing = new("phone.outgoing", "Outgoing");
+        public static readonly LocString Incoming = new("phone.incoming", "Incoming");
+        public static readonly LocString Missed = new("phone.missed", "Missed");
+        public static readonly LocString NoRecentCalls = new("phone.noRecentCalls", "No Recent Calls");
+        public static readonly LocString NoRecentCallsHint = new("phone.noRecentCallsHint", "Calls you make and receive will appear here");
+        public static readonly LocString ContactInfo = new("phone.contactInfo", "Info");
+        public static readonly LocString MissedCallBody = new("phone.missedCallBody", "Missed call");
     }
 
     internal static class Friends
@@ -414,7 +425,7 @@ internal static class L
     {
         public static readonly LocString[] Release0910 =
         {
-            new("changelog.r0910.0", "Your one-to-one and group chats in Messages, and your Velvet messages, are now end-to-end encrypted, so only you and the people you're talking to can read them — not even the server can"),
+            new("changelog.r0910.0", "Your one-to-one and group chats in Messages, and your Velvet messages, are now end-to-end encrypted, so only you and the people you're talking to can read them. Not even the server can"),
             new("changelog.r0910.1", "Encryption is automatic: your key is created quietly the first time you sign in, with nothing to set up and no passphrase to remember"),
             new("changelog.r0910.2", "On a new computer a fresh key is created automatically, and older messages become readable again once your chat partners come online"),
             new("changelog.r0910.3", "Added an Encrypted Chats page in Settings to check your encryption status or reset your key"),
@@ -723,9 +734,14 @@ internal static class L
         public static readonly LocString SignOut = new("account.signOut", "Sign out");
         public static readonly LocString CharacterLabel = new("account.characterLabel", "Character");
         public static readonly LocString HomeWorldLabel = new("account.homeWorldLabel", "Home World");
-        public static readonly LocString HandleLabel = new("account.handleLabel", "Username");
         public static readonly LocString SignOutConfirmTitle = new("account.signOutConfirmTitle", "Sign out?");
         public static readonly LocString SignOutConfirmBody = new("account.signOutConfirmBody", "You can sign back in anytime. Your account and data stay safe.");
+        public static readonly LocString ChangePhoto = new("account.changePhoto", "Change Photo");
+        public static readonly LocString ImportFromPc = new("account.importFromPc", "Import from PC");
+        public static readonly LocString MoveAndScale = new("account.moveAndScale", "Move and Scale");
+        public static readonly LocString Use = new("account.use", "Use");
+        public static readonly LocString Saving = new("account.saving", "Saving…");
+        public static readonly LocString GestureHint = new("account.gestureHint", "Drag to move · scroll to zoom");
         public static readonly LocString SignIn = new("account.signIn", "Sign in with Lodestone");
         public static readonly LocString XivSignIn = new("account.xivSignIn", "Sign in with XIVAuth");
         public static readonly LocString LodestoneHint = new("account.lodestoneHint", "No XIVAuth account? Verify with a Lodestone code instead.");
@@ -770,7 +786,7 @@ internal static class L
         public static readonly LocString Intro = new("encryption.intro", "End-to-end encryption keeps your chats between you and the people you write to. Not even the Aethernet server can read them.");
         public static readonly LocString NotSignedIn = new("encryption.notSignedIn", "Sign in to your Aethernet account first.");
         public static readonly LocString SettingUp = new("encryption.settingUp", "Setting up encryption…");
-        public static readonly LocString ActiveHint = new("encryption.activeHint", "Encryption is active on this device. It works automatically — nothing to set up.");
+        public static readonly LocString ActiveHint = new("encryption.activeHint", "Encryption is active on this device. It works automatically. There is nothing to set up.");
         public static readonly LocString NewDeviceHint = new("encryption.newDeviceHint", "On a new computer a fresh key is created automatically. Older messages become readable again once your chat partners come online.");
         public static readonly LocString ForgotTitle = new("encryption.forgotTitle", "Reset encryption key");
         public static readonly LocString ForgotBody = new("encryption.forgotBody", "A new key will be created. Messages encrypted with the old key become readable again once your chat partners come online.");
@@ -788,6 +804,26 @@ internal static class L
         public static readonly LocString ReportDisclosure = new("encryption.reportDisclosure", "This message and up to 5 previous messages will be shared with the moderators, decrypted.");
         public static readonly LocString ReportMessageAction = new("encryption.reportMessageAction", "Report message");
         public static readonly LocString CopyTextAction = new("encryption.copyTextAction", "Copy text");
+    }
+
+    internal static class Report
+    {
+        public static readonly LocString Action = new("report.action", "Report");
+        public static readonly LocString PostTitle = new("report.postTitle", "Report post");
+        public static readonly LocString UserTitle = new("report.userTitle", "Report user");
+        public static readonly LocString CategoryHint = new("report.categoryHint", "Select a reason");
+        public static readonly LocString CategorySpam = new("report.categorySpam", "Spam");
+        public static readonly LocString CategoryHarassment = new("report.categoryHarassment", "Harassment or bullying");
+        public static readonly LocString CategoryHateSpeech = new("report.categoryHateSpeech", "Hate speech");
+        public static readonly LocString CategoryInappropriate = new("report.categoryInappropriate", "Inappropriate content");
+        public static readonly LocString CategoryImpersonation = new("report.categoryImpersonation", "Impersonation");
+        public static readonly LocString CategoryScam = new("report.categoryScam", "Scam or fraud");
+        public static readonly LocString CategoryOther = new("report.categoryOther", "Something else");
+        public static readonly LocString DetailsHint = new("report.detailsHint", "Add details (optional)");
+        public static readonly LocString Submit = new("report.submit", "Report");
+        public static readonly LocString Sending = new("report.sending", "Sending…");
+        public static readonly LocString Sent = new("report.sent", "Report submitted. Thank you.");
+        public static readonly LocString Failed = new("report.failed", "Couldn't submit the report");
     }
 
     internal static class Music
@@ -922,10 +958,6 @@ internal static class L
         public static readonly LocString ReactAngry = new("chirper.reactAngry", "Angry");
         public static readonly LocPlural Posts = new("chirper.posts", "{0} post", "{0} posts");
         public static readonly LocPlural Likes = new("chirper.likes", "{0} like", "{0} likes");
-        public static readonly LocString ReportReasonHint = new("chirper.reportReasonHint", "Why are you reporting this? (optional)");
-        public static readonly LocString ReportSubmit = new("chirper.reportSubmit", "Report");
-        public static readonly LocString ReportSent = new("chirper.reportSent", "Report submitted. Thank you.");
-        public static readonly LocString ReportFailed = new("chirper.reportFailed", "Couldn't submit the report");
         public static readonly LocString DeleteConfirmMessage = new("chirper.deleteConfirmMessage", "Delete this post? This can't be undone.");
         public static readonly LocString DeleteCommentConfirmMessage = new("chirper.deleteCommentConfirmMessage", "Delete this comment? This can't be undone.");
         public static readonly LocString DeleteConfirm = new("chirper.deleteConfirm", "Delete");
@@ -986,10 +1018,6 @@ internal static class L
         public static readonly LocString NameOrWorld = new("aethergram.nameOrWorld", "Name, @username, or world");
         public static readonly LocPlural Posts = new("aethergram.posts", "{0} post", "{0} posts");
         public static readonly LocPlural Likes = new("aethergram.likes", "{0} like", "{0} likes");
-        public static readonly LocString ReportReasonHint = new("aethergram.reportReasonHint", "Why are you reporting this? (optional)");
-        public static readonly LocString ReportSubmit = new("aethergram.reportSubmit", "Report");
-        public static readonly LocString ReportSent = new("aethergram.reportSent", "Report submitted. Thank you.");
-        public static readonly LocString ReportFailed = new("aethergram.reportFailed", "Couldn't submit the report");
         public static readonly LocString DeleteConfirmMessage = new("aethergram.deleteConfirmMessage", "Delete this post? This can't be undone.");
         public static readonly LocString DeleteCommentConfirmMessage = new("aethergram.deleteCommentConfirmMessage", "Delete this comment? This can't be undone.");
         public static readonly LocString DeleteConfirm = new("aethergram.deleteConfirm", "Delete");
@@ -1089,10 +1117,6 @@ internal static class L
         public static readonly LocString Comments = new("velvet.comments", "Comments");
         public static readonly LocString NoComments = new("velvet.noComments", "No comments yet. Say something.");
         public static readonly LocString AddComment = new("velvet.addComment", "Add a comment…");
-        public static readonly LocString ReportReasonHint = new("velvet.reportReasonHint", "Why are you reporting this? (optional)");
-        public static readonly LocString ReportSubmit = new("velvet.reportSubmit", "Report");
-        public static readonly LocString ReportSent = new("velvet.reportSent", "Report submitted. Thank you.");
-        public static readonly LocString ReportFailed = new("velvet.reportFailed", "Couldn't submit the report");
         public static readonly LocString DeleteConfirmMessage = new("velvet.deleteConfirmMessage", "Delete this post? This can't be undone.");
         public static readonly LocString DeleteConfirm = new("velvet.deleteConfirm", "Delete");
         public static readonly LocString DeleteCancel = new("velvet.deleteCancel", "Cancel");
@@ -1155,7 +1179,7 @@ internal static class L
         public static readonly LocString AboutHeader = new("velvet.aboutHeader", "About you");
         public static readonly LocString WantHeader = new("velvet.wantHeader", "What you're after");
         public static readonly LocString SafetyHeader = new("velvet.safetyHeader", "Safety");
-        public static readonly LocString ViewProfile = new("velvet.viewProfile", "View my profile");
+        public static readonly LocString ViewProfile = new("velvet.viewProfile", "View profile");
         public static readonly LocString ChangePhoto = new("velvet.changePhoto", "Change photo");
         public static readonly LocString MoveAndScale = new("velvet.moveAndScale", "Move and scale");
         public static readonly LocString GestureHint = new("velvet.gestureHint", "Drag to move, scroll to zoom");
@@ -1790,6 +1814,13 @@ internal static class L
         public static readonly LocString CustomizeBody = new("onboarding.customizeBody", "Press and hold anywhere on the Home Screen to rearrange icons, resize widgets, and add new ones.");
         public static readonly LocString ControlCenterTitle = new("onboarding.controlCenterTitle", "Control Center");
         public static readonly LocString ControlCenterBody = new("onboarding.controlCenterBody", "Tap the top of the screen to open Control Center, with volume, brightness, accent color, and your notifications.");
+        public static readonly LocString HomeTourTitle = new("onboarding.homeTourTitle", "This is your Home Screen");
+        public static readonly LocString HomeTourBody = new("onboarding.homeTourBody", "Your phone is ready. Before you dive in, here's a quick look around.");
+        public static readonly LocString AppsTourTitle = new("onboarding.appsTourTitle", "Your apps");
+        public static readonly LocString AppsTourBody = new("onboarding.appsTourBody", "Tap any icon to open an app. The bar at the bottom of the screen always brings you back home.");
+        public static readonly LocString ControlCenterTapBody = new("onboarding.controlCenterTapBody", "Tap the top of the screen to open Control Center.");
+        public static readonly LocString ControlCenterInsideTitle = new("onboarding.controlCenterInsideTitle", "Everything at hand");
+        public static readonly LocString ControlCenterInsideBody = new("onboarding.controlCenterInsideBody", "Volume, brightness, accent color and your notifications all live here. Tap the bottom edge to close it anytime; for now, Continue will do it for you.");
         public static readonly LocString SignalTourTitle = new("onboarding.signalTourTitle", "Live signal");
         public static readonly LocString SignalTourBody = new("onboarding.signalTourBody", "These bars are your real ping to Aethernet, updating as you play. More bars means a faster connection.");
         public static readonly LocString BatteryTourTitle = new("onboarding.batteryTourTitle", "Real battery");
@@ -1876,5 +1907,169 @@ internal static class L
         public static readonly LocString PollsBody = new("onboarding.pollsBody", "Community polls from across Aethernet. Tap an option to cast your vote and see where everyone stands.");
         public static readonly LocString PollsResultsTitle = new("onboarding.pollsResultsTitle", "Live results");
         public static readonly LocString PollsResultsBody = new("onboarding.pollsResultsBody", "Every vote updates the bars in real time. Once a poll closes, you'll see the final tally.");
+        public static readonly LocString ChirperTabsTitle = new("onboarding.chirperTabsTitle", "Two feeds");
+        public static readonly LocString ChirperTabsBody = new("onboarding.chirperTabsBody", "For You shows chirps from everyone; Following keeps it to the people you follow. Swap between them any time.");
+        public static readonly LocString ChirperSearchTitle = new("onboarding.chirperSearchTitle", "Find people");
+        public static readonly LocString ChirperSearchBody = new("onboarding.chirperSearchBody", "Search for other players by name or handle, and follow them to build your Following feed.");
+        public static readonly LocString ChirperActivityTitle = new("onboarding.chirperActivityTitle", "Never miss a mention");
+        public static readonly LocString ChirperActivityBody = new("onboarding.chirperActivityBody", "Likes, replies and new followers all land under the bell.");
+        public static readonly LocString AethergramSearchTitle = new("onboarding.aethergramSearchTitle", "Find people");
+        public static readonly LocString AethergramSearchBody = new("onboarding.aethergramSearchBody", "Tap Search to look up other players, browse their grids, and follow the ones you like.");
+        public static readonly LocString AethergramActivityTitle = new("onboarding.aethergramActivityTitle", "Likes and comments");
+        public static readonly LocString AethergramActivityBody = new("onboarding.aethergramActivityBody", "Hearts, comments and new followers show up under this tab the moment they happen.");
+        public static readonly LocString AethergramProfileTitle = new("onboarding.aethergramProfileTitle", "Your profile");
+        public static readonly LocString AethergramProfileBody = new("onboarding.aethergramProfileBody", "Tap your avatar to set up your profile and watch your grid fill up with your shots.");
+        public static readonly LocString VelvetComposeTitle = new("onboarding.velvetComposeTitle", "Share to the feed");
+        public static readonly LocString VelvetComposeBody = new("onboarding.velvetComposeBody", "Post thoughts and photos for your connections. Everything you share stays inside Velvet.");
+        public static readonly LocString MessageCallsTitle = new("onboarding.messageCallsTitle", "Voice calls");
+        public static readonly LocString MessageContactsTitle = new("onboarding.messageContactsTitle", "Your address book");
+        public static readonly LocString MessageContactsBody = new("onboarding.messageContactsBody", "Friends you add by number live in Contacts. Tap the tab to take a look.");
+        public static readonly LocString MessageNumberCopyBody = new("onboarding.messageNumberCopyBody", "This card is your number. Tap it to copy, then share it in game so friends can add you.");
+        public static readonly LocString MessageAddFriendTitle = new("onboarding.messageAddFriendTitle", "Add a friend");
+        public static readonly LocString MessageAddFriendBody = new("onboarding.messageAddFriendBody", "Got someone's number? Tap the plus and their card appears right here.");
+        public static readonly LocString MusicSearchTitle = new("onboarding.musicSearchTitle", "Find any track");
+        public static readonly LocString MusicSearchBody = new("onboarding.musicSearchBody", "Type a song or artist and the results stream straight to your phone.");
+        public static readonly LocString MusicRadioTitle = new("onboarding.musicRadioTitle", "Tune the radio");
+        public static readonly LocString MusicRadioBody = new("onboarding.musicRadioBody", "Pick a genre to browse live radio stations. Tap one and it starts playing instantly.");
+        public static readonly LocString MarketSearchTitle = new("onboarding.marketSearchTitle", "Search anything");
+        public static readonly LocString MarketSearchBody = new("onboarding.marketSearchBody", "Type a couple of letters to search every marketable item, or look one up straight from the game.");
+        public static readonly LocString MarketScopeTitle = new("onboarding.marketScopeTitle", "Pick your scope");
+        public static readonly LocString MarketScopeBody = new("onboarding.marketScopeBody", "Compare prices on your world, your data center, or the whole region. Your pick is remembered.");
+        public static readonly LocString VenuesTimeTitle = new("onboarding.venuesTimeTitle", "Now or later");
+        public static readonly LocString VenuesTimeBody = new("onboarding.venuesTimeBody", "Filter events by when they happen: live right now, today, upcoming, or everything.");
+        public static readonly LocString VenuesFilterTitle = new("onboarding.venuesFilterTitle", "Narrow it down");
+        public static readonly LocString VenuesFilterBody = new("onboarding.venuesFilterBody", "Tap a chip to filter by data center, source, tags, or just your favorites.");
+        public static readonly LocString VenuesSearchTitle = new("onboarding.venuesSearchTitle", "Find a venue");
+        public static readonly LocString VenuesSearchBody = new("onboarding.venuesSearchBody", "Know the name? Search venues and events directly here.");
+        public static readonly LocString GamesFeaturedTitle = new("onboarding.gamesFeaturedTitle", "Today's pick");
+        public static readonly LocString GamesFeaturedBody = new("onboarding.gamesFeaturedBody", "A different game is featured every day. Tap the card to jump straight in.");
+        public static readonly LocString GamesLibraryTitle = new("onboarding.gamesLibraryTitle", "Browse the arcade");
+        public static readonly LocString GamesLibraryBody = new("onboarding.gamesLibraryBody", "Every game sorted by genre, with your best score under each title.");
+        public static readonly LocString CameraModesTitle = new("onboarding.cameraModesTitle", "Pick a mode");
+        public static readonly LocString CameraModesBody = new("onboarding.cameraModesBody", "Square gives a centered crop, Photo uses the full viewfinder.");
+        public static readonly LocString CameraFlashTitle = new("onboarding.cameraFlashTitle", "Screen flash");
+        public static readonly LocString CameraFlashBody = new("onboarding.cameraFlashBody", "With the flash on, the screen blinks white as you capture. Handy in dark zones.");
+        public static readonly LocString CameraShutterTitle = new("onboarding.cameraShutterTitle", "Say cheese");
+        public static readonly LocString CameraShutterBody = new("onboarding.cameraShutterBody", "Tap the shutter to snap what's behind the phone. Shots land straight in the Photos app.");
+        public static readonly LocString PhotosEmptyTitle = new("onboarding.photosEmptyTitle", "Nothing here yet?");
+        public static readonly LocString PhotosEmptyBody = new("onboarding.photosEmptyBody", "Photos come from the Camera app. Take a shot and it appears in this grid instantly.");
+        public static readonly LocString NotesNewTitle = new("onboarding.notesNewTitle", "Start a note");
+        public static readonly LocString NotesNewBody = new("onboarding.notesNewBody", "Tap the plus to open a fresh note. It saves itself as you type.");
+        public static readonly LocString NotesReminderTitle = new("onboarding.notesReminderTitle", "Add a reminder");
+        public static readonly LocString NotesReminderBody = new("onboarding.notesReminderBody", "On this tab the plus creates a reminder. Give it a due date and the phone nudges you.");
+        public static readonly LocString CalendarAgendaTitle = new("onboarding.calendarAgendaTitle", "Day agenda");
+        public static readonly LocString CalendarAgendaBody = new("onboarding.calendarAgendaBody", "Whatever day you pick, its events line up here, community happenings beside your own plans.");
+        public static readonly LocString SettingsAccountTitle = new("onboarding.settingsAccountTitle", "Your Aethernet account");
+        public static readonly LocString SettingsAccountBody = new("onboarding.settingsAccountBody", "Sign in here to unlock the social side of the phone: Chirper, Aethergram, Polls and more.");
+        public static readonly LocString SettingsAppearanceTitle = new("onboarding.settingsAppearanceTitle", "Looks and themes");
+        public static readonly LocString SettingsAppearanceBody = new("onboarding.settingsAppearanceBody", "Theme, accent color and wallpaper all live in Appearance. Make the phone yours.");
+        public static readonly LocString SettingsTutorialsTitle = new("onboarding.settingsTutorialsTitle", "Tours live here");
+        public static readonly LocString SettingsTutorialsBody = new("onboarding.settingsTutorialsBody", "Replay any tour or turn tips off entirely from Tutorials.");
+        public static readonly LocString NotificationsHistoryTitle = new("onboarding.notificationsHistoryTitle", "Your history");
+        public static readonly LocString NotificationsHistoryBody = new("onboarding.notificationsHistoryBody", "Everything the phone pinged you about stacks up here. Tap one to jump to its app, or clear them all up top.");
+        public static readonly LocString MessagesListTitle = new("onboarding.messagesListTitle", "Pick up the thread");
+        public static readonly LocString MessagesListBody = new("onboarding.messagesListBody", "Every /tell becomes a conversation here. Tap one to read and reply without leaving the game.");
+        public static readonly LocString MessagesLinkshellsTitle = new("onboarding.messagesLinkshellsTitle", "Linkshells too");
+        public static readonly LocString MessagesLinkshellsBody = new("onboarding.messagesLinkshellsBody", "Tap the tabs to switch views. Linkshells mirrors your linkshell and cross-world channels.");
+        public static readonly LocString FeedbackSendTitle = new("onboarding.feedbackSendTitle", "Send it off");
+        public static readonly LocString FeedbackSendBody = new("onboarding.feedbackSendBody", "When you're happy with it, tap Send. It goes straight to the developer's dashboard.");
+        public static readonly LocString PollsVoteTitle = new("onboarding.pollsVoteTitle", "Cast your vote");
+        public static readonly LocString PollsVoteBody = new("onboarding.pollsVoteBody", "Each card is one community poll. Tap an option to vote. You can switch your pick while it's open.");
+        public static readonly LocString SkywatcherCurrentTitle = new("onboarding.skywatcherCurrentTitle", "Right now");
+        public static readonly LocString SkywatcherCurrentBody = new("onboarding.skywatcherCurrentBody", "This is the zone you're standing in and its live weather, refreshed as you travel.");
+        public static readonly LocString MapsLocationTitle = new("onboarding.mapsLocationTitle", "You are here");
+        public static readonly LocString MapsLocationBody = new("onboarding.mapsLocationBody", "Maps always knows where you're standing. Your current zone and region sit right at the top.");
+        public static readonly LocString MapsSearchTitle = new("onboarding.mapsSearchTitle", "Find any aetheryte");
+        public static readonly LocString MapsSearchBody = new("onboarding.mapsSearchBody", "Type a zone or aetheryte name to jump straight to it. With Lifestream installed, one tap travels there.");
+        public static readonly LocString MapsStarTitle = new("onboarding.mapsStarTitle", "Star your favorites");
+        public static readonly LocString MapsStarBody = new("onboarding.mapsStarBody", "Expand an expansion, then tap the star beside any destination to pin it to your Favorites.");
+        public static readonly LocString FindPeopleSearchTitle = new("onboarding.findPeopleSearchTitle", "Search the Lodestone");
+        public static readonly LocString FindPeopleSearchBody = new("onboarding.findPeopleSearchBody", "Type a character's name here. The world field is set to your data center, but you can point it anywhere.");
+        public static readonly LocString FindPeopleKindTitle = new("onboarding.findPeopleKindTitle", "Characters or Free Companies");
+        public static readonly LocString FindPeopleKindBody = new("onboarding.findPeopleKindBody", "Flip this to look up Free Companies instead, with crests, slogans and full member rosters.");
+        public static readonly LocString NewsCategoriesTitle = new("onboarding.newsCategoriesTitle", "Four feeds in one");
+        public static readonly LocString NewsCategoriesBody = new("onboarding.newsCategoriesBody", "Topics, notices, maintenance windows and patch updates, each on its own tab.");
+        public static readonly LocString NewsReadTitle = new("onboarding.newsReadTitle", "Read the full story");
+        public static readonly LocString NewsReadBody = new("onboarding.newsReadBody", "Tap any card or row to open the full article in your browser.");
+        public static readonly LocString NewsRefreshTitle = new("onboarding.newsRefreshTitle", "Fresh off the Lodestone");
+        public static readonly LocString NewsRefreshBody = new("onboarding.newsRefreshBody", "News refreshes on its own, but a tap here pulls the latest right now.");
+        public static readonly LocString ContactsListTitle = new("onboarding.contactsListTitle", "Friends at a glance");
+        public static readonly LocString ContactsListBody = new("onboarding.contactsListBody", "Your friend list, online first, with portraits. Tap anyone for actions like messaging and party invites.");
+        public static readonly LocString ContactsSearchTitle = new("onboarding.contactsSearchTitle", "Find someone fast");
+        public static readonly LocString ContactsSearchBody = new("onboarding.contactsSearchBody", "Start typing a name to filter the list instantly.");
+        public static readonly LocString CharacterRingsTitle = new("onboarding.characterRingsTitle", "Your three rings");
+        public static readonly LocString CharacterRingsBody = new("onboarding.characterRingsBody", "Job level, mastery across every job, and your collection. Each ring fills as you progress.");
+        public static readonly LocString CharacterSummaryTitle = new("onboarding.characterSummaryTitle", "The numbers behind them");
+        public static readonly LocString CharacterSummaryBody = new("onboarding.characterSummaryBody", "The same three tracks in detail: exact levels, jobs at cap, and what's left to the next level.");
+        public static readonly LocString ClockIntroBody = new("onboarding.clockIntroBody", "Eorzea time, server time and your own cities, ticking side by side. And that's just the first tab.");
+        public static readonly LocString ClockTabsTitle = new("onboarding.clockTabsTitle", "More than a clock");
+        public static readonly LocString ClockTabsBody = new("onboarding.clockTabsBody", "Alarms, a stopwatch and a timer live behind these tabs. Tap here to try the alarms.");
+        public static readonly LocString ClockAddTitle = new("onboarding.clockAddTitle", "Add your own");
+        public static readonly LocString ClockAddBody = new("onboarding.clockAddBody", "This plus creates a new alarm here, or adds a city on the World tab.");
+        public static readonly LocString CalculatorTapeTitle = new("onboarding.calculatorTapeTitle", "Your running tape");
+        public static readonly LocString CalculatorTapeBody = new("onboarding.calculatorTapeBody", "Past results pile up here as you calculate. Tap any old result to drop it into a new sum.");
+        public static readonly LocString TimersResetsTitle = new("onboarding.timersResetsTitle", "Counting down");
+        public static readonly LocString TimersResetsBody = new("onboarding.timersResetsBody", "Daily, Grand Company and weekly resets counted down live, each with the time it lands for you.");
+        public static readonly LocString TimersRemindersTitle = new("onboarding.timersRemindersTitle", "Never miss a reset");
+        public static readonly LocString TimersRemindersBody = new("onboarding.timersRemindersBody", "Flip a toggle and the phone pings you when that reset hits or a retainer venture finishes.");
+        public static readonly LocString DailiesCadenceTitle = new("onboarding.dailiesCadenceTitle", "Two rhythms");
+        public static readonly LocString DailiesCadenceBody = new("onboarding.dailiesCadenceBody", "Your routines split into Daily and Weekly. Tap here to flip over to the weekly list.");
+        public static readonly LocString DailiesNotifyTitle = new("onboarding.dailiesNotifyTitle", "A nudge at reset");
+        public static readonly LocString DailiesNotifyBody = new("onboarding.dailiesNotifyBody", "Turn this on and the phone reminds you at daily reset if anything is still unchecked.");
+        public static readonly LocString FishingHeroTitle = new("onboarding.fishingHeroTitle", "Next voyage");
+        public static readonly LocString FishingHeroBody = new("onboarding.fishingHeroBody", "The ring counts down to the next ocean fishing boarding window, with the route and time of day up top.");
+        public static readonly LocString FishingBlueTitle = new("onboarding.fishingBlueTitle", "Blue fish aboard");
+        public static readonly LocString FishingBlueBody = new("onboarding.fishingBlueBody", "The rare blue fish catchable on this route, each with the bait that tempts it.");
+        public static readonly LocString FishingUpcomingTitle = new("onboarding.fishingUpcomingTitle", "Plan your trip");
+        public static readonly LocString FishingUpcomingBody = new("onboarding.fishingUpcomingBody", "Boats leave every two hours. Scroll the schedule to find a departure that suits you.");
+        public static readonly LocString WalletGilTitle = new("onboarding.walletGilTitle", "Gil at a glance");
+        public static readonly LocString WalletGilBody = new("onboarding.walletGilBody", "Your live gil balance, refreshed as you earn and spend.");
+        public static readonly LocString WalletCurrenciesTitle = new("onboarding.walletCurrenciesTitle", "Caps included");
+        public static readonly LocString WalletCurrenciesBody = new("onboarding.walletCurrenciesBody", "Tomestones, seals and scrip grouped by family. Capped currencies show a bar so you know when to spend.");
+        public static readonly LocString InventorySearchTitle = new("onboarding.inventorySearchTitle", "Search everything");
+        public static readonly LocString InventorySearchBody = new("onboarding.inventorySearchBody", "Type an item name to search your bags, saddlebag, retainers and FC chest all at once.");
+        public static readonly LocString InventorySummaryTitle = new("onboarding.inventorySummaryTitle", "The headline numbers");
+        public static readonly LocString InventorySummaryBody = new("onboarding.inventorySummaryBody", "How much you're carrying and your gil, front and center.");
+        public static readonly LocString InventorySourcesTitle = new("onboarding.inventorySourcesTitle", "Retainers remembered");
+        public static readonly LocString InventorySourcesBody = new("onboarding.inventorySourcesBody", "Open a retainer or the FC chest once and the phone keeps a snapshot here, browsable any time.");
+        public static readonly LocString CollectionsCategoryTitle = new("onboarding.collectionsCategoryTitle", "Pick a category");
+        public static readonly LocString CollectionsCategoryBody = new("onboarding.collectionsCategoryBody", "Each tile is a collection with your completion ring. Tap Mounts to open its catalog.");
+        public static readonly LocString CollectionsSearchTitle = new("onboarding.collectionsSearchTitle", "Find anything");
+        public static readonly LocString CollectionsSearchBody = new("onboarding.collectionsSearchBody", "Search the whole catalog by name, or filter by where it comes from.");
+        public static readonly LocString CollectionsMissingTitle = new("onboarding.collectionsMissingTitle", "What's still missing");
+        public static readonly LocString CollectionsMissingBody = new("onboarding.collectionsMissingBody", "With your Lodestone linked, flip to Missing to see exactly what's left to hunt down.");
+    }
+
+    internal static class Setup
+    {
+        public static readonly LocString WelcomeTitle = new("setup.welcomeTitle", "Aetherphone");
+        public static readonly LocString WelcomeBody = new("setup.welcomeBody", "Your very own smartphone, right here in Eorzea. A few quick steps and it's ready to go.");
+        public static readonly LocString SetUpLater = new("setup.setUpLater", "Set Up Later");
+        public static readonly LocString SkipForNow = new("setup.skipForNow", "Skip for Now");
+        public static readonly LocString AccountTitle = new("setup.accountTitle", "Aethernet Account");
+        public static readonly LocString AccountBody = new("setup.accountBody", "One account unlocks every social app: Chirper, Aethergram, Message and more. Sign in with your character, no password needed.");
+        public static readonly LocString SignedInTitle = new("setup.signedInTitle", "You're signed in");
+        public static readonly LocString SignedInBody = new("setup.signedInBody", "Signed in as {0}. Next, make your profile yours.");
+        public static readonly LocString ProfileTitle = new("setup.profileTitle", "Your Profile");
+        public static readonly LocString ProfileBody = new("setup.profileBody", "This is how other players see you across the social apps. You can change it anytime, or set a different one per app.");
+        public static readonly LocString DisplayNameLabel = new("setup.displayNameLabel", "Display name");
+        public static readonly LocString HandleLabel = new("setup.handleLabel", "Handle");
+        public static readonly LocString HandleRules = new("setup.handleRules", "3 to 15 characters: lowercase letters, numbers and underscores.");
+        public static readonly LocString HandleTaken = new("setup.handleTaken", "That handle isn't available. Try another one.");
+        public static readonly LocString PhotoTitle = new("setup.photoTitle", "Profile Photo");
+        public static readonly LocString PhotoBody = new("setup.photoBody", "Add a photo so friends recognize you. Without one, your Lodestone portrait is shown instead.");
+        public static readonly LocString ChoosePhoto = new("setup.choosePhoto", "Choose a Photo");
+        public static readonly LocString AnalyticsTitle = new("setup.analyticsTitle", "Analytics");
+        public static readonly LocString AnalyticsFootnote = new("setup.analyticsFootnote", "You can change this anytime in Settings, under Privacy.");
+        public static readonly LocString FeatureMessageTitle = new("setup.featureMessageTitle", "Stay in touch");
+        public static readonly LocString FeatureMessageBody = new("setup.featureMessageBody", "Chats, calls and contacts with players everywhere.");
+        public static readonly LocString FeatureSocialTitle = new("setup.featureSocialTitle", "Share your story");
+        public static readonly LocString FeatureSocialBody = new("setup.featureSocialBody", "Post on Chirper and Aethergram with one account.");
+        public static readonly LocString FeatureToolsTitle = new("setup.featureToolsTitle", "Tools for Eorzea");
+        public static readonly LocString FeatureToolsBody = new("setup.featureToolsBody", "Market board, weather, maps, timers and news.");
+        public static readonly LocString FeaturePlayTitle = new("setup.featurePlayTitle", "Take a break");
+        public static readonly LocString FeaturePlayBody = new("setup.featurePlayBody", "Music, radio and a shelf of mini-games.");
+        public static readonly LocString ReadyBody = new("setup.readyBody", "You're all set. Enjoy your Aetherphone.");
+        public static readonly LocString StartUsing = new("setup.startUsing", "Start Using Aetherphone");
     }
 }
