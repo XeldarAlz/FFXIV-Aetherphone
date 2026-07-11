@@ -98,7 +98,7 @@ internal sealed class ControlCenter
         var rounding = theme.ScreenRounding * scale;
         var panelTop = screen.Min.Y - (1f - eased) * height;
         dl.PushClipRect(screen.Min, screen.Max, true);
-        Material.Veil(dl, screen.Min, screen.Max, 0.5f * eased, rounding);
+        Material.Veil(dl, screen.Min, screen.Max, 0.68f * eased, rounding);
         Material.Frosted(dl, new Vector2(screen.Min.X, panelTop), new Vector2(screen.Max.X, panelTop + height),
             rounding, scale, 1f);
         var opacity = Math.Clamp(eased * 1.7f, 0f, 1f);
@@ -133,6 +133,11 @@ internal sealed class ControlCenter
         if (interactive)
         {
             UpdateEditInput(delta);
+        }
+
+        if (editing)
+        {
+            DrawEmptyCells(dl, slots, placements, scale, opacity);
         }
 
         DrawSlots(dl, theme, slots, scale, opacity, interactive);
@@ -232,6 +237,50 @@ internal sealed class ControlCenter
 
             var posedMin = gridOrigin + new Vector2(pose.X.Value, pose.Y.Value);
             pose.Current = new Rect(posedMin, posedMin + new Vector2(pose.W.Value, pose.H.Value));
+        }
+    }
+
+    private void DrawEmptyCells(ImDrawListPtr dl, IReadOnlyList<ControlSlot> slots,
+        IReadOnlyList<GridCell> placements, float scale, float opacity)
+    {
+        Span<bool> occupied = stackalloc bool[HomeGridSolver.MaxCells];
+        occupied.Clear();
+        var columns = ControlLayoutService.Columns;
+        var maxRows = HomeGridSolver.MaxCells / columns;
+        for (var index = 0; index < placements.Count && index < slots.Count; index++)
+        {
+            for (var rowOffset = 0; rowOffset < slots[index].RowSpan; rowOffset++)
+            {
+                for (var columnOffset = 0; columnOffset < slots[index].ColumnSpan; columnOffset++)
+                {
+                    var cellIndex = (placements[index].Row + rowOffset) * columns +
+                                    placements[index].Column + columnOffset;
+                    if (cellIndex >= 0 && cellIndex < occupied.Length)
+                    {
+                        occupied[cellIndex] = true;
+                    }
+                }
+            }
+        }
+
+        var rows = Math.Min(layout.RowsUsed, maxRows);
+        for (var row = 0; row < rows; row++)
+        {
+            for (var column = 0; column < columns; column++)
+            {
+                if (occupied[row * columns + column])
+                {
+                    continue;
+                }
+
+                var cellRect = metrics.SlotRect(new GridCell(column, row), 1, 1);
+                var radius = MathF.Min(cellRect.Width, cellRect.Height) * 0.30f;
+                dl.AddRectFilled(cellRect.Min, cellRect.Max,
+                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.045f * opacity)), radius);
+                dl.AddRect(cellRect.Min, cellRect.Max,
+                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.11f * opacity)), radius, ImDrawFlags.RoundCornersAll,
+                    1f * scale);
+            }
         }
     }
 
@@ -499,9 +548,7 @@ internal sealed class ControlCenter
             Palette.WithAlpha(theme.TextStrong, opacity), 1.0f, FontWeight.Bold);
         var padding = 12f * scale;
         var rounding = 22f * scale;
-        var measured = notificationCenter.MeasureHeight(scale) + 2f * padding;
-        var panelHeight = MathF.Min(panelBottom - panelTop, measured);
-        var panel = new Rect(new Vector2(left, panelTop), new Vector2(right, panelTop + panelHeight));
+        var panel = new Rect(new Vector2(left, panelTop), new Vector2(right, panelBottom));
         Squircle.Fill(dl, panel.Min, panel.Max, rounding,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f * opacity)));
         Material.EdgeSquircle(dl, panel.Min, panel.Max, rounding, scale, opacity);

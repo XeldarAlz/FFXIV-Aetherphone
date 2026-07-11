@@ -5,7 +5,7 @@ namespace Aetherphone.Core.ControlCenter.Modules;
 
 internal sealed class ToggleModule : IControlModule
 {
-    private static readonly ControlSpan[] SpanOptions = { ControlSpan.Small, ControlSpan.Wide };
+    private static readonly ControlSpan[] SpanOptions = { ControlSpan.Small, ControlSpan.Wide, ControlSpan.Large };
 
     private readonly FontAwesomeIcon icon;
     private readonly string label;

@@ -37,6 +37,11 @@ internal sealed class ControlRegistry
                 Plugin.Cfg.ScrollWhileIdle = !Plugin.Cfg.ScrollWhileIdle;
                 Plugin.Cfg.Save();
             }));
+        Add(new MediaModule(playback));
+        Add(new SliderModule("brightness", Loc.T(L.ControlCenter.Brightness), () => FontAwesomeIcon.Sun,
+            () => Plugin.Cfg.ScreenBrightness, value => Plugin.Cfg.ScreenBrightness = value, Plugin.Cfg.Save));
+        Add(new SliderModule("volume", Loc.T(L.ControlCenter.Volume), VolumeIcon(playback),
+            () => playback.Volume, value => playback.Volume = value, () => { }));
         Add(new ToggleModule("camera", FontAwesomeIcon.Camera, Loc.T(L.Apps.Camera), () => false, () =>
         {
             navigation.Open("camera", AppOpenSource.ControlCenter);
@@ -47,11 +52,6 @@ internal sealed class ControlRegistry
             navigation.Open("settings", AppOpenSource.ControlCenter);
             dismiss();
         }));
-        Add(new SliderModule("brightness", Loc.T(L.ControlCenter.Brightness), () => FontAwesomeIcon.Sun,
-            () => Plugin.Cfg.ScreenBrightness, value => Plugin.Cfg.ScreenBrightness = value, Plugin.Cfg.Save));
-        Add(new SliderModule("volume", Loc.T(L.ControlCenter.Volume), VolumeIcon(playback),
-            () => playback.Volume, value => playback.Volume = value, () => { }));
-        Add(new MediaModule(playback));
         Add(new AccentModule(themes));
     }
 

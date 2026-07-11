@@ -10,7 +10,7 @@ namespace Aetherphone.Core.ControlCenter.Modules;
 
 internal sealed class MediaModule : IControlModule
 {
-    private static readonly ControlSpan[] SpanOptions = { ControlSpan.Bar };
+    private static readonly ControlSpan[] SpanOptions = { ControlSpan.Large, ControlSpan.Bar };
 
     private readonly PlaybackHub playback;
 
@@ -23,7 +23,7 @@ internal sealed class MediaModule : IControlModule
     public string GalleryLabel => Loc.T(L.Apps.Music);
     public FontAwesomeIcon GalleryIcon => FontAwesomeIcon.Music;
     public IReadOnlyList<ControlSpan> Sizes => SpanOptions;
-    public ControlSpan DefaultSpan => ControlSpan.Bar;
+    public ControlSpan DefaultSpan => ControlSpan.Large;
 
     public void Draw(in ControlModuleContext context)
     {
@@ -44,6 +44,11 @@ internal sealed class MediaModule : IControlModule
         var interactive = context.Interactive && active;
         var title = active ? playback.Title : Loc.T(L.ControlCenter.NotPlaying);
         var subtitle = active ? playback.Subtitle : string.Empty;
+        if (context.Span == ControlSpan.Large)
+        {
+            DrawLarge(dl, rect, theme, title, subtitle, active, hasQueue, interactive, opacity, scale, pad);
+            return;
+        }
 
         var artSize = MathF.Min(rect.Height - 2f * pad, 44f * scale);
         var artRect = new Rect(new Vector2(rect.Min.X + pad, rect.Center.Y - artSize * 0.5f),
@@ -54,6 +59,30 @@ internal sealed class MediaModule : IControlModule
         DrawText(dl, textLeft, rect.Center.Y, rect.Max.X - band - textLeft, title, subtitle, theme, opacity, scale);
         DrawTransport(dl, rect.Max.X - band * 0.5f, rect.Center.Y, 34f * scale, accent, ink, opacity, active, hasQueue,
             interactive, scale);
+    }
+
+    private void DrawLarge(ImDrawListPtr dl, Rect rect, PhoneTheme theme, string title, string subtitle, bool active,
+        bool hasQueue, bool interactive, float opacity, float scale, float pad)
+    {
+        var artSize = MathF.Min(rect.Height * 0.30f, 46f * scale);
+        var artTop = rect.Min.Y + pad + 4f * scale;
+        var artRect = new Rect(new Vector2(rect.Center.X - artSize * 0.5f, artTop),
+            new Vector2(rect.Center.X + artSize * 0.5f, artTop + artSize));
+        DrawArt(dl, artRect, theme, active, opacity);
+        var textWidth = rect.Width - 2f * pad;
+        var titleCenterY = artRect.Max.Y + 16f * scale;
+        Typography.DrawCentered(dl, new Vector2(rect.Center.X, titleCenterY),
+            Typography.FitText(title, textWidth, TextStyles.Headline), Palette.WithAlpha(theme.TextStrong, opacity),
+            TextStyles.Headline);
+        if (subtitle.Length > 0)
+        {
+            Typography.DrawCentered(dl, new Vector2(rect.Center.X, titleCenterY + 18f * scale),
+                Typography.FitText(subtitle, textWidth, TextStyles.Footnote),
+                Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Footnote);
+        }
+
+        DrawTransport(dl, rect.Center.X, rect.Max.Y - pad - 16f * scale, 40f * scale, theme.Accent, theme.TextStrong,
+            opacity, active, hasQueue, interactive, scale);
     }
 
     private static void DrawArt(ImDrawListPtr dl, Rect artRect, PhoneTheme theme, bool active, float opacity)

@@ -78,6 +78,7 @@ internal sealed class Configuration : IPluginConfiguration
     public HomeLayout? Home { get; set; }
     public int HomeGridRows { get; set; } = 6;
     public ControlLayout? ControlPanel { get; set; }
+    public bool ControlPanelRepacked { get; set; }
     public VenueTimeFilter VenueTimeFilter { get; set; } = VenueTimeFilter.LiveNow;
     public int VenueSourceFilter { get; set; }
     public bool VenueAllDataCenters { get; set; }
@@ -148,6 +149,18 @@ internal sealed class Configuration : IPluginConfiguration
         }
 
         SetupCompleted = true;
+        Save();
+    }
+
+    public void MigrateControlPanelRepack()
+    {
+        if (ControlPanelRepacked)
+        {
+            return;
+        }
+
+        ControlPanel = null;
+        ControlPanelRepacked = true;
         Save();
     }
 

@@ -9,7 +9,7 @@ namespace Aetherphone.Core.ControlCenter.Modules;
 
 internal sealed class AccentModule : IControlModule
 {
-    private static readonly ControlSpan[] SpanOptions = { ControlSpan.Bar };
+    private static readonly ControlSpan[] SpanOptions = { ControlSpan.Wide, ControlSpan.Bar };
 
     private readonly ThemeProvider themes;
 
@@ -22,7 +22,7 @@ internal sealed class AccentModule : IControlModule
     public string GalleryLabel => Loc.T(L.ControlCenter.Accent);
     public FontAwesomeIcon GalleryIcon => FontAwesomeIcon.Palette;
     public IReadOnlyList<ControlSpan> Sizes => SpanOptions;
-    public ControlSpan DefaultSpan => ControlSpan.Bar;
+    public ControlSpan DefaultSpan => ControlSpan.Wide;
 
     public void Draw(in ControlModuleContext context)
     {
@@ -39,10 +39,11 @@ internal sealed class AccentModule : IControlModule
             return;
         }
 
-        var swatchRadius = MathF.Min(rect.Height * 0.28f, 11f * scale);
-        var innerLeft = rect.Min.X + 22f * scale;
-        var innerRight = rect.Max.X - 22f * scale;
+        var inset = MathF.Min(22f * scale, rect.Width * 0.10f);
+        var innerLeft = rect.Min.X + inset;
+        var innerRight = rect.Max.X - inset;
         var cell = (innerRight - innerLeft) / accents.Count;
+        var swatchRadius = MathF.Min(MathF.Min(rect.Height * 0.28f, 11f * scale), cell * 0.32f);
         var centerY = rect.Center.Y;
         for (var index = 0; index < accents.Count; index++)
         {
