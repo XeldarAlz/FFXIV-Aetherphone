@@ -1,16 +1,3 @@
-// Regenerates the app icon PNGs under src/Aetherphone/Icons from Tabler Icons.
-//
-// Usage:
-//   cd tools/icon-generator
-//   npm install
-//   node generate-app-icons.mjs
-//
-// Each icon is downloaded as an outline SVG, recolored to white, given a
-// slightly heavier stroke for small-size legibility, and rasterized to a
-// 256px transparent PNG named after the app's IPhoneApp.Id. They ship white
-// so the client tints them to the active theme at runtime (see
-// Windows/Components/AppIconTextures.cs).
-
 import sharp from "sharp";
 import { writeFileSync, mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -22,9 +9,6 @@ const TABLER_VERSION = "3.44.0";
 const SIZE = 256;
 const STROKE = "2.25";
 
-// app.Id -> Tabler outline icon name. Note: Tabler has no literal "bird"
-// (chirper uses feather), and brand-instagram is intentionally avoided as a
-// trademarked logo (aethergram uses aperture).
 const map = {
   phone: "phone",
   messages: "message-circle",
@@ -56,6 +40,8 @@ const map = {
   feedback: "message-report",
   dev: "terminal-2",
   polls: "chart-bar-popular",
+  message: "messages",
+  kupoai: "message-chatbot",
 };
 
 function recolor(svg) {
@@ -71,9 +57,13 @@ mkdirSync(OUT, { recursive: true });
 
 let ok = 0;
 const failed = [];
+const only = new Set(process.argv.slice(2));
 for (const [id, icon] of Object.entries(map)) {
-  const url = `https://cdn.jsdelivr.net/npm/@tabler/icons@${TABLER_VERSION}/icons/outline/${icon}.svg`;
+  if (only.size > 0 && !only.has(id)) {
+    continue;
+  }
   try {
+    const url = `https://cdn.jsdelivr.net/npm/@tabler/icons@${TABLER_VERSION}/icons/outline/${icon}.svg`;
     const res = await fetch(url);
     if (!res.ok) {
       failed.push(`${id} (${icon}): HTTP ${res.status}`);

@@ -17,14 +17,21 @@ transparent PNG named after the app's `IPhoneApp.Id`.
 
 The icons ship **white on transparent** so the client tints them to the active
 theme at runtime (`Windows/Components/AppIconTextures.cs` draws them via
-`AddImage(..., tint)`, falling back to the procedural `AppIconArt` for any id
-without a PNG, e.g. the mini-games).
+`AddImage(..., tint)`). Every app icon comes from a PNG; the procedural art in
+`AppIconArt` covers only the mini-games, and any id with neither falls back to
+the caller's letter glyph.
 
 ## Changing an icon
 
 Edit the `map` (app id -> Tabler icon name) in `generate-app-icons.mjs` and
-re-run. Browse icon names at https://tabler.io/icons. Avoid `brand-*` icons —
+re-run. Browse icon names at https://tabler.io/icons. Avoid `brand-*` icons;
 those are trademarked logos.
+
+Pass app ids as arguments to regenerate only those icons:
+
+```sh
+node generate-app-icons.mjs messages
+```
 
 ## License
 
