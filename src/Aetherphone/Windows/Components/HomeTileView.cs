@@ -35,15 +35,7 @@ internal static class HomeTileView
         DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, labelWidth, zoom);
         if (app.BadgeCount > 0)
         {
-            var badgeCenter = new Vector2(center.X + size * 0.5f - 5f * scale, center.Y - size * 0.5f + 5f * scale);
-            if (app.BadgeAsDot)
-            {
-                AppBadge.DrawDot(badgeCenter, theme, scale);
-            }
-            else
-            {
-                AppBadge.Draw(badgeCenter, app.BadgeCount, theme, scale);
-            }
+            DrawBadge(center, size, app.BadgeCount, app.BadgeAsDot, theme, scale);
         }
     }
 
@@ -79,6 +71,47 @@ internal static class HomeTileView
 
         var name = string.IsNullOrEmpty(folder.FolderName) ? fallbackName : folder.FolderName;
         DrawLabel(center, size, name, theme, scale, labelAlpha, labelWidth, zoom);
+        var badgeTotal = 0;
+        var badgeHasDot = false;
+        for (var appIndex = 0; appIndex < folder.Apps.Count; appIndex++)
+        {
+            var folderApp = folder.Apps[appIndex];
+            if (folderApp.BadgeCount <= 0)
+            {
+                continue;
+            }
+
+            if (folderApp.BadgeAsDot)
+            {
+                badgeHasDot = true;
+            }
+            else
+            {
+                badgeTotal += folderApp.BadgeCount;
+            }
+        }
+
+        if (badgeTotal > 0)
+        {
+            DrawBadge(center, size, badgeTotal, false, theme, scale);
+        }
+        else if (badgeHasDot)
+        {
+            DrawBadge(center, size, 1, true, theme, scale);
+        }
+    }
+
+    private static void DrawBadge(Vector2 center, float size, int count, bool asDot, PhoneTheme theme, float scale)
+    {
+        var badgeCenter = new Vector2(center.X + size * 0.5f - 5f * scale, center.Y - size * 0.5f + 5f * scale);
+        if (asDot)
+        {
+            AppBadge.DrawDot(badgeCenter, theme, scale);
+        }
+        else
+        {
+            AppBadge.Draw(badgeCenter, count, theme, scale);
+        }
     }
 
     public static bool RemoveBadge(Vector2 center, float scale, PhoneTheme theme)
