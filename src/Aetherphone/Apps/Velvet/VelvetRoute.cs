@@ -23,6 +23,7 @@ internal enum VelvetScreen
     ChatImage,
     ImageView,
     Likers,
+    Reactions,
 }
 
 internal readonly record struct VelvetRoute(VelvetScreen Screen, string? Id = null)
@@ -38,6 +39,7 @@ internal readonly record struct VelvetRoute(VelvetScreen Screen, string? Id = nu
     public static VelvetRoute Thread(string userId) => new(VelvetScreen.Thread, userId);
     public static VelvetRoute ChatImage(string userId) => new(VelvetScreen.ChatImage, userId);
     public static VelvetRoute ImageView(string messageId) => new(VelvetScreen.ImageView, messageId);
+    public static VelvetRoute Reactions(string messageId) => new(VelvetScreen.Reactions, messageId);
     public static VelvetRoute PostDetail(string postId) => new(VelvetScreen.PostDetail, postId);
     public static VelvetRoute Likers(string postId) => new(VelvetScreen.Likers, postId);
 }
