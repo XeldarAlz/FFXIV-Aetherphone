@@ -25,6 +25,7 @@ internal sealed partial class VelvetApp
     private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
     private string? menuMessageId;
     private Action<string>? onMessageContext;
+    private Action? onThreadLoadOlder;
 
     private void OpenMessageMenu(string messageId)
     {
@@ -493,10 +494,12 @@ internal sealed partial class VelvetApp
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(VelvetRoute.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
+        onThreadLoadOlder ??= store.LoadOlder;
         var model = new ChatTranscriptModel(threadId, transcriptMessages, store.Me?.UserId ?? string.Empty, Accent,
             theme, AppPalettes.Velvet.MutedInk, AppPalettes.Velvet.BodyInk, store.OtherTyping, store.LoadingThread,
             false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
-            onMessageContext);
+            onMessageContext, onLoadOlder: onThreadLoadOlder, hasMoreOlder: store.HasMoreOlder,
+            loadingOlder: store.LoadingOlder);
         transcript.Draw(listRect, model);
         DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), threadId);
         DrawMessageMenu(area);

@@ -133,13 +133,17 @@ internal readonly ref struct ChatTranscriptModel
     public readonly Action<string, string>? OnReactionClick;
     public readonly Func<string, VoiceNoteState>? VoiceState;
     public readonly Action<string>? OnVoiceToggle;
+    public readonly bool HasMoreOlder;
+    public readonly bool LoadingOlder;
+    public readonly Action? OnLoadOlder;
 
     public ChatTranscriptModel(string threadId, ReadOnlySpan<TranscriptMessage> messages, string myUserId,
         Vector4 accent, PhoneTheme theme, Vector4 mutedInk, Vector4 bodyInk, bool otherTyping, bool loading,
         bool isGroup, RemoteImageCache images, Func<string, string?> mediaUrl, Action<string> onImageClick,
         string emptyText, string loadingText, Action<string>? onMessageContext = null,
         Action<string>? onQuoteClick = null, Action<string, string>? onReactionClick = null,
-        Func<string, VoiceNoteState>? voiceState = null, Action<string>? onVoiceToggle = null)
+        Func<string, VoiceNoteState>? voiceState = null, Action<string>? onVoiceToggle = null,
+        bool hasMoreOlder = false, bool loadingOlder = false, Action? onLoadOlder = null)
     {
         ThreadId = threadId;
         Messages = messages;
@@ -161,6 +165,9 @@ internal readonly ref struct ChatTranscriptModel
         OnReactionClick = onReactionClick;
         VoiceState = voiceState;
         OnVoiceToggle = onVoiceToggle;
+        HasMoreOlder = hasMoreOlder;
+        LoadingOlder = loadingOlder;
+        OnLoadOlder = onLoadOlder;
     }
 }
 
@@ -179,14 +186,23 @@ internal sealed class ChatTranscript
     private static readonly Vector4 SeenTickColor = new(0.45f, 0.83f, 1f, 1f);
 
     private const float FlashSeconds = 1.6f;
+    private const float LoadOlderThreshold = 48f;
+    private const int OlderSettleFrames = 2;
+    private const float OlderRestoreTimeout = 20f;
 
     private readonly List<BubbleEntrance> entrances = new();
     private string? entranceThreadId;
     private int entranceSettled;
     private bool entrancePrimed;
+    private string? entranceLastId;
     private string? followThreadId;
     private bool followBottom;
     private bool snapToBottom;
+    private float olderAnchorFromBottom = -1f;
+    private int olderBaselineCount;
+    private int olderSettleFrames;
+    private float olderElapsed;
+    private float olderSpinnerPhase;
     private float typingReveal;
     private float typingPhase;
     private string? scrollTargetId;
@@ -208,7 +224,12 @@ internal sealed class ChatTranscript
     {
         var scale = ImGuiHelpers.GlobalScale;
         var delta = ImGui.GetIO().DeltaTime;
-        SyncEntrances(model.ThreadId, model.Messages.Length, delta, model.Loading);
+        SyncEntrances(model.ThreadId, model.Messages, delta, model.Loading);
+        if (model.LoadingOlder)
+        {
+            olderSpinnerPhase += delta;
+        }
+
         if (flashMessageId is not null)
         {
             flashElapsed += delta;
@@ -231,6 +252,7 @@ internal sealed class ChatTranscript
             }
 
             SyncFollow(model.ThreadId);
+            MaybeLoadOlder(model);
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             var messages = model.Messages;
             for (var index = 0; index < messages.Length; index++)
@@ -293,16 +315,86 @@ internal sealed class ChatTranscript
             {
                 ImGui.SetScrollHereY(1f);
             }
+
+            ApplyOlderRestore(model, delta);
+            if (model.LoadingOlder)
+            {
+                DrawOlderLoading(listRect, model);
+            }
         }
     }
 
-    private void SyncEntrances(string threadId, int count, float delta, bool loading)
+    private void MaybeLoadOlder(in ChatTranscriptModel model)
     {
+        if (olderAnchorFromBottom >= 0f || model.OnLoadOlder is null
+            || !model.HasMoreOlder || model.LoadingOlder || followBottom)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        if (ImGui.GetScrollMaxY() <= 0f || ImGui.GetScrollY() > LoadOlderThreshold * scale)
+        {
+            return;
+        }
+
+        olderAnchorFromBottom = ImGui.GetScrollMaxY() - ImGui.GetScrollY();
+        olderBaselineCount = model.Messages.Length;
+        olderSettleFrames = 0;
+        olderElapsed = 0f;
+        model.OnLoadOlder();
+    }
+
+    private void ApplyOlderRestore(in ChatTranscriptModel model, float delta)
+    {
+        if (olderAnchorFromBottom < 0f)
+        {
+            return;
+        }
+
+        ImGui.SetScrollY(MathF.Max(0f, ImGui.GetScrollMaxY() - olderAnchorFromBottom));
+        olderElapsed += delta;
+        if (model.Messages.Length > olderBaselineCount)
+        {
+            if (++olderSettleFrames >= OlderSettleFrames)
+            {
+                olderAnchorFromBottom = -1f;
+            }
+        }
+        else if (olderElapsed >= OlderRestoreTimeout)
+        {
+            olderAnchorFromBottom = -1f;
+        }
+    }
+
+    private void DrawOlderLoading(Rect listRect, in ChatTranscriptModel model)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var dotRadius = 2.6f * scale;
+        var dotGap = 6f * scale;
+        var baseX = listRect.Center.X - (dotRadius * 2f + dotGap);
+        var baseY = listRect.Min.Y + 12f * scale;
+        for (var dot = 0; dot < 3; dot++)
+        {
+            var wave = MathF.Max(0f, MathF.Sin(olderSpinnerPhase * 6f - dot * 0.9f));
+            var alpha = 0.30f + 0.55f * wave;
+            var center = new Vector2(baseX + dot * (dotRadius * 2f + dotGap), baseY);
+            drawList.AddCircleFilled(center, dotRadius,
+                ImGui.GetColorU32(Palette.WithAlpha(model.MutedInk, alpha)), 16);
+        }
+    }
+
+    private void SyncEntrances(string threadId, ReadOnlySpan<TranscriptMessage> messages, float delta, bool loading)
+    {
+        var count = messages.Length;
+        var lastId = count > 0 ? messages[count - 1].Id : null;
         if (entranceThreadId != threadId)
         {
             entranceThreadId = threadId;
             entranceSettled = count;
             entrancePrimed = count > 0 || !loading;
+            entranceLastId = lastId;
             entrances.Clear();
             return;
         }
@@ -311,9 +403,19 @@ internal sealed class ChatTranscript
         {
             entranceSettled = count;
             entrancePrimed = count > 0 || !loading;
+            entranceLastId = lastId;
             return;
         }
 
+        if (count > entranceSettled && lastId == entranceLastId)
+        {
+            entrances.Clear();
+            entranceSettled = count;
+            entranceLastId = lastId;
+            return;
+        }
+
+        entranceLastId = lastId;
         if (count < entranceSettled)
         {
             entranceSettled = count;
@@ -364,6 +466,7 @@ internal sealed class ChatTranscript
         {
             followThreadId = threadId;
             followBottom = true;
+            olderAnchorFromBottom = -1f;
         }
 
         if (snapToBottom)

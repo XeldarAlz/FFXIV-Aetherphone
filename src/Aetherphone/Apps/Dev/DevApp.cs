@@ -59,8 +59,14 @@ internal sealed partial class DevApp : IPhoneApp
     private readonly List<BubbleEntrance> chatEntrances = new();
     private int entranceSettled;
     private bool entrancePrimed;
+    private string? entranceLastId;
     private bool followChatBottom = true;
     private bool snapChatToBottom;
+    private float olderAnchorFromBottom = -1f;
+    private int olderBaselineCount;
+    private int olderSettleFrames;
+    private float olderElapsed;
+    private float olderSpinnerPhase;
     private string? imageViewId;
     private volatile int imageSaveOutcome;
     private volatile bool imageSaveBusy;

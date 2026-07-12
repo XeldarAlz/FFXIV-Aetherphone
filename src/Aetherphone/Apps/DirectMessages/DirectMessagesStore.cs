@@ -27,6 +27,7 @@ internal sealed class DirectMessagesStore : IDisposable
     private readonly ConversationKeyStore keys;
     private readonly PeerKeyDirectory peers;
     private readonly StoreWork work = new("Messages");
+    private readonly object messagesLock = new();
     private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
     private readonly ConcurrentDictionary<string, DmDecryptedBody> decryptedBodies = new(StringComparer.Ordinal);
@@ -40,6 +41,9 @@ internal sealed class DirectMessagesStore : IDisposable
     private volatile ConversationDto? conversation;
     private volatile ConversationMemberDto[] members = Array.Empty<ConversationMemberDto>();
     private volatile ChatMessageDto[] messages = Array.Empty<ChatMessageDto>();
+    private volatile string? olderCursor;
+    private volatile bool loadingOlder;
+    private volatile bool hasMoreOlder;
     private volatile bool loadingThread;
     private volatile bool sending;
     private volatile bool otherTyping;
@@ -78,6 +82,8 @@ internal sealed class DirectMessagesStore : IDisposable
     public ConversationDto? Conversation => conversation;
     public ConversationMemberDto[] Members => members;
     public ChatMessageDto[] Messages => messages;
+    public bool LoadingOlder => loadingOlder;
+    public bool HasMoreOlder => hasMoreOlder;
     public bool LoadingThread => loadingThread;
     public bool Sending => sending;
     public bool OtherTyping => otherTyping;
@@ -330,6 +336,9 @@ internal sealed class DirectMessagesStore : IDisposable
         conversationId = id;
         conversation = FindConversation(id);
         messages = Array.Empty<ChatMessageDto>();
+        olderCursor = null;
+        hasMoreOlder = false;
+        loadingOlder = false;
         otherTyping = false;
         loadingThread = true;
         currentKeyStatus = ChatKeyStatus.None;
@@ -349,10 +358,12 @@ internal sealed class DirectMessagesStore : IDisposable
                 currentKeyStatus = status;
             }
 
-            var page = await client.ChatMessagesAsync(id, token).ConfigureAwait(false);
+            var page = await client.ChatMessagesAsync(id, null, token).ConfigureAwait(false);
             if (conversationId == id && page is not null)
             {
                 messages = DecorateMessages(id, page.Items);
+                olderCursor = page.NextCursor;
+                hasMoreOlder = page.NextCursor is not null;
             }
         }, () =>
         {
@@ -373,12 +384,91 @@ internal sealed class DirectMessagesStore : IDisposable
 
         work.Run("thread refresh", async token =>
         {
-            var page = await client.ChatMessagesAsync(current, token).ConfigureAwait(false);
+            var page = await client.ChatMessagesAsync(current, null, token).ConfigureAwait(false);
             if (conversationId == current && page is not null)
             {
-                messages = DecorateMessages(current, page.Items);
+                var decorated = DecorateMessages(current, page.Items);
+                lock (messagesLock)
+                {
+                    messages = MergeById(messages, decorated);
+                }
             }
         });
+    }
+
+    public void LoadOlder()
+    {
+        var current = conversationId;
+        if (current is null || loadingThread || loadingOlder || !hasMoreOlder)
+        {
+            return;
+        }
+
+        var cursor = olderCursor;
+        if (cursor is null)
+        {
+            hasMoreOlder = false;
+            return;
+        }
+
+        loadingOlder = true;
+        work.Run("thread older", async token =>
+        {
+            var page = await client.ChatMessagesAsync(current, cursor, token).ConfigureAwait(false);
+            if (conversationId == current && page is not null)
+            {
+                var decorated = DecorateMessages(current, page.Items);
+                lock (messagesLock)
+                {
+                    messages = MergeById(messages, decorated);
+                }
+
+                olderCursor = page.NextCursor;
+                hasMoreOlder = page.NextCursor is not null;
+            }
+        }, () => loadingOlder = false);
+    }
+
+    private static ChatMessageDto[] MergeById(ChatMessageDto[] existing, ChatMessageDto[] incoming)
+    {
+        if (existing.Length == 0)
+        {
+            return incoming;
+        }
+
+        if (incoming.Length == 0)
+        {
+            return existing;
+        }
+
+        var incomingIds = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            incomingIds.Add(incoming[index].Id);
+        }
+
+        var merged = new List<ChatMessageDto>(existing.Length + incoming.Length);
+        for (var index = 0; index < existing.Length; index++)
+        {
+            if (!incomingIds.Contains(existing[index].Id))
+            {
+                merged.Add(existing[index]);
+            }
+        }
+
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            merged.Add(incoming[index]);
+        }
+
+        merged.Sort(CompareByCreatedAt);
+        return merged.ToArray();
+    }
+
+    private static int CompareByCreatedAt(ChatMessageDto left, ChatMessageDto right)
+    {
+        var byTime = left.CreatedAtUnix.CompareTo(right.CreatedAtUnix);
+        return byTime != 0 ? byTime : string.CompareOrdinal(left.Id, right.Id);
     }
 
     public void RefreshDetail()

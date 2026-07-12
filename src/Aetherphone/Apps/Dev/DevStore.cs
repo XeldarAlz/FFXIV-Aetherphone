@@ -19,6 +19,7 @@ internal sealed class DevStore : IDisposable
     private readonly AethernetClient client;
     private readonly Configuration configuration;
     private readonly StoreWork work = new StoreWork("Dev");
+    private readonly object messagesLock = new();
     private readonly ConcurrentDictionary<string, DevMediaUrlDto> mediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> mediaLoading = new();
     private readonly DevBoardCardDto[][] columns =
@@ -27,6 +28,9 @@ internal sealed class DevStore : IDisposable
     };
 
     private volatile DevChatMessageDto[] messages = Array.Empty<DevChatMessageDto>();
+    private volatile string? olderCursor;
+    private volatile bool loadingOlder;
+    private volatile bool hasMoreOlder;
     private volatile bool loadingBoard;
     private volatile bool boardLoaded;
     private volatile bool loadingChat;
@@ -48,6 +52,8 @@ internal sealed class DevStore : IDisposable
     }
 
     public DevChatMessageDto[] Messages => messages;
+    public bool LoadingOlder => loadingOlder;
+    public bool HasMoreOlder => hasMoreOlder;
     public bool LoadingBoard => loadingBoard;
     public bool BoardLoaded => boardLoaded;
     public bool LoadingChat => loadingChat;
@@ -191,13 +197,42 @@ internal sealed class DevStore : IDisposable
         loadingChat = true;
         work.Run("chat load", async token =>
         {
-            var page = await client.DevChatMessagesAsync(0, token, OnDevStatus).ConfigureAwait(false);
+            var page = await client.DevChatMessagesAsync(0, null, token, OnDevStatus).ConfigureAwait(false);
             if (page is not null)
             {
                 messages = page.Items;
+                olderCursor = page.NextCursor;
+                hasMoreOlder = page.NextCursor is not null;
                 chatLoaded = true;
             }
         }, () => loadingChat = false);
+    }
+
+    public void LoadOlder()
+    {
+        if (loadingChat || loadingOlder || !hasMoreOlder)
+        {
+            return;
+        }
+
+        var cursor = olderCursor;
+        if (cursor is null)
+        {
+            hasMoreOlder = false;
+            return;
+        }
+
+        loadingOlder = true;
+        work.Run("chat older", async token =>
+        {
+            var page = await client.DevChatMessagesAsync(0, cursor, token, OnDevStatus).ConfigureAwait(false);
+            if (page is not null)
+            {
+                MergeMessages(page.Items);
+                olderCursor = page.NextCursor;
+                hasMoreOlder = page.NextCursor is not null;
+            }
+        }, () => loadingOlder = false);
     }
 
     public void PollChat()
@@ -217,7 +252,7 @@ internal sealed class DevStore : IDisposable
                 after = snapshot[^1].CreatedAtUnix;
             }
 
-            var page = await client.DevChatMessagesAsync(after, token, OnDevStatus).ConfigureAwait(false);
+            var page = await client.DevChatMessagesAsync(after, null, token, OnDevStatus).ConfigureAwait(false);
             if (page is not null)
             {
                 MergeMessages(page.Items);
@@ -439,6 +474,8 @@ internal sealed class DevStore : IDisposable
         }
 
         messages = Array.Empty<DevChatMessageDto>();
+        olderCursor = null;
+        hasMoreOlder = false;
         boardLoaded = false;
         chatLoaded = false;
         mediaUrls.Clear();
@@ -519,29 +556,32 @@ internal sealed class DevStore : IDisposable
             return;
         }
 
-        var current = messages;
-        var known = new HashSet<string>(StringComparer.Ordinal);
-        for (var index = 0; index < current.Length; index++)
+        lock (messagesLock)
         {
-            known.Add(current[index].Id);
-        }
-
-        var merged = new List<DevChatMessageDto>(current.Length + incoming.Length);
-        for (var index = 0; index < current.Length; index++)
-        {
-            merged.Add(current[index]);
-        }
-
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            if (known.Add(incoming[index].Id))
+            var current = messages;
+            var known = new HashSet<string>(StringComparer.Ordinal);
+            for (var index = 0; index < current.Length; index++)
             {
-                merged.Add(incoming[index]);
+                known.Add(current[index].Id);
             }
-        }
 
-        merged.Sort(CompareMessages);
-        messages = merged.ToArray();
+            var merged = new List<DevChatMessageDto>(current.Length + incoming.Length);
+            for (var index = 0; index < current.Length; index++)
+            {
+                merged.Add(current[index]);
+            }
+
+            for (var index = 0; index < incoming.Length; index++)
+            {
+                if (known.Add(incoming[index].Id))
+                {
+                    merged.Add(incoming[index]);
+                }
+            }
+
+            merged.Sort(CompareMessages);
+            messages = merged.ToArray();
+        }
     }
 
     private static int CompareMessages(DevChatMessageDto left, DevChatMessageDto right)

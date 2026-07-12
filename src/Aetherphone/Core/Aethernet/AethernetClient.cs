@@ -180,9 +180,15 @@ internal sealed class AethernetClient
         return http.PostJsonAsync(Url("/chats/"), request, AethernetJsonContext.Default.CreateConversationRequest, AethernetJsonContext.Default.ConversationDetailDto, session.Token, token, sink);
     }
 
-    public Task<ChatMessagePage?> ChatMessagesAsync(string conversationId, CancellationToken token)
+    public Task<ChatMessagePage?> ChatMessagesAsync(string conversationId, string? cursor, CancellationToken token)
     {
-        return http.GetJsonAsync(Url($"/chats/{Uri.EscapeDataString(conversationId)}/messages"), AethernetJsonContext.Default.ChatMessagePage, session.Token, token, authStatusSink);
+        var path = $"/chats/{Uri.EscapeDataString(conversationId)}/messages";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.ChatMessagePage, session.Token, token, authStatusSink);
     }
 
     public Task<ChatMessageDto?> SendChatMessageAsync(string conversationId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null, string? replyToId = null, string? forwardOfId = null, bool forwarded = false, int durationSecs = 0)
@@ -712,9 +718,18 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Delete, Url($"/devspace/board/cards/{Uri.EscapeDataString(cardId)}"), session.Token, token, authStatusSink);
     }
 
-    public Task<DevChatPage?> DevChatMessagesAsync(long afterUnix, CancellationToken token, Action<int>? onStatus = null)
+    public Task<DevChatPage?> DevChatMessagesAsync(long afterUnix, string? cursor, CancellationToken token, Action<int>? onStatus = null)
     {
-        var path = afterUnix > 0 ? $"/devspace/chat/messages?afterUnix={afterUnix}" : "/devspace/chat/messages";
+        var path = "/devspace/chat/messages";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+        else if (afterUnix > 0)
+        {
+            path += $"?afterUnix={afterUnix}";
+        }
+
         return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.DevChatPage, session.Token, token, Combine(onStatus));
     }
 

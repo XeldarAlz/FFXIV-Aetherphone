@@ -18,6 +18,10 @@ internal sealed partial class DevApp
 {
     private readonly PhotoZoomView imageZoom = new();
 
+    private const float OlderLoadThreshold = 48f;
+    private const int OlderSettleFrames = 2;
+    private const float OlderRestoreTimeout = 20f;
+
     private void DrawChat(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -26,7 +30,12 @@ internal sealed partial class DevApp
         var composerHeight = 52f * scale;
         var listRect = new Rect(area.Min, new Vector2(area.Max.X, area.Max.Y - composerHeight));
         var snapshot = store.Messages;
-        SyncChatEntrances(snapshot.Length, delta);
+        SyncChatEntrances(snapshot, delta);
+        if (store.LoadingOlder)
+        {
+            olderSpinnerPhase += delta;
+        }
+
         using (AppSurface.Begin(listRect))
         {
             if (snapshot.Length == 0)
@@ -38,6 +47,7 @@ internal sealed partial class DevApp
             else
             {
                 SyncChatFollow();
+                MaybeLoadOlderChat(snapshot.Length);
                 ImGui.Dummy(new Vector2(0f, 8f * scale));
                 for (var index = 0; index < snapshot.Length; index++)
                 {
@@ -49,10 +59,76 @@ internal sealed partial class DevApp
                 {
                     ImGui.SetScrollHereY(1f);
                 }
+
+                ApplyOlderChatRestore(snapshot.Length, delta);
+                if (store.LoadingOlder)
+                {
+                    DrawOlderChatLoading(listRect);
+                }
             }
         }
 
         DrawChatComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max));
+    }
+
+    private void MaybeLoadOlderChat(int count)
+    {
+        if (olderAnchorFromBottom >= 0f || !store.HasMoreOlder || store.LoadingOlder || followChatBottom)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        if (ImGui.GetScrollMaxY() <= 0f || ImGui.GetScrollY() > OlderLoadThreshold * scale)
+        {
+            return;
+        }
+
+        olderAnchorFromBottom = ImGui.GetScrollMaxY() - ImGui.GetScrollY();
+        olderBaselineCount = count;
+        olderSettleFrames = 0;
+        olderElapsed = 0f;
+        store.LoadOlder();
+    }
+
+    private void ApplyOlderChatRestore(int count, float delta)
+    {
+        if (olderAnchorFromBottom < 0f)
+        {
+            return;
+        }
+
+        ImGui.SetScrollY(MathF.Max(0f, ImGui.GetScrollMaxY() - olderAnchorFromBottom));
+        olderElapsed += delta;
+        if (count > olderBaselineCount)
+        {
+            if (++olderSettleFrames >= OlderSettleFrames)
+            {
+                olderAnchorFromBottom = -1f;
+            }
+        }
+        else if (olderElapsed >= OlderRestoreTimeout)
+        {
+            olderAnchorFromBottom = -1f;
+        }
+    }
+
+    private void DrawOlderChatLoading(Rect listRect)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var dotRadius = 2.6f * scale;
+        var dotGap = 6f * scale;
+        var baseX = listRect.Center.X - (dotRadius * 2f + dotGap);
+        var baseY = listRect.Min.Y + 12f * scale;
+        for (var dot = 0; dot < 3; dot++)
+        {
+            var wave = MathF.Max(0f, MathF.Sin(olderSpinnerPhase * 6f - dot * 0.9f));
+            var alpha = 0.30f + 0.55f * wave;
+            var center = new Vector2(baseX + dot * (dotRadius * 2f + dotGap), baseY);
+            drawList.AddCircleFilled(center, dotRadius,
+                ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.Dev.MutedInk, alpha)), 16);
+        }
     }
 
     private void DrawChatMessage(DevChatMessageDto[] snapshot, int index)
@@ -243,15 +319,27 @@ internal sealed partial class DevApp
         });
     }
 
-    private void SyncChatEntrances(int count, float delta)
+    private void SyncChatEntrances(DevChatMessageDto[] snapshot, float delta)
     {
+        var count = snapshot.Length;
+        var lastId = count > 0 ? snapshot[count - 1].Id : null;
         if (!entrancePrimed)
         {
             entranceSettled = count;
             entrancePrimed = count > 0 || !store.LoadingChat;
+            entranceLastId = lastId;
             return;
         }
 
+        if (count > entranceSettled && lastId == entranceLastId)
+        {
+            chatEntrances.Clear();
+            entranceSettled = count;
+            entranceLastId = lastId;
+            return;
+        }
+
+        entranceLastId = lastId;
         if (count < entranceSettled)
         {
             entranceSettled = count;
