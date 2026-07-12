@@ -974,19 +974,9 @@ internal sealed class ChatTranscript
             return new BubbleStamp(time, null, false, timeSize.X, timeSize.Y, 0f);
         }
 
-        var encrypted = (message.Flags & TranscriptFlags.Encrypted) != 0;
-        var lockWidth = 0f;
-        if (encrypted)
-        {
-            using (ImRaii.PushFont(UiBuilder.IconFont))
-            {
-                lockWidth = ImGui.CalcTextSize(FontAwesomeIcon.Lock.ToIconString()).X * StampTickScale + 4f * scale;
-            }
-        }
-
         if (!mine)
         {
-            return new BubbleStamp(time, null, false, lockWidth + timeSize.X, timeSize.Y, 0f, lockWidth);
+            return new BubbleStamp(time, null, false, timeSize.X, timeSize.Y, 0f);
         }
 
         var seen = message.ReadAtUnix is not null;
@@ -997,23 +987,13 @@ internal sealed class ChatTranscript
             tickWidth = ImGui.CalcTextSize(glyph).X * StampTickScale;
         }
 
-        return new BubbleStamp(time, glyph, seen, lockWidth + timeSize.X + 4f * scale + tickWidth, timeSize.Y,
-            tickWidth, lockWidth);
+        return new BubbleStamp(time, glyph, seen, timeSize.X + 4f * scale + tickWidth, timeSize.Y, tickWidth);
     }
 
     private static void DrawStamp(ImDrawListPtr drawList, in BubbleStamp stamp, Vector2 bottomRight, Vector2 anchor,
         float pop, Vector2 rise, float alpha, Vector4 timeColor)
     {
         var topLeft = new Vector2(bottomRight.X - stamp.Width, bottomRight.Y - stamp.Height);
-        if (stamp.LockWidth > 0f)
-        {
-            var lockCenter = new Vector2(topLeft.X + stamp.LockWidth * 0.5f, bottomRight.Y - stamp.Height * 0.45f);
-            AppSkin.Icon(drawList, anchor + (lockCenter - anchor) * pop + rise,
-                FontAwesomeIcon.Lock.ToIconString(), Palette.WithAlpha(timeColor, timeColor.W * alpha * 0.9f),
-                StampTickScale * pop);
-            topLeft = new Vector2(topLeft.X + stamp.LockWidth, topLeft.Y);
-        }
-
         var timePos = anchor + (topLeft - anchor) * pop + rise;
         Typography.Draw(drawList, timePos, stamp.Time, Palette.WithAlpha(timeColor, timeColor.W * alpha),
             StampTextScale * pop);
@@ -1042,10 +1022,8 @@ internal sealed class ChatTranscript
         public readonly float Width;
         public readonly float Height;
         public readonly float TickWidth;
-        public readonly float LockWidth;
 
-        public BubbleStamp(string time, string? tickGlyph, bool seen, float width, float height, float tickWidth,
-            float lockWidth = 0f)
+        public BubbleStamp(string time, string? tickGlyph, bool seen, float width, float height, float tickWidth)
         {
             Time = time;
             TickGlyph = tickGlyph;
@@ -1053,7 +1031,6 @@ internal sealed class ChatTranscript
             Width = width;
             Height = height;
             TickWidth = tickWidth;
-            LockWidth = lockWidth;
         }
     }
 
