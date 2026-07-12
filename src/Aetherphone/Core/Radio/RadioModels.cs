@@ -20,6 +20,20 @@ internal readonly struct RadioStation
     }
 }
 
+internal readonly struct RadioPage
+{
+    public static readonly RadioPage Empty = new(Array.Empty<RadioStation>(), false);
+
+    public readonly RadioStation[] Stations;
+    public readonly bool HasMore;
+
+    public RadioPage(RadioStation[] stations, bool hasMore)
+    {
+        Stations = stations;
+        HasMore = hasMore;
+    }
+}
+
 internal sealed class RadioStationDto
 {
     [JsonPropertyName("name")] public string? Name { get; set; }

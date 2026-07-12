@@ -71,6 +71,12 @@ internal sealed partial class MusicApp : IPhoneApp
     private RadioStation[] stations = Array.Empty<RadioStation>();
     private volatile bool loading;
     private CancellationTokenSource? fetch;
+    private string radioSearchDraft = string.Empty;
+    private string radioQuery = string.Empty;
+    private bool focusRadioSearch;
+    private int stationOffset;
+    private volatile bool stationHasMore;
+    private volatile bool loadingMore;
     private Song[] results = Array.Empty<Song>();
     private volatile bool searching;
     private bool hasSearched;
@@ -254,8 +260,23 @@ internal sealed partial class MusicApp : IPhoneApp
     private void OpenCategory(int index)
     {
         categoryIndex = index;
+        radioQuery = string.Empty;
+        radioSearchDraft = string.Empty;
         router.Push(View.Stations);
-        BeginFetch(RadioService.Categories[index].Tag);
+        BeginFetch(RadioService.Categories[index].Tags);
+    }
+
+    private void OpenRadioSearch()
+    {
+        fetch?.Cancel();
+        categoryIndex = -1;
+        radioQuery = string.Empty;
+        radioSearchDraft = string.Empty;
+        stations = Array.Empty<RadioStation>();
+        loading = false;
+        ResetPaging();
+        focusRadioSearch = true;
+        router.Push(View.Stations);
     }
 
     private void OpenNowPlaying()
@@ -271,7 +292,7 @@ internal sealed partial class MusicApp : IPhoneApp
 
     private void CloseNowPlaying() => nowPlayingOpen = false;
 
-    private void BeginFetch(string tag)
+    private void BeginFetch(string[] tags)
     {
         fetch?.Cancel();
         fetch?.Dispose();
@@ -279,19 +300,116 @@ internal sealed partial class MusicApp : IPhoneApp
         var token = fetch.Token;
         loading = true;
         stations = Array.Empty<RadioStation>();
-        _ = FetchAsync(tag, token);
+        ResetPaging();
+        _ = LoadCategoryPageAsync(tags, 0, token);
     }
 
-    private async Task FetchAsync(string tag, CancellationToken token)
+    private void BeginRadioSearch(string query)
     {
-        var result = await radio.FetchStationsAsync(tag, token).ConfigureAwait(false);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return;
+        }
+
+        fetch?.Cancel();
+        fetch?.Dispose();
+        fetch = new CancellationTokenSource();
+        var token = fetch.Token;
+        loading = true;
+        categoryIndex = -1;
+        radioQuery = query.Trim();
+        stations = Array.Empty<RadioStation>();
+        ResetPaging();
+        _ = LoadSearchPageAsync(radioQuery, 0, token);
+    }
+
+    private void LoadMoreStations()
+    {
+        if (loading || loadingMore || !stationHasMore || fetch is null)
+        {
+            return;
+        }
+
+        var token = fetch.Token;
+        var offset = stationOffset + RadioService.PageSize;
+        loadingMore = true;
+        if (!string.IsNullOrEmpty(radioQuery))
+        {
+            _ = LoadSearchPageAsync(radioQuery, offset, token);
+        }
+        else if (categoryIndex >= 0)
+        {
+            _ = LoadCategoryPageAsync(RadioService.Categories[categoryIndex].Tags, offset, token);
+        }
+        else
+        {
+            loadingMore = false;
+        }
+    }
+
+    private async Task LoadCategoryPageAsync(string[] tags, int offset, CancellationToken token)
+    {
+        var page = await radio.FetchStationsAsync(tags, offset, token).ConfigureAwait(false);
         if (token.IsCancellationRequested)
         {
             return;
         }
 
-        stations = result;
+        ApplyPage(page, offset);
+    }
+
+    private async Task LoadSearchPageAsync(string query, int offset, CancellationToken token)
+    {
+        var page = await radio.SearchStationsAsync(query, offset, token).ConfigureAwait(false);
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        ApplyPage(page, offset);
+    }
+
+    private void ApplyPage(RadioPage page, int offset)
+    {
+        var basis = offset == 0 ? Array.Empty<RadioStation>() : stations;
+        stations = AppendDedup(basis, page.Stations);
+        stationOffset = offset;
+        stationHasMore = page.HasMore;
         loading = false;
+        loadingMore = false;
+    }
+
+    private void ResetPaging()
+    {
+        stationOffset = 0;
+        stationHasMore = false;
+        loadingMore = false;
+    }
+
+    private static RadioStation[] AppendDedup(RadioStation[] existing, RadioStation[] incoming)
+    {
+        if (incoming.Length == 0)
+        {
+            return existing;
+        }
+
+        var seen = new HashSet<string>(existing.Length + incoming.Length, StringComparer.OrdinalIgnoreCase);
+        for (var index = 0; index < existing.Length; index++)
+        {
+            seen.Add(existing[index].StreamUrl);
+        }
+
+        var list = new List<RadioStation>(existing.Length + incoming.Length);
+        list.AddRange(existing);
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            if (seen.Add(incoming[index].StreamUrl))
+            {
+                list.Add(incoming[index]);
+            }
+        }
+
+        return list.ToArray();
     }
 
     private void BeginSearch(string query)
@@ -331,7 +449,7 @@ internal sealed partial class MusicApp : IPhoneApp
 
     private void PlayStation(int index)
     {
-        playSource = CategoryTitle();
+        playSource = string.IsNullOrEmpty(radioQuery) ? CategoryTitle() : Loc.T(L.Music.SourceRadioSearch);
         playback.PlayStations(stations, index);
     }
 
@@ -414,6 +532,16 @@ internal sealed partial class MusicApp : IPhoneApp
         return categoryIndex >= 0
             ? CatalogLabels.RadioCategory(RadioService.Categories[categoryIndex].Display)
             : DisplayName;
+    }
+
+    private string StationsTitle()
+    {
+        if (categoryIndex >= 0)
+        {
+            return CategoryTitle();
+        }
+
+        return string.IsNullOrEmpty(radioQuery) ? Loc.T(L.Common.Search) : radioQuery;
     }
 
     private static readonly Dictionary<(string, int), string> SongSubtitleCache = new();

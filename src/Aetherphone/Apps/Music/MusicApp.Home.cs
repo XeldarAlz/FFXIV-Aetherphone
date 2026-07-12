@@ -40,7 +40,7 @@ internal sealed partial class MusicApp
             DrawRecentChips(scale, gridWidth);
             DrawShelfHeading(Loc.T(L.Music.MadeForYou), scale);
             DrawFeaturedShelf(scale, gridWidth);
-            DrawShelfHeading(Loc.T(L.Music.RadioStations), scale);
+            DrawRadioHeading(scale);
             DrawCategoryGrid(scale, gridWidth);
             ImGui.Dummy(new Vector2(0f, 10f * scale));
         }
@@ -82,6 +82,34 @@ internal sealed partial class MusicApp
         var width = ImGui.GetContentRegionAvail().X;
         var fitted = Typography.FitText(title, width, TextStyles.Title3);
         Typography.Draw(origin, fitted, ui.Palette.HeadingInk, TextStyles.Title3);
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+    }
+
+    private void DrawRadioHeading(float scale)
+    {
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var iconBox = 30f * scale;
+        var title = Typography.FitText(Loc.T(L.Music.RadioStations), width - iconBox - 8f * scale, TextStyles.Title3);
+        var titleSize = Typography.Measure(title, TextStyles.Title3);
+        Typography.Draw(origin, title, ui.Palette.HeadingInk, TextStyles.Title3);
+        var iconCenter = new Vector2(origin.X + width - iconBox * 0.5f, origin.Y + titleSize.Y * 0.5f);
+        var iconMin = iconCenter - new Vector2(iconBox * 0.5f, iconBox * 0.5f);
+        var iconMax = iconCenter + new Vector2(iconBox * 0.5f, iconBox * 0.5f);
+        var hovered = UiInteract.Hover(iconMin, iconMax);
+        if (hovered)
+        {
+            Squircle.Fill(ImGui.GetWindowDrawList(), iconMin, iconMax, iconBox * 0.5f, ImGui.GetColorU32(ui.HoverTint));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        AppSkin.Icon(iconCenter, FontAwesomeIcon.Search.ToIconString(), ui.MutedInk, 0.9f);
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            OpenRadioSearch();
+        }
+
         ImGui.Dummy(new Vector2(0f, 8f * scale));
     }
 
@@ -300,8 +328,23 @@ internal sealed partial class MusicApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
-        DrawTopBar(context, CategoryTitle(), GoToHome);
-        var body = ScrollBody(content, scale);
+        DrawTopBar(context, StationsTitle(), GoToHome);
+        var barRect = SearchBarRect(content, scale);
+        if (focusRadioSearch)
+        {
+            focusRadioSearch = false;
+            ImGui.SetKeyboardFocusHere();
+        }
+
+        var submitted = SearchField.DrawSubmit(barRect, "##radioSearch", Loc.T(L.Music.SearchStations),
+            ref radioSearchDraft, SearchFieldSurface, SearchFieldHint, SearchFieldInk, 80, 16f);
+        if (submitted && !string.IsNullOrWhiteSpace(radioSearchDraft))
+        {
+            BeginRadioSearch(radioSearchDraft);
+        }
+
+        var body = new Rect(new Vector2(content.Min.X, barRect.Max.Y),
+            new Vector2(content.Max.X, BodyBottom(content, scale)));
         if (loading)
         {
             LoadingPulse.Draw(new Vector2(body.Center.X, body.Center.Y - 14f * scale), 13f * scale, ui.Accent,
@@ -311,7 +354,7 @@ internal sealed partial class MusicApp
 
         if (stations.Length == 0)
         {
-            Typography.DrawCentered(body.Center, Loc.T(L.Music.NoStations), ui.MutedInk, TextStyles.Callout);
+            DrawStationsPlaceholder(body, scale);
             return;
         }
 
@@ -323,8 +366,32 @@ internal sealed partial class MusicApp
                 DrawStationRow(scale, stations[index], index);
             }
 
+            if (loadingMore)
+            {
+                InfiniteScroll.DrawLoadingRow(body.Center.X, ui.MutedInk);
+            }
+
             ImGui.Dummy(new Vector2(0f, 8f * scale));
+            if (InfiniteScroll.ReachedBottom() && stationHasMore && !loadingMore)
+            {
+                LoadMoreStations();
+            }
         }
+    }
+
+    private void DrawStationsPlaceholder(Rect body, float scale)
+    {
+        if (categoryIndex >= 0 || !string.IsNullOrEmpty(radioQuery))
+        {
+            Typography.DrawCentered(body.Center, Loc.T(L.Music.NoStations), ui.MutedInk, TextStyles.Callout);
+            return;
+        }
+
+        var center = new Vector2(body.Center.X, body.Center.Y - 20f * scale);
+        Typography.DrawCentered(center, Loc.T(L.Music.RadioSearchTitle), ui.TitleInk, TextStyles.Title3);
+        var maxWidth = body.Width - 48f * scale;
+        Typography.DrawWrappedCentered(new Vector2(center.X, center.Y + 20f * scale), Loc.T(L.Music.RadioSearchSub),
+            ui.MutedInk, TextStyles.Subheadline, maxWidth);
     }
 
     private void DrawStationRow(float scale, RadioStation station, int index)

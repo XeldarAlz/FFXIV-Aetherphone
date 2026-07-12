@@ -957,6 +957,10 @@ internal static class L
         public static readonly LocString MadeForYou = new("music.madeForYou", "Made for you");
         public static readonly LocString PlayingFrom = new("music.playingFrom", "Playing from");
         public static readonly LocString SourceSearch = new("music.sourceSearch", "Search results");
+        public static readonly LocString SourceRadioSearch = new("music.sourceRadioSearch", "Radio search");
+        public static readonly LocString SearchStations = new("music.searchStations", "Search stations");
+        public static readonly LocString RadioSearchTitle = new("music.radioSearchTitle", "Find your station");
+        public static readonly LocString RadioSearchSub = new("music.radioSearchSub", "Search by name, genre, or country");
     }
 
     internal static class Messages
