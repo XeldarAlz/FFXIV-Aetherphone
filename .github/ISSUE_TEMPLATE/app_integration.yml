@@ -1,0 +1,113 @@
+name: App integration request
+description: Propose a new phone app that talks to your (or another) plugin over IPC or an API.
+title: "[App] "
+labels: ["enhancement", "integration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want your plugin to live as an app on the phone? This is the place.
+
+        The phone can drive another plugin two ways: **Dalamud IPC** (a `CallGateSubscriber` surface your plugin exposes) or an **HTTP API** the app can call. Give us a stable surface to talk to and we can build the app around it.
+
+        If the idea is still fuzzy, float it in [Discussions](https://github.com/XeldarAlz/FFXIV-Aetherphone/discussions) first; the shape tends to firm up faster there than in a tracked issue.
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Who are you here?
+      description: This tells us who owns the surface we'd integrate against.
+      options:
+        - I'm the plugin's author / maintainer
+        - I'm a user requesting integration with someone else's plugin
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: plugin
+    attributes:
+      label: Which plugin?
+      description: Name and a link (repo, plugin page, or docs).
+      placeholder: "Awesome Fishing Tracker: https://github.com/example/fishing-tracker"
+    validations:
+      required: true
+
+  - type: textarea
+    id: concept
+    attributes:
+      label: What would the app do?
+      description: The concept in a few lines. What screens does it have, and what does a user actually do with it?
+      placeholder: "A Fishing app: a home screen with your current spot and bite window, a log of recent catches, and a push notification when a rare fish is on the line..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: transport
+    attributes:
+      label: How should the phone talk to it?
+      description: If you're not sure yet, pick that and we'll figure it out together.
+      options:
+        - Dalamud IPC (CallGateSubscriber)
+        - HTTP / REST API
+        - Both
+        - Not sure yet
+    validations:
+      required: true
+
+  - type: textarea
+    id: ipc
+    attributes:
+      label: IPC surface (if any)
+      description: |
+        The `CallGate` action names, their signatures, and the data shapes they return. Note whether the surface is already published or would need to be added, and how it's versioned.
+      placeholder: |
+        FishingTracker.GetCurrentSpot -> string
+        FishingTracker.GetRecentCatches -> IReadOnlyList<CatchDto>
+        FishingTracker.OnRareBite (event) -> fires with the fish id
+      render: text
+
+  - type: textarea
+    id: api
+    attributes:
+      label: API details (if any)
+      description: Base URL, auth model, rate limits, and a link to docs. Say if it's public or gated.
+      placeholder: |
+        Base: https://api.example.com/v1
+        Auth: bearer token per user
+        Docs: https://example.com/docs
+
+  - type: textarea
+    id: data
+    attributes:
+      label: Data and permissions
+      description: What data flows in and out, and anything sensitive about it. Accounts, tokens, personal info, or anything that shouldn't be logged or synced.
+
+  - type: dropdown
+    id: contribution
+    attributes:
+      label: How do you want to help?
+      description: No wrong answer. A request with no code is still welcome.
+      options:
+        - I can build the app myself and open a PR
+        - I'll provide and maintain the IPC / API; someone else builds the app
+        - I'm requesting it and can't build or maintain it
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Mockups, prior art, related plugins, or constraints we should know about.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you file
+      options:
+        - label: The plugin has, or can add, a stable IPC surface or a public API to talk to.
+          required: true
+        - label: I checked existing issues and discussions for a similar request.
+          required: true
