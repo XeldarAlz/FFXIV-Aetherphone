@@ -55,7 +55,8 @@ internal sealed class Configuration : IPluginConfiguration
     public float RingtoneVolume { get; set; } = 0.8f;
     public float NotificationVolume { get; set; } = 0.8f;
     public bool SoundSettingsMigrated { get; set; }
-    public const string DefaultAethernetBaseUrl = "https://ffxiv-aethernet-production.up.railway.app";
+    public const string DefaultAethernetBaseUrl = "https://api.aetherphone.net";
+    private const string LegacyAethernetHost = "ffxiv-aethernet-production.up.railway.app";
     public string AethernetBaseUrl { get; set; } = DefaultAethernetBaseUrl;
     public string AethernetToken { get; set; } = string.Empty;
     public string EncryptionKeyCache { get; set; } = string.Empty;
@@ -396,6 +397,11 @@ internal sealed class Configuration : IPluginConfiguration
         }
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed))
+        {
+            return true;
+        }
+
+        if (string.Equals(parsed.Host, LegacyAethernetHost, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
