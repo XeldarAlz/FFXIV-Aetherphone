@@ -29,6 +29,11 @@ internal abstract class SocialFeedStore : IDisposable
     protected volatile bool posting;
     private volatile bool loadingForYou;
     private volatile bool loadingFollowing;
+    private volatile string? forYouCursor;
+    private volatile string? followingCursor;
+    private volatile bool loadingMoreForYou;
+    private volatile bool loadingMoreFollowing;
+    private readonly object feedLock = new();
     private volatile string? profileUserId;
     private volatile UserDto? profileUser;
     private volatile bool profileLoading;
@@ -64,6 +69,12 @@ internal abstract class SocialFeedStore : IDisposable
     public bool IsLoading(SocialFeedScope scope) =>
         scope == SocialFeedScope.ForYou ? loadingForYou : loadingFollowing;
 
+    public bool HasMoreFeed(SocialFeedScope scope) =>
+        (scope == SocialFeedScope.ForYou ? forYouCursor : followingCursor) is not null;
+
+    public bool LoadingMore(SocialFeedScope scope) =>
+        scope == SocialFeedScope.ForYou ? loadingMoreForYou : loadingMoreFollowing;
+
     public string? ProfileUserId => profileUserId;
     public UserDto? ProfileUser => profileUser;
     public PostDto[] ProfilePosts => profilePosts;
@@ -80,7 +91,7 @@ internal abstract class SocialFeedStore : IDisposable
     public bool UserListLoading => userListLoading;
     public bool UserListFailed => userListFailed;
 
-    protected abstract Task<FeedPage?> FetchFeedAsync(string feedKey, CancellationToken token);
+    protected abstract Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, CancellationToken token);
 
     protected abstract Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token);
 
@@ -125,18 +136,11 @@ internal abstract class SocialFeedStore : IDisposable
 
         work.Run("feed refresh", async token =>
         {
-            var page = await FetchFeedAsync(scope == SocialFeedScope.ForYou ? "explore" : "following", token)
+            var page = await FetchFeedAsync(scope == SocialFeedScope.ForYou ? "explore" : "following", null, token)
                 .ConfigureAwait(false);
             if (page is not null)
             {
-                if (scope == SocialFeedScope.ForYou)
-                {
-                    forYou = page.Items;
-                }
-                else
-                {
-                    following = page.Items;
-                }
+                ApplyFeedRefresh(scope, page);
             }
         }, () =>
         {
@@ -149,6 +153,139 @@ internal abstract class SocialFeedStore : IDisposable
                 loadingFollowing = false;
             }
         });
+    }
+
+    public void LoadMoreFeed(SocialFeedScope scope)
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        var cursor = scope == SocialFeedScope.ForYou ? forYouCursor : followingCursor;
+        if (cursor is null || LoadingMore(scope) || IsLoading(scope))
+        {
+            return;
+        }
+
+        if (scope == SocialFeedScope.ForYou)
+        {
+            loadingMoreForYou = true;
+        }
+        else
+        {
+            loadingMoreFollowing = true;
+        }
+
+        work.Run("feed more", async token =>
+        {
+            var page = await FetchFeedAsync(scope == SocialFeedScope.ForYou ? "explore" : "following", cursor, token)
+                .ConfigureAwait(false);
+            if (page is not null)
+            {
+                ApplyFeedMore(scope, page);
+            }
+        }, () =>
+        {
+            if (scope == SocialFeedScope.ForYou)
+            {
+                loadingMoreForYou = false;
+            }
+            else
+            {
+                loadingMoreFollowing = false;
+            }
+        });
+    }
+
+    private void ApplyFeedRefresh(SocialFeedScope scope, FeedPage page)
+    {
+        lock (feedLock)
+        {
+            if (scope == SocialFeedScope.ForYou)
+            {
+                if (forYou.Length == 0)
+                {
+                    forYou = page.Items;
+                    forYouCursor = page.NextCursor;
+                }
+                else
+                {
+                    forYou = MergeFeed(forYou, page.Items);
+                }
+            }
+            else
+            {
+                if (following.Length == 0)
+                {
+                    following = page.Items;
+                    followingCursor = page.NextCursor;
+                }
+                else
+                {
+                    following = MergeFeed(following, page.Items);
+                }
+            }
+        }
+    }
+
+    private void ApplyFeedMore(SocialFeedScope scope, FeedPage page)
+    {
+        lock (feedLock)
+        {
+            if (scope == SocialFeedScope.ForYou)
+            {
+                forYou = MergeFeed(forYou, page.Items);
+                forYouCursor = page.NextCursor;
+            }
+            else
+            {
+                following = MergeFeed(following, page.Items);
+                followingCursor = page.NextCursor;
+            }
+        }
+    }
+
+    private static PostDto[] MergeFeed(PostDto[] current, PostDto[] incoming)
+    {
+        if (incoming.Length == 0)
+        {
+            return current;
+        }
+
+        if (current.Length == 0)
+        {
+            return incoming;
+        }
+
+        var incomingIds = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            incomingIds.Add(incoming[index].Id);
+        }
+
+        var merged = new List<PostDto>(current.Length + incoming.Length);
+        for (var index = 0; index < current.Length; index++)
+        {
+            if (!incomingIds.Contains(current[index].Id))
+            {
+                merged.Add(current[index]);
+            }
+        }
+
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            merged.Add(incoming[index]);
+        }
+
+        merged.Sort(ByNewestFirst);
+        return merged.ToArray();
+    }
+
+    private static int ByNewestFirst(PostDto left, PostDto right)
+    {
+        var byTime = right.CreatedAtUnix.CompareTo(left.CreatedAtUnix);
+        return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
     }
 
     public void OpenDetail(PostDto post)

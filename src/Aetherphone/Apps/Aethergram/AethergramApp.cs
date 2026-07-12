@@ -449,7 +449,16 @@ internal sealed partial class AethergramApp : IPhoneApp
                     DrawGramCard(snapshot[index]);
                 }
 
+                if (store.LoadingMore(scope))
+                {
+                    InfiniteScroll.DrawLoadingRow(listRect.Center.X, AppPalettes.Aethergram.MutedInk);
+                }
+
                 ImGui.Dummy(new Vector2(0f, 16f * ImGuiHelpers.GlobalScale));
+                if (InfiniteScroll.ReachedBottom() && store.HasMoreFeed(scope) && !store.LoadingMore(scope))
+                {
+                    store.LoadMoreFeed(scope);
+                }
             }
         }
     }

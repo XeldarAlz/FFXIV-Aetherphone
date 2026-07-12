@@ -250,7 +250,16 @@ internal sealed partial class ChirperApp : IPhoneApp
                     DrawPost(snapshot[index]);
                 }
 
+                if (store.LoadingMore(scope))
+                {
+                    InfiniteScroll.DrawLoadingRow(listRect.Center.X, AppPalettes.Chirper.MutedInk);
+                }
+
                 ImGui.Dummy(new Vector2(0f, 72f * ImGuiHelpers.GlobalScale));
+                if (InfiniteScroll.ReachedBottom() && store.HasMoreFeed(scope) && !store.LoadingMore(scope))
+                {
+                    store.LoadMoreFeed(scope);
+                }
             }
         }
     }
