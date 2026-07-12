@@ -462,7 +462,7 @@ internal static class L
     {
         public static readonly LocString[] Release0940 =
         {
-            new("changelog.r0940.0", "You can now like comments in Chirper, Aethergram, and Velvet — and you get notified when someone likes yours"),
+            new("changelog.r0940.0", "You can now like comments in Chirper, Aethergram, and Velvet, and you get notified when someone likes yours"),
             new("changelog.r0940.1", "Aetherphone now connects through api.aetherphone.net, its own permanent address; the switch happens automatically and needs nothing from you"),
             new("changelog.r0940.2", "Server traffic now runs behind additional protection against outages and abuse, for a more reliable connection"),
         };
@@ -1061,7 +1061,7 @@ internal static class L
         public static readonly LocString Save = new("chirper.save", "Save");
         public static readonly LocString Saving = new("chirper.saving", "Saving…");
         public static readonly LocString HandleTaken = new("chirper.handleTaken", "That username is taken");
-        public static readonly LocString HandleRules = new("chirper.handleRules", "3–15 characters: letters, numbers, or _");
+        public static readonly LocString HandleRules = new("chirper.handleRules", "3-15 characters: letters, numbers, or _");
         public static readonly LocString ProfileError = new("chirper.profileError", "Couldn't load this profile");
         public static readonly LocString React = new("chirper.react", "React");
         public static readonly LocString ReactLike = new("chirper.reactLike", "Like");
@@ -1124,7 +1124,7 @@ internal static class L
         public static readonly LocString DisplayNameLabel = new("aethergram.displayNameLabel", "Display name");
         public static readonly LocString HandleLabel = new("aethergram.handleLabel", "Username");
         public static readonly LocString BioLabel = new("aethergram.bioLabel", "Bio");
-        public static readonly LocString HandleRules = new("aethergram.handleRules", "3–15 characters: letters, numbers, or _");
+        public static readonly LocString HandleRules = new("aethergram.handleRules", "3-15 characters: letters, numbers, or _");
         public static readonly LocString HandleTaken = new("aethergram.handleTaken", "That username is taken");
         public static readonly LocString Save = new("aethergram.save", "Save");
         public static readonly LocString FindPeople = new("aethergram.findPeople", "Find People");

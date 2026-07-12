@@ -244,7 +244,16 @@ internal sealed record VelvetMessageDto(
     int MediaHeight = 0,
     long? ReadAtUnix = null,
     int EncVersion = 0,
-    string? CommitmentTag = null) : IIdentified;
+    string? CommitmentTag = null,
+    string? ReplyToId = null,
+    string? ReplySenderId = null,
+    string? ReplyBody = null,
+    int ReplyKind = 0,
+    int ReplyEncVersion = 0,
+    bool Deleted = false,
+    int DurationSecs = 0,
+    ReactionSummaryDto[]? Reactions = null,
+    long? EditedAtUnix = null) : IIdentified;
 
 internal sealed record VelvetMessagePage(VelvetMessageDto[] Items, string? NextCursor);
 
@@ -256,7 +265,9 @@ internal sealed record SendVelvetMessageRequest(
     int MediaWidth = 0,
     int MediaHeight = 0,
     int EncVersion = 0,
-    string? CommitmentTag = null);
+    string? CommitmentTag = null,
+    string? ReplyToId = null,
+    int DurationSecs = 0);
 
 internal sealed record VelvetMediaUrlDto(string Url, long ExpiresAtUnix);
 

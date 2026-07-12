@@ -642,9 +642,29 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url(path), AethernetJsonContext.Default.VelvetMessagePage, session.Token, token, authStatusSink);
     }
 
-    public Task<VelvetMessageDto?> SendVelvetMessageAsync(string threadId, string body, int kind, int? ttlSeconds, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null)
+    public Task<VelvetMessageDto?> SendVelvetMessageAsync(string threadId, string body, int kind, int? ttlSeconds, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null, string? replyToId = null, int durationSecs = 0)
     {
-        return http.PostJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages"), new SendVelvetMessageRequest(body, kind, ttlSeconds, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag), AethernetJsonContext.Default.SendVelvetMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url($"/velvet/threads/{Uri.EscapeDataString(threadId)}/messages"), new SendVelvetMessageRequest(body, kind, ttlSeconds, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag, replyToId, durationSecs), AethernetJsonContext.Default.SendVelvetMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> SetVelvetReactionAsync(string messageId, string reactionToken, CancellationToken token)
+    {
+        return http.SendJsonForStatusAsync(HttpMethod.Post, Url($"/velvet/messages/{Uri.EscapeDataString(messageId)}/reactions"), new SetReactionRequest(reactionToken), AethernetJsonContext.Default.SetReactionRequest, session.Token, token, authStatusSink);
+    }
+
+    public Task<ReactionListDto?> VelvetReactionsAsync(string messageId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/velvet/messages/{Uri.EscapeDataString(messageId)}/reactions"), AethernetJsonContext.Default.ReactionListDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<VelvetMessageDto?> EditVelvetMessageAsync(string messageId, string body, CancellationToken token, int encVersion = 0, string? commitmentTag = null)
+    {
+        return http.SendJsonAsync(HttpMethod.Patch, Url($"/velvet/messages/{Uri.EscapeDataString(messageId)}"), new EditChatMessageRequest(body, encVersion, commitmentTag), AethernetJsonContext.Default.EditChatMessageRequest, AethernetJsonContext.Default.VelvetMessageDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteVelvetMessageAsync(string messageId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/velvet/messages/{Uri.EscapeDataString(messageId)}"), session.Token, token, authStatusSink);
     }
 
     public Task<VelvetMediaUrlDto?> VelvetDmMediaUrlAsync(string messageId, CancellationToken token)
