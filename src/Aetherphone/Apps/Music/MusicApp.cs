@@ -179,28 +179,24 @@ internal sealed partial class MusicApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var rowCenterY = content.Min.Y + TopBarHeight * scale * 0.5f;
+        var textLeft = content.Min.X + (onBack is null ? 16f * scale : 38f * scale);
+        var fitted = Typography.FitText(title, content.Max.X - 16f * scale - textLeft, TextStyles.Title2);
+        var titleSize = Typography.Measure(fitted, TextStyles.Title2);
+        Typography.Draw(new Vector2(textLeft, rowCenterY - titleSize.Y * 0.5f), fitted, ui.TitleInk,
+            TextStyles.Title2);
+        if (onBack is null)
+        {
+            return;
+        }
+
         var hitMin = content.Min;
         var hitMax = new Vector2(content.Min.X + 40f * scale, content.Min.Y + TopBarHeight * scale);
         var hovered = UiInteract.Hover(hitMin, hitMax);
         var clicked = BackButton.Draw("music.back", new Vector2(content.Min.X + 18f * scale, rowCenterY), 15f * scale,
             ui.TitleInk, hovered, scale);
-        var textLeft = content.Min.X + 38f * scale;
-        var fitted = Typography.FitText(title, content.Max.X - 16f * scale - textLeft, TextStyles.Title2);
-        var titleSize = Typography.Measure(fitted, TextStyles.Title2);
-        Typography.Draw(new Vector2(textLeft, rowCenterY - titleSize.Y * 0.5f), fitted, ui.TitleInk,
-            TextStyles.Title2);
-        if (!clicked)
-        {
-            return;
-        }
-
-        if (onBack is not null)
+        if (clicked)
         {
             onBack();
-        }
-        else
-        {
-            context.Navigation.Back();
         }
     }
 
