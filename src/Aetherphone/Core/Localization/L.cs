@@ -460,6 +460,13 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0940 =
+        {
+            new("changelog.r0940.0", "You can now like comments in Chirper, Aethergram, and Velvet — and you get notified when someone likes yours"),
+            new("changelog.r0940.1", "Aetherphone now connects through api.aetherphone.net, its own permanent address; the switch happens automatically and needs nothing from you"),
+            new("changelog.r0940.2", "Server traffic now runs behind additional protection against outages and abuse, for a more reliable connection"),
+        };
+
         public static readonly LocString[] Release0931 =
         {
             new("changelog.r0931.0", "Fixed encrypted chats being stuck on Setting up encryption: the key exchange now completes, and Message and Velvet conversations lock end-to-end as intended"),
