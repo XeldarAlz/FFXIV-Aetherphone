@@ -26,6 +26,7 @@ internal sealed partial class VelvetApp
     private string? menuMessageId;
     private Action<string>? onMessageContext;
     private Action? onThreadLoadOlder;
+    private readonly ChatSearchController searchController = new();
 
     private void OpenMessageMenu(string messageId)
     {
@@ -480,6 +481,7 @@ internal sealed partial class VelvetApp
             store.OpenThread(threadId);
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
+            searchController.Close();
         }
 
         store.NoteThreadViewed(threadId);
@@ -488,9 +490,17 @@ internal sealed partial class VelvetApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
+        var transcriptMessages = BuildTranscript(store.Messages);
+        if (searchController.Open)
+        {
+            var searchHeight = 44f * scale;
+            searchController.Draw(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)),
+                new ChatSearchModel(ui, transcriptMessages, transcript.RequestScrollTo));
+            top += searchHeight;
+        }
+
         var listRect = new Rect(new Vector2(area.Min.X, top),
             new Vector2(area.Max.X, area.Max.Y - composerHeight));
-        var transcriptMessages = BuildTranscript(store.Messages);
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(VelvetRoute.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
@@ -512,6 +522,8 @@ internal sealed partial class VelvetApp
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
+        ChatHeaderControls.DrawLock(ui, area, rowCenterY, store.EncryptingCurrent, store.VaultState, () => { });
+        ChatHeaderControls.DrawSearchToggle(ui, area, rowCenterY, searchController.Open, searchController.Toggle);
         var name = ThreadTitle(threadId);
         var avatar = ThreadAvatar(threadId, out var monogram, out var presence);
         var avatarRadius = 18f * scale;

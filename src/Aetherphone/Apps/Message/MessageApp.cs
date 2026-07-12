@@ -112,7 +112,7 @@ internal sealed partial class MessageApp : IPhoneApp
     public void OnClosed()
     {
         FlushNotes();
-        if (editTargetId is null && store.ConversationId is { } openConversation)
+        if (!composer.IsEditing && store.ConversationId is { } openConversation)
         {
             SaveDraft(openConversation);
         }
@@ -120,14 +120,12 @@ internal sealed partial class MessageApp : IPhoneApp
         router.Reset();
         filter = string.Empty;
         searchDraft = string.Empty;
-        messageDraft = string.Empty;
         selectedContacts.Clear();
         groupTitleDraft = string.Empty;
-        voiceRecorder.Cancel();
+        composer.CancelVoice();
         voicePlayer.Stop();
-        CloseSearch();
-        ClearReplyTarget();
-        ClearEditTarget();
+        searchController.Close();
+        composer.Clear();
     }
 
     public void Draw(in PhoneContext context)
@@ -144,7 +142,7 @@ internal sealed partial class MessageApp : IPhoneApp
         currentCall = calls.Snapshot();
         SyncCallRoute();
         ProcessPending();
-        messageMenu.Gate();
+        messageMenuController.Gate();
         chatMenu.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
@@ -436,7 +434,7 @@ internal sealed partial class MessageApp : IPhoneApp
 
     public void Dispose()
     {
-        voiceRecorder.Dispose();
+        composer.Dispose();
         voicePlayer.Dispose();
         store.Dispose();
         contacts.Dispose();

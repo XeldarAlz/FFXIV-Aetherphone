@@ -208,6 +208,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         messageDraft = string.Empty;
         discoverQuery = string.Empty;
         discoverApplied = string.Empty;
+        searchController.Close();
         store.ClearDiscover();
     }
 
