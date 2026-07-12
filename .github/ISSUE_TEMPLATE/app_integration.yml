@@ -2,6 +2,7 @@ name: App integration request
 description: Propose a new phone app that talks to your (or another) plugin over IPC or an API.
 title: "[App] "
 labels: ["enhancement", "integration"]
+assignees: ["XeldarAlz"]
 body:
   - type: markdown
     attributes:
