@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Numerics;
 using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Core;
@@ -7,9 +8,11 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
+using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -21,40 +24,134 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetApp
 {
-    private readonly DropdownMenu messageMenu = new();
-    private readonly DropdownMenu.Item[] messageMenuItems = new DropdownMenu.Item[2];
-    private string? menuMessageId;
+    private readonly ChatMenuController messageMenuController = new();
+    private readonly ChatComposer composer = new();
+    private readonly VoiceNotePlayer voicePlayer = new();
+    private readonly ConcurrentDictionary<string, byte[]> voiceBytes = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> voiceFetching = new(StringComparer.Ordinal);
+    private volatile string? pendingVoicePlay;
     private Action<string>? onMessageContext;
+    private Action<string>? onThreadQuoteClick;
+    private Action<string, string>? onThreadReactionClick;
+    private Func<string, VoiceNoteState>? voiceStateFor;
+    private Action<string>? onThreadVoiceToggle;
+    private Action<string>? composerPickImage;
+    private Action<string, string, string?>? composerSendText;
+    private Action<string, string, string>? composerEditText;
+    private Action<string, byte[], int>? composerSendVoice;
+    private Func<int>? composerResolveVoice;
     private Action? onThreadLoadOlder;
     private readonly ChatSearchController searchController = new();
 
     private void OpenMessageMenu(string messageId)
     {
-        menuMessageId = messageId;
-        var pos = ImGui.GetMousePos();
-        messageMenu.Toggle(messageId, new Rect(pos, pos + new Vector2(1f, 1f)));
-    }
-
-    private void DrawMessageMenu(Rect area)
-    {
-        if (menuMessageId is not { } id || !messageMenu.IsOpenFor(id))
+        var message = FindMessage(messageId);
+        if (message is null || message.Deleted)
         {
             return;
         }
 
-        messageMenuItems[0] = new DropdownMenu.Item(Loc.T(L.Encryption.ReportMessageAction),
-            FontAwesomeIcon.Flag.ToIconString(), Danger: true);
-        messageMenuItems[1] = new DropdownMenu.Item(Loc.T(L.Encryption.CopyTextAction),
-            FontAwesomeIcon.Copy.ToIconString());
-        var clicked = messageMenu.Draw(area, theme, messageMenuItems);
-        if (clicked == 0)
+        messageMenuController.Open(messageId, message.SenderId == (store.Me?.UserId ?? string.Empty), message.Kind);
+    }
+
+    private void DrawMessageMenu(Rect area)
+    {
+        if (!messageMenuController.Active)
         {
-            OpenReportMessage(id);
+            return;
         }
-        else if (clicked == 1)
+
+        var model = new ChatMenuModel
         {
-            CopyMessageText(id);
+            Ui = ui,
+            ShowReactions = true,
+            CanReply = true,
+            CanForward = false,
+            CanCopy = true,
+            CanStar = false,
+            CanEdit = true,
+            CanInfo = false,
+            CanDelete = true,
+            CanReport = true,
+            IsStarred = _ => false,
+            MyReactionTo = store.MyReactionTo,
+            OnReply = BeginReply,
+            OnForward = _ => { },
+            OnCopy = id => ChatActions.CopyMessageText(transcriptCache, id, CanRevealBody),
+            OnStar = _ => { },
+            OnEdit = BeginEdit,
+            OnInfo = _ => { },
+            OnDelete = AskDeleteMessage,
+            OnReport = OpenReportMessage,
+            OnReact = store.SetReaction,
+        };
+        messageMenuController.Draw(area, model);
+    }
+
+    private VelvetMessageDto? FindMessage(string messageId)
+    {
+        var snapshot = store.Messages;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id == messageId)
+            {
+                return snapshot[index];
+            }
         }
+
+        return null;
+    }
+
+    private bool CanRevealBody(string id)
+    {
+        var message = FindMessage(id);
+        if (message is null)
+        {
+            return false;
+        }
+
+        return message.EncVersion != 1 || store.DecryptionState(id).State == DmBodyState.Decrypted;
+    }
+
+    private void BeginReply(string messageId)
+    {
+        var message = FindMessage(messageId);
+        if (message is null || message.Deleted)
+        {
+            return;
+        }
+
+        var myId = store.Me?.UserId ?? string.Empty;
+        var senderName = message.SenderId == myId ? Loc.T(L.Message.You) : ThreadTitle(store.ThreadId ?? messageId);
+        composer.BeginReply(messageId, senderName, ChatText.QuotePreview(message.Body, message.Kind));
+    }
+
+    private void BeginEdit(string messageId)
+    {
+        var message = FindMessage(messageId);
+        if (message is null || message.Kind != 0 || message.Deleted)
+        {
+            return;
+        }
+
+        if (message.EncVersion != 0 && store.DecryptionState(messageId).State != DmBodyState.Decrypted)
+        {
+            return;
+        }
+
+        composer.BeginEdit(messageId, message.Body ?? string.Empty);
+    }
+
+    private void AskDeleteMessage(string messageId)
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Message.DeleteConfirm),
+            ConfirmLabel = Loc.T(L.Message.DeleteAction),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            ConfirmAsync = done => store.DeleteMessage(messageId, done),
+        });
     }
 
     private void OpenReportMessage(string messageId)
@@ -65,27 +162,6 @@ internal sealed partial class VelvetApp
             Disclosure = Loc.T(L.Encryption.ReportDisclosure),
             Submit = (reason, done) => store.ReportMessage(messageId, reason, done),
         });
-    }
-
-    private void CopyMessageText(string id)
-    {
-        var snapshot = store.Messages;
-        for (var index = 0; index < snapshot.Length; index++)
-        {
-            if (snapshot[index].Id != id)
-            {
-                continue;
-            }
-
-            var message = snapshot[index];
-            if (message.EncVersion == 1 && store.DecryptionState(id).State != DmBodyState.Decrypted)
-            {
-                return;
-            }
-
-            ImGui.SetClipboardText(message.Body ?? string.Empty);
-            return;
-        }
     }
 
     private void DrawProfile(Rect area, string userId)
@@ -482,6 +558,9 @@ internal sealed partial class VelvetApp
             sinceThreadPoll = ThreadPollSeconds;
             lastTypingDraft = string.Empty;
             searchController.Close();
+            composer.ClearTargets();
+            composer.CancelVoice();
+            voicePlayer.Stop();
         }
 
         store.NoteThreadViewed(threadId);
@@ -490,6 +569,7 @@ internal sealed partial class VelvetApp
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
+        var accessoryHeight = composer.AccessoryHeight;
         var transcriptMessages = BuildTranscript(store.Messages);
         if (searchController.Open)
         {
@@ -500,18 +580,42 @@ internal sealed partial class VelvetApp
         }
 
         var listRect = new Rect(new Vector2(area.Min.X, top),
-            new Vector2(area.Max.X, area.Max.Y - composerHeight));
+            new Vector2(area.Max.X, area.Max.Y - composerHeight - accessoryHeight));
         threadMediaUrl ??= store.DmMediaUrl;
         onThreadImageClick ??= id => router.Push(VelvetRoute.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
+        onThreadQuoteClick ??= transcript.RequestScrollTo;
+        onThreadReactionClick ??= (messageId, _) => router.Push(VelvetRoute.Reactions(messageId));
+        voiceStateFor ??= voicePlayer.StateFor;
+        onThreadVoiceToggle ??= ToggleVoice;
         onThreadLoadOlder ??= store.LoadOlder;
         var model = new ChatTranscriptModel(threadId, transcriptMessages, store.Me?.UserId ?? string.Empty, Accent,
             theme, AppPalettes.Velvet.MutedInk, AppPalettes.Velvet.BodyInk, store.OtherTyping, store.LoadingThread,
             false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
-            onMessageContext, onLoadOlder: onThreadLoadOlder, hasMoreOlder: store.HasMoreOlder,
-            loadingOlder: store.LoadingOlder);
+            onMessageContext, onQuoteClick: onThreadQuoteClick, onReactionClick: onThreadReactionClick,
+            voiceState: voiceStateFor, onVoiceToggle: onThreadVoiceToggle,
+            onLoadOlder: onThreadLoadOlder, hasMoreOlder: store.HasMoreOlder, loadingOlder: store.LoadingOlder);
         transcript.Draw(listRect, model);
-        DrawMessageComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), threadId);
+        composerPickImage ??= id => router.Push(VelvetRoute.ChatImage(id));
+        composerSendText ??= ComposerSendText;
+        composerEditText ??= ComposerEditText;
+        composerSendVoice ??= ComposerSendVoice;
+        composerResolveVoice ??= ResolveVoiceInput;
+        composer.Draw(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), new ChatComposerModel
+        {
+            Ui = ui,
+            ConversationId = threadId,
+            MaxLength = MessageMax,
+            Sending = store.Sending,
+            CanImage = true,
+            CanVoice = true,
+            CanHandleEscape = !searchController.Open,
+            ResolveVoiceInput = composerResolveVoice,
+            OnPickImage = composerPickImage,
+            OnSendText = composerSendText,
+            OnEditText = composerEditText,
+            OnSendVoice = composerSendVoice,
+        });
         DrawMessageMenu(area);
     }
 
@@ -625,13 +729,43 @@ internal sealed partial class VelvetApp
         }
 
         transcriptSource = source;
+        var myId = store.Me?.UserId ?? string.Empty;
+        var otherName = store.ThreadId is { } threadId ? ThreadTitle(threadId) : string.Empty;
         var mapped = new TranscriptMessage[source.Length];
         for (var index = 0; index < source.Length; index++)
         {
             var message = source[index];
+            if (message.Deleted)
+            {
+                mapped[index] = new TranscriptMessage(message.Id, message.SenderId, Loc.T(L.Message.DeletedBody), 0,
+                    message.CreatedAtUnix, 0, 0, null, string.Empty, default, TranscriptFlags.Deleted);
+                continue;
+            }
+
+            var replySender = string.Empty;
+            var replyBody = string.Empty;
+            if (message.ReplyToId is not null)
+            {
+                replySender = message.ReplySenderId == myId ? Loc.T(L.Message.You) : otherName;
+                replyBody = ChatText.QuotePreview(message.ReplyBody, message.ReplyKind);
+            }
+
+            TranscriptReaction[]? reactions = null;
+            var summaries = message.Reactions;
+            if (summaries is { Length: > 0 })
+            {
+                reactions = new TranscriptReaction[summaries.Length];
+                for (var summaryIndex = 0; summaryIndex < summaries.Length; summaryIndex++)
+                {
+                    reactions[summaryIndex] = new TranscriptReaction(summaries[summaryIndex].Token,
+                        summaries[summaryIndex].Count, summaries[summaryIndex].Mine);
+                }
+            }
+
             mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                 message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
-                default, MessageFlags(message));
+                default, MessageFlags(message), message.ReplyToId, replySender, replyBody, message.ReplyKind,
+                message.DurationSecs, reactions);
         }
 
         transcriptCache = mapped;
@@ -640,13 +774,19 @@ internal sealed partial class VelvetApp
 
     private byte MessageFlags(VelvetMessageDto message)
     {
+        byte flags = 0;
+        if (message.EditedAtUnix is not null)
+        {
+            flags |= TranscriptFlags.Edited;
+        }
+
         if (message.EncVersion == 0)
         {
-            return 0;
+            return flags;
         }
 
         var state = store.DecryptionState(message.Id);
-        byte flags = TranscriptFlags.Encrypted;
+        flags |= TranscriptFlags.Encrypted;
         if (state.IsPlaceholder)
         {
             flags |= TranscriptFlags.Placeholder;
@@ -661,6 +801,7 @@ internal sealed partial class VelvetApp
 
     private void TickThread(string threadId)
     {
+        PumpPendingVoice();
         var delta = ImGui.GetIO().DeltaTime;
         sinceThreadPoll += delta;
         if (sinceThreadPoll >= ThreadPollSeconds)
@@ -671,10 +812,11 @@ internal sealed partial class VelvetApp
         }
 
         sinceTypingSend += delta;
-        if (messageDraft != lastTypingDraft)
+        var draft = composer.Draft;
+        if (draft != lastTypingDraft)
         {
-            lastTypingDraft = messageDraft;
-            if (messageDraft.Trim().Length > 0 && sinceTypingSend >= TypingSendSeconds)
+            lastTypingDraft = draft;
+            if (draft.Trim().Length > 0 && sinceTypingSend >= TypingSendSeconds)
             {
                 sinceTypingSend = 0f;
                 store.SendTyping(threadId);
@@ -682,79 +824,193 @@ internal sealed partial class VelvetApp
         }
     }
 
-    private void DrawMessageComposer(Rect area, string threadId)
+    private void ComposerSendText(string threadId, string text, string? replyToId)
+    {
+        store.SendMessage(threadId, text, _ => { }, replyToId);
+        transcript.RequestSnapToBottom();
+        lastTypingDraft = string.Empty;
+    }
+
+    private void ComposerEditText(string threadId, string editId, string text)
+    {
+        store.EditMessage(threadId, editId, text, _ => { });
+        lastTypingDraft = string.Empty;
+    }
+
+    private void ComposerSendVoice(string threadId, byte[] wavBytes, int durationSecs)
+    {
+        store.SendVoiceMessage(threadId, wavBytes, durationSecs, _ => { });
+        transcript.RequestSnapToBottom();
+    }
+
+    private int ResolveVoiceInput()
+    {
+        return AudioDevices.ResolveInput(configuration.CallInputDevice);
+    }
+
+    private void ToggleVoice(string messageId)
+    {
+        if (voiceBytes.TryGetValue(messageId, out var bytes))
+        {
+            pendingVoicePlay = null;
+            voicePlayer.Toggle(messageId, bytes);
+            return;
+        }
+
+        pendingVoicePlay = messageId;
+        FetchVoice(messageId);
+    }
+
+    private void FetchVoice(string messageId)
+    {
+        if (voiceBytes.ContainsKey(messageId))
+        {
+            return;
+        }
+
+        var url = store.DmMediaUrl(messageId);
+        if (url is null || !voiceFetching.TryAdd(messageId, 0))
+        {
+            return;
+        }
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var data = await http.GetBytesAsync(new Uri(url), CancellationToken.None).ConfigureAwait(false);
+                if (data is not null)
+                {
+                    voiceBytes[messageId] = data;
+                }
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Voice note download failed: {exception.Message}");
+            }
+            finally
+            {
+                voiceFetching.TryRemove(messageId, out _);
+            }
+        });
+    }
+
+    private void PumpPendingVoice()
+    {
+        if (pendingVoicePlay is not { } id)
+        {
+            return;
+        }
+
+        if (voiceBytes.TryGetValue(id, out var bytes))
+        {
+            pendingVoicePlay = null;
+            voicePlayer.Toggle(id, bytes);
+            return;
+        }
+
+        FetchVoice(id);
+    }
+
+    private volatile ReactorDto[]? reactors;
+    private string? reactorsFor;
+
+    private void DrawReactions(Rect area, string messageId)
     {
         var scale = ImGuiHelpers.GlobalScale;
+        var context = new PhoneContext(area, theme, navigation);
+        AppHeader.Draw(context, Loc.T(L.Message.ReactionsTitle), back);
+        if (reactorsFor != messageId)
+        {
+            reactorsFor = messageId;
+            reactors = null;
+            store.LoadReactions(messageId, result => reactors = result);
+        }
+
+        var top = area.Min.Y + AppHeader.Height * scale;
+        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var snapshot = reactors;
+        if (snapshot is null)
+        {
+            Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale),
+                Loc.T(L.Common.Loading), ui.MutedInk);
+            return;
+        }
+
+        if (snapshot.Length == 0)
+        {
+            EmptyState.Draw(body, ui, FontAwesomeIcon.ThumbsUp, Loc.T(L.Message.ReactionsTitle), string.Empty);
+            return;
+        }
+
+        using (AppSurface.Begin(body))
+        {
+            ImGui.Dummy(new Vector2(0f, 4f * scale));
+            for (var index = 0; index < snapshot.Length; index++)
+            {
+                DrawReactorRow(messageId, snapshot[index], scale);
+            }
+
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
+        }
+    }
+
+    private void DrawReactorRow(string messageId, ReactorDto reactor, float scale)
+    {
+        var myId = store.Me?.UserId ?? string.Empty;
+        var mine = reactor.UserId == myId;
+        var rowHeight = 54f * scale;
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
-        var buttonRadius = 16f * scale;
-        var pictureCenter = new Vector2(area.Min.X + 12f * scale + buttonRadius, area.Center.Y);
-        var pictureMin = pictureCenter - new Vector2(buttonRadius, buttonRadius);
-        var pictureMax = pictureCenter + new Vector2(buttonRadius, buttonRadius);
-        var pictureHovered = ImGui.IsMouseHoveringRect(pictureMin, pictureMax);
-        drawList.AddCircleFilled(pictureCenter, buttonRadius,
-            ImGui.GetColorU32(pictureHovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent), 24);
-        AppSkin.Icon(pictureCenter, FontAwesomeIcon.Image.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.85f);
-        HoverTooltip.Show(new Rect(pictureMin, pictureMax), Loc.T(L.Velvet.SendPicture), HoverLabelSide.Above);
-        if (pictureHovered)
+        var rowMax = new Vector2(origin.X + width, origin.Y + rowHeight);
+        ui.Card(drawList, origin, rowMax, 14f * scale);
+        var pad = 12f * scale;
+        var radius = 17f * scale;
+        var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
+        var label = mine
+            ? Loc.T(L.Message.You)
+            : reactor.DisplayName.Length > 0 ? reactor.DisplayName : reactor.Handle;
+        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, reactor.AvatarUrl, images,
+            lodestone, 0.85f, 32);
+        var textLeft = avatarCenter.X + radius + 12f * scale;
+        if (mine)
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            Typography.Draw(new Vector2(textLeft, origin.Y + 10f * scale), label, theme.TextStrong, 1f,
+                FontWeight.SemiBold);
+            Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), Loc.T(L.Message.TapToRemove),
+                ui.MutedInk, TextStyles.Footnote);
+        }
+        else
+        {
+            Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale), label,
+                theme.TextStrong, 1f, FontWeight.SemiBold);
+        }
+
+        var tokenColor = ReactionArt.Color(reactor.Token);
+        AppSkin.Icon(new Vector2(origin.X + width - pad - 10f * scale, origin.Y + rowHeight * 0.5f),
+            ReactionArt.Glyph(reactor.Token), tokenColor, 1f);
+        if (mine && UiInteract.HoverClick(origin, rowMax))
+        {
+            store.SetReaction(messageId, string.Empty);
+            var current = reactors;
+            if (current is not null)
             {
-                router.Push(VelvetRoute.ChatImage(threadId));
+                var next = new List<ReactorDto>(current.Length);
+                for (var index = 0; index < current.Length; index++)
+                {
+                    if (current[index].UserId != myId)
+                    {
+                        next.Add(current[index]);
+                    }
+                }
+
+                reactors = next.ToArray();
             }
         }
 
-        var sendWidth = 40f * scale;
-        var pillMin = new Vector2(pictureMax.X + 10f * scale, area.Min.Y + 8f * scale);
-        var pillMax = new Vector2(area.Max.X - sendWidth - 12f * scale, area.Max.Y - 8f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
-        if (threadFocus)
-        {
-            ImGui.SetKeyboardFocusHere();
-            threadFocus = false;
-        }
-
-        var submitted = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
-        {
-            if (ImGui.InputTextWithHint("##velvetMessage", Loc.T(L.Velvet.MessageHint), ref messageDraft, MessageMax,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                submitted = true;
-            }
-        }
-
-        var canSend = messageDraft.Trim().Length > 0 && !store.Sending;
-        var sendCenter = new Vector2(area.Max.X - sendWidth * 0.5f - 8f * scale, area.Center.Y);
-        drawList.AddCircleFilled(sendCenter, 16f * scale, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
-        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.9f);
-        var sendHitRadius = 16f * scale;
-        var sendRect = new Rect(sendCenter - new Vector2(sendHitRadius, sendHitRadius),
-            sendCenter + new Vector2(sendHitRadius, sendHitRadius));
-        HoverTooltip.Show(sendRect, Loc.T(L.Velvet.Send), HoverLabelSide.Above);
-        if (UiInteract.Hover(sendRect.Min, sendRect.Max))
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && canSend)
-            {
-                submitted = true;
-            }
-        }
-
-        if (submitted && canSend)
-        {
-            store.SendMessage(threadId, messageDraft, _ => { });
-            messageDraft = string.Empty;
-            lastTypingDraft = string.Empty;
-            transcript.RequestSnapToBottom();
-            threadFocus = true;
-        }
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, rowHeight + 8f * scale));
     }
 
     private readonly PhotoZoomView imageZoom = new();

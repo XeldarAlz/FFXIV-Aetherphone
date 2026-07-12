@@ -83,6 +83,9 @@ internal sealed class VelvetStore : IDisposable
     private volatile bool otherTyping;
     private volatile VelvetPostDto[] feed = Array.Empty<VelvetPostDto>();
     private volatile bool loadingFeed;
+    private volatile string? feedCursor;
+    private volatile bool loadingMoreFeed;
+    private readonly object feedLock = new();
     private volatile string? detailPostId;
     private volatile VelvetCommentDto[] detailComments = Array.Empty<VelvetCommentDto>();
     private volatile bool loadingComments;
@@ -323,6 +326,8 @@ internal sealed class VelvetStore : IDisposable
     public VelvetPostDto[] Feed => feed;
     public bool LoadingFeed => loadingFeed;
     public bool FeedLoaded => feedLoaded;
+    public bool HasMoreFeed => feedCursor is not null;
+    public bool LoadingMoreFeed => loadingMoreFeed;
     public bool Posting => posting;
     public VelvetPostDto? FetchedPost => fetchedPost;
     public UserDto[] Likers => likers;
@@ -599,13 +604,99 @@ internal sealed class VelvetStore : IDisposable
             var page = await client.VelvetFeedAsync("explore", null, token).ConfigureAwait(false);
             if (page is not null)
             {
-                feed = page.Items;
+                ApplyFeedRefresh(page);
             }
         }, () =>
         {
             loadingFeed = false;
             feedLoaded = true;
         });
+    }
+
+    public void LoadMoreFeed()
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        var cursor = feedCursor;
+        if (cursor is null || loadingMoreFeed || loadingFeed)
+        {
+            return;
+        }
+
+        loadingMoreFeed = true;
+        work.Run("feed more", async token =>
+        {
+            var page = await client.VelvetFeedAsync("explore", cursor, token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                lock (feedLock)
+                {
+                    feed = MergeFeed(feed, page.Items);
+                    feedCursor = page.NextCursor;
+                }
+            }
+        }, () => loadingMoreFeed = false);
+    }
+
+    private void ApplyFeedRefresh(VelvetFeedPage page)
+    {
+        lock (feedLock)
+        {
+            if (feed.Length == 0)
+            {
+                feed = page.Items;
+                feedCursor = page.NextCursor;
+            }
+            else
+            {
+                feed = MergeFeed(feed, page.Items);
+            }
+        }
+    }
+
+    private static VelvetPostDto[] MergeFeed(VelvetPostDto[] current, VelvetPostDto[] incoming)
+    {
+        if (incoming.Length == 0)
+        {
+            return current;
+        }
+
+        if (current.Length == 0)
+        {
+            return incoming;
+        }
+
+        var incomingIds = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            incomingIds.Add(incoming[index].Id);
+        }
+
+        var merged = new List<VelvetPostDto>(current.Length + incoming.Length);
+        for (var index = 0; index < current.Length; index++)
+        {
+            if (!incomingIds.Contains(current[index].Id))
+            {
+                merged.Add(current[index]);
+            }
+        }
+
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            merged.Add(incoming[index]);
+        }
+
+        merged.Sort(ByNewestFirst);
+        return merged.ToArray();
+    }
+
+    private static int ByNewestFirst(VelvetPostDto left, VelvetPostDto right)
+    {
+        var byTime = right.CreatedAtUnix.CompareTo(left.CreatedAtUnix);
+        return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
     }
 
     public void OpenProfile(string userId)
@@ -871,7 +962,7 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
-    public void SendMessage(string id, string body, Action<bool> onComplete)
+    public void SendMessage(string id, string body, Action<bool> onComplete, string? replyToId = null)
     {
         var trimmed = body.Trim();
         if (trimmed.Length == 0 || sending)
@@ -890,7 +981,8 @@ internal sealed class VelvetStore : IDisposable
             {
                 var encoded = EnvelopeCodec.Encode(trimmed, cek, generation, scope, MyUserId);
                 sent = await client.SendVelvetMessageAsync(id, encoded.Envelope, 0, null, token,
-                    encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag)
+                    encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
+                    replyToId: replyToId)
                     .ConfigureAwait(false);
                 if (sent is not null)
                 {
@@ -901,12 +993,18 @@ internal sealed class VelvetStore : IDisposable
             }
             else
             {
-                sent = await client.SendVelvetMessageAsync(id, trimmed, 0, null, token).ConfigureAwait(false);
+                sent = await client.SendVelvetMessageAsync(id, trimmed, 0, null, token, replyToId: replyToId)
+                    .ConfigureAwait(false);
             }
 
             if (sent is null)
             {
                 return false;
+            }
+
+            if (sent.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
+            {
+                sent = sent with { ReplyBody = ResolveQuotedBody(scope, sent) };
             }
 
             if (threadId == id)
@@ -961,6 +1059,280 @@ internal sealed class VelvetStore : IDisposable
             Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
             return true;
         }, onComplete, () => sending = false);
+    }
+
+    public void SendVoiceMessage(string id, byte[] wavBytes, int durationSecs, Action<bool> onComplete)
+    {
+        if (sending)
+        {
+            return;
+        }
+
+        sending = true;
+        work.Run("send voice", async token =>
+        {
+            var upload = await client.UploadUrlAsync("audio/wav", "velvet-voice", token).ConfigureAwait(false);
+            if (upload is null)
+            {
+                return false;
+            }
+
+            var uploaded = await client.UploadImageAsync(upload.UploadUrl, wavBytes, "audio/wav", token)
+                .ConfigureAwait(false);
+            if (!uploaded)
+            {
+                return false;
+            }
+
+            var sent = await client.SendVelvetMessageAsync(id, string.Empty, 3, null, token, upload.Key,
+                durationSecs: durationSecs).ConfigureAwait(false);
+            if (sent is null)
+            {
+                return false;
+            }
+
+            if (threadId == id)
+            {
+                messages = CopyOnWrite.Append(messages, sent);
+            }
+
+            threadsLoaded = false;
+            Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
+            return true;
+        }, onComplete, () => sending = false);
+    }
+
+    public void SetReaction(string messageId, string reactionToken)
+    {
+        messages = ApplyLocalReaction(messages, messageId, reactionToken);
+        work.Run("react", async token =>
+            await client.SetVelvetReactionAsync(messageId, reactionToken, token).ConfigureAwait(false));
+    }
+
+    public string MyReactionTo(string messageId)
+    {
+        var snapshot = messages;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id != messageId)
+            {
+                continue;
+            }
+
+            var reactions = snapshot[index].Reactions;
+            if (reactions is null)
+            {
+                return string.Empty;
+            }
+
+            for (var reactionIndex = 0; reactionIndex < reactions.Length; reactionIndex++)
+            {
+                if (reactions[reactionIndex].Mine)
+                {
+                    return reactions[reactionIndex].Token;
+                }
+            }
+
+            return string.Empty;
+        }
+
+        return string.Empty;
+    }
+
+    private static VelvetMessageDto[] ApplyLocalReaction(VelvetMessageDto[] items, string messageId,
+        string reactionToken)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id != messageId)
+            {
+                continue;
+            }
+
+            var current = items[index].Reactions ?? Array.Empty<ReactionSummaryDto>();
+            var next = new List<ReactionSummaryDto>(current.Length + 1);
+            var added = false;
+            for (var summaryIndex = 0; summaryIndex < current.Length; summaryIndex++)
+            {
+                var summary = current[summaryIndex];
+                if (summary.Mine)
+                {
+                    summary = summary with { Count = summary.Count - 1, Mine = false };
+                }
+
+                if (summary.Token == reactionToken)
+                {
+                    summary = summary with { Count = summary.Count + 1, Mine = true };
+                    added = true;
+                }
+
+                if (summary.Count > 0)
+                {
+                    next.Add(summary);
+                }
+            }
+
+            if (!added && reactionToken.Length > 0)
+            {
+                next.Add(new ReactionSummaryDto(reactionToken, 1, true));
+            }
+
+            var updated = (VelvetMessageDto[])items.Clone();
+            updated[index] = items[index] with { Reactions = next.Count > 0 ? next.ToArray() : null };
+            return updated;
+        }
+
+        return items;
+    }
+
+    public void LoadReactions(string messageId, Action<ReactorDto[]?> onResult)
+    {
+        work.Run("reaction list", async token =>
+        {
+            var result = await client.VelvetReactionsAsync(messageId, token).ConfigureAwait(false);
+            onResult(result?.Items);
+        });
+    }
+
+    public void EditMessage(string id, string messageId, string body, Action<bool> onComplete)
+    {
+        var trimmed = body.Trim();
+        if (trimmed.Length == 0)
+        {
+            return;
+        }
+
+        work.Run("edit message", async token =>
+        {
+            VelvetMessageDto? edited;
+            var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, id));
+            var generation = keys.CurrentGeneration(scope);
+            if (EncryptingCurrent && threadId == id && generation > 0
+                && keys.TryGetCek(scope, generation, out var cek))
+            {
+                var encoded = EnvelopeCodec.Encode(trimmed, cek, generation, scope, MyUserId);
+                edited = await client.EditVelvetMessageAsync(messageId, encoded.Envelope, token,
+                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
+                if (edited is not null)
+                {
+                    decryptedBodies[edited.Id] = new DmDecryptedBody(DmBodyState.Decrypted, trimmed,
+                        encoded.FrankingKeyBase64, true);
+                    edited = edited with { Body = trimmed };
+                }
+            }
+            else
+            {
+                edited = await client.EditVelvetMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
+                if (edited is not null)
+                {
+                    decryptedBodies.TryRemove(messageId, out _);
+                }
+            }
+
+            if (edited is null)
+            {
+                return false;
+            }
+
+            if (edited.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
+            {
+                edited = edited with { ReplyBody = ResolveQuotedBody(scope, edited) };
+            }
+
+            if (threadId == id)
+            {
+                messages = ReplaceMessage(messages, edited);
+            }
+
+            threadsLoaded = false;
+            return true;
+        }, onComplete);
+    }
+
+    private static VelvetMessageDto[] ReplaceMessage(VelvetMessageDto[] items, VelvetMessageDto updated)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id != updated.Id)
+            {
+                continue;
+            }
+
+            var next = (VelvetMessageDto[])items.Clone();
+            next[index] = updated with { Reactions = items[index].Reactions, ReadAtUnix = items[index].ReadAtUnix };
+            return next;
+        }
+
+        return items;
+    }
+
+    public void DeleteMessage(string messageId, Action<bool> onComplete)
+    {
+        work.Run("delete message", async token =>
+        {
+            var ok = await client.DeleteVelvetMessageAsync(messageId, token).ConfigureAwait(false);
+            if (!ok)
+            {
+                return false;
+            }
+
+            messages = TombstoneLocal(messages, messageId);
+            threadsLoaded = false;
+            return true;
+        }, onComplete);
+    }
+
+    private static VelvetMessageDto[] TombstoneLocal(VelvetMessageDto[] items, string messageId)
+    {
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].Id != messageId)
+            {
+                continue;
+            }
+
+            var updated = (VelvetMessageDto[])items.Clone();
+            updated[index] = items[index] with
+            {
+                Deleted = true,
+                Body = string.Empty,
+                EncVersion = 0,
+                CommitmentTag = null,
+                DurationSecs = 0,
+                Reactions = null,
+            };
+            return updated;
+        }
+
+        return items;
+    }
+
+    private string ResolveQuotedBody(string scope, VelvetMessageDto item)
+    {
+        if (item.ReplyToId is null || string.IsNullOrEmpty(item.ReplyBody))
+        {
+            return Loc.T(L.Encryption.NoKeyPlaceholder);
+        }
+
+        if (decryptedBodies.TryGetValue(item.ReplyToId, out var cached) && cached.State == DmBodyState.Decrypted)
+        {
+            return cached.Text;
+        }
+
+        if (!EnvelopeCodec.TryParseGeneration(item.ReplyBody, out var generation))
+        {
+            return Loc.T(L.Encryption.NoKeyPlaceholder);
+        }
+
+        if (!keys.TryGetCek(scope, generation, out var cek))
+        {
+            return vault.State == KeyVaultState.Unlocked
+                ? Loc.T(L.Encryption.NoKeyPlaceholder)
+                : Loc.T(L.Encryption.EncryptedPlaceholder);
+        }
+
+        var decoded = EnvelopeCodec.Decode(item.ReplyBody, cek, scope, item.ReplySenderId ?? string.Empty, null);
+        return decoded.Status == EnvelopeDecodeStatus.Success ? decoded.Body : Loc.T(L.Encryption.NoKeyPlaceholder);
     }
 
     public string? DmMediaUrl(string messageId)
@@ -1332,14 +1704,26 @@ internal sealed class VelvetStore : IDisposable
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            if (item.EncVersion != EnvelopeCodec.VersionEnvelope)
+            var needsBody = item.EncVersion == EnvelopeCodec.VersionEnvelope;
+            var needsReply = item.ReplyEncVersion == EnvelopeCodec.VersionEnvelope;
+            if (!needsBody && !needsReply)
             {
                 continue;
             }
 
-            var body = ResolveBody(scope, item);
+            var updated = item;
+            if (needsBody)
+            {
+                updated = updated with { Body = ResolveBody(scope, item).Text };
+            }
+
+            if (needsReply)
+            {
+                updated = updated with { ReplyBody = ResolveQuotedBody(scope, item) };
+            }
+
             decorated ??= (VelvetMessageDto[])items.Clone();
-            decorated[index] = item with { Body = body.Text };
+            decorated[index] = updated;
         }
 
         return decorated ?? items;

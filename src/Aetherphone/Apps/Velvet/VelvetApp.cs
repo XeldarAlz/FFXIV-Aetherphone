@@ -109,8 +109,6 @@ internal sealed partial class VelvetApp : IPhoneApp
     private string? editLoadedFor;
     private volatile int editOutcome;
     private volatile bool editBusy;
-    private string messageDraft = string.Empty;
-    private bool threadFocus;
     private string[] chatPickerPaths = Array.Empty<string>();
     private string? chatPickerThreadId;
     private string? chatPendingPickedPath;
@@ -205,7 +203,9 @@ internal sealed partial class VelvetApp : IPhoneApp
     public void OnClosed()
     {
         router.Reset();
-        messageDraft = string.Empty;
+        composer.Clear();
+        composer.CancelVoice();
+        voicePlayer.Stop();
         discoverQuery = string.Empty;
         discoverApplied = string.Empty;
         searchController.Close();
@@ -244,7 +244,7 @@ internal sealed partial class VelvetApp : IPhoneApp
         filterMenu.Gate();
         postMenu.Gate();
         threadMenu.Gate();
-        messageMenu.Gate();
+        messageMenuController.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
         if (photoViewer.Active)
@@ -288,6 +288,9 @@ internal sealed partial class VelvetApp : IPhoneApp
                 break;
             case VelvetScreen.ImageView:
                 DrawImageViewer(area, route.Id!);
+                break;
+            case VelvetScreen.Reactions:
+                DrawReactions(area, route.Id!);
                 break;
             case VelvetScreen.Avatar:
                 DrawAvatar(area);
@@ -572,7 +575,16 @@ internal sealed partial class VelvetApp : IPhoneApp
                 }
             }
 
+            if (store.LoadingMoreFeed)
+            {
+                InfiniteScroll.DrawLoadingRow(area.Center.X, AppPalettes.Velvet.MutedInk);
+            }
+
             ImGui.Dummy(new Vector2(0f, 96f * scale));
+            if (InfiniteScroll.ReachedBottom() && store.HasMoreFeed && !store.LoadingMoreFeed)
+            {
+                store.LoadMoreFeed();
+            }
         }
     }
 
@@ -1417,6 +1429,8 @@ internal sealed partial class VelvetApp : IPhoneApp
 
     public void Dispose()
     {
+        composer.Dispose();
+        voicePlayer.Dispose();
         store.Dispose();
     }
 }
