@@ -460,6 +460,20 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0950 =
+        {
+            new("changelog.r0950.0", "Aetherphone now has its own website at www.aetherphone.net, where you can explore the phone and all of its apps"),
+            new("changelog.r0950.1", "Velvet chats now let you react to messages with an emoji, and clicking a reaction count shows who reacted"),
+            new("changelog.r0950.2", "You can now reply to a Velvet message, with the original quoted inside your bubble"),
+            new("changelog.r0950.3", "You can now edit or delete a Velvet message you already sent"),
+            new("changelog.r0950.4", "You can now record and send voice notes in Velvet"),
+            new("changelog.r0950.5", "You can now search for radio stations by name in Music"),
+            new("changelog.r0950.6", "Radio browsing in Music now loads more stations as you keep scrolling and offers more genres to explore"),
+            new("changelog.r0950.7", "Chirper and Aethergram now load more posts automatically as you scroll to the bottom"),
+            new("changelog.r0950.8", "Message and Velvet now load older messages when you scroll to the top of a conversation"),
+            new("changelog.r0950.9", "Encrypted chats look cleaner now that the redundant lock icon no longer appears on every message bubble"),
+        };
+
         public static readonly LocString[] Release0940 =
         {
             new("changelog.r0940.0", "You can now like comments in Chirper, Aethergram, and Velvet, and you get notified when someone likes yours"),
