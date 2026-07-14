@@ -1,0 +1,355 @@
+using System.Numerics;
+using Aetherphone.Apps.Velvet.Kit;
+using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Social;
+using Aetherphone.Windows.Components;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
+using Dalamud.Interface.Utility;
+
+namespace Aetherphone.Apps.Velvet;
+
+internal sealed partial class VelvetShell
+{
+    private void DrawProfile(Rect area, string userId)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var user = store.ProfileUserId == userId ? store.ProfileUser : null;
+        var title = user != null ? DisplayNameOf(user.DisplayName, user.Handle) : "Profile";
+        if (VHeader.Push(area, title, theme))
+        {
+            router.Pop();
+            return;
+        }
+
+        if (user != null && store.Me?.UserId != user.UserId)
+        {
+            var flagCenter = new Vector2(area.Max.X - 22f * scale, area.Min.Y + VHeader.Height * scale * 0.5f);
+            if (ui.IconButton(flagCenter, 15f * scale, FontAwesomeIcon.Flag.ToIconString(), VelvetTheme.MutedInk,
+                    AppSkin.Transparent, 0.82f, "Report"))
+            {
+                OpenReport("velvet_profile", user.UserId, "Report profile");
+            }
+        }
+
+        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
+        if (user == null)
+        {
+            if (store.ProfileLoading)
+            {
+                Typography.DrawCentered(body.Center, "Loading", VelvetTheme.MutedInk, TextStyles.Callout);
+            }
+            else
+            {
+                EmptyState.Draw(body, ui, FontAwesomeIcon.User, "Profile unavailable",
+                    "This person may be private or no longer here.");
+            }
+
+            return;
+        }
+
+        DrawProfileBody(body, user);
+    }
+
+    private void DrawProfileBody(Rect body, VelvetProfileDto user)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var isMe = store.Me?.UserId == user.UserId;
+        var connected = isMe || user.ConnectionState == VelvetConnectionState.Connected;
+        using (AppSurface.Begin(body))
+        {
+            var width = ImGui.GetContentRegionAvail().X;
+            var drawList = ImGui.GetWindowDrawList();
+            var heroTop = ImGui.GetCursorScreenPos();
+            var centerX = heroTop.X + width * 0.5f;
+            var name = DisplayNameOf(user.DisplayName, user.Handle);
+            var radius = 56f * scale;
+            var avatarCenter = new Vector2(centerX, heroTop.Y + 14f * scale + radius);
+            Vector4? ring = isMe ? VelvetTheme.Rose : connected ? VelvetTheme.Moonlight : null;
+            VAvatar.Draw(drawList, avatarCenter, radius, theme, name, user.World, user.AvatarUrl, images, lodestone, -1,
+                ring);
+
+            var lineY = avatarCenter.Y + radius + 22f * scale;
+            var nameSize = Typography.Measure(name, TextStyles.Title1);
+            var badgeSpace = user.Verified ? 24f * scale : 0f;
+            var nameX = centerX - (nameSize.X + badgeSpace) * 0.5f;
+            Typography.Draw(new Vector2(nameX, lineY - nameSize.Y * 0.5f), name, VelvetTheme.TitleInk, TextStyles.Title1);
+            if (user.Verified)
+            {
+                DrawVerifiedBadge(drawList, new Vector2(nameX + nameSize.X + 13f * scale, lineY), scale);
+            }
+
+            lineY += 24f * scale;
+            var region = RegionOf(user.World);
+            var meta = SocialIdentity.ProfileMeta(user.Handle, region);
+            if (user.Pronouns.Length > 0)
+            {
+                meta = meta.Length > 0 ? meta + " · " + user.Pronouns : user.Pronouns;
+            }
+
+            if (meta.Length > 0)
+            {
+                Typography.DrawCentered(new Vector2(centerX, lineY), meta, VelvetTheme.MutedInk, TextStyles.Subheadline);
+                lineY += 22f * scale;
+            }
+
+            var mask = VelvetIntent.Sanitize(user.LookingFor);
+            var lookingFor = mask == 0 ? "Open to anything" : "Looking for " + VelvetIntent.Describe(mask);
+            Typography.DrawCentered(new Vector2(centerX, lineY), lookingFor, VelvetTheme.RoseInk, TextStyles.Headline);
+            lineY += 22f * scale;
+
+            var sub = user.RelationshipStatus != VelvetRelationship.NotSaying
+                ? VelvetRelationship.Label(user.RelationshipStatus)
+                : string.Empty;
+            if (user.ShareTimeZone && user.UtcOffsetMinutes is { } offset)
+            {
+                var timeZone = SocialTimeZone.Describe(offset);
+                sub = sub.Length > 0 ? sub + " · " + timeZone : timeZone;
+            }
+
+            if (sub.Length > 0)
+            {
+                Typography.DrawCentered(new Vector2(centerX, lineY), sub, VelvetTheme.MutedInk, TextStyles.Footnote);
+                lineY += 18f * scale;
+            }
+
+            var heroHeight = lineY - heroTop.Y + 8f * scale;
+            ImGui.SetCursorScreenPos(heroTop);
+            ImGui.Dummy(new Vector2(width, heroHeight));
+
+            Gap(6f);
+            DrawRelationshipAction(user, isMe);
+
+            if (isMe)
+            {
+                Gap(10f);
+                var settingsRect = Reserve(44f);
+                if (ui.GhostButton(settingsRect, "Settings"))
+                {
+                    settingsLoaded = false;
+                    router.Push(VelvetView.Settings);
+                }
+            }
+
+            Gap(24f);
+            DrawGallery(user, isMe, connected);
+
+            if (user.Intro.Length > 0)
+            {
+                Gap(20f);
+                VSectionHeader.Bar("About");
+                Gap(4f);
+                WrapText(user.Intro, VelvetTheme.BodyInk, TextStyles.Body);
+            }
+
+            if (VelvetIntent.IncludesErp(user.LookingFor) && user.Dynamic.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar("Role");
+                Gap(4f);
+                DrawDisplayTokens(VelvetTags.Parse(user.Dynamic), VChipStyle.Tint, new Vector4(0.62f, 0.22f, 0.60f, 1f));
+            }
+
+            if (user.Tags.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar("Tags");
+                Gap(4f);
+                DrawDisplayTokens(user.Tags, VChipStyle.Tint, VelvetTheme.Rose);
+            }
+
+            if (user.Limits.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar("Limits");
+                Gap(4f);
+                DrawDisplayTokens(user.Limits, VChipStyle.Outline, VelvetTheme.Gold);
+            }
+
+            if (!isMe)
+            {
+                Gap(26f);
+                var blocked = user.ConnectionState == VelvetConnectionState.Blocked;
+                var actionRect = Reserve(42f);
+                if (blocked)
+                {
+                    if (ui.GhostButton(actionRect, "Unblock"))
+                    {
+                        store.Unblock(user.UserId);
+                    }
+                }
+                else if (ui.DangerGhostButton(actionRect, "Block"))
+                {
+                    store.Block(user.UserId, _ => { });
+                }
+            }
+
+            Gap(40f);
+        }
+    }
+
+    private static void DrawVerifiedBadge(ImDrawListPtr drawList, Vector2 center, float scale)
+    {
+        drawList.AddCircleFilled(center, 8f * scale, VelvetTheme.Rose.Packed(), 20);
+        var ink = VelvetTheme.OnAccent.Packed();
+        drawList.AddLine(new Vector2(center.X - 3.4f * scale, center.Y + 0.4f * scale),
+            new Vector2(center.X - 1f * scale, center.Y + 2.8f * scale), ink, 1.6f * scale);
+        drawList.AddLine(new Vector2(center.X - 1f * scale, center.Y + 2.8f * scale),
+            new Vector2(center.X + 3.6f * scale, center.Y - 2.6f * scale), ink, 1.6f * scale);
+    }
+
+    private void DrawGallery(VelvetProfileDto user, bool isMe, bool connected)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        if (!store.FeedLoaded && !store.LoadingFeed)
+        {
+            store.RefreshFeed();
+        }
+
+        var feed = store.Feed;
+        var owned = new List<VelvetPostDto>();
+        for (var index = 0; index < feed.Length; index++)
+        {
+            if (feed[index].OwnerId == user.UserId)
+            {
+                owned.Add(feed[index]);
+            }
+        }
+
+        var width = ImGui.GetContentRegionAvail().X;
+        VSectionHeader.Bar(isMe ? "My photos" : "Photos", owned.Count > 0 ? owned.Count.ToString() : string.Empty);
+        Gap(6f);
+
+        if (owned.Count == 0)
+        {
+            if (!isMe && !connected)
+            {
+                DrawLockedGallery(DisplayNameOf(user.DisplayName, user.Handle), width);
+            }
+            else
+            {
+                Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(0f, 2f * scale),
+                    isMe ? "You have not shared any photos yet." : "No photos shared yet.", VelvetTheme.MutedInk,
+                    TextStyles.Footnote);
+                Gap(24f);
+            }
+
+            return;
+        }
+
+        const int columns = 3;
+        var cellGap = 6f * scale;
+        var cell = (width - cellGap * (columns - 1)) / columns;
+        var rows = (owned.Count + columns - 1) / columns;
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        for (var index = 0; index < owned.Count; index++)
+        {
+            var row = index / columns;
+            var col = index % columns;
+            var min = new Vector2(origin.X + col * (cell + cellGap), origin.Y + row * (cell + cellGap));
+            var max = new Vector2(min.X + cell, min.Y + cell);
+            DrawMedia(drawList, min, max, owned[index].MediaUrl, Metrics.Radius.Md * scale);
+            if (UiInteract.Hover(min, max) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                store.EnsurePost(owned[index].Id);
+                router.Push(VelvetView.PostDetail(owned[index].Id));
+            }
+        }
+
+        var gridHeight = rows * cell + (rows - 1) * cellGap;
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, gridHeight));
+    }
+
+    private void DrawLockedGallery(string name, float width)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        const int columns = 3;
+        var cellGap = 6f * scale;
+        var cell = (width - cellGap * (columns - 1)) / columns;
+        var origin = ImGui.GetCursorScreenPos();
+        var drawList = ImGui.GetWindowDrawList();
+        for (var col = 0; col < columns; col++)
+        {
+            var min = new Vector2(origin.X + col * (cell + cellGap), origin.Y);
+            var max = new Vector2(min.X + cell, min.Y + cell);
+            VMediaTile.Conceal(drawList, min, max, Metrics.Radius.Md * scale, string.Empty, 0f);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, cell));
+        Gap(12f);
+        Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, ImGui.GetCursorScreenPos().Y),
+            "Connect with " + name + " to see their photos", VelvetTheme.RoseInk, TextStyles.Callout, width - 40f * scale);
+        Gap(30f);
+    }
+
+    private void DrawRelationshipAction(VelvetProfileDto user, bool isMe)
+    {
+        var rect = Reserve(46f);
+        if (isMe)
+        {
+            if (ui.PillButton(rect, "Edit profile", true))
+            {
+                BeginEditProfile();
+                router.Push(VelvetView.EditProfile);
+            }
+
+            return;
+        }
+
+        switch (user.ConnectionState)
+        {
+            case VelvetConnectionState.Connected:
+                if (ui.PillButton(rect, "Message", true))
+                {
+                    OpenThread(user.UserId);
+                }
+
+                break;
+            case VelvetConnectionState.OutgoingRequest:
+                if (ui.GhostButton(rect, "Requested"))
+                {
+                    store.CancelRequest(user.UserId);
+                }
+
+                break;
+            case VelvetConnectionState.IncomingRequest:
+                if (ui.PillButton(rect, "Reply", true))
+                {
+                    OpenThread(user.UserId);
+                }
+
+                break;
+            case VelvetConnectionState.Blocked:
+                break;
+            default:
+                if (ui.PillButton(rect, "Introduce yourself", true))
+                {
+                    RequestIntro(user.UserId, DisplayNameOf(user.DisplayName, user.Handle));
+                }
+
+                break;
+        }
+    }
+
+    private void DrawDisplayTokens(string[] tokens, VChipStyle style, Vector4 tone)
+    {
+        if (tokens.Length == 0)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = ImGui.GetContentRegionAvail().X;
+        var models = new VChipModel[tokens.Length];
+        for (var index = 0; index < tokens.Length; index++)
+        {
+            models[index] = new VChipModel(tokens[index], style, tone);
+        }
+
+        VChipFlow.Draw(models, width, scale);
+    }
+}
