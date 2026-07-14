@@ -1332,6 +1332,29 @@ internal static class L
         public static readonly LocString AddVibeHint = new("velvet.addVibeHint", "Add your own, then Enter");
         public static readonly LocString AddTagHint = new("velvet.addTagHint", "Add your own, then Enter");
         public static readonly LocString AddLimitHint = new("velvet.addLimitHint", "Add a limit, then Enter");
+        public static readonly LocString IntentErp = new("velvet.intentErp", "ERP");
+        public static readonly LocString IntentGpose = new("velvet.intentGpose", "GPose");
+        public static readonly LocString IntentRelationship = new("velvet.intentRelationship", "Relationship");
+        public static readonly LocString IntentCollab = new("velvet.intentCollab", "Collab");
+        public static readonly LocString IntentFriends = new("velvet.intentFriends", "Friends");
+        public static readonly LocString IntentSharing = new("velvet.intentSharing", "Sharing");
+        public static readonly LocString IntentWandering = new("velvet.intentWandering", "Wandering");
+        public static readonly LocString OpenToAnything = new("velvet.openToAnything", "Open to anything");
+        public static readonly LocString LookingForOne = new("velvet.lookingForOne", "Looking for {0}");
+        public static readonly LocString Photos = new("velvet.photos", "Photos");
+        public static readonly LocString MyPhotos = new("velvet.myPhotos", "My photos");
+        public static readonly LocString NoPhotosShared = new("velvet.noPhotosShared", "No photos shared yet.");
+        public static readonly LocString NoPhotosMine = new("velvet.noPhotosMine", "You have not shared any photos yet.");
+        public static readonly LocString ConnectToSeePhotos = new("velvet.connectToSeePhotos", "Connect with {0} to see their photos");
+        public static readonly LocString PhotoCount = new("velvet.photoCount", "{0} photos");
+        public static readonly LocString IntroTitle = new("velvet.introTitle", "Send an intro");
+        public static readonly LocString IntroduceYourselfTo = new("velvet.introduceYourselfTo", "Introduce yourself to {0}");
+        public static readonly LocString YourIntro = new("velvet.yourIntro", "Your intro");
+        public static readonly LocString IntroSheetHint = new("velvet.introSheetHint", "Your intro lands in their Requests. A reply accepts you.");
+        public static readonly LocString SendIntro = new("velvet.sendIntro", "Send intro");
+        public static readonly LocString Reply = new("velvet.reply", "Reply");
+        public static readonly LocString Activity = new("velvet.activity", "Activity");
+        public static readonly LocString Post = new("velvet.post", "Post");
     }
 
     internal static class Clock
