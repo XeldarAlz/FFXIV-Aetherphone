@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -18,7 +19,7 @@ internal sealed partial class VelvetShell
         if (me is null)
         {
             store.EnsureMe();
-            Typography.DrawCentered(area.Center, "Loading", VelvetTheme.MutedInk, TextStyles.Callout);
+            Typography.DrawCentered(area.Center, Loc.T(L.Common.Loading), VelvetTheme.MutedInk, TextStyles.Callout);
             return;
         }
 
@@ -31,7 +32,7 @@ internal sealed partial class VelvetShell
     private void DrawSettings(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        if (VHeader.Push(area, "Settings", theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.Settings), theme))
         {
             router.Pop();
             return;
@@ -41,13 +42,13 @@ internal sealed partial class VelvetShell
         using (AppSurface.Begin(body))
         {
             Gap(10f);
-            VSectionHeader.Overline("Discovery");
+            VSectionHeader.Overline(Loc.T(L.Velvet.DiscoveryHeader));
             var me = store.Me;
             if (me is not null)
             {
                 Gap(2f);
                 var discoverable = me.Discoverable;
-                ui.ToggleRow("Appear in Discover", ref discoverable);
+                ui.ToggleRow(Loc.T(L.Velvet.DiscoverableLabel), ref discoverable);
                 if (discoverable != me.Discoverable && !editBusy)
                 {
                     editBusy = true;
@@ -56,10 +57,10 @@ internal sealed partial class VelvetShell
                 }
 
                 Gap(6f);
-                ui.HelpText("When on, your profile can be found by others in Discover.");
+                ui.HelpText(Loc.T(L.Velvet.DiscoverableHelp));
 
                 Gap(22f);
-                VSectionHeader.Overline("Who can message you");
+                VSectionHeader.Overline(Loc.T(L.Velvet.WhoCanMessage));
                 Gap(10f);
                 if (!settingsLoaded)
                 {
@@ -68,8 +69,9 @@ internal sealed partial class VelvetShell
                 }
 
                 var whoRect = Reserve(34f);
-                var who = VSegmented.Draw("velvetWho", whoRect, new[] { "Everyone", "Friends", "No one" }, settingsWho,
-                    scale);
+                var who = VSegmented.Draw("velvetWho", whoRect,
+                    new[] { Loc.T(L.Velvet.WhoEveryone), Loc.T(L.Velvet.WhoFriends), Loc.T(L.Velvet.WhoNoOne) },
+                    settingsWho, scale);
                 if (who >= 0 && who != settingsWho)
                 {
                     settingsWho = who;
@@ -79,14 +81,14 @@ internal sealed partial class VelvetShell
                 }
 
                 Gap(10f);
-                ui.HelpText("Choose who can send you a one line intro. Friends means friends of friends.");
+                ui.HelpText(Loc.T(L.Velvet.WhoHelp));
             }
 
             Gap(18f);
-            VSectionHeader.Overline("Safety");
+            VSectionHeader.Overline(Loc.T(L.Velvet.SafetyHeader));
             var blockedRow = new VRowModel
             {
-                Title = "Blocked",
+                Title = Loc.T(L.Velvet.Blocked),
                 Leading = VRowLeading.IconTile,
                 TileIcon = FontAwesomeIcon.ShieldAlt,
                 TileTint = VelvetTheme.Gold,
@@ -105,7 +107,7 @@ internal sealed partial class VelvetShell
     private void DrawBlocked(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        if (VHeader.Push(area, "Blocked", theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.Blocked), theme))
         {
             router.Pop();
             return;
@@ -122,7 +124,7 @@ internal sealed partial class VelvetShell
             var blocked = store.Blocked;
             if (blocked.Length == 0)
             {
-                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 80f * scale), "No one blocked.",
+                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 80f * scale), Loc.T(L.Velvet.BlockedNone),
                     VelvetTheme.MutedInk, TextStyles.Callout);
                 return;
             }
@@ -141,7 +143,7 @@ internal sealed partial class VelvetShell
                     Name = DisplayNameOf(user.DisplayName, user.Handle),
                     World = user.World,
                     AvatarUrl = user.AvatarUrl,
-                    Pill = "Unblock",
+                    Pill = Loc.T(L.Velvet.Unblock),
                     PillFilled = false,
                     PillEnabled = true,
                 };

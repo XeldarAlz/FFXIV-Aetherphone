@@ -181,7 +181,7 @@ internal sealed class VelvetStore : IDisposable
 
     private void OnFrameworkTick(IFramework framework)
     {
-        if (!session.IsSignedIn || !configuration.VelvetOnboarded)
+        if (!session.IsSignedIn || !configuration.IsVelvetOnboarded())
         {
             inboxPrimed = false;
             vaultRefreshRequested = false;

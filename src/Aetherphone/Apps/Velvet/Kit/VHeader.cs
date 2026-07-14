@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -22,7 +23,7 @@ internal static class VHeader
             TextStyles.Title3);
         var bellCenter = new Vector2(area.Max.X - 20f * scale, midY);
         var clicked = AppSkin.IconButton(bellCenter, 16f * scale, FontAwesomeIcon.Bell.ToIconString(),
-            VelvetTheme.TitleInk, AppSkin.Transparent, 0.9f, theme, "Activity", HoverLabelSide.Below);
+            VelvetTheme.TitleInk, AppSkin.Transparent, 0.9f, theme, Loc.T(L.Velvet.Activity), HoverLabelSide.Below);
         if (bellBadge > 0)
         {
             VBadge.Count(drawList, new Vector2(bellCenter.X + 16f * scale, bellCenter.Y - 9f * scale), bellBadge);

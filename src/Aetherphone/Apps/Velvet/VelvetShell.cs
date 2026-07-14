@@ -93,13 +93,13 @@ internal sealed partial class VelvetShell : IPhoneApp
             store.EnsureMe();
         }
 
-        if (launcher.TryConsume(out var targetUserId) && GateAccepted && configuration.VelvetOnboarded &&
+        if (launcher.TryConsume(out var targetUserId) && GateAccepted && configuration.IsVelvetOnboarded() &&
             store.IsSignedIn)
         {
             OpenThread(targetUserId);
         }
 
-        if (socialLauncher.TryConsume(Id, out var link) && GateAccepted && configuration.VelvetOnboarded &&
+        if (socialLauncher.TryConsume(Id, out var link) && GateAccepted && configuration.IsVelvetOnboarded() &&
             store.IsSignedIn)
         {
             if (link.Kind == SocialLinkKind.Profile)
@@ -131,8 +131,8 @@ internal sealed partial class VelvetShell : IPhoneApp
         if (!store.IsSignedIn)
         {
             TourHolds.Hold(Id);
-            EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Moon, "Velvet is after dark",
-                "Sign in to your account to step inside.");
+            EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Moon, Loc.T(L.Velvet.SignedOutTitle),
+                Loc.T(L.Velvet.SignedOutHint));
             return;
         }
 
@@ -143,7 +143,7 @@ internal sealed partial class VelvetShell : IPhoneApp
             return;
         }
 
-        if (!configuration.VelvetOnboarded)
+        if (!configuration.IsVelvetOnboarded())
         {
             TourHolds.Hold(Id);
             DrawOnboarding(context.Content);
@@ -249,12 +249,32 @@ internal sealed partial class VelvetShell : IPhoneApp
         var bodyRect = new Rect(new Vector2(area.Min.X, headerRect.Max.Y),
             new Vector2(area.Max.X, tabRect.Min.Y));
 
+        if (GuideIntents.Consume("velvet.tab.feed"))
+        {
+            activeTab = VelvetPage.Feed;
+        }
+        else if (GuideIntents.Consume("velvet.tab.messages"))
+        {
+            activeTab = VelvetPage.Messages;
+        }
+        else if (GuideIntents.Consume("velvet.tab.me"))
+        {
+            activeTab = VelvetPage.Me;
+        }
+        else if (GuideIntents.Consume("velvet.tab.discover"))
+        {
+            activeTab = VelvetPage.Discover;
+        }
+
+        var bellCenter = new Vector2(headerRect.Max.X - 20f * scale, headerRect.Min.Y + headerHeight * 0.5f);
+        UiAnchors.Report("velvet.activity", AnchorBox(bellCenter, 18f * scale));
+
         var title = activeTab switch
         {
-            VelvetPage.Feed => "Feed",
-            VelvetPage.Messages => "Messages",
-            VelvetPage.Me => "Me",
-            _ => "Discover",
+            VelvetPage.Feed => Loc.T(L.Velvet.TabFeed),
+            VelvetPage.Messages => Loc.T(L.Velvet.Messages),
+            VelvetPage.Me => Loc.T(L.Velvet.TabMe),
+            _ => Loc.T(L.Velvet.TabDiscover),
         };
         if (VHeader.Root(headerRect, title, theme, 0))
         {
@@ -285,11 +305,20 @@ internal sealed partial class VelvetShell : IPhoneApp
         var messageBadge = store.UnreadCount + store.RequestCount;
         var tabs = new[]
         {
-            new VTabDef(FontAwesomeIcon.Compass, "Discover"),
-            new VTabDef(FontAwesomeIcon.Image, "Feed"),
-            new VTabDef(FontAwesomeIcon.Comment, "Messages", messageBadge),
-            new VTabDef(FontAwesomeIcon.User, "Me"),
+            new VTabDef(FontAwesomeIcon.Compass, Loc.T(L.Velvet.TabDiscover)),
+            new VTabDef(FontAwesomeIcon.Image, Loc.T(L.Velvet.TabFeed)),
+            new VTabDef(FontAwesomeIcon.Comment, Loc.T(L.Velvet.Messages), messageBadge),
+            new VTabDef(FontAwesomeIcon.User, Loc.T(L.Velvet.TabMe)),
         };
+        var tabMargin = 12f * scale;
+        var cellWidth = (tabRect.Width - tabMargin * 2f) / 4f;
+        var tabLeft = tabRect.Min.X + tabMargin;
+        var tabMidY = (tabRect.Min.Y + 6f * scale + tabRect.Max.Y - 12f * scale) * 0.5f;
+        UiAnchors.Report("velvet.tab.discover", AnchorBox(new Vector2(tabLeft + cellWidth * 0.5f, tabMidY), 22f * scale));
+        UiAnchors.Report("velvet.tab.feed", AnchorBox(new Vector2(tabLeft + cellWidth * 1.5f, tabMidY), 22f * scale));
+        UiAnchors.Report("velvet.tab.messages", AnchorBox(new Vector2(tabLeft + cellWidth * 2.5f, tabMidY), 22f * scale));
+        UiAnchors.Report("velvet.tab.me", AnchorBox(new Vector2(tabLeft + cellWidth * 3.5f, tabMidY), 22f * scale));
+
         var picked = VTabBar.Draw(tabRect, tabs, (int)activeTab, scale);
         if (picked >= 0)
         {

@@ -2,6 +2,8 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -28,10 +30,11 @@ internal sealed partial class VelvetShell
         var buttonGap = 8f * scale;
         var searchRect = new Rect(new Vector2(area.Min.X + pad, searchTop),
             new Vector2(area.Max.X - pad - buttonSize - buttonGap, searchTop + rowHeight));
-        DrawSearchField(searchRect, ref discoverQuery, "Search people by tag");
+        DrawSearchField(searchRect, ref discoverQuery, Loc.T(L.Velvet.SearchPeopleHint));
         var filterRect = new Rect(new Vector2(area.Max.X - pad - buttonSize, searchTop),
             new Vector2(area.Max.X - pad, searchTop + rowHeight));
         DrawFilterButton(filterRect);
+        UiAnchors.Report("velvet.discover.filter", filterRect);
         TickDiscoverSearch();
 
         if (!store.DiscoverLoaded && !store.LoadingDiscover)
@@ -48,8 +51,8 @@ internal sealed partial class VelvetShell
             var results = store.DiscoverResults;
             if (results.Length == 0)
             {
-                var message = store.LoadingDiscover ? "Looking for people..." : "No one here yet.";
-                var hint = store.LoadingDiscover ? string.Empty : "Try clearing filters or check back later.";
+                var message = store.LoadingDiscover ? Loc.T(L.Velvet.DiscoverLoading) : Loc.T(L.Velvet.DiscoverNone);
+                var hint = store.LoadingDiscover ? string.Empty : Loc.T(L.Velvet.DiscoverNoneHint);
                 Typography.DrawCentered(new Vector2(width * 0.5f + listRect.Min.X, listRect.Min.Y + 90f * scale),
                     message, VelvetTheme.TitleInk, TextStyles.Headline);
                 if (hint.Length > 0)
@@ -67,11 +70,18 @@ internal sealed partial class VelvetShell
             }
 
             var feed = store.Feed;
-            VSectionHeader.Overline("People to meet", results.Length.ToString());
+            VSectionHeader.Overline(Loc.T(L.Velvet.PeopleToMeet), results.Length.ToString(Loc.Culture));
             Gap(8f);
             for (var index = 0; index < results.Length; index++)
             {
+                var cardTop = ImGui.GetCursorScreenPos();
                 DrawPersonCard(results[index], feed);
+                if (index == 0)
+                {
+                    UiAnchors.Report("velvet.discover.card",
+                        new Rect(cardTop, new Vector2(cardTop.X + width, ImGui.GetCursorScreenPos().Y)));
+                }
+
                 Gap(26f);
             }
 
@@ -147,7 +157,7 @@ internal sealed partial class VelvetShell
                 continue;
             }
 
-            models[cursor] = new VChipModel(def.Label, VChipStyle.Tint, def.Hue, def.Icon, true);
+            models[cursor] = new VChipModel(Loc.T(def.Label), VChipStyle.Tint, def.Hue, def.Icon, true);
             flags[cursor] = def.Flag;
             cursor++;
         }
@@ -229,17 +239,18 @@ internal sealed partial class VelvetShell
                 continue;
             }
 
-            var chipWidth = VChip.Width(def.Label, false, false, scale);
+            var chipLabel = Loc.T(def.Label);
+            var chipWidth = VChip.Width(chipLabel, false, false, scale);
             chipX -= chipWidth;
             VChip.Draw(new Vector2(chipX, card.Min.Y + pad), 26f * scale,
-                new VChipModel(def.Label, VChipStyle.Solid, def.Hue), scale);
+                new VChipModel(chipLabel, VChipStyle.Solid, def.Hue), scale);
             chipX -= 6f * scale;
             drawnChips++;
         }
 
         if (photoCount > 0)
         {
-            var badgeText = photoCount + (photoCount == 1 ? " photo" : " photos");
+            var badgeText = Loc.Plural(L.Velvet.PhotoBadge, photoCount);
             var badgeWidth = Typography.Measure(badgeText, TextStyles.Footnote).X + 32f * scale;
             var badgeMin = new Vector2(card.Min.X + pad, card.Min.Y + pad);
             var badgeMax = new Vector2(badgeMin.X + badgeWidth, badgeMin.Y + 24f * scale);
@@ -281,9 +292,8 @@ internal sealed partial class VelvetShell
 
         Typography.Draw(new Vector2(textLeft, card.Max.Y - pad - 34f * scale),
             SocialIdentity.ProfileMeta(profile.Handle, region), VelvetTheme.BodyInk, TextStyles.Subheadline);
-        var lookingFor = mask == 0 ? "Open to anything" : "Looking for " + VelvetIntent.Describe(mask);
         Typography.Draw(new Vector2(textLeft, card.Max.Y - pad - 15f * scale),
-            Typography.FitText(lookingFor, textWidth, TextStyles.Footnote), VelvetTheme.RoseInk,
+            Typography.FitText(VelvetIntent.Summary(mask), textWidth, TextStyles.Footnote), VelvetTheme.RoseInk,
             TextStyles.SubheadlineEmphasized);
 
         if (!pillClicked && UiInteract.Hover(card.Min, card.Max) && !UiInteract.Hover(pillRect.Min, pillRect.Max) &&
@@ -350,10 +360,10 @@ internal sealed partial class VelvetShell
     private static (string Label, bool Filled, bool Enabled) ConnectCta(int state) =>
         state switch
         {
-            VelvetConnectionState.Connected => ("Message", false, true),
-            VelvetConnectionState.OutgoingRequest => ("Requested", false, false),
-            VelvetConnectionState.IncomingRequest => ("Reply", true, true),
-            _ => ("Connect", true, true),
+            VelvetConnectionState.Connected => (Loc.T(L.Velvet.Message), false, true),
+            VelvetConnectionState.OutgoingRequest => (Loc.T(L.Velvet.Requested), false, false),
+            VelvetConnectionState.IncomingRequest => (Loc.T(L.Velvet.Reply), true, true),
+            _ => (Loc.T(L.Velvet.Connect), true, true),
         };
 
     private void TickDiscoverSearch()

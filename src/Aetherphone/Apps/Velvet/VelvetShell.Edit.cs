@@ -3,6 +3,7 @@ using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -61,13 +62,13 @@ internal sealed partial class VelvetShell
             return;
         }
 
-        if (VHeader.Push(area, "Edit profile", theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.EditProfile), theme))
         {
             router.Pop();
             return;
         }
 
-        if (ui.HeaderAction(area, editBusy ? "Saving" : "Save", !editBusy))
+        if (ui.HeaderAction(area, editBusy ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Save), !editBusy))
         {
             SaveProfile();
         }
@@ -79,39 +80,39 @@ internal sealed partial class VelvetShell
             DrawEditAvatar();
             Gap(14f);
 
-            VSectionHeader.Card(FontAwesomeIcon.User, "Identity");
+            VSectionHeader.Card(FontAwesomeIcon.User, Loc.T(L.Velvet.CardIdentity));
             Gap(4f);
-            ui.Field("Display name", "##ed_name", ref editDisplayName, 40, false);
-            ui.Field("Handle", "##ed_handle", ref editHandle, 15, false);
+            ui.Field(Loc.T(L.Velvet.DisplayNameLabel), "##ed_name", ref editDisplayName, 40, false);
+            ui.Field(Loc.T(L.Velvet.HandleLabel), "##ed_handle", ref editHandle, 15, false);
             Gap(16f);
 
-            VSectionHeader.Card(FontAwesomeIcon.Feather, "About");
+            VSectionHeader.Card(FontAwesomeIcon.Feather, Loc.T(L.Velvet.CardAbout));
             Gap(4f);
-            ui.Field("Introduce yourself", "##ed_intro", ref editIntro, 400, true);
-            ui.Field("Pronouns", "##ed_pronouns", ref editPronouns, 40, false);
+            ui.Field(Loc.T(L.Velvet.IntroduceYourself), "##ed_intro", ref editIntro, 400, true);
+            ui.Field(Loc.T(L.Velvet.PronounsLabel), "##ed_pronouns", ref editPronouns, 40, false);
             Gap(16f);
 
-            VSectionHeader.Card(FontAwesomeIcon.Compass, "Intent");
+            VSectionHeader.Card(FontAwesomeIcon.Compass, Loc.T(L.Velvet.CardIntent));
             Gap(6f);
             DrawIntentEditor();
             Gap(16f);
 
-            VSectionHeader.Card(FontAwesomeIcon.Heart, "Role");
+            VSectionHeader.Card(FontAwesomeIcon.Heart, Loc.T(L.Velvet.CardRole));
             Gap(6f);
             DrawCategoryPicker(VelvetSuggestions.DynamicCategories, editRole);
             Gap(16f);
 
-            VSectionHeader.Card(FontAwesomeIcon.HandHoldingHeart, "Relationship");
+            VSectionHeader.Card(FontAwesomeIcon.HandHoldingHeart, Loc.T(L.Velvet.CardRelationship));
             Gap(6f);
             DrawRelationshipEditor();
             Gap(16f);
 
-            VSectionHeader.Card(FontAwesomeIcon.Hashtag, "Tags");
+            VSectionHeader.Card(FontAwesomeIcon.Hashtag, Loc.T(L.Velvet.CardTags));
             Gap(6f);
             DrawCategoryPicker(VelvetSuggestions.TagCategories, editTags);
             Gap(16f);
 
-            VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, "Limits");
+            VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, Loc.T(L.Velvet.CardLimits));
             Gap(6f);
             DrawTokenEditor(editLimits, VelvetSuggestions.Limits, VelvetTheme.Gold);
             Gap(16f);
@@ -148,7 +149,7 @@ internal sealed partial class VelvetShell
         var pillTop = center.Y + radius + 16f * scale;
         var changeRect = new Rect(new Vector2(block.Center.X - pillWidth * 0.5f, pillTop),
             new Vector2(block.Center.X + pillWidth * 0.5f, pillTop + 34f * scale));
-        var pillClicked = ui.GhostButton(changeRect, "Change photo");
+        var pillClicked = ui.GhostButton(changeRect, Loc.T(L.Velvet.ChangePhoto));
         if (pillClicked || (avatarHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left)))
         {
             avatar.Open();
@@ -165,7 +166,7 @@ internal sealed partial class VelvetShell
         {
             var def = VelvetIntent.All[index];
             var selected = VelvetIntent.Has(editIntent, def.Flag);
-            models[index] = new VChipModel(def.Label, selected ? VChipStyle.Solid : VChipStyle.Ghost,
+            models[index] = new VChipModel(Loc.T(def.Label), selected ? VChipStyle.Solid : VChipStyle.Ghost,
                 selected ? def.Hue : VelvetTheme.Moonlight, def.Icon);
         }
 

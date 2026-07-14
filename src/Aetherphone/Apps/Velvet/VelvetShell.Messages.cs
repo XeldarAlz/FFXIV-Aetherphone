@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -21,7 +22,11 @@ internal sealed partial class VelvetShell
         var segRect = new Rect(new Vector2(area.Min.X + pad, area.Min.Y + 8f * scale),
             new Vector2(area.Max.X - pad, area.Min.Y + 8f * scale + 32f * scale));
         var requestCount = store.RequestCount;
-        var labels = new[] { "Chats", requestCount > 0 ? "Requests (" + requestCount + ")" : "Requests" };
+        var labels = new[]
+        {
+            Loc.T(L.Velvet.ChatsTab),
+            requestCount > 0 ? Loc.T(L.Velvet.RequestsCount, requestCount) : Loc.T(L.Velvet.Requests),
+        };
         var picked = VSegmented.Draw("velvetMessages", segRect, labels, (int)messagesTab, scale);
         if (picked >= 0)
         {
@@ -54,9 +59,9 @@ internal sealed partial class VelvetShell
         if (threads.Length == 0)
         {
             Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 80f * scale),
-                "No conversations yet", VelvetTheme.TitleInk, TextStyles.Headline);
+                Loc.T(L.Velvet.MessagesEmpty), VelvetTheme.TitleInk, TextStyles.Headline);
             Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 106f * scale),
-                "Send an intro from Discover.", VelvetTheme.MutedInk, TextStyles.Subheadline);
+                Loc.T(L.Velvet.MessagesEmptyHint), VelvetTheme.MutedInk, TextStyles.Subheadline);
             return;
         }
 
@@ -64,7 +69,9 @@ internal sealed partial class VelvetShell
         for (var index = 0; index < threads.Length; index++)
         {
             var thread = threads[index];
-            var preview = string.IsNullOrEmpty(thread.LastMessagePreview) ? "Say hello" : thread.LastMessagePreview;
+            var preview = string.IsNullOrEmpty(thread.LastMessagePreview)
+                ? Loc.T(L.Velvet.ThreadEmpty)
+                : thread.LastMessagePreview;
             var model = new VRowModel
             {
                 Title = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
@@ -76,7 +83,7 @@ internal sealed partial class VelvetShell
                 World = string.Empty,
                 AvatarUrl = thread.OtherAvatarUrl,
                 Presence = thread.Presence,
-                Time = RelativeShort(thread.LastMessageAtUnix),
+                Time = TimeText.Short(thread.LastMessageAtUnix),
                 Badge = thread.UnreadCount,
             };
             if (VRow.Draw(in model, ui, theme, images, lodestone) == VRowHit.Body)
@@ -105,17 +112,17 @@ internal sealed partial class VelvetShell
         var sent = store.SentRequests;
         if (requests.Length == 0 && sent.Length == 0)
         {
-            Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 80f * scale), "No requests",
-                VelvetTheme.TitleInk, TextStyles.Headline);
+            Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 80f * scale),
+                Loc.T(L.Velvet.RequestsEmpty), VelvetTheme.TitleInk, TextStyles.Headline);
             Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 106f * scale),
-                "Intros you receive land here.", VelvetTheme.MutedInk, TextStyles.Subheadline);
+                Loc.T(L.Velvet.RequestsEmptyHint), VelvetTheme.MutedInk, TextStyles.Subheadline);
             return;
         }
 
         Gap(8f);
         if (requests.Length > 0)
         {
-            VSectionHeader.Overline("Requests", requests.Length.ToString());
+            VSectionHeader.Overline(Loc.T(L.Velvet.Requests), requests.Length.ToString(Loc.Culture));
             for (var index = 0; index < requests.Length; index++)
             {
                 DrawRequestRow(requests[index]);
@@ -125,7 +132,7 @@ internal sealed partial class VelvetShell
         if (sent.Length > 0)
         {
             Gap(14f);
-            VSectionHeader.Overline("Sent", sent.Length.ToString());
+            VSectionHeader.Overline(Loc.T(L.Velvet.SentRequests), sent.Length.ToString(Loc.Culture));
             for (var index = 0; index < sent.Length; index++)
             {
                 var request = sent[index];
@@ -138,7 +145,7 @@ internal sealed partial class VelvetShell
                     AvatarRadius = 20f,
                     Name = DisplayNameOf(request.DisplayName, request.Handle),
                     AvatarUrl = request.AvatarUrl,
-                    Pill = "Requested",
+                    Pill = Loc.T(L.Velvet.Requested),
                     PillFilled = false,
                     PillEnabled = true,
                 };
@@ -168,7 +175,7 @@ internal sealed partial class VelvetShell
             AvatarRadius = 22f,
             Name = DisplayNameOf(request.DisplayName, request.Handle),
             AvatarUrl = request.AvatarUrl,
-            Pill = "Accept",
+            Pill = Loc.T(L.Velvet.Accept),
             PillFilled = true,
             PillEnabled = true,
             Decline = true,
@@ -199,7 +206,7 @@ internal sealed partial class VelvetShell
     private void DrawIntro(Rect area, string userId)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        if (VHeader.Push(area, "Send an intro", theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.IntroTitle), theme))
         {
             router.Pop();
             return;
@@ -217,18 +224,19 @@ internal sealed partial class VelvetShell
                 VelvetTheme.GroundTop);
             Gap(80f);
             Typography.DrawWrappedCentered(new Vector2(centerX, ImGui.GetCursorScreenPos().Y),
-                "Introduce yourself to " + introName, VelvetTheme.TitleInk, TextStyles.Title3, width - 48f * scale);
+                Loc.T(L.Velvet.IntroduceYourselfTo, introName), VelvetTheme.TitleInk, TextStyles.Title3,
+                width - 48f * scale);
             Gap(50f);
 
-            ui.Field("Your intro", "##introText", ref introText, 140, true);
-            ui.HelpText("Your intro lands in their Requests. A reply accepts you.");
+            ui.Field(Loc.T(L.Velvet.YourIntro), "##introText", ref introText, 140, true);
+            ui.HelpText(Loc.T(L.Velvet.IntroSheetHint));
             Gap(16f);
 
             var sendRect = Reserve(46f);
             var canSend = introText.Trim().Length > 0;
             if (canSend)
             {
-                if (ui.PillButton(sendRect, "Send intro", true))
+                if (ui.PillButton(sendRect, Loc.T(L.Velvet.SendIntro), true))
                 {
                     SendIntro(userId);
                 }
@@ -237,7 +245,8 @@ internal sealed partial class VelvetShell
             {
                 Squircle.Fill(drawList, sendRect.Min, sendRect.Max, sendRect.Height * 0.5f,
                     VelvetTheme.Alpha(VelvetTheme.Rose, 0.35f).Packed());
-                Typography.DrawCentered(sendRect.Center, "Send intro", VelvetTheme.Alpha(VelvetTheme.OnAccent, 0.6f),
+                Typography.DrawCentered(sendRect.Center, Loc.T(L.Velvet.SendIntro),
+                    VelvetTheme.Alpha(VelvetTheme.OnAccent, 0.6f),
                     0.9f, FontWeight.SemiBold);
             }
 
@@ -253,37 +262,5 @@ internal sealed partial class VelvetShell
     }
 
     private static string IntroLineOf(VelvetConnectionDto request) =>
-        string.IsNullOrWhiteSpace(request.Intro) ? "wants to connect" : request.Intro;
-
-    private static string RelativeShort(long unix)
-    {
-        if (unix <= 0)
-        {
-            return string.Empty;
-        }
-
-        var then = DateTimeOffset.FromUnixTimeSeconds(unix);
-        var span = DateTimeOffset.UtcNow - then;
-        if (span.TotalMinutes < 1)
-        {
-            return "now";
-        }
-
-        if (span.TotalHours < 1)
-        {
-            return (int)span.TotalMinutes + "m";
-        }
-
-        if (span.TotalDays < 1)
-        {
-            return (int)span.TotalHours + "h";
-        }
-
-        if (span.TotalDays < 7)
-        {
-            return (int)span.TotalDays + "d";
-        }
-
-        return then.ToLocalTime().ToString("MMM d");
-    }
+        string.IsNullOrWhiteSpace(request.Intro) ? Loc.T(L.Velvet.WantsToConnect) : request.Intro;
 }

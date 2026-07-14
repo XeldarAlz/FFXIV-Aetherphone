@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface.Utility;
 
@@ -15,7 +16,7 @@ internal sealed partial class VelvetShell
     private void DrawActivity(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        if (VHeader.Push(area, "Activity", theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.Activity), theme))
         {
             router.Pop();
             return;

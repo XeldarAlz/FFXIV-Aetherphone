@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -36,7 +37,7 @@ internal static class VMediaTile
     public static void InReview(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius)
     {
         Squircle.Fill(drawList, min, max, radius, VelvetTheme.Scrim.Packed());
-        Typography.DrawCentered(new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f), "In review",
-            VelvetTheme.TitleInk, TextStyles.FootnoteEmphasized);
+        Typography.DrawCentered(new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
+            Loc.T(L.Moderation.InReview), VelvetTheme.TitleInk, TextStyles.FootnoteEmphasized);
     }
 }

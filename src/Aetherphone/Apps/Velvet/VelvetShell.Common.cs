@@ -25,6 +25,12 @@ internal sealed partial class VelvetShell
         ImGui.Dummy(new Vector2(0f, pixels * ImGuiHelpers.GlobalScale));
     }
 
+    private static Rect AnchorBox(Vector2 center, float half)
+    {
+        var offset = new Vector2(half, half);
+        return new Rect(center - offset, center + offset);
+    }
+
     private static void WrapText(string text, Vector4 color, in TextStyle style)
     {
         ImGui.PushTextWrapPos(0f);

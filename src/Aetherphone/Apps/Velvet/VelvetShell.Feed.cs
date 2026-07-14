@@ -3,6 +3,7 @@ using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -26,13 +27,13 @@ internal sealed partial class VelvetShell
             var feed = store.Feed;
             if (feed.Length == 0)
             {
-                var message = store.LoadingFeed ? "Loading" : "Nothing shared yet";
+                var message = store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.FeedNone);
                 Typography.DrawCentered(new Vector2(area.Center.X, area.Min.Y + 90f * scale), message,
                     VelvetTheme.TitleInk, TextStyles.Headline);
                 if (!store.LoadingFeed)
                 {
                     Typography.DrawCentered(new Vector2(area.Center.X, area.Min.Y + 116f * scale),
-                        "Be the first to post.", VelvetTheme.MutedInk, TextStyles.Subheadline);
+                        Loc.T(L.Velvet.FeedNoneHint), VelvetTheme.MutedInk, TextStyles.Subheadline);
                 }
             }
             else
@@ -54,7 +55,8 @@ internal sealed partial class VelvetShell
             }
         }
 
-        if (ComposeFab.Draw(area, "velvetCompose", VelvetTheme.Rose, FontAwesomeIcon.Plus.ToIconString(), "Share"))
+        if (ComposeFab.Draw(area, "velvetCompose", VelvetTheme.Rose, FontAwesomeIcon.Plus.ToIconString(),
+                Loc.T(L.Velvet.Share), "velvet.compose"))
         {
             post.Open();
             router.Push(VelvetView.Compose);
@@ -86,7 +88,7 @@ internal sealed partial class VelvetShell
         Typography.Draw(new Vector2(textLeft, headerCenterY - 14f * scale), authorName, VelvetTheme.TitleInk,
             TextStyles.Headline);
         Typography.Draw(new Vector2(textLeft, headerCenterY + 2f * scale),
-            "@" + entry.OwnerHandle + " · " + RelativeShort(entry.CreatedAtUnix), VelvetTheme.MutedInk,
+            "@" + entry.OwnerHandle + " · " + TimeText.Short(entry.CreatedAtUnix), VelvetTheme.MutedInk,
             TextStyles.Subheadline);
 
         var headerHitMin = new Vector2(card.Min.X, card.Min.Y);
@@ -150,7 +152,8 @@ internal sealed partial class VelvetShell
         {
             VMediaTile.Placeholder(drawList, min, max, rounding);
             Typography.DrawCentered(new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
-                images.Failed(url) ? "Image unavailable" : "Loading", VelvetTheme.MutedInk, TextStyles.Footnote);
+                images.Failed(url) ? Loc.T(L.Velvet.ImageUnavailable) : Loc.T(L.Common.Loading), VelvetTheme.MutedInk,
+                TextStyles.Footnote);
             return;
         }
 

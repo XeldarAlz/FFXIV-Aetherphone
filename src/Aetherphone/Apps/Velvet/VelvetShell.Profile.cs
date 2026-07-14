@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -16,7 +17,7 @@ internal sealed partial class VelvetShell
     {
         var scale = ImGuiHelpers.GlobalScale;
         var user = store.ProfileUserId == userId ? store.ProfileUser : null;
-        var title = user != null ? DisplayNameOf(user.DisplayName, user.Handle) : "Profile";
+        var title = user != null ? DisplayNameOf(user.DisplayName, user.Handle) : Loc.T(L.Velvet.ProfileTitle);
         if (VHeader.Push(area, title, theme))
         {
             router.Pop();
@@ -27,9 +28,9 @@ internal sealed partial class VelvetShell
         {
             var flagCenter = new Vector2(area.Max.X - 22f * scale, area.Min.Y + VHeader.Height * scale * 0.5f);
             if (ui.IconButton(flagCenter, 15f * scale, FontAwesomeIcon.Flag.ToIconString(), VelvetTheme.MutedInk,
-                    AppSkin.Transparent, 0.82f, "Report"))
+                    AppSkin.Transparent, 0.82f, Loc.T(L.Velvet.Report)))
             {
-                OpenReport("velvet_profile", user.UserId, "Report profile");
+                OpenReport("velvet_profile", user.UserId, Loc.T(L.Velvet.ReportProfile));
             }
         }
 
@@ -38,12 +39,12 @@ internal sealed partial class VelvetShell
         {
             if (store.ProfileLoading)
             {
-                Typography.DrawCentered(body.Center, "Loading", VelvetTheme.MutedInk, TextStyles.Callout);
+                Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetTheme.MutedInk, TextStyles.Callout);
             }
             else
             {
-                EmptyState.Draw(body, ui, FontAwesomeIcon.User, "Profile unavailable",
-                    "This person may be private or no longer here.");
+                EmptyState.Draw(body, ui, FontAwesomeIcon.User, Loc.T(L.Velvet.ProfileUnavailable),
+                    Loc.T(L.Velvet.ProfileUnavailableHint));
             }
 
             return;
@@ -94,9 +95,8 @@ internal sealed partial class VelvetShell
                 lineY += 22f * scale;
             }
 
-            var mask = VelvetIntent.Sanitize(user.LookingFor);
-            var lookingFor = mask == 0 ? "Open to anything" : "Looking for " + VelvetIntent.Describe(mask);
-            Typography.DrawCentered(new Vector2(centerX, lineY), lookingFor, VelvetTheme.RoseInk, TextStyles.Headline);
+            Typography.DrawCentered(new Vector2(centerX, lineY), VelvetIntent.Summary(user.LookingFor),
+                VelvetTheme.RoseInk, TextStyles.Headline);
             lineY += 22f * scale;
 
             var sub = user.RelationshipStatus != VelvetRelationship.NotSaying
@@ -125,7 +125,7 @@ internal sealed partial class VelvetShell
             {
                 Gap(10f);
                 var settingsRect = Reserve(44f);
-                if (ui.GhostButton(settingsRect, "Settings"))
+                if (ui.GhostButton(settingsRect, Loc.T(L.Velvet.Settings)))
                 {
                     settingsLoaded = false;
                     router.Push(VelvetView.Settings);
@@ -138,7 +138,7 @@ internal sealed partial class VelvetShell
             if (user.Intro.Length > 0)
             {
                 Gap(20f);
-                VSectionHeader.Bar("About");
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardAbout));
                 Gap(4f);
                 WrapText(user.Intro, VelvetTheme.BodyInk, TextStyles.Body);
             }
@@ -146,7 +146,7 @@ internal sealed partial class VelvetShell
             if (VelvetIntent.IncludesErp(user.LookingFor) && user.Dynamic.Length > 0)
             {
                 Gap(18f);
-                VSectionHeader.Bar("Role");
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardRole));
                 Gap(4f);
                 DrawDisplayTokens(VelvetTags.Parse(user.Dynamic), VChipStyle.Tint, new Vector4(0.62f, 0.22f, 0.60f, 1f));
             }
@@ -154,7 +154,7 @@ internal sealed partial class VelvetShell
             if (user.Tags.Length > 0)
             {
                 Gap(18f);
-                VSectionHeader.Bar("Tags");
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardTags));
                 Gap(4f);
                 DrawDisplayTokens(user.Tags, VChipStyle.Tint, VelvetTheme.Rose);
             }
@@ -162,7 +162,7 @@ internal sealed partial class VelvetShell
             if (user.Limits.Length > 0)
             {
                 Gap(18f);
-                VSectionHeader.Bar("Limits");
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardLimits));
                 Gap(4f);
                 DrawDisplayTokens(user.Limits, VChipStyle.Outline, VelvetTheme.Gold);
             }
@@ -174,12 +174,12 @@ internal sealed partial class VelvetShell
                 var actionRect = Reserve(42f);
                 if (blocked)
                 {
-                    if (ui.GhostButton(actionRect, "Unblock"))
+                    if (ui.GhostButton(actionRect, Loc.T(L.Velvet.Unblock)))
                     {
                         store.Unblock(user.UserId);
                     }
                 }
-                else if (ui.DangerGhostButton(actionRect, "Block"))
+                else if (ui.DangerGhostButton(actionRect, Loc.T(L.Velvet.Block)))
                 {
                     store.Block(user.UserId, _ => { });
                 }
@@ -218,7 +218,8 @@ internal sealed partial class VelvetShell
         }
 
         var width = ImGui.GetContentRegionAvail().X;
-        VSectionHeader.Bar(isMe ? "My photos" : "Photos", owned.Count > 0 ? owned.Count.ToString() : string.Empty);
+        VSectionHeader.Bar(isMe ? Loc.T(L.Velvet.MyPhotos) : Loc.T(L.Velvet.Photos),
+            owned.Count > 0 ? owned.Count.ToString(Loc.Culture) : string.Empty);
         Gap(6f);
 
         if (owned.Count == 0)
@@ -230,7 +231,7 @@ internal sealed partial class VelvetShell
             else
             {
                 Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(0f, 2f * scale),
-                    isMe ? "You have not shared any photos yet." : "No photos shared yet.", VelvetTheme.MutedInk,
+                    isMe ? Loc.T(L.Velvet.NoPhotosMine) : Loc.T(L.Velvet.NoPhotosShared), VelvetTheme.MutedInk,
                     TextStyles.Footnote);
                 Gap(24f);
             }
@@ -282,7 +283,7 @@ internal sealed partial class VelvetShell
         ImGui.Dummy(new Vector2(width, cell));
         Gap(12f);
         Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, ImGui.GetCursorScreenPos().Y),
-            "Connect with " + name + " to see their photos", VelvetTheme.RoseInk, TextStyles.Callout, width - 40f * scale);
+            Loc.T(L.Velvet.ConnectToSeePhotos, name), VelvetTheme.RoseInk, TextStyles.Callout, width - 40f * scale);
         Gap(30f);
     }
 
@@ -291,7 +292,7 @@ internal sealed partial class VelvetShell
         var rect = Reserve(46f);
         if (isMe)
         {
-            if (ui.PillButton(rect, "Edit profile", true))
+            if (ui.PillButton(rect, Loc.T(L.Velvet.EditProfile), true))
             {
                 BeginEditProfile();
                 router.Push(VelvetView.EditProfile);
@@ -303,21 +304,21 @@ internal sealed partial class VelvetShell
         switch (user.ConnectionState)
         {
             case VelvetConnectionState.Connected:
-                if (ui.PillButton(rect, "Message", true))
+                if (ui.PillButton(rect, Loc.T(L.Velvet.Message), true))
                 {
                     OpenThread(user.UserId);
                 }
 
                 break;
             case VelvetConnectionState.OutgoingRequest:
-                if (ui.GhostButton(rect, "Requested"))
+                if (ui.GhostButton(rect, Loc.T(L.Velvet.Requested)))
                 {
                     store.CancelRequest(user.UserId);
                 }
 
                 break;
             case VelvetConnectionState.IncomingRequest:
-                if (ui.PillButton(rect, "Reply", true))
+                if (ui.PillButton(rect, Loc.T(L.Velvet.Reply), true))
                 {
                     OpenThread(user.UserId);
                 }
@@ -326,7 +327,7 @@ internal sealed partial class VelvetShell
             case VelvetConnectionState.Blocked:
                 break;
             default:
-                if (ui.PillButton(rect, "Introduce yourself", true))
+                if (ui.PillButton(rect, Loc.T(L.Velvet.IntroduceYourself), true))
                 {
                     RequestIntro(user.UserId, DisplayNameOf(user.DisplayName, user.Handle));
                 }

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -88,7 +89,7 @@ internal sealed class VFilterSheet
         Material.EdgeSquircle(drawList, min, max, radius, scale);
 
         var headerCenterY = min.Y + padY + headerHeight * 0.5f;
-        var headerLabel = "Looking for";
+        var headerLabel = Loc.T(L.Velvet.LookingForLabel);
         var headerSize = Typography.Measure(headerLabel, 0.82f, FontWeight.SemiBold);
         Typography.Draw(drawList, new Vector2(min.X + 16f * scale, headerCenterY - headerSize.Y * 0.5f), headerLabel,
             VelvetTheme.Alpha(VelvetTheme.HeaderInk, alpha), 0.82f, FontWeight.SemiBold);
@@ -116,8 +117,9 @@ internal sealed class VFilterSheet
             AppSkin.Icon(drawList, iconCenter, def.Icon.ToIconString(), VelvetTheme.Alpha(def.Hue, alpha), 0.9f);
 
             var labelInk = selected ? VelvetTheme.TitleInk : VelvetTheme.BodyInk;
-            var labelSize = Typography.Measure(def.Label, 0.95f, FontWeight.Medium);
-            Typography.Draw(drawList, new Vector2(iconCenter.X + 22f * scale, centerY - labelSize.Y * 0.5f), def.Label,
+            var label = Loc.T(def.Label);
+            var labelSize = Typography.Measure(label, 0.95f, FontWeight.Medium);
+            Typography.Draw(drawList, new Vector2(iconCenter.X + 22f * scale, centerY - labelSize.Y * 0.5f), label,
                 VelvetTheme.Alpha(labelInk, alpha), 0.95f, FontWeight.Medium);
 
             DrawCheckbox(drawList, new Vector2(rowMax.X - 22f * scale, centerY), selected, def.Hue, alpha, scale);
@@ -137,7 +139,7 @@ internal sealed class VFilterSheet
             VelvetTheme.Alpha(VelvetTheme.Divider, alpha).Packed(), 1f);
         var footerCenterY = footerTop + footerHeight * 0.5f;
 
-        var clearLabel = "Clear all";
+        var clearLabel = Loc.T(L.Velvet.FilterClearAll);
         var clearSize = Typography.Measure(clearLabel, 0.9f, FontWeight.Medium);
         var clearMin = new Vector2(min.X + 12f * scale, footerCenterY - 16f * scale);
         var clearMax = new Vector2(clearMin.X + clearSize.X + 16f * scale, footerCenterY + 16f * scale);
@@ -162,7 +164,7 @@ internal sealed class VFilterSheet
         var doneHovered = ImGui.IsMouseHoveringRect(doneMin, doneMax);
         var doneFill = doneHovered ? VelvetTheme.Lerp(VelvetTheme.Rose, VelvetTheme.OnAccent, 0.12f) : VelvetTheme.Rose;
         Squircle.Fill(drawList, doneMin, doneMax, doneHeight * 0.5f, VelvetTheme.Alpha(doneFill, alpha).Packed());
-        var doneLabel = "Done";
+        var doneLabel = Loc.T(L.Velvet.FilterDone);
         var doneSize = Typography.Measure(doneLabel, 0.9f, FontWeight.SemiBold);
         Typography.Draw(drawList,
             new Vector2((doneMin.X + doneMax.X) * 0.5f - doneSize.X * 0.5f, footerCenterY - doneSize.Y * 0.5f),

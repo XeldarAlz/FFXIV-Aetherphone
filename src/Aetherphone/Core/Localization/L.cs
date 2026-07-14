@@ -1221,7 +1221,7 @@ internal static class L
         public static readonly LocString PresenceOffline = new("velvet.presenceOffline", "Offline");
         public static readonly LocString Locked = new("velvet.locked", "Locked");
         public static readonly LocString Unlock = new("velvet.unlock", "Unlock");
-        public static readonly LocString EditProfile = new("velvet.editProfile", "Edit Profile");
+        public static readonly LocString EditProfile = new("velvet.editProfile", "Edit profile");
         public static readonly LocString IntroLabel = new("velvet.introLabel", "About you");
         public static readonly LocString PronounsLabel = new("velvet.pronounsLabel", "Pronouns");
         public static readonly LocString DynamicLabel = new("velvet.dynamicLabel", "Your vibe");
@@ -1307,7 +1307,7 @@ internal static class L
         public static readonly LocString Suggestions = new("velvet.suggestions", "Tap to add");
         public static readonly LocString IdentityHeader = new("velvet.identityHeader", "Display");
         public static readonly LocString DisplayNameLabel = new("velvet.displayNameLabel", "Display name");
-        public static readonly LocString HandleLabel = new("velvet.handleLabel", "Username");
+        public static readonly LocString HandleLabel = new("velvet.handleLabel", "Handle");
         public static readonly LocString AboutHeader = new("velvet.aboutHeader", "About you");
         public static readonly LocString WantHeader = new("velvet.wantHeader", "What you're after");
         public static readonly LocString SafetyHeader = new("velvet.safetyHeader", "Safety");
@@ -1346,7 +1346,6 @@ internal static class L
         public static readonly LocString NoPhotosShared = new("velvet.noPhotosShared", "No photos shared yet.");
         public static readonly LocString NoPhotosMine = new("velvet.noPhotosMine", "You have not shared any photos yet.");
         public static readonly LocString ConnectToSeePhotos = new("velvet.connectToSeePhotos", "Connect with {0} to see their photos");
-        public static readonly LocString PhotoCount = new("velvet.photoCount", "{0} photos");
         public static readonly LocString IntroTitle = new("velvet.introTitle", "Send an intro");
         public static readonly LocString IntroduceYourselfTo = new("velvet.introduceYourselfTo", "Introduce yourself to {0}");
         public static readonly LocString YourIntro = new("velvet.yourIntro", "Your intro");
@@ -1355,6 +1354,99 @@ internal static class L
         public static readonly LocString Reply = new("velvet.reply", "Reply");
         public static readonly LocString Activity = new("velvet.activity", "Activity");
         public static readonly LocString Post = new("velvet.post", "Post");
+        public static readonly LocString IntentAny = new("velvet.intentAny", "Any");
+        public static readonly LocString IntentErpBlurb = new("velvet.intentErpBlurb", "Erotic roleplay and scenes");
+        public static readonly LocString IntentGposeBlurb = new("velvet.intentGposeBlurb", "Group pose shoots and art");
+        public static readonly LocString IntentRelationshipBlurb =
+            new("velvet.intentRelationshipBlurb", "Something with feelings");
+        public static readonly LocString IntentCollabBlurb =
+            new("velvet.intentCollabBlurb", "Writing and story partners");
+        public static readonly LocString IntentFriendsBlurb =
+            new("velvet.intentFriendsBlurb", "Just here to make friends");
+        public static readonly LocString IntentSharingBlurb = new("velvet.intentSharingBlurb", "Trading photos and media");
+        public static readonly LocString IntentWanderingBlurb = new("velvet.intentWanderingBlurb", "Seeing who is around");
+        public static readonly LocString CatDominant = new("velvet.catDominant", "Dominant");
+        public static readonly LocString CatSubmissive = new("velvet.catSubmissive", "Submissive");
+        public static readonly LocString CatSwitch = new("velvet.catSwitch", "Switch");
+        public static readonly LocString CatTone = new("velvet.catTone", "Tone");
+        public static readonly LocString CatPace = new("velvet.catPace", "Pace");
+        public static readonly LocString CatStyle = new("velvet.catStyle", "Style");
+        public static readonly LocString DiscoverLoading = new("velvet.discoverLoading", "Looking for people…");
+        public static readonly LocString DiscoverNone = new("velvet.discoverNone", "No one here yet.");
+        public static readonly LocString DiscoverNoneHint =
+            new("velvet.discoverNoneHint", "Try clearing filters or check back later.");
+        public static readonly LocPlural PhotoBadge = new("velvet.photoBadge", "{0} photo", "{0} photos");
+        public static readonly LocString FilterClearAll = new("velvet.filterClearAll", "Clear all");
+        public static readonly LocString FilterDone = new("velvet.filterDone", "Done");
+        public static readonly LocString FeedNone = new("velvet.feedNone", "Nothing shared yet");
+        public static readonly LocString FeedNoneHint = new("velvet.feedNoneHint", "Be the first to post.");
+        public static readonly LocString ImageUnavailable = new("velvet.imageUnavailable", "Image unavailable");
+        public static readonly LocString GateTagline =
+            new("velvet.gateTagline", "A private, adults only corner of the suite. Moonlit, unhurried, yours.");
+        public static readonly LocString GateConsent =
+            new("velvet.gateConsent", "By entering you confirm you are 18 or older. Be kind, be discreet.");
+        public static readonly LocString GateEnterAction = new("velvet.gateEnterAction", "Enter");
+        public static readonly LocString DiscoveryHeader = new("velvet.discoveryHeader", "Discovery");
+        public static readonly LocString DiscoverableHelp =
+            new("velvet.discoverableHelp", "When on, your profile can be found by others in Discover.");
+        public static readonly LocString WhoCanMessage = new("velvet.whoCanMessage", "Who can message you");
+        public static readonly LocString WhoEveryone = new("velvet.whoEveryone", "Everyone");
+        public static readonly LocString WhoFriends = new("velvet.whoFriends", "Friends");
+        public static readonly LocString WhoNoOne = new("velvet.whoNoOne", "No one");
+        public static readonly LocString WhoHelp =
+            new("velvet.whoHelp", "Choose who can send you a one line intro. Friends means friends of friends.");
+        public static readonly LocString BlockedNone = new("velvet.blockedNone", "No one blocked.");
+        public static readonly LocString ChatsTab = new("velvet.chatsTab", "Chats");
+        public static readonly LocString RequestsCount = new("velvet.requestsCount", "Requests ({0})");
+        public static readonly LocString MessagesEmptyHint =
+            new("velvet.messagesEmptyHint", "Send an intro from Discover.");
+        public static readonly LocString RequestsEmpty = new("velvet.requestsEmpty", "No requests");
+        public static readonly LocString RequestsEmptyHint =
+            new("velvet.requestsEmptyHint", "Intros you receive land here.");
+        public static readonly LocString ProfileTitle = new("velvet.profileTitle", "Profile");
+        public static readonly LocString ProfileUnavailable = new("velvet.profileUnavailable", "Profile unavailable");
+        public static readonly LocString ProfileUnavailableHint =
+            new("velvet.profileUnavailableHint", "This person may be private or no longer here.");
+        public static readonly LocString Report = new("velvet.report", "Report");
+        public static readonly LocString ReportProfile = new("velvet.reportProfile", "Report profile");
+        public static readonly LocString ReportPost = new("velvet.reportPost", "Report post");
+        public static readonly LocString IntroduceYourself = new("velvet.introduceYourself", "Introduce yourself");
+        public static readonly LocString CardIdentity = new("velvet.cardIdentity", "Identity");
+        public static readonly LocString CardAbout = new("velvet.cardAbout", "About");
+        public static readonly LocString CardIntent = new("velvet.cardIntent", "Intent");
+        public static readonly LocString CardRole = new("velvet.cardRole", "Role");
+        public static readonly LocString CardRelationship = new("velvet.cardRelationship", "Relationship");
+        public static readonly LocString CardTags = new("velvet.cardTags", "Tags");
+        public static readonly LocString CardLimits = new("velvet.cardLimits", "Limits");
+        public static readonly LocString LikesTitle = new("velvet.likesTitle", "Likes");
+        public static readonly LocString NoLikes = new("velvet.noLikes", "No likes yet.");
+        public static readonly LocString CommentsCount = new("velvet.commentsCount", "Comments · {0}");
+        public static readonly LocString SignedOutTitle = new("velvet.signedOutTitle", "Velvet is after dark");
+        public static readonly LocString SignedOutHint =
+            new("velvet.signedOutHint", "Sign in to your account to step inside.");
+        public static readonly LocString ObTitleIdentity = new("velvet.obTitleIdentity", "Make your entrance");
+        public static readonly LocString ObTitleAbout = new("velvet.obTitleAbout", "Say hello");
+        public static readonly LocString ObTitleReady = new("velvet.obTitleReady", "You are all set");
+        public static readonly LocString ObSubIdentity =
+            new("velvet.obSubIdentity", "This is the first thing people see in Discover.");
+        public static readonly LocString ObSubIntent =
+            new("velvet.obSubIntent", "Choose everything that fits. It shapes who finds you.");
+        public static readonly LocString ObSubAbout = new("velvet.obSubAbout", "A line or two goes a long way.");
+        public static readonly LocString ObSubReady =
+            new("velvet.obSubReady", "A couple of last touches, then step inside.");
+        public static readonly LocString Continue = new("velvet.continue", "Continue");
+        public static readonly LocString ObHandleHelp = new("velvet.obHandleHelp",
+            "Your handle is how people @mention you. You can change all of this later from Edit profile.");
+        public static readonly LocString AddPhoto = new("velvet.addPhoto", "Add a photo");
+        public static readonly LocString YourRole = new("velvet.yourRole", "Your role");
+        public static readonly LocString RoleErpHelp =
+            new("velvet.roleErpHelp", "Optional. Shown because you are here for ERP.");
+        public static readonly LocString VibeOptionalHelp =
+            new("velvet.vibeOptionalHelp", "Optional. A few tags help the right people find you.");
+        public static readonly LocString ObDiscoverableHelp = new("velvet.obDiscoverableHelp",
+            "When on, your profile can be found by others. When off, only people you connect with can see you.");
+        public static readonly LocString ObConductHelp = new("velvet.obConductHelp",
+            "Velvet is for adults. Be kind and discreet, and remember block and report are always one tap away.");
     }
 
     internal static class Clock
@@ -2036,6 +2128,12 @@ internal static class L
         public static readonly LocString VelvetBody = new("onboarding.velvetBody", "Welcome to Velvet! A private, 18+ space for sharing mature work and connecting with like-minded people, separate from the rest of the phone.");
         public static readonly LocString VelvetDiscoverTitle = new("onboarding.velvetDiscoverTitle", "Discover people");
         public static readonly LocString VelvetDiscoverBody = new("onboarding.velvetDiscoverBody", "Browse profiles filtered by what people are looking for, and send a connection request when you find someone interesting.");
+        public static readonly LocString VelvetFilterTitle = new("onboarding.velvetFilterTitle", "Filter by intent");
+        public static readonly LocString VelvetFilterBody = new("onboarding.velvetFilterBody", "Narrow the people here to exactly what you want, from ERP to gpose to just making friends.");
+        public static readonly LocString VelvetFeedTitle = new("onboarding.velvetFeedTitle", "The live feed");
+        public static readonly LocString VelvetFeedBody = new("onboarding.velvetFeedBody", "This is the live feed, where people share photos and posts across Velvet. Everything here stays inside Velvet.");
+        public static readonly LocString VelvetActivityTitle = new("onboarding.velvetActivityTitle", "Your activity");
+        public static readonly LocString VelvetActivityBody = new("onboarding.velvetActivityBody", "Likes, comments and new intros land here. Tap the bell any time to catch up.");
         public static readonly LocString VelvetMessagesTitle = new("onboarding.velvetMessagesTitle", "Requests and messages");
         public static readonly LocString VelvetMessagesBody = new("onboarding.velvetMessagesBody", "Accept or decline requests, then chat privately with the connections you make.");
         public static readonly LocString VelvetProfileTitle = new("onboarding.velvetProfileTitle", "Your profile");

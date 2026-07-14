@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -13,7 +14,8 @@ internal static class VSectionHeader
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        Typography.Draw(origin, label.ToUpperInvariant(), VelvetTheme.HeaderInk, TextStyles.FootnoteEmphasized);
+        Typography.Draw(origin, Loc.Culture.TextInfo.ToUpper(label), VelvetTheme.HeaderInk,
+            TextStyles.FootnoteEmphasized);
         if (trailing.Length > 0)
         {
             var size = Typography.Measure(trailing, TextStyles.FootnoteEmphasized);

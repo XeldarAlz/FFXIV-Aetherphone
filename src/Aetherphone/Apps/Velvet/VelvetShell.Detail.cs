@@ -22,7 +22,7 @@ internal sealed partial class VelvetShell
     private void DrawPostDetail(Rect area, string postId)
     {
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, "Post", back);
+        AppHeader.Draw(context, Loc.T(L.Velvet.Post), back);
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
@@ -71,7 +71,7 @@ internal sealed partial class VelvetShell
                 images, lodestone, -1);
             var nameLeft = avatarCenter.X + avatarRadius + 10f * scale;
             var ownerSub = post.OwnerHandle.Length > 0 ? "@" + post.OwnerHandle : string.Empty;
-            var ownerTime = RelativeShort(post.CreatedAtUnix);
+            var ownerTime = TimeText.Short(post.CreatedAtUnix);
             if (ownerTime.Length > 0)
             {
                 ownerSub = ownerSub.Length > 0 ? ownerSub + " · " + ownerTime : ownerTime;
@@ -99,7 +99,7 @@ internal sealed partial class VelvetShell
             var liked = post.MyReaction >= 0;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);
             if (ui.IconButton(heartCenter, 15f * scale, FontAwesomeIcon.Heart.ToIconString(),
-                    liked ? VelvetTheme.Rose : VelvetTheme.BodyInk, AppSkin.Transparent, 1.2f, "Like"))
+                    liked ? VelvetTheme.Rose : VelvetTheme.BodyInk, AppSkin.Transparent, 1.2f, Loc.T(L.Velvet.Like)))
             {
                 store.ToggleReaction(post, 0);
             }
@@ -142,15 +142,15 @@ internal sealed partial class VelvetShell
             if (mine)
             {
                 if (ui.IconButton(trailingCenter, 14f * scale, FontAwesomeIcon.Trash.ToIconString(), VelvetTheme.Danger,
-                        VelvetTheme.Alpha(VelvetTheme.Danger, 0.16f), 0.9f, "Delete"))
+                        VelvetTheme.Alpha(VelvetTheme.Danger, 0.16f), 0.9f, Loc.T(L.Velvet.DeleteConfirm)))
                 {
                     AskDeletePost(post.Id);
                 }
             }
             else if (ui.IconButton(trailingCenter, 14f * scale, FontAwesomeIcon.Flag.ToIconString(), VelvetTheme.Danger,
-                         VelvetTheme.Alpha(VelvetTheme.Danger, 0.16f), 0.9f, "Report"))
+                         VelvetTheme.Alpha(VelvetTheme.Danger, 0.16f), 0.9f, Loc.T(L.Velvet.Report)))
             {
-                OpenReport("velvet_media", post.Id, "Report post");
+                OpenReport("velvet_media", post.Id, Loc.T(L.Velvet.ReportPost));
             }
 
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
@@ -180,7 +180,7 @@ internal sealed partial class VelvetShell
             VelvetTheme.Divider.Packed(), 1f);
         Gap(14f);
         var count = store.DetailComments.Length;
-        VSectionHeader.Bar(count > 0 ? "Comments · " + count : "Comments");
+        VSectionHeader.Bar(count > 0 ? Loc.T(L.Velvet.CommentsCount, count) : Loc.T(L.Velvet.Comments));
         if (store.LoadingComments)
         {
             Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(0f, 2f * scale), Loc.T(L.Common.Loading),
@@ -192,7 +192,7 @@ internal sealed partial class VelvetShell
         var comments = store.DetailComments;
         if (comments.Length == 0)
         {
-            Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(0f, 2f * scale), "No comments yet. Say something.",
+            Typography.Draw(ImGui.GetCursorScreenPos() + new Vector2(0f, 2f * scale), Loc.T(L.Velvet.NoComments),
                 VelvetTheme.MutedInk, TextStyles.Footnote);
             Gap(18f);
             return;
@@ -218,7 +218,7 @@ internal sealed partial class VelvetShell
         var wrapWidth = origin.X + width - 28f * scale - textLeft;
         Typography.Draw(new Vector2(textLeft, origin.Y), authorName, VelvetTheme.TitleInk, TextStyles.SubheadlineEmphasized);
         var nameWidth = Typography.Measure(authorName, TextStyles.SubheadlineEmphasized).X;
-        var time = RelativeShort(comment.CreatedAtUnix);
+        var time = TimeText.Short(comment.CreatedAtUnix);
         if (time.Length > 0)
         {
             Typography.Draw(new Vector2(textLeft + nameWidth + 8f * scale, origin.Y + 1f * scale), time,
@@ -255,7 +255,7 @@ internal sealed partial class VelvetShell
 
         var heartCenter = new Vector2(origin.X + width - 10f * scale, origin.Y + 28f * scale);
         if (CommentHeart.Draw(ui, heartCenter, comment.Liked, comment.LikeCount, VelvetTheme.MutedInk,
-                VelvetTheme.MutedInk, "Like", out var heartBottom))
+                VelvetTheme.MutedInk, Loc.T(L.Velvet.Like), out var heartBottom))
         {
             store.ToggleCommentLike(comment);
         }
@@ -281,7 +281,7 @@ internal sealed partial class VelvetShell
         using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
         using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
-            if (ImGui.InputTextWithHint("##velvetComment", "Add a comment", ref commentDraft, 500,
+            if (ImGui.InputTextWithHint("##velvetComment", Loc.T(L.Velvet.AddComment), ref commentDraft, 500,
                     ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 submitted = true;
@@ -320,7 +320,7 @@ internal sealed partial class VelvetShell
     private void DrawLikers(Rect area, string postId)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        if (VHeader.Push(area, "Likes", theme))
+        if (VHeader.Push(area, Loc.T(L.Velvet.LikesTitle), theme))
         {
             router.Pop();
             return;
@@ -339,7 +339,7 @@ internal sealed partial class VelvetShell
             var likers = store.Likers;
             if (likers.Length == 0)
             {
-                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 70f * scale), "No likes yet.",
+                Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 70f * scale), Loc.T(L.Velvet.NoLikes),
                     VelvetTheme.MutedInk, TextStyles.Callout);
                 return;
             }
