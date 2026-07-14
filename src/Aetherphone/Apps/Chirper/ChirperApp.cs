@@ -673,6 +673,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         }
 
         ImGui.PopTextWrapPos();
+        var textBottom = ImGui.GetCursorScreenPos().Y;
         if (store.Me is { } me && me.Id == comment.AuthorId && store.DetailPost is { } post)
         {
             var trashCenter = new Vector2(origin.X + width - 10f * scale, origin.Y + 9f * scale);
@@ -690,7 +691,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             store.ToggleCommentLike(comment);
         }
 
-        var bottom = MathF.Max(MathF.Max(ImGui.GetCursorScreenPos().Y, origin.Y + radius * 2f), heartBottom);
+        var bottom = MathF.Max(MathF.Max(textBottom, origin.Y + radius * 2f), heartBottom);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, bottom));
         ImGui.Dummy(new Vector2(width, 12f * scale));
     }

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core.Localization;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
@@ -23,7 +24,7 @@ internal static class CommentHeart
             var countText = likeCount.ToString(Loc.Culture);
             var countSize = Typography.Measure(countText, CountTextScale);
             var countPos = new Vector2(center.X - countSize.X * 0.5f, center.Y + 9f * scale);
-            Typography.Draw(countPos, countText, countColor, CountTextScale);
+            Typography.Draw(ImGui.GetWindowDrawList(), countPos, countText, countColor, CountTextScale);
             bottom = countPos.Y + countSize.Y;
         }
 
