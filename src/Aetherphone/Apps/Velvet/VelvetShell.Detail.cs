@@ -5,6 +5,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -88,10 +89,11 @@ internal sealed partial class VelvetShell
 
             var imageRect = new Rect(new Vector2(origin.X, origin.Y + headerHeight),
                 new Vector2(origin.X + width, origin.Y + headerHeight + width));
-            DrawMedia(drawList, imageRect.Min, imageRect.Max, post.MediaUrl, Metrics.Radius.Md * scale);
-            if (!string.IsNullOrEmpty(post.MediaUrl) && UiInteract.HoverClick(imageRect.Min, imageRect.Max))
+            var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+            var result = DrawPostCarousel(drawList, imageRect, post, photos, Metrics.Radius.Md * scale);
+            if (result.Tapped && result.Index < photos.Length)
             {
-                var mediaUrl = post.MediaUrl;
+                var mediaUrl = photos[result.Index];
                 photoViewer.Open(() => images.Get(mediaUrl));
             }
 
@@ -131,14 +133,26 @@ internal sealed partial class VelvetShell
 
             var commentCenter = new Vector2(actionCursorX + 13f * scale, actionsY);
             AppSkin.Icon(commentCenter, FontAwesomeIcon.Comment.ToIconString(), VelvetTheme.BodyInk, 1.1f);
+            var actionsRight = commentCenter.X + 20f * scale;
             if (post.CommentCount > 0)
             {
-                Typography.Draw(new Vector2(commentCenter.X + 20f * scale, actionsY - 8f * scale),
-                    post.CommentCount.ToString(Loc.Culture), VelvetTheme.BodyInk, TextStyles.Callout);
+                var commentText = post.CommentCount.ToString(Loc.Culture);
+                Typography.Draw(new Vector2(actionsRight, actionsY - 8f * scale), commentText, VelvetTheme.BodyInk,
+                    TextStyles.Callout);
+                actionsRight += Typography.Measure(commentText, TextStyles.Callout).X;
             }
 
             var mine = store.Me is { } me && me.UserId == post.OwnerId;
             var trailingCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
+            if (photos.Length > 1)
+            {
+                var dotsCenter = new Vector2(origin.X + width * 0.5f, actionsY);
+                var available = MathF.Min((trailingCenter.X - 16f * scale - dotsCenter.X) * 2f,
+                    (dotsCenter.X - actionsRight - 10f * scale) * 2f);
+                PhotoCarousel.DrawDots(drawList, dotsCenter, photos.Length, result.Index, available,
+                    VelvetTheme.BodyInk);
+            }
+
             if (mine)
             {
                 if (ui.IconButton(trailingCenter, 14f * scale, FontAwesomeIcon.Trash.ToIconString(), VelvetTheme.Danger,

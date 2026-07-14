@@ -3,6 +3,7 @@ using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -252,6 +253,11 @@ internal sealed partial class VelvetShell
             var min = new Vector2(origin.X + col * (cell + cellGap), origin.Y + row * (cell + cellGap));
             var max = new Vector2(min.X + cell, min.Y + cell);
             DrawMedia(drawList, min, max, owned[index].MediaUrl, Metrics.Radius.Md * scale);
+            if (PostMedia.Photos(owned[index].MediaUrls, owned[index].MediaUrl).Length > 1)
+            {
+                MultiPhotoBadge.Draw(drawList, new Vector2(max.X - 8f * scale, min.Y + 8f * scale), scale);
+            }
+
             if (UiInteract.Hover(min, max) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
                 store.EnsurePost(owned[index].Id);

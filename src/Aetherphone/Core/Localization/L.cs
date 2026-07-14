@@ -15,6 +15,11 @@ internal static class L
         public static readonly LocString Nq = new("common.nq", "NQ");
         public static readonly LocString ComingSoon = new("common.comingSoon", "Coming soon");
         public static readonly LocString OpenInBrowser = new("common.openInBrowser", "Click to open in browser");
+        public static readonly LocString Next = new("common.next", "Next");
+        public static readonly LocString Back = new("common.back", "Back");
+        public static readonly LocString PhotoCounter = new("common.photoCounter", "{0}/{1}");
+        public static readonly LocString PhotoStep = new("common.photoStep", "Photo {0} of {1}");
+        public static readonly LocString PhotoLimit = new("common.photoLimit", "You can add up to {0} photos");
     }
 
     internal static class Social
@@ -460,6 +465,35 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0960 =
+        {
+            new("changelog.r0960.0", "Velvet has been rebuilt from the ground up, with an after-dark look and every screen redrawn around Discover"),
+            new("changelog.r0960.1", "Velvet's Discover filters now live behind a filter button, leaving the whole screen to the people you are browsing"),
+            new("changelog.r0960.2", "Velvet's role and tag pickers are now sorted into categories that match how roleplay communities actually describe themselves"),
+            new("changelog.r0960.3", "Setting up Velvet is now a guided flow that walks you through your identity, what you are looking for, and your profile"),
+            new("changelog.r0960.4", "Velvet now has a guided tour that shows you around the first time you open it"),
+            new("changelog.r0960.5", "Velvet now speaks every language Aetherphone supports, instead of always showing English"),
+            new("changelog.r0960.6", "You can now send an intro message with a Velvet connection request, and choose who is allowed to message you"),
+            new("changelog.r0960.7", "Japanese, Chinese, Russian, and Korean text now renders everywhere in the phone instead of turning into question marks, whatever language your phone is set to"),
+            new("changelog.r0960.8", "New messages and notifications now reach you the moment they are sent, instead of waiting for the next refresh"),
+            new("changelog.r0960.9", "You can now stay signed in on several computers at once: a second install no longer knocks the first offline, and calls ring properly again"),
+            new("changelog.r0960.10", "Picking up a call on one device now stops the ringing on the others"),
+            new("changelog.r0960.11", "The phone now goes quiet while it is closed or minimized, cutting its background network use to a fraction"),
+            new("changelog.r0960.12", "Photos and other media now load faster and are reused from cache instead of being downloaded again every time"),
+            new("changelog.r0960.13", "KupoAI now answers everyday questions far more reliably instead of coming up empty when your wording does not match the wiki"),
+            new("changelog.r0960.14", "KupoAI now reads wiki tables and infoboxes, so unlock requirements, item costs, and step tables make it into its answers"),
+            new("changelog.r0960.15", "KupoAI now recognizes the colloquial names people actually use for pages, not just their official titles"),
+            new("changelog.r0960.16", "KupoAI replies no longer carry stray bracketed citation numbers"),
+            new("changelog.r0960.17", "The phone now opens by itself when you log in; you can turn this off in Settings"),
+            new("changelog.r0960.18", "Dragging the minimized phone no longer drags the full phone with it: each one remembers its own place on screen"),
+            new("changelog.r0960.19", "Fixed comments overlapping each other in a Chirper post thread when they had likes"),
+            new("changelog.r0960.20", "The Aetherphone website is now available in all eight languages and follows your browser's language automatically"),
+            new("changelog.r0960.21", "Plugin developers can now propose their plugin as a phone app through the new App integration request form on GitHub"),
+            new("changelog.r0960.22", "Aethergram and Velvet posts can now hold up to 8 photos instead of just one"),
+            new("changelog.r0960.23", "Posts with several photos now show dot indicators and arrows, so you can swipe through them straight from the feed"),
+            new("changelog.r0960.24", "Composing a multi-photo post now walks you through framing each photo in turn before you write the caption"),
+        };
+
         public static readonly LocString[] Release0950 =
         {
             new("changelog.r0950.0", "Aetherphone now has its own website at www.aetherphone.net, where you can explore the phone and all of its apps"),
@@ -1109,6 +1143,8 @@ internal static class L
     internal static class Aethergram
     {
         public static readonly LocString SetUpAccount = new("aethergram.setUpAccount", "Set up your account in Settings");
+        public static readonly LocString YourStory = new("aethergram.yourStory", "Your story");
+        public static readonly LocString NewStory = new("aethergram.newStory", "New Story");
         public static readonly LocString ForYou = new("aethergram.forYou", "For You");
         public static readonly LocString Following = new("aethergram.following", "Following");
         public static readonly LocString Follow = new("aethergram.follow", "Follow");

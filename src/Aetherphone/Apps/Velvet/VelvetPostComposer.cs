@@ -3,8 +3,10 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -19,14 +21,18 @@ internal sealed class VelvetPostComposer
     private const float CropSmoothTime = 0.10f;
     private readonly VelvetStore store;
     private readonly PhotoLibrary library;
-    private bool cropStage;
-    private string sourcePath = string.Empty;
+    private readonly List<string> selected = new();
+    private readonly List<WallpaperCrop> crops = new();
+    private ComposeStage stage;
+    private int cropIndex;
+    private int previewIndex;
     private string[] pickerPaths = Array.Empty<string>();
     private string? pendingPickedPath;
     private volatile int outcome;
     private bool closeRequested;
     private int visibility = VelvetVisibility.Public;
     private string caption = string.Empty;
+    private string limitNotice = string.Empty;
     private Spring zoomSpring = new(1f);
     private Spring centerXSpring = new(0.5f);
     private Spring centerYSpring = new(0.5f);
@@ -42,15 +48,30 @@ internal sealed class VelvetPostComposer
         this.library = library;
     }
 
+    private enum ComposeStage
+    {
+        Pick,
+        Crop,
+        Caption,
+    }
+
+    private static WallpaperCrop DefaultCrop => new(1f, 0.5f, 0.5f);
+
+    private string CurrentPath => cropIndex >= 0 && cropIndex < selected.Count ? selected[cropIndex] : string.Empty;
+
     public void Open()
     {
-        cropStage = false;
-        sourcePath = string.Empty;
+        stage = ComposeStage.Pick;
+        selected.Clear();
+        crops.Clear();
+        cropIndex = 0;
+        previewIndex = 0;
         pendingPickedPath = null;
         outcome = 0;
         closeRequested = false;
         visibility = VelvetVisibility.Public;
         caption = string.Empty;
+        limitNotice = string.Empty;
         pickerPaths = library.List();
     }
 
@@ -76,16 +97,20 @@ internal sealed class VelvetPostComposer
         var picked = Interlocked.Exchange(ref pendingPickedPath, null);
         if (!string.IsNullOrEmpty(picked))
         {
-            BeginCrop(picked);
+            TakePicked(picked);
         }
 
-        if (cropStage)
+        switch (stage)
         {
-            DrawCrop(area, ui, context);
-        }
-        else
-        {
-            DrawPick(area, ui, context);
+            case ComposeStage.Crop:
+                DrawCrop(area, ui, context);
+                break;
+            case ComposeStage.Caption:
+                DrawCaption(area, ui, context);
+                break;
+            default:
+                DrawPick(area, ui, context);
+                break;
         }
 
         return false;
@@ -94,6 +119,11 @@ internal sealed class VelvetPostComposer
     private void DrawPick(Rect area, AppSkin ui, in PhoneContext context)
     {
         AppHeader.Draw(context, Loc.T(L.Velvet.NewPost), () => closeRequested = true);
+        if (ui.HeaderAction(area, Loc.T(L.Common.Next), selected.Count > 0))
+        {
+            BeginCropSequence();
+        }
+
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var importHeight = 46f * scale;
@@ -104,7 +134,14 @@ internal sealed class VelvetPostComposer
             LaunchFileDialog();
         }
 
-        var gridRect = new Rect(new Vector2(area.Min.X, importRect.Max.Y + 12f * scale), area.Max);
+        var noticeHeight = limitNotice.Length > 0 ? 20f * scale : 0f;
+        if (noticeHeight > 0f)
+        {
+            Typography.DrawCentered(new Vector2(area.Center.X, importRect.Max.Y + 8f * scale), limitNotice,
+                AppPalettes.Velvet.MutedInk, TextStyles.Footnote);
+        }
+
+        var gridRect = new Rect(new Vector2(area.Min.X, importRect.Max.Y + 12f * scale + noticeHeight), area.Max);
         using (AppSurface.Begin(gridRect))
         {
             if (pickerPaths.Length == 0)
@@ -124,9 +161,10 @@ internal sealed class VelvetPostComposer
                     {
                         var clicked = ImGui.InvisibleButton("pick", new Vector2(cell, cell));
                         DrawLocalThumbnail(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
+                        DrawPickBadge(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
                         if (clicked)
                         {
-                            BeginCrop(pickerPaths[index]);
+                            TakePicked(pickerPaths[index]);
                         }
                     }
 
@@ -137,6 +175,108 @@ internal sealed class VelvetPostComposer
                 }
             }
         }
+    }
+
+    private void DrawPickBadge(string path, Vector2 min, Vector2 max, float scale)
+    {
+        var order = selected.IndexOf(path);
+        if (order < 0)
+        {
+            return;
+        }
+
+        var accent = AppPalettes.Velvet.Accent;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.35f)), 10f * scale);
+        var radius = 11f * scale;
+        var center = new Vector2(max.X - radius - 6f * scale, min.Y + radius + 6f * scale);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(accent), 20);
+        drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.9f)), 20, 1.5f * scale);
+        Typography.DrawCentered(drawList, center, (order + 1).ToString(Loc.Culture), new Vector4(1f, 1f, 1f, 1f),
+            TextStyles.FootnoteEmphasized);
+    }
+
+    private void TakePicked(string path)
+    {
+        var existing = selected.IndexOf(path);
+        if (existing >= 0)
+        {
+            selected.RemoveAt(existing);
+            return;
+        }
+
+        if (selected.Count >= PostMedia.MaxPhotos)
+        {
+            limitNotice = Loc.T(L.Common.PhotoLimit, PostMedia.MaxPhotos);
+            return;
+        }
+
+        limitNotice = string.Empty;
+        selected.Add(path);
+    }
+
+    private void BeginCropSequence()
+    {
+        crops.Clear();
+        for (var index = 0; index < selected.Count; index++)
+        {
+            crops.Add(DefaultCrop);
+        }
+
+        previewIndex = 0;
+        stage = ComposeStage.Crop;
+        LoadCrop(0);
+    }
+
+    private void SaveCurrentCrop()
+    {
+        if (cropIndex >= 0 && cropIndex < crops.Count)
+        {
+            crops[cropIndex] = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY);
+        }
+    }
+
+    private void LoadCrop(int index)
+    {
+        if (index < 0 || index >= crops.Count)
+        {
+            return;
+        }
+
+        cropIndex = index;
+        var crop = crops[index];
+        targetZoom = crop.Zoom;
+        targetCenterX = crop.CenterX;
+        targetCenterY = crop.CenterY;
+        zoomSpring.SnapTo(crop.Zoom);
+        centerXSpring.SnapTo(crop.CenterX);
+        centerYSpring.SnapTo(crop.CenterY);
+        cropDragging = false;
+    }
+
+    private void CropBack()
+    {
+        if (cropIndex == 0)
+        {
+            stage = ComposeStage.Pick;
+            return;
+        }
+
+        SaveCurrentCrop();
+        LoadCrop(cropIndex - 1);
+    }
+
+    private void CropAdvance()
+    {
+        SaveCurrentCrop();
+        if (cropIndex < selected.Count - 1)
+        {
+            LoadCrop(cropIndex + 1);
+            return;
+        }
+
+        previewIndex = 0;
+        stage = ComposeStage.Caption;
     }
 
     private static void DrawLocalThumbnail(string path, Vector2 min, Vector2 max, float scale)
@@ -160,39 +300,28 @@ internal sealed class VelvetPostComposer
         }
     }
 
-    private void BeginCrop(string path)
-    {
-        sourcePath = path;
-        targetZoom = 1f;
-        targetCenterX = 0.5f;
-        targetCenterY = 0.5f;
-        zoomSpring.SnapTo(1f);
-        centerXSpring.SnapTo(0.5f);
-        centerYSpring.SnapTo(0.5f);
-        cropDragging = false;
-        cropStage = true;
-    }
-
     private void DrawCrop(Rect area, AppSkin ui, in PhoneContext context)
     {
-        AppHeader.Draw(context, Loc.T(L.Velvet.MoveAndScale), () => cropStage = false);
-        var canShare = !store.Posting;
-        if (ui.HeaderAction(area, store.Posting ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Share), canShare))
+        var title = selected.Count > 1
+            ? Loc.T(L.Common.PhotoStep, cropIndex + 1, selected.Count)
+            : Loc.T(L.Velvet.MoveAndScale);
+        AppHeader.Draw(context, title, CropBack);
+        if (ui.HeaderAction(area, Loc.T(L.Common.Next), true))
         {
-            Commit();
+            CropAdvance();
         }
 
         var scale = ImGuiHelpers.GlobalScale;
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var drawList = ImGui.GetWindowDrawList();
         var top = area.Min.Y + AppHeader.Height * scale;
-        var stage = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
-            new Vector2(area.Max.X - 16f * scale, area.Max.Y - 240f * scale));
-        var side = MathF.Min(stage.Width, stage.Height);
-        var preview = new Rect(new Vector2(stage.Center.X - side * 0.5f, stage.Center.Y - side * 0.5f),
-            new Vector2(stage.Center.X + side * 0.5f, stage.Center.Y + side * 0.5f));
+        var stageRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
+            new Vector2(area.Max.X - 16f * scale, area.Max.Y - 96f * scale));
+        var side = MathF.Min(stageRect.Width, stageRect.Height);
+        var preview = new Rect(new Vector2(stageRect.Center.X - side * 0.5f, stageRect.Center.Y - side * 0.5f),
+            new Vector2(stageRect.Center.X + side * 0.5f, stageRect.Center.Y + side * 0.5f));
         var rounding = 18f * scale;
-        var texture = Plugin.WallpaperImages.Get(sourcePath);
+        var texture = Plugin.WallpaperImages.Get(CurrentPath);
         if (texture is null)
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding,
@@ -210,19 +339,50 @@ internal sealed class VelvetPostComposer
         drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         HandleCropGestures(preview, size, uv1 - uv0);
-        var hintY = stage.Max.Y + 18f * scale;
-        Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Velvet.GestureHint), AppPalettes.Velvet.MutedInk,
-            0.78f);
+        Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), Loc.T(L.Velvet.GestureHint),
+            AppPalettes.Velvet.MutedInk, 0.78f);
         var trackWidth = area.Width * 0.62f;
-        var trackY = hintY + 22f * scale;
-        var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, trackY),
-            new Vector2(area.Center.X + trackWidth * 0.5f, trackY + 4f * scale));
+        var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, area.Max.Y - 48f * scale),
+            new Vector2(area.Center.X + trackWidth * 0.5f, area.Max.Y - 44f * scale));
         var zoomNormalized = (targetZoom - WallpaperCrop.MinZoom) / (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
-        var updatedZoom = Scrubber.Draw(track, zoomNormalized, AppPalettes.Velvet.Accent, AppPalettes.Velvet.MutedInk, 1f);
+        var updatedZoom = Scrubber.Draw(track, zoomNormalized, AppPalettes.Velvet.Accent, AppPalettes.Velvet.MutedInk,
+            1f);
         targetZoom = WallpaperCrop.MinZoom + updatedZoom * (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
-        var captionY = track.Max.Y + 22f * scale;
+    }
+
+    private void DrawCaption(Rect area, AppSkin ui, in PhoneContext context)
+    {
+        AppHeader.Draw(context, Loc.T(L.Velvet.NewPost), () =>
+        {
+            stage = ComposeStage.Crop;
+            LoadCrop(selected.Count - 1);
+        });
+
+        var canShare = !store.Posting;
+        if (ui.HeaderAction(area, store.Posting ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Share), canShare))
+        {
+            Commit();
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var top = area.Min.Y + AppHeader.Height * scale;
+        var chipsY = area.Max.Y - 78f * scale;
+        var captionHeight = 34f * scale;
+        var captionY = chipsY - 20f * scale - captionHeight;
+        var stripHeight = selected.Count > 1 ? 52f * scale : 0f;
+        var previewRegion = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
+            new Vector2(area.Max.X - 16f * scale, captionY - 12f * scale - stripHeight));
+        DrawCaptionPreview(previewRegion, scale);
+        if (stripHeight > 0f)
+        {
+            var strip = new Rect(new Vector2(area.Min.X + 16f * scale, previewRegion.Max.Y + 6f * scale),
+                new Vector2(area.Max.X - 16f * scale, previewRegion.Max.Y + stripHeight));
+            DrawCaptionStrip(strip, scale);
+        }
+
         var captionRect = new Rect(new Vector2(area.Min.X + 16f * scale, captionY),
-            new Vector2(area.Max.X - 16f * scale, captionY + 34f * scale));
+            new Vector2(area.Max.X - 16f * scale, captionY + captionHeight));
         Squircle.Fill(drawList, captionRect.Min, captionRect.Max, 9f * scale,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
         ImGui.SetCursorScreenPos(new Vector2(captionRect.Min.X + 12f * scale,
@@ -234,9 +394,72 @@ internal sealed class VelvetPostComposer
             ImGui.InputTextWithHint("##velvetCaption", Loc.T(L.Velvet.CaptionHint), ref caption, 500);
         }
 
-        DrawChoiceRow(ui, area, captionRect.Max.Y + 20f * scale, Loc.T(L.Velvet.VisibilityLabel),
+        DrawChoiceRow(ui, area, chipsY, Loc.T(L.Velvet.VisibilityLabel),
             new[] { VelvetVisibility.Public, VelvetVisibility.Connections }, visibility, value => visibility = value,
             VelvetVisibility.Label);
+    }
+
+    private void DrawCaptionPreview(Rect region, float scale)
+    {
+        var side = MathF.Min(region.Width, region.Height);
+        if (side <= 0f)
+        {
+            return;
+        }
+
+        var half = side * 0.5f;
+        var preview = new Rect(region.Center - new Vector2(half, half), region.Center + new Vector2(half, half));
+        var rounding = 18f * scale;
+        var drawList = ImGui.GetWindowDrawList();
+        var index = Math.Clamp(previewIndex, 0, Math.Max(0, selected.Count - 1));
+        var texture = Plugin.WallpaperImages.Get(index < selected.Count ? selected[index] : string.Empty);
+        if (texture is null)
+        {
+            Squircle.Fill(drawList, preview.Min, preview.Max, rounding,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
+            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), AppPalettes.Velvet.MutedInk);
+            return;
+        }
+
+        var crop = crops[index].Clamped(texture.Size, 1f);
+        var (uv0, uv1) = crop.ComputeUv(texture.Size, 1f);
+        drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
+            ImDrawFlags.RoundCornersAll);
+        if (UiInteract.HoverClick(preview.Min, preview.Max))
+        {
+            stage = ComposeStage.Crop;
+            LoadCrop(index);
+        }
+    }
+
+    private void DrawCaptionStrip(Rect strip, float scale)
+    {
+        var count = selected.Count;
+        var gap = 6f * scale;
+        var side = MathF.Min(strip.Height, (strip.Width - gap * (count - 1)) / count);
+        var span = side * count + gap * (count - 1);
+        var startX = strip.Center.X - span * 0.5f;
+        var drawList = ImGui.GetWindowDrawList();
+        for (var index = 0; index < count; index++)
+        {
+            var min = new Vector2(startX + index * (side + gap), strip.Min.Y);
+            var max = min + new Vector2(side, side);
+            DrawLocalThumbnail(selected[index], min, max, scale);
+            if (index == previewIndex)
+            {
+                drawList.AddRect(min, max, ImGui.GetColorU32(AppPalettes.Velvet.Accent), 8f * scale,
+                    ImDrawFlags.RoundCornersAll, 2f * scale);
+            }
+            else
+            {
+                drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), 8f * scale);
+            }
+
+            if (UiInteract.HoverClick(min, max))
+            {
+                previewIndex = index;
+            }
+        }
     }
 
     private static float DrawChoiceRow(AppSkin ui, Rect area, float y, string label, int[] values, int selected,
@@ -310,13 +533,13 @@ internal sealed class VelvetPostComposer
 
     private void Commit()
     {
-        if (sourcePath.Length == 0 || store.Posting)
+        if (selected.Count == 0 || store.Posting)
         {
             return;
         }
 
-        var crop = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY);
-        store.CreatePost(sourcePath, crop, caption, Array.Empty<string>(), visibility, ok => outcome = ok ? 1 : 2);
+        store.CreatePost(selected.ToArray(), crops.ToArray(), caption, Array.Empty<string>(), visibility,
+            ok => outcome = ok ? 1 : 2);
     }
 
     private void LaunchFileDialog()
@@ -329,5 +552,4 @@ internal sealed class VelvetPostComposer
             }
         });
     }
-
 }

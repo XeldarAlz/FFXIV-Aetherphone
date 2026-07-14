@@ -402,9 +402,9 @@ internal sealed class AethernetClient
         return http.PutBytesAsync(new Uri(uploadUrl), bytes, contentType, token);
     }
 
-    public Task<PostDto?> CreateGramAsync(string caption, string mediaKey, int width, int height, CancellationToken token)
+    public Task<PostDto?> CreateGramAsync(string caption, string[] mediaKeys, int width, int height, CancellationToken token)
     {
-        return http.PostJsonAsync(Url("/grams"), new CreateGramRequest(caption, mediaKey, width, height), AethernetJsonContext.Default.CreateGramRequest, AethernetJsonContext.Default.PostDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url("/grams"), new CreateGramRequest(caption, mediaKeys[0], width, height, mediaKeys), AethernetJsonContext.Default.CreateGramRequest, AethernetJsonContext.Default.PostDto, session.Token, token, authStatusSink);
     }
 
     public Task<FeedPage?> GramFeedAsync(string scope, string? cursor, CancellationToken token)
@@ -421,6 +421,31 @@ internal sealed class AethernetClient
     public Task<FeedPage?> UserGramsAsync(string userId, CancellationToken token)
     {
         return http.GetJsonAsync(Url($"/users/{Uri.EscapeDataString(userId)}/posts?kind=1"), AethernetJsonContext.Default.FeedPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<StoryDto?> CreateStoryAsync(string caption, string mediaKey, int width, int height, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/stories"), new CreateStoryRequest(caption, mediaKey, width, height), AethernetJsonContext.Default.CreateStoryRequest, AethernetJsonContext.Default.StoryDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<StoryTray?> StoryTrayAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/stories"), AethernetJsonContext.Default.StoryTray, session.Token, token, authStatusSink);
+    }
+
+    public Task<StoryGroup?> UserStoriesAsync(string userId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/stories/{Uri.EscapeDataString(userId)}"), AethernetJsonContext.Default.StoryGroup, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> MarkStoryViewedAsync(string storyId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url($"/stories/{Uri.EscapeDataString(storyId)}/view"), session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteStoryAsync(string storyId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/stories/{Uri.EscapeDataString(storyId)}"), session.Token, token, authStatusSink);
     }
 
     public Task<CommentPage?> CommentsAsync(string postId, string? cursor, CancellationToken token)

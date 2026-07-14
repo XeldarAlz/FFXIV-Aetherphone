@@ -1,8 +1,6 @@
-using Aetherphone.Core.Animation;
+namespace Aetherphone.Core.Animation;
 
-namespace Aetherphone.Core.Shell.Home;
-
-internal sealed class HomePager
+internal sealed class Pager
 {
     private const float SettleSmoothTime = 0.30f;
     private const float FlingVelocity = 320f;

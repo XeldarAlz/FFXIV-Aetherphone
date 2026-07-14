@@ -72,7 +72,8 @@ internal sealed record PostDto(
     string? AuthorAvatarUrl,
     int CommentCount,
     bool IsFollowing,
-    string ScanStatus = "clean") : IIdentified;
+    string ScanStatus = "clean",
+    string[]? MediaUrls = null) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
@@ -84,7 +85,41 @@ internal sealed record UploadUrlRequest(string ContentType, string Scope);
 
 internal sealed record UploadUrlResponse(string Key, string UploadUrl, string PublicUrl);
 
-internal sealed record CreateGramRequest(string Caption, string MediaKey, int Width, int Height);
+internal sealed record CreateGramRequest(
+    string Caption,
+    string MediaKey,
+    int Width,
+    int Height,
+    string[]? MediaKeys = null);
+
+internal sealed record CreateStoryRequest(string Caption, string MediaKey, int Width, int Height);
+
+internal sealed record StoryDto(
+    string Id,
+    string AuthorId,
+    string Caption,
+    string MediaUrl,
+    int MediaWidth,
+    int MediaHeight,
+    long CreatedAtUnix,
+    long ExpiresAtUnix,
+    bool Seen,
+    int ViewCount,
+    string ScanStatus = "clean") : IIdentified;
+
+internal sealed record StoryRingDto(
+    string AuthorId,
+    string AuthorDisplayName,
+    string AuthorHandle,
+    string? AuthorAvatarUrl,
+    bool IsMe,
+    bool HasUnseen,
+    int Count,
+    long LatestAtUnix);
+
+internal sealed record StoryTray(StoryRingDto[] Rings);
+
+internal sealed record StoryGroup(StoryDto[] Items);
 
 internal sealed record CommentDto(
     string Id,
@@ -176,7 +211,8 @@ internal sealed record VelvetPostDto(
     int TotalReactions,
     int MyReaction,
     int CommentCount,
-    string ScanStatus = "clean") : IIdentified;
+    string ScanStatus = "clean",
+    string[]? MediaUrls = null) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
 
@@ -186,7 +222,8 @@ internal sealed record CreateVelvetPostRequest(
     int Height,
     string Caption,
     string[] Tags,
-    int Visibility);
+    int Visibility,
+    string[]? MediaKeys = null);
 
 internal sealed record VelvetCommentDto(
     string Id,

@@ -46,7 +46,7 @@ internal sealed class HomeScreen
 
     private readonly HomeLayoutService layout;
     private readonly WidgetRegistry widgets;
-    private readonly HomePager pager = new();
+    private readonly Pager pager = new();
     private readonly FolderOverlay folder;
     private readonly WidgetSizeMenu sizeMenu;
     private readonly WidgetGallery gallery;

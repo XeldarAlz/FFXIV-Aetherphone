@@ -5,7 +5,7 @@ namespace Aetherphone.Apps.Aethergram;
 
 /// <summary>
 /// Aethergram's signature bespoke artwork: the multi-stop "story" gradient ring drawn around
-/// avatars. Pure drawing; state and layout live in <see cref="AethergramApp"/>.
+/// avatars that have a live story. Pure drawing; state and layout live in <see cref="AethergramApp"/>.
 /// </summary>
 internal static class AethergramArt
 {
@@ -15,9 +15,18 @@ internal static class AethergramArt
         new(0.514f, 0.227f, 0.706f, 1f),
     ];
 
-    public static void StoryRing(ImDrawListPtr drawList, Vector2 center, float radius, float scale)
+    private static readonly Vector4 SeenRing = new(1f, 1f, 1f, 0.28f);
+
+    public static void StoryRing(ImDrawListPtr drawList, Vector2 center, float radius, float scale, bool unseen)
     {
         const int Segments = 40;
+        var thickness = (unseen ? 2.4f : 1.6f) * scale;
+        if (!unseen)
+        {
+            drawList.AddCircle(center, radius, ImGui.GetColorU32(SeenRing), Segments, thickness);
+            return;
+        }
+
         var direction = Vector2.Normalize(new Vector2(1f, -1f));
         var step = MathF.Tau / Segments;
         var previous = center + new Vector2(radius, 0f);
@@ -27,7 +36,7 @@ internal static class AethergramArt
             var point = center + radius * new Vector2(MathF.Cos(angle), MathF.Sin(angle));
             var normal = Vector2.Normalize((previous + point) * 0.5f - center);
             var position = Vector2.Dot(normal, direction) * 0.5f + 0.5f;
-            drawList.AddLine(previous, point, ImGui.GetColorU32(RingColor(position)), 2.4f * scale);
+            drawList.AddLine(previous, point, ImGui.GetColorU32(RingColor(position)), thickness);
             previous = point;
         }
     }

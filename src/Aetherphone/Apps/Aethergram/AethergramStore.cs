@@ -23,9 +23,9 @@ internal sealed class AethergramStore : SocialFeedStore
     protected override Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token) =>
         client.UserGramsAsync(userId, token);
 
-    public void CreateGram(string sourcePath, WallpaperCrop crop, string caption, Action<bool> onComplete)
+    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, string caption, Action<bool> onComplete)
     {
-        if (posting)
+        if (posting || sourcePaths.Length == 0)
         {
             return;
         }
@@ -33,21 +33,27 @@ internal sealed class AethergramStore : SocialFeedStore
         posting = true;
         work.Run("create gram", async token =>
         {
-            var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, GramSize);
-            var upload = await client.UploadUrlAsync("image/jpeg", "gram", token).ConfigureAwait(false);
-            if (upload is null)
+            var keys = new string[sourcePaths.Length];
+            for (var index = 0; index < sourcePaths.Length; index++)
             {
-                return false;
+                var baked = ImageProcessor.BakeSquareJpeg(sourcePaths[index], crops[index], GramSize);
+                var upload = await client.UploadUrlAsync("image/jpeg", "gram", token).ConfigureAwait(false);
+                if (upload is null)
+                {
+                    return false;
+                }
+
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
+                if (!uploaded)
+                {
+                    return false;
+                }
+
+                keys[index] = upload.Key;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-                .ConfigureAwait(false);
-            if (!uploaded)
-            {
-                return false;
-            }
-
-            var created = await client.CreateGramAsync(caption.Trim(), upload.Key, baked.Width, baked.Height, token)
+            var created = await client.CreateGramAsync(caption.Trim(), keys, GramSize, GramSize, token)
                 .ConfigureAwait(false);
             if (created is null)
             {

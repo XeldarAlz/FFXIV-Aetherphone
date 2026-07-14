@@ -101,7 +101,8 @@ internal sealed partial class AethergramApp
         if (user.Bio.Length > 0)
         {
             ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
-            ImGui.PushTextWrapPos(innerLeft + innerWidth);
+            var bioWrapPos = (innerLeft + innerWidth) - ImGui.GetWindowPos().X;
+            ImGui.PushTextWrapPos(bioWrapPos);
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
             {
                 Typography.Wrapped(user.Bio);
@@ -214,9 +215,11 @@ internal sealed partial class AethergramApp
 
     private void DrawGridThumbnail(PostDto post, Vector2 min, Vector2 max)
     {
+        var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var rounding = 8f * ImGuiHelpers.GlobalScale;
-        var texture = images.Get(post.MediaUrl);
+        var rounding = 8f * scale;
+        var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+        var texture = images.Get(photos.Length > 0 ? photos[0] : null);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(AppPalettes.Aethergram.FieldSurface));
@@ -226,6 +229,11 @@ internal sealed partial class AethergramApp
         var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
         drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
+        if (photos.Length > 1)
+        {
+            MultiPhotoBadge.Draw(drawList, new Vector2(max.X - 8f * scale, min.Y + 8f * scale), scale);
+        }
+
         if (ImGui.IsItemHovered())
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)));

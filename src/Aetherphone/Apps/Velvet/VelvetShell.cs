@@ -38,6 +38,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly SocialNotificationService social;
     private readonly AppSkin ui = new(VelvetTheme.Palette);
     private readonly PhotoViewerOverlay photoViewer = new();
+    private readonly PhotoCarousel carousel = new();
     private readonly VelvetAvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly ViewRouter<VelvetView> router;

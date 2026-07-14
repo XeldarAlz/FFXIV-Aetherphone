@@ -4,6 +4,8 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -100,8 +102,10 @@ internal sealed partial class VelvetShell
 
         var imageMin = new Vector2(card.Min.X + innerPad, card.Min.Y + headerHeight + 8f * scale);
         var imageMax = new Vector2(imageMin.X + imageSize, imageMin.Y + imageSize);
-        DrawMedia(drawList, imageMin, imageMax, entry.MediaUrl, Metrics.Radius.Md * scale);
-        if (UiInteract.Hover(imageMin, imageMax) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var photos = PostMedia.Photos(entry.MediaUrls, entry.MediaUrl);
+        var result = DrawPostCarousel(drawList, new Rect(imageMin, imageMax), entry, photos,
+            Metrics.Radius.Md * scale);
+        if (result.Tapped)
         {
             store.EnsurePost(entry.Id);
             router.Push(VelvetView.PostDetail(entry.Id));
@@ -126,8 +130,17 @@ internal sealed partial class VelvetShell
             router.Push(VelvetView.PostDetail(entry.Id));
         }
 
-        Typography.Draw(new Vector2(commentCenter.X + 16f * scale, actionY - 8f * scale), entry.CommentCount.ToString(),
+        var commentText = entry.CommentCount.ToString(Loc.Culture);
+        Typography.Draw(new Vector2(commentCenter.X + 16f * scale, actionY - 8f * scale), commentText,
             VelvetTheme.BodyInk, TextStyles.Subheadline);
+        if (photos.Length > 1)
+        {
+            var actionsRight = commentCenter.X + 16f * scale + Typography.Measure(commentText, TextStyles.Subheadline).X;
+            var dotsCenter = new Vector2(card.Center.X, actionY);
+            var available = MathF.Min((card.Max.X - innerPad - dotsCenter.X) * 2f,
+                (dotsCenter.X - actionsRight - 10f * scale) * 2f);
+            PhotoCarousel.DrawDots(drawList, dotsCenter, photos.Length, result.Index, available, VelvetTheme.BodyInk);
+        }
 
         var lineY = actionY + 16f * scale;
         if (entry.Caption.Length > 0)
@@ -145,7 +158,16 @@ internal sealed partial class VelvetShell
         }
     }
 
-    private void DrawMedia(ImDrawListPtr drawList, Vector2 min, Vector2 max, string url, float rounding)
+    private CarouselResult DrawPostCarousel(ImDrawListPtr drawList, Rect rect, VelvetPostDto entry, string[] photos,
+        float rounding)
+    {
+        var scanStatus = entry.ScanStatus;
+        return carousel.Draw(drawList, rect, entry.Id, photos, rounding,
+            (list, min, max, radius, url) => DrawMedia(list, min, max, url ?? string.Empty, radius, scanStatus));
+    }
+
+    private void DrawMedia(ImDrawListPtr drawList, Vector2 min, Vector2 max, string url, float rounding,
+        string? scanStatus = null)
     {
         var texture = images.Get(url);
         if (texture is null)
@@ -154,11 +176,28 @@ internal sealed partial class VelvetShell
             Typography.DrawCentered(new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
                 images.Failed(url) ? Loc.T(L.Velvet.ImageUnavailable) : Loc.T(L.Common.Loading), VelvetTheme.MutedInk,
                 TextStyles.Footnote);
+        }
+        else
+        {
+            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+            drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
+                ImDrawFlags.RoundCornersAll);
+        }
+
+        if (!ContentModeration.IsInReview(scanStatus))
+        {
             return;
         }
 
-        var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-        drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+        var scale = ImGuiHelpers.GlobalScale;
+        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)));
+        var center = new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f);
+        AppSkin.Icon(drawList, new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Hourglass.ToIconString(),
+            new Vector4(1f, 1f, 1f, 0.92f), 1.6f);
+        Typography.DrawCentered(drawList, center, Loc.T(L.Moderation.InReview), new Vector4(1f, 1f, 1f, 0.95f),
+            TextStyles.Headline);
+        Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + 22f * scale),
+            Loc.T(L.Moderation.InReviewHint), new Vector4(1f, 1f, 1f, 0.75f), TextStyles.Footnote);
     }
 
     private void DrawCompose(Rect area)

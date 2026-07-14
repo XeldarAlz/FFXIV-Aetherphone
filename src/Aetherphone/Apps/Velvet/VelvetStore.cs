@@ -1369,10 +1369,10 @@ internal sealed class VelvetStore : IDisposable
         return null;
     }
 
-    public void CreatePost(string sourcePath, WallpaperCrop crop, string caption, string[] tags, int visibility,
+    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, string caption, string[] tags, int visibility,
         Action<bool> onComplete)
     {
-        if (posting)
+        if (posting || sourcePaths.Length == 0)
         {
             return;
         }
@@ -1380,22 +1380,28 @@ internal sealed class VelvetStore : IDisposable
         posting = true;
         work.Run("create post", async token =>
         {
-            var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, PostSize);
-            var upload = await client.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
-            if (upload is null)
+            var keys = new string[sourcePaths.Length];
+            for (var index = 0; index < sourcePaths.Length; index++)
             {
-                return false;
-            }
+                var baked = ImageProcessor.BakeSquareJpeg(sourcePaths[index], crops[index], PostSize);
+                var upload = await client.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
+                if (upload is null)
+                {
+                    return false;
+                }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-                .ConfigureAwait(false);
-            if (!uploaded)
-            {
-                return false;
+                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                    .ConfigureAwait(false);
+                if (!uploaded)
+                {
+                    return false;
+                }
+
+                keys[index] = upload.Key;
             }
 
             var request =
-                new CreateVelvetPostRequest(upload.Key, baked.Width, baked.Height, caption, tags, visibility);
+                new CreateVelvetPostRequest(keys[0], PostSize, PostSize, caption, tags, visibility, keys);
             var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
             if (created is null)
             {
