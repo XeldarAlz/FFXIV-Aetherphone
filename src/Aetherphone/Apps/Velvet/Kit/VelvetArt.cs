@@ -21,10 +21,11 @@ internal static class VelvetArt
             carve.Packed(), 44);
     }
 
-    public static void Bloom(ImDrawListPtr drawList, Rect area, float strength = 1f)
+    public static void Bloom(ImDrawListPtr drawList, Rect screen, float rounding, float strength = 1f)
     {
-        var top = new Vector2(area.Min.X, area.Min.Y + area.Height * 0.42f);
-        Squircle.FillVerticalGradient(drawList, top, area.Max, 0f, VelvetTheme.Alpha(VelvetTheme.BloomTop, 0f).Packed(),
+        var top = new Vector2(screen.Min.X, screen.Min.Y + screen.Height * 0.42f);
+        Squircle.FillVerticalGradient(drawList, top, screen.Max, rounding,
+            VelvetTheme.Alpha(VelvetTheme.BloomTop, 0f).Packed(),
             VelvetTheme.Alpha(VelvetTheme.BloomTop, 0.22f * strength).Packed());
     }
 
