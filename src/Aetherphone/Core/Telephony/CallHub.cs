@@ -22,6 +22,7 @@ internal sealed class CallHub : IDisposable
     private readonly NotificationService notifications;
     private readonly SoundService sound;
     private readonly PlaybackHub playback;
+    private readonly RealtimeSignalBus signals;
     private readonly RealtimeConnection connection;
     private readonly object gate = new();
     private readonly HashSet<int> remoteSlots = new();
@@ -41,13 +42,14 @@ internal sealed class CallHub : IDisposable
     private CallLogEntry[] callLog = Array.Empty<CallLogEntry>();
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
-        SoundService sound, PlaybackHub playback)
+        SoundService sound, PlaybackHub playback, RealtimeSignalBus signals)
     {
         this.configuration = configuration;
         this.session = session;
         this.notifications = notifications;
         this.sound = sound;
         this.playback = playback;
+        this.signals = signals;
         connection = new RealtimeConnection(session);
         callLog = configuration.CallLog.ToArray();
     }
@@ -405,6 +407,18 @@ internal sealed class CallHub : IDisposable
             case SignalType.Ended:
                 HandleEnded(message);
                 break;
+            case SignalType.Handled:
+                HandleHandledElsewhere(message);
+                break;
+            case SignalType.ChatPing:
+                signals.PublishChat();
+                break;
+            case SignalType.VelvetPing:
+                signals.PublishVelvet();
+                break;
+            case SignalType.SocialPing:
+                signals.PublishSocial();
+                break;
         }
     }
 
@@ -590,6 +604,25 @@ internal sealed class CallHub : IDisposable
         {
             EndCall(notify: false, reason: null);
             LogMissed(missedFrom, notify: true);
+        }
+    }
+
+    private void HandleHandledElsewhere(CallControl message)
+    {
+        if (!Guid.TryParse(message.CallId, out var id))
+        {
+            return;
+        }
+
+        bool matched;
+        lock (gate)
+        {
+            matched = id == callId && state == CallState.Ringing;
+        }
+
+        if (matched)
+        {
+            EndCall(notify: false, reason: null);
         }
     }
 

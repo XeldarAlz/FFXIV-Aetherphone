@@ -125,7 +125,6 @@ internal sealed class MarketAlertService : IDisposable
             try
             {
                 await PollAsync(token).ConfigureAwait(false);
-                await Task.Delay(PollInterval, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -134,6 +133,15 @@ internal sealed class MarketAlertService : IDisposable
             catch (Exception exception)
             {
                 AepLog.Warning($"Market alert poll failed: {exception.Message}");
+            }
+
+            try
+            {
+                await Task.Delay(PollInterval, token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
         }
     }

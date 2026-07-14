@@ -21,7 +21,8 @@ internal sealed class VelvetStore : IDisposable
     private const int AvatarSize = 512;
     private const int PostSize = 1080;
     private const int DmImageMaxDimension = 1280;
-    private static readonly TimeSpan InboxPollInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(600);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
@@ -31,6 +32,8 @@ internal sealed class VelvetStore : IDisposable
     private readonly Configuration configuration;
     private readonly KeyVault vault;
     private readonly ConversationKeyStore keys;
+    private readonly RealtimeSignalBus signals;
+    private readonly PollCadence inboxCadence;
     private readonly StoreWork work = new StoreWork("Velvet");
     private readonly object messagesLock = new();
     private readonly Dictionary<string, long> inboxLastAt = new();
@@ -47,7 +50,6 @@ internal sealed class VelvetStore : IDisposable
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
     private volatile bool inboxPolling;
     private bool inboxPrimed;
-    private DateTime lastInboxPollUtc = DateTime.MinValue;
     private volatile string? viewingThreadUserId;
     private DateTime lastViewingUtc = DateTime.MinValue;
     private readonly RetryGate meGate = new RetryGate(TimeSpan.FromSeconds(30));
@@ -103,7 +105,7 @@ internal sealed class VelvetStore : IDisposable
     private volatile bool blockedLoaded;
 
     public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications,
-        Configuration configuration, KeyVault vault, ConversationKeyStore keys)
+        Configuration configuration, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals)
     {
         this.session = session;
         this.client = client;
@@ -111,6 +113,9 @@ internal sealed class VelvetStore : IDisposable
         this.configuration = configuration;
         this.vault = vault;
         this.keys = keys;
+        this.signals = signals;
+        inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
+        signals.VelvetPinged += inboxCadence.RequestImmediate;
         vault.Changed += OnVaultChanged;
         Plugin.Framework.Update += OnFrameworkTick;
     }
@@ -186,12 +191,11 @@ internal sealed class VelvetStore : IDisposable
         EnsureVaultRefreshed();
         var now = DateTime.UtcNow;
         EnsureThreadKeysFresh(now);
-        if (now - lastInboxPollUtc < InboxPollInterval)
+        if (!inboxCadence.Due(now))
         {
             return;
         }
 
-        lastInboxPollUtc = now;
         PollInbox();
     }
 
@@ -1816,6 +1820,7 @@ internal sealed class VelvetStore : IDisposable
 
     public void Dispose()
     {
+        signals.VelvetPinged -= inboxCadence.RequestImmediate;
         vault.Changed -= OnVaultChanged;
         Plugin.Framework.Update -= OnFrameworkTick;
         work.Dispose();

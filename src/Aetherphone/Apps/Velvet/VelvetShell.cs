@@ -52,9 +52,10 @@ internal sealed partial class VelvetShell : IPhoneApp
     public VelvetShell(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
-        SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys)
+        SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
+        PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
     {
-        store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys);
+        store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys, visibility, realtimeSignals);
         this.launcher = launcher;
         this.socialLauncher = socialLauncher;
         this.lodestone = lodestone;
