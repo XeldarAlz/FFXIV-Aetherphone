@@ -16,7 +16,7 @@ internal static class AppAccents
         ["message"] = new(0.80f, 0.52f, 0.25f, 1f),
         ["chirper"] = new(0.16f, 0.52f, 0.94f, 1f),
         ["aethergram"] = new(0.92f, 0.30f, 0.38f, 1f),
-        ["velvet"] = new(0.84f, 0.16f, 0.40f, 1f),
+        ["velvet"] = new(0.898f, 0.102f, 0.357f, 1f),
         ["character"] = new(0.98f, 0.22f, 0.36f, 1f),
         ["camera"] = new(0.70f, 0.72f, 0.78f, 1f),
         ["photos"] = new(0.95f, 0.62f, 0.25f, 1f),
