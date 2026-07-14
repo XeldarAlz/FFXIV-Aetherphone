@@ -74,6 +74,7 @@ internal sealed class PhoneServices : IDisposable
     public InventoryCaptureService InventoryCapture { get; }
     public CallHub Calls { get; }
     public PhoneVisibility Visibility { get; }
+    public RealtimeSignalBus RealtimeSignals { get; }
 
     private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps,
         ITextureProvider textures, WeatherService weather, NotificationService notifications, SoundService sound,
@@ -88,7 +89,7 @@ internal sealed class PhoneServices : IDisposable
         RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer,
         SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues,
         CollectionsCatalogService collections, InventoryCaptureService inventoryCapture, CallHub calls,
-        SocialNotificationService socialNotifications, PhoneVisibility visibility)
+        SocialNotificationService socialNotifications, PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
     {
         Configuration = configuration;
         Themes = themes;
@@ -137,6 +138,7 @@ internal sealed class PhoneServices : IDisposable
         InventoryCapture = inventoryCapture;
         Calls = calls;
         Visibility = visibility;
+        RealtimeSignals = realtimeSignals;
     }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
@@ -210,16 +212,17 @@ internal sealed class PhoneServices : IDisposable
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
-        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback);
+        var realtimeSignals = new RealtimeSignalBus();
+        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals);
         var visibility = new PhoneVisibility();
-        var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, configuration, framework, visibility);
+        var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, configuration, framework, visibility, realtimeSignals);
         return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
             messages, chatBridge, messageLauncher, velvetLauncher, dmLauncher, socialLauncher, linkshellMutes, linkshells,
             linkshellBridge, http, media, remoteImages, lodestone,
             collect, lookup, aethernetSession, aethernetClient, keyVault, peerKeys, conversationKeys,
             analytics, marketIndex, market, marketLauncher,
             marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
-            collections, inventoryCapture, calls, socialNotifications, visibility);
+            collections, inventoryCapture, calls, socialNotifications, visibility, realtimeSignals);
     }
 
     public void Dispose()

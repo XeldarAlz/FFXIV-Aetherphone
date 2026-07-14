@@ -10,13 +10,14 @@ namespace Aetherphone.Core.Notifications;
 
 internal sealed class SocialNotificationService : IDisposable
 {
-    private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(20);
-    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(180);
+    private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(600);
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly IFramework framework;
+    private readonly RealtimeSignalBus signals;
     private readonly PollCadence cadence;
     private readonly CancellationTokenSource cancellation = new();
     private readonly HashSet<string> seenIds = new();
@@ -25,14 +26,16 @@ internal sealed class SocialNotificationService : IDisposable
     private volatile bool primed;
 
     public SocialNotificationService(AethernetSession session, AethernetClient client, NotificationService notifications,
-        Configuration configuration, IFramework framework, PhoneVisibility visibility)
+        Configuration configuration, IFramework framework, PhoneVisibility visibility, RealtimeSignalBus signals)
     {
         this.session = session;
         this.client = client;
         this.notifications = notifications;
         this.configuration = configuration;
         this.framework = framework;
+        this.signals = signals;
         cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
+        signals.SocialPinged += cadence.RequestImmediate;
         framework.Update += OnFrameworkTick;
     }
 
@@ -210,6 +213,7 @@ internal sealed class SocialNotificationService : IDisposable
 
     public void Dispose()
     {
+        signals.SocialPinged -= cadence.RequestImmediate;
         framework.Update -= OnFrameworkTick;
         cancellation.Cancel();
         cancellation.Dispose();

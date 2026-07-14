@@ -15,8 +15,8 @@ namespace Aetherphone.Apps.DirectMessages;
 internal sealed class DirectMessagesStore : IDisposable
 {
     private const int DmImageMaxDimension = 1280;
-    private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(15);
-    private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(180);
+    private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(600);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
@@ -27,6 +27,7 @@ internal sealed class DirectMessagesStore : IDisposable
     private readonly KeyVault vault;
     private readonly ConversationKeyStore keys;
     private readonly PeerKeyDirectory peers;
+    private readonly RealtimeSignalBus signals;
     private readonly PollCadence inboxCadence;
     private readonly StoreWork work = new("Messages");
     private readonly object messagesLock = new();
@@ -62,7 +63,7 @@ internal sealed class DirectMessagesStore : IDisposable
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
 
     public DirectMessagesStore(AethernetSession session, AethernetClient client, NotificationService notifications,
-        KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers, PhoneVisibility visibility)
+        KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers, PhoneVisibility visibility, RealtimeSignalBus signals)
     {
         this.session = session;
         this.client = client;
@@ -70,7 +71,9 @@ internal sealed class DirectMessagesStore : IDisposable
         this.vault = vault;
         this.keys = keys;
         this.peers = peers;
+        this.signals = signals;
         inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
+        signals.ChatPinged += inboxCadence.RequestImmediate;
         vault.Changed += OnVaultChanged;
         Plugin.Framework.Update += OnFrameworkTick;
     }
@@ -1288,6 +1291,7 @@ internal sealed class DirectMessagesStore : IDisposable
 
     public void Dispose()
     {
+        signals.ChatPinged -= inboxCadence.RequestImmediate;
         vault.Changed -= OnVaultChanged;
         Plugin.Framework.Update -= OnFrameworkTick;
         work.Dispose();

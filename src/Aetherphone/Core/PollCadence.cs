@@ -6,6 +6,7 @@ internal sealed class PollCadence
     private readonly TimeSpan foregroundInterval;
     private readonly TimeSpan backgroundInterval;
     private DateTime lastPollUtc = DateTime.MinValue;
+    private volatile bool immediate;
 
     public PollCadence(PhoneVisibility visibility, TimeSpan foregroundInterval, TimeSpan backgroundInterval)
     {
@@ -16,8 +17,20 @@ internal sealed class PollCadence
 
     public TimeSpan CurrentInterval => visibility.IsVisible ? foregroundInterval : backgroundInterval;
 
+    public void RequestImmediate()
+    {
+        immediate = true;
+    }
+
     public bool Due(DateTime nowUtc)
     {
+        if (immediate)
+        {
+            immediate = false;
+            lastPollUtc = nowUtc;
+            return true;
+        }
+
         if (nowUtc - lastPollUtc < CurrentInterval)
         {
             return false;
