@@ -30,8 +30,8 @@ internal sealed class StoryViewerOverlay
     private Spring reveal;
     private StoryDto[] stories = Array.Empty<StoryDto>();
     private string authorLabel = string.Empty;
-    private string authorHandle = string.Empty;
     private string? authorAvatarUrl;
+    private bool canDelete;
     private int index;
     private float elapsed;
     private bool open;
@@ -40,6 +40,7 @@ internal sealed class StoryViewerOverlay
     private Vector2 pressOrigin;
     private float dragOffset;
     private Action<StoryDto>? onSeen;
+    private Action<StoryDto>? onDelete;
     private Action? onExhausted;
 
     public StoryViewerOverlay(RemoteImageCache images, LodestoneService lodestone)
@@ -51,14 +52,15 @@ internal sealed class StoryViewerOverlay
     public bool Active => open || reveal.Value > 0.01f;
     public StoryDto? Current => index >= 0 && index < stories.Length ? stories[index] : null;
 
-    public void Open(StoryDto[] items, string label, string handle, string? avatarUrl, Action<StoryDto> seen,
-        Action? exhausted = null)
+    public void Open(StoryDto[] items, string label, string? avatarUrl, Action<StoryDto> seen, bool deletable = false,
+        Action<StoryDto>? delete = null, Action? exhausted = null)
     {
         stories = items;
         authorLabel = label;
-        authorHandle = handle;
         authorAvatarUrl = avatarUrl;
+        canDelete = deletable;
         onSeen = seen;
+        onDelete = delete;
         onExhausted = exhausted;
         index = FirstUnseen(items);
         elapsed = 0f;
@@ -92,7 +94,12 @@ internal sealed class StoryViewerOverlay
         holding = false;
     }
 
-    public void Draw(Rect area, PhoneTheme theme)
+    /// <param name="suspended">
+    /// Holds the story on screen and ignores input while something modal is above the viewer, such as
+    /// the delete confirmation. Without it the timer keeps running underneath and can advance off, or
+    /// close, the very story being acted on.
+    /// </param>
+    public void Draw(Rect area, PhoneTheme theme, bool suspended = false)
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         reveal.Step(open ? 1f : 0f, RevealSmoothTime, delta);
@@ -103,6 +110,7 @@ internal sealed class StoryViewerOverlay
             {
                 stories = Array.Empty<StoryDto>();
                 onSeen = null;
+                onDelete = null;
                 onExhausted = null;
             }
 
@@ -121,7 +129,7 @@ internal sealed class StoryViewerOverlay
             return;
         }
 
-        if (open)
+        if (open && !suspended)
         {
             HandleInput(area, delta, images.Get(story.MediaUrl) is not null);
         }
@@ -309,12 +317,24 @@ internal sealed class StoryViewerOverlay
         Typography.Draw(new Vector2(left + nameSize.X + 8f * scale, row.Center.Y - nameSize.Y * 0.5f + 1f * scale),
             TimeText.Short(story.CreatedAtUnix), new Vector4(1f, 1f, 1f, 0.6f), TextStyles.Footnote);
 
+        var hit = new Vector2(14f * scale, 14f * scale);
         var closeCenter = new Vector2(row.Max.X - 10f * scale, row.Center.Y);
         AppSkin.Icon(closeCenter, FontAwesomeIcon.Times.ToIconString(), new Vector4(1f, 1f, 1f, 0.9f), 1.1f);
-        if (UiInteract.HoverClick(closeCenter - new Vector2(14f * scale, 14f * scale),
-                closeCenter + new Vector2(14f * scale, 14f * scale)))
+        if (UiInteract.HoverClick(closeCenter - hit, closeCenter + hit))
         {
             Close();
+        }
+
+        if (!canDelete)
+        {
+            return;
+        }
+
+        var deleteCenter = new Vector2(closeCenter.X - 32f * scale, row.Center.Y);
+        AppSkin.Icon(deleteCenter, FontAwesomeIcon.Trash.ToIconString(), new Vector4(1f, 1f, 1f, 0.82f), 1f);
+        if (UiInteract.HoverClick(deleteCenter - hit, deleteCenter + hit))
+        {
+            onDelete?.Invoke(story);
         }
     }
 

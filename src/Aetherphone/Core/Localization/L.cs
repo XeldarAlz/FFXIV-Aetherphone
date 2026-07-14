@@ -1145,6 +1145,7 @@ internal static class L
         public static readonly LocString SetUpAccount = new("aethergram.setUpAccount", "Set up your account in Settings");
         public static readonly LocString YourStory = new("aethergram.yourStory", "Your story");
         public static readonly LocString NewStory = new("aethergram.newStory", "New Story");
+        public static readonly LocString DeleteStoryMessage = new("aethergram.deleteStoryMessage", "Delete this story? It disappears for everyone right away.");
         public static readonly LocString ForYou = new("aethergram.forYou", "For You");
         public static readonly LocString Following = new("aethergram.following", "Following");
         public static readonly LocString Follow = new("aethergram.follow", "Follow");

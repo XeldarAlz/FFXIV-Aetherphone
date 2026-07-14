@@ -931,6 +931,7 @@
   "aethergram.setUpAccount": "設定でアカウントをセットアップしてください",
   "aethergram.yourStory": "あなたのストーリー",
   "aethergram.newStory": "新しいストーリー",
+  "aethergram.deleteStoryMessage": "このストーリーを削除しますか？全員からすぐに消えます。",
   "aethergram.forYou": "おすすめ",
   "aethergram.following": "フォロー中",
   "aethergram.follow": "フォロー",

@@ -931,6 +931,7 @@
   "aethergram.setUpAccount": "Hesabını Ayarlar'dan oluştur",
   "aethergram.yourStory": "Hikayen",
   "aethergram.newStory": "Yeni Hikaye",
+  "aethergram.deleteStoryMessage": "Bu hikaye silinsin mi? Herkes için hemen kaybolur.",
   "aethergram.forYou": "Senin İçin",
   "aethergram.following": "Takip",
   "aethergram.follow": "Takip Et",

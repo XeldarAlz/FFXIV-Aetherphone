@@ -931,6 +931,7 @@
   "aethergram.setUpAccount": "Configurez votre compte dans les Réglages",
   "aethergram.yourStory": "Ta story",
   "aethergram.newStory": "Nouvelle story",
+  "aethergram.deleteStoryMessage": "Supprimer cette story ? Elle disparaît immédiatement pour tout le monde.",
   "aethergram.forYou": "Pour vous",
   "aethergram.following": "Abonnements",
   "aethergram.follow": "Suivre",

@@ -931,6 +931,7 @@
   "aethergram.setUpAccount": "Настройте аккаунт в Настройках",
   "aethergram.yourStory": "Ваша история",
   "aethergram.newStory": "Новая история",
+  "aethergram.deleteStoryMessage": "Удалить эту историю? Она сразу исчезнет у всех.",
   "aethergram.forYou": "Для вас",
   "aethergram.following": "Подписки",
   "aethergram.follow": "Подписаться",

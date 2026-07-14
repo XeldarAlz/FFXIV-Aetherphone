@@ -931,6 +931,7 @@
   "aethergram.setUpAccount": "在设置中设置你的账户",
   "aethergram.yourStory": "你的快拍",
   "aethergram.newStory": "新快拍",
+  "aethergram.deleteStoryMessage": "要删除这条快拍吗？所有人将立即看不到它。",
   "aethergram.forYou": "为你推荐",
   "aethergram.following": "正在关注",
   "aethergram.follow": "关注",
