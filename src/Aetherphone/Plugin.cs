@@ -11,6 +11,7 @@ using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Gui.Dtr;
@@ -59,6 +60,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ReminderService reminders;
     private readonly DateTime sessionStartedAt;
     private readonly IDtrBarEntry dtrEntry;
+    private bool autoOpenPending;
     private int sampleCounter;
 
     public Plugin()
@@ -100,16 +102,7 @@ public sealed class Plugin : IDalamudPlugin
             services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
             services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
             services.AethernetClient, services.GameData, services.RemoteImages, services.Lodestone);
-        phoneWindow = new PhoneWindow(shell) { IsOpen = Cfg.OpenOnStartup };
-        if (Cfg.OpenOnStartup)
-        {
-            phoneWindow.MarkOpenTrigger("startup");
-            if (Cfg.OpenMinimizedOnStartup)
-            {
-                phoneWindow.StartMinimized();
-            }
-        }
-
+        phoneWindow = new PhoneWindow(shell);
         windowSystem.AddWindow(phoneWindow);
         windowSystem.AddWindow(aboutWindow);
         phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
@@ -133,12 +126,76 @@ public sealed class Plugin : IDalamudPlugin
             new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) });
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
+        ClientState.Login += OnLogin;
+
+        if (Cfg.OpenOnStartup && ClientState.IsLoggedIn)
+        {
+            QueueAutoOpen();
+        }
+    }
+
+    private void OnLogin()
+    {
+        if (!Cfg.OpenOnStartup)
+        {
+            return;
+        }
+
+        QueueAutoOpen();
+    }
+
+    private void QueueAutoOpen()
+    {
+        if (phoneWindow.IsOpen)
+        {
+            return;
+        }
+
+        autoOpenPending = true;
+        Framework.Update -= OnAutoOpenTick;
+        Framework.Update += OnAutoOpenTick;
+    }
+
+    private void OnAutoOpenTick(IFramework framework)
+    {
+        if (!autoOpenPending)
+        {
+            Framework.Update -= OnAutoOpenTick;
+            return;
+        }
+
+        if (ObjectTable.LocalPlayer is null || Condition[ConditionFlag.BetweenAreas] ||
+            Condition[ConditionFlag.BetweenAreas51])
+        {
+            return;
+        }
+
+        autoOpenPending = false;
+        Framework.Update -= OnAutoOpenTick;
+        if (phoneWindow.IsOpen)
+        {
+            return;
+        }
+
+        phoneWindow.MarkOpenTrigger("startup");
+        if (Cfg.OpenMinimizedOnStartup)
+        {
+            phoneWindow.StartMinimized();
+        }
+        else
+        {
+            phoneWindow.Maximize();
+        }
+
+        phoneWindow.IsOpen = true;
     }
 
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
+        ClientState.Login -= OnLogin;
+        Framework.Update -= OnAutoOpenTick;
         services.Notifications.Changed -= UpdateDtrBadge;
         services.Calls.IncomingCallPresented -= OnIncomingCall;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
