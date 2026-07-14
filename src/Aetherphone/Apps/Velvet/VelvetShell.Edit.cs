@@ -12,8 +12,6 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
-    private static readonly Vector4 RoleTone = new(0.62f, 0.22f, 0.60f, 1f);
-
     private string editDisplayName = string.Empty;
     private string editHandle = string.Empty;
     private string editIntro = string.Empty;
@@ -98,13 +96,10 @@ internal sealed partial class VelvetShell
             DrawIntentEditor();
             Gap(16f);
 
-            if (VelvetIntent.IncludesErp(editIntent))
-            {
-                VSectionHeader.Card(FontAwesomeIcon.Heart, "Role");
-                Gap(6f);
-                DrawTokenEditor(editRole, VelvetSuggestions.Roles, RoleTone);
-                Gap(16f);
-            }
+            VSectionHeader.Card(FontAwesomeIcon.Heart, "Role");
+            Gap(6f);
+            DrawCategoryPicker(VelvetSuggestions.DynamicCategories, editRole);
+            Gap(16f);
 
             VSectionHeader.Card(FontAwesomeIcon.HandHoldingHeart, "Relationship");
             Gap(6f);
@@ -113,7 +108,7 @@ internal sealed partial class VelvetShell
 
             VSectionHeader.Card(FontAwesomeIcon.Hashtag, "Tags");
             Gap(6f);
-            DrawTokenEditor(editTags, VelvetSuggestions.Tags, VelvetTheme.Rose);
+            DrawCategoryPicker(VelvetSuggestions.TagCategories, editTags);
             Gap(16f);
 
             VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, "Limits");

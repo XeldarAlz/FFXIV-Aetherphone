@@ -261,18 +261,17 @@ internal sealed partial class VelvetShell
         var scale = ImGuiHelpers.GlobalScale;
         ui.Field("Introduce yourself", "##ob_intro", ref onboardIntro, 400, true, 132f);
         ImGui.Dummy(new Vector2(0f, 20f * scale));
+        DrawCategoryPicker(VelvetSuggestions.DynamicCategories, onboardRole);
+        ImGui.Dummy(new Vector2(0f, 18f * scale));
+        DrawCategoryPicker(VelvetSuggestions.TagCategories, onboardTags);
+    }
 
-        var dynamics = VelvetSuggestions.DynamicCategories;
-        for (var index = 0; index < dynamics.Length; index++)
-        {
-            DrawTagCategory(dynamics[index], onboardRole);
-            ImGui.Dummy(new Vector2(0f, 18f * scale));
-        }
-
-        var categories = VelvetSuggestions.TagCategories;
+    private void DrawCategoryPicker(VelvetTagCategory[] categories, List<string> target)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
         for (var index = 0; index < categories.Length; index++)
         {
-            DrawTagCategory(categories[index], onboardTags);
+            DrawTagCategory(categories[index], target);
             if (index < categories.Length - 1)
             {
                 ImGui.Dummy(new Vector2(0f, 18f * scale));

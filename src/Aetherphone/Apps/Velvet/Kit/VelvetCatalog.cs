@@ -115,17 +115,6 @@ internal static class VelvetIntent
 
 internal static class VelvetSuggestions
 {
-    public static readonly string[] Roles =
-    {
-        "dominant", "submissive", "switch", "soft", "service", "brat", "caregiver", "primal", "rope", "gentle",
-    };
-
-    public static readonly string[] Tags =
-    {
-        "slowburn", "romance", "storytelling", "casual", "longterm", "lore", "canon", "ocs", "aftercare", "praise",
-        "wholesome", "latenight",
-    };
-
     public static readonly string[] Limits =
     {
         "no irl", "fade to black", "ask first", "no pain", "no gore", "sfw until trust", "no permadeath", "no non-con",
@@ -133,20 +122,23 @@ internal static class VelvetSuggestions
 
     public static readonly VelvetTagCategory[] DynamicCategories =
     {
-        new("Dynamic", new Vector4(0.898f, 0.102f, 0.357f, 1f),
-            new[] { "dominant", "submissive", "switch", "brat", "primal" }),
-        new("Care", new Vector4(0.890f, 0.604f, 0.416f, 1f),
-            new[] { "service", "caregiver", "soft", "gentle", "rope" }),
+        new("Dominant", new Vector4(0.898f, 0.102f, 0.357f, 1f),
+            new[] { "dominant", "soft dom", "sadist", "primal", "caregiver", "owner", "brat tamer" }),
+        new("Submissive", new Vector4(0.647f, 0.482f, 0.839f, 1f),
+            new[] { "submissive", "brat", "masochist", "little", "pet", "service", "rope bunny" }),
+        new("Switch", new Vector4(0.420f, 0.780f, 0.753f, 1f),
+            new[] { "switch", "vanilla" }),
     };
 
     public static readonly VelvetTagCategory[] TagCategories =
     {
-        new("Pace", new Vector4(0.420f, 0.780f, 0.753f, 1f),
-            new[] { "slowburn", "longterm", "casual", "latenight" }),
-        new("Mood", new Vector4(0.776f, 0.294f, 0.690f, 1f),
-            new[] { "romance", "wholesome", "praise", "aftercare" }),
-        new("Roleplay", new Vector4(0.647f, 0.482f, 0.839f, 1f),
-            new[] { "storytelling", "lore", "canon", "ocs" }),
+        new("Tone", new Vector4(0.961f, 0.361f, 0.541f, 1f),
+            new[] { "romantic", "passionate", "tender", "rough", "playful", "dark", "wholesome" }),
+        new("Pace", new Vector4(0.890f, 0.604f, 0.416f, 1f),
+            new[] { "slow burn", "long-term", "casual", "slice-of-life", "one-shot", "late night" }),
+        new("Style", new Vector4(0.549f, 0.627f, 0.878f, 1f),
+            new[] { "para", "multi-para", "literate", "walk-up", "tell-first", "lore-friendly", "canon", "oc",
+                "immersive", "venue" }),
     };
 }
 
