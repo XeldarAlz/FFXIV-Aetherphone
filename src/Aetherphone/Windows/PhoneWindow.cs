@@ -18,6 +18,10 @@ internal sealed class PhoneWindow : Window
     private const int RecenterFrameCount = 3;
     private readonly PhoneShell shell;
     private int recenterFrames;
+    private int restoreFrames;
+    private Vector2? maximizedPosition;
+    private Vector2 expandFromPosition;
+    private MinimizePhase lastPhase;
     private string pendingOpenTrigger = "toggle";
     private DateTime shellOpenedAt;
 
@@ -31,7 +35,16 @@ internal sealed class PhoneWindow : Window
 
     public bool IsMinimized => shell.MinimizedResting;
 
-    public void Maximize() => shell.ForceMaximize();
+    public void Maximize()
+    {
+        if (shell.MinimizePhase != MinimizePhase.None)
+        {
+            restoreFrames = RecenterFrameCount;
+        }
+
+        shell.ForceMaximize();
+    }
+
     public void StartMinimized() => shell.ForceMinimized();
 
     public void MarkOpenTrigger(string trigger) => pendingOpenTrigger = trigger;
@@ -40,6 +53,7 @@ internal sealed class PhoneWindow : Window
     {
         shell.ForceMaximize();
         recenterFrames = RecenterFrameCount;
+        restoreFrames = 0;
         pendingOpenTrigger = "command";
         IsOpen = true;
     }
@@ -53,6 +67,7 @@ internal sealed class PhoneWindow : Window
         }
 
         shell.ForceMaximize();
+        restoreFrames = RecenterFrameCount;
         pendingOpenTrigger = "toggle";
         IsOpen = true;
     }
@@ -74,7 +89,8 @@ internal sealed class PhoneWindow : Window
 
     public override void PreDraw()
     {
-        var minimized = shell.MinimizedResting;
+        var phase = shell.MinimizePhase;
+        var minimized = phase == MinimizePhase.Minimized;
         var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
         Size = size;
         SizeCondition = ImGuiCond.Always;
@@ -88,9 +104,21 @@ internal sealed class PhoneWindow : Window
             PositionCondition = ImGuiCond.Always;
             recenterFrames--;
         }
+        else if (restoreFrames > 0 && maximizedPosition is { } restoreTarget)
+        {
+            Position = restoreTarget;
+            PositionCondition = ImGuiCond.Always;
+            restoreFrames--;
+        }
+        else if (phase == MinimizePhase.Expanding && maximizedPosition is { } homePosition)
+        {
+            Position = Vector2.Lerp(homePosition, expandFromPosition, shell.MinimizeEased);
+            PositionCondition = ImGuiCond.Always;
+        }
         else
         {
             Position = null;
+            restoreFrames = 0;
         }
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
@@ -108,6 +136,19 @@ internal sealed class PhoneWindow : Window
             var device = new Rect(origin, origin + available);
             shell.Draw(device);
         }
+
+        var phase = shell.MinimizePhase;
+        if (phase == MinimizePhase.Expanding && lastPhase != MinimizePhase.Expanding)
+        {
+            expandFromPosition = ImGui.GetWindowPos();
+        }
+
+        if (phase == MinimizePhase.None)
+        {
+            maximizedPosition = ImGui.GetWindowPos();
+        }
+
+        lastPhase = phase;
 
         if (shell.ConsumeCloseRequest())
         {

@@ -169,6 +169,10 @@ internal sealed class PhoneShell : IDisposable
 
     public bool MinimizedResting => minimize.MinimizedResting;
 
+    public MinimizePhase MinimizePhase => minimize.Phase;
+
+    public float MinimizeEased => minimize.EasedProgress;
+
     public void ForceMaximize() => minimize.SnapFull();
 
     public void ForceMinimized() => minimize.SnapMinimized();
