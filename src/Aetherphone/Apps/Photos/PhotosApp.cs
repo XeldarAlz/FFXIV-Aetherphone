@@ -114,7 +114,7 @@ internal sealed class PhotosApp : IPhoneApp
             }
 
             var gap = 6f * scale;
-            var avail = ImGui.GetContentRegionAvail().X;
+            var avail = ScrollLayout.StableContentWidth();
             var cell = (avail - gap * (Columns - 1)) / Columns;
             for (var index = 0; index < paths.Length; index++)
             {

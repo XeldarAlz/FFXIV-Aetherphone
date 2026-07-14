@@ -217,7 +217,7 @@ internal sealed partial class VelvetShell
             }
         }
 
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = ScrollLayout.StableContentWidth();
         VSectionHeader.Bar(isMe ? Loc.T(L.Velvet.MyPhotos) : Loc.T(L.Velvet.Photos),
             owned.Count > 0 ? owned.Count.ToString(Loc.Culture) : string.Empty);
         Gap(6f);

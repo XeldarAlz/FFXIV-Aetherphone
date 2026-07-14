@@ -305,7 +305,7 @@ internal sealed class FeedbackApp : IPhoneApp
             }
 
             var gap = 6f * scale;
-            var cell = (ImGui.GetContentRegionAvail().X - gap * (PickerColumns - 1)) / PickerColumns;
+            var cell = (ScrollLayout.StableContentWidth() - gap * (PickerColumns - 1)) / PickerColumns;
             using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
             {
                 for (var index = 0; index < pickerPaths.Length; index++)

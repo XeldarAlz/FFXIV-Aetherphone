@@ -488,7 +488,7 @@ internal sealed class ChatTranscript
     private void DrawSystemMessage(TranscriptMessage message, in ChatTranscriptModel model)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = ScrollLayout.StableContentWidth();
         var origin = ImGui.GetCursorScreenPos();
         var textSize = Typography.Measure(message.Body, 0.74f, FontWeight.Medium);
         var center = new Vector2(origin.X + available * 0.5f, origin.Y + 6f * scale + textSize.Y * 0.5f);
@@ -506,7 +506,7 @@ internal sealed class ChatTranscript
 
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = ScrollLayout.StableContentWidth();
         var textSize = Typography.Measure(label, 0.72f, FontWeight.Medium);
         var chipWidth = textSize.X + 20f * scale;
         var chipHeight = textSize.Y + 8f * scale;
@@ -525,7 +525,7 @@ internal sealed class ChatTranscript
         var mine = message.SenderId == model.MyUserId;
         var deleted = (message.Flags & TranscriptFlags.Deleted) != 0;
         var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = ScrollLayout.StableContentWidth();
         var paddingX = 11f * scale;
         var paddingY = 7f * scale;
         var wrap = available * 0.74f - paddingX * 2f;
@@ -722,7 +722,7 @@ internal sealed class ChatTranscript
         var scale = ImGuiHelpers.GlobalScale;
         var mine = message.SenderId == model.MyUserId;
         var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = ScrollLayout.StableContentWidth();
         var paddingX = 10f * scale;
         var paddingY = 8f * scale;
         var contentWidth = MathF.Min(available * 0.62f, 210f * scale);
@@ -818,7 +818,7 @@ internal sealed class ChatTranscript
         var scale = ImGuiHelpers.GlobalScale;
         var mine = message.SenderId == model.MyUserId;
         var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = ScrollLayout.StableContentWidth();
         var padding = 5f * scale;
         var aspect = message.MediaWidth > 0 && message.MediaHeight > 0
             ? (float)message.MediaHeight / message.MediaWidth

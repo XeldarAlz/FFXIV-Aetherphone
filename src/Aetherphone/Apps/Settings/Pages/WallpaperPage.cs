@@ -154,7 +154,7 @@ internal sealed class WallpaperPage : ISettingsPage
         using (AppSurface.Begin(region))
         using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
         {
-            var cellWidth = (ImGui.GetContentRegionAvail().X - gap * (Columns - 1)) / Columns;
+            var cellWidth = (ScrollLayout.StableContentWidth() - gap * (Columns - 1)) / Columns;
             var cellHeight = aspect > 0f ? cellWidth / aspect : cellWidth;
             var tileCount = entries.Count + 1;
             for (var index = 0; index < tileCount; index++)
@@ -356,7 +356,7 @@ internal sealed class WallpaperPage : ISettingsPage
                 return;
             }
 
-            var cell = (ImGui.GetContentRegionAvail().X - gap * (PhotoColumns - 1)) / PhotoColumns;
+            var cell = (ScrollLayout.StableContentWidth() - gap * (PhotoColumns - 1)) / PhotoColumns;
             for (var index = 0; index < photoPaths.Length; index++)
             {
                 using (ImRaii.PushId(index))

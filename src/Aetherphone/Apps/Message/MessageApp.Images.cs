@@ -60,7 +60,7 @@ internal sealed partial class MessageApp
 
             const int columns = 3;
             var gap = 6f * scale;
-            var cell = (ImGui.GetContentRegionAvail().X - gap * (columns - 1)) / columns;
+            var cell = (ScrollLayout.StableContentWidth() - gap * (columns - 1)) / columns;
             using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
             {
                 for (var index = 0; index < chatPickerPaths.Length; index++)

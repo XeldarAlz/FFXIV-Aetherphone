@@ -167,7 +167,7 @@ internal sealed partial class DevApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = ScrollLayout.StableContentWidth();
         var paddingX = 12f * scale;
         var paddingY = 8f * scale;
         var wrap = available * 0.74f - paddingX * 2f;
@@ -240,7 +240,7 @@ internal sealed partial class DevApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var available = ImGui.GetContentRegionAvail().X;
+        var available = ScrollLayout.StableContentWidth();
         var padding = 5f * scale;
         var aspect = message.MediaWidth > 0 && message.MediaHeight > 0
             ? (float)message.MediaHeight / message.MediaWidth
@@ -512,7 +512,7 @@ internal sealed partial class DevApp
 
             const int columns = 3;
             var gap = 6f * scale;
-            var cell = (ImGui.GetContentRegionAvail().X - gap * (columns - 1)) / columns;
+            var cell = (ScrollLayout.StableContentWidth() - gap * (columns - 1)) / columns;
             using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
             {
                 for (var index = 0; index < chatPickerPaths.Length; index++)

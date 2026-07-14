@@ -107,7 +107,7 @@ internal sealed partial class AethergramApp
             }
 
             var gap = 6f * scale;
-            var cell = (ImGui.GetContentRegionAvail().X - gap * (GridColumns - 1)) / GridColumns;
+            var cell = (ScrollLayout.StableContentWidth() - gap * (GridColumns - 1)) / GridColumns;
             using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
             {
                 for (var index = 0; index < pickerPaths.Length; index++)
