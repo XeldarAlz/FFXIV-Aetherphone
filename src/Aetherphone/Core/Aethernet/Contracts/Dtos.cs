@@ -141,7 +141,8 @@ internal sealed record VelvetProfileDto(
     string? AvatarUrl,
     long GateAckAtUnix,
     bool ShareTimeZone = true,
-    int? UtcOffsetMinutes = null);
+    int? UtcOffsetMinutes = null,
+    int WhoCanMessage = 0);
 
 internal sealed record UpdateVelvetProfileRequest(
     string? Intro,
@@ -151,7 +152,8 @@ internal sealed record UpdateVelvetProfileRequest(
     string[]? Limits,
     int? LookingFor,
     int? RelationshipStatus,
-    bool? Discoverable);
+    bool? Discoverable,
+    int? WhoCanMessage = null);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 
@@ -212,7 +214,8 @@ internal sealed record VelvetConnectionDto(
     int State,
     int Presence,
     long ConnectedAtUnix,
-    int? UtcOffsetMinutes = null);
+    int? UtcOffsetMinutes = null,
+    string Intro = "");
 
 internal sealed record VelvetConnectionPage(VelvetConnectionDto[] Items, string? NextCursor);
 

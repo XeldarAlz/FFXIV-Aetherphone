@@ -742,6 +742,13 @@ internal sealed class VelvetStore : IDisposable
         work.Run("connect", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
     }
 
+    public void Connect(string userId, string intro)
+    {
+        sentRequestsLoaded = false;
+        SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
+        work.Run("connect", async token => await client.ConnectAsync(userId, intro, token).ConfigureAwait(false));
+    }
+
     public void Disconnect(string userId)
     {
         connections = RemoveConnection(connections, userId);

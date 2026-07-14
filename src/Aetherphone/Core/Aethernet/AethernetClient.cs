@@ -548,6 +548,17 @@ internal sealed class AethernetClient
         return http.SendAsync(HttpMethod.Post, Url($"/velvet/connect/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
     }
 
+    public Task<bool> ConnectAsync(string userId, string intro, CancellationToken token)
+    {
+        var url = Url($"/velvet/connect/{Uri.EscapeDataString(userId)}");
+        if (!string.IsNullOrEmpty(intro))
+        {
+            url += "?intro=" + Uri.EscapeDataString(intro);
+        }
+
+        return http.SendAsync(HttpMethod.Post, url, session.Token, token, authStatusSink);
+    }
+
     public Task<bool> DisconnectAsync(string userId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Delete, Url($"/velvet/connect/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);
