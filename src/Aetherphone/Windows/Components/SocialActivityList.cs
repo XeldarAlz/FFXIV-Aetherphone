@@ -89,7 +89,7 @@ internal static class SocialActivityList
             using (Plugin.Fonts.Push(0.88f))
             using (ImRaii.PushColor(ImGuiCol.Text, palette.BodyInk))
             {
-                ImGui.TextWrapped(body);
+                Typography.Wrapped(body);
             }
 
             ImGui.PopTextWrapPos();

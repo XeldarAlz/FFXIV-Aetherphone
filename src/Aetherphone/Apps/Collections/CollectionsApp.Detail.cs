@@ -72,7 +72,7 @@ internal sealed partial class CollectionsApp
         using (ImRaii.PushColor(ImGuiCol.Text, frameTheme.TextStrong))
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextUnformatted(item.Description);
+            Typography.Plain(item.Description);
             ImGui.PopTextWrapPos();
         }
 

@@ -517,7 +517,7 @@ internal sealed partial class VelvetApp
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.MutedInk))
         using (Plugin.Fonts.Push(0.82f))
         {
-            ImGui.TextWrapped(text);
+            Typography.Wrapped(text);
         }
 
         ImGui.PopTextWrapPos();

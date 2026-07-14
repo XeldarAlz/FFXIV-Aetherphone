@@ -182,7 +182,7 @@ internal sealed partial class VelvetApp
                 using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.BodyInk))
                 using (Plugin.Fonts.Push(0.92f))
                 {
-                    ImGui.TextWrapped(post.Caption);
+                    Typography.Wrapped(post.Caption);
                 }
 
                 ImGui.PopTextWrapPos();
@@ -263,7 +263,7 @@ internal sealed partial class VelvetApp
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.BodyInk))
         using (Plugin.Fonts.Push(0.9f))
         {
-            ImGui.TextWrapped(comment.Text);
+            Typography.Wrapped(comment.Text);
         }
 
         ImGui.PopTextWrapPos();

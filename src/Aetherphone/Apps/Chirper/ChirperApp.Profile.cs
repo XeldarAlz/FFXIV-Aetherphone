@@ -155,7 +155,7 @@ internal sealed partial class ChirperApp
             ImGui.PushTextWrapPos(bioWrapPos);
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
             {
-                ImGui.TextWrapped(user.Bio);
+                Typography.Wrapped(user.Bio);
             }
 
             ImGui.PopTextWrapPos();
@@ -341,7 +341,7 @@ internal sealed partial class ChirperApp
                 ImGui.Dummy(new Vector2(0f, 10f * scale));
                 using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
                 {
-                    ImGui.TextWrapped(editStatus);
+                    Typography.Wrapped(editStatus);
                 }
             }
         }
@@ -368,7 +368,7 @@ internal sealed partial class ChirperApp
         var scale = ImGuiHelpers.GlobalScale;
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.MutedInk))
         {
-            ImGui.TextUnformatted(Loc.T(L.Chirper.HandleLabel));
+            Typography.Plain(Loc.T(L.Chirper.HandleLabel));
         }
 
         var origin = ImGui.GetCursorScreenPos();

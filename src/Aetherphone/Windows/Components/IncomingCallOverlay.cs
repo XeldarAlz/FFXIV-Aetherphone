@@ -110,7 +110,7 @@ internal sealed class IncomingCallOverlay
             ImGui.SetCursorScreenPos(center - size * 0.5f);
             using (ImRaii.PushColor(ImGuiCol.Text, Ink with { W = alpha }))
             {
-                ImGui.TextUnformatted(glyph);
+                Typography.Plain(glyph);
             }
         }
 

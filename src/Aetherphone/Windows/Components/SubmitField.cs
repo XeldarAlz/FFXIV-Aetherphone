@@ -29,7 +29,7 @@ internal static class SubmitField
             ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
             {
-                ImGui.TextUnformatted(glyph);
+                Typography.Plain(glyph);
             }
         }
 
@@ -41,6 +41,8 @@ internal static class SubmitField
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, bar.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(inputRight - inputLeft);
         var submitted = false;
+        Plugin.Fonts.NoticeText(hint);
+        Plugin.Fonts.NoticeText(text);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {

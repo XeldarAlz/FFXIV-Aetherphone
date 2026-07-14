@@ -335,7 +335,7 @@ internal sealed class AppSkin
         var scale = ImGuiHelpers.GlobalScale;
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
         {
-            ImGui.TextUnformatted(label);
+            Typography.Plain(label);
         }
 
         var origin = ImGui.GetCursorScreenPos();
@@ -380,13 +380,13 @@ internal sealed class AppSkin
     {
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
         {
-            ImGui.TextUnformatted(label);
+            Typography.Plain(label);
         }
 
         ImGui.PushTextWrapPos(0f);
         using (ImRaii.PushColor(ImGuiCol.Text, Theme.TextStrong))
         {
-            ImGui.TextWrapped(value);
+            Typography.Wrapped(value);
         }
 
         ImGui.PopTextWrapPos();
@@ -400,7 +400,7 @@ internal sealed class AppSkin
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.HeaderInk))
         {
-            ImGui.TextUnformatted(label.ToUpperInvariant());
+            Typography.Plain(label.ToUpperInvariant());
         }
 
         ImGui.Dummy(new Vector2(0f, gapPixels * scale));
@@ -434,7 +434,7 @@ internal sealed class AppSkin
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
         using (Plugin.Fonts.Push(0.82f))
         {
-            ImGui.TextWrapped(text);
+            Typography.Wrapped(text);
         }
 
         ImGui.PopTextWrapPos();

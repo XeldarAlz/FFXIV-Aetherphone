@@ -99,7 +99,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Encryption.NotSignedIn));
+            Typography.Wrapped(Loc.T(L.Encryption.NotSignedIn));
         }
     }
 
@@ -109,9 +109,9 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Encryption.Intro));
+            Typography.Wrapped(Loc.T(L.Encryption.Intro));
             ImGui.Dummy(new Vector2(0f, 4f * scale));
-            ImGui.TextWrapped(Loc.T(L.Encryption.SettingUp));
+            Typography.Wrapped(Loc.T(L.Encryption.SettingUp));
         }
     }
 
@@ -121,13 +121,13 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Encryption.Intro));
+            Typography.Wrapped(Loc.T(L.Encryption.Intro));
             ImGui.Dummy(new Vector2(0f, 4f * scale));
-            ImGui.TextWrapped(Loc.T(L.Encryption.ActiveHint));
+            Typography.Wrapped(Loc.T(L.Encryption.ActiveHint));
             ImGui.Dummy(new Vector2(0f, 4f * scale));
-            ImGui.TextWrapped(Loc.T(L.Encryption.NewDeviceHint));
+            Typography.Wrapped(Loc.T(L.Encryption.NewDeviceHint));
             ImGui.Dummy(new Vector2(0f, 2f * scale));
-            ImGui.TextUnformatted(Loc.T(L.Encryption.KeyVersion, vault.KeyVersion));
+            Typography.Plain(Loc.T(L.Encryption.KeyVersion, vault.KeyVersion));
         }
 
         ImGui.Dummy(new Vector2(0f, 12f * scale));
@@ -190,7 +190,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(message);
+            Typography.Wrapped(message);
         }
     }
 

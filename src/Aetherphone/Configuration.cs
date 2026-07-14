@@ -41,6 +41,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool ScrollWhileIdle { get; set; } = true;
     public bool ShowLodestonePortraits { get; set; } = true;
     public float TextZoom { get; set; } = 1.15f;
+    public List<string> FontGlyphLedger { get; set; } = new();
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = 1.25f;
     public string Language { get; set; } = string.Empty;

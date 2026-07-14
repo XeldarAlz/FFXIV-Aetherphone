@@ -346,7 +346,7 @@ internal sealed class DynamicIsland
             ImGui.SetCursorScreenPos(center - size * 0.5f);
             using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, alpha)))
             {
-                ImGui.TextUnformatted(glyph);
+                Typography.Plain(glyph);
             }
         }
 

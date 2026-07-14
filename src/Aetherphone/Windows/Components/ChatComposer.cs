@@ -190,6 +190,7 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var submitted = false;
+        Plugin.Fonts.NoticeText(draft);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {

@@ -692,7 +692,7 @@ internal sealed partial class VelvetApp : IPhoneApp
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.BodyInk))
             using (Plugin.Fonts.Push(0.95f))
             {
-                ImGui.TextWrapped(post.Caption);
+                Typography.Wrapped(post.Caption);
             }
 
             ImGui.PopTextWrapPos();

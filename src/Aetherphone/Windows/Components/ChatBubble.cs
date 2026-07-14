@@ -80,7 +80,7 @@ internal static class ChatBubble
                 ImGui.PushTextWrapPos(start.X + offsetX + padding + wrap);
                 using (ImRaii.PushColor(ImGuiCol.Text, textColor))
                 {
-                    ImGui.TextUnformatted(line.Text);
+                    Typography.Plain(line.Text);
                 }
 
                 ImGui.PopTextWrapPos();
@@ -127,7 +127,7 @@ internal static class ChatBubble
         ImGui.PushTextWrapPos(scaledTextLocal.X + wrap * pop);
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(textColor, textColor.W * alpha)))
         {
-            ImGui.TextUnformatted(text);
+            Typography.Plain(text);
         }
 
         ImGui.PopTextWrapPos();

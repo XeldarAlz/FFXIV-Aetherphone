@@ -225,11 +225,11 @@ public sealed class AboutWindow : Window, IDisposable
             ImGui.PushTextWrapPos(320f * s);
             using (ImRaii.PushFont(UiBuilder.IconFont))
             using (ImRaii.PushColor(ImGuiCol.Text, cat.Color))
-                ImGui.TextUnformatted(cat.Icon.ToIconString());
+                Typography.Plain(cat.Icon.ToIconString());
             ImGui.SameLine(0, 6f * s);
-            using (ImRaii.PushColor(ImGuiCol.Text, cat.Color)) ImGui.TextUnformatted(Loc.T(cat.Header));
+            using (ImRaii.PushColor(ImGuiCol.Text, cat.Color)) Typography.Plain(Loc.T(cat.Header));
             ImGui.Spacing();
-            using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextSecondary)) ImGui.TextUnformatted(Loc.T(line));
+            using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextSecondary)) Typography.Plain(Loc.T(line));
             ImGui.PopTextWrapPos();
         }
     }
@@ -379,17 +379,17 @@ public sealed class AboutWindow : Window, IDisposable
         {
             var hs = ImGui.CalcTextSize(iconStr);
             ImGui.SetCursorScreenPos(new Vector2(startX, midY - hs.Y * 0.5f));
-            using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextStrong)) ImGui.TextUnformatted(iconStr);
+            using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextStrong)) Typography.Plain(iconStr);
         }
 
         ImGui.SetWindowFontScale(1f);
         ImGui.SetCursorScreenPos(new Vector2(startX + iconSize.X + innerGap, midY - labelSize.Y * 0.5f));
-        using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextStrong)) ImGui.TextUnformatted(label);
+        using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextStrong)) Typography.Plain(label);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(size);
         if (!hover) return;
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        using (ImRaii.Tooltip()) ImGui.TextUnformatted(Loc.T(L.About.SponsorTooltip));
+        using (ImRaii.Tooltip()) Typography.Plain(Loc.T(L.About.SponsorTooltip));
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             OpenUrl(SponsorUrl);
         else if (ImGui.IsMouseClicked(ImGuiMouseButton.Right)) ImGui.SetClipboardText(SponsorUrl);
@@ -522,15 +522,15 @@ public sealed class AboutWindow : Window, IDisposable
         ImGui.SetCursorScreenPos(new Vector2(startX, midY - iconSize.Y * 0.5f));
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Lerp(accent, ChromeInk.TextStrong, h)))
-            ImGui.TextUnformatted(iconStr);
+            Typography.Plain(iconStr);
         ImGui.SetCursorScreenPos(new Vector2(startX + iconSize.X + innerGap, midY - labelSize.Y * 0.5f));
         using (ImRaii.PushColor(ImGuiCol.Text, Vector4.Lerp(ChromeInk.TextSecondary, ChromeInk.TextStrong, h)))
-            ImGui.TextUnformatted(label);
+            Typography.Plain(label);
         ImGui.SetCursorScreenPos(slotOrigin);
         ImGui.Dummy(size);
         if (!hovered) return;
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        using (ImRaii.Tooltip()) ImGui.TextUnformatted(Loc.T(L.About.LinkTooltip));
+        using (ImRaii.Tooltip()) Typography.Plain(Loc.T(L.About.LinkTooltip));
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             OpenUrl(url);
         else if (ImGui.IsMouseClicked(ImGuiMouseButton.Right)) ImGui.SetClipboardText(url);
@@ -552,9 +552,9 @@ public sealed class AboutWindow : Window, IDisposable
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text,
                    Vector4.Lerp(Accent.Blue, Palette.Lighten(Accent.BlueSoft, 0.3f), twinkle)))
-            ImGui.TextUnformatted(glyph);
+            Typography.Plain(glyph);
         ImGui.SameLine(0, gap);
-        using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextDim)) ImGui.TextUnformatted(madeBy);
+        using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextDim)) Typography.Plain(madeBy);
     }
 
     private static void SectionHeader(FontAwesomeIcon icon, string label, Vector4 accent)
@@ -577,10 +577,10 @@ public sealed class AboutWindow : Window, IDisposable
         ImGui.SetCursorScreenPos(new Vector2(contentStartX, startScreen.Y));
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text, accent))
-            ImGui.TextUnformatted(iconStr);
+            Typography.Plain(iconStr);
         var labelX = contentStartX + iconSize.X + iconGap;
         ImGui.SetCursorScreenPos(new Vector2(labelX, startScreen.Y + (iconSize.Y - labelSize.Y) * 0.5f));
-        using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextDim)) ImGui.TextUnformatted(labelUp);
+        using (ImRaii.PushColor(ImGuiCol.Text, ChromeInk.TextDim)) Typography.Plain(labelUp);
         RuleLine(leftX, contentStartX - sidePad, lineY, accent, brightAtStart: false);
         RuleLine(labelX + labelSize.X + sidePad, rightX, lineY, accent, brightAtStart: true);
         ImGui.SetCursorScreenPos(startScreen);
@@ -618,11 +618,11 @@ public sealed class AboutWindow : Window, IDisposable
         foreach (var off in BloomOffsets)
         {
             ImGui.SetCursorScreenPos(startScreen + off * ImGuiHelpers.GlobalScale);
-            using (ImRaii.PushColor(ImGuiCol.Text, bloom)) ImGui.TextUnformatted(text);
+            using (ImRaii.PushColor(ImGuiCol.Text, bloom)) Typography.Plain(text);
         }
 
         ImGui.SetCursorScreenPos(startScreen);
-        using (ImRaii.PushColor(ImGuiCol.Text, baseColor)) ImGui.TextUnformatted(text);
+        using (ImRaii.PushColor(ImGuiCol.Text, baseColor)) Typography.Plain(text);
         var dl = ImGui.GetWindowDrawList();
         var bandW = size.X * bandFrac;
         var phase = Pulse.Phase(periodMs);
@@ -630,7 +630,7 @@ public sealed class AboutWindow : Window, IDisposable
         dl.PushClipRect(new Vector2(bandCenter - bandW * 0.5f, startScreen.Y),
             new Vector2(bandCenter + bandW * 0.5f, startScreen.Y + size.Y), true);
         ImGui.SetCursorScreenPos(startScreen);
-        using (ImRaii.PushColor(ImGuiCol.Text, shimmerColor)) ImGui.TextUnformatted(text);
+        using (ImRaii.PushColor(ImGuiCol.Text, shimmerColor)) Typography.Plain(text);
         dl.PopClipRect();
         ImGui.SetWindowFontScale(1f);
     }
@@ -650,7 +650,7 @@ public sealed class AboutWindow : Window, IDisposable
         dl.AddRectFilled(origin, end, ImGui.GetColorU32(bgColor), h * 0.5f);
         dl.AddRect(origin, end, ImGui.GetColorU32(borderColor), h * 0.5f, ImDrawFlags.None, 1f);
         ImGui.SetCursorScreenPos(new Vector2(origin.X + padX, origin.Y + padY));
-        using (ImRaii.PushColor(ImGuiCol.Text, textColor)) ImGui.TextUnformatted(text);
+        using (ImRaii.PushColor(ImGuiCol.Text, textColor)) Typography.Plain(text);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(w, h));
     }
@@ -690,7 +690,7 @@ public sealed class AboutWindow : Window, IDisposable
         var w = ImGui.CalcTextSize(text).X;
         var avail = ImGui.GetContentRegionAvail().X;
         if (avail > w) ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (avail - w) * 0.5f);
-        using (ImRaii.PushColor(ImGuiCol.Text, color)) ImGui.TextUnformatted(text);
+        using (ImRaii.PushColor(ImGuiCol.Text, color)) Typography.Plain(text);
         if (fontScale != 1f) ImGui.SetWindowFontScale(1f);
     }
 

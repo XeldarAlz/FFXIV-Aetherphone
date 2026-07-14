@@ -118,7 +118,7 @@ internal static class ProgressRing
         ImGui.SetCursorScreenPos(new Vector2(c.X - sz.X * 0.5f, c.Y - sz.Y * 0.5f));
         using (ImRaii.PushFont(UiBuilder.IconFont))
         using (ImRaii.PushColor(ImGuiCol.Text, col))
-            ImGui.TextUnformatted(glyph);
+            Typography.Plain(glyph);
         ImGui.SetWindowFontScale(1f);
     }
 

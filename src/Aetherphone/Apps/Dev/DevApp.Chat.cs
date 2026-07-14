@@ -195,7 +195,7 @@ internal sealed partial class DevApp
             ImGui.PushTextWrapPos(start.X + offsetX + paddingX + wrap);
             using (ImRaii.PushColor(ImGuiCol.Text, ink))
             {
-                ImGui.TextUnformatted(message.Body);
+                Typography.Plain(message.Body);
             }
 
             ImGui.PopTextWrapPos();
@@ -229,7 +229,7 @@ internal sealed partial class DevApp
         ImGui.PushTextWrapPos(scaledTextLocal.X + wrap * pop);
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, ink.W * alpha)))
         {
-            ImGui.TextUnformatted(text);
+            Typography.Plain(text);
         }
 
         ImGui.PopTextWrapPos();

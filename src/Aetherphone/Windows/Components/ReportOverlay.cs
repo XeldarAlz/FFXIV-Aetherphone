@@ -306,7 +306,7 @@ internal sealed class ReportOverlay
         using (ImRaii.PushColor(ImGuiCol.Text, color))
         {
             ImGui.PushTextWrapPos(position.X + width - ImGui.GetWindowPos().X);
-            ImGui.TextWrapped(text);
+            Typography.Wrapped(text);
             ImGui.PopTextWrapPos();
         }
     }

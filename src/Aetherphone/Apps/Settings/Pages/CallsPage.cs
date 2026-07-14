@@ -67,7 +67,7 @@ internal sealed class CallsPage : ISettingsPage
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
             {
                 ImGui.PushTextWrapPos(0f);
-                ImGui.TextWrapped(Loc.T(L.Phone.AudioHint));
+                Typography.Wrapped(Loc.T(L.Phone.AudioHint));
                 ImGui.PopTextWrapPos();
             }
         }

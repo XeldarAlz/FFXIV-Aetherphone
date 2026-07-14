@@ -176,7 +176,7 @@ internal sealed class FeedbackApp : IPhoneApp
             {
                 ImGui.SetCursorScreenPos(placeholderPos);
                 ImGui.PushTextWrapPos(wrapRight);
-                ImGui.TextUnformatted(Loc.T(L.Feedback.Placeholder));
+                Typography.Plain(Loc.T(L.Feedback.Placeholder));
                 ImGui.PopTextWrapPos();
             }
         }

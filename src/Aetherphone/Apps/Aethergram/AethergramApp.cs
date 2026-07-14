@@ -556,7 +556,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
             using (Plugin.Fonts.Push(0.95f))
             {
-                ImGui.TextWrapped(post.Text);
+                Typography.Wrapped(post.Text);
             }
 
             ImGui.PopTextWrapPos();
@@ -758,7 +758,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.MutedInk))
         {
-            ImGui.TextUnformatted(Loc.T(L.Aethergram.HandleLabel));
+            Typography.Plain(Loc.T(L.Aethergram.HandleLabel));
         }
 
         var origin = ImGui.GetCursorScreenPos();

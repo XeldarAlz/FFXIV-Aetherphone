@@ -41,6 +41,7 @@ internal static class SoftWrapField
             editor.Display = SoftWrap.WrapText(logical, wrapWidth);
         }
 
+        Plugin.Fonts.NoticeText(editor.Display);
         var bufferBytes = maxLength * 4 + 1024;
         var edited = ImGui.InputTextMultiline(id, ref editor.Display, bufferBytes, size,
             ImGuiInputTextFlags.CallbackEdit | ImGuiInputTextFlags.CallbackCharFilter, editor.Callback);

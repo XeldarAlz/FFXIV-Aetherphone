@@ -336,7 +336,7 @@ internal sealed partial class MessageApp
         using (Plugin.Fonts.Push(TextStyles.Callout.Scale))
         using (ImRaii.PushColor(ImGuiCol.Text, ui.BodyInk))
         {
-            ImGui.TextWrapped(Loc.T(L.Friends.NewNumberBody));
+            Typography.Wrapped(Loc.T(L.Friends.NewNumberBody));
         }
 
         ImGui.PopTextWrapPos();
@@ -385,7 +385,7 @@ internal sealed partial class MessageApp
             using (ImRaii.PushColor(ImGuiCol.Text, ui.MutedInk))
             using (Plugin.Fonts.Push(1.05f))
             {
-                ImGui.TextUnformatted(Loc.T(L.Friends.ReasonHint));
+                Typography.Plain(Loc.T(L.Friends.ReasonHint));
             }
         }
 

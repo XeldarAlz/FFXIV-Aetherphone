@@ -279,7 +279,7 @@ internal sealed class TimersApp : IPhoneApp
         using (Plugin.Fonts.Push(TextStyles.Footnote.Scale))
         using (Dalamud.Interface.Utility.Raii.ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Timers.MutedInk))
         {
-            ImGui.TextWrapped(text);
+            Typography.Wrapped(text);
         }
 
         ImGui.Dummy(new Vector2(0f, CardGap * scale));

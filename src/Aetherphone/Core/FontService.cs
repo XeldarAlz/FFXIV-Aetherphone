@@ -15,6 +15,24 @@ internal enum FontWeight : byte
     Bold,
 }
 
+internal readonly struct FontToken : IDisposable
+{
+    private readonly FontService owner;
+    private readonly IDisposable inner;
+
+    internal FontToken(FontService owner, IDisposable inner)
+    {
+        this.owner = owner;
+        this.inner = inner;
+    }
+
+    public void Dispose()
+    {
+        inner.Dispose();
+        owner.PopBucket();
+    }
+}
+
 internal sealed class FontService : IDisposable
 {
     private static readonly string[] WeightFiles =
@@ -39,13 +57,26 @@ internal sealed class FontService : IDisposable
     private const float TrackingThreshold = 1.20f;
     private const float TrackingRatio = -0.02f;
     private const float MaxZoom = 1.5f;
+    private const int LedgerCapPerBucket = 2500;
+    private const long LedgerRebuildDebounceMs = 600;
+    private const int PushStackCapacity = 64;
     private readonly IFontAtlas atlas;
     private readonly string fontDirectory;
     private readonly float baseSize;
+    private readonly int bucketCount;
+    private readonly int defaultBucket;
+    private readonly HashSet<ushort>[] ledger;
+    private readonly ushort[][] bucketRanges;
+    private readonly int[] pushedBuckets = new int[PushStackCapacity];
+    private readonly ulong[] baseCoverage = new ulong[(char.MaxValue + 1) / 64];
     private ushort[] glyphRanges;
     private IFontHandle[,] handles;
     private float zoom;
     private float renderScale;
+    private int pushDepth;
+    private long ledgerDirtySince;
+    private volatile bool ledgerRebuildInFlight;
+    private int generation;
 
     public FontService(IDalamudPluginInterface pluginInterface, float zoom)
     {
@@ -54,11 +85,25 @@ internal sealed class FontService : IDisposable
         baseSize = UiBuilder.DefaultFontSizePx;
         this.zoom = zoom;
         renderScale = zoom / MaxZoom;
+        bucketCount = WeightFiles.Length * SizeMultipliers.Length;
+        defaultBucket = BucketIndex(FontWeight.Regular, NearestSize(1f));
+        ledger = new HashSet<ushort>[bucketCount];
+        bucketRanges = new ushort[bucketCount][];
+        for (var bucket = 0; bucket < bucketCount; bucket++)
+        {
+            ledger[bucket] = new HashSet<ushort>();
+        }
+
         glyphRanges = ComposeRanges(Loc.Current);
+        RebuildBaseCoverage();
+        SeedLedgerFromConfig();
+        SnapshotBucketRanges();
         handles = Build();
     }
 
     public float Zoom => zoom;
+
+    public int Generation => Volatile.Read(ref generation);
 
     public bool Ready
     {
@@ -102,15 +147,116 @@ internal sealed class FontService : IDisposable
         Plugin.Loading.Show();
         var previous = handles;
         glyphRanges = next;
+        RebuildBaseCoverage();
+        SnapshotBucketRanges();
         using (atlas.SuppressAutoRebuild())
         {
             handles = Build();
             DisposeHandles(previous);
         }
+
+        Interlocked.Increment(ref generation);
     }
 
-    public IDisposable Push(float scale) => Push(scale, FontWeight.Regular);
-    public IDisposable Push(float scale, FontWeight weight) => handles[(int)weight, NearestSize(scale)].Push();
+    public FontToken Push(float scale) => Push(scale, FontWeight.Regular);
+
+    public FontToken Push(float scale, FontWeight weight)
+    {
+        MaybeRebuildLedger();
+        var sizeIndex = NearestSize(scale);
+        if (pushDepth < PushStackCapacity)
+        {
+            pushedBuckets[pushDepth] = BucketIndex(weight, sizeIndex);
+        }
+
+        pushDepth++;
+        return new FontToken(this, handles[(int)weight, sizeIndex].Push());
+    }
+
+    internal void PopBucket()
+    {
+        if (pushDepth > 0)
+        {
+            pushDepth--;
+        }
+    }
+
+    // Emulates OS-level font fallback on ImGui's static atlas: any character drawn through the phone
+    // that no baked range covers is remembered per weight/size bucket, baked into the atlas on the
+    // next debounced rebuild, and persisted so it renders instantly in later sessions.
+    public void NoticeText(ReadOnlySpan<char> text)
+    {
+        if (text.IsEmpty)
+        {
+            return;
+        }
+
+        var top = pushDepth > 0 ? Math.Min(pushDepth, PushStackCapacity) - 1 : -1;
+        var bucket = top >= 0 ? pushedBuckets[top] : defaultBucket;
+        var set = ledger[bucket];
+        var added = false;
+        for (var index = 0; index < text.Length; index++)
+        {
+            var codepoint = text[index];
+            if (codepoint < 0x0080)
+            {
+                continue;
+            }
+
+            if (char.IsSurrogate(codepoint))
+            {
+                continue;
+            }
+
+            if (codepoint is >= (char)0xE000 and <= (char)0xF8FF)
+            {
+                continue;
+            }
+
+            if (IsBaseCovered(codepoint))
+            {
+                continue;
+            }
+
+            if (set.Count >= LedgerCapPerBucket)
+            {
+                continue;
+            }
+
+            if (set.Add(codepoint))
+            {
+                added = true;
+            }
+        }
+
+        if (added)
+        {
+            ledgerDirtySince = Environment.TickCount64;
+        }
+    }
+
+    private void MaybeRebuildLedger()
+    {
+        if (ledgerDirtySince == 0 || ledgerRebuildInFlight)
+        {
+            return;
+        }
+
+        if (Environment.TickCount64 - ledgerDirtySince < LedgerRebuildDebounceMs)
+        {
+            return;
+        }
+
+        ledgerDirtySince = 0;
+        ledgerRebuildInFlight = true;
+        SnapshotBucketRanges();
+        PersistLedger();
+        _ = atlas.BuildFontsAsync().ContinueWith(_ =>
+        {
+            ledgerRebuildInFlight = false;
+            Interlocked.Increment(ref generation);
+        }, TaskScheduler.Default);
+    }
 
     private IFontHandle[,] Build()
     {
@@ -122,7 +268,7 @@ internal sealed class FontService : IDisposable
                 var path = Path.Combine(fontDirectory, WeightFiles[weightIndex]);
                 for (var sizeIndex = 0; sizeIndex < SizeMultipliers.Length; sizeIndex++)
                 {
-                    built[weightIndex, sizeIndex] = BuildHandle(path, SizeMultipliers[sizeIndex]);
+                    built[weightIndex, sizeIndex] = BuildHandle(path, weightIndex, sizeIndex);
                 }
             }
         }
@@ -130,22 +276,24 @@ internal sealed class FontService : IDisposable
         return built;
     }
 
-    private IFontHandle BuildHandle(string path, float multiplier)
+    private IFontHandle BuildHandle(string path, int weightIndex, int sizeIndex)
     {
-        var pixels = baseSize * multiplier * MaxZoom;
-        var tracking = multiplier >= TrackingThreshold ? pixels * TrackingRatio : 0f;
+        var pixels = baseSize * SizeMultipliers[sizeIndex] * MaxZoom;
+        var tracking = SizeMultipliers[sizeIndex] >= TrackingThreshold ? pixels * TrackingRatio : 0f;
+        var bucket = weightIndex * SizeMultipliers.Length + sizeIndex;
         var primary = default(ImFontPtr);
         return atlas.NewDelegateFontHandle(e =>
         {
             e.OnPreBuild(tk =>
             {
+                var ranges = bucketRanges[bucket] ?? glyphRanges;
                 primary = tk.AddFontFromFile(path,
                     new SafeFontConfig
                     {
-                        SizePx = pixels, GlyphRanges = glyphRanges, GlyphExtraSpacing = new Vector2(tracking, 0f),
+                        SizePx = pixels, GlyphRanges = ranges, GlyphExtraSpacing = new Vector2(tracking, 0f),
                     });
                 tk.AddDalamudAssetFont(Dalamud.DalamudAsset.NotoSansCjkRegular,
-                    new SafeFontConfig { SizePx = pixels, GlyphRanges = glyphRanges, MergeFont = primary, });
+                    new SafeFontConfig { SizePx = pixels, GlyphRanges = ranges, MergeFont = primary, });
             });
             e.OnPostBuild(_ => primary.Scale = renderScale);
         });
@@ -169,6 +317,9 @@ internal sealed class FontService : IDisposable
         }
     }
 
+    private static int BucketIndex(FontWeight weight, int sizeIndex) =>
+        (int)weight * SizeMultipliers.Length + sizeIndex;
+
     private static int NearestSize(float scale)
     {
         var best = 0;
@@ -184,6 +335,141 @@ internal sealed class FontService : IDisposable
         }
 
         return best;
+    }
+
+    private bool IsBaseCovered(int codepoint) =>
+        (baseCoverage[codepoint >> 6] & (1UL << (codepoint & 63))) != 0;
+
+    private void RebuildBaseCoverage()
+    {
+        Array.Clear(baseCoverage, 0, baseCoverage.Length);
+        for (var index = 0; index + 1 < glyphRanges.Length; index += 2)
+        {
+            var first = glyphRanges[index];
+            if (first == 0)
+            {
+                break;
+            }
+
+            var last = glyphRanges[index + 1];
+            for (int codepoint = first; codepoint <= last; codepoint++)
+            {
+                baseCoverage[codepoint >> 6] |= 1UL << (codepoint & 63);
+            }
+        }
+    }
+
+    private void SeedLedgerFromConfig()
+    {
+        var stored = Plugin.Cfg.FontGlyphLedger;
+        if (stored == null)
+        {
+            return;
+        }
+
+        var limit = Math.Min(stored.Count, bucketCount);
+        for (var bucket = 0; bucket < limit; bucket++)
+        {
+            var chars = stored[bucket];
+            if (string.IsNullOrEmpty(chars))
+            {
+                continue;
+            }
+
+            var set = ledger[bucket];
+            for (var index = 0; index < chars.Length && set.Count < LedgerCapPerBucket; index++)
+            {
+                var codepoint = chars[index];
+                if (char.IsSurrogate(codepoint) || codepoint < 0x0080)
+                {
+                    continue;
+                }
+
+                set.Add(codepoint);
+            }
+        }
+    }
+
+    private void PersistLedger()
+    {
+        var stored = new List<string>(bucketCount);
+        for (var bucket = 0; bucket < bucketCount; bucket++)
+        {
+            var set = ledger[bucket];
+            if (set.Count == 0)
+            {
+                stored.Add(string.Empty);
+                continue;
+            }
+
+            var sorted = new ushort[set.Count];
+            set.CopyTo(sorted);
+            Array.Sort(sorted);
+            var chars = new char[sorted.Length];
+            for (var index = 0; index < sorted.Length; index++)
+            {
+                chars[index] = (char)sorted[index];
+            }
+
+            stored.Add(new string(chars));
+        }
+
+        Plugin.Cfg.FontGlyphLedger = stored;
+        Plugin.Cfg.Save();
+    }
+
+    private void SnapshotBucketRanges()
+    {
+        for (var bucket = 0; bucket < bucketCount; bucket++)
+        {
+            var set = ledger[bucket];
+            if (set.Count == 0)
+            {
+                bucketRanges[bucket] = null!;
+                continue;
+            }
+
+            bucketRanges[bucket] = ComposeBucketRanges(set);
+        }
+    }
+
+    private ushort[] ComposeBucketRanges(HashSet<ushort> set)
+    {
+        var sorted = new ushort[set.Count];
+        set.CopyTo(sorted);
+        Array.Sort(sorted);
+        var runCount = 1;
+        for (var index = 1; index < sorted.Length; index++)
+        {
+            if (sorted[index] != sorted[index - 1] + 1)
+            {
+                runCount++;
+            }
+        }
+
+        var baseLength = glyphRanges.Length - 1;
+        var combined = new ushort[baseLength + runCount * 2 + 1];
+        Array.Copy(glyphRanges, 0, combined, 0, baseLength);
+        var offset = baseLength;
+        var runStart = sorted[0];
+        var runEnd = sorted[0];
+        for (var index = 1; index < sorted.Length; index++)
+        {
+            if (sorted[index] == runEnd + 1)
+            {
+                runEnd = sorted[index];
+                continue;
+            }
+
+            combined[offset++] = runStart;
+            combined[offset++] = runEnd;
+            runStart = sorted[index];
+            runEnd = sorted[index];
+        }
+
+        combined[offset++] = runStart;
+        combined[offset] = runEnd;
+        return combined;
     }
 
     private static readonly ushort[] NativeNameGlyphRanges = ComposeNativeNameRanges();

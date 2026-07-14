@@ -35,6 +35,8 @@ internal static class SearchField
         ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 32f * scale,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
+        Plugin.Fonts.NoticeText(hint);
+        Plugin.Fonts.NoticeText(text);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, titleInk))
         {
@@ -69,7 +71,7 @@ internal static class SearchField
             ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
             using (ImRaii.PushColor(ImGuiCol.Text, mutedInk))
             {
-                ImGui.TextUnformatted(glyph);
+                Typography.Plain(glyph);
             }
         }
 
@@ -80,6 +82,8 @@ internal static class SearchField
         var inputRight = hasText ? clearCenter.X - clearRadius - 6f * scale : pillMax.X - 14f * scale;
         ImGui.SetCursorScreenPos(new Vector2(inputLeft, bar.Center.Y - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(inputRight - inputLeft);
+        Plugin.Fonts.NoticeText(hint);
+        Plugin.Fonts.NoticeText(text);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, titleInk))
         {
