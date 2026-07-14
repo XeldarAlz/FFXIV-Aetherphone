@@ -10,27 +10,29 @@ namespace Aetherphone.Core.Notifications;
 
 internal sealed class SocialNotificationService : IDisposable
 {
-    private static readonly TimeSpan PollInterval = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(180);
     private readonly AethernetSession session;
     private readonly AethernetClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly IFramework framework;
+    private readonly PollCadence cadence;
     private readonly CancellationTokenSource cancellation = new();
     private readonly HashSet<string> seenIds = new();
     private volatile NotificationDto[] latest = Array.Empty<NotificationDto>();
     private volatile bool polling;
     private volatile bool primed;
-    private DateTime lastPollUtc = DateTime.MinValue;
 
     public SocialNotificationService(AethernetSession session, AethernetClient client, NotificationService notifications,
-        Configuration configuration, IFramework framework)
+        Configuration configuration, IFramework framework, PhoneVisibility visibility)
     {
         this.session = session;
         this.client = client;
         this.notifications = notifications;
         this.configuration = configuration;
         this.framework = framework;
+        cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
         framework.Update += OnFrameworkTick;
     }
 
@@ -93,7 +95,7 @@ internal sealed class SocialNotificationService : IDisposable
     {
         if (session.IsSignedIn)
         {
-            lastPollUtc = DateTime.UtcNow;
+            cadence.Mark(DateTime.UtcNow);
             Poll();
         }
     }
@@ -106,13 +108,11 @@ internal sealed class SocialNotificationService : IDisposable
             return;
         }
 
-        var now = DateTime.UtcNow;
-        if (now - lastPollUtc < PollInterval)
+        if (!cadence.Due(DateTime.UtcNow))
         {
             return;
         }
 
-        lastPollUtc = now;
         Poll();
     }
 

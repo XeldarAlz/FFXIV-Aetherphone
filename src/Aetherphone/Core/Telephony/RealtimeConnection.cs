@@ -8,6 +8,7 @@ namespace Aetherphone.Core.Telephony;
 internal sealed class RealtimeConnection : IDisposable
 {
     private const int ReceiveBufferBytes = 16 * 1024;
+    private static readonly TimeSpan HealthyConnectionThreshold = TimeSpan.FromSeconds(60);
     private readonly AethernetSession session;
     private readonly object gate = new();
     private readonly SemaphoreSlim sendLock = new(1, 1);
@@ -72,6 +73,7 @@ internal sealed class RealtimeConnection : IDisposable
         var attempt = 0;
         while (!token.IsCancellationRequested)
         {
+            var connectedAtUtc = DateTime.MinValue;
             try
             {
                 using var ws = new ClientWebSocket();
@@ -89,7 +91,7 @@ internal sealed class RealtimeConnection : IDisposable
                     socket = ws;
                 }
 
-                attempt = 0;
+                connectedAtUtc = DateTime.UtcNow;
                 SetConnected(true);
                 await ReceiveLoopAsync(ws, token).ConfigureAwait(false);
             }
@@ -116,7 +118,9 @@ internal sealed class RealtimeConnection : IDisposable
                 break;
             }
 
-            attempt++;
+            var heldLongEnough = connectedAtUtc != DateTime.MinValue
+                && DateTime.UtcNow - connectedAtUtc >= HealthyConnectionThreshold;
+            attempt = heldLongEnough ? 1 : attempt + 1;
             var seconds = attempt == 1 ? 0.5d : Math.Min(15d, Math.Pow(2, Math.Min(attempt - 1, 4)));
             try
             {

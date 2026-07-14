@@ -142,9 +142,10 @@ internal sealed partial class VelvetApp : IPhoneApp
     public VelvetApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
-        SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys)
+        SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
+        PhoneVisibility visibility)
     {
-        store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys);
+        store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys, visibility);
         this.launcher = launcher;
         this.socialLauncher = socialLauncher;
         this.lodestone = lodestone;

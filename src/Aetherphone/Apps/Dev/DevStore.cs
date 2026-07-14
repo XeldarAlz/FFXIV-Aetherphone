@@ -38,6 +38,7 @@ internal sealed class DevStore : IDisposable
     private volatile bool sending;
     private volatile bool cardBusy;
     private volatile bool probing;
+    private volatile bool accessSettled;
     private volatile bool pollingChat;
     private DateTime lastProbeUtc = DateTime.MinValue;
     private DateTime lastBackgroundChatUtc = DateTime.MinValue;
@@ -104,6 +105,7 @@ internal sealed class DevStore : IDisposable
 
     private void OnSessionChanged()
     {
+        accessSettled = false;
         lastProbeUtc = DateTime.MinValue;
     }
 
@@ -117,7 +119,7 @@ internal sealed class DevStore : IDisposable
         var now = DateTime.UtcNow;
         if (!session.HasDevAccess)
         {
-            if (now - lastProbeUtc < AccessProbeInterval)
+            if (accessSettled || now - lastProbeUtc < AccessProbeInterval)
             {
                 return;
             }
@@ -150,6 +152,7 @@ internal sealed class DevStore : IDisposable
             var granted = await client.DevAccessAsync(token).ConfigureAwait(false);
             if (granted is { } value)
             {
+                accessSettled = true;
                 session.SetDevAccess(value);
             }
         }, () => probing = false);
