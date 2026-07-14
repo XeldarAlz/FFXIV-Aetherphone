@@ -405,6 +405,9 @@ internal sealed class CallHub : IDisposable
             case SignalType.Ended:
                 HandleEnded(message);
                 break;
+            case SignalType.Handled:
+                HandleHandledElsewhere(message);
+                break;
         }
     }
 
@@ -590,6 +593,25 @@ internal sealed class CallHub : IDisposable
         {
             EndCall(notify: false, reason: null);
             LogMissed(missedFrom, notify: true);
+        }
+    }
+
+    private void HandleHandledElsewhere(CallControl message)
+    {
+        if (!Guid.TryParse(message.CallId, out var id))
+        {
+            return;
+        }
+
+        bool matched;
+        lock (gate)
+        {
+            matched = id == callId && state == CallState.Ringing;
+        }
+
+        if (matched)
+        {
+            EndCall(notify: false, reason: null);
         }
     }
 

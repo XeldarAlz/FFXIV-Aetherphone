@@ -18,6 +18,7 @@ internal static class SignalType
     public const string Declined = "call.declined";
     public const string Left = "call.left";
     public const string Ended = "call.ended";
+    public const string Handled = "call.handled";
     public const string Unavailable = "call.unavailable";
     public const string Error = "error";
 }
