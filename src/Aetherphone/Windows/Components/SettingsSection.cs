@@ -16,7 +16,7 @@ internal static class SettingsSection
         using (Plugin.Fonts.Push(TextStyles.Footnote.Scale, TextStyles.FootnoteEmphasized.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextUnformatted(title.ToUpperInvariant());
+            Typography.Plain(title.ToUpperInvariant());
         }
 
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
@@ -30,7 +30,7 @@ internal static class SettingsSection
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextWrapped(text);
+            Typography.Wrapped(text);
             ImGui.PopTextWrapPos();
         }
     }

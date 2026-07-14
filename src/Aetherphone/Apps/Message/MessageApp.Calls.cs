@@ -471,7 +471,7 @@ internal sealed partial class MessageApp
             ImGui.SetCursorScreenPos(center - size * 0.5f);
             using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, enabled ? 1f : 0.5f)))
             {
-                ImGui.TextUnformatted(glyph);
+                Typography.Plain(glyph);
             }
         }
 

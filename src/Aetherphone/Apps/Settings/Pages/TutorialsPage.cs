@@ -69,7 +69,7 @@ internal sealed class TutorialsPage : ISettingsPage
             using (Plugin.Fonts.Push(0.8f))
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
             {
-                ImGui.TextWrapped(Loc.T(L.Settings.TutorialsHint));
+                Typography.Wrapped(Loc.T(L.Settings.TutorialsHint));
             }
         }
     }

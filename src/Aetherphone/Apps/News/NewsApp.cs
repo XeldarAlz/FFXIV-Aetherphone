@@ -411,7 +411,7 @@ internal sealed class NewsApp : IPhoneApp
             ImGui.SetCursorScreenPos(center - size * 0.5f);
             using (ImRaii.PushColor(ImGuiCol.Text, hovered ? theme.TextStrong : theme.TextMuted))
             {
-                ImGui.TextUnformatted(glyph);
+                Typography.Plain(glyph);
             }
         }
 

@@ -175,7 +175,7 @@ internal sealed class PollsApp : IPhoneApp
         using (Plugin.Fonts.Push(1.08f, FontWeight.SemiBold))
         using (ImRaii.PushColor(ImGuiCol.Text, ui.TitleInk))
         {
-            ImGui.TextWrapped(text.Question);
+            Typography.Wrapped(text.Question);
         }
 
         ImGui.PopTextWrapPos();
@@ -250,7 +250,7 @@ internal sealed class PollsApp : IPhoneApp
         using (Plugin.Fonts.Push(OptionFontScale, weight))
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(labelInk, inkAlpha)))
         {
-            ImGui.TextWrapped(optionLabel);
+            Typography.Wrapped(optionLabel);
         }
 
         ImGui.PopTextWrapPos();

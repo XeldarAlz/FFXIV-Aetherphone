@@ -37,7 +37,7 @@ internal sealed partial class VelvetShell
         using (ImRaii.PushColor(ImGuiCol.Text, color))
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
-            ImGui.TextWrapped(text);
+            Typography.Wrapped(text);
         }
 
         ImGui.PopTextWrapPos();

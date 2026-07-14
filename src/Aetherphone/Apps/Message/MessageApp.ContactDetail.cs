@@ -217,7 +217,7 @@ internal sealed partial class MessageApp
             ImGui.SetCursorScreenPos(cardMin + new Vector2(pad + 4f * scale, pad + 2f * scale));
             using (ImRaii.PushColor(ImGuiCol.Text, ui.MutedInk))
             {
-                ImGui.TextUnformatted(Loc.T(L.Message.NotesHint));
+                Typography.Plain(Loc.T(L.Message.NotesHint));
             }
         }
 

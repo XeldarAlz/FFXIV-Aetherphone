@@ -217,7 +217,7 @@ internal sealed class ActivityApp : IPhoneApp
         using (Plugin.Fonts.Push(0.85f))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(text);
+            Typography.Wrapped(text);
         }
     }
 

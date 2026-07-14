@@ -402,7 +402,7 @@ internal sealed partial class VenuesApp
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Venues.BodyInk))
         {
             ImGui.PushTextWrapPos(0f);
-            ImGui.TextUnformatted(venue.Description);
+            Typography.Plain(venue.Description);
             ImGui.PopTextWrapPos();
         }
 

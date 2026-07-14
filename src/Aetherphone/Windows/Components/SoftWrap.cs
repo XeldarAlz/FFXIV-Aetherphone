@@ -59,6 +59,8 @@ internal static class SoftWrap
             return text;
         }
 
+        Plugin.Fonts.NoticeText(text);
+
         var builder = new StringBuilder(text.Length + 16);
         var lineWidth = 0f;
         var lineStart = 0;

@@ -182,7 +182,7 @@ internal sealed class FishingApp : IPhoneApp
         using (Plugin.Fonts.Push(0.78f))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Fishing.DeparturesNote));
+            Typography.Wrapped(Loc.T(L.Fishing.DeparturesNote));
         }
     }
 

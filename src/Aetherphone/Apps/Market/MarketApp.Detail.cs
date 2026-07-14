@@ -403,7 +403,7 @@ internal sealed partial class MarketApp
             ImGui.SetCursorScreenPos(center - size * 0.5f);
             using (ImRaii.PushColor(ImGuiCol.Text, hovered ? frameTheme.TextStrong : color))
             {
-                ImGui.TextUnformatted(glyph);
+                Typography.Plain(glyph);
             }
         }
 

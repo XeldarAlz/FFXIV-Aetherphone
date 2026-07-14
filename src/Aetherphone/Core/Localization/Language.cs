@@ -29,20 +29,21 @@ internal sealed class LanguageInfo
 
 internal static class Languages
 {
+    // Han ideographs are deliberately absent: baking the full CJK unified block into every weight and
+    // size combination overflows the font atlas. Ideographs stream in through the FontService glyph
+    // ledger the first time they are displayed and persist across sessions.
     private static readonly ushort[] JapaneseGlyphRanges =
     {
         0x3000, 0x303F, // CJK symbols and punctuation
         0x3040, 0x309F, // Hiragana
         0x30A0, 0x30FF, // Katakana
         0x31F0, 0x31FF, // Katakana phonetic extensions
-        0x4E00, 0x9FFF, // CJK unified ideographs
+        0xFF00, 0xFFEF, // Halfwidth and fullwidth forms
     };
 
     private static readonly ushort[] ChineseGlyphRanges =
     {
         0x3000, 0x303F, // CJK symbols and punctuation
-        0x3400, 0x4DBF, // CJK unified ideographs extension A
-        0x4E00, 0x9FFF, // CJK unified ideographs
         0xFF00, 0xFFEF, // Halfwidth and fullwidth forms
     };
 

@@ -143,7 +143,7 @@ internal sealed partial class AethergramApp
                 using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
                 using (Plugin.Fonts.Push(0.9f))
                 {
-                    ImGui.TextWrapped(post.Text);
+                    Typography.Wrapped(post.Text);
                 }
 
                 ImGui.PopTextWrapPos();
@@ -236,7 +236,7 @@ internal sealed partial class AethergramApp
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
         using (Plugin.Fonts.Push(0.9f))
         {
-            ImGui.TextWrapped(comment.Text);
+            Typography.Wrapped(comment.Text);
         }
 
         ImGui.PopTextWrapPos();

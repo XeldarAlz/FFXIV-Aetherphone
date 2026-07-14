@@ -55,6 +55,33 @@ internal static class Typography
 
     private static readonly Dictionary<string, WrapEntry> WrapCache = new();
 
+    private static int cacheGeneration;
+
+    private static void InvalidateCachesOnFontChange()
+    {
+        var current = Plugin.Fonts.Generation;
+        if (current == cacheGeneration)
+        {
+            return;
+        }
+
+        cacheGeneration = current;
+        FitCache.Clear();
+        WrapCache.Clear();
+    }
+
+    public static void Plain(string text)
+    {
+        Plugin.Fonts.NoticeText(text);
+        ImGui.TextUnformatted(text);
+    }
+
+    public static void Wrapped(string text)
+    {
+        Plugin.Fonts.NoticeText(text);
+        ImGui.TextWrapped(text);
+    }
+
     public static Vector2 Measure(string text, float scale = 1f) => Measure(text, scale, FontWeight.Regular);
     public static Vector2 Measure(string text, in TextStyle style) => Measure(text, style.Scale, style.Weight);
 
@@ -62,6 +89,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(scale, weight))
         {
+            Plugin.Fonts.NoticeText(text);
             return ImGui.CalcTextSize(text);
         }
     }
@@ -71,6 +99,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(fontScale, weight))
         {
+            Plugin.Fonts.NoticeText(text);
             return ImGui.CalcTextSize(text, false, wrapWidth).Y;
         }
     }
@@ -79,6 +108,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
+            Plugin.Fonts.NoticeText(text);
             var lines = WrapLines(text, maxWidth);
             var lineHeight = ImGui.GetTextLineHeightWithSpacing();
             var width = 0f;
@@ -101,6 +131,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(scale, weight))
         {
+            Plugin.Fonts.NoticeText(text);
             ImGui.SetCursorScreenPos(position);
             using (ImRaii.PushColor(ImGuiCol.Text, color))
             {
@@ -124,6 +155,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(scale, weight))
         {
+            Plugin.Fonts.NoticeText(text);
             return Fit(text, maxWidth);
         }
     }
@@ -136,6 +168,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(scale, weight))
         {
+            Plugin.Fonts.NoticeText(text);
             drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), position, ImGui.GetColorU32(color), text);
         }
     }
@@ -152,6 +185,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(scale, weight))
         {
+            Plugin.Fonts.NoticeText(text);
             var size = ImGui.CalcTextSize(text);
             var wrapWidth = AutoWrapWidth(center.X);
             if (wrapWidth > 0f && size.X > wrapWidth)
@@ -305,6 +339,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
+            Plugin.Fonts.NoticeText(text);
             var display = Fit(text, maxWidth);
             var drawList = ImGui.GetWindowDrawList();
             var font = ImGui.GetFont();
@@ -325,6 +360,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
+            Plugin.Fonts.NoticeText(text);
             var lines = WrapLines(text, maxWidth);
             var drawList = ImGui.GetWindowDrawList();
             var font = ImGui.GetFont();
@@ -347,12 +383,14 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
+            Plugin.Fonts.NoticeText(text);
             DrawWrappedBlock(drawList, center, text, color, maxWidth);
         }
     }
 
     private static string[] WrapLines(string text, float maxWidth)
     {
+        InvalidateCachesOnFontChange();
         var fontSize = ImGui.GetFontSize();
         if (WrapCache.TryGetValue(text, out var cached) && cached.Width == maxWidth && cached.FontSize == fontSize)
         {
@@ -423,6 +461,7 @@ internal static class Typography
             return text;
         }
 
+        InvalidateCachesOnFontChange();
         var fontSize = ImGui.GetFontSize();
         if (FitCache.TryGetValue(text, out var cached) && cached.Width == maxWidth && cached.FontSize == fontSize)
         {
@@ -460,6 +499,7 @@ internal static class Typography
     {
         using (Plugin.Fonts.Push(scale, weight))
         {
+            Plugin.Fonts.NoticeText(text);
             var size = ImGui.CalcTextSize(text);
             var wrapWidth = AutoWrapWidth(center.X);
             if (wrapWidth > 0f && size.X > wrapWidth)

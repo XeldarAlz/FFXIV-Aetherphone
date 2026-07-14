@@ -244,7 +244,7 @@ internal sealed partial class DevApp
         using (Plugin.Fonts.Push(titleStyle.Scale, titleStyle.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            ImGui.TextWrapped(card.Title);
+            Typography.Wrapped(card.Title);
         }
 
         ImGui.PopTextWrapPos();
@@ -271,7 +271,7 @@ internal sealed partial class DevApp
             ImGui.PushTextWrapPos(ImGui.GetCursorPosX() + innerWidth);
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Dev.BodyInk))
             {
-                ImGui.TextWrapped(card.Body);
+                Typography.Wrapped(card.Body);
             }
 
             ImGui.PopTextWrapPos();

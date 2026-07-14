@@ -254,7 +254,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Account.SignInIntro));
+            Typography.Wrapped(Loc.T(L.Account.SignInIntro));
         }
 
         ImGui.Dummy(new Vector2(0f, 12f * scale));
@@ -274,7 +274,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Account.LodestoneHint));
+            Typography.Wrapped(Loc.T(L.Account.LodestoneHint));
         }
 
         DrawStatus(theme);
@@ -288,14 +288,14 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
             {
-                ImGui.TextUnformatted(Loc.T(L.Account.XivTitle));
+                Typography.Plain(Loc.T(L.Account.XivTitle));
             }
         }
 
         ImGui.Dummy(new Vector2(0f, 4f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Account.XivIntro));
+            Typography.Wrapped(Loc.T(L.Account.XivIntro));
         }
 
         var xivUserCode = flow.XivUserCode;
@@ -311,7 +311,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Account.XivWaiting));
+            Typography.Wrapped(Loc.T(L.Account.XivWaiting));
         }
 
         ImGui.Dummy(new Vector2(0f, 12f * scale));
@@ -337,14 +337,14 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
             {
-                ImGui.TextUnformatted(Loc.T(L.Account.VerifyTitle));
+                Typography.Plain(Loc.T(L.Account.VerifyTitle));
             }
         }
 
         ImGui.Dummy(new Vector2(0f, 4f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(Loc.T(L.Account.VerifyIntro));
+            Typography.Wrapped(Loc.T(L.Account.VerifyIntro));
         }
 
         var code = flow.LodestoneCode;
@@ -489,7 +489,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            ImGui.TextWrapped(message);
+            Typography.Wrapped(message);
         }
     }
 

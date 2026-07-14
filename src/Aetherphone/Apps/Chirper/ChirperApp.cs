@@ -317,7 +317,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             using (Plugin.Fonts.Push(1.05f))
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
             {
-                ImGui.TextWrapped(post.Text);
+                Typography.Wrapped(post.Text);
             }
 
             ImGui.PopTextWrapPos();
@@ -669,7 +669,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         ImGui.PushTextWrapPos(commentWrapPos);
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
         {
-            ImGui.TextWrapped(comment.Text);
+            Typography.Wrapped(comment.Text);
         }
 
         ImGui.PopTextWrapPos();

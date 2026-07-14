@@ -104,7 +104,7 @@ internal sealed partial class AethergramApp
             ImGui.PushTextWrapPos(innerLeft + innerWidth);
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
             {
-                ImGui.TextWrapped(user.Bio);
+                Typography.Wrapped(user.Bio);
             }
 
             ImGui.PopTextWrapPos();
@@ -304,7 +304,7 @@ internal sealed partial class AethergramApp
                 ImGui.Dummy(new Vector2(0f, 10f * scale));
                 using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
                 {
-                    ImGui.TextWrapped(editStatus);
+                    Typography.Wrapped(editStatus);
                 }
             }
         }
