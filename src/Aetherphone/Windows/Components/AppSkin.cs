@@ -330,7 +330,11 @@ internal sealed class AppSkin
         ImGui.Dummy(new Vector2(width, height));
     }
 
-    public void Field(string label, string id, ref string value, int maxLength, bool multiline)
+    public void Field(string label, string id, ref string value, int maxLength, bool multiline) =>
+        Field(label, id, ref value, maxLength, multiline,
+            multiline ? Metrics.Size.FieldMultiline : Metrics.Size.FieldHeight);
+
+    public void Field(string label, string id, ref string value, int maxLength, bool multiline, float heightUnscaled)
     {
         var scale = ImGuiHelpers.GlobalScale;
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
@@ -340,7 +344,7 @@ internal sealed class AppSkin
 
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var height = (multiline ? Metrics.Size.FieldMultiline : Metrics.Size.FieldHeight) * scale;
+        var height = heightUnscaled * scale;
         Squircle.Fill(ImGui.GetWindowDrawList(), origin, new Vector2(origin.X + width, origin.Y + height),
             Metrics.Radius.Field * scale, ImGui.GetColorU32(Palette.FieldSurface));
         ImGui.SetCursorScreenPos(new Vector2(origin.X + Metrics.Space.Md * scale,

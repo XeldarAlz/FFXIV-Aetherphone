@@ -3,7 +3,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Velvet.Kit;
 
-internal readonly record struct VelvetIntentDef(int Flag, string Label, Vector4 Hue, FontAwesomeIcon Icon);
+internal readonly record struct VelvetIntentDef(int Flag, string Label, string Blurb, Vector4 Hue, FontAwesomeIcon Icon);
 
 internal static class VelvetIntent
 {
@@ -20,13 +20,19 @@ internal static class VelvetIntent
 
     public static readonly VelvetIntentDef[] All =
     {
-        new(Erp, "ERP", new Vector4(0.898f, 0.102f, 0.357f, 1f), FontAwesomeIcon.Heart),
-        new(Gpose, "GPose", new Vector4(0.722f, 0.612f, 0.878f, 1f), FontAwesomeIcon.Camera),
-        new(Relationship, "Relationship", new Vector4(0.890f, 0.604f, 0.416f, 1f), FontAwesomeIcon.HandHoldingHeart),
-        new(Collab, "Collab", new Vector4(0.647f, 0.482f, 0.839f, 1f), FontAwesomeIcon.Feather),
-        new(Friends, "Friends", new Vector4(0.420f, 0.780f, 0.753f, 1f), FontAwesomeIcon.Users),
-        new(Sharing, "Sharing", new Vector4(0.776f, 0.294f, 0.690f, 1f), FontAwesomeIcon.Image),
-        new(Wandering, "Wandering", new Vector4(0.549f, 0.627f, 0.878f, 1f), FontAwesomeIcon.Compass),
+        new(Erp, "ERP", "Erotic roleplay and scenes", new Vector4(0.898f, 0.102f, 0.357f, 1f), FontAwesomeIcon.Heart),
+        new(Gpose, "GPose", "Group pose shoots and art", new Vector4(0.722f, 0.612f, 0.878f, 1f),
+            FontAwesomeIcon.Camera),
+        new(Relationship, "Relationship", "Something with feelings", new Vector4(0.890f, 0.604f, 0.416f, 1f),
+            FontAwesomeIcon.HandHoldingHeart),
+        new(Collab, "Collab", "Writing and story partners", new Vector4(0.647f, 0.482f, 0.839f, 1f),
+            FontAwesomeIcon.Feather),
+        new(Friends, "Friends", "Just here to make friends", new Vector4(0.420f, 0.780f, 0.753f, 1f),
+            FontAwesomeIcon.Users),
+        new(Sharing, "Sharing", "Trading photos and media", new Vector4(0.776f, 0.294f, 0.690f, 1f),
+            FontAwesomeIcon.Image),
+        new(Wandering, "Wandering", "Seeing who is around", new Vector4(0.549f, 0.627f, 0.878f, 1f),
+            FontAwesomeIcon.Compass),
     };
 
     public static bool Has(int mask, int flag) => (mask & flag) != 0;
@@ -124,4 +130,24 @@ internal static class VelvetSuggestions
     {
         "no irl", "fade to black", "ask first", "no pain", "no gore", "sfw until trust", "no permadeath", "no non-con",
     };
+
+    public static readonly VelvetTagCategory[] DynamicCategories =
+    {
+        new("Dynamic", new Vector4(0.898f, 0.102f, 0.357f, 1f),
+            new[] { "dominant", "submissive", "switch", "brat", "primal" }),
+        new("Care", new Vector4(0.890f, 0.604f, 0.416f, 1f),
+            new[] { "service", "caregiver", "soft", "gentle", "rope" }),
+    };
+
+    public static readonly VelvetTagCategory[] TagCategories =
+    {
+        new("Pace", new Vector4(0.420f, 0.780f, 0.753f, 1f),
+            new[] { "slowburn", "longterm", "casual", "latenight" }),
+        new("Mood", new Vector4(0.776f, 0.294f, 0.690f, 1f),
+            new[] { "romance", "wholesome", "praise", "aftercare" }),
+        new("Roleplay", new Vector4(0.647f, 0.482f, 0.839f, 1f),
+            new[] { "storytelling", "lore", "canon", "ocs" }),
+    };
 }
+
+internal readonly record struct VelvetTagCategory(string Title, Vector4 Hue, string[] Tags);

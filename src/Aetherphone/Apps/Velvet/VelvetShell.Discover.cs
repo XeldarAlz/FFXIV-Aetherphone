@@ -23,9 +23,15 @@ internal sealed partial class VelvetShell
         var scale = ImGuiHelpers.GlobalScale;
         var pad = Metrics.Space.Lg * scale;
         var searchTop = area.Min.Y + 8f * scale;
+        var rowHeight = 36f * scale;
+        var buttonSize = 36f * scale;
+        var buttonGap = 8f * scale;
         var searchRect = new Rect(new Vector2(area.Min.X + pad, searchTop),
-            new Vector2(area.Max.X - pad, searchTop + 36f * scale));
+            new Vector2(area.Max.X - pad - buttonSize - buttonGap, searchTop + rowHeight));
         DrawSearchField(searchRect, ref discoverQuery, "Search people by tag");
+        var filterRect = new Rect(new Vector2(area.Max.X - pad - buttonSize, searchTop),
+            new Vector2(area.Max.X - pad, searchTop + rowHeight));
+        DrawFilterButton(filterRect);
         TickDiscoverSearch();
 
         if (!store.DiscoverLoaded && !store.LoadingDiscover)
@@ -37,8 +43,7 @@ internal sealed partial class VelvetShell
         using (AppSurface.Begin(listRect))
         {
             var width = ImGui.GetContentRegionAvail().X;
-            DrawIntentFilter(width);
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            DrawActiveFilters(width);
 
             var results = store.DiscoverResults;
             if (results.Length == 0)
@@ -74,30 +79,102 @@ internal sealed partial class VelvetShell
         }
     }
 
-    private void DrawIntentFilter(float width)
+    private void DrawFilterButton(Rect rect)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var models = new VChipModel[VelvetIntent.All.Length + 1];
-        var allSelected = discoverIntent == 0;
-        models[0] = new VChipModel("All", allSelected ? VChipStyle.Solid : VChipStyle.Ghost,
-            allSelected ? VelvetTheme.Rose : VelvetTheme.Moonlight);
-        for (var index = 0; index < VelvetIntent.All.Length; index++)
+        var drawList = ImGui.GetWindowDrawList();
+        var active = VelvetIntent.Sanitize(discoverIntent) != 0;
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var radius = Metrics.Radius.Field * scale;
+        var fill = active
+            ? VelvetTheme.Alpha(VelvetTheme.Rose, hovered ? 0.34f : 0.26f)
+            : hovered ? VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.10f) : VelvetTheme.PlumWell;
+        Squircle.Fill(drawList, rect.Min, rect.Max, radius, fill.Packed());
+        if (active)
         {
-            var def = VelvetIntent.All[index];
-            var selected = VelvetIntent.Has(discoverIntent, def.Flag);
-            models[index + 1] = new VChipModel(def.Label, selected ? VChipStyle.Solid : VChipStyle.Ghost,
-                selected ? def.Hue : VelvetTheme.Moonlight, def.Icon);
+            Squircle.Stroke(drawList, rect.Min, rect.Max, radius, VelvetTheme.Alpha(VelvetTheme.Rose, 0.55f).Packed(),
+                1f * scale);
         }
 
-        var clicked = VChipFlow.Draw(models, width, scale);
-        if (clicked == 0)
+        AppSkin.Icon(rect.Center, FontAwesomeIcon.SlidersH.ToIconString(),
+            active ? VelvetTheme.RoseInk : VelvetTheme.MutedInk, 0.86f);
+
+        if (active)
         {
-            discoverIntent = 0;
+            var dotCenter = new Vector2(rect.Max.X - 6f * scale, rect.Min.Y + 6f * scale);
+            drawList.AddCircleFilled(dotCenter, 4f * scale, VelvetTheme.RoseBright.Packed(), 16);
+            drawList.AddCircle(dotCenter, 4f * scale, VelvetTheme.CardHi.Packed(), 16, 1.4f * scale);
+        }
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                filterSheet.Toggle(rect);
+            }
+        }
+    }
+
+    private void DrawActiveFilters(float width)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var mask = VelvetIntent.Sanitize(discoverIntent);
+        if (mask == 0)
+        {
+            Gap(6f);
+            return;
+        }
+
+        var defs = VelvetIntent.All;
+        var count = 0;
+        for (var index = 0; index < defs.Length; index++)
+        {
+            if ((mask & defs[index].Flag) != 0)
+            {
+                count++;
+            }
+        }
+
+        var models = new VChipModel[count];
+        var flags = new int[count];
+        var cursor = 0;
+        for (var index = 0; index < defs.Length; index++)
+        {
+            var def = defs[index];
+            if ((mask & def.Flag) == 0)
+            {
+                continue;
+            }
+
+            models[cursor] = new VChipModel(def.Label, VChipStyle.Tint, def.Hue, def.Icon, true);
+            flags[cursor] = def.Flag;
+            cursor++;
+        }
+
+        Gap(4f);
+        var removed = VChipFlow.Draw(models, width, scale);
+        if (removed >= 0)
+        {
+            discoverIntent = VelvetIntent.Toggle(discoverIntent, flags[removed]);
             store.RefreshDiscover(discoverIntent, discoverApplied.Trim());
         }
-        else if (clicked > 0)
+
+        Gap(10f);
+    }
+
+    private void DrawDiscoverFilterSheet(Rect screen)
+    {
+        if (!filterSheet.Open)
         {
-            discoverIntent = VelvetIntent.Toggle(discoverIntent, VelvetIntent.All[clicked - 1].Flag);
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var newMask = filterSheet.Draw(screen, scale, discoverIntent);
+        if (newMask != discoverIntent)
+        {
+            discoverIntent = newMask;
             store.RefreshDiscover(discoverIntent, discoverApplied.Trim());
         }
     }

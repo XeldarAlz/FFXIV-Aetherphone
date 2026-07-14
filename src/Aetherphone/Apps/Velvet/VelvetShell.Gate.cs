@@ -4,6 +4,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
@@ -16,11 +17,13 @@ internal sealed partial class VelvetShell
     private string onboardIntro = string.Empty;
     private bool onboardDiscoverable = true;
     private readonly List<string> onboardTags = new();
+    private readonly List<string> onboardRole = new();
 
     private void GateMenus()
     {
         postMenu.Gate();
         threadMenu.Gate();
+        filterSheet.Gate();
     }
 
     private void DrawGate(Rect area)
@@ -29,7 +32,7 @@ internal sealed partial class VelvetShell
         var screen = SceneChrome.ScreenFrom(area, theme, scale);
         ui.Backdrop(screen);
         var drawList = ImGui.GetWindowDrawList();
-        VelvetArt.Bloom(drawList, area, 1.15f);
+        VelvetArt.Bloom(drawList, screen, theme.ScreenRounding * scale, 1.15f);
 
         var moonCenter = new Vector2(area.Center.X, area.Min.Y + area.Height * 0.24f);
         VelvetArt.Moon(drawList, moonCenter, 24f * scale, VelvetTheme.Moonlight, VelvetTheme.GroundTop);
@@ -39,10 +42,10 @@ internal sealed partial class VelvetShell
         var textWidth = MathF.Min(area.Width - 60f * scale, 320f * scale);
         var bodyHeight = Typography.DrawWrappedCentered(new Vector2(area.Center.X, moonCenter.Y + 106f * scale),
             "A private, adults only corner of the suite. Moonlit, unhurried, yours.", VelvetTheme.BodyInk,
-            TextStyles.Callout, textWidth);
+            TextStyles.Body, textWidth);
         Typography.DrawWrappedCentered(new Vector2(area.Center.X, moonCenter.Y + 106f * scale + bodyHeight + 14f * scale),
             "By entering you confirm you are 18 or older. Be kind, be discreet.", VelvetTheme.MutedInk,
-            TextStyles.Footnote, textWidth);
+            TextStyles.Subheadline, textWidth);
 
         var buttonWidth = MathF.Min(area.Width - 48f * scale, 300f * scale);
         var buttonHeight = 46f * scale;
@@ -102,26 +105,29 @@ internal sealed partial class VelvetShell
         Typography.DrawCentered(new Vector2(area.Center.X, area.Min.Y + 70f * scale), title, VelvetTheme.TitleInk,
             TextStyles.Title1);
         Typography.DrawWrappedCentered(new Vector2(area.Center.X, area.Min.Y + 100f * scale), hint, VelvetTheme.MutedInk,
-            TextStyles.Callout, MathF.Min(area.Width - 52f * scale, 320f * scale));
+            TextStyles.Body, MathF.Min(area.Width - 52f * scale, 320f * scale));
 
         var buttonWidth = MathF.Min(area.Width - 48f * scale, 300f * scale);
         var buttonHeight = 46f * scale;
         var bodyTop = area.Min.Y + 150f * scale;
         var bodyRect = new Rect(new Vector2(area.Min.X + 24f * scale, bodyTop),
             new Vector2(area.Max.X - 24f * scale, area.Max.Y - buttonHeight * 2f - 40f * scale));
-        using (AppSurface.Begin(bodyRect))
+        if (onboardStep == 0)
         {
-            if (onboardStep == 0)
+            DrawOnboardIntent(bodyRect);
+        }
+        else
+        {
+            using (AppSurface.Begin(bodyRect))
             {
-                DrawOnboardIntent();
-            }
-            else if (onboardStep == 1)
-            {
-                DrawOnboardHello();
-            }
-            else
-            {
-                DrawOnboardPrivacy();
+                if (onboardStep == 1)
+                {
+                    DrawOnboardHello();
+                }
+                else
+                {
+                    DrawOnboardPrivacy();
+                }
             }
         }
 
@@ -163,32 +169,198 @@ internal sealed partial class VelvetShell
         }
     }
 
-    private void DrawOnboardIntent()
+    private void DrawOnboardIntent(Rect body)
     {
-        var width = ImGui.GetContentRegionAvail().X;
         var scale = ImGuiHelpers.GlobalScale;
-        ImGui.Dummy(new Vector2(0f, 4f * scale));
-        var models = new VChipModel[VelvetIntent.All.Length];
-        for (var index = 0; index < models.Length; index++)
+        var defs = VelvetIntent.All;
+        var count = defs.Length;
+        var sidePad = 8f * scale;
+        var available = body.Height;
+        var rowHeight = Math.Clamp((available - 12f * scale * (count - 1)) / count, 52f * scale, 88f * scale);
+        var gap = Math.Clamp((available - rowHeight * count) / (count - 1), 12f * scale, 22f * scale);
+        var blockHeight = rowHeight * count + gap * (count - 1);
+        var startY = body.Min.Y + MathF.Max(0f, (available - blockHeight) * 0.5f);
+        var left = body.Min.X + sidePad;
+        var right = body.Max.X - sidePad;
+
+        for (var index = 0; index < count; index++)
         {
-            var def = VelvetIntent.All[index];
-            var selected = VelvetIntent.Has(onboardIntent, def.Flag);
-            models[index] = new VChipModel(def.Label, selected ? VChipStyle.Solid : VChipStyle.Ghost,
-                selected ? def.Hue : VelvetTheme.Moonlight, def.Icon);
+            var def = defs[index];
+            var top = startY + index * (rowHeight + gap);
+            var rect = new Rect(new Vector2(left, top), new Vector2(right, top + rowHeight));
+            if (DrawIntentSelectRow(rect, def, VelvetIntent.Has(onboardIntent, def.Flag)))
+            {
+                onboardIntent = VelvetIntent.Toggle(onboardIntent, def.Flag);
+            }
+        }
+    }
+
+    private bool DrawIntentSelectRow(Rect rect, in VelvetIntentDef def, bool selected)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
+        var radius = Metrics.Radius.Card * scale;
+
+        var fill = selected
+            ? VelvetTheme.Alpha(def.Hue, hovered ? 0.22f : 0.16f)
+            : hovered ? VelvetTheme.CardHi : VelvetTheme.Card;
+        Squircle.Fill(drawList, rect.Min, rect.Max, radius, fill.Packed());
+        Squircle.Stroke(drawList, rect.Min, rect.Max, radius,
+            (selected ? VelvetTheme.Alpha(def.Hue, 0.75f) : VelvetTheme.CardStroke).Packed(),
+            (selected ? 1.5f : 1f) * scale);
+
+        var tileSize = rect.Height * 0.56f;
+        var tileMin = new Vector2(rect.Min.X + 14f * scale, rect.Center.Y - tileSize * 0.5f);
+        var tileMax = new Vector2(tileMin.X + tileSize, tileMin.Y + tileSize);
+        Squircle.Fill(drawList, tileMin, tileMax, tileSize * 0.32f, def.Hue.Packed());
+        AppSkin.Icon(new Vector2((tileMin.X + tileMax.X) * 0.5f, (tileMin.Y + tileMax.Y) * 0.5f),
+            def.Icon.ToIconString(), VelvetTheme.OnAccent, 0.92f);
+
+        var textLeft = tileMax.X + 14f * scale;
+        var textWidth = rect.Max.X - 46f * scale - textLeft;
+        var label = Typography.FitText(def.Label, textWidth, TextStyles.Headline);
+        var blurb = Typography.FitText(def.Blurb, textWidth, TextStyles.Subheadline);
+        var labelSize = Typography.Measure(label, TextStyles.Headline);
+        var blurbSize = Typography.Measure(blurb, TextStyles.Subheadline);
+        var textTop = rect.Center.Y - (labelSize.Y + 3f * scale + blurbSize.Y) * 0.5f;
+        Typography.Draw(new Vector2(textLeft, textTop), label, VelvetTheme.TitleInk, TextStyles.Headline);
+        Typography.Draw(new Vector2(textLeft, textTop + labelSize.Y + 3f * scale), blurb, VelvetTheme.MutedInk,
+            TextStyles.Subheadline);
+
+        DrawSelectCheck(drawList, new Vector2(rect.Max.X - 26f * scale, rect.Center.Y), selected, def.Hue, scale);
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var clicked = VChipFlow.Draw(models, width, scale);
-        if (clicked >= 0)
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    private static void DrawSelectCheck(ImDrawListPtr drawList, Vector2 center, bool selected, Vector4 hue, float scale)
+    {
+        var radius = 11f * scale;
+        if (!selected)
         {
-            onboardIntent = VelvetIntent.Toggle(onboardIntent, VelvetIntent.All[clicked].Flag);
+            drawList.AddCircle(center, radius, VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.30f).Packed(), 24, 1.5f * scale);
+            return;
         }
+
+        drawList.AddCircleFilled(center, radius, hue.Packed(), 24);
+        var tick = VelvetTheme.OnAccent.Packed();
+        var thickness = 2f * scale;
+        drawList.AddLine(center + new Vector2(-4.5f * scale, 0.2f * scale), center + new Vector2(-1.4f * scale, 3.6f * scale),
+            tick, thickness);
+        drawList.AddLine(center + new Vector2(-1.4f * scale, 3.6f * scale), center + new Vector2(5f * scale, -3.8f * scale),
+            tick, thickness);
     }
 
     private void DrawOnboardHello()
     {
-        ui.Field("Introduce yourself", "##ob_intro", ref onboardIntro, 400, true);
-        ImGui.Dummy(new Vector2(0f, ImGuiHelpers.GlobalScale * 8f));
-        DrawTokenEditor(onboardTags, VelvetSuggestions.Tags, VelvetTheme.Rose);
+        var scale = ImGuiHelpers.GlobalScale;
+        ui.Field("Introduce yourself", "##ob_intro", ref onboardIntro, 400, true, 132f);
+        ImGui.Dummy(new Vector2(0f, 20f * scale));
+
+        var dynamics = VelvetSuggestions.DynamicCategories;
+        for (var index = 0; index < dynamics.Length; index++)
+        {
+            DrawTagCategory(dynamics[index], onboardRole);
+            ImGui.Dummy(new Vector2(0f, 18f * scale));
+        }
+
+        var categories = VelvetSuggestions.TagCategories;
+        for (var index = 0; index < categories.Length; index++)
+        {
+            DrawTagCategory(categories[index], onboardTags);
+            if (index < categories.Length - 1)
+            {
+                ImGui.Dummy(new Vector2(0f, 18f * scale));
+            }
+        }
+    }
+
+    private void DrawTagCategory(in VelvetTagCategory category, List<string> selected)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = ImGui.GetContentRegionAvail().X;
+
+        var headerOrigin = ImGui.GetCursorScreenPos();
+        Typography.Draw(headerOrigin, category.Title.ToUpperInvariant(),
+            VelvetTheme.Lerp(category.Hue, VelvetTheme.OnAccent, 0.30f), TextStyles.SubheadlineEmphasized);
+        ImGui.SetCursorScreenPos(headerOrigin);
+        ImGui.Dummy(new Vector2(width, 26f * scale));
+
+        var origin = ImGui.GetCursorScreenPos();
+        var height = 40f * scale;
+        var rowGap = 8f * scale;
+        var chipGap = 8f * scale;
+        var x = origin.X;
+        var y = origin.Y;
+        var toggled = -1;
+        for (var index = 0; index < category.Tags.Length; index++)
+        {
+            var tag = category.Tags[index];
+            var chipWidth = Typography.Measure(tag, TextStyles.Callout).X + 32f * scale;
+            if (x + chipWidth > origin.X + width && x > origin.X)
+            {
+                x = origin.X;
+                y += height + rowGap;
+            }
+
+            if (DrawTagPill(new Vector2(x, y), new Vector2(chipWidth, height), tag, category.Hue,
+                    selected.Contains(tag), scale))
+            {
+                toggled = index;
+            }
+
+            x += chipWidth + chipGap;
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, y + height - origin.Y));
+
+        if (toggled >= 0)
+        {
+            var tag = category.Tags[toggled];
+            if (!selected.Remove(tag) && selected.Count < 12)
+            {
+                selected.Add(tag);
+            }
+        }
+    }
+
+    private static bool DrawTagPill(Vector2 min, Vector2 size, string label, Vector4 hue, bool selected, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var max = min + size;
+        var radius = size.Y * 0.5f;
+        var hovered = UiInteract.Hover(min, max);
+
+        Vector4 fill;
+        Vector4 ink;
+        if (selected)
+        {
+            fill = hovered ? VelvetTheme.Lerp(hue, VelvetTheme.OnAccent, 0.14f) : hue;
+            ink = VelvetTheme.OnAccent;
+        }
+        else
+        {
+            fill = VelvetTheme.Alpha(hue, hovered ? 0.24f : 0.14f);
+            ink = VelvetTheme.Lerp(hue, VelvetTheme.OnAccent, 0.60f);
+        }
+
+        Squircle.Fill(drawList, min, max, radius, fill.Packed());
+        var textSize = Typography.Measure(label, TextStyles.Callout);
+        Typography.Draw(new Vector2((min.X + max.X) * 0.5f - textSize.X * 0.5f, (min.Y + max.Y) * 0.5f - textSize.Y * 0.5f),
+            label, ink, TextStyles.Callout);
+
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private void DrawOnboardPrivacy()
@@ -202,7 +374,8 @@ internal sealed partial class VelvetShell
     {
         configuration.VelvetOnboarded = true;
         configuration.Save();
-        var request = new UpdateVelvetProfileRequest(onboardIntro.Trim(), null, null, onboardTags.ToArray(), null,
+        var dynamic = VelvetTags.Join(onboardRole.ToArray());
+        var request = new UpdateVelvetProfileRequest(onboardIntro.Trim(), null, dynamic, onboardTags.ToArray(), null,
             VelvetIntent.Sanitize(onboardIntent), null, onboardDiscoverable);
         store.UpdateProfile(request, _ => { });
     }
