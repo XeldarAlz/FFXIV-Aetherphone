@@ -22,22 +22,20 @@ internal static class ComposeFab
         using var overlay = ImRaii.Child(childId, new Vector2(boxSize, boxSize), false,
             ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
         var center = new Vector2(area.Max.X - radius - margin, area.Max.Y - radius - margin);
+        var fabRect = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         if (anchorKey is not null)
         {
-            UiAnchors.Report(anchorKey, new Rect(center - new Vector2(radius, radius),
-                center + new Vector2(radius, radius)));
+            UiAnchors.Report(anchorKey, fabRect);
         }
 
         var drawList = ImGui.GetWindowDrawList();
-        var hovered =
-            UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered = UiInteract.HoverOverlay(fabRect);
         drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
         drawList.AddCircleFilled(center, radius,
             ImGui.GetColorU32(hovered ? Palette.Mix(accent, new Vector4(1f, 1f, 1f, 1f), 0.12f) : accent), 32);
         AppSkin.Icon(center, glyph, new Vector4(1f, 1f, 1f, 1f), 1.1f);
-        HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
-            tooltip, HoverLabelSide.Above);
+        HoverTooltip.Show(fabRect, tooltip, HoverLabelSide.Above);
         if (!hovered)
         {
             return false;

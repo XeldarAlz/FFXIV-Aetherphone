@@ -734,7 +734,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var eased = Easing.EaseOutQuint(Math.Clamp(reveal, 0f, 1f));
         var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.6f, 0f, 1f));
-        var hovered = interactive && ImGui.IsMouseHoveringRect(center - new Vector2(hitRadius, hitRadius),
+        var hovered = interactive && UiInteract.Hover(center - new Vector2(hitRadius, hitRadius),
             center + new Vector2(hitRadius, hitRadius));
         if (background.W > 0f)
         {
@@ -783,7 +783,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var pad = 16f * scale;
         var pos = new Vector2(origin.X + pad, origin.Y);
         var size = Typography.Measure(label, 0.9f, FontWeight.Medium);
-        var hovered = ImGui.IsMouseHoveringRect(pos, pos + size);
+        var hovered = UiInteract.Hover(pos, pos + size);
         Typography.Draw(pos, label, hovered ? theme.Accent : AppPalettes.Chirper.MutedInk, 0.9f, FontWeight.Medium);
         if (hovered)
         {
