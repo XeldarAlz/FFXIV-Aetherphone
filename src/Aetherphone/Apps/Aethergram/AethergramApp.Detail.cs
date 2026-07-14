@@ -79,8 +79,6 @@ internal sealed partial class AethergramApp
                 new Vector2(origin.X + width, origin.Y + headerHeight + width));
             var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
             var page = DrawGramCarousel(imageRect, post, photos, 16f * scale);
-            HandleLikeGesture(imageRect, post, photos, page);
-            DrawLikeBurst(imageRect, post.Id);
             var liked = post.MyReaction >= 0;
             var actionsY = imageRect.Max.Y + 22f * scale;
             var heartCenter = new Vector2(origin.X + 13f * scale, actionsY);

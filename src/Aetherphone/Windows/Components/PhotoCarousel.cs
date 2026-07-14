@@ -62,7 +62,7 @@ internal sealed class PhotoCarousel
         if (count <= 1)
         {
             drawPage(drawList, rect.Min, rect.Max, rounding, count == 1 ? photos[0] : null);
-            return new CarouselResult(0, false, ResolveTap(rect, postId, false));
+            return new CarouselResult(0, false, ResolveTap(rect, postId, false, false));
         }
 
         var pager = PagerFor(postId);
@@ -71,7 +71,6 @@ internal sealed class PhotoCarousel
         pager.Step(delta, count);
 
         var consumed = DriveGesture(pager, rect, postId, count, delta, scale);
-        var tapped = ResolveTap(rect, postId, consumed);
 
         var scroll = pager.Value;
         var first = Math.Max(0, (int)MathF.Floor(scroll));
@@ -87,7 +86,9 @@ internal sealed class PhotoCarousel
 
         var active = Math.Clamp((int)MathF.Round(scroll), 0, count - 1);
         DrawCounter(drawList, rect, active, count, scale);
-        consumed |= DrawChevrons(drawList, rect, pager, active, count, scale);
+        var chevronHot = DrawChevrons(drawList, rect, pager, active, count, scale, out var chevronClicked);
+        consumed |= chevronClicked;
+        var tapped = ResolveTap(rect, postId, consumed, chevronHot);
         return new CarouselResult(active, consumed, tapped);
     }
 
@@ -161,9 +162,9 @@ internal sealed class PhotoCarousel
         return true;
     }
 
-    private bool ResolveTap(Rect rect, string postId, bool consumed)
+    private bool ResolveTap(Rect rect, string postId, bool consumed, bool blocked)
     {
-        if (UiInteract.Hover(rect.Min, rect.Max) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!blocked && UiInteract.Hover(rect.Min, rect.Max) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             pressActive = true;
             pressPostId = postId;
@@ -191,41 +192,53 @@ internal sealed class PhotoCarousel
         Typography.Draw(drawList, min + padding, label, BadgeInk, TextStyles.FootnoteEmphasized);
     }
 
-    private static bool DrawChevrons(ImDrawListPtr drawList, Rect rect, Pager pager, int active, int count, float scale)
+    private static bool DrawChevrons(ImDrawListPtr drawList, Rect rect, Pager pager, int active, int count, float scale,
+        out bool clicked)
     {
+        clicked = false;
         if (!UiInteract.Hover(rect.Min, rect.Max) || pager.Dragging)
         {
             return false;
         }
 
-        var consumed = false;
+        var hot = false;
         var radius = ChevronRadius * scale;
         var inset = ChevronInset * scale;
         if (active > 0)
         {
             var center = new Vector2(rect.Min.X + inset + radius, rect.Center.Y);
-            if (DrawChevron(drawList, center, radius, FontAwesomeIcon.ChevronLeft.ToIconString()))
+            if (DrawChevron(drawList, center, radius, FontAwesomeIcon.ChevronLeft.ToIconString(), out var pressed))
             {
-                pager.AnimateTo(active - 1, count);
-                consumed = true;
+                hot = true;
+                if (pressed)
+                {
+                    pager.AnimateTo(active - 1, count);
+                    clicked = true;
+                }
             }
         }
 
         if (active < count - 1)
         {
             var center = new Vector2(rect.Max.X - inset - radius, rect.Center.Y);
-            if (DrawChevron(drawList, center, radius, FontAwesomeIcon.ChevronRight.ToIconString()))
+            if (DrawChevron(drawList, center, radius, FontAwesomeIcon.ChevronRight.ToIconString(), out var pressed))
             {
-                pager.AnimateTo(active + 1, count);
-                consumed = true;
+                hot = true;
+                if (pressed)
+                {
+                    pager.AnimateTo(active + 1, count);
+                    clicked = true;
+                }
             }
         }
 
-        return consumed;
+        return hot;
     }
 
-    private static bool DrawChevron(ImDrawListPtr drawList, Vector2 center, float radius, string glyph)
+    private static bool DrawChevron(ImDrawListPtr drawList, Vector2 center, float radius, string glyph,
+        out bool clicked)
     {
+        clicked = false;
         var min = new Vector2(center.X - radius, center.Y - radius);
         var max = new Vector2(center.X + radius, center.Y + radius);
         var hovered = UiInteract.Hover(min, max);
@@ -238,6 +251,7 @@ internal sealed class PhotoCarousel
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        clicked = ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return true;
     }
 }

@@ -65,6 +65,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly StoryViewerOverlay storyViewer;
     private readonly StoryRingPainter ringPainter = AethergramArt.StoryRing;
     private StoryRingDto? pendingStoryRing;
+    private StoryDto[]? viewerItems;
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly PhotoCarousel carousel = new();
     private string? pendingViewUrl;
@@ -194,7 +195,7 @@ internal sealed partial class AethergramApp : IPhoneApp
 
         if (storyViewer.Active)
         {
-            storyViewer.Draw(screen, theme);
+            storyViewer.Draw(screen, theme, Plugin.Confirm.Active is not null);
             return;
         }
 
@@ -327,10 +328,12 @@ internal sealed partial class AethergramApp : IPhoneApp
         if (!storyViewer.Active && stories.OpenAuthorId is not null && pendingStoryRing is null)
         {
             stories.CloseAuthor();
+            viewerItems = null;
         }
 
         if (pendingStoryRing is not { } ring)
         {
+            SyncViewerItems();
             return;
         }
 
@@ -346,10 +349,43 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
 
         pendingStoryRing = null;
+        viewerItems = items;
         var label = ring.IsMe
             ? Loc.T(L.Aethergram.YourStory)
             : SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
-        storyViewer.Open(items, label, ring.AuthorHandle, ring.AuthorAvatarUrl, stories.MarkSeen);
+        storyViewer.Open(items, label, ring.AuthorAvatarUrl, stories.MarkSeen, ring.IsMe, AskDeleteStory);
+    }
+
+    // The store swaps in a fresh array off the worker thread after a delete, so the viewer is
+    // refreshed here on the draw thread rather than from the completion callback.
+    private void SyncViewerItems()
+    {
+        if (!storyViewer.Active)
+        {
+            return;
+        }
+
+        var items = stories.OpenStories;
+        if (ReferenceEquals(items, viewerItems))
+        {
+            return;
+        }
+
+        viewerItems = items;
+        storyViewer.Replace(items);
+    }
+
+    private void AskDeleteStory(StoryDto story)
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Aethergram.DeleteStoryMessage),
+            ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
+            CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
+            BusyLabel = Loc.T(L.Aethergram.Saving),
+            FailedMessage = Loc.T(L.Aethergram.DeleteFailed),
+            ConfirmAsync = done => stories.DeleteStory(story.Id, done),
+        });
     }
 
     private void DrawActivityTab(Rect area)
@@ -586,8 +622,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         var imageRect = new Rect(new Vector2(innerX, imageTop), new Vector2(innerX + innerWidth, imageBottom));
         var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
         var page = DrawGramCarousel(imageRect, post, photos, 14f * scale);
-        HandleLikeGesture(imageRect, post, photos, page);
-        DrawLikeBurst(imageRect, post.Id);
         var liked = post.MyReaction >= 0;
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var heartCenter = new Vector2(innerX + 13f * scale, actionCenterY);
@@ -675,7 +709,12 @@ internal sealed partial class AethergramApp : IPhoneApp
         {
             pendingViewUrl = null;
         }
+        else
+        {
+            HandleLikeGesture(imageRect, post, photos, result.Index);
+        }
 
+        DrawLikeBurst(imageRect, post.Id);
         return result.Index;
     }
 
