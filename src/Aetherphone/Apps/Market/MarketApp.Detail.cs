@@ -97,7 +97,7 @@ internal sealed partial class MarketApp
         Typography.Draw(new Vector2(textX, textTop), MarketFormat.Clip(view.Name, 18), frameTheme.TextStrong,
             TextStyles.Title3);
         var min = snapshot.Min(hq);
-        var priceText = min > 0 ? MarketFormat.Gil(min) : "\u2014";
+        var priceText = PriceOrDash(min);
         var priceSize = Typography.Measure(priceText, 1.4f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(textX, textTop + 26f * scale), priceText, AppPalettes.Market.Accent, 1.4f,
             FontWeight.SemiBold);
@@ -463,6 +463,6 @@ internal sealed partial class MarketApp
         return count;
     }
 
-    private static string PriceOrDash(double value) => value > 0 ? MarketFormat.Gil(value) : "\u2014";
-    private static string PriceOrDash(long value) => value > 0 ? MarketFormat.Gil(value) : "\u2014";
+    private static string PriceOrDash(double value) => value > 0 ? MarketFormat.Gil(value) : "-";
+    private static string PriceOrDash(long value) => value > 0 ? MarketFormat.Gil(value) : "-";
 }
