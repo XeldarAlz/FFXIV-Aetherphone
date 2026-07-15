@@ -1669,6 +1669,8 @@
   "plugin.unlockPositionHint": "Konum kilidini aç",
   "plugin.dndEnableHint": "Rahatsız etme modunu aç",
   "plugin.dndDisableHint": "Rahatsız etme modunu kapat",
+  "plugin.updateChip": "{0} sürümüne güncelle",
+  "plugin.updateChipHint": "Aetherphone'un daha yeni bir sürümü hazır. Dalamud eklenti yükleyicisini açmak için tıkla.",
   "feedback.sendFeedback": "Geri bildirim gönder",
   "feedback.subtitle": "Düşüncelerinizi, önerilerinizi veya hata raporlarınızı doğrudan geliştiriciye iletin",
   "feedback.yourFeedback": "Geri bildiriminiz",

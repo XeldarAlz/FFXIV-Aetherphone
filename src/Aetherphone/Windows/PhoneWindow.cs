@@ -35,6 +35,12 @@ internal sealed class PhoneWindow : Window
 
     public bool IsMinimized => shell.MinimizedResting;
 
+    public Vector2 LastPosition { get; private set; }
+
+    public Vector2 LastSize { get; private set; }
+
+    public bool ShowsChrome => IsOpen && shell.MinimizePhase == MinimizePhase.None && LastSize.Y > 0f;
+
     public void Maximize()
     {
         if (shell.MinimizePhase != MinimizePhase.None)
@@ -128,6 +134,9 @@ internal sealed class PhoneWindow : Window
 
     public override void Draw()
     {
+        LastPosition = ImGui.GetWindowPos();
+        LastSize = ImGui.GetWindowSize();
+        Plugin.Updates.Poll();
         using (Plugin.Fonts.Push(1f))
         {
             var origin = ImGui.GetCursorScreenPos();

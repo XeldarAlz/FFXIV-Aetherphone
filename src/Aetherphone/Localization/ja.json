@@ -1669,6 +1669,8 @@
   "plugin.unlockPositionHint": "位置のロックを解除",
   "plugin.dndEnableHint": "おやすみモードをオンにする",
   "plugin.dndDisableHint": "おやすみモードをオフにする",
+  "plugin.updateChip": "{0} に更新",
+  "plugin.updateChipHint": "新しい Aetherphone が利用できます。クリックで Dalamud のプラグインインストーラーを開きます。",
   "feedback.sendFeedback": "フィードバックを送信",
   "feedback.subtitle": "ご意見、ご提案、バグ報告を開発者に直接お送りください",
   "feedback.yourFeedback": "フィードバック",

@@ -1669,6 +1669,8 @@
   "plugin.unlockPositionHint": "解锁位置",
   "plugin.dndEnableHint": "开启免打扰",
   "plugin.dndDisableHint": "关闭免打扰",
+  "plugin.updateChip": "更新到 {0}",
+  "plugin.updateChipHint": "Aetherphone 有新版本可用。点击打开 Dalamud 插件安装器。",
   "feedback.sendFeedback": "发送反馈",
   "feedback.subtitle": "将您的想法、建议或错误报告直接发送给开发者",
   "feedback.yourFeedback": "您的反馈",

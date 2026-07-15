@@ -9,6 +9,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell;
+using Aetherphone.Core.Updates;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
 using Dalamud.Game.ClientState.Conditions;
@@ -48,11 +49,13 @@ public sealed class Plugin : IDalamudPlugin
     internal static IAnalyticsService Analytics { get; private set; } = null!;
     internal static ConfirmService Confirm { get; private set; } = null!;
     internal static ReportService Report { get; private set; } = null!;
+    internal static UpdateCheckService Updates { get; private set; } = null!;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
     private readonly PhoneShell shell;
     private readonly PhoneWindow phoneWindow;
     private readonly AboutWindow aboutWindow;
+    private readonly UpdateChipWindow updateChipWindow;
     private readonly PhoneEmoteController phoneEmote;
     private readonly TimerNotifier timerNotifier;
     private readonly CalendarReminderService calendarReminders;
@@ -105,7 +108,10 @@ public sealed class Plugin : IDalamudPlugin
             services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
             services.AethernetClient, services.GameData, services.RemoteImages, services.Lodestone);
         phoneWindow = new PhoneWindow(shell);
+        Updates = new UpdateCheckService(services.Http, PluginInterface);
+        updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
         windowSystem.AddWindow(phoneWindow);
+        windowSystem.AddWindow(updateChipWindow);
         windowSystem.AddWindow(aboutWindow);
         services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false });
         phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
@@ -209,6 +215,7 @@ public sealed class Plugin : IDalamudPlugin
         calendarReminders.Dispose();
         clockAlarms.Dispose();
         reminders.Dispose();
+        Updates.Dispose();
         shell.Dispose();
         var sessionDuration = (DateTime.UtcNow - sessionStartedAt).TotalSeconds;
         Analytics.Track(AnalyticsEvents.SessionEnd(sessionDuration));

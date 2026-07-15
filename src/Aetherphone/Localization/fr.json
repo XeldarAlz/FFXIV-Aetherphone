@@ -1669,6 +1669,8 @@
   "plugin.unlockPositionHint": "Déverrouiller la position",
   "plugin.dndEnableHint": "Activer Ne pas déranger",
   "plugin.dndDisableHint": "Désactiver Ne pas déranger",
+  "plugin.updateChip": "Mettre à jour vers {0}",
+  "plugin.updateChipHint": "Un Aetherphone plus récent est disponible. Cliquer pour ouvrir l'installateur de plugins de Dalamud.",
   "feedback.sendFeedback": "Envoyer un commentaire",
   "feedback.subtitle": "Partagez vos réflexions, suggestions ou rapports de bugs directement avec le développeur",
   "feedback.yourFeedback": "Votre avis",

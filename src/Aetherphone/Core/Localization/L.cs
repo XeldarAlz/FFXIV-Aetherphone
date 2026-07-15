@@ -1985,6 +1985,10 @@ internal static class L
         public static readonly LocString UnlockPositionHint = new("plugin.unlockPositionHint", "Unlock position");
         public static readonly LocString DndEnableHint = new("plugin.dndEnableHint", "Turn on Do Not Disturb");
         public static readonly LocString DndDisableHint = new("plugin.dndDisableHint", "Turn off Do Not Disturb");
+        public static readonly LocString UpdateChip = new("plugin.updateChip", "Update to {0}");
+
+        public static readonly LocString UpdateChipHint = new("plugin.updateChipHint",
+            "A newer Aetherphone is ready. Click to open Dalamud's plugin installer.");
     }
 
     internal static class Feedback

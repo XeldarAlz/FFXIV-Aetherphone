@@ -1669,6 +1669,8 @@
   "plugin.unlockPositionHint": "Разблокировать позицию",
   "plugin.dndEnableHint": "Включить режим «Не беспокоить»",
   "plugin.dndDisableHint": "Выключить режим «Не беспокоить»",
+  "plugin.updateChip": "Обновить до {0}",
+  "plugin.updateChipHint": "Доступна новая версия Aetherphone. Нажмите, чтобы открыть установщик плагинов Dalamud.",
   "feedback.sendFeedback": "Отправить отзыв",
   "feedback.subtitle": "Поделитесь мыслями, предложениями или отчётами об ошибках напрямую с разработчиком",
   "feedback.yourFeedback": "Ваш отзыв",
