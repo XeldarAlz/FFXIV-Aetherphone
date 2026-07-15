@@ -517,6 +517,8 @@ internal static class L
         {
             new("changelog.r0970.37", "Velvet photos are now for your connections only: the feed no longer shows posts from people you have not connected with"),
             new("changelog.r0970.38", "Choosing who can see a Velvet post is gone, because every post now goes to your connections and no further"),
+            new("changelog.r0970.41", "You can now disconnect from someone in Velvet without blocking them, which ends the connection for both of you"),
+            new("changelog.r0970.42", "Disconnecting in Velvet takes the chat out of both inboxes, and connecting again later brings the conversation back"),
             new("changelog.r0970.0", "Velvet now has stories: share a photo your connections can watch for 24 hours before it disappears on its own"),
             new("changelog.r0970.1", "You can now tap the seen count on your own story to see everyone who watched it, and when"),
             new("changelog.r0970.22", "You can now mention people with @ in a chirp, a caption, or a comment across Chirper, Aethergram, and Velvet: the handle becomes a link that opens their profile"),

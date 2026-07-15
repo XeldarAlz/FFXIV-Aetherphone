@@ -479,6 +479,8 @@
   "changelog.r0970.36": "El teléfono olvidaba dónde lo habías colocado, a tamaño completo y minimizado, en cuanto el plugin se desactivaba y se volvía a activar o el juego se reiniciaba",
   "changelog.r0970.37": "Las fotos de Velvet ahora son solo para tus conexiones: el feed ya no muestra publicaciones de personas con las que no te has conectado",
   "changelog.r0970.38": "La opción de elegir quién puede ver una publicación de Velvet ya no está, porque ahora cada publicación llega a tus conexiones y a nadie más",
+  "changelog.r0970.41": "Ahora puedes desconectarte de alguien en Velvet sin bloquearlo: la conexión termina para los dos",
+  "changelog.r0970.42": "Al desconectarte en Velvet, el chat sale de las dos bandejas de entrada, y si más adelante vuelves a conectarte, la conversación regresa",
   "changelog.r0970.39": "Importar una foto desde tu PC no hacía nada visible al componer una publicación de Aethergram o Velvet: ahora aparece en la cuadrícula de fotos, seleccionada y numerada",
   "changelog.r0970.40": "Aethergram no decía nada cuando intentabas añadir una novena foto a una publicación, en lugar de avisarte de que el límite son ocho",
   "changelog.r0960.0":"Velvet se ha reconstruido desde cero, con una estética after-dark y todas sus pantallas rediseñadas en torno a Descubrir",

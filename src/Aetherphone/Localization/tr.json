@@ -479,6 +479,8 @@
   "changelog.r0970.36": "Eklenti kapatılıp yeniden açıldığında ya da oyun yeniden başlatıldığında telefon, onu tam boyutta ve küçültülmüş halde nereye koyduğunuzu unutuyordu",
   "changelog.r0970.37": "Velvet fotoğrafları artık yalnızca bağlantılarınıza açık: akışta bağlantı kurmadığınız kişilerin gönderileri artık görünmüyor",
   "changelog.r0970.38": "Bir Velvet gönderisini kimlerin görebileceğini seçme ayarı kaldırıldı, çünkü artık her gönderi yalnızca bağlantılarınıza gidiyor",
+  "changelog.r0970.41": "Artık Velvet'te birini engellemeden bağlantınızı kesebilirsiniz: bağlantı ikiniz için de sona erer",
+  "changelog.r0970.42": "Velvet'te bağlantıyı kestiğinizde sohbet iki gelen kutusundan da çıkar, sonra yeniden bağlanırsanız konuşma geri gelir",
   "changelog.r0970.39": "Aethergram veya Velvet gönderisi hazırlarken bilgisayarınızdan fotoğraf içe aktarmak gözle görülür hiçbir şey yapmıyordu: fotoğraf artık seçili ve numaralı olarak fotoğraf ızgarasında beliriyor",
   "changelog.r0970.40": "Aethergram, bir gönderiye dokuzuncu fotoğrafı eklemeye çalıştığınızda sınırın sekiz olduğunu söylemek yerine hiçbir şey demiyordu",
   "changelog.r0960.0":"Velvet sıfırdan yeniden inşa edildi: gece sonrasına yakışan bir görünüm ve Keşfet çevresinde yeniden çizilmiş tüm ekranlar",

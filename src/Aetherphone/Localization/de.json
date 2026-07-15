@@ -479,6 +479,8 @@
   "changelog.r0970.36": "Das Telefon vergaß seine Plätze in voller Größe und minimiert, sobald das Plugin aus- und wieder eingeschaltet oder das Spiel neu gestartet wurde",
   "changelog.r0970.37": "Velvet-Fotos sind jetzt nur noch für deine Verbindungen: Der Feed zeigt keine Beiträge mehr von Leuten, mit denen du nicht verbunden bist",
   "changelog.r0970.38": "Die Auswahl, wer einen Velvet-Beitrag sehen kann, ist entfallen, weil jeder Beitrag jetzt an deine Verbindungen geht und nicht weiter",
+  "changelog.r0970.41": "Du kannst dich in Velvet jetzt von jemandem trennen, ohne ihn zu blockieren: Die Verbindung endet für euch beide",
+  "changelog.r0970.42": "Beim Trennen in Velvet verschwindet der Chat aus beiden Postfächern, und wenn ihr euch später wieder verbindet, ist das Gespräch zurück",
   "changelog.r0970.39": "Ein Foto vom PC zu importieren bewirkte beim Verfassen eines Aethergram- oder Velvet-Beitrags sichtbar nichts: Es landet jetzt im Fotoraster, ausgewählt und nummeriert",
   "changelog.r0970.40": "Aethergram sagte nichts, wenn du ein neuntes Foto zu einem Beitrag hinzufügen wolltest, statt dir mitzuteilen, dass acht das Limit sind",
   "changelog.r0960.0":"Velvet wurde von Grund auf neu gebaut: mit einem After-Dark-Look und allen Bildschirmen, die rund um Entdecken neu gezeichnet wurden",
