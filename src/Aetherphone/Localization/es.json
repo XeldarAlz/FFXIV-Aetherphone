@@ -426,6 +426,7 @@
   "changelog.r0970.15": "Salir de una aplicación en mitad de una historia ya no deja esa historia colgada sobre la aplicación al volver",
   "changelog.r0970.16": "La confirmación para eliminar una historia decía que no se pudo eliminar la publicación",
   "changelog.r0970.17": "Una historia que ha caducado ahora se considera desaparecida en todas partes, incluida su lista de espectadores",
+  "changelog.r0970.18": "Aetherphone cerraba el juego al iniciarse cuando el país o el formato regional de Windows estaba configurado en Rusia o Bielorrusia",
   "changelog.r0960.0":"Velvet se ha reconstruido desde cero, con una estética after-dark y todas sus pantallas rediseñadas en torno a Descubrir",
   "changelog.r0960.1": "Los filtros de Descubrir en Velvet ahora viven tras un botón de filtro, dejando toda la pantalla a las personas que estás explorando",
   "changelog.r0960.2": "Los selectores de roles y etiquetas de Velvet ahora están ordenados en categorías que reflejan cómo se describen realmente las comunidades de rol",

@@ -426,6 +426,7 @@
   "changelog.r0970.15": "Hikaye izlerken uygulamadan çıktığınızda, geri döndüğünüzde o hikayenin uygulamanın üzerinde asılı kalması düzeltildi",
   "changelog.r0970.16": "Hikaye silme onayının gönderi silinemedi demesi düzeltildi",
   "changelog.r0970.17": "Süresi dolmuş bir hikaye artık izleyici listesi dahil her yerde yok sayılıyor",
+  "changelog.r0970.18": "Windows ülke veya bölge biçimi Rusya ya da Belarus olarak ayarlı olan oyuncularda Aetherphone'un başlangıçta oyunu kapatması düzeltildi",
   "changelog.r0960.0":"Velvet sıfırdan yeniden inşa edildi: gece sonrasına yakışan bir görünüm ve Keşfet çevresinde yeniden çizilmiş tüm ekranlar",
   "changelog.r0960.1": "Velvet'te Keşfet filtreleri artık bir filtre düğmesinin arkasında duruyor, böylece ekranın tamamı göz attığın kişilere kalıyor",
   "changelog.r0960.2": "Velvet'in rol ve etiket seçicileri artık rol yapma topluluklarının kendilerini gerçekte nasıl tanımladığına uyan kategorilere ayrıldı",

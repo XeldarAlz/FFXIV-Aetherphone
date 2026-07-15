@@ -426,6 +426,7 @@
   "changelog.r0970.15": "Wenn du eine App mitten in einer Story verlässt, hängt diese Story beim Zurückkehren nicht mehr über der App",
   "changelog.r0970.16": "Die Bestätigung zum Löschen einer Story sagte, der Beitrag könne nicht gelöscht werden",
   "changelog.r0970.17": "Eine abgelaufene Story gilt jetzt überall als verschwunden, auch für ihre Zuschauerliste",
+  "changelog.r0970.18": "Aetherphone beendete beim Start das Spiel, wenn in Windows als Land oder Regionsformat Russland oder Belarus eingestellt war",
   "changelog.r0960.0":"Velvet wurde von Grund auf neu gebaut: mit einem After-Dark-Look und allen Bildschirmen, die rund um Entdecken neu gezeichnet wurden",
   "changelog.r0960.1": "Die Filter in Velvets Entdecken liegen jetzt hinter einer Filterschaltfläche, sodass der ganze Bildschirm den Leuten gehört, die du durchstöberst",
   "changelog.r0960.2": "Velvets Rollen- und Tag-Auswahl ist jetzt in Kategorien sortiert, die dem entsprechen, wie Rollenspiel-Communitys sich tatsächlich selbst beschreiben",

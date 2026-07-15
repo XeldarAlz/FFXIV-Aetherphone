@@ -497,6 +497,7 @@ internal static class L
             new("changelog.r0970.15", "Fixed leaving an app in the middle of a story leaving that story hanging over the app when you came back"),
             new("changelog.r0970.16", "Fixed the story delete confirmation saying it couldn't delete the post"),
             new("changelog.r0970.17", "A story that has expired is now treated as gone everywhere, including its viewer list"),
+            new("changelog.r0970.18", "Fixed Aetherphone closing the game on startup for players whose Windows country or regional format is set to Russia or Belarus"),
         };
 
         public static readonly LocString[] Release0960 =

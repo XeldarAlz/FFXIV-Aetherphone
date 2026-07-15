@@ -426,6 +426,7 @@
   "changelog.r0970.15": "Fixed leaving an app in the middle of a story leaving that story hanging over the app when you came back",
   "changelog.r0970.16": "Fixed the story delete confirmation saying it couldn't delete the post",
   "changelog.r0970.17": "A story that has expired is now treated as gone everywhere, including its viewer list",
+  "changelog.r0970.18": "Fixed Aetherphone closing the game on startup for players whose Windows country or regional format is set to Russia or Belarus",
   "changelog.r0960.0": "Velvet has been rebuilt from the ground up, with an after-dark look and every screen redrawn around Discover",
   "changelog.r0960.1": "Velvet's Discover filters now live behind a filter button, leaving the whole screen to the people you are browsing",
   "changelog.r0960.2": "Velvet's role and tag pickers are now sorted into categories that match how roleplay communities actually describe themselves",

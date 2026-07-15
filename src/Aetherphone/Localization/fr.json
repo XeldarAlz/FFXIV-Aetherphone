@@ -426,6 +426,7 @@
   "changelog.r0970.15": "Quitter une application au milieu d'une story ne laisse plus cette story suspendue au-dessus de l'application à votre retour",
   "changelog.r0970.16": "La confirmation de suppression d'une story indiquait que la publication n'avait pas pu être supprimée",
   "changelog.r0970.17": "Une story expirée est désormais considérée comme disparue partout, y compris sa liste de spectateurs",
+  "changelog.r0970.18": "Aetherphone fermait le jeu au démarrage lorsque le pays ou le format régional de Windows était défini sur la Russie ou la Biélorussie",
   "changelog.r0960.0":"Velvet a été reconstruit de fond en comble, avec une allure after-dark et tous ses écrans redessinés autour de Découvrir",
   "changelog.r0960.1": "Les filtres de Découvrir dans Velvet se cachent désormais derrière un bouton de filtre, laissant tout l'écran aux personnes que vous parcourez",
   "changelog.r0960.2": "Les sélecteurs de rôles et de tags de Velvet sont désormais classés en catégories qui reflètent la façon dont les communautés de roleplay se décrivent réellement",
