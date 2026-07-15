@@ -4,11 +4,6 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
 
-// Single line input with @ autocomplete. Mirrors SoftWrapField's shape: one editor per field id holding a
-// cached callback delegate, so no lambda is allocated per frame. A picked handle is spliced inside the
-// callback rather than by assigning the buffer from outside, because ImGui will not reload a buffer it is
-// actively editing. Tab arrives through CallbackCompletion, which is the only way to stop it moving focus
-// out of the field.
 internal static class MentionField
 {
     private sealed class Editor
@@ -39,9 +34,9 @@ internal static class MentionField
             }
 
             var current = Encoding.UTF8.GetString(data.BufSpan[..data.BufTextLen]);
-            Cursor = ByteIndexToCharIndex(current, data.CursorPos);
             if (PendingHandle is null)
             {
+                Cursor = ByteIndexToCharIndex(current, data.CursorPos);
                 return 0;
             }
 
@@ -111,6 +106,11 @@ internal static class MentionField
         if (mentions.TryTakeCommit(out var handle))
         {
             editor.PendingHandle = handle;
+        }
+
+        if (editor.PendingHandle is not null)
+        {
+            ImGui.SetKeyboardFocusHere();
         }
 
         const ImGuiInputTextFlags flags = ImGuiInputTextFlags.EnterReturnsTrue

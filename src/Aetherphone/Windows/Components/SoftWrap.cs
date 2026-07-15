@@ -120,9 +120,6 @@ internal static class SoftWrap
         logical = StripNewlines(display);
     }
 
-    // Puts the caret back where it was without touching the text. ImGui reads these fields after the
-    // callback returns and reassigns the edit state, which is how a multi-line field can keep its caret
-    // still while arrow keys drive something else.
     public static void SetCursor(ImGuiInputTextCallbackDataPtr data, string display, int logicalCursor)
     {
         var wrappedCursor = LogicalToWrappedIndex(display, logicalCursor);

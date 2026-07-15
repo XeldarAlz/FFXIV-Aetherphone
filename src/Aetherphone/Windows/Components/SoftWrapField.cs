@@ -52,15 +52,15 @@ internal static class SoftWrapField
                 return 0;
             }
 
-            LogicalCursor = cursor;
             if (PendingHandle is null)
             {
+                LogicalCursor = cursor;
                 return 0;
             }
 
             var handle = PendingHandle;
             PendingHandle = null;
-            if (!MentionTokenScanner.TryFind(logical, cursor, out var start, out var length))
+            if (!MentionTokenScanner.TryFind(logical, LogicalCursor, out var start, out var length))
             {
                 return 0;
             }
@@ -119,6 +119,11 @@ internal static class SoftWrapField
         if (mentions is not null)
         {
             flags |= ImGuiInputTextFlags.CallbackAlways | ImGuiInputTextFlags.CallbackCompletion;
+        }
+
+        if (editor.PendingHandle is not null)
+        {
+            ImGui.SetKeyboardFocusHere();
         }
 
         var edited = ImGui.InputTextMultiline(id, ref editor.Display, bufferBytes, size, flags, editor.Callback);

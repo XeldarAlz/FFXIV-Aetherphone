@@ -5,14 +5,14 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
 
-// Shared brain behind the @ autocomplete. Both the single line and multi line fields drive one of these,
-// so token tracking, debouncing and keyboard navigation exist once. The field owns the text; this owns
-// the decision of whether a popup is open and which row is selected.
 internal sealed class MentionAutocomplete
 {
     private const float DebounceSeconds = 0.20f;
 
+    public const int MaxRows = 5;
+
     private readonly MentionSuggestions suggestions;
+    private MentionSuggestDto[] visible = Array.Empty<MentionSuggestDto>();
     private string pending = string.Empty;
     private string applied = string.Empty;
     private float debounce;
@@ -28,9 +28,26 @@ internal sealed class MentionAutocomplete
 
     public Rect Anchor { get; set; }
 
-    public MentionSuggestDto[] Rows => suggestions.Results;
+    public MentionSuggestDto[] Rows
+    {
+        get
+        {
+            var results = suggestions.Results;
+            if (results.Length <= MaxRows)
+            {
+                return results;
+            }
 
-    public bool IsOpen => tokenLive && (suggestions.Results.Length > 0 || suggestions.Loading);
+            if (visible.Length != MaxRows || !ReferenceEquals(visible[0], results[0]))
+            {
+                visible = results[..MaxRows];
+            }
+
+            return visible;
+        }
+    }
+
+    public bool IsOpen => tokenLive && (Rows.Length > 0 || suggestions.Loading);
 
     public void Track(string logical, int logicalCursor, float deltaSeconds)
     {
@@ -77,7 +94,7 @@ internal sealed class MentionAutocomplete
             return false;
         }
 
-        var rows = suggestions.Results.Length;
+        var rows = Rows.Length;
         if (rows == 0)
         {
             return false;
@@ -122,18 +139,12 @@ internal sealed class MentionAutocomplete
             return false;
         }
 
-        var rows = suggestions.Results;
-        if (SelectedIndex < 0 || SelectedIndex >= rows.Length)
-        {
-            return false;
-        }
-
         return Pick(SelectedIndex);
     }
 
     public bool Pick(int index)
     {
-        var rows = suggestions.Results;
+        var rows = Rows;
         if (index < 0 || index >= rows.Length)
         {
             return false;
@@ -163,6 +174,7 @@ internal sealed class MentionAutocomplete
         applied = string.Empty;
         debounce = 0f;
         SelectedIndex = 0;
+        visible = Array.Empty<MentionSuggestDto>();
         suggestions.Clear();
     }
 }

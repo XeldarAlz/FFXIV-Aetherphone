@@ -2,9 +2,6 @@ using Aetherphone.Core.Social;
 
 namespace Aetherphone.Windows.Components;
 
-// Finds the @handle token the caret currently sits inside. Runs against the logical string, never the
-// wrapped display string, because soft newlines shift every index. The boundary rules mirror the server
-// side regex so the client offers exactly the handles the server would resolve.
 internal static class MentionTokenScanner
 {
     public static bool TryFind(string text, int cursor, out int start, out int length)
