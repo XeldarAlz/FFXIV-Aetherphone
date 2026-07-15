@@ -428,6 +428,7 @@
   "changelog.r0970.17": "Eine abgelaufene Story gilt jetzt überall als verschwunden, auch für ihre Zuschauerliste",
   "changelog.r0970.18": "Aetherphone beendete beim Start das Spiel, wenn in Windows als Land oder Regionsformat Russland oder Belarus eingestellt war",
   "changelog.r0970.19": "Einige Beschriftungen, etwa die Zeile Klingelton in den Einstellungen und die Kacheln im Kontrollzentrum, blieben nach einem Sprachwechsel in der vorherigen Sprache",
+  "changelog.r0970.20": "Die Angaben unter dem Namen in einem Velvet-Profil liegen nicht mehr übereinander, wenn die Person nach mehreren Dingen gleichzeitig sucht",
   "changelog.r0960.0":"Velvet wurde von Grund auf neu gebaut: mit einem After-Dark-Look und allen Bildschirmen, die rund um Entdecken neu gezeichnet wurden",
   "changelog.r0960.1": "Die Filter in Velvets Entdecken liegen jetzt hinter einer Filterschaltfläche, sodass der ganze Bildschirm den Leuten gehört, die du durchstöberst",
   "changelog.r0960.2": "Velvets Rollen- und Tag-Auswahl ist jetzt in Kategorien sortiert, die dem entsprechen, wie Rollenspiel-Communitys sich tatsächlich selbst beschreiben",

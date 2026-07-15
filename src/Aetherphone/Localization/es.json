@@ -428,6 +428,7 @@
   "changelog.r0970.17": "Una historia que ha caducado ahora se considera desaparecida en todas partes, incluida su lista de espectadores",
   "changelog.r0970.18": "Aetherphone cerraba el juego al iniciarse cuando el país o el formato regional de Windows estaba configurado en Rusia o Bielorrusia",
   "changelog.r0970.19": "Algunas etiquetas, como la fila Tono de llamada en Ajustes y los mosaicos del Centro de Control, se quedaban en el idioma anterior después de cambiar de idioma",
+  "changelog.r0970.20": "Los datos bajo el nombre de un perfil de Velvet ya no se superponen cuando la persona busca varias cosas a la vez",
   "changelog.r0960.0":"Velvet se ha reconstruido desde cero, con una estética after-dark y todas sus pantallas rediseñadas en torno a Descubrir",
   "changelog.r0960.1": "Los filtros de Descubrir en Velvet ahora viven tras un botón de filtro, dejando toda la pantalla a las personas que estás explorando",
   "changelog.r0960.2": "Los selectores de roles y etiquetas de Velvet ahora están ordenados en categorías que reflejan cómo se describen realmente las comunidades de rol",
