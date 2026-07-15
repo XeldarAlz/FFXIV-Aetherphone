@@ -118,7 +118,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var time = bell.Formatted;
         var timeStyle = new TextStyle(heroScale, FontWeight.Medium);
         var timeSize = Typography.Measure(time, timeStyle);
-        var eorzeaLabel = Loc.T(L.Home.Eorzea).ToUpperInvariant();
+        var eorzeaLabel = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Home.Eorzea));
         var eorzeaScale = roomy ? 0.92f : 0.72f;
         var eorzeaTracking = 1.5f * scale;
         var eorzeaWidth = Typography.Measure(eorzeaLabel, eorzeaScale, FontWeight.SemiBold).X +

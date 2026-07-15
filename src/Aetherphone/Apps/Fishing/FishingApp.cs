@@ -81,7 +81,8 @@ internal sealed class FishingApp : IPhoneApp
         ProgressRing.Fill(ringCenter, radius, thickness, fraction, tint);
         ProgressRing.CenterIcon(ringCenter, FontAwesomeIcon.Fish, tint, radius * 0.52f);
         var status = current.BoardingNow ? Loc.T(L.Fishing.NowBoarding) : Loc.T(L.Fishing.NextVoyage);
-        Typography.DrawCentered(new Vector2(centerX, ringCenter.Y + radius + 24f * scale), status.ToUpperInvariant(),
+        Typography.DrawCentered(new Vector2(centerX, ringCenter.Y + radius + 24f * scale),
+            Loc.Culture.TextInfo.ToUpper(status),
             tint, TextStyles.FootnoteEmphasized);
         var heading = $"{plan.RouteName} · {TimeOfDayLabel(plan.TimeOfDay)}";
         Typography.DrawCentered(new Vector2(centerX, ringCenter.Y + radius + 46f * scale), heading, theme.TextStrong,

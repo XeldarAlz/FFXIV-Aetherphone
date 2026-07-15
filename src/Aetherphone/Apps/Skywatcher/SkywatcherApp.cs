@@ -226,7 +226,7 @@ internal sealed class SkywatcherApp : IPhoneApp
         using (Plugin.Fonts.Push(TextStyles.FootnoteEmphasized.Scale, TextStyles.FootnoteEmphasized.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, ink))
         {
-            Typography.Plain(title.ToUpperInvariant());
+            Typography.Plain(Loc.Culture.TextInfo.ToUpper(title));
         }
 
         ImGui.Dummy(new Vector2(0f, 6f * scale));

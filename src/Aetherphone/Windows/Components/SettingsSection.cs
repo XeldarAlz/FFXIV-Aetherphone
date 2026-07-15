@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -16,7 +17,7 @@ internal static class SettingsSection
         using (Plugin.Fonts.Push(TextStyles.Footnote.Scale, TextStyles.FootnoteEmphasized.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            Typography.Plain(title.ToUpperInvariant());
+            Typography.Plain(Loc.Culture.TextInfo.ToUpper(title));
         }
 
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));

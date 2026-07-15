@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -80,7 +81,8 @@ internal sealed class SimonRenderer
         drawList.AddCircle(center, radius, ImGui.GetColorU32(color with { W = 0.6f }), 48, 1.6f * scale);
         Typography.DrawCentered(new Vector2(center.X, center.Y - radius * 0.16f), value, theme.TextStrong,
             TextStyles.Title1);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + radius * 0.42f), label.ToUpperInvariant(), color,
+        Typography.DrawCentered(new Vector2(center.X, center.Y + radius * 0.42f), Loc.Culture.TextInfo.ToUpper(label),
+            color,
             TextStyles.Caption2);
     }
 }

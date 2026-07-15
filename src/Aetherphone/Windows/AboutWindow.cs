@@ -561,7 +561,7 @@ public sealed class AboutWindow : Window, IDisposable
     {
         var s = ImGuiHelpers.GlobalScale;
         var iconStr = icon.ToIconString();
-        var labelUp = label.ToUpperInvariant();
+        var labelUp = Loc.Culture.TextInfo.ToUpper(label);
         Vector2 iconSize;
         using (ImRaii.PushFont(UiBuilder.IconFont)) iconSize = ImGui.CalcTextSize(iconStr);
         var labelSize = ImGui.CalcTextSize(labelUp);

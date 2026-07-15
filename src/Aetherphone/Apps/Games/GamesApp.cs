@@ -384,7 +384,8 @@ internal sealed class GamesApp : IPhoneApp
         }
 
         var textX = min.X + height * 0.72f;
-        Typography.Draw(new Vector2(textX, center.Y - 34f * scale), Loc.T(L.Games.Featured).ToUpperInvariant(),
+        Typography.Draw(new Vector2(textX, center.Y - 34f * scale),
+            Loc.Culture.TextInfo.ToUpper(Loc.T(L.Games.Featured)),
             GamePalette.Lighten(accent, 0.62f), TextStyles.Caption2);
         Typography.Draw(new Vector2(textX, center.Y - 18f * scale), game.Title, ink, TextStyles.Title2);
         Typography.Draw(new Vector2(textX, center.Y + 8f * scale), game.Genre, ink with { W = 0.72f },

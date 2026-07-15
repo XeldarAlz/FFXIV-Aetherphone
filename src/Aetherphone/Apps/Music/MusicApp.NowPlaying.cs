@@ -169,7 +169,7 @@ internal sealed partial class MusicApp
             CloseNowPlaying();
         }
 
-        var caption = Loc.T(L.Music.PlayingFrom).ToUpperInvariant();
+        var caption = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Music.PlayingFrom));
         Typography.DrawCentered(drawList, new Vector2(frame.Center.X, barCenterY - 8f * scale), caption,
             ui.HeaderInk, TextStyles.Caption2);
         var source = playSource.Length > 0 ? playSource : DisplayName;
@@ -295,7 +295,7 @@ internal sealed partial class MusicApp
         var thickness = trackRect.Height;
         drawList.AddRectFilled(trackRect.Min, trackRect.Max,
             ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.90f)), thickness * 0.5f);
-        var label = Loc.T(L.Common.Live).ToUpperInvariant();
+        var label = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Common.Live));
         var labelSize = Typography.Measure(label, TextStyles.FootnoteEmphasized);
         var labelPosition = new Vector2(trackRect.Max.X - labelSize.X, progressY + 8f * scale);
         drawList.AddCircleFilled(new Vector2(labelPosition.X - 9f * scale, labelPosition.Y + labelSize.Y * 0.5f),

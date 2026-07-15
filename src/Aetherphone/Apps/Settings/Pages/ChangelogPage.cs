@@ -147,7 +147,7 @@ internal sealed class ChangelogPage : ISettingsPage
     private static void DrawLatestPill(ImDrawListPtr drawList, PhoneTheme theme, float scale, float x, float rowTop,
         float rowHeight)
     {
-        var label = Loc.T(L.Settings.ChangelogLatest).ToUpperInvariant();
+        var label = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Settings.ChangelogLatest));
         var textSize = Typography.Measure(label, TextStyles.Caption2);
         var padX = 7f * scale;
         var padY = 3f * scale;

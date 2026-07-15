@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -50,7 +51,7 @@ internal static class GameHud
 
         Typography.DrawCentered(new Vector2(center.X, center.Y - 7f * scale), value,
             highlight ? accent : theme.TextStrong, TextStyles.Title3.Scale * valuePop, TextStyles.Title3.Weight);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 12f * scale), label.ToUpperInvariant(),
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 12f * scale), Loc.Culture.TextInfo.ToUpper(label),
             theme.TextMuted, TextStyles.Caption2);
     }
 

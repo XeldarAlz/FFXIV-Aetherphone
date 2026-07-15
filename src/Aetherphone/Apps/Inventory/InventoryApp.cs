@@ -352,7 +352,8 @@ internal sealed class InventoryApp : IPhoneApp
     {
         Typography.DrawCentered(new Vector2(columnTop.X, columnTop.Y + height * 0.40f), value, theme.TextStrong,
             TextStyles.Title1);
-        Typography.DrawCentered(new Vector2(columnTop.X, columnTop.Y + height * 0.74f), label.ToUpperInvariant(),
+        Typography.DrawCentered(new Vector2(columnTop.X, columnTop.Y + height * 0.74f),
+            Loc.Culture.TextInfo.ToUpper(label),
             theme.TextMuted, TextStyles.Caption1);
     }
 

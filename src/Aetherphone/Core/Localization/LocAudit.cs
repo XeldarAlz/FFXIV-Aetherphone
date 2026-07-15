@@ -53,10 +53,11 @@ internal static class LocAudit
     private static List<string> CollectKeys()
     {
         var keys = new List<string>();
-        var nested = typeof(L).GetNestedTypes(BindingFlags.Public | BindingFlags.Static);
+        var nested = typeof(L).GetNestedTypes(BindingFlags.Public | BindingFlags.NonPublic);
         for (var groupIndex = 0; groupIndex < nested.Length; groupIndex++)
         {
-            var fields = nested[groupIndex].GetFields(BindingFlags.Public | BindingFlags.Static);
+            var fields = nested[groupIndex].GetFields(BindingFlags.Public | BindingFlags.NonPublic |
+                                                      BindingFlags.Static);
             for (var fieldIndex = 0; fieldIndex < fields.Length; fieldIndex++)
             {
                 var field = fields[fieldIndex];

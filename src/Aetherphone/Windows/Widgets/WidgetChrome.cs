@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -32,13 +33,13 @@ internal static class WidgetChrome
     public static void Eyebrow(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float scale,
         float opacity)
     {
-        Tracked(drawList, position, text.ToUpperInvariant(), color with { W = color.W * opacity }, EyebrowFontScale,
-            FontWeight.SemiBold, EyebrowTracking * scale);
+        Tracked(drawList, position, Loc.Culture.TextInfo.ToUpper(text), color with { W = color.W * opacity },
+            EyebrowFontScale, FontWeight.SemiBold, EyebrowTracking * scale);
     }
 
     public static float EyebrowWidth(string text, float scale)
     {
-        var upper = text.ToUpperInvariant();
+        var upper = Loc.Culture.TextInfo.ToUpper(text);
         var width = Typography.Measure(upper, EyebrowFontScale, FontWeight.SemiBold).X;
         return width + EyebrowTracking * scale * Math.Max(0, upper.Length - 1);
     }

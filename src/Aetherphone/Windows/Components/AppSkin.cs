@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -404,7 +405,7 @@ internal sealed class AppSkin
         using (Plugin.Fonts.Push(style.Scale, style.Weight))
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.HeaderInk))
         {
-            Typography.Plain(label.ToUpperInvariant());
+            Typography.Plain(Loc.Culture.TextInfo.ToUpper(label));
         }
 
         ImGui.Dummy(new Vector2(0f, gapPixels * scale));

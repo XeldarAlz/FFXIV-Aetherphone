@@ -104,7 +104,7 @@ internal static class GameOverlay
             CountingValue(result.PrimaryValue, valuePhase > 0f ? deltaSeconds : 0f),
             theme.TextStrong with { W = valuePhase }, TextStyles.LargeTitle, valuePhase, scale);
         var labelPhase = Phase(clamped, 0.25f, 0.7f);
-        DrawStaggered(new Vector2(center.X, center.Y + 26f * scale), result.PrimaryLabel.ToUpperInvariant(),
+        DrawStaggered(new Vector2(center.X, center.Y + 26f * scale), Loc.Culture.TextInfo.ToUpper(result.PrimaryLabel),
             theme.TextMuted with { W = labelPhase }, TextStyles.Caption1, labelPhase, scale);
         if (!string.IsNullOrEmpty(result.SecondaryLine))
         {
