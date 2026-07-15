@@ -8,7 +8,9 @@ internal static class Squircle
     private const float Exponent = 4.2f;
     private const float Fullness = 1.10f;
     private const int CornerSegments = 8;
+    private const float MinSegmentSquared = 0.01f;
     private static readonly Vector2[] UnitCorner = BuildUnitCorner();
+    private static readonly Vector2[] PathScratch = new Vector2[(CornerSegments + 1) * 4];
 
     public static void Fill(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, uint color)
     {
@@ -161,35 +163,57 @@ internal static class Squircle
 
     private static void TracePath(ImDrawListPtr drawList, Vector2 min, Vector2 max, float box)
     {
-        drawList.PathClear();
         var corner = UnitCorner;
         var topLeft = new Vector2(min.X + box, min.Y + box);
         var topRight = new Vector2(max.X - box, min.Y + box);
         var bottomRight = new Vector2(max.X - box, max.Y - box);
         var bottomLeft = new Vector2(min.X + box, max.Y - box);
+        var count = 0;
         for (var index = 0; index < corner.Length; index++)
         {
             var point = corner[index];
-            drawList.PathLineTo(new Vector2(topLeft.X - point.X * box, topLeft.Y - point.Y * box));
+            AppendDistinct(new Vector2(topLeft.X - point.X * box, topLeft.Y - point.Y * box), ref count);
         }
 
         for (var index = corner.Length - 1; index >= 0; index--)
         {
             var point = corner[index];
-            drawList.PathLineTo(new Vector2(topRight.X + point.X * box, topRight.Y - point.Y * box));
+            AppendDistinct(new Vector2(topRight.X + point.X * box, topRight.Y - point.Y * box), ref count);
         }
 
         for (var index = 0; index < corner.Length; index++)
         {
             var point = corner[index];
-            drawList.PathLineTo(new Vector2(bottomRight.X + point.X * box, bottomRight.Y + point.Y * box));
+            AppendDistinct(new Vector2(bottomRight.X + point.X * box, bottomRight.Y + point.Y * box), ref count);
         }
 
         for (var index = corner.Length - 1; index >= 0; index--)
         {
             var point = corner[index];
-            drawList.PathLineTo(new Vector2(bottomLeft.X - point.X * box, bottomLeft.Y + point.Y * box));
+            AppendDistinct(new Vector2(bottomLeft.X - point.X * box, bottomLeft.Y + point.Y * box), ref count);
         }
+
+        while (count > 1 && Vector2.DistanceSquared(PathScratch[count - 1], PathScratch[0]) < MinSegmentSquared)
+        {
+            count--;
+        }
+
+        drawList.PathClear();
+        for (var index = 0; index < count; index++)
+        {
+            drawList.PathLineTo(PathScratch[index]);
+        }
+    }
+
+    private static void AppendDistinct(Vector2 point, ref int count)
+    {
+        if (count > 0 && Vector2.DistanceSquared(PathScratch[count - 1], point) < MinSegmentSquared)
+        {
+            return;
+        }
+
+        PathScratch[count] = point;
+        count++;
     }
 
     private static void TraceCapPath(ImDrawListPtr drawList, Vector2 min, Vector2 max, float box, bool top,
