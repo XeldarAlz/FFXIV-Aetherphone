@@ -539,12 +539,12 @@ internal static class L
             new("changelog.r0970.7", "A story photo that is still in review is now held back in the story viewer, the way it already was everywhere else"),
             new("changelog.r0970.17", "A story that has expired is now treated as gone everywhere, including its viewer list"),
             new("changelog.r0970.8", "Aetherphone is now about a third smaller to download and install: the wallpapers it ships with are packed far more efficiently at the same resolution"),
-
             new("changelog.r0970.9", "Encrypted chats now set up on computers that run the game through Wine or Proton, where creating the security key used to fail"),
             new("changelog.r0970.10", "A PC that cannot support encrypted chats now says so in the chat encryption sheet, instead of showing Setting up encryption forever"),
+            new("changelog.r0970.21", "Turkish uppercase labels are now spelled correctly throughout the phone: headings like UYARILAR no longer come out with a lowercase ı in the middle"),
+
             new("changelog.r0970.18", "Fixed Aetherphone closing the game on startup for players whose Windows country or regional format is set to Russia or Belarus"),
             new("changelog.r0970.19", "Fixed some labels, such as the Ringtone row in Settings and the Control Center tiles, staying in the previous language after you changed language"),
-            new("changelog.r0970.21", "Turkish uppercase labels are now spelled correctly throughout the phone: headings like UYARILAR no longer come out with a lowercase ı in the middle"),
             new("changelog.r0970.30", "Fixed the reason a call was declined or unavailable, the Wallet section headers, and the Calculator error staying in English whatever language your phone was set to"),
             new("changelog.r0970.31", "Fixed the edited marker on a message reading backwards in Turkish, Japanese, and German, where the time has to come first"),
             new("changelog.r0970.32", "Fixed a post's detail view still showing In review after the review had finished, and hiding the comments other people had left"),
