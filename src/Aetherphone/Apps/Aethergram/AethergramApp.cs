@@ -35,6 +35,13 @@ internal sealed partial class AethergramApp : IPhoneApp
     private const int HandleMax = 15;
     private const int BioMax = 200;
     private const float BottomNavHeight = 52f;
+    private const int NavTabCount = 4;
+    private const float NavHitRadius = 17f;
+    private const float NavHoverSmoothTime = 0.12f;
+    private const float NavHoverMaxFrameSeconds = 0.1f;
+    private const float NavPillWidth = 40f;
+    private const float NavPillHeight = 34f;
+    private const float NavPillAlpha = 0.10f;
     private const float CropSmoothTime = 0.10f;
     private const int GridColumns = 3;
     private const float LikeBurstDuration = 0.9f;
@@ -78,6 +85,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private AethergramTab activeTab = AethergramTab.Home;
+    private readonly Spring[] navHover = new Spring[NavTabCount];
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
     private float sinceForYou;
     private float sinceFollowing;
@@ -843,20 +851,46 @@ internal sealed partial class AethergramApp : IPhoneApp
         UiAnchors.Report("aethergram.tab.search", new Rect(searchCenter - anchorHalf, searchCenter + anchorHalf));
         UiAnchors.Report("aethergram.tab.activity", new Rect(activityCenter - anchorHalf, activityCenter + anchorHalf));
         UiAnchors.Report("aethergram.tab.profile", new Rect(profileCenter - anchorHalf, profileCenter + anchorHalf));
-        DrawNavIcon(new Vector2(bar.Min.X + slot * 0.5f, centerY), FontAwesomeIcon.Home, AethergramTab.Home);
-        DrawNavIcon(searchCenter, FontAwesomeIcon.Search, AethergramTab.Search);
-        DrawNavIcon(activityCenter, FontAwesomeIcon.Heart, AethergramTab.Activity);
+        DrawNavIcon(new Vector2(bar.Min.X + slot * 0.5f, centerY), FontAwesomeIcon.Home, AethergramTab.Home,
+            Loc.T(L.Aethergram.Home));
+        DrawNavIcon(searchCenter, FontAwesomeIcon.Search, AethergramTab.Search, Loc.T(L.Aethergram.Search));
+        DrawNavIcon(activityCenter, FontAwesomeIcon.Heart, AethergramTab.Activity, Loc.T(L.Social.ActivityTab));
         ActivityBadge.Draw(activityCenter + new Vector2(11f * scale, -10f * scale), social.UnseenCount(Id), theme,
             scale);
         DrawNavProfile(profileCenter);
     }
 
-    private void DrawNavIcon(Vector2 center, FontAwesomeIcon icon, AethergramTab tab)
+    private float StepNavHover(AethergramTab tab, Vector2 center)
+    {
+        var hit = new Vector2(NavHitRadius * ImGuiHelpers.GlobalScale, NavHitRadius * ImGuiHelpers.GlobalScale);
+        var hovered = UiInteract.Hover(center - hit, center + hit);
+        var delta = MathF.Min(ImGui.GetIO().DeltaTime, NavHoverMaxFrameSeconds);
+        navHover[(int)tab].Step(hovered ? 1f : 0f, NavHoverSmoothTime, delta);
+        return Math.Clamp(navHover[(int)tab].Value, 0f, 1f);
+    }
+
+    private void DrawNavHoverPill(Vector2 center, float hover)
+    {
+        if (hover <= 0.001f)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var grow = 0.86f + 0.14f * hover;
+        var half = new Vector2(NavPillWidth * 0.5f * scale * grow, NavPillHeight * 0.5f * scale * grow);
+        var tint = Palette.WithAlpha(ui.HoverTint, NavPillAlpha * hover);
+        Squircle.Fill(ImGui.GetWindowDrawList(), center - half, center + half, half.Y, ImGui.GetColorU32(tint));
+    }
+
+    private void DrawNavIcon(Vector2 center, FontAwesomeIcon icon, AethergramTab tab, string label)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var active = activeTab == tab;
+        DrawNavHoverPill(center, StepNavHover(tab, center));
         var color = active ? AppPalettes.Aethergram.TitleInk : AppPalettes.Aethergram.MutedInk;
-        if (ui.IconButton(center, 17f * scale, icon.ToIconString(), color, AppSkin.Transparent, active ? 1.3f : 1.2f))
+        if (ui.IconButton(center, NavHitRadius * scale, icon.ToIconString(), color, AppSkin.Transparent,
+                active ? 1.3f : 1.2f, label))
         {
             SelectTab(tab);
         }
@@ -866,12 +900,14 @@ internal sealed partial class AethergramApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var active = activeTab == AethergramTab.Profile;
+        var label = Loc.T(L.Aethergram.Profile);
+        DrawNavHoverPill(center, StepNavHover(AethergramTab.Profile, center));
         if (store.Me is not { } me)
         {
             store.EnsureMe();
             var color = active ? AppPalettes.Aethergram.TitleInk : AppPalettes.Aethergram.MutedInk;
-            if (ui.IconButton(center, 17f * scale, FontAwesomeIcon.User.ToIconString(), color, AppSkin.Transparent,
-                    1.15f))
+            if (ui.IconButton(center, NavHitRadius * scale, FontAwesomeIcon.User.ToIconString(), color,
+                    AppSkin.Transparent, 1.15f, label))
             {
                 SelectTab(AethergramTab.Profile);
             }
@@ -887,7 +923,9 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
 
         DrawAvatar(center, radius, me.Name, me.World, me.AvatarUrl, 0.85f, 28);
-        if (UiInteract.HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
+        var hit = new Vector2(NavHitRadius * scale, NavHitRadius * scale);
+        HoverTooltip.Show(new Rect(center - hit, center + hit), label, HoverLabelSide.Above);
+        if (UiInteract.HoverClick(center - hit, center + hit))
         {
             SelectTab(AethergramTab.Profile);
         }

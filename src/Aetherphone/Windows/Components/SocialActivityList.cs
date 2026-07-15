@@ -72,7 +72,10 @@ internal static class SocialActivityList
         var bodyHeight = body.Length > 0 ? Typography.MeasureWrapped(body, textWidth, 0.88f) : 0f;
         var contentHeight = actorSize.Y + 4f * scale + bodyHeight;
         var rowHeight = MathF.Max(radius * 2f + pad * 2f, contentHeight + pad * 2f);
-        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + rowHeight), 16f * scale);
+        var rowMax = new Vector2(origin.X + width, origin.Y + rowHeight);
+        var rowRounding = 16f * scale;
+        ui.Card(drawList, origin, rowMax, rowRounding);
+        UiInteract.HoverHighlight(drawList, origin, rowMax, rowRounding);
         var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, item.ActorName, string.Empty,
             item.ActorAvatarUrl, images, lodestone, 0.95f, 32);
@@ -95,7 +98,7 @@ internal static class SocialActivityList
             ImGui.PopTextWrapPos();
         }
 
-        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)))
+        if (UiInteract.HoverClick(origin, rowMax))
         {
             if (SocialActivity.OpensPost(item))
             {
