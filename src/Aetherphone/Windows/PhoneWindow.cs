@@ -20,8 +20,7 @@ internal sealed class PhoneWindow : Window
     private int recenterFrames;
     private int restoreFrames;
     private Vector2? maximizedPosition;
-    private Vector2 expandFromPosition;
-    private MinimizePhase lastPhase;
+    private Vector2? minimizedPosition;
     private string pendingOpenTrigger = "toggle";
     private DateTime shellOpenedAt;
 
@@ -116,9 +115,10 @@ internal sealed class PhoneWindow : Window
             PositionCondition = ImGuiCond.Always;
             restoreFrames--;
         }
-        else if (phase == MinimizePhase.Expanding && maximizedPosition is { } homePosition)
+        else if (phase is MinimizePhase.Collapsing or MinimizePhase.Expanding &&
+                 maximizedPosition is { } homePosition && minimizedPosition is { } dockPosition)
         {
-            Position = Vector2.Lerp(homePosition, expandFromPosition, shell.MinimizeEased);
+            Position = Vector2.Lerp(homePosition, dockPosition, shell.MinimizeEased);
             PositionCondition = ImGuiCond.Always;
         }
         else
@@ -147,17 +147,14 @@ internal sealed class PhoneWindow : Window
         }
 
         var phase = shell.MinimizePhase;
-        if (phase == MinimizePhase.Expanding && lastPhase != MinimizePhase.Expanding)
-        {
-            expandFromPosition = ImGui.GetWindowPos();
-        }
-
         if (phase == MinimizePhase.None)
         {
             maximizedPosition = ImGui.GetWindowPos();
         }
-
-        lastPhase = phase;
+        else if (phase == MinimizePhase.Minimized)
+        {
+            minimizedPosition = ImGui.GetWindowPos();
+        }
 
         if (shell.ConsumeCloseRequest())
         {
