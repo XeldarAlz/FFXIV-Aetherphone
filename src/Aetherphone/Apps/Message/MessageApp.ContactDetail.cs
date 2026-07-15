@@ -56,6 +56,7 @@ internal sealed partial class MessageApp
             var avatarCenter = new Vector2(centerX, origin.Y + 24f * scale + radius);
             AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, ContactBook.DisplayLabel(contact),
                 string.Empty, contact.AvatarUrl, images, lodestone, 1.8f, 48);
+            avatarLightbox.TryOpen(avatarCenter, radius, contact.AvatarUrl, images);
             var nameY = avatarCenter.Y + radius + 20f * scale;
             Typography.DrawCentered(new Vector2(centerX, nameY), ContactBook.DisplayLabel(contact), ui.TitleInk,
                 TextStyles.Title2);

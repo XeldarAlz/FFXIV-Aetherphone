@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
@@ -53,6 +54,7 @@ internal sealed partial class MessageApp : IPhoneApp
     private readonly HttpService http;
     private readonly Configuration configuration;
     private readonly AppSkin ui = new(AppPalettes.Message);
+    private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<MessageRoute> router;
     private readonly RouterDraw<MessageRoute> drawView;
     private readonly ChatTranscript transcript = new();
@@ -118,6 +120,7 @@ internal sealed partial class MessageApp : IPhoneApp
         }
 
         router.Reset();
+        avatarLightbox.Reset();
         filter = string.Empty;
         searchDraft = string.Empty;
         selectedContacts.Clear();
@@ -146,7 +149,15 @@ internal sealed partial class MessageApp : IPhoneApp
         chatMenu.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
-        router.Draw(context.Content, AppSkin.Transparent, delta, drawView);
+        using (InputShield.Engage(avatarLightbox.Expanded))
+        {
+            router.Draw(context.Content, AppSkin.Transparent, delta, drawView);
+        }
+
+        if (avatarLightbox.Active)
+        {
+            avatarLightbox.Draw(screen, theme);
+        }
     }
 
     private void SyncCallRoute()
