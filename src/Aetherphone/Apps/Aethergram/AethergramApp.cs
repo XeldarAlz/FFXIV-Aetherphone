@@ -64,6 +64,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly StoryTrayRow storyTray;
     private readonly StoryViewerOverlay storyViewer;
     private readonly StoryRingPainter ringPainter = AethergramArt.StoryRing;
+    private readonly Func<StoryDto, StoryViewers> storyViewers;
     private StoryRingDto? pendingStoryRing;
     private StoryDto[]? viewerItems;
     private readonly PhotoViewerOverlay photoViewer = new();
@@ -134,6 +135,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);
         openActivityPost = item => OpenDetailFromLink(item.PostId!);
+        storyViewers = StoryViewersFor;
     }
 
     private enum ComposeStage
@@ -350,10 +352,18 @@ internal sealed partial class AethergramApp : IPhoneApp
 
         pendingStoryRing = null;
         viewerItems = items;
+        stories.ClearViewers();
         var label = ring.IsMe
             ? Loc.T(L.Aethergram.YourStory)
             : SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
-        storyViewer.Open(items, label, ring.AuthorAvatarUrl, stories.MarkSeen, ring.IsMe, AskDeleteStory);
+        storyViewer.Open(items, label, ring.AuthorAvatarUrl, stories.MarkSeen, ring.IsMe, AskDeleteStory,
+            storyViewers);
+    }
+
+    private StoryViewers StoryViewersFor(StoryDto story)
+    {
+        stories.LoadViewers(story.Id);
+        return new StoryViewers(stories.Viewers, stories.ViewersTotal, stories.ViewersLoading);
     }
 
     // The store swaps in a fresh array off the worker thread after a delete, so the viewer is

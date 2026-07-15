@@ -5,6 +5,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -17,9 +18,14 @@ namespace Aetherphone.Windows.Components;
 /// press and hold to pause, drag down to dismiss. Draws over the whole app like
 /// <see cref="PhotoViewerOverlay"/> rather than routing, so the app returns early while it is active.
 /// </summary>
+internal readonly record struct StoryViewers(StoryViewerDto[] Items, int Total, bool Loading);
+
 internal sealed class StoryViewerOverlay
 {
     private const float SecondsPerStory = 5f;
+    private const float SheetSmoothTime = 0.16f;
+    private const float SheetHeightFraction = 0.58f;
+    private const float SheetRowHeight = 46f;
     private const float RevealSmoothTime = 0.15f;
     private const float DismissDragDistance = 140f;
     private const float HoldPauseSeconds = 0.18f;
@@ -42,6 +48,9 @@ internal sealed class StoryViewerOverlay
     private Action<StoryDto>? onSeen;
     private Action<StoryDto>? onDelete;
     private Action? onExhausted;
+    private Func<StoryDto, StoryViewers>? viewersSource;
+    private Spring sheetReveal;
+    private bool sheetOpen;
 
     public StoryViewerOverlay(RemoteImageCache images, LodestoneService lodestone)
     {
@@ -52,16 +61,19 @@ internal sealed class StoryViewerOverlay
     public bool Active => open || reveal.Value > 0.01f;
     public StoryDto? Current => index >= 0 && index < stories.Length ? stories[index] : null;
 
-    public void Open(StoryDto[] items, string label, string? avatarUrl, Action<StoryDto> seen, bool deletable = false,
-        Action<StoryDto>? delete = null, Action? exhausted = null)
+    public void Open(StoryDto[] items, string label, string? avatarUrl, Action<StoryDto> seen, bool mine = false,
+        Action<StoryDto>? delete = null, Func<StoryDto, StoryViewers>? viewers = null, Action? exhausted = null)
     {
         stories = items;
         authorLabel = label;
         authorAvatarUrl = avatarUrl;
-        canDelete = deletable;
+        canDelete = mine;
         onSeen = seen;
         onDelete = delete;
+        viewersSource = viewers;
         onExhausted = exhausted;
+        sheetOpen = false;
+        sheetReveal = new Spring(0f);
         index = FirstUnseen(items);
         elapsed = 0f;
         dragOffset = 0f;
@@ -92,6 +104,7 @@ internal sealed class StoryViewerOverlay
     {
         open = false;
         holding = false;
+        sheetOpen = false;
     }
 
     /// <param name="suspended">
@@ -129,7 +142,8 @@ internal sealed class StoryViewerOverlay
             return;
         }
 
-        if (open && !suspended)
+        sheetReveal.Step(sheetOpen ? 1f : 0f, SheetSmoothTime, delta);
+        if (open && !suspended && !sheetOpen)
         {
             HandleInput(area, delta, images.Get(story.MediaUrl) is not null);
         }
@@ -144,6 +158,113 @@ internal sealed class StoryViewerOverlay
             new Vector2(area.Max.X - 12f * scale, contentTop + 11f * scale) + shift), scale);
         DrawHeader(new Rect(new Vector2(area.Min.X + 12f * scale, contentTop + 18f * scale) + shift,
             new Vector2(area.Max.X - 12f * scale, contentTop + 42f * scale) + shift), theme, story, scale);
+        DrawSeenBar(drawList, stage, story, scale);
+        DrawViewersSheet(area, theme, story, scale);
+    }
+
+    // The eye and count only exist on your own story: the server reports ViewCount as zero to anyone
+    // who is not the author, so this would silently read "0" for everyone else.
+    private void DrawSeenBar(ImDrawListPtr drawList, Rect stage, StoryDto story, float scale)
+    {
+        if (!canDelete || viewersSource is null)
+        {
+            return;
+        }
+
+        var label = Loc.Plural(L.Aethergram.StorySeenBy, story.ViewCount);
+        var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
+        var center = new Vector2(stage.Min.X + 18f * scale + size.X * 0.5f + 14f * scale,
+            stage.Max.Y - 20f * scale);
+        var half = new Vector2(size.X * 0.5f + 22f * scale, 14f * scale);
+        Squircle.Fill(drawList, center - half, center + half, 12f * scale,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f)));
+        AppSkin.Icon(new Vector2(center.X - half.X + 14f * scale, center.Y), FontAwesomeIcon.Eye.ToIconString(),
+            new Vector4(1f, 1f, 1f, 0.9f), 0.8f);
+        Typography.Draw(new Vector2(center.X - half.X + 26f * scale, center.Y - size.Y * 0.5f), label,
+            new Vector4(1f, 1f, 1f, 0.95f), TextStyles.FootnoteEmphasized);
+        if (UiInteract.HoverClick(center - half, center + half))
+        {
+            sheetOpen = true;
+        }
+    }
+
+    private void DrawViewersSheet(Rect area, PhoneTheme theme, StoryDto story, float scale)
+    {
+        var reveal = Math.Clamp(sheetReveal.Value, 0f, 1f);
+        if (reveal <= 0.01f || viewersSource is null)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f * reveal)));
+        if (UiInteract.HoverClick(area.Min, area.Max))
+        {
+            sheetOpen = false;
+        }
+
+        var height = area.Height * SheetHeightFraction;
+        var top = area.Max.Y - height * Easing.EaseOutQuint(reveal);
+        var panel = new Rect(new Vector2(area.Min.X, top), area.Max);
+        var rounding = Metrics.Radius.Lg * scale;
+        Squircle.Fill(drawList, panel.Min, new Vector2(panel.Max.X, panel.Max.Y + rounding), rounding,
+            ImGui.GetColorU32(theme.Surface));
+        drawList.AddRectFilled(new Vector2(panel.Center.X - 18f * scale, panel.Min.Y + 8f * scale),
+            new Vector2(panel.Center.X + 18f * scale, panel.Min.Y + 11f * scale),
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f)), 2f * scale);
+
+        var viewers = viewersSource(story);
+        var headerY = panel.Min.Y + 26f * scale;
+        Typography.DrawCentered(new Vector2(panel.Center.X, headerY),
+            Loc.Plural(L.Aethergram.StorySeenBy, story.ViewCount), theme.TextStrong, TextStyles.Headline);
+        var listRect = new Rect(new Vector2(panel.Min.X, headerY + 18f * scale), panel.Max);
+        if (viewers.Items.Length == 0)
+        {
+            Typography.DrawCentered(new Vector2(panel.Center.X, listRect.Min.Y + 40f * scale),
+                Loc.T(viewers.Loading ? L.Common.Loading : L.Aethergram.StoryNoViewers), theme.TextMuted,
+                TextStyles.Subheadline);
+            return;
+        }
+
+        using (AppSurface.Begin(listRect))
+        {
+            for (var index = 0; index < viewers.Items.Length; index++)
+            {
+                DrawViewerRow(viewers.Items[index], theme, scale);
+            }
+
+            if (viewers.Items.Length < viewers.Total)
+            {
+                Typography.DrawCentered(
+                    new Vector2(listRect.Center.X, ImGui.GetCursorScreenPos().Y + 14f * scale),
+                    Loc.T(L.Aethergram.StoryViewersTrimmed, viewers.Items.Length, viewers.Total), theme.TextMuted,
+                    TextStyles.Caption1);
+                ImGui.Dummy(new Vector2(0f, 30f * scale));
+            }
+        }
+    }
+
+    private void DrawViewerRow(StoryViewerDto viewer, PhoneTheme theme, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = SheetRowHeight * scale;
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = 16f * scale;
+        var center = new Vector2(origin.X + radius + 4f * scale, origin.Y + height * 0.5f);
+        var name = SocialIdentity.Name(viewer.DisplayName, viewer.Handle);
+        AvatarView.DrawRemote(drawList, center, radius, theme, name, string.Empty, viewer.AvatarUrl, images, lodestone,
+            0.8f, 28);
+        var left = center.X + radius + 10f * scale;
+        var nameSize = Typography.Measure(name, TextStyles.Subheadline);
+        Typography.Draw(new Vector2(left, center.Y - nameSize.Y * 0.5f), name, theme.TextStrong,
+            TextStyles.Subheadline);
+        var stamp = TimeText.Short(viewer.ViewedAtUnix);
+        var stampSize = Typography.Measure(stamp, TextStyles.Caption1);
+        Typography.Draw(new Vector2(origin.X + width - stampSize.X - 6f * scale, center.Y - stampSize.Y * 0.5f), stamp,
+            theme.TextMuted, TextStyles.Caption1);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
     }
 
     private void HandleInput(Rect area, float delta, bool imageReady)

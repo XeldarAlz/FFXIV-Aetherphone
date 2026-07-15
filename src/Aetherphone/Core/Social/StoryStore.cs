@@ -25,8 +25,12 @@ internal sealed class StoryStore : IDisposable
     private volatile StoryRingDto[] rings = Array.Empty<StoryRingDto>();
     private volatile StoryDto[] openStories = Array.Empty<StoryDto>();
     private volatile string? openAuthorId;
+    private volatile StoryViewerDto[] viewers = Array.Empty<StoryViewerDto>();
+    private volatile string? viewersStoryId;
+    private volatile int viewersTotal;
     private volatile bool trayLoading;
     private volatile bool groupLoading;
+    private volatile bool viewersLoading;
     private volatile bool posting;
 
     public StoryStore(AethernetSession session, AethernetClient client, string logTag)
@@ -42,6 +46,42 @@ internal sealed class StoryStore : IDisposable
     public string? OpenAuthorId => openAuthorId;
     public bool GroupLoading => groupLoading;
     public bool Posting => posting;
+    public StoryViewerDto[] Viewers => viewers;
+    public int ViewersTotal => viewersTotal;
+    public bool ViewersLoading => viewersLoading;
+
+    /// <summary>
+    /// Loads who watched one of your own stories. Keyed by story id so stepping to the next story
+    /// clears the previous list rather than showing the wrong viewers under a new photo.
+    /// </summary>
+    public void LoadViewers(string storyId)
+    {
+        if (viewersStoryId == storyId)
+        {
+            return;
+        }
+
+        viewersStoryId = storyId;
+        viewers = Array.Empty<StoryViewerDto>();
+        viewersTotal = 0;
+        viewersLoading = true;
+        work.Run("story viewers", async token =>
+        {
+            var page = await client.StoryViewersAsync(storyId, token).ConfigureAwait(false);
+            if (page is not null && viewersStoryId == storyId)
+            {
+                viewers = page.Items;
+                viewersTotal = page.Total;
+            }
+        }, () => viewersLoading = false);
+    }
+
+    public void ClearViewers()
+    {
+        viewersStoryId = null;
+        viewers = Array.Empty<StoryViewerDto>();
+        viewersTotal = 0;
+    }
 
     public bool TryRing(string authorId, out StoryRingDto ring)
     {

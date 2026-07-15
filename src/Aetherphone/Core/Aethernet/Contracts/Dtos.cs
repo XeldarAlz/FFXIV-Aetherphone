@@ -121,6 +121,15 @@ internal sealed record StoryTray(StoryRingDto[] Rings);
 
 internal sealed record StoryGroup(StoryDto[] Items);
 
+internal sealed record StoryViewerDto(
+    string UserId,
+    string DisplayName,
+    string Handle,
+    string? AvatarUrl,
+    long ViewedAtUnix);
+
+internal sealed record StoryViewersPage(StoryViewerDto[] Items, int Total);
+
 internal sealed record CommentDto(
     string Id,
     string PostId,

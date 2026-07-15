@@ -438,6 +438,11 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/stories/{Uri.EscapeDataString(userId)}"), AethernetJsonContext.Default.StoryGroup, session.Token, token, authStatusSink);
     }
 
+    public Task<StoryViewersPage?> StoryViewersAsync(string storyId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/stories/{Uri.EscapeDataString(storyId)}/views"), AethernetJsonContext.Default.StoryViewersPage, session.Token, token, authStatusSink);
+    }
+
     public Task<bool> MarkStoryViewedAsync(string storyId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Post, Url($"/stories/{Uri.EscapeDataString(storyId)}/view"), session.Token, token, authStatusSink);

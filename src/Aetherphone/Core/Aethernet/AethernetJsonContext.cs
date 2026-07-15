@@ -29,6 +29,8 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(StoryRingDto))]
 [JsonSerializable(typeof(StoryTray))]
 [JsonSerializable(typeof(StoryGroup))]
+[JsonSerializable(typeof(StoryViewerDto))]
+[JsonSerializable(typeof(StoryViewersPage))]
 [JsonSerializable(typeof(CommentDto))]
 [JsonSerializable(typeof(CreateCommentRequest))]
 [JsonSerializable(typeof(CommentPage))]
