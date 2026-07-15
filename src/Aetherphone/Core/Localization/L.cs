@@ -492,6 +492,11 @@ internal static class L
             new("changelog.r0960.22", "Aethergram and Velvet posts can now hold up to 8 photos instead of just one"),
             new("changelog.r0960.23", "Posts with several photos now show dot indicators and arrows, so you can swipe through them straight from the feed"),
             new("changelog.r0960.24", "Composing a multi-photo post now walks you through framing each photo in turn before you write the caption"),
+            new("changelog.r0960.25", "Aethergram now has stories: share a photo that everyone can watch for 24 hours before it disappears on its own"),
+            new("changelog.r0960.26", "The Aethergram feed now opens with a story tray, where a bright ring marks anyone whose story you have not watched yet"),
+            new("changelog.r0960.27", "Fixed photo grids and chat image bubbles shaking every frame in the gallery, the post composers, the wallpaper picker, and message threads"),
+            new("changelog.r0960.28", "Fixed the compose button also clicking the post sitting behind it in Chirper, Velvet, and Message"),
+            new("changelog.r0960.29", "Fixed Chirper reacting to the post underneath when you clicked an open menu on top of it"),
         };
 
         public static readonly LocString[] Release0950 =
