@@ -12,12 +12,15 @@ internal static class SocialActivity
     public const int TypeConnectAccept = 4;
     public const int TypePostRemoved = 5;
     public const int TypeCommentLike = 6;
+    public const int TypeMention = 7;
+    public const int TypeCommentMention = 8;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";
 
     public static bool OpensPost(NotificationDto item) =>
-        item.Type is TypeLike or TypeComment or TypeCommentLike && !string.IsNullOrEmpty(item.PostId);
+        item.Type is TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention
+        && !string.IsNullOrEmpty(item.PostId);
 
     public static string ActorLabel(NotificationDto item)
     {
@@ -42,6 +45,14 @@ internal static class SocialActivity
             case TypeCommentLike:
                 var likedAction = Loc.T(L.Social.LikedComment);
                 return string.IsNullOrEmpty(item.Preview) ? likedAction : $"{likedAction}: “{item.Preview}”";
+            case TypeMention:
+                var mentionAction = Loc.T(isPhoto ? L.Social.MentionedPhoto : L.Social.MentionedChirp);
+                return string.IsNullOrEmpty(item.Preview) ? mentionAction : $"{mentionAction}: “{item.Preview}”";
+            case TypeCommentMention:
+                var commentMentionAction = Loc.T(L.Social.MentionedComment);
+                return string.IsNullOrEmpty(item.Preview)
+                    ? commentMentionAction
+                    : $"{commentMentionAction}: “{item.Preview}”";
             case TypeFollow:
                 return Loc.T(L.Social.Followed);
             case TypeConnectRequest:

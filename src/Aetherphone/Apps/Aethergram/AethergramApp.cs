@@ -73,6 +73,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     private string? pendingViewUrl;
     private double pendingViewAt;
     private readonly AppSkin ui = new(AppPalettes.Aethergram);
+    private readonly RichTextCache bodyLayouts = new();
+    private readonly RichTextCache detailBodyLayouts = new();
+    private readonly RichTextCache commentLayouts = new();
     private readonly ViewRouter<AethergramRoute> router;
     private readonly RouterDraw<AethergramRoute> drawView;
     private readonly Action back;
@@ -518,7 +521,18 @@ internal sealed partial class AethergramApp : IPhoneApp
         var actionsTop = imageBottom + 12f * scale;
         var actionsHeight = 24f * scale;
         var textTop = actionsTop + actionsHeight + 10f * scale;
-        var captionHeight = post.Text.Length > 0 ? Typography.MeasureWrapped(post.Text, innerWidth, 0.95f) + 6f * scale : 0f;
+        RichTextLayout? captionLayout = null;
+        if (post.Text.Length > 0)
+        {
+            using (Plugin.Fonts.Push(0.95f))
+            {
+                captionLayout = bodyLayouts.LayoutFor(post.Id, post.Text, post.Mentions, innerWidth);
+            }
+        }
+
+        var captionHeight = post.Text.Length == 0
+            ? 0f
+            : (captionLayout?.Size.Y ?? Typography.MeasureWrapped(post.Text, innerWidth, 0.95f)) + 6f * scale;
         var commentsHeight = post.CommentCount > 0 ? 20f * scale : 0f;
         var cardBottom = textTop + captionHeight + commentsHeight + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 18f * scale);
@@ -610,15 +624,26 @@ internal sealed partial class AethergramApp : IPhoneApp
         var y = textTop;
         if (post.Text.Length > 0)
         {
-            ImGui.SetCursorScreenPos(new Vector2(innerX, y));
-            ImGui.PushTextWrapPos(innerX + innerWidth - ImGui.GetWindowPos().X);
-            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
-            using (Plugin.Fonts.Push(0.95f))
+            if (captionLayout is null)
             {
-                Typography.Wrapped(post.Text);
+                ImGui.SetCursorScreenPos(new Vector2(innerX, y));
+                ImGui.PushTextWrapPos(innerX + innerWidth - ImGui.GetWindowPos().X);
+                using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
+                using (Plugin.Fonts.Push(0.95f))
+                {
+                    Typography.Wrapped(post.Text);
+                }
+
+                ImGui.PopTextWrapPos();
+            }
+            else
+            {
+                using (Plugin.Fonts.Push(0.95f))
+                {
+                    DrawRichBody(drawList, captionLayout, new Vector2(innerX, y));
+                }
             }
 
-            ImGui.PopTextWrapPos();
             y += captionHeight;
         }
 
@@ -902,6 +927,17 @@ internal sealed partial class AethergramApp : IPhoneApp
     {
         store.OpenProfile(userId);
         router.Push(AethergramRoute.Profile(userId));
+    }
+
+    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
+    {
+        var ink = new RichTextInk(AppPalettes.Aethergram.BodyInk, AppPalettes.Aethergram.Accent,
+            AppPalettes.Aethergram.Accent);
+        RichText.Draw(drawList, layout, origin, ink, out var hit);
+        if (hit.Kind == RichTextRunKind.Mention && hit.Clicked)
+        {
+            OpenProfile(layout.Mentions[hit.TargetIndex].UserId);
+        }
     }
 
     private void OpenDetail(PostDto post, bool focusComment = false)

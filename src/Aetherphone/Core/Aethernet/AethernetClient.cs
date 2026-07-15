@@ -126,6 +126,16 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/users/search?q={Uri.EscapeDataString(query)}"), AethernetJsonContext.Default.UserSearchResult, session.Token, token, authStatusSink);
     }
 
+    public Task<MentionSuggestResult?> MentionSuggestAsync(string query, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/users/mention-suggest?q={Uri.EscapeDataString(query)}"), AethernetJsonContext.Default.MentionSuggestResult, session.Token, token, authStatusSink);
+    }
+
+    public Task<UserDto?> UpdateMentionPrivacyAsync(int policy, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/me/mention-privacy"), new UpdateMentionPrivacyRequest(policy), AethernetJsonContext.Default.UpdateMentionPrivacyRequest, AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);
+    }
+
     public Task<ContactListResult?> ContactsAsync(CancellationToken token)
     {
         return http.GetJsonAsync(Url("/contacts/"), AethernetJsonContext.Default.ContactListResult, session.Token, token, authStatusSink);

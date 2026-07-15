@@ -53,6 +53,14 @@ internal sealed record CreatePostRequest(string Text);
 
 internal sealed record ReactRequest(int Kind);
 
+internal sealed record MentionDto(string Handle, string UserId, string DisplayName);
+
+internal sealed record MentionSuggestDto(string UserId, string Handle, string DisplayName, string? AvatarUrl);
+
+internal sealed record MentionSuggestResult(MentionSuggestDto[] Users);
+
+internal sealed record UpdateMentionPrivacyRequest(int? MentionPolicy);
+
 internal sealed record PostDto(
     string Id,
     string AuthorId,
@@ -73,7 +81,8 @@ internal sealed record PostDto(
     int CommentCount,
     bool IsFollowing,
     string ScanStatus = "clean",
-    string[]? MediaUrls = null) : IIdentified;
+    string[]? MediaUrls = null,
+    MentionDto[]? Mentions = null) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
@@ -141,7 +150,8 @@ internal sealed record CommentDto(
     string Text,
     long CreatedAtUnix,
     int LikeCount,
-    bool Liked) : IIdentified;
+    bool Liked,
+    MentionDto[]? Mentions = null) : IIdentified;
 
 internal sealed record CreateCommentRequest(string Text);
 
@@ -221,7 +231,8 @@ internal sealed record VelvetPostDto(
     int MyReaction,
     int CommentCount,
     string ScanStatus = "clean",
-    string[]? MediaUrls = null) : IIdentified;
+    string[]? MediaUrls = null,
+    MentionDto[]? Mentions = null) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
 
@@ -244,7 +255,8 @@ internal sealed record VelvetCommentDto(
     string Text,
     long CreatedAtUnix,
     int LikeCount,
-    bool Liked) : IIdentified;
+    bool Liked,
+    MentionDto[]? Mentions = null) : IIdentified;
 
 internal sealed record VelvetCommentPage(VelvetCommentDto[] Items, string? NextCursor);
 

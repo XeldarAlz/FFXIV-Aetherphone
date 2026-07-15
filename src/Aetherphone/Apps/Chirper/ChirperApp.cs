@@ -47,6 +47,8 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly SocialNotificationService social;
     private readonly ChirperAvatarComposer avatar;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
+    private readonly RichTextCache bodyLayouts = new();
+    private readonly RichTextCache commentLayouts = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
@@ -289,7 +291,18 @@ internal sealed partial class ChirperApp : IPhoneApp
         var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var nameSize = Typography.Measure(displayName, 1.05f, FontWeight.SemiBold);
         var textTop = origin.Y + pad + nameSize.Y + 6f * scale;
-        var textHeight = post.Text.Length > 0 ? Typography.MeasureWrapped(post.Text, contentWidth, 1.05f) : 0f;
+        RichTextLayout? bodyLayout = null;
+        if (post.Text.Length > 0)
+        {
+            using (Plugin.Fonts.Push(1.05f))
+            {
+                bodyLayout = bodyLayouts.LayoutFor(post.Id, post.Text, post.Mentions, contentWidth);
+            }
+        }
+
+        var textHeight = post.Text.Length == 0
+            ? 0f
+            : bodyLayout?.Size.Y ?? Typography.MeasureWrapped(post.Text, contentWidth, 1.05f);
         var contentBottom = MathF.Max(avatarCenter.Y + radius, textTop + textHeight);
         var actionsTop = contentBottom + 8f * scale;
         var actionsHeight = 30f * scale;
@@ -319,7 +332,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             OpenProfile(post.AuthorId);
         }
 
-        if (post.Text.Length > 0)
+        if (post.Text.Length > 0 && bodyLayout is null)
         {
             ImGui.SetCursorScreenPos(new Vector2(contentLeft, textTop));
             var wrapPos = contentRight - ImGui.GetWindowPos().X;
@@ -331,6 +344,13 @@ internal sealed partial class ChirperApp : IPhoneApp
             }
 
             ImGui.PopTextWrapPos();
+        }
+        else if (bodyLayout is not null)
+        {
+            using (Plugin.Fonts.Push(1.05f))
+            {
+                DrawRichBody(drawList, bodyLayout, new Vector2(contentLeft, textTop));
+            }
         }
 
         DrawPostActions(post, contentLeft, contentWidth, actionsTop + actionsHeight * 0.5f, isThreadHead);
@@ -674,15 +694,27 @@ internal sealed partial class ChirperApp : IPhoneApp
         var metaSize = Typography.Measure(meta, 0.85f);
         Typography.Draw(new Vector2(textLeft + nameSize.X + 7f * scale, origin.Y + (nameSize.Y - metaSize.Y) * 0.5f),
             meta, AppPalettes.Chirper.MutedInk, 0.85f);
-        ImGui.SetCursorScreenPos(new Vector2(textLeft, origin.Y + nameSize.Y + 6f * scale));
-        var commentWrapPos = (origin.X + width - 30f * scale) - ImGui.GetWindowPos().X;
-        ImGui.PushTextWrapPos(commentWrapPos);
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
+        var bodyOrigin = new Vector2(textLeft, origin.Y + nameSize.Y + 6f * scale);
+        ImGui.SetCursorScreenPos(bodyOrigin);
+        var commentRight = origin.X + width - 30f * scale;
+        var commentLayout = commentLayouts.LayoutFor(comment.Id, comment.Text, comment.Mentions, commentRight - textLeft);
+        if (commentLayout is null)
         {
-            Typography.Wrapped(comment.Text);
+            ImGui.PushTextWrapPos(commentRight - ImGui.GetWindowPos().X);
+            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
+            {
+                Typography.Wrapped(comment.Text);
+            }
+
+            ImGui.PopTextWrapPos();
+        }
+        else
+        {
+            DrawRichBody(drawList, commentLayout, bodyOrigin);
+            ImGui.SetCursorScreenPos(bodyOrigin);
+            ImGui.Dummy(commentLayout.Size);
         }
 
-        ImGui.PopTextWrapPos();
         var textBottom = ImGui.GetCursorScreenPos().Y;
         if (store.Me is { } me && me.Id == comment.AuthorId && store.DetailPost is { } post)
         {
@@ -783,6 +815,16 @@ internal sealed partial class ChirperApp : IPhoneApp
         actions.Reset();
         store.OpenProfile(userId);
         router.Push(ChirperRoute.Profile(userId));
+    }
+
+    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
+    {
+        var ink = new RichTextInk(AppPalettes.Chirper.BodyInk, AppPalettes.Chirper.Accent, AppPalettes.Chirper.Accent);
+        RichText.Draw(drawList, layout, origin, ink, out var hit);
+        if (hit.Kind == RichTextRunKind.Mention && hit.Clicked)
+        {
+            OpenProfile(layout.Mentions[hit.TargetIndex].UserId);
+        }
     }
 
     private void DrawLikersLink(PostDto post)

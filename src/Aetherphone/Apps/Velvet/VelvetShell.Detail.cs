@@ -170,7 +170,29 @@ internal sealed partial class VelvetShell
             ImGui.SetCursorScreenPos(new Vector2(origin.X, actionsY + 20f * scale));
             if (!string.IsNullOrWhiteSpace(post.Caption))
             {
-                WrapText(post.Caption, VelvetTheme.BodyInk, TextStyles.Callout);
+                var captionOrigin = ImGui.GetCursorScreenPos();
+                RichTextLayout? captionLayout;
+                using (Plugin.Fonts.Push(TextStyles.Callout.Scale, TextStyles.Callout.Weight))
+                {
+                    captionLayout = detailBodyLayouts.LayoutFor(post.Id, post.Caption, post.Mentions,
+                        ImGui.GetContentRegionAvail().X);
+                }
+
+                if (captionLayout is null)
+                {
+                    WrapText(post.Caption, VelvetTheme.BodyInk, TextStyles.Callout);
+                }
+                else
+                {
+                    using (Plugin.Fonts.Push(TextStyles.Callout.Scale, TextStyles.Callout.Weight))
+                    {
+                        DrawRichBody(ImGui.GetWindowDrawList(), captionLayout, captionOrigin);
+                    }
+
+                    ImGui.SetCursorScreenPos(captionOrigin);
+                    ImGui.Dummy(captionLayout.Size);
+                }
+
                 Gap(12f);
             }
 
@@ -241,15 +263,32 @@ internal sealed partial class VelvetShell
 
         var textTop = origin.Y + 18f * scale;
         ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop));
-        ImGui.PushTextWrapPos(textLeft + wrapWidth);
-        using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.BodyInk))
+        RichTextLayout? commentLayout;
         using (Plugin.Fonts.Push(0.9f))
         {
-            Typography.Wrapped(comment.Text);
+            commentLayout = commentLayouts.LayoutFor(comment.Id, comment.Text, comment.Mentions, wrapWidth);
         }
 
-        ImGui.PopTextWrapPos();
-        var textHeight = Typography.MeasureWrapped(comment.Text, wrapWidth, 0.9f);
+        if (commentLayout is null)
+        {
+            ImGui.PushTextWrapPos(textLeft + wrapWidth);
+            using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.BodyInk))
+            using (Plugin.Fonts.Push(0.9f))
+            {
+                Typography.Wrapped(comment.Text);
+            }
+
+            ImGui.PopTextWrapPos();
+        }
+        else
+        {
+            using (Plugin.Fonts.Push(0.9f))
+            {
+                DrawRichBody(drawList, commentLayout, new Vector2(textLeft, textTop));
+            }
+        }
+
+        var textHeight = commentLayout?.Size.Y ?? Typography.MeasureWrapped(comment.Text, wrapWidth, 0.9f);
         var rowHeight = MathF.Max(avatarRadius * 2f, 18f * scale + textHeight);
         if (UiInteract.HoverClick(origin, new Vector2(textLeft + nameWidth, textTop)))
         {

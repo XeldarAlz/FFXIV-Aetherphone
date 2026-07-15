@@ -95,7 +95,7 @@ internal static class ChatBubble
         ImGui.SetCursorPos(new Vector2(start.X, bubbleTop + bubbleHeight + 6f * scale));
     }
 
-    private static void DrawEntering(string text, LinkTextLayout? linkLayout, float scale, Vector2 start,
+    private static void DrawEntering(string text, RichTextLayout? linkLayout, float scale, Vector2 start,
         float offsetX, float bubbleWidth, float bubbleHeight, float padding, float wrap, bool outgoing,
         Vector4 fillColor, Vector4 textColor, Vector4 linkInk, float entrance)
     {

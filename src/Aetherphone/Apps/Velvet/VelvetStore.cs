@@ -114,6 +114,7 @@ internal sealed class VelvetStore : IDisposable
         this.vault = vault;
         this.keys = keys;
         this.signals = signals;
+        Mentions = new MentionSuggestions(client, work);
         inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
         signals.VelvetPinged += inboxCadence.RequestImmediate;
         vault.Changed += OnVaultChanged;
@@ -158,6 +159,8 @@ internal sealed class VelvetStore : IDisposable
             threadsLoaded = false;
         });
     }
+
+    public MentionSuggestions Mentions { get; }
 
     private string MyUserId => session.CurrentUser?.Id ?? string.Empty;
 

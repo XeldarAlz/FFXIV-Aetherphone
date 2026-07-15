@@ -30,6 +30,10 @@ internal static class L
         public static readonly LocString LikedComment = new("social.likedComment", "liked your comment");
         public static readonly LocString CommentedChirp = new("social.commentedChirp", "commented on your chirp");
         public static readonly LocString CommentedPhoto = new("social.commentedPhoto", "commented on your photo");
+        public static readonly LocString MentionedChirp = new("social.mentionedChirp", "mentioned you in a chirp");
+        public static readonly LocString MentionedPhoto = new("social.mentionedPhoto", "mentioned you in a photo");
+        public static readonly LocString MentionedComment = new("social.mentionedComment", "mentioned you in a comment");
+        public static readonly LocString ViewProfile = new("social.viewProfile", "View profile");
         public static readonly LocString Followed = new("social.followed", "started following you");
         public static readonly LocString ConnectionRequest = new("social.connectionRequest", "wants to connect with you");
         public static readonly LocString ConnectionAccepted = new("social.connectionAccepted", "accepted your connection request");

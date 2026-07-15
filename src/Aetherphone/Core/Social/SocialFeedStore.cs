@@ -60,7 +60,10 @@ internal abstract class SocialFeedStore : IDisposable
         this.client = client;
         this.analyticsChannel = analyticsChannel;
         work = new StoreWork(logTag);
+        Mentions = new MentionSuggestions(client, work);
     }
+
+    public MentionSuggestions Mentions { get; }
 
     public bool IsSignedIn => session.IsSignedIn;
     public UserDto? Me => me;

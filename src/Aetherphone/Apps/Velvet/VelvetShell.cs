@@ -39,6 +39,8 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
     private readonly AppSkin ui = new(VelvetTheme.Palette);
+    private readonly RichTextCache detailBodyLayouts = new();
+    private readonly RichTextCache commentLayouts = new();
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
@@ -353,6 +355,16 @@ internal sealed partial class VelvetShell : IPhoneApp
             {
                 filterSheet.Close();
             }
+        }
+    }
+
+    private void DrawRichBody(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin)
+    {
+        var ink = new RichTextInk(VelvetTheme.BodyInk, VelvetTheme.RoseGlow, VelvetTheme.RoseGlow);
+        RichText.Draw(drawList, layout, origin, ink, out var hit);
+        if (hit.Kind == RichTextRunKind.Mention && hit.Clicked)
+        {
+            OpenProfile(layout.Mentions[hit.TargetIndex].UserId);
         }
     }
 

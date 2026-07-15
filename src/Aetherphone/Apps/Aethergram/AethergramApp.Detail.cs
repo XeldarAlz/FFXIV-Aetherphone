@@ -154,15 +154,38 @@ internal sealed partial class AethergramApp
                 var captionPos = ImGui.GetCursorScreenPos();
                 Typography.Draw(captionPos, displayName, theme.TextStrong, 0.9f, FontWeight.SemiBold);
                 var nameWidth = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).X;
-                ImGui.SetCursorScreenPos(new Vector2(captionPos.X + nameWidth + 6f * scale, captionPos.Y));
-                ImGui.PushTextWrapPos(origin.X + width - ImGui.GetWindowPos().X);
-                using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
+                var captionLeft = captionPos.X + nameWidth + 6f * scale;
+                ImGui.SetCursorScreenPos(new Vector2(captionLeft, captionPos.Y));
+                RichTextLayout? captionLayout;
                 using (Plugin.Fonts.Push(0.9f))
                 {
-                    Typography.Wrapped(post.Text);
+                    captionLayout = detailBodyLayouts.LayoutFor(post.Id, post.Text, post.Mentions,
+                        origin.X + width - captionLeft);
                 }
 
-                ImGui.PopTextWrapPos();
+                if (captionLayout is null)
+                {
+                    ImGui.PushTextWrapPos(origin.X + width - ImGui.GetWindowPos().X);
+                    using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
+                    using (Plugin.Fonts.Push(0.9f))
+                    {
+                        Typography.Wrapped(post.Text);
+                    }
+
+                    ImGui.PopTextWrapPos();
+                }
+                else
+                {
+                    var captionOrigin = new Vector2(captionLeft, captionPos.Y);
+                    using (Plugin.Fonts.Push(0.9f))
+                    {
+                        DrawRichBody(ImGui.GetWindowDrawList(), captionLayout, captionOrigin);
+                    }
+
+                    ImGui.SetCursorScreenPos(captionOrigin);
+                    ImGui.Dummy(captionLayout.Size);
+                }
+
                 ImGui.Dummy(new Vector2(0f, 4f * scale));
             }
 
@@ -214,7 +237,13 @@ internal sealed partial class AethergramApp
         var textRight = bubbleRight - padX - 22f * scale;
         var displayName = SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle);
         var nameHeight = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).Y;
-        var textHeight = Typography.MeasureWrapped(comment.Text, textRight - textLeft, 0.9f);
+        RichTextLayout? commentLayout;
+        using (Plugin.Fonts.Push(0.9f))
+        {
+            commentLayout = commentLayouts.LayoutFor(comment.Id, comment.Text, comment.Mentions, textRight - textLeft);
+        }
+
+        var textHeight = commentLayout?.Size.Y ?? Typography.MeasureWrapped(comment.Text, textRight - textLeft, 0.9f);
         var bubbleHeight = padTop + nameHeight + 4f * scale + textHeight + padBottom;
         var bubbleTop = origin.Y;
         var bubbleBottom = bubbleTop + bubbleHeight;
@@ -247,14 +276,24 @@ internal sealed partial class AethergramApp
 
         var textTop = nameTop + nameHeight + 4f * scale;
         ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop));
-        ImGui.PushTextWrapPos(textRight - ImGui.GetWindowPos().X);
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
-        using (Plugin.Fonts.Push(0.9f))
+        if (commentLayout is null)
         {
-            Typography.Wrapped(comment.Text);
-        }
+            ImGui.PushTextWrapPos(textRight - ImGui.GetWindowPos().X);
+            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
+            using (Plugin.Fonts.Push(0.9f))
+            {
+                Typography.Wrapped(comment.Text);
+            }
 
-        ImGui.PopTextWrapPos();
+            ImGui.PopTextWrapPos();
+        }
+        else
+        {
+            using (Plugin.Fonts.Push(0.9f))
+            {
+                DrawRichBody(drawList, commentLayout, new Vector2(textLeft, textTop));
+            }
+        }
         if (UiInteract.HoverClick(new Vector2(origin.X, bubbleTop), new Vector2(textLeft + nameWidth, textTop)))
         {
             OpenProfile(comment.AuthorId);
