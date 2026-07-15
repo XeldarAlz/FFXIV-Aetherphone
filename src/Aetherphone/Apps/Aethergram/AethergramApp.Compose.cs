@@ -420,20 +420,27 @@ internal sealed partial class AethergramApp
         var cardBottom = shareRect.Min.Y - 14f * scale - statusHeight;
         var cardRect = new Rect(new Vector2(area.Min.X + margin, cardBottom - cardHeight),
             new Vector2(area.Max.X - margin, cardBottom));
-        var hintY = cardRect.Min.Y - 20f * scale;
-        var stripHeight = composeSelected.Count > 1 ? 52f * scale : 0f;
-        var previewRegion = new Rect(new Vector2(area.Min.X + margin, top + 14f * scale),
-            new Vector2(area.Max.X - margin, hintY - 12f * scale - stripHeight));
-        DrawCaptionPreview(previewRegion, scale);
+        var left = area.Min.X + margin;
+        var right = area.Max.X - margin;
+        var stripHeight = composeSelected.Count > 1 ? 46f * scale : 0f;
+        var stripGap = stripHeight > 0f ? 18f * scale : 0f;
+        var tagBarHeight = TagModeBarHeight * scale;
+        var tagBarGap = 18f * scale;
+        var reserved = stripGap + stripHeight + tagBarGap + tagBarHeight;
+        var previewRegion = new Rect(new Vector2(left, top + 14f * scale),
+            new Vector2(right, cardRect.Min.Y - 18f * scale - reserved));
+        var preview = ImageFit.CenteredRect(previewRegion, ComposeAspect);
+        DrawCaptionPreview(preview, scale);
+        var stackY = preview.Max.Y;
         if (stripHeight > 0f)
         {
-            var strip = new Rect(new Vector2(area.Min.X + margin, previewRegion.Max.Y + 6f * scale),
-                new Vector2(area.Max.X - margin, previewRegion.Max.Y + 6f * scale + stripHeight - 6f * scale));
-            DrawCaptionStrip(strip, scale);
+            DrawCaptionStrip(new Rect(new Vector2(left, stackY + stripGap),
+                new Vector2(right, stackY + stripGap + stripHeight)), scale);
+            stackY += stripGap + stripHeight;
         }
 
-        DrawTagModeBar(new Rect(new Vector2(area.Min.X + margin, hintY - 8f * scale),
-            new Vector2(area.Max.X - margin, hintY + 10f * scale)), scale);
+        DrawTagModeBar(new Rect(new Vector2(left, stackY + tagBarGap),
+            new Vector2(right, stackY + tagBarGap + tagBarHeight)), scale);
         DrawCaptionCard(cardRect, area, scale);
         if (composeStatus.Length > 0)
         {
@@ -502,28 +509,35 @@ internal sealed partial class AethergramApp
     {
         if (composeStoryMode)
         {
-            Typography.DrawCentered(new Vector2(bar.Center.X, bar.Min.Y + 2f * scale),
-                Loc.T(L.Aethergram.TapToAdjust), AppPalettes.Aethergram.MutedInk, 0.75f);
+            Typography.DrawCentered(bar.Center, Loc.T(L.Aethergram.TapToAdjust), AppPalettes.Aethergram.MutedInk,
+                TextStyles.Footnote);
             return;
         }
 
-        var label = composeTagMode ? Loc.T(L.PhotoTag.TapToTag) : Loc.T(L.Aethergram.TapToAdjust);
-        Typography.DrawCentered(new Vector2(bar.Center.X - 44f * scale, bar.Min.Y + 2f * scale), label,
-            AppPalettes.Aethergram.MutedInk, 0.75f);
-
-        var pillWidth = 78f * scale;
-        var pillMin = new Vector2(bar.Max.X - pillWidth, bar.Min.Y - 2f * scale);
-        var pillMax = new Vector2(bar.Max.X, bar.Min.Y + 16f * scale);
+        var pillPadding = 28f * scale;
+        var pillLabel = Typography.FitText(Loc.T(L.PhotoTag.TagPeople), bar.Width * 0.5f - pillPadding,
+            TextStyles.FootnoteEmphasized);
+        var pillWidth = Typography.Measure(pillLabel, TextStyles.FootnoteEmphasized).X + pillPadding;
+        var pillMin = new Vector2(bar.Max.X - pillWidth, bar.Min.Y);
+        var pillMax = new Vector2(bar.Max.X, bar.Max.Y);
         var drawList = ImGui.GetWindowDrawList();
         var active = composeTagMode;
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(active ? Accent : AppPalettes.Aethergram.FieldSurface));
-        Typography.DrawCentered(drawList, new Vector2((pillMin.X + pillMax.X) * 0.5f, pillMin.Y + 2f * scale),
-            Loc.T(L.PhotoTag.TagPeople), active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Aethergram.MutedInk, 0.72f);
+        var hovered = UiInteract.Hover(pillMin, pillMax);
+        var fill = active ? Accent : AppPalettes.Aethergram.FieldSurface;
+        Squircle.Fill(drawList, pillMin, pillMax, bar.Height * 0.5f,
+            ImGui.GetColorU32(hovered ? Palette.Mix(fill, theme.TextStrong, 0.12f) : fill));
+        Typography.DrawCentered(drawList, new Vector2((pillMin.X + pillMax.X) * 0.5f, bar.Center.Y), pillLabel,
+            active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Aethergram.MutedInk, TextStyles.FootnoteEmphasized);
         if (UiInteract.HoverClick(pillMin, pillMax))
         {
             composeTagMode = !composeTagMode;
         }
+
+        var hintRight = pillMin.X - 12f * scale;
+        var hint = Typography.FitText(composeTagMode ? Loc.T(L.PhotoTag.TapToTag) : Loc.T(L.Aethergram.TapToAdjust),
+            hintRight - bar.Min.X, TextStyles.Footnote);
+        Typography.DrawCentered(drawList, new Vector2((bar.Min.X + hintRight) * 0.5f, bar.Center.Y), hint,
+            AppPalettes.Aethergram.MutedInk, TextStyles.Footnote);
     }
 
     private void PlaceComposeTag(MentionSuggestDto person)
@@ -594,15 +608,14 @@ internal sealed partial class AethergramApp
         }
     }
 
-    private void DrawCaptionPreview(Rect region, float scale)
+    private void DrawCaptionPreview(Rect preview, float scale)
     {
-        var aspect = ComposeAspect;
-        var preview = ImageFit.CenteredRect(region, aspect);
         if (preview.Width <= 0f)
         {
             return;
         }
 
+        var aspect = ComposeAspect;
         var rounding = 18f * scale;
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, new Vector2(preview.Min.X - 2f * scale, preview.Min.Y + 4f * scale),

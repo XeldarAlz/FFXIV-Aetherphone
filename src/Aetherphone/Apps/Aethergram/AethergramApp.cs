@@ -45,6 +45,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private const float CropSmoothTime = 0.10f;
     private const int GridColumns = 3;
     private const float LikeBurstDuration = 0.9f;
+    private const float TagModeBarHeight = 28f;
 
     public string Id => "aethergram";
     public Vector4 Accent => AppAccents.For(Id);
