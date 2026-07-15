@@ -551,6 +551,8 @@ internal static class L
             new("changelog.r0970.33", "Fixed speckles appearing along the edges of small rounded corners"),
             new("changelog.r0970.34",
                 "The phone now tells you when a newer Aetherphone is out: an update button appears beneath it, and clicking it takes you straight to Dalamud's plugin installer"),
+            new("changelog.r0970.35",
+                "Fixed the phone forgetting where you last left it minimized, so minimizing it again returns it to that spot instead of the full phone's corner"),
         };
 
         public static readonly LocString[] Release0960 =

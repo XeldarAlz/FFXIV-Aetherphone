@@ -475,6 +475,7 @@
   "changelog.r0970.32": "La vue détaillée d'une publication affichait encore En cours d'examen une fois l'examen terminé, et masquait les commentaires laissés par d'autres personnes",
   "changelog.r0970.33": "Des taches apparaissaient le long des bords des petits coins arrondis",
   "changelog.r0970.34": "Le téléphone vous prévient désormais lorsqu'un Aetherphone plus récent est disponible : un bouton de mise à jour apparaît en dessous et vous emmène directement à l'installateur de plugins de Dalamud",
+  "changelog.r0970.35": "Le téléphone oubliait où vous l'aviez laissé réduit la dernière fois : en le réduisant de nouveau, il rétrécissait dans le coin du téléphone complet au lieu de retrouver cet emplacement",
   "changelog.r0960.0":"Velvet a été reconstruit de fond en comble, avec une allure after-dark et tous ses écrans redessinés autour de Découvrir",
   "changelog.r0960.1": "Les filtres de Découvrir dans Velvet se cachent désormais derrière un bouton de filtre, laissant tout l'écran aux personnes que vous parcourez",
   "changelog.r0960.2": "Les sélecteurs de rôles et de tags de Velvet sont désormais classés en catégories qui reflètent la façon dont les communautés de roleplay se décrivent réellement",

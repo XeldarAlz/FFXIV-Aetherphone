@@ -475,6 +475,7 @@
   "changelog.r0970.32": "In der Detailansicht eines Beitrags stand weiterhin In Prüfung, obwohl die Prüfung längst abgeschlossen war, und Kommentare anderer Leute wurden ausgeblendet",
   "changelog.r0970.33": "An den Kanten kleiner abgerundeter Ecken erschienen Sprenkel",
   "changelog.r0970.34": "Das Telefon sagt dir jetzt Bescheid, wenn ein neueres Aetherphone erschienen ist: Darunter erscheint eine Aktualisieren-Schaltfläche, die dich direkt zu Dalamuds Plugin-Installer bringt",
+  "changelog.r0970.35": "Das Telefon vergaß, wo du es zuletzt minimiert abgelegt hattest, und schrumpfte beim erneuten Minimieren in die Ecke des großen Telefons, statt an diesen Platz zurückzukehren",
   "changelog.r0960.0":"Velvet wurde von Grund auf neu gebaut: mit einem After-Dark-Look und allen Bildschirmen, die rund um Entdecken neu gezeichnet wurden",
   "changelog.r0960.1": "Die Filter in Velvets Entdecken liegen jetzt hinter einer Filterschaltfläche, sodass der ganze Bildschirm den Leuten gehört, die du durchstöberst",
   "changelog.r0960.2": "Velvets Rollen- und Tag-Auswahl ist jetzt in Kategorien sortiert, die dem entsprechen, wie Rollenspiel-Communitys sich tatsächlich selbst beschreiben",
