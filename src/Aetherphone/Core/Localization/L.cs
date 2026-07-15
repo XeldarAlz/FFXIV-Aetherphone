@@ -345,6 +345,9 @@ internal static class L
         public static readonly LocString NoAnswerTitle = new("phone.noAnswerTitle", "No answer");
         public static readonly LocString NoAnswerBody = new("phone.noAnswerBody", "The call was not answered");
         public static readonly LocString CallEnded = new("phone.callEnded", "Call ended");
+        public static readonly LocString CallDeclined = new("phone.callDeclined", "Call declined");
+        public static readonly LocString Unavailable = new("phone.unavailable", "Unavailable");
+        public static readonly LocString GroupCall = new("phone.groupCall", "Group call");
         public static readonly LocString ContactsSection = new("phone.contactsSection", "Contacts");
         public static readonly LocString PendingSection = new("phone.pendingSection", "Pending");
         public static readonly LocString NoContactsTitle = new("phone.noContactsTitle", "No one to call yet");
@@ -1528,6 +1531,11 @@ internal static class L
             "Velvet is for adults. Be kind and discreet, and remember block and report are always one tap away.");
     }
 
+    internal static class Calculator
+    {
+        public static readonly LocString Error = new("calculator.error", "Error");
+    }
+
     internal static class Clock
     {
         public static readonly LocString Local = new("clock.local", "Local");
@@ -1769,6 +1777,12 @@ internal static class L
     {
         public static readonly LocString LogInToView = new("wallet.logInToView", "Log in to view your wallet");
         public static readonly LocString GilBalance = new("wallet.gilBalance", "GIL BALANCE");
+        public static readonly LocString SectionCurrency = new("wallet.sectionCurrency", "Currency");
+        public static readonly LocString SectionHunt = new("wallet.sectionHunt", "Hunt");
+        public static readonly LocString SectionTomestones = new("wallet.sectionTomestones", "Tomestones");
+        public static readonly LocString SectionPvp = new("wallet.sectionPvp", "PvP");
+        public static readonly LocString SectionCrafting = new("wallet.sectionCrafting", "Crafting & Gathering");
+        public static readonly LocString SectionOther = new("wallet.sectionOther", "Other");
     }
 
     internal static class Inventory

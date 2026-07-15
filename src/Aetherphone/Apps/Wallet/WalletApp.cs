@@ -92,7 +92,7 @@ internal sealed class WalletApp : IPhoneApp
                     continue;
                 }
 
-                SettingsSection.Header(section.Title, theme);
+                SettingsSection.Header(Loc.T(section.Title), theme);
                 var card = GroupCard.Begin(theme, section.Entries.Length, CurrencyRow.Height);
                 for (var entryIndex = 0; entryIndex < section.Entries.Length; entryIndex++)
                 {

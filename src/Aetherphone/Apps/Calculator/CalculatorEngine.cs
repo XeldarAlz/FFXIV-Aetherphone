@@ -1,4 +1,5 @@
 using System.Globalization;
+using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Calculator;
 
@@ -304,7 +305,7 @@ internal sealed class CalculatorEngine
         if (error || double.IsNaN(value) || double.IsInfinity(value))
         {
             error = true;
-            return "Error";
+            return Loc.T(L.Calculator.Error);
         }
 
         var rounded = Math.Round(value, 8, MidpointRounding.AwayFromZero);

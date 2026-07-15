@@ -1,3 +1,5 @@
+using Aetherphone.Core.Localization;
+
 namespace Aetherphone.Core.Wallet;
 
 internal enum CurrencyKind
@@ -28,12 +30,12 @@ internal sealed class WalletEntry
 
 internal sealed class WalletSection
 {
-    public WalletSection(string title, WalletEntry[] entries)
+    public WalletSection(LocString title, WalletEntry[] entries)
     {
         Title = title;
         Entries = entries;
     }
 
-    public string Title { get; }
+    public LocString Title { get; }
     public WalletEntry[] Entries { get; }
 }

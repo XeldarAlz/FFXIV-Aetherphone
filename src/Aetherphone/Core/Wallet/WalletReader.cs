@@ -1,4 +1,5 @@
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Localization;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 
@@ -55,12 +56,12 @@ internal static unsafe class WalletReader
 
     public static WalletSection[] BuildSections(GameData gameData)
     {
-        var sections = new List<WalletSection>(6) { new("Currency", BuildCurrency(gameData)), };
-        AddDefSection(sections, gameData, "Hunt", HuntDefs);
+        var sections = new List<WalletSection>(6) { new(L.Wallet.SectionCurrency, BuildCurrency(gameData)), };
+        AddDefSection(sections, gameData, L.Wallet.SectionHunt, HuntDefs);
         AddTomestones(sections, gameData);
-        AddDefSection(sections, gameData, "PvP", PvpDefs);
-        AddDefSection(sections, gameData, "Crafting & Gathering", ScripDefs);
-        AddDefSection(sections, gameData, "Other", OtherDefs);
+        AddDefSection(sections, gameData, L.Wallet.SectionPvp, PvpDefs);
+        AddDefSection(sections, gameData, L.Wallet.SectionCrafting, ScripDefs);
+        AddDefSection(sections, gameData, L.Wallet.SectionOther, OtherDefs);
         return sections.ToArray();
     }
 
@@ -99,7 +100,7 @@ internal static unsafe class WalletReader
         return entries.ToArray();
     }
 
-    private static void AddDefSection(List<WalletSection> sections, GameData gameData, string title, Def[] defs)
+    private static void AddDefSection(List<WalletSection> sections, GameData gameData, LocString title, Def[] defs)
     {
         var entries = new List<WalletEntry>(defs.Length);
         for (var index = 0; index < defs.Length; index++)
@@ -131,7 +132,7 @@ internal static unsafe class WalletReader
 
         if (entries.Count > 0)
         {
-            sections.Add(new WalletSection("Tomestones", entries.ToArray()));
+            sections.Add(new WalletSection(L.Wallet.SectionTomestones, entries.ToArray()));
         }
     }
 

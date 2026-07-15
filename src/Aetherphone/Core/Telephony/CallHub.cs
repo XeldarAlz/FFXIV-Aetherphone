@@ -567,7 +567,7 @@ internal sealed class CallHub : IDisposable
 
         if (ended)
         {
-            EndCall(notify: true, reason: "Call declined");
+            EndCall(notify: true, reason: Loc.T(L.Phone.CallDeclined));
         }
     }
 
@@ -586,7 +586,7 @@ internal sealed class CallHub : IDisposable
 
         if (matched)
         {
-            EndCall(notify: true, reason: "Unavailable");
+            EndCall(notify: true, reason: Loc.T(L.Phone.Unavailable));
         }
     }
 
@@ -854,7 +854,7 @@ internal sealed class CallHub : IDisposable
                     }
                 }
 
-                return others == 1 && only is not null ? only.DisplayName : "Group call";
+                return others == 1 && only is not null ? only.DisplayName : Loc.T(L.Phone.GroupCall);
             default:
                 return string.Empty;
         }
