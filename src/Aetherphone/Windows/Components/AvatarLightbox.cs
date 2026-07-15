@@ -16,7 +16,7 @@ internal sealed class AvatarLightbox
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const float RevealSmoothTime = 0.16f;
+    private const float RevealSmoothTime = 0.05f;
     private const float BackdropAlpha = 0.92f;
     private const float EdgePadding = 26f;
     private const int CircleSegments = 96;
@@ -88,10 +88,9 @@ internal sealed class AvatarLightbox
             var drawList = ImGui.GetWindowDrawList();
             drawList.AddRectFilled(area.Min, area.Max,
                 ImGui.GetColorU32(new Vector4(0f, 0f, 0f, BackdropAlpha * progress)));
-            var eased = Easing.EaseOutQuint(progress);
             var targetRadius = MathF.Min(area.Size.X, area.Size.Y) * 0.5f - EdgePadding * scale;
-            var center = Vector2.Lerp(originCenter, area.Center, eased);
-            var radius = Easing.Lerp(originRadius, targetRadius, eased);
+            var center = Vector2.Lerp(originCenter, area.Center, progress);
+            var radius = Easing.Lerp(originRadius, targetRadius, progress);
             var texture = source?.Invoke();
             if (texture is not null)
             {
