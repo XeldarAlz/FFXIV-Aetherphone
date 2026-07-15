@@ -76,6 +76,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly RichTextCache bodyLayouts = new();
     private readonly RichTextCache detailBodyLayouts = new();
     private readonly RichTextCache commentLayouts = new();
+    private readonly MentionPopup mentionPopup = new();
+    private readonly MentionAutocomplete composeMentions;
+    private readonly MentionAutocomplete commentMentions;
     private readonly ViewRouter<AethergramRoute> router;
     private readonly RouterDraw<AethergramRoute> drawView;
     private readonly Action back;
@@ -125,6 +128,8 @@ internal sealed partial class AethergramApp : IPhoneApp
         Configuration configuration, SocialNotificationService social)
     {
         store = new AethergramStore(session, client);
+        composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
+        commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, client, images, lodestone, AethergramArt.StoryRing,
             AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
                 L.Aethergram.Saving), "Aethergram stories", StartStoryCompose);

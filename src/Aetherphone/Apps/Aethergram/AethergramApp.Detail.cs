@@ -214,7 +214,7 @@ internal sealed partial class AethergramApp
             ImGui.Dummy(new Vector2(0f, 16f * scale));
         }
 
-        DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), postId);
+        DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), area, postId);
         DrawPostMenu(area, false);
     }
 
@@ -325,7 +325,7 @@ internal sealed partial class AethergramApp
         ImGui.Dummy(new Vector2(width, bubbleHeight + 11f * scale));
     }
 
-    private void DrawCommentComposer(Rect bar, string postId)
+    private void DrawCommentComposer(Rect bar, Rect screen, string postId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -348,9 +348,17 @@ internal sealed partial class AethergramApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.TitleInk))
         {
-            submitted = ImGui.InputTextWithHint("##gramComment", Loc.T(L.Aethergram.AddComment), ref commentDraft,
-                MaxCommentLength, ImGuiInputTextFlags.EnterReturnsTrue);
+            submitted = MentionField.SingleLineWithHint("##gramComment", Loc.T(L.Aethergram.AddComment),
+                ref commentDraft, MaxCommentLength, commentMentions);
         }
+
+        var pickedMention = mentionPopup.Draw(commentMentions, screen, theme, images, lodestone);
+        if (pickedMention >= 0)
+        {
+            commentMentions.Pick(pickedMention);
+        }
+
+        mentionPopup.Gate(commentMentions);
 
         var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
         var sendRadius = 15f * scale;

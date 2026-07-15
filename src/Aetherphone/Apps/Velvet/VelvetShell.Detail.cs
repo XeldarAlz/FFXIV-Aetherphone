@@ -205,7 +205,7 @@ internal sealed partial class VelvetShell
             Gap(20f);
         }
 
-        DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), postId);
+        DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), area, postId);
     }
 
     private void DrawComments(float width, float scale)
@@ -318,7 +318,7 @@ internal sealed partial class VelvetShell
         ImGui.Dummy(new Vector2(width, rowHeight + 14f * scale));
     }
 
-    private void DrawCommentComposer(Rect bar, string postId)
+    private void DrawCommentComposer(Rect bar, Rect screen, string postId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -334,12 +334,20 @@ internal sealed partial class VelvetShell
         using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
         using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
         {
-            if (ImGui.InputTextWithHint("##velvetComment", Loc.T(L.Velvet.AddComment), ref commentDraft, 500,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
+            if (MentionField.SingleLineWithHint("##velvetComment", Loc.T(L.Velvet.AddComment), ref commentDraft, 500,
+                    commentMentions))
             {
                 submitted = true;
             }
         }
+
+        var pickedMention = mentionPopup.Draw(commentMentions, screen, theme, images, lodestone);
+        if (pickedMention >= 0)
+        {
+            commentMentions.Pick(pickedMention);
+        }
+
+        mentionPopup.Gate(commentMentions);
 
         var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
         var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, bar.Center.Y);

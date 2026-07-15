@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
@@ -23,6 +24,10 @@ internal sealed class VelvetPostComposer
     private readonly VelvetStore store;
     private readonly StoryPresenter stories;
     private readonly PhotoLibrary library;
+    private readonly RemoteImageCache images;
+    private readonly LodestoneService lodestone;
+    private readonly MentionPopup mentionPopup = new();
+    private readonly MentionAutocomplete captionMentions;
     private readonly List<string> selected = new();
     private readonly List<WallpaperCrop> crops = new();
     private ComposeStage stage;
@@ -46,11 +51,15 @@ internal sealed class VelvetPostComposer
     private bool cropDragging;
     private Vector2 cropLastDrag;
 
-    public VelvetPostComposer(VelvetStore store, StoryPresenter stories, PhotoLibrary library)
+    public VelvetPostComposer(VelvetStore store, StoryPresenter stories, PhotoLibrary library,
+        RemoteImageCache images, LodestoneService lodestone)
     {
         this.store = store;
         this.stories = stories;
         this.library = library;
+        this.images = images;
+        this.lodestone = lodestone;
+        captionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
     }
 
     private enum ComposeStage
@@ -424,8 +433,17 @@ internal sealed class VelvetPostComposer
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.TitleInk))
         {
-            ImGui.InputTextWithHint("##velvetCaption", Loc.T(L.Velvet.CaptionHint), ref caption, 500);
+            MentionField.SingleLineWithHint("##velvetCaption", Loc.T(L.Velvet.CaptionHint), ref caption, 500,
+                captionMentions);
         }
+
+        var pickedMention = mentionPopup.Draw(captionMentions, area, context.Theme, images, lodestone);
+        if (pickedMention >= 0)
+        {
+            captionMentions.Pick(pickedMention);
+        }
+
+        mentionPopup.Gate(captionMentions);
 
         if (storyMode)
         {

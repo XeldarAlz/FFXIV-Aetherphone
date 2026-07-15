@@ -102,8 +102,16 @@ internal sealed partial class ChirperApp
             using (Plugin.Fonts.Push(1.15f))
             {
                 SoftWrapField.Multiline("##chirpBody", ref draft, MaxPostLength,
-                    new Vector2(inputWidth, inputHeight), composeWrapWidth);
+                    new Vector2(inputWidth, inputHeight), composeWrapWidth, composeMentions);
             }
+
+            var pickedMention = mentionPopup.Draw(composeMentions, area, theme, images, lodestone);
+            if (pickedMention >= 0)
+            {
+                composeMentions.Pick(pickedMention);
+            }
+
+            mentionPopup.Gate(composeMentions);
 
             if (draft.Length == 0)
             {

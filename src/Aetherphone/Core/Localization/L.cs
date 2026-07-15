@@ -34,6 +34,7 @@ internal static class L
         public static readonly LocString MentionedPhoto = new("social.mentionedPhoto", "mentioned you in a photo");
         public static readonly LocString MentionedComment = new("social.mentionedComment", "mentioned you in a comment");
         public static readonly LocString ViewProfile = new("social.viewProfile", "View profile");
+        public static readonly LocString MentionSearching = new("social.mentionSearching", "Looking for people");
         public static readonly LocString Followed = new("social.followed", "started following you");
         public static readonly LocString ConnectionRequest = new("social.connectionRequest", "wants to connect with you");
         public static readonly LocString ConnectionAccepted = new("social.connectionAccepted", "accepted your connection request");

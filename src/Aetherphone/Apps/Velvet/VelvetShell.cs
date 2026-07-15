@@ -41,6 +41,8 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly AppSkin ui = new(VelvetTheme.Palette);
     private readonly RichTextCache detailBodyLayouts = new();
     private readonly RichTextCache commentLayouts = new();
+    private readonly MentionPopup mentionPopup = new();
+    private readonly MentionAutocomplete commentMentions;
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
@@ -62,6 +64,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
     {
         store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys, visibility, realtimeSignals);
+        commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, client, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
             new StoryConfirmLabels(L.Velvet.DeleteConfirm, L.Velvet.DeleteCancel, L.Velvet.Saving), "Velvet stories",
             StartStoryCompose);
@@ -75,7 +78,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.images = images;
         this.social = social;
         avatar = new VelvetAvatarComposer(store, library);
-        post = new VelvetPostComposer(store, stories, library);
+        post = new VelvetPostComposer(store, stories, library, images, lodestone);
         router = new ViewRouter<VelvetView>(VelvetView.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();

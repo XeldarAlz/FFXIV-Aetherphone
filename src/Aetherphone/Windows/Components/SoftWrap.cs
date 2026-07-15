@@ -111,6 +111,40 @@ internal static class SoftWrap
         return text.IndexOf('\n') < 0 ? text : text.Replace("\n", string.Empty);
     }
 
+    public static void ReadLogical(ImGuiInputTextCallbackDataPtr data, out string display, out string logical,
+        out int logicalCursor)
+    {
+        display = Encoding.UTF8.GetString(data.BufSpan[..data.BufTextLen]);
+        var charCursor = ByteIndexToCharIndex(display, data.CursorPos);
+        logicalCursor = charCursor - CountNewlines(display, charCursor);
+        logical = StripNewlines(display);
+    }
+
+    // Puts the caret back where it was without touching the text. ImGui reads these fields after the
+    // callback returns and reassigns the edit state, which is how a multi-line field can keep its caret
+    // still while arrow keys drive something else.
+    public static void SetCursor(ImGuiInputTextCallbackDataPtr data, string display, int logicalCursor)
+    {
+        var wrappedCursor = LogicalToWrappedIndex(display, logicalCursor);
+        var byteCursor = Encoding.UTF8.GetByteCount(display.AsSpan(0, wrappedCursor));
+        data.CursorPos = byteCursor;
+        data.SelectionStart = byteCursor;
+        data.SelectionEnd = byteCursor;
+    }
+
+    public static void WriteLogical(ImGuiInputTextCallbackDataPtr data, string logical, int logicalCursor,
+        float wrapWidth)
+    {
+        var wrapped = WrapText(logical, wrapWidth);
+        var wrappedCursor = LogicalToWrappedIndex(wrapped, logicalCursor);
+        var byteCursor = Encoding.UTF8.GetByteCount(wrapped.AsSpan(0, wrappedCursor));
+        data.DeleteChars(0, data.BufTextLen);
+        data.InsertChars(0, wrapped);
+        data.CursorPos = byteCursor;
+        data.SelectionStart = byteCursor;
+        data.SelectionEnd = byteCursor;
+    }
+
     public static int LogicalLength(string text)
     {
         var length = text.Length;

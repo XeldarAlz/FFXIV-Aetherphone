@@ -431,7 +431,7 @@ internal sealed partial class AethergramApp
 
         Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Aethergram.TapToAdjust),
             AppPalettes.Aethergram.MutedInk, 0.75f);
-        DrawCaptionCard(cardRect, scale);
+        DrawCaptionCard(cardRect, area, scale);
         if (composeStatus.Length > 0)
         {
             Typography.DrawCentered(new Vector2(area.Center.X, cardRect.Max.Y + 10f * scale), composeStatus,
@@ -521,7 +521,7 @@ internal sealed partial class AethergramApp
         }
     }
 
-    private void DrawCaptionCard(Rect card, float scale)
+    private void DrawCaptionCard(Rect card, Rect screen, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 14f * scale;
@@ -557,8 +557,17 @@ internal sealed partial class AethergramApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            SoftWrapField.Multiline("##gramCaption", ref caption, MaxCaptionLength, inputSize, wrapWidth);
+            SoftWrapField.Multiline("##gramCaption", ref caption, MaxCaptionLength, inputSize, wrapWidth,
+                composeMentions);
         }
+
+        var pickedMention = mentionPopup.Draw(composeMentions, screen, theme, images, lodestone);
+        if (pickedMention >= 0)
+        {
+            composeMentions.Pick(pickedMention);
+        }
+
+        mentionPopup.Gate(composeMentions);
 
         if (caption.Length == 0)
         {

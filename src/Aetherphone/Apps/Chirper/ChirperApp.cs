@@ -49,6 +49,9 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly AppSkin ui = new(AppPalettes.Chirper);
     private readonly RichTextCache bodyLayouts = new();
     private readonly RichTextCache commentLayouts = new();
+    private readonly MentionPopup mentionPopup = new();
+    private readonly MentionAutocomplete composeMentions;
+    private readonly MentionAutocomplete commentMentions;
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
@@ -81,6 +84,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         Configuration configuration, SocialNotificationService social)
     {
         store = new ChirperStore(session, client);
+        composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
+        commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         this.launcher = launcher;
         this.gameData = gameData;
         this.configuration = configuration;
@@ -666,7 +671,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
 
-        DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), postId);
+        DrawCommentComposer(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), area, postId);
     }
 
     private void DrawComment(CommentDto comment)
@@ -738,7 +743,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         ImGui.Dummy(new Vector2(width, 12f * scale));
     }
 
-    private void DrawCommentComposer(Rect bar, string postId)
+    private void DrawCommentComposer(Rect bar, Rect screen, string postId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -755,9 +760,17 @@ internal sealed partial class ChirperApp : IPhoneApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.TitleInk))
         {
-            submitted = ImGui.InputTextWithHint("##chirperComment", Loc.T(L.Chirper.AddComment), ref commentDraft,
-                MaxCommentLength, ImGuiInputTextFlags.EnterReturnsTrue);
+            submitted = MentionField.SingleLineWithHint("##chirperComment", Loc.T(L.Chirper.AddComment),
+                ref commentDraft, MaxCommentLength, commentMentions);
         }
+
+        var picked = mentionPopup.Draw(commentMentions, screen, theme, images, lodestone);
+        if (picked >= 0)
+        {
+            commentMentions.Pick(picked);
+        }
+
+        mentionPopup.Gate(commentMentions);
 
         var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
         var sendCenter = new Vector2(bar.Max.X - 28f * scale, bar.Center.Y);
