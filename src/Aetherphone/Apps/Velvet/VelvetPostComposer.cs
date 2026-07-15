@@ -6,6 +6,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
@@ -20,10 +21,12 @@ internal sealed class VelvetPostComposer
     private const int GridColumns = 3;
     private const float CropSmoothTime = 0.10f;
     private readonly VelvetStore store;
+    private readonly StoryStore stories;
     private readonly PhotoLibrary library;
     private readonly List<string> selected = new();
     private readonly List<WallpaperCrop> crops = new();
     private ComposeStage stage;
+    private bool storyMode;
     private int cropIndex;
     private int previewIndex;
     private string[] pickerPaths = Array.Empty<string>();
@@ -33,6 +36,7 @@ internal sealed class VelvetPostComposer
     private int visibility = VelvetVisibility.Public;
     private string caption = string.Empty;
     private string limitNotice = string.Empty;
+    private string status = string.Empty;
     private Spring zoomSpring = new(1f);
     private Spring centerXSpring = new(0.5f);
     private Spring centerYSpring = new(0.5f);
@@ -42,9 +46,10 @@ internal sealed class VelvetPostComposer
     private bool cropDragging;
     private Vector2 cropLastDrag;
 
-    public VelvetPostComposer(VelvetStore store, PhotoLibrary library)
+    public VelvetPostComposer(VelvetStore store, StoryStore stories, PhotoLibrary library)
     {
         this.store = store;
+        this.stories = stories;
         this.library = library;
     }
 
@@ -59,8 +64,15 @@ internal sealed class VelvetPostComposer
 
     private string CurrentPath => cropIndex >= 0 && cropIndex < selected.Count ? selected[cropIndex] : string.Empty;
 
-    public void Open()
+    private float Aspect => storyMode ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight : 1f;
+
+    private string Title => storyMode ? Loc.T(L.Story.NewStory) : Loc.T(L.Velvet.NewPost);
+
+    private bool Posting => storyMode ? stories.Posting : store.Posting;
+
+    public void Open(bool story = false)
     {
+        storyMode = story;
         stage = ComposeStage.Pick;
         selected.Clear();
         crops.Clear();
@@ -72,6 +84,7 @@ internal sealed class VelvetPostComposer
         visibility = VelvetVisibility.Public;
         caption = string.Empty;
         limitNotice = string.Empty;
+        status = string.Empty;
         pickerPaths = library.List();
     }
 
@@ -86,6 +99,7 @@ internal sealed class VelvetPostComposer
         if (outcome == 2)
         {
             outcome = 0;
+            status = Loc.T(L.Account.CannotReach);
         }
 
         if (closeRequested)
@@ -118,8 +132,8 @@ internal sealed class VelvetPostComposer
 
     private void DrawPick(Rect area, AppSkin ui, in PhoneContext context)
     {
-        AppHeader.Draw(context, Loc.T(L.Velvet.NewPost), () => closeRequested = true);
-        if (ui.HeaderAction(area, Loc.T(L.Common.Next), selected.Count > 0))
+        AppHeader.Draw(context, Title, () => closeRequested = true);
+        if (!storyMode && ui.HeaderAction(area, Loc.T(L.Common.Next), selected.Count > 0))
         {
             BeginCropSequence();
         }
@@ -179,6 +193,11 @@ internal sealed class VelvetPostComposer
 
     private void DrawPickBadge(string path, Vector2 min, Vector2 max, float scale)
     {
+        if (storyMode)
+        {
+            return;
+        }
+
         var order = selected.IndexOf(path);
         if (order < 0)
         {
@@ -198,6 +217,14 @@ internal sealed class VelvetPostComposer
 
     private void TakePicked(string path)
     {
+        if (storyMode)
+        {
+            selected.Clear();
+            selected.Add(path);
+            BeginCropSequence();
+            return;
+        }
+
         var existing = selected.IndexOf(path);
         if (existing >= 0)
         {
@@ -317,9 +344,8 @@ internal sealed class VelvetPostComposer
         var top = area.Min.Y + AppHeader.Height * scale;
         var stageRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
             new Vector2(area.Max.X - 16f * scale, area.Max.Y - 96f * scale));
-        var side = MathF.Min(stageRect.Width, stageRect.Height);
-        var preview = new Rect(new Vector2(stageRect.Center.X - side * 0.5f, stageRect.Center.Y - side * 0.5f),
-            new Vector2(stageRect.Center.X + side * 0.5f, stageRect.Center.Y + side * 0.5f));
+        var aspect = Aspect;
+        var preview = ImageFit.CenteredRect(stageRect, aspect);
         var rounding = 18f * scale;
         var texture = Plugin.WallpaperImages.Get(CurrentPath);
         if (texture is null)
@@ -334,8 +360,8 @@ internal sealed class VelvetPostComposer
         var zoom = zoomSpring.Step(targetZoom, CropSmoothTime, deltaSeconds);
         var centerX = centerXSpring.Step(targetCenterX, CropSmoothTime, deltaSeconds);
         var centerY = centerYSpring.Step(targetCenterY, CropSmoothTime, deltaSeconds);
-        var crop = new WallpaperCrop(zoom, centerX, centerY).Clamped(size, 1f);
-        var (uv0, uv1) = crop.ComputeUv(size, 1f);
+        var crop = new WallpaperCrop(zoom, centerX, centerY).Clamped(size, aspect);
+        var (uv0, uv1) = crop.ComputeUv(size, aspect);
         drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         HandleCropGestures(preview, size, uv1 - uv0);
@@ -352,14 +378,14 @@ internal sealed class VelvetPostComposer
 
     private void DrawCaption(Rect area, AppSkin ui, in PhoneContext context)
     {
-        AppHeader.Draw(context, Loc.T(L.Velvet.NewPost), () =>
+        AppHeader.Draw(context, Title, () =>
         {
             stage = ComposeStage.Crop;
             LoadCrop(selected.Count - 1);
         });
 
-        var canShare = !store.Posting;
-        if (ui.HeaderAction(area, store.Posting ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Share), canShare))
+        var busy = Posting;
+        if (ui.HeaderAction(area, busy ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Share), !busy))
         {
             Commit();
         }
@@ -369,11 +395,18 @@ internal sealed class VelvetPostComposer
         var top = area.Min.Y + AppHeader.Height * scale;
         var chipsY = area.Max.Y - 78f * scale;
         var captionHeight = 34f * scale;
-        var captionY = chipsY - 20f * scale - captionHeight;
+        var captionY = storyMode ? area.Max.Y - 20f * scale - captionHeight : chipsY - 20f * scale - captionHeight;
         var stripHeight = selected.Count > 1 ? 52f * scale : 0f;
+        var statusHeight = status.Length > 0 ? 20f * scale : 0f;
         var previewRegion = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
-            new Vector2(area.Max.X - 16f * scale, captionY - 12f * scale - stripHeight));
+            new Vector2(area.Max.X - 16f * scale, captionY - 12f * scale - stripHeight - statusHeight));
         DrawCaptionPreview(previewRegion, scale);
+        if (statusHeight > 0f)
+        {
+            Typography.DrawCentered(new Vector2(area.Center.X, captionY - 12f * scale), status, context.Theme.Danger,
+                TextStyles.Footnote);
+        }
+
         if (stripHeight > 0f)
         {
             var strip = new Rect(new Vector2(area.Min.X + 16f * scale, previewRegion.Max.Y + 6f * scale),
@@ -394,6 +427,11 @@ internal sealed class VelvetPostComposer
             ImGui.InputTextWithHint("##velvetCaption", Loc.T(L.Velvet.CaptionHint), ref caption, 500);
         }
 
+        if (storyMode)
+        {
+            return;
+        }
+
         DrawChoiceRow(ui, area, chipsY, Loc.T(L.Velvet.VisibilityLabel),
             new[] { VelvetVisibility.Public, VelvetVisibility.Connections }, visibility, value => visibility = value,
             VelvetVisibility.Label);
@@ -401,14 +439,13 @@ internal sealed class VelvetPostComposer
 
     private void DrawCaptionPreview(Rect region, float scale)
     {
-        var side = MathF.Min(region.Width, region.Height);
-        if (side <= 0f)
+        var aspect = Aspect;
+        var preview = ImageFit.CenteredRect(region, aspect);
+        if (preview.Width <= 0f)
         {
             return;
         }
 
-        var half = side * 0.5f;
-        var preview = new Rect(region.Center - new Vector2(half, half), region.Center + new Vector2(half, half));
         var rounding = 18f * scale;
         var drawList = ImGui.GetWindowDrawList();
         var index = Math.Clamp(previewIndex, 0, Math.Max(0, selected.Count - 1));
@@ -421,8 +458,8 @@ internal sealed class VelvetPostComposer
             return;
         }
 
-        var crop = crops[index].Clamped(texture.Size, 1f);
-        var (uv0, uv1) = crop.ComputeUv(texture.Size, 1f);
+        var crop = crops[index].Clamped(texture.Size, aspect);
+        var (uv0, uv1) = crop.ComputeUv(texture.Size, aspect);
         drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         if (UiInteract.HoverClick(preview.Min, preview.Max))
@@ -525,7 +562,7 @@ internal sealed class VelvetPostComposer
             }
         }
 
-        var clamped = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY).Clamped(size, 1f);
+        var clamped = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY).Clamped(size, Aspect);
         targetZoom = clamped.Zoom;
         targetCenterX = clamped.CenterX;
         targetCenterY = clamped.CenterY;
@@ -533,8 +570,15 @@ internal sealed class VelvetPostComposer
 
     private void Commit()
     {
-        if (selected.Count == 0 || store.Posting)
+        if (selected.Count == 0 || Posting)
         {
+            return;
+        }
+
+        status = string.Empty;
+        if (storyMode)
+        {
+            stories.CreateStory(selected[0], crops[0], caption, ok => outcome = ok ? 1 : 2);
             return;
         }
 
@@ -544,7 +588,7 @@ internal sealed class VelvetPostComposer
 
     private void LaunchFileDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Velvet.NewPost)).ContinueWith(task =>
+        _ = NativeFileDialog.OpenImageAsync(Title).ContinueWith(task =>
         {
             if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
             {

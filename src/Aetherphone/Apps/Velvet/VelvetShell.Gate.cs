@@ -65,6 +65,7 @@ internal sealed partial class VelvetShell
         configuration.Save();
         store.AcceptGate(Configuration.VelvetGateVersion, _ => gateBusy = false);
         store.EnsureMe();
+        stories.RefreshTray();
     }
 
     private void DrawCategoryPicker(VelvetTagCategory[] categories, List<string> target)

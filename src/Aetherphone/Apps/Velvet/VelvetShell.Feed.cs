@@ -25,8 +25,8 @@ internal sealed partial class VelvetShell
 
         using (AppSurface.Begin(area))
         {
-            storyTray.Draw(theme, VelvetTheme.Palette, stories.Rings, HasOwnStory, ringPainter, StartStoryCompose,
-                OpenStoryRing);
+            storyTray.Draw(theme, VelvetTheme.Palette, stories.Rings, stories.HasOwnRing, ringPainter,
+                StartStoryCompose, OpenStoryRing);
             var width = ImGui.GetContentRegionAvail().X;
             var feed = store.Feed;
             if (feed.Length == 0)
@@ -106,8 +106,7 @@ internal sealed partial class VelvetShell
 
         var headerHitMin = new Vector2(card.Min.X, card.Min.Y);
         var headerHitMax = new Vector2(card.Max.X - 44f * scale, card.Min.Y + headerHeight);
-        if (hasStory && UiInteract.HoverClick(avatarCenter - new Vector2(ringRadius, ringRadius),
-                avatarCenter + new Vector2(ringRadius, ringRadius)))
+        if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))
         {
             OpenStoryRing(authorRing);
         }
