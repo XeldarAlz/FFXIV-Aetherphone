@@ -429,6 +429,7 @@
   "changelog.r0970.18": "Aetherphone fermait le jeu au démarrage lorsque le pays ou le format régional de Windows était défini sur la Russie ou la Biélorussie",
   "changelog.r0970.19": "Certains libellés, comme la ligne Sonnerie dans les Réglages et les tuiles du Centre de contrôle, restaient dans la langue précédente après un changement de langue",
   "changelog.r0970.20": "Les informations sous le nom d'un profil Velvet ne se chevauchent plus lorsque la personne recherche plusieurs choses à la fois",
+  "changelog.r0970.21": "Les libellés turcs en majuscules sont désormais correctement écrits dans tout le téléphone : les titres comme UYARILAR n'apparaissent plus avec un ı minuscule au milieu",
   "changelog.r0960.0":"Velvet a été reconstruit de fond en comble, avec une allure after-dark et tous ses écrans redessinés autour de Découvrir",
   "changelog.r0960.1": "Les filtres de Découvrir dans Velvet se cachent désormais derrière un bouton de filtre, laissant tout l'écran aux personnes que vous parcourez",
   "changelog.r0960.2": "Les sélecteurs de rôles et de tags de Velvet sont désormais classés en catégories qui reflètent la façon dont les communautés de roleplay se décrivent réellement",

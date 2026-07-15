@@ -429,6 +429,7 @@
   "changelog.r0970.18": "Windows ülke veya bölge biçimi Rusya ya da Belarus olarak ayarlı olan oyuncularda Aetherphone'un başlangıçta oyunu kapatması düzeltildi",
   "changelog.r0970.19": "Ayarlar'daki Zil sesi satırı ve Kontrol Merkezi kutucukları gibi bazı etiketlerin, dili değiştirdikten sonra önceki dilde kalması düzeltildi",
   "changelog.r0970.20": "Velvet profilinde kişi aynı anda birden fazla şey ararken adın altındaki bilgilerin üst üste binmesi düzeltildi",
+  "changelog.r0970.21": "Telefon genelinde Türkçe büyük harfli etiketler artık doğru yazılıyor: UYARILAR gibi başlıklar artık ortasında küçük ı ile görünmüyor",
   "changelog.r0960.0":"Velvet sıfırdan yeniden inşa edildi: gece sonrasına yakışan bir görünüm ve Keşfet çevresinde yeniden çizilmiş tüm ekranlar",
   "changelog.r0960.1": "Velvet'te Keşfet filtreleri artık bir filtre düğmesinin arkasında duruyor, böylece ekranın tamamı göz attığın kişilere kalıyor",
   "changelog.r0960.2": "Velvet'in rol ve etiket seçicileri artık rol yapma topluluklarının kendilerini gerçekte nasıl tanımladığına uyan kategorilere ayrıldı",
