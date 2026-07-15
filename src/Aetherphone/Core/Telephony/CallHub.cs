@@ -152,6 +152,7 @@ internal sealed class CallHub : IDisposable
     {
         if (!configuration.CallsEnabled || !session.IsSignedIn)
         {
+            AepLog.Info($"[calls] start-refused calls_enabled={configuration.CallsEnabled} signed_in={session.IsSignedIn}");
             return;
         }
 
@@ -160,6 +161,7 @@ internal sealed class CallHub : IDisposable
         {
             if (state == CallState.Ringing)
             {
+                AepLog.Info("[calls] start-refused an incoming call is still ringing");
                 return;
             }
 
@@ -167,6 +169,7 @@ internal sealed class CallHub : IDisposable
             {
                 if (InvolvesLocked(target.UserId))
                 {
+                    AepLog.Info($"[calls] start-refused already engaged with {target.UserId} in state {state}");
                     return;
                 }
 
@@ -184,6 +187,7 @@ internal sealed class CallHub : IDisposable
         {
             if (state != CallState.Idle)
             {
+                AepLog.Info($"[calls] start-refused state {state} never returned to idle");
                 return;
             }
 
@@ -197,6 +201,7 @@ internal sealed class CallHub : IDisposable
         }
 
         AddLog(target, CallDirection.Outgoing);
+        AepLog.Info($"[calls] start-sent call={id:D} to={target.UserId} realtime_connected={connection.Connected}");
         Send(new CallControl
         {
             Type = SignalType.Start, CallId = id.ToString("D"), InviteeIds = new[] { target.UserId },
@@ -418,6 +423,9 @@ internal sealed class CallHub : IDisposable
                 break;
             case SignalType.SocialPing:
                 signals.PublishSocial();
+                break;
+            default:
+                AepLog.Warning($"[calls] unhandled-signal type={message.Type} call={message.CallId} reason={message.Reason}");
                 break;
         }
     }
@@ -768,6 +776,7 @@ internal sealed class CallHub : IDisposable
         CallSession? toDispose;
         bool wasConnected;
         double durationMs;
+        CallState priorState;
         lock (gate)
         {
             if (state == CallState.Idle)
@@ -775,11 +784,14 @@ internal sealed class CallHub : IDisposable
                 return;
             }
 
+            priorState = state;
             wasConnected = callStartTicks != 0;
             durationMs = wasConnected ? Environment.TickCount64 - callStartTicks : 0;
             toDispose = activeSession;
             ClearLocked();
         }
+
+        AepLog.Info($"[calls] ended from={priorState} reason={reason ?? "server hung up"} connected={wasConnected} duration_ms={durationMs:F0}");
 
         sound.StopCallRing();
         toDispose?.Dispose();

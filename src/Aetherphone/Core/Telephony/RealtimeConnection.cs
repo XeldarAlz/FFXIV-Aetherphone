@@ -201,6 +201,11 @@ internal sealed class RealtimeConnection : IDisposable
 
         if (ws is null || ws.State != WebSocketState.Open)
         {
+            if (type == WebSocketMessageType.Text)
+            {
+                AepLog.Warning($"[realtime] send-dropped socket={(ws is null ? "none" : ws.State.ToString())}");
+            }
+
             return;
         }
 
