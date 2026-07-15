@@ -341,7 +341,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         DrawFeedList(area, activeScope);
     }
 
-    private bool HasOwnStory => store.Me is { } me && stories.TryRing(me.Id, out _);
 
     private void OpenStoryRing(StoryRingDto ring)
     {
@@ -417,7 +416,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
             CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
             BusyLabel = Loc.T(L.Aethergram.Saving),
-            FailedMessage = Loc.T(L.Aethergram.DeleteFailed),
+            FailedMessage = Loc.T(L.Story.DeleteFailed),
             ConfirmAsync = done => stories.DeleteStory(story.Id, done),
         });
     }
@@ -566,8 +565,8 @@ internal sealed partial class AethergramApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
-            storyTray.Draw(theme, AppPalettes.Aethergram, stories.Rings, HasOwnStory, ringPainter, StartStoryCompose,
-                OpenStoryRing);
+            storyTray.Draw(theme, AppPalettes.Aethergram, stories.Rings, stories.HasOwnRing, ringPainter,
+                StartStoryCompose, OpenStoryRing);
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
@@ -635,8 +634,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             FontWeight.SemiBold);
         var subline = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), subline, AppPalettes.Aethergram.MutedInk, 0.85f);
-        if (hasStory && UiInteract.HoverClick(avatarCenter - new Vector2(ringRadius, ringRadius),
-                avatarCenter + new Vector2(ringRadius, ringRadius)))
+        if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))
         {
             OpenStoryRing(authorRing);
         }

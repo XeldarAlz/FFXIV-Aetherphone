@@ -83,6 +83,23 @@ internal sealed class StoryStore : IDisposable
         viewersTotal = 0;
     }
 
+    public bool HasOwnRing
+    {
+        get
+        {
+            var snapshot = rings;
+            for (var index = 0; index < snapshot.Length; index++)
+            {
+                if (snapshot[index].IsMe)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
+
     public bool TryRing(string authorId, out StoryRingDto ring)
     {
         var snapshot = rings;

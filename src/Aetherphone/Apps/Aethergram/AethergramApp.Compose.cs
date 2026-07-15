@@ -33,8 +33,10 @@ internal sealed partial class AethergramApp
         composeStoryMode ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight : 1f;
 
     private string ComposeTitle => composeAvatarMode ? Loc.T(L.Aethergram.NewAvatar)
-        : composeStoryMode ? Loc.T(L.Aethergram.NewStory)
+        : composeStoryMode ? Loc.T(L.Story.NewStory)
         : Loc.T(L.Aethergram.NewPost);
+
+    private bool ComposePosting => composeStoryMode ? stories.Posting : store.Posting;
 
     private void StartStoryCompose()
     {
@@ -293,9 +295,7 @@ internal sealed partial class AethergramApp
         var stage = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
             new Vector2(area.Max.X - 16f * scale, area.Max.Y - 96f * scale));
         var aspect = ComposeAspect;
-        var previewWidth = MathF.Min(stage.Width, stage.Height * aspect);
-        var previewHalf = new Vector2(previewWidth, previewWidth / aspect) * 0.5f;
-        var preview = new Rect(stage.Center - previewHalf, stage.Center + previewHalf);
+        var preview = ImageFit.CenteredRect(stage, aspect);
         var rounding = 18f * scale;
         var texture = Plugin.WallpaperImages.Get(ComposeCurrentPath);
         if (texture is null)
@@ -396,7 +396,7 @@ internal sealed partial class AethergramApp
             }
         }
 
-        var clamped = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY).Clamped(size, 1f);
+        var clamped = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY).Clamped(size, ComposeAspect);
         targetZoom = clamped.Zoom;
         targetCenterX = clamped.CenterX;
         targetCenterY = clamped.CenterY;
@@ -438,7 +438,7 @@ internal sealed partial class AethergramApp
                 theme.Danger, 0.82f);
         }
 
-        var busy = store.Posting;
+        var busy = ComposePosting;
         if (DrawShareBar(shareRect, busy ? Loc.T(L.Aethergram.Sharing) : Loc.T(L.Aethergram.Share), !busy))
         {
             if (composeStoryMode)
@@ -489,14 +489,13 @@ internal sealed partial class AethergramApp
 
     private void DrawCaptionPreview(Rect region, float scale)
     {
-        var side = MathF.Min(region.Width, region.Height);
-        if (side <= 0f)
+        var aspect = ComposeAspect;
+        var preview = ImageFit.CenteredRect(region, aspect);
+        if (preview.Width <= 0f)
         {
             return;
         }
 
-        var half = side * 0.5f;
-        var preview = new Rect(region.Center - new Vector2(half, half), region.Center + new Vector2(half, half));
         var rounding = 18f * scale;
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, new Vector2(preview.Min.X - 2f * scale, preview.Min.Y + 4f * scale),
@@ -511,8 +510,8 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        var crop = composeCrops[index].Clamped(texture.Size, 1f);
-        var (uv0, uv1) = crop.ComputeUv(texture.Size, 1f);
+        var crop = composeCrops[index].Clamped(texture.Size, aspect);
+        var (uv0, uv1) = crop.ComputeUv(texture.Size, aspect);
         drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
