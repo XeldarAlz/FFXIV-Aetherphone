@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "录制语音消息",
   "message.editAction": "编辑",
   "message.editingLabel": "正在编辑消息",
-  "message.editedLabel": "已编辑",
+  "message.editedAt": "{0} 已编辑",
   "message.starAction": "星标",
   "message.unstarAction": "取消星标",
   "message.starredTitle": "星标消息",

@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "Grabar un mensaje de voz",
   "message.editAction": "Editar",
   "message.editingLabel": "Editando mensaje",
-  "message.editedLabel": "editado",
+  "message.editedAt": "{0} editado",
   "message.starAction": "Destacar",
   "message.unstarAction": "Quitar destacado",
   "message.starredTitle": "Mensajes destacados",

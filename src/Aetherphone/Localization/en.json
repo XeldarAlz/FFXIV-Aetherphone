@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "Record a voice message",
   "message.editAction": "Edit",
   "message.editingLabel": "Editing message",
-  "message.editedLabel": "edited",
+  "message.editedAt": "edited {0}",
   "message.starAction": "Star",
   "message.unstarAction": "Unstar",
   "message.starredTitle": "Starred messages",

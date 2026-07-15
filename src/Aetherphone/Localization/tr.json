@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "Sesli mesaj kaydet",
   "message.editAction": "Düzenle",
   "message.editingLabel": "Mesaj düzenleniyor",
-  "message.editedLabel": "düzenlendi",
+  "message.editedAt": "{0} düzenlendi",
   "message.starAction": "Yıldızla",
   "message.unstarAction": "Yıldızı kaldır",
   "message.starredTitle": "Yıldızlı mesajlar",

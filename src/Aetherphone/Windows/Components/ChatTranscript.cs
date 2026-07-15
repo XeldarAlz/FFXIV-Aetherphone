@@ -1068,7 +1068,7 @@ internal sealed class ChatTranscript
         var time = TimeText.Clock(message.CreatedAtUnix);
         if ((message.Flags & TranscriptFlags.Edited) != 0)
         {
-            time = string.Concat(Loc.T(L.Message.EditedLabel), " ", time);
+            time = Loc.T(L.Message.EditedAt, time);
         }
 
         var timeSize = Typography.Measure(time, StampTextScale);

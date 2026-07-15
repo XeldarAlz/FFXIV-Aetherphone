@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "ボイスメッセージを録音",
   "message.editAction": "編集",
   "message.editingLabel": "メッセージを編集中",
-  "message.editedLabel": "編集済み",
+  "message.editedAt": "{0} 編集済み",
   "message.starAction": "スターを付ける",
   "message.unstarAction": "スターを外す",
   "message.starredTitle": "スター付きメッセージ",

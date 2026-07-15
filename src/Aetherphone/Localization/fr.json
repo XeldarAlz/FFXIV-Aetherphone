@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "Enregistrer un message vocal",
   "message.editAction": "Modifier",
   "message.editingLabel": "Modification du message",
-  "message.editedLabel": "modifié",
+  "message.editedAt": "{0} modifié",
   "message.starAction": "Ajouter aux favoris",
   "message.unstarAction": "Retirer des favoris",
   "message.starredTitle": "Messages favoris",

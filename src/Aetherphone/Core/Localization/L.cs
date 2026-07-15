@@ -188,7 +188,7 @@ internal static class L
         public static readonly LocString RecordVoiceHint = new("message.recordVoiceHint", "Record a voice message");
         public static readonly LocString EditAction = new("message.editAction", "Edit");
         public static readonly LocString EditingLabel = new("message.editingLabel", "Editing message");
-        public static readonly LocString EditedLabel = new("message.editedLabel", "edited");
+        public static readonly LocString EditedAt = new("message.editedAt", "edited {0}");
         public static readonly LocString StarAction = new("message.starAction", "Star");
         public static readonly LocString UnstarAction = new("message.unstarAction", "Unstar");
         public static readonly LocString StarredTitle = new("message.starredTitle", "Starred messages");

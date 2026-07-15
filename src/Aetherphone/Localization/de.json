@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "Sprachnachricht aufnehmen",
   "message.editAction": "Bearbeiten",
   "message.editingLabel": "Nachricht bearbeiten",
-  "message.editedLabel": "bearbeitet",
+  "message.editedAt": "{0} bearbeitet",
   "message.starAction": "Markieren",
   "message.unstarAction": "Markierung entfernen",
   "message.starredTitle": "Markierte Nachrichten",

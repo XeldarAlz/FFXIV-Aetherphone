@@ -152,7 +152,7 @@
   "message.recordVoiceHint": "Записать голосовое сообщение",
   "message.editAction": "Изменить",
   "message.editingLabel": "Изменение сообщения",
-  "message.editedLabel": "изменено",
+  "message.editedAt": "{0} изменено",
   "message.starAction": "В избранное",
   "message.unstarAction": "Убрать из избранного",
   "message.starredTitle": "Избранные сообщения",
