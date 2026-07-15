@@ -25,8 +25,7 @@ internal sealed partial class VelvetShell
 
         using (AppSurface.Begin(area))
         {
-            storyTray.Draw(theme, VelvetTheme.Palette, stories.Rings, stories.HasOwnRing, ringPainter,
-                StartStoryCompose, OpenStoryRing);
+            stories.DrawTray(theme);
             var width = ImGui.GetContentRegionAvail().X;
             var feed = store.Feed;
             if (feed.Length == 0)
@@ -66,6 +65,12 @@ internal sealed partial class VelvetShell
             post.Open();
             router.Push(VelvetView.Compose);
         }
+    }
+
+    private void StartStoryCompose()
+    {
+        post.Open(true);
+        router.Push(VelvetView.Compose);
     }
 
     private void DrawPostCard(VelvetPostDto entry, float width)
@@ -108,7 +113,7 @@ internal sealed partial class VelvetShell
         var headerHitMax = new Vector2(card.Max.X - 44f * scale, card.Min.Y + headerHeight);
         if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))
         {
-            OpenStoryRing(authorRing);
+            stories.OpenRing(authorRing);
         }
         else if (UiInteract.Hover(headerHitMin, headerHitMax) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {

@@ -2,7 +2,6 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
@@ -29,7 +28,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private const float HeartbeatSeconds = 45f;
 
     private readonly VelvetStore store;
-    private readonly StoryStore stories;
+    private readonly StoryPresenter stories;
     private readonly VelvetLauncher launcher;
     private readonly SocialLauncher socialLauncher;
     private readonly LodestoneService lodestone;
@@ -45,10 +44,6 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly PhotoCarousel carousel = new();
     private readonly VelvetAvatarComposer avatar;
     private readonly VelvetPostComposer post;
-    private readonly StoryTrayRow storyTray;
-    private readonly StoryViewerOverlay storyViewer;
-    private readonly StoryRingPainter ringPainter = VelvetArt.StoryRing;
-    private readonly Func<StoryDto, StoryViewers> storyViewers;
     private readonly ViewRouter<VelvetView> router;
     private readonly RouterDraw<VelvetView> drawView;
     private readonly Action back;
@@ -57,8 +52,6 @@ internal sealed partial class VelvetShell : IPhoneApp
     private INavigator navigation = null!;
     private VelvetPage activeTab = VelvetPage.Discover;
     private float sinceHeartbeat = HeartbeatSeconds;
-    private StoryRingDto? pendingStoryRing;
-    private StoryDto[]? viewerItems;
 
     public VelvetShell(AethernetSession session, AethernetClient client, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
@@ -67,7 +60,9 @@ internal sealed partial class VelvetShell : IPhoneApp
         PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
     {
         store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys, visibility, realtimeSignals);
-        stories = new StoryStore(session, client, "Velvet stories");
+        stories = new StoryPresenter(session, client, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
+            new StoryConfirmLabels(L.Velvet.DeleteConfirm, L.Velvet.DeleteCancel, L.Velvet.Saving), "Velvet stories",
+            StartStoryCompose);
         this.launcher = launcher;
         this.socialLauncher = socialLauncher;
         this.lodestone = lodestone;
@@ -79,9 +74,6 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.social = social;
         avatar = new VelvetAvatarComposer(store, library);
         post = new VelvetPostComposer(store, stories, library);
-        storyTray = new StoryTrayRow(images, lodestone);
-        storyViewer = new StoryViewerOverlay(images, lodestone);
-        storyViewers = StoryViewersFor;
         router = new ViewRouter<VelvetView>(VelvetView.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();
@@ -137,7 +129,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         store.ClearDiscover();
         filterSheet.Close();
         activeTab = VelvetPage.Discover;
-        CloseStories();
+        stories.Close();
     }
 
     public void Draw(in PhoneContext context)
@@ -174,16 +166,16 @@ internal sealed partial class VelvetShell : IPhoneApp
         GateMenus();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
-        AdvanceStoryOpen();
+        stories.Advance();
         if (photoViewer.Active)
         {
             photoViewer.Draw(screen, theme);
             return;
         }
 
-        if (storyViewer.Active)
+        if (stories.Active)
         {
-            storyViewer.Draw(screen, theme, Plugin.Confirm.Active is not null);
+            stories.DrawViewer(screen, theme);
             return;
         }
 

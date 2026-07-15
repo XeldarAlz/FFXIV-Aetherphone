@@ -21,7 +21,7 @@ internal sealed class VelvetPostComposer
     private const int GridColumns = 3;
     private const float CropSmoothTime = 0.10f;
     private readonly VelvetStore store;
-    private readonly StoryStore stories;
+    private readonly StoryPresenter stories;
     private readonly PhotoLibrary library;
     private readonly List<string> selected = new();
     private readonly List<WallpaperCrop> crops = new();
@@ -46,7 +46,7 @@ internal sealed class VelvetPostComposer
     private bool cropDragging;
     private Vector2 cropLastDrag;
 
-    public VelvetPostComposer(VelvetStore store, StoryStore stories, PhotoLibrary library)
+    public VelvetPostComposer(VelvetStore store, StoryPresenter stories, PhotoLibrary library)
     {
         this.store = store;
         this.stories = stories;

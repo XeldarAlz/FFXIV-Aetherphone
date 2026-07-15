@@ -4,7 +4,6 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
@@ -67,13 +66,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
     private PostDto? menuPost;
-    private readonly StoryStore stories;
-    private readonly StoryTrayRow storyTray;
-    private readonly StoryViewerOverlay storyViewer;
-    private readonly StoryRingPainter ringPainter = AethergramArt.StoryRing;
-    private readonly Func<StoryDto, StoryViewers> storyViewers;
-    private StoryRingDto? pendingStoryRing;
-    private StoryDto[]? viewerItems;
+    private readonly StoryPresenter stories;
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
@@ -129,9 +122,9 @@ internal sealed partial class AethergramApp : IPhoneApp
         Configuration configuration, SocialNotificationService social)
     {
         store = new AethergramStore(session, client);
-        stories = new StoryStore(session, client, "Aethergram stories");
-        storyTray = new StoryTrayRow(images, lodestone);
-        storyViewer = new StoryViewerOverlay(images, lodestone);
+        stories = new StoryPresenter(session, client, images, lodestone, AethergramArt.StoryRing,
+            AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
+                L.Aethergram.Saving), "Aethergram stories", StartStoryCompose);
         this.launcher = launcher;
         this.gameData = gameData;
         this.configuration = configuration;
@@ -144,7 +137,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);
         openActivityPost = item => OpenDetailFromLink(item.PostId!);
-        storyViewers = StoryViewersFor;
     }
 
     private enum ComposeStage
@@ -186,16 +178,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         searchDraft = string.Empty;
         commentDraft = string.Empty;
         store.ClearDiscover();
-        CloseStories();
-    }
-
-    private void CloseStories()
-    {
-        storyViewer.Reset();
-        stories.CloseAuthor();
-        stories.ClearViewers();
-        pendingStoryRing = null;
-        viewerItems = null;
+        stories.Close();
     }
 
     public void Draw(in PhoneContext context)
@@ -208,16 +191,16 @@ internal sealed partial class AethergramApp : IPhoneApp
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
         AdvancePendingPhotoView();
-        AdvanceStoryOpen();
+        stories.Advance();
         if (photoViewer.Active)
         {
             photoViewer.Draw(screen, theme);
             return;
         }
 
-        if (storyViewer.Active)
+        if (stories.Active)
         {
-            storyViewer.Draw(screen, theme, Plugin.Confirm.Active is not null);
+            stories.DrawViewer(screen, theme);
             return;
         }
 
@@ -341,85 +324,6 @@ internal sealed partial class AethergramApp : IPhoneApp
         DrawFeedList(area, activeScope);
     }
 
-
-    private void OpenStoryRing(StoryRingDto ring)
-    {
-        pendingStoryRing = ring;
-        stories.OpenAuthor(ring.AuthorId);
-    }
-
-    private void AdvanceStoryOpen()
-    {
-        if (!storyViewer.Active && stories.OpenAuthorId is not null && pendingStoryRing is null)
-        {
-            stories.CloseAuthor();
-            viewerItems = null;
-        }
-
-        if (pendingStoryRing is not { } ring)
-        {
-            SyncViewerItems();
-            return;
-        }
-
-        var items = stories.OpenStories;
-        if (items.Length == 0)
-        {
-            if (!stories.GroupLoading)
-            {
-                pendingStoryRing = null;
-            }
-
-            return;
-        }
-
-        pendingStoryRing = null;
-        viewerItems = items;
-        stories.ClearViewers();
-        var label = ring.IsMe
-            ? Loc.T(L.Story.YourStory)
-            : SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
-        storyViewer.Open(items, label, ring.AuthorAvatarUrl, stories.MarkSeen, ring.IsMe, AskDeleteStory,
-            storyViewers);
-    }
-
-    private StoryViewers StoryViewersFor(StoryDto story)
-    {
-        stories.LoadViewers(story.Id);
-        return new StoryViewers(stories.Viewers, stories.ViewersTotal, stories.ViewersLoading);
-    }
-
-    // The store swaps in a fresh array off the worker thread after a delete, so the viewer is
-    // refreshed here on the draw thread rather than from the completion callback.
-    private void SyncViewerItems()
-    {
-        if (!storyViewer.Active)
-        {
-            return;
-        }
-
-        var items = stories.OpenStories;
-        if (ReferenceEquals(items, viewerItems))
-        {
-            return;
-        }
-
-        viewerItems = items;
-        storyViewer.Replace(items);
-    }
-
-    private void AskDeleteStory(StoryDto story)
-    {
-        Plugin.Confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Story.DeleteMessage),
-            ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
-            CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
-            BusyLabel = Loc.T(L.Aethergram.Saving),
-            FailedMessage = Loc.T(L.Story.DeleteFailed),
-            ConfirmAsync = done => stories.DeleteStory(story.Id, done),
-        });
-    }
 
     private void DrawActivityTab(Rect area)
     {
@@ -565,8 +469,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
-            storyTray.Draw(theme, AppPalettes.Aethergram, stories.Rings, stories.HasOwnRing, ringPainter,
-                StartStoryCompose, OpenStoryRing);
+            stories.DrawTray(theme);
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
@@ -636,7 +539,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), subline, AppPalettes.Aethergram.MutedInk, 0.85f);
         if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))
         {
-            OpenStoryRing(authorRing);
+            stories.OpenRing(authorRing);
         }
         else if (UiInteract.HoverClick(new Vector2(innerX, origin.Y + pad),
                 new Vector2(origin.X + width - pad - 30f * scale, origin.Y + pad + headerBlock)))
