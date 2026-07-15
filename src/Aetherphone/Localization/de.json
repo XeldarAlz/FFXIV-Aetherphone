@@ -442,7 +442,7 @@
   "settings.commandTest": "Sendet eine Beispielbenachrichtigung",
   "changelog.r0970.0": "Velvet hat jetzt Storys: Teile ein Foto, das deine Verbindungen 24 Stunden lang ansehen können, bevor es von selbst verschwindet",
   "changelog.r0970.1": "Tippe bei deiner eigenen Story auf die Anzahl der Aufrufe, um zu sehen, wer sie wann angesehen hat",
-  "changelog.r0970.2": "Tippe in Chirper, Aethergram oder Velvet auf ein Profilfoto, um es vergrößert zu öffnen",
+  "changelog.r0970.2": "Tippe in Chirper, Aethergram, Velvet oder Message auf ein Profilfoto, um es vergrößert zu öffnen",
   "changelog.r0970.3": "Die Story-Leiste scrollt jetzt mit dem Feed mit, statt darüber fixiert zu bleiben",
   "changelog.r0970.4": "Die unteren Tabs in Aethergram leuchten jetzt auf und nennen ihren Namen, wenn du mit dem Zeiger darauf gehst",
   "changelog.r0970.5": "Benachrichtigungszeilen werden in Chirper, Aethergram und Velvet jetzt hervorgehoben, wenn du mit dem Zeiger darauf gehst",

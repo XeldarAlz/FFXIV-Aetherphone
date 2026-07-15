@@ -442,7 +442,7 @@
   "settings.commandTest": "サンプル通知を送信",
   "changelog.r0970.0": "Velvet にストーリーが追加されました。つながっている人が24時間だけ見られる写真を共有でき、そのあとは自動的に消えます",
   "changelog.r0970.1": "自分のストーリーの閲覧数をタップすると、誰がいつ見たかを確認できるようになりました",
-  "changelog.r0970.2": "Chirper、Aethergram、Velvet でプロフィール写真をタップすると、拡大表示されるようになりました",
+  "changelog.r0970.2": "Chirper、Aethergram、Velvet、Message でプロフィール写真をタップすると、拡大表示されるようになりました",
   "changelog.r0970.3": "ストーリーの一覧が上部に固定されず、フィードと一緒にスクロールするようになりました",
   "changelog.r0970.4": "Aethergram の下部タブにポインタを合わせると、明るく光って名前が表示されるようになりました",
   "changelog.r0970.5": "Chirper、Aethergram、Velvet で通知の行にポインタを合わせると、ハイライトされるようになりました",

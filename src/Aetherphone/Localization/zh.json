@@ -442,7 +442,7 @@
   "settings.commandTest": "发送测试通知",
   "changelog.r0970.0": "Velvet 现在也支持快拍：分享一张你的连接可以观看 24 小时的照片，之后它会自动消失",
   "changelog.r0970.1": "现在可以点按自己快拍的观看次数，查看谁在什么时候看过",
-  "changelog.r0970.2": "在 Chirper、Aethergram 或 Velvet 中点按头像，现在会放大显示",
+  "changelog.r0970.2": "在 Chirper、Aethergram、Velvet 或 Message 中点按头像，现在会放大显示",
   "changelog.r0970.3": "快拍栏现在会随信息流一起滚动，而不再固定在帖子上方",
   "changelog.r0970.4": "将指针移到 Aethergram 底部标签上时，标签现在会亮起并显示名称",
   "changelog.r0970.5": "在 Chirper、Aethergram 和 Velvet 中，将指针移到通知行上时现在会高亮显示",

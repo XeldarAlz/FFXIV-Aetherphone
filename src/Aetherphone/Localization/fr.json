@@ -442,7 +442,7 @@
   "settings.commandTest": "Envoie une notification d'exemple",
   "changelog.r0970.0": "Velvet propose désormais les stories : partagez une photo que vos connexions peuvent regarder pendant 24 heures avant qu'elle ne disparaisse d'elle-même",
   "changelog.r0970.1": "Vous pouvez désormais toucher le nombre de vues de votre story pour voir qui l'a regardée, et quand",
-  "changelog.r0970.2": "Toucher une photo de profil dans Chirper, Aethergram ou Velvet l'ouvre désormais en grand",
+  "changelog.r0970.2": "Toucher une photo de profil dans Chirper, Aethergram, Velvet ou Message l'ouvre désormais en grand",
   "changelog.r0970.3": "La barre de stories défile désormais avec le fil au lieu de rester figée au-dessus des publications",
   "changelog.r0970.4": "Les onglets du bas d'Aethergram s'allument désormais et affichent leur nom au passage du pointeur",
   "changelog.r0970.5": "Les lignes de notification sont désormais mises en évidence au passage du pointeur dans Chirper, Aethergram et Velvet",

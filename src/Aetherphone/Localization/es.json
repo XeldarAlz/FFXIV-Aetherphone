@@ -442,7 +442,7 @@
   "settings.commandTest": "Enviar una notificación de prueba",
   "changelog.r0970.0": "Velvet ahora tiene historias: comparte una foto que tus conexiones pueden ver durante 24 horas antes de que desaparezca sola",
   "changelog.r0970.1": "Ahora puedes tocar el número de vistas de tu propia historia para ver quién la vio y cuándo",
-  "changelog.r0970.2": "Tocar una foto de perfil en Chirper, Aethergram o Velvet ahora la abre ampliada",
+  "changelog.r0970.2": "Tocar una foto de perfil en Chirper, Aethergram, Velvet o Message ahora la abre ampliada",
   "changelog.r0970.3": "La fila de historias ahora se desplaza junto con el feed en lugar de quedarse fija encima de las publicaciones",
   "changelog.r0970.4": "Las pestañas inferiores de Aethergram ahora se iluminan y dicen su nombre cuando pasas el puntero por encima",
   "changelog.r0970.5": "Las filas de notificaciones ahora se resaltan al pasar el puntero por encima en Chirper, Aethergram y Velvet",

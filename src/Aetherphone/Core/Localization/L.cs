@@ -517,7 +517,7 @@ internal static class L
         {
             new("changelog.r0970.0", "Velvet now has stories: share a photo your connections can watch for 24 hours before it disappears on its own"),
             new("changelog.r0970.1", "You can now tap the seen count on your own story to see everyone who watched it, and when"),
-            new("changelog.r0970.2", "Tapping a profile photo in Chirper, Aethergram, or Velvet now opens it enlarged"),
+            new("changelog.r0970.2", "Tapping a profile photo in Chirper, Aethergram, Velvet, or Message now opens it enlarged"),
             new("changelog.r0970.3", "The story tray now scrolls away with the feed instead of staying pinned above the posts"),
             new("changelog.r0970.4", "Aethergram's bottom tabs now light up and name themselves as you point at them"),
             new("changelog.r0970.5", "Notification rows now highlight as you point at them in Chirper, Aethergram, and Velvet"),

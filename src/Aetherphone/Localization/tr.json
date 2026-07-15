@@ -442,7 +442,7 @@
   "settings.commandTest": "Örnek bir bildirim gönderir",
   "changelog.r0970.0": "Velvet'a hikayeler geldi: bağlantılarınızın 24 saat boyunca izleyebileceği, sonra kendiliğinden kaybolan bir fotoğraf paylaşın",
   "changelog.r0970.1": "Artık kendi hikayenizdeki görüntülenme sayısına dokunarak kimin ne zaman izlediğini görebilirsiniz",
-  "changelog.r0970.2": "Chirper, Aethergram veya Velvet'ta bir profil fotoğrafına dokunmak artık fotoğrafı büyütüyor",
+  "changelog.r0970.2": "Chirper, Aethergram, Message veya Velvet'ta bir profil fotoğrafına dokunmak artık fotoğrafı büyütüyor",
   "changelog.r0970.3": "Hikaye şeridi artık gönderilerin üstünde sabit kalmak yerine akışla birlikte kayıyor",
   "changelog.r0970.4": "Aethergram'ın alt sekmeleri, imleci üzerlerine getirdiğinizde artık aydınlanıyor ve adlarını gösteriyor",
   "changelog.r0970.5": "Chirper, Aethergram ve Velvet'ta bildirim satırları, imleci üzerlerine getirdiğinizde artık vurgulanıyor",
