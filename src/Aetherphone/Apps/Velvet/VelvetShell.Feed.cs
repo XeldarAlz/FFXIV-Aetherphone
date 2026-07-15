@@ -25,16 +25,19 @@ internal sealed partial class VelvetShell
 
         using (AppSurface.Begin(area))
         {
+            storyTray.Draw(theme, VelvetTheme.Palette, stories.Rings, HasOwnStory, ringPainter, StartStoryCompose,
+                OpenStoryRing);
             var width = ImGui.GetContentRegionAvail().X;
             var feed = store.Feed;
             if (feed.Length == 0)
             {
+                var emptyY = ImGui.GetCursorScreenPos().Y + 60f * scale;
                 var message = store.LoadingFeed ? Loc.T(L.Common.Loading) : Loc.T(L.Velvet.FeedNone);
-                Typography.DrawCentered(new Vector2(area.Center.X, area.Min.Y + 90f * scale), message,
-                    VelvetTheme.TitleInk, TextStyles.Headline);
+                Typography.DrawCentered(new Vector2(area.Center.X, emptyY), message, VelvetTheme.TitleInk,
+                    TextStyles.Headline);
                 if (!store.LoadingFeed)
                 {
-                    Typography.DrawCentered(new Vector2(area.Center.X, area.Min.Y + 116f * scale),
+                    Typography.DrawCentered(new Vector2(area.Center.X, emptyY + 26f * scale),
                         Loc.T(L.Velvet.FeedNoneHint), VelvetTheme.MutedInk, TextStyles.Subheadline);
                 }
             }
@@ -82,11 +85,19 @@ internal sealed partial class VelvetShell
         VCard.Draw(drawList, card.Min, card.Max, Metrics.Radius.Card * scale, VCardStyle.Plain);
 
         var headerCenterY = card.Min.Y + 6f * scale + 20f * scale;
-        var avatarCenter = new Vector2(card.Min.X + innerPad + 16f * scale, headerCenterY);
+        var avatarRadius = 16f * scale;
+        var avatarCenter = new Vector2(card.Min.X + innerPad + avatarRadius, headerCenterY);
         var authorName = DisplayNameOf(entry.OwnerDisplayName, entry.OwnerHandle);
-        VAvatar.Draw(drawList, avatarCenter, 16f * scale, theme, authorName, string.Empty, entry.OwnerAvatarUrl, images,
-            lodestone, -1);
-        var textLeft = avatarCenter.X + 16f * scale + 10f * scale;
+        var ringRadius = avatarRadius + 3f * scale;
+        var hasStory = stories.TryRing(entry.OwnerId, out var authorRing);
+        if (hasStory)
+        {
+            VelvetArt.StoryRing(drawList, avatarCenter, ringRadius, scale, authorRing.HasUnseen);
+        }
+
+        VAvatar.Draw(drawList, avatarCenter, hasStory ? avatarRadius - 1f * scale : avatarRadius, theme, authorName,
+            string.Empty, entry.OwnerAvatarUrl, images, lodestone, -1);
+        var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
         Typography.Draw(new Vector2(textLeft, headerCenterY - 14f * scale), authorName, VelvetTheme.TitleInk,
             TextStyles.Headline);
         Typography.Draw(new Vector2(textLeft, headerCenterY + 2f * scale),
@@ -95,7 +106,12 @@ internal sealed partial class VelvetShell
 
         var headerHitMin = new Vector2(card.Min.X, card.Min.Y);
         var headerHitMax = new Vector2(card.Max.X - 44f * scale, card.Min.Y + headerHeight);
-        if (UiInteract.Hover(headerHitMin, headerHitMax) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (hasStory && UiInteract.HoverClick(avatarCenter - new Vector2(ringRadius, ringRadius),
+                avatarCenter + new Vector2(ringRadius, ringRadius)))
+        {
+            OpenStoryRing(authorRing);
+        }
+        else if (UiInteract.Hover(headerHitMin, headerHitMax) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             OpenProfile(entry.OwnerId);
         }

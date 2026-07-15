@@ -186,6 +186,16 @@ internal sealed partial class AethergramApp : IPhoneApp
         searchDraft = string.Empty;
         commentDraft = string.Empty;
         store.ClearDiscover();
+        CloseStories();
+    }
+
+    private void CloseStories()
+    {
+        storyViewer.Reset();
+        stories.CloseAuthor();
+        stories.ClearViewers();
+        pendingStoryRing = null;
+        viewerItems = null;
     }
 
     public void Draw(in PhoneContext context)
@@ -328,11 +338,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         sinceForYou += ImGui.GetIO().DeltaTime;
         sinceFollowing += ImGui.GetIO().DeltaTime;
         TickRefresh(activeScope);
-        var scale = ImGuiHelpers.GlobalScale;
-        var trayRect = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + StoryTrayRow.Height * scale));
-        storyTray.Draw(trayRect, theme, AppPalettes.Aethergram, stories.Rings, HasOwnStory, ringPainter,
-            StartStoryCompose, OpenStoryRing);
-        DrawFeedList(new Rect(new Vector2(area.Min.X, trayRect.Max.Y), area.Max), activeScope);
+        DrawFeedList(area, activeScope);
     }
 
     private bool HasOwnStory => store.Me is { } me && stories.TryRing(me.Id, out _);
@@ -372,7 +378,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         viewerItems = items;
         stories.ClearViewers();
         var label = ring.IsMe
-            ? Loc.T(L.Aethergram.YourStory)
+            ? Loc.T(L.Story.YourStory)
             : SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
         storyViewer.Open(items, label, ring.AuthorAvatarUrl, stories.MarkSeen, ring.IsMe, AskDeleteStory,
             storyViewers);
@@ -407,7 +413,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     {
         Plugin.Confirm.Ask(new ConfirmRequest
         {
-            Message = Loc.T(L.Aethergram.DeleteStoryMessage),
+            Message = Loc.T(L.Story.DeleteMessage),
             ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
             CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
             BusyLabel = Loc.T(L.Aethergram.Saving),
@@ -560,12 +566,15 @@ internal sealed partial class AethergramApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
+            storyTray.Draw(theme, AppPalettes.Aethergram, stories.Rings, HasOwnStory, ringPainter, StartStoryCompose,
+                OpenStoryRing);
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
                     scope == SocialFeedScope.Following ? Loc.T(L.Aethergram.FollowingEmpty) :
                     Loc.T(L.Aethergram.ExploreEmpty);
-                Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 90f * ImGuiHelpers.GlobalScale),
+                Typography.DrawCentered(
+                    new Vector2(listRect.Center.X, ImGui.GetCursorScreenPos().Y + 60f * ImGuiHelpers.GlobalScale),
                     message, AppPalettes.Aethergram.MutedInk);
             }
             else
@@ -822,7 +831,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         {
             Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(AppPalettes.Aethergram.FieldSurface));
             Typography.DrawCentered(rect.Center,
-                Loc.T(images.Failed(url) ? L.Aethergram.ImageFailed : L.Common.Loading), AppPalettes.Aethergram.MutedInk, 0.85f);
+                Loc.T(images.Failed(url) ? L.Common.ImageFailed : L.Common.Loading), AppPalettes.Aethergram.MutedInk, 0.85f);
         }
         else
         {
