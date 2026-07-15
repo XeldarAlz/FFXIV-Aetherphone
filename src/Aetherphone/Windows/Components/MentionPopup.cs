@@ -34,6 +34,7 @@ internal sealed class MentionPopup
         if (!autocomplete.IsOpen)
         {
             openedAt = -1d;
+            autocomplete.PointerOver = false;
             return -1;
         }
 
@@ -64,6 +65,7 @@ internal sealed class MentionPopup
 
         var min = new Vector2(left, top);
         var max = new Vector2(left + width, top + height);
+        autocomplete.PointerOver = ImGui.IsMouseHoveringRect(min, max);
         Elevation.Floating(drawList, min, max, 14f * scale, scale);
         Squircle.Fill(drawList, min, max, 14f * scale,
             ImGui.GetColorU32(Palette.WithAlpha(theme.GroupedCard, MathF.Min(0.98f, theme.GroupedCard.W + 0.4f) * alpha)));

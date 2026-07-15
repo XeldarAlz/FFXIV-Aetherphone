@@ -124,7 +124,7 @@ internal static class MentionField
             mentions.Anchor = new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
             mentions.Track(value, editor.Cursor, ImGui.GetIO().DeltaTime);
         }
-        else
+        else if (!mentions.PointerOver)
         {
             mentions.Close();
         }

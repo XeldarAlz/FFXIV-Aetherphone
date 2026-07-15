@@ -147,7 +147,7 @@ internal static class SoftWrapField
                 mentions.Track(editor.Logical, editor.LogicalCursor, ImGui.GetIO().DeltaTime);
             }
         }
-        else
+        else if (!mentions.PointerOver)
         {
             mentions.Close();
         }

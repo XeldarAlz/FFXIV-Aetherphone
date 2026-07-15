@@ -28,6 +28,8 @@ internal sealed class MentionAutocomplete
 
     public Rect Anchor { get; set; }
 
+    public bool PointerOver { get; set; }
+
     public MentionSuggestDto[] Rows
     {
         get
@@ -174,6 +176,7 @@ internal sealed class MentionAutocomplete
         applied = string.Empty;
         debounce = 0f;
         SelectedIndex = 0;
+        PointerOver = false;
         visible = Array.Empty<MentionSuggestDto>();
         suggestions.Clear();
     }
