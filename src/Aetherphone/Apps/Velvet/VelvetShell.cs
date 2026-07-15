@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
@@ -38,6 +39,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly SocialNotificationService social;
     private readonly AppSkin ui = new(VelvetTheme.Palette);
     private readonly PhotoViewerOverlay photoViewer = new();
+    private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
     private readonly VelvetAvatarComposer avatar;
     private readonly VelvetPostComposer post;
@@ -118,6 +120,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     public void OnClosed()
     {
         router.Reset();
+        avatarLightbox.Reset();
         store.ClearDiscover();
         filterSheet.Close();
         activeTab = VelvetPage.Discover;
@@ -163,7 +166,15 @@ internal sealed partial class VelvetShell : IPhoneApp
             return;
         }
 
-        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        using (InputShield.Engage(avatarLightbox.Expanded))
+        {
+            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
+        if (avatarLightbox.Active)
+        {
+            avatarLightbox.Draw(screen, theme);
+        }
     }
 
     public void Dispose()

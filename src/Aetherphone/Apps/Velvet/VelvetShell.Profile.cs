@@ -71,6 +71,7 @@ internal sealed partial class VelvetShell
             Vector4? ring = isMe ? VelvetTheme.Rose : connected ? VelvetTheme.Moonlight : null;
             VAvatar.Draw(drawList, avatarCenter, radius, theme, name, user.World, user.AvatarUrl, images, lodestone, -1,
                 ring);
+            avatarLightbox.TryOpen(avatarCenter, radius, user.AvatarUrl, images);
 
             var lineY = avatarCenter.Y + radius + 22f * scale;
             var nameSize = Typography.Measure(name, TextStyles.Title1);

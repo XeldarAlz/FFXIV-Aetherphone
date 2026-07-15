@@ -41,6 +41,18 @@ internal static class UiInteract
         return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
+    public static bool HoverClickCircle(Vector2 center, float radius)
+    {
+        var offset = ImGui.GetMousePos() - center;
+        if (offset.LengthSquared() > radius * radius)
+        {
+            return false;
+        }
+
+        var corner = new Vector2(radius, radius);
+        return HoverClick(center - corner, center + corner);
+    }
+
     public static void HoverHighlight(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding)
     {
         if (!Hover(min, max))

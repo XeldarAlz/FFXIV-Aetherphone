@@ -75,6 +75,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private StoryRingDto? pendingStoryRing;
     private StoryDto[]? viewerItems;
     private readonly PhotoViewerOverlay photoViewer = new();
+    private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
     private string? pendingViewUrl;
     private double pendingViewAt;
@@ -180,6 +181,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     public void OnClosed()
     {
         router.Reset();
+        avatarLightbox.Reset();
         caption = string.Empty;
         searchDraft = string.Empty;
         commentDraft = string.Empty;
@@ -209,7 +211,15 @@ internal sealed partial class AethergramApp : IPhoneApp
             return;
         }
 
-        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        using (InputShield.Engage(avatarLightbox.Expanded))
+        {
+            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
+        if (avatarLightbox.Active)
+        {
+            avatarLightbox.Draw(screen, theme);
+        }
     }
 
     private void DrawView(AethergramRoute route, Rect area, int depth)

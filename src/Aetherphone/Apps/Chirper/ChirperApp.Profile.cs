@@ -105,6 +105,7 @@ internal sealed partial class ChirperApp
         drawList.AddCircleFilled(avatarCenter, avatarRadius + 2.5f * scale,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)), 64);
         DrawAvatar(drawList, avatarCenter, avatarRadius, user.Name, user.World, user.AvatarUrl, 1.5f, 64);
+        avatarLightbox.TryOpen(avatarCenter, avatarRadius, user.AvatarUrl, images);
         var buttonHeight = 34f * scale;
         var buttonWidth = 122f * scale;
         var buttonMax = new Vector2(origin.X + width - pad, avatarCenter.Y + buttonHeight * 0.5f);

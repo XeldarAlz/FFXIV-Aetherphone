@@ -47,6 +47,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly SocialNotificationService social;
     private readonly ChirperAvatarComposer avatar;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
+    private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
     private readonly Action back;
@@ -119,6 +120,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     public void OnClosed()
     {
         router.Reset();
+        avatarLightbox.Reset();
         draft = string.Empty;
         searchDraft = string.Empty;
         actions.Reset();
@@ -134,7 +136,15 @@ internal sealed partial class ChirperApp : IPhoneApp
         actions.Tick(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
-        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        using (InputShield.Engage(avatarLightbox.Expanded))
+        {
+            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
+        if (avatarLightbox.Active)
+        {
+            avatarLightbox.Draw(screen, theme);
+        }
     }
 
     private void DrawView(ChirperRoute route, Rect area, int depth)
