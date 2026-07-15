@@ -756,6 +756,7 @@
   "encryption.notSignedIn": "Melde dich zuerst bei deinem Aethernet-Konto an.",
   "encryption.unsupportedBody": "Dieser Computer kann den Sicherheitsschlüssel für verschlüsselte Chats nicht erstellen, daher bleiben Nachrichten- und Velvet-Chats hier nicht verfügbar. Das passiert meist, wenn das Spiel über Wine oder Proton läuft. Der Rest von Aetherphone funktioniert normal.",
   "encryption.settingUp": "Verschlüsselung wird eingerichtet…",
+  "encryption.unsupportedSummary": "Dieser PC kann keine Verschlüsselung einrichten, daher sind Nachrichten hier nicht verschlüsselt.",
   "encryption.activeHint": "Die Verschlüsselung ist auf diesem Gerät aktiv. Sie funktioniert automatisch, nichts einzurichten.",
   "encryption.newDeviceHint": "Auf einem neuen Computer wird automatisch ein neuer Schlüssel erstellt. Ältere Nachrichten werden wieder lesbar, sobald deine Gesprächspartner online kommen.",
   "encryption.forgotTitle": "Verschlüsselungsschlüssel zurücksetzen",

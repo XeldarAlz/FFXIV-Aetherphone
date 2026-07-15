@@ -756,6 +756,7 @@
   "encryption.notSignedIn": "先にAethernetアカウントにサインインしてください。",
   "encryption.unsupportedBody": "このコンピューターは暗号化チャットに必要なセキュリティキーを作成できないため、メッセージとVelvetのチャットはここでは利用できません。これはゲームをWineまたはProtonで実行している場合に起こります。Aetherphoneのその他の機能は通常どおり動作します。",
   "encryption.settingUp": "暗号化を設定しています…",
+  "encryption.unsupportedSummary": "このPCでは暗号化を設定できないため、ここでのメッセージは暗号化されません。",
   "encryption.activeHint": "このデバイスで暗号化が有効です。自動的に機能するため、設定は不要です。",
   "encryption.newDeviceHint": "新しいデバイスでは新しいキーが自動的に作成されます。チャット相手がオンラインになると、以前のメッセージは再び読めるようになります。",
   "encryption.forgotTitle": "暗号化キーをリセット",

@@ -756,6 +756,7 @@
   "encryption.notSignedIn": "Connectez-vous d'abord à votre compte Aethernet.",
   "encryption.unsupportedBody": "Cet ordinateur ne peut pas créer la clé de sécurité nécessaire aux discussions chiffrées ; les discussions Messages et Velvet restent donc indisponibles ici. Cela arrive généralement lorsque le jeu s’exécute via Wine ou Proton. Le reste d’Aetherphone fonctionne normalement.",
   "encryption.settingUp": "Configuration du chiffrement…",
+  "encryption.unsupportedSummary": "Ce PC ne peut pas configurer le chiffrement, les messages ne sont donc pas chiffrés ici.",
   "encryption.activeHint": "Le chiffrement est actif sur cet appareil. Il fonctionne automatiquement. Rien à configurer.",
   "encryption.newDeviceHint": "Sur un nouvel ordinateur, une nouvelle clé est créée automatiquement. Les anciens messages redeviennent lisibles dès que vos interlocuteurs se connectent.",
   "encryption.forgotTitle": "Réinitialiser la clé de chiffrement",

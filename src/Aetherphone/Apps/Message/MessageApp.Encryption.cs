@@ -95,6 +95,11 @@ internal sealed partial class MessageApp
             return Loc.T(L.Encryption.NotSignedIn);
         }
 
+        if (store.VaultState == KeyVaultState.Unsupported)
+        {
+            return Loc.T(L.Encryption.UnsupportedSummary);
+        }
+
         if (store.VaultState == KeyVaultState.Provisioning)
         {
             return Loc.T(L.Encryption.SettingUp);

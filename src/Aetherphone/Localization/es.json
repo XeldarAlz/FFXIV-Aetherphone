@@ -756,6 +756,7 @@
   "encryption.notSignedIn": "Primero inicia sesión en tu cuenta de Aethernet.",
   "encryption.unsupportedBody": "Este ordenador no puede crear la clave de seguridad que necesitan los chats cifrados, así que los chats de Mensajes y Velvet seguirán sin estar disponibles aquí. Esto suele ocurrir cuando el juego se ejecuta con Wine o Proton. El resto de Aetherphone funciona con normalidad.",
   "encryption.settingUp": "Configurando el cifrado…",
+  "encryption.unsupportedSummary": "Este PC no puede configurar el cifrado, así que los mensajes aquí no están cifrados.",
   "encryption.activeHint": "El cifrado está activo en este dispositivo. Funciona automáticamente: no hay nada que configurar.",
   "encryption.newDeviceHint": "En un ordenador nuevo se crea una clave nueva automáticamente. Los mensajes antiguos vuelven a ser legibles cuando tus contactos se conectan.",
   "encryption.forgotTitle": "Restablecer clave de cifrado",

@@ -756,6 +756,7 @@
   "encryption.notSignedIn": "请先登录你的 Aethernet 账户。",
   "encryption.unsupportedBody": "这台电脑无法创建加密聊天所需的安全密钥，因此“信息”和 Velvet 聊天在此不可用。这通常发生在游戏通过 Wine 或 Proton 运行时。Aetherphone 的其余功能一切正常。",
   "encryption.settingUp": "正在设置加密…",
+  "encryption.unsupportedSummary": "这台电脑无法设置加密，因此这里的消息不会被加密。",
   "encryption.activeHint": "此设备上的加密已启用。它会自动运行，无需任何设置。",
   "encryption.newDeviceHint": "在新设备上会自动创建新的密钥。当聊天对象上线后，之前的消息将重新可读。",
   "encryption.forgotTitle": "重置加密密钥",

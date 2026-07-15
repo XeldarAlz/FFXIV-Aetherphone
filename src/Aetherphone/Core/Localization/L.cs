@@ -940,6 +940,7 @@ internal static class L
         public static readonly LocString NotSignedIn = new("encryption.notSignedIn", "Sign in to your Aethernet account first.");
         public static readonly LocString UnsupportedBody = new("encryption.unsupportedBody", "This computer cannot create the security key that encrypted chats need, so Messages and Velvet chats stay unavailable here. This usually happens when the game runs through Wine or Proton. The rest of Aetherphone works normally.");
         public static readonly LocString SettingUp = new("encryption.settingUp", "Setting up encryption…");
+        public static readonly LocString UnsupportedSummary = new("encryption.unsupportedSummary", "This PC cannot set up encryption, so messages here are not encrypted.");
         public static readonly LocString ActiveHint = new("encryption.activeHint", "Encryption is active on this device. It works automatically. There is nothing to set up.");
         public static readonly LocString NewDeviceHint = new("encryption.newDeviceHint", "On a new computer a fresh key is created automatically. Older messages become readable again once your chat partners come online.");
         public static readonly LocString ForgotTitle = new("encryption.forgotTitle", "Reset encryption key");

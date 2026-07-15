@@ -756,6 +756,7 @@
   "encryption.notSignedIn": "Önce Aethernet hesabınıza giriş yapın.",
   "encryption.unsupportedBody": "Bu bilgisayar şifreli sohbetler için gereken güvenlik anahtarını oluşturamıyor, bu yüzden Mesajlar ve Velvet sohbetleri burada kullanılamıyor. Bu genellikle oyun Wine veya Proton üzerinden çalıştığında olur. Aetherphone’un geri kalanı normal şekilde çalışır.",
   "encryption.settingUp": "Şifreleme kuruluyor…",
+  "encryption.unsupportedSummary": "Bu bilgisayar şifrelemeyi kuramıyor, bu yüzden buradaki mesajlar şifrelenmiyor.",
   "encryption.activeHint": "Şifreleme bu cihazda etkin. Otomatik çalışır. Kurmanız gereken bir şey yok.",
   "encryption.newDeviceHint": "Yeni bir bilgisayarda otomatik olarak yeni bir anahtar oluşturulur. Eski mesajlar, konuştuğunuz kişiler çevrimiçi olduğunda yeniden okunabilir hale gelir.",
   "encryption.forgotTitle": "Şifreleme anahtarını sıfırla",
