@@ -553,6 +553,8 @@ internal static class L
                 "The phone now tells you when a newer Aetherphone is out: an update button appears beneath it, and clicking it takes you straight to Dalamud's plugin installer"),
             new("changelog.r0970.35",
                 "Fixed the phone forgetting where you last left it minimized, so minimizing it again returns it to that spot instead of the full phone's corner"),
+            new("changelog.r0970.36",
+                "Fixed the phone forgetting where you had placed it, full size and minimized, whenever the plugin was turned off and on again or the game restarted"),
         };
 
         public static readonly LocString[] Release0960 =

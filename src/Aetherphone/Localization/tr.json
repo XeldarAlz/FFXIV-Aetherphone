@@ -476,6 +476,7 @@
   "changelog.r0970.33": "Küçük yuvarlatılmış köşelerin kenarlarında benekler beliriyordu",
   "changelog.r0970.34": "Telefon artık daha yeni bir Aetherphone çıktığında haber veriyor: altında bir güncelleme düğmesi beliriyor ve tıkladığınızda sizi doğrudan Dalamud eklenti yükleyicisine götürüyor",
   "changelog.r0970.35": "Telefon, onu en son nerede küçültülmüş bıraktığınızı unutuyor ve yeniden küçülttüğünüzde o yere dönmek yerine tam telefonun köşesine doğru büzülüyordu",
+  "changelog.r0970.36": "Eklenti kapatılıp yeniden açıldığında ya da oyun yeniden başlatıldığında telefon, onu tam boyutta ve küçültülmüş halde nereye koyduğunuzu unutuyordu",
   "changelog.r0960.0":"Velvet sıfırdan yeniden inşa edildi: gece sonrasına yakışan bir görünüm ve Keşfet çevresinde yeniden çizilmiş tüm ekranlar",
   "changelog.r0960.1": "Velvet'te Keşfet filtreleri artık bir filtre düğmesinin arkasında duruyor, böylece ekranın tamamı göz attığın kişilere kalıyor",
   "changelog.r0960.2": "Velvet'in rol ve etiket seçicileri artık rol yapma topluluklarının kendilerini gerçekte nasıl tanımladığına uyan kategorilere ayrıldı",

@@ -476,6 +476,7 @@
   "changelog.r0970.33": "Aparecían motas en los bordes de las esquinas redondeadas pequeñas",
   "changelog.r0970.34": "El teléfono ahora te avisa cuando hay un Aetherphone más reciente: debajo aparece un botón de actualización que te lleva directamente al instalador de plugins de Dalamud",
   "changelog.r0970.35": "El teléfono olvidaba dónde lo habías dejado minimizado por última vez y, al minimizarlo de nuevo, encogía hacia la esquina del teléfono completo en lugar de volver a ese sitio",
+  "changelog.r0970.36": "El teléfono olvidaba dónde lo habías colocado, a tamaño completo y minimizado, en cuanto el plugin se desactivaba y se volvía a activar o el juego se reiniciaba",
   "changelog.r0960.0":"Velvet se ha reconstruido desde cero, con una estética after-dark y todas sus pantallas rediseñadas en torno a Descubrir",
   "changelog.r0960.1": "Los filtros de Descubrir en Velvet ahora viven tras un botón de filtro, dejando toda la pantalla a las personas que estás explorando",
   "changelog.r0960.2": "Los selectores de roles y etiquetas de Velvet ahora están ordenados en categorías que reflejan cómo se describen realmente las comunidades de rol",

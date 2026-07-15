@@ -476,6 +476,7 @@
   "changelog.r0970.33": "Fixed speckles appearing along the edges of small rounded corners",
   "changelog.r0970.34": "The phone now tells you when a newer Aetherphone is out: an update button appears beneath it, and clicking it takes you straight to Dalamud's plugin installer",
   "changelog.r0970.35": "Fixed the phone forgetting where you last left it minimized, so minimizing it again returns it to that spot instead of the full phone's corner",
+  "changelog.r0970.36": "Fixed the phone forgetting where you had placed it, full size and minimized, whenever the plugin was turned off and on again or the game restarted",
   "changelog.r0960.0": "Velvet has been rebuilt from the ground up, with an after-dark look and every screen redrawn around Discover",
   "changelog.r0960.1": "Velvet's Discover filters now live behind a filter button, leaving the whole screen to the people you are browsing",
   "changelog.r0960.2": "Velvet's role and tag pickers are now sorted into categories that match how roleplay communities actually describe themselves",
