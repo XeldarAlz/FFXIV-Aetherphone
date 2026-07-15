@@ -20,6 +20,7 @@ internal static class L
         public static readonly LocString PhotoCounter = new("common.photoCounter", "{0}/{1}");
         public static readonly LocString PhotoStep = new("common.photoStep", "Photo {0} of {1}");
         public static readonly LocString PhotoLimit = new("common.photoLimit", "You can add up to {0} photos");
+        public static readonly LocString ImageFailed = new("common.imageFailed", "Couldn't load image");
     }
 
     internal static class Social
@@ -39,6 +40,17 @@ internal static class L
         public static readonly LocString ActivityTitle = new("social.activityTitle", "Notifications");
         public static readonly LocString ActivityTab = new("social.activityTab", "Activity");
         public static readonly LocString ActivityEmpty = new("social.activityEmpty", "Nothing here yet. Interactions with your posts will show up here");
+    }
+
+    internal static class Story
+    {
+        public static readonly LocString YourStory = new("story.yourStory", "Your story");
+        public static readonly LocString NewStory = new("story.newStory", "New Story");
+        public static readonly LocString DeleteMessage = new("story.deleteMessage", "Delete this story? It disappears for everyone right away.");
+        public static readonly LocPlural SeenBy = new("story.seenBy", "Seen by {0}", "Seen by {0}");
+        public static readonly LocString NoViewers = new("story.noViewers", "No one has seen this yet");
+        public static readonly LocString ViewersTrimmed = new("story.viewersTrimmed", "Showing the latest {0} of {1}");
+        public static readonly LocString DeleteFailed = new("story.deleteFailed", "Couldn't delete the story");
     }
 
     internal static class Moderation
@@ -1151,12 +1163,6 @@ internal static class L
     internal static class Aethergram
     {
         public static readonly LocString SetUpAccount = new("aethergram.setUpAccount", "Set up your account in Settings");
-        public static readonly LocString YourStory = new("aethergram.yourStory", "Your story");
-        public static readonly LocString NewStory = new("aethergram.newStory", "New Story");
-        public static readonly LocString DeleteStoryMessage = new("aethergram.deleteStoryMessage", "Delete this story? It disappears for everyone right away.");
-        public static readonly LocPlural StorySeenBy = new("aethergram.storySeenBy", "Seen by {0}", "Seen by {0}");
-        public static readonly LocString StoryNoViewers = new("aethergram.storyNoViewers", "No one has seen this yet");
-        public static readonly LocString StoryViewersTrimmed = new("aethergram.storyViewersTrimmed", "Showing the latest {0} of {1}");
         public static readonly LocString ForYou = new("aethergram.forYou", "For You");
         public static readonly LocString Following = new("aethergram.following", "Following");
         public static readonly LocString Follow = new("aethergram.follow", "Follow");
@@ -1165,7 +1171,6 @@ internal static class L
         public static readonly LocString FollowingEmpty = new("aethergram.followingEmpty", "Follow people to see their photos here");
         public static readonly LocString ExploreEmpty = new("aethergram.exploreEmpty", "No photos yet. Share the first one");
         public static readonly LocString Empty = new("aethergram.empty", "No photos yet");
-        public static readonly LocString ImageFailed = new("aethergram.imageFailed", "Couldn't load image");
         public static readonly LocString ViewComments = new("aethergram.viewComments", "View {0} comments");
         public static readonly LocString NewPost = new("aethergram.newPost", "New Post");
         public static readonly LocString NewAvatar = new("aethergram.newAvatar", "New Photo");

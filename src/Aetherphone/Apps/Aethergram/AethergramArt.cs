@@ -1,4 +1,5 @@
 using System.Numerics;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Aethergram;
@@ -17,34 +18,6 @@ internal static class AethergramArt
 
     private static readonly Vector4 SeenRing = new(1f, 1f, 1f, 0.28f);
 
-    public static void StoryRing(ImDrawListPtr drawList, Vector2 center, float radius, float scale, bool unseen)
-    {
-        const int Segments = 40;
-        var thickness = (unseen ? 2.4f : 1.6f) * scale;
-        if (!unseen)
-        {
-            drawList.AddCircle(center, radius, ImGui.GetColorU32(SeenRing), Segments, thickness);
-            return;
-        }
-
-        var direction = Vector2.Normalize(new Vector2(1f, -1f));
-        var step = MathF.Tau / Segments;
-        var previous = center + new Vector2(radius, 0f);
-        for (var index = 1; index <= Segments; index++)
-        {
-            var angle = step * index;
-            var point = center + radius * new Vector2(MathF.Cos(angle), MathF.Sin(angle));
-            var normal = Vector2.Normalize((previous + point) * 0.5f - center);
-            var position = Vector2.Dot(normal, direction) * 0.5f + 0.5f;
-            drawList.AddLine(previous, point, ImGui.GetColorU32(RingColor(position)), thickness);
-            previous = point;
-        }
-    }
-
-    private static Vector4 RingColor(float t)
-    {
-        var position = Math.Clamp(t, 0f, 1f) * (RingStops.Length - 1);
-        var index = Math.Min((int)position, RingStops.Length - 2);
-        return Vector4.Lerp(RingStops[index], RingStops[index + 1], position - index);
-    }
+    public static void StoryRing(ImDrawListPtr drawList, Vector2 center, float radius, float scale, bool unseen) =>
+        StoryRingArt.Sweep(drawList, center, radius, scale, unseen, RingStops, SeenRing);
 }

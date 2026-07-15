@@ -1,9 +1,17 @@
 using System.Numerics;
+using Aetherphone.Core;
 
 namespace Aetherphone.Windows.Components;
 
 internal static class ImageFit
 {
+    public static Rect CenteredRect(Rect region, float aspect)
+    {
+        var width = MathF.Min(region.Width, region.Height * aspect);
+        var half = new Vector2(width, width / aspect) * 0.5f;
+        return new Rect(region.Center - half, region.Center + half);
+    }
+
     public static (Vector2 Uv0, Vector2 Uv1) Cover(float imageWidth, float imageHeight, float targetWidth,
         float targetHeight)
     {

@@ -8,6 +8,17 @@ namespace Aetherphone.Apps.Velvet.Kit;
 
 internal static class VelvetArt
 {
+    private static readonly Vector4[] RingStops =
+    [
+        VelvetTheme.RoseGlow, VelvetTheme.RoseBright, VelvetTheme.Rose, VelvetTheme.Moonlight,
+    ];
+
+    private static readonly Vector4 SeenRing = new(VelvetTheme.RoseInk.X, VelvetTheme.RoseInk.Y,
+        VelvetTheme.RoseInk.Z, 0.26f);
+
+    public static void StoryRing(ImDrawListPtr drawList, Vector2 center, float radius, float scale, bool unseen) =>
+        StoryRingArt.Sweep(drawList, center, radius, scale, unseen, RingStops, SeenRing);
+
     public static void Moon(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 light, Vector4 carve,
         bool glow = true)
     {
