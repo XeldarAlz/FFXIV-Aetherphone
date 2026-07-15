@@ -1,3 +1,4 @@
+using System.Numerics;
 using Aetherphone.Apps.Calendar;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.DirectMessages;
@@ -29,6 +30,8 @@ internal sealed class Configuration : IPluginConfiguration
     public bool TutorialsEnabled { get; set; } = true;
     public Dictionary<string, int> OnboardingCompleted { get; set; } = new();
     public bool LockPosition { get; set; }
+    public Vector2? MaximizedPosition { get; set; }
+    public Vector2? MinimizedPosition { get; set; }
     public bool DoNotDisturb { get; set; }
     public bool Vibration { get; set; } = true;
     public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();

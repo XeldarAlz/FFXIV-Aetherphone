@@ -18,7 +18,8 @@ internal sealed class PhoneWindow : Window
     private const int RecenterFrameCount = 3;
     private readonly PhoneShell shell;
     private int recenterFrames;
-    private int restoreFrames;
+    private int pendingFrames;
+    private Vector2? pendingPosition;
     private Vector2? maximizedPosition;
     private Vector2? minimizedPosition;
     private string pendingOpenTrigger = "toggle";
@@ -30,6 +31,8 @@ internal sealed class PhoneWindow : Window
         Size = PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
         SizeCondition = ImGuiCond.Always;
         RespectCloseHotkey = false;
+        maximizedPosition = Plugin.Cfg.MaximizedPosition;
+        minimizedPosition = Plugin.Cfg.MinimizedPosition;
     }
 
     public bool IsMinimized => shell.MinimizedResting;
@@ -42,23 +45,36 @@ internal sealed class PhoneWindow : Window
 
     public void Maximize()
     {
-        if (shell.MinimizePhase != MinimizePhase.None)
-        {
-            restoreFrames = RecenterFrameCount;
-        }
-
+        RequestPosition(maximizedPosition);
         shell.ForceMaximize();
     }
 
-    public void StartMinimized() => shell.ForceMinimized();
+    public void StartMinimized()
+    {
+        RequestPosition(minimizedPosition);
+        shell.ForceMinimized();
+    }
 
     public void MarkOpenTrigger(string trigger) => pendingOpenTrigger = trigger;
+
+    public void PersistPositions()
+    {
+        if (Plugin.Cfg.MaximizedPosition == maximizedPosition && Plugin.Cfg.MinimizedPosition == minimizedPosition)
+        {
+            return;
+        }
+
+        Plugin.Cfg.MaximizedPosition = maximizedPosition;
+        Plugin.Cfg.MinimizedPosition = minimizedPosition;
+        Plugin.Cfg.Save();
+    }
 
     public void Recenter()
     {
         shell.ForceMaximize();
         recenterFrames = RecenterFrameCount;
-        restoreFrames = 0;
+        pendingFrames = 0;
+        minimizedPosition = null;
         pendingOpenTrigger = "command";
         IsOpen = true;
     }
@@ -71,10 +87,20 @@ internal sealed class PhoneWindow : Window
             return;
         }
 
-        shell.ForceMaximize();
-        restoreFrames = RecenterFrameCount;
+        Maximize();
         pendingOpenTrigger = "toggle";
         IsOpen = true;
+    }
+
+    private void RequestPosition(Vector2? target)
+    {
+        if (target is not { } position)
+        {
+            return;
+        }
+
+        pendingPosition = position;
+        pendingFrames = RecenterFrameCount;
     }
 
     public override void OnOpen()
@@ -89,6 +115,7 @@ internal sealed class PhoneWindow : Window
     {
         var durationMs = (DateTime.UtcNow - shellOpenedAt).TotalMilliseconds;
         Plugin.Analytics.Track(AnalyticsEvents.ShellClosed(durationMs));
+        PersistPositions();
         shell.OnClosed();
     }
 
@@ -109,11 +136,11 @@ internal sealed class PhoneWindow : Window
             PositionCondition = ImGuiCond.Always;
             recenterFrames--;
         }
-        else if (restoreFrames > 0 && maximizedPosition is { } restoreTarget)
+        else if (pendingFrames > 0 && pendingPosition is { } pendingTarget)
         {
-            Position = restoreTarget;
+            Position = pendingTarget;
             PositionCondition = ImGuiCond.Always;
-            restoreFrames--;
+            pendingFrames--;
         }
         else if (phase is MinimizePhase.Collapsing or MinimizePhase.Expanding &&
                  maximizedPosition is { } homePosition && minimizedPosition is { } dockPosition)
@@ -124,7 +151,7 @@ internal sealed class PhoneWindow : Window
         else
         {
             Position = null;
-            restoreFrames = 0;
+            pendingFrames = 0;
         }
 
         ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);

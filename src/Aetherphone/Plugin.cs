@@ -209,6 +209,7 @@ public sealed class Plugin : IDalamudPlugin
         services.Calls.IncomingCallPresented -= OnIncomingCall;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
         dtrEntry.Remove();
+        phoneWindow.PersistPositions();
         windowSystem.RemoveAllWindows();
         phoneEmote.Dispose();
         timerNotifier.Dispose();
