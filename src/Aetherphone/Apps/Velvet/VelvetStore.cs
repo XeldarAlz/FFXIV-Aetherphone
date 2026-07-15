@@ -757,15 +757,14 @@ internal sealed class VelvetStore : IDisposable
 
     public void Disconnect(string userId)
     {
-        connections = RemoveConnection(connections, userId);
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
+        ForgetConnection(userId, VelvetConnectionState.None);
         work.Run("disconnect", async token => await client.DisconnectAsync(userId, token).ConfigureAwait(false));
     }
 
     public void Block(string userId, Action<bool> onComplete)
     {
         blockedLoaded = false;
-        SetConnectionStateEverywhere(userId, VelvetConnectionState.Blocked);
+        ForgetConnection(userId, VelvetConnectionState.Blocked);
         work.Run("block", async token => await client.BlockAsync(userId, token).ConfigureAwait(false), onComplete);
     }
 
@@ -1689,6 +1688,19 @@ internal sealed class VelvetStore : IDisposable
         Array.Copy(source, 0, result, 0, index);
         Array.Copy(source, index + 1, result, index, source.Length - index - 1);
         return result;
+    }
+
+    private void ForgetConnection(string userId, int state)
+    {
+        connections = RemoveConnection(connections, userId);
+        threads = CopyOnWrite.RemoveById(threads, userId);
+        if (threadId == userId)
+        {
+            threadId = null;
+            messages = Array.Empty<VelvetMessageDto>();
+        }
+
+        SetConnectionStateEverywhere(userId, state);
     }
 
     private void SetConnectionStateEverywhere(string userId, int state)

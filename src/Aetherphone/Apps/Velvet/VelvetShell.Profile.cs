@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
@@ -178,23 +179,49 @@ internal sealed partial class VelvetShell
             if (!isMe)
             {
                 Gap(26f);
-                var blocked = user.ConnectionState == VelvetConnectionState.Blocked;
-                var actionRect = Reserve(42f);
-                if (blocked)
+                if (user.ConnectionState == VelvetConnectionState.Blocked)
                 {
-                    if (ui.GhostButton(actionRect, Loc.T(L.Velvet.Unblock)))
+                    if (ui.GhostButton(Reserve(42f), Loc.T(L.Velvet.Unblock)))
                     {
                         store.Unblock(user.UserId);
                     }
                 }
-                else if (ui.DangerGhostButton(actionRect, Loc.T(L.Velvet.Block)))
+                else
                 {
-                    store.Block(user.UserId, _ => { });
+                    if (user.ConnectionState == VelvetConnectionState.Connected)
+                    {
+                        if (ui.GhostButton(Reserve(42f), Loc.T(L.Velvet.Disconnect)))
+                        {
+                            AskDisconnect(user.UserId);
+                        }
+
+                        Gap(10f);
+                    }
+
+                    if (ui.DangerGhostButton(Reserve(42f), Loc.T(L.Velvet.Block)))
+                    {
+                        store.Block(user.UserId, _ => { });
+                    }
                 }
             }
 
             Gap(40f);
         }
+    }
+
+    private void AskDisconnect(string userId)
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Velvet.DisconnectConfirmMessage),
+            ConfirmLabel = Loc.T(L.Velvet.Disconnect),
+            CancelLabel = Loc.T(L.Velvet.DeleteCancel),
+            Confirm = () =>
+            {
+                store.Disconnect(userId);
+                router.Reset();
+            },
+        });
     }
 
     private static void DrawVerifiedBadge(ImDrawListPtr drawList, Vector2 center, float scale)
