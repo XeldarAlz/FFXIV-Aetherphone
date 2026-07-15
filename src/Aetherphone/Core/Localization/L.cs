@@ -477,6 +477,27 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0970 =
+        {
+            new("changelog.r0970.0", "Velvet now has stories: share a photo your connections can watch for 24 hours before it disappears on its own"),
+            new("changelog.r0970.1", "You can now tap the seen count on your own story to see everyone who watched it, and when"),
+            new("changelog.r0970.2", "Tapping a profile photo in Chirper, Aethergram, or Velvet now opens it enlarged"),
+            new("changelog.r0970.3", "The story tray now scrolls away with the feed instead of staying pinned above the posts"),
+            new("changelog.r0970.4", "Aethergram's bottom tabs now light up and name themselves as you point at them"),
+            new("changelog.r0970.5", "Notification rows now highlight as you point at them in Chirper, Aethergram, and Velvet"),
+            new("changelog.r0970.6", "Photo captions on Aethergram, Velvet, and stories now go through moderation alongside the photo itself"),
+            new("changelog.r0970.7", "A story photo that is still in review is now held back in the story viewer, the way it already was everywhere else"),
+            new("changelog.r0970.8", "Encrypted chats now set up on computers that run the game through Wine or Proton, where creating the security key used to fail"),
+            new("changelog.r0970.9", "A PC that cannot support encrypted chats now says so in the chat encryption sheet, instead of showing Setting up encryption forever"),
+            new("changelog.r0970.10", "Fixed composing a story framing your photo as a square when it publishes tall"),
+            new("changelog.r0970.11", "Fixed sharing a story showing no progress, leaving the Share button looking untouched for the whole upload"),
+            new("changelog.r0970.12", "Fixed being offered a new story tile beside the ring of the story you had already posted"),
+            new("changelog.r0970.13", "Fixed a story's caption and its seen count landing on top of each other"),
+            new("changelog.r0970.14", "Fixed leaving an app in the middle of a story leaving that story hanging over the app when you came back"),
+            new("changelog.r0970.15", "Fixed the story delete confirmation saying it couldn't delete the post"),
+            new("changelog.r0970.16", "A story that has expired is now treated as gone everywhere, including its viewer list"),
+        };
+
         public static readonly LocString[] Release0960 =
         {
             new("changelog.r0960.0", "Velvet has been rebuilt from the ground up, with an after-dark look and every screen redrawn around Discover"),
