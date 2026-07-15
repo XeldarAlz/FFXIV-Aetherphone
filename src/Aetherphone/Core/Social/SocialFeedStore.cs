@@ -49,6 +49,9 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile UserDto[] userListResults = Array.Empty<UserDto>();
     private volatile bool userListLoading;
     private volatile bool userListFailed;
+    private volatile PostDto[] taggedPosts = Array.Empty<PostDto>();
+    private volatile string? taggedUserId;
+    private volatile bool taggedLoading;
 
     protected SocialFeedStore(
         AethernetSession session,
@@ -96,6 +99,39 @@ internal abstract class SocialFeedStore : IDisposable
     protected abstract Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, CancellationToken token);
 
     protected abstract Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token);
+
+    protected virtual Task<FeedPage?> FetchTaggedPostsAsync(string userId, CancellationToken token) =>
+        Task.FromResult<FeedPage?>(null);
+
+    public PostDto[] TaggedPosts => taggedPosts;
+
+    public bool TaggedLoading => taggedLoading;
+
+    public void EnsureTaggedPosts(string userId)
+    {
+        if (!session.IsSignedIn || taggedLoading || string.Equals(taggedUserId, userId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        taggedUserId = userId;
+        taggedPosts = Array.Empty<PostDto>();
+        taggedLoading = true;
+        work.Run("tagged load", async token =>
+        {
+            var page = await FetchTaggedPostsAsync(userId, token).ConfigureAwait(false);
+            if (page is not null && string.Equals(taggedUserId, userId, StringComparison.Ordinal))
+            {
+                taggedPosts = page.Items;
+            }
+        }, () => taggedLoading = false);
+    }
+
+    protected void ClearTagged()
+    {
+        taggedUserId = null;
+        taggedPosts = Array.Empty<PostDto>();
+    }
 
     public void EnsureMe()
     {
@@ -290,40 +326,17 @@ internal abstract class SocialFeedStore : IDisposable
         return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
     }
 
-    public void OpenDetail(PostDto post)
-    {
-        detailPostId = post.Id;
-        detailPost = post;
-        detailComments = Array.Empty<CommentDto>();
-        detailLoading = true;
-        work.Run("comments load", async token =>
-        {
-            var page = await client.CommentsAsync(post.Id, null, token).ConfigureAwait(false);
-            if (detailPostId != post.Id)
-            {
-                return;
-            }
+    public void OpenDetail(PostDto post) => LoadDetail(post.Id, post);
 
-            if (page is not null)
-            {
-                detailComments = CopyOnWrite.Reversed(page.Items);
-            }
-        }, () =>
-        {
-            if (detailPostId == post.Id)
-            {
-                detailLoading = false;
-            }
-        });
-    }
+    public void OpenDetailById(string postId) => LoadDetail(postId, null);
 
-    public void OpenDetailById(string postId)
+    private void LoadDetail(string postId, PostDto? cached)
     {
         detailPostId = postId;
-        detailPost = null;
+        detailPost = cached;
         detailComments = Array.Empty<CommentDto>();
         detailLoading = true;
-        work.Run("detail by id", async token =>
+        work.Run("detail load", async token =>
         {
             var post = await client.PostAsync(postId, token).ConfigureAwait(false);
             if (detailPostId != postId)
@@ -334,6 +347,7 @@ internal abstract class SocialFeedStore : IDisposable
             if (post is not null)
             {
                 detailPost = post;
+                ReplacePost(post);
             }
 
             var page = await client.CommentsAsync(postId, null, token).ConfigureAwait(false);
