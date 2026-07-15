@@ -14,6 +14,8 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
+    private const float HeroTextInset = 12f;
+
     private void DrawProfile(Rect area, string userId)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -73,17 +75,20 @@ internal sealed partial class VelvetShell
                 ring);
             avatarLightbox.TryOpen(avatarCenter, radius, user.AvatarUrl, images);
 
-            var lineY = avatarCenter.Y + radius + 22f * scale;
-            var nameSize = Typography.Measure(name, TextStyles.Title1);
+            var textWidth = width - HeroTextInset * 2f * scale;
+            var lineTop = avatarCenter.Y + radius + 16f * scale;
             var badgeSpace = user.Verified ? 24f * scale : 0f;
+            var displayName = Typography.FitText(name, textWidth - badgeSpace, TextStyles.Title1);
+            var nameSize = Typography.Measure(displayName, TextStyles.Title1);
             var nameX = centerX - (nameSize.X + badgeSpace) * 0.5f;
-            Typography.Draw(new Vector2(nameX, lineY - nameSize.Y * 0.5f), name, VelvetTheme.TitleInk, TextStyles.Title1);
+            Typography.Draw(new Vector2(nameX, lineTop), displayName, VelvetTheme.TitleInk, TextStyles.Title1);
             if (user.Verified)
             {
-                DrawVerifiedBadge(drawList, new Vector2(nameX + nameSize.X + 13f * scale, lineY), scale);
+                DrawVerifiedBadge(drawList, new Vector2(nameX + nameSize.X + 13f * scale, lineTop + nameSize.Y * 0.5f),
+                    scale);
             }
 
-            lineY += 24f * scale;
+            lineTop += nameSize.Y + 4f * scale;
             var region = RegionOf(user.World);
             var meta = SocialIdentity.ProfileMeta(user.Handle, region);
             if (user.Pronouns.Length > 0)
@@ -93,13 +98,13 @@ internal sealed partial class VelvetShell
 
             if (meta.Length > 0)
             {
-                Typography.DrawCentered(new Vector2(centerX, lineY), meta, VelvetTheme.MutedInk, TextStyles.Subheadline);
-                lineY += 22f * scale;
+                lineTop += Typography.DrawWrappedCentered(new Vector2(centerX, lineTop), meta, VelvetTheme.MutedInk,
+                    TextStyles.Subheadline, textWidth);
             }
 
-            Typography.DrawCentered(new Vector2(centerX, lineY), VelvetIntent.Summary(user.LookingFor),
-                VelvetTheme.RoseInk, TextStyles.Headline);
-            lineY += 22f * scale;
+            lineTop += 10f * scale;
+            lineTop += Typography.DrawWrappedCentered(new Vector2(centerX, lineTop),
+                VelvetIntent.Summary(user.LookingFor), VelvetTheme.RoseInk, TextStyles.Headline, textWidth);
 
             var sub = user.RelationshipStatus != VelvetRelationship.NotSaying
                 ? VelvetRelationship.Label(user.RelationshipStatus)
@@ -112,11 +117,12 @@ internal sealed partial class VelvetShell
 
             if (sub.Length > 0)
             {
-                Typography.DrawCentered(new Vector2(centerX, lineY), sub, VelvetTheme.MutedInk, TextStyles.Footnote);
-                lineY += 18f * scale;
+                lineTop += 6f * scale;
+                lineTop += Typography.DrawWrappedCentered(new Vector2(centerX, lineTop), sub, VelvetTheme.MutedInk,
+                    TextStyles.Footnote, textWidth);
             }
 
-            var heroHeight = lineY - heroTop.Y + 8f * scale;
+            var heroHeight = lineTop - heroTop.Y + 8f * scale;
             ImGui.SetCursorScreenPos(heroTop);
             ImGui.Dummy(new Vector2(width, heroHeight));
 
