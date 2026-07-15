@@ -22,6 +22,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     {
         KeyVaultState.Unlocked => Loc.T(L.Encryption.StateActive),
         KeyVaultState.Provisioning => Loc.T(L.Encryption.StateSettingUp),
+        KeyVaultState.Unsupported => Loc.T(L.Encryption.StateUnsupported),
         _ => Loc.T(L.Encryption.StateUnavailable),
     };
 
@@ -54,6 +55,9 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
                     break;
                 case KeyVaultState.Provisioning:
                     DrawProvisioning(theme);
+                    break;
+                case KeyVaultState.Unsupported:
+                    DrawUnsupported(theme);
                     break;
                 default:
                     DrawActive(theme);
@@ -100,6 +104,15 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Wrapped(Loc.T(L.Encryption.NotSignedIn));
+        }
+    }
+
+    private void DrawUnsupported(PhoneTheme theme)
+    {
+        ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            Typography.Wrapped(Loc.T(L.Encryption.UnsupportedBody));
         }
     }
 

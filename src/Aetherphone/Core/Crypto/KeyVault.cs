@@ -10,6 +10,7 @@ internal enum KeyVaultState
     Unavailable = 0,
     Provisioning = 1,
     Unlocked = 2,
+    Unsupported = 3,
 }
 
 internal sealed class KeyVault : IDisposable
@@ -60,6 +61,11 @@ internal sealed class KeyVault : IDisposable
             return;
         }
 
+        if (State == KeyVaultState.Unsupported)
+        {
+            return;
+        }
+
         refreshing = true;
         await gate.WaitAsync(token).ConfigureAwait(false);
         try
@@ -94,7 +100,6 @@ internal sealed class KeyVault : IDisposable
                 return;
             }
 
-            ClearLocalCache();
             await ProvisionAsync(token).ConfigureAwait(false);
         }
         finally
@@ -132,9 +137,17 @@ internal sealed class KeyVault : IDisposable
     private async Task<bool> ProvisionAsync(CancellationToken token)
     {
         SetState(KeyVaultState.Provisioning);
-        var identity = CryptoBox.GenerateIdentity();
-        var request = new PutMyKeysRequest(CryptoBox.ExportPublicKey(identity));
-        var stored = await client.PutMyKeysAsync(request, token).ConfigureAwait(false);
+        var identity = CryptoBox.TryGenerateIdentity();
+        var publicKey = identity is null ? null : CryptoBox.TryExportPublicKey(identity);
+        if (identity is null || publicKey is null)
+        {
+            identity?.Dispose();
+            AepLog.Warning("[Encryption] identity unsupported: this system cannot create an encryption key.");
+            SetState(KeyVaultState.Unsupported);
+            return false;
+        }
+
+        var stored = await client.PutMyKeysAsync(new PutMyKeysRequest(publicKey), token).ConfigureAwait(false);
         if (stored is null)
         {
             identity.Dispose();
@@ -144,9 +157,13 @@ internal sealed class KeyVault : IDisposable
         serverBundle = stored;
         ClearKey();
         privateKey = identity;
-        var pkcs8 = CryptoBox.ExportPrivateKey(identity);
-        StoreLocalCache(pkcs8);
-        CryptographicOperations.ZeroMemory(pkcs8);
+        var pkcs8 = CryptoBox.TryExportPrivateKey(identity);
+        if (pkcs8 is not null)
+        {
+            StoreLocalCache(pkcs8);
+            CryptographicOperations.ZeroMemory(pkcs8);
+        }
+
         SetState(KeyVaultState.Unlocked);
         return true;
     }
@@ -216,18 +233,6 @@ internal sealed class KeyVault : IDisposable
 
         configuration.EncryptionKeyCache = protectedBlob;
         configuration.EncryptionKeyCacheUserId = userId;
-        configuration.Save();
-    }
-
-    private void ClearLocalCache()
-    {
-        if (configuration.EncryptionKeyCache.Length == 0 && configuration.EncryptionKeyCacheUserId.Length == 0)
-        {
-            return;
-        }
-
-        configuration.EncryptionKeyCache = string.Empty;
-        configuration.EncryptionKeyCacheUserId = string.Empty;
         configuration.Save();
     }
 

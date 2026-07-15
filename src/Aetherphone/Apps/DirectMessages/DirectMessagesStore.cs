@@ -163,7 +163,7 @@ internal sealed class DirectMessagesStore : IDisposable
 
     private void EnsureVaultRefreshed()
     {
-        if (session.CurrentUser is null || vaultRefreshInFlight)
+        if (session.CurrentUser is null || vaultRefreshInFlight || vault.State == KeyVaultState.Unsupported)
         {
             return;
         }

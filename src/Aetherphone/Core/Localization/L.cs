@@ -935,8 +935,10 @@ internal static class L
         public static readonly LocString StateActive = new("encryption.stateActive", "Active");
         public static readonly LocString StateSettingUp = new("encryption.stateSettingUp", "Setting up…");
         public static readonly LocString StateUnavailable = new("encryption.stateUnavailable", "Sign in required");
+        public static readonly LocString StateUnsupported = new("encryption.stateUnsupported", "Unavailable on this PC");
         public static readonly LocString Intro = new("encryption.intro", "End-to-end encryption keeps your chats between you and the people you write to. Not even the Aethernet server can read them.");
         public static readonly LocString NotSignedIn = new("encryption.notSignedIn", "Sign in to your Aethernet account first.");
+        public static readonly LocString UnsupportedBody = new("encryption.unsupportedBody", "This computer cannot create the security key that encrypted chats need, so Messages and Velvet chats stay unavailable here. This usually happens when the game runs through Wine or Proton. The rest of Aetherphone works normally.");
         public static readonly LocString SettingUp = new("encryption.settingUp", "Setting up encryption…");
         public static readonly LocString ActiveHint = new("encryption.activeHint", "Encryption is active on this device. It works automatically. There is nothing to set up.");
         public static readonly LocString NewDeviceHint = new("encryption.newDeviceHint", "On a new computer a fresh key is created automatically. Older messages become readable again once your chat partners come online.");
@@ -1151,6 +1153,9 @@ internal static class L
         public static readonly LocString YourStory = new("aethergram.yourStory", "Your story");
         public static readonly LocString NewStory = new("aethergram.newStory", "New Story");
         public static readonly LocString DeleteStoryMessage = new("aethergram.deleteStoryMessage", "Delete this story? It disappears for everyone right away.");
+        public static readonly LocPlural StorySeenBy = new("aethergram.storySeenBy", "Seen by {0}", "Seen by {0}");
+        public static readonly LocString StoryNoViewers = new("aethergram.storyNoViewers", "No one has seen this yet");
+        public static readonly LocString StoryViewersTrimmed = new("aethergram.storyViewersTrimmed", "Showing the latest {0} of {1}");
         public static readonly LocString ForYou = new("aethergram.forYou", "For You");
         public static readonly LocString Following = new("aethergram.following", "Following");
         public static readonly LocString Follow = new("aethergram.follow", "Follow");

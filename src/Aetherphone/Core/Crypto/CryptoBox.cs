@@ -11,14 +11,62 @@ internal static class CryptoBox
     private const string WrapPrefix = "EC1.";
     private static readonly byte[] WrapInfo = Encoding.UTF8.GetBytes("aethernet-cek-v1");
 
-    public static ECDiffieHellman GenerateIdentity()
+    public static ECDiffieHellman? TryGenerateIdentity()
     {
-        return ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
+        try
+        {
+            return ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
+        }
+        catch (CryptographicException)
+        {
+        }
+        catch (PlatformNotSupportedException)
+        {
+        }
+
+        return TryGenerateNamedCurveIdentity();
+    }
+
+    private static ECDiffieHellman? TryGenerateNamedCurveIdentity()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return null;
+        }
+
+        try
+        {
+            var parameters = new CngKeyCreationParameters
+            {
+                ExportPolicy = CngExportPolicies.AllowPlaintextExport,
+            };
+            return new ECDiffieHellmanCng(CngKey.Create(CngAlgorithm.ECDiffieHellmanP256, null, parameters));
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
+        catch (PlatformNotSupportedException)
+        {
+            return null;
+        }
     }
 
     public static string ExportPublicKey(ECDiffieHellman key)
     {
         return Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
+    }
+
+    public static string? TryExportPublicKey(ECDiffieHellman key)
+    {
+        try
+        {
+            return Convert.ToBase64String(key.ExportSubjectPublicKeyInfo());
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
     }
 
     public static ECDiffieHellman? ImportPublicKey(string publicKeyBase64)
@@ -35,9 +83,16 @@ internal static class CryptoBox
         }
     }
 
-    public static byte[] ExportPrivateKey(ECDiffieHellman key)
+    public static byte[]? TryExportPrivateKey(ECDiffieHellman key)
     {
-        return key.ExportPkcs8PrivateKey();
+        try
+        {
+            return key.ExportPkcs8PrivateKey();
+        }
+        catch (CryptographicException)
+        {
+            return null;
+        }
     }
 
     public static ECDiffieHellman? ImportPrivateKey(byte[] pkcs8)
