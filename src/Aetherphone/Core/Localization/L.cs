@@ -556,6 +556,8 @@ internal static class L
             new("changelog.r0970.16", "Fixed the story delete confirmation saying it couldn't delete the post"),
             new("changelog.r0970.35", "Fixed the phone forgetting where you last left it minimized, so minimizing it again returns it to that spot instead of the full phone's corner"),
             new("changelog.r0970.36", "Fixed the phone forgetting where you had placed it, full size and minimized, whenever the plugin was turned off and on again or the game restarted"),
+            new("changelog.r0970.39", "Fixed importing a photo from your PC doing nothing visible when composing an Aethergram or Velvet post: it now lands in the photo grid, selected and numbered"),
+            new("changelog.r0970.40", "Fixed Aethergram saying nothing when you tried to add a ninth photo to a post, instead of telling you eight is the limit"),
         };
 
         public static readonly LocString[] Release0960 =

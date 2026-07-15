@@ -88,7 +88,7 @@ internal sealed partial class AethergramApp
         var picked = Interlocked.Exchange(ref pendingPickedPath, null);
         if (!string.IsNullOrEmpty(picked))
         {
-            TakePicked(picked);
+            AdoptImported(picked);
         }
 
         switch (composeStage)
@@ -125,7 +125,14 @@ internal sealed partial class AethergramApp
             LaunchFileDialog();
         }
 
-        var gridTop = importRect.Max.Y + 12f * scale;
+        var noticeHeight = composeStatus.Length > 0 ? 20f * scale : 0f;
+        if (noticeHeight > 0f)
+        {
+            Typography.DrawCentered(new Vector2(area.Center.X, importRect.Max.Y + 8f * scale), composeStatus,
+                AppPalettes.Aethergram.MutedInk, TextStyles.Footnote);
+        }
+
+        var gridTop = importRect.Max.Y + 12f * scale + noticeHeight;
         var gridRect = new Rect(new Vector2(area.Min.X, gridTop), area.Max);
         using (AppSurface.Begin(gridRect))
         {
@@ -204,6 +211,17 @@ internal sealed partial class AethergramApp
         drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.9f)), 20, 1.5f * scale);
         Typography.DrawCentered(drawList, center, (order + 1).ToString(Loc.Culture), new Vector4(1f, 1f, 1f, 1f),
             TextStyles.FootnoteEmphasized);
+    }
+
+    private void AdoptImported(string path)
+    {
+        pickerPaths = PickerPaths.WithImported(pickerPaths, path);
+        if (!composeAvatarMode && !composeStoryMode && composeSelected.Contains(path))
+        {
+            return;
+        }
+
+        TakePicked(path);
     }
 
     private void TakePicked(string path)

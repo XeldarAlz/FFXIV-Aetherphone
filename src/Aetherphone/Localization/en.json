@@ -479,6 +479,8 @@
   "changelog.r0970.36": "Fixed the phone forgetting where you had placed it, full size and minimized, whenever the plugin was turned off and on again or the game restarted",
   "changelog.r0970.37": "Velvet photos are now for your connections only: the feed no longer shows posts from people you have not connected with",
   "changelog.r0970.38": "Choosing who can see a Velvet post is gone, because every post now goes to your connections and no further",
+  "changelog.r0970.39": "Fixed importing a photo from your PC doing nothing visible when composing an Aethergram or Velvet post: it now lands in the photo grid, selected and numbered",
+  "changelog.r0970.40": "Fixed Aethergram saying nothing when you tried to add a ninth photo to a post, instead of telling you eight is the limit",
   "changelog.r0960.0": "Velvet has been rebuilt from the ground up, with an after-dark look and every screen redrawn around Discover",
   "changelog.r0960.1": "Velvet's Discover filters now live behind a filter button, leaving the whole screen to the people you are browsing",
   "changelog.r0960.2": "Velvet's role and tag pickers are now sorted into categories that match how roleplay communities actually describe themselves",

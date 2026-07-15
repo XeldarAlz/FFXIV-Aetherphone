@@ -118,7 +118,7 @@ internal sealed class VelvetPostComposer
         var picked = Interlocked.Exchange(ref pendingPickedPath, null);
         if (!string.IsNullOrEmpty(picked))
         {
-            TakePicked(picked);
+            AdoptImported(picked);
         }
 
         switch (stage)
@@ -220,6 +220,17 @@ internal sealed class VelvetPostComposer
         drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.9f)), 20, 1.5f * scale);
         Typography.DrawCentered(drawList, center, (order + 1).ToString(Loc.Culture), new Vector4(1f, 1f, 1f, 1f),
             TextStyles.FootnoteEmphasized);
+    }
+
+    private void AdoptImported(string path)
+    {
+        pickerPaths = PickerPaths.WithImported(pickerPaths, path);
+        if (!storyMode && selected.Contains(path))
+        {
+            return;
+        }
+
+        TakePicked(path);
     }
 
     private void TakePicked(string path)
