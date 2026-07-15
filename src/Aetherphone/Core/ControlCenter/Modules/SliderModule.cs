@@ -1,3 +1,4 @@
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
 
@@ -7,13 +8,13 @@ internal sealed class SliderModule : IControlModule
 {
     private static readonly ControlSpan[] SpanOptions = { ControlSpan.Tall };
 
-    private readonly string label;
+    private readonly LocString label;
     private readonly Func<FontAwesomeIcon> icon;
     private readonly Func<float> read;
     private readonly Action<float> write;
     private readonly Action onReleased;
 
-    public SliderModule(string id, string label, Func<FontAwesomeIcon> icon, Func<float> read, Action<float> write,
+    public SliderModule(string id, LocString label, Func<FontAwesomeIcon> icon, Func<float> read, Action<float> write,
         Action onReleased)
     {
         Id = id;
@@ -25,7 +26,7 @@ internal sealed class SliderModule : IControlModule
     }
 
     public string Id { get; }
-    public string GalleryLabel => label;
+    public string GalleryLabel => Loc.T(label);
     public FontAwesomeIcon GalleryIcon => icon();
     public IReadOnlyList<ControlSpan> Sizes => SpanOptions;
     public ControlSpan DefaultSpan => ControlSpan.Tall;
@@ -33,8 +34,8 @@ internal sealed class SliderModule : IControlModule
     public void Draw(in ControlModuleContext context)
     {
         var current = read();
-        var next = ControlTile.VerticalSlider(context.DrawList, context.Rect, current, icon(), label, context.Theme,
-            context.Opacity, context.Interactive, out var released);
+        var next = ControlTile.VerticalSlider(context.DrawList, context.Rect, current, icon(), Loc.T(label),
+            context.Theme, context.Opacity, context.Interactive, out var released);
         if (MathF.Abs(next - current) > 0.0005f)
         {
             write(next);

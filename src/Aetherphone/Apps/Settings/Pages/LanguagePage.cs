@@ -41,6 +41,7 @@ internal sealed class LanguagePage : ISettingsPage
                     configuration.Save();
                     Loc.SetLanguage(language.Code);
                     Plugin.Fonts.OnLanguageChanged();
+                    Plugin.OnLanguageChanged();
                 }
             }
 

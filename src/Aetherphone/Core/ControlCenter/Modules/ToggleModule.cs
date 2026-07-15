@@ -1,3 +1,4 @@
+using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
 
@@ -8,11 +9,11 @@ internal sealed class ToggleModule : IControlModule
     private static readonly ControlSpan[] SpanOptions = { ControlSpan.Small, ControlSpan.Wide, ControlSpan.Large };
 
     private readonly FontAwesomeIcon icon;
-    private readonly string label;
+    private readonly LocString label;
     private readonly Func<bool> isActive;
     private readonly Action onActivate;
 
-    public ToggleModule(string id, FontAwesomeIcon icon, string label, Func<bool> isActive, Action onActivate)
+    public ToggleModule(string id, FontAwesomeIcon icon, LocString label, Func<bool> isActive, Action onActivate)
     {
         Id = id;
         this.icon = icon;
@@ -22,14 +23,14 @@ internal sealed class ToggleModule : IControlModule
     }
 
     public string Id { get; }
-    public string GalleryLabel => label;
+    public string GalleryLabel => Loc.T(label);
     public FontAwesomeIcon GalleryIcon => icon;
     public IReadOnlyList<ControlSpan> Sizes => SpanOptions;
     public ControlSpan DefaultSpan => ControlSpan.Small;
 
     public void Draw(in ControlModuleContext context)
     {
-        if (ControlTile.Toggle(context.DrawList, context.Rect, icon, label, isActive(), context.Theme.Accent,
+        if (ControlTile.Toggle(context.DrawList, context.Rect, icon, Loc.T(label), isActive(), context.Theme.Accent,
                 context.Theme, context.Opacity, context.Interactive))
         {
             onActivate();

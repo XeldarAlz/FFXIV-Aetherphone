@@ -17,37 +17,37 @@ internal sealed class ControlRegistry
     public ControlRegistry(ThemeProvider themes, PlaybackHub playback, CallHub calls, INavigator navigation,
         Action dismiss)
     {
-        Add(new ToggleModule("dnd", FontAwesomeIcon.Moon, Loc.T(L.Settings.DoNotDisturb),
+        Add(new ToggleModule("dnd", FontAwesomeIcon.Moon, L.Settings.DoNotDisturb,
             () => Plugin.Cfg.DoNotDisturb, () =>
             {
                 Plugin.Cfg.DoNotDisturb = !Plugin.Cfg.DoNotDisturb;
                 Plugin.Cfg.Save();
             }));
-        Add(new ToggleModule("calls", FontAwesomeIcon.Phone, Loc.T(L.Phone.Calls),
+        Add(new ToggleModule("calls", FontAwesomeIcon.Phone, L.Phone.Calls,
             () => Plugin.Cfg.CallsEnabled, () => calls.SetEnabled(!Plugin.Cfg.CallsEnabled)));
-        Add(new ToggleModule("lock", FontAwesomeIcon.Thumbtack, Loc.T(L.ControlCenter.LockPosition),
+        Add(new ToggleModule("lock", FontAwesomeIcon.Thumbtack, L.ControlCenter.LockPosition,
             () => Plugin.Cfg.LockPosition, () =>
             {
                 Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
                 Plugin.Cfg.Save();
             }));
-        Add(new ToggleModule("idle", FontAwesomeIcon.HandPointUp, Loc.T(L.Settings.ScrollWhileIdle),
+        Add(new ToggleModule("idle", FontAwesomeIcon.HandPointUp, L.Settings.ScrollWhileIdle,
             () => Plugin.Cfg.ScrollWhileIdle, () =>
             {
                 Plugin.Cfg.ScrollWhileIdle = !Plugin.Cfg.ScrollWhileIdle;
                 Plugin.Cfg.Save();
             }));
         Add(new MediaModule(playback));
-        Add(new SliderModule("brightness", Loc.T(L.ControlCenter.Brightness), () => FontAwesomeIcon.Sun,
+        Add(new SliderModule("brightness", L.ControlCenter.Brightness, () => FontAwesomeIcon.Sun,
             () => Plugin.Cfg.ScreenBrightness, value => Plugin.Cfg.ScreenBrightness = value, Plugin.Cfg.Save));
-        Add(new SliderModule("volume", Loc.T(L.ControlCenter.Volume), VolumeIcon(playback),
+        Add(new SliderModule("volume", L.ControlCenter.Volume, VolumeIcon(playback),
             () => playback.Volume, value => playback.Volume = value, () => { }));
-        Add(new ToggleModule("camera", FontAwesomeIcon.Camera, Loc.T(L.Apps.Camera), () => false, () =>
+        Add(new ToggleModule("camera", FontAwesomeIcon.Camera, L.Apps.Camera, () => false, () =>
         {
             navigation.Open("camera", AppOpenSource.ControlCenter);
             dismiss();
         }));
-        Add(new ToggleModule("settings", FontAwesomeIcon.Cog, Loc.T(L.Apps.Settings), () => false, () =>
+        Add(new ToggleModule("settings", FontAwesomeIcon.Cog, L.Apps.Settings, () => false, () =>
         {
             navigation.Open("settings", AppOpenSource.ControlCenter);
             dismiss();

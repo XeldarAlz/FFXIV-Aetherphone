@@ -15,7 +15,7 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class SoundSettingsPage : ISettingsPage
 {
     private readonly SoundService sound;
-    private readonly string title;
+    private readonly LocString title;
     private readonly FontAwesomeIcon icon;
     private readonly Vector4 tint;
     private readonly string segmentId;
@@ -26,7 +26,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
     private readonly Action<float> setVolume;
     private readonly SoundImport import = new();
 
-    public SoundSettingsPage(SoundService sound, string title, FontAwesomeIcon icon, Vector4 tint, string segmentId,
+    public SoundSettingsPage(SoundService sound, LocString title, FontAwesomeIcon icon, Vector4 tint, string segmentId,
         string analyticsKey, Func<string> getToken, Action<string> setToken, Func<float> getVolume,
         Action<float> setVolume)
     {
@@ -42,7 +42,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
         this.setVolume = setVolume;
     }
 
-    public string Title => title;
+    public string Title => Loc.T(title);
     public string Summary => sound.Label(getToken());
     public FontAwesomeIcon Icon => icon;
     public Vector4 Tint => tint;
@@ -79,7 +79,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
             var importCard = GroupCard.Begin(theme, 1);
             if (SettingsRow.Disclosure(importCard.NextRow(), Loc.T(L.Settings.ImportSound), string.Empty, theme))
             {
-                import.Launch(title);
+                import.Launch(Loc.T(title));
             }
 
             importCard.End();

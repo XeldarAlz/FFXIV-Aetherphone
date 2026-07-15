@@ -60,6 +60,8 @@ public sealed class Plugin : IDalamudPlugin
     private readonly ReminderService reminders;
     private readonly DateTime sessionStartedAt;
     private readonly IDtrBarEntry dtrEntry;
+    private static CommandInfo? primaryCommand;
+    private static CommandInfo? aliasCommand;
     private bool autoOpenPending;
     private int sampleCounter;
 
@@ -121,10 +123,10 @@ public sealed class Plugin : IDalamudPlugin
         UpdateDtrBadge();
         services.MarketIndex.EnsureBuilt();
         ContextMenu.OnMenuOpened += OnMenuOpened;
-        CommandManager.AddHandler(AepConstants.PrimaryCommand,
-            new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) });
-        CommandManager.AddHandler(AepConstants.AliasCommand,
-            new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) });
+        primaryCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) };
+        aliasCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) };
+        CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
+        CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
         PluginInterface.UiBuilder.Draw += windowSystem.Draw;
         PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
         ClientState.Login += OnLogin;
@@ -217,6 +219,19 @@ public sealed class Plugin : IDalamudPlugin
         WallpaperImages.Dispose();
         CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
         CommandManager.RemoveHandler(AepConstants.AliasCommand);
+    }
+
+    public static void OnLanguageChanged()
+    {
+        if (primaryCommand is not null)
+        {
+            primaryCommand.HelpMessage = Loc.T(L.Plugin.CommandHelp);
+        }
+
+        if (aliasCommand is not null)
+        {
+            aliasCommand.HelpMessage = Loc.T(L.Plugin.CommandHelpAlias);
+        }
     }
 
     private static void InitializeLocalization()

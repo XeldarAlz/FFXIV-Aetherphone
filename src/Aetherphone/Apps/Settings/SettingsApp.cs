@@ -56,7 +56,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var tutorials = new TutorialsPage(configuration);
         var callsPage = new CallsPage(calls, configuration);
         var appNotifications = new AppNotificationPage(configuration, sound);
-        var notificationSoundPage = new SoundSettingsPage(sound, Loc.T(L.Settings.NotificationSound),
+        var notificationSoundPage = new SoundSettingsPage(sound, L.Settings.NotificationSound,
             FontAwesomeIcon.Bell, new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume",
             "notification_sound",
             () => configuration.NotificationSound, token =>
@@ -69,7 +69,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.Save();
             });
         var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage);
-        var ringtonePage = new SoundSettingsPage(sound, Loc.T(L.Settings.Ringtone), FontAwesomeIcon.Music,
+        var ringtonePage = new SoundSettingsPage(sound, L.Settings.Ringtone, FontAwesomeIcon.Music,
             new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume", "ringtone",
             () => configuration.RingtoneSound, token =>
             {
