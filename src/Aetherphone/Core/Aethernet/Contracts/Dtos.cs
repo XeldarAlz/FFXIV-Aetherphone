@@ -41,7 +41,10 @@ internal sealed record UserDto(
     int? UtcOffsetMinutes = null,
     bool ShareTimeZone = true,
     bool ShareReadReceipts = true,
-    bool SharePresence = true) : IIdentified;
+    bool SharePresence = true,
+    int MentionPolicy = 0,
+    int TagPolicy = 0,
+    bool RequireTagApproval = false) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
 
@@ -60,6 +63,22 @@ internal sealed record MentionSuggestDto(string UserId, string Handle, string Di
 internal sealed record MentionSuggestResult(MentionSuggestDto[] Users);
 
 internal sealed record UpdateMentionPrivacyRequest(int? MentionPolicy);
+
+internal sealed record UpdateTagPrivacyRequest(int? TagPolicy, bool? RequireTagApproval);
+
+internal sealed record PhotoTagInput(string UserId, int PhotoIndex, float X, float Y);
+
+internal sealed record PhotoTagDto(
+    string Id,
+    string UserId,
+    string Handle,
+    string DisplayName,
+    int PhotoIndex,
+    float X,
+    float Y,
+    int State);
+
+internal sealed record PhotoTagPage(PhotoTagDto[] Items);
 
 internal sealed record PostDto(
     string Id,
@@ -82,7 +101,8 @@ internal sealed record PostDto(
     bool IsFollowing,
     string ScanStatus = "clean",
     string[]? MediaUrls = null,
-    MentionDto[]? Mentions = null) : IIdentified;
+    MentionDto[]? Mentions = null,
+    PhotoTagDto[]? PhotoTags = null) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
@@ -99,7 +119,8 @@ internal sealed record CreateGramRequest(
     string MediaKey,
     int Width,
     int Height,
-    string[]? MediaKeys = null);
+    string[]? MediaKeys = null,
+    PhotoTagInput[]? PhotoTags = null);
 
 internal sealed record CreateStoryRequest(string Caption, string MediaKey, int Width, int Height);
 

@@ -23,7 +23,11 @@ internal sealed class AethergramStore : SocialFeedStore
     protected override Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token) =>
         client.UserGramsAsync(userId, token);
 
-    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, string caption, Action<bool> onComplete)
+    protected override Task<FeedPage?> FetchTaggedPostsAsync(string userId, CancellationToken token) =>
+        client.UserTaggedGramsAsync(userId, token);
+
+    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, string caption, PhotoTagInput[]? photoTags,
+        Action<bool> onComplete)
     {
         if (posting || sourcePaths.Length == 0)
         {
@@ -53,7 +57,7 @@ internal sealed class AethergramStore : SocialFeedStore
                 keys[index] = upload.Key;
             }
 
-            var created = await client.CreateGramAsync(caption.Trim(), keys, GramSize, GramSize, token)
+            var created = await client.CreateGramAsync(caption.Trim(), keys, GramSize, GramSize, photoTags, token)
                 .ConfigureAwait(false);
             if (created is null)
             {

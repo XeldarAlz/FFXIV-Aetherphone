@@ -176,15 +176,16 @@ internal sealed partial class AethergramApp
         UiInteract.HoverHighlight(drawList, min, max, 12f * scale);
     }
 
-    private void DrawProfileGrid()
+    private void DrawProfileGrid() => DrawProfileGrid(store.ProfilePosts, L.Aethergram.Empty);
+
+    private void DrawProfileGrid(PostDto[] posts, LocString emptyMessage)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var posts = store.ProfilePosts;
         if (posts.Length == 0)
         {
             Typography.DrawCentered(
                 new Vector2(ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X * 0.5f,
-                    ImGui.GetCursorScreenPos().Y + 40f * scale), Loc.T(L.Aethergram.Empty), AppPalettes.Aethergram.MutedInk);
+                    ImGui.GetCursorScreenPos().Y + 40f * scale), Loc.T(emptyMessage), AppPalettes.Aethergram.MutedInk);
             return;
         }
 

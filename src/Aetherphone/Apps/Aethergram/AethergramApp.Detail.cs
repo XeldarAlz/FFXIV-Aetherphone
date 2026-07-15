@@ -415,8 +415,28 @@ internal sealed partial class AethergramApp
         using (AppSurface.Begin(body))
         {
             DrawProfileHeader(user);
-            ui.SectionHeading(Loc.T(L.Aethergram.GramsTitle));
-            DrawProfileGrid();
+            var scale = ImGuiHelpers.GlobalScale;
+            var tabRow = new Rect(
+                new Vector2(ImGui.GetCursorScreenPos().X + 14f * scale, ImGui.GetCursorScreenPos().Y + 4f * scale),
+                new Vector2(ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X - 14f * scale,
+                    ImGui.GetCursorScreenPos().Y + 32f * scale));
+            for (var index = 0; index < ProfileTabs.Length; index++)
+            {
+                profileTabLabels[index] = Loc.T(ProfileTabs[index]);
+            }
+
+            profileTab = SegmentStrip.Draw("aethergram.profileTabs", tabRow, profileTabLabels, profileTab,
+                AppPalettes.Aethergram);
+            ImGui.SetCursorScreenPos(new Vector2(ImGui.GetCursorScreenPos().X, tabRow.Max.Y + 10f * scale));
+            if (profileTab == 0)
+            {
+                DrawProfileGrid();
+            }
+            else
+            {
+                store.EnsureTaggedPosts(userId);
+                DrawProfileGrid(store.TaggedPosts, L.PhotoTag.NoTagged);
+            }
         }
     }
 

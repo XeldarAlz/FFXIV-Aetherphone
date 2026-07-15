@@ -29,6 +29,7 @@ internal sealed partial class AethergramApp : IPhoneApp
 {
     private const float FeedRefreshSeconds = 25f;
     private const int MaxCaptionLength = 500;
+    private const int MaxPhotoTags = 20;
     private const int MaxCommentLength = 500;
     private const int DisplayNameMax = 40;
     private const int HandleMax = 15;
@@ -97,6 +98,15 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly List<WallpaperCrop> composeCrops = new();
     private int composeIndex;
     private int composePreviewIndex;
+    private static readonly LocString[] ProfileTabs = { L.PhotoTag.PostsTab, L.PhotoTag.TaggedTab };
+    private readonly string[] profileTabLabels = new string[ProfileTabs.Length];
+    private int profileTab;
+    private bool composeTagMode;
+    private int composeTagPhotoIndex;
+    private Vector2 composeTagPoint;
+    private readonly List<PhotoTagDto> composeTags = new();
+    private readonly PhotoTagOverlay tagOverlay = new();
+    private readonly PersonPicker personPicker;
     private string caption = string.Empty;
     private bool captionFocus;
     private string composeStatus = string.Empty;
@@ -130,6 +140,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         store = new AethergramStore(session, client);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
+        personPicker = new PersonPicker(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, client, images, lodestone, AethergramArt.StoryRing,
             AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
                 L.Aethergram.Saving), "Aethergram stories", StartStoryCompose);
@@ -682,6 +693,18 @@ internal sealed partial class AethergramApp : IPhoneApp
             HandleLikeGesture(imageRect, post, photos, result.Index);
         }
 
+        var tags = tagOverlay.Draw(ImGui.GetWindowDrawList(), imageRect, post.Id, result.Index, post.PhotoTags,
+            theme, ImGui.GetIO().DeltaTime);
+        if (tags.InputConsumed)
+        {
+            pendingViewUrl = null;
+        }
+
+        if (tags.OpenUserId is { } taggedUserId)
+        {
+            OpenProfile(taggedUserId);
+        }
+
         DrawLikeBurst(imageRect, post.Id);
         return result.Index;
     }
@@ -930,6 +953,7 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     private void OpenProfile(string userId)
     {
+        profileTab = 0;
         store.OpenProfile(userId);
         router.Push(AethergramRoute.Profile(userId));
     }

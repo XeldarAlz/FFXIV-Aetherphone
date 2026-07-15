@@ -497,6 +497,7 @@ internal abstract class SocialFeedStore : IDisposable
         profilePosts = Array.Empty<PostDto>();
         profileFailed = false;
         profileLoading = true;
+        ClearTagged();
         work.Run("profile open", async token =>
         {
             var user = await client.UserAsync(userId, token).ConfigureAwait(false);

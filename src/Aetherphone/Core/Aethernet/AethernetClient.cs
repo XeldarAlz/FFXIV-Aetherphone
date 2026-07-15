@@ -412,9 +412,34 @@ internal sealed class AethernetClient
         return http.PutBytesAsync(new Uri(uploadUrl), bytes, contentType, token);
     }
 
-    public Task<PostDto?> CreateGramAsync(string caption, string[] mediaKeys, int width, int height, CancellationToken token)
+    public Task<PostDto?> CreateGramAsync(string caption, string[] mediaKeys, int width, int height, PhotoTagInput[]? photoTags, CancellationToken token)
     {
-        return http.PostJsonAsync(Url("/grams"), new CreateGramRequest(caption, mediaKeys[0], width, height, mediaKeys), AethernetJsonContext.Default.CreateGramRequest, AethernetJsonContext.Default.PostDto, session.Token, token, authStatusSink);
+        return http.PostJsonAsync(Url("/grams"), new CreateGramRequest(caption, mediaKeys[0], width, height, mediaKeys, photoTags), AethernetJsonContext.Default.CreateGramRequest, AethernetJsonContext.Default.PostDto, session.Token, token, authStatusSink);
+    }
+
+    public Task<FeedPage?> UserTaggedGramsAsync(string userId, CancellationToken token)
+    {
+        return http.GetJsonAsync(Url($"/users/{Uri.EscapeDataString(userId)}/tagged"), AethernetJsonContext.Default.FeedPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<PhotoTagPage?> PendingPhotoTagsAsync(CancellationToken token)
+    {
+        return http.GetJsonAsync(Url("/phototags/pending"), AethernetJsonContext.Default.PhotoTagPage, session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> ApprovePhotoTagAsync(string tagId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Post, Url($"/phototags/{Uri.EscapeDataString(tagId)}/approve"), session.Token, token, authStatusSink);
+    }
+
+    public Task<bool> RemovePhotoTagAsync(string tagId, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url($"/phototags/{Uri.EscapeDataString(tagId)}"), session.Token, token, authStatusSink);
+    }
+
+    public Task<UserDto?> UpdateTagPrivacyAsync(int? tagPolicy, bool? requireApproval, CancellationToken token)
+    {
+        return http.PostJsonAsync(Url("/me/tag-privacy"), new UpdateTagPrivacyRequest(tagPolicy, requireApproval), AethernetJsonContext.Default.UpdateTagPrivacyRequest, AethernetJsonContext.Default.UserDto, session.Token, token, authStatusSink);
     }
 
     public Task<FeedPage?> GramFeedAsync(string scope, string? cursor, CancellationToken token)

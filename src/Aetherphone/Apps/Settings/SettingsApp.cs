@@ -38,6 +38,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private readonly EncryptionPage encryptionPage;
     private readonly ChangelogPage changelogPage;
     private readonly PrivacyPage privacyPage;
+    private readonly TagsMentionsPage tagsMentionsPage;
 
     public SettingsApp(Configuration configuration, ThemeProvider themes, SoundService sound,
         AethernetSession aethernetSession, AethernetClient aethernetClient, KeyVault keyVault,
@@ -82,6 +83,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             });
         var commands = new CommandsPage();
         privacyPage = new PrivacyPage(configuration, aethernetSession, aethernetClient);
+        tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernetClient, this);
         var about = new AboutPage(showAbout);
         changelogPage = new ChangelogPage(configuration);
         var groups = new[]
@@ -89,7 +91,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             new SettingsGroup(new ISettingsPage[] { appearance, language, immersion, tutorials },
                 L.Settings.GeneralFooter),
             new SettingsGroup(new ISettingsPage[] { callsPage, notifications, ringtonePage }, L.Settings.AlertsFooter),
-            new SettingsGroup(new ISettingsPage[] { commands, privacyPage, about, changelogPage }),
+            new SettingsGroup(new ISettingsPage[] { commands, privacyPage, tagsMentionsPage, about, changelogPage }),
         };
         router = new ViewRouter<ISettingsPage>(
             new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage), Id);
@@ -158,5 +160,6 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         profilePage.Dispose();
         encryptionPage.Dispose();
         privacyPage.Dispose();
+        tagsMentionsPage.Dispose();
     }
 }

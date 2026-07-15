@@ -35,6 +35,10 @@ internal static class L
         public static readonly LocString MentionedComment = new("social.mentionedComment", "mentioned you in a comment");
         public static readonly LocString ViewProfile = new("social.viewProfile", "View profile");
         public static readonly LocString MentionSearching = new("social.mentionSearching", "Looking for people");
+        public static readonly LocString TaggedPhoto = new("social.taggedPhoto", "tagged you in a photo");
+        public static readonly LocString AudienceEveryone = new("social.audienceEveryone", "Everyone");
+        public static readonly LocString AudienceFollowing = new("social.audienceFollowing", "People you follow");
+        public static readonly LocString AudienceNoOne = new("social.audienceNoOne", "No one");
         public static readonly LocString Followed = new("social.followed", "started following you");
         public static readonly LocString ConnectionRequest = new("social.connectionRequest", "wants to connect with you");
         public static readonly LocString ConnectionAccepted = new("social.connectionAccepted", "accepted your connection request");
@@ -45,6 +49,30 @@ internal static class L
         public static readonly LocString ActivityTitle = new("social.activityTitle", "Notifications");
         public static readonly LocString ActivityTab = new("social.activityTab", "Activity");
         public static readonly LocString ActivityEmpty = new("social.activityEmpty", "Nothing here yet. Interactions with your posts will show up here");
+    }
+
+    internal static class PhotoTag
+    {
+        public static readonly LocString TagPeople = new("photoTag.tagPeople", "Tag people");
+        public static readonly LocString TapToTag = new("photoTag.tapToTag", "Tap the photo to tag someone");
+        public static readonly LocString PickPerson = new("photoTag.pickPerson", "Tag someone");
+        public static readonly LocString SearchHint = new("photoTag.searchHint", "Search by name or @username");
+        public static readonly LocString NoPeople = new("photoTag.noPeople", "No one found");
+        public static readonly LocString TaggedTab = new("photoTag.taggedTab", "Tagged");
+        public static readonly LocString PostsTab = new("photoTag.postsTab", "Posts");
+        public static readonly LocString NoTagged = new("photoTag.noTagged", "No photos of you yet");
+        public static readonly LocString TagLimit = new("photoTag.tagLimit", "You can tag up to {0} people");
+        public static readonly LocString SettingsTitle = new("photoTag.settingsTitle", "Tags and mentions");
+        public static readonly LocString SignInPrompt = new("photoTag.signInPrompt", "Sign in to Aethernet to choose who can mention and tag you");
+        public static readonly LocString AllowMentions = new("photoTag.allowMentions", "Allow mentions from");
+        public static readonly LocString AllowTags = new("photoTag.allowTags", "Allow tags from");
+        public static readonly LocString AudienceHint = new("photoTag.audienceHint", "Choose who can mention you in posts and comments, and who can tag you in photos.");
+        public static readonly LocString ApprovalHeader = new("photoTag.approvalHeader", "Approval");
+        public static readonly LocString ApproveManually = new("photoTag.approveManually", "Manually approve tags");
+        public static readonly LocString ApproveHint = new("photoTag.approveHint", "Tags stay hidden until you approve them, and never reach your Tagged tab without you.");
+        public static readonly LocString ReviewTags = new("photoTag.reviewTags", "Tag review");
+        public static readonly LocString Approve = new("photoTag.approve", "Approve");
+        public static readonly LocString Remove = new("photoTag.remove", "Remove");
     }
 
     internal static class Story

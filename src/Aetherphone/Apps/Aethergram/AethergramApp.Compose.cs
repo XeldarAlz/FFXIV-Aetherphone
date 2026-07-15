@@ -54,6 +54,9 @@ internal sealed partial class AethergramApp
         composePreviewIndex = 0;
         caption = string.Empty;
         composeStatus = string.Empty;
+        composeTags.Clear();
+        composeTagMode = false;
+        personPicker.Close();
         pendingPickedPath = null;
         pickerPaths = library.List();
         router.Push(AethergramRoute.Compose);
@@ -429,14 +432,22 @@ internal sealed partial class AethergramApp
             DrawCaptionStrip(strip, scale);
         }
 
-        Typography.DrawCentered(new Vector2(area.Center.X, hintY), Loc.T(L.Aethergram.TapToAdjust),
-            AppPalettes.Aethergram.MutedInk, 0.75f);
+        DrawTagModeBar(new Rect(new Vector2(area.Min.X + margin, hintY - 8f * scale),
+            new Vector2(area.Max.X - margin, hintY + 10f * scale)), scale);
         DrawCaptionCard(cardRect, area, scale);
         if (composeStatus.Length > 0)
         {
             Typography.DrawCentered(new Vector2(area.Center.X, cardRect.Max.Y + 10f * scale), composeStatus,
                 theme.Danger, 0.82f);
         }
+
+        var pickedPerson = personPicker.Draw(area, theme, images, lodestone);
+        if (pickedPerson is not null)
+        {
+            PlaceComposeTag(pickedPerson);
+        }
+
+        personPicker.Gate();
 
         var busy = ComposePosting;
         if (DrawShareBar(shareRect, busy ? Loc.T(L.Aethergram.Sharing) : Loc.T(L.Aethergram.Share), !busy))
@@ -487,6 +498,102 @@ internal sealed partial class AethergramApp
         }
     }
 
+    private void DrawTagModeBar(Rect bar, float scale)
+    {
+        if (composeStoryMode)
+        {
+            Typography.DrawCentered(new Vector2(bar.Center.X, bar.Min.Y + 2f * scale),
+                Loc.T(L.Aethergram.TapToAdjust), AppPalettes.Aethergram.MutedInk, 0.75f);
+            return;
+        }
+
+        var label = composeTagMode ? Loc.T(L.PhotoTag.TapToTag) : Loc.T(L.Aethergram.TapToAdjust);
+        Typography.DrawCentered(new Vector2(bar.Center.X - 44f * scale, bar.Min.Y + 2f * scale), label,
+            AppPalettes.Aethergram.MutedInk, 0.75f);
+
+        var pillWidth = 78f * scale;
+        var pillMin = new Vector2(bar.Max.X - pillWidth, bar.Min.Y - 2f * scale);
+        var pillMax = new Vector2(bar.Max.X, bar.Min.Y + 16f * scale);
+        var drawList = ImGui.GetWindowDrawList();
+        var active = composeTagMode;
+        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
+            ImGui.GetColorU32(active ? Accent : AppPalettes.Aethergram.FieldSurface));
+        Typography.DrawCentered(drawList, new Vector2((pillMin.X + pillMax.X) * 0.5f, pillMin.Y + 2f * scale),
+            Loc.T(L.PhotoTag.TagPeople), active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Aethergram.MutedInk, 0.72f);
+        if (UiInteract.HoverClick(pillMin, pillMax))
+        {
+            composeTagMode = !composeTagMode;
+        }
+    }
+
+    private void PlaceComposeTag(MentionSuggestDto person)
+    {
+        for (var index = 0; index < composeTags.Count; index++)
+        {
+            if (string.Equals(composeTags[index].UserId, person.UserId, StringComparison.Ordinal))
+            {
+                composeTags[index] = new PhotoTagDto(string.Empty, person.UserId, person.Handle, person.DisplayName,
+                    composeTagPhotoIndex, composeTagPoint.X, composeTagPoint.Y, 1);
+                return;
+            }
+        }
+
+        composeTags.Add(new PhotoTagDto(string.Empty, person.UserId, person.Handle, person.DisplayName,
+            composeTagPhotoIndex, composeTagPoint.X, composeTagPoint.Y, 1));
+    }
+
+    private PhotoTagInput[]? ComposeTagInputs()
+    {
+        if (composeTags.Count == 0)
+        {
+            return null;
+        }
+
+        var inputs = new PhotoTagInput[composeTags.Count];
+        for (var index = 0; index < composeTags.Count; index++)
+        {
+            var tag = composeTags[index];
+            inputs[index] = new PhotoTagInput(tag.UserId, tag.PhotoIndex, tag.X, tag.Y);
+        }
+
+        return inputs;
+    }
+
+    private void DrawComposeTags(ImDrawListPtr drawList, Rect preview, int photoIndex, float scale)
+    {
+        for (var index = composeTags.Count - 1; index >= 0; index--)
+        {
+            var tag = composeTags[index];
+            if (tag.PhotoIndex != photoIndex)
+            {
+                continue;
+            }
+
+            var anchor = PhotoTagGeometry.ToScreen(preview, tag.X, tag.Y);
+            var label = SocialIdentity.Name(tag.DisplayName, tag.Handle);
+            var text = Typography.FitText(label, preview.Width * 0.5f, TextStyles.FootnoteEmphasized);
+            var textSize = Typography.Measure(text, TextStyles.FootnoteEmphasized);
+            var pillWidth = textSize.X + 26f * scale;
+            var pillHeight = textSize.Y + 8f * scale;
+            var left = Math.Clamp(anchor.X - pillWidth * 0.5f, preview.Min.X + 4f * scale,
+                MathF.Max(preview.Min.X + 4f * scale, preview.Max.X - 4f * scale - pillWidth));
+            var top = Math.Clamp(anchor.Y + 6f * scale, preview.Min.Y, preview.Max.Y - pillHeight);
+            var min = new Vector2(left, top);
+            var max = new Vector2(left + pillWidth, top + pillHeight);
+            drawList.AddCircleFilled(anchor, 4f * scale, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.9f)), 12);
+            Squircle.Fill(drawList, min, max, pillHeight * 0.5f, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.62f)));
+            Typography.Draw(drawList, new Vector2(min.X + 8f * scale, min.Y + 4f * scale), text,
+                new Vector4(1f, 1f, 1f, 1f), TextStyles.FootnoteEmphasized);
+            var closeCenter = new Vector2(max.X - 9f * scale, (min.Y + max.Y) * 0.5f);
+            AppSkin.Icon(closeCenter, FontAwesomeIcon.Times.ToIconString(), new Vector4(1f, 1f, 1f, 0.75f), 0.6f);
+            if (UiInteract.HoverClick(closeCenter - new Vector2(8f * scale, 8f * scale),
+                    closeCenter + new Vector2(8f * scale, 8f * scale)))
+            {
+                composeTags.RemoveAt(index);
+            }
+        }
+    }
+
     private void DrawCaptionPreview(Rect region, float scale)
     {
         var aspect = ComposeAspect;
@@ -515,10 +622,31 @@ internal sealed partial class AethergramApp
         drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
-        if (UiInteract.HoverClick(preview.Min, preview.Max))
+        if (composeTagMode && !composeStoryMode)
+        {
+            DrawComposeTags(drawList, preview, index, scale);
+        }
+
+        if (!UiInteract.HoverClick(preview.Min, preview.Max))
+        {
+            return;
+        }
+
+        if (!composeTagMode || composeStoryMode)
         {
             LoadCropStage(index);
+            return;
         }
+
+        if (composeTags.Count >= MaxPhotoTags)
+        {
+            composeStatus = Loc.T(L.PhotoTag.TagLimit, MaxPhotoTags);
+            return;
+        }
+
+        composeTagPoint = PhotoTagGeometry.ToNormalized(preview, ImGui.GetMousePos());
+        composeTagPhotoIndex = index;
+        personPicker.Open();
     }
 
     private void DrawCaptionCard(Rect card, Rect screen, float scale)
@@ -616,7 +744,7 @@ internal sealed partial class AethergramApp
         }
 
         composeStatus = string.Empty;
-        store.CreateGram(composeSelected.ToArray(), composeCrops.ToArray(), caption,
+        store.CreateGram(composeSelected.ToArray(), composeCrops.ToArray(), caption, ComposeTagInputs(),
             ok => composeOutcome = ok ? 1 : 2);
     }
 
