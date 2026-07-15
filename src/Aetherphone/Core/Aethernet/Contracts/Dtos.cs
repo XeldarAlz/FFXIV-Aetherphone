@@ -242,7 +242,6 @@ internal sealed record VelvetPostDto(
     string MediaUrl,
     string Caption,
     string[] Tags,
-    int Visibility,
     bool Unlocked,
     int MediaWidth,
     int MediaHeight,
@@ -263,7 +262,6 @@ internal sealed record CreateVelvetPostRequest(
     int Height,
     string Caption,
     string[] Tags,
-    int Visibility,
     string[]? MediaKeys = null);
 
 internal sealed record VelvetCommentDto(

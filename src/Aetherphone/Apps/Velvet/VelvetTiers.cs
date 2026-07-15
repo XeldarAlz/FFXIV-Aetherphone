@@ -3,21 +3,6 @@ using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Velvet;
 
-internal static class VelvetVisibility
-{
-    public const int Connections = 0;
-    public const int Public = 1;
-    public const int Unlockable = 2;
-
-    public static string Label(int visibility) =>
-        visibility switch
-        {
-            Public => Loc.T(L.Velvet.VisibilityPublic),
-            Unlockable => Loc.T(L.Velvet.VisibilityUnlockable),
-            _ => Loc.T(L.Velvet.VisibilityConnections),
-        };
-}
-
 internal static class VelvetLookingFor
 {
     public const int Any = 0;

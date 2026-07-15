@@ -38,7 +38,6 @@ internal sealed class VelvetPostComposer
     private string? pendingPickedPath;
     private volatile int outcome;
     private bool closeRequested;
-    private int visibility = VelvetVisibility.Public;
     private string caption = string.Empty;
     private string limitNotice = string.Empty;
     private string status = string.Empty;
@@ -90,7 +89,6 @@ internal sealed class VelvetPostComposer
         pendingPickedPath = null;
         outcome = 0;
         closeRequested = false;
-        visibility = VelvetVisibility.Public;
         caption = string.Empty;
         limitNotice = string.Empty;
         status = string.Empty;
@@ -402,9 +400,8 @@ internal sealed class VelvetPostComposer
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var top = area.Min.Y + AppHeader.Height * scale;
-        var chipsY = area.Max.Y - 78f * scale;
         var captionHeight = 34f * scale;
-        var captionY = storyMode ? area.Max.Y - 20f * scale - captionHeight : chipsY - 20f * scale - captionHeight;
+        var captionY = area.Max.Y - 20f * scale - captionHeight;
         var stripHeight = selected.Count > 1 ? 52f * scale : 0f;
         var statusHeight = status.Length > 0 ? 20f * scale : 0f;
         var previewRegion = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
@@ -444,15 +441,6 @@ internal sealed class VelvetPostComposer
         }
 
         mentionPopup.Gate(captionMentions);
-
-        if (storyMode)
-        {
-            return;
-        }
-
-        DrawChoiceRow(ui, area, chipsY, Loc.T(L.Velvet.VisibilityLabel),
-            new[] { VelvetVisibility.Public, VelvetVisibility.Connections }, visibility, value => visibility = value,
-            VelvetVisibility.Label);
     }
 
     private void DrawCaptionPreview(Rect region, float scale)
@@ -517,30 +505,6 @@ internal sealed class VelvetPostComposer
         }
     }
 
-    private static float DrawChoiceRow(AppSkin ui, Rect area, float y, string label, int[] values, int selected,
-        Action<int> onSelect, Func<int, string> labelFor)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(new Vector2(area.Min.X + 18f * scale, y), label, AppPalettes.Velvet.BodyInk, 0.9f, FontWeight.SemiBold);
-        var cursorX = area.Min.X + 18f * scale;
-        var chipY = y + 26f * scale;
-        var chipHeight = 36f * scale;
-        for (var index = 0; index < values.Length; index++)
-        {
-            var text = labelFor(values[index]);
-            var width = Typography.Measure(text, 0.9f, FontWeight.Medium).X + 28f * scale;
-            var rect = new Rect(new Vector2(cursorX, chipY), new Vector2(cursorX + width, chipY + chipHeight));
-            if (ui.Chip(rect, text, selected == values[index]))
-            {
-                onSelect(values[index]);
-            }
-
-            cursorX += width + 10f * scale;
-        }
-
-        return chipY + chipHeight;
-    }
-
     private void HandleCropGestures(Rect preview, Vector2 size, Vector2 visible)
     {
         var hovering = ImGui.IsMouseHoveringRect(preview.Min, preview.Max);
@@ -600,7 +564,7 @@ internal sealed class VelvetPostComposer
             return;
         }
 
-        store.CreatePost(selected.ToArray(), crops.ToArray(), caption, Array.Empty<string>(), visibility,
+        store.CreatePost(selected.ToArray(), crops.ToArray(), caption, Array.Empty<string>(),
             ok => outcome = ok ? 1 : 2);
     }
 

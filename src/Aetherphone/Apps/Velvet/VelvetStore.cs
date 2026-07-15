@@ -607,7 +607,7 @@ internal sealed class VelvetStore : IDisposable
         loadingFeed = true;
         work.Run("feed", async token =>
         {
-            var page = await client.VelvetFeedAsync("explore", null, token).ConfigureAwait(false);
+            var page = await client.VelvetFeedAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
                 ApplyFeedRefresh(page);
@@ -635,7 +635,7 @@ internal sealed class VelvetStore : IDisposable
         loadingMoreFeed = true;
         work.Run("feed more", async token =>
         {
-            var page = await client.VelvetFeedAsync("explore", cursor, token).ConfigureAwait(false);
+            var page = await client.VelvetFeedAsync(cursor, token).ConfigureAwait(false);
             if (page is not null)
             {
                 lock (feedLock)
@@ -1371,7 +1371,7 @@ internal sealed class VelvetStore : IDisposable
         return null;
     }
 
-    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, string caption, string[] tags, int visibility,
+    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, string caption, string[] tags,
         Action<bool> onComplete)
     {
         if (posting || sourcePaths.Length == 0)
@@ -1403,7 +1403,7 @@ internal sealed class VelvetStore : IDisposable
             }
 
             var request =
-                new CreateVelvetPostRequest(keys[0], PostSize, PostSize, caption, tags, visibility, keys);
+                new CreateVelvetPostRequest(keys[0], PostSize, PostSize, caption, tags, keys);
             var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
             if (created is null)
             {

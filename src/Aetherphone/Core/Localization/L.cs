@@ -515,28 +515,10 @@ internal static class L
     {
         public static readonly LocString[] Release0970 =
         {
+            new("changelog.r0970.37", "Velvet photos are now for your connections only: the feed no longer shows posts from people you have not connected with"),
+            new("changelog.r0970.38", "Choosing who can see a Velvet post is gone, because every post now goes to your connections and no further"),
             new("changelog.r0970.0", "Velvet now has stories: share a photo your connections can watch for 24 hours before it disappears on its own"),
             new("changelog.r0970.1", "You can now tap the seen count on your own story to see everyone who watched it, and when"),
-            new("changelog.r0970.2", "Tapping a profile photo in Chirper, Aethergram, Velvet, or Message now opens it enlarged"),
-            new("changelog.r0970.3", "The story tray now scrolls away with the feed instead of staying pinned above the posts"),
-            new("changelog.r0970.4", "Aethergram's bottom tabs now light up and name themselves as you point at them"),
-            new("changelog.r0970.5", "Notification rows now highlight as you point at them in Chirper, Aethergram, and Velvet"),
-            new("changelog.r0970.6", "Photo captions on Aethergram, Velvet, and stories now go through moderation alongside the photo itself"),
-            new("changelog.r0970.7", "A story photo that is still in review is now held back in the story viewer, the way it already was everywhere else"),
-            new("changelog.r0970.8", "Aetherphone is now about a third smaller to download and install: the wallpapers it ships with are packed far more efficiently at the same resolution"),
-            new("changelog.r0970.9", "Encrypted chats now set up on computers that run the game through Wine or Proton, where creating the security key used to fail"),
-            new("changelog.r0970.10", "A PC that cannot support encrypted chats now says so in the chat encryption sheet, instead of showing Setting up encryption forever"),
-            new("changelog.r0970.11", "Fixed composing a story framing your photo as a square when it publishes tall"),
-            new("changelog.r0970.12", "Fixed sharing a story showing no progress, leaving the Share button looking untouched for the whole upload"),
-            new("changelog.r0970.13", "Fixed being offered a new story tile beside the ring of the story you had already posted"),
-            new("changelog.r0970.14", "Fixed a story's caption and its seen count landing on top of each other"),
-            new("changelog.r0970.15", "Fixed leaving an app in the middle of a story leaving that story hanging over the app when you came back"),
-            new("changelog.r0970.16", "Fixed the story delete confirmation saying it couldn't delete the post"),
-            new("changelog.r0970.17", "A story that has expired is now treated as gone everywhere, including its viewer list"),
-            new("changelog.r0970.18", "Fixed Aetherphone closing the game on startup for players whose Windows country or regional format is set to Russia or Belarus"),
-            new("changelog.r0970.19", "Fixed some labels, such as the Ringtone row in Settings and the Control Center tiles, staying in the previous language after you changed language"),
-            new("changelog.r0970.20", "Fixed the details under a Velvet profile's name landing on top of each other when the person is looking for several things at once"),
-            new("changelog.r0970.21", "Turkish uppercase labels are now spelled correctly throughout the phone: headings like UYARILAR no longer come out with a lowercase ı in the middle"),
             new("changelog.r0970.22", "You can now mention people with @ in a chirp, a caption, or a comment across Chirper, Aethergram, and Velvet: the handle becomes a link that opens their profile"),
             new("changelog.r0970.23", "Typing @ while composing now suggests people to pick from, so you no longer have to remember a handle exactly"),
             new("changelog.r0970.24", "Being mentioned now reaches you as a notification that opens the post it came from"),
@@ -545,16 +527,35 @@ internal static class L
             new("changelog.r0970.27", "Aethergram profiles now have a Tagged tab, holding the photos you have been tagged in"),
             new("changelog.r0970.28", "Settings now has a Tags and mentions screen, where you choose who can mention you in posts and comments, and who can tag you in photos"),
             new("changelog.r0970.29", "You can now hold tags for review before they appear: turn on Manually approve tags, and nothing reaches your Tagged tab until you approve it"),
+            new("changelog.r0970.34", "The phone now tells you when a newer Aetherphone is out: an update button appears beneath it, and clicking it takes you straight to Dalamud's plugin installer"),
+            new("changelog.r0970.2", "Tapping a profile photo in Chirper, Aethergram, Velvet, or Message now opens it enlarged"),
+
+            new("changelog.r0970.3", "The story tray now scrolls away with the feed instead of staying pinned above the posts"),
+            new("changelog.r0970.4", "Aethergram's bottom tabs now light up and name themselves as you point at them"),
+            new("changelog.r0970.5", "Notification rows now highlight as you point at them in Chirper, Aethergram, and Velvet"),
+            new("changelog.r0970.6", "Photo captions on Aethergram, Velvet, and stories now go through moderation alongside the photo itself"),
+            new("changelog.r0970.7", "A story photo that is still in review is now held back in the story viewer, the way it already was everywhere else"),
+            new("changelog.r0970.17", "A story that has expired is now treated as gone everywhere, including its viewer list"),
+            new("changelog.r0970.8", "Aetherphone is now about a third smaller to download and install: the wallpapers it ships with are packed far more efficiently at the same resolution"),
+
+            new("changelog.r0970.9", "Encrypted chats now set up on computers that run the game through Wine or Proton, where creating the security key used to fail"),
+            new("changelog.r0970.10", "A PC that cannot support encrypted chats now says so in the chat encryption sheet, instead of showing Setting up encryption forever"),
+            new("changelog.r0970.18", "Fixed Aetherphone closing the game on startup for players whose Windows country or regional format is set to Russia or Belarus"),
+            new("changelog.r0970.19", "Fixed some labels, such as the Ringtone row in Settings and the Control Center tiles, staying in the previous language after you changed language"),
+            new("changelog.r0970.21", "Turkish uppercase labels are now spelled correctly throughout the phone: headings like UYARILAR no longer come out with a lowercase ı in the middle"),
             new("changelog.r0970.30", "Fixed the reason a call was declined or unavailable, the Wallet section headers, and the Calculator error staying in English whatever language your phone was set to"),
             new("changelog.r0970.31", "Fixed the edited marker on a message reading backwards in Turkish, Japanese, and German, where the time has to come first"),
             new("changelog.r0970.32", "Fixed a post's detail view still showing In review after the review had finished, and hiding the comments other people had left"),
+            new("changelog.r0970.20", "Fixed the details under a Velvet profile's name landing on top of each other when the person is looking for several things at once"),
             new("changelog.r0970.33", "Fixed speckles appearing along the edges of small rounded corners"),
-            new("changelog.r0970.34",
-                "The phone now tells you when a newer Aetherphone is out: an update button appears beneath it, and clicking it takes you straight to Dalamud's plugin installer"),
-            new("changelog.r0970.35",
-                "Fixed the phone forgetting where you last left it minimized, so minimizing it again returns it to that spot instead of the full phone's corner"),
-            new("changelog.r0970.36",
-                "Fixed the phone forgetting where you had placed it, full size and minimized, whenever the plugin was turned off and on again or the game restarted"),
+            new("changelog.r0970.11", "Fixed composing a story framing your photo as a square when it publishes tall"),
+            new("changelog.r0970.12", "Fixed sharing a story showing no progress, leaving the Share button looking untouched for the whole upload"),
+            new("changelog.r0970.13", "Fixed being offered a new story tile beside the ring of the story you had already posted"),
+            new("changelog.r0970.14", "Fixed a story's caption and its seen count landing on top of each other"),
+            new("changelog.r0970.15", "Fixed leaving an app in the middle of a story leaving that story hanging over the app when you came back"),
+            new("changelog.r0970.16", "Fixed the story delete confirmation saying it couldn't delete the post"),
+            new("changelog.r0970.35", "Fixed the phone forgetting where you last left it minimized, so minimizing it again returns it to that spot instead of the full phone's corner"),
+            new("changelog.r0970.36", "Fixed the phone forgetting where you had placed it, full size and minimized, whenever the plugin was turned off and on again or the game restarted"),
         };
 
         public static readonly LocString[] Release0960 =
@@ -1366,10 +1367,6 @@ internal static class L
         public static readonly LocString NewPost = new("velvet.newPost", "New Post");
         public static readonly LocString Share = new("velvet.share", "Share");
         public static readonly LocString CaptionHint = new("velvet.captionHint", "Write a caption…");
-        public static readonly LocString VisibilityLabel = new("velvet.visibilityLabel", "Who can see it");
-        public static readonly LocString VisibilityConnections = new("velvet.visibilityConnections", "Connections");
-        public static readonly LocString VisibilityPublic = new("velvet.visibilityPublic", "Everyone in Velvet");
-        public static readonly LocString VisibilityUnlockable = new("velvet.visibilityUnlockable", "Unlock only");
         public static readonly LocString Block = new("velvet.block", "Block");
         public static readonly LocString Blocked = new("velvet.blocked", "Blocked");
         public static readonly LocString Unblock = new("velvet.unblock", "Unblock");
