@@ -30,6 +30,11 @@ internal sealed class StoryViewerOverlay
     private const float DismissDragDistance = 140f;
     private const float HoldPauseSeconds = 0.18f;
     private const float TapZoneFraction = 0.32f;
+    private const float FooterInset = 16f;
+    private const float FooterGap = 10f;
+    private const float SeenPillHeight = 30f;
+    private const float ScrimFadeHeight = 44f;
+    private const float SeenHoverSmoothTime = 0.12f;
 
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
@@ -50,6 +55,7 @@ internal sealed class StoryViewerOverlay
     private Action? onExhausted;
     private Func<StoryDto, StoryViewers>? viewersSource;
     private Spring sheetReveal;
+    private Spring seenHover;
     private bool sheetOpen;
 
     public StoryViewerOverlay(RemoteImageCache images, LodestoneService lodestone)
@@ -74,6 +80,7 @@ internal sealed class StoryViewerOverlay
         onExhausted = exhausted;
         sheetOpen = false;
         sheetReveal = new Spring(0f);
+        seenHover = new Spring(0f);
         index = FirstUnseen(items);
         elapsed = 0f;
         dragOffset = 0f;
@@ -105,6 +112,19 @@ internal sealed class StoryViewerOverlay
         open = false;
         holding = false;
         sheetOpen = false;
+    }
+
+    public void Reset()
+    {
+        Close();
+        reveal = new Spring(0f);
+        sheetReveal = new Spring(0f);
+        seenHover = new Spring(0f);
+        stories = Array.Empty<StoryDto>();
+        onSeen = null;
+        onDelete = null;
+        onExhausted = null;
+        viewersSource = null;
     }
 
     /// <param name="suspended">
@@ -153,36 +173,90 @@ internal sealed class StoryViewerOverlay
         var stage = new Rect(new Vector2(area.Min.X, contentTop + 44f * scale) + shift,
             new Vector2(area.Max.X, area.Max.Y - 16f * scale) + shift);
         DrawImage(drawList, stage, story, scale);
-        DrawCaption(drawList, stage, story, scale);
+        DrawFooter(drawList, stage, story, scale, delta);
         DrawProgress(drawList, new Rect(new Vector2(area.Min.X + 12f * scale, contentTop + 8f * scale) + shift,
             new Vector2(area.Max.X - 12f * scale, contentTop + 11f * scale) + shift), scale);
         DrawHeader(new Rect(new Vector2(area.Min.X + 12f * scale, contentTop + 18f * scale) + shift,
             new Vector2(area.Max.X - 12f * scale, contentTop + 42f * scale) + shift), theme, story, scale);
-        DrawSeenBar(drawList, stage, story, scale);
         DrawViewersSheet(area, theme, story, scale);
     }
 
-    // The eye and count only exist on your own story: the server reports ViewCount as zero to anyone
-    // who is not the author, so this would silently read "0" for everyone else.
-    private void DrawSeenBar(ImDrawListPtr drawList, Rect stage, StoryDto story, float scale)
+    /// <summary>
+    /// Stacks the caption above the seen pill against the bottom of the stage under one scrim, so the two
+    /// cannot land on top of each other the way separately bottom-anchored blocks did.
+    /// </summary>
+    private void DrawFooter(ImDrawListPtr drawList, Rect stage, StoryDto story, float scale, float delta)
     {
-        if (!canDelete || viewersSource is null)
+        var showSeen = ShowSeenPill;
+        var hasCaption = story.Caption.Length > 0;
+        if (!showSeen && !hasCaption)
         {
             return;
         }
 
-        var label = Loc.Plural(L.Aethergram.StorySeenBy, story.ViewCount);
+        var inset = FooterInset * scale;
+        var captionWidth = stage.Width - inset * 2f;
+        var captionHeight = hasCaption
+            ? Typography.MeasureWrappedBlock(story.Caption, TextStyles.Body, captionWidth).Y
+            : 0f;
+        var seenHeight = showSeen ? SeenPillHeight * scale : 0f;
+        var gap = hasCaption && showSeen ? FooterGap * scale : 0f;
+        var bottom = stage.Max.Y - inset;
+        var top = MathF.Max(stage.Min.Y + inset, bottom - captionHeight - gap - seenHeight);
+        var scrimTop = MathF.Max(stage.Min.Y, top - ScrimFadeHeight * scale);
+        Squircle.FillVerticalGradient(drawList, new Vector2(stage.Min.X, scrimTop), stage.Max,
+            Metrics.Radius.Md * scale, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0f)),
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.78f)));
+        if (hasCaption)
+        {
+            Typography.DrawWrappedCentered(new Vector2(stage.Center.X, top), story.Caption,
+                new Vector4(1f, 1f, 1f, 0.96f), TextStyles.Body, captionWidth);
+        }
+
+        if (showSeen)
+        {
+            DrawSeenPill(drawList, new Vector2(stage.Min.X + inset, bottom - seenHeight), story, seenHeight, scale,
+                delta);
+        }
+    }
+
+    // The eye and count only exist on your own story: the server reports ViewCount as zero to anyone
+    // who is not the author, so this would silently read "0" for everyone else.
+    private bool ShowSeenPill => canDelete && viewersSource is not null;
+
+    /// <summary>
+    /// The chip sits on an arbitrary photo, so hover has to read against both a bright and a dark backdrop:
+    /// the fill deepens, a hairline ring fades in, and the ink lifts to full white together.
+    /// </summary>
+    private void DrawSeenPill(ImDrawListPtr drawList, Vector2 origin, StoryDto story, float height, float scale,
+        float delta)
+    {
+        var label = Loc.Plural(L.Story.SeenBy, story.ViewCount);
         var size = Typography.Measure(label, TextStyles.FootnoteEmphasized);
-        var center = new Vector2(stage.Min.X + 18f * scale + size.X * 0.5f + 14f * scale,
-            stage.Max.Y - 20f * scale);
-        var half = new Vector2(size.X * 0.5f + 22f * scale, 14f * scale);
-        Squircle.Fill(drawList, center - half, center + half, 12f * scale,
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f)));
-        AppSkin.Icon(new Vector2(center.X - half.X + 14f * scale, center.Y), FontAwesomeIcon.Eye.ToIconString(),
-            new Vector4(1f, 1f, 1f, 0.9f), 0.8f);
-        Typography.Draw(new Vector2(center.X - half.X + 26f * scale, center.Y - size.Y * 0.5f), label,
-            new Vector4(1f, 1f, 1f, 0.95f), TextStyles.FootnoteEmphasized);
-        if (UiInteract.HoverClick(center - half, center + half))
+        var padding = 12f * scale;
+        var iconWidth = 11f * scale;
+        var iconGap = 7f * scale;
+        var max = new Vector2(origin.X + padding * 2f + iconWidth + iconGap + size.X, origin.Y + height);
+        var radius = height * 0.5f;
+        var centerY = origin.Y + height * 0.5f;
+        var hovered = UiInteract.Hover(origin, max);
+        seenHover.Step(hovered ? 1f : 0f, SeenHoverSmoothTime, delta);
+        var hover = Math.Clamp(seenHover.Value, 0f, 1f);
+        var press = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left) ? 0.1f : 0f;
+        Squircle.Fill(drawList, origin, max, radius,
+            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.45f + 0.25f * hover + press)));
+        if (hover > 0.001f)
+        {
+            Squircle.Stroke(drawList, origin, max, radius,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.3f * hover)), 1f * scale);
+        }
+
+        var ink = new Vector4(1f, 1f, 1f, 0.9f + 0.1f * hover);
+        AppSkin.Icon(new Vector2(origin.X + padding + iconWidth * 0.5f, centerY), FontAwesomeIcon.Eye.ToIconString(),
+            ink, 0.8f);
+        Typography.Draw(new Vector2(origin.X + padding + iconWidth + iconGap, centerY - size.Y * 0.5f), label, ink,
+            TextStyles.FootnoteEmphasized);
+        if (UiInteract.HoverClick(origin, max))
         {
             sheetOpen = true;
         }
@@ -216,12 +290,12 @@ internal sealed class StoryViewerOverlay
         var viewers = viewersSource(story);
         var headerY = panel.Min.Y + 26f * scale;
         Typography.DrawCentered(new Vector2(panel.Center.X, headerY),
-            Loc.Plural(L.Aethergram.StorySeenBy, story.ViewCount), theme.TextStrong, TextStyles.Headline);
+            Loc.Plural(L.Story.SeenBy, story.ViewCount), theme.TextStrong, TextStyles.Headline);
         var listRect = new Rect(new Vector2(panel.Min.X, headerY + 18f * scale), panel.Max);
         if (viewers.Items.Length == 0)
         {
             Typography.DrawCentered(new Vector2(panel.Center.X, listRect.Min.Y + 40f * scale),
-                Loc.T(viewers.Loading ? L.Common.Loading : L.Aethergram.StoryNoViewers), theme.TextMuted,
+                Loc.T(viewers.Loading ? L.Common.Loading : L.Story.NoViewers), theme.TextMuted,
                 TextStyles.Subheadline);
             return;
         }
@@ -237,7 +311,7 @@ internal sealed class StoryViewerOverlay
             {
                 Typography.DrawCentered(
                     new Vector2(listRect.Center.X, ImGui.GetCursorScreenPos().Y + 14f * scale),
-                    Loc.T(L.Aethergram.StoryViewersTrimmed, viewers.Items.Length, viewers.Total), theme.TextMuted,
+                    Loc.T(L.Story.ViewersTrimmed, viewers.Items.Length, viewers.Total), theme.TextMuted,
                     TextStyles.Caption1);
                 ImGui.Dummy(new Vector2(0f, 30f * scale));
             }
@@ -369,7 +443,7 @@ internal sealed class StoryViewerOverlay
         {
             Squircle.Fill(drawList, stage.Min, stage.Max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)));
             Typography.DrawCentered(stage.Center,
-                Loc.T(images.Failed(story.MediaUrl) ? L.Aethergram.ImageFailed : L.Common.Loading),
+                Loc.T(images.Failed(story.MediaUrl) ? L.Common.ImageFailed : L.Common.Loading),
                 new Vector4(1f, 1f, 1f, 0.7f), TextStyles.Subheadline);
             return;
         }
@@ -377,22 +451,19 @@ internal sealed class StoryViewerOverlay
         var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, stage.Width, stage.Height);
         drawList.AddImageRounded(texture.Handle, stage.Min, stage.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
-    }
-
-    private void DrawCaption(ImDrawListPtr drawList, Rect stage, StoryDto story, float scale)
-    {
-        if (story.Caption.Length == 0)
+        if (!ContentModeration.IsInReview(story.ScanStatus))
         {
             return;
         }
 
-        var width = stage.Width - 32f * scale;
-        var height = Typography.MeasureWrapped(story.Caption, width, TextStyles.Body.Scale, TextStyles.Body.Weight);
-        var bandTop = stage.Max.Y - height - 30f * scale;
-        drawList.AddRectFilled(new Vector2(stage.Min.X, bandTop - 12f * scale), new Vector2(stage.Max.X, stage.Max.Y),
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.45f)));
-        Typography.DrawWrappedCentered(drawList, new Vector2(stage.Center.X, bandTop + height * 0.5f), story.Caption,
-            new Vector4(1f, 1f, 1f, 0.96f), TextStyles.Body, width);
+        Squircle.Fill(drawList, stage.Min, stage.Max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)));
+        var center = stage.Center;
+        AppSkin.Icon(drawList, new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Hourglass.ToIconString(),
+            new Vector4(1f, 1f, 1f, 0.92f), 1.6f);
+        Typography.DrawCentered(drawList, center, Loc.T(L.Moderation.InReview), new Vector4(1f, 1f, 1f, 0.95f),
+            TextStyles.Headline);
+        Typography.DrawCentered(drawList, new Vector2(center.X, center.Y + 22f * scale),
+            Loc.T(L.Moderation.InReviewHint), new Vector4(1f, 1f, 1f, 0.75f), TextStyles.Footnote);
     }
 
     private void DrawProgress(ImDrawListPtr drawList, Rect bar, float scale)
