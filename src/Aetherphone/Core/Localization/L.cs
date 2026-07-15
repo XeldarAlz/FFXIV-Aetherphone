@@ -549,6 +549,8 @@ internal static class L
             new("changelog.r0970.31", "Fixed the edited marker on a message reading backwards in Turkish, Japanese, and German, where the time has to come first"),
             new("changelog.r0970.32", "Fixed a post's detail view still showing In review after the review had finished, and hiding the comments other people had left"),
             new("changelog.r0970.33", "Fixed speckles appearing along the edges of small rounded corners"),
+            new("changelog.r0970.34",
+                "The phone now tells you when a newer Aetherphone is out: an update button appears beneath it, and clicking it takes you straight to Dalamud's plugin installer"),
         };
 
         public static readonly LocString[] Release0960 =

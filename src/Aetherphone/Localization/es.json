@@ -474,6 +474,7 @@
   "changelog.r0970.31": "La marca de editado en un mensaje aparecía al revés en turco, japonés y alemán, donde la hora debe ir primero",
   "changelog.r0970.32": "La vista de detalle de una publicación seguía mostrando En revisión después de que la revisión hubiera terminado, y ocultaba los comentarios que otras personas habían dejado",
   "changelog.r0970.33": "Aparecían motas en los bordes de las esquinas redondeadas pequeñas",
+  "changelog.r0970.34": "El teléfono ahora te avisa cuando hay un Aetherphone más reciente: debajo aparece un botón de actualización que te lleva directamente al instalador de plugins de Dalamud",
   "changelog.r0960.0":"Velvet se ha reconstruido desde cero, con una estética after-dark y todas sus pantallas rediseñadas en torno a Descubrir",
   "changelog.r0960.1": "Los filtros de Descubrir en Velvet ahora viven tras un botón de filtro, dejando toda la pantalla a las personas que estás explorando",
   "changelog.r0960.2": "Los selectores de roles y etiquetas de Velvet ahora están ordenados en categorías que reflejan cómo se describen realmente las comunidades de rol",
