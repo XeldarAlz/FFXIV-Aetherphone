@@ -49,6 +49,9 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly AppSkin ui = new(AppPalettes.Chirper);
     private readonly RichTextCache bodyLayouts = new();
     private readonly RichTextCache commentLayouts = new();
+    private readonly Dictionary<string, float> feedRowHeights = new();
+    private float feedRowWidth;
+    private int feedRowFontGeneration;
     private readonly MentionPopup mentionPopup = new();
     private readonly MentionAutocomplete composeMentions;
     private readonly MentionAutocomplete commentMentions;
@@ -262,9 +265,30 @@ internal sealed partial class ChirperApp : IPhoneApp
             else
             {
                 ImGui.Dummy(new Vector2(0f, FeedTopPadding * ImGuiHelpers.GlobalScale));
+                var rowWidth = ImGui.GetContentRegionAvail().X;
+                if (feedRowWidth != rowWidth || feedRowFontGeneration != Plugin.Fonts.Generation)
+                {
+                    feedRowHeights.Clear();
+                    feedRowWidth = rowWidth;
+                    feedRowFontGeneration = Plugin.Fonts.Generation;
+                }
+
+                var windowTop = ImGui.GetWindowPos().Y;
+                var windowBottom = windowTop + ImGui.GetWindowSize().Y;
+                var cullMargin = 300f * ImGuiHelpers.GlobalScale;
                 for (var index = 0; index < snapshot.Length; index++)
                 {
-                    DrawPost(snapshot[index]);
+                    var post = snapshot[index];
+                    var cursor = ImGui.GetCursorScreenPos();
+                    if (feedRowHeights.TryGetValue(post.Id, out var rowHeight)
+                        && (cursor.Y > windowBottom + cullMargin || cursor.Y + rowHeight < windowTop - cullMargin))
+                    {
+                        ImGui.SetCursorScreenPos(new Vector2(cursor.X, cursor.Y + rowHeight));
+                        continue;
+                    }
+
+                    DrawPost(post);
+                    feedRowHeights[post.Id] = ImGui.GetCursorScreenPos().Y - cursor.Y;
                 }
 
                 if (store.LoadingMore(scope))
