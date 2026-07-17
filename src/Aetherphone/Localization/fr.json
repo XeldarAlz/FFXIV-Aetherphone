@@ -1339,6 +1339,8 @@
   "fishing.day": "Jour",
   "fishing.sunset": "Coucher du soleil",
   "fishing.night": "Nuit",
+  "fishing.indigoRoute": "Route indigo",
+  "fishing.rubyRoute": "Route rubis",
   "fishing.departuresNote": "Les sorties partent toutes les 2 heures depuis la guilde des pêcheurs de Limsa Lominsa.",
   "fishing.inDays": "dans {0}j {1}h",
   "dailies.daily": "Quotidien",

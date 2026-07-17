@@ -22,6 +22,12 @@ internal static class OceanRoutes
     private static readonly OceanBlueFish Hafgufa = new("Hafgufa", "Squid Strip");
     private static readonly OceanBlueFish SeafaringToad = new("Seafaring Toad", "Pill Bug");
     private static readonly OceanBlueFish Placodus = new("Placodus", "Glowworm");
+    private static readonly OceanBlueFish Taniwha = new("Taniwha", "Mackerel Strip");
+    private static readonly OceanBlueFish GlassDragon = new("Glass Dragon", "Mooch Snapping Koban");
+    private static readonly OceanBlueFish HellsClaw = new("Hells' Claw", "Squid Strip");
+    private static readonly OceanBlueFish JewelOfPlumSpring = new("Jewel of Plum Spring", "Stonefly Nymph");
+    private static readonly OceanBlueFish Akupara = new("Akupara", "Mooch Cieldalaes Roosterfish");
+    private static readonly OceanBlueFish Manasvin = new("Manasvin", "Rat Tail");
     private static readonly OceanBlueFish[] None = Array.Empty<OceanBlueFish>();
 
     private static readonly OceanRoutePlan[] Plans =
@@ -50,6 +56,24 @@ internal static class OceanRoutes
             OceanTimeOfDay.Sunset, new[] { Hafgufa, Placodus }),
         new('T', 'N', "Rothlyt Sound", "Outer Rothlyt Sound", "Cieldalaes · Rhotano Sea · Rothlyt Sound",
             OceanTimeOfDay.Night, new[] { Stonescale }),
+        new('Y', 'D', "Ruby Sea", "Open Ruby Sea", "Sirensong Sea · Kugane · Ruby Sea",
+            OceanTimeOfDay.Day, new[] { GlassDragon }),
+        new('Y', 'S', "Ruby Sea", "Open Ruby Sea", "Sirensong Sea · Kugane · Ruby Sea",
+            OceanTimeOfDay.Sunset, new[] { HellsClaw }),
+        new('Y', 'N', "Ruby Sea", "Open Ruby Sea", "Sirensong Sea · Kugane · Ruby Sea",
+            OceanTimeOfDay.Night, new[] { Taniwha }),
+        new('O', 'D', "One River", "Lower One River", "Sirensong Sea · Kugane · One River",
+            OceanTimeOfDay.Day, new[] { GlassDragon, JewelOfPlumSpring }),
+        new('O', 'S', "One River", "Lower One River", "Sirensong Sea · Kugane · One River",
+            OceanTimeOfDay.Sunset, None),
+        new('O', 'N', "One River", "Lower One River", "Sirensong Sea · Kugane · One River",
+            OceanTimeOfDay.Night, new[] { Taniwha }),
+        new('V', 'D', "Thavnair", "Thavnair Margin", "Unnamed Margin · Sirensong Sea · Thavnair",
+            OceanTimeOfDay.Day, new[] { Akupara }),
+        new('V', 'S', "Thavnair", "Thavnair Margin", "Unnamed Margin · Sirensong Sea · Thavnair",
+            OceanTimeOfDay.Sunset, new[] { Taniwha }),
+        new('V', 'N', "Thavnair", "Thavnair Margin", "Unnamed Margin · Sirensong Sea · Thavnair",
+            OceanTimeOfDay.Night, new[] { Manasvin }),
     };
 
     public static OceanRoutePlan Resolve(char destination, char time)

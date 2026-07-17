@@ -1339,6 +1339,8 @@
   "fishing.day": "Day",
   "fishing.sunset": "Sunset",
   "fishing.night": "Night",
+  "fishing.indigoRoute": "Indigo Route",
+  "fishing.rubyRoute": "Ruby Route",
   "fishing.departuresNote": "Voyages depart every 2 hours from the Fisher's Guild in Limsa Lominsa.",
   "fishing.inDays": "in {0}d {1}h",
   "dailies.daily": "Daily",

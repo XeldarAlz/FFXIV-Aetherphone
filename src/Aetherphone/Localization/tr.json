@@ -1339,6 +1339,8 @@
   "fishing.day": "Gündüz",
   "fishing.sunset": "Gün batımı",
   "fishing.night": "Gece",
+  "fishing.indigoRoute": "İndigo Rotası",
+  "fishing.rubyRoute": "Yakut Rotası",
   "fishing.departuresNote": "Seferler Limsa Lominsa'daki Balıkçı Loncası'ndan her 2 saatte bir kalkar.",
   "fishing.inDays": "{0}g {1}sa içinde",
   "dailies.daily": "Günlük",

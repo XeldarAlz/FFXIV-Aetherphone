@@ -19,6 +19,7 @@ internal sealed class FishingApp : IPhoneApp
     private const int VoyageCount = 12;
     private const float RefreshIntervalSeconds = 5f;
     private const float UpcomingRowHeight = 64f;
+    private const float RouteSwitchHeight = 32f;
     private const double VoyagePeriodSeconds = 7200;
     private static readonly Vector4 OceanTint = AppAccents.For("fishing");
     public string Id => "fishing";
@@ -26,6 +27,8 @@ internal sealed class FishingApp : IPhoneApp
     public string Glyph => "F";
     public int BadgeCount => 0;
     private readonly OceanVoyageSlot[] voyages = new OceanVoyageSlot[VoyageCount];
+    private readonly string[] routeLabels = new string[2];
+    private OceanRoute route;
     private RefreshCadence refreshCadence;
     public void OnOpened() => Refresh();
 
@@ -35,7 +38,7 @@ internal sealed class FishingApp : IPhoneApp
 
     private void Refresh()
     {
-        GameSchedule.UpcomingOceanVoyages(DateTime.UtcNow, voyages);
+        GameSchedule.UpcomingOceanVoyages(DateTime.UtcNow, route, voyages);
         refreshCadence.Reset();
     }
 
@@ -54,11 +57,31 @@ internal sealed class FishingApp : IPhoneApp
         var utcNow = DateTime.UtcNow;
         using (AppSurface.Begin(body))
         {
+            DrawRouteSwitch(theme, scale);
             DrawHero(theme, utcNow, scale);
             DrawUpcoming(theme, utcNow, scale);
             DrawNote(theme, scale);
             ImGui.Dummy(new Vector2(0f, 10f * scale));
         }
+    }
+
+    private void DrawRouteSwitch(PhoneTheme theme, float scale)
+    {
+        routeLabels[0] = Loc.T(L.Fishing.IndigoRoute);
+        routeLabels[1] = Loc.T(L.Fishing.RubyRoute);
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var row = new Rect(origin, origin + new Vector2(width, RouteSwitchHeight * scale));
+        var selected = SegmentStrip.Draw("fishing.route", row, routeLabels, (int)route, theme);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, (RouteSwitchHeight + 12f) * scale));
+        if (selected == (int)route)
+        {
+            return;
+        }
+
+        route = (OceanRoute)selected;
+        Refresh();
     }
 
     private void DrawHero(PhoneTheme theme, DateTime utcNow, float scale)

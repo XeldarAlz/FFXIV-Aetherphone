@@ -1100,6 +1100,9 @@ internal static class L
         public static readonly LocString SearchEmptyTitle = new("music.searchEmptyTitle", "Play what you love");
         public static readonly LocString SearchEmptySub = new("music.searchEmptySub", "Search for songs and artists");
         public static readonly LocString SearchSongs = new("music.searchSongs", "Search songs");
+        public static readonly LocString ScopeSongs = new("music.scopeSongs", "Songs");
+        public static readonly LocString ScopeLongPlays = new("music.scopeLongPlays", "Long plays");
+        public static readonly LocString ScopeAll = new("music.scopeAll", "All");
         public static readonly LocString LiveLower = new("music.liveLower", "live");
         public static readonly LocString Buffering = new("music.buffering", "Buffering…");
         public static readonly LocString Paused = new("music.paused", "Paused");
@@ -1613,6 +1616,8 @@ internal static class L
         public static readonly LocString Day = new("fishing.day", "Day");
         public static readonly LocString Sunset = new("fishing.sunset", "Sunset");
         public static readonly LocString Night = new("fishing.night", "Night");
+        public static readonly LocString IndigoRoute = new("fishing.indigoRoute", "Indigo Route");
+        public static readonly LocString RubyRoute = new("fishing.rubyRoute", "Ruby Route");
         public static readonly LocString DeparturesNote = new("fishing.departuresNote", "Voyages depart every 2 hours from the Fisher's Guild in Limsa Lominsa.");
         public static readonly LocString InDays = new("fishing.inDays", "in {0}d {1}h");
     }

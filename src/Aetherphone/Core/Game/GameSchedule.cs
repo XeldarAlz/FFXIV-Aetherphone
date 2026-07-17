@@ -7,6 +7,12 @@ internal enum OceanTimeOfDay
     Night,
 }
 
+internal enum OceanRoute
+{
+    Indigo,
+    Ruby,
+}
+
 internal readonly record struct TimerWindow(bool Active, DateTime NextChangeUtc);
 
 internal readonly record struct OceanVoyage(
@@ -29,7 +35,7 @@ internal static class GameSchedule
     private const long OceanVoyageWindowSeconds = 7200;
     private static readonly TimeSpan OceanBoardingWindow = TimeSpan.FromMinutes(15);
 
-    private static readonly string[] OceanPattern =
+    private static readonly string[] IndigoPattern =
     {
         "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "TD", "ND", "RD", "BS", "TS", "NS",
         "RS", "BN", "TN", "NN", "RN", "BD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN", "RN", "BD", "TD",
@@ -39,6 +45,18 @@ internal static class GameSchedule
         "TD", "ND", "RD", "BS", "TS", "NS", "BN", "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS",
         "TN", "NN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "NN", "RN", "BD", "TD", "ND", "RD",
         "BS", "TS", "NS", "RS", "BN", "TN", "RN", "BD", "TD", "ND", "RD", "BS", "TS", "NS", "RS", "BN", "TN", "NN",
+    };
+
+    private static readonly string[] RubyPattern =
+    {
+        "VD", "OD", "VD", "YD", "VS", "OS", "VS", "YS", "VN", "ON", "VN", "YN", "OD", "VD", "YD", "VS", "OS", "VS",
+        "YS", "VN", "ON", "VN", "YN", "VD", "VD", "YD", "VS", "OS", "VS", "YS", "VN", "ON", "VN", "YN", "VD", "OD",
+        "YD", "VS", "OS", "VS", "YS", "VN", "ON", "VN", "YN", "VD", "OD", "VD", "VS", "OS", "VS", "YS", "VN", "ON",
+        "VN", "YN", "VD", "OD", "VD", "YD", "OS", "VS", "YS", "VN", "ON", "VN", "YN", "VD", "OD", "VD", "YD", "VS",
+        "VS", "YS", "VN", "ON", "VN", "YN", "VD", "OD", "VD", "YD", "VS", "OS", "YS", "VN", "ON", "VN", "YN", "VD",
+        "OD", "VD", "YD", "VS", "OS", "VS", "VN", "ON", "VN", "YN", "VD", "OD", "VD", "YD", "VS", "OS", "VS", "YS",
+        "ON", "VN", "YN", "VD", "OD", "VD", "YD", "VS", "OS", "VS", "YS", "VN", "VN", "YN", "VD", "OD", "VD", "YD",
+        "VS", "OS", "VS", "YS", "VN", "ON", "YN", "VD", "OD", "VD", "YD", "VS", "OS", "VS", "YS", "VN", "ON", "VN",
     };
 
     public static DateTime NextDailyReset(DateTime utcNow) => NextDailyAt(utcNow, DailyResetHour);
@@ -55,14 +73,14 @@ internal static class GameSchedule
         return nextClose < nextOpen ? new TimerWindow(true, nextClose) : new TimerWindow(false, nextOpen);
     }
 
-    public static OceanVoyage OceanFishing(DateTime utcNow)
+    public static OceanVoyage OceanFishing(DateTime utcNow, OceanRoute route)
     {
         var boarding = NextOceanBoarding(utcNow, out var boardingNow);
-        var code = RouteCode(boarding);
+        var code = RouteCode(boarding, route);
         return new OceanVoyage(boarding, boardingNow, RouteName(code[0]), TimeOfDay(code[1]));
     }
 
-    public static void UpcomingOceanVoyages(DateTime utcNow, OceanVoyageSlot[] destination)
+    public static void UpcomingOceanVoyages(DateTime utcNow, OceanRoute route, OceanVoyageSlot[] destination)
     {
         if (destination.Length == 0)
         {
@@ -73,7 +91,7 @@ internal static class GameSchedule
         for (var index = 0; index < destination.Length; index++)
         {
             var boarding = firstBoarding.AddHours(2 * index);
-            var code = RouteCode(boarding);
+            var code = RouteCode(boarding, route);
             var boardingNow = index == 0 && firstBoardingNow;
             destination[index] = new OceanVoyageSlot(boarding, boardingNow, code[0], code[1]);
         }
@@ -87,13 +105,13 @@ internal static class GameSchedule
         return boardingNow ? windowStart : windowStart.AddHours(2);
     }
 
-    private static string RouteCode(DateTime boardingUtc)
+    private static string RouteCode(DateTime boardingUtc, OceanRoute route)
     {
         var voyageNumber = new DateTimeOffset(boardingUtc).ToUnixTimeSeconds() / OceanVoyageWindowSeconds;
         var index =
             (int)(((OceanVoyageEpochIndex + voyageNumber) % OceanVoyagePatternLength + OceanVoyagePatternLength) %
                   OceanVoyagePatternLength);
-        return OceanPattern[index];
+        return route == OceanRoute.Ruby ? RubyPattern[index] : IndigoPattern[index];
     }
 
     private static string RouteName(char destination) =>
@@ -103,6 +121,9 @@ internal static class GameSchedule
             'T' => "Rothlyt",
             'N' => "Northern",
             'R' => "Rhotano",
+            'Y' => "Ruby Sea",
+            'O' => "One River",
+            'V' => "Thavnair",
             _ => string.Empty,
         };
 

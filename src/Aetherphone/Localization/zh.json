@@ -1339,6 +1339,8 @@
   "fishing.day": "白天",
   "fishing.sunset": "黄昏",
   "fishing.night": "夜晚",
+  "fishing.indigoRoute": "近海航线",
+  "fishing.rubyRoute": "远洋航线",
   "fishing.departuresNote": "出海船只每 2 小时从利姆萨·罗敏萨的捕鱼人公会出发。",
   "fishing.inDays": "{0}天 {1}小时后",
   "dailies.daily": "日常",

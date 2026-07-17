@@ -1339,6 +1339,8 @@
   "fishing.day": "День",
   "fishing.sunset": "Закат",
   "fishing.night": "Ночь",
+  "fishing.indigoRoute": "Индиго",
+  "fishing.rubyRoute": "Рубин",
   "fishing.departuresNote": "Рейсы отправляются каждые 2 часа от Гильдии рыболовов в Лимса Ломинса.",
   "fishing.inDays": "через {0}д {1}ч",
   "dailies.daily": "Ежедневные",

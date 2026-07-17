@@ -1339,6 +1339,8 @@
   "fishing.day": "Día",
   "fishing.sunset": "Atardecer",
   "fishing.night": "Noche",
+  "fishing.indigoRoute": "Ruta índigo",
+  "fishing.rubyRoute": "Ruta rubí",
   "fishing.departuresNote": "Los viajes parten cada 2 horas desde el gremio de pescadores en Limsa Lominsa.",
   "fishing.inDays": "en {0}d {1}h",
   "dailies.daily": "Diario",

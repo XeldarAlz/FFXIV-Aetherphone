@@ -131,12 +131,14 @@ internal sealed class TimersApp : IPhoneApp
         DrawTimerRow(CardRow(card, 1, scale), Accent.AmberSoft, FontAwesomeIcon.Dice,
             Loc.T(L.Timers.JumboCactpot), LocalDay(cactpot), TimeFormat.Relative(cactpot - utcNow), AppPalettes.Timers.TitleInk);
 
-        var ocean = GameSchedule.OceanFishing(utcNow);
-        var route = ocean.Route.Length == 0 ? string.Empty : $"{ocean.Route} · {TimeOfDayLabel(ocean.TimeOfDay)}";
-        var oceanValue = ocean.BoardingNow
+        var indigo = GameSchedule.OceanFishing(utcNow, OceanRoute.Indigo);
+        var ruby = GameSchedule.OceanFishing(utcNow, OceanRoute.Ruby);
+        var route =
+            $"{indigo.Route} · {TimeOfDayLabel(indigo.TimeOfDay)} / {ruby.Route} · {TimeOfDayLabel(ruby.TimeOfDay)}";
+        var oceanValue = indigo.BoardingNow
             ? Loc.T(L.Timers.BoardingNow)
-            : TimeFormat.Relative(ocean.NextBoardingUtc - utcNow);
-        var oceanColor = ocean.BoardingNow ? AppPalettes.Timers.Accent : AppPalettes.Timers.TitleInk;
+            : TimeFormat.Relative(indigo.NextBoardingUtc - utcNow);
+        var oceanColor = indigo.BoardingNow ? AppPalettes.Timers.Accent : AppPalettes.Timers.TitleInk;
         DrawTimerRow(CardRow(card, 2, scale), Accent.Mint, FontAwesomeIcon.Fish, Loc.T(L.Timers.OceanFishing),
             route, oceanValue, oceanColor);
 

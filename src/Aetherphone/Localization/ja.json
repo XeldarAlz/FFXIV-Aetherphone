@@ -1339,6 +1339,8 @@
   "fishing.day": "昼",
   "fishing.sunset": "夕",
   "fishing.night": "夜",
+  "fishing.indigoRoute": "近海航路",
+  "fishing.rubyRoute": "遠洋航路",
   "fishing.departuresNote": "リムサ・ロミンサの漁師ギルドから2時間ごとに船が出ます。",
   "fishing.inDays": "{0}日 {1}時間後",
   "dailies.daily": "デイリー",
