@@ -7,9 +7,6 @@ namespace Aetherphone.Core.Dailies;
 internal static unsafe class DailiesReader
 {
     private const int WondrousTailsCellCount = 16;
-    private const uint StormSealItemId = 20;
-    private const uint SerpentSealItemId = 21;
-    private const uint FlameSealItemId = 22;
 
     public static DailyAutoStatus Read(DailyTracking tracking, int goal)
     {
@@ -130,32 +127,61 @@ internal static unsafe class DailiesReader
         return new DailyAutoStatus(true, true, current, goal);
     }
 
+    public static DailyAutoStatus ReadDutyRoulettes(IReadOnlyList<byte> bonusIndices)
+    {
+        var content = InstanceContent.Instance();
+        if (content is null || bonusIndices.Count == 0)
+        {
+            return DailyAutoStatus.Unavailable;
+        }
+
+        var claimed = 0;
+        for (var index = 0; index < bonusIndices.Count; index++)
+        {
+            if (content->IsRouletteComplete(bonusIndices[index]))
+            {
+                claimed++;
+            }
+        }
+
+        var complete = claimed > 0;
+        return new DailyAutoStatus(true, complete, complete ? 0 : 1, 1);
+    }
+
+    public static DailyAutoStatus ReadHuntBills(IReadOnlyList<byte> weeklyIndices)
+    {
+        var hunt = MobHunt.Instance();
+        if (hunt is null || weeklyIndices.Count == 0)
+        {
+            return DailyAutoStatus.Unavailable;
+        }
+
+        var unlocked = 0;
+        var done = 0;
+        for (var index = 0; index < weeklyIndices.Count; index++)
+        {
+            var billIndex = weeklyIndices[index];
+            if (!hunt->IsMarkBillUnlocked(billIndex))
+            {
+                continue;
+            }
+
+            unlocked++;
+            if (!hunt->IsMarkBillObtained(billIndex) && hunt->GetAvailableHuntOrderRowId(billIndex) == 0)
+            {
+                done++;
+            }
+        }
+
+        if (unlocked == 0)
+        {
+            return DailyAutoStatus.Unavailable;
+        }
+
+        return new DailyAutoStatus(true, done >= unlocked, unlocked - done, unlocked);
+    }
+
     public static TimerWindow ReadFashionReportWindow(DateTime utcNow) => GameSchedule.FashionReport(utcNow);
 
     public static DateTime ReadNextJumboCactpot(DateTime utcNow) => GameSchedule.NextJumboCactpot(utcNow);
-
-    public static int ReadHuntSealBalance()
-    {
-        var manager = InventoryManager.Instance();
-        var playerState = PlayerState.Instance();
-        if (manager is null || playerState is null)
-        {
-            return -1;
-        }
-
-        var sealItemId = playerState->GrandCompany switch
-        {
-            1 => StormSealItemId,
-            2 => SerpentSealItemId,
-            3 => FlameSealItemId,
-            _ => 0u,
-        };
-
-        if (sealItemId == 0)
-        {
-            return -1;
-        }
-
-        return (int)manager->GetInventoryItemCount(sealItemId, false, true, true, 0);
-    }
 }

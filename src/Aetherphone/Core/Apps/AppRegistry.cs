@@ -73,7 +73,7 @@ internal static class AppRegistry
         apps.Add(new NotesApp(services.Configuration));
         apps.Add(new CalculatorApp());
         apps.Add(new TimersApp(services.Configuration));
-        apps.Add(new DailiesApp(services.Configuration));
+        apps.Add(new DailiesApp(services.Configuration, services.GameData));
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats));
         apps.Add(new NotificationsApp(services.Notifications, services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.SocialLauncher));

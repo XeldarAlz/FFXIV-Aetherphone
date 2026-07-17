@@ -12,6 +12,8 @@ internal sealed class GameData
     private readonly IObjectTable objectTable;
     private uint[]? collectableMountIds;
     private uint[]? collectableMinionIds;
+    private byte[]? dailyBonusRouletteIndices;
+    private byte[]? weeklyHuntBillIndices;
     private Dictionary<string, string>? worldRegionCodes;
 
     public GameData(IDataManager data, IObjectTable objectTable)
@@ -392,5 +394,53 @@ internal sealed class GameData
 
         collectableMinionIds = ids.ToArray();
         return collectableMinionIds;
+    }
+
+    public byte[] DailyBonusRouletteIndices()
+    {
+        if (dailyBonusRouletteIndices is not null)
+        {
+            return dailyBonusRouletteIndices;
+        }
+
+        var indices = new List<byte>(16);
+        foreach (var row in data.GetExcelSheet<ContentRoulette>())
+        {
+            if (!row.IsInDutyFinder || row.IsGoldSaucer || row.CompletionArrayIndex < 0)
+            {
+                continue;
+            }
+
+            if (row.Name.ExtractText().Length == 0)
+            {
+                continue;
+            }
+
+            indices.Add((byte)row.CompletionArrayIndex);
+        }
+
+        dailyBonusRouletteIndices = indices.Count > 0 ? indices.ToArray() : Array.Empty<byte>();
+        return dailyBonusRouletteIndices;
+    }
+
+    public byte[] WeeklyHuntBillIndices()
+    {
+        if (weeklyHuntBillIndices is not null)
+        {
+            return weeklyHuntBillIndices;
+        }
+
+        const byte weeklyOrderType = 2;
+        var indices = new List<byte>(8);
+        foreach (var row in data.GetExcelSheet<MobHuntOrderType>())
+        {
+            if (row.Type == weeklyOrderType)
+            {
+                indices.Add((byte)row.RowId);
+            }
+        }
+
+        weeklyHuntBillIndices = indices.Count > 0 ? indices.ToArray() : Array.Empty<byte>();
+        return weeklyHuntBillIndices;
     }
 }

@@ -12,6 +12,8 @@ internal enum DailyTracking
     WondrousTails,
     DomanEnclave,
     Levequests,
+    DutyRoulettes,
+    HuntBills,
 }
 
 internal readonly record struct DailyItem(
