@@ -16,6 +16,7 @@ using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -69,7 +70,7 @@ internal sealed partial class ChirperApp : IPhoneApp
 
     public ChirperApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
-        Configuration configuration, SocialNotificationService social)
+        Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages)
     {
         store = new ChirperStore(session, net.Account, net.Social, net.Safety, net.Media);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -82,7 +83,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         this.social = social;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Chirper.ChangePhoto, L.Chirper.ImportFromPc, L.Photos.NoPhotos,
-                L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library);
+                L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library,
+            wallpaperImages);
         router = new ViewRouter<ChirperRoute>(ChirperRoute.Home, Id);
         drawView = DrawView;
         back = () => router.Pop();

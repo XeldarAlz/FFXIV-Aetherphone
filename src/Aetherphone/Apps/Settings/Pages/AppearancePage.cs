@@ -2,10 +2,12 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
 
@@ -23,14 +25,23 @@ internal sealed class AppearancePage : ISettingsPage
     private readonly ThemeProvider themes;
     private readonly ISettingsNavigator navigator;
     private readonly PhotoLibrary photos;
+    private readonly IAnalyticsService analytics;
+    private readonly ConfirmService confirm;
+    private readonly WallpaperLibrary wallpapers;
+    private readonly WallpaperImageCache wallpaperImages;
 
     public AppearancePage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator,
-        PhotoLibrary photos)
+        PhotoLibrary photos, IAnalyticsService analytics, ConfirmService confirm, WallpaperLibrary wallpapers,
+        WallpaperImageCache wallpaperImages)
     {
         this.configuration = configuration;
         this.themes = themes;
         this.navigator = navigator;
         this.photos = photos;
+        this.analytics = analytics;
+        this.confirm = confirm;
+        this.wallpapers = wallpapers;
+        this.wallpaperImages = wallpaperImages;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -46,7 +57,7 @@ internal sealed class AppearancePage : ISettingsPage
             if (mode != configuration.ThemeMode)
             {
                 configuration.ThemeMode = mode;
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("theme_mode", mode.ToString().ToLowerInvariant()));
+                analytics.Track(AnalyticsEvents.SettingChanged("theme_mode", mode.ToString().ToLowerInvariant()));
                 ApplyTheme();
             }
 
@@ -56,13 +67,14 @@ internal sealed class AppearancePage : ISettingsPage
             if (accentName != configuration.AccentName)
             {
                 configuration.AccentName = accentName;
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("accent", accentName));
+                analytics.Track(AnalyticsEvents.SettingChanged("accent", accentName));
                 ApplyTheme();
             }
 
             if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Settings.Wallpaper), string.Empty, theme))
             {
-                navigator.Open(new WallpaperPage(configuration, themes, navigator, photos));
+                navigator.Open(new WallpaperPage(configuration, themes, navigator, photos, wallpapers, wallpaperImages,
+                    analytics));
             }
 
             card.End();
@@ -75,7 +87,7 @@ internal sealed class AppearancePage : ISettingsPage
             if (MathF.Abs(zoom - configuration.TextZoom) > 0.001f)
             {
                 configuration.TextZoom = zoom;
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("text_zoom", zoom.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
+                analytics.Track(AnalyticsEvents.SettingChanged("text_zoom", zoom.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 Plugin.Fonts.SetZoom(zoom);
                 configuration.Save();
             }
@@ -89,7 +101,7 @@ internal sealed class AppearancePage : ISettingsPage
             if (MathF.Abs(phoneScale - configuration.PhoneScale) > 0.001f)
             {
                 configuration.PhoneScale = phoneScale;
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("phone_scale", phoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
+                analytics.Track(AnalyticsEvents.SettingChanged("phone_scale", phoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 configuration.Save();
             }
 
@@ -107,13 +119,13 @@ internal sealed class AppearancePage : ISettingsPage
         if (rows != configuration.HomeGridRows)
         {
             configuration.HomeGridRows = rows;
-            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("home_grid_rows", rows.ToString()));
+            analytics.Track(AnalyticsEvents.SettingChanged("home_grid_rows", rows.ToString()));
             configuration.Save();
         }
 
         if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Home.ResetLayout), string.Empty, theme))
         {
-            Plugin.Confirm.Ask(new Core.Confirm.ConfirmRequest
+            confirm.Ask(new ConfirmRequest
             {
                 Title = Loc.T(L.Home.ResetLayout),
                 Message = Loc.T(L.Home.ResetLayoutMessage),
@@ -131,7 +143,7 @@ internal sealed class AppearancePage : ISettingsPage
     {
         configuration.Home = null;
         configuration.Save();
-        Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("home_layout", "reset"));
+        analytics.Track(AnalyticsEvents.SettingChanged("home_layout", "reset"));
     }
 
     private static readonly int[] GridRowOptions = { 5, 6, 7 };

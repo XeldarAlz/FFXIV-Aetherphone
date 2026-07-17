@@ -15,6 +15,7 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class SoundSettingsPage : ISettingsPage
 {
     private readonly SoundService sound;
+    private readonly IAnalyticsService analytics;
     private readonly LocString title;
     private readonly FontAwesomeIcon icon;
     private readonly Vector4 tint;
@@ -26,11 +27,12 @@ internal sealed class SoundSettingsPage : ISettingsPage
     private readonly Action<float> setVolume;
     private readonly SoundImport import = new();
 
-    public SoundSettingsPage(SoundService sound, LocString title, FontAwesomeIcon icon, Vector4 tint, string segmentId,
-        string analyticsKey, Func<string> getToken, Action<string> setToken, Func<float> getVolume,
-        Action<float> setVolume)
+    public SoundSettingsPage(SoundService sound, IAnalyticsService analytics, LocString title, FontAwesomeIcon icon,
+        Vector4 tint, string segmentId, string analyticsKey, Func<string> getToken, Action<string> setToken,
+        Func<float> getVolume, Action<float> setVolume)
     {
         this.sound = sound;
+        this.analytics = analytics;
         this.title = title;
         this.icon = icon;
         this.tint = tint;
@@ -70,7 +72,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
             if (MathF.Abs(volume - getVolume()) > 0.001f)
             {
                 setVolume(volume);
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey + "_volume",
+                analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey + "_volume",
                     volume.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 sound.Preview(getToken(), volume);
             }
@@ -96,7 +98,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
         }
 
         setToken(token);
-        Plugin.Analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, token));
+        analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, token));
         sound.Preview(token, getVolume());
     }
 
@@ -106,7 +108,7 @@ internal sealed class SoundSettingsPage : ISettingsPage
         {
             var token = sound.AddUserFile(path);
             setToken(token);
-            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, "file"));
+            analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, "file"));
             sound.Preview(token, getVolume());
         }
         catch (Exception exception)

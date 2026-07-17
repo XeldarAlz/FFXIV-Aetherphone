@@ -49,6 +49,7 @@ internal sealed class ImagePickCrop
     private const float CropSmoothTime = 0.10f;
 
     private readonly PhotoLibrary library;
+    private readonly WallpaperImageCache images;
     private bool cropStage;
     private string sourcePath = string.Empty;
     private string[] pickerPaths = Array.Empty<string>();
@@ -62,9 +63,10 @@ internal sealed class ImagePickCrop
     private bool cropDragging;
     private Vector2 cropLastDrag;
 
-    public ImagePickCrop(PhotoLibrary library)
+    public ImagePickCrop(PhotoLibrary library, WallpaperImageCache images)
     {
         this.library = library;
+        this.images = images;
     }
 
     public string SourcePath => sourcePath;
@@ -146,11 +148,11 @@ internal sealed class ImagePickCrop
         return cancelled ? ImagePickCropEvent.Cancelled : ImagePickCropEvent.None;
     }
 
-    private static void DrawThumbnail(string path, Vector2 min, Vector2 max, PhoneTheme theme, float scale)
+    private void DrawThumbnail(string path, Vector2 min, Vector2 max, PhoneTheme theme, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
-        var texture = Plugin.WallpaperImages.Get(path);
+        var texture = images.Get(path);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
@@ -196,7 +198,7 @@ internal sealed class ImagePickCrop
         var preview = new Rect(new Vector2(stage.Center.X - side * 0.5f, stage.Center.Y - side * 0.5f),
             new Vector2(stage.Center.X + side * 0.5f, stage.Center.Y + side * 0.5f));
         var rounding = side * 0.5f;
-        var texture = Plugin.WallpaperImages.Get(sourcePath);
+        var texture = images.Get(sourcePath);
         if (texture is null)
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));

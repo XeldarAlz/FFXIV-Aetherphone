@@ -27,6 +27,8 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private readonly AethernetSession session;
     private readonly AccountClient client;
     private readonly SafetyClient safety;
+    private readonly IAnalyticsService analytics;
+    private readonly ConfirmService confirm;
     private readonly CancellationTokenSource cancellation = new();
     private static readonly TimeSpan BlockedListMaxAge = TimeSpan.FromSeconds(30);
     private volatile bool chatPrivacyLoaded;
@@ -38,12 +40,15 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private volatile bool blockedLoading;
     private DateTime blockedLoadedAtUtc = DateTime.MinValue;
 
-    public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client, SafetyClient safety)
+    public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client, SafetyClient safety,
+        IAnalyticsService analytics, ConfirmService confirm)
     {
         this.configuration = configuration;
         this.session = session;
         this.client = client;
         this.safety = safety;
+        this.analytics = analytics;
+        this.confirm = confirm;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -64,7 +69,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
                 configuration.Save();
                 if (share)
                 {
-                    Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("analytics_enabled", "1"));
+                    analytics.Track(AnalyticsEvents.SettingChanged("analytics_enabled", "1"));
                 }
             }
 
@@ -150,7 +155,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private void AskUnblock(UserDto user)
     {
         var name = user.DisplayName.Length > 0 ? user.DisplayName : user.Name;
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Social.UnblockConfirm, name),
             ConfirmLabel = Loc.T(L.Social.Unblock),

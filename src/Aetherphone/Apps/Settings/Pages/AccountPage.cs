@@ -44,6 +44,8 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private readonly ISettingsPage profilePage;
     private readonly ISettingsPage encryptionPage;
     private readonly PhotoLibrary photoLibrary;
+    private readonly ConfirmService confirm;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly SignInFlow flow;
     private readonly CancellationTokenSource cancellation = new();
     private volatile bool avatarBusy;
@@ -51,7 +53,8 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     public AccountPage(AethernetSession session, AuthClient auth, AccountClient account, MediaClient media,
         GameData gameData, RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
-        ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary)
+        ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary, ConfirmService confirm,
+        WallpaperImageCache wallpaperImages)
     {
         this.session = session;
         this.auth = auth;
@@ -64,6 +67,8 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.profilePage = profilePage;
         this.encryptionPage = encryptionPage;
         this.photoLibrary = photoLibrary;
+        this.confirm = confirm;
+        this.wallpaperImages = wallpaperImages;
         flow = new SignInFlow(session, auth);
     }
 
@@ -91,7 +96,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private void ShowFailureAlert(string failureReason)
     {
         var (title, message) = SignInFailureText.Resolve(failureReason, gameData);
-        Plugin.Confirm.Alert(title, message, Loc.T(L.Account.FailDismiss));
+        confirm.Alert(title, message, Loc.T(L.Account.FailDismiss));
     }
 
     private void DrawSignedIn(PhoneTheme theme)
@@ -204,7 +209,8 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void OpenPhotoPicker()
     {
-        navigator.Open(new AvatarPhotoPage(photoLibrary, navigator, () => avatarBusy, UploadAvatar));
+        navigator.Open(new AvatarPhotoPage(photoLibrary, wallpaperImages, navigator, () => avatarBusy, UploadAvatar,
+            confirm));
     }
 
     private void UploadAvatar(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
@@ -224,7 +230,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void AskSignOut()
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Title = Loc.T(L.Account.SignOutConfirmTitle),
             Message = Loc.T(L.Account.SignOutConfirmBody),
@@ -263,7 +269,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void AskDeleteAccount()
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Title = Loc.T(L.Account.DeleteConfirmTitle),
             Message = Loc.T(L.Account.DeleteConfirmBody),
@@ -294,7 +300,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                     done(true);
                     if (!erased)
                     {
-                        Plugin.Confirm.Alert(Loc.T(L.Account.DeleteConfirmTitle), Loc.T(L.Account.DeleteFailed),
+                        confirm.Alert(Loc.T(L.Account.DeleteConfirmTitle), Loc.T(L.Account.DeleteFailed),
                             Loc.T(L.Account.FailDismiss));
                     }
                 });

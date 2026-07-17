@@ -13,6 +13,7 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
@@ -84,7 +85,8 @@ internal sealed partial class SetupOverlay : IDisposable
     private volatile int avatarOutcome;
 
     public SetupOverlay(AethernetSession session, AethernetApi aethernet, GameData gameData,
-        RemoteImageCache images, LodestoneService lodestone, PhotoLibrary photoLibrary, INavigator navigation)
+        RemoteImageCache images, LodestoneService lodestone, PhotoLibrary photoLibrary,
+        WallpaperImageCache wallpaperImages, INavigator navigation)
     {
         this.session = session;
         account = aethernet.Account;
@@ -94,7 +96,7 @@ internal sealed partial class SetupOverlay : IDisposable
         this.lodestone = lodestone;
         this.navigation = navigation;
         flow = new SignInFlow(session, aethernet.Auth);
-        picker = new ImagePickCrop(photoLibrary);
+        picker = new ImagePickCrop(photoLibrary, wallpaperImages);
     }
 
     public bool IsActive => !Plugin.Cfg.SetupCompleted || exiting;

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Wallpapers;
@@ -19,16 +20,18 @@ internal sealed class AvatarPhotoPage : ISettingsPage
     private readonly ISettingsNavigator navigator;
     private readonly Func<bool> busy;
     private readonly Action<string, WallpaperCrop, Action<bool>> upload;
+    private readonly ConfirmService confirm;
     private readonly ImagePickCrop picker;
     private volatile int outcome;
 
-    public AvatarPhotoPage(PhotoLibrary library, ISettingsNavigator navigator, Func<bool> busy,
-        Action<string, WallpaperCrop, Action<bool>> upload)
+    public AvatarPhotoPage(PhotoLibrary library, WallpaperImageCache images, ISettingsNavigator navigator,
+        Func<bool> busy, Action<string, WallpaperCrop, Action<bool>> upload, ConfirmService confirm)
     {
         this.navigator = navigator;
         this.busy = busy;
         this.upload = upload;
-        picker = new ImagePickCrop(library);
+        this.confirm = confirm;
+        picker = new ImagePickCrop(library, images);
         picker.Open();
     }
 
@@ -44,7 +47,7 @@ internal sealed class AvatarPhotoPage : ISettingsPage
         if (outcome == 2)
         {
             outcome = 0;
-            Plugin.Confirm.Alert(null, Loc.T(L.Account.CannotReach), Loc.T(L.Account.FailDismiss));
+            confirm.Alert(null, Loc.T(L.Account.CannotReach), Loc.T(L.Account.FailDismiss));
         }
 
         var labels = new ImagePickCropLabels(Loc.T(L.Account.ChangePhoto), Loc.T(L.Account.ImportFromPc),

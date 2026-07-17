@@ -36,6 +36,9 @@ internal sealed class WallpaperPage : ISettingsPage
     private readonly ThemeProvider themes;
     private readonly ISettingsNavigator navigator;
     private readonly PhotoLibrary photos;
+    private readonly WallpaperLibrary wallpapers;
+    private readonly WallpaperImageCache wallpaperImages;
+    private readonly IAnalyticsService analytics;
     private readonly Action<string> assign;
     private Overlay overlay = Overlay.None;
     private string[] photoPaths = Array.Empty<string>();
@@ -43,14 +46,18 @@ internal sealed class WallpaperPage : ISettingsPage
     private bool editingDark;
 
     public WallpaperPage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator,
-        PhotoLibrary photos)
+        PhotoLibrary photos, WallpaperLibrary wallpapers, WallpaperImageCache wallpaperImages,
+        IAnalyticsService analytics)
     {
         this.configuration = configuration;
         this.themes = themes;
         this.navigator = navigator;
         this.photos = photos;
+        this.wallpapers = wallpapers;
+        this.wallpaperImages = wallpaperImages;
+        this.analytics = analytics;
         assign = Assign;
-        editingDark = Plugin.Wallpapers.Darkness >= 0.5f;
+        editingDark = wallpapers.Darkness >= 0.5f;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -59,7 +66,7 @@ internal sealed class WallpaperPage : ISettingsPage
         if (!string.IsNullOrEmpty(picked))
         {
             overlay = Overlay.None;
-            navigator.Open(new WallpaperCropPage(picked, navigator, assign));
+            navigator.Open(new WallpaperCropPage(picked, navigator, assign, wallpapers, wallpaperImages));
             return;
         }
 
@@ -118,7 +125,7 @@ internal sealed class WallpaperPage : ISettingsPage
         var dl = ImGui.GetWindowDrawList();
         var rounding = 22f * scale;
         var active = editingDark == isDark;
-        var entry = Plugin.Wallpapers.Resolve(selectedId);
+        var entry = wallpapers.Resolve(selectedId);
         if (active)
         {
             Elevation.Floating(dl, rect.Min, rect.Max, rounding, scale, 0.7f);
@@ -149,7 +156,7 @@ internal sealed class WallpaperPage : ISettingsPage
     {
         var scale = ImGuiHelpers.GlobalScale;
         var aspect = TileAspect();
-        var entries = Plugin.Wallpapers.Entries;
+        var entries = wallpapers.Entries;
         var gap = 10f * scale;
         using (AppSurface.Begin(region))
         using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
@@ -366,7 +373,8 @@ internal sealed class WallpaperPage : ISettingsPage
                     if (clicked)
                     {
                         overlay = Overlay.None;
-                        navigator.Open(new WallpaperCropPage(photoPaths[index], navigator, assign));
+                        navigator.Open(new WallpaperCropPage(photoPaths[index], navigator, assign, wallpapers,
+                            wallpaperImages));
                         return;
                     }
                 }
@@ -379,11 +387,11 @@ internal sealed class WallpaperPage : ISettingsPage
         }
     }
 
-    private static void DrawPhotoThumb(string path, Vector2 min, Vector2 max, PhoneTheme theme)
+    private void DrawPhotoThumb(string path, Vector2 min, Vector2 max, PhoneTheme theme)
     {
         var dl = ImGui.GetWindowDrawList();
         var rounding = 10f * ImGuiHelpers.GlobalScale;
-        var texture = Plugin.WallpaperImages.Get(path);
+        var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
             dl.AddRectFilled(min, max, ImGui.GetColorU32(theme.SurfaceMuted), rounding);
@@ -432,12 +440,12 @@ internal sealed class WallpaperPage : ISettingsPage
         if (editingDark)
         {
             configuration.DarkWallpaperId = id;
-            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_dark", id));
+            analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_dark", id));
         }
         else
         {
             configuration.LightWallpaperId = id;
-            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_light", id));
+            analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_light", id));
         }
 
         themes.Apply(configuration);
@@ -446,8 +454,8 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void RemoveCustom(string id)
     {
-        Plugin.Wallpapers.RemoveCustom(id);
-        var entries = Plugin.Wallpapers.Entries;
+        wallpapers.RemoveCustom(id);
+        var entries = wallpapers.Entries;
         var fallback = entries.Count > 0 ? entries[0].Id : string.Empty;
         var changed = false;
         if (configuration.LightWallpaperId == id)
@@ -469,9 +477,9 @@ internal sealed class WallpaperPage : ISettingsPage
         }
     }
 
-    private static float TileAspect()
+    private float TileAspect()
     {
-        var aspect = Plugin.Wallpapers.CurrentTargetAspect;
+        var aspect = wallpapers.CurrentTargetAspect;
         return aspect > 0.1f ? aspect : 0.5f;
     }
 

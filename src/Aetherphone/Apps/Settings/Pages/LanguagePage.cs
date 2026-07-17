@@ -16,10 +16,12 @@ internal sealed class LanguagePage : ISettingsPage
     public FontAwesomeIcon Icon => FontAwesomeIcon.Globe;
     public Vector4 Tint => new(0.30f, 0.62f, 0.95f, 1f);
     private readonly Configuration configuration;
+    private readonly IAnalyticsService analytics;
 
-    public LanguagePage(Configuration configuration)
+    public LanguagePage(Configuration configuration, IAnalyticsService analytics)
     {
         this.configuration = configuration;
+        this.analytics = analytics;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -37,7 +39,7 @@ internal sealed class LanguagePage : ISettingsPage
                         theme) && language.Code != configuration.Language)
                 {
                     configuration.Language = language.Code;
-                    Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("language", language.Code));
+                    analytics.Track(AnalyticsEvents.SettingChanged("language", language.Code));
                     configuration.Save();
                     Loc.SetLanguage(language.Code);
                     Plugin.Fonts.OnLanguageChanged();

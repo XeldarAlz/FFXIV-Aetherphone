@@ -25,12 +25,12 @@ internal sealed class AvatarComposer
     private volatile int outcome;
 
     public AvatarComposer(Func<bool> busy, Action<string, WallpaperCrop, Action<bool>> update,
-        AvatarComposerLabels labels, PhotoLibrary library)
+        AvatarComposerLabels labels, PhotoLibrary library, WallpaperImageCache images)
     {
         this.busy = busy;
         this.update = update;
         this.labels = labels;
-        picker = new ImagePickCrop(library);
+        picker = new ImagePickCrop(library, images);
     }
 
     public void Open()

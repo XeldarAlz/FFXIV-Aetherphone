@@ -17,6 +17,7 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -62,7 +63,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
         SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
-        PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
+        PhoneVisibility visibility, RealtimeSignalBus realtimeSignals, WallpaperImageCache wallpaperImages)
     {
         store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
             keyVault, conversationKeys, visibility, realtimeSignals);
@@ -81,7 +82,8 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.social = social;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Velvet.ChangePhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,
-                L.Velvet.MoveAndScale, L.Velvet.Use, L.Velvet.Saving, L.Velvet.GestureHint), library);
+                L.Velvet.MoveAndScale, L.Velvet.Use, L.Velvet.Saving, L.Velvet.GestureHint), library,
+            wallpaperImages);
         post = new VelvetPostComposer(store, stories, library, images, lodestone);
         router = new ViewRouter<VelvetView>(VelvetView.Root, Id);
         drawView = DrawView;

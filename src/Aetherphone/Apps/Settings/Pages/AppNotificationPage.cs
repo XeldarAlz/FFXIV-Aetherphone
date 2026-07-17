@@ -21,12 +21,14 @@ internal sealed class AppNotificationPage : ISettingsPage
     public Vector4 Tint => channel.Accent;
     private readonly Configuration configuration;
     private readonly SoundService sound;
+    private readonly IAnalyticsService analytics;
     private NotificationChannel channel = NotificationChannels.All[0];
 
-    public AppNotificationPage(Configuration configuration, SoundService sound)
+    public AppNotificationPage(Configuration configuration, SoundService sound, IAnalyticsService analytics)
     {
         this.configuration = configuration;
         this.sound = sound;
+        this.analytics = analytics;
     }
 
     public void Show(NotificationChannel target) => channel = target;
@@ -45,7 +47,7 @@ internal sealed class AppNotificationPage : ISettingsPage
             if (enabled != wasEnabled)
             {
                 configuration.NotificationSettingFor(channel.AppId).Enabled = enabled;
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("notify_" + channel.AppId, enabled ? "1" : "0"));
+                analytics.Track(AnalyticsEvents.SettingChanged("notify_" + channel.AppId, enabled ? "1" : "0"));
                 configuration.Save();
             }
 
@@ -66,7 +68,7 @@ internal sealed class AppNotificationPage : ISettingsPage
         if (!string.Equals(setting.Sound, token, StringComparison.Ordinal))
         {
             setting.Sound = token;
-            Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("notify_sound_" + channel.AppId, token ?? "default"));
+            analytics.Track(AnalyticsEvents.SettingChanged("notify_sound_" + channel.AppId, token ?? "default"));
             configuration.Save();
         }
 

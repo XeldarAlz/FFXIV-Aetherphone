@@ -84,7 +84,7 @@ internal sealed class PhoneShell : IDisposable
         var confirmOverlay = new ConfirmOverlay(services.Confirm);
         var reportOverlay = new ReportOverlay(services.Report);
         setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
-            services.RemoteImages, services.Lodestone, bundle.Photos, navigation);
+            services.RemoteImages, services.Lodestone, bundle.Photos, services.WallpaperImages, navigation);
         painter = new ShellScreenPainter(themes, navigation, home);
         transition = new ShellTransitionRenderer(themes, navigation, home, painter);
         morph = new MinimizeMorphView(themes, minimize, minimizedView, notifications, painter);

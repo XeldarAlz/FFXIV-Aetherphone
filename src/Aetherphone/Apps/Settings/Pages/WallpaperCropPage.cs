@@ -23,6 +23,8 @@ internal sealed class WallpaperCropPage : ISettingsPage
     private readonly string sourcePath;
     private readonly ISettingsNavigator navigator;
     private readonly Action<string> onCommit;
+    private readonly WallpaperLibrary wallpapers;
+    private readonly WallpaperImageCache wallpaperImages;
     private Spring zoomSpring = new(1f);
     private Spring centerXSpring = new(0.5f);
     private Spring centerYSpring = new(0.5f);
@@ -32,11 +34,14 @@ internal sealed class WallpaperCropPage : ISettingsPage
     private bool dragging;
     private Vector2 lastDrag;
 
-    public WallpaperCropPage(string sourcePath, ISettingsNavigator navigator, Action<string> onCommit)
+    public WallpaperCropPage(string sourcePath, ISettingsNavigator navigator, Action<string> onCommit,
+        WallpaperLibrary wallpapers, WallpaperImageCache wallpaperImages)
     {
         this.sourcePath = sourcePath;
         this.navigator = navigator;
         this.onCommit = onCommit;
+        this.wallpapers = wallpapers;
+        this.wallpaperImages = wallpaperImages;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -45,7 +50,7 @@ internal sealed class WallpaperCropPage : ISettingsPage
         var theme = context.Theme;
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var aspect = CropAspect();
-        var texture = Plugin.WallpaperImages.Get(sourcePath);
+        var texture = wallpaperImages.Get(sourcePath);
         var dl = ImGui.GetWindowDrawList();
         var footer = 116f * scale;
         var area = new Rect(new Vector2(body.Min.X + 16f * scale, body.Min.Y + 8f * scale),
@@ -55,7 +60,7 @@ internal sealed class WallpaperCropPage : ISettingsPage
         if (texture is null)
         {
             Squircle.Fill(dl, preview.Min, preview.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-            var failed = Plugin.WallpaperImages.Failed(sourcePath);
+            var failed = wallpaperImages.Failed(sourcePath);
             Typography.DrawCentered(preview.Center, Loc.T(failed ? L.Wallpaper.LoadFailed : L.Common.Loading),
                 theme.TextMuted, 1f);
         }
@@ -150,7 +155,7 @@ internal sealed class WallpaperCropPage : ISettingsPage
         if (DrawButton(setRect, Loc.T(L.Wallpaper.Set), true, texture is not null, theme, scale) && texture is not null)
         {
             var finalCrop = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY).Clamped(texture.Size, aspect);
-            var id = Plugin.Wallpapers.AddCustom(sourcePath, finalCrop);
+            var id = wallpapers.AddCustom(sourcePath, finalCrop);
             onCommit(id);
             navigator.Back();
         }
@@ -204,9 +209,9 @@ internal sealed class WallpaperCropPage : ISettingsPage
         return new Rect(center - half, center + half);
     }
 
-    private static float CropAspect()
+    private float CropAspect()
     {
-        var aspect = Plugin.Wallpapers.CurrentTargetAspect;
+        var aspect = wallpapers.CurrentTargetAspect;
         return aspect > 0.1f ? aspect : 0.5f;
     }
 }

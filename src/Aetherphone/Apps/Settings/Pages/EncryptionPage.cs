@@ -31,15 +31,17 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private readonly AethernetSession session;
     private readonly KeyVault vault;
+    private readonly ConfirmService confirm;
     private readonly CancellationTokenSource cancellation = new();
     private volatile string status = string.Empty;
     private volatile bool busy;
     private volatile bool refreshRequested;
 
-    public EncryptionPage(AethernetSession session, KeyVault vault)
+    public EncryptionPage(AethernetSession session, KeyVault vault, ConfirmService confirm)
     {
         this.session = session;
         this.vault = vault;
+        this.confirm = confirm;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -161,7 +163,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private void AskReset()
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Encryption.ForgotBody),
             ConfirmLabel = Loc.T(L.Encryption.ForgotConfirm),

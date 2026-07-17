@@ -24,15 +24,17 @@ internal sealed class NotificationsPage : ISettingsPage
     private readonly AppNotificationPage appPage;
     private readonly SoundService sound;
     private readonly ISettingsPage soundPage;
+    private readonly IAnalyticsService analytics;
 
     public NotificationsPage(Configuration configuration, ISettingsNavigator navigator, AppNotificationPage appPage,
-        SoundService sound, ISettingsPage soundPage)
+        SoundService sound, ISettingsPage soundPage, IAnalyticsService analytics)
     {
         this.configuration = configuration;
         this.navigator = navigator;
         this.appPage = appPage;
         this.sound = sound;
         this.soundPage = soundPage;
+        this.analytics = analytics;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -48,7 +50,7 @@ internal sealed class NotificationsPage : ISettingsPage
             if (doNotDisturb != configuration.DoNotDisturb)
             {
                 configuration.DoNotDisturb = doNotDisturb;
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("do_not_disturb", doNotDisturb ? "1" : "0"));
+                analytics.Track(AnalyticsEvents.SettingChanged("do_not_disturb", doNotDisturb ? "1" : "0"));
                 configuration.Save();
             }
 
@@ -57,7 +59,7 @@ internal sealed class NotificationsPage : ISettingsPage
             if (vibration != configuration.Vibration)
             {
                 configuration.Vibration = vibration;
-                Plugin.Analytics.Track(AnalyticsEvents.SettingChanged("vibration", vibration ? "1" : "0"));
+                analytics.Track(AnalyticsEvents.SettingChanged("vibration", vibration ? "1" : "0"));
                 configuration.Save();
             }
 
