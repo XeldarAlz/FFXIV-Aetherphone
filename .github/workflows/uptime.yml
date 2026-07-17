@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      test_webhook:
+        description: "Post a test message to the alert webhook"
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -17,6 +22,18 @@ jobs:
   health:
     runs-on: ubuntu-latest
     steps:
+      - name: Send a test alert
+        if: ${{ inputs.test_webhook }}
+        env:
+          WEBHOOK_URL: ${{ secrets.UPTIME_ALERT_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "::error::UPTIME_ALERT_WEBHOOK_URL is not set"
+            exit 1
+          fi
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d '{"content": "**Aethernet alerting is live.** This webhook now carries: server 5xx/surge/moderation alerts, /health uptime failures, backup failures, and release announcements. (test message)"}' \
+            "$WEBHOOK_URL" > /dev/null && echo "Webhook accepted the test message."
       - name: Probe https://api.aetherphone.net/health
         id: probe
         run: |

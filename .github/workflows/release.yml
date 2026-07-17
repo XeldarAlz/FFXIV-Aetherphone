@@ -89,6 +89,20 @@ jobs:
           generate_release_notes: true
           fail_on_unmatched_files: true
 
+      - name: Announce the release on Discord
+        shell: bash
+        env:
+          WEBHOOK_URL: ${{ secrets.UPTIME_ALERT_WEBHOOK_URL }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "UPTIME_ALERT_WEBHOOK_URL not set; skipping the announcement."
+            exit 0
+          fi
+          tag='${{ steps.tag.outputs.target }}'
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            -d "{\"content\": \"**Aetherphone ${tag} is out.** latest.zip is published and the plugin repo is updating. Release notes: https://github.com/${{ github.repository }}/releases/tag/${tag}\"}" \
+            "$WEBHOOK_URL" > /dev/null
+
       - name: Fetch total download count
         id: count
         shell: bash
