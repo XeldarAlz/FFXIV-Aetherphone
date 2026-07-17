@@ -16,7 +16,7 @@ namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
-    private readonly ChatEntranceAnimator entrance = new();
+    private readonly ChatEntranceTracker entrance = new();
     private readonly string[] chatSegmentLabels = new string[2];
     private readonly List<LinkshellEntry> roster = new();
     private string draft = string.Empty;

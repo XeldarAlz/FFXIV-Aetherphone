@@ -99,33 +99,29 @@ internal static class ChatBubble
         float offsetX, float bubbleWidth, float bubbleHeight, float padding, float wrap, bool outgoing,
         Vector4 fillColor, Vector4 textColor, Vector4 linkInk, float entrance)
     {
-        var pop = 0.78f + 0.22f * Easing.EaseOutQuint(entrance);
-        var alpha = MathF.Min(entrance * 1.8f, 1f);
-        var rise = new Vector2(0f, (1f - Easing.EaseOutCubic(entrance)) * 10f * scale);
         ImGui.SetCursorPos(start);
         var screenStart = ImGui.GetCursorScreenPos();
         var fillMin = screenStart + new Vector2(offsetX, 0f);
         var fillMax = fillMin + new Vector2(bubbleWidth, bubbleHeight);
-        var anchor = new Vector2(outgoing ? fillMax.X : fillMin.X, fillMax.Y);
-        var scaledMin = anchor + (fillMin - anchor) * pop + rise;
-        var scaledMax = anchor + (fillMax - anchor) * pop + rise;
-        Squircle.Fill(ImGui.GetWindowDrawList(), scaledMin, scaledMax, 13f * scale * pop,
-            ImGui.GetColorU32(Palette.WithAlpha(fillColor, fillColor.W * alpha)));
+        var fx = BubblePop.For(entrance, scale, new Vector2(outgoing ? fillMax.X : fillMin.X, fillMax.Y));
+        Squircle.Fill(ImGui.GetWindowDrawList(), fx.Apply(fillMin), fx.Apply(fillMax), 13f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fillColor, fillColor.W * fx.Alpha)));
         var textLocal = new Vector2(start.X + offsetX + padding, start.Y + padding);
         var anchorLocal = new Vector2(outgoing ? start.X + offsetX + bubbleWidth : start.X + offsetX,
             start.Y + bubbleHeight);
-        var scaledTextLocal = anchorLocal + (textLocal - anchorLocal) * pop + rise;
+        var scaledTextLocal = anchorLocal + (textLocal - anchorLocal) * fx.Pop + fx.Rise;
         if (linkLayout is not null)
         {
             var textScreen = screenStart + (scaledTextLocal - start);
-            LinkText.Draw(ImGui.GetWindowDrawList(), linkLayout, textScreen, pop, textColor, linkInk, alpha, false);
+            LinkText.Draw(ImGui.GetWindowDrawList(), linkLayout, textScreen, fx.Pop, textColor, linkInk, fx.Alpha,
+                false);
             return;
         }
 
-        ImGui.SetWindowFontScale(pop);
+        ImGui.SetWindowFontScale(fx.Pop);
         ImGui.SetCursorPos(scaledTextLocal);
-        ImGui.PushTextWrapPos(scaledTextLocal.X + wrap * pop);
-        using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(textColor, textColor.W * alpha)))
+        ImGui.PushTextWrapPos(scaledTextLocal.X + wrap * fx.Pop);
+        using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(textColor, textColor.W * fx.Alpha)))
         {
             Typography.Plain(text);
         }
