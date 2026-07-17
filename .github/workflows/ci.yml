@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
 
   # Cheap gates that don't need the SDK or Dalamud; run them first so a
@@ -53,13 +56,10 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Download Dalamud dev build
+      - name: Download Dalamud
         shell: pwsh
-        # Track staging while API 15 / Patch 7.50 is in beta; the release
-        # channel is still API 14 and won't satisfy Dalamud.NET.Sdk 15.x.
-        # Revert to /latest.zip once Dalamud 15 GAs.
         run: |
-          $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/stg/latest.zip"
+          $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/latest.zip"
           $dalamudDir = "$env:AppData\XIVLauncher\addon\Hooks\dev"
           New-Item -ItemType Directory -Force -Path $dalamudDir | Out-Null
           Invoke-WebRequest -Uri $dalamudUrl -OutFile dalamud.zip
@@ -67,7 +67,7 @@ jobs:
           Remove-Item dalamud.zip
 
       - name: Restore
-        run: dotnet restore Aetherphone.sln
+        run: dotnet restore Aetherphone.sln --locked-mode
 
       - name: Build (Release)
         run: dotnet build Aetherphone.sln --configuration Release --no-restore
