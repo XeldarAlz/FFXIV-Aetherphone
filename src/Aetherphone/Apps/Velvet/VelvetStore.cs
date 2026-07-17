@@ -39,8 +39,7 @@ internal sealed class VelvetStore : IDisposable
     private readonly Dictionary<string, long> inboxLastAt = new();
     private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
     private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
-    private readonly ConcurrentDictionary<string, DmDecryptedBody> decryptedBodies = new(StringComparer.Ordinal);
-    private readonly ConcurrentDictionary<string, (long AtUnix, string Text)> previewCache = new(StringComparer.Ordinal);
+    private readonly MessageCipher cipher;
     private volatile bool velvetKeysHydrated;
     private volatile bool vaultRefreshRequested;
     private volatile bool vaultRefreshInFlight;
@@ -118,6 +117,7 @@ internal sealed class VelvetStore : IDisposable
         this.vault = vault;
         this.keys = keys;
         this.signals = signals;
+        cipher = new MessageCipher(vault, keys);
         inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
         signals.VelvetPinged += inboxCadence.RequestImmediate;
         vault.Changed += OnVaultChanged;
@@ -126,19 +126,13 @@ internal sealed class VelvetStore : IDisposable
 
     public KeyVaultState VaultState => vault.State;
     public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
-    public bool EncryptingCurrent => vault.State == KeyVaultState.Unlocked && currentKeyStatus.CanEncrypt;
+    public bool EncryptingCurrent => cipher.IsUnlocked && currentKeyStatus.CanEncrypt;
 
-    public DmDecryptedBody DecryptionState(string messageId)
-    {
-        return decryptedBodies.TryGetValue(messageId, out var state)
-            ? state
-            : new DmDecryptedBody(DmBodyState.Plain, string.Empty, null, false);
-    }
+    public DmDecryptedBody DecryptionState(string messageId) => cipher.DecryptionState(messageId);
 
     private void OnVaultChanged()
     {
-        decryptedBodies.Clear();
-        previewCache.Clear();
+        cipher.Clear();
         velvetKeysHydrated = false;
         if (vault.State != KeyVaultState.Unlocked)
         {
@@ -1015,18 +1009,16 @@ internal sealed class VelvetStore : IDisposable
             VelvetMessageDto? sent;
             var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, id));
             var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && threadId == id && generation > 0
-                && keys.TryGetCek(scope, generation, out var cek))
+            if (EncryptingCurrent && threadId == id
+                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
             {
-                var encoded = EnvelopeCodec.Encode(trimmed, cek, generation, scope, MyUserId);
                 sent = await client.SendVelvetMessageAsync(id, encoded.Envelope, 0, null, token,
                     encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
                     replyToId: replyToId)
                     .ConfigureAwait(false);
                 if (sent is not null)
                 {
-                    decryptedBodies[sent.Id] = new DmDecryptedBody(DmBodyState.Decrypted, trimmed,
-                        encoded.FrankingKeyBase64, true);
+                    cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
                     sent = sent with { Body = trimmed };
                 }
             }
@@ -1043,7 +1035,10 @@ internal sealed class VelvetStore : IDisposable
 
             if (sent.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
             {
-                sent = sent with { ReplyBody = ResolveQuotedBody(scope, sent) };
+                sent = sent with
+                {
+                    ReplyBody = cipher.ResolveQuotedBody(scope, sent.ReplyToId, sent.ReplyBody, sent.ReplySenderId),
+                };
             }
 
             if (threadId == id)
@@ -1246,16 +1241,14 @@ internal sealed class VelvetStore : IDisposable
             VelvetMessageDto? edited;
             var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, id));
             var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && threadId == id && generation > 0
-                && keys.TryGetCek(scope, generation, out var cek))
+            if (EncryptingCurrent && threadId == id
+                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
             {
-                var encoded = EnvelopeCodec.Encode(trimmed, cek, generation, scope, MyUserId);
                 edited = await client.EditVelvetMessageAsync(messageId, encoded.Envelope, token,
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
                 if (edited is not null)
                 {
-                    decryptedBodies[edited.Id] = new DmDecryptedBody(DmBodyState.Decrypted, trimmed,
-                        encoded.FrankingKeyBase64, true);
+                    cipher.RecordDecrypted(edited.Id, trimmed, encoded.FrankingKeyBase64);
                     edited = edited with { Body = trimmed };
                 }
             }
@@ -1264,7 +1257,7 @@ internal sealed class VelvetStore : IDisposable
                 edited = await client.EditVelvetMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
                 if (edited is not null)
                 {
-                    decryptedBodies.TryRemove(messageId, out _);
+                    cipher.Forget(messageId);
                 }
             }
 
@@ -1275,7 +1268,10 @@ internal sealed class VelvetStore : IDisposable
 
             if (edited.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
             {
-                edited = edited with { ReplyBody = ResolveQuotedBody(scope, edited) };
+                edited = edited with
+                {
+                    ReplyBody = cipher.ResolveQuotedBody(scope, edited.ReplyToId, edited.ReplyBody, edited.ReplySenderId),
+                };
             }
 
             if (threadId == id)
@@ -1344,34 +1340,6 @@ internal sealed class VelvetStore : IDisposable
         }
 
         return items;
-    }
-
-    private string ResolveQuotedBody(string scope, VelvetMessageDto item)
-    {
-        if (item.ReplyToId is null || string.IsNullOrEmpty(item.ReplyBody))
-        {
-            return Loc.T(L.Encryption.NoKeyPlaceholder);
-        }
-
-        if (decryptedBodies.TryGetValue(item.ReplyToId, out var cached) && cached.State == DmBodyState.Decrypted)
-        {
-            return cached.Text;
-        }
-
-        if (!EnvelopeCodec.TryParseGeneration(item.ReplyBody, out var generation))
-        {
-            return Loc.T(L.Encryption.NoKeyPlaceholder);
-        }
-
-        if (!keys.TryGetCek(scope, generation, out var cek))
-        {
-            return vault.State == KeyVaultState.Unlocked
-                ? Loc.T(L.Encryption.NoKeyPlaceholder)
-                : Loc.T(L.Encryption.EncryptedPlaceholder);
-        }
-
-        var decoded = EnvelopeCodec.Decode(item.ReplyBody, cek, scope, item.ReplySenderId ?? string.Empty, null);
-        return decoded.Status == EnvelopeDecodeStatus.Success ? decoded.Body : Loc.T(L.Encryption.NoKeyPlaceholder);
     }
 
     public string? DmMediaUrl(string messageId)
@@ -1772,12 +1740,18 @@ internal sealed class VelvetStore : IDisposable
             var updated = item;
             if (needsBody)
             {
-                updated = updated with { Body = ResolveBody(scope, item).Text };
+                updated = updated with
+                {
+                    Body = cipher.ResolveBody(scope, item.Id, item.Body, item.SenderId, item.CommitmentTag).Text,
+                };
             }
 
             if (needsReply)
             {
-                updated = updated with { ReplyBody = ResolveQuotedBody(scope, item) };
+                updated = updated with
+                {
+                    ReplyBody = cipher.ResolveQuotedBody(scope, item.ReplyToId, item.ReplyBody, item.ReplySenderId),
+                };
             }
 
             decorated ??= (VelvetMessageDto[])items.Clone();
@@ -1785,42 +1759,6 @@ internal sealed class VelvetStore : IDisposable
         }
 
         return decorated ?? items;
-    }
-
-    private DmDecryptedBody ResolveBody(string scope, VelvetMessageDto item)
-    {
-        if (decryptedBodies.TryGetValue(item.Id, out var cached)
-            && cached.State is DmBodyState.Decrypted or DmBodyState.Malformed)
-        {
-            return cached;
-        }
-
-        DmDecryptedBody resolved;
-        if (!EnvelopeCodec.TryParseGeneration(item.Body, out var generation))
-        {
-            resolved = new DmDecryptedBody(DmBodyState.Malformed, Loc.T(L.Encryption.NoKeyPlaceholder), null, false);
-        }
-        else if (!keys.TryGetCek(scope, generation, out var cek))
-        {
-            resolved = vault.State == KeyVaultState.Unlocked
-                ? new DmDecryptedBody(DmBodyState.NoKey, Loc.T(L.Encryption.NoKeyPlaceholder), null, false)
-                : new DmDecryptedBody(DmBodyState.Pending, Loc.T(L.Encryption.EncryptedPlaceholder), null, false);
-        }
-        else
-        {
-            var decoded = EnvelopeCodec.Decode(item.Body, cek, scope, item.SenderId, item.CommitmentTag);
-            resolved = decoded.Status switch
-            {
-                EnvelopeDecodeStatus.Success => new DmDecryptedBody(DmBodyState.Decrypted, decoded.Body,
-                    decoded.FrankingKeyBase64, decoded.CommitmentVerified),
-                EnvelopeDecodeStatus.WrongKey => new DmDecryptedBody(DmBodyState.NoKey,
-                    Loc.T(L.Encryption.NoKeyPlaceholder), null, false),
-                _ => new DmDecryptedBody(DmBodyState.Malformed, Loc.T(L.Encryption.NoKeyPlaceholder), null, false),
-            };
-        }
-
-        decryptedBodies[item.Id] = resolved;
-        return resolved;
     }
 
     private VelvetThreadDto[] DecorateThreads(VelvetThreadDto[] items)
@@ -1835,34 +1773,15 @@ internal sealed class VelvetStore : IDisposable
             }
 
             decorated ??= (VelvetThreadDto[])items.Clone();
-            decorated[index] = item with { LastMessagePreview = ResolvePreview(item) };
+            var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, item.OtherUserId));
+            decorated[index] = item with
+            {
+                LastMessagePreview = cipher.ResolvePreview(item.OtherUserId, scope, item.LastMessageAtUnix,
+                    item.LastMessagePreview, item.LastMessageSenderId),
+            };
         }
 
         return decorated ?? items;
-    }
-
-    private string ResolvePreview(VelvetThreadDto item)
-    {
-        if (previewCache.TryGetValue(item.OtherUserId, out var cached) && cached.AtUnix == item.LastMessageAtUnix)
-        {
-            return cached.Text;
-        }
-
-        var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, item.OtherUserId));
-        var text = Loc.T(L.Encryption.EncryptedPlaceholder);
-        if (EnvelopeCodec.TryParseGeneration(item.LastMessagePreview, out var generation)
-            && keys.TryGetCek(scope, generation, out var cek))
-        {
-            var decoded = EnvelopeCodec.Decode(item.LastMessagePreview, cek, scope, item.LastMessageSenderId, null);
-            if (decoded.Status == EnvelopeDecodeStatus.Success)
-            {
-                text = decoded.Body;
-            }
-
-            previewCache[item.OtherUserId] = (item.LastMessageAtUnix, text);
-        }
-
-        return text;
     }
 
     public void Dispose()
