@@ -1,18 +1,12 @@
 using System.Numerics;
-using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
-using Aetherphone.Core.Game;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Lodestone;
-using Aetherphone.Core.Media;
-using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
-using Aetherphone.Core.Playback;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Telephony;
@@ -40,25 +34,21 @@ internal sealed class PhoneShell : IDisposable
     private readonly WidgetRegistry widgets;
     private readonly NavigationStack navigation;
     private readonly NotificationBanner banner;
-    private readonly DynamicIsland island;
-    private readonly ControlCenter controlCenter;
     private readonly MinimizedPhone minimizedView;
     private readonly MinimizeTransition minimize = new();
-    private readonly NotificationService notifications;
-    private readonly HomeScreen home;
     private readonly SideButton sideButton = new();
     private readonly CallHub calls;
-    private readonly IncomingCallOverlay incomingOverlay;
-    private readonly ConfirmOverlay confirmOverlay;
-    private readonly ReportOverlay reportOverlay;
     private readonly OnboardingDirector director;
     private readonly SetupOverlay setup;
+    private readonly ShellScreenPainter painter;
+    private readonly ShellTransitionRenderer transition;
+    private readonly MinimizeMorphView morph;
+    private readonly ShellOverlayCoordinator overlays;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
     private bool closeRequested;
     private bool analyticsConsentRequested;
     private bool indicatorPressActive;
     private Vector2 indicatorPressPos;
-    private string? zoomPreparedFor;
     private CallState lastCallState;
     private DateTime lastVisibleDrawUtc = DateTime.MinValue;
 
@@ -68,7 +58,7 @@ internal sealed class PhoneShell : IDisposable
         apps = bundle.Apps;
         widgets = bundle.Widgets;
         calls = services.Calls;
-        notifications = services.Notifications;
+        var notifications = services.Notifications;
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
@@ -76,16 +66,21 @@ internal sealed class PhoneShell : IDisposable
             services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
-        island = new DynamicIsland(services.Playback, calls);
-        controlCenter = new ControlCenter(themes, services.Playback, calls, navigation, notifications, router);
+        var island = new DynamicIsland(services.Playback, calls);
+        var controlCenter = new ControlCenter(themes, services.Playback, calls, navigation, notifications, router);
         minimizedView = new MinimizedPhone(notifications);
-        home = new HomeScreen(apps, bundle.Widgets);
+        var home = new HomeScreen(apps, bundle.Widgets);
         navigation.ReturningHome += home.PrepareReveal;
-        incomingOverlay = new IncomingCallOverlay(calls);
-        confirmOverlay = new ConfirmOverlay(confirm);
-        reportOverlay = new ReportOverlay(report);
+        var incomingOverlay = new IncomingCallOverlay(calls);
+        var confirmOverlay = new ConfirmOverlay(confirm);
+        var reportOverlay = new ReportOverlay(report);
         setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
             services.RemoteImages, services.Lodestone, bundle.Photos, navigation);
+        painter = new ShellScreenPainter(themes, navigation, home);
+        transition = new ShellTransitionRenderer(themes, navigation, home, painter);
+        morph = new MinimizeMorphView(themes, minimize, minimizedView, notifications, painter);
+        overlays = new ShellOverlayCoordinator(navigation, controlCenter, banner, island, incomingOverlay,
+            confirmOverlay, reportOverlay, director, setup);
     }
 
     public void OnOpened()
@@ -203,13 +198,9 @@ internal sealed class PhoneShell : IDisposable
                 Plugin.Loading.Cancel();
             }
 
-            if (minimize.MorphActive)
+            if (morph.Draw(device, delta))
             {
-                DrawMinimizeMorph(device, delta);
-            }
-            else
-            {
-                DrawMinimizedFace(device, delta);
+                closeRequested = true;
             }
 
             HoverTooltip.Flush();
@@ -228,7 +219,7 @@ internal sealed class PhoneShell : IDisposable
         navigation.Advance(delta);
         if (!navigation.IsTransitioning)
         {
-            zoomPreparedFor = null;
+            transition.ResetPrepared();
         }
 
         banner.Advance(delta);
@@ -261,26 +252,15 @@ internal sealed class PhoneShell : IDisposable
         }
 
         SyncCallNavigation();
-        var setupActive = setup.IsActive;
-        var confirming = !loading.IsActive && (confirmOverlay.CapturesPointer || reportOverlay.CapturesPointer);
-        var controlCenterCaptures = !loading.IsActive && controlCenter.CapturesPointer;
-        var overlaysCapture = controlCenterCaptures && !director.WantsControlCenter;
-        var ringing = !loading.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !loading.IsActive && !controlCenterCaptures && !ringing && !confirming &&
-                             !setupActive &&
-                             (island.CapturesPointer(screen) ||
-                              (!director.CapturesPointer && banner.CapturesPointer(screen)));
-        var busy = loading.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning ||
-                   setupActive;
-        director.Advance(delta, busy, navigation.AtHome, navigation.Current?.Id);
-        MaybeAskAnalyticsConsent(busy);
+        var state = overlays.Assess(screen);
+        director.Advance(delta, state.Busy, navigation.AtHome, navigation.Current?.Id);
+        MaybeAskAnalyticsConsent(state.Busy);
         UiAnchors.BeginFrame(director.WantsAnchors);
         UiAnchors.Report("chrome.lock", DeviceChrome.LockButtonRect(device));
         UiAnchors.Report("chrome.minimize", DeviceChrome.SideButtonRect(device));
         UiAnchors.Report("chrome.controlcenter",
             new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * ImGuiHelpers.GlobalScale)));
-        using (InputShield.Engage(loading.IsActive || islandCaptures || controlCenterCaptures || ringing ||
-                                  confirming || director.CapturesPointer || setupActive))
+        using (InputShield.Engage(state.ShieldBase || director.CapturesPointer))
         {
             DrawContent(screen, theme);
             if (!navigation.AtHome || navigation.IsTransitioning)
@@ -291,65 +271,7 @@ internal sealed class PhoneShell : IDisposable
             DrawChrome(screen, theme);
         }
 
-        if (setupActive)
-        {
-            setup.Draw(screen, theme, delta, !loading.IsActive && !confirming);
-        }
-
-        if (loading.IsActive)
-        {
-            loading.Draw(screen, theme);
-            return;
-        }
-
-        if (setupActive)
-        {
-            HoverTooltip.Flush();
-            confirmOverlay.Draw(screen, theme);
-            DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);
-            return;
-        }
-
-        if (!director.CapturesPointer)
-        {
-            banner.Draw(screen, theme);
-            if (!controlCenter.IsActive)
-            {
-                island.Draw(screen, theme, navigation, navigation.Current?.Id);
-            }
-
-            incomingOverlay.Draw(screen, theme);
-        }
-
-        if (GuideIntents.Consume(TourRegistry.ControlCenterOpenIntent))
-        {
-            controlCenter.Open();
-        }
-
-        if (GuideIntents.Consume(TourRegistry.ControlCenterCloseIntent))
-        {
-            controlCenter.Dismiss();
-        }
-
-        controlCenter.Draw(screen, theme, delta,
-            !navigation.IsTransitioning && !director.CapturesPointer && !islandCaptures,
-            !director.CapturesPointer);
-        HoverTooltip.Flush();
-        reportOverlay.Draw(screen, theme);
-        confirmOverlay.Draw(screen, theme);
-        director.Draw(screen, theme);
-        DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);
-    }
-
-    private bool TransparencyActive()
-    {
-        if (navigation.IsTransitioning)
-        {
-            return navigation.MotionOver.WantsTransparentScreen ||
-                   (navigation.MotionUnder?.WantsTransparentScreen ?? false);
-        }
-
-        return !navigation.AtHome && (navigation.Current?.WantsTransparentScreen ?? false);
+        overlays.DrawOverlays(screen, theme, delta, state);
     }
 
     private Rect? TransparentBand(Rect screen)
@@ -383,111 +305,15 @@ internal sealed class PhoneShell : IDisposable
         lastCallState = state;
     }
 
-    private void DrawMinimizeMorph(Rect device, float delta)
-    {
-        minimizedView.IsShowing = false;
-        var scale = ImGuiHelpers.GlobalScale;
-        var theme = themes.Chrome;
-        var startBody = DeviceChrome.BodyRect(device);
-        var endBody = MinimizedRect(device, scale).Inset(scale);
-        var eased = minimize.EasedProgress;
-        var body = new Rect(Vector2.Lerp(startBody.Min, endBody.Min, eased),
-            Vector2.Lerp(startBody.Max, endBody.Max, eased));
-        var bezel = Easing.Lerp(theme.BezelThickness * scale, endBody.Width * 0.09f, eased);
-        var rounding = Easing.Lerp(theme.DeviceRounding * scale, endBody.Width * 0.30f, eased);
-        var geometry = MinimizedPhone.Geometry.Lerp(body, bezel, rounding);
-
-        var shell = ImGui.GetWindowDrawList();
-        Elevation.Floating(shell, geometry.Body.Min, geometry.Body.Max, geometry.Rounding, scale, eased);
-        MinimizedPhone.DrawShell(shell, geometry, theme);
-        RevealMorphContent(device, theme, geometry, eased);
-
-        var raw = Math.Clamp((eased - 0.5f) / 0.4f, 0f, 1f);
-        var glyphAlpha = raw * raw * (3f - 2f * raw);
-        MinimizedPhone.DrawFace(ImGui.GetForegroundDrawList(), geometry, theme, scale, glyphAlpha,
-            notifications.UnreadCount);
-    }
-
-    private void RevealMorphContent(Rect device, PhoneTheme theme, in MinimizedPhone.Geometry geometry, float eased)
-    {
-        var screen = geometry.Screen;
-        if (screen.Height <= 0.5f)
-        {
-            return;
-        }
-
-        var fullScreen = DeviceChrome.ScreenRect(device, theme);
-        var rounding = geometry.ScreenRounding;
-        var veil = ImGui.GetColorU32(Palette.WithAlpha(theme.ScreenBase, eased));
-        var shrink = ShrinkMotion(fullScreen, screen);
-        SceneCompositor.DrawClipped(screen, fullScreen, 0f, target =>
-        {
-            PaintCurrentScreen(target, theme, shrink);
-            Squircle.Fill(ImGui.GetWindowDrawList(), screen.Min, screen.Max, rounding, veil);
-        });
-    }
-
-    private static HomeMotion ShrinkMotion(Rect fullScreen, Rect target)
-    {
-        var zoom = fullScreen.Width > 0f ? target.Width / fullScreen.Width : 1f;
-        if (zoom >= 0.999f)
-        {
-            return new HomeMotion(1f, default, 0f, false);
-        }
-
-        var pivot = (target.Min - fullScreen.Min * zoom) / (1f - zoom);
-        return new HomeMotion(zoom, pivot, 0f, false);
-    }
-
-    private void PaintCurrentScreen(Rect screen, PhoneTheme theme, in HomeMotion motion)
-    {
-        if (navigation.AtHome)
-        {
-            PaintHome(screen, theme, motion);
-            return;
-        }
-
-        using (ImRaii.PushId(navigation.Current!.Id))
-        {
-            PaintApp(screen, theme, navigation.Current!);
-        }
-    }
-
-    private void DrawMinimizedFace(Rect device, float delta)
-    {
-        minimizedView.IsShowing = true;
-        var mini = MinimizedRect(device, ImGuiHelpers.GlobalScale);
-        switch (minimizedView.Draw(mini, themes.Chrome, delta))
-        {
-            case MinimizedAction.Expand:
-                minimize.BeginExpand();
-                break;
-            case MinimizedAction.Close:
-                closeRequested = true;
-                break;
-        }
-    }
-
-    private static Rect MinimizedRect(Rect device, float scale) =>
-        new(device.Min, device.Min + MinimizeTransition.MinimizedSize * scale);
-
     private void DrawContent(Rect screen, PhoneTheme theme)
     {
         if (navigation.IsTransitioning)
         {
-            DrawTransition(screen, theme);
+            transition.Draw(screen, theme);
+            return;
         }
-        else if (navigation.AtHome)
-        {
-            PaintHome(screen, theme, HomeMotion.Rest);
-        }
-        else
-        {
-            using (ImRaii.PushId(navigation.Current!.Id))
-            {
-                PaintApp(screen, theme, navigation.Current!);
-            }
-        }
+
+        painter.PaintCurrent(screen, theme, HomeMotion.Rest);
     }
 
     private void DrawChrome(Rect screen, PhoneTheme theme)
@@ -498,182 +324,6 @@ internal sealed class PhoneShell : IDisposable
             StatusBar.Draw(screen, theme);
             DrawHomeIndicator(screen, theme);
         }
-    }
-
-    private void DrawTransition(Rect screen, PhoneTheme theme)
-    {
-        var cover = navigation.MotionProgress;
-        var height = screen.Height;
-        var over = navigation.MotionOver;
-        var under = navigation.MotionUnder;
-        if (under is null && !over.WantsTransparentScreen)
-        {
-            DrawZoomTransition(screen, theme, over);
-            return;
-        }
-
-        var overOffset = new Vector2(0f, (1f - cover) * height);
-        var underDim = cover * TransitionTiming.ShellDimMax;
-        LayerPainter underPaint = under is null
-            ? target => PaintHome(target, theme, new HomeMotion(1f, default, 0f, false))
-            : target => PaintApp(target, theme, under);
-        LayerPainter overPaint = target => PaintApp(target, theme, over);
-        if (over.WantsTransparentScreen || (under?.WantsTransparentScreen ?? false))
-        {
-            var band = new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + overOffset.Y));
-            SceneCompositor.DrawClipped(band, screen, underDim, underPaint);
-            SceneCompositor.DrawLayer(screen,
-                new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true));
-            return;
-        }
-
-        var underLayer =
-            new SceneCompositor.Layer(under?.Id ?? "home", Vector2.Zero, underDim, underPaint, default, true);
-        var overLayer = new SceneCompositor.Layer(over.Id, overOffset, 0f, overPaint, default, true);
-        SceneCompositor.Composite(screen, underLayer, overLayer);
-    }
-
-    private void DrawZoomTransition(Rect screen, PhoneTheme theme, IPhoneApp over)
-    {
-        var raw = Math.Clamp(navigation.MotionProgress, 0f, 1f);
-        var content = ContentRect(screen, theme);
-        if (navigation.Motion == ShellMotion.Present && navigation.MotionOrigin is null &&
-            !string.Equals(zoomPreparedFor, over.Id, StringComparison.Ordinal))
-        {
-            zoomPreparedFor = over.Id;
-            home.PrepareReveal(over.Id);
-        }
-
-        var recede = Easing.SmoothStep(raw);
-        var rest = navigation.MotionOrigin ?? home.RevealRect(over.Id, content) ?? CenterOrigin(content);
-        var motion = new HomeMotion(1f + TransitionTiming.HomeZoomDepth * recede, rest.Center, recede, false);
-        SceneCompositor.DrawLayer(screen, new SceneCompositor.Layer("home", Vector2.Zero,
-            TransitionTiming.HomeRecedeDim * recede, target => PaintHome(target, theme, motion), default, true));
-        var warped = motion.Warp(rest);
-        var card = new Rect(Vector2.Lerp(warped.Min, screen.Min, raw), Vector2.Lerp(warped.Max, screen.Max, raw));
-        if (card.Width < 4f || card.Height < 4f)
-        {
-            return;
-        }
-
-        var scale = ImGuiHelpers.GlobalScale;
-        var iconRadius = MathF.Min(MathF.Min(rest.Width, rest.Height) * 0.26f, 24f * scale);
-        var rounding = iconRadius + (theme.ScreenRounding * scale - iconRadius) * raw;
-        var shellDrawList = ImGui.GetWindowDrawList();
-        var elevation = Easing.Clamp01(raw * 2.4f);
-        Elevation.Floating(shellDrawList, card.Min, card.Max, rounding, scale, elevation);
-        DrawZoomCard(screen, theme, over, rest, card, rounding, raw);
-        Material.EdgeSquircle(ImGui.GetWindowDrawList(), card.Min, card.Max, rounding, scale, elevation);
-    }
-
-    private void DrawZoomCard(Rect screen, PhoneTheme theme, IPhoneApp over, Rect rest, Rect card, float rounding,
-        float raw)
-    {
-        const ImGuiWindowFlags cardFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
-                                           ImGuiWindowFlags.NoBackground;
-        var appReady = navigation.Motion == ShellMotion.Present && raw >= TransitionTiming.AppInteractiveProgress;
-        ImGui.SetCursorScreenPos(card.Min);
-        using (ImRaii.PushId("zoomcard"))
-        using (ImRaii.Child("card", card.Size, false, cardFlags))
-        using (InputShield.Engage(!appReady))
-        {
-            var reveal = Easing.SmootherStep(Easing.Segment(raw, 0.45f, 0.85f));
-            if (reveal > 0.001f)
-            {
-                var offset = card.Center - screen.Center;
-                var rise = (1f - reveal) * 8f * ImGuiHelpers.GlobalScale;
-                var target = new Rect(screen.Min + offset + new Vector2(0f, rise),
-                    screen.Max + offset + new Vector2(0f, rise));
-                using (ImRaii.PushId(over.Id))
-                {
-                    PaintApp(target, theme, over);
-                }
-            }
-
-            var cardDrawList = ImGui.GetWindowDrawList();
-            var veilAlpha = 1f - reveal;
-            if (veilAlpha > 0.001f)
-            {
-                var surface = IconTile.Surface(over.Accent);
-                var background = themes.Current.AppBackground;
-                var settle = Easing.SmootherStep(Easing.Segment(raw, 0f, 0.4f));
-                var veil = Vector4.Lerp(surface, background, settle);
-                Squircle.Fill(cardDrawList, card.Min, card.Max, rounding,
-                    ImGui.GetColorU32(veil with { W = veil.W * veilAlpha }));
-            }
-
-            var glyphAlpha = 1f - Easing.Segment(raw, 0.12f, 0.5f);
-            if (glyphAlpha > 0.001f)
-            {
-                DrawZoomGlyph(cardDrawList, over, card, rest, raw, Easing.SmootherStep(glyphAlpha));
-            }
-        }
-    }
-
-    private static void DrawZoomGlyph(ImDrawListPtr drawList, IPhoneApp over, Rect card, Rect rest, float raw,
-        float alpha)
-    {
-        var size = rest.Width * (1f + 0.4f * raw);
-        var center = card.Center;
-        var surface = IconTile.Surface(over.Accent);
-        var ink = new Vector4(1f, 1f, 1f, alpha);
-        if (!AppIconArt.TryDraw(drawList, over.Id, center, size, ink,
-                Palette.WithAlpha(Palette.Darken(surface, 0.25f), alpha)))
-        {
-            var glyphHeight = Typography.Measure(over.Glyph).Y;
-            var glyphScale = glyphHeight > 0f ? size * 0.5f / glyphHeight : 1f;
-            Typography.DrawCentered(drawList, center, over.Glyph, ink, glyphScale, FontWeight.Regular);
-        }
-    }
-
-    private static Rect CenterOrigin(Rect content)
-    {
-        var half = 30f * ImGuiHelpers.GlobalScale;
-        return new Rect(content.Center - new Vector2(half, half), content.Center + new Vector2(half, half));
-    }
-
-    private void PaintHome(Rect screen, PhoneTheme theme, in HomeMotion motion)
-    {
-        DeviceChrome.DrawWallpaper(screen, theme, motion);
-        DeviceChrome.DrawHomeScrim(screen, theme);
-        home.Draw(screen, ContentRect(screen, theme), theme, navigation, motion);
-    }
-
-    private void PaintApp(Rect screen, PhoneTheme theme, IPhoneApp app)
-    {
-        var content = themes.Current;
-        if (!app.WantsTransparentScreen)
-        {
-            DeviceChrome.FillScreen(screen, theme, content.AppBackground);
-        }
-
-        var contentRect = ContentRect(screen, theme);
-        try
-        {
-            app.Draw(new PhoneContext(contentRect, content, navigation));
-        }
-        catch (Exception exception)
-        {
-            AepLog.Error($"[shell] app-draw {app.Id} threw: {exception.Message}");
-            DrawAppFailure(contentRect, content);
-        }
-    }
-
-    private static void DrawAppFailure(Rect content, PhoneTheme theme)
-    {
-        var draw = ImGui.GetWindowDrawList();
-        var text = Loc.T(L.Common.AppDrawFailure);
-        var size = ImGui.CalcTextSize(text);
-        var position = new Vector2(content.Center.X - size.X * 0.5f, content.Center.Y - size.Y * 0.5f);
-        draw.AddText(position, ImGui.ColorConvertFloat4ToU32(theme.TextMuted), text);
-    }
-
-    private static Rect ContentRect(Rect screen, PhoneTheme theme)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var min = new Vector2(screen.Min.X + theme.SidePadding * scale, screen.Min.Y + theme.TopZoneHeight * scale);
-        var max = new Vector2(screen.Max.X - theme.SidePadding * scale, screen.Max.Y - theme.BottomZoneHeight * scale);
-        return new Rect(min, max);
     }
 
     private void DrawHomeIndicator(Rect screen, PhoneTheme theme)
