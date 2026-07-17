@@ -516,6 +516,44 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0980 =
+        {
+            new("changelog.r0980.0", "Activity is now a daily tracker: close your rings as you clear roulettes and duties, keep a history of your streaks, and watch a home widget fill up through the day"),
+            new("changelog.r0980.1", "Dailies has been rebuilt around gradient cards and now fills itself in, detecting the roulettes and hunt bills you have already done"),
+            new("changelog.r0980.2", "The Photos gallery has been rebuilt with a day-by-day library, smart month albums, and a full-screen viewer"),
+            new("changelog.r0980.3", "Collections has been redrawn with colored category tiles and glass cards to match the rest of the phone"),
+            new("changelog.r0980.4", "Inventory has been redrawn with colored source tiles and glass cards to match the rest of the phone"),
+            new("changelog.r0980.5", "Wallet has been redrawn with the same gradient-card look as the rest of the phone"),
+            new("changelog.r0980.6", "Fishing has been rebuilt in the phone's gradient look and now carries the Ruby Route schedule alongside Indigo"),
+            new("changelog.r0980.7", "Music now starts a song the instant you tap it, instead of waiting for the whole track to load, and its search now reaches long mixes and full albums"),
+            new("changelog.r0980.8", "Music radio can now be filtered by country and language and sorted, making it easier to find something to listen to"),
+            new("changelog.r0980.9", "Velvet's feed is now a full post-card timeline, on par with Aethergram and Chirper"),
+            new("changelog.r0980.10", "Photos and voice notes you send in ChocoChat or Velvet are now end-to-end encrypted, the same way your messages already were"),
+            new("changelog.r0980.11", "You can now rename a saved contact in ChocoChat"),
+            new("changelog.r0980.12", "About now links to the Aetherphone Discord and website"),
+            new("changelog.r0980.33", "Settings now has a Delete account button in the Account section that removes your account and erases everything held for it on Aethernet"),
+            new("changelog.r0980.15", "You can now block someone from the phone, and a block now holds everywhere: they leave your chats, they can no longer show up on your posts' likes and comments, and they cannot reach you"),
+            new("changelog.r0980.16", "The Calendar app now loads events through Aetherphone's own service instead of a third-party key"),
+
+            new("changelog.r0980.17", "The Chirper and Aethergram feeds now stay smooth however far you scroll, drawing only the posts on screen"),
+            new("changelog.r0980.18", "Photo grids now load small thumbnails and keep full resolution for the viewer alone, so galleries open faster and use far less memory"),
+            new("changelog.r0980.19", "The phone now keeps its graphics memory in check, so a long browsing session no longer builds up and slows the game down"),
+            new("changelog.r0980.21", "The phone is sturdier now: a glitch inside one app can no longer bring the whole phone down with it"),
+            new("changelog.r0980.22", "Aethernet now answers noticeably faster across feeds, profiles, chats, and reactions, with its busiest lookups rebuilt and freshly indexed"),
+            new("changelog.r0980.31", "Aethernet now stands up to abuse and sudden spikes in traffic: rate limits, a cap on live connections, and health checks keep it responsive even when everyone is online at once"),
+            new("changelog.r0980.20", "The connection now holds steady even with thousands of players online at once, and calls and live updates recover on their own after a network hiccup"),
+            new("changelog.r0980.32", "Everything you post and send is now backed up off-site automatically, so your data stays safe even if something goes wrong"),
+
+            new("changelog.r0980.23", "Fixed a tap on a chat menu also pressing the message bubble behind it"),
+            new("changelog.r0980.24", "Fixed the photo picker in chat showing old photos: it now refreshes every time you open it"),
+            new("changelog.r0980.25", "Fixed Collections showing the wrong progress on its tiles"),
+            new("changelog.r0980.26", "Fixed the clock reading the wrong time when your custom clock format included the AM or PM marker"),
+            new("changelog.r0980.27", "Fixed the phone forgetting your Lock Position setting whenever you minimized or maximized it"),
+            new("changelog.r0980.28", "Fixed the phone being willing to open any kind of link: it now opens only ordinary web links"),
+            new("changelog.r0980.29", "Fixed some conversations showing no last-message preview in your chat list"),
+            new("changelog.r0980.30", "Fixed loading older messages in a conversation sometimes skipping or repeating one"),
+        };
+
         public static readonly LocString[] Release0970 =
         {
             new("changelog.r0970.37", "Velvet photos are now for your connections only: the feed no longer shows posts from people you have not connected with"),
