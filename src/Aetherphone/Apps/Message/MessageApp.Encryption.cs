@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using Aetherphone.Core;

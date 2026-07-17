@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Apps.Settings.Pages;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;

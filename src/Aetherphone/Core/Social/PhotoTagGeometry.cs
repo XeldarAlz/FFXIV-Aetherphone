@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Social;

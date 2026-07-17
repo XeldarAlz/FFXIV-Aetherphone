@@ -1,6 +1,4 @@
-using System.Numerics;
 using Aetherphone.Core;
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;

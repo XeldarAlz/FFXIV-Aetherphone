@@ -1,10 +1,5 @@
-using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
-using Aetherphone.Core;
 using Aetherphone.Windows.Components;
-using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
 

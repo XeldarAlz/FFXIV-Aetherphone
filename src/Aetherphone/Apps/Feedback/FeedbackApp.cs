@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
@@ -10,7 +9,6 @@ using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
-using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;

@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Home;
 
 namespace Aetherphone.Core.Shell.Home;

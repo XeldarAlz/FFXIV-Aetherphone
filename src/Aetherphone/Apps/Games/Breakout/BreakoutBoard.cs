@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Apps.Games.Breakout;
 
 internal enum PowerUpKind

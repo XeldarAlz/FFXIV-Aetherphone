@@ -5,7 +5,6 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Media;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;

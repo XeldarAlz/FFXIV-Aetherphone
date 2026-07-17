@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Velvet;

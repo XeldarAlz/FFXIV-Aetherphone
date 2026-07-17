@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Core.Localization;
 using Dalamud.Plugin.Services;

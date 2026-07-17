@@ -1,6 +1,4 @@
-using System.Numerics;
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;

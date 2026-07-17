@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Apps.Skywatcher;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;

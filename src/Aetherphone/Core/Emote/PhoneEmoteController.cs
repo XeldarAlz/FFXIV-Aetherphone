@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Linkpearl;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;

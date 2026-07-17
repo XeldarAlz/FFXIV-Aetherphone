@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core.Animation;
 
 internal static class Pulse

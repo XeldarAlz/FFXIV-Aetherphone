@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core.Shell.Home;
 
 internal readonly struct HomeMotion

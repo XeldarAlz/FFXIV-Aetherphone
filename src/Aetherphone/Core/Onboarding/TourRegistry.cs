@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Core.Onboarding;

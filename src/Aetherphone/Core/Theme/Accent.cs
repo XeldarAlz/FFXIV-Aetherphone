@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core.Theme;
 
 internal static class Accent

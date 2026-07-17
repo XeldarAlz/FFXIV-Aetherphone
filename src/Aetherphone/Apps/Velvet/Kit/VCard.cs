@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;

@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Linkpearl;

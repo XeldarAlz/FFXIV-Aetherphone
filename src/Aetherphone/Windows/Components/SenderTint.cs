@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Windows.Components;
 
 internal static class SenderTint

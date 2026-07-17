@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;

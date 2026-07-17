@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Numerics;
 using Aetherphone.Core.Net;
 using Dalamud.Interface.Textures.TextureWraps;
 

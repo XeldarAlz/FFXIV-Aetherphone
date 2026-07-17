@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;

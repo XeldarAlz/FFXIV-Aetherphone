@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Changelog;

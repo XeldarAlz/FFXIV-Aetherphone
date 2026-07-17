@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core;
 
 internal readonly record struct Rect(Vector2 Min, Vector2 Max)

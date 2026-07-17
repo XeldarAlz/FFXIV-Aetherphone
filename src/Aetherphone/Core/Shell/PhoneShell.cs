@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
@@ -7,7 +6,6 @@ using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
-using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;

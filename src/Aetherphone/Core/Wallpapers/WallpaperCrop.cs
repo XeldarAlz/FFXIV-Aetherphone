@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core.Wallpapers;
 
 internal readonly struct WallpaperCrop

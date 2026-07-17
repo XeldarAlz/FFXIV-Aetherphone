@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core.Theme;
 
 internal sealed record NamedColor(string Name, Vector4 Color);

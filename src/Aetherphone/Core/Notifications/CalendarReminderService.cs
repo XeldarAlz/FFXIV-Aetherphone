@@ -1,5 +1,3 @@
-using System.Numerics;
-using Aetherphone.Apps.Calendar;
 using Aetherphone.Core.Localization;
 using Dalamud.Plugin.Services;
 

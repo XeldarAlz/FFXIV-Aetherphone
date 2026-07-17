@@ -1,11 +1,9 @@
-using System.Numerics;
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
-using Aetherphone.Windows;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 

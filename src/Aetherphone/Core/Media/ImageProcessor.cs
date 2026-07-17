@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Wallpapers;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;

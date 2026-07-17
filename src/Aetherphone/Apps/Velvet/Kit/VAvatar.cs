@@ -1,5 +1,3 @@
-using System.Numerics;
-using Aetherphone.Apps.Velvet;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;

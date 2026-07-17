@@ -1,10 +1,8 @@
-using System.Numerics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
-using Aetherphone.Windows.Widgets;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Core.Shell.Home;

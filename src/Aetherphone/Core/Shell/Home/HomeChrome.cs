@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;

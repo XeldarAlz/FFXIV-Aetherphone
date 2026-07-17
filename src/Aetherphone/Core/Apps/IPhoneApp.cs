@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core.Apps;
 
 internal interface IPhoneApp : IDisposable

@@ -1,4 +1,3 @@
-using System.Numerics;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 

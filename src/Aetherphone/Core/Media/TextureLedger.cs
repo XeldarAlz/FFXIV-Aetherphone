@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Numerics;
 using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Core.Media;

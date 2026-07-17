@@ -1,4 +1,3 @@
-using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Aethernet;

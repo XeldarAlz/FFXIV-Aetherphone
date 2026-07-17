@@ -1,5 +1,3 @@
-using System.Numerics;
-
 namespace Aetherphone.Core.Notifications;
 
 internal sealed record PhoneNotification(

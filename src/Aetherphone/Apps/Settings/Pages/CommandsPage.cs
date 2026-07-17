@@ -1,12 +1,9 @@
-using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
-
 using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Settings.Pages;
