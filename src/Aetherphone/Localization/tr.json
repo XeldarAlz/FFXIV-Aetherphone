@@ -1,5 +1,6 @@
 {
   "common.loading": "Yükleniyor…",
+  "common.appDrawFailure": "Bu uygulamada bir sorun oluştu. Tekrar denemek için yeniden açın.",
   "common.searching": "Aranıyor…",
   "common.search": "Ara",
   "common.cancel": "İptal",

@@ -656,7 +656,25 @@ internal sealed class PhoneShell : IDisposable
             DeviceChrome.FillScreen(screen, theme, content.AppBackground);
         }
 
-        app.Draw(new PhoneContext(ContentRect(screen, theme), content, navigation));
+        var contentRect = ContentRect(screen, theme);
+        try
+        {
+            app.Draw(new PhoneContext(contentRect, content, navigation));
+        }
+        catch (Exception exception)
+        {
+            AepLog.Error($"[shell] app-draw {app.Id} threw: {exception.Message}");
+            DrawAppFailure(contentRect, content);
+        }
+    }
+
+    private static void DrawAppFailure(Rect content, PhoneTheme theme)
+    {
+        var draw = ImGui.GetWindowDrawList();
+        var text = Loc.T(L.Common.AppDrawFailure);
+        var size = ImGui.CalcTextSize(text);
+        var position = new Vector2(content.Center.X - size.X * 0.5f, content.Center.Y - size.Y * 0.5f);
+        draw.AddText(position, ImGui.ColorConvertFloat4ToU32(theme.TextMuted), text);
     }
 
     private static Rect ContentRect(Rect screen, PhoneTheme theme)

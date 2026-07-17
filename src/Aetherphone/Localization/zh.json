@@ -1,5 +1,6 @@
 {
   "common.loading": "加载中…",
+  "common.appDrawFailure": "此应用出现了问题。请重新打开再试一次。",
   "common.searching": "搜索中…",
   "common.search": "搜索",
   "common.cancel": "取消",

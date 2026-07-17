@@ -5,6 +5,7 @@ internal static class L
     internal static class Common
     {
         public static readonly LocString Loading = new("common.loading", "Loading…");
+        public static readonly LocString AppDrawFailure = new("common.appDrawFailure", "This app hit a problem. Reopen it to try again.");
         public static readonly LocString Searching = new("common.searching", "Searching…");
         public static readonly LocString Search = new("common.search", "Search");
         public static readonly LocString Cancel = new("common.cancel", "Cancel");

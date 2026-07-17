@@ -24,8 +24,14 @@ internal static unsafe class ChatSender
             return false;
         }
 
+        var uiModule = UIModule.Instance();
+        if (uiModule == null)
+        {
+            return false;
+        }
+
         var entry = Utf8String.FromSequence(bytes);
-        UIModule.Instance()->ProcessChatBoxEntry(entry);
+        uiModule->ProcessChatBoxEntry(entry);
         entry->Dtor(true);
         return true;
     }

@@ -115,7 +115,10 @@ internal sealed class MessageArchive
         {
             lock (sync)
             {
-                File.WriteAllText(PathFor(sendTarget), JsonConvert.SerializeObject(stored));
+                var path = PathFor(sendTarget);
+                var temp = path + ".tmp";
+                File.WriteAllText(temp, JsonConvert.SerializeObject(stored));
+                File.Move(temp, path, true);
             }
         }
         catch (Exception exception)

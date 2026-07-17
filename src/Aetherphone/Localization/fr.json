@@ -1,5 +1,6 @@
 {
   "common.loading": "Chargement…",
+  "common.appDrawFailure": "Cette appli a rencontré un problème. Rouvre-la pour réessayer.",
   "common.searching": "Recherche…",
   "common.search": "Rechercher",
   "common.cancel": "Annuler",
