@@ -14,6 +14,7 @@ internal sealed class OnboardingDirector
     private const float AnchorMissGrace = 0.4f;
     private const float AnchorSmoothing = 16f;
     private readonly INavigator navigation;
+    private readonly IAnalyticsService analytics;
     private readonly CoachmarkOverlay coachmark = new();
     private GuideSequence? active;
     private int stepIndex;
@@ -33,9 +34,10 @@ internal sealed class OnboardingDirector
     private bool anchorInitialized;
     private float missTimer;
 
-    public OnboardingDirector(INavigator navigation)
+    public OnboardingDirector(INavigator navigation, IAnalyticsService analytics)
     {
         this.navigation = navigation;
+        this.analytics = analytics;
     }
 
     public bool CapturesPointer => active.HasValue && !suppressed;
@@ -245,9 +247,9 @@ internal sealed class OnboardingDirector
         TrackStep(sequence, 0, OnboardingAction.Begin);
     }
 
-    private static void TrackStep(GuideSequence sequence, int step, string action)
+    private void TrackStep(GuideSequence sequence, int step, string action)
     {
-        Plugin.Analytics.Track(AnalyticsEvents.OnboardingStep(sequence.Id, step, sequence.Steps.Length, action));
+        analytics.Track(AnalyticsEvents.OnboardingStep(sequence.Id, step, sequence.Steps.Length, action));
     }
 
     private void BeginExit(bool completesCoveredTours)

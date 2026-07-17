@@ -22,15 +22,18 @@ internal sealed class NotificationRouter
     private const int TypePhotoTag = 9;
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
+    private readonly IAnalyticsService analytics;
     private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
     private readonly SocialLauncher socialLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher,
+        IAnalyticsService analytics)
     {
         this.navigation = navigation;
+        this.analytics = analytics;
         this.notifications = notifications;
         this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
@@ -66,7 +69,7 @@ internal sealed class NotificationRouter
             socialLauncher.Request(notification.AppId, link);
         }
 
-        Plugin.Analytics.Track(AnalyticsEvents.NotificationOpened(notification.AppId, notification.GroupKey ?? string.Empty));
+        analytics.Track(AnalyticsEvents.NotificationOpened(notification.AppId, notification.GroupKey ?? string.Empty));
         navigation.Open(notification.AppId, AppOpenSource.Notification);
     }
 

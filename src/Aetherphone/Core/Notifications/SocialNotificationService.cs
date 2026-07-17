@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Dalamud.Plugin.Services;
@@ -14,6 +15,7 @@ internal sealed class SocialNotificationService : IDisposable
     private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(600);
     private readonly AethernetSession session;
+    private readonly ConfirmService confirm;
     private readonly AccountClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
@@ -27,9 +29,11 @@ internal sealed class SocialNotificationService : IDisposable
     private volatile bool primed;
 
     public SocialNotificationService(AethernetSession session, AccountClient client, NotificationService notifications,
-        Configuration configuration, IFramework framework, PhoneVisibility visibility, RealtimeSignalBus signals)
+        Configuration configuration, IFramework framework, PhoneVisibility visibility, RealtimeSignalBus signals,
+        ConfirmService confirm)
     {
         this.session = session;
+        this.confirm = confirm;
         this.client = client;
         this.notifications = notifications;
         this.configuration = configuration;
@@ -195,7 +199,7 @@ internal sealed class SocialNotificationService : IDisposable
 
         if (removed)
         {
-            Plugin.Confirm.Alert(
+            confirm.Alert(
                 Loc.T(L.Moderation.RemovedTitle),
                 $"{body}\n\n{Loc.T(L.Moderation.RemovedFooter)}",
                 Loc.T(L.Moderation.RemovedDismiss));

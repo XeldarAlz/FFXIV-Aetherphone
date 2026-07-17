@@ -14,32 +14,33 @@ internal sealed class ControlRegistry
     private readonly List<IControlModule> modules = new();
     private readonly Dictionary<string, IControlModule> byId = new();
 
-    public ControlRegistry(ThemeProvider themes, PlaybackHub playback, CallHub calls, INavigator navigation,
-        Action dismiss)
+    public ControlRegistry(Configuration configuration, ThemeProvider themes, PlaybackHub playback, CallHub calls,
+        INavigator navigation, Action dismiss)
     {
         Add(new ToggleModule("dnd", FontAwesomeIcon.Moon, L.Settings.DoNotDisturb,
-            () => Plugin.Cfg.DoNotDisturb, () =>
+            () => configuration.DoNotDisturb, () =>
             {
-                Plugin.Cfg.DoNotDisturb = !Plugin.Cfg.DoNotDisturb;
-                Plugin.Cfg.Save();
+                configuration.DoNotDisturb = !configuration.DoNotDisturb;
+                configuration.Save();
             }));
         Add(new ToggleModule("calls", FontAwesomeIcon.Phone, L.Phone.Calls,
-            () => Plugin.Cfg.CallsEnabled, () => calls.SetEnabled(!Plugin.Cfg.CallsEnabled)));
+            () => configuration.CallsEnabled, () => calls.SetEnabled(!configuration.CallsEnabled)));
         Add(new ToggleModule("lock", FontAwesomeIcon.Thumbtack, L.ControlCenter.LockPosition,
-            () => Plugin.Cfg.LockPosition, () =>
+            () => configuration.LockPosition, () =>
             {
-                Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
-                Plugin.Cfg.Save();
+                configuration.LockPosition = !configuration.LockPosition;
+                configuration.Save();
             }));
         Add(new ToggleModule("idle", FontAwesomeIcon.HandPointUp, L.Settings.ScrollWhileIdle,
-            () => Plugin.Cfg.ScrollWhileIdle, () =>
+            () => configuration.ScrollWhileIdle, () =>
             {
-                Plugin.Cfg.ScrollWhileIdle = !Plugin.Cfg.ScrollWhileIdle;
-                Plugin.Cfg.Save();
+                configuration.ScrollWhileIdle = !configuration.ScrollWhileIdle;
+                configuration.Save();
             }));
         Add(new MediaModule(playback));
         Add(new SliderModule("brightness", L.ControlCenter.Brightness, () => FontAwesomeIcon.Sun,
-            () => Plugin.Cfg.ScreenBrightness, value => Plugin.Cfg.ScreenBrightness = value, Plugin.Cfg.Save));
+            () => configuration.ScreenBrightness, value => configuration.ScreenBrightness = value,
+            configuration.Save));
         Add(new SliderModule("volume", L.ControlCenter.Volume, VolumeIcon(playback),
             () => playback.Volume, value => playback.Volume = value, () => { }));
         Add(new ToggleModule("camera", FontAwesomeIcon.Camera, L.Apps.Camera, () => false, () =>
@@ -52,7 +53,7 @@ internal sealed class ControlRegistry
             navigation.Open("settings", AppOpenSource.ControlCenter);
             dismiss();
         }));
-        Add(new AccentModule(themes));
+        Add(new AccentModule(themes, configuration));
     }
 
     public IReadOnlyList<IControlModule> Modules => modules;

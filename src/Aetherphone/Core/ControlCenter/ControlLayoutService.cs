@@ -8,14 +8,16 @@ internal sealed class ControlLayoutService
     private const int SolverRows = 16;
 
     private readonly ControlRegistry registry;
+    private readonly Configuration configuration;
     private readonly List<ControlSlot> slots = new();
     private readonly List<GridCell> placements = new();
     private bool placementsDirty = true;
     private int rowsUsed;
 
-    public ControlLayoutService(ControlRegistry registry)
+    public ControlLayoutService(ControlRegistry registry, Configuration configuration)
     {
         this.registry = registry;
+        this.configuration = configuration;
         Load();
     }
 
@@ -132,7 +134,7 @@ internal sealed class ControlLayoutService
 
     public void Reset()
     {
-        Plugin.Cfg.ControlPanel = null;
+        configuration.ControlPanel = null;
         Load();
         Save();
     }
@@ -153,7 +155,7 @@ internal sealed class ControlLayoutService
     private void Load()
     {
         slots.Clear();
-        var saved = Plugin.Cfg.ControlPanel;
+        var saved = configuration.ControlPanel;
         var placed = new HashSet<string>();
         if (saved is not null)
         {
@@ -222,7 +224,7 @@ internal sealed class ControlLayoutService
             });
         }
 
-        Plugin.Cfg.ControlPanel = layout;
-        Plugin.Cfg.Save();
+        configuration.ControlPanel = layout;
+        configuration.Save();
     }
 }

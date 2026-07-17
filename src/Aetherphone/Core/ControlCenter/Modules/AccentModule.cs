@@ -12,10 +12,12 @@ internal sealed class AccentModule : IControlModule
     private static readonly ControlSpan[] SpanOptions = { ControlSpan.Wide, ControlSpan.Bar };
 
     private readonly ThemeProvider themes;
+    private readonly Configuration configuration;
 
-    public AccentModule(ThemeProvider themes)
+    public AccentModule(ThemeProvider themes, Configuration configuration)
     {
         this.themes = themes;
+        this.configuration = configuration;
     }
 
     public string Id => "accent";
@@ -48,13 +50,13 @@ internal sealed class AccentModule : IControlModule
         for (var index = 0; index < accents.Count; index++)
         {
             var center = new Vector2(innerLeft + cell * (index + 0.5f), centerY);
-            var selected = accents[index].Name == Plugin.Cfg.AccentName;
+            var selected = accents[index].Name == configuration.AccentName;
             if (ControlTile.Swatch(dl, center, swatchRadius, accents[index].Color, selected, opacity,
                     context.Interactive) && !selected)
             {
-                Plugin.Cfg.AccentName = accents[index].Name;
-                themes.Apply(Plugin.Cfg);
-                Plugin.Cfg.Save();
+                configuration.AccentName = accents[index].Name;
+                themes.Apply(configuration);
+                configuration.Save();
             }
         }
     }

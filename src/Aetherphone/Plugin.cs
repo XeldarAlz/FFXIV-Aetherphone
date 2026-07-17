@@ -103,7 +103,7 @@ public sealed class Plugin : IDalamudPlugin
             Analytics.Track(AnalyticsEvents.SessionStart(BuildSessionProperties()));
             aboutWindow = new AboutWindow();
             shell = new PhoneShell(services, AppRegistry.BuildDefault(services, ShowAbout));
-            phoneWindow = new PhoneWindow(shell);
+            phoneWindow = new PhoneWindow(shell, Cfg, services.Analytics);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
             windowSystem.AddWindow(phoneWindow);

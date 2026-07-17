@@ -151,7 +151,7 @@ internal sealed class PhoneServices : IDisposable
         var audioCache = new DiskCache(audioRoot, 256L * 1024 * 1024);
         var songPlayer = new SongPlayer(youtube, audioCache);
         var songHistory = new SongHistory(configuration);
-        var playback = new PlaybackHub(radioPlayer, songPlayer);
+        var playback = new PlaybackHub(radioPlayer, songPlayer, analytics);
         var gameStats = new GameStatsStore(configuration);
         var venues = new VenuesService(http, notifications, configuration, gameData);
         var collectionsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collections"));
@@ -163,9 +163,11 @@ internal sealed class PhoneServices : IDisposable
         var activity = new ActivityTracker(framework, clientState, dutyState, gameData, configDirectory);
         var ringNotifier = new ActivityRingNotifier(framework, activity, configuration, notifications);
         var realtimeSignals = new RealtimeSignalBus();
-        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals);
+        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals,
+            analytics);
         var visibility = new PhoneVisibility();
-        var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals);
+        var confirm = new ConfirmService();
+        var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm);
         return new PhoneServices
         {
             Configuration = configuration,
@@ -218,7 +220,7 @@ internal sealed class PhoneServices : IDisposable
             Visibility = visibility,
             RealtimeSignals = realtimeSignals,
             Loading = new LoadingScreen(configuration),
-            Confirm = new ConfirmService(),
+            Confirm = confirm,
             Report = new ReportService(),
             Wallpapers = wallpapers,
             WallpaperImages = new WallpaperImageCache(),

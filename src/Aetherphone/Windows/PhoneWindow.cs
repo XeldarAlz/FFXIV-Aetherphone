@@ -17,6 +17,8 @@ internal sealed class PhoneWindow : Window
 
     private const int RecenterFrameCount = 3;
     private readonly PhoneShell shell;
+    private readonly Configuration configuration;
+    private readonly IAnalyticsService analytics;
     private int recenterFrames;
     private int pendingFrames;
     private Vector2? pendingPosition;
@@ -25,14 +27,17 @@ internal sealed class PhoneWindow : Window
     private string pendingOpenTrigger = "toggle";
     private DateTime shellOpenedAt;
 
-    public PhoneWindow(PhoneShell shell) : base(AepConstants.Name, BaseFlags)
+    public PhoneWindow(PhoneShell shell, Configuration configuration, IAnalyticsService analytics)
+        : base(AepConstants.Name, BaseFlags)
     {
         this.shell = shell;
-        Size = PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        this.configuration = configuration;
+        this.analytics = analytics;
+        Size = PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
         SizeCondition = ImGuiCond.Always;
         RespectCloseHotkey = false;
-        maximizedPosition = Plugin.Cfg.MaximizedPosition;
-        minimizedPosition = Plugin.Cfg.MinimizedPosition;
+        maximizedPosition = configuration.MaximizedPosition;
+        minimizedPosition = configuration.MinimizedPosition;
     }
 
     public bool IsMinimized => shell.MinimizedResting;
@@ -59,14 +64,14 @@ internal sealed class PhoneWindow : Window
 
     public void PersistPositions()
     {
-        if (Plugin.Cfg.MaximizedPosition == maximizedPosition && Plugin.Cfg.MinimizedPosition == minimizedPosition)
+        if (configuration.MaximizedPosition == maximizedPosition && configuration.MinimizedPosition == minimizedPosition)
         {
             return;
         }
 
-        Plugin.Cfg.MaximizedPosition = maximizedPosition;
-        Plugin.Cfg.MinimizedPosition = minimizedPosition;
-        Plugin.Cfg.Save();
+        configuration.MaximizedPosition = maximizedPosition;
+        configuration.MinimizedPosition = minimizedPosition;
+        configuration.Save();
     }
 
     public void Recenter()
@@ -106,7 +111,7 @@ internal sealed class PhoneWindow : Window
     public override void OnOpen()
     {
         shellOpenedAt = DateTime.UtcNow;
-        Plugin.Analytics.Track(AnalyticsEvents.ShellOpened(pendingOpenTrigger));
+        analytics.Track(AnalyticsEvents.ShellOpened(pendingOpenTrigger));
         pendingOpenTrigger = "toggle";
         shell.OnOpened();
     }
@@ -114,7 +119,7 @@ internal sealed class PhoneWindow : Window
     public override void OnClose()
     {
         var durationMs = (DateTime.UtcNow - shellOpenedAt).TotalMilliseconds;
-        Plugin.Analytics.Track(AnalyticsEvents.ShellClosed(durationMs));
+        analytics.Track(AnalyticsEvents.ShellClosed(durationMs));
         PersistPositions();
         shell.OnClosed();
     }
@@ -123,10 +128,10 @@ internal sealed class PhoneWindow : Window
     {
         var phase = shell.MinimizePhase;
         var minimized = phase == MinimizePhase.Minimized;
-        var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(Plugin.Cfg.PhoneScale);
+        var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
         Size = size;
         SizeCondition = ImGuiCond.Always;
-        Flags = !minimized && Plugin.Cfg.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
+        Flags = !minimized && configuration.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
 
         if (recenterFrames > 0)
         {

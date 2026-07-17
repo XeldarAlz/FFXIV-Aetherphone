@@ -64,16 +64,16 @@ internal sealed class ControlCenter
     private float pressTime;
     private ControlMetrics metrics;
 
-    public ControlCenter(ThemeProvider themes, PlaybackHub playback, CallHub calls, INavigator navigation,
-        NotificationService notifications, NotificationRouter router)
+    public ControlCenter(Configuration configuration, ThemeProvider themes, PlaybackHub playback, CallHub calls,
+        INavigator navigation, NotificationService notifications, NotificationRouter router)
     {
         this.themes = themes;
         this.playback = playback;
         this.navigation = navigation;
         this.notifications = notifications;
         notificationCenter = new NotificationCenter(notifications, router, Dismiss);
-        registry = new ControlRegistry(themes, playback, calls, navigation, Dismiss);
-        layout = new ControlLayoutService(registry);
+        registry = new ControlRegistry(configuration, themes, playback, calls, navigation, Dismiss);
+        layout = new ControlLayoutService(registry, configuration);
         gallery = new ControlGallery(layout);
     }
 

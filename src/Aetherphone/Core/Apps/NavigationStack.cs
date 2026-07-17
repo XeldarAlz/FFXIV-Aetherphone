@@ -13,6 +13,7 @@ internal enum ShellMotion
 internal sealed class NavigationStack : INavigator
 {
     private readonly IReadOnlyList<IPhoneApp> apps;
+    private readonly IAnalyticsService analytics;
     private readonly Stack<IPhoneApp> history = new();
     private Spring cover;
     private float coverTarget;
@@ -26,9 +27,10 @@ internal sealed class NavigationStack : INavigator
     private DateTime appOpenedAt;
     private string? trackedAppId;
 
-    public NavigationStack(IReadOnlyList<IPhoneApp> apps)
+    public NavigationStack(IReadOnlyList<IPhoneApp> apps, IAnalyticsService analytics)
     {
         this.apps = apps;
+        this.analytics = analytics;
     }
 
     public event Action<string>? AppOpened;
@@ -91,7 +93,7 @@ internal sealed class NavigationStack : INavigator
         app.OnOpened();
         appOpenedAt = DateTime.UtcNow;
         trackedAppId = app.Id;
-        Plugin.Analytics.Track(AnalyticsEvents.AppOpen(app.Id, source));
+        analytics.Track(AnalyticsEvents.AppOpen(app.Id, source));
         AppOpened?.Invoke(app.Id);
         BeginPresent(app, under);
     }
@@ -230,7 +232,7 @@ internal sealed class NavigationStack : INavigator
             if (trackedAppId is not null && string.Equals(trackedAppId, motionOver?.Id, StringComparison.Ordinal))
             {
                 var durationMs = (DateTime.UtcNow - appOpenedAt).TotalMilliseconds;
-                Plugin.Analytics.Track(AnalyticsEvents.AppClose(trackedAppId, durationMs));
+                analytics.Track(AnalyticsEvents.AppClose(trackedAppId, durationMs));
                 trackedAppId = null;
             }
         }

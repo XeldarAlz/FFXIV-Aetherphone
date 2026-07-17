@@ -68,15 +68,16 @@ internal sealed class PhoneShell : IDisposable
         widgets = bundle.Widgets;
         calls = services.Calls;
         var notifications = services.Notifications;
-        navigation = new NavigationStack(apps);
-        director = new OnboardingDirector(navigation);
+        navigation = new NavigationStack(apps, services.Analytics);
+        director = new OnboardingDirector(navigation, services.Analytics);
         navigation.AppOpened += director.OnAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
-            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
+            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher, services.Analytics);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);
-        var controlCenter = new ControlCenter(themes, services.Playback, calls, navigation, notifications, router);
+        var controlCenter = new ControlCenter(configuration, themes, services.Playback, calls, navigation,
+            notifications, router);
         minimizedView = new MinimizedPhone(notifications, configuration);
         var home = new HomeScreen(apps, bundle.Widgets, configuration);
         navigation.ReturningHome += home.PrepareReveal;
@@ -84,7 +85,8 @@ internal sealed class PhoneShell : IDisposable
         var confirmOverlay = new ConfirmOverlay(services.Confirm);
         var reportOverlay = new ReportOverlay(services.Report);
         setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
-            services.RemoteImages, services.Lodestone, bundle.Photos, services.WallpaperImages, navigation);
+            services.RemoteImages, services.Lodestone, bundle.Photos, services.WallpaperImages, navigation,
+            configuration, services.Confirm, services.Analytics);
         painter = new ShellScreenPainter(themes, navigation, home);
         transition = new ShellTransitionRenderer(themes, navigation, home, painter);
         morph = new MinimizeMorphView(themes, minimize, minimizedView, notifications, painter);

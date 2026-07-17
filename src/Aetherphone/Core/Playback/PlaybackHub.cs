@@ -9,15 +9,17 @@ internal sealed class PlaybackHub
 {
     private const long MinListenTicks = 3000;
     private readonly RadioPlayer radio;
+    private readonly IAnalyticsService analytics;
     private readonly SongPlayer songs;
     private float volume = 0.6f;
     private string listenStation = string.Empty;
     private long listenStartTicks;
 
-    public PlaybackHub(RadioPlayer radio, SongPlayer songs)
+    public PlaybackHub(RadioPlayer radio, SongPlayer songs, IAnalyticsService analytics)
     {
         this.radio = radio;
         this.songs = songs;
+        this.analytics = analytics;
         radio.Volume = volume;
         songs.Volume = volume;
     }
@@ -145,7 +147,7 @@ internal sealed class PlaybackHub
         listenStartTicks = 0;
         if (elapsedTicks >= MinListenTicks && listenStation.Length > 0)
         {
-            Plugin.Analytics.Track(AnalyticsEvents.MusicListen(listenStation, elapsedTicks / 1000d));
+            analytics.Track(AnalyticsEvents.MusicListen(listenStation, elapsedTicks / 1000d));
         }
     }
 

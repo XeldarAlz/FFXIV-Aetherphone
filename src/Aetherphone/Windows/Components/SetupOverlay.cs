@@ -6,6 +6,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
@@ -57,6 +58,9 @@ internal sealed partial class SetupOverlay : IDisposable
     private readonly AethernetSession session;
     private readonly AccountClient account;
     private readonly MediaClient media;
+    private readonly Configuration configuration;
+    private readonly ConfirmService confirm;
+    private readonly IAnalyticsService analytics;
     private readonly GameData gameData;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
@@ -86,7 +90,8 @@ internal sealed partial class SetupOverlay : IDisposable
 
     public SetupOverlay(AethernetSession session, AethernetApi aethernet, GameData gameData,
         RemoteImageCache images, LodestoneService lodestone, PhotoLibrary photoLibrary,
-        WallpaperImageCache wallpaperImages, INavigator navigation)
+        WallpaperImageCache wallpaperImages, INavigator navigation, Configuration configuration,
+        ConfirmService confirm, IAnalyticsService analytics)
     {
         this.session = session;
         account = aethernet.Account;
@@ -95,11 +100,14 @@ internal sealed partial class SetupOverlay : IDisposable
         this.images = images;
         this.lodestone = lodestone;
         this.navigation = navigation;
-        flow = new SignInFlow(session, aethernet.Auth);
+        this.configuration = configuration;
+        this.confirm = confirm;
+        this.analytics = analytics;
+        flow = new SignInFlow(session, aethernet.Auth, analytics);
         picker = new ImagePickCrop(photoLibrary, wallpaperImages);
     }
 
-    public bool IsActive => !Plugin.Cfg.SetupCompleted || exiting;
+    public bool IsActive => !configuration.SetupCompleted || exiting;
 
     public void Draw(Rect screen, PhoneTheme theme, float delta, bool interactive)
     {
@@ -111,7 +119,7 @@ internal sealed partial class SetupOverlay : IDisposable
         if (flow.ConsumeFailure() is { } failureReason)
         {
             var (title, message) = SignInFailureText.Resolve(failureReason, gameData);
-            Plugin.Confirm.Alert(title, message, Loc.T(L.Account.FailDismiss));
+            confirm.Alert(title, message, Loc.T(L.Account.FailDismiss));
         }
 
         ConsumeOutcomes();
@@ -214,7 +222,7 @@ internal sealed partial class SetupOverlay : IDisposable
             }
             else
             {
-                Plugin.Confirm.Alert(null, Loc.T(L.Account.CannotReach), Loc.T(L.Account.FailDismiss));
+                confirm.Alert(null, Loc.T(L.Account.CannotReach), Loc.T(L.Account.FailDismiss));
             }
         }
     }
@@ -267,22 +275,22 @@ internal sealed partial class SetupOverlay : IDisposable
 
     private void Complete()
     {
-        Plugin.Cfg.SetupCompleted = true;
-        Plugin.Cfg.Save();
+        configuration.SetupCompleted = true;
+        configuration.Save();
         exiting = true;
         exitClock = 0f;
         TrackStep(OnboardingAction.Complete);
     }
 
     private void TrackStep(string action) =>
-        Plugin.Analytics.Track(AnalyticsEvents.OnboardingStep(SetupTourId, Array.IndexOf(Order, page), Order.Length,
+        analytics.Track(AnalyticsEvents.OnboardingStep(SetupTourId, Array.IndexOf(Order, page), Order.Length,
             action));
 
-    private static void SetAnalyticsConsent(bool enabled)
+    private void SetAnalyticsConsent(bool enabled)
     {
-        Plugin.Cfg.AnalyticsEnabled = enabled;
-        Plugin.Cfg.AnalyticsConsentPrompted = true;
-        Plugin.Cfg.Save();
+        configuration.AnalyticsEnabled = enabled;
+        configuration.AnalyticsConsentPrompted = true;
+        configuration.Save();
     }
 
     private void DrawBackButton(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float alpha, bool live)
