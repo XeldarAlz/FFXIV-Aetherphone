@@ -2,12 +2,10 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Device;
 using Aetherphone.Core.Emote;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
-using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Updates;
 using Aetherphone.Core.Wallpapers;
@@ -43,13 +41,9 @@ public sealed class Plugin : IDalamudPlugin
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
-    internal static LoadingScreen Loading { get; private set; } = null!;
     internal static WallpaperLibrary Wallpapers { get; private set; } = null!;
-    internal static WallpaperImageCache WallpaperImages { get; private set; } = null!;
     internal static DeviceStatus Device { get; private set; } = null!;
     internal static IAnalyticsService Analytics { get; private set; } = null!;
-    internal static ConfirmService Confirm { get; private set; } = null!;
-    internal static ReportService Report { get; private set; } = null!;
     internal static UpdateCheckService Updates { get; private set; } = null!;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
@@ -90,11 +84,7 @@ public sealed class Plugin : IDalamudPlugin
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
             sessionStartedAt = DateTime.UtcNow;
             Analytics = services.Analytics;
-            Loading = services.Loading;
             Wallpapers = services.Wallpapers;
-            WallpaperImages = services.WallpaperImages;
-            Confirm = services.Confirm;
-            Report = services.Report;
             if (Analytics.IsFirstRun)
             {
                 Analytics.Track(AnalyticsEvents.FirstRun());
