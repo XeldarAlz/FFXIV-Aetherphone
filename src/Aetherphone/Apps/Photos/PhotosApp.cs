@@ -1,62 +1,72 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Photos;
 
-internal sealed class PhotosApp : IPhoneApp
+internal sealed partial class PhotosApp : IPhoneApp
 {
-    private enum PhotoRoute : byte
-    {
-        Grid,
-        Viewer,
-    }
-
     private const int Columns = 3;
     private const int ThumbnailMaxDimension = 256;
     private const long ThumbnailBudgetBytes = 48L * 1024 * 1024;
     private const long FullImageBudgetBytes = 96L * 1024 * 1024;
+    private const float SegmentHeight = 34f;
+
     public string Id => "photos";
+    public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Photos);
     public string Glyph => "P";
     public int BadgeCount => 0;
+
     private readonly PhotoLibrary library;
+    private readonly AppSkin ui = new(AppPalettes.Photos);
     private readonly TextureLedger thumbnails = new(ThumbnailBudgetBytes);
     private readonly TextureLedger fullImages = new(FullImageBudgetBytes);
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
     private readonly CancellationTokenSource cancellation = new();
-    private string[] paths = Array.Empty<string>();
-    private int? viewerIndex;
     private readonly PhotoZoomView zoomView = new();
-    private readonly ViewRouter<PhotoRoute> router;
-    private readonly RouterDraw<PhotoRoute> drawView;
-    private PhoneTheme theme = PhoneTheme.Default;
-    private INavigator navigation = null!;
+    private readonly ViewRouter<PhotoView> router;
+    private readonly RouterDraw<PhotoView> drawView;
+    private readonly Action back;
+    private readonly List<MonthAlbum> albums = new();
+    private readonly List<GridBand> bands = new();
+    private readonly string[] segmentLabels = new string[2];
+
+    private PhotoEntry[] entries = Array.Empty<PhotoEntry>();
+    private string[] viewerPaths = Array.Empty<string>();
+    private int viewerIndex;
+    private int segment;
+    private bool resetScroll;
+    private PhoneTheme frameTheme = PhoneTheme.Default;
+    private INavigator frameNavigation = null!;
 
     public PhotosApp(PhotoLibrary library)
     {
         this.library = library;
-        router = new ViewRouter<PhotoRoute>(PhotoRoute.Grid, Id);
+        router = new ViewRouter<PhotoView>(PhotoView.Grid(), Id);
         drawView = DrawView;
+        back = () => router.Pop();
     }
 
     public void OnOpened()
     {
         router.Reset();
-        viewerIndex = null;
+        segment = 0;
+        viewerPaths = Array.Empty<string>();
+        viewerIndex = 0;
+        resetScroll = true;
         Refresh();
     }
 
@@ -67,175 +77,129 @@ internal sealed class PhotosApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        theme = context.Theme;
-        navigation = context.Navigation;
-        if (router.Current == PhotoRoute.Viewer &&
-            !(viewerIndex is { } target && target >= 0 && target < paths.Length))
+        frameTheme = context.Theme;
+        frameNavigation = context.Navigation;
+        ui.Theme = context.Theme;
+        if (router.Current.Route == PhotoRoute.Viewer && viewerPaths.Length == 0)
         {
             router.Pop(false);
         }
 
-        router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawView);
+        var scale = ImGuiHelpers.GlobalScale;
+        var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
+        ui.Backdrop(screen);
+        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
-    private void DrawView(PhotoRoute route, Rect area, int depth)
+    private void DrawView(PhotoView view, Rect area, int depth)
     {
-        var context = new PhoneContext(area, theme, navigation);
-        if (route == PhotoRoute.Viewer && viewerIndex is { } index && index >= 0 && index < paths.Length)
+        if (view.Route == PhotoRoute.Viewer)
         {
-            DrawViewer(context, index);
+            DrawViewer(area);
             return;
         }
 
-        DrawGrid(context);
+        ui.Body(area);
+        if (view.Route == PhotoRoute.Album)
+        {
+            DrawAlbum(area, view.AlbumKey);
+            return;
+        }
+
+        DrawRoot(area);
     }
 
-    private void DrawGrid(in PhoneContext context)
+    private void DrawNavBar(Rect area, string title, Action? onBack)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var theme = context.Theme;
-        var content = context.Content;
-        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 2f * scale), Loc.T(L.Apps.Photos),
-            theme.TextStrong, 1.7f, FontWeight.Bold);
-        var countLabel = Loc.Plural(L.Photos.Count, paths.Length);
-        Typography.Draw(new Vector2(content.Min.X + 4f * scale, content.Min.Y + 34f * scale), countLabel,
-            theme.TextMuted, 0.85f);
-        var bodyTop = content.Min.Y + 58f * scale;
-        var body = new Rect(new Vector2(content.Min.X, bodyTop), content.Max);
-        UiAnchors.Report("photos.grid", body);
-        if (paths.Length == 0)
+        var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
+        var fitted = Typography.FitText(title, area.Width - 96f * scale, TextStyles.Title3);
+        Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), fitted, ui.TitleInk, TextStyles.Title3);
+        if (onBack is null)
         {
-            PhotosChrome.Empty(content, theme, scale);
             return;
         }
 
-        ImGui.SetCursorScreenPos(body.Min);
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(6f * scale, 6f * scale)))
-        using (var child = ImRaii.Child("##grid", body.Size, false, ImGuiWindowFlags.NoBackground))
+        var hitMin = new Vector2(area.Min.X, area.Min.Y);
+        var hitMax = new Vector2(area.Min.X + 46f * scale, area.Min.Y + AppHeader.Height * scale);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
+        var center = new Vector2(area.Min.X + 17f * scale, rowCenterY);
+        if (BackButton.Draw("photos.back", center, 15f * scale, ui.TitleInk, hovered, scale))
         {
-            if (!child)
-            {
-                return;
-            }
-
-            var gap = 6f * scale;
-            var avail = ScrollLayout.StableContentWidth();
-            var cell = (avail - gap * (Columns - 1)) / Columns;
-            var rowCount = (paths.Length + Columns - 1) / Columns;
-            var rowStride = cell + gap;
-            var scrollY = ImGui.GetScrollY();
-            var viewHeight = ImGui.GetWindowSize().Y;
-            var firstVisibleRow = Math.Max(0, (int)(scrollY / rowStride) - 1);
-            var lastVisibleRow = Math.Min(rowCount - 1, (int)((scrollY + viewHeight) / rowStride) + 1);
-            for (var row = 0; row < rowCount; row++)
-            {
-                if (row < firstVisibleRow || row > lastVisibleRow)
-                {
-                    ImGui.Dummy(new Vector2(avail, cell));
-                    continue;
-                }
-
-                for (var column = 0; column < Columns; column++)
-                {
-                    var index = row * Columns + column;
-                    if (index >= paths.Length)
-                    {
-                        break;
-                    }
-
-                    using (ImRaii.PushId(index))
-                    {
-                        var clicked = ImGui.InvisibleButton("cell", new Vector2(cell, cell));
-                        PhotosChrome.Thumbnail(GetThumbnail(paths[index]), ImGui.GetItemRectMin(),
-                            ImGui.GetItemRectMax(), ImGui.IsItemHovered(), scale);
-                        if (clicked)
-                        {
-                            viewerIndex = index;
-                            zoomView.Reset();
-                            router.Push(PhotoRoute.Viewer);
-                        }
-                    }
-
-                    if (column < Columns - 1 && index + 1 < paths.Length)
-                    {
-                        ImGui.SameLine();
-                    }
-                }
-            }
+            onBack();
         }
     }
 
-    private void DrawViewer(in PhoneContext context, int index)
+    private void Refresh()
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var theme = context.Theme;
-        var content = context.Content;
-        var path = paths[index];
-        var texture = GetFull(path) ?? thumbnails.Get(path);
-        var stage = new Rect(new Vector2(content.Min.X, content.Min.Y + 44f * scale),
-            new Vector2(content.Max.X, content.Max.Y - 36f * scale));
-        if (texture is not null)
+        var paths = library.List();
+        var built = new PhotoEntry[paths.Length];
+        for (var index = 0; index < paths.Length; index++)
         {
-            zoomView.Draw(stage, texture, theme, Metrics.Radius.Sm * scale);
-        }
-        else
-        {
-            LoadingPulse.Draw(new Vector2(stage.Center.X, stage.Center.Y - 14f * scale), 13f * scale, theme.Accent,
-                theme.TextMuted, Loc.T(L.Common.Loading));
+            built[index] = new PhotoEntry(paths[index], ResolveTaken(paths[index]));
         }
 
-        var backCenter = new Vector2(content.Min.X + 18f * scale, content.Min.Y + 20f * scale);
-        var backHovered = ImGui.IsMouseHoveringRect(backCenter - new Vector2(18f * scale, 18f * scale),
-            backCenter + new Vector2(18f * scale, 18f * scale));
-        if (BackButton.Draw("photos.viewer.back", backCenter, 15f * scale, new Vector4(1f, 1f, 1f, 1f), backHovered,
-                scale, shadow: true))
-        {
-            router.Pop();
-            return;
-        }
+        Array.Sort(built, static (left, right) => right.Taken.CompareTo(left.Taken));
+        entries = built;
+        BuildAlbums();
+    }
 
-        if (PhotosChrome.Trash(new Vector2(content.Max.X - 18f * scale, content.Min.Y + 20f * scale), theme, scale))
+    private void BuildAlbums()
+    {
+        albums.Clear();
+        var index = 0;
+        while (index < entries.Length)
         {
-            AskDelete(index);
-            return;
-        }
+            var taken = entries[index].Taken;
+            var key = taken.Year * 100 + taken.Month;
+            var start = index;
+            while (index < entries.Length)
+            {
+                var next = entries[index].Taken;
+                if (next.Year * 100 + next.Month != key)
+                {
+                    break;
+                }
 
-        Typography.DrawCentered(new Vector2(content.Center.X, content.Max.Y - 16f * scale),
-            $"{index + 1} / {paths.Length}", theme.TextMuted, 0.85f);
-        if (paths.Length <= 1)
-        {
-            return;
-        }
+                index++;
+            }
 
-        if (PhotosChrome.Arrow(new Vector2(content.Min.X + 16f * scale, content.Center.Y), theme.TextStrong, true,
-                scale))
-        {
-            viewerIndex = (index - 1 + paths.Length) % paths.Length;
-            zoomView.Reset();
-        }
-
-        if (PhotosChrome.Arrow(new Vector2(content.Max.X - 16f * scale, content.Center.Y), theme.TextStrong, false,
-                scale))
-        {
-            viewerIndex = (index + 1) % paths.Length;
-            zoomView.Reset();
+            albums.Add(new MonthAlbum(key, new DateTime(taken.Year, taken.Month, 1), start, index - start));
         }
     }
 
-    private void AskDelete(int index)
+    private string[] SlicePaths(int start, int count)
+    {
+        var slice = new string[count];
+        for (var index = 0; index < count; index++)
+        {
+            slice[index] = entries[start + index].Path;
+        }
+
+        return slice;
+    }
+
+    private void OpenViewer(int sliceStart, int sliceCount, int absoluteIndex)
+    {
+        viewerPaths = SlicePaths(sliceStart, sliceCount);
+        viewerIndex = Math.Clamp(absoluteIndex - sliceStart, 0, viewerPaths.Length - 1);
+        zoomView.Reset();
+        router.Push(PhotoView.Viewer());
+    }
+
+    private void AskDelete(string path)
     {
         Plugin.Confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Photos.DeleteConfirmMessage),
             ConfirmLabel = Loc.T(L.Photos.DeleteConfirm),
             CancelLabel = Loc.T(L.Photos.DeleteCancel),
-            Confirm = () => DeletePhoto(index),
+            Confirm = () => DeletePhoto(path),
         });
     }
 
-    private void DeletePhoto(int index)
+    private void DeletePhoto(string path)
     {
-        var path = paths[index];
         library.Delete(path);
         if (thumbnails.TryRemove(path, out var thumbWrap))
         {
@@ -247,20 +211,67 @@ internal sealed class PhotosApp : IPhoneApp
             DisposeLater(fullWrap);
         }
 
-        Refresh();
-        if (paths.Length == 0)
+        var removedAt = Array.IndexOf(viewerPaths, path);
+        if (removedAt >= 0)
         {
-            viewerIndex = null;
+            var trimmed = new string[viewerPaths.Length - 1];
+            for (var index = 0; index < removedAt; index++)
+            {
+                trimmed[index] = viewerPaths[index];
+            }
+
+            for (var index = removedAt + 1; index < viewerPaths.Length; index++)
+            {
+                trimmed[index - 1] = viewerPaths[index];
+            }
+
+            viewerPaths = trimmed;
+        }
+
+        Refresh();
+        if (viewerPaths.Length == 0)
+        {
             router.Pop(false);
             return;
         }
 
-        viewerIndex = Math.Clamp(index, 0, paths.Length - 1);
+        viewerIndex = Math.Clamp(removedAt >= 0 ? removedAt : viewerIndex, 0, viewerPaths.Length - 1);
     }
 
-    private void Refresh()
+    private static DateTime ResolveTaken(string path)
     {
-        paths = library.List();
+        var name = Path.GetFileNameWithoutExtension(path);
+        if (name.StartsWith("AEP_", StringComparison.Ordinal) && DateTime.TryParseExact(name.AsSpan(4),
+                "yyyyMMdd_HHmmss_fff", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        {
+            return parsed;
+        }
+
+        try
+        {
+            return File.GetLastWriteTime(path);
+        }
+        catch
+        {
+            return DateTime.Now;
+        }
+    }
+
+    private static string DayLabel(DateTime taken)
+    {
+        var day = taken.Date;
+        var today = DateTime.Today;
+        if (day == today)
+        {
+            return Loc.T(L.Photos.Today);
+        }
+
+        if (day == today.AddDays(-1))
+        {
+            return Loc.T(L.Photos.Yesterday);
+        }
+
+        return taken.ToString("dddd, d MMMM", Loc.Culture);
     }
 
     private IDalamudTextureWrap? GetThumbnail(string path)
@@ -372,5 +383,44 @@ internal sealed class PhotosApp : IPhoneApp
         thumbnails.DisposeAll();
         fullImages.DisposeAll();
         cancellation.Dispose();
+    }
+
+    private readonly struct PhotoEntry
+    {
+        public readonly string Path;
+        public readonly DateTime Taken;
+
+        public PhotoEntry(string path, DateTime taken)
+        {
+            Path = path;
+            Taken = taken;
+        }
+    }
+
+    private readonly struct MonthAlbum
+    {
+        public readonly int Key;
+        public readonly DateTime Month;
+        public readonly int Start;
+        public readonly int Count;
+
+        public MonthAlbum(int key, DateTime month, int start, int count)
+        {
+            Key = key;
+            Month = month;
+            Start = start;
+            Count = count;
+        }
+    }
+
+    private struct GridBand
+    {
+        public bool Header;
+        public DateTime Day;
+        public int DayCount;
+        public int PhotoStart;
+        public int PhotoCount;
+        public float Top;
+        public float Height;
     }
 }

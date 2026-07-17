@@ -1718,6 +1718,11 @@ internal static class L
         public static readonly LocString DeleteConfirmMessage = new("photos.deleteConfirmMessage", "Delete this photo? This can't be undone.");
         public static readonly LocString DeleteConfirm = new("photos.deleteConfirm", "Delete");
         public static readonly LocString DeleteCancel = new("photos.deleteCancel", "Cancel");
+        public static readonly LocString Library = new("photos.library", "Library");
+        public static readonly LocString Albums = new("photos.albums", "Albums");
+        public static readonly LocString Recents = new("photos.recents", "Recents");
+        public static readonly LocString Today = new("photos.today", "Today");
+        public static readonly LocString Yesterday = new("photos.yesterday", "Yesterday");
     }
 
     internal static class Skywatcher
