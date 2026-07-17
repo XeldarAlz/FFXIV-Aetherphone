@@ -1,0 +1,52 @@
+# Polls the production API health endpoint and fails the run when it is down,
+# which triggers GitHub's workflow-failure notification email. If the
+# UPTIME_ALERT_WEBHOOK_URL secret is set (a Discord-compatible webhook), the
+# failure is also posted there. This lives in the plugin repo because it is
+# public, so the schedule consumes no Actions minutes.
+
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe https://api.aetherphone.net/health
+        id: probe
+        run: |
+          code=000
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o /tmp/health-body -w '%{http_code}' --max-time 15 https://api.aetherphone.net/health || echo 000)
+            if [ "$code" = "200" ]; then
+              cat /tmp/health-body
+              exit 0
+            fi
+            echo "attempt ${attempt}: HTTP ${code}"
+            sleep 20
+          done
+          {
+            echo "code=${code}"
+            echo "body=$(head -c 300 /tmp/health-body 2>/dev/null | tr -d '\n')"
+          } >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - name: Post the failure to the alert webhook
+        if: failure()
+        env:
+          WEBHOOK_URL: ${{ secrets.UPTIME_ALERT_WEBHOOK_URL }}
+          CODE: ${{ steps.probe.outputs.code }}
+          BODY: ${{ steps.probe.outputs.body }}
+        run: |
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "UPTIME_ALERT_WEBHOOK_URL not set; relying on the workflow-failure email."
+            exit 0
+          fi
+          payload=$(jq -n --arg code "$CODE" --arg body "$BODY" \
+            '{content: ("**api.aetherphone.net /health is failing**\nHTTP \($code) after 3 attempts\n\($body)")}')
+          curl -sS -X POST -H 'Content-Type: application/json' -d "$payload" "$WEBHOOK_URL"
