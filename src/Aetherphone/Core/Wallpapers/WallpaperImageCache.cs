@@ -1,18 +1,20 @@
 using System.Collections.Concurrent;
+using Aetherphone.Core.Media;
 using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Core.Wallpapers;
 
 internal sealed class WallpaperImageCache : IDisposable
 {
-    private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
+    private const long TextureBudgetBytes = 64L * 1024 * 1024;
+    private readonly TextureLedger ready = new(TextureBudgetBytes);
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
     private readonly CancellationTokenSource cancellation = new();
 
     public IDalamudTextureWrap? Get(string path)
     {
-        if (ready.TryGetValue(path, out var wrap))
+        if (ready.Get(path) is { } wrap)
         {
             return wrap;
         }
@@ -31,12 +33,7 @@ internal sealed class WallpaperImageCache : IDisposable
     public void Dispose()
     {
         cancellation.Cancel();
-        foreach (var wrap in ready.Values)
-        {
-            wrap.Dispose();
-        }
-
-        ready.Clear();
+        ready.DisposeAll();
         cancellation.Dispose();
     }
 

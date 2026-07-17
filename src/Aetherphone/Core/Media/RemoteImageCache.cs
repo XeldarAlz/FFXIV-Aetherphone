@@ -7,9 +7,10 @@ namespace Aetherphone.Core.Media;
 
 internal sealed class RemoteImageCache : IDisposable
 {
+    private const long TextureBudgetBytes = 160L * 1024 * 1024;
     private static readonly TimeSpan FailureRetryFor = TimeSpan.FromMinutes(2);
     private readonly HttpService http;
-    private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
+    private readonly TextureLedger ready = new(TextureBudgetBytes);
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, DateTime> failed = new();
     private readonly CancellationTokenSource cancellation = new();
@@ -27,7 +28,7 @@ internal sealed class RemoteImageCache : IDisposable
             return null;
         }
 
-        if (ready.TryGetValue(url, out var wrap))
+        if (ready.Get(url) is { } wrap)
         {
             return wrap;
         }
@@ -53,7 +54,7 @@ internal sealed class RemoteImageCache : IDisposable
 
     public Vector2 SizeOf(string? url)
     {
-        return url is not null && ready.TryGetValue(url, out var wrap) ? wrap.Size : Vector2.Zero;
+        return url is not null ? ready.SizeOf(url) : Vector2.Zero;
     }
 
     public bool Failed(string? url) => url is not null && failed.ContainsKey(url);
@@ -101,14 +102,7 @@ internal sealed class RemoteImageCache : IDisposable
     {
         disposed = true;
         cancellation.Cancel();
-        foreach (var key in ready.Keys)
-        {
-            if (ready.TryRemove(key, out var wrap))
-            {
-                wrap.Dispose();
-            }
-        }
-
+        ready.DisposeAll();
         cancellation.Dispose();
     }
 }
