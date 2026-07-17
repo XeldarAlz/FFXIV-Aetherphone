@@ -84,10 +84,10 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateSetupCompleted();
             Cfg.MigrateControlPanelRepack();
             InitializeLocalization();
-            Fonts = new FontService(PluginInterface, Cfg.TextZoom);
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
                 TextureProvider, PluginInterface.ConfigDirectory);
+            Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
             sessionStartedAt = DateTime.UtcNow;
             Analytics = services.Analytics;
             Loading = services.Loading;

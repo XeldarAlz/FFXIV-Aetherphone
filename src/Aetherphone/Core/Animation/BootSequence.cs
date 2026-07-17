@@ -6,6 +6,7 @@ internal sealed class BootSequence
 
     private static readonly string[] Greetings = { "Hello!", "Bonjour!", "Hola!", "Ciao!", "Olá!", };
 
+    private readonly Configuration configuration;
     private bool full;
     private float elapsed;
     private float powerOnSeconds;
@@ -18,6 +19,11 @@ internal sealed class BootSequence
     private int greetingCount;
     private float revealSeconds;
     private float gateWait;
+
+    public BootSequence(Configuration configuration)
+    {
+        this.configuration = configuration;
+    }
 
     public bool IsActive { get; private set; }
     public float BackdropAlpha { get; private set; }
@@ -102,13 +108,13 @@ internal sealed class BootSequence
         ClearChannels();
         BackdropAlpha = 0f;
 
-        if (!full || Plugin.Cfg.WelcomeShown)
+        if (!full || configuration.WelcomeShown)
         {
             return;
         }
 
-        Plugin.Cfg.WelcomeShown = true;
-        Plugin.Cfg.Save();
+        configuration.WelcomeShown = true;
+        configuration.Save();
     }
 
     private void Recompute()

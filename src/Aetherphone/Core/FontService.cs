@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Shell;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.ManagedFontAtlas;
@@ -60,6 +61,8 @@ internal sealed class FontService : IDisposable
     private const int LedgerCapPerBucket = 2500;
     private const long LedgerRebuildDebounceMs = 600;
     private const int PushStackCapacity = 64;
+    private readonly Configuration configuration;
+    private readonly LoadingScreen loading;
     private readonly IFontAtlas atlas;
     private readonly string fontDirectory;
     private readonly float baseSize;
@@ -78,8 +81,11 @@ internal sealed class FontService : IDisposable
     private volatile bool ledgerRebuildInFlight;
     private int generation;
 
-    public FontService(IDalamudPluginInterface pluginInterface, float zoom)
+    public FontService(IDalamudPluginInterface pluginInterface, Configuration configuration, LoadingScreen loading,
+        float zoom)
     {
+        this.configuration = configuration;
+        this.loading = loading;
         atlas = pluginInterface.UiBuilder.FontAtlas;
         fontDirectory = Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Fonts");
         baseSize = UiBuilder.DefaultFontSizePx;
@@ -144,7 +150,7 @@ internal sealed class FontService : IDisposable
             return;
         }
 
-        Plugin.Loading.Show();
+        loading.Show();
         var previous = handles;
         glyphRanges = next;
         RebuildBaseCoverage();
@@ -361,7 +367,7 @@ internal sealed class FontService : IDisposable
 
     private void SeedLedgerFromConfig()
     {
-        var stored = Plugin.Cfg.FontGlyphLedger;
+        var stored = configuration.FontGlyphLedger;
         if (stored == null)
         {
             return;
@@ -414,8 +420,8 @@ internal sealed class FontService : IDisposable
             stored.Add(new string(chars));
         }
 
-        Plugin.Cfg.FontGlyphLedger = stored;
-        Plugin.Cfg.Save();
+        configuration.FontGlyphLedger = stored;
+        configuration.Save();
     }
 
     private void SnapshotBucketRanges()

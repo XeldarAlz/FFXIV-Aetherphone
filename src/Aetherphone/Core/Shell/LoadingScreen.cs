@@ -6,11 +6,18 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed class LoadingScreen
 {
-    private readonly BootSequence sequence = new();
+    private readonly Configuration configuration;
+    private readonly BootSequence sequence;
+
+    public LoadingScreen(Configuration configuration)
+    {
+        this.configuration = configuration;
+        sequence = new BootSequence(configuration);
+    }
 
     public bool IsActive => sequence.IsActive;
 
-    public void BeginSession() => sequence.Begin(!Plugin.Cfg.WelcomeShown);
+    public void BeginSession() => sequence.Begin(!configuration.WelcomeShown);
 
     public void Show()
     {

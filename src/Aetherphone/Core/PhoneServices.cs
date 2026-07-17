@@ -96,7 +96,7 @@ internal sealed class PhoneServices : IDisposable
         var customWallpaperDirectory = new DirectoryInfo(Path.Combine(configDirectory.FullName, "Wallpapers"));
         var wallpapers = new WallpaperLibrary(textures, builtInWallpaperDirectory, customWallpaperDirectory,
             configuration);
-        var themes = new ThemeProvider(configuration);
+        var themes = new ThemeProvider(configuration, wallpapers);
         var gameData = new GameData(dataManager, objectTable);
         var maps = new MapData(dataManager, clientState);
         var weather = new WeatherService(dataManager, clientState);
@@ -217,7 +217,7 @@ internal sealed class PhoneServices : IDisposable
             Calls = calls,
             Visibility = visibility,
             RealtimeSignals = realtimeSignals,
-            Loading = new LoadingScreen(),
+            Loading = new LoadingScreen(configuration),
             Confirm = new ConfirmService(),
             Report = new ReportService(),
             Wallpapers = wallpapers,

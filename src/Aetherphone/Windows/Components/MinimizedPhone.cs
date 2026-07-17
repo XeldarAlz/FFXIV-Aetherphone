@@ -26,11 +26,13 @@ internal sealed class MinimizedPhone : IDisposable
     private static readonly Vector4 CloseTint = new(1f, 1f, 1f, 0.16f);
     private static readonly Vector4 IconInk = new(1f, 1f, 1f, 1f);
     private readonly NotificationService notifications;
+    private readonly Configuration configuration;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
 
-    public MinimizedPhone(NotificationService notifications)
+    public MinimizedPhone(NotificationService notifications, Configuration configuration)
     {
         this.notifications = notifications;
+        this.configuration = configuration;
         notifications.Presented += OnPresented;
     }
 
@@ -144,7 +146,7 @@ internal sealed class MinimizedPhone : IDisposable
 
     private void OnPresented(PhoneNotification _)
     {
-        if (IsShowing && Plugin.Cfg.Vibration)
+        if (IsShowing && configuration.Vibration)
         {
             shake.Trigger();
         }

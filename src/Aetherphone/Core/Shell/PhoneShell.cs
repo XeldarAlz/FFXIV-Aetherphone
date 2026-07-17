@@ -77,7 +77,7 @@ internal sealed class PhoneShell : IDisposable
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);
         var controlCenter = new ControlCenter(themes, services.Playback, calls, navigation, notifications, router);
-        minimizedView = new MinimizedPhone(notifications);
+        minimizedView = new MinimizedPhone(notifications, configuration);
         var home = new HomeScreen(apps, bundle.Widgets, configuration);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);

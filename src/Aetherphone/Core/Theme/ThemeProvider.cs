@@ -1,14 +1,18 @@
+using Aetherphone.Core.Wallpapers;
+
 namespace Aetherphone.Core.Theme;
 
 internal sealed class ThemeProvider
 {
     private readonly Configuration configuration;
+    private readonly WallpaperLibrary wallpapers;
     private PhoneTheme light = PhoneTheme.Default;
     private PhoneTheme dark = PhoneTheme.Default;
 
-    public ThemeProvider(Configuration configuration)
+    public ThemeProvider(Configuration configuration, WallpaperLibrary wallpapers)
     {
         this.configuration = configuration;
+        this.wallpapers = wallpapers;
         Rebuild();
     }
 
@@ -28,6 +32,6 @@ internal sealed class ThemeProvider
         {
             ThemeMode.Light => light,
             ThemeMode.Dark => dark,
-            _ => Plugin.Wallpapers.Darkness >= 0.5f ? dark : light,
+            _ => wallpapers.Darkness >= 0.5f ? dark : light,
         };
 }
