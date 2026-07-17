@@ -9,7 +9,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;

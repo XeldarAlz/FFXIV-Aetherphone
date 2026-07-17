@@ -1,4 +1,4 @@
-namespace Aetherphone.Apps.DirectMessages;
+namespace Aetherphone.Apps.Message;
 
 internal sealed class StarredMessage
 {

@@ -10,7 +10,8 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.News;
 using Aetherphone.Core.Notifications;
@@ -38,7 +39,7 @@ internal sealed class PhoneServices : IDisposable
     public SoundService Sound { get; }
     public MessageStore Messages { get; }
     public ChatBridge ChatBridge { get; }
-    public MessageLauncher MessageLauncher { get; }
+    public LinkpearlLauncher LinkpearlLauncher { get; }
     public VelvetLauncher VelvetLauncher { get; }
     public DmLauncher DmLauncher { get; }
     public SocialLauncher SocialLauncher { get; }
@@ -78,7 +79,7 @@ internal sealed class PhoneServices : IDisposable
 
     private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps,
         ITextureProvider textures, WeatherService weather, NotificationService notifications, SoundService sound,
-        MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
+        MessageStore messages, ChatBridge chatBridge, LinkpearlLauncher linkpearlLauncher, VelvetLauncher velvetLauncher,
         DmLauncher dmLauncher, SocialLauncher socialLauncher, LinkshellMuteStore linkshellMutes,
         LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http,
         MediaCache media, RemoteImageCache remoteImages,
@@ -102,7 +103,7 @@ internal sealed class PhoneServices : IDisposable
         Sound = sound;
         Messages = messages;
         ChatBridge = chatBridge;
-        MessageLauncher = messageLauncher;
+        LinkpearlLauncher = linkpearlLauncher;
         VelvetLauncher = velvetLauncher;
         DmLauncher = dmLauncher;
         SocialLauncher = socialLauncher;
@@ -158,7 +159,7 @@ internal sealed class PhoneServices : IDisposable
         var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
         var messages = new MessageStore(messageArchive, configuration);
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
-        var messageLauncher = new MessageLauncher();
+        var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
         var socialLauncher = new SocialLauncher();
@@ -217,7 +218,7 @@ internal sealed class PhoneServices : IDisposable
         var visibility = new PhoneVisibility();
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals);
         return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
-            messages, chatBridge, messageLauncher, velvetLauncher, dmLauncher, socialLauncher, linkshellMutes, linkshells,
+            messages, chatBridge, linkpearlLauncher, velvetLauncher, dmLauncher, socialLauncher, linkshellMutes, linkshells,
             linkshellBridge, http, media, remoteImages, lodestone,
             collect, lookup, aethernetSession, aethernet, keyVault, peerKeys, conversationKeys,
             analytics, marketIndex, market, marketLauncher,

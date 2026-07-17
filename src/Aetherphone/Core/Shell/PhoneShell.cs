@@ -9,7 +9,7 @@ using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Playback;
@@ -63,7 +63,7 @@ internal sealed class PhoneShell : IDisposable
     private DateTime lastVisibleDrawUtc = DateTime.MinValue;
 
     public PhoneShell(ThemeProvider themes, AppBundle bundle, NotificationService notifications,
-        PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
+        PlaybackHub playback, CallHub calls, LinkpearlLauncher linkpearlLauncher, VelvetLauncher velvetLauncher,
         DmLauncher dmLauncher, SocialLauncher socialLauncher, ConfirmService confirm, ReportService report,
         AethernetSession aethernetSession, AethernetApi aethernet, GameData gameData,
         RemoteImageCache remoteImages, LodestoneService lodestone)
@@ -76,7 +76,7 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
-        var router = new NotificationRouter(navigation, notifications, messageLauncher, velvetLauncher, dmLauncher, socialLauncher);
+        var router = new NotificationRouter(navigation, notifications, linkpearlLauncher, velvetLauncher, dmLauncher, socialLauncher);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         island = new DynamicIsland(playback, calls);

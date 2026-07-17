@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 
-namespace Aetherphone.Core.Messaging;
+namespace Aetherphone.Core.Linkpearl;
 
 internal sealed class StoredLine
 {

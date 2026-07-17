@@ -12,9 +12,9 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Aetherphone.Apps.Messages;
+namespace Aetherphone.Apps.Linkpearl;
 
-internal sealed partial class MessagesApp
+internal sealed partial class LinkpearlApp
 {
     private const float IdleReadIntervalSeconds = 5f;
     private const float PostRequestReadIntervalSeconds = 0.5f;
@@ -124,7 +124,7 @@ internal sealed partial class MessagesApp
 
             if (ContactRow.Draw(card.NextRow(), friends[index], frameTheme, lodestone))
             {
-                router.Push(MessagesRoute.Detail(friends[index]));
+                router.Push(LinkpearlRoute.Detail(friends[index]));
             }
         }
 
@@ -255,7 +255,7 @@ internal sealed partial class MessagesApp
         var conversation = store.GetOrCreate(display, sendTarget);
         conversation.MarkRead();
         chatSegment = 0;
-        router.Push(MessagesRoute.Direct(conversation));
+        router.Push(LinkpearlRoute.Direct(conversation));
     }
 
     private bool DrawRefreshButton(in PhoneContext context)

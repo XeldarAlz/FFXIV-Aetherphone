@@ -1,6 +1,6 @@
 using Aetherphone.Core.Localization;
 
-namespace Aetherphone.Core.Messaging;
+namespace Aetherphone.Core.Linkpearl;
 
 internal static class LinkshellLabel
 {

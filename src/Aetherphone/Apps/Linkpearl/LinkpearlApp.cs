@@ -4,7 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
@@ -13,9 +13,9 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
-namespace Aetherphone.Apps.Messages;
+namespace Aetherphone.Apps.Linkpearl;
 
-internal sealed partial class MessagesApp : IPhoneApp
+internal sealed partial class LinkpearlApp : IPhoneApp
 {
     private enum MessagesTab : byte
     {
@@ -36,20 +36,20 @@ internal sealed partial class MessagesApp : IPhoneApp
     private readonly LinkshellMuteStore mutes;
     private readonly ChatBridge bridge;
     private readonly LinkshellBridge linkshellBridge;
-    private readonly MessageLauncher launcher;
+    private readonly LinkpearlLauncher launcher;
     private readonly LodestoneService lodestone;
     private readonly NotificationService notifications;
     private readonly GameData gameData;
     private readonly LookupService lookup;
-    private readonly ViewRouter<MessagesRoute> router;
-    private readonly RouterDraw<MessagesRoute> drawView;
+    private readonly ViewRouter<LinkpearlRoute> router;
+    private readonly RouterDraw<LinkpearlRoute> drawView;
     private readonly Action backToList;
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
     private MessagesTab activeTab;
 
-    public MessagesApp(MessageStore store, LinkshellStore linkshells, LinkshellMuteStore mutes, ChatBridge bridge,
-        LinkshellBridge linkshellBridge, MessageLauncher launcher, LodestoneService lodestone,
+    public LinkpearlApp(MessageStore store, LinkshellStore linkshells, LinkshellMuteStore mutes, ChatBridge bridge,
+        LinkshellBridge linkshellBridge, LinkpearlLauncher launcher, LodestoneService lodestone,
         NotificationService notifications, GameData gameData, LookupService lookup)
     {
         this.store = store;
@@ -62,7 +62,7 @@ internal sealed partial class MessagesApp : IPhoneApp
         this.notifications = notifications;
         this.gameData = gameData;
         this.lookup = lookup;
-        router = new ViewRouter<MessagesRoute>(MessagesRoute.Root, Id);
+        router = new ViewRouter<LinkpearlRoute>(LinkpearlRoute.Root, Id);
         drawView = DrawView;
         backToList = () => router.Pop();
     }
@@ -82,7 +82,7 @@ internal sealed partial class MessagesApp : IPhoneApp
             var name = existing?.Name is { Length: > 0 } current ? current : linkshellName;
             var thread = linkshells.GetOrCreate(channel, name);
             thread.MarkRead();
-            router.Push(MessagesRoute.Shell(thread), false);
+            router.Push(LinkpearlRoute.Shell(thread), false);
             return;
         }
 
@@ -91,7 +91,7 @@ internal sealed partial class MessagesApp : IPhoneApp
             chatSegment = 0;
             var conversation = store.GetOrCreate(display, sendTarget);
             conversation.MarkRead();
-            router.Push(MessagesRoute.Direct(conversation), false);
+            router.Push(LinkpearlRoute.Direct(conversation), false);
         }
     }
 
@@ -113,23 +113,23 @@ internal sealed partial class MessagesApp : IPhoneApp
         router.Draw(context.Content, context.Theme.AppBackground, delta, drawView);
     }
 
-    private void DrawView(MessagesRoute route, Rect area, int depth)
+    private void DrawView(LinkpearlRoute route, Rect area, int depth)
     {
         switch (route.Screen)
         {
-            case MessagesScreen.DirectThread when route.Conversation is { } conversation:
+            case LinkpearlScreen.DirectThread when route.Conversation is { } conversation:
                 DrawDirectThread(area, conversation);
                 break;
-            case MessagesScreen.LinkshellThread when route.Linkshell is { } thread:
+            case LinkpearlScreen.LinkshellThread when route.Linkshell is { } thread:
                 DrawLinkshellThread(area, thread);
                 break;
-            case MessagesScreen.FriendDetail when route.Friend is { } friend:
+            case LinkpearlScreen.FriendDetail when route.Friend is { } friend:
                 DrawFriendDetail(area, friend);
                 break;
-            case MessagesScreen.CharacterDetail:
+            case LinkpearlScreen.CharacterDetail:
                 DrawCharacterDetail(area, route);
                 break;
-            case MessagesScreen.FreeCompanyDetail:
+            case LinkpearlScreen.FreeCompanyDetail:
                 DrawFreeCompanyDetail(area, route);
                 break;
             default:

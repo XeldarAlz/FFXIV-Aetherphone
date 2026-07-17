@@ -10,9 +10,9 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
-namespace Aetherphone.Apps.Messages;
+namespace Aetherphone.Apps.Linkpearl;
 
-internal sealed partial class MessagesApp
+internal sealed partial class LinkpearlApp
 {
     private const float FindSegmentRowHeight = 36f;
     private const float FindFieldRowHeight = 44f;
@@ -140,7 +140,7 @@ internal sealed partial class MessagesApp
                 var world = match.World.Length > 0 ? match.World : hintWorld;
                 if (DrawResultRow(card.NextRow(), theme, scale, match.Name, world, lodestone.Avatar(match.Name, world)))
                 {
-                    router.Push(MessagesRoute.Character(match.Id, match.Name, world));
+                    router.Push(LinkpearlRoute.Character(match.Id, match.Name, world));
                 }
             }
 
@@ -174,7 +174,7 @@ internal sealed partial class MessagesApp
                 if (DrawResultRow(card.NextRow(), theme, scale, match.Name, match.Subtitle,
                         lodestone.Remote(match.CrestKey, match.Crest)))
                 {
-                    router.Push(MessagesRoute.FreeCompany(match.Id, match.Name, match.World));
+                    router.Push(LinkpearlRoute.FreeCompany(match.Id, match.Name, match.World));
                 }
             }
 
@@ -209,7 +209,7 @@ internal sealed partial class MessagesApp
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private void DrawCharacterDetail(Rect area, MessagesRoute route)
+    private void DrawCharacterDetail(Rect area, LinkpearlRoute route)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.FindPeople.CharacterTitle), backToList);
@@ -374,7 +374,7 @@ internal sealed partial class MessagesApp
         card.End();
     }
 
-    private void DrawFreeCompanyDetail(Rect area, MessagesRoute route)
+    private void DrawFreeCompanyDetail(Rect area, LinkpearlRoute route)
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.FindPeople.FreeCompanyTitle), backToList);
@@ -480,7 +480,7 @@ internal sealed partial class MessagesApp
             if (DrawResultRow(card.NextRow(), theme, scale, member.Name, member.Subtitle,
                     lodestone.Remote(member.AvatarKey, member.Avatar)))
             {
-                router.Push(MessagesRoute.Character(member.Id, member.Name, member.World));
+                router.Push(LinkpearlRoute.Character(member.Id, member.Name, member.World));
             }
         }
 

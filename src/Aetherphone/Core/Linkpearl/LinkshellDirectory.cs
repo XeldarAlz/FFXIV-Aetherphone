@@ -1,6 +1,6 @@
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
-namespace Aetherphone.Core.Messaging;
+namespace Aetherphone.Core.Linkpearl;
 
 internal static unsafe class LinkshellDirectory
 {

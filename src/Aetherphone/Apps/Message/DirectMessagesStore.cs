@@ -11,7 +11,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
 using Dalamud.Plugin.Services;
 
-namespace Aetherphone.Apps.DirectMessages;
+namespace Aetherphone.Apps.Message;
 
 internal sealed class DirectMessagesStore : IDisposable
 {

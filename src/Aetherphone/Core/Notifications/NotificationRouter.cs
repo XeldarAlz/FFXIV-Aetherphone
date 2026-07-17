@@ -1,6 +1,6 @@
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -22,17 +22,17 @@ internal sealed class NotificationRouter
     private const int TypePhotoTag = 9;
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
-    private readonly MessageLauncher messageLauncher;
+    private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
     private readonly SocialLauncher socialLauncher;
 
-    public NotificationRouter(INavigator navigation, NotificationService notifications, MessageLauncher messageLauncher,
+    public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
         VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
     {
         this.navigation = navigation;
         this.notifications = notifications;
-        this.messageLauncher = messageLauncher;
+        this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
         this.socialLauncher = socialLauncher;
@@ -46,11 +46,11 @@ internal sealed class NotificationRouter
         {
             if (LinkshellChannel.TryParse(notification.GroupKey, out var channel))
             {
-                messageLauncher.RequestLinkshell(channel, notification.Title);
+                linkpearlLauncher.RequestLinkshell(channel, notification.Title);
             }
             else
             {
-                messageLauncher.Request(notification.Title, notification.GroupKey);
+                linkpearlLauncher.Request(notification.Title, notification.GroupKey);
             }
         }
         else if (notification.AppId == DmAppId && !string.IsNullOrEmpty(notification.GroupKey))

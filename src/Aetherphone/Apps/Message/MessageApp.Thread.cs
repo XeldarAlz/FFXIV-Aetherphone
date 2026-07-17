@@ -10,7 +10,6 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Theme;
-using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;

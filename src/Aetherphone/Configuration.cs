@@ -1,6 +1,6 @@
 using System.Numerics;
 using Aetherphone.Apps.Calendar;
-using Aetherphone.Apps.DirectMessages;
+using Aetherphone.Apps.Message;
 using Aetherphone.Apps.Clock;
 using Aetherphone.Apps.Notes;
 using Aetherphone.Core.Changelog;

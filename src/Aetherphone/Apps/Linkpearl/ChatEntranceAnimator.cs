@@ -1,6 +1,6 @@
 using Aetherphone.Core.Animation;
 
-namespace Aetherphone.Apps.Messages;
+namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed class ChatEntranceAnimator
 {

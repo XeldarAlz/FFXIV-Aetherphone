@@ -1,4 +1,4 @@
-namespace Aetherphone.Core.Messaging;
+namespace Aetherphone.Core.Linkpearl;
 
 internal enum LinkshellKind
 {

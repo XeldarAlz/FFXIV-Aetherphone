@@ -1,4 +1,4 @@
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Xunit;
 
 namespace Aetherphone.Tests;

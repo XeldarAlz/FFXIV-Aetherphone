@@ -73,6 +73,7 @@ public sealed class Plugin : IDalamudPlugin
         try
         {
             Instance = this;
+            ConfigMigrations.Run(PluginInterface.ConfigFile);
             Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
             Cfg.NormalizeAethernetBaseUrl();
             Cfg.MigrateSoundSettings();
@@ -106,7 +107,7 @@ public sealed class Plugin : IDalamudPlugin
             Confirm = new ConfirmService();
             Report = new ReportService();
             shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
-                services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
+                services.Playback, services.Calls, services.LinkpearlLauncher, services.VelvetLauncher,
                 services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
                 services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone);
             phoneWindow = new PhoneWindow(shell);

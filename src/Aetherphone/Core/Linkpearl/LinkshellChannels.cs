@@ -1,6 +1,6 @@
 using Dalamud.Game.Text;
 
-namespace Aetherphone.Core.Messaging;
+namespace Aetherphone.Core.Linkpearl;
 
 internal static class LinkshellChannels
 {

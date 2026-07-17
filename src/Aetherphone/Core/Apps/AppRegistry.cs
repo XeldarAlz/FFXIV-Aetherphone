@@ -12,7 +12,7 @@ using Aetherphone.Apps.Inventory;
 using Aetherphone.Apps.Calculator;
 using Aetherphone.Apps.Maps;
 using Aetherphone.Apps.Market;
-using Aetherphone.Apps.Messages;
+using Aetherphone.Apps.Linkpearl;
 using Aetherphone.Apps.Music;
 using Aetherphone.Apps.Activity;
 using Aetherphone.Apps.News;
@@ -24,7 +24,6 @@ using Aetherphone.Apps.Settings;
 using Aetherphone.Apps.Skywatcher;
 using Aetherphone.Apps.Timers;
 using Aetherphone.Apps.Dev;
-using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Apps.Feedback;
 using Aetherphone.Apps.KupoAi;
 using Aetherphone.Apps.Velvet;
@@ -44,7 +43,7 @@ internal static class AppRegistry
         var contactBook = new ContactBook(services.Aethernet.Contacts, services.AethernetSession);
         var apps = new List<IPhoneApp>
         {
-            new MessagesApp(services.Messages, services.Linkshells, services.LinkshellMutes, services.ChatBridge, services.LinkshellBridge, services.MessageLauncher, services.Lodestone, services.Notifications, services.GameData, services.Lookup),
+            new LinkpearlApp(services.Messages, services.Linkshells, services.LinkshellMutes, services.ChatBridge, services.LinkshellBridge, services.LinkpearlLauncher, services.Lodestone, services.Notifications, services.GameData, services.Lookup),
             new ActivityApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
         };
 
@@ -77,7 +76,7 @@ internal static class AppRegistry
         apps.Add(new DailiesApp(services.Configuration));
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats));
-        apps.Add(new NotificationsApp(services.Notifications, services.MessageLauncher, services.VelvetLauncher, services.DmLauncher, services.SocialLauncher));
+        apps.Add(new NotificationsApp(services.Notifications, services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.SocialLauncher));
         apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Sound, services.AethernetSession, services.Aethernet, services.KeyVault, services.GameData, services.RemoteImages, services.Lodestone, photoLibrary, services.Calls, showAbout));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents));

@@ -3,7 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -12,9 +12,9 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
-namespace Aetherphone.Apps.Messages;
+namespace Aetherphone.Apps.Linkpearl;
 
-internal sealed partial class MessagesApp
+internal sealed partial class LinkpearlApp
 {
     private readonly ChatEntranceAnimator entrance = new();
     private readonly string[] chatSegmentLabels = new string[2];
@@ -75,7 +75,7 @@ internal sealed partial class MessagesApp
                 if (ConversationRow.Draw(conversations[index], frameTheme, lodestone))
                 {
                     conversations[index].MarkRead();
-                    router.Push(MessagesRoute.Direct(conversations[index]));
+                    router.Push(LinkpearlRoute.Direct(conversations[index]));
                 }
             }
         }
@@ -136,7 +136,7 @@ internal sealed partial class MessagesApp
     {
         var thread = linkshells.GetOrCreate(channel, name);
         thread.MarkRead();
-        router.Push(MessagesRoute.Shell(thread));
+        router.Push(LinkpearlRoute.Shell(thread));
     }
 
     private bool InRoster(LinkshellChannel channel)

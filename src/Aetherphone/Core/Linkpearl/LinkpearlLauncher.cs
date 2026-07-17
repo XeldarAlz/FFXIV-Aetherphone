@@ -1,6 +1,6 @@
-namespace Aetherphone.Core.Messaging;
+namespace Aetherphone.Core.Linkpearl;
 
-internal sealed class MessageLauncher
+internal sealed class LinkpearlLauncher
 {
     private string? pendingDisplay;
     private string? pendingTarget;
