@@ -388,6 +388,28 @@ internal static class Typography
         }
     }
 
+    public static float DrawWrappedLeft(Vector2 topLeft, string text, Vector4 color, in TextStyle style,
+        float maxWidth)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            Plugin.Fonts.NoticeText(text);
+            var lines = WrapLines(text, maxWidth);
+            var drawList = ImGui.GetWindowDrawList();
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
+            var lineHeight = ImGui.GetTextLineHeightWithSpacing();
+            var packed = ImGui.GetColorU32(color);
+            for (var index = 0; index < lines.Length; index++)
+            {
+                drawList.AddText(font, fontSize, new Vector2(topLeft.X, topLeft.Y + index * lineHeight), packed,
+                    lines[index]);
+            }
+
+            return lines.Length * lineHeight;
+        }
+    }
+
     private static string[] WrapLines(string text, float maxWidth)
     {
         InvalidateCachesOnFontChange();
