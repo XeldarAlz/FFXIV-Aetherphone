@@ -41,7 +41,7 @@
 
 Aetherphone, FINAL FANTASY XIV içinde ekrana gerçek bir akıllı telefon getiren, ücretsiz ve açık kaynaklı bir Dalamud eklentisidir: ana ekranı, bildirimleri, zil sesleri ve temalandırılabilir duvar kağıtları olan, sabitlenmiş ve her zaman açık bir cihaz. Uygulamaların arkasında Aetherphone kullanıcıları için kendi sosyal ağı çalışır; böylece uygulamalar yalnızca yerel olarak değil, karakterler ve oturumlar arasında çalışır.
 
-Gizlilik ve güvenlik her şeyden önce gelir: metin mesajları uçtan uca şifrelidir, ekler, sesli notlar ve aramalar aktarım sırasında şifrelenir; gönderiler ile görseller, net içerik kurallarıyla yapay zeka denetiminden geçer.
+Gizlilik ve güvenlik her şeyden önce gelir: metin mesajları, ekler ve sesli notlar uçtan uca şifrelidir, aramalar aktarım sırasında şifrelenir; gönderiler ile görseller, net içerik kurallarıyla yapay zeka denetiminden geçer.
 
 ## Öne çıkanlar
 

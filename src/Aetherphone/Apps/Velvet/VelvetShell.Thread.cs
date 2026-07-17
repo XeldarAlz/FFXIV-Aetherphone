@@ -15,6 +15,7 @@ using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
@@ -38,6 +39,7 @@ internal sealed partial class VelvetShell
     private VelvetMessageDto[] transcriptSource = Array.Empty<VelvetMessageDto>();
     private TranscriptMessage[] transcriptCache = Array.Empty<TranscriptMessage>();
     private Func<string, string?>? threadMediaUrl;
+    private Func<string, IDalamudTextureWrap?>? resolveThreadImage;
     private Action<string>? onThreadImageClick;
     private Action<string>? onMessageContext;
     private Action<string>? onThreadQuoteClick;
@@ -94,6 +96,7 @@ internal sealed partial class VelvetShell
         var listRect = new Rect(new Vector2(area.Min.X, top),
             new Vector2(area.Max.X, area.Max.Y - composerHeight - accessoryHeight));
         threadMediaUrl ??= store.DmMediaUrl;
+        resolveThreadImage ??= ResolveThreadImage;
         onThreadImageClick ??= id => router.Push(VelvetView.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
         onThreadQuoteClick ??= transcript.RequestScrollTo;
@@ -106,7 +109,8 @@ internal sealed partial class VelvetShell
             false, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
             onMessageContext, onQuoteClick: onThreadQuoteClick, onReactionClick: onThreadReactionClick,
             voiceState: voiceStateFor, onVoiceToggle: onThreadVoiceToggle,
-            onLoadOlder: onThreadLoadOlder, hasMoreOlder: store.HasMoreOlder, loadingOlder: store.LoadingOlder);
+            onLoadOlder: onThreadLoadOlder, hasMoreOlder: store.HasMoreOlder, loadingOlder: store.LoadingOlder,
+            resolveImage: resolveThreadImage);
         transcript.Draw(listRect, model);
         composerPickImage ??= id => router.Push(VelvetView.ChatImage(id));
         composerSendText ??= ComposerSendText;
@@ -534,6 +538,37 @@ internal sealed partial class VelvetShell
         FetchVoice(messageId);
     }
 
+    private IDalamudTextureWrap? ResolveThreadImage(string messageId)
+    {
+        var message = store.FindMessage(messageId);
+        if (message is null)
+        {
+            return null;
+        }
+
+        if (message.EncVersion != EnvelopeCodec.VersionEnvelope)
+        {
+            return images.Get(store.DmMediaUrl(messageId));
+        }
+
+        if (store.ThreadId is not { } partner)
+        {
+            return null;
+        }
+
+        var url = store.DmMediaUrl(messageId);
+        if (url is null)
+        {
+            return null;
+        }
+
+        return images.GetKeyed(messageId, async token =>
+        {
+            var data = await http.GetBytesAsync(new Uri(url), token).ConfigureAwait(false);
+            return data is null ? null : store.DecryptMedia(message, data, partner);
+        });
+    }
+
     private void FetchVoice(string messageId)
     {
         if (voiceBytes.ContainsKey(messageId))
@@ -547,6 +582,8 @@ internal sealed partial class VelvetShell
             return;
         }
 
+        var message = store.FindMessage(messageId);
+        var partner = store.ThreadId;
         _ = Task.Run(async () =>
         {
             try
@@ -554,7 +591,20 @@ internal sealed partial class VelvetShell
                 var data = await http.GetBytesAsync(new Uri(url), CancellationToken.None).ConfigureAwait(false);
                 if (data is not null)
                 {
-                    voiceBytes[messageId] = data;
+                    byte[]? plain;
+                    if (message is { EncVersion: EnvelopeCodec.VersionEnvelope })
+                    {
+                        plain = partner is not null ? store.DecryptMedia(message, data, partner) : null;
+                    }
+                    else
+                    {
+                        plain = data;
+                    }
+
+                    if (plain is not null)
+                    {
+                        voiceBytes[messageId] = plain;
+                    }
                 }
             }
             catch (Exception exception)
@@ -699,8 +749,7 @@ internal sealed partial class VelvetShell
         var footerHeight = 60f * scale;
         var fitMin = new Vector2(area.Min.X + 8f * scale, area.Min.Y + headerHeight);
         var fitMax = new Vector2(area.Max.X - 8f * scale, area.Max.Y - footerHeight);
-        var url = store.DmMediaUrl(messageId);
-        var texture = images.Get(url);
+        var texture = ResolveThreadImage(messageId);
         if (texture is null)
         {
             Typography.DrawCentered(new Vector2(area.Center.X, (fitMin.Y + fitMax.Y) * 0.5f), Loc.T(L.Common.Loading),
@@ -722,13 +771,22 @@ internal sealed partial class VelvetShell
             new Vector2(area.Center.X + buttonWidth * 0.5f, buttonTop + buttonHeight));
         if (ui.PillButton(buttonRect, label, !saved) && !saved && !imageSaveBusy && texture is not null)
         {
-            SaveDmImage(url);
+            SaveDmImage(messageId);
         }
     }
 
-    private void SaveDmImage(string? url)
+    private void SaveDmImage(string messageId)
     {
-        if (string.IsNullOrEmpty(url) || imageSaveBusy)
+        var url = store.DmMediaUrl(messageId);
+        var message = store.FindMessage(messageId);
+        if (string.IsNullOrEmpty(url) || imageSaveBusy || message is null)
+        {
+            return;
+        }
+
+        var encrypted = message.EncVersion == EnvelopeCodec.VersionEnvelope;
+        var partner = store.ThreadId;
+        if (encrypted && partner is null)
         {
             return;
         }
@@ -739,7 +797,10 @@ internal sealed partial class VelvetShell
             var succeeded = false;
             try
             {
-                var bytes = await http.GetBytesAsync(new Uri(url), CancellationToken.None).ConfigureAwait(false);
+                var raw = await http.GetBytesAsync(new Uri(url), CancellationToken.None).ConfigureAwait(false);
+                var bytes = encrypted && raw is not null
+                    ? store.DecryptMedia(message, raw, partner!)
+                    : raw;
                 if (bytes is not null)
                 {
                     using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(bytes);

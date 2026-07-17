@@ -19,12 +19,21 @@ internal readonly record struct DmDecryptedBody(DmBodyState State, string Text, 
 
 internal readonly record struct EncryptedOutbound(string Envelope, string CommitmentTag, string FrankingKeyBase64);
 
+internal readonly record struct OutboundMedia(
+    byte[] UploadBytes,
+    string Body,
+    int EncVersion,
+    int Generation,
+    string? CommitmentTag,
+    string? FrankingKey);
+
 internal sealed class MessageCipher
 {
     private readonly KeyVault vault;
     private readonly ConversationKeyStore keys;
     private readonly ConcurrentDictionary<string, DmDecryptedBody> decryptedBodies = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, (long AtUnix, string Text)> previewCache = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, int> generationByMessage = new(StringComparer.Ordinal);
 
     public MessageCipher(KeyVault vault, ConversationKeyStore keys)
     {
@@ -45,6 +54,20 @@ internal sealed class MessageCipher
     {
         decryptedBodies.Clear();
         previewCache.Clear();
+        generationByMessage.Clear();
+    }
+
+    public void RecordGeneration(string messageId, int generation)
+    {
+        if (generation >= 1)
+        {
+            generationByMessage[messageId] = generation;
+        }
+    }
+
+    public bool TryGetGeneration(string messageId, out int generation)
+    {
+        return generationByMessage.TryGetValue(messageId, out generation);
     }
 
     public void Forget(string messageId) => decryptedBodies.TryRemove(messageId, out _);
@@ -67,9 +90,20 @@ internal sealed class MessageCipher
         decryptedBodies[messageId] = new DmDecryptedBody(DmBodyState.Decrypted, plaintext, frankingKeyBase64, true);
     }
 
-    // Attachments and voice notes are sealed with the same conversation CEK as the text body. The AAD
-    // adds a "media" domain and the message kind so a text envelope, an image, and a voice note can
-    // never be swapped for one another, and neither can media from another conversation or generation.
+    public OutboundMedia PrepareOutboundMedia(string scope, int generation, string senderId, byte[] plaintextBytes,
+        string caption, int mediaKind, bool encrypt)
+    {
+        if (encrypt
+            && TryEncryptMedia(scope, generation, plaintextBytes, senderId, mediaKind, out var sealedBytes)
+            && TryEncrypt(scope, generation, caption, senderId, out var capEnvelope))
+        {
+            return new OutboundMedia(sealedBytes, capEnvelope.Envelope, EnvelopeCodec.VersionEnvelope, generation,
+                capEnvelope.CommitmentTag, capEnvelope.FrankingKeyBase64);
+        }
+
+        return new OutboundMedia(plaintextBytes, caption, EnvelopeCodec.VersionPlaintext, 0, null, null);
+    }
+
     public bool TryEncryptMedia(string scope, int generation, byte[] plaintext, string senderId, int mediaKind,
         out byte[] sealedBytes)
     {
@@ -125,6 +159,7 @@ internal sealed class MessageCipher
             };
         }
 
+        RecordGeneration(messageId, generation);
         decryptedBodies[messageId] = resolved;
         return resolved;
     }

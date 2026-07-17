@@ -48,7 +48,33 @@ internal sealed class RemoteImageCache : IDisposable
             return null;
         }
 
-        _ = LoadAsync(url);
+        _ = LoadAsync(url, token => http.GetBytesAsync(new Uri(url), token));
+        return null;
+    }
+
+    public IDalamudTextureWrap? GetKeyed(string key, Func<CancellationToken, Task<byte[]?>> fetch)
+    {
+        if (ready.Get(key) is { } wrap)
+        {
+            return wrap;
+        }
+
+        if (failed.TryGetValue(key, out var failedAtUtc))
+        {
+            if (DateTime.UtcNow - failedAtUtc < FailureRetryFor)
+            {
+                return null;
+            }
+
+            failed.TryRemove(key, out _);
+        }
+
+        if (!loading.TryAdd(key, 0))
+        {
+            return null;
+        }
+
+        _ = LoadAsync(key, fetch);
         return null;
     }
 
@@ -59,27 +85,27 @@ internal sealed class RemoteImageCache : IDisposable
 
     public bool Failed(string? url) => url is not null && failed.ContainsKey(url);
 
-    private async Task LoadAsync(string url)
+    private async Task LoadAsync(string key, Func<CancellationToken, Task<byte[]?>> fetch)
     {
         try
         {
             var token = cancellation.Token;
-            var bytes = await http.GetBytesAsync(new Uri(url), token).ConfigureAwait(false);
+            var bytes = await fetch(token).ConfigureAwait(false);
             if (bytes is null)
             {
-                failed[url] = DateTime.UtcNow;
+                failed[key] = DateTime.UtcNow;
                 return;
             }
 
-            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, $"Aetherphone.Gram.{url}", token)
+            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, $"Aetherphone.Img.{key}", token)
                 .ConfigureAwait(false);
-            if (!ready.TryAdd(url, wrap))
+            if (!ready.TryAdd(key, wrap))
             {
                 wrap.Dispose();
                 return;
             }
 
-            if (disposed && ready.TryRemove(url, out var lateWrap))
+            if (disposed && ready.TryRemove(key, out var lateWrap))
             {
                 lateWrap.Dispose();
             }
@@ -89,12 +115,12 @@ internal sealed class RemoteImageCache : IDisposable
         }
         catch (Exception exception)
         {
-            failed[url] = DateTime.UtcNow;
-            AepLog.Warning($"[Media] failed to load image {url}: {exception.Message}");
+            failed[key] = DateTime.UtcNow;
+            AepLog.Warning($"[Media] failed to load image {key}: {exception.Message}");
         }
         finally
         {
-            loading.TryRemove(url, out _);
+            loading.TryRemove(key, out _);
         }
     }
 

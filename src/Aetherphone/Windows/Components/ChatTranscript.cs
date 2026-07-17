@@ -6,6 +6,7 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
@@ -125,6 +126,7 @@ internal readonly ref struct ChatTranscriptModel
     public readonly bool IsGroup;
     public readonly RemoteImageCache Images;
     public readonly Func<string, string?> MediaUrl;
+    public readonly Func<string, IDalamudTextureWrap?>? ResolveImage;
     public readonly Action<string> OnImageClick;
     public readonly string EmptyText;
     public readonly string LoadingText;
@@ -143,7 +145,8 @@ internal readonly ref struct ChatTranscriptModel
         string emptyText, string loadingText, Action<string>? onMessageContext = null,
         Action<string>? onQuoteClick = null, Action<string, string>? onReactionClick = null,
         Func<string, VoiceNoteState>? voiceState = null, Action<string>? onVoiceToggle = null,
-        bool hasMoreOlder = false, bool loadingOlder = false, Action? onLoadOlder = null)
+        bool hasMoreOlder = false, bool loadingOlder = false, Action? onLoadOlder = null,
+        Func<string, IDalamudTextureWrap?>? resolveImage = null)
     {
         ThreadId = threadId;
         Messages = messages;
@@ -157,6 +160,7 @@ internal readonly ref struct ChatTranscriptModel
         IsGroup = isGroup;
         Images = images;
         MediaUrl = mediaUrl;
+        ResolveImage = resolveImage;
         OnImageClick = onImageClick;
         EmptyText = emptyText;
         LoadingText = loadingText;
@@ -864,7 +868,9 @@ internal sealed class ChatTranscript
         var imageMin = scaledMin + new Vector2(padding * pop, (padding + forwardBlock) * pop);
         var imageMax = imageMin + new Vector2(imageWidth * pop, imageHeight * pop);
         var rounding = 10f * scale * pop;
-        var texture = model.Images.Get(model.MediaUrl(message.Id));
+        var texture = model.ResolveImage is { } resolve
+            ? resolve(message.Id)
+            : model.Images.Get(model.MediaUrl(message.Id));
         if (texture is null)
         {
             Squircle.Fill(drawList, imageMin, imageMax, rounding,
