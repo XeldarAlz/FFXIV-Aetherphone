@@ -1938,7 +1938,7 @@
   "onboarding.dailiesNotifyTitle": "A nudge at reset",
   "onboarding.dailiesNotifyBody": "Turn this on and the phone reminds you at daily reset if anything is still unchecked.",
   "onboarding.fishingHeroTitle": "Next voyage",
-  "onboarding.fishingHeroBody": "The ring counts down to the next ocean fishing boarding window, with the route and time of day up top.",
+  "onboarding.fishingHeroBody": "This card is your next boarding window, with the route, its time of day and a countdown to departure.",
   "onboarding.fishingBlueTitle": "Blue fish aboard",
   "onboarding.fishingBlueBody": "The rare blue fish catchable on this route, each with the bait that tempts it.",
   "onboarding.fishingUpcomingTitle": "Plan your trip",

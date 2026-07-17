@@ -2307,7 +2307,7 @@ internal static class L
         public static readonly LocString DailiesNotifyTitle = new("onboarding.dailiesNotifyTitle", "A nudge at reset");
         public static readonly LocString DailiesNotifyBody = new("onboarding.dailiesNotifyBody", "Turn this on and the phone reminds you at daily reset if anything is still unchecked.");
         public static readonly LocString FishingHeroTitle = new("onboarding.fishingHeroTitle", "Next voyage");
-        public static readonly LocString FishingHeroBody = new("onboarding.fishingHeroBody", "The ring counts down to the next ocean fishing boarding window, with the route and time of day up top.");
+        public static readonly LocString FishingHeroBody = new("onboarding.fishingHeroBody", "This card is your next boarding window, with the route, its time of day and a countdown to departure.");
         public static readonly LocString FishingBlueTitle = new("onboarding.fishingBlueTitle", "Blue fish aboard");
         public static readonly LocString FishingBlueBody = new("onboarding.fishingBlueBody", "The rare blue fish catchable on this route, each with the bait that tempts it.");
         public static readonly LocString FishingUpcomingTitle = new("onboarding.fishingUpcomingTitle", "Plan your trip");

@@ -1938,7 +1938,7 @@
   "onboarding.dailiesNotifyTitle": "重置时的小提醒",
   "onboarding.dailiesNotifyBody": "打开这个开关，如果日常重置时还有未勾选的项目，手机就会提醒你。",
   "onboarding.fishingHeroTitle": "下一班次",
-  "onboarding.fishingHeroBody": "圆环倒计时指向下一次出海垂钓的登船时间，顶部标注着航线和时间段。",
+  "onboarding.fishingHeroBody": "这张卡片显示下一次登船时间，包括航线、时间段以及距离出发的倒计时。",
   "onboarding.fishingBlueTitle": "船上的传说鱼",
   "onboarding.fishingBlueBody": "这条航线上能钓到的稀有传说鱼，每一条都附有能诱惑它的鱼饵。",
   "onboarding.fishingUpcomingTitle": "规划行程",

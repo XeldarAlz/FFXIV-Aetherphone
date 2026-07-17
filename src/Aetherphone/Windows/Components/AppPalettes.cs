@@ -317,6 +317,24 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    public static readonly AppPalette Fishing = new()
+    {
+        Accent = AppAccents.For("fishing"),
+        TitleInk = new(0.94f, 0.98f, 1f, 1f),
+        BodyInk = new(0.86f, 0.93f, 0.98f, 0.96f),
+        MutedInk = new(0.60f, 0.75f, 0.86f, 0.85f),
+        HeaderInk = new(0.60f, 0.86f, 0.99f, 0.95f),
+        HeadingInk = new(0.93f, 0.97f, 1f, 1f),
+        BackdropTop = new(0.03f, 0.13f, 0.22f, 1f),
+        BackdropBottom = new(0.01f, 0.035f, 0.065f, 1f),
+        BloomTop = new(0.16f, 0.58f, 0.88f, 0.22f),
+        BloomBottom = new(0.08f, 0.32f, 0.54f, 0f),
+        CardFill = new(1f, 1f, 1f, 0.05f),
+        CardStroke = new(1f, 1f, 1f, 0.07f),
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static readonly AppPalette Calculator = new()
     {
         Accent = new(1.00f, 0.62f, 0.10f, 1f),

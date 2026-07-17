@@ -1938,7 +1938,7 @@
   "onboarding.dailiesNotifyTitle": "リセット時のお知らせ",
   "onboarding.dailiesNotifyBody": "これをオンにすると、デイリーリセットの時点で未チェックの項目があれば電話が教えてくれます。",
   "onboarding.fishingHeroTitle": "次の航海",
-  "onboarding.fishingHeroBody": "リングは次のオーシャンフィッシングの搭乗受付までをカウントダウンし、上部には航路と時間帯が表示されます。",
+  "onboarding.fishingHeroBody": "このカードには次の乗船受付が表示され、航路と時間帯、出港までのカウントダウンを確認できます。",
   "onboarding.fishingBlueTitle": "この航路の伝説魚",
   "onboarding.fishingBlueBody": "この航路で釣れる希少な伝説魚と、それぞれを誘う餌が表示されます。",
   "onboarding.fishingUpcomingTitle": "釣行の計画を",
