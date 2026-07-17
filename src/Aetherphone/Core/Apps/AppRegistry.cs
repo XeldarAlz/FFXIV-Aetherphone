@@ -77,7 +77,7 @@ internal static class AppRegistry
         apps.Add(new GamesApp(services.GameStats));
         apps.Add(new NotificationsApp(services.Notifications, services.MessageLauncher, services.VelvetLauncher, services.DmLauncher, services.SocialLauncher));
         apps.Add(new SettingsApp(services.Configuration, services.Themes, services.Sound, services.AethernetSession, services.AethernetClient, services.KeyVault, services.GameData, services.RemoteImages, services.Lodestone, photoLibrary, services.Calls, showAbout));
-        var calendarEvents = new CalendarEvents();
+        var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents));
 
         return new AppBundle
