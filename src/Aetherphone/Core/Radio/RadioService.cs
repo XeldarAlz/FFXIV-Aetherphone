@@ -1,3 +1,4 @@
+using System.Text;
 using Aetherphone.Core.Net;
 
 namespace Aetherphone.Core.Radio;
@@ -29,7 +30,7 @@ internal sealed class RadioService : IDisposable
     private const string ApiRoot = "https://all.api.radio-browser.info";
     public const int PageSize = 40;
     private const int MaxMerged = PageSize * 2;
-    private const string CommonQuery = "codec=MP3&hidebroken=true&order=clickcount&reverse=true";
+    private const string BaseQuery = "codec=MP3&hidebroken=true";
 
     public static readonly RadioCategory[] Categories =
     {
@@ -42,6 +43,8 @@ internal sealed class RadioService : IDisposable
     private readonly HttpService http;
     private readonly RequestThrottle throttle;
     private readonly CancellationTokenSource cancellation = new();
+    private RadioFacet[]? countries;
+    private RadioFacet[]? languages;
 
     public RadioService(HttpService http)
     {
@@ -49,11 +52,12 @@ internal sealed class RadioService : IDisposable
         throttle = new RequestThrottle(2, TimeSpan.FromMilliseconds(250));
     }
 
-    public async Task<RadioPage> FetchStationsAsync(string[] tags, int offset, CancellationToken token)
+    public async Task<RadioPage> FetchStationsAsync(string[] tags, RadioFilter filter, int offset,
+        CancellationToken token)
     {
         if (tags.Length == 1)
         {
-            var single = await QueryAsync(TagUrl(tags[0], offset), tags[0], token).ConfigureAwait(false);
+            var single = await QueryAsync(TagUrl(tags[0], filter, offset), tags[0], token).ConfigureAwait(false);
             return new RadioPage(single, single.Length >= PageSize);
         }
 
@@ -62,7 +66,7 @@ internal sealed class RadioService : IDisposable
         var hasMore = false;
         for (var index = 0; index < tags.Length; index++)
         {
-            var page = await QueryAsync(TagUrl(tags[index], offset), tags[index], token).ConfigureAwait(false);
+            var page = await QueryAsync(TagUrl(tags[index], filter, offset), tags[index], token).ConfigureAwait(false);
             if (page.Length >= PageSize)
             {
                 hasMore = true;
@@ -80,21 +84,66 @@ internal sealed class RadioService : IDisposable
         return new RadioPage(merged.ToArray(), hasMore);
     }
 
-    private static string TagUrl(string tag, int offset)
+    private static string TagUrl(string tag, in RadioFilter filter, int offset)
     {
-        return $"{ApiRoot}/json/stations/search?tag={Uri.EscapeDataString(tag)}&{CommonQuery}&offset={offset}&limit={PageSize}";
+        return $"{ApiRoot}/json/stations/search?tag={Uri.EscapeDataString(tag)}&{QuerySuffix(filter, offset)}";
     }
 
-    public async Task<RadioPage> SearchStationsAsync(string query, int offset, CancellationToken token)
+    private static string QuerySuffix(in RadioFilter filter, int offset)
+    {
+        var builder = new StringBuilder(128);
+        builder.Append(BaseQuery);
+        builder.Append("&order=").Append(OrderValue(filter.Order));
+        if (filter.Order != RadioOrder.Name)
+        {
+            builder.Append("&reverse=true");
+        }
+
+        if (filter.CountryCode.Length > 0)
+        {
+            builder.Append("&countrycode=").Append(Uri.EscapeDataString(filter.CountryCode));
+        }
+
+        if (filter.Language.Length > 0)
+        {
+            builder.Append("&language=").Append(Uri.EscapeDataString(filter.Language));
+        }
+
+        builder.Append("&offset=").Append(offset).Append("&limit=").Append(PageSize);
+        return builder.ToString();
+    }
+
+    private static string OrderValue(RadioOrder order)
+    {
+        return order switch
+        {
+            RadioOrder.Trending => "clicktrend",
+            RadioOrder.TopVoted => "votes",
+            RadioOrder.Name => "name",
+            RadioOrder.Bitrate => "bitrate",
+            _ => "clickcount",
+        };
+    }
+
+    public async Task<RadioPage> SearchStationsAsync(string query, RadioFilter filter, int offset,
+        CancellationToken token)
     {
         var trimmed = query.Trim();
-        if (trimmed.Length == 0)
+        if (trimmed.Length == 0 && filter.IsDefault)
         {
             return RadioPage.Empty;
         }
 
+        var suffix = QuerySuffix(filter, offset);
+        if (trimmed.Length == 0)
+        {
+            var browse = await QueryAsync($"{ApiRoot}/json/stations/search?{suffix}", "browse", token)
+                .ConfigureAwait(false);
+            return new RadioPage(browse, browse.Length >= PageSize);
+        }
+
         var term = Uri.EscapeDataString(trimmed);
-        var byName = $"{ApiRoot}/json/stations/search?name={term}&{CommonQuery}&offset={offset}&limit={PageSize}";
+        var byName = $"{ApiRoot}/json/stations/search?name={term}&{suffix}";
         var nameMatches = await QueryAsync(byName, trimmed, token).ConfigureAwait(false);
         var hasMore = nameMatches.Length >= PageSize;
         if (offset > 0)
@@ -102,9 +151,154 @@ internal sealed class RadioService : IDisposable
             return new RadioPage(nameMatches, hasMore);
         }
 
-        var byTag = $"{ApiRoot}/json/stations/search?tag={term}&{CommonQuery}&offset=0&limit={PageSize}";
+        var byTag = $"{ApiRoot}/json/stations/search?tag={term}&{QuerySuffix(filter, 0)}";
         var tagMatches = await QueryAsync(byTag, trimmed, token).ConfigureAwait(false);
         return new RadioPage(Merge(nameMatches, tagMatches), hasMore);
+    }
+
+    public async Task<RadioFacet[]> FetchCountriesAsync(CancellationToken token)
+    {
+        if (countries is not null)
+        {
+            return countries;
+        }
+
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, cancellation.Token);
+        try
+        {
+            using (await throttle.EnterAsync(linked.Token).ConfigureAwait(false))
+            {
+                var dtos = await http
+                    .GetJsonAsync($"{ApiRoot}/json/countries", RadioJsonContext.Default.RadioCountryDtoArray, null,
+                        linked.Token)
+                    .ConfigureAwait(false);
+                countries = ProjectCountries(dtos);
+                return countries;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return Array.Empty<RadioFacet>();
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"Radio country list failed: {exception.Message}");
+            return Array.Empty<RadioFacet>();
+        }
+    }
+
+    public async Task<RadioFacet[]> FetchLanguagesAsync(CancellationToken token)
+    {
+        if (languages is not null)
+        {
+            return languages;
+        }
+
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(token, cancellation.Token);
+        try
+        {
+            using (await throttle.EnterAsync(linked.Token).ConfigureAwait(false))
+            {
+                var dtos = await http
+                    .GetJsonAsync($"{ApiRoot}/json/languages", RadioJsonContext.Default.RadioLanguageDtoArray, null,
+                        linked.Token)
+                    .ConfigureAwait(false);
+                languages = ProjectLanguages(dtos);
+                return languages;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            return Array.Empty<RadioFacet>();
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"Radio language list failed: {exception.Message}");
+            return Array.Empty<RadioFacet>();
+        }
+    }
+
+    public void ReportClick(string stationUuid)
+    {
+        if (string.IsNullOrEmpty(stationUuid))
+        {
+            return;
+        }
+
+        _ = ReportClickAsync(stationUuid);
+    }
+
+    private async Task ReportClickAsync(string stationUuid)
+    {
+        try
+        {
+            var uri = new Uri($"{ApiRoot}/json/url/{Uri.EscapeDataString(stationUuid)}");
+            await http.GetBytesAsync(uri, cancellation.Token).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+        }
+    }
+
+    private static RadioFacet[] ProjectCountries(RadioCountryDto[]? dtos)
+    {
+        if (dtos is null || dtos.Length == 0)
+        {
+            return Array.Empty<RadioFacet>();
+        }
+
+        var facets = new List<RadioFacet>(dtos.Length);
+        for (var index = 0; index < dtos.Length; index++)
+        {
+            var dto = dtos[index];
+            if (string.IsNullOrEmpty(dto.Name) || string.IsNullOrEmpty(dto.IsoCode) || dto.StationCount <= 0)
+            {
+                continue;
+            }
+
+            facets.Add(new RadioFacet(dto.Name, dto.IsoCode, dto.StationCount));
+        }
+
+        return SortByCount(facets);
+    }
+
+    private static RadioFacet[] ProjectLanguages(RadioLanguageDto[]? dtos)
+    {
+        if (dtos is null || dtos.Length == 0)
+        {
+            return Array.Empty<RadioFacet>();
+        }
+
+        var facets = new List<RadioFacet>(dtos.Length);
+        for (var index = 0; index < dtos.Length; index++)
+        {
+            var dto = dtos[index];
+            if (string.IsNullOrEmpty(dto.Name) || dto.StationCount <= 0)
+            {
+                continue;
+            }
+
+            facets.Add(new RadioFacet(Capitalize(dto.Name), dto.Name, dto.StationCount));
+        }
+
+        return SortByCount(facets);
+    }
+
+    private static RadioFacet[] SortByCount(List<RadioFacet> facets)
+    {
+        var sorted = facets.ToArray();
+        Array.Sort(sorted, static (left, right) => right.Count.CompareTo(left.Count));
+        return sorted;
+    }
+
+    private static string Capitalize(string value)
+    {
+        if (value.Length == 0 || char.IsUpper(value[0]))
+        {
+            return value;
+        }
+
+        return string.Concat(char.ToUpperInvariant(value[0]).ToString(), value.AsSpan(1));
     }
 
     private async Task<RadioStation[]> QueryAsync(string url, string label, CancellationToken token)
@@ -180,7 +374,7 @@ internal sealed class RadioService : IDisposable
             }
 
             stations.Add(new RadioStation(dto.Name, stream, dto.Codec ?? string.Empty, dto.Bitrate,
-                dto.Country ?? string.Empty));
+                dto.Country ?? string.Empty, dto.StationUuid ?? string.Empty));
         }
 
         return stations.ToArray();

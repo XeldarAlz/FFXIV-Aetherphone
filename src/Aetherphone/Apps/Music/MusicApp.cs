@@ -24,6 +24,8 @@ internal sealed partial class MusicApp : IPhoneApp
         Home,
         Stations,
         Search,
+        CountryFilter,
+        LanguageFilter,
     }
 
     private const float TopBarHeight = 46f;
@@ -80,6 +82,17 @@ internal sealed partial class MusicApp : IPhoneApp
     private int stationOffset;
     private volatile bool stationHasMore;
     private volatile bool loadingMore;
+    private readonly DropdownMenu radioSortMenu = new();
+    private RadioOrder radioOrder = RadioOrder.Popular;
+    private string radioCountryCode = string.Empty;
+    private string radioCountryName = string.Empty;
+    private string radioLanguage = string.Empty;
+    private string radioLanguageName = string.Empty;
+    private RadioFacet[] radioCountries = Array.Empty<RadioFacet>();
+    private RadioFacet[] radioLanguages = Array.Empty<RadioFacet>();
+    private volatile bool facetsLoading;
+    private CancellationTokenSource? facetFetch;
+    private string facetSearchDraft = string.Empty;
     private Song[] results = Array.Empty<Song>();
     private volatile bool searching;
     private bool hasSearched;
@@ -144,6 +157,7 @@ internal sealed partial class MusicApp : IPhoneApp
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = theme;
+        radioSortMenu.Gate();
         CaptureRecent();
         if (!playback.IsActive)
         {
@@ -179,6 +193,12 @@ internal sealed partial class MusicApp : IPhoneApp
                 break;
             case View.Search:
                 DrawSearch(context);
+                break;
+            case View.CountryFilter:
+                DrawFacetPicker(context, true);
+                break;
+            case View.LanguageFilter:
+                DrawFacetPicker(context, false);
                 break;
             default:
                 DrawHome(context);
@@ -283,6 +303,10 @@ internal sealed partial class MusicApp : IPhoneApp
         ResetPaging();
         focusRadioSearch = true;
         router.Push(View.Stations);
+        if (!CurrentRadioFilter().IsDefault)
+        {
+            BeginRadioSearch(string.Empty);
+        }
     }
 
     private void OpenNowPlaying()
@@ -298,6 +322,11 @@ internal sealed partial class MusicApp : IPhoneApp
 
     private void CloseNowPlaying() => nowPlayingOpen = false;
 
+    private RadioFilter CurrentRadioFilter()
+    {
+        return new RadioFilter(radioCountryCode, radioLanguage, radioOrder);
+    }
+
     private void BeginFetch(string[] tags)
     {
         fetch?.Cancel();
@@ -307,12 +336,14 @@ internal sealed partial class MusicApp : IPhoneApp
         loading = true;
         stations = Array.Empty<RadioStation>();
         ResetPaging();
-        _ = LoadCategoryPageAsync(tags, 0, token);
+        _ = LoadCategoryPageAsync(tags, CurrentRadioFilter(), 0, token);
     }
 
     private void BeginRadioSearch(string query)
     {
-        if (string.IsNullOrWhiteSpace(query))
+        var trimmed = query.Trim();
+        var filter = CurrentRadioFilter();
+        if (trimmed.Length == 0 && filter.IsDefault)
         {
             return;
         }
@@ -323,10 +354,30 @@ internal sealed partial class MusicApp : IPhoneApp
         var token = fetch.Token;
         loading = true;
         categoryIndex = -1;
-        radioQuery = query.Trim();
+        radioQuery = trimmed;
         stations = Array.Empty<RadioStation>();
         ResetPaging();
-        _ = LoadSearchPageAsync(radioQuery, 0, token);
+        _ = LoadSearchPageAsync(radioQuery, filter, 0, token);
+    }
+
+    private void RefetchRadio()
+    {
+        if (categoryIndex >= 0)
+        {
+            BeginFetch(RadioService.Categories[categoryIndex].Tags);
+            return;
+        }
+
+        if (radioQuery.Length > 0 || !CurrentRadioFilter().IsDefault)
+        {
+            BeginRadioSearch(radioQuery);
+            return;
+        }
+
+        fetch?.Cancel();
+        stations = Array.Empty<RadioStation>();
+        loading = false;
+        ResetPaging();
     }
 
     private void LoadMoreStations()
@@ -337,15 +388,16 @@ internal sealed partial class MusicApp : IPhoneApp
         }
 
         var token = fetch.Token;
+        var filter = CurrentRadioFilter();
         var offset = stationOffset + RadioService.PageSize;
         loadingMore = true;
-        if (!string.IsNullOrEmpty(radioQuery))
+        if (categoryIndex >= 0)
         {
-            _ = LoadSearchPageAsync(radioQuery, offset, token);
+            _ = LoadCategoryPageAsync(RadioService.Categories[categoryIndex].Tags, filter, offset, token);
         }
-        else if (categoryIndex >= 0)
+        else if (radioQuery.Length > 0 || !filter.IsDefault)
         {
-            _ = LoadCategoryPageAsync(RadioService.Categories[categoryIndex].Tags, offset, token);
+            _ = LoadSearchPageAsync(radioQuery, filter, offset, token);
         }
         else
         {
@@ -353,9 +405,9 @@ internal sealed partial class MusicApp : IPhoneApp
         }
     }
 
-    private async Task LoadCategoryPageAsync(string[] tags, int offset, CancellationToken token)
+    private async Task LoadCategoryPageAsync(string[] tags, RadioFilter filter, int offset, CancellationToken token)
     {
-        var page = await radio.FetchStationsAsync(tags, offset, token).ConfigureAwait(false);
+        var page = await radio.FetchStationsAsync(tags, filter, offset, token).ConfigureAwait(false);
         if (token.IsCancellationRequested)
         {
             return;
@@ -364,15 +416,50 @@ internal sealed partial class MusicApp : IPhoneApp
         ApplyPage(page, offset);
     }
 
-    private async Task LoadSearchPageAsync(string query, int offset, CancellationToken token)
+    private async Task LoadSearchPageAsync(string query, RadioFilter filter, int offset, CancellationToken token)
     {
-        var page = await radio.SearchStationsAsync(query, offset, token).ConfigureAwait(false);
+        var page = await radio.SearchStationsAsync(query, filter, offset, token).ConfigureAwait(false);
         if (token.IsCancellationRequested)
         {
             return;
         }
 
         ApplyPage(page, offset);
+    }
+
+    private void EnsureRadioFacets()
+    {
+        if ((radioCountries.Length > 0 && radioLanguages.Length > 0) || facetsLoading)
+        {
+            return;
+        }
+
+        facetsLoading = true;
+        facetFetch?.Cancel();
+        facetFetch?.Dispose();
+        facetFetch = new CancellationTokenSource();
+        _ = LoadFacetsAsync(facetFetch.Token);
+    }
+
+    private async Task LoadFacetsAsync(CancellationToken token)
+    {
+        var countries = await radio.FetchCountriesAsync(token).ConfigureAwait(false);
+        var languages = await radio.FetchLanguagesAsync(token).ConfigureAwait(false);
+        if (token.IsCancellationRequested)
+        {
+            return;
+        }
+
+        radioCountries = countries;
+        radioLanguages = languages;
+        facetsLoading = false;
+    }
+
+    private void OpenFacetPicker(View view)
+    {
+        facetSearchDraft = string.Empty;
+        EnsureRadioFacets();
+        router.Push(view);
     }
 
     private void ApplyPage(RadioPage page, int offset)
@@ -471,6 +558,7 @@ internal sealed partial class MusicApp : IPhoneApp
     private void PlayStation(int index)
     {
         playSource = string.IsNullOrEmpty(radioQuery) ? CategoryTitle() : Loc.T(L.Music.SourceRadioSearch);
+        radio.ReportClick(stations[index].Uuid);
         playback.PlayStations(stations, index);
     }
 
@@ -625,6 +713,8 @@ internal sealed partial class MusicApp : IPhoneApp
         search?.Dispose();
         featuredFetch?.Cancel();
         featuredFetch?.Dispose();
+        facetFetch?.Cancel();
+        facetFetch?.Dispose();
         artwork.Dispose();
         flags.Dispose();
     }

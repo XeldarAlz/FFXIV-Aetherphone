@@ -1103,6 +1103,15 @@ internal static class L
         public static readonly LocString ScopeSongs = new("music.scopeSongs", "Songs");
         public static readonly LocString ScopeLongPlays = new("music.scopeLongPlays", "Long plays");
         public static readonly LocString ScopeAll = new("music.scopeAll", "All");
+        public static readonly LocString SortPopular = new("music.sortPopular", "Popular");
+        public static readonly LocString SortTrending = new("music.sortTrending", "Trending");
+        public static readonly LocString SortTopVoted = new("music.sortTopVoted", "Top voted");
+        public static readonly LocString SortName = new("music.sortName", "Name");
+        public static readonly LocString SortBitrate = new("music.sortBitrate", "Bitrate");
+        public static readonly LocString FilterCountry = new("music.filterCountry", "Country");
+        public static readonly LocString FilterLanguage = new("music.filterLanguage", "Language");
+        public static readonly LocString AllCountries = new("music.allCountries", "All countries");
+        public static readonly LocString AllLanguages = new("music.allLanguages", "All languages");
         public static readonly LocString LiveLower = new("music.liveLower", "live");
         public static readonly LocString Buffering = new("music.buffering", "Buffering…");
         public static readonly LocString Paused = new("music.paused", "Paused");

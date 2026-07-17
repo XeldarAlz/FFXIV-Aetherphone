@@ -343,7 +343,9 @@ internal sealed partial class MusicApp
             BeginRadioSearch(radioSearchDraft);
         }
 
-        var body = new Rect(new Vector2(content.Min.X, barRect.Max.Y),
+        DrawRadioFilterChips(content, barRect, scale);
+        DrawRadioSortMenu(content);
+        var body = new Rect(new Vector2(content.Min.X, barRect.Max.Y + ScopeRowHeight * scale),
             new Vector2(content.Max.X, BodyBottom(content, scale)));
         if (loading)
         {
@@ -381,7 +383,7 @@ internal sealed partial class MusicApp
 
     private void DrawStationsPlaceholder(Rect body, float scale)
     {
-        if (categoryIndex >= 0 || !string.IsNullOrEmpty(radioQuery))
+        if (categoryIndex >= 0 || !string.IsNullOrEmpty(radioQuery) || !CurrentRadioFilter().IsDefault)
         {
             Typography.DrawCentered(body.Center, Loc.T(L.Music.NoStations), ui.MutedInk, TextStyles.Callout);
             return;
