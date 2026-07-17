@@ -1,4 +1,4 @@
-namespace Aetherphone.Apps.Clock;
+namespace Aetherphone.Core.Clock;
 
 [Serializable]
 internal sealed class AlarmEntry

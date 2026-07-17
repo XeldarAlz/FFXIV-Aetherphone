@@ -8,7 +8,19 @@ internal static class ConfigMigrations
     private static readonly (string Old, string New)[] TypeRenames =
     {
         ("Aetherphone.Apps.DirectMessages.StarredMessage, Aetherphone",
-            "Aetherphone.Apps.Message.StarredMessage, Aetherphone"),
+            "Aetherphone.Core.Message.StarredMessage, Aetherphone"),
+        ("Aetherphone.Apps.Message.StarredMessage, Aetherphone",
+            "Aetherphone.Core.Message.StarredMessage, Aetherphone"),
+        ("Aetherphone.Apps.Calendar.CalendarCustomEvent, Aetherphone",
+            "Aetherphone.Core.Calendar.CalendarCustomEvent, Aetherphone"),
+        ("Aetherphone.Apps.Notes.PhoneNote, Aetherphone",
+            "Aetherphone.Core.Notes.PhoneNote, Aetherphone"),
+        ("Aetherphone.Apps.Notes.ReminderItem, Aetherphone",
+            "Aetherphone.Core.Notes.ReminderItem, Aetherphone"),
+        ("Aetherphone.Apps.Clock.WorldClockEntry, Aetherphone",
+            "Aetherphone.Core.Clock.WorldClockEntry, Aetherphone"),
+        ("Aetherphone.Apps.Clock.AlarmEntry, Aetherphone",
+            "Aetherphone.Core.Clock.AlarmEntry, Aetherphone"),
     };
 
     public static string RewriteTypeNames(string json)

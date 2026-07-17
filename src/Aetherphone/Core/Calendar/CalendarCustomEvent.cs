@@ -1,4 +1,4 @@
-namespace Aetherphone.Apps.Calendar;
+namespace Aetherphone.Core.Calendar;
 
 [Serializable]
 internal sealed class CalendarCustomEvent

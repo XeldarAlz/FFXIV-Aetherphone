@@ -12,8 +12,17 @@ public sealed class ConfigMigrationsTests
     public void RewritesLegacyStarredMessageTypeName()
     {
         var rewritten = ConfigMigrations.RewriteTypeNames(LegacyJson);
-        Assert.Contains("Aetherphone.Apps.Message.StarredMessage, Aetherphone", rewritten);
+        Assert.Contains("Aetherphone.Core.Message.StarredMessage, Aetherphone", rewritten);
         Assert.DoesNotContain("Aetherphone.Apps.DirectMessages.StarredMessage", rewritten);
+    }
+
+    [Fact]
+    public void RewritesEveryRelocatedAppTypeName()
+    {
+        const string json =
+            """["Aetherphone.Apps.Calendar.CalendarCustomEvent, Aetherphone","Aetherphone.Apps.Notes.PhoneNote, Aetherphone","Aetherphone.Apps.Notes.ReminderItem, Aetherphone","Aetherphone.Apps.Clock.WorldClockEntry, Aetherphone","Aetherphone.Apps.Clock.AlarmEntry, Aetherphone"]""";
+        var rewritten = ConfigMigrations.RewriteTypeNames(json);
+        Assert.DoesNotContain("Aetherphone.Apps.", rewritten);
     }
 
     [Fact]

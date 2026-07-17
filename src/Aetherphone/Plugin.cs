@@ -106,10 +106,7 @@ public sealed class Plugin : IDalamudPlugin
             aboutWindow = new AboutWindow();
             Confirm = new ConfirmService();
             Report = new ReportService();
-            shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
-                services.Playback, services.Calls, services.LinkpearlLauncher, services.VelvetLauncher,
-                services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
-                services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone);
+            shell = new PhoneShell(services, AppRegistry.BuildDefault(services, ShowAbout), Confirm, Report);
             phoneWindow = new PhoneWindow(shell);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);

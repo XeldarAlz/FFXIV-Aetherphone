@@ -1,4 +1,4 @@
-namespace Aetherphone.Apps.Notes;
+namespace Aetherphone.Core.Notes;
 
 [Serializable]
 internal sealed class PhoneNote

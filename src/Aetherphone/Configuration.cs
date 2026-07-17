@@ -1,8 +1,8 @@
 using System.Numerics;
-using Aetherphone.Apps.Calendar;
-using Aetherphone.Apps.Message;
-using Aetherphone.Apps.Clock;
-using Aetherphone.Apps.Notes;
+using Aetherphone.Core.Calendar;
+using Aetherphone.Core.Message;
+using Aetherphone.Core.Clock;
+using Aetherphone.Core.Notes;
 using Aetherphone.Core.Changelog;
 using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
