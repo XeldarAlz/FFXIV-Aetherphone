@@ -55,7 +55,7 @@ internal static class AppRegistry
         apps.Add(new VelvetShell(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages, services.Notifications, services.VelvetLauncher, services.SocialLauncher, services.GameData, services.SocialNotifications, services.KeyVault, services.ConversationKeys, services.Visibility, services.RealtimeSignals));
         var feedbackNet = new AethernetApi(services.Http, services.AethernetSession, "feedback");
         apps.Add(new FeedbackApp(services.AethernetSession, feedbackNet.Feedback, feedbackNet.Media, photoLibrary));
-        apps.Add(new KupoAiApp(new KupoAiStore(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "kupoai").Assistant, new KupoAiArchive(new DirectoryInfo(Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "KupoAI")))), services.RemoteImages));
+        apps.Add(new KupoAiApp(new KupoAiStore(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "kupoai").Assistant, new KupoAiArchive(new DirectoryInfo(Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "KupoAI"))))));
         apps.Add(new DevApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "dev"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages));
         apps.Add(new PollsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "polls").Polls));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary));

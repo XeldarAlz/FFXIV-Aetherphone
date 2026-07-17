@@ -2,7 +2,6 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -44,7 +43,7 @@ internal sealed partial class KupoAiApp : IPhoneApp, IChatTranscriptInteractions
     private string? menuMessageId;
     private bool composerFocus;
 
-    public KupoAiApp(KupoAiStore store, RemoteImageCache images)
+    public KupoAiApp(KupoAiStore store)
     {
         this.store = store;
         router = new ViewRouter<KupoAiView>(KupoAiView.List, Id);
