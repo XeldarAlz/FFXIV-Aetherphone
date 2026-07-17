@@ -804,12 +804,6 @@ internal sealed partial class AethergramApp
 
     private void LaunchFileDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Aethergram.NewPost)).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref pendingPickedPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage(Loc.T(L.Aethergram.NewPost), path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 }

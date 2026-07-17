@@ -8,13 +8,7 @@ internal sealed class SoundImport
 
     public void Launch(string title)
     {
-        _ = NativeFileDialog.OpenAudioAsync(title).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref pendingPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickAudio(title, path => Interlocked.Exchange(ref pendingPath, path));
     }
 
     public bool TryTake(out string path)

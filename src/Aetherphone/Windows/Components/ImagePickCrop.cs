@@ -271,13 +271,7 @@ internal sealed class ImagePickCrop
 
     private void LaunchFileDialog(string title)
     {
-        _ = NativeFileDialog.OpenImageAsync(title).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref pendingPickedPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 
     private static bool HeaderAction(Rect area, string label, bool enabled, Vector4 accent, PhoneTheme theme)

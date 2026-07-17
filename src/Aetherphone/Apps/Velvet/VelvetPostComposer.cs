@@ -581,12 +581,6 @@ internal sealed class VelvetPostComposer
 
     private void LaunchFileDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Title).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref pendingPickedPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage(Title, path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 }

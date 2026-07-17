@@ -836,13 +836,8 @@ internal sealed partial class VelvetShell
 
     private void LaunchChatImageDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Velvet.ChangePhoto)).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref chatPendingPickedPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage(Loc.T(L.Velvet.ChangePhoto),
+            path => Interlocked.Exchange(ref chatPendingPickedPath, path));
     }
 
     private static void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)

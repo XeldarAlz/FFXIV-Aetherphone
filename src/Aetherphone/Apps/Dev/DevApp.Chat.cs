@@ -547,13 +547,7 @@ internal sealed partial class DevApp
 
     private void LaunchChatImageDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync("Send Picture").ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref chatPendingPickedPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage("Send Picture", path => Interlocked.Exchange(ref chatPendingPickedPath, path));
     }
 
     private static void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)

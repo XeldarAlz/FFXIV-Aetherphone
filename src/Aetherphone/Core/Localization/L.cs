@@ -14,10 +14,8 @@ internal static class L
         public static readonly LocString Live = new("common.live", "LIVE");
         public static readonly LocString Hq = new("common.hq", "HQ");
         public static readonly LocString Nq = new("common.nq", "NQ");
-        public static readonly LocString ComingSoon = new("common.comingSoon", "Coming soon");
         public static readonly LocString OpenInBrowser = new("common.openInBrowser", "Click to open in browser");
         public static readonly LocString Next = new("common.next", "Next");
-        public static readonly LocString Back = new("common.back", "Back");
         public static readonly LocString PhotoCounter = new("common.photoCounter", "{0}/{1}");
         public static readonly LocString PhotoStep = new("common.photoStep", "Photo {0} of {1}");
         public static readonly LocString PhotoLimit = new("common.photoLimit", "You can add up to {0} photos");
@@ -85,9 +83,6 @@ internal static class L
         public static readonly LocString ApprovalHeader = new("photoTag.approvalHeader", "Approval");
         public static readonly LocString ApproveManually = new("photoTag.approveManually", "Manually approve tags");
         public static readonly LocString ApproveHint = new("photoTag.approveHint", "Tags stay hidden until you approve them, and never reach your Tagged tab without you.");
-        public static readonly LocString ReviewTags = new("photoTag.reviewTags", "Tag review");
-        public static readonly LocString Approve = new("photoTag.approve", "Approve");
-        public static readonly LocString Remove = new("photoTag.remove", "Remove");
     }
 
     internal static class Story
@@ -147,7 +142,6 @@ internal static class L
         public static readonly LocString Calendar = new("app.calendar", "Calendar");
         public static readonly LocString Notes = new("app.notes", "Notes");
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
-        public static readonly LocString Friends = new("app.friends", "Friends");
         public static readonly LocString Linkpearl = new("app.linkpearl", "Linkpearl");
         public static readonly LocString Message = new("app.message", "Message");
         public static readonly LocString KupoAi = new("app.kupoai", "KupoAI");
@@ -159,13 +153,11 @@ internal static class L
         public static readonly LocString EmptyHint = new("dm.emptyHint", "Message a friend from your friend list");
         public static readonly LocString SignInPrompt = new("dm.signInPrompt", "Sign in to message your friends");
         public static readonly LocString NewMessage = new("dm.newMessage", "New message");
-        public static readonly LocString NewGroup = new("dm.newGroup", "New group");
         public static readonly LocString GroupFallback = new("dm.groupFallback", "Group");
         public static readonly LocString PhotoPreview = new("dm.photoPreview", "Photo");
         public static readonly LocString VoicePreview = new("dm.voicePreview", "Voice message");
         public static readonly LocString NoMutualTitle = new("dm.noMutualTitle", "No mutual friends yet");
         public static readonly LocString NoMutualFriends = new("dm.noMutualFriends", "Share numbers in-game to start messaging.");
-        public static readonly LocString To = new("dm.to", "To");
         public static readonly LocString GroupNameHint = new("dm.groupNameHint", "Group name (optional)");
         public static readonly LocString CreateGroup = new("dm.createGroup", "Create group");
         public static readonly LocString StartChat = new("dm.startChat", "Message");
@@ -178,7 +170,6 @@ internal static class L
         public static readonly LocString ConfirmLeave = new("dm.confirmLeave", "Leave this chat?");
         public static readonly LocString Leaving = new("dm.leaving", "Leaving…");
         public static readonly LocString LeaveFailed = new("dm.leaveFailed", "Could not leave the chat");
-        public static readonly LocString Rename = new("dm.rename", "Rename");
         public static readonly LocString RenameHint = new("dm.renameHint", "Group name");
         public static readonly LocString Save = new("dm.save", "Save");
         public static readonly LocString Owner = new("dm.owner", "Owner");
@@ -288,7 +279,6 @@ internal static class L
         public static readonly LocString FilterOwned = new("collections.filterOwned", "Owned");
         public static readonly LocString FilterMissing = new("collections.filterMissing", "Missing");
         public static readonly LocString AllSources = new("collections.allSources", "All sources");
-        public static readonly LocString Sources = new("collections.sources", "Sources");
         public static readonly LocString Source = new("collections.source", "Source");
         public static readonly LocString HowToObtain = new("collections.howToObtain", "How to obtain");
         public static readonly LocString Patch = new("collections.patch", "Patch");
@@ -360,18 +350,14 @@ internal static class L
 
     internal static class Phone
     {
-        public static readonly LocString Title = new("phone.title", "Phone");
         public static readonly LocString AddToCall = new("phone.addToCall", "Add to Call");
         public static readonly LocString SignInPrompt = new("phone.signInPrompt", "Sign in to Aethernet in Settings to make calls");
         public static readonly LocString NoOneFound = new("phone.noOneFound", "No one found");
-        public static readonly LocString SearchPrompt = new("phone.searchPrompt", "Search for someone to call");
-        public static readonly LocString Recents = new("phone.recents", "Recents");
         public static readonly LocString Connecting = new("phone.connecting", "Connecting to call service…");
         public static readonly LocString UseHeadphones = new("phone.useHeadphones", "Use headphones to avoid echo");
         public static readonly LocString EnableTitle = new("phone.enableTitle", "Phone Calls");
         public static readonly LocString EnableBody = new("phone.enableBody", "Voice calls with other Aetherphone users");
         public static readonly LocString Enable = new("phone.enable", "Enable");
-        public static readonly LocString SearchHint = new("phone.searchHint", "Name or Name@World");
         public static readonly LocString StatusCalling = new("phone.statusCalling", "Calling…");
         public static readonly LocString StatusConnecting = new("phone.statusConnecting", "Connecting…");
         public static readonly LocString Reconnecting = new("phone.reconnecting", "Reconnecting…");
@@ -398,12 +384,9 @@ internal static class L
         public static readonly LocString Unavailable = new("phone.unavailable", "Unavailable");
         public static readonly LocString GroupCall = new("phone.groupCall", "Group call");
         public static readonly LocString ContactsSection = new("phone.contactsSection", "Contacts");
-        public static readonly LocString PendingSection = new("phone.pendingSection", "Pending");
         public static readonly LocString NoContactsTitle = new("phone.noContactsTitle", "No one to call yet");
-        public static readonly LocString NoContacts = new("phone.noContacts", "Add friends by number in the Friends app to call them");
         public static readonly LocString SignInTitle = new("phone.signInTitle", "Sign in to call");
         public static readonly LocString FilterHint = new("phone.filterHint", "Search contacts");
-        public static readonly LocString NotMutual = new("phone.notMutual", "Waiting for them to add you back");
         public static readonly LocString NewCall = new("phone.newCall", "New Call");
         public static readonly LocString Outgoing = new("phone.outgoing", "Outgoing");
         public static readonly LocString Incoming = new("phone.incoming", "Incoming");
@@ -416,7 +399,6 @@ internal static class L
 
     internal static class Friends
     {
-        public static readonly LocString Title = new("friends.title", "Friends");
         public static readonly LocString MyNumber = new("friends.myNumber", "My Number");
         public static readonly LocString ShareHint = new("friends.shareHint", "Share it in-game so friends can add you");
         public static readonly LocString Copied = new("friends.copied", "Copied");
@@ -431,24 +413,20 @@ internal static class L
         public static readonly LocString AddFailed = new("friends.addFailed", "Could not add the number right now");
         public static readonly LocString Empty = new("friends.empty", "No friends yet");
         public static readonly LocString EmptyHint = new("friends.emptyHint", "Ask for a number in-game and add it here");
-        public static readonly LocString CanCall = new("friends.canCall", "You can call each other");
         public static readonly LocString Pending = new("friends.pending", "Waiting for them to add your number");
         public static readonly LocString PendingShort = new("friends.pendingShort", "Pending");
         public static readonly LocString Call = new("friends.call", "Call");
         public static readonly LocString Remove = new("friends.remove", "Remove");
         public static readonly LocString ConfirmRemove = new("friends.confirmRemove", "Remove {0} from your contacts?");
         public static readonly LocString RemoveFailed = new("friends.removeFailed", "Could not remove the contact");
-        public static readonly LocString SafetyTitle = new("friends.safetyTitle", "Safety");
         public static readonly LocString NewNumberTitle = new("friends.newNumberTitle", "Request a New Number");
         public static readonly LocString NewNumberBody = new("friends.newNumberBody", "If someone you do not trust has your number, you can ask for a new one. Everyone who saved your old number will lose it.");
         public static readonly LocString ReasonHint = new("friends.reasonHint", "Tell us briefly why you need a new number");
         public static readonly LocString SendRequest = new("friends.sendRequest", "Send Request");
         public static readonly LocString Sending = new("friends.sending", "Sending…");
-        public static readonly LocString RequestFailed = new("friends.requestFailed", "Could not send the request right now");
         public static readonly LocString RequestPending = new("friends.requestPending", "Your request is waiting for review");
         public static readonly LocString RequestApproved = new("friends.requestApproved", "Your number was changed. Share the new one with people you trust");
         public static readonly LocString RequestDenied = new("friends.requestDenied", "Your last request was declined");
-        public static readonly LocString SignInPrompt = new("friends.signInPrompt", "Sign in to Aethernet in Settings to use Friends");
     }
 
     internal static class Settings
@@ -953,7 +931,6 @@ internal static class L
         public static readonly LocString FromFiles = new("wallpaper.fromFiles", "Files");
         public static readonly LocString Set = new("wallpaper.set", "Set Wallpaper");
         public static readonly LocString LoadFailed = new("wallpaper.loadFailed", "Couldn't load that image");
-        public static readonly LocString Custom = new("wallpaper.custom", "Custom");
         public static readonly LocString GestureHint = new("wallpaper.gestureHint", "Drag to move · scroll to zoom");
         public static readonly LocString Light = new("wallpaper.light", "Light");
         public static readonly LocString Dark = new("wallpaper.dark", "Dark");
@@ -998,7 +975,6 @@ internal static class L
         public static readonly LocString RequestingCode = new("account.requestingCode", "Requesting a code…");
         public static readonly LocString CannotReach = new("account.cannotReach", "Could not reach Aethernet. Is the server running?");
         public static readonly LocString Verifying = new("account.verifying", "Verifying via Lodestone…");
-        public static readonly LocString CodeNotFound = new("account.codeNotFound", "Code not found on your profile yet. Save it on Lodestone, then Verify again. Make sure both Profile and Character Search visibility are set to Public/Displayed in Results.");
         public static readonly LocString SignOut = new("account.signOut", "Sign out");
         public static readonly LocString CharacterLabel = new("account.characterLabel", "Character");
         public static readonly LocString HomeWorldLabel = new("account.homeWorldLabel", "Home World");
@@ -1025,7 +1001,6 @@ internal static class L
         public static readonly LocString XivOpen = new("account.xivOpen", "Open XIVAuth");
         public static readonly LocString XivConnecting = new("account.xivConnecting", "Connecting to XIVAuth…");
         public static readonly LocPlural Followers = new("account.followers", "{0} follower", "{0} followers");
-        public static readonly LocPlural Following = new("account.following", "{0} following", "{0} following");
         public static readonly LocString FailDismiss = new("account.fail.dismiss", "Got it");
         public static readonly LocString FailCharacterNotFoundTitle = new("account.fail.characterNotFound.title", "Character not found");
         public static readonly LocString FailCharacterNotFoundBody = new("account.fail.characterNotFound.body", "We couldn't find {0} on {1} in the Lodestone search. In your Character settings, set Character Search to Public, then Verify again.");
@@ -1066,7 +1041,6 @@ internal static class L
         public static readonly LocString ActiveHint = new("encryption.activeHint", "Encryption is active on this device. It works automatically. There is nothing to set up.");
         public static readonly LocString NewDeviceHint = new("encryption.newDeviceHint", "On a new computer a fresh key is created automatically. Older messages become readable again once your chat partners come online.");
         public static readonly LocString LocalStoreUnavailable = new("encryption.localStoreUnavailable", "This PC can't store the encryption key securely, so a fresh key will be created each session. Older messages become readable again once your chat partners come online.");
-        public static readonly LocString ForgotTitle = new("encryption.forgotTitle", "Reset encryption key");
         public static readonly LocString ForgotBody = new("encryption.forgotBody", "A new key will be created. Messages encrypted with the old key become readable again once your chat partners come online.");
         public static readonly LocString ForgotConfirm = new("encryption.forgotConfirm", "Reset key");
         public static readonly LocString ResetButton = new("encryption.resetButton", "Reset encryption key…");
@@ -1075,7 +1049,6 @@ internal static class L
         public static readonly LocString Failed = new("encryption.failed", "Something went wrong. Try again.");
         public static readonly LocString EncryptedPlaceholder = new("encryption.encryptedPlaceholder", "Encrypted message");
         public static readonly LocString NoKeyPlaceholder = new("encryption.noKeyPlaceholder", "Can't decrypt this message");
-        public static readonly LocString UnverifiedBadge = new("encryption.unverifiedBadge", "Unverified");
         public static readonly LocString SafetyChanged = new("encryption.safetyChanged", "{0}'s security key changed.");
         public static readonly LocString EncryptedIndicator = new("encryption.encryptedIndicator", "End-to-end encrypted");
         public static readonly LocString PlaintextIndicator = new("encryption.plaintextIndicator", "Not encrypted");
@@ -1150,7 +1123,6 @@ internal static class L
         public static readonly LocString TabDirect = new("messages.tabDirect", "Direct");
         public static readonly LocString TabLinkshells = new("messages.tabLinkshells", "Linkshells");
         public static readonly LocString LinkshellsEmpty = new("messages.linkshellsEmpty", "No linkshell chatter yet");
-        public static readonly LocString DeleteHistory = new("messages.deleteHistory", "Delete history");
         public static readonly LocString DeleteHistoryConfirm = new("messages.deleteHistoryConfirm", "Delete this conversation history? This can't be undone.");
         public static readonly LocString DeleteHistoryButton = new("messages.deleteHistoryButton", "Delete");
         public static readonly LocString DeleteHistoryCancel = new("messages.deleteHistoryCancel", "Cancel");
@@ -1187,7 +1159,6 @@ internal static class L
         public static readonly LocString Retainers = new("character.retainers", "Retainers");
         public static readonly LocString VenturesReady = new("character.venturesReady", "{0} ready");
         public static readonly LocString VenturesActive = new("character.venturesActive", "{0} running");
-        public static readonly LocString RetainersNone = new("character.retainersNone", "Open the summoning bell once");
         public static readonly LocString Achievements = new("character.achievements", "Achievements");
         public static readonly LocString AchievementPoints = new("character.achievementPoints", "Points");
         public static readonly LocString CollectHint = new("character.collectHint", "Open a chat with someone or view a portrait once to link Lodestone for full collection stats");
@@ -1206,10 +1177,7 @@ internal static class L
         public static readonly LocString Offline = new("contacts.offline", "Offline");
         public static readonly LocString Detail = new("contacts.detail", "Contact");
         public static readonly LocString Message = new("contacts.message", "Message");
-        public static readonly LocString AdventurerPlate = new("contacts.adventurerPlate", "Adventurer Plate");
         public static readonly LocString SearchInfo = new("contacts.searchInfo", "Search Info");
-        public static readonly LocString InviteToParty = new("contacts.inviteToParty", "Invite to Party");
-        public static readonly LocString VisitEstate = new("contacts.visitEstate", "Visit Estate");
         public static readonly LocString Plate = new("contacts.plate", "Plate");
         public static readonly LocString Party = new("contacts.party", "Party");
         public static readonly LocString Visit = new("contacts.visit", "Visit");
@@ -1240,7 +1208,6 @@ internal static class L
         public static readonly LocString DisplayNameLabel = new("chirper.displayNameLabel", "Display name");
         public static readonly LocString HandleLabel = new("chirper.handleLabel", "Username");
         public static readonly LocString BioLabel = new("chirper.bioLabel", "Bio");
-        public static readonly LocString BioHint = new("chirper.bioHint", "Add a bio");
         public static readonly LocString Save = new("chirper.save", "Save");
         public static readonly LocString Saving = new("chirper.saving", "Saving…");
         public static readonly LocString HandleTaken = new("chirper.handleTaken", "That username is taken");
@@ -1297,7 +1264,6 @@ internal static class L
         public static readonly LocString Saving = new("aethergram.saving", "Saving…");
         public static readonly LocString PostTitle = new("aethergram.postTitle", "Post");
         public static readonly LocString CommentsTitle = new("aethergram.comments", "Comments");
-        public static readonly LocString GramsTitle = new("aethergram.gramsTitle", "Grams");
         public static readonly LocString NoComments = new("aethergram.noComments", "No comments yet");
         public static readonly LocString AddComment = new("aethergram.addComment", "Add a comment…");
         public static readonly LocString ProfileError = new("aethergram.profileError", "Couldn't load this profile");
@@ -1313,7 +1279,6 @@ internal static class L
         public static readonly LocString SearchByName = new("aethergram.searchByName", "Search by name, @username, or world");
         public static readonly LocString NameOrWorld = new("aethergram.nameOrWorld", "Name, @username, or world");
         public static readonly LocPlural Posts = new("aethergram.posts", "{0} post", "{0} posts");
-        public static readonly LocPlural Likes = new("aethergram.likes", "{0} like", "{0} likes");
         public static readonly LocString DeleteConfirmMessage = new("aethergram.deleteConfirmMessage", "Delete this post? This can't be undone.");
         public static readonly LocString DeleteCommentConfirmMessage = new("aethergram.deleteCommentConfirmMessage", "Delete this comment? This can't be undone.");
         public static readonly LocString DeleteConfirm = new("aethergram.deleteConfirm", "Delete");
@@ -1326,47 +1291,21 @@ internal static class L
         public static readonly LocString More = new("aethergram.more", "More");
         public static readonly LocString Home = new("aethergram.home", "Home");
         public static readonly LocString Search = new("aethergram.search", "Search");
-        public static readonly LocString Post = new("aethergram.post", "Post");
         public static readonly LocString Profile = new("aethergram.profile", "Profile");
     }
 
     internal static class Velvet
     {
-        public static readonly LocString SetUpAccount = new("velvet.setUpAccount", "Set up your account in Settings first");
-        public static readonly LocString GateTitle = new("velvet.gateTitle", "Adults only");
-        public static readonly LocString GateBody = new("velvet.gateBody", "Velvet is a private, 18+ space for sharing mature work and connecting with like-minded people. By entering you confirm you are 18 or older and consent to see mature content.");
-        public static readonly LocString GateDiscretion = new("velvet.gateDiscretion", "This app can show on-screen in-game, so open it when the moment is right for you.");
-        public static readonly LocString GateEnter = new("velvet.gateEnter", "I am 18+, enter");
         public static readonly LocString GateLeave = new("velvet.gateLeave", "Not now");
         public static readonly LocString GateWorking = new("velvet.gateWorking", "One moment…");
-        public static readonly LocString LockTitle = new("velvet.lockTitle", "Locked");
-        public static readonly LocString LockPrompt = new("velvet.lockPrompt", "Enter passcode");
-        public static readonly LocString LockWrong = new("velvet.lockWrong", "Wrong passcode");
-        public static readonly LocString LockUnlock = new("velvet.lockUnlock", "Unlock");
-        public static readonly LocString Hide = new("velvet.hide", "Hide");
         public static readonly LocString TabDiscover = new("velvet.tabDiscover", "Discover");
         public static readonly LocString TabFeed = new("velvet.tabFeed", "Feed");
-        public static readonly LocString TabTimeline = new("velvet.tabTimeline", "Timeline");
-        public static readonly LocString TabHome = new("velvet.tabHome", "Home");
-        public static readonly LocString AllPosts = new("velvet.allPosts", "All posts");
-        public static readonly LocString MyPosts = new("velvet.myPosts", "My posts");
-        public static readonly LocString MyPostsEmpty = new("velvet.myPostsEmpty", "You haven't posted yet. Tap + to share something");
-        public static readonly LocString Pin = new("velvet.pin", "Pin");
-        public static readonly LocString Unpin = new("velvet.unpin", "Unpin");
-        public static readonly LocString More = new("velvet.more", "More");
         public static readonly LocString SearchPeopleHint = new("velvet.searchPeopleHint", "Search people by tag");
-        public static readonly LocString Connections = new("velvet.connections", "Connections");
         public static readonly LocString Messages = new("velvet.messages", "Messages");
-        public static readonly LocString DiscoverEmpty = new("velvet.discoverEmpty", "No one to show yet. Widen your filters");
-        public static readonly LocString SetupPrompt = new("velvet.setupPrompt", "Set up your profile so others can find you and connect.");
-        public static readonly LocString FeedEmpty = new("velvet.feedEmpty", "Nothing here yet. Tap + to share the first");
-        public static readonly LocString Fresh = new("velvet.fresh", "Fresh");
-        public static readonly LocString ConnectionsEmpty = new("velvet.connectionsEmpty", "Connect with people to message them");
         public static readonly LocString MessagesEmpty = new("velvet.messagesEmpty", "No conversations yet");
         public static readonly LocString ThreadEmpty = new("velvet.threadEmpty", "Say hello");
         public static readonly LocString Connect = new("velvet.connect", "Connect");
         public static readonly LocString Requested = new("velvet.requested", "Requested");
-        public static readonly LocString Connected = new("velvet.connected", "Connected");
         public static readonly LocString Message = new("velvet.message", "Message");
         public static readonly LocString MessageHint = new("velvet.messageHint", "Write a message…");
         public static readonly LocString Send = new("velvet.send", "Send");
@@ -1383,14 +1322,9 @@ internal static class L
         public static readonly LocString PresenceAway = new("velvet.presenceAway", "Away");
         public static readonly LocString PresenceDnd = new("velvet.presenceDnd", "Do not disturb");
         public static readonly LocString PresenceOffline = new("velvet.presenceOffline", "Offline");
-        public static readonly LocString Locked = new("velvet.locked", "Locked");
-        public static readonly LocString Unlock = new("velvet.unlock", "Unlock");
         public static readonly LocString EditProfile = new("velvet.editProfile", "Edit profile");
-        public static readonly LocString IntroLabel = new("velvet.introLabel", "About you");
         public static readonly LocString PronounsLabel = new("velvet.pronounsLabel", "Pronouns");
         public static readonly LocString DynamicLabel = new("velvet.dynamicLabel", "Your vibe");
-        public static readonly LocString TagsLabel = new("velvet.tagsLabel", "Tags (comma separated)");
-        public static readonly LocString LimitsLabel = new("velvet.limitsLabel", "Hard limits");
         public static readonly LocString DiscoverableLabel = new("velvet.discoverableLabel", "Appear in Discover");
         public static readonly LocString Save = new("velvet.save", "Save");
         public static readonly LocString Saving = new("velvet.saving", "Saving…");
@@ -1400,12 +1334,7 @@ internal static class L
         public static readonly LocString Block = new("velvet.block", "Block");
         public static readonly LocString Blocked = new("velvet.blocked", "Blocked");
         public static readonly LocString Unblock = new("velvet.unblock", "Unblock");
-        public static readonly LocString SafetyLabel = new("velvet.safetyLabel", "Safety");
-        public static readonly LocString BlockedUsers = new("velvet.blockedUsers", "Blocked users");
-        public static readonly LocString BlockedEmpty = new("velvet.blockedEmpty", "You haven't blocked anyone.");
         public static readonly LocString Like = new("velvet.like", "Like");
-        public static readonly LocString Comment = new("velvet.comment", "Comment");
-        public static readonly LocPlural Likes = new("velvet.likes", "{0} like", "{0} likes");
         public static readonly LocString Comments = new("velvet.comments", "Comments");
         public static readonly LocString NoComments = new("velvet.noComments", "No comments yet. Say something.");
         public static readonly LocString AddComment = new("velvet.addComment", "Add a comment…");
@@ -1415,63 +1344,26 @@ internal static class L
         public static readonly LocString DeleteFailed = new("velvet.deleteFailed", "Couldn't delete the post");
         public static readonly LocString DeleteCommentConfirmMessage = new("velvet.deleteCommentConfirmMessage", "Delete this comment? This can't be undone.");
         public static readonly LocString DeleteCommentFailed = new("velvet.deleteCommentFailed", "Couldn't delete the comment");
-        public static readonly LocString DeleteComment = new("velvet.deleteComment", "Delete comment");
-        public static readonly LocString SettingsSection = new("velvet.settingsSection", "Velvet");
-        public static readonly LocString SetPasscode = new("velvet.setPasscode", "Passcode");
-        public static readonly LocString ShowExplicit = new("velvet.showExplicit", "Show explicit content");
-        public static readonly LocString BlurSoft = new("velvet.blurSoft", "Blur soft content until tapped");
-        public static readonly LocString TabHub = new("velvet.tabHub", "Hub");
         public static readonly LocString TabMe = new("velvet.tabMe", "Me");
         public static readonly LocString Settings = new("velvet.settings", "Settings");
         public static readonly LocString OnboardIntent = new("velvet.onboardIntent", "What brings you here?");
-        public static readonly LocString OnboardIntentHint = new("velvet.onboardIntentHint", "Pick what you're mainly looking for. You can change it any time.");
-        public static readonly LocString OnboardVibe = new("velvet.onboardVibe", "Show your vibe");
-        public static readonly LocString OnboardVibeHint = new("velvet.onboardVibeHint", "A short intro and a few tags help the right people find you.");
-        public static readonly LocString OnboardPrivacy = new("velvet.onboardPrivacy", "Your privacy");
-        public static readonly LocString OnboardPrivacyHint = new("velvet.onboardPrivacyHint", "You choose whether others can find you, and you can lock the app with a PIN.");
-        public static readonly LocString Next = new("velvet.next", "Next");
         public static readonly LocString Back = new("velvet.back", "Back");
         public static readonly LocString EnterVelvet = new("velvet.enterVelvet", "Enter Velvet");
         public static readonly LocString Requests = new("velvet.requests", "Requests");
         public static readonly LocString Accept = new("velvet.accept", "Accept");
-        public static readonly LocString Decline = new("velvet.decline", "Decline");
         public static readonly LocString WantsToConnect = new("velvet.wantsToConnect", "wants to connect");
         public static readonly LocString SentRequests = new("velvet.sentRequests", "Sent");
         public static readonly LocString Disconnect = new("velvet.disconnect", "Disconnect");
         public static readonly LocString DisconnectConfirmMessage = new("velvet.disconnectConfirmMessage", "Remove this connection?");
-        public static readonly LocString StartChat = new("velvet.startChat", "Start a chat");
         public static readonly LocString PeopleToMeet = new("velvet.peopleToMeet", "People to meet");
-        public static readonly LocString RelationshipLabel = new("velvet.relationshipLabel", "Relationship");
         public static readonly LocString RelNotSaying = new("velvet.relNotSaying", "Rather not say");
         public static readonly LocString RelSingle = new("velvet.relSingle", "Single");
         public static readonly LocString RelTaken = new("velvet.relTaken", "Taken");
         public static readonly LocString RelOpen = new("velvet.relOpen", "Open");
         public static readonly LocString RelComplicated = new("velvet.relComplicated", "It's complicated");
-        public static readonly LocString AppLock = new("velvet.appLock", "App Lock");
-        public static readonly LocString AppLockHelp = new("velvet.appLockHelp", "Require a PIN to open Velvet, so nobody who grabs your screen can peek.");
-        public static readonly LocString AppLockOn = new("velvet.appLockOn", "On");
-        public static readonly LocString AppLockOff = new("velvet.appLockOff", "Off");
-        public static readonly LocString SetPin = new("velvet.setPin", "Set a PIN (digits)");
-        public static readonly LocString RemovePin = new("velvet.removePin", "Remove lock");
-        public static readonly LocString AppearHelp = new("velvet.appearHelp", "Let others find your profile in the Hub.");
-        public static readonly LocString TimeZoneLabel = new("velvet.timeZoneLabel", "Time zone");
-        public static readonly LocString TimeZoneHelp = new("velvet.timeZoneHelp", "Show others your current local time so it is easy to find a moment that works for both of you.");
-        public static readonly LocString ShareTimeZoneLabel = new("velvet.shareTimeZoneLabel", "Share my time zone");
-        public static readonly LocString TimeZoneManualLabel = new("velvet.timeZoneManualLabel", "Set it manually");
-        public static readonly LocString UtcOffsetLabel = new("velvet.utcOffsetLabel", "UTC offset");
-        public static readonly LocString YourTimeLabel = new("velvet.yourTimeLabel", "Your time");
-        public static readonly LocString IntroHint = new("velvet.introHint", "A little about you and what you're into…");
-        public static readonly LocString VibeHint = new("velvet.vibeHint", "e.g. soft, switch, service, playful");
-        public static readonly LocString TagsHint = new("velvet.tagsHint", "Add tags, comma separated");
-        public static readonly LocString LimitsHint = new("velvet.limitsHint", "Anything that's off the table");
-        public static readonly LocString Suggestions = new("velvet.suggestions", "Tap to add");
-        public static readonly LocString IdentityHeader = new("velvet.identityHeader", "Display");
         public static readonly LocString DisplayNameLabel = new("velvet.displayNameLabel", "Display name");
         public static readonly LocString HandleLabel = new("velvet.handleLabel", "Handle");
-        public static readonly LocString AboutHeader = new("velvet.aboutHeader", "About you");
-        public static readonly LocString WantHeader = new("velvet.wantHeader", "What you're after");
         public static readonly LocString SafetyHeader = new("velvet.safetyHeader", "Safety");
-        public static readonly LocString ViewProfile = new("velvet.viewProfile", "View profile");
         public static readonly LocString ChangePhoto = new("velvet.changePhoto", "Change photo");
         public static readonly LocString MoveAndScale = new("velvet.moveAndScale", "Move and scale");
         public static readonly LocString GestureHint = new("velvet.gestureHint", "Drag to move, scroll to zoom");
@@ -1481,17 +1373,6 @@ internal static class L
         public static readonly LocString SavedToGallery = new("velvet.savedToGallery", "Saved to gallery");
         public static readonly LocString NoPhotos = new("velvet.noPhotos", "No photos in your gallery yet");
         public static readonly LocString Use = new("velvet.use", "Use");
-        public static readonly LocString VibeCardHelp = new("velvet.vibeCardHelp", "Pick the roles and moods that fit you.");
-        public static readonly LocString TagsHeading = new("velvet.tagsHeading", "Tags");
-        public static readonly LocString TagsCardHelp = new("velvet.tagsCardHelp", "Add themes so the right people can find you.");
-        public static readonly LocString LimitsCardHelp = new("velvet.limitsCardHelp", "Anything off the table, no exceptions.");
-        public static readonly LocString LookingForHelp = new("velvet.lookingForHelp", "What you're mainly here for right now.");
-        public static readonly LocString RelationshipHelp = new("velvet.relationshipHelp", "Shown on your profile so people know where you stand.");
-        public static readonly LocString SelectedLabel = new("velvet.selectedLabel", "Your picks");
-        public static readonly LocString SuggestionsLabel = new("velvet.suggestionsLabel", "Popular");
-        public static readonly LocString AddVibeHint = new("velvet.addVibeHint", "Add your own, then Enter");
-        public static readonly LocString AddTagHint = new("velvet.addTagHint", "Add your own, then Enter");
-        public static readonly LocString AddLimitHint = new("velvet.addLimitHint", "Add a limit, then Enter");
         public static readonly LocString IntentErp = new("velvet.intentErp", "ERP");
         public static readonly LocString IntentGpose = new("velvet.intentGpose", "GPose");
         public static readonly LocString IntentRelationship = new("velvet.intentRelationship", "Relationship");
@@ -1624,16 +1505,12 @@ internal static class L
         public static readonly LocString TabStopwatch = new("clock.tabStopwatch", "Stopwatch");
         public static readonly LocString TabTimer = new("clock.tabTimer", "Timer");
         public static readonly LocString AddCity = new("clock.addCity", "Add City");
-        public static readonly LocString SearchCities = new("clock.searchCities", "Search cities");
-        public static readonly LocString WorldEmpty = new("clock.worldEmpty", "Add a city to see its local time.");
         public static readonly LocString DayToday = new("clock.dayToday", "Today");
         public static readonly LocString DayTomorrow = new("clock.dayTomorrow", "Tomorrow");
         public static readonly LocString DayYesterday = new("clock.dayYesterday", "Yesterday");
-        public static readonly LocString RemoveCity = new("clock.removeCity", "Remove");
         public static readonly LocString AlarmsEmpty = new("clock.alarmsEmpty", "No alarms yet. Tap + to add one.");
         public static readonly LocString NewAlarm = new("clock.newAlarm", "New Alarm");
         public static readonly LocString EditAlarm = new("clock.editAlarm", "Edit Alarm");
-        public static readonly LocString AlarmLabel = new("clock.alarmLabel", "Label");
         public static readonly LocString AlarmLabelHint = new("clock.alarmLabelHint", "Alarm");
         public static readonly LocString Repeat = new("clock.repeat", "Repeat");
         public static readonly LocString RepeatNever = new("clock.repeatNever", "Never");
@@ -1655,7 +1532,6 @@ internal static class L
         public static readonly LocString Hours = new("clock.hours", "hours");
         public static readonly LocString Minutes = new("clock.minutes", "min");
         public static readonly LocString Seconds = new("clock.seconds", "sec");
-        public static readonly LocString TimerWhenEnds = new("clock.timerWhenEnds", "When Timer Ends");
         public static readonly LocString Alarm = new("clock.alarm", "Alarm");
         public static readonly LocString TimerTitle = new("clock.timerTitle", "Timer");
         public static readonly LocString TimerFinished = new("clock.timerFinished", "Timer finished");
@@ -1668,7 +1544,6 @@ internal static class L
         public static readonly LocString TabReminders = new("notes.tabReminders", "Reminders");
         public static readonly LocString NotesEmpty = new("notes.notesEmpty", "No notes yet. Tap + to write one.");
         public static readonly LocString RemindersEmpty = new("notes.remindersEmpty", "No reminders yet. Tap + to add one.");
-        public static readonly LocString NoteHint = new("notes.noteHint", "Start typing…");
         public static readonly LocString NoteTitle = new("notes.noteTitle", "Note");
         public static readonly LocString NewNote = new("notes.newNote", "New Note");
         public static readonly LocString Untitled = new("notes.untitled", "New Note");
@@ -1682,7 +1557,6 @@ internal static class L
         public static readonly LocString RemindMe = new("notes.remindMe", "Remind me on a day");
         public static readonly LocString ReminderDate = new("notes.reminderDate", "Date");
         public static readonly LocString ReminderTime = new("notes.reminderTime", "Time");
-        public static readonly LocString Completed = new("notes.completed", "Completed");
         public static readonly LocString Save = new("notes.save", "Save");
         public static readonly LocString Delete = new("notes.delete", "Delete");
         public static readonly LocString KeepIt = new("notes.keepIt", "Keep");
@@ -1743,8 +1617,6 @@ internal static class L
     {
         public static readonly LocString Daily = new("dailies.daily", "Daily");
         public static readonly LocString Weekly = new("dailies.weekly", "Weekly");
-        public static readonly LocString DailyTasks = new("dailies.dailyTasks", "Daily Tasks");
-        public static readonly LocString WeeklyTasks = new("dailies.weeklyTasks", "Weekly Tasks");
         public static readonly LocString AllDone = new("dailies.allDone", "All done");
         public static readonly LocString NothingLeft = new("dailies.nothingLeft", "Nothing left to do");
         public static readonly LocString Remaining = new("dailies.remaining", "{0} remaining");
@@ -1885,7 +1757,6 @@ internal static class L
         public static readonly LocString RetainerEmpty = new("inventory.retainerEmpty", "Open a retainer at a summoning bell to store their contents here.");
         public static readonly LocString FreeCompanyEmpty = new("inventory.freeCompanyEmpty", "Open your FC chest once to store its contents here.");
         public static readonly LocString Updated = new("inventory.updated", "Updated {0}");
-        public static readonly LocString NotYetSeen = new("inventory.notYetSeen", "Not opened yet");
     }
 
     internal static class Market
@@ -1961,7 +1832,6 @@ internal static class L
         public static readonly LocString Next = new("games.next", "Next");
         public static readonly LocString Lines = new("games.lines", "Lines");
         public static readonly LocString Level = new("games.level", "Level");
-        public static readonly LocString Lives = new("games.lives", "Lives");
         public static readonly LocString Moves = new("games.moves", "Moves");
         public static readonly LocString Undo = new("games.undo", "Undo");
         public static readonly LocString NextLevel = new("games.nextLevel", "Next Level");
@@ -2027,8 +1897,6 @@ internal static class L
     internal static class Feedback
     {
         public static readonly LocString SendFeedback = new("feedback.sendFeedback", "Send Feedback");
-        public static readonly LocString Subtitle = new("feedback.subtitle", "Share your thoughts, suggestions, or bug reports directly with the developer");
-        public static readonly LocString YourFeedback = new("feedback.yourFeedback", "Your feedback");
         public static readonly LocString Placeholder = new("feedback.placeholder", "What's on your mind? Suggestions, bug reports, feature ideas…");
         public static readonly LocString Send = new("feedback.send", "Send");
         public static readonly LocString Sending = new("feedback.sending", "Sending…");
@@ -2038,9 +1906,7 @@ internal static class L
         public static readonly LocString ConfirmMessage = new("feedback.confirmMessage", "Send this feedback to the developer?");
         public static readonly LocString SendMore = new("feedback.sendMore", "Send more feedback");
         public static readonly LocString Cooldown = new("feedback.cooldown", "You can send again in {0}");
-        public static readonly LocString Error = new("feedback.error", "Something went wrong");
         public static readonly LocString ErrorMessage = new("feedback.errorMessage", "Couldn't send your feedback. Please try again.");
-        public static readonly LocString SignInRequired = new("feedback.signInRequired", "Sign in to Aethernet in Settings to send feedback");
         public static readonly LocString AddPhotos = new("feedback.addPhotos", "Add photos");
         public static readonly LocString ImportFromPc = new("feedback.importFromPc", "Import from PC");
         public static readonly LocString NoGallery = new("feedback.noGallery", "No photos in your gallery yet");
@@ -2213,29 +2079,18 @@ internal static class L
         public static readonly LocString Continue = new("onboarding.continue", "Continue");
         public static readonly LocString GetStarted = new("onboarding.getStarted", "Get Started");
         public static readonly LocString GotIt = new("onboarding.gotIt", "Got it");
-        public static readonly LocString Skip = new("onboarding.skip", "Skip");
-        public static readonly LocString SkipTour = new("onboarding.skipTour", "Skip tour");
         public static readonly LocString TapToContinue = new("onboarding.tapToContinue", "Tap to continue");
         public static readonly LocString WelcomeTitle = new("onboarding.welcomeTitle", "Welcome to Aetherphone");
-        public static readonly LocString WelcomeBody = new("onboarding.welcomeBody", "Your very own smartphone, right here in Eorzea. Here's a quick tour of what it can do.");
         public static readonly LocString AllInOneTitle = new("onboarding.allInOneTitle", "Everything in one place");
         public static readonly LocString AllInOneBody = new("onboarding.allInOneBody", "Chat, music, weather, the market board, mini-games and more, all in your pocket.");
         public static readonly LocString FeedbackTitle = new("onboarding.feedbackTitle", "Still a work in progress");
         public static readonly LocString FeedbackBody = new("onboarding.feedbackBody", "This plugin is nowhere near a full release yet. I would love your opinions, feature ideas, and criticism. Reach me on GitHub: the links are in Settings, About Aetherphone.");
-        public static readonly LocString BeginTitle = new("onboarding.beginTitle", "Ready when you are");
-        public static readonly LocString BeginBody = new("onboarding.beginBody", "Tap the app icon to dive in. You can replay any tip later from Settings.");
         public static readonly LocString WidgetTourTitle = new("onboarding.widgetTourTitle", "Live at a glance");
         public static readonly LocString WidgetTourBody = new("onboarding.widgetTourBody", "Widgets live on your Home Screen and update on their own. This one shows the Eorzean weather wherever you're standing.");
-        public static readonly LocString MessageTourTitle = new("onboarding.messageTourTitle", "Meet Message");
-        public static readonly LocString MessageTourBody = new("onboarding.messageTourBody", "Give Message a tap. Chats, calls and your contacts all live in one place. Every app opens like this.");
         public static readonly LocString MyNumberTourTitle = new("onboarding.myNumberTourTitle", "Your very own number");
-        public static readonly LocString MessageNumberTourBody = new("onboarding.messageNumberTourBody", "Every Aetherphone gets its own number. Find yours in the Contacts tab and share it in-game so friends can add you and give you a call.");
-        public static readonly LocString ReturnHomeTitle = new("onboarding.returnHomeTitle", "Head back home");
-        public static readonly LocString ReturnHomeBody = new("onboarding.returnHomeBody", "This bar brings you home from any app. Give it a tap to go back.");
         public static readonly LocString CustomizeTitle = new("onboarding.customizeTitle", "Make it your own");
         public static readonly LocString CustomizeBody = new("onboarding.customizeBody", "Press and hold anywhere on the Home Screen to rearrange icons, resize widgets, and add new ones.");
         public static readonly LocString ControlCenterTitle = new("onboarding.controlCenterTitle", "Control Center");
-        public static readonly LocString ControlCenterBody = new("onboarding.controlCenterBody", "Tap the top of the screen to open Control Center, with volume, brightness, accent color, and your notifications.");
         public static readonly LocString HomeTourTitle = new("onboarding.homeTourTitle", "This is your Home Screen");
         public static readonly LocString HomeTourBody = new("onboarding.homeTourBody", "Your phone is ready. Before you dive in, here's a quick look around.");
         public static readonly LocString AppsTourTitle = new("onboarding.appsTourTitle", "Your apps");
@@ -2295,12 +2150,10 @@ internal static class L
         public static readonly LocString CollectionsBody = new("onboarding.collectionsBody", "Track your mounts, minions, emotes, orchestrion rolls and more. See what you've got and what's still out there to find.");
         public static readonly LocString WalletBody = new("onboarding.walletBody", "Gil, tomestones, hunt seals and every currency you care about, with your weekly caps, all at a glance.");
         public static readonly LocString InventoryBody = new("onboarding.inventoryBody", "Peek at what's on you and stashed with your retainers, so you always know what you're carrying.");
-        public static readonly LocString ClockBody = new("onboarding.clockBody", "A clean analog clock on Eorzea time, for when you just need to know the hour.");
         public static readonly LocString TimersBody = new("onboarding.timersBody", "Countdowns to the daily, Grand Company and weekly resets, plus Fashion Report, the Jumbo Cactpot and your retainer ventures. Switch on reminders and the phone nudges you.");
         public static readonly LocString DailiesBody = new("onboarding.dailiesBody", "A simple checklist for your daily and weekly routines. Tick things off and it all resets right on schedule.");
         public static readonly LocString FishingBody = new("onboarding.fishingBody", "Bite windows, handy tips and the best spots for the fish worth chasing.");
         public static readonly LocString NotificationsBody = new("onboarding.notificationsBody", "A running history of everything your phone has pinged you about, so nothing slips past you.");
-        public static readonly LocString VelvetBody = new("onboarding.velvetBody", "Welcome to Velvet! A private, 18+ space for sharing mature work and connecting with like-minded people, separate from the rest of the phone.");
         public static readonly LocString VelvetDiscoverTitle = new("onboarding.velvetDiscoverTitle", "Discover people");
         public static readonly LocString VelvetDiscoverBody = new("onboarding.velvetDiscoverBody", "Browse profiles filtered by what people are looking for, and send a connection request when you find someone interesting.");
         public static readonly LocString VelvetFilterTitle = new("onboarding.velvetFilterTitle", "Filter by intent");
@@ -2315,7 +2168,6 @@ internal static class L
         public static readonly LocString VelvetProfileBody = new("onboarding.velvetProfileBody", "Set up your intro, vibe, tags and limits, and choose whether you're discoverable to others.");
         public static readonly LocString VelvetKindTitle = new("onboarding.velvetKindTitle", "Consent and Respect");
         public static readonly LocString VelvetKindBody = new("onboarding.velvetKindBody", "This space is for everyone. Discriminatory, hateful or harmful content isn't welcome and can get you banned.");
-        public static readonly LocString FeedbackIntroTitle = new("onboarding.feedbackIntroTitle", "Feedback");
         public static readonly LocString FeedbackIntroBody = new("onboarding.feedbackIntroBody", "Tell the developer what you think: suggestions, bug reports, feature ideas, or just a hello.");
         public static readonly LocString FeedbackWriteTitle = new("onboarding.feedbackWriteTitle", "Write and send");
         public static readonly LocString FeedbackWriteBody = new("onboarding.feedbackWriteBody", "Type your message and tap Send. Your feedback goes directly to the developer's dashboard.");
@@ -2488,7 +2340,6 @@ internal static class L
         public static readonly LocString PhotoBody = new("setup.photoBody", "Add a photo so friends recognize you. Without one, your Lodestone portrait is shown instead.");
         public static readonly LocString ChoosePhoto = new("setup.choosePhoto", "Choose a Photo");
         public static readonly LocString AnalyticsTitle = new("setup.analyticsTitle", "Analytics");
-        public static readonly LocString AnalyticsFootnote = new("setup.analyticsFootnote", "You can change this anytime in Settings, under Privacy.");
         public static readonly LocString FeatureMessageTitle = new("setup.featureMessageTitle", "Stay in touch");
         public static readonly LocString FeatureMessageBody = new("setup.featureMessageBody", "Chats, calls and contacts with players everywhere.");
         public static readonly LocString FeatureSocialTitle = new("setup.featureSocialTitle", "Share your story");
