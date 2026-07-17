@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
@@ -64,7 +65,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly DropdownMenu scopeMenu = new();
     private readonly DropdownMenu postMenu = new();
     private readonly DropdownMenu.Item[] scopeItems = new DropdownMenu.Item[2];
-    private readonly DropdownMenu.Item[] postItems = new DropdownMenu.Item[3];
+    private readonly DropdownMenu.Item[] postItems = new DropdownMenu.Item[4];
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
     private PostDto? menuPost;
@@ -448,6 +449,8 @@ internal sealed partial class AethergramApp : IPhoneApp
                 (post.IsFollowing ? FontAwesomeIcon.UserCheck : FontAwesomeIcon.UserPlus).ToIconString());
             postItems[count++] = new DropdownMenu.Item(Loc.T(L.Report.Action),
                 FontAwesomeIcon.Flag.ToIconString(), true);
+            postItems[count++] = new DropdownMenu.Item(Loc.T(L.Social.BlockAction),
+                FontAwesomeIcon.Ban.ToIconString(), true);
         }
 
         var picked = postMenu.Draw(area, theme, postItems.AsSpan(0, count));
@@ -475,7 +478,26 @@ internal sealed partial class AethergramApp : IPhoneApp
             return;
         }
 
-        OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
+        if (picked == viewOffset + 1)
+        {
+            OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
+            return;
+        }
+
+        AskBlock(post);
+    }
+
+    private void AskBlock(PostDto post)
+    {
+        var name = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Social.BlockConfirm, name),
+            ConfirmLabel = Loc.T(L.Social.BlockAction),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            Confirm = () => store.Block(post.AuthorId, _ => { }),
+        });
     }
 
     private void OpenReport(string targetType, string targetId, string title)

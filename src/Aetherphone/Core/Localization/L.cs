@@ -35,6 +35,13 @@ internal static class L
         public static readonly LocString MentionedPhoto = new("social.mentionedPhoto", "mentioned you in a photo");
         public static readonly LocString MentionedComment = new("social.mentionedComment", "mentioned you in a comment");
         public static readonly LocString ViewProfile = new("social.viewProfile", "View profile");
+        public static readonly LocString BlockAction = new("social.blockAction", "Block");
+        public static readonly LocString BlockConfirm = new("social.blockConfirm", "Block {0}? You won't see each other's posts, comments, or profile, and any follows between you are removed.");
+        public static readonly LocString BlockedUsers = new("social.blockedUsers", "Blocked people");
+        public static readonly LocString BlockedEmpty = new("social.blockedEmpty", "You haven't blocked anyone.");
+        public static readonly LocString BlockedHint = new("social.blockedHint", "Blocking applies across Chirper, Aethergram, and calls. Tap someone to unblock them.");
+        public static readonly LocString Unblock = new("social.unblock", "Unblock");
+        public static readonly LocString UnblockConfirm = new("social.unblockConfirm", "Unblock {0}? They'll be able to see your posts and follow you again.");
         public static readonly LocString MentionSearching = new("social.mentionSearching", "Looking for people");
         public static readonly LocString TaggedPhoto = new("social.taggedPhoto", "tagged you in a photo");
         public static readonly LocString AudienceEveryone = new("social.audienceEveryone", "Everyone");
@@ -989,6 +996,12 @@ internal static class L
         public static readonly LocString HomeWorldLabel = new("account.homeWorldLabel", "Home World");
         public static readonly LocString SignOutConfirmTitle = new("account.signOutConfirmTitle", "Sign out?");
         public static readonly LocString SignOutConfirmBody = new("account.signOutConfirmBody", "You can sign back in anytime. Your account and data stay safe.");
+        public static readonly LocString DeleteAccount = new("account.deleteAccount", "Delete account");
+        public static readonly LocString DeleteAccountHint = new("account.deleteAccountHint", "Permanently deletes your Aethernet account from the server: profile, posts, comments, messages, photos, and connections. The phone itself keeps working. This cannot be undone.");
+        public static readonly LocString DeleteConfirmTitle = new("account.deleteConfirmTitle", "Delete your account?");
+        public static readonly LocString DeleteConfirmBody = new("account.deleteConfirmBody", "This permanently erases your profile, posts, comments, messages, and photos from the Aetherphone servers. There is no way to get them back.");
+        public static readonly LocString DeleteConfirmAction = new("account.deleteConfirmAction", "Delete forever");
+        public static readonly LocString DeleteFailed = new("account.deleteFailed", "Deletion didn't go through. Check your connection and try again.");
         public static readonly LocString ChangePhoto = new("account.changePhoto", "Change Photo");
         public static readonly LocString ImportFromPc = new("account.importFromPc", "Import from PC");
         public static readonly LocString MoveAndScale = new("account.moveAndScale", "Move and Scale");

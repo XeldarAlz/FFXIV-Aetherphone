@@ -23,7 +23,7 @@ internal sealed class RemoteImageCache : IDisposable
 
     public IDalamudTextureWrap? Get(string? url)
     {
-        if (string.IsNullOrEmpty(url))
+        if (string.IsNullOrEmpty(url) || !url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }

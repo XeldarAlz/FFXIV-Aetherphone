@@ -485,6 +485,27 @@ internal abstract class SocialFeedStore : IDisposable
         work.Run("report", token => client.ReportAsync(targetType, targetId, reason, token), onComplete);
     }
 
+    public void Block(string userId, Action<bool> onComplete)
+    {
+        RemoveAuthorEverywhere(userId);
+        work.Run("block", token => client.BlockAsync(userId, token), onComplete);
+    }
+
+    private void RemoveAuthorEverywhere(string userId)
+    {
+        forYou = CopyOnWrite.RemoveWhere(forYou, post => post.AuthorId == userId);
+        following = CopyOnWrite.RemoveWhere(following, post => post.AuthorId == userId);
+        profilePosts = CopyOnWrite.RemoveWhere(profilePosts, post => post.AuthorId == userId);
+        taggedPosts = CopyOnWrite.RemoveWhere(taggedPosts, post => post.AuthorId == userId);
+        detailComments = CopyOnWrite.RemoveWhere(detailComments, comment => comment.AuthorId == userId);
+        discoverResults = CopyOnWrite.RemoveWhere(discoverResults, user => user.Id == userId);
+        if (detailPost is { } current && current.AuthorId == userId)
+        {
+            detailPost = null;
+            detailPostId = null;
+        }
+    }
+
     public void OpenProfile(string userId)
     {
         if (profileUserId == userId && (profileUser is not null || profileLoading))

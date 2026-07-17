@@ -589,7 +589,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var anchorX = left + width - 12f * scale;
         var interactive = !actions.Closing;
         var mine = store.Me is { } me && me.Id == post.AuthorId;
-        var count = mine ? 2 : 3;
+        var count = mine ? 2 : 4;
         var slot = 0;
         var closeCenter = new Vector2(anchorX - slot * step, centerY);
         if (DrawRevealIcon(closeCenter, iconRadius, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Chirper.MutedInk,
@@ -637,6 +637,29 @@ internal sealed partial class ChirperApp : IPhoneApp
             store.SetFollow(post.AuthorId, !post.IsFollowing);
             actions.Dismiss();
         }
+
+        slot++;
+        var blockCenter = new Vector2(anchorX - slot * step, centerY);
+        if (DrawRevealIcon(blockCenter, iconRadius, FontAwesomeIcon.Ban.ToIconString(), theme.Danger,
+                Palette.WithAlpha(theme.Danger, 0.16f), 0.95f,
+                ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Social.BlockAction), interactive))
+        {
+            AskBlock(post);
+            actions.Dismiss();
+        }
+    }
+
+    private void AskBlock(PostDto post)
+    {
+        var name = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Social.BlockConfirm, name),
+            ConfirmLabel = Loc.T(L.Social.BlockAction),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            Confirm = () => store.Block(post.AuthorId, _ => { }),
+        });
     }
 
     private void DrawThread(Rect area, string postId)

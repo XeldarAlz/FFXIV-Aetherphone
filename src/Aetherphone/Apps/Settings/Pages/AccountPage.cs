@@ -147,6 +147,16 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
         signOut.End();
         ImGui.Dummy(new Vector2(0f, 14f * scale));
+        var deleteAccount = GroupCard.Begin(theme, 1);
+        if (SettingsRow.Action(deleteAccount.NextRow(), Loc.T(L.Account.DeleteAccount), theme.Danger, theme))
+        {
+            AskDeleteAccount();
+        }
+
+        deleteAccount.End();
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        SettingsSection.Hint(Loc.T(L.Account.DeleteAccountHint), theme);
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
     }
 
     private void DrawIdentityHeader(UserDto user, PhoneTheme theme, float scale)
@@ -217,8 +227,72 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             CancelLabel = Loc.T(L.Common.Cancel),
             Confirm = () =>
             {
+                RevokeCurrentToken();
                 session.SignOut();
                 ResetFlow();
+            },
+        });
+    }
+
+    private void RevokeCurrentToken()
+    {
+        var bearer = session.Token;
+        if (bearer is null)
+        {
+            return;
+        }
+
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await client.RevokeTokenAsync(bearer, token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Token revoke failed: {exception.Message}");
+            }
+        });
+    }
+
+    private void AskDeleteAccount()
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Account.DeleteConfirmTitle),
+            Message = Loc.T(L.Account.DeleteConfirmBody),
+            ConfirmLabel = Loc.T(L.Account.DeleteConfirmAction),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            ConfirmAsync = done =>
+            {
+                var token = cancellation.Token;
+                _ = Task.Run(async () =>
+                {
+                    var erased = false;
+                    try
+                    {
+                        erased = await client.DeleteAccountAsync(token).ConfigureAwait(false);
+                    }
+                    catch (Exception exception)
+                    {
+                        AepLog.Warning($"Account deletion failed: {exception.Message}");
+                    }
+
+                    if (erased)
+                    {
+                        session.SignOut();
+                        ResetFlow();
+                    }
+
+                    done(true);
+                    if (!erased)
+                    {
+                        Plugin.Confirm.Alert(Loc.T(L.Account.DeleteConfirmTitle), Loc.T(L.Account.DeleteFailed),
+                            Loc.T(L.Account.FailDismiss));
+                    }
+                });
             },
         });
     }

@@ -748,6 +748,16 @@ internal sealed class AethernetClient
         return http.GetJsonAsync(Url($"/velvet/media/dm/{Uri.EscapeDataString(messageId)}/url"), AethernetJsonContext.Default.VelvetMediaUrlDto, session.Token, token, authStatusSink);
     }
 
+    public Task<bool> RevokeTokenAsync(string bearer, CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url("/auth/token"), bearer, token, authStatusSink);
+    }
+
+    public Task<bool> DeleteAccountAsync(CancellationToken token)
+    {
+        return http.SendAsync(HttpMethod.Delete, Url("/me"), session.Token, token, authStatusSink);
+    }
+
     public Task<bool> BlockAsync(string userId, CancellationToken token)
     {
         return http.SendAsync(HttpMethod.Post, Url($"/blocks/{Uri.EscapeDataString(userId)}"), session.Token, token, authStatusSink);

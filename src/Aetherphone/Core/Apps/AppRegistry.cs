@@ -67,7 +67,7 @@ internal static class AppRegistry
         apps.Add(new MarketApp(services.Market, services.MarketIndex, services.MarketAlerts, services.MarketLauncher, services.GameData, services.Textures, services.Configuration));
         apps.Add(new WalletApp(services.GameData, services.Textures));
         apps.Add(new InventoryApp(services.InventoryCapture, services.GameData, services.Textures));
-        apps.Add(new MusicApp(services.Radio, services.SongSearch, services.Playback, services.SongHistory, services.Media, services.Http, services.Textures));
+        apps.Add(new MusicApp(services.Radio, services.SongSearch, services.Playback, services.SongHistory, services.Media, services.Http, services.Textures, new FeatureFlags(services.Http, services.AethernetSession)));
         apps.Add(new ClockApp(services.Configuration));
         apps.Add(new NotesApp(services.Configuration));
         apps.Add(new CalculatorApp());
