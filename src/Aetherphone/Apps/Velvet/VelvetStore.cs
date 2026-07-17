@@ -23,7 +23,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private readonly Configuration configuration;
     private readonly RealtimeSignalBus signals;
     private readonly RetryGate meGate = new RetryGate(TimeSpan.FromSeconds(30));
-    private readonly object feedLock = new();
+    private readonly FeedLane<VelvetPostDto> feedLane = new FeedLane<VelvetPostDto>(ByNewestFirst);
     private volatile bool velvetKeysHydrated;
     private volatile VelvetProfileDto? me;
     private volatile bool loadingMe;
@@ -44,10 +44,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile VelvetProfileDto? profileUser;
     private volatile bool profileLoading;
     private volatile bool profileFailed;
-    private volatile VelvetPostDto[] feed = Array.Empty<VelvetPostDto>();
-    private volatile bool loadingFeed;
-    private volatile string? feedCursor;
-    private volatile bool loadingMoreFeed;
     private volatile string? detailPostId;
     private volatile VelvetCommentDto[] detailComments = Array.Empty<VelvetCommentDto>();
     private volatile bool loadingComments;
@@ -102,11 +98,11 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public bool LoadingThreads => LoadingThreadList;
     public bool ThreadsLoaded => ThreadListLoaded;
     public string? ThreadId => CurrentThreadId;
-    public VelvetPostDto[] Feed => feed;
-    public bool LoadingFeed => loadingFeed;
+    public VelvetPostDto[] Feed => feedLane.Items;
+    public bool LoadingFeed => feedLane.Loading;
     public bool FeedLoaded => feedLoaded;
-    public bool HasMoreFeed => feedCursor is not null;
-    public bool LoadingMoreFeed => loadingMoreFeed;
+    public bool HasMoreFeed => feedLane.HasMore;
+    public bool LoadingMoreFeed => feedLane.LoadingMore;
     public bool Posting => posting;
     public VelvetPostDto? FetchedPost => fetchedPost;
     public UserDto[] Likers => likers;
@@ -577,17 +573,17 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
             return;
         }
 
-        loadingFeed = true;
+        feedLane.Loading = true;
         work.Run("feed", async token =>
         {
             var page = await client.FeedAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
-                ApplyFeedRefresh(page);
+                feedLane.ApplyRefresh(page.Items, page.NextCursor);
             }
         }, () =>
         {
-            loadingFeed = false;
+            feedLane.Loading = false;
             feedLoaded = true;
         });
     }
@@ -599,77 +595,21 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
             return;
         }
 
-        var cursor = feedCursor;
-        if (cursor is null || loadingMoreFeed || loadingFeed)
+        var cursor = feedLane.Cursor;
+        if (cursor is null || feedLane.LoadingMore || feedLane.Loading)
         {
             return;
         }
 
-        loadingMoreFeed = true;
+        feedLane.LoadingMore = true;
         work.Run("feed more", async token =>
         {
             var page = await client.FeedAsync(cursor, token).ConfigureAwait(false);
             if (page is not null)
             {
-                lock (feedLock)
-                {
-                    feed = MergeFeed(feed, page.Items);
-                    feedCursor = page.NextCursor;
-                }
+                feedLane.ApplyMore(page.Items, page.NextCursor);
             }
-        }, () => loadingMoreFeed = false);
-    }
-
-    private void ApplyFeedRefresh(VelvetFeedPage page)
-    {
-        lock (feedLock)
-        {
-            if (feed.Length == 0)
-            {
-                feed = page.Items;
-                feedCursor = page.NextCursor;
-            }
-            else
-            {
-                feed = MergeFeed(feed, page.Items);
-            }
-        }
-    }
-
-    private static VelvetPostDto[] MergeFeed(VelvetPostDto[] current, VelvetPostDto[] incoming)
-    {
-        if (incoming.Length == 0)
-        {
-            return current;
-        }
-
-        if (current.Length == 0)
-        {
-            return incoming;
-        }
-
-        var incomingIds = new HashSet<string>(StringComparer.Ordinal);
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            incomingIds.Add(incoming[index].Id);
-        }
-
-        var merged = new List<VelvetPostDto>(current.Length + incoming.Length);
-        for (var index = 0; index < current.Length; index++)
-        {
-            if (!incomingIds.Contains(current[index].Id))
-            {
-                merged.Add(current[index]);
-            }
-        }
-
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            merged.Add(incoming[index]);
-        }
-
-        merged.Sort(ByNewestFirst);
-        return merged.ToArray();
+        }, () => feedLane.LoadingMore = false);
     }
 
     private static int ByNewestFirst(VelvetPostDto left, VelvetPostDto right)
@@ -969,7 +909,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     private void AcceptPostEverywhere(VelvetPostDto post)
     {
-        feed = CopyOnWrite.Replace(feed, post);
+        feedLane.Items = CopyOnWrite.Replace(feedLane.Items, post);
         if (fetchedPost?.Id == post.Id)
         {
             fetchedPost = post;
@@ -1085,7 +1025,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     private void RemovePost(string postId)
     {
-        feed = CopyOnWrite.RemoveById(feed, postId);
+        feedLane.Items = CopyOnWrite.RemoveById(feedLane.Items, postId);
     }
 
     protected override void DisposeCore()

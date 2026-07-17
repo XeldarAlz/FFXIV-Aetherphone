@@ -83,8 +83,8 @@ internal sealed class ChirperStore : SocialFeedStore
     protected override void ApplyFollowEverywhere(string userId, bool follow)
     {
         base.ApplyFollowEverywhere(userId, follow);
-        forYou = MapFollowByAuthor(forYou, userId, follow);
-        following = MapFollowByAuthor(following, userId, follow);
+        forYouLane.Items = MapFollowByAuthor(forYouLane.Items, userId, follow);
+        followingLane.Items = MapFollowByAuthor(followingLane.Items, userId, follow);
         profilePosts = MapFollowByAuthor(profilePosts, userId, follow);
         if (detailPost is { } post && post.AuthorId == userId)
         {

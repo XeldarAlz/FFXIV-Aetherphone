@@ -1,8 +1,8 @@
 using Aetherphone.Core.Aethernet.Contracts;
 
-namespace Aetherphone.Core.Message;
+namespace Aetherphone.Core.Aethernet;
 
-internal static class MessageMerge
+internal static class IdentifiedMerge
 {
     public static T[] MergeById<T>(T[] existing, T[] incoming, Comparison<T> order) where T : class, IIdentified
     {

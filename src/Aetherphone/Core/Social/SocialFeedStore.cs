@@ -26,18 +26,11 @@ internal abstract class SocialFeedStore : IDisposable
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
     private readonly string analyticsChannel;
     private volatile UserDto? me;
-    protected volatile PostDto[] forYou = Array.Empty<PostDto>();
-    protected volatile PostDto[] following = Array.Empty<PostDto>();
+    protected readonly FeedLane<PostDto> forYouLane = new(ByNewestFirst);
+    protected readonly FeedLane<PostDto> followingLane = new(ByNewestFirst);
     protected volatile PostDto[] profilePosts = Array.Empty<PostDto>();
     protected volatile PostDto? detailPost;
     protected volatile bool posting;
-    private volatile bool loadingForYou;
-    private volatile bool loadingFollowing;
-    private volatile string? forYouCursor;
-    private volatile string? followingCursor;
-    private volatile bool loadingMoreForYou;
-    private volatile bool loadingMoreFollowing;
-    private readonly object feedLock = new();
     private volatile string? profileUserId;
     private volatile UserDto? profileUser;
     private volatile bool profileLoading;
@@ -79,16 +72,19 @@ internal abstract class SocialFeedStore : IDisposable
 
     public bool IsSignedIn => session.IsSignedIn;
     public UserDto? Me => me;
-    public PostDto[] Feed(SocialFeedScope scope) => scope == SocialFeedScope.ForYou ? forYou : following;
+    public PostDto[] Feed(SocialFeedScope scope) => Lane(scope).Items;
 
-    public bool IsLoading(SocialFeedScope scope) =>
-        scope == SocialFeedScope.ForYou ? loadingForYou : loadingFollowing;
+    public bool IsLoading(SocialFeedScope scope) => Lane(scope).Loading;
 
-    public bool HasMoreFeed(SocialFeedScope scope) =>
-        (scope == SocialFeedScope.ForYou ? forYouCursor : followingCursor) is not null;
+    public bool HasMoreFeed(SocialFeedScope scope) => Lane(scope).HasMore;
 
-    public bool LoadingMore(SocialFeedScope scope) =>
-        scope == SocialFeedScope.ForYou ? loadingMoreForYou : loadingMoreFollowing;
+    public bool LoadingMore(SocialFeedScope scope) => Lane(scope).LoadingMore;
+
+    private FeedLane<PostDto> Lane(SocialFeedScope scope) =>
+        scope == SocialFeedScope.ForYou ? forYouLane : followingLane;
+
+    private static string FeedKey(SocialFeedScope scope) =>
+        scope == SocialFeedScope.ForYou ? "explore" : "following";
 
     public string? ProfileUserId => profileUserId;
     public UserDto? ProfileUser => profileUser;
@@ -173,34 +169,16 @@ internal abstract class SocialFeedStore : IDisposable
             return;
         }
 
-        if (scope == SocialFeedScope.ForYou)
-        {
-            loadingForYou = true;
-        }
-        else
-        {
-            loadingFollowing = true;
-        }
-
+        var lane = Lane(scope);
+        lane.Loading = true;
         work.Run("feed refresh", async token =>
         {
-            var page = await FetchFeedAsync(scope == SocialFeedScope.ForYou ? "explore" : "following", null, token)
-                .ConfigureAwait(false);
+            var page = await FetchFeedAsync(FeedKey(scope), null, token).ConfigureAwait(false);
             if (page is not null)
             {
-                ApplyFeedRefresh(scope, page);
+                lane.ApplyRefresh(page.Items, page.NextCursor);
             }
-        }, () =>
-        {
-            if (scope == SocialFeedScope.ForYou)
-            {
-                loadingForYou = false;
-            }
-            else
-            {
-                loadingFollowing = false;
-            }
-        });
+        }, () => lane.Loading = false);
     }
 
     public void LoadMoreFeed(SocialFeedScope scope)
@@ -210,124 +188,22 @@ internal abstract class SocialFeedStore : IDisposable
             return;
         }
 
-        var cursor = scope == SocialFeedScope.ForYou ? forYouCursor : followingCursor;
-        if (cursor is null || LoadingMore(scope) || IsLoading(scope))
+        var lane = Lane(scope);
+        var cursor = lane.Cursor;
+        if (cursor is null || lane.LoadingMore || lane.Loading)
         {
             return;
         }
 
-        if (scope == SocialFeedScope.ForYou)
-        {
-            loadingMoreForYou = true;
-        }
-        else
-        {
-            loadingMoreFollowing = true;
-        }
-
+        lane.LoadingMore = true;
         work.Run("feed more", async token =>
         {
-            var page = await FetchFeedAsync(scope == SocialFeedScope.ForYou ? "explore" : "following", cursor, token)
-                .ConfigureAwait(false);
+            var page = await FetchFeedAsync(FeedKey(scope), cursor, token).ConfigureAwait(false);
             if (page is not null)
             {
-                ApplyFeedMore(scope, page);
+                lane.ApplyMore(page.Items, page.NextCursor);
             }
-        }, () =>
-        {
-            if (scope == SocialFeedScope.ForYou)
-            {
-                loadingMoreForYou = false;
-            }
-            else
-            {
-                loadingMoreFollowing = false;
-            }
-        });
-    }
-
-    private void ApplyFeedRefresh(SocialFeedScope scope, FeedPage page)
-    {
-        lock (feedLock)
-        {
-            if (scope == SocialFeedScope.ForYou)
-            {
-                if (forYou.Length == 0)
-                {
-                    forYou = page.Items;
-                    forYouCursor = page.NextCursor;
-                }
-                else
-                {
-                    forYou = MergeFeed(forYou, page.Items);
-                }
-            }
-            else
-            {
-                if (following.Length == 0)
-                {
-                    following = page.Items;
-                    followingCursor = page.NextCursor;
-                }
-                else
-                {
-                    following = MergeFeed(following, page.Items);
-                }
-            }
-        }
-    }
-
-    private void ApplyFeedMore(SocialFeedScope scope, FeedPage page)
-    {
-        lock (feedLock)
-        {
-            if (scope == SocialFeedScope.ForYou)
-            {
-                forYou = MergeFeed(forYou, page.Items);
-                forYouCursor = page.NextCursor;
-            }
-            else
-            {
-                following = MergeFeed(following, page.Items);
-                followingCursor = page.NextCursor;
-            }
-        }
-    }
-
-    private static PostDto[] MergeFeed(PostDto[] current, PostDto[] incoming)
-    {
-        if (incoming.Length == 0)
-        {
-            return current;
-        }
-
-        if (current.Length == 0)
-        {
-            return incoming;
-        }
-
-        var incomingIds = new HashSet<string>(StringComparer.Ordinal);
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            incomingIds.Add(incoming[index].Id);
-        }
-
-        var merged = new List<PostDto>(current.Length + incoming.Length);
-        for (var index = 0; index < current.Length; index++)
-        {
-            if (!incomingIds.Contains(current[index].Id))
-            {
-                merged.Add(current[index]);
-            }
-        }
-
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            merged.Add(incoming[index]);
-        }
-
-        merged.Sort(ByNewestFirst);
-        return merged.ToArray();
+        }, () => lane.LoadingMore = false);
     }
 
     private static int ByNewestFirst(PostDto left, PostDto right)
@@ -503,8 +379,8 @@ internal abstract class SocialFeedStore : IDisposable
 
     private void RemoveAuthorEverywhere(string userId)
     {
-        forYou = CopyOnWrite.RemoveWhere(forYou, post => post.AuthorId == userId);
-        following = CopyOnWrite.RemoveWhere(following, post => post.AuthorId == userId);
+        forYouLane.Items = CopyOnWrite.RemoveWhere(forYouLane.Items, post => post.AuthorId == userId);
+        followingLane.Items = CopyOnWrite.RemoveWhere(followingLane.Items, post => post.AuthorId == userId);
         profilePosts = CopyOnWrite.RemoveWhere(profilePosts, post => post.AuthorId == userId);
         taggedPosts = CopyOnWrite.RemoveWhere(taggedPosts, post => post.AuthorId == userId);
         detailComments = CopyOnWrite.RemoveWhere(detailComments, comment => comment.AuthorId == userId);
@@ -687,8 +563,8 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected void AcceptCreatedPost(PostDto created)
     {
-        forYou = CopyOnWrite.Prepend(forYou, created);
-        following = CopyOnWrite.Prepend(following, created);
+        forYouLane.Items = CopyOnWrite.Prepend(forYouLane.Items, created);
+        followingLane.Items = CopyOnWrite.Prepend(followingLane.Items, created);
         if (profileUserId is not null && profileUserId == created.AuthorId)
         {
             profilePosts = CopyOnWrite.Prepend(profilePosts, created);
@@ -699,8 +575,8 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected void ReplacePost(PostDto updated)
     {
-        forYou = CopyOnWrite.Replace(forYou, updated);
-        following = CopyOnWrite.Replace(following, updated);
+        forYouLane.Items = CopyOnWrite.Replace(forYouLane.Items, updated);
+        followingLane.Items = CopyOnWrite.Replace(followingLane.Items, updated);
         profilePosts = CopyOnWrite.Replace(profilePosts, updated);
         if (detailPost is { } current && current.Id == updated.Id)
         {
@@ -710,8 +586,8 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected void RemovePost(string postId)
     {
-        forYou = CopyOnWrite.RemoveById(forYou, postId);
-        following = CopyOnWrite.RemoveById(following, postId);
+        forYouLane.Items = CopyOnWrite.RemoveById(forYouLane.Items, postId);
+        followingLane.Items = CopyOnWrite.RemoveById(followingLane.Items, postId);
         profilePosts = CopyOnWrite.RemoveById(profilePosts, postId);
         if (detailPost is { } current && current.Id == postId)
         {
@@ -722,8 +598,8 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected void BumpCommentCount(string postId, int delta)
     {
-        forYou = MapCommentCount(forYou, postId, delta);
-        following = MapCommentCount(following, postId, delta);
+        forYouLane.Items = MapCommentCount(forYouLane.Items, postId, delta);
+        followingLane.Items = MapCommentCount(followingLane.Items, postId, delta);
         profilePosts = MapCommentCount(profilePosts, postId, delta);
         if (detailPost is { } current && current.Id == postId)
         {

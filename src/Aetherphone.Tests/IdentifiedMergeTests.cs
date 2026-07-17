@@ -1,10 +1,10 @@
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Message;
 using Xunit;
 
 namespace Aetherphone.Tests;
 
-public sealed class MessageMergeTests
+public sealed class IdentifiedMergeTests
 {
     private sealed record FakeMessage(string Id, long CreatedAtUnix) : IIdentified;
 
@@ -15,7 +15,7 @@ public sealed class MessageMergeTests
     };
 
     private static FakeMessage[] Merge(FakeMessage[] existing, FakeMessage[] incoming) =>
-        MessageMerge.MergeById(existing, incoming, ByCreatedAt);
+        IdentifiedMerge.MergeById(existing, incoming, ByCreatedAt);
 
     [Fact]
     public void EmptyExistingReturnsIncoming()

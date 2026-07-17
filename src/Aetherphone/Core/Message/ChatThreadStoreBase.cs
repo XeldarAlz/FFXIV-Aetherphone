@@ -473,7 +473,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 var decorated = DecorateMessages(current, page.Value.Items);
                 lock (messagesLock)
                 {
-                    messages = MessageMerge.MergeById(messages, decorated, messageOrder);
+                    messages = IdentifiedMerge.MergeById(messages, decorated, messageOrder);
                 }
             }
         }, () => refreshingThread = false);
@@ -517,7 +517,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 var decorated = DecorateMessages(current, page.Value.Items);
                 lock (messagesLock)
                 {
-                    messages = MessageMerge.MergeById(messages, decorated, messageOrder);
+                    messages = IdentifiedMerge.MergeById(messages, decorated, messageOrder);
                 }
 
                 olderCursor = page.Value.NextCursor;
