@@ -1,3 +1,4 @@
+using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
@@ -31,6 +32,8 @@ public sealed class AboutWindow : Window, IDisposable
     {
         (FontAwesomeIcon.CodeBranch, "GitHub", RepoUrl, 0),
         (FontAwesomeIcon.Comments, "Discussions", DiscussionsUrl, 1),
+        (FontAwesomeIcon.Users, "Discord", AepConstants.DiscordUrl, 5),
+        (FontAwesomeIcon.Globe, "Website", AepConstants.WebsiteUrl, 6),
         (FontAwesomeIcon.Bug, "Report a bug", IssuesUrl, 2), (FontAwesomeIcon.ThLarge, "More plugins", HubUrl, 3),
         (FontAwesomeIcon.ShieldAlt, "Security", SecurityUrl, 4),
     };
@@ -425,7 +428,7 @@ public sealed class AboutWindow : Window, IDisposable
         var pillH = ImGui.GetFrameHeight() * 1.15f;
         var accents = new[]
         {
-            Accent.Violet, Accent.Blue, Accent.Rose, Accent.Mint, Accent.Amber,
+            Accent.Violet, Accent.Blue, Accent.Rose, Accent.Mint, Accent.Amber, Accent.Indigo, Accent.Teal,
         };
         var widths = new float[Links.Length];
         for (var i = 0; i < Links.Length; i++) widths[i] = PillWidth(Links[i].Icon, LinkLabel(Links[i].Label));
@@ -469,6 +472,7 @@ public sealed class AboutWindow : Window, IDisposable
         identifier switch
         {
             "Discussions" => Loc.T(L.About.LinkDiscussions),
+            "Website" => Loc.T(L.About.LinkWebsite),
             "Report a bug" => Loc.T(L.About.LinkReportBug),
             "More plugins" => Loc.T(L.About.LinkMorePlugins),
             "Security" => Loc.T(L.About.LinkSecurity),

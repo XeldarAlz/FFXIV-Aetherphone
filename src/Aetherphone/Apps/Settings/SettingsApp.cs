@@ -91,7 +91,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             new SettingsGroup(new ISettingsPage[] { appearance, language, immersion, tutorials },
                 L.Settings.GeneralFooter),
             new SettingsGroup(new ISettingsPage[] { callsPage, notifications, ringtonePage }, L.Settings.AlertsFooter),
-            new SettingsGroup(new ISettingsPage[] { commands, privacyPage, tagsMentionsPage, about, changelogPage }),
+            new SettingsGroup(new ISettingsPage[] { commands, privacyPage, tagsMentionsPage, changelogPage, about }),
         };
         router = new ViewRouter<ISettingsPage>(
             new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage), Id);

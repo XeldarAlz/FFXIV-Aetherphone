@@ -6,6 +6,7 @@
 
 <p align="center">
   <a href="https://www.aetherphone.net/"><img alt="Website" src="https://img.shields.io/badge/website-aetherphone.net-blue?style=flat-square"></a>
+  <a href="https://discord.gg/fgE8QFj7Y"><img alt="Discord" src="https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white"></a>
   <a href="https://github.com/XeldarAlz/FFXIV-Aetherphone/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/XeldarAlz/FFXIV-Aetherphone?style=flat-square&color=blue"></a>
   <a href="https://github.com/XeldarAlz/FFXIV-Aetherphone/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/XeldarAlz/FFXIV-Aetherphone/total?style=flat-square&color=blue&cacheSeconds=300"></a>
   <a href="https://github.com/XeldarAlz/FFXIV-Aetherphone/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/XeldarAlz/FFXIV-Aetherphone/release.yml?style=flat-square"></a>
@@ -71,6 +72,12 @@ Marca **Enabled**, haz clic en **+** y luego en **Save and Close**. Abre `/xlplu
 | `/aetherphone` | Alias de `/phone` |
 | `/phone about` | Abrir créditos / enlaces |
 | `/phone reset` | Volver a centrar el teléfono en pantalla |
+
+## Comunidad
+
+¿Preguntas, ideas o simplemente ganas de pasar el rato con otros jugadores? Pásate por el Discord.
+
+→ [Únete a nuestro Discord](https://discord.gg/fgE8QFj7Y)
 
 ## Más cosas mías
 
