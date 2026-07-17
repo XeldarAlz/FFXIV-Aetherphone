@@ -39,7 +39,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     private const float NavPillWidth = 40f;
     private const float NavPillHeight = 34f;
     private const float NavPillAlpha = 0.10f;
-    private const float CropSmoothTime = 0.10f;
     private const int GridColumns = 3;
     private const float LikeBurstDuration = 0.9f;
     private const float TagModeBarHeight = 28f;
@@ -89,13 +88,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly Spring[] navHover = new Spring[NavTabCount];
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
     private bool commentFocusPending;
-    private ComposeStage composeStage = ComposeStage.Pick;
+    private readonly PhotoComposeSession composeSession;
     private bool composeAvatarMode;
     private bool composeStoryMode;
-    private readonly List<string> composeSelected = new();
-    private readonly List<WallpaperCrop> composeCrops = new();
-    private int composeIndex;
-    private int composePreviewIndex;
     private static readonly LocString[] ProfileTabs = { L.PhotoTag.PostsTab, L.PhotoTag.TaggedTab };
     private readonly string[] profileTabLabels = new string[ProfileTabs.Length];
     private int profileTab;
@@ -109,16 +104,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     private bool captionFocus;
     private string composeStatus = string.Empty;
     private volatile int composeOutcome;
-    private string[] pickerPaths = Array.Empty<string>();
-    private string? pendingPickedPath;
-    private Spring zoomSpring = new(1f);
-    private Spring centerXSpring = new(0.5f);
-    private Spring centerYSpring = new(0.5f);
-    private float targetZoom = 1f;
-    private float targetCenterX = 0.5f;
-    private float targetCenterY = 0.5f;
-    private bool cropDragging;
-    private Vector2 cropLastDrag;
     private string commentDraft = string.Empty;
     private string likeBurstPostId = string.Empty;
     private double likeBurstStart;
@@ -139,6 +124,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         this.configuration = configuration;
         this.lodestone = lodestone;
         this.library = library;
+        composeSession = new PhotoComposeSession(library);
         this.images = images;
         this.social = social;
         router = new ViewRouter<AethergramRoute>(AethergramRoute.Home, Id);
@@ -176,13 +162,6 @@ internal sealed partial class AethergramApp : IPhoneApp
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
         }, images, lodestone, avatarLightbox, configuration, gameData,
             () => router.Push(AethergramRoute.EditProfile), () => StartCompose(true), OpenProfile, OpenUserList, back);
-    }
-
-    private enum ComposeStage
-    {
-        Pick,
-        Crop,
-        Caption,
     }
 
     public void OnOpened()

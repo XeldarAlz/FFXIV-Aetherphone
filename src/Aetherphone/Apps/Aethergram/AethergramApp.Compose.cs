@@ -1,16 +1,8 @@
 using System.Numerics;
 using Aetherphone.Core;
-using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
-using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Lodestone;
-using Aetherphone.Core.Media;
-using Aetherphone.Core.Net;
-using Aetherphone.Core.Photos;
-using Aetherphone.Core.Platform;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
@@ -26,9 +18,6 @@ namespace Aetherphone.Apps.Aethergram;
 // main AethergramApp.cs stays focused on the feed and app orchestration.
 internal sealed partial class AethergramApp
 {
-    private string ComposeCurrentPath =>
-        composeIndex >= 0 && composeIndex < composeSelected.Count ? composeSelected[composeIndex] : string.Empty;
-
     private float ComposeAspect =>
         composeStoryMode ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight : 1f;
 
@@ -37,6 +26,9 @@ internal sealed partial class AethergramApp
         : Loc.T(L.Aethergram.NewPost);
 
     private bool ComposePosting => composeStoryMode ? stories.Posting : store.Posting;
+
+    private PhotoComposeStyle ComposeStyle => new(Accent, AppPalettes.Aethergram.MutedInk, theme.SurfaceMuted,
+        theme.Accent, theme.SurfaceMuted, true);
 
     private void StartStoryCompose()
     {
@@ -47,18 +39,12 @@ internal sealed partial class AethergramApp
     {
         composeAvatarMode = avatarMode;
         composeStoryMode = storyMode;
-        composeStage = ComposeStage.Pick;
-        composeSelected.Clear();
-        composeCrops.Clear();
-        composeIndex = 0;
-        composePreviewIndex = 0;
         caption = string.Empty;
         composeStatus = string.Empty;
         composeTags.Clear();
         composeTagMode = false;
         personPicker.Close();
-        pendingPickedPath = null;
-        pickerPaths = library.List();
+        composeSession.Open(avatarMode || storyMode);
         router.Push(AethergramRoute.Compose);
     }
 
@@ -84,18 +70,13 @@ internal sealed partial class AethergramApp
             composeStatus = Loc.T(L.Account.CannotReach);
         }
 
-        var picked = Interlocked.Exchange(ref pendingPickedPath, null);
-        if (!string.IsNullOrEmpty(picked))
+        composeSession.ConsumePendingImport();
+        switch (composeSession.Stage)
         {
-            AdoptImported(picked);
-        }
-
-        switch (composeStage)
-        {
-            case ComposeStage.Crop:
+            case PhotoComposeStage.Crop:
                 DrawComposeCrop(area);
                 break;
-            case ComposeStage.Caption:
+            case PhotoComposeStage.Caption:
                 DrawComposeCaption(area);
                 break;
             default:
@@ -109,9 +90,9 @@ internal sealed partial class AethergramApp
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, ComposeTitle, back);
         if (!composeAvatarMode && !composeStoryMode &&
-            ui.HeaderAction(area, Loc.T(L.Common.Next), composeSelected.Count > 0))
+            ui.HeaderAction(area, Loc.T(L.Common.Next), composeSession.HasSelection))
         {
-            BeginCropSequence();
+            composeSession.BeginCropSequence();
         }
 
         var scale = ImGuiHelpers.GlobalScale;
@@ -121,13 +102,13 @@ internal sealed partial class AethergramApp
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
         if (ui.PillButton(importRect, Loc.T(L.Aethergram.ImportFromPc), true))
         {
-            LaunchFileDialog();
+            composeSession.LaunchImportDialog(Loc.T(L.Aethergram.NewPost));
         }
 
-        var noticeHeight = composeStatus.Length > 0 ? 20f * scale : 0f;
+        var noticeHeight = composeSession.Notice.Length > 0 ? 20f * scale : 0f;
         if (noticeHeight > 0f)
         {
-            Typography.DrawCentered(new Vector2(area.Center.X, importRect.Max.Y + 8f * scale), composeStatus,
+            Typography.DrawCentered(new Vector2(area.Center.X, importRect.Max.Y + 8f * scale), composeSession.Notice,
                 AppPalettes.Aethergram.MutedInk, TextStyles.Footnote);
         }
 
@@ -135,167 +116,22 @@ internal sealed partial class AethergramApp
         var gridRect = new Rect(new Vector2(area.Min.X, gridTop), area.Max);
         using (AppSurface.Begin(gridRect))
         {
-            if (pickerPaths.Length == 0)
+            if (composeSession.PickerCount == 0)
             {
                 Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
                     Loc.T(L.Photos.NoPhotos), AppPalettes.Aethergram.MutedInk);
                 return;
             }
 
-            var gap = 6f * scale;
-            var cell = (ScrollLayout.StableContentWidth() - gap * (GridColumns - 1)) / GridColumns;
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
-            {
-                for (var index = 0; index < pickerPaths.Length; index++)
-                {
-                    using (ImRaii.PushId(index))
-                    {
-                        var clicked = ImGui.InvisibleButton("pick", new Vector2(cell, cell));
-                        DrawLocalThumbnail(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
-                        DrawPickBadge(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
-                        if (clicked)
-                        {
-                            TakePicked(pickerPaths[index]);
-                        }
-                    }
-
-                    if (index % GridColumns != GridColumns - 1)
-                    {
-                        ImGui.SameLine();
-                    }
-                }
-            }
+            composeSession.DrawPickGrid(gridRect, scale, ComposeStyle, true);
         }
-    }
-
-    private void DrawLocalThumbnail(string path, Vector2 min, Vector2 max, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var rounding = 10f * scale;
-        var texture = Plugin.WallpaperImages.Get(path);
-        if (texture is null)
-        {
-            Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-            return;
-        }
-
-        var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-        drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
-            ImDrawFlags.RoundCornersAll);
-        if (ImGui.IsItemHovered())
-        {
-            drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)), rounding);
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-    }
-
-    private void DrawPickBadge(string path, Vector2 min, Vector2 max, float scale)
-    {
-        if (composeAvatarMode || composeStoryMode)
-        {
-            return;
-        }
-
-        var order = composeSelected.IndexOf(path);
-        if (order < 0)
-        {
-            return;
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(Accent, 0.35f)), 10f * scale);
-        var radius = 11f * scale;
-        var center = new Vector2(max.X - radius - 6f * scale, min.Y + radius + 6f * scale);
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Accent), 20);
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.9f)), 20, 1.5f * scale);
-        Typography.DrawCentered(drawList, center, (order + 1).ToString(Loc.Culture), new Vector4(1f, 1f, 1f, 1f),
-            TextStyles.FootnoteEmphasized);
-    }
-
-    private void AdoptImported(string path)
-    {
-        pickerPaths = PickerPaths.WithImported(pickerPaths, path);
-        if (!composeAvatarMode && !composeStoryMode && composeSelected.Contains(path))
-        {
-            return;
-        }
-
-        TakePicked(path);
-    }
-
-    private void TakePicked(string path)
-    {
-        if (composeAvatarMode || composeStoryMode)
-        {
-            composeSelected.Clear();
-            composeSelected.Add(path);
-            BeginCropSequence();
-            return;
-        }
-
-        var existing = composeSelected.IndexOf(path);
-        if (existing >= 0)
-        {
-            composeSelected.RemoveAt(existing);
-            return;
-        }
-
-        if (composeSelected.Count >= PostMedia.MaxPhotos)
-        {
-            composeStatus = Loc.T(L.Common.PhotoLimit, PostMedia.MaxPhotos);
-            return;
-        }
-
-        composeStatus = string.Empty;
-        composeSelected.Add(path);
-    }
-
-    private void BeginCropSequence()
-    {
-        composeCrops.Clear();
-        for (var index = 0; index < composeSelected.Count; index++)
-        {
-            composeCrops.Add(DefaultCrop);
-        }
-
-        composePreviewIndex = 0;
-        composeStage = ComposeStage.Crop;
-        LoadCrop(0);
-    }
-
-    private static WallpaperCrop DefaultCrop => new(1f, 0.5f, 0.5f);
-
-    private void SaveCurrentCrop()
-    {
-        if (composeIndex >= 0 && composeIndex < composeCrops.Count)
-        {
-            composeCrops[composeIndex] = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY);
-        }
-    }
-
-    private void LoadCrop(int index)
-    {
-        if (index < 0 || index >= composeCrops.Count)
-        {
-            return;
-        }
-
-        composeIndex = index;
-        var crop = composeCrops[index];
-        targetZoom = crop.Zoom;
-        targetCenterX = crop.CenterX;
-        targetCenterY = crop.CenterY;
-        zoomSpring.SnapTo(crop.Zoom);
-        centerXSpring.SnapTo(crop.CenterX);
-        centerYSpring.SnapTo(crop.CenterY);
-        cropDragging = false;
     }
 
     private void DrawComposeCrop(Rect area)
     {
-        var multi = !composeAvatarMode && composeSelected.Count > 1;
+        var multi = !composeAvatarMode && composeSession.SelectedCount > 1;
         var title = multi
-            ? Loc.T(L.Common.PhotoStep, composeIndex + 1, composeSelected.Count)
+            ? Loc.T(L.Common.PhotoStep, composeSession.CropIndex + 1, composeSession.SelectedCount)
             : Loc.T(L.Aethergram.MoveAndScale);
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, title, CropBack);
@@ -308,53 +144,19 @@ internal sealed partial class AethergramApp
             CropAdvance();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
-        var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
-        var drawList = ImGui.GetWindowDrawList();
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var stage = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
-            new Vector2(area.Max.X - 16f * scale, area.Max.Y - 96f * scale));
-        var aspect = ComposeAspect;
-        var preview = ImageFit.CenteredRect(stage, aspect);
-        var rounding = 18f * scale;
-        var texture = Plugin.WallpaperImages.Get(ComposeCurrentPath);
-        if (texture is null)
-        {
-            Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
-            Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), AppPalettes.Aethergram.MutedInk);
-            return;
-        }
-
-        var size = texture.Size;
-        var zoom = zoomSpring.Step(targetZoom, CropSmoothTime, deltaSeconds);
-        var centerX = centerXSpring.Step(targetCenterX, CropSmoothTime, deltaSeconds);
-        var centerY = centerYSpring.Step(targetCenterY, CropSmoothTime, deltaSeconds);
-        var crop = new WallpaperCrop(zoom, centerX, centerY).Clamped(size, aspect);
-        var (uv0, uv1) = crop.ComputeUv(size, aspect);
-        drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
-            ImDrawFlags.RoundCornersAll);
-        Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
-        HandleCropGestures(preview, size, uv1 - uv0);
-        Typography.DrawCentered(new Vector2(area.Center.X, area.Max.Y - 70f * scale), Loc.T(L.Aethergram.GestureHint),
-            AppPalettes.Aethergram.MutedInk, 0.78f);
-        var trackWidth = area.Width * 0.62f;
-        var track = new Rect(new Vector2(area.Center.X - trackWidth * 0.5f, area.Max.Y - 48f * scale),
-            new Vector2(area.Center.X + trackWidth * 0.5f, area.Max.Y - 44f * scale));
-        var zoomNormalized = (targetZoom - WallpaperCrop.MinZoom) / (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
-        var updated = Scrubber.Draw(track, zoomNormalized, theme.Accent, theme.SurfaceMuted, 1f);
-        targetZoom = WallpaperCrop.MinZoom + updated * (WallpaperCrop.MaxZoom - WallpaperCrop.MinZoom);
+        composeSession.DrawCropCanvas(area, ImGuiHelpers.GlobalScale, ComposeAspect, ComposeStyle,
+            Loc.T(L.Aethergram.GestureHint));
     }
 
     private void CropBack()
     {
-        if (composeAvatarMode || composeIndex == 0)
+        if (composeAvatarMode)
         {
-            composeStage = ComposeStage.Pick;
+            composeSession.Stage = PhotoComposeStage.Pick;
             return;
         }
 
-        SaveCurrentCrop();
-        LoadCrop(composeIndex - 1);
+        composeSession.CropBack();
     }
 
     private void CropAdvance()
@@ -365,67 +167,16 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        SaveCurrentCrop();
-        if (composeIndex < composeSelected.Count - 1)
+        if (composeSession.CropAdvance())
         {
-            LoadCrop(composeIndex + 1);
-            return;
+            captionFocus = true;
         }
-
-        composePreviewIndex = 0;
-        composeStage = ComposeStage.Caption;
-        captionFocus = true;
-    }
-
-    private void HandleCropGestures(Rect preview, Vector2 size, Vector2 visible)
-    {
-        var hovering = ImGui.IsMouseHoveringRect(preview.Min, preview.Max);
-        if (hovering)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            var wheel = ImGui.GetIO().MouseWheel;
-            if (wheel != 0f)
-            {
-                targetZoom = Math.Clamp(targetZoom * (1f + wheel * 0.12f), WallpaperCrop.MinZoom,
-                    WallpaperCrop.MaxZoom);
-            }
-        }
-
-        if (hovering && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            cropDragging = true;
-            cropLastDrag = ImGui.GetMousePos();
-        }
-
-        if (cropDragging)
-        {
-            if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
-            {
-                var position = ImGui.GetMousePos();
-                var delta = position - cropLastDrag;
-                cropLastDrag = position;
-                if (preview.Width > 0f && preview.Height > 0f)
-                {
-                    targetCenterX -= delta.X * visible.X / preview.Width;
-                    targetCenterY -= delta.Y * visible.Y / preview.Height;
-                }
-            }
-            else
-            {
-                cropDragging = false;
-            }
-        }
-
-        var clamped = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY).Clamped(size, ComposeAspect);
-        targetZoom = clamped.Zoom;
-        targetCenterX = clamped.CenterX;
-        targetCenterY = clamped.CenterY;
     }
 
     private void DrawComposeCaption(Rect area)
     {
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, ComposeTitle, () => LoadCropStage(composeSelected.Count - 1));
+        AppHeader.Draw(context, ComposeTitle, () => composeSession.LoadCropStage(composeSession.SelectedCount - 1));
         var scale = ImGuiHelpers.GlobalScale;
         var margin = 16f * scale;
         var top = area.Min.Y + AppHeader.Height * scale;
@@ -439,7 +190,7 @@ internal sealed partial class AethergramApp
             new Vector2(area.Max.X - margin, cardBottom));
         var left = area.Min.X + margin;
         var right = area.Max.X - margin;
-        var stripHeight = composeSelected.Count > 1 ? 46f * scale : 0f;
+        var stripHeight = composeSession.SelectedCount > 1 ? 46f * scale : 0f;
         var stripGap = stripHeight > 0f ? 18f * scale : 0f;
         var tagBarHeight = TagModeBarHeight * scale;
         var tagBarGap = 18f * scale;
@@ -451,8 +202,8 @@ internal sealed partial class AethergramApp
         var stackY = preview.Max.Y;
         if (stripHeight > 0f)
         {
-            DrawCaptionStrip(new Rect(new Vector2(left, stackY + stripGap),
-                new Vector2(right, stackY + stripGap + stripHeight)), scale);
+            composeSession.DrawCaptionStrip(new Rect(new Vector2(left, stackY + stripGap),
+                new Vector2(right, stackY + stripGap + stripHeight)), scale, ComposeStyle);
             stackY += stripGap + stripHeight;
         }
 
@@ -483,42 +234,6 @@ internal sealed partial class AethergramApp
             }
 
             CommitGram();
-        }
-    }
-
-    private void LoadCropStage(int index)
-    {
-        composeStage = ComposeStage.Crop;
-        LoadCrop(Math.Clamp(index, 0, composeSelected.Count - 1));
-    }
-
-    private void DrawCaptionStrip(Rect strip, float scale)
-    {
-        var count = composeSelected.Count;
-        var gap = 6f * scale;
-        var side = MathF.Min(strip.Height, (strip.Width - gap * (count - 1)) / count);
-        var span = side * count + gap * (count - 1);
-        var startX = strip.Center.X - span * 0.5f;
-        for (var index = 0; index < count; index++)
-        {
-            var min = new Vector2(startX + index * (side + gap), strip.Min.Y);
-            var max = min + new Vector2(side, side);
-            DrawLocalThumbnail(composeSelected[index], min, max, scale);
-            var drawList = ImGui.GetWindowDrawList();
-            if (index == composePreviewIndex)
-            {
-                drawList.AddRect(min, max, ImGui.GetColorU32(Accent), 8f * scale, ImDrawFlags.RoundCornersAll,
-                    2f * scale);
-            }
-            else
-            {
-                drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)), 8f * scale);
-            }
-
-            if (UiInteract.HoverClick(min, max))
-            {
-                composePreviewIndex = index;
-            }
         }
     }
 
@@ -632,23 +347,19 @@ internal sealed partial class AethergramApp
             return;
         }
 
-        var aspect = ComposeAspect;
         var rounding = 18f * scale;
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, new Vector2(preview.Min.X - 2f * scale, preview.Min.Y + 4f * scale),
             new Vector2(preview.Max.X + 2f * scale, preview.Max.Y + 8f * scale), rounding + 2f * scale,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.32f)));
-        var index = Math.Clamp(composePreviewIndex, 0, Math.Max(0, composeSelected.Count - 1));
-        var texture = Plugin.WallpaperImages.Get(index < composeSelected.Count ? composeSelected[index] : string.Empty);
-        if (texture is null)
+        var index = composeSession.ClampedPreviewIndex;
+        if (!composeSession.TryGetPreviewUv(ComposeAspect, out var texture, out var uv0, out var uv1))
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
             Typography.DrawCentered(preview.Center, Loc.T(L.Common.Loading), AppPalettes.Aethergram.MutedInk);
             return;
         }
 
-        var crop = composeCrops[index].Clamped(texture.Size, aspect);
-        var (uv0, uv1) = crop.ComputeUv(texture.Size, aspect);
         drawList.AddImageRounded(texture.Handle, preview.Min, preview.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
         Material.EdgeSquircle(drawList, preview.Min, preview.Max, rounding, scale);
@@ -664,7 +375,7 @@ internal sealed partial class AethergramApp
 
         if (!composeTagMode || composeStoryMode)
         {
-            LoadCropStage(index);
+            composeSession.LoadCropStage(index);
             return;
         }
 
@@ -768,42 +479,37 @@ internal sealed partial class AethergramApp
 
     private void CommitGram()
     {
-        if (composeSelected.Count == 0 || store.Posting)
+        if (!composeSession.HasSelection || store.Posting)
         {
             return;
         }
 
         composeStatus = string.Empty;
-        store.CreateGram(composeSelected.ToArray(), composeCrops.ToArray(), caption, ComposeTagInputs(),
+        store.CreateGram(composeSession.SelectedArray(), composeSession.CropsArray(), caption, ComposeTagInputs(),
             ok => composeOutcome = ok ? 1 : 2);
     }
 
     private void CommitStory()
     {
-        if (ComposeCurrentPath.Length == 0 || stories.Posting)
+        if (composeSession.CurrentPath.Length == 0 || stories.Posting)
         {
             return;
         }
 
         composeStatus = string.Empty;
-        var crop = composeCrops.Count > 0 ? composeCrops[0] : new WallpaperCrop(targetZoom, targetCenterX, targetCenterY);
-        stories.CreateStory(composeSelected[0], crop, caption, ok => composeOutcome = ok ? 1 : 2);
+        var crop = composeSession.CropCount > 0 ? composeSession.CropAt(0) : composeSession.CurrentTargetCrop;
+        stories.CreateStory(composeSession.FirstSelected, crop, caption, ok => composeOutcome = ok ? 1 : 2);
     }
 
     private void CommitAvatar()
     {
-        if (ComposeCurrentPath.Length == 0 || store.Posting)
+        if (composeSession.CurrentPath.Length == 0 || store.Posting)
         {
             return;
         }
 
         composeStatus = string.Empty;
-        var crop = new WallpaperCrop(targetZoom, targetCenterX, targetCenterY);
-        store.UpdateAvatar(ComposeCurrentPath, crop, ok => composeOutcome = ok ? 1 : 2);
-    }
-
-    private void LaunchFileDialog()
-    {
-        NativeFileDialog.PickImage(Loc.T(L.Aethergram.NewPost), path => Interlocked.Exchange(ref pendingPickedPath, path));
+        store.UpdateAvatar(composeSession.CurrentPath, composeSession.CurrentTargetCrop,
+            ok => composeOutcome = ok ? 1 : 2);
     }
 }
