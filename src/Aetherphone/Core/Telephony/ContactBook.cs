@@ -1,5 +1,6 @@
 using System.Text;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Telephony;
@@ -17,7 +18,7 @@ internal sealed class ContactBook : IDisposable
 {
     private const long RefreshIntervalMs = 30_000;
 
-    private readonly AethernetClient client;
+    private readonly ContactsClient client;
     private readonly AethernetSession session;
     private readonly CancellationTokenSource cancellation = new();
     private readonly object gate = new();
@@ -27,7 +28,7 @@ internal sealed class ContactBook : IDisposable
     private volatile bool loading;
     private long lastRefreshTicks;
 
-    public ContactBook(AethernetClient client, AethernetSession session)
+    public ContactBook(ContactsClient client, AethernetSession session)
     {
         this.client = client;
         this.session = session;
@@ -62,7 +63,7 @@ internal sealed class ContactBook : IDisposable
         {
             try
             {
-                var list = await client.ContactsAsync(token).ConfigureAwait(false);
+                var list = await client.ListAsync(token).ConfigureAwait(false);
                 if (list is not null)
                 {
                     contacts = list.Contacts;
@@ -95,7 +96,7 @@ internal sealed class ContactBook : IDisposable
             ContactDto? added = null;
             try
             {
-                added = await client.AddContactAsync(number, alias, token, code => status = code).ConfigureAwait(false);
+                added = await client.AddAsync(number, alias, token, code => status = code).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
@@ -127,7 +128,7 @@ internal sealed class ContactBook : IDisposable
             var ok = false;
             try
             {
-                ok = await client.RemoveContactAsync(userId, token).ConfigureAwait(false);
+                ok = await client.RemoveAsync(userId, token).ConfigureAwait(false);
             }
             catch (Exception exception)
             {

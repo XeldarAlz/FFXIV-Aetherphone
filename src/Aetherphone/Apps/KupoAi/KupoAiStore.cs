@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Apps.KupoAi;
@@ -10,7 +11,7 @@ internal sealed class KupoAiStore : IDisposable
     private const int TitleMaxChars = 60;
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AssistantClient client;
     private readonly KupoAiArchive archive;
     private readonly StoreWork work = new StoreWork("KupoAI");
     private readonly object gate = new();
@@ -24,7 +25,7 @@ internal sealed class KupoAiStore : IDisposable
     private volatile int dailyLimit;
     private int version;
 
-    public KupoAiStore(AethernetSession session, AethernetClient client, KupoAiArchive archive)
+    public KupoAiStore(AethernetSession session, AssistantClient client, KupoAiArchive archive)
     {
         this.session = session;
         this.client = client;
@@ -78,7 +79,7 @@ internal sealed class KupoAiStore : IDisposable
 
         work.Run("status", async token =>
         {
-            var status = await client.AssistantStatusAsync(token).ConfigureAwait(false);
+            var status = await client.StatusAsync(token).ConfigureAwait(false);
             if (status is null)
             {
                 return;
@@ -175,7 +176,7 @@ internal sealed class KupoAiStore : IDisposable
         work.Run("ask", async token =>
         {
             var response = await client
-                .AssistantAskAsync(new AssistantAskRequest(trimmed, history, conversation.Id), token, status => capturedStatus = status)
+                .AskAsync(new AssistantAskRequest(trimmed, history, conversation.Id), token, status => capturedStatus = status)
                 .ConfigureAwait(false);
             CompleteAsk(conversation, response, capturedStatus);
         }, () => asking = false);

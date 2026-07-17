@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
@@ -57,15 +58,16 @@ internal sealed partial class VelvetShell : IPhoneApp
     private VelvetPage activeTab = VelvetPage.Discover;
     private float sinceHeartbeat = HeartbeatSeconds;
 
-    public VelvetShell(AethernetSession session, AethernetClient client, LodestoneService lodestone,
+    public VelvetShell(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
         SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
         PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
     {
-        store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys, visibility, realtimeSignals);
+        store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
+            keyVault, conversationKeys, visibility, realtimeSignals);
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
-        stories = new StoryPresenter(session, client, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
+        stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
             new StoryConfirmLabels(L.Velvet.DeleteConfirm, L.Velvet.DeleteCancel, L.Velvet.Saving), "Velvet stories",
             StartStoryCompose);
         this.launcher = launcher;

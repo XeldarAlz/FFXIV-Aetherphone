@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Crypto;
@@ -27,7 +28,10 @@ internal sealed class VelvetStore : IDisposable
     private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly VelvetClient client;
+    private readonly AccountClient account;
+    private readonly SafetyClient safety;
+    private readonly MediaClient media;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly KeyVault vault;
@@ -107,11 +111,15 @@ internal sealed class VelvetStore : IDisposable
     private volatile bool loadingBlocked;
     private volatile bool blockedLoaded;
 
-    public VelvetStore(AethernetSession session, AethernetClient client, NotificationService notifications,
-        Configuration configuration, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals)
+    public VelvetStore(AethernetSession session, VelvetClient client, AccountClient account, SafetyClient safety,
+        MediaClient media, NotificationService notifications, Configuration configuration, KeyVault vault,
+        ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals)
     {
         this.session = session;
         this.client = client;
+        this.account = account;
+        this.safety = safety;
+        this.media = media;
         this.notifications = notifications;
         this.configuration = configuration;
         this.vault = vault;
@@ -157,7 +165,7 @@ internal sealed class VelvetStore : IDisposable
         });
     }
 
-    public MentionSuggestions NewMentionSuggestions() => new(client, work);
+    public MentionSuggestions NewMentionSuggestions() => new(account, work);
 
     private string MyUserId => session.CurrentUser?.Id ?? string.Empty;
 
@@ -260,7 +268,7 @@ internal sealed class VelvetStore : IDisposable
         work.Run("inbox poll", async token =>
         {
             await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
-            var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
+            var page = await client.ThreadsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
                 var decorated = DecorateThreads(page.Items);
@@ -371,7 +379,7 @@ internal sealed class VelvetStore : IDisposable
         loadingMe = true;
         work.Run("profile load", async token =>
         {
-            var profile = await client.VelvetMeAsync(token).ConfigureAwait(false);
+            var profile = await client.MeAsync(token).ConfigureAwait(false);
             if (profile is not null)
             {
                 me = profile;
@@ -405,20 +413,20 @@ internal sealed class VelvetStore : IDisposable
         work.Run("avatar update", async token =>
         {
             var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarSize);
-            var upload = await client.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
                 return false;
             }
 
-            var updated = await client
+            var updated = await account
                 .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
                 .ConfigureAwait(false);
             if (updated is null)
@@ -442,7 +450,7 @@ internal sealed class VelvetStore : IDisposable
         {
             var request = new UpdateProfileRequest(displayName.Length > 0 ? displayName : null,
                 handle.Length > 0 ? handle : null, null);
-            var updated = await client.UpdateProfileAsync(request, token).ConfigureAwait(false);
+            var updated = await account.UpdateProfileAsync(request, token).ConfigureAwait(false);
             if (updated is null)
             {
                 return false;
@@ -462,7 +470,7 @@ internal sealed class VelvetStore : IDisposable
     {
         work.Run("profile update", async token =>
         {
-            var updated = await client.UpdateVelvetProfileAsync(request, token).ConfigureAwait(false);
+            var updated = await client.UpdateProfileAsync(request, token).ConfigureAwait(false);
             if (updated is null)
             {
                 return false;
@@ -483,7 +491,7 @@ internal sealed class VelvetStore : IDisposable
         loadingDiscover = true;
         work.Run("discover", async token =>
         {
-            var page = await client.VelvetDiscoverAsync(lookingFor, tags, null, token).ConfigureAwait(false);
+            var page = await client.DiscoverAsync(lookingFor, tags, null, token).ConfigureAwait(false);
             if (page is not null)
             {
                 discoverResults = page.Users;
@@ -505,7 +513,7 @@ internal sealed class VelvetStore : IDisposable
         loadingConnections = true;
         work.Run("connections", async token =>
         {
-            var page = await client.VelvetConnectionsAsync(null, token).ConfigureAwait(false);
+            var page = await client.ConnectionsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
                 connections = page.Items;
@@ -525,7 +533,7 @@ internal sealed class VelvetStore : IDisposable
         }
 
         var offset = SocialTimeZone.EffectiveOffsetMinutes(configuration);
-        work.Run("heartbeat", async token => await client.VelvetHeartbeatAsync(offset, token).ConfigureAwait(false));
+        work.Run("heartbeat", async token => await client.HeartbeatAsync(offset, token).ConfigureAwait(false));
     }
 
     public void RefreshRequests()
@@ -538,7 +546,7 @@ internal sealed class VelvetStore : IDisposable
         loadingRequests = true;
         work.Run("requests", async token =>
         {
-            var page = await client.VelvetRequestsAsync(token).ConfigureAwait(false);
+            var page = await client.RequestsAsync(token).ConfigureAwait(false);
             if (page is not null)
             {
                 requests = page.Items;
@@ -560,7 +568,7 @@ internal sealed class VelvetStore : IDisposable
         loadingSentRequests = true;
         work.Run("sent requests", async token =>
         {
-            var page = await client.VelvetSentRequestsAsync(token).ConfigureAwait(false);
+            var page = await client.SentRequestsAsync(token).ConfigureAwait(false);
             if (page is not null)
             {
                 sentRequests = page.Items;
@@ -577,7 +585,7 @@ internal sealed class VelvetStore : IDisposable
         requests = RemoveConnection(requests, userId);
         connectionsLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.Connected);
-        work.Run("accept", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
+        work.Run("accept", async token => await client.ConnectAsync(userId, string.Empty, token).ConfigureAwait(false));
     }
 
     public void DeclineRequest(string userId)
@@ -605,7 +613,7 @@ internal sealed class VelvetStore : IDisposable
         loadingFeed = true;
         work.Run("feed", async token =>
         {
-            var page = await client.VelvetFeedAsync(null, token).ConfigureAwait(false);
+            var page = await client.FeedAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
                 ApplyFeedRefresh(page);
@@ -633,7 +641,7 @@ internal sealed class VelvetStore : IDisposable
         loadingMoreFeed = true;
         work.Run("feed more", async token =>
         {
-            var page = await client.VelvetFeedAsync(cursor, token).ConfigureAwait(false);
+            var page = await client.FeedAsync(cursor, token).ConfigureAwait(false);
             if (page is not null)
             {
                 lock (feedLock)
@@ -716,7 +724,7 @@ internal sealed class VelvetStore : IDisposable
         profileLoading = true;
         work.Run("profile open", async token =>
         {
-            var user = await client.VelvetUserAsync(userId, token).ConfigureAwait(false);
+            var user = await client.UserAsync(userId, token).ConfigureAwait(false);
             if (profileUserId != userId)
             {
                 return;
@@ -743,7 +751,7 @@ internal sealed class VelvetStore : IDisposable
     {
         sentRequestsLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
-        work.Run("connect", async token => await client.ConnectAsync(userId, token).ConfigureAwait(false));
+        work.Run("connect", async token => await client.ConnectAsync(userId, string.Empty, token).ConfigureAwait(false));
     }
 
     public void Connect(string userId, string intro)
@@ -763,14 +771,14 @@ internal sealed class VelvetStore : IDisposable
     {
         blockedLoaded = false;
         ForgetConnection(userId, VelvetConnectionState.Blocked);
-        work.Run("block", async token => await client.BlockAsync(userId, token).ConfigureAwait(false), onComplete);
+        work.Run("block", async token => await safety.BlockAsync(userId, token).ConfigureAwait(false), onComplete);
     }
 
     public void Unblock(string userId)
     {
         blocked = CopyOnWrite.RemoveById(blocked, userId);
         SetConnectionStateEverywhere(userId, VelvetConnectionState.None);
-        work.Run("unblock", async token => await client.UnblockAsync(userId, token).ConfigureAwait(false));
+        work.Run("unblock", async token => await safety.UnblockAsync(userId, token).ConfigureAwait(false));
     }
 
     public void RefreshBlocked()
@@ -783,7 +791,7 @@ internal sealed class VelvetStore : IDisposable
         loadingBlocked = true;
         work.Run("blocked", async token =>
         {
-            var page = await client.BlockedUsersAsync(token).ConfigureAwait(false);
+            var page = await safety.BlockedUsersAsync(token).ConfigureAwait(false);
             if (page is not null)
             {
                 blocked = page.Users;
@@ -806,7 +814,7 @@ internal sealed class VelvetStore : IDisposable
         work.Run("threads", async token =>
         {
             await EnsureVelvetHydratedAsync(token).ConfigureAwait(false);
-            var page = await client.VelvetThreadsAsync(null, token).ConfigureAwait(false);
+            var page = await client.ThreadsAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
                 threads = DecorateThreads(page.Items);
@@ -842,7 +850,7 @@ internal sealed class VelvetStore : IDisposable
                 currentKeyStatus = status;
             }
 
-            var page = await client.VelvetMessagesAsync(id, null, token).ConfigureAwait(false);
+            var page = await client.MessagesAsync(id, null, token).ConfigureAwait(false);
             if (threadId == id && page is not null)
             {
                 messages = DecorateMessages(id, page.Items);
@@ -869,7 +877,7 @@ internal sealed class VelvetStore : IDisposable
         refreshingThread = true;
         work.Run("thread refresh", async token =>
         {
-            var page = await client.VelvetMessagesAsync(current, null, token).ConfigureAwait(false);
+            var page = await client.MessagesAsync(current, null, token).ConfigureAwait(false);
             NotePollResult(page is not null);
             if (threadId == current && page is not null)
             {
@@ -914,7 +922,7 @@ internal sealed class VelvetStore : IDisposable
         loadingOlder = true;
         work.Run("thread older", async token =>
         {
-            var page = await client.VelvetMessagesAsync(current, cursor, token).ConfigureAwait(false);
+            var page = await client.MessagesAsync(current, cursor, token).ConfigureAwait(false);
             if (threadId == current && page is not null)
             {
                 var decorated = DecorateMessages(current, page.Items);
@@ -973,7 +981,7 @@ internal sealed class VelvetStore : IDisposable
 
     public void SendTyping(string id)
     {
-        work.Run("typing", async token => await client.SendVelvetTypingAsync(id, token).ConfigureAwait(false));
+        work.Run("typing", async token => await client.SendTypingAsync(id, token).ConfigureAwait(false));
     }
 
     public void RefreshTyping(string id)
@@ -986,7 +994,7 @@ internal sealed class VelvetStore : IDisposable
         refreshingTyping = true;
         work.Run("typing state", async token =>
         {
-            var result = await client.VelvetTypingAsync(id, token).ConfigureAwait(false);
+            var result = await client.TypingAsync(id, token).ConfigureAwait(false);
             NotePollResult(result is not null);
             if (threadId == id && result is not null)
             {
@@ -1012,7 +1020,7 @@ internal sealed class VelvetStore : IDisposable
             if (EncryptingCurrent && threadId == id
                 && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
             {
-                sent = await client.SendVelvetMessageAsync(id, encoded.Envelope, 0, null, token,
+                sent = await client.SendMessageAsync(id, encoded.Envelope, 0, null, token,
                     encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
                     replyToId: replyToId)
                     .ConfigureAwait(false);
@@ -1024,7 +1032,7 @@ internal sealed class VelvetStore : IDisposable
             }
             else
             {
-                sent = await client.SendVelvetMessageAsync(id, trimmed, 0, null, token, replyToId: replyToId)
+                sent = await client.SendMessageAsync(id, trimmed, 0, null, token, replyToId: replyToId)
                     .ConfigureAwait(false);
             }
 
@@ -1063,13 +1071,13 @@ internal sealed class VelvetStore : IDisposable
         work.Run("send image", async token =>
         {
             var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
-            var upload = await client.UploadUrlAsync("image/jpeg", "velvet-dm", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("image/jpeg", "velvet-dm", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
@@ -1077,7 +1085,7 @@ internal sealed class VelvetStore : IDisposable
             }
 
             var sent = await client
-                .SendVelvetMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height)
+                .SendMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height)
                 .ConfigureAwait(false);
             if (sent is null)
             {
@@ -1105,20 +1113,20 @@ internal sealed class VelvetStore : IDisposable
         sending = true;
         work.Run("send voice", async token =>
         {
-            var upload = await client.UploadUrlAsync("audio/wav", "velvet-voice", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("audio/wav", "velvet-voice", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, wavBytes, "audio/wav", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, wavBytes, "audio/wav", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
                 return false;
             }
 
-            var sent = await client.SendVelvetMessageAsync(id, string.Empty, 3, null, token, upload.Key,
+            var sent = await client.SendMessageAsync(id, string.Empty, 3, null, token, upload.Key,
                 durationSecs: durationSecs).ConfigureAwait(false);
             if (sent is null)
             {
@@ -1140,7 +1148,7 @@ internal sealed class VelvetStore : IDisposable
     {
         messages = ApplyLocalReaction(messages, messageId, reactionToken);
         work.Run("react", async token =>
-            await client.SetVelvetReactionAsync(messageId, reactionToken, token).ConfigureAwait(false));
+            await client.SetReactionAsync(messageId, reactionToken, token).ConfigureAwait(false));
     }
 
     public string MyReactionTo(string messageId)
@@ -1223,7 +1231,7 @@ internal sealed class VelvetStore : IDisposable
     {
         work.Run("reaction list", async token =>
         {
-            var result = await client.VelvetReactionsAsync(messageId, token).ConfigureAwait(false);
+            var result = await client.ReactionsAsync(messageId, token).ConfigureAwait(false);
             onResult(result?.Items);
         });
     }
@@ -1244,7 +1252,7 @@ internal sealed class VelvetStore : IDisposable
             if (EncryptingCurrent && threadId == id
                 && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
             {
-                edited = await client.EditVelvetMessageAsync(messageId, encoded.Envelope, token,
+                edited = await client.EditMessageAsync(messageId, encoded.Envelope, token,
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
                 if (edited is not null)
                 {
@@ -1254,7 +1262,7 @@ internal sealed class VelvetStore : IDisposable
             }
             else
             {
-                edited = await client.EditVelvetMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
+                edited = await client.EditMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
                 if (edited is not null)
                 {
                     cipher.Forget(messageId);
@@ -1305,7 +1313,7 @@ internal sealed class VelvetStore : IDisposable
     {
         work.Run("delete message", async token =>
         {
-            var ok = await client.DeleteVelvetMessageAsync(messageId, token).ConfigureAwait(false);
+            var ok = await client.DeleteMessageAsync(messageId, token).ConfigureAwait(false);
             if (!ok)
             {
                 return false;
@@ -1356,7 +1364,7 @@ internal sealed class VelvetStore : IDisposable
 
         work.Run("dm media url", async token =>
         {
-            var result = await client.VelvetDmMediaUrlAsync(messageId, token).ConfigureAwait(false);
+            var result = await client.DmMediaUrlAsync(messageId, token).ConfigureAwait(false);
             if (result is not null)
             {
                 dmMediaUrls[messageId] = result.Url;
@@ -1380,13 +1388,13 @@ internal sealed class VelvetStore : IDisposable
             for (var index = 0; index < sourcePaths.Length; index++)
             {
                 var baked = ImageProcessor.BakeSquareJpeg(sourcePaths[index], crops[index], PostSize);
-                var upload = await client.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
+                var upload = await media.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
                 if (upload is null)
                 {
                     return false;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                     .ConfigureAwait(false);
                 if (!uploaded)
                 {
@@ -1398,7 +1406,7 @@ internal sealed class VelvetStore : IDisposable
 
             var request =
                 new CreateVelvetPostRequest(keys[0], PostSize, PostSize, caption, tags, keys);
-            var created = await client.CreateVelvetPostAsync(request, token).ConfigureAwait(false);
+            var created = await client.CreatePostAsync(request, token).ConfigureAwait(false);
             if (created is null)
             {
                 return false;
@@ -1424,7 +1432,7 @@ internal sealed class VelvetStore : IDisposable
         fetchedPost = null;
         work.Run("post by id", async token =>
         {
-            var post = await client.VelvetPostAsync(postId, token).ConfigureAwait(false);
+            var post = await client.PostAsync(postId, token).ConfigureAwait(false);
             if (fetchingPostId == postId && post is not null)
             {
                 fetchedPost = post;
@@ -1445,7 +1453,7 @@ internal sealed class VelvetStore : IDisposable
         likersLoading = true;
         work.Run("likers", async token =>
         {
-            var page = await client.VelvetPostLikersAsync(postId, null, token).ConfigureAwait(false);
+            var page = await client.PostLikersAsync(postId, null, token).ConfigureAwait(false);
             if (likersPostId != postId)
             {
                 return;
@@ -1475,7 +1483,7 @@ internal sealed class VelvetStore : IDisposable
         loadingComments = true;
         work.Run("comments", async token =>
         {
-            var page = await client.VelvetCommentsAsync(postId, token).ConfigureAwait(false);
+            var page = await client.CommentsAsync(postId, token).ConfigureAwait(false);
             if (detailPostId == postId && page is not null)
             {
                 detailComments = page.Items;
@@ -1500,7 +1508,7 @@ internal sealed class VelvetStore : IDisposable
         commenting = true;
         work.Run("comment", async token =>
         {
-            var created = await client.AddVelvetCommentAsync(postId, trimmed, token).ConfigureAwait(false);
+            var created = await client.AddCommentAsync(postId, trimmed, token).ConfigureAwait(false);
             if (created is null)
             {
                 return false;
@@ -1525,8 +1533,8 @@ internal sealed class VelvetStore : IDisposable
         work.Run("comment like", async token =>
         {
             var updated = liked
-                ? await client.LikeVelvetCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false)
-                : await client.UnlikeVelvetCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false);
+                ? await client.LikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false)
+                : await client.UnlikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false);
             if (updated is not null && detailPostId == comment.PostId)
             {
                 detailComments = CopyOnWrite.Replace(detailComments, updated);
@@ -1538,7 +1546,7 @@ internal sealed class VelvetStore : IDisposable
     {
         RemovePost(postId);
         work.Run("delete post",
-            async token => await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false));
+            async token => await client.DeletePostAsync(postId, token).ConfigureAwait(false));
     }
 
     public void ToggleReaction(VelvetPostDto post, int kind)
@@ -1552,8 +1560,8 @@ internal sealed class VelvetStore : IDisposable
         work.Run("reaction", async token =>
         {
             var result = target < 0
-                ? await client.VelvetRemoveReactionAsync(post.Id, token).ConfigureAwait(false)
-                : await client.VelvetReactAsync(post.Id, target, token).ConfigureAwait(false);
+                ? await client.RemoveReactionAsync(post.Id, token).ConfigureAwait(false)
+                : await client.ReactAsync(post.Id, target, token).ConfigureAwait(false);
             if (result is not null)
             {
                 feed = CopyOnWrite.Replace(feed, result);
@@ -1568,7 +1576,7 @@ internal sealed class VelvetStore : IDisposable
     public void Report(string targetType, string targetId, string? reason, Action<bool> onComplete)
     {
         work.Run("report",
-            async token => await client.ReportAsync(targetType, targetId, reason, token).ConfigureAwait(false),
+            async token => await safety.ReportAsync(targetType, targetId, reason, token).ConfigureAwait(false),
             onComplete);
     }
 
@@ -1600,7 +1608,7 @@ internal sealed class VelvetStore : IDisposable
 
         var revealed = reveals.Count > 0 && reveals[0].MessageId == messageId ? reveals.ToArray() : null;
         work.Run("report message", async token =>
-            await client.ReportAsync("velvet_message", messageId, reason, token, revealed).ConfigureAwait(false),
+            await safety.ReportAsync("velvet_message", messageId, reason, token, revealed).ConfigureAwait(false),
             onComplete);
     }
 
@@ -1623,7 +1631,7 @@ internal sealed class VelvetStore : IDisposable
     {
         work.Run("delete post", async token =>
         {
-            var succeeded = await client.DeleteVelvetPostAsync(postId, token).ConfigureAwait(false);
+            var succeeded = await client.DeletePostAsync(postId, token).ConfigureAwait(false);
             if (succeeded)
             {
                 RemovePost(postId);
@@ -1641,14 +1649,14 @@ internal sealed class VelvetStore : IDisposable
         }
 
         work.Run("comment delete",
-            async token => await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false));
+            async token => await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false));
     }
 
     public void DeleteComment(string postId, string commentId, Action<bool> onComplete)
     {
         work.Run("comment delete", async token =>
         {
-            var succeeded = await client.DeleteVelvetCommentAsync(postId, commentId, token).ConfigureAwait(false);
+            var succeeded = await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false);
             if (succeeded && detailPostId == postId)
             {
                 detailComments = CopyOnWrite.RemoveById(detailComments, commentId);

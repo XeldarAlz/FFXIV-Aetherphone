@@ -82,11 +82,11 @@ internal sealed partial class ChirperApp : IPhoneApp
     private volatile bool editBusy;
     private volatile int editOutcome;
 
-    public ChirperApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
+    public ChirperApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
         Configuration configuration, SocialNotificationService social)
     {
-        store = new ChirperStore(session, client);
+        store = new ChirperStore(session, net.Account, net.Social, net.Safety, net.Media);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         this.launcher = launcher;

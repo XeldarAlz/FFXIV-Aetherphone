@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Media;
 using Dalamud.Plugin.Services;
@@ -16,7 +17,9 @@ internal sealed class DevStore : IDisposable
     private static readonly TimeSpan BackgroundChatInterval = TimeSpan.FromSeconds(30);
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly DevClient client;
+    private readonly AccountClient account;
+    private readonly MediaClient media;
     private readonly Configuration configuration;
     private readonly StoreWork work = new StoreWork("Dev");
     private readonly object messagesLock = new();
@@ -43,10 +46,12 @@ internal sealed class DevStore : IDisposable
     private DateTime lastProbeUtc = DateTime.MinValue;
     private DateTime lastBackgroundChatUtc = DateTime.MinValue;
 
-    public DevStore(AethernetSession session, AethernetClient client, Configuration configuration)
+    public DevStore(AethernetSession session, DevClient client, AccountClient account, MediaClient media, Configuration configuration)
     {
         this.session = session;
         this.client = client;
+        this.account = account;
+        this.media = media;
         this.configuration = configuration;
         session.Changed += OnSessionChanged;
         Plugin.Framework.Update += OnFrameworkTick;
@@ -135,7 +140,7 @@ internal sealed class DevStore : IDisposable
         }
 
         lastBackgroundChatUtc = now;
-        client.EnsureCurrentUser();
+        account.EnsureCurrentUser();
         PollChat();
     }
 
@@ -149,7 +154,7 @@ internal sealed class DevStore : IDisposable
         probing = true;
         work.Run("access probe", async token =>
         {
-            var granted = await client.DevAccessAsync(token).ConfigureAwait(false);
+            var granted = await client.AccessAsync(token).ConfigureAwait(false);
             if (granted is { } value)
             {
                 accessSettled = true;
@@ -181,7 +186,7 @@ internal sealed class DevStore : IDisposable
         loadingBoard = true;
         work.Run("board load", async token =>
         {
-            var board = await client.DevBoardCardsAsync(token, OnDevStatus).ConfigureAwait(false);
+            var board = await client.BoardCardsAsync(token, OnDevStatus).ConfigureAwait(false);
             if (board is not null)
             {
                 IngestBoard(board.Items);
@@ -200,7 +205,7 @@ internal sealed class DevStore : IDisposable
         loadingChat = true;
         work.Run("chat load", async token =>
         {
-            var page = await client.DevChatMessagesAsync(0, null, token, OnDevStatus).ConfigureAwait(false);
+            var page = await client.ChatMessagesAsync(0, null, token, OnDevStatus).ConfigureAwait(false);
             if (page is not null)
             {
                 messages = page.Items;
@@ -228,7 +233,7 @@ internal sealed class DevStore : IDisposable
         loadingOlder = true;
         work.Run("chat older", async token =>
         {
-            var page = await client.DevChatMessagesAsync(0, cursor, token, OnDevStatus).ConfigureAwait(false);
+            var page = await client.ChatMessagesAsync(0, cursor, token, OnDevStatus).ConfigureAwait(false);
             if (page is not null)
             {
                 MergeMessages(page.Items);
@@ -255,7 +260,7 @@ internal sealed class DevStore : IDisposable
                 after = snapshot[^1].CreatedAtUnix;
             }
 
-            var page = await client.DevChatMessagesAsync(after, null, token, OnDevStatus).ConfigureAwait(false);
+            var page = await client.ChatMessagesAsync(after, null, token, OnDevStatus).ConfigureAwait(false);
             if (page is not null)
             {
                 MergeMessages(page.Items);
@@ -291,7 +296,7 @@ internal sealed class DevStore : IDisposable
         cardBusy = true;
         RunCardOp("card create", onComplete, async token =>
         {
-            var created = await client.CreateDevCardAsync(title, body, token).ConfigureAwait(false);
+            var created = await client.CreateCardAsync(title, body, token).ConfigureAwait(false);
             if (created is not null)
             {
                 ApplyCard(created);
@@ -311,7 +316,7 @@ internal sealed class DevStore : IDisposable
         cardBusy = true;
         RunCardOp("card update", onComplete, async token =>
         {
-            var updated = await client.UpdateDevCardAsync(cardId, title, body, token).ConfigureAwait(false);
+            var updated = await client.UpdateCardAsync(cardId, title, body, token).ConfigureAwait(false);
             if (updated is not null)
             {
                 ApplyCard(updated);
@@ -331,7 +336,7 @@ internal sealed class DevStore : IDisposable
         cardBusy = true;
         RunCardOp("card move", null, async token =>
         {
-            var moved = await client.MoveDevCardAsync(cardId, status, beforeId, token).ConfigureAwait(false);
+            var moved = await client.MoveCardAsync(cardId, status, beforeId, token).ConfigureAwait(false);
             if (moved is not null)
             {
                 ApplyCard(moved);
@@ -351,7 +356,7 @@ internal sealed class DevStore : IDisposable
         cardBusy = true;
         RunCardOp("card delete", onComplete, async token =>
         {
-            var deleted = await client.DeleteDevCardAsync(cardId, token).ConfigureAwait(false);
+            var deleted = await client.DeleteCardAsync(cardId, token).ConfigureAwait(false);
             if (deleted)
             {
                 RemoveCard(cardId);
@@ -372,7 +377,7 @@ internal sealed class DevStore : IDisposable
         sending = true;
         work.Run("send", async token =>
         {
-            var sent = await client.SendDevChatMessageAsync(trimmed, null, 0, 0, token).ConfigureAwait(false);
+            var sent = await client.SendChatMessageAsync(trimmed, null, 0, 0, token).ConfigureAwait(false);
             if (sent is not null)
             {
                 MergeMessages(new[] { sent });
@@ -393,14 +398,14 @@ internal sealed class DevStore : IDisposable
         work.Run("send image", async token =>
         {
             var baked = ImageProcessor.BakeJpeg(sourcePath, ImageMaxDimension);
-            var upload = await client.UploadUrlAsync("image/jpeg", "dev", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("image/jpeg", "dev", token).ConfigureAwait(false);
             if (upload is null)
             {
                 onComplete(false);
                 return;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
@@ -409,7 +414,7 @@ internal sealed class DevStore : IDisposable
             }
 
             var sent = await client
-                .SendDevChatMessageAsync(string.Empty, upload.Key, baked.Width, baked.Height, token)
+                .SendChatMessageAsync(string.Empty, upload.Key, baked.Width, baked.Height, token)
                 .ConfigureAwait(false);
             if (sent is not null)
             {
@@ -424,7 +429,7 @@ internal sealed class DevStore : IDisposable
     {
         work.Run("message delete", async token =>
         {
-            var deleted = await client.DeleteDevChatMessageAsync(messageId, token).ConfigureAwait(false);
+            var deleted = await client.DeleteChatMessageAsync(messageId, token).ConfigureAwait(false);
             if (deleted)
             {
                 messages = CopyOnWrite.RemoveById(messages, messageId);
@@ -454,7 +459,7 @@ internal sealed class DevStore : IDisposable
 
         work.Run("media url", async token =>
         {
-            var result = await client.DevChatMediaUrlAsync(messageId, token).ConfigureAwait(false);
+            var result = await client.ChatMediaUrlAsync(messageId, token).ConfigureAwait(false);
             if (result is not null)
             {
                 mediaUrls[messageId] = result;

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Crypto;
@@ -22,7 +23,9 @@ internal sealed class DirectMessagesStore : IDisposable
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly ChatClient client;
+    private readonly SafetyClient safety;
+    private readonly MediaClient media;
     private readonly NotificationService notifications;
     private readonly KeyVault vault;
     private readonly ConversationKeyStore keys;
@@ -65,11 +68,14 @@ internal sealed class DirectMessagesStore : IDisposable
     private DateTime lastKeyStatusUtc = DateTime.MinValue;
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
 
-    public DirectMessagesStore(AethernetSession session, AethernetClient client, NotificationService notifications,
-        KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers, PhoneVisibility visibility, RealtimeSignalBus signals)
+    public DirectMessagesStore(AethernetSession session, ChatClient client, SafetyClient safety, MediaClient media,
+        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
+        PhoneVisibility visibility, RealtimeSignalBus signals)
     {
         this.session = session;
         this.client = client;
+        this.safety = safety;
+        this.media = media;
         this.notifications = notifications;
         this.vault = vault;
         this.keys = keys;
@@ -360,7 +366,7 @@ internal sealed class DirectMessagesStore : IDisposable
                 currentKeyStatus = status;
             }
 
-            var page = await client.ChatMessagesAsync(id, null, token).ConfigureAwait(false);
+            var page = await client.MessagesAsync(id, null, token).ConfigureAwait(false);
             if (conversationId == id && page is not null)
             {
                 messages = DecorateMessages(id, page.Items);
@@ -387,7 +393,7 @@ internal sealed class DirectMessagesStore : IDisposable
         refreshingThread = true;
         work.Run("thread refresh", async token =>
         {
-            var page = await client.ChatMessagesAsync(current, null, token).ConfigureAwait(false);
+            var page = await client.MessagesAsync(current, null, token).ConfigureAwait(false);
             NotePollResult(page is not null);
             if (conversationId == current && page is not null)
             {
@@ -432,7 +438,7 @@ internal sealed class DirectMessagesStore : IDisposable
         loadingOlder = true;
         work.Run("thread older", async token =>
         {
-            var page = await client.ChatMessagesAsync(current, cursor, token).ConfigureAwait(false);
+            var page = await client.MessagesAsync(current, cursor, token).ConfigureAwait(false);
             if (conversationId == current && page is not null)
             {
                 var decorated = DecorateMessages(current, page.Items);
@@ -510,7 +516,7 @@ internal sealed class DirectMessagesStore : IDisposable
 
     public void SendTyping(string id)
     {
-        work.Run("typing", async token => await client.SendChatTypingAsync(id, token).ConfigureAwait(false));
+        work.Run("typing", async token => await client.SendTypingAsync(id, token).ConfigureAwait(false));
     }
 
     public void RefreshTyping(string id)
@@ -523,7 +529,7 @@ internal sealed class DirectMessagesStore : IDisposable
         refreshingTyping = true;
         work.Run("typing state", async token =>
         {
-            var result = await client.ChatTypingAsync(id, token).ConfigureAwait(false);
+            var result = await client.TypingAsync(id, token).ConfigureAwait(false);
             NotePollResult(result is not null);
             if (conversationId == id && result is not null)
             {
@@ -549,7 +555,7 @@ internal sealed class DirectMessagesStore : IDisposable
             if (EncryptingCurrent && conversationId == id
                 && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
             {
-                sent = await client.SendChatMessageAsync(id, encoded.Envelope, 0, token,
+                sent = await client.SendMessageAsync(id, encoded.Envelope, 0, token,
                     encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
                     replyToId: replyToId)
                     .ConfigureAwait(false);
@@ -561,7 +567,7 @@ internal sealed class DirectMessagesStore : IDisposable
             }
             else
             {
-                sent = await client.SendChatMessageAsync(id, trimmed, 0, token, replyToId: replyToId)
+                sent = await client.SendMessageAsync(id, trimmed, 0, token, replyToId: replyToId)
                     .ConfigureAwait(false);
             }
 
@@ -600,13 +606,13 @@ internal sealed class DirectMessagesStore : IDisposable
         work.Run("send image", async token =>
         {
             var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
-            var upload = await client.UploadUrlAsync("image/jpeg", "chat-dm", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("image/jpeg", "chat-dm", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
@@ -614,7 +620,7 @@ internal sealed class DirectMessagesStore : IDisposable
             }
 
             var sent = await client
-                .SendChatMessageAsync(id, caption.Trim(), 1, token, upload.Key, baked.Width, baked.Height)
+                .SendMessageAsync(id, caption.Trim(), 1, token, upload.Key, baked.Width, baked.Height)
                 .ConfigureAwait(false);
             if (sent is null)
             {
@@ -642,20 +648,20 @@ internal sealed class DirectMessagesStore : IDisposable
         sending = true;
         work.Run("send voice", async token =>
         {
-            var upload = await client.UploadUrlAsync("audio/wav", "chat-voice", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("audio/wav", "chat-voice", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, wavBytes, "audio/wav", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, wavBytes, "audio/wav", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
                 return false;
             }
 
-            var sent = await client.SendChatMessageAsync(id, string.Empty, 3, token, upload.Key,
+            var sent = await client.SendMessageAsync(id, string.Empty, 3, token, upload.Key,
                 durationSecs: durationSecs).ConfigureAwait(false);
             if (sent is null)
             {
@@ -677,7 +683,7 @@ internal sealed class DirectMessagesStore : IDisposable
     {
         messages = ApplyLocalReaction(messages, messageId, reactionToken);
         work.Run("react", async token =>
-            await client.SetChatReactionAsync(messageId, reactionToken, token).ConfigureAwait(false));
+            await client.SetReactionAsync(messageId, reactionToken, token).ConfigureAwait(false));
     }
 
     public string MyReactionTo(string messageId)
@@ -771,7 +777,7 @@ internal sealed class DirectMessagesStore : IDisposable
             if (EncryptingCurrent && conversationId == id
                 && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
             {
-                edited = await client.EditChatMessageAsync(messageId, encoded.Envelope, token,
+                edited = await client.EditMessageAsync(messageId, encoded.Envelope, token,
                     EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
                 if (edited is not null)
                 {
@@ -781,7 +787,7 @@ internal sealed class DirectMessagesStore : IDisposable
             }
             else
             {
-                edited = await client.EditChatMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
+                edited = await client.EditMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
                 if (edited is not null)
                 {
                     cipher.Forget(messageId);
@@ -832,7 +838,7 @@ internal sealed class DirectMessagesStore : IDisposable
     {
         work.Run("reaction list", async token =>
         {
-            var result = await client.ChatReactionsAsync(messageId, token).ConfigureAwait(false);
+            var result = await client.ReactionsAsync(messageId, token).ConfigureAwait(false);
             onResult(result?.Items);
         });
     }
@@ -841,7 +847,7 @@ internal sealed class DirectMessagesStore : IDisposable
     {
         work.Run("delete message", async token =>
         {
-            var ok = await client.DeleteChatMessageAsync(messageId, token).ConfigureAwait(false);
+            var ok = await client.DeleteMessageAsync(messageId, token).ConfigureAwait(false);
             if (!ok)
             {
                 return false;
@@ -918,7 +924,7 @@ internal sealed class DirectMessagesStore : IDisposable
             ChatMessageDto? sent;
             if (source.Kind != 0)
             {
-                sent = await client.SendChatMessageAsync(targetId, source.Body ?? string.Empty, source.Kind, token,
+                sent = await client.SendMessageAsync(targetId, source.Body ?? string.Empty, source.Kind, token,
                     forwardOfId: source.Id).ConfigureAwait(false);
             }
             else
@@ -945,7 +951,7 @@ internal sealed class DirectMessagesStore : IDisposable
                 if (cipher.IsUnlocked && status.CanEncrypt
                     && cipher.TryEncrypt(scope, status.CurrentGeneration, plaintext, MyUserId, out var encoded))
                 {
-                    sent = await client.SendChatMessageAsync(targetId, encoded.Envelope, 0, token,
+                    sent = await client.SendMessageAsync(targetId, encoded.Envelope, 0, token,
                         encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
                         forwarded: true).ConfigureAwait(false);
                     if (sent is not null)
@@ -956,7 +962,7 @@ internal sealed class DirectMessagesStore : IDisposable
                 }
                 else
                 {
-                    sent = await client.SendChatMessageAsync(targetId, plaintext, 0, token, forwarded: true)
+                    sent = await client.SendMessageAsync(targetId, plaintext, 0, token, forwarded: true)
                         .ConfigureAwait(false);
                 }
             }
@@ -991,7 +997,7 @@ internal sealed class DirectMessagesStore : IDisposable
 
         work.Run("dm media url", async token =>
         {
-            var result = await client.ChatDmMediaUrlAsync(messageId, token).ConfigureAwait(false);
+            var result = await client.DmMediaUrlAsync(messageId, token).ConfigureAwait(false);
             if (result is not null)
             {
                 dmMediaUrls[messageId] = result.Url;
@@ -1037,7 +1043,7 @@ internal sealed class DirectMessagesStore : IDisposable
     {
         work.Run("add members", async token =>
         {
-            var detail = await client.AddChatMembersAsync(id, memberIds, token).ConfigureAwait(false);
+            var detail = await client.AddMembersAsync(id, memberIds, token).ConfigureAwait(false);
             if (detail is null)
             {
                 return false;
@@ -1064,7 +1070,7 @@ internal sealed class DirectMessagesStore : IDisposable
     {
         work.Run("remove member", async token =>
         {
-            var ok = await client.RemoveChatMemberAsync(id, userId, token).ConfigureAwait(false);
+            var ok = await client.RemoveMemberAsync(id, userId, token).ConfigureAwait(false);
             if (!ok)
             {
                 return false;
@@ -1147,7 +1153,7 @@ internal sealed class DirectMessagesStore : IDisposable
 
         var revealed = reveals.Count > 0 && reveals[0].MessageId == messageId ? reveals.ToArray() : null;
         work.Run("report message", async token =>
-            await client.ReportAsync("chat_message", messageId, reason, token, revealed).ConfigureAwait(false),
+            await safety.ReportAsync("chat_message", messageId, reason, token, revealed).ConfigureAwait(false),
             onComplete);
     }
 

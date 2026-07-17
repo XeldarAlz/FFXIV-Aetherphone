@@ -108,7 +108,7 @@ public sealed class Plugin : IDalamudPlugin
             shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
                 services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
                 services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
-                services.AethernetClient, services.GameData, services.RemoteImages, services.Lodestone);
+                services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone);
             phoneWindow = new PhoneWindow(shell);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
@@ -122,7 +122,7 @@ public sealed class Plugin : IDalamudPlugin
             calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
             clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
             reminders = new ReminderService(Cfg, Framework, services.Notifications);
-            services.AethernetClient.EnsureCurrentUser();
+            services.Aethernet.Account.EnsureCurrentUser();
             services.Calls.IncomingCallPresented += OnIncomingCall;
             services.Calls.Start();
             dtrEntry = DtrBar.Get(AepConstants.Name);

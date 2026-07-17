@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Dalamud.Plugin.Services;
 
@@ -10,7 +11,7 @@ internal sealed class PollsStore : IDisposable
     private static readonly TimeSpan BackgroundRefreshInterval = TimeSpan.FromMinutes(5);
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly PollsClient client;
     private readonly StoreWork work = new StoreWork("Polls");
 
     private volatile PollDto[] polls = Array.Empty<PollDto>();
@@ -18,7 +19,7 @@ internal sealed class PollsStore : IDisposable
     private volatile bool loadedOnce;
     private DateTime lastBackgroundRefreshUtc = DateTime.MinValue;
 
-    public PollsStore(AethernetSession session, AethernetClient client)
+    public PollsStore(AethernetSession session, PollsClient client)
     {
         this.session = session;
         this.client = client;
@@ -66,7 +67,7 @@ internal sealed class PollsStore : IDisposable
         loading = true;
         work.Run("polls refresh", async token =>
         {
-            var page = await client.PollsAsync(token).ConfigureAwait(false);
+            var page = await client.ListAsync(token).ConfigureAwait(false);
             if (page is not null)
             {
                 polls = page.Items;

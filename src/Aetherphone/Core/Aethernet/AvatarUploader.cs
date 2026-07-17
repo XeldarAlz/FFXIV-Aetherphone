@@ -1,3 +1,4 @@
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Wallpapers;
@@ -8,7 +9,7 @@ internal static class AvatarUploader
 {
     public const int Size = 512;
 
-    public static void Upload(AethernetClient client, AethernetSession session, string sourcePath,
+    public static void Upload(AccountClient account, MediaClient media, AethernetSession session, string sourcePath,
         WallpaperCrop crop, CancellationToken token, Action<bool> onComplete)
     {
         _ = Task.Run(async () =>
@@ -17,19 +18,19 @@ internal static class AvatarUploader
             try
             {
                 var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, Size);
-                var upload = await client.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
+                var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
                 if (upload is null)
                 {
                     return;
                 }
 
-                if (!await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                         .ConfigureAwait(false))
                 {
                     return;
                 }
 
-                var updated = await client
+                var updated = await account
                     .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
                     .ConfigureAwait(false);
                 if (updated is null)

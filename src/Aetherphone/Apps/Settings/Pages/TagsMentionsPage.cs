@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
@@ -14,7 +15,7 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
 {
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AccountClient client;
     private readonly ISettingsNavigator navigator;
     private readonly SocialAudiencePage audiencePage;
     private readonly CancellationTokenSource cancellation = new();
@@ -24,7 +25,7 @@ internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
     private volatile int tagPolicy;
     private volatile bool requireTagApproval;
 
-    public TagsMentionsPage(AethernetSession session, AethernetClient client, ISettingsNavigator navigator)
+    public TagsMentionsPage(AethernetSession session, AccountClient client, ISettingsNavigator navigator)
     {
         this.session = session;
         this.client = client;

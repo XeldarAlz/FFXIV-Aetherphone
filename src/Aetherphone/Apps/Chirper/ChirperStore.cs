@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Social;
@@ -10,8 +11,9 @@ internal sealed class ChirperStore : SocialFeedStore
 {
     private volatile bool avatarBusy;
 
-    public ChirperStore(AethernetSession session, AethernetClient client)
-        : base(session, client, "Chirper", "chirper")
+    public ChirperStore(AethernetSession session, AccountClient account, SocialClient client, SafetyClient safety,
+        MediaClient media)
+        : base(session, account, client, safety, media, "Chirper", "chirper")
     {
     }
 

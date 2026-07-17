@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -33,7 +34,9 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     public FontAwesomeIcon Icon => FontAwesomeIcon.User;
     public Vector4 Tint => new(0.36f, 0.72f, 0.62f, 1f);
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AuthClient auth;
+    private readonly AccountClient account;
+    private readonly MediaClient media;
     private readonly GameData gameData;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
@@ -46,12 +49,14 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private volatile bool avatarBusy;
     private bool meRequested;
 
-    public AccountPage(AethernetSession session, AethernetClient client, GameData gameData,
-        RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
+    public AccountPage(AethernetSession session, AuthClient auth, AccountClient account, MediaClient media,
+        GameData gameData, RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
         ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary)
     {
         this.session = session;
-        this.client = client;
+        this.auth = auth;
+        this.account = account;
+        this.media = media;
         this.gameData = gameData;
         this.images = images;
         this.lodestone = lodestone;
@@ -59,7 +64,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.profilePage = profilePage;
         this.encryptionPage = encryptionPage;
         this.photoLibrary = photoLibrary;
-        flow = new SignInFlow(session, client);
+        flow = new SignInFlow(session, auth);
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -210,7 +215,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         avatarBusy = true;
-        AvatarUploader.Upload(client, session, sourcePath, crop, cancellation.Token, uploaded =>
+        AvatarUploader.Upload(account, media, session, sourcePath, crop, cancellation.Token, uploaded =>
         {
             avatarBusy = false;
             onComplete(uploaded);
@@ -247,7 +252,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             try
             {
-                await client.RevokeTokenAsync(bearer, token).ConfigureAwait(false);
+                await auth.RevokeTokenAsync(bearer, token).ConfigureAwait(false);
             }
             catch (Exception exception)
             {
@@ -273,7 +278,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                     var erased = false;
                     try
                     {
-                        erased = await client.DeleteAccountAsync(token).ConfigureAwait(false);
+                        erased = await account.DeleteAsync(token).ConfigureAwait(false);
                     }
                     catch (Exception exception)
                     {
@@ -574,7 +579,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             try
             {
-                var me = await client.MeAsync(token).ConfigureAwait(false);
+                var me = await account.MeAsync(token).ConfigureAwait(false);
                 if (me is not null)
                 {
                     session.SetUser(me);

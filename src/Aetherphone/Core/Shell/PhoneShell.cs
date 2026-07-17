@@ -65,7 +65,7 @@ internal sealed class PhoneShell : IDisposable
     public PhoneShell(ThemeProvider themes, AppBundle bundle, NotificationService notifications,
         PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
         DmLauncher dmLauncher, SocialLauncher socialLauncher, ConfirmService confirm, ReportService report,
-        AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
+        AethernetSession aethernetSession, AethernetApi aethernet, GameData gameData,
         RemoteImageCache remoteImages, LodestoneService lodestone)
     {
         this.themes = themes;
@@ -87,7 +87,7 @@ internal sealed class PhoneShell : IDisposable
         incomingOverlay = new IncomingCallOverlay(calls);
         confirmOverlay = new ConfirmOverlay(confirm);
         reportOverlay = new ReportOverlay(report);
-        setup = new SetupOverlay(aethernetSession, aethernetClient, gameData, remoteImages, lodestone,
+        setup = new SetupOverlay(aethernetSession, aethernet, gameData, remoteImages, lodestone,
             bundle.Photos, navigation);
     }
 

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
@@ -13,7 +14,7 @@ internal sealed class SocialNotificationService : IDisposable
     private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(600);
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AccountClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly IFramework framework;
@@ -25,7 +26,7 @@ internal sealed class SocialNotificationService : IDisposable
     private volatile bool polling;
     private volatile bool primed;
 
-    public SocialNotificationService(AethernetSession session, AethernetClient client, NotificationService notifications,
+    public SocialNotificationService(AethernetSession session, AccountClient client, NotificationService notifications,
         Configuration configuration, IFramework framework, PhoneVisibility visibility, RealtimeSignalBus signals)
     {
         this.session = session;

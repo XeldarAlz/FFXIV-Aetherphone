@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Wallpapers;
@@ -17,7 +18,8 @@ internal sealed class StoryStore : IDisposable
     public const int StoryHeight = 1920;
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly GramClient client;
+    private readonly MediaClient media;
     private readonly StoreWork work;
     private readonly object seenLock = new();
     private readonly HashSet<string> seenStoryIds = new(StringComparer.Ordinal);
@@ -33,10 +35,11 @@ internal sealed class StoryStore : IDisposable
     private volatile bool viewersLoading;
     private volatile bool posting;
 
-    public StoryStore(AethernetSession session, AethernetClient client, string logTag)
+    public StoryStore(AethernetSession session, GramClient client, MediaClient media, string logTag)
     {
         this.session = session;
         this.client = client;
+        this.media = media;
         work = new StoreWork(logTag);
     }
 
@@ -180,13 +183,13 @@ internal sealed class StoryStore : IDisposable
         work.Run("create story", async token =>
         {
             var baked = ImageProcessor.BakeCroppedJpeg(sourcePath, crop, StoryWidth, StoryHeight);
-            var upload = await client.UploadUrlAsync("image/jpeg", "story", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("image/jpeg", "story", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {

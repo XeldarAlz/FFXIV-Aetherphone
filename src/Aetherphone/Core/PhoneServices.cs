@@ -52,7 +52,7 @@ internal sealed class PhoneServices : IDisposable
     public CollectService Collect { get; }
     public LookupService Lookup { get; }
     public AethernetSession AethernetSession { get; }
-    public AethernetClient AethernetClient { get; }
+    public AethernetApi Aethernet { get; }
     public KeyVault KeyVault { get; }
     public PeerKeyDirectory PeerKeys { get; }
     public ConversationKeyStore ConversationKeys { get; }
@@ -83,7 +83,7 @@ internal sealed class PhoneServices : IDisposable
         LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http,
         MediaCache media, RemoteImageCache remoteImages,
         LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession,
-        AethernetClient aethernetClient, KeyVault keyVault, PeerKeyDirectory peerKeys,
+        AethernetApi aethernet, KeyVault keyVault, PeerKeyDirectory peerKeys,
         ConversationKeyStore conversationKeys, IAnalyticsService analytics, MarketItemIndex marketIndex,
         MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news,
         RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer,
@@ -116,7 +116,7 @@ internal sealed class PhoneServices : IDisposable
         Collect = collect;
         Lookup = lookup;
         AethernetSession = aethernetSession;
-        AethernetClient = aethernetClient;
+        Aethernet = aethernet;
         KeyVault = keyVault;
         PeerKeys = peerKeys;
         ConversationKeys = conversationKeys;
@@ -178,10 +178,10 @@ internal sealed class PhoneServices : IDisposable
         var collect = new CollectService(http, collectCache);
         var lookup = new LookupService(lodestone);
         var aethernetSession = new AethernetSession(configuration, framework);
-        var aethernetClient = new AethernetClient(http, aethernetSession);
-        var keyVault = new KeyVault(configuration, aethernetSession, aethernetClient);
-        var peerKeys = new PeerKeyDirectory(configuration, aethernetClient);
-        var conversationKeys = new ConversationKeyStore(aethernetClient, keyVault);
+        var aethernet = new AethernetApi(http, aethernetSession);
+        var keyVault = new KeyVault(configuration, aethernetSession, aethernet.Keys);
+        var peerKeys = new PeerKeyDirectory(configuration, aethernet.Keys);
+        var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault);
         var gameRegion = clientState.ClientLanguage switch
         {
             Dalamud.Game.ClientLanguage.German => "de",
@@ -215,11 +215,11 @@ internal sealed class PhoneServices : IDisposable
         var realtimeSignals = new RealtimeSignalBus();
         var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals);
         var visibility = new PhoneVisibility();
-        var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, configuration, framework, visibility, realtimeSignals);
+        var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals);
         return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
             messages, chatBridge, messageLauncher, velvetLauncher, dmLauncher, socialLauncher, linkshellMutes, linkshells,
             linkshellBridge, http, media, remoteImages, lodestone,
-            collect, lookup, aethernetSession, aethernetClient, keyVault, peerKeys, conversationKeys,
+            collect, lookup, aethernetSession, aethernet, keyVault, peerKeys, conversationKeys,
             analytics, marketIndex, market, marketLauncher,
             marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
             collections, inventoryCapture, calls, socialNotifications, visibility, realtimeSignals);

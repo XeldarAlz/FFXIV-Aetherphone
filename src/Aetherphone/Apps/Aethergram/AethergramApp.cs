@@ -138,15 +138,15 @@ internal sealed partial class AethergramApp : IPhoneApp
     private volatile bool editBusy;
     private volatile int editOutcome;
 
-    public AethergramApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
+    public AethergramApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
         Configuration configuration, SocialNotificationService social)
     {
-        store = new AethergramStore(session, client);
+        store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         personPicker = new PersonPicker(store.NewMentionSuggestions());
-        stories = new StoryPresenter(session, client, images, lodestone, AethergramArt.StoryRing,
+        stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, AethergramArt.StoryRing,
             AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
                 L.Aethergram.Saving), "Aethergram stories", StartStoryCompose);
         this.launcher = launcher;

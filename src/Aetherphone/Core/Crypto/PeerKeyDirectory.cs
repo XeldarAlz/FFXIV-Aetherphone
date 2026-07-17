@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Crypto;
@@ -7,11 +7,11 @@ namespace Aetherphone.Core.Crypto;
 internal sealed class PeerKeyDirectory
 {
     private readonly Configuration configuration;
-    private readonly AethernetClient client;
+    private readonly KeysClient client;
     private readonly ConcurrentDictionary<string, UserPublicKeyDto> cache = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, byte> rotationNotices = new(StringComparer.Ordinal);
 
-    public PeerKeyDirectory(Configuration configuration, AethernetClient client)
+    public PeerKeyDirectory(Configuration configuration, KeysClient client)
     {
         this.configuration = configuration;
         this.client = client;

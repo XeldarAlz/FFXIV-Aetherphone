@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
@@ -24,7 +25,8 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     public Vector4 Tint => new(0.42f, 0.56f, 0.86f, 1f);
     private readonly Configuration configuration;
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AccountClient client;
+    private readonly SafetyClient safety;
     private readonly CancellationTokenSource cancellation = new();
     private static readonly TimeSpan BlockedListMaxAge = TimeSpan.FromSeconds(30);
     private volatile bool chatPrivacyLoaded;
@@ -36,11 +38,12 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private volatile bool blockedLoading;
     private DateTime blockedLoadedAtUtc = DateTime.MinValue;
 
-    public PrivacyPage(Configuration configuration, AethernetSession session, AethernetClient client)
+    public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client, SafetyClient safety)
     {
         this.configuration = configuration;
         this.session = session;
         this.client = client;
+        this.safety = safety;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -125,7 +128,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         {
             try
             {
-                var page = await client.BlockedUsersAsync(token).ConfigureAwait(false);
+                var page = await safety.BlockedUsersAsync(token).ConfigureAwait(false);
                 if (page is not null)
                 {
                     blockedUsers = page.Users;
@@ -163,7 +166,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         {
             try
             {
-                if (await client.UnblockAsync(userId, token).ConfigureAwait(false))
+                if (await safety.UnblockAsync(userId, token).ConfigureAwait(false))
                 {
                     blockedUsers = CopyOnWrite.RemoveWhere(blockedUsers, user => user.Id == userId);
                 }

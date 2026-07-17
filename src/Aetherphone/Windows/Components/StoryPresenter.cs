@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
@@ -26,11 +27,11 @@ internal sealed class StoryPresenter : IDisposable
     private StoryRingDto? pendingRing;
     private StoryDto[]? viewerItems;
 
-    public StoryPresenter(AethernetSession session, AethernetClient client, RemoteImageCache images,
+    public StoryPresenter(AethernetSession session, GramClient client, MediaClient media, RemoteImageCache images,
         LodestoneService lodestone, StoryRingPainter painter, AppPalette palette, StoryConfirmLabels labels,
         string logTag, Action onCompose)
     {
-        stories = new StoryStore(session, client, logTag);
+        stories = new StoryStore(session, client, media, logTag);
         tray = new StoryTrayRow(images, lodestone);
         viewer = new StoryViewerOverlay(images, lodestone);
         this.painter = painter;

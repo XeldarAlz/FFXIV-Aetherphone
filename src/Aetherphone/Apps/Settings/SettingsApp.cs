@@ -41,16 +41,16 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private readonly TagsMentionsPage tagsMentionsPage;
 
     public SettingsApp(Configuration configuration, ThemeProvider themes, SoundService sound,
-        AethernetSession aethernetSession, AethernetClient aethernetClient, KeyVault keyVault,
+        AethernetSession aethernetSession, AethernetApi aethernet, KeyVault keyVault,
         GameData gameData, RemoteImageCache remoteImages, LodestoneService lodestone, PhotoLibrary photoLibrary,
         CallHub calls, Action showAbout)
     {
         this.sound = sound;
         this.configuration = configuration;
-        profilePage = new ProfilePage(configuration, aethernetSession, aethernetClient, gameData);
+        profilePage = new ProfilePage(configuration, aethernetSession, aethernet.Account, gameData);
         encryptionPage = new EncryptionPage(aethernetSession, keyVault);
-        accountPage = new AccountPage(aethernetSession, aethernetClient, gameData, remoteImages, lodestone, this,
-            profilePage, encryptionPage, photoLibrary);
+        accountPage = new AccountPage(aethernetSession, aethernet.Auth, aethernet.Account, aethernet.Media, gameData,
+            remoteImages, lodestone, this, profilePage, encryptionPage, photoLibrary);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
@@ -82,8 +82,8 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.Save();
             });
         var commands = new CommandsPage();
-        privacyPage = new PrivacyPage(configuration, aethernetSession, aethernetClient);
-        tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernetClient, this);
+        privacyPage = new PrivacyPage(configuration, aethernetSession, aethernet.Account, aethernet.Safety);
+        tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernet.Account, this);
         var about = new AboutPage(showAbout);
         changelogPage = new ChangelogPage(configuration);
         var groups = new[]
