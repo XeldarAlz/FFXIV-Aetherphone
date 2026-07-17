@@ -36,6 +36,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Aetherphone.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="System" />
     <Using Include="System.Collections" />
     <Using Include="System.Collections.Generic" />
