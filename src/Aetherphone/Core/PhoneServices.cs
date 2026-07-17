@@ -1,6 +1,6 @@
+using Aetherphone.Core.Activity;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
-using Aetherphone.Core.Character;
 using Aetherphone.Core.Collections;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
@@ -50,7 +50,6 @@ internal sealed class PhoneServices : IDisposable
     public required MediaCache Media { get; init; }
     public required RemoteImageCache RemoteImages { get; init; }
     public required LodestoneService Lodestone { get; init; }
-    public required CollectService Collect { get; init; }
     public required LookupService Lookup { get; init; }
     public required AethernetSession AethernetSession { get; init; }
     public required AethernetApi Aethernet { get; init; }
@@ -73,13 +72,15 @@ internal sealed class PhoneServices : IDisposable
     public required VenuesService Venues { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
+    public required ActivityTracker Activity { get; init; }
+    public required ActivityRingNotifier RingNotifier { get; init; }
     public required CallHub Calls { get; init; }
     public required PhoneVisibility Visibility { get; init; }
     public required RealtimeSignalBus RealtimeSignals { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
-        IObjectTable objectTable, IClientState clientState, IFramework framework, ITextureProvider textures,
-        DirectoryInfo configDirectory)
+        IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
+        ITextureProvider textures, DirectoryInfo configDirectory)
     {
         var themes = new ThemeProvider(configuration);
         var gameData = new GameData(dataManager, objectTable);
@@ -109,9 +110,6 @@ internal sealed class PhoneServices : IDisposable
         var media = new MediaCache(textures, disk);
         var remoteImages = new RemoteImageCache(http);
         var lodestone = new LodestoneService(configuration, http, media, cacheRoot);
-        var collectRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collect"));
-        var collectCache = new DiskCache(collectRoot, 8L * 1024 * 1024);
-        var collect = new CollectService(http, collectCache);
         var lookup = new LookupService(lodestone);
         var aethernetSession = new AethernetSession(configuration, framework);
         var aethernet = new AethernetApi(http, aethernetSession);
@@ -148,6 +146,8 @@ internal sealed class PhoneServices : IDisposable
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
+        var activity = new ActivityTracker(framework, clientState, dutyState, gameData, configDirectory);
+        var ringNotifier = new ActivityRingNotifier(framework, activity, configuration, notifications);
         var realtimeSignals = new RealtimeSignalBus();
         var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals);
         var visibility = new PhoneVisibility();
@@ -176,7 +176,6 @@ internal sealed class PhoneServices : IDisposable
             Media = media,
             RemoteImages = remoteImages,
             Lodestone = lodestone,
-            Collect = collect,
             Lookup = lookup,
             AethernetSession = aethernetSession,
             Aethernet = aethernet,
@@ -199,6 +198,8 @@ internal sealed class PhoneServices : IDisposable
             Venues = venues,
             Collections = collections,
             InventoryCapture = inventoryCapture,
+            Activity = activity,
+            RingNotifier = ringNotifier,
             Calls = calls,
             Visibility = visibility,
             RealtimeSignals = realtimeSignals,
@@ -212,6 +213,8 @@ internal sealed class PhoneServices : IDisposable
         Calls.Dispose();
         Collections.Dispose();
         InventoryCapture.Dispose();
+        RingNotifier.Dispose();
+        Activity.Dispose();
         Venues.Dispose();
         SongPlayer.Dispose();
         SongSearch.Dispose();
@@ -219,7 +222,6 @@ internal sealed class PhoneServices : IDisposable
         Radio.Dispose();
         LinkshellBridge.Dispose();
         ChatBridge.Dispose();
-        Collect.Dispose();
         Lookup.Dispose();
         Lodestone.Dispose();
         MarketAlerts.Dispose();

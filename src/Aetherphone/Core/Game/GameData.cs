@@ -76,6 +76,26 @@ internal sealed class GameData
         return string.Empty;
     }
 
+    public int JobExpArrayIndex(uint rowId)
+    {
+        if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
+        {
+            return job.ExpArrayIndex;
+        }
+
+        return -1;
+    }
+
+    public long ExpToNextLevel(int level)
+    {
+        if (level > 0 && data.GetExcelSheet<ParamGrow>().TryGetRow((uint)level, out var row))
+        {
+            return row.ExpToNext;
+        }
+
+        return 0;
+    }
+
     public string TerritoryName(uint rowId)
     {
         if (rowId != 0 && data.GetExcelSheet<TerritoryType>().TryGetRow(rowId, out var territory))

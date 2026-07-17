@@ -1151,33 +1151,41 @@ internal static class L
     internal static class Character
     {
         public static readonly LocString LogInToView = new("character.logInToView", "Log in to view your character");
-        public static readonly LocString Profile = new("character.profile", "Profile");
-        public static readonly LocString Equipment = new("character.equipment", "Equipment");
-        public static readonly LocString Race = new("character.race", "Race");
-        public static readonly LocString Clan = new("character.clan", "Clan");
-        public static readonly LocString Gender = new("character.gender", "Gender");
-        public static readonly LocString Nameday = new("character.nameday", "Nameday");
-        public static readonly LocString Guardian = new("character.guardian", "Guardian");
-        public static readonly LocString CityState = new("character.cityState", "City-state");
-        public static readonly LocString GrandCompany = new("character.grandCompany", "Grand Company");
         public static readonly LocString Activity = new("character.activity", "Activity");
-        public static readonly LocString Summary = new("character.summary", "Summary");
-        public static readonly LocString RingJob = new("character.ringJob", "Job");
-        public static readonly LocString RingMastery = new("character.ringMastery", "Mastery");
-        public static readonly LocString RingCollection = new("character.ringCollection", "Collect");
-        public static readonly LocString JobLevelMax = new("character.jobLevelMax", "MAX");
-        public static readonly LocString ExpToLevel = new("character.expToLevel", "{0} XP to Lv {1}");
-        public static readonly LocString JobsAtMax = new("character.jobsAtMax", "{0} of {1} jobs maxed");
-        public static readonly LocString JobMastery = new("character.jobMastery", "Job Mastery");
-        public static readonly LocString Collection = new("character.collection", "Collection");
+        public static readonly LocString Today = new("character.today", "Today");
+        public static readonly LocString ThisSession = new("character.thisSession", "This session");
+        public static readonly LocString RingProgress = new("character.ringProgress", "Progress");
+        public static readonly LocString RingAdventure = new("character.ringAdventure", "Adventure");
+        public static readonly LocString RingFortune = new("character.ringFortune", "Fortune");
+        public static readonly LocString Experience = new("character.experience", "Experience");
+        public static readonly LocString Duties = new("character.duties", "Duties");
+        public static readonly LocString GilEarned = new("character.gilEarned", "Gil earned");
+        public static readonly LocString TimePlayed = new("character.timePlayed", "Time played");
+        public static readonly LocString NewCollectibles = new("character.newCollectibles", "New collectibles");
+        public static readonly LocString LevelsGained = new("character.levelsGained", "{0} levels gained");
+        public static readonly LocString PercentOfGoal = new("character.percentOfGoal", "{0}% of goal");
         public static readonly LocString Mounts = new("character.mounts", "Mounts");
         public static readonly LocString Minions = new("character.minions", "Minions");
         public static readonly LocString Retainers = new("character.retainers", "Retainers");
         public static readonly LocString VenturesReady = new("character.venturesReady", "{0} ready");
         public static readonly LocString VenturesActive = new("character.venturesActive", "{0} running");
-        public static readonly LocString Achievements = new("character.achievements", "Achievements");
-        public static readonly LocString AchievementPoints = new("character.achievementPoints", "Points");
-        public static readonly LocString CollectHint = new("character.collectHint", "Open a chat with someone or view a portrait once to link Lodestone for full collection stats");
+        public static readonly LocString GoalsSection = new("character.goalsSection", "Daily goals");
+        public static readonly LocString GoalLevels = new("character.goalLevels", "Level progress");
+        public static readonly LocString LevelsShort = new("character.levelsShort", "{0} Lv");
+        public static readonly LocString GoalsHint = new("character.goalsHint", "Rings close when you reach these goals. Progress resets at midnight.");
+        public static readonly LocString DurationHoursMinutes = new("character.durationHoursMinutes", "{0}h {1}m");
+        public static readonly LocString DurationMinutes = new("character.durationMinutes", "{0}m");
+        public static readonly LocString History = new("character.history", "History");
+        public static readonly LocString ThisWeek = new("character.thisWeek", "This week");
+        public static readonly LocString Streaks = new("character.streaks", "Streaks");
+        public static readonly LocString CurrentStreak = new("character.currentStreak", "Current streak");
+        public static readonly LocString BestStreak = new("character.bestStreak", "Best streak");
+        public static readonly LocPlural StreakDays = new("character.streakDays", "{0} day", "{0} days");
+        public static readonly LocString StreaksHint = new("character.streaksHint", "A day counts toward your streak when all three rings close.");
+        public static readonly LocString PersonalBests = new("character.personalBests", "Personal bests");
+        public static readonly LocString RingClosedBody = new("character.ringClosedBody", "You reached today's goal.");
+        public static readonly LocString AllRingsTitle = new("character.allRingsTitle", "All rings closed");
+        public static readonly LocString AllRingsBody = new("character.allRingsBody", "You hit all three goals today. Perfect day!");
     }
 
     internal static class Camera
@@ -2150,7 +2158,7 @@ internal static class L
         public static readonly LocString SettingsTitle = new("onboarding.settingsTitle", "Make it yours");
         public static readonly LocString SettingsBody = new("onboarding.settingsBody", "Themes, wallpapers, text size and how your phone behaves. Poke around and set it up just how you like.");
         public static readonly LocString ContactsBody = new("onboarding.contactsBody", "Your in-game friends, laid out like a proper address book with their portraits. Tap anyone to start a conversation.");
-        public static readonly LocString CharacterBody = new("onboarding.characterBody", "A tidy profile card for your character, with your gear, portrait and the basics all in one glance.");
+        public static readonly LocString CharacterBody = new("onboarding.characterBody", "Your day in Eorzea at a glance: three rings that fill as you play and reset at midnight.");
         public static readonly LocString ChirperBody = new("onboarding.chirperBody", "Welcome to Chirper! A little social feed built just for the Aetherphone community, short posts and timelines with other players.");
         public static readonly LocString ChirperPostTitle = new("onboarding.chirperPostTitle", "Join the conversation");
         public static readonly LocString ChirperPostBody = new("onboarding.chirperPostBody", "Post what's on your mind, follow people, and reply or react to their chirps. It runs on our own network, completely separate from the Lodestone.");
@@ -2297,9 +2305,9 @@ internal static class L
         public static readonly LocString ContactsSearchTitle = new("onboarding.contactsSearchTitle", "Find someone fast");
         public static readonly LocString ContactsSearchBody = new("onboarding.contactsSearchBody", "Start typing a name to filter the list instantly.");
         public static readonly LocString CharacterRingsTitle = new("onboarding.characterRingsTitle", "Your three rings");
-        public static readonly LocString CharacterRingsBody = new("onboarding.characterRingsBody", "Job level, mastery across every job, and your collection. Each ring fills as you progress.");
+        public static readonly LocString CharacterRingsBody = new("onboarding.characterRingsBody", "Progress tracks experience, Adventure counts duties, and Fortune counts gil earned today. Play to close all three.");
         public static readonly LocString CharacterSummaryTitle = new("onboarding.characterSummaryTitle", "The numbers behind them");
-        public static readonly LocString CharacterSummaryBody = new("onboarding.characterSummaryBody", "The same three tracks in detail: exact levels, jobs at cap, and what's left to the next level.");
+        public static readonly LocString CharacterSummaryBody = new("onboarding.characterSummaryBody", "Today's totals in detail: experience, duties, gil, playtime and new collectibles, with your current session below.");
         public static readonly LocString ClockIntroBody = new("onboarding.clockIntroBody", "Eorzea time, server time and your own cities, ticking side by side. And that's just the first tab.");
         public static readonly LocString ClockTabsTitle = new("onboarding.clockTabsTitle", "More than a clock");
         public static readonly LocString ClockTabsBody = new("onboarding.clockTabsBody", "Alarms, a stopwatch and a timer live behind these tabs. Tap here to try the alarms.");

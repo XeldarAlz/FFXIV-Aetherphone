@@ -281,6 +281,24 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    public static readonly AppPalette Activity = new()
+    {
+        Accent = AppAccents.For("character"),
+        TitleInk = new(0.99f, 0.96f, 0.97f, 1f),
+        BodyInk = new(0.94f, 0.88f, 0.90f, 0.96f),
+        MutedInk = new(0.74f, 0.64f, 0.68f, 0.85f),
+        HeaderInk = new(0.99f, 0.64f, 0.72f, 0.95f),
+        HeadingInk = new(0.99f, 0.95f, 0.96f, 1f),
+        BackdropTop = new(0.13f, 0.05f, 0.08f, 1f),
+        BackdropBottom = new(0.03f, 0.015f, 0.025f, 1f),
+        BloomTop = new(0.85f, 0.20f, 0.35f, 0.20f),
+        BloomBottom = new(0.42f, 0.10f, 0.20f, 0f),
+        CardFill = new(1f, 1f, 1f, 0.05f),
+        CardStroke = new(1f, 1f, 1f, 0.07f),
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static readonly AppPalette Dailies = new()
     {
         Accent = AppAccents.For("dailies"),

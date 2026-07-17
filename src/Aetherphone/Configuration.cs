@@ -41,6 +41,9 @@ internal sealed class Configuration : IPluginConfiguration
     public bool NotifyRetainerVentures { get; set; }
     public bool NotifyDailiesReset { get; set; }
     public List<DailyCheckRecord> DailyChecks { get; set; } = new();
+    public float ActivityGoalLevels { get; set; } = 1f;
+    public int ActivityGoalDuties { get; set; } = 3;
+    public long ActivityGoalGil { get; set; } = 50000;
     public bool ScrollWhileIdle { get; set; } = true;
     public bool ShowLodestonePortraits { get; set; } = true;
     public float TextZoom { get; set; } = 1.15f;

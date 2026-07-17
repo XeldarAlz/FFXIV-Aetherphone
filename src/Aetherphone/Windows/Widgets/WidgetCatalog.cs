@@ -18,6 +18,7 @@ internal static class WidgetCatalog
             new CalendarWidget(services.Configuration, calendarEvents),
             new PhotosWidget(photos),
             new ResetsWidget(),
+            new ActivityRingsWidget(services.Activity, services.Configuration),
         };
 
         return new WidgetRegistry(widgets, apps);

@@ -9,14 +9,14 @@ namespace Aetherphone.Windows.Components;
 internal static class ActivityRings
 {
     public const float Height = 188f;
-    private static readonly Vector4 MoveTint = new(0.98f, 0.22f, 0.36f, 1f);
-    private static readonly Vector4 ExerciseTint = new(0.62f, 0.94f, 0.18f, 1f);
-    private static readonly Vector4 StandTint = new(0.36f, 0.84f, 0.96f, 1f);
-    public static Vector4 RingOneTint => MoveTint;
-    public static Vector4 RingTwoTint => ExerciseTint;
-    public static Vector4 RingThreeTint => StandTint;
+    private static readonly Vector4 ProgressTint = new(0.98f, 0.22f, 0.36f, 1f);
+    private static readonly Vector4 AdventureTint = new(0.62f, 0.94f, 0.18f, 1f);
+    private static readonly Vector4 FortuneTint = new(0.36f, 0.84f, 0.96f, 1f);
+    public static Vector4 RingOneTint => ProgressTint;
+    public static Vector4 RingTwoTint => AdventureTint;
+    public static Vector4 RingThreeTint => FortuneTint;
 
-    public static void Draw(PhoneTheme theme, float jobFraction, float tomestoneFraction, float collectionFraction)
+    public static void Draw(Vector4 trackInk, float progressFraction, float adventureFraction, float fortuneFraction)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
@@ -27,10 +27,10 @@ internal static class ActivityRings
         var outerRadius = 64f * scale;
         var middleRadius = outerRadius - thickness - gap;
         var innerRadius = middleRadius - thickness - gap;
-        var trackColor = Palette.WithAlpha(theme.TextStrong, 0.12f);
-        DrawRing(center, outerRadius, thickness, jobFraction, MoveTint, trackColor);
-        DrawRing(center, middleRadius, thickness, tomestoneFraction, ExerciseTint, trackColor);
-        DrawRing(center, innerRadius, thickness, collectionFraction, StandTint, trackColor);
+        var trackColor = Palette.WithAlpha(trackInk, 0.12f);
+        DrawRing(center, outerRadius, thickness, progressFraction, ProgressTint, trackColor);
+        DrawRing(center, middleRadius, thickness, adventureFraction, AdventureTint, trackColor);
+        DrawRing(center, innerRadius, thickness, fortuneFraction, FortuneTint, trackColor);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, Height * scale));
     }
@@ -44,6 +44,6 @@ internal static class ActivityRings
             ProgressRing.Glow(center, radius, tint, 0.30f + 0.20f * Pulse.Wave(Pulse.Breath));
         }
 
-        ProgressRing.Fill(center, radius, thickness, fraction, tint);
+        ProgressRing.Fill(center, radius, thickness, Math.Clamp(fraction, 0f, 1f), tint);
     }
 }

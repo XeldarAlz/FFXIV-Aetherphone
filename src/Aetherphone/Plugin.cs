@@ -34,6 +34,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IClientState ClientState { get; private set; } = null!;
     [PluginService] internal static IFramework Framework { get; private set; } = null!;
     [PluginService] internal static ICondition Condition { get; private set; } = null!;
+    [PluginService] internal static IDutyState DutyState { get; private set; } = null!;
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
     [PluginService] internal static ITextureSubstitutionProvider TextureSubstitution { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
@@ -93,8 +94,8 @@ public sealed class Plugin : IDalamudPlugin
             Wallpapers = new WallpaperLibrary(TextureProvider, builtInWallpaperDirectory, customWallpaperDirectory, Cfg);
             WallpaperImages = new WallpaperImageCache();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
-            services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, TextureProvider,
-                PluginInterface.ConfigDirectory);
+            services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
+                TextureProvider, PluginInterface.ConfigDirectory);
             sessionStartedAt = DateTime.UtcNow;
             Analytics = services.Analytics;
             if (Analytics.IsFirstRun)

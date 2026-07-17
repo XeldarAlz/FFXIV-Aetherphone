@@ -44,7 +44,7 @@ internal static class AppRegistry
         var apps = new List<IPhoneApp>
         {
             new LinkpearlApp(services.Messages, services.Linkshells, services.LinkshellMutes, services.ChatBridge, services.LinkshellBridge, services.LinkpearlLauncher, services.Lodestone, services.Notifications, services.GameData, services.Lookup),
-            new ActivityApp(services.GameData, services.Textures, services.Lodestone, services.Collect),
+            new ActivityApp(services.GameData, services.Activity, services.Configuration),
         };
 
         var photoLibrary = new PhotoLibrary(Plugin.PluginInterface.ConfigDirectory);
