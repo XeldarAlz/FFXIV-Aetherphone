@@ -112,67 +112,56 @@ internal readonly struct TranscriptMessage
     }
 }
 
+internal interface IChatTranscriptMedia
+{
+    IDalamudTextureWrap? Texture(string messageId);
+
+    void OnImageClick(string messageId);
+}
+
+internal interface IChatTranscriptInteractions
+{
+    void OnMessageContext(string messageId);
+
+    void OnQuoteClick(string messageId);
+
+    void OnReactionClick(string messageId, string token);
+}
+
+internal interface IChatTranscriptVoice
+{
+    VoiceNoteState StateFor(string messageId);
+
+    void Toggle(string messageId);
+}
+
+internal interface IChatTranscriptPaging
+{
+    bool HasMoreOlder { get; }
+
+    bool LoadingOlder { get; }
+
+    void LoadOlder();
+}
+
 internal readonly ref struct ChatTranscriptModel
 {
-    public readonly string ThreadId;
-    public readonly ReadOnlySpan<TranscriptMessage> Messages;
-    public readonly string MyUserId;
-    public readonly Vector4 Accent;
-    public readonly PhoneTheme Theme;
-    public readonly Vector4 MutedInk;
-    public readonly Vector4 BodyInk;
-    public readonly bool OtherTyping;
-    public readonly bool Loading;
-    public readonly bool IsGroup;
-    public readonly RemoteImageCache Images;
-    public readonly Func<string, string?> MediaUrl;
-    public readonly Func<string, IDalamudTextureWrap?>? ResolveImage;
-    public readonly Action<string> OnImageClick;
-    public readonly string EmptyText;
-    public readonly string LoadingText;
-    public readonly Action<string>? OnMessageContext;
-    public readonly Action<string>? OnQuoteClick;
-    public readonly Action<string, string>? OnReactionClick;
-    public readonly Func<string, VoiceNoteState>? VoiceState;
-    public readonly Action<string>? OnVoiceToggle;
-    public readonly bool HasMoreOlder;
-    public readonly bool LoadingOlder;
-    public readonly Action? OnLoadOlder;
-
-    public ChatTranscriptModel(string threadId, ReadOnlySpan<TranscriptMessage> messages, string myUserId,
-        Vector4 accent, PhoneTheme theme, Vector4 mutedInk, Vector4 bodyInk, bool otherTyping, bool loading,
-        bool isGroup, RemoteImageCache images, Func<string, string?> mediaUrl, Action<string> onImageClick,
-        string emptyText, string loadingText, Action<string>? onMessageContext = null,
-        Action<string>? onQuoteClick = null, Action<string, string>? onReactionClick = null,
-        Func<string, VoiceNoteState>? voiceState = null, Action<string>? onVoiceToggle = null,
-        bool hasMoreOlder = false, bool loadingOlder = false, Action? onLoadOlder = null,
-        Func<string, IDalamudTextureWrap?>? resolveImage = null)
-    {
-        ThreadId = threadId;
-        Messages = messages;
-        MyUserId = myUserId;
-        Accent = accent;
-        Theme = theme;
-        MutedInk = mutedInk;
-        BodyInk = bodyInk;
-        OtherTyping = otherTyping;
-        Loading = loading;
-        IsGroup = isGroup;
-        Images = images;
-        MediaUrl = mediaUrl;
-        ResolveImage = resolveImage;
-        OnImageClick = onImageClick;
-        EmptyText = emptyText;
-        LoadingText = loadingText;
-        OnMessageContext = onMessageContext;
-        OnQuoteClick = onQuoteClick;
-        OnReactionClick = onReactionClick;
-        VoiceState = voiceState;
-        OnVoiceToggle = onVoiceToggle;
-        HasMoreOlder = hasMoreOlder;
-        LoadingOlder = loadingOlder;
-        OnLoadOlder = onLoadOlder;
-    }
+    public required string ThreadId { get; init; }
+    public required ReadOnlySpan<TranscriptMessage> Messages { get; init; }
+    public required string MyUserId { get; init; }
+    public required Vector4 Accent { get; init; }
+    public required PhoneTheme Theme { get; init; }
+    public required Vector4 MutedInk { get; init; }
+    public required Vector4 BodyInk { get; init; }
+    public required string EmptyText { get; init; }
+    public required string LoadingText { get; init; }
+    public bool OtherTyping { get; init; }
+    public bool Loading { get; init; }
+    public bool IsGroup { get; init; }
+    public IChatTranscriptMedia? Media { get; init; }
+    public IChatTranscriptInteractions? Interactions { get; init; }
+    public IChatTranscriptVoice? Voice { get; init; }
+    public IChatTranscriptPaging? Paging { get; init; }
 }
 
 internal sealed class ChatTranscript
@@ -194,11 +183,7 @@ internal sealed class ChatTranscript
     private const int OlderSettleFrames = 2;
     private const float OlderRestoreTimeout = 20f;
 
-    private readonly List<BubbleEntrance> entrances = new();
-    private string? entranceThreadId;
-    private int entranceSettled;
-    private bool entrancePrimed;
-    private string? entranceLastId;
+    private readonly ChatEntranceTracker entrances = new();
     private string? followThreadId;
     private bool followBottom;
     private bool snapToBottom;
@@ -228,8 +213,10 @@ internal sealed class ChatTranscript
     {
         var scale = ImGuiHelpers.GlobalScale;
         var delta = ImGui.GetIO().DeltaTime;
-        SyncEntrances(model.ThreadId, model.Messages, delta, model.Loading);
-        if (model.LoadingOlder)
+        var tailId = model.Messages.Length > 0 ? model.Messages[model.Messages.Length - 1].Id : null;
+        entrances.Sync(model.ThreadId, model.Messages.Length, tailId, delta, model.Loading);
+        var loadingOlder = model.Paging is { LoadingOlder: true };
+        if (loadingOlder)
         {
             olderSpinnerPhase += delta;
         }
@@ -321,7 +308,7 @@ internal sealed class ChatTranscript
             }
 
             ApplyOlderRestore(model, delta);
-            if (model.LoadingOlder)
+            if (loadingOlder)
             {
                 DrawOlderLoading(listRect, model);
             }
@@ -330,8 +317,8 @@ internal sealed class ChatTranscript
 
     private void MaybeLoadOlder(in ChatTranscriptModel model)
     {
-        if (olderAnchorFromBottom >= 0f || model.OnLoadOlder is null
-            || !model.HasMoreOlder || model.LoadingOlder || followBottom)
+        if (olderAnchorFromBottom >= 0f || model.Paging is not { } paging
+            || !paging.HasMoreOlder || paging.LoadingOlder || followBottom)
         {
             return;
         }
@@ -346,7 +333,7 @@ internal sealed class ChatTranscript
         olderBaselineCount = model.Messages.Length;
         olderSettleFrames = 0;
         olderElapsed = 0f;
-        model.OnLoadOlder();
+        paging.LoadOlder();
     }
 
     private void ApplyOlderRestore(in ChatTranscriptModel model, float delta)
@@ -387,76 +374,6 @@ internal sealed class ChatTranscript
             drawList.AddCircleFilled(center, dotRadius,
                 ImGui.GetColorU32(Palette.WithAlpha(model.MutedInk, alpha)), 16);
         }
-    }
-
-    private void SyncEntrances(string threadId, ReadOnlySpan<TranscriptMessage> messages, float delta, bool loading)
-    {
-        var count = messages.Length;
-        var lastId = count > 0 ? messages[count - 1].Id : null;
-        if (entranceThreadId != threadId)
-        {
-            entranceThreadId = threadId;
-            entranceSettled = count;
-            entrancePrimed = count > 0 || !loading;
-            entranceLastId = lastId;
-            entrances.Clear();
-            return;
-        }
-
-        if (!entrancePrimed)
-        {
-            entranceSettled = count;
-            entrancePrimed = count > 0 || !loading;
-            entranceLastId = lastId;
-            return;
-        }
-
-        if (count > entranceSettled && lastId == entranceLastId)
-        {
-            entrances.Clear();
-            entranceSettled = count;
-            entranceLastId = lastId;
-            return;
-        }
-
-        entranceLastId = lastId;
-        if (count < entranceSettled)
-        {
-            entranceSettled = count;
-        }
-
-        while (entranceSettled < count)
-        {
-            entrances.Add(new BubbleEntrance { Line = entranceSettled, Elapsed = 0f });
-            entranceSettled++;
-        }
-
-        for (var index = entrances.Count - 1; index >= 0; index--)
-        {
-            var entrance = entrances[index];
-            entrance.Elapsed += delta;
-            if (entrance.Elapsed >= TransitionTiming.BubbleSeconds || entrance.Line >= count)
-            {
-                entrances.RemoveAt(index);
-            }
-            else
-            {
-                entrances[index] = entrance;
-            }
-        }
-    }
-
-    private float EntranceProgress(int line)
-    {
-        for (var index = 0; index < entrances.Count; index++)
-        {
-            if (entrances[index].Line == line)
-            {
-                return entrances[index].Elapsed / TransitionTiming.BubbleSeconds;
-            }
-        }
-
-        return 1f;
     }
 
     private void SyncFollow(string threadId)
@@ -564,13 +481,10 @@ internal sealed class ChatTranscript
         var bubbleMin = new Vector2(mine ? start.X + available - bubbleWidth : start.X, start.Y);
         var bubbleMax = bubbleMin + new Vector2(bubbleWidth, bubbleHeight);
         ConsumeScrollTarget(message.Id, bubbleMin.Y);
-        var entrance = EntranceProgress(index);
-        var pop = entrance < 1f ? 0.80f + 0.20f * Easing.EaseOutQuint(entrance) : 1f;
-        var alpha = entrance < 1f ? MathF.Min(entrance * 1.8f, 1f) : 1f;
-        var rise = new Vector2(0f, entrance < 1f ? (1f - Easing.EaseOutCubic(entrance)) * 10f * scale : 0f);
-        var anchor = new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y);
-        var scaledMin = anchor + (bubbleMin - anchor) * pop + rise;
-        var scaledMax = anchor + (bubbleMax - anchor) * pop + rise;
+        var entrance = entrances.Progress(index);
+        var fx = BubblePop.For(entrance, scale, new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y));
+        var scaledMin = fx.Apply(bubbleMin);
+        var scaledMax = fx.Apply(bubbleMax);
         var placeholder = (message.Flags & TranscriptFlags.Placeholder) != 0;
         var fill = mine ? model.Accent : new Vector4(1f, 1f, 1f, 0.10f);
         var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
@@ -580,54 +494,51 @@ internal sealed class ChatTranscript
             ink = model.MutedInk;
         }
 
-        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * pop,
-            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
-        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * pop, mine, model);
+        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * fx.Alpha)));
+        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * fx.Pop, mine, model);
         var contentTop = bubbleMin.Y + paddingY;
         if (forwardBlock > 0f)
         {
-            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + paddingX, contentTop), anchor, pop, rise, alpha,
-                mine, model, scale);
+            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + paddingX, contentTop), fx, mine, model, scale);
             contentTop += forwardBlock;
         }
 
         if (quote.Height > 0f)
         {
             DrawQuote(drawList, message, quote, new Vector2(bubbleMin.X + paddingX, contentTop),
-                contentWidth, anchor, pop, rise, alpha, mine, model);
+                contentWidth, fx, mine, model);
             contentTop += quoteBlock;
         }
 
         if (deleted)
         {
             var iconCenter = new Vector2(bubbleMin.X + paddingX + 6f * scale, contentTop + textSize.Y * 0.5f);
-            AppSkin.Icon(drawList, anchor + (iconCenter - anchor) * pop + rise, FontAwesomeIcon.Ban.ToIconString(),
-                Palette.WithAlpha(ink, ink.W * alpha * 0.9f), 0.68f * pop);
+            AppSkin.Icon(drawList, fx.Apply(iconCenter), FontAwesomeIcon.Ban.ToIconString(),
+                Palette.WithAlpha(ink, ink.W * fx.Alpha * 0.9f), 0.68f * fx.Pop);
         }
 
-        var textPos = anchor + (new Vector2(bubbleMin.X + paddingX + deletedIconWidth, contentTop) - anchor)
-            * pop + rise;
+        var textPos = fx.Apply(new Vector2(bubbleMin.X + paddingX + deletedIconWidth, contentTop));
         if (linkLayout is null)
         {
-            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize() * pop, textPos,
-                ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * alpha)), message.Body, wrap * pop);
+            drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize() * fx.Pop, textPos,
+                ImGui.GetColorU32(Palette.WithAlpha(ink, ink.W * fx.Alpha)), message.Body, wrap * fx.Pop);
         }
         else
         {
             var linkInk = mine || placeholder ? ink : model.Accent;
-            LinkText.Draw(drawList, linkLayout, textPos, pop, ink, linkInk, alpha, entrance >= 1f);
+            LinkText.Draw(drawList, linkLayout, textPos, fx.Pop, ink, linkInk, fx.Alpha, entrance >= 1f);
         }
         var timeColor = mine ? new Vector4(1f, 1f, 1f, 0.72f) : Palette.WithAlpha(model.MutedInk, 0.95f);
-        DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), anchor, pop, rise,
-            alpha, timeColor);
-        if (entrance >= 1f && !deleted && model.OnMessageContext is not null && message.Kind != KindSystem
-            && ImGui.IsMouseHoveringRect(bubbleMin, bubbleMax)
+        DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), fx, timeColor);
+        if (entrance >= 1f && !deleted && model.Interactions is { } interactions && message.Kind != KindSystem
+            && Hovering(bubbleMin, bubbleMax)
             && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            model.OnMessageContext(message.Id);
+            interactions.OnMessageContext(message.Id);
         }
 
-        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, alpha, model, scale);
+        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
         ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
     }
 
@@ -642,17 +553,17 @@ internal sealed class ChatTranscript
         return new Vector2(15f * scale + size.X, size.Y);
     }
 
-    private void DrawForwardLabel(ImDrawListPtr drawList, Vector2 origin, Vector2 anchor, float pop, Vector2 rise,
-        float alpha, bool mine, in ChatTranscriptModel model, float scale)
+    private void DrawForwardLabel(ImDrawListPtr drawList, Vector2 origin, in BubblePop fx, bool mine,
+        in ChatTranscriptModel model, float scale)
     {
         var ink = mine ? new Vector4(1f, 1f, 1f, 0.70f) : Palette.WithAlpha(model.MutedInk, 0.95f);
         var label = Loc.T(L.Message.ForwardedLabel);
         var size = Typography.Measure(label, 0.72f);
         var iconCenter = new Vector2(origin.X + 5f * scale, origin.Y + size.Y * 0.5f);
-        AppSkin.Icon(drawList, anchor + (iconCenter - anchor) * pop + rise, FontAwesomeIcon.Share.ToIconString(),
-            Palette.WithAlpha(ink, ink.W * alpha), 0.58f * pop);
-        var textPos = anchor + (new Vector2(origin.X + 15f * scale, origin.Y) - anchor) * pop + rise;
-        Typography.Draw(drawList, textPos, label, Palette.WithAlpha(ink, ink.W * alpha), 0.72f * pop);
+        AppSkin.Icon(drawList, fx.Apply(iconCenter), FontAwesomeIcon.Share.ToIconString(),
+            Palette.WithAlpha(ink, ink.W * fx.Alpha), 0.58f * fx.Pop);
+        var textPos = fx.Apply(new Vector2(origin.X + 15f * scale, origin.Y));
+        Typography.Draw(drawList, textPos, label, Palette.WithAlpha(ink, ink.W * fx.Alpha), 0.72f * fx.Pop);
     }
 
     private float DrawReactionChips(ImDrawListPtr drawList, in TranscriptMessage message, bool mine,
@@ -706,12 +617,12 @@ internal sealed class ChatTranscript
                     reaction.Count.ToString(Loc.Culture), new Vector4(0.94f, 0.94f, 0.97f, alpha), 0.68f);
             }
 
-            if (model.OnReactionClick is not null && ImGui.IsMouseHoveringRect(chipMin, chipMax))
+            if (model.Interactions is { } interactions && Hovering(chipMin, chipMax))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
-                    model.OnReactionClick(message.Id, reaction.Mine ? string.Empty : reaction.Token);
+                    interactions.OnReactionClick(message.Id, reaction.Mine ? string.Empty : reaction.Token);
                 }
             }
 
@@ -742,47 +653,43 @@ internal sealed class ChatTranscript
         var bubbleMin = new Vector2(mine ? start.X + available - bubbleWidth : start.X, start.Y);
         var bubbleMax = bubbleMin + new Vector2(bubbleWidth, bubbleHeight);
         ConsumeScrollTarget(message.Id, bubbleMin.Y);
-        var entrance = EntranceProgress(index);
-        var pop = entrance < 1f ? 0.80f + 0.20f * Easing.EaseOutQuint(entrance) : 1f;
-        var alpha = entrance < 1f ? MathF.Min(entrance * 1.8f, 1f) : 1f;
-        var rise = new Vector2(0f, entrance < 1f ? (1f - Easing.EaseOutCubic(entrance)) * 10f * scale : 0f);
-        var anchor = new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y);
-        var scaledMin = anchor + (bubbleMin - anchor) * pop + rise;
-        var scaledMax = anchor + (bubbleMax - anchor) * pop + rise;
+        var entrance = entrances.Progress(index);
+        var fx = BubblePop.For(entrance, scale, new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y));
+        var scaledMin = fx.Apply(bubbleMin);
+        var scaledMax = fx.Apply(bubbleMax);
         var fill = mine ? model.Accent : new Vector4(1f, 1f, 1f, 0.10f);
         var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
-        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * pop,
-            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
-        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * pop, mine, model);
+        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * fx.Alpha)));
+        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * fx.Pop, mine, model);
         var contentTop = bubbleMin.Y + paddingY;
         if (forwardBlock > 0f)
         {
-            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + paddingX, contentTop), anchor, pop, rise, alpha,
-                mine, model, scale);
+            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + paddingX, contentTop), fx, mine, model, scale);
             contentTop += forwardBlock;
         }
 
-        var state = model.VoiceState?.Invoke(message.Id) ?? default;
+        var state = model.Voice?.StateFor(message.Id) ?? default;
         var playCenter = new Vector2(bubbleMin.X + paddingX + playRadius, contentTop + playRadius);
         var playFill = mine ? new Vector4(1f, 1f, 1f, 0.22f) : Palette.WithAlpha(model.Accent, 0.9f);
         drawList.AddCircleFilled(playCenter, playRadius, ImGui.GetColorU32(Palette.WithAlpha(playFill,
-            playFill.W * alpha)), 28);
+            playFill.W * fx.Alpha)), 28);
         AppSkin.Icon(drawList, playCenter, (state.Playing ? FontAwesomeIcon.Pause : FontAwesomeIcon.Play)
-            .ToIconString(), new Vector4(1f, 1f, 1f, alpha), 0.7f);
+            .ToIconString(), new Vector4(1f, 1f, 1f, fx.Alpha), 0.7f);
         var trackLeft = playCenter.X + playRadius + 9f * scale;
         var trackRight = bubbleMax.X - paddingX;
         var trackY = playCenter.Y;
         var trackColor = mine ? new Vector4(1f, 1f, 1f, 0.35f) : Palette.WithAlpha(model.MutedInk, 0.55f);
         drawList.AddRectFilled(new Vector2(trackLeft, trackY - 2f * scale), new Vector2(trackRight, trackY + 2f * scale),
-            ImGui.GetColorU32(Palette.WithAlpha(trackColor, trackColor.W * alpha)), 2f * scale);
+            ImGui.GetColorU32(Palette.WithAlpha(trackColor, trackColor.W * fx.Alpha)), 2f * scale);
         var progress = state.Current ? state.Progress : 0f;
         if (progress > 0f)
         {
             var fillRight = trackLeft + (trackRight - trackLeft) * progress;
             drawList.AddRectFilled(new Vector2(trackLeft, trackY - 2f * scale), new Vector2(fillRight, trackY + 2f * scale),
-                ImGui.GetColorU32(Palette.WithAlpha(ink, 0.95f * alpha)), 2f * scale);
+                ImGui.GetColorU32(Palette.WithAlpha(ink, 0.95f * fx.Alpha)), 2f * scale);
             drawList.AddCircleFilled(new Vector2(fillRight, trackY), 4.5f * scale,
-                ImGui.GetColorU32(Palette.WithAlpha(ink, alpha)), 16);
+                ImGui.GetColorU32(Palette.WithAlpha(ink, fx.Alpha)), 16);
         }
 
         var duration = state.Current && state.Playing
@@ -790,30 +697,29 @@ internal sealed class ChatTranscript
             : message.DurationSecs;
         var durationText = TimeText.MinutesSeconds(duration);
         Typography.Draw(drawList, new Vector2(trackLeft, bubbleMax.Y - paddingY - stamp.Height),
-            durationText, Palette.WithAlpha(mine ? new Vector4(1f, 1f, 1f, 0.72f) : model.MutedInk, alpha),
+            durationText, Palette.WithAlpha(mine ? new Vector4(1f, 1f, 1f, 0.72f) : model.MutedInk, fx.Alpha),
             StampTextScale);
         var timeColor = mine ? new Vector4(1f, 1f, 1f, 0.72f) : Palette.WithAlpha(model.MutedInk, 0.95f);
-        DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), anchor, pop, rise,
-            alpha, timeColor);
+        DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), fx, timeColor);
         var playHitMin = playCenter - new Vector2(playRadius, playRadius);
         var playHitMax = playCenter + new Vector2(playRadius, playRadius);
-        if (entrance >= 1f && model.OnVoiceToggle is not null && ImGui.IsMouseHoveringRect(playHitMin, playHitMax))
+        if (entrance >= 1f && model.Voice is { } voice && Hovering(playHitMin, playHitMax))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
-                model.OnVoiceToggle(message.Id);
+                voice.Toggle(message.Id);
             }
         }
 
-        if (entrance >= 1f && model.OnMessageContext is not null
-            && ImGui.IsMouseHoveringRect(bubbleMin, bubbleMax)
+        if (entrance >= 1f && model.Interactions is { } interactions
+            && Hovering(bubbleMin, bubbleMax)
             && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            model.OnMessageContext(message.Id);
+            interactions.OnMessageContext(message.Id);
         }
 
-        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, alpha, model, scale);
+        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
         ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
     }
 
@@ -847,69 +753,64 @@ internal sealed class ChatTranscript
         var start = ImGui.GetCursorScreenPos();
         var offsetX = mine ? available - bubbleWidth : 0f;
         var fill = mine ? model.Accent : new Vector4(1f, 1f, 1f, 0.10f);
-        var entrance = EntranceProgress(index);
-        var pop = entrance < 1f ? 0.80f + 0.20f * Easing.EaseOutQuint(entrance) : 1f;
-        var alpha = entrance < 1f ? MathF.Min(entrance * 1.8f, 1f) : 1f;
-        var rise = new Vector2(0f, entrance < 1f ? (1f - Easing.EaseOutCubic(entrance)) * 10f * scale : 0f);
+        var entrance = entrances.Progress(index);
         var bubbleMin = start + new Vector2(offsetX, 0f);
         var bubbleMax = bubbleMin + new Vector2(bubbleWidth, bubbleHeight);
         ConsumeScrollTarget(message.Id, bubbleMin.Y);
-        var anchor = new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y);
-        var scaledMin = anchor + (bubbleMin - anchor) * pop + rise;
-        var scaledMax = anchor + (bubbleMax - anchor) * pop + rise;
-        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * pop,
-            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
+        var fx = BubblePop.For(entrance, scale, new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y));
+        var scaledMin = fx.Apply(bubbleMin);
+        var scaledMax = fx.Apply(bubbleMax);
+        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * fx.Alpha)));
         if (forwardBlock > 0f)
         {
-            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + padding, bubbleMin.Y + padding), anchor, pop, rise,
-                alpha, mine, model, scale);
+            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + padding, bubbleMin.Y + padding), fx, mine, model,
+                scale);
         }
 
-        var imageMin = scaledMin + new Vector2(padding * pop, (padding + forwardBlock) * pop);
-        var imageMax = imageMin + new Vector2(imageWidth * pop, imageHeight * pop);
-        var rounding = 10f * scale * pop;
-        var texture = model.ResolveImage is { } resolve
-            ? resolve(message.Id)
-            : model.Images.Get(model.MediaUrl(message.Id));
+        var imageMin = scaledMin + new Vector2(padding * fx.Pop, (padding + forwardBlock) * fx.Pop);
+        var imageMax = imageMin + new Vector2(imageWidth * fx.Pop, imageHeight * fx.Pop);
+        var rounding = 10f * scale * fx.Pop;
+        var texture = model.Media?.Texture(message.Id);
         if (texture is null)
         {
             Squircle.Fill(drawList, imageMin, imageMax, rounding,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * alpha)));
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * fx.Alpha)));
             AppSkin.Icon((imageMin + imageMax) * 0.5f, FontAwesomeIcon.Image.ToIconString(),
-                Palette.WithAlpha(model.MutedInk, alpha), 1.2f);
+                Palette.WithAlpha(model.MutedInk, fx.Alpha), 1.2f);
         }
         else
         {
             drawList.AddImageRounded(texture.Handle, imageMin, imageMax, Vector2.Zero, Vector2.One,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)), rounding, ImDrawFlags.RoundCornersAll);
-            if (entrance >= 1f && ImGui.IsMouseHoveringRect(imageMin, imageMax))
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, fx.Alpha)), rounding, ImDrawFlags.RoundCornersAll);
+            if (entrance >= 1f && model.Media is { } media && Hovering(imageMin, imageMax))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
-                    model.OnImageClick(message.Id);
+                    media.OnImageClick(message.Id);
                 }
             }
         }
 
-        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * pop, mine, model);
-        if (entrance >= 1f && model.OnMessageContext is not null
-            && ImGui.IsMouseHoveringRect(bubbleMin, bubbleMax)
+        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * fx.Pop, mine, model);
+        if (entrance >= 1f && model.Interactions is { } interactions
+            && Hovering(bubbleMin, bubbleMax)
             && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
-            model.OnMessageContext(message.Id);
+            interactions.OnMessageContext(message.Id);
         }
 
         if (caption.Length > 0)
         {
             var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
-            Typography.Draw(drawList, new Vector2(imageMin.X, imageMax.Y + 4f * scale * pop),
-                UiText.Truncate(caption, 60), Palette.WithAlpha(ink, alpha), 0.9f * pop);
+            Typography.Draw(drawList, new Vector2(imageMin.X, imageMax.Y + 4f * scale * fx.Pop),
+                UiText.Truncate(caption, 60), Palette.WithAlpha(ink, fx.Alpha), 0.9f * fx.Pop);
             var timeColor = mine
                 ? new Vector4(1f, 1f, 1f, 0.72f)
                 : Palette.WithAlpha(model.MutedInk, 0.95f);
             DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - padding - 4f * scale, bubbleMax.Y - padding),
-                anchor, pop, rise, alpha, timeColor);
+                fx, timeColor);
         }
         else
         {
@@ -917,12 +818,12 @@ internal sealed class ChatTranscript
             var pillMax = bubbleMin + new Vector2(padding + imageWidth, padding + forwardBlock + imageHeight) -
                           new Vector2(6f * scale, 6f * scale);
             var pillMin = pillMax - new Vector2(stamp.Width + stampPad.X * 2f, stamp.Height + stampPad.Y * 2f);
-            Squircle.Fill(drawList, anchor + (pillMin - anchor) * pop + rise, anchor + (pillMax - anchor) * pop + rise,
-                (pillMax.Y - pillMin.Y) * 0.5f * pop, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.38f * alpha)));
-            DrawStamp(drawList, stamp, pillMax - stampPad, anchor, pop, rise, alpha, new Vector4(1f, 1f, 1f, 0.92f));
+            Squircle.Fill(drawList, fx.Apply(pillMin), fx.Apply(pillMax),
+                (pillMax.Y - pillMin.Y) * 0.5f * fx.Pop, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.38f * fx.Alpha)));
+            DrawStamp(drawList, stamp, pillMax - stampPad, fx, new Vector4(1f, 1f, 1f, 0.92f));
         }
 
-        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, alpha, model, scale);
+        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
         ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
     }
 
@@ -980,28 +881,27 @@ internal sealed class ChatTranscript
     }
 
     private void DrawQuote(ImDrawListPtr drawList, in TranscriptMessage message, in QuoteMeasure quote,
-        Vector2 origin, float width, Vector2 anchor, float pop, Vector2 rise, float alpha, bool mine,
-        in ChatTranscriptModel model)
+        Vector2 origin, float width, in BubblePop fx, bool mine, in ChatTranscriptModel model)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var quoteMin = origin;
         var quoteMax = origin + new Vector2(width, quote.Height);
-        var scaledMin = anchor + (quoteMin - anchor) * pop + rise;
-        var scaledMax = anchor + (quoteMax - anchor) * pop + rise;
+        var scaledMin = fx.Apply(quoteMin);
+        var scaledMax = fx.Apply(quoteMax);
         var fill = mine ? new Vector4(0f, 0f, 0f, 0.20f) : new Vector4(1f, 1f, 1f, 0.07f);
-        Squircle.Fill(drawList, scaledMin, scaledMax, 8f * scale * pop,
-            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
+        Squircle.Fill(drawList, scaledMin, scaledMax, 8f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * fx.Alpha)));
         var barColor = mine ? new Vector4(1f, 1f, 1f, 0.92f) : model.Accent;
         var barMax = new Vector2(quoteMin.X + 3f * scale, quoteMax.Y);
-        Squircle.Fill(drawList, anchor + (quoteMin - anchor) * pop + rise, anchor + (barMax - anchor) * pop + rise,
-            1.5f * scale * pop, ImGui.GetColorU32(Palette.WithAlpha(barColor, barColor.W * alpha)));
+        Squircle.Fill(drawList, fx.Apply(quoteMin), fx.Apply(barMax),
+            1.5f * scale * fx.Pop, ImGui.GetColorU32(Palette.WithAlpha(barColor, barColor.W * fx.Alpha)));
         var textLeft = quoteMin.X + 3f * scale + 7f * scale;
         var textWidth = quoteMax.X - 8f * scale - textLeft;
         var senderInk = mine ? new Vector4(1f, 1f, 1f, 0.95f) : model.Accent;
-        var senderPos = anchor + (new Vector2(textLeft, quoteMin.Y + 5f * scale) - anchor) * pop + rise;
+        var senderPos = fx.Apply(new Vector2(textLeft, quoteMin.Y + 5f * scale));
         Typography.Draw(drawList, senderPos, Typography.FitText(message.ReplySenderName, textWidth,
-            QuoteSenderScale, FontWeight.SemiBold), Palette.WithAlpha(senderInk, senderInk.W * alpha),
-            QuoteSenderScale * pop, FontWeight.SemiBold);
+            QuoteSenderScale, FontWeight.SemiBold), Palette.WithAlpha(senderInk, senderInk.W * fx.Alpha),
+            QuoteSenderScale * fx.Pop, FontWeight.SemiBold);
         var previewInk = mine ? new Vector4(1f, 1f, 1f, 0.78f) : Palette.WithAlpha(model.MutedInk, 0.95f);
         var previewTop = quoteMin.Y + 5f * scale + quote.SenderHeight + 1f * scale;
         var previewLeft = textLeft;
@@ -1011,21 +911,21 @@ internal sealed class ChatTranscript
             var glyph = message.ReplyKind == KindVoice
                 ? FontAwesomeIcon.Microphone.ToIconString()
                 : FontAwesomeIcon.Camera.ToIconString();
-            AppSkin.Icon(drawList, anchor + (iconCenter - anchor) * pop + rise, glyph,
-                Palette.WithAlpha(previewInk, previewInk.W * alpha), 0.62f * pop);
+            AppSkin.Icon(drawList, fx.Apply(iconCenter), glyph,
+                Palette.WithAlpha(previewInk, previewInk.W * fx.Alpha), 0.62f * fx.Pop);
             previewLeft += 15f * scale;
         }
 
-        var previewPos = anchor + (new Vector2(previewLeft, previewTop) - anchor) * pop + rise;
+        var previewPos = fx.Apply(new Vector2(previewLeft, previewTop));
         Typography.Draw(drawList, previewPos, Typography.FitText(message.ReplyBody,
             textWidth - (previewLeft - textLeft), QuotePreviewScale, FontWeight.Regular),
-            Palette.WithAlpha(previewInk, previewInk.W * alpha), QuotePreviewScale * pop);
-        if (model.OnQuoteClick is not null && ImGui.IsMouseHoveringRect(quoteMin, quoteMax))
+            Palette.WithAlpha(previewInk, previewInk.W * fx.Alpha), QuotePreviewScale * fx.Pop);
+        if (model.Interactions is { } interactions && Hovering(quoteMin, quoteMax))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
-                model.OnQuoteClick(message.ReplyToId!);
+                interactions.OnQuoteClick(message.ReplyToId!);
             }
         }
     }
@@ -1099,13 +999,12 @@ internal sealed class ChatTranscript
         return new BubbleStamp(time, glyph, seen, timeSize.X + 4f * scale + tickWidth, timeSize.Y, tickWidth);
     }
 
-    private static void DrawStamp(ImDrawListPtr drawList, in BubbleStamp stamp, Vector2 bottomRight, Vector2 anchor,
-        float pop, Vector2 rise, float alpha, Vector4 timeColor)
+    private static void DrawStamp(ImDrawListPtr drawList, in BubbleStamp stamp, Vector2 bottomRight, in BubblePop fx,
+        Vector4 timeColor)
     {
         var topLeft = new Vector2(bottomRight.X - stamp.Width, bottomRight.Y - stamp.Height);
-        var timePos = anchor + (topLeft - anchor) * pop + rise;
-        Typography.Draw(drawList, timePos, stamp.Time, Palette.WithAlpha(timeColor, timeColor.W * alpha),
-            StampTextScale * pop);
+        Typography.Draw(drawList, fx.Apply(topLeft), stamp.Time, Palette.WithAlpha(timeColor, timeColor.W * fx.Alpha),
+            StampTextScale * fx.Pop);
         if (stamp.TickGlyph is null)
         {
             return;
@@ -1113,8 +1012,8 @@ internal sealed class ChatTranscript
 
         var tickCenter = new Vector2(bottomRight.X - stamp.TickWidth * 0.5f, bottomRight.Y - stamp.Height * 0.45f);
         var tickColor = stamp.Seen ? SeenTickColor : timeColor;
-        AppSkin.Icon(drawList, anchor + (tickCenter - anchor) * pop + rise, stamp.TickGlyph,
-            Palette.WithAlpha(tickColor, tickColor.W * alpha), StampTickScale * pop);
+        AppSkin.Icon(drawList, fx.Apply(tickCenter), stamp.TickGlyph,
+            Palette.WithAlpha(tickColor, tickColor.W * fx.Alpha), StampTickScale * fx.Pop);
     }
 
     private static string FirstName(string name)
@@ -1122,6 +1021,9 @@ internal sealed class ChatTranscript
         var space = name.IndexOf(' ');
         return space > 0 ? name.Substring(0, space) : name;
     }
+
+    private static bool Hovering(Vector2 min, Vector2 max) =>
+        !UiInteract.InputBlocked && ImGui.IsMouseHoveringRect(min, max);
 
     private readonly struct BubbleStamp
     {
@@ -1143,9 +1045,4 @@ internal sealed class ChatTranscript
         }
     }
 
-    private struct BubbleEntrance
-    {
-        public int Line;
-        public float Elapsed;
-    }
 }
