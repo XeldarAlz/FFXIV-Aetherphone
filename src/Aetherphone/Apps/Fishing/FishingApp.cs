@@ -346,7 +346,11 @@ internal sealed class FishingApp : IPhoneApp
             _ => Loc.T(L.Fishing.Day),
         };
 
-    private static string LocalTime(DateTime utc) => utc.ToLocalTime().ToString("ddd t", Loc.Culture);
+    private static string LocalTime(DateTime utc)
+    {
+        var local = utc.ToLocalTime();
+        return string.Concat(local.ToString("ddd", Loc.Culture), " ", local.ToString("t", Loc.Culture));
+    }
 
     private static string Relative(TimeSpan remaining)
     {

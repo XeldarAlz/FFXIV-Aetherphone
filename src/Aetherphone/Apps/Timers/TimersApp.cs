@@ -333,7 +333,11 @@ internal sealed class TimersApp : IPhoneApp
 
     private static string LocalTime(DateTime utc) => utc.ToLocalTime().ToString("t", Loc.Culture);
 
-    private static string LocalDay(DateTime utc) => utc.ToLocalTime().ToString("ddd t", Loc.Culture);
+    private static string LocalDay(DateTime utc)
+    {
+        var local = utc.ToLocalTime();
+        return string.Concat(local.ToString("ddd", Loc.Culture), " ", local.ToString("t", Loc.Culture));
+    }
 
     private static string TimeOfDayLabel(OceanTimeOfDay timeOfDay) =>
         timeOfDay switch
