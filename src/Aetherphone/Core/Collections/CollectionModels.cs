@@ -31,6 +31,21 @@ internal enum OwnedState : byte
     Failed,
 }
 
+internal enum SummaryState : byte
+{
+    Unknown,
+    Loading,
+    Ready,
+    Failed,
+}
+
+internal enum CollectionAccess : byte
+{
+    Public,
+    Private,
+    NotSynced,
+}
+
 internal sealed class CollectionSource
 {
     [JsonPropertyName("type")] public string? Type { get; set; }
@@ -85,9 +100,29 @@ internal sealed class OwnedItemDto
     [JsonPropertyName("id")] public int Id { get; set; }
 }
 
+internal sealed class CharacterCollectionStat
+{
+    [JsonPropertyName("count")] public int Count { get; set; }
+    [JsonPropertyName("total")] public int Total { get; set; }
+    [JsonPropertyName("public")] public bool? Public { get; set; }
+}
+
+internal sealed class CharacterSummaryDto
+{
+    [JsonPropertyName("mounts")] public CharacterCollectionStat? Mounts { get; set; }
+    [JsonPropertyName("minions")] public CharacterCollectionStat? Minions { get; set; }
+    [JsonPropertyName("emotes")] public CharacterCollectionStat? Emotes { get; set; }
+    [JsonPropertyName("orchestrions")] public CharacterCollectionStat? Orchestrions { get; set; }
+    [JsonPropertyName("hairstyles")] public CharacterCollectionStat? Hairstyles { get; set; }
+    [JsonPropertyName("facewear")] public CharacterCollectionStat? Facewear { get; set; }
+    [JsonPropertyName("achievements")] public CharacterCollectionStat? Achievements { get; set; }
+    [JsonPropertyName("cards")] public CharacterCollectionStat? Cards { get; set; }
+}
+
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(CollectionResponse))]
 [JsonSerializable(typeof(OwnedItemDto[]))]
+[JsonSerializable(typeof(CharacterSummaryDto))]
 internal sealed partial class CollectionJsonContext : JsonSerializerContext
 {
 }

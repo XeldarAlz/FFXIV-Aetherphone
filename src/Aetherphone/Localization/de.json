@@ -246,6 +246,7 @@
   "collections.about": "Info",
   "collections.linkHint": "Verknüpfe deinen Charakter, um deinen Besitz zu sehen.",
   "collections.collectionPrivate": "Diese Sammlung ist im Lodestone privat.",
+  "collections.collectionNotTracked": "Diese Sammlung kann nicht über den Lodestone verfolgt werden.",
   "collections.ownedUnavailable": "Deine erhaltenen Einträge konnten nicht geladen werden.",
   "collections.failed": "FFXIV Collect nicht erreichbar.",
   "collections.tryAgain": "Erneut versuchen",

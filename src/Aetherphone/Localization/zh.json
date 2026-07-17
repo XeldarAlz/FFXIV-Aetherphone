@@ -246,6 +246,7 @@
   "collections.about": "关于",
   "collections.linkHint": "绑定你的角色以查看已拥有的物品。",
   "collections.collectionPrivate": "此收藏在 Lodestone 上设为私密。",
+  "collections.collectionNotTracked": "此收藏无法通过 Lodestone 追踪。",
   "collections.ownedUnavailable": "目前无法加载你的已拥有物品。",
   "collections.failed": "无法连接到 FFXIV Collect。",
   "collections.tryAgain": "重试",

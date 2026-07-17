@@ -19,6 +19,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
 {
     private const float TileGap = 12f;
     private const float TileHeight = 104f;
+    private const float MaxTileHeight = 118f;
     private const float SearchHeight = 50f;
     private const float SegmentHeight = 34f;
     private const float ChipRowHeight = 38f;
@@ -95,6 +96,12 @@ internal sealed partial class CollectionsApp : IPhoneApp
         ownershipLabels[2] = Loc.T(L.Collections.FilterMissing);
         lodestoneId = ResolveLocalId();
         catalog.ResetOwned();
+        catalog.ResetSummaries();
+        if (lodestoneId is not null)
+        {
+            catalog.RequestSummary(lodestoneId);
+        }
+
         for (var index = 0; index < CollectionCategories.All.Length; index++)
         {
             catalog.RequestCatalog(CollectionCategories.All[index]);

@@ -295,6 +295,7 @@ internal static class L
 
         public static readonly LocString LinkHint = new("collections.linkHint", "Link your character to see what you own.");
         public static readonly LocString CollectionPrivate = new("collections.collectionPrivate", "This collection is private on the Lodestone.");
+        public static readonly LocString CollectionNotTracked = new("collections.collectionNotTracked", "This collection can't be tracked from the Lodestone.");
         public static readonly LocString OwnedUnavailable = new("collections.ownedUnavailable", "Couldn't load your owned items right now.");
         public static readonly LocString Failed = new("collections.failed", "Couldn't reach FFXIV Collect.");
         public static readonly LocString TryAgain = new("collections.tryAgain", "Try again");

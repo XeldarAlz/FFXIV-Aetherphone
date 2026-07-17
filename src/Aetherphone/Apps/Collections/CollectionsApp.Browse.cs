@@ -69,11 +69,8 @@ internal sealed partial class CollectionsApp
         var bottomMargin = 12f * scale;
         var tileWidth = (width - gap) / columns;
         var tileHeight = (available - (rows - 1) * gap - bottomMargin) / rows;
-        var minTileHeight = TileHeight * scale;
-        if (tileHeight < minTileHeight)
-        {
-            tileHeight = minTileHeight;
-        }
+        tileHeight = Math.Clamp(tileHeight, TileHeight * scale, MaxTileHeight * scale);
+        var summary = lodestoneId is not null ? catalog.RequestSummary(lodestoneId) : null;
 
         for (var index = 0; index < count; index++)
         {
@@ -88,7 +85,7 @@ internal sealed partial class CollectionsApp
                 UiAnchors.Report("collections.tile.mounts", tileRect);
             }
 
-            if (DrawTile(tileRect, category, scale))
+            if (DrawTile(tileRect, category, summary, scale))
             {
                 OpenCategory(category);
             }
@@ -99,7 +96,7 @@ internal sealed partial class CollectionsApp
         ImGui.Dummy(new Vector2(width, totalHeight + bottomMargin));
     }
 
-    private bool DrawTile(Rect rect, CollectionCategory category, float scale)
+    private bool DrawTile(Rect rect, CollectionCategory category, SummaryEntry? summary, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 18f * scale;
@@ -117,10 +114,9 @@ internal sealed partial class CollectionsApp
         var tileCenter = new Vector2(rect.Min.X + pad + tileSize * 0.5f, rect.Min.Y + pad + tileSize * 0.5f);
         IconTile.Draw(tileCenter, tileSize, IconTile.Surface(tint), CategoryIcon(category));
 
-        var entry = catalog.RequestCatalog(category);
-        var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
-        var total = entry.Total;
-        DrawTileRing(rect, owned, total, pad, scale);
+        var progress = summary is { State: SummaryState.Ready } ? summary.For(category) : null;
+        var total = progress is { Total: > 0 } ? progress.Total : catalog.RequestCatalog(category).Total;
+        DrawTileRing(rect, summary, progress, pad, scale);
 
         var name = Typography.FitText(CategoryLabel(category), rect.Width - pad * 2f, TextStyles.Headline);
         Typography.Draw(new Vector2(rect.Min.X + pad, rect.Max.Y - pad - 36f * scale), name, ui.TitleInk,
@@ -136,21 +132,56 @@ internal sealed partial class CollectionsApp
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private void DrawTileRing(Rect rect, OwnedEntry? owned, int total, float pad, float scale)
+    private void DrawTileRing(Rect rect, SummaryEntry? summary, CategoryProgress? progress, float pad, float scale)
     {
-        if (owned is not { State: OwnedState.Ready } || total <= 0)
+        if (summary is null)
         {
             return;
         }
 
-        var radius = 20f * scale;
-        var thickness = 3.6f * scale;
+        var radius = 23f * scale;
+        var thickness = 4.2f * scale;
         var center = new Vector2(rect.Max.X - pad - radius, rect.Min.Y + pad + radius);
-        var fraction = Math.Clamp(owned.Count / (float)total, 0f, 1f);
-        ProgressRing.Track(center, radius, thickness, Palette.WithAlpha(ui.TitleInk, 0.14f));
+        var track = Palette.WithAlpha(ui.TitleInk, 0.14f);
+        if (progress is null)
+        {
+            ProgressRing.Track(center, radius, thickness, track);
+            if (summary.State == SummaryState.Loading)
+            {
+                ProgressRing.Sweep(center, radius, thickness, ui.Accent, 900.0, 1.6f, 0.85f);
+            }
+
+            return;
+        }
+
+        if (!progress.HasPercent)
+        {
+            ProgressRing.Track(center, radius, thickness, Palette.WithAlpha(ui.TitleInk, 0.10f));
+            AppSkin.Icon(center, FontAwesomeIcon.Lock.ToIconString(), Palette.WithAlpha(ui.MutedInk, 0.9f), 0.6f);
+            return;
+        }
+
+        var fraction = progress.Total > 0 ? Math.Clamp(progress.Count / (float)progress.Total, 0f, 1f) : 0f;
+        ProgressRing.Track(center, radius, thickness, track);
         ProgressRing.Fill(center, radius, thickness, fraction, ui.Accent);
         var percent = (int)MathF.Round(fraction * 100f);
-        Typography.DrawCentered(center, percent + "%", ui.TitleInk, TextStyles.FootnoteEmphasized);
+        DrawRingPercent(center, radius, thickness, percent + "%", ui.TitleInk);
+    }
+
+    private static void DrawRingPercent(Vector2 center, float radius, float thickness, string text, Vector4 color)
+    {
+        const FontWeight weight = FontWeight.SemiBold;
+        var maxWidth = (radius - thickness) * 2f * 0.84f;
+        var fontScale = 1.02f;
+        var reference = Typography.Measure("100%", fontScale, weight).X;
+        if (reference > maxWidth)
+        {
+            fontScale *= maxWidth / reference;
+        }
+
+        var size = Typography.Measure(text, fontScale, weight);
+        var position = new Vector2(center.X - size.X * 0.5f, center.Y - size.Y * 0.5f + size.Y * 0.06f);
+        Typography.Draw(position, text, color, fontScale, weight);
     }
 
     private void DrawCategory(Rect area, CollectionCategory category)
@@ -162,6 +193,10 @@ internal sealed partial class CollectionsApp
         contentBottom = area.Max.Y;
         var entry = catalog.RequestCatalog(category);
         var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
+        var summary = lodestoneId is not null ? catalog.RequestSummary(lodestoneId) : null;
+        var progress = summary is { State: SummaryState.Ready } ? summary.For(category) : null;
+        var trackable = progress?.HasPercent ?? true;
+        var ownedUi = trackable ? owned : null;
         var searchBar = new Rect(new Vector2(area.Min.X + pad, top),
             new Vector2(area.Max.X - pad, top + SearchHeight * scale));
         UiAnchors.Report("collections.search", searchBar);
@@ -174,7 +209,7 @@ internal sealed partial class CollectionsApp
         }
 
         var rowTop = searchBar.Max.Y;
-        var hasOwned = owned is { State: OwnedState.Ready };
+        var hasOwned = ownedUi is { State: OwnedState.Ready };
         if (hasOwned)
         {
             var segmentBar = new Rect(new Vector2(area.Min.X + pad, rowTop),
@@ -213,7 +248,7 @@ internal sealed partial class CollectionsApp
         var sourceFilter = sourceIndex > 0 && sourceIndex <= sourceList.Count
             ? sourceList[sourceIndex - 1]
             : string.Empty;
-        CollectionFilter.Apply(entry.Items, filtered, search, ownership, sourceFilter, owned);
+        CollectionFilter.Apply(entry.Items, filtered, search, ownership, sourceFilter, ownedUi);
         var total = filtered.Count;
         var totalPages = Math.Max(1, (total + PageSize - 1) / PageSize);
         page = Math.Clamp(page, 0, totalPages - 1);
@@ -228,15 +263,15 @@ internal sealed partial class CollectionsApp
             }
 
             ImGui.Dummy(new Vector2(0f, 2f * scale));
-            DrawSummary(entry, owned);
-            DrawOwnedNotice(owned);
+            DrawSummary(entry, ownedUi);
+            DrawAccessNotice(progress, owned);
             if (total == 0)
             {
                 DrawNoResults(scale);
             }
             else
             {
-                DrawList(category, owned, start, end);
+                DrawList(category, ownedUi, start, end);
                 if (totalPages > 1)
                 {
                     DrawPager(totalPages);
@@ -291,14 +326,25 @@ internal sealed partial class CollectionsApp
         ImGui.Dummy(new Vector2(width, 34f * scale));
     }
 
-    private void DrawOwnedNotice(OwnedEntry? owned)
+    private void DrawAccessNotice(CategoryProgress? progress, OwnedEntry? owned)
     {
-        var message = owned?.State switch
+        string message;
+        if (progress is { HasPercent: false })
         {
-            OwnedState.Private => Loc.T(L.Collections.CollectionPrivate),
-            OwnedState.Failed => Loc.T(L.Collections.OwnedUnavailable),
-            _ => string.Empty,
-        };
+            message = progress.Access == CollectionAccess.Private
+                ? Loc.T(L.Collections.CollectionPrivate)
+                : Loc.T(L.Collections.CollectionNotTracked);
+        }
+        else
+        {
+            message = owned?.State switch
+            {
+                OwnedState.Private => Loc.T(L.Collections.CollectionPrivate),
+                OwnedState.Failed => Loc.T(L.Collections.OwnedUnavailable),
+                _ => string.Empty,
+            };
+        }
+
         if (message.Length == 0)
         {
             return;

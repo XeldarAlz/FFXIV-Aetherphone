@@ -246,6 +246,7 @@
   "collections.about": "Описание",
   "collections.linkHint": "Привяжите персонажа, чтобы видеть, что у вас есть.",
   "collections.collectionPrivate": "Эта коллекция скрыта на Lodestone.",
+  "collections.collectionNotTracked": "Эту коллекцию нельзя отследить через Lodestone.",
   "collections.ownedUnavailable": "Не удалось загрузить ваши предметы.",
   "collections.failed": "Не удалось связаться с FFXIV Collect.",
   "collections.tryAgain": "Повторить",

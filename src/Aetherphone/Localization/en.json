@@ -246,6 +246,7 @@
   "collections.about": "About",
   "collections.linkHint": "Link your character to see what you own.",
   "collections.collectionPrivate": "This collection is private on the Lodestone.",
+  "collections.collectionNotTracked": "This collection can't be tracked from the Lodestone.",
   "collections.ownedUnavailable": "Couldn't load your owned items right now.",
   "collections.failed": "Couldn't reach FFXIV Collect.",
   "collections.tryAgain": "Try again",

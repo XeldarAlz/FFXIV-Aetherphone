@@ -19,17 +19,48 @@ internal sealed class OwnedEntry
     public DateTime FetchedUtc;
 }
 
+internal sealed class CategoryProgress
+{
+    public int Count;
+    public int Total;
+    public CollectionAccess Access;
+
+    public bool HasPercent => Access == CollectionAccess.Public || Count > 0;
+}
+
+internal sealed class SummaryEntry
+{
+    public volatile SummaryState State = SummaryState.Unknown;
+    public readonly CategoryProgress[] Categories = Create();
+    public DateTime FetchedUtc;
+
+    public CategoryProgress For(CollectionCategory category) => Categories[(int)category];
+
+    private static CategoryProgress[] Create()
+    {
+        var array = new CategoryProgress[CollectionCategories.All.Length];
+        for (var index = 0; index < array.Length; index++)
+        {
+            array[index] = new CategoryProgress();
+        }
+
+        return array;
+    }
+}
+
 internal sealed class CollectionsCatalogService : IDisposable
 {
     private const string ApiRoot = "https://ffxivcollect.com/api";
     private static readonly TimeSpan CatalogFreshFor = TimeSpan.FromDays(14);
     private static readonly TimeSpan OwnedFailedRetryFor = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan SummaryFailedRetryFor = TimeSpan.FromMinutes(1);
     private readonly HttpService http;
     private readonly DiskCache disk;
     private readonly RequestThrottle throttle;
     private readonly CancellationTokenSource cancellation = new();
     private readonly ConcurrentDictionary<CollectionCategory, CatalogEntry> catalogs = new();
     private readonly ConcurrentDictionary<string, OwnedEntry> owned = new();
+    private readonly ConcurrentDictionary<string, SummaryEntry> summaries = new();
 
     public CollectionsCatalogService(HttpService http, DiskCache disk)
     {
@@ -66,6 +97,21 @@ internal sealed class CollectionsCatalogService : IDisposable
         return entry;
     }
 
+    public SummaryEntry RequestSummary(string lodestoneId)
+    {
+        var entry = summaries.GetOrAdd(lodestoneId, static _ => new SummaryEntry());
+        var retryFailed = entry.State == SummaryState.Failed &&
+            DateTime.UtcNow - entry.FetchedUtc >= SummaryFailedRetryFor;
+
+        if (entry.State == SummaryState.Unknown || retryFailed)
+        {
+            entry.State = SummaryState.Loading;
+            _ = LoadSummaryAsync(lodestoneId, entry);
+        }
+
+        return entry;
+    }
+
     public void Retry(CollectionCategory category)
     {
         if (catalogs.TryGetValue(category, out var entry) && entry.State == CollectionState.Failed)
@@ -78,6 +124,11 @@ internal sealed class CollectionsCatalogService : IDisposable
     public void ResetOwned()
     {
         owned.Clear();
+    }
+
+    public void ResetSummaries()
+    {
+        summaries.Clear();
     }
 
     private async Task LoadCatalogAsync(CollectionCategory category, CatalogEntry entry)
@@ -177,6 +228,70 @@ internal sealed class CollectionsCatalogService : IDisposable
             entry.State = OwnedState.Failed;
             AepLog.Warning($"Collections owned fetch failed for {category}: {exception.Message}");
         }
+    }
+
+    private async Task LoadSummaryAsync(string lodestoneId, SummaryEntry entry)
+    {
+        try
+        {
+            var token = cancellation.Token;
+            var url = string.Concat(ApiRoot, "/characters/", lodestoneId);
+            CharacterSummaryDto? dto;
+
+            using (await throttle.EnterAsync(token).ConfigureAwait(false))
+            {
+                dto = await http.GetJsonAsync(url, CollectionJsonContext.Default.CharacterSummaryDto, null, token)
+                    .ConfigureAwait(false);
+            }
+
+            entry.FetchedUtc = DateTime.UtcNow;
+
+            if (dto is null)
+            {
+                entry.State = SummaryState.Failed;
+                return;
+            }
+
+            Apply(entry, CollectionCategory.Mounts, dto.Mounts);
+            Apply(entry, CollectionCategory.Minions, dto.Minions);
+            Apply(entry, CollectionCategory.Emotes, dto.Emotes);
+            Apply(entry, CollectionCategory.Orchestrions, dto.Orchestrions);
+            Apply(entry, CollectionCategory.Hairstyles, dto.Hairstyles);
+            Apply(entry, CollectionCategory.Facewear, dto.Facewear);
+            Apply(entry, CollectionCategory.Achievements, dto.Achievements);
+            Apply(entry, CollectionCategory.TriadCards, dto.Cards);
+            entry.State = SummaryState.Ready;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            entry.FetchedUtc = DateTime.UtcNow;
+            entry.State = SummaryState.Failed;
+            AepLog.Warning($"Collections summary fetch failed: {exception.Message}");
+        }
+    }
+
+    private static void Apply(SummaryEntry entry, CollectionCategory category, CharacterCollectionStat? stat)
+    {
+        var progress = entry.For(category);
+        if (stat is null)
+        {
+            progress.Count = 0;
+            progress.Total = 0;
+            progress.Access = CollectionAccess.NotSynced;
+            return;
+        }
+
+        progress.Count = stat.Count;
+        progress.Total = stat.Total;
+        progress.Access = stat.Public switch
+        {
+            true => CollectionAccess.Public,
+            false => CollectionAccess.Private,
+            _ => CollectionAccess.NotSynced,
+        };
     }
 
     private static CollectionItem[] Build(CollectionItemDto[] results)

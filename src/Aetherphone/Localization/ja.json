@@ -246,6 +246,7 @@
   "collections.about": "概要",
   "collections.linkHint": "キャラクターをリンクして所持状況を確認します。",
   "collections.collectionPrivate": "このコレクションはLodestoneで非公開に設定されています。",
+  "collections.collectionNotTracked": "このコレクションはLodestoneから取得できません。",
   "collections.ownedUnavailable": "現在、所持アイテムを読み込めませんでした。",
   "collections.failed": "FFXIV Collectに接続できませんでした。",
   "collections.tryAgain": "再試行",

@@ -246,6 +246,7 @@
   "collections.about": "Hakkında",
   "collections.linkHint": "Sahip olduklarını görmek için karakterini bağla.",
   "collections.collectionPrivate": "Bu koleksiyon Lodestone'da gizli.",
+  "collections.collectionNotTracked": "Bu koleksiyon Lodestone üzerinden takip edilemiyor.",
   "collections.ownedUnavailable": "Sahip olduğun öğeler şu anda yüklenemedi.",
   "collections.failed": "FFXIV Collect'e ulaşılamadı.",
   "collections.tryAgain": "Tekrar dene",
