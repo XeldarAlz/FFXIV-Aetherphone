@@ -85,19 +85,16 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateControlPanelRepack();
             InitializeLocalization();
             Fonts = new FontService(PluginInterface, Cfg.TextZoom);
-            Loading = new LoadingScreen();
-            var builtInWallpaperDirectory =
-                new DirectoryInfo(
-                    Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
-            var customWallpaperDirectory =
-                new DirectoryInfo(Path.Combine(PluginInterface.ConfigDirectory.FullName, "Wallpapers"));
-            Wallpapers = new WallpaperLibrary(TextureProvider, builtInWallpaperDirectory, customWallpaperDirectory, Cfg);
-            WallpaperImages = new WallpaperImageCache();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
                 TextureProvider, PluginInterface.ConfigDirectory);
             sessionStartedAt = DateTime.UtcNow;
             Analytics = services.Analytics;
+            Loading = services.Loading;
+            Wallpapers = services.Wallpapers;
+            WallpaperImages = services.WallpaperImages;
+            Confirm = services.Confirm;
+            Report = services.Report;
             if (Analytics.IsFirstRun)
             {
                 Analytics.Track(AnalyticsEvents.FirstRun());
@@ -105,9 +102,7 @@ public sealed class Plugin : IDalamudPlugin
 
             Analytics.Track(AnalyticsEvents.SessionStart(BuildSessionProperties()));
             aboutWindow = new AboutWindow();
-            Confirm = new ConfirmService();
-            Report = new ReportService();
-            shell = new PhoneShell(services, AppRegistry.BuildDefault(services, ShowAbout), Confirm, Report);
+            shell = new PhoneShell(services, AppRegistry.BuildDefault(services, ShowAbout));
             phoneWindow = new PhoneWindow(shell);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
@@ -189,8 +184,6 @@ public sealed class Plugin : IDalamudPlugin
         services?.Dispose();
         Device?.Dispose();
         Fonts?.Dispose();
-        Wallpapers?.Dispose();
-        WallpaperImages?.Dispose();
     }
 
     private void OnLogin()
@@ -273,8 +266,6 @@ public sealed class Plugin : IDalamudPlugin
         services.Dispose();
         Device.Dispose();
         Fonts.Dispose();
-        Wallpapers.Dispose();
-        WallpaperImages.Dispose();
         CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
         CommandManager.RemoveHandler(AepConstants.AliasCommand);
     }

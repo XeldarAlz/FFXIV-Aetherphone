@@ -2,6 +2,7 @@ using Aetherphone.Core.Activity;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Collections;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Games;
@@ -17,10 +18,13 @@ using Aetherphone.Core.News;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Radio;
+using Aetherphone.Core.Report;
+using Aetherphone.Core.Shell;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
+using Aetherphone.Core.Wallpapers;
 using Dalamud.Plugin.Services;
 using YoutubeExplode;
 
@@ -77,11 +81,21 @@ internal sealed class PhoneServices : IDisposable
     public required CallHub Calls { get; init; }
     public required PhoneVisibility Visibility { get; init; }
     public required RealtimeSignalBus RealtimeSignals { get; init; }
+    public required LoadingScreen Loading { get; init; }
+    public required ConfirmService Confirm { get; init; }
+    public required ReportService Report { get; init; }
+    public required WallpaperLibrary Wallpapers { get; init; }
+    public required WallpaperImageCache WallpaperImages { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
         ITextureProvider textures, DirectoryInfo configDirectory)
     {
+        var builtInWallpaperDirectory = new DirectoryInfo(
+            Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
+        var customWallpaperDirectory = new DirectoryInfo(Path.Combine(configDirectory.FullName, "Wallpapers"));
+        var wallpapers = new WallpaperLibrary(textures, builtInWallpaperDirectory, customWallpaperDirectory,
+            configuration);
         var themes = new ThemeProvider(configuration);
         var gameData = new GameData(dataManager, objectTable);
         var maps = new MapData(dataManager, clientState);
@@ -203,6 +217,11 @@ internal sealed class PhoneServices : IDisposable
             Calls = calls,
             Visibility = visibility,
             RealtimeSignals = realtimeSignals,
+            Loading = new LoadingScreen(),
+            Confirm = new ConfirmService(),
+            Report = new ReportService(),
+            Wallpapers = wallpapers,
+            WallpaperImages = new WallpaperImageCache(),
         };
     }
 
@@ -233,5 +252,7 @@ internal sealed class PhoneServices : IDisposable
         RemoteImages.Dispose();
         Analytics.Dispose();
         Http.Dispose();
+        Wallpapers.Dispose();
+        WallpaperImages.Dispose();
     }
 }

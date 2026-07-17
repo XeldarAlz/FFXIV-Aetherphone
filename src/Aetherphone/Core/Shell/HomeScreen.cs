@@ -20,9 +20,9 @@ internal sealed class HomeScreen
     private readonly HomeGridRenderer renderer;
     private readonly HomeChrome chrome;
 
-    public HomeScreen(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets)
+    public HomeScreen(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets, Configuration configuration)
     {
-        layout = new HomeLayoutService(apps, widgets, Plugin.Cfg);
+        layout = new HomeLayoutService(apps, widgets, configuration);
         folder = new FolderOverlay(layout);
         sizeMenu = new WidgetSizeMenu(layout);
         gallery = new WidgetGallery(layout, widgets);

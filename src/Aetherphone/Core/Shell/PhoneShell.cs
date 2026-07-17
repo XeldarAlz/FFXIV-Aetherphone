@@ -11,6 +11,7 @@ using Aetherphone.Core.Report;
 using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -29,6 +30,10 @@ internal sealed class PhoneShell : IDisposable
     private const float ShakeAmplitude = 3f;
     private static readonly TimeSpan ScreenVisibleGrace = TimeSpan.FromSeconds(0.5);
 
+    private readonly Configuration configuration;
+    private readonly LoadingScreen loading;
+    private readonly ConfirmService confirm;
+    private readonly WallpaperLibrary wallpapers;
     private readonly ThemeProvider themes;
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly WidgetRegistry widgets;
@@ -52,8 +57,12 @@ internal sealed class PhoneShell : IDisposable
     private CallState lastCallState;
     private DateTime lastVisibleDrawUtc = DateTime.MinValue;
 
-    public PhoneShell(PhoneServices services, AppBundle bundle, ConfirmService confirm, ReportService report)
+    public PhoneShell(PhoneServices services, AppBundle bundle)
     {
+        configuration = services.Configuration;
+        loading = services.Loading;
+        confirm = services.Confirm;
+        wallpapers = services.Wallpapers;
         themes = services.Themes;
         apps = bundle.Apps;
         widgets = bundle.Widgets;
@@ -69,25 +78,25 @@ internal sealed class PhoneShell : IDisposable
         var island = new DynamicIsland(services.Playback, calls);
         var controlCenter = new ControlCenter(themes, services.Playback, calls, navigation, notifications, router);
         minimizedView = new MinimizedPhone(notifications);
-        var home = new HomeScreen(apps, bundle.Widgets);
+        var home = new HomeScreen(apps, bundle.Widgets, configuration);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);
-        var confirmOverlay = new ConfirmOverlay(confirm);
-        var reportOverlay = new ReportOverlay(report);
+        var confirmOverlay = new ConfirmOverlay(services.Confirm);
+        var reportOverlay = new ReportOverlay(services.Report);
         setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
             services.RemoteImages, services.Lodestone, bundle.Photos, navigation);
         painter = new ShellScreenPainter(themes, navigation, home);
         transition = new ShellTransitionRenderer(themes, navigation, home, painter);
         morph = new MinimizeMorphView(themes, minimize, minimizedView, notifications, painter);
-        overlays = new ShellOverlayCoordinator(navigation, controlCenter, banner, island, incomingOverlay,
-            confirmOverlay, reportOverlay, director, setup);
+        overlays = new ShellOverlayCoordinator(configuration, loading, navigation, controlCenter, banner, island,
+            incomingOverlay, confirmOverlay, reportOverlay, director, setup);
     }
 
     public void OnOpened()
     {
         if (minimize.Phase == MinimizePhase.None)
         {
-            Plugin.Loading.BeginSession();
+            loading.BeginSession();
         }
 
         director.OnPhoneOpened();
@@ -95,7 +104,7 @@ internal sealed class PhoneShell : IDisposable
 
     private void MaybeAskAnalyticsConsent(bool busy)
     {
-        if (analyticsConsentRequested || Plugin.Cfg.AnalyticsConsentPrompted)
+        if (analyticsConsentRequested || configuration.AnalyticsConsentPrompted)
         {
             return;
         }
@@ -106,7 +115,7 @@ internal sealed class PhoneShell : IDisposable
         }
 
         analyticsConsentRequested = true;
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Title = Loc.T(L.Settings.ConsentTitle),
             Message = Loc.T(L.Settings.ConsentMessage),
@@ -129,16 +138,16 @@ internal sealed class PhoneShell : IDisposable
         return OnboardingState.HasCompleted(welcome.Id, welcome.ContentVersion);
     }
 
-    private static void SetAnalyticsConsent(bool enabled)
+    private void SetAnalyticsConsent(bool enabled)
     {
-        Plugin.Cfg.AnalyticsEnabled = enabled;
-        Plugin.Cfg.AnalyticsConsentPrompted = true;
-        Plugin.Cfg.Save();
+        configuration.AnalyticsEnabled = enabled;
+        configuration.AnalyticsConsentPrompted = true;
+        configuration.Save();
     }
 
     public void OnClosed()
     {
-        Plugin.Loading.Cancel();
+        loading.Cancel();
         director.Suspend();
     }
 
@@ -171,7 +180,7 @@ internal sealed class PhoneShell : IDisposable
 
     private void OnBannerShown()
     {
-        if (minimize.Phase == MinimizePhase.None && Plugin.Cfg.Vibration)
+        if (minimize.Phase == MinimizePhase.None && configuration.Vibration)
         {
             shake.Trigger();
         }
@@ -193,9 +202,9 @@ internal sealed class PhoneShell : IDisposable
         minimize.Advance(delta);
         if (minimize.Phase != MinimizePhase.None)
         {
-            if (Plugin.Loading.IsActive)
+            if (loading.IsActive)
             {
-                Plugin.Loading.Cancel();
+                loading.Cancel();
             }
 
             if (morph.Draw(device, delta))
@@ -210,11 +219,10 @@ internal sealed class PhoneShell : IDisposable
         minimizedView.IsShowing = false;
         lastVisibleDrawUtc = DateTime.UtcNow;
         device = device.Translate(new Vector2(shake.Advance(delta), 0f));
-        Plugin.Wallpapers.StepDayNight(delta);
+        wallpapers.StepDayNight(delta);
         var theme = themes.Chrome;
         var screen = DeviceChrome.ScreenRect(device, theme);
         DeviceChrome.DrawBody(device, theme, TransparentBand(screen));
-        var loading = Plugin.Loading;
         loading.Advance(delta);
         navigation.Advance(delta);
         if (!navigation.IsTransitioning)
@@ -236,18 +244,18 @@ internal sealed class PhoneShell : IDisposable
                     break;
             }
 
-            if (SideToggle.Update(DeviceChrome.MuteButtonRect(device), theme, Plugin.Cfg.DoNotDisturb,
-                    Loc.T(Plugin.Cfg.DoNotDisturb ? L.Plugin.DndDisableHint : L.Plugin.DndEnableHint)))
+            if (SideToggle.Update(DeviceChrome.MuteButtonRect(device), theme, configuration.DoNotDisturb,
+                    Loc.T(configuration.DoNotDisturb ? L.Plugin.DndDisableHint : L.Plugin.DndEnableHint)))
             {
-                Plugin.Cfg.DoNotDisturb = !Plugin.Cfg.DoNotDisturb;
-                Plugin.Cfg.Save();
+                configuration.DoNotDisturb = !configuration.DoNotDisturb;
+                configuration.Save();
             }
 
-            if (SideToggle.Update(DeviceChrome.LockButtonRect(device), theme, Plugin.Cfg.LockPosition,
-                    Loc.T(Plugin.Cfg.LockPosition ? L.Plugin.UnlockPositionHint : L.Plugin.LockPositionHint)))
+            if (SideToggle.Update(DeviceChrome.LockButtonRect(device), theme, configuration.LockPosition,
+                    Loc.T(configuration.LockPosition ? L.Plugin.UnlockPositionHint : L.Plugin.LockPositionHint)))
             {
-                Plugin.Cfg.LockPosition = !Plugin.Cfg.LockPosition;
-                Plugin.Cfg.Save();
+                configuration.LockPosition = !configuration.LockPosition;
+                configuration.Save();
             }
         }
 

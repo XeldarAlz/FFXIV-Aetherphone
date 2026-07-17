@@ -26,6 +26,8 @@ internal readonly struct ShellOverlayState
 
 internal sealed class ShellOverlayCoordinator
 {
+    private readonly Configuration configuration;
+    private readonly LoadingScreen loading;
     private readonly NavigationStack navigation;
     private readonly ControlCenter controlCenter;
     private readonly NotificationBanner banner;
@@ -36,10 +38,13 @@ internal sealed class ShellOverlayCoordinator
     private readonly OnboardingDirector director;
     private readonly SetupOverlay setup;
 
-    public ShellOverlayCoordinator(NavigationStack navigation, ControlCenter controlCenter, NotificationBanner banner,
-        DynamicIsland island, IncomingCallOverlay incomingOverlay, ConfirmOverlay confirmOverlay,
-        ReportOverlay reportOverlay, OnboardingDirector director, SetupOverlay setup)
+    public ShellOverlayCoordinator(Configuration configuration, LoadingScreen loading, NavigationStack navigation,
+        ControlCenter controlCenter, NotificationBanner banner, DynamicIsland island,
+        IncomingCallOverlay incomingOverlay, ConfirmOverlay confirmOverlay, ReportOverlay reportOverlay,
+        OnboardingDirector director, SetupOverlay setup)
     {
+        this.configuration = configuration;
+        this.loading = loading;
         this.navigation = navigation;
         this.controlCenter = controlCenter;
         this.banner = banner;
@@ -53,7 +58,6 @@ internal sealed class ShellOverlayCoordinator
 
     public ShellOverlayState Assess(Rect screen)
     {
-        var loading = Plugin.Loading;
         var setupActive = setup.IsActive;
         var confirming = !loading.IsActive && (confirmOverlay.CapturesPointer || reportOverlay.CapturesPointer);
         var controlCenterCaptures = !loading.IsActive && controlCenter.CapturesPointer;
@@ -72,7 +76,6 @@ internal sealed class ShellOverlayCoordinator
 
     public void DrawOverlays(Rect screen, PhoneTheme theme, float delta, in ShellOverlayState state)
     {
-        var loading = Plugin.Loading;
         if (state.SetupActive)
         {
             setup.Draw(screen, theme, delta, !loading.IsActive && !state.Confirming);
@@ -88,7 +91,7 @@ internal sealed class ShellOverlayCoordinator
         {
             HoverTooltip.Flush();
             confirmOverlay.Draw(screen, theme);
-            DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);
+            DeviceChrome.DrawBrightnessVeil(screen, theme, configuration.ScreenBrightness);
             return;
         }
 
@@ -120,6 +123,6 @@ internal sealed class ShellOverlayCoordinator
         reportOverlay.Draw(screen, theme);
         confirmOverlay.Draw(screen, theme);
         director.Draw(screen, theme);
-        DeviceChrome.DrawBrightnessVeil(screen, theme, Plugin.Cfg.ScreenBrightness);
+        DeviceChrome.DrawBrightnessVeil(screen, theme, configuration.ScreenBrightness);
     }
 }
