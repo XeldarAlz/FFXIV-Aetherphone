@@ -70,77 +70,128 @@ public sealed class Plugin : IDalamudPlugin
 
     public Plugin()
     {
-        Instance = this;
-        Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
-        Cfg.NormalizeAethernetBaseUrl();
-        Cfg.MigrateSoundSettings();
-        Cfg.MigrateChangelogSeen();
-        Cfg.MigrateMessage();
-        Cfg.MigrateMessagesMerge();
-        Cfg.MigrateSetupCompleted();
-        Cfg.MigrateControlPanelRepack();
-        InitializeLocalization();
-        Fonts = new FontService(PluginInterface, Cfg.TextZoom);
-        Loading = new LoadingScreen();
-        var builtInWallpaperDirectory =
-            new DirectoryInfo(
-                Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
-        var customWallpaperDirectory =
-            new DirectoryInfo(Path.Combine(PluginInterface.ConfigDirectory.FullName, "Wallpapers"));
-        Wallpapers = new WallpaperLibrary(TextureProvider, builtInWallpaperDirectory, customWallpaperDirectory, Cfg);
-        WallpaperImages = new WallpaperImageCache();
-        Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
-        services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, TextureProvider,
-            PluginInterface.ConfigDirectory);
-        sessionStartedAt = DateTime.UtcNow;
-        Analytics = services.Analytics;
-        if (Analytics.IsFirstRun)
+        try
         {
-            Analytics.Track(AnalyticsEvents.FirstRun());
+            Instance = this;
+            Cfg = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+            Cfg.NormalizeAethernetBaseUrl();
+            Cfg.MigrateSoundSettings();
+            Cfg.MigrateChangelogSeen();
+            Cfg.MigrateMessage();
+            Cfg.MigrateMessagesMerge();
+            Cfg.MigrateSetupCompleted();
+            Cfg.MigrateControlPanelRepack();
+            InitializeLocalization();
+            Fonts = new FontService(PluginInterface, Cfg.TextZoom);
+            Loading = new LoadingScreen();
+            var builtInWallpaperDirectory =
+                new DirectoryInfo(
+                    Path.Combine(PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
+            var customWallpaperDirectory =
+                new DirectoryInfo(Path.Combine(PluginInterface.ConfigDirectory.FullName, "Wallpapers"));
+            Wallpapers = new WallpaperLibrary(TextureProvider, builtInWallpaperDirectory, customWallpaperDirectory, Cfg);
+            WallpaperImages = new WallpaperImageCache();
+            Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
+            services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, TextureProvider,
+                PluginInterface.ConfigDirectory);
+            sessionStartedAt = DateTime.UtcNow;
+            Analytics = services.Analytics;
+            if (Analytics.IsFirstRun)
+            {
+                Analytics.Track(AnalyticsEvents.FirstRun());
+            }
+
+            Analytics.Track(AnalyticsEvents.SessionStart(BuildSessionProperties()));
+            aboutWindow = new AboutWindow();
+            Confirm = new ConfirmService();
+            Report = new ReportService();
+            shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
+                services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
+                services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
+                services.AethernetClient, services.GameData, services.RemoteImages, services.Lodestone);
+            phoneWindow = new PhoneWindow(shell);
+            Updates = new UpdateCheckService(services.Http, PluginInterface);
+            updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
+            windowSystem.AddWindow(phoneWindow);
+            windowSystem.AddWindow(updateChipWindow);
+            windowSystem.AddWindow(aboutWindow);
+            services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false });
+            phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
+                () => services.Visibility.IsVisible);
+            timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
+            calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
+            clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
+            reminders = new ReminderService(Cfg, Framework, services.Notifications);
+            services.AethernetClient.EnsureCurrentUser();
+            services.Calls.IncomingCallPresented += OnIncomingCall;
+            services.Calls.Start();
+            dtrEntry = DtrBar.Get(AepConstants.Name);
+            dtrEntry.OnClick = _ => phoneWindow.ToggleShell();
+            services.Notifications.Changed += UpdateDtrBadge;
+            UpdateDtrBadge();
+            services.MarketIndex.EnsureBuilt();
+            ContextMenu.OnMenuOpened += OnMenuOpened;
+            primaryCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) };
+            aliasCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) };
+            CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
+            CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
+            PluginInterface.UiBuilder.Draw += windowSystem.Draw;
+            PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
+            ClientState.Login += OnLogin;
+
+            if (Cfg.OpenOnStartup && ClientState.IsLoggedIn)
+            {
+                QueueAutoOpen();
+            }
+        }
+        catch
+        {
+            try
+            {
+                TearDownPartialConstruction();
+            }
+            catch (Exception cleanupException)
+            {
+                Log.Error(cleanupException, "Partial construction teardown failed.");
+            }
+
+            throw;
+        }
+    }
+
+    private void TearDownPartialConstruction()
+    {
+        PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        if (phoneWindow is not null)
+        {
+            PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
         }
 
-        Analytics.Track(AnalyticsEvents.SessionStart(BuildSessionProperties()));
-        aboutWindow = new AboutWindow();
-        Confirm = new ConfirmService();
-        Report = new ReportService();
-        shell = new PhoneShell(services.Themes, AppRegistry.BuildDefault(services, ShowAbout), services.Notifications,
-            services.Playback, services.Calls, services.MessageLauncher, services.VelvetLauncher,
-            services.DmLauncher, services.SocialLauncher, Confirm, Report, services.AethernetSession,
-            services.AethernetClient, services.GameData, services.RemoteImages, services.Lodestone);
-        phoneWindow = new PhoneWindow(shell);
-        Updates = new UpdateCheckService(services.Http, PluginInterface);
-        updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
-        windowSystem.AddWindow(phoneWindow);
-        windowSystem.AddWindow(updateChipWindow);
-        windowSystem.AddWindow(aboutWindow);
-        services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false });
-        phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
-            () => services.Visibility.IsVisible);
-        timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
-        calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
-        clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
-        reminders = new ReminderService(Cfg, Framework, services.Notifications);
-        services.AethernetClient.EnsureCurrentUser();
-        services.Calls.IncomingCallPresented += OnIncomingCall;
-        services.Calls.Start();
-        dtrEntry = DtrBar.Get(AepConstants.Name);
-        dtrEntry.OnClick = _ => phoneWindow.ToggleShell();
-        services.Notifications.Changed += UpdateDtrBadge;
-        UpdateDtrBadge();
-        services.MarketIndex.EnsureBuilt();
-        ContextMenu.OnMenuOpened += OnMenuOpened;
-        primaryCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelp) };
-        aliasCommand = new CommandInfo(OnCommand) { HelpMessage = Loc.T(L.Plugin.CommandHelpAlias) };
-        CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
-        CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
-        PluginInterface.UiBuilder.Draw += windowSystem.Draw;
-        PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
-        ClientState.Login += OnLogin;
-
-        if (Cfg.OpenOnStartup && ClientState.IsLoggedIn)
+        ClientState.Login -= OnLogin;
+        Framework.Update -= OnAutoOpenTick;
+        ContextMenu.OnMenuOpened -= OnMenuOpened;
+        CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
+        CommandManager.RemoveHandler(AepConstants.AliasCommand);
+        if (services is not null)
         {
-            QueueAutoOpen();
+            services.Notifications.Changed -= UpdateDtrBadge;
+            services.Calls.IncomingCallPresented -= OnIncomingCall;
         }
+
+        dtrEntry?.Remove();
+        windowSystem.RemoveAllWindows();
+        phoneEmote?.Dispose();
+        timerNotifier?.Dispose();
+        calendarReminders?.Dispose();
+        clockAlarms?.Dispose();
+        reminders?.Dispose();
+        Updates?.Dispose();
+        shell?.Dispose();
+        services?.Dispose();
+        Device?.Dispose();
+        Fonts?.Dispose();
+        Wallpapers?.Dispose();
+        WallpaperImages?.Dispose();
     }
 
     private void OnLogin()

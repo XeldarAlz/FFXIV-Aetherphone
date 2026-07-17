@@ -418,5 +418,14 @@ internal sealed class Configuration : IPluginConfiguration
         return parsed.IsLoopback;
     }
 
-    public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
+    public void Save()
+    {
+        if (Plugin.Framework.IsInFrameworkUpdateThread)
+        {
+            Plugin.PluginInterface.SavePluginConfig(this);
+            return;
+        }
+
+        _ = Plugin.Framework.RunOnFrameworkThread(() => Plugin.PluginInterface.SavePluginConfig(this));
+    }
 }
