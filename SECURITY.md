@@ -16,7 +16,7 @@ What counts:
 
 - Code execution or crashes triggerable by crafted game state, chat input, or a malformed message.
 - The plugin reading, sending, or persisting chat/tells or character data it shouldn't (beyond the documented messaging features, which are the point).
-- When the Aethernet backend lands: anything in the account, transport, or end-to-end-encryption layer that would expose another user's identity or messages.
+- The Aethernet backend: anything in the account, transport, or end-to-end-encryption layer that would expose another user's identity or messages.
 
 What doesn't:
 

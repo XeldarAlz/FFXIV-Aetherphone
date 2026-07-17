@@ -41,11 +41,11 @@
 
 Aetherphone ist ein kostenloses, quelloffenes Dalamud-Plugin, das ein echtes Smartphone auf den Bildschirm von FINAL FANTASY XIV bringt: ein angedocktes, dauerhaft sichtbares Gerät mit Startbildschirm, Benachrichtigungen, Klingeltönen und individuell gestaltbaren Hintergründen. Hinter den Apps läuft ein eigenes soziales Netzwerk für Aetherphone-Nutzer, sodass sie über Charaktere und Sitzungen hinweg funktionieren, nicht nur lokal.
 
-Privatsphäre und Sicherheit stehen an erster Stelle: Nachrichten sind Ende-zu-Ende-verschlüsselt, und Beiträge und Bilder durchlaufen eine KI-Moderation mit klaren Inhaltsregeln.
+Privatsphäre und Sicherheit stehen an erster Stelle: Textnachrichten sind Ende-zu-Ende-verschlüsselt, Anhänge, Sprachnotizen und Anrufe sind auf dem Transportweg verschlüsselt, und Beiträge und Bilder durchlaufen eine KI-Moderation mit klaren Inhaltsregeln.
 
 ## Highlights
 
-- **Soziales**: der Chirper-Microblog, der Aethergram-Foto-Feed, ChocoChat für verschlüsselte Nachrichten mit Sprachnotizen und Gruppenanrufen sowie Velvet, eine optionale Companion-App ab 18.
+- **Soziales**: der Chirper-Microblog, der Aethergram-Foto-Feed, ChocoChat für private Nachrichten mit Sprachnotizen und Gruppenanrufen sowie Velvet, eine optionale Companion-App ab 18.
 - **Werkzeuge**: ein Marktbrett-Tracker, ein Verzeichnis für Locations und Events, In-Game-Musik, Wetter, eine Geldbörse, Timer und Resets, eine Fotobibliothek und Kamera sowie eine Taschenspielhalle voller Minispiele, unter mehr als 30 Apps.
 - **Mach es zu deinem**: Akzentpaletten, Hintergründe, Lodestone-Charakterporträts, eigene Klingeltöne und ein Barrierefreiheits-Zoom für die Textgröße.
 

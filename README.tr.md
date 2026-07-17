@@ -41,11 +41,11 @@
 
 Aetherphone, FINAL FANTASY XIV içinde ekrana gerçek bir akıllı telefon getiren, ücretsiz ve açık kaynaklı bir Dalamud eklentisidir: ana ekranı, bildirimleri, zil sesleri ve temalandırılabilir duvar kağıtları olan, sabitlenmiş ve her zaman açık bir cihaz. Uygulamaların arkasında Aetherphone kullanıcıları için kendi sosyal ağı çalışır; böylece uygulamalar yalnızca yerel olarak değil, karakterler ve oturumlar arasında çalışır.
 
-Gizlilik ve güvenlik her şeyden önce gelir: mesajlar uçtan uca şifrelidir ve gönderiler ile görseller, net içerik kurallarıyla yapay zeka denetiminden geçer.
+Gizlilik ve güvenlik her şeyden önce gelir: metin mesajları uçtan uca şifrelidir, ekler, sesli notlar ve aramalar aktarım sırasında şifrelenir; gönderiler ile görseller, net içerik kurallarıyla yapay zeka denetiminden geçer.
 
 ## Öne çıkanlar
 
-- **Sosyal**: Chirper mikroblogu, Aethergram fotoğraf akışı, sesli notlar ve grup aramalarıyla şifreli mesajlaşma için ChocoChat ve isteğe bağlı bir 18+ yardımcı uygulama olan Velvet.
+- **Sosyal**: Chirper mikroblogu, Aethergram fotoğraf akışı, sesli notlar ve grup aramalarıyla özel mesajlaşma için ChocoChat ve isteğe bağlı bir 18+ yardımcı uygulama olan Velvet.
 - **Araçlar**: bir pazar takipçisi, mekan ve etkinlik rehberi, oyun içi müzik, hava durumu, bir cüzdan, zamanlayıcılar ve sıfırlamalar, bir fotoğraf kitaplığı ve kamera ve bir cep mini oyun salonu; 30'dan fazla uygulama arasında.
 - **Kendine göre yap**: vurgu paletleri, duvar kağıtları, Lodestone karakter portreleri, özel zil sesleri ve yazı boyutu için bir erişilebilirlik yakınlaştırması.
 
