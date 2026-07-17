@@ -23,7 +23,8 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
-internal abstract class ChatThreadView<TMessage, TThread> : IDisposable
+internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTranscriptMedia,
+    IChatTranscriptInteractions, IChatTranscriptVoice, IChatTranscriptPaging
     where TMessage : class, IIdentified
     where TThread : class, IIdentified
 {
@@ -46,15 +47,6 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable
     private readonly ConcurrentDictionary<string, byte> voiceFetching = new(StringComparer.Ordinal);
     private readonly float threadPollSeconds;
     private readonly float typingSendSeconds;
-    private readonly Func<string, string?> threadMediaUrl;
-    private readonly Func<string, IDalamudTextureWrap?> resolveImage;
-    private readonly Action<string> onImageClick;
-    private readonly Action<string> onMessageContext;
-    private readonly Action<string> onQuoteClick;
-    private readonly Action<string, string> onReactionClick;
-    private readonly Func<string, VoiceNoteState> voiceStateFor;
-    private readonly Action<string> onVoiceToggle;
-    private readonly Action onLoadOlder;
     private readonly Action<string> pickImage;
     private readonly Action<string, string, string?> sendText;
     private readonly Action<string, string, string> editText;
@@ -91,15 +83,6 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable
         this.threadPollSeconds = threadPollSeconds;
         this.typingSendSeconds = typingSendSeconds;
         sinceTypingSend = typingSendSeconds;
-        threadMediaUrl = store.DmMediaUrl;
-        resolveImage = ResolveThreadImage;
-        onImageClick = OpenImageView;
-        onMessageContext = OpenMessageMenu;
-        onQuoteClick = transcript.RequestScrollTo;
-        onReactionClick = OnReactionClicked;
-        voiceStateFor = voicePlayer.StateFor;
-        onVoiceToggle = ToggleVoice;
-        onLoadOlder = store.LoadOlder;
         pickImage = OpenImagePicker;
         sendText = ComposerSendText;
         editText = ComposerEditText;
@@ -236,11 +219,25 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable
         var listRect = new Rect(new Vector2(area.Min.X, top),
             new Vector2(area.Max.X, area.Max.Y - composerHeight - accessoryHeight));
         DrawAboveTranscript(ref listRect, threadId);
-        var model = new ChatTranscriptModel(threadId, transcriptMessages, MyUserId, Accent, Theme,
-            ui.MutedInk, ui.BodyInk, store.OtherTyping, store.LoadingThread,
-            IsGroupThread, images, threadMediaUrl, onImageClick, EmptyText, Loc.T(L.Common.Loading),
-            onMessageContext, onQuoteClick, onReactionClick, voiceStateFor, onVoiceToggle,
-            store.HasMoreOlder, store.LoadingOlder, onLoadOlder, resolveImage);
+        var model = new ChatTranscriptModel
+        {
+            ThreadId = threadId,
+            Messages = transcriptMessages,
+            MyUserId = MyUserId,
+            Accent = Accent,
+            Theme = Theme,
+            MutedInk = ui.MutedInk,
+            BodyInk = ui.BodyInk,
+            EmptyText = EmptyText,
+            LoadingText = Loc.T(L.Common.Loading),
+            OtherTyping = store.OtherTyping,
+            Loading = store.LoadingThread,
+            IsGroup = IsGroupThread,
+            Media = this,
+            Interactions = this,
+            Voice = this,
+            Paging = this,
+        };
         transcript.Draw(listRect, model);
         composer.Draw(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), new ChatComposerModel
         {
@@ -297,7 +294,25 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable
         }
     }
 
-    private void OnReactionClicked(string messageId, string reactionToken) => OpenReactions(messageId);
+    IDalamudTextureWrap? IChatTranscriptMedia.Texture(string messageId) => ResolveThreadImage(messageId);
+
+    void IChatTranscriptMedia.OnImageClick(string messageId) => OpenImageView(messageId);
+
+    void IChatTranscriptInteractions.OnMessageContext(string messageId) => OpenMessageMenu(messageId);
+
+    void IChatTranscriptInteractions.OnQuoteClick(string messageId) => transcript.RequestScrollTo(messageId);
+
+    void IChatTranscriptInteractions.OnReactionClick(string messageId, string token) => OpenReactions(messageId);
+
+    VoiceNoteState IChatTranscriptVoice.StateFor(string messageId) => voicePlayer.StateFor(messageId);
+
+    void IChatTranscriptVoice.Toggle(string messageId) => ToggleVoice(messageId);
+
+    bool IChatTranscriptPaging.HasMoreOlder => store.HasMoreOlder;
+
+    bool IChatTranscriptPaging.LoadingOlder => store.LoadingOlder;
+
+    void IChatTranscriptPaging.LoadOlder() => store.LoadOlder();
 
     protected void OpenMessageMenu(string messageId)
     {

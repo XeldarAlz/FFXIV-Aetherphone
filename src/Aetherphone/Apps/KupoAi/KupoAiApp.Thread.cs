@@ -34,10 +34,20 @@ internal sealed partial class KupoAiApp
         var listRect = new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, listBottom));
 
         RebuildTranscriptIfNeeded(conversation);
-        onMessageContext ??= OpenMessageMenu;
-        var model = new ChatTranscriptModel(conversation.Id, transcriptCache, MySenderId, ui.Accent, theme,
-            AppPalettes.KupoAi.MutedInk, AppPalettes.KupoAi.BodyInk, store.Asking, false, false, images, mediaUrl,
-            onImageClick, Loc.T(L.KupoAi.ThreadEmpty), Loc.T(L.Common.Loading), onMessageContext);
+        var model = new ChatTranscriptModel
+        {
+            ThreadId = conversation.Id,
+            Messages = transcriptCache,
+            MyUserId = MySenderId,
+            Accent = ui.Accent,
+            Theme = theme,
+            MutedInk = AppPalettes.KupoAi.MutedInk,
+            BodyInk = AppPalettes.KupoAi.BodyInk,
+            EmptyText = Loc.T(L.KupoAi.ThreadEmpty),
+            LoadingText = Loc.T(L.Common.Loading),
+            OtherTyping = store.Asking,
+            Interactions = this,
+        };
         transcript.Draw(listRect, model);
 
         if (gateText is not null)
@@ -146,6 +156,16 @@ internal sealed partial class KupoAiApp
             KupoAiNotes.Error => Loc.T(L.KupoAi.Error),
             _ => note,
         };
+    }
+
+    void IChatTranscriptInteractions.OnMessageContext(string messageId) => OpenMessageMenu(messageId);
+
+    void IChatTranscriptInteractions.OnQuoteClick(string messageId)
+    {
+    }
+
+    void IChatTranscriptInteractions.OnReactionClick(string messageId, string token)
+    {
     }
 
     private void OpenMessageMenu(string messageId)

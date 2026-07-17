@@ -10,7 +10,7 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.KupoAi;
 
-internal sealed partial class KupoAiApp : IPhoneApp
+internal sealed partial class KupoAiApp : IPhoneApp, IChatTranscriptInteractions
 {
     private enum KupoAiView : byte
     {
@@ -27,16 +27,12 @@ internal sealed partial class KupoAiApp : IPhoneApp
     public int BadgeCount => 0;
 
     private readonly KupoAiStore store;
-    private readonly RemoteImageCache images;
     private readonly AppSkin ui = new(AppPalettes.KupoAi);
     private readonly ViewRouter<KupoAiView> router;
     private readonly RouterDraw<KupoAiView> drawView;
     private readonly ChatTranscript transcript = new();
     private readonly DropdownMenu messageMenu = new();
-    private readonly Func<string, string?> mediaUrl = static _ => null;
-    private readonly Action<string> onImageClick = static _ => { };
     private readonly Action back;
-    private Action<string>? onMessageContext;
 
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
@@ -51,7 +47,6 @@ internal sealed partial class KupoAiApp : IPhoneApp
     public KupoAiApp(KupoAiStore store, RemoteImageCache images)
     {
         this.store = store;
-        this.images = images;
         router = new ViewRouter<KupoAiView>(KupoAiView.List, Id);
         drawView = DrawView;
         back = HandleBack;
