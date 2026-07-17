@@ -174,7 +174,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable
 
     protected abstract void OpenReactions(string messageId);
 
-    protected abstract void OpenImagePicker(string threadId);
+    protected abstract void PushImagePickerScreen(string threadId);
 
     protected abstract void PopScreen();
 
@@ -583,6 +583,13 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable
                 imageSaveBusy = false;
             }
         });
+    }
+
+    protected void OpenImagePicker(string threadId)
+    {
+        pickerThreadId = null;
+        pendingPickedPath = null;
+        PushImagePickerScreen(threadId);
     }
 
     public void DrawImagePicker(Rect area, string threadId)

@@ -58,7 +58,7 @@ internal sealed partial class MessageApp
 
         protected override void OpenReactions(string messageId) => app.router.Push(MessageRoute.Reactions(messageId));
 
-        protected override void OpenImagePicker(string threadId) => app.router.Push(MessageRoute.ChatImage(threadId));
+        protected override void PushImagePickerScreen(string threadId) => app.router.Push(MessageRoute.ChatImage(threadId));
 
         protected override void PopScreen() => app.router.Pop();
 
