@@ -21,6 +21,11 @@ internal sealed class ContactsClient
         return net.PostAsync("/contacts/", new AddContactRequest(number, alias), AethernetJsonContext.Default.AddContactRequest, AethernetJsonContext.Default.ContactDto, token, statusSink);
     }
 
+    public Task<ContactDto?> UpdateAliasAsync(string userId, string alias, CancellationToken token)
+    {
+        return net.SendJsonAsync(HttpMethod.Patch, $"/contacts/{Uri.EscapeDataString(userId)}", new UpdateContactAliasRequest(alias), AethernetJsonContext.Default.UpdateContactAliasRequest, AethernetJsonContext.Default.ContactDto, token);
+    }
+
     public Task<bool> RemoveAsync(string userId, CancellationToken token)
     {
         return net.SendAsync(HttpMethod.Delete, $"/contacts/{Uri.EscapeDataString(userId)}", token);

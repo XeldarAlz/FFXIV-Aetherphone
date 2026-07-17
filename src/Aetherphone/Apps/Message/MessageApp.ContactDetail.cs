@@ -22,6 +22,11 @@ internal sealed partial class MessageApp
     private string notesDraft = string.Empty;
     private string? notesLoadedFor;
     private float notesSaveTimer;
+    private string contactNameDraft = string.Empty;
+    private string renameError = string.Empty;
+    private bool editingContactName;
+    private volatile bool renameBusy;
+    private volatile int renameOutcome;
 
     private void DrawContactDetail(Rect area, string userId)
     {
@@ -40,8 +45,12 @@ internal sealed partial class MessageApp
             notesLoadedFor = userId;
             notesDraft = configuration.MessageContactNotes.GetValueOrDefault(userId, string.Empty);
             notesSaveTimer = 0f;
+            editingContactName = false;
+            renameError = string.Empty;
+            renameOutcome = 0;
         }
 
+        ProcessRenameOutcome();
         TickNotes(userId);
         DrawFavoriteToggle(area, userId, scale);
         var top = area.Min.Y + AppHeader.Height * scale;
@@ -58,9 +67,27 @@ internal sealed partial class MessageApp
                 string.Empty, contact.AvatarUrl, images, lodestone, 1.8f, 48);
             avatarLightbox.TryOpen(avatarCenter, radius, contact.AvatarUrl, images);
             var nameY = avatarCenter.Y + radius + 20f * scale;
-            Typography.DrawCentered(new Vector2(centerX, nameY), ContactBook.DisplayLabel(contact), ui.TitleInk,
-                TextStyles.Title2);
-            var afterName = nameY + 24f * scale;
+            float afterName;
+            if (editingContactName)
+            {
+                afterName = DrawContactNameEditor(contact, origin.X, width, nameY, scale);
+            }
+            else
+            {
+                var label = ContactBook.DisplayLabel(contact);
+                Typography.DrawCentered(new Vector2(centerX, nameY), label, ui.TitleInk, TextStyles.Title2);
+                var labelSize = Typography.Measure(label, TextStyles.Title2);
+                var pencilCenter = new Vector2(centerX + labelSize.X * 0.5f + 18f * scale, nameY);
+                if (ui.IconButton(pencilCenter, 13f * scale, FontAwesomeIcon.Pen.ToIconString(), ui.MutedInk,
+                        Transparent, 0.85f, Loc.T(L.Friends.EditName), HoverLabelSide.Below))
+                {
+                    editingContactName = true;
+                    contactNameDraft = contact.Alias;
+                    renameError = string.Empty;
+                }
+
+                afterName = nameY + 24f * scale;
+            }
             if (!contact.IsMutual)
             {
                 Typography.DrawCentered(new Vector2(centerX, afterName), Loc.T(L.Friends.Pending), ui.MutedInk,
@@ -83,6 +110,76 @@ internal sealed partial class MessageApp
             }
 
             ImGui.Dummy(new Vector2(0f, 30f * scale));
+        }
+    }
+
+    private float DrawContactNameEditor(ContactDto contact, float left, float width, float nameY, float scale)
+    {
+        var sideInset = 16f * scale;
+        var fieldHeight = FieldHeight * scale;
+        var iconRadius = 15f * scale;
+        var gap = 10f * scale;
+        var iconSpan = (iconRadius * 2f + gap) * 2f;
+        var top = nameY - fieldHeight * 0.5f;
+        var fieldRect = new Rect(new Vector2(left + sideInset, top),
+            new Vector2(left + width - sideInset - iconSpan, top + fieldHeight));
+        var submitted = PillField(fieldRect, "##msgContactRename", contact.DisplayName, ref contactNameDraft,
+            AliasMaxLength);
+        var centerY = top + fieldHeight * 0.5f;
+        var saveCenter = new Vector2(fieldRect.Max.X + gap + iconRadius, centerY);
+        var canSave = !renameBusy && !string.Equals(contactNameDraft.Trim(), contact.Alias, StringComparison.Ordinal);
+        var saveBackground = canSave ? ui.Accent : ui.FieldSurface;
+        var saveInk = canSave ? White : ui.MutedInk;
+        if ((ui.IconButton(saveCenter, iconRadius, FontAwesomeIcon.Check.ToIconString(), saveInk, saveBackground,
+                0.95f, Loc.T(L.DirectMessages.Save), HoverLabelSide.Below) || submitted) && canSave)
+        {
+            SubmitRename(contact.UserId);
+        }
+
+        var cancelCenter = new Vector2(saveCenter.X + iconRadius + gap + iconRadius, centerY);
+        if (ui.IconButton(cancelCenter, iconRadius, FontAwesomeIcon.Times.ToIconString(), ui.MutedInk,
+                ui.FieldSurface, 0.95f, Loc.T(L.Common.Cancel), HoverLabelSide.Below))
+        {
+            editingContactName = false;
+            renameError = string.Empty;
+        }
+
+        var afterName = top + fieldHeight + 10f * scale;
+        if (renameError.Length > 0)
+        {
+            Typography.DrawCentered(new Vector2(left + width * 0.5f, afterName), renameError, theme.Danger,
+                TextStyles.Footnote);
+            afterName += 22f * scale;
+        }
+
+        return afterName;
+    }
+
+    private void SubmitRename(string userId)
+    {
+        renameBusy = true;
+        renameError = string.Empty;
+        contacts.Rename(userId, contactNameDraft.Trim(), ok => renameOutcome = ok ? 1 : 2);
+    }
+
+    private void ProcessRenameOutcome()
+    {
+        var outcome = renameOutcome;
+        if (outcome == 0)
+        {
+            return;
+        }
+
+        renameOutcome = 0;
+        renameBusy = false;
+        if (outcome == 1)
+        {
+            editingContactName = false;
+            renameError = string.Empty;
+        }
+        else
+        {
+            renameError = Loc.T(L.Friends.RenameFailed);
         }
     }
 

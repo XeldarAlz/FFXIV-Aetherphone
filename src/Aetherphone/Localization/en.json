@@ -370,6 +370,8 @@
   "friends.pending": "Waiting for them to add your number",
   "friends.pendingShort": "Pending",
   "friends.call": "Call",
+  "friends.editName": "Edit Name",
+  "friends.renameFailed": "Could not update the name",
   "friends.remove": "Remove",
   "friends.confirmRemove": "Remove {0} from your contacts?",
   "friends.removeFailed": "Could not remove the contact",

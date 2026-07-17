@@ -435,6 +435,8 @@ internal static class L
         public static readonly LocString Pending = new("friends.pending", "Waiting for them to add your number");
         public static readonly LocString PendingShort = new("friends.pendingShort", "Pending");
         public static readonly LocString Call = new("friends.call", "Call");
+        public static readonly LocString EditName = new("friends.editName", "Edit Name");
+        public static readonly LocString RenameFailed = new("friends.renameFailed", "Could not update the name");
         public static readonly LocString Remove = new("friends.remove", "Remove");
         public static readonly LocString ConfirmRemove = new("friends.confirmRemove", "Remove {0} from your contacts?");
         public static readonly LocString RemoveFailed = new("friends.removeFailed", "Could not remove the contact");

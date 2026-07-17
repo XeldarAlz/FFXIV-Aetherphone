@@ -370,6 +370,8 @@
   "friends.pending": "Numaranızı eklemeleri bekleniyor",
   "friends.pendingShort": "Beklemede",
   "friends.call": "Ara",
+  "friends.editName": "İsmi düzenle",
+  "friends.renameFailed": "İsim güncellenemedi",
   "friends.remove": "Kaldır",
   "friends.confirmRemove": "{0} kişilerinizden kaldırılsın mı?",
   "friends.removeFailed": "Kişi kaldırılamadı",

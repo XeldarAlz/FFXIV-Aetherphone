@@ -370,6 +370,8 @@
   "friends.pending": "相手があなたの番号を登録するのを待っています",
   "friends.pendingShort": "保留中",
   "friends.call": "発信",
+  "friends.editName": "名前を編集",
+  "friends.renameFailed": "名前を更新できませんでした",
   "friends.remove": "削除",
   "friends.confirmRemove": "{0}を連絡先から削除しますか?",
   "friends.removeFailed": "連絡先を削除できませんでした",

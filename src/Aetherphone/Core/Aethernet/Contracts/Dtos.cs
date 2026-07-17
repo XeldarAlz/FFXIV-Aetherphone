@@ -453,6 +453,8 @@ internal sealed record ContactListResult(ContactDto[] Contacts, string MyNumber)
 
 internal sealed record AddContactRequest(string Number, string? Alias);
 
+internal sealed record UpdateContactAliasRequest(string? Alias);
+
 internal sealed record NumberChangeStatusDto(string Status, long CreatedAtUnix, long? ResolvedAtUnix);
 
 internal sealed record NumberChangeStatusResult(NumberChangeStatusDto? Request);

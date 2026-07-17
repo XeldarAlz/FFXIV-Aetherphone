@@ -370,6 +370,8 @@
   "friends.pending": "等待对方添加你的号码",
   "friends.pendingShort": "待确认",
   "friends.call": "拨打",
+  "friends.editName": "编辑名字",
+  "friends.renameFailed": "无法更新名字",
   "friends.remove": "移除",
   "friends.confirmRemove": "将 {0} 从联系人中移除?",
   "friends.removeFailed": "无法移除该联系人",

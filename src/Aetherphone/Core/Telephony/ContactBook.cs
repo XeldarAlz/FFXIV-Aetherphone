@@ -120,6 +120,30 @@ internal sealed class ContactBook : IDisposable
         });
     }
 
+    public void Rename(string userId, string alias, Action<bool> done)
+    {
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            ContactDto? updated = null;
+            try
+            {
+                updated = await client.UpdateAliasAsync(userId, alias, token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Contact rename failed: {exception.Message}");
+            }
+
+            if (updated is not null)
+            {
+                Merge(updated);
+            }
+
+            done(updated is not null);
+        });
+    }
+
     public void Remove(string userId, Action<bool> done)
     {
         var token = cancellation.Token;

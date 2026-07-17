@@ -90,6 +90,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(ContactDto))]
 [JsonSerializable(typeof(ContactListResult))]
 [JsonSerializable(typeof(AddContactRequest))]
+[JsonSerializable(typeof(UpdateContactAliasRequest))]
 [JsonSerializable(typeof(NumberChangeStatusDto))]
 [JsonSerializable(typeof(NumberChangeStatusResult))]
 [JsonSerializable(typeof(CreateNumberChangeRequest))]
