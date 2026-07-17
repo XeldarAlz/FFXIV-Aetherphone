@@ -19,7 +19,7 @@ internal sealed class SongSearchService : IDisposable
         throttle = new RequestThrottle(1, TimeSpan.FromMilliseconds(400));
     }
 
-    public async Task<Song[]> SearchAsync(string query, CancellationToken token)
+    public async Task<Song[]> SearchAsync(string query, SongSearchScope scope, CancellationToken token)
     {
         if (string.IsNullOrWhiteSpace(query))
         {
@@ -40,7 +40,7 @@ internal sealed class SongSearchService : IDisposable
                     }
 
                     var seconds = (int)video.Duration.Value.TotalSeconds;
-                    if (seconds < MinSongSeconds || seconds > MaxSongSeconds)
+                    if (!MatchesScope(scope, seconds))
                     {
                         continue;
                     }
@@ -66,6 +66,26 @@ internal sealed class SongSearchService : IDisposable
             AepLog.Warning($"Song search failed for '{query}': {exception.Message}");
             return Array.Empty<Song>();
         }
+    }
+
+    private static bool MatchesScope(SongSearchScope scope, int seconds)
+    {
+        if (seconds < MinSongSeconds)
+        {
+            return false;
+        }
+
+        if (scope == SongSearchScope.Songs)
+        {
+            return seconds <= MaxSongSeconds;
+        }
+
+        if (scope == SongSearchScope.LongPlays)
+        {
+            return seconds > MaxSongSeconds;
+        }
+
+        return true;
     }
 
     private static string PickThumbnail(IReadOnlyList<Thumbnail> thumbnails)

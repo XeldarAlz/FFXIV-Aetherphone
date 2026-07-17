@@ -12,6 +12,7 @@ namespace Aetherphone.Apps.Music;
 internal sealed partial class MusicApp
 {
     private const float SongRowHeight = 60f;
+    private const float ScopeRowHeight = 42f;
 
     private static readonly Vector4 SearchFieldSurface = new(0.96f, 0.96f, 0.96f, 1f);
     private static readonly Vector4 SearchFieldHint = new(0.38f, 0.39f, 0.40f, 1f);
@@ -36,7 +37,8 @@ internal sealed partial class MusicApp
             BeginSearch(searchDraft);
         }
 
-        var body = new Rect(new Vector2(content.Min.X, barRect.Max.Y),
+        DrawScopeChips(content, barRect, scale);
+        var body = new Rect(new Vector2(content.Min.X, barRect.Max.Y + ScopeRowHeight * scale),
             new Vector2(content.Max.X, BodyBottom(content, scale)));
         if (searching)
         {
@@ -60,6 +62,28 @@ internal sealed partial class MusicApp
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
+        }
+    }
+
+    private void DrawScopeChips(Rect content, Rect barRect, float scale)
+    {
+        var centerY = barRect.Max.Y + ScopeRowHeight * scale * 0.5f;
+        var cursorX = content.Min.X + 16f * scale;
+        var gap = 8f * scale;
+        if (ui.FlowChip(ref cursorX, centerY, gap, Loc.T(L.Music.ScopeSongs), searchScope == SongSearchScope.Songs))
+        {
+            SetSearchScope(SongSearchScope.Songs);
+        }
+
+        if (ui.FlowChip(ref cursorX, centerY, gap, Loc.T(L.Music.ScopeLongPlays),
+                searchScope == SongSearchScope.LongPlays))
+        {
+            SetSearchScope(SongSearchScope.LongPlays);
+        }
+
+        if (ui.FlowChip(ref cursorX, centerY, gap, Loc.T(L.Music.ScopeAll), searchScope == SongSearchScope.All))
+        {
+            SetSearchScope(SongSearchScope.All);
         }
     }
 

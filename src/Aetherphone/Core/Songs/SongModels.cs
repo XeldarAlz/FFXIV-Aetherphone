@@ -1,5 +1,12 @@
 namespace Aetherphone.Core.Songs;
 
+internal enum SongSearchScope : byte
+{
+    Songs,
+    LongPlays,
+    All,
+}
+
 internal readonly struct Song
 {
     public readonly string VideoId;

@@ -85,6 +85,8 @@ internal sealed partial class MusicApp : IPhoneApp
     private bool hasSearched;
     private CancellationTokenSource? search;
     private string searchDraft = string.Empty;
+    private string lastSearchQuery = string.Empty;
+    private SongSearchScope searchScope = SongSearchScope.Songs;
     private bool focusSearch;
     private Song[] featured = Array.Empty<Song>();
     private volatile bool featuredLoading;
@@ -429,13 +431,28 @@ internal sealed partial class MusicApp : IPhoneApp
         var token = search.Token;
         searching = true;
         hasSearched = true;
+        lastSearchQuery = query;
         results = Array.Empty<Song>();
         _ = SearchAsync(query, token);
     }
 
+    private void SetSearchScope(SongSearchScope scope)
+    {
+        if (searchScope == scope)
+        {
+            return;
+        }
+
+        searchScope = scope;
+        if (!string.IsNullOrWhiteSpace(lastSearchQuery))
+        {
+            BeginSearch(lastSearchQuery);
+        }
+    }
+
     private async Task SearchAsync(string query, CancellationToken token)
     {
-        var found = await songSearch.SearchAsync(query, token).ConfigureAwait(false);
+        var found = await songSearch.SearchAsync(query, searchScope, token).ConfigureAwait(false);
         if (token.IsCancellationRequested)
         {
             return;
@@ -499,7 +516,7 @@ internal sealed partial class MusicApp : IPhoneApp
 
     private async Task FetchFeaturedAsync(string query, CancellationToken token)
     {
-        var found = await songSearch.SearchAsync(query, token).ConfigureAwait(false);
+        var found = await songSearch.SearchAsync(query, SongSearchScope.Songs, token).ConfigureAwait(false);
         if (token.IsCancellationRequested)
         {
             return;
@@ -566,7 +583,7 @@ internal sealed partial class MusicApp : IPhoneApp
             return cached;
         }
 
-        var formatted = TimeText.MinutesSeconds(totalSeconds);
+        var formatted = TimeText.Duration(totalSeconds);
         TimeCache[totalSeconds] = formatted;
         return formatted;
     }

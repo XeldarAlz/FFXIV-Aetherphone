@@ -18,6 +18,8 @@ internal enum SongPlaybackState : byte
 
 internal sealed class SongPlayer : IDisposable
 {
+    private const int StreamedThresholdSeconds = 600;
+    private const int StreamedAttempts = 2;
     private static readonly TimeSpan CacheMaxAge = TimeSpan.FromDays(14);
     private readonly YoutubeClient youtube;
     private readonly DiskCache cache;
@@ -125,8 +127,9 @@ internal sealed class SongPlayer : IDisposable
             cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
             var videoId = song.VideoId;
+            var knownDurationSeconds = song.DurationSeconds;
             var workerSession = session;
-            worker = new Thread(() => Run(videoId, token, workerSession))
+            worker = new Thread(() => Run(videoId, knownDurationSeconds, token, workerSession))
             {
                 IsBackground = true, Name = "Aetherphone.Song",
             };
@@ -188,32 +191,96 @@ internal sealed class SongPlayer : IDisposable
         }
     }
 
-    private void Run(string videoId, CancellationToken token, int workerSession)
+    private void Run(string videoId, int knownDurationSeconds, CancellationToken token, int workerSession)
+    {
+        var resumeSeconds = -1f;
+        for (var attempt = 0; attempt < StreamedAttempts; attempt++)
+        {
+            var allowStreaming = attempt == 0 || knownDurationSeconds > StreamedThresholdSeconds;
+            try
+            {
+                if (PlayOnce(videoId, knownDurationSeconds, allowStreaming, resumeSeconds, token, workerSession))
+                {
+                    AdvanceAfterCompletion(workerSession);
+                }
+
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception) when (token.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception exception)
+            {
+                resumeSeconds = positionSeconds;
+                if (attempt + 1 >= StreamedAttempts)
+                {
+                    TrySetState(workerSession, SongPlaybackState.Failed);
+                    AepLog.Warning($"Song playback failed: {exception.Message}");
+                    return;
+                }
+
+                TrySetState(workerSession, SongPlaybackState.Buffering);
+                AepLog.Warning($"Song stream interrupted, retrying: {exception.Message}");
+            }
+        }
+    }
+
+    private bool PlayOnce(string videoId, int knownDurationSeconds, bool allowStreaming, float resumeSeconds,
+        CancellationToken token, int workerSession)
     {
         MemoryStream? audio = null;
-        StreamMediaFoundationReader? reader = null;
+        MediaFoundationReader? reader = null;
         WaveOutEvent? output = null;
         var lastAppliedVolume = -1f;
         try
         {
-            var bytes = cache.Get(videoId, CacheMaxAge) ?? Download(videoId, token);
-            if (bytes is null || bytes.Length == 0)
+            var bytes = cache.Get(videoId, CacheMaxAge);
+            if (bytes is null && !allowStreaming)
             {
-                TrySetState(workerSession, SongPlaybackState.Failed);
-                return;
+                bytes = Download(videoId, token);
+            }
+
+            if (bytes is not null && bytes.Length > 0)
+            {
+                TrySetState(workerSession, SongPlaybackState.Buffering);
+                audio = new MemoryStream(bytes, false);
+                reader = new StreamMediaFoundationReader(audio);
+            }
+            else if (allowStreaming)
+            {
+                reader = OpenStreamedReader(videoId, token, workerSession);
+                if (reader is not null && knownDurationSeconds > 0 &&
+                    knownDurationSeconds <= StreamedThresholdSeconds)
+                {
+                    BeginCacheFill(videoId, token);
+                }
             }
 
             if (token.IsCancellationRequested)
             {
-                return;
+                return false;
             }
 
-            TrySetState(workerSession, SongPlaybackState.Buffering);
-            audio = new MemoryStream(bytes, false);
-            reader = new StreamMediaFoundationReader(audio);
+            if (reader is null)
+            {
+                TrySetState(workerSession, SongPlaybackState.Failed);
+                return false;
+            }
+
             if (IsCurrent(workerSession))
             {
                 durationSeconds = (float)reader.TotalTime.TotalSeconds;
+            }
+
+            if (resumeSeconds > 0f)
+            {
+                var clampedResume = Math.Min(resumeSeconds, (float)reader.TotalTime.TotalSeconds);
+                reader.CurrentTime = TimeSpan.FromSeconds(clampedResume);
             }
 
             output = new WaveOutEvent();
@@ -258,22 +325,13 @@ internal sealed class SongPlayer : IDisposable
                 Thread.Sleep(80);
             }
 
-            if (!token.IsCancellationRequested)
+            if (token.IsCancellationRequested)
             {
-                output.Stop();
-                AdvanceAfterCompletion(workerSession);
+                return false;
             }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception) when (token.IsCancellationRequested)
-        {
-        }
-        catch (Exception exception)
-        {
-            TrySetState(workerSession, SongPlaybackState.Failed);
-            AepLog.Warning($"Song playback failed: {exception.Message}");
+
+            output.Stop();
+            return true;
         }
         finally
         {
@@ -281,6 +339,40 @@ internal sealed class SongPlayer : IDisposable
             reader?.Dispose();
             audio?.Dispose();
         }
+    }
+
+    private void BeginCacheFill(string videoId, CancellationToken token)
+    {
+        Task.Run(() =>
+        {
+            try
+            {
+                Download(videoId, token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception) when (token.IsCancellationRequested)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Song cache fill failed: {exception.Message}");
+            }
+        }, CancellationToken.None);
+    }
+
+    private MediaFoundationReader? OpenStreamedReader(string videoId, CancellationToken token, int workerSession)
+    {
+        var manifest = youtube.Videos.Streams.GetManifestAsync(videoId, token).GetAwaiter().GetResult();
+        var best = SelectAudioStream(manifest);
+        if (best is null || token.IsCancellationRequested)
+        {
+            return null;
+        }
+
+        TrySetState(workerSession, SongPlaybackState.Buffering);
+        return new MediaFoundationReader(best.Url);
     }
 
     private byte[]? Download(string videoId, CancellationToken token)
