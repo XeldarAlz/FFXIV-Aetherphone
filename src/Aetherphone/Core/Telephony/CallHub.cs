@@ -15,7 +15,6 @@ internal sealed class CallHub : IDisposable
     private const float IncomingTimeoutSeconds = 60f;
     private const float DialingTimeoutSeconds = 60f;
     private const long ReconnectGraceMs = 20_000;
-    private const int MaxCallLog = 50;
     private static readonly Vector4 Accent = new(0.20f, 0.78f, 0.35f, 1f);
     private readonly Configuration configuration;
     private readonly AethernetSession session;
@@ -39,7 +38,7 @@ internal sealed class CallHub : IDisposable
     private float stateTimer;
     private long connectionLostTicks;
     private volatile bool callScreenRequested;
-    private CallLogEntry[] callLog = Array.Empty<CallLogEntry>();
+    private readonly CallLogStore log;
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
         SoundService sound, PlaybackHub playback, RealtimeSignalBus signals)
@@ -51,7 +50,7 @@ internal sealed class CallHub : IDisposable
         this.playback = playback;
         this.signals = signals;
         connection = new RealtimeConnection(session);
-        callLog = configuration.CallLog.ToArray();
+        log = new CallLogStore(configuration);
     }
 
     public event Action? IncomingCallPresented;
@@ -59,37 +58,10 @@ internal sealed class CallHub : IDisposable
     public bool SignedIn => session.IsSignedIn;
     public bool Connected => connection.Connected;
     public string LocalUserId => session.CurrentUser?.Id ?? string.Empty;
-    public CallLogEntry[] CallLog => callLog;
+    public CallLogEntry[] CallLog => log.Entries;
+    public int UnseenMissed => log.UnseenMissed;
 
-    public int UnseenMissed
-    {
-        get
-        {
-            var seen = configuration.CallLogSeenUnix;
-            var log = callLog;
-            var total = 0;
-            for (var index = 0; index < log.Length; index++)
-            {
-                if (log[index].Direction == CallDirection.Missed && log[index].TimestampUnix > seen)
-                {
-                    total += log[index].Count;
-                }
-            }
-
-            return total;
-        }
-    }
-
-    public void MarkLogSeen()
-    {
-        if (UnseenMissed == 0)
-        {
-            return;
-        }
-
-        configuration.CallLogSeenUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        configuration.Save();
-    }
+    public void MarkLogSeen() => log.MarkSeen();
 
     public void Start()
     {
@@ -200,7 +172,7 @@ internal sealed class CallHub : IDisposable
             stateTimer = 0f;
         }
 
-        AddLog(target, CallDirection.Outgoing);
+        log.Add(target, CallDirection.Outgoing);
         AepLog.Info($"[calls] start-sent call={id:D} to={target.UserId} realtime_connected={connection.Connected}");
         Send(new CallControl
         {
@@ -240,7 +212,7 @@ internal sealed class CallHub : IDisposable
             id = callId.ToString("D");
         }
 
-        AddLog(target, CallDirection.Outgoing);
+        log.Add(target, CallDirection.Outgoing);
         Send(new CallControl { Type = SignalType.Invite, CallId = id, InviteeIds = new[] { target.UserId }, });
     }
 
@@ -264,7 +236,7 @@ internal sealed class CallHub : IDisposable
         Send(new CallControl { Type = SignalType.Accept, CallId = id });
         if (from is not null)
         {
-            AddLog(new CallContact(from.UserId, from.Name, from.World, from.DisplayName), CallDirection.Incoming);
+            log.Add(new CallContact(from.UserId, from.Name, from.World, from.DisplayName), CallDirection.Incoming);
         }
     }
 
@@ -860,55 +832,6 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void AddLog(CallContact contact, CallDirection direction)
-    {
-        lock (gate)
-        {
-            var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            var current = callLog;
-            if (current.Length > 0 && current[0].UserId == contact.UserId && current[0].Direction == direction)
-            {
-                var merged = (CallLogEntry[])current.Clone();
-                merged[0] = new CallLogEntry
-                {
-                    UserId = contact.UserId,
-                    Name = contact.Name,
-                    World = contact.World,
-                    DisplayName = contact.DisplayName,
-                    Direction = direction,
-                    TimestampUnix = now,
-                    Count = current[0].Count + 1,
-                };
-                callLog = merged;
-            }
-            else
-            {
-                var length = Math.Min(current.Length + 1, MaxCallLog);
-                var next = new CallLogEntry[length];
-                next[0] = new CallLogEntry
-                {
-                    UserId = contact.UserId,
-                    Name = contact.Name,
-                    World = contact.World,
-                    DisplayName = contact.DisplayName,
-                    Direction = direction,
-                    TimestampUnix = now,
-                };
-                for (var index = 1; index < length; index++)
-                {
-                    next[index] = current[index - 1];
-                }
-
-                callLog = next;
-            }
-
-            configuration.CallLog.Clear();
-            configuration.CallLog.AddRange(callLog);
-        }
-
-        configuration.Save();
-    }
-
     private void LogMissed(ParticipantInfo? from, bool notify)
     {
         if (from is null)
@@ -916,7 +839,7 @@ internal sealed class CallHub : IDisposable
             return;
         }
 
-        AddLog(new CallContact(from.UserId, from.Name, from.World, from.DisplayName), CallDirection.Missed);
+        log.Add(new CallContact(from.UserId, from.Name, from.World, from.DisplayName), CallDirection.Missed);
         if (notify)
         {
             notifications.Notify(new PhoneNotification("message", from.DisplayName, Loc.T(L.Phone.MissedCallBody),
