@@ -493,6 +493,8 @@ internal static class L
         public static readonly LocString Command = new("settings.command", "Command");
         public static readonly LocString CreditsLinks = new("settings.creditsLinks", "Credits & links");
         public static readonly LocString AboutAetherphone = new("settings.aboutAetherphone", "About Aetherphone");
+        public static readonly LocString JoinDiscord = new("settings.joinDiscord", "Join our Discord");
+        public static readonly LocString VisitWebsite = new("settings.visitWebsite", "Visit our website");
         public static readonly LocString Changelog = new("settings.changelog", "Changelog");
         public static readonly LocString ChangelogSummary = new("settings.changelogSummary", "What's new");
         public static readonly LocString ChangelogHero = new("settings.changelogHero", "What's New");
@@ -2084,6 +2086,7 @@ internal static class L
         public static readonly LocString LinkReportBug = new("about.linkReportBug", "Report a bug");
         public static readonly LocString LinkMorePlugins = new("about.linkMorePlugins", "More plugins");
         public static readonly LocString LinkSecurity = new("about.linkSecurity", "Security");
+        public static readonly LocString LinkWebsite = new("about.linkWebsite", "Website");
         public static readonly LocString Connect = new("about.connect", "Connect");
         public static readonly LocString MadeWithCare = new("about.madeWithCare", "Made with care");
         public static readonly LocString SupportBody = new("about.supportBody", "I build and maintain this in my spare time. If it has helped you, a sponsorship lets me keep improving it. No pressure, and thank you for being here.");

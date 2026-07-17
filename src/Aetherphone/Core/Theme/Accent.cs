@@ -14,4 +14,6 @@ internal static class Accent
     public static readonly Vector4 Rose = new(0.93f, 0.42f, 0.50f, 1.00f);
     public static readonly Vector4 Blue = new(0.40f, 0.68f, 0.98f, 1.00f);
     public static readonly Vector4 BlueSoft = new(0.62f, 0.82f, 1.00f, 1.00f);
+    public static readonly Vector4 Indigo = new(0.45f, 0.51f, 0.96f, 1.00f);
+    public static readonly Vector4 Teal = new(0.16f, 0.72f, 0.70f, 1.00f);
 }
