@@ -18,6 +18,7 @@
   "common.pin": "置顶",
   "common.unpin": "取消置顶",
   "common.changePhoto": "更换照片",
+  "common.sendPhoto": "发送照片",
   "common.importFromPc": "从电脑导入",
   "common.saveToGallery": "保存到图库",
   "common.savedToGallery": "已保存到图库",

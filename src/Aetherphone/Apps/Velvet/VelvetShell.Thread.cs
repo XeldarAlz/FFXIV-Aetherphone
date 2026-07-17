@@ -38,7 +38,7 @@ internal sealed partial class VelvetShell
         protected override Vector4 Accent => app.Accent;
         protected override string EmptyText => Loc.T(L.Velvet.ThreadEmpty);
         protected override string LogTag => "Velvet";
-        protected override string PickerTitle => Loc.T(L.Velvet.ChangePhoto);
+        protected override string PickerTitle => Loc.T(L.Common.SendPhoto);
         protected override string ImportLabel => Loc.T(L.Velvet.ImportFromPc);
         protected override string NoPhotosLabel => Loc.T(L.Velvet.NoPhotos);
         protected override string SaveLabel => Loc.T(L.Velvet.SaveToGallery);

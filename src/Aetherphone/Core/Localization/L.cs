@@ -23,6 +23,7 @@ internal static class L
         public static readonly LocString Pin = new("common.pin", "Pin");
         public static readonly LocString Unpin = new("common.unpin", "Unpin");
         public static readonly LocString ChangePhoto = new("common.changePhoto", "Change photo");
+        public static readonly LocString SendPhoto = new("common.sendPhoto", "Send photo");
         public static readonly LocString ImportFromPc = new("common.importFromPc", "Import from PC");
         public static readonly LocString SaveToGallery = new("common.saveToGallery", "Save to gallery");
         public static readonly LocString SavedToGallery = new("common.savedToGallery", "Saved to gallery");

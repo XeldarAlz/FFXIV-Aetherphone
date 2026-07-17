@@ -18,6 +18,7 @@
   "common.pin": "Pin",
   "common.unpin": "Unpin",
   "common.changePhoto": "Change photo",
+  "common.sendPhoto": "Send photo",
   "common.importFromPc": "Import from PC",
   "common.saveToGallery": "Save to gallery",
   "common.savedToGallery": "Saved to gallery",

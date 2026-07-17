@@ -34,7 +34,7 @@ internal sealed partial class MessageApp
         protected override Vector4 Accent => ui.Accent;
         protected override string EmptyText => Loc.T(L.Message.ThreadEmpty);
         protected override string LogTag => "Message";
-        protected override string PickerTitle => Loc.T(L.Common.ChangePhoto);
+        protected override string PickerTitle => Loc.T(L.Common.SendPhoto);
         protected override string ImportLabel => Loc.T(L.Common.ImportFromPc);
         protected override string NoPhotosLabel => Loc.T(L.Common.NoPhotos);
         protected override string SaveLabel => Loc.T(L.Common.SaveToGallery);
