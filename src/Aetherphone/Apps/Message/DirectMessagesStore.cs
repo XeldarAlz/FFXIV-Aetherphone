@@ -52,11 +52,11 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public void ClearRotationNotice(string userId) => peers.ClearRotationNotice(userId);
 
-    public void NoteConversationViewed(string id) => NoteThreadViewedCore(id);
+    public void NoteConversationViewed(string id) => NoteThreadViewed(id);
 
     public void RefreshConversations() => RefreshThreadListCore();
 
-    public void OpenConversation(string id) => OpenThreadCore(id);
+    public void OpenConversation(string id) => OpenThread(id);
 
     protected override string AnalyticsSource => "dm";
     protected override string ImageUploadScope => "chat-dm";

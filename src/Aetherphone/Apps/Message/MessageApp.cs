@@ -31,7 +31,6 @@ internal sealed partial class MessageApp : IPhoneApp
 
     private const float ThreadPollSeconds = 3f;
     private const float TypingSendSeconds = 2.5f;
-    private const int MessageMax = 1000;
 
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 Transparent = new(0f, 0f, 0f, 0f);
@@ -56,7 +55,6 @@ internal sealed partial class MessageApp : IPhoneApp
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<MessageRoute> router;
     private readonly RouterDraw<MessageRoute> drawView;
-    private readonly ChatTranscript transcript = new();
     private readonly Action back;
 
     private PhoneTheme theme = PhoneTheme.Default;
@@ -83,6 +81,7 @@ internal sealed partial class MessageApp : IPhoneApp
         router = new ViewRouter<MessageRoute>(MessageRoute.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();
+        threadView = new ThreadView(this);
     }
 
     public void OnOpened()
@@ -113,21 +112,13 @@ internal sealed partial class MessageApp : IPhoneApp
     public void OnClosed()
     {
         FlushNotes();
-        if (!composer.IsEditing && store.ConversationId is { } openConversation)
-        {
-            SaveDraft(openConversation);
-        }
-
+        threadView.OnAppClosed();
         router.Reset();
         avatarLightbox.Reset();
         filter = string.Empty;
         searchDraft = string.Empty;
         selectedContacts.Clear();
         groupTitleDraft = string.Empty;
-        composer.CancelVoice();
-        voicePlayer.Stop();
-        searchController.Close();
-        composer.Clear();
     }
 
     public void Draw(in PhoneContext context)
@@ -144,7 +135,7 @@ internal sealed partial class MessageApp : IPhoneApp
         currentCall = calls.Snapshot();
         SyncCallRoute();
         ProcessPending();
-        messageMenuController.Gate();
+        threadView.GateMenus();
         chatMenu.Gate();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
@@ -243,7 +234,7 @@ internal sealed partial class MessageApp : IPhoneApp
         switch (route.Screen)
         {
             case MessageScreen.Thread:
-                DrawThread(area, route.Id ?? string.Empty);
+                threadView.Draw(area, route.Id ?? string.Empty);
                 break;
             case MessageScreen.NewChat:
                 DrawNewChat(area);
@@ -255,10 +246,10 @@ internal sealed partial class MessageApp : IPhoneApp
                 DrawAddMembers(area, route.Id ?? string.Empty);
                 break;
             case MessageScreen.ChatImage:
-                DrawChatImagePicker(area, route.Id ?? string.Empty);
+                threadView.DrawImagePicker(area, route.Id ?? string.Empty);
                 break;
             case MessageScreen.ImageView:
-                DrawImageViewer(area, route.Id ?? string.Empty);
+                threadView.DrawImageViewer(area, route.Id ?? string.Empty);
                 break;
             case MessageScreen.Archived:
                 DrawArchived(area);
@@ -294,7 +285,7 @@ internal sealed partial class MessageApp : IPhoneApp
                 DrawStarred(area);
                 break;
             case MessageScreen.Reactions:
-                DrawReactions(area, route.Id ?? string.Empty);
+                threadView.DrawReactions(area, route.Id ?? string.Empty);
                 break;
             default:
                 DrawRoot(area);
@@ -444,8 +435,7 @@ internal sealed partial class MessageApp : IPhoneApp
 
     public void Dispose()
     {
-        composer.Dispose();
-        voicePlayer.Dispose();
+        threadView.Dispose();
         store.Dispose();
         contacts.Dispose();
     }

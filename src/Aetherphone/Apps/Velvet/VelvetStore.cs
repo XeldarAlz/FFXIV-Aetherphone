@@ -117,11 +117,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public bool BlockedLoaded => blockedLoaded;
     public int UnreadCount => ComputeUnread();
 
-    public void NoteThreadViewed(string userId) => NoteThreadViewedCore(userId);
-
     public void RefreshThreads() => RefreshThreadListCore();
-
-    public void OpenThread(string id) => OpenThreadCore(id);
 
     protected override string AnalyticsSource => "velvet";
     protected override string ImageUploadScope => "velvet-dm";

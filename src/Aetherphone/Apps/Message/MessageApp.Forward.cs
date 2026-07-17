@@ -22,7 +22,7 @@ internal sealed partial class MessageApp
         var scale = ImGuiHelpers.GlobalScale;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Message.ForwardTitle), back);
-        var message = FindMessage(messageId);
+        var message = store.FindMessage(messageId);
         if (message is null || message.Deleted)
         {
             return;

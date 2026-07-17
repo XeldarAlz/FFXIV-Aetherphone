@@ -21,7 +21,7 @@ internal sealed partial class MessageApp
         var scale = ImGuiHelpers.GlobalScale;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Message.InfoTitle), back);
-        var message = FindMessage(messageId);
+        var message = store.FindMessage(messageId);
         var conversation = store.Conversation;
         if (message is null || conversation is null)
         {

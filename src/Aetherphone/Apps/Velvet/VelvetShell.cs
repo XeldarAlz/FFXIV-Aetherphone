@@ -86,6 +86,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         router = new ViewRouter<VelvetView>(VelvetView.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();
+        threadView = new ThreadView(this);
     }
 
     public string Id => "velvet";
@@ -201,8 +202,7 @@ internal sealed partial class VelvetShell : IPhoneApp
 
     public void Dispose()
     {
-        composer.Dispose();
-        voicePlayer.Dispose();
+        threadView.Dispose();
         stories.Dispose();
         store.Dispose();
     }
@@ -233,7 +233,7 @@ internal sealed partial class VelvetShell : IPhoneApp
                 DrawProfile(area, view.Arg ?? string.Empty);
                 break;
             case VelvetScreenId.Thread:
-                DrawThread(area, view.Arg ?? string.Empty);
+                threadView.Draw(area, view.Arg ?? string.Empty);
                 break;
             case VelvetScreenId.PostDetail:
                 DrawPostDetail(area, view.Arg ?? string.Empty);
@@ -257,16 +257,16 @@ internal sealed partial class VelvetShell : IPhoneApp
                 DrawBlocked(area);
                 break;
             case VelvetScreenId.ChatImage:
-                DrawChatImage(area, view.Arg ?? string.Empty);
+                threadView.DrawImagePicker(area, view.Arg ?? string.Empty);
                 break;
             case VelvetScreenId.ImageView:
-                DrawImageView(area, view.Arg ?? string.Empty);
+                threadView.DrawImageViewer(area, view.Arg ?? string.Empty);
                 break;
             case VelvetScreenId.Intro:
                 DrawIntro(area, view.Arg ?? string.Empty);
                 break;
             case VelvetScreenId.Reactions:
-                DrawReactions(area, view.Arg ?? string.Empty);
+                threadView.DrawReactions(area, view.Arg ?? string.Empty);
                 break;
             default:
                 DrawRoot(area);

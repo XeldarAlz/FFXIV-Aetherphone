@@ -13,9 +13,6 @@ namespace Aetherphone.Apps.Message;
 
 internal sealed partial class MessageApp
 {
-    private string? reactorsFor;
-    private volatile ReactorDto[]? reactors;
-
     private void DrawStarred(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -85,104 +82,7 @@ internal sealed partial class MessageApp
         else if (UiInteract.HoverClick(origin, rowMax))
         {
             router.Push(MessageRoute.Thread(entry.ConversationId));
-            transcript.RequestScrollTo(entry.MessageId);
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rowHeight + 8f * scale));
-    }
-
-    private void DrawReactions(Rect area, string messageId)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Message.ReactionsTitle), back);
-        if (reactorsFor != messageId)
-        {
-            reactorsFor = messageId;
-            reactors = null;
-            store.LoadReactions(messageId, result => reactors = result);
-        }
-
-        var top = area.Min.Y + AppHeader.Height * scale;
-        var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        var snapshot = reactors;
-        if (snapshot is null)
-        {
-            Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 60f * scale),
-                Loc.T(L.Common.Loading), ui.MutedInk);
-            return;
-        }
-
-        if (snapshot.Length == 0)
-        {
-            EmptyState.Draw(body, ui, FontAwesomeIcon.ThumbsUp, Loc.T(L.Message.ReactionsTitle), string.Empty);
-            return;
-        }
-
-        using (AppSurface.Begin(body))
-        {
-            ImGui.Dummy(new Vector2(0f, 4f * scale));
-            for (var index = 0; index < snapshot.Length; index++)
-            {
-                DrawReactorRow(messageId, snapshot[index], scale);
-            }
-
-            ImGui.Dummy(new Vector2(0f, 24f * scale));
-        }
-    }
-
-    private void DrawReactorRow(string messageId, ReactorDto reactor, float scale)
-    {
-        var mine = reactor.UserId == store.MyUserId;
-        var rowHeight = 54f * scale;
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var drawList = ImGui.GetWindowDrawList();
-        var rowMax = new Vector2(origin.X + width, origin.Y + rowHeight);
-        ui.Card(drawList, origin, rowMax, 14f * scale);
-        var pad = 12f * scale;
-        var radius = 17f * scale;
-        var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
-        var label = mine
-            ? Loc.T(L.Message.You)
-            : reactor.DisplayName.Length > 0 ? reactor.DisplayName : reactor.Handle;
-        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, reactor.AvatarUrl, images,
-            lodestone, 0.85f, 32);
-        var textLeft = avatarCenter.X + radius + 12f * scale;
-        if (mine)
-        {
-            Typography.Draw(new Vector2(textLeft, origin.Y + 10f * scale), label, theme.TextStrong, 1f,
-                FontWeight.SemiBold);
-            Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), Loc.T(L.Message.TapToRemove),
-                ui.MutedInk, TextStyles.Footnote);
-        }
-        else
-        {
-            Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale), label,
-                theme.TextStrong, 1f, FontWeight.SemiBold);
-        }
-
-        var tokenColor = ReactionArt.Color(reactor.Token);
-        AppSkin.Icon(new Vector2(origin.X + width - pad - 10f * scale, origin.Y + rowHeight * 0.5f),
-            ReactionArt.Glyph(reactor.Token), tokenColor, 1f);
-        if (mine && UiInteract.HoverClick(origin, rowMax))
-        {
-            store.SetReaction(messageId, string.Empty);
-            var snapshot = reactors;
-            if (snapshot is not null)
-            {
-                var next = new List<ReactorDto>(snapshot.Length);
-                for (var index = 0; index < snapshot.Length; index++)
-                {
-                    if (snapshot[index].UserId != store.MyUserId)
-                    {
-                        next.Add(snapshot[index]);
-                    }
-                }
-
-                reactors = next.ToArray();
-            }
+            threadView.RequestScrollTo(entry.MessageId);
         }
 
         ImGui.SetCursorScreenPos(origin);

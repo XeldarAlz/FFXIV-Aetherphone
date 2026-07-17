@@ -186,8 +186,9 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     public DmDecryptedBody DecryptionState(string messageId) => cipher.DecryptionState(messageId);
 
+    public string? CurrentThreadId => currentThreadId;
+
     protected PollCadence InboxCadence => inboxCadence;
-    protected string? CurrentThreadId => currentThreadId;
 
     protected TThread[] ThreadListItems
     {
@@ -240,7 +241,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         return total;
     }
 
-    protected void NoteThreadViewedCore(string threadKey)
+    public void NoteThreadViewed(string threadKey)
     {
         viewingThreadKey = threadKey;
         lastViewingUtc = DateTime.UtcNow;
@@ -412,7 +413,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         });
     }
 
-    protected void OpenThreadCore(string id)
+    public void OpenThread(string id)
     {
         if (currentThreadId == id && (messages.Length > 0 || loadingThread))
         {
