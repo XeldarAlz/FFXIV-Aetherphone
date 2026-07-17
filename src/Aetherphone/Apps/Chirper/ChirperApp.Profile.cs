@@ -13,8 +13,6 @@ using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Chirper;
 
-// Profile screens: the shared SocialProfilePages component draws the header/stats/edit/user-list
-// surfaces; this partial keeps the Chirper-specific routing, the posts list, and the home top bar.
 internal sealed partial class ChirperApp
 {
     private void DrawProfile(Rect area, string userId)

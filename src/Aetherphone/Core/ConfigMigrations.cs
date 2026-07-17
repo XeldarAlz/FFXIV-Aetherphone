@@ -1,8 +1,5 @@
 namespace Aetherphone.Core;
 
-// Dalamud persists the plugin config with TypeNameHandling.Objects, so every saved object carries a
-// "$type" with its full namespace. Moving or renaming a persisted type therefore breaks config
-// loading for existing users. This rewrites the stored type names before Dalamud deserializes.
 internal static class ConfigMigrations
 {
     private static readonly (string Old, string New)[] TypeRenames =

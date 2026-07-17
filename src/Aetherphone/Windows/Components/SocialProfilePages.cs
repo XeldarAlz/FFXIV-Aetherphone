@@ -48,8 +48,6 @@ internal sealed class SocialProfileStyle
     public required LocString DeleteCommentFailed { get; init; }
 }
 
-// The profile surface both social apps share: header card, stats, edit form, user lists, people
-// search, and the moderation prompts. Apps keep only what genuinely differs (feed cards, routes).
 internal sealed class SocialProfilePages
 {
     public const float FeedRefreshSeconds = 25f;
