@@ -239,12 +239,6 @@ internal sealed class PhoneShell : IDisposable
             {
                 case SideButtonAction.Minimize:
                     minimize.BeginCollapse();
-                    if (Plugin.Cfg.LockPosition)
-                    {
-                        Plugin.Cfg.LockPosition = false;
-                        Plugin.Cfg.Save();
-                    }
-
                     break;
                 case SideButtonAction.Close:
                     closeRequested = true;
