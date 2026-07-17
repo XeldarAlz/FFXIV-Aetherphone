@@ -22,6 +22,13 @@ internal static class L
         public static readonly LocString PhotoStep = new("common.photoStep", "Photo {0} of {1}");
         public static readonly LocString PhotoLimit = new("common.photoLimit", "You can add up to {0} photos");
         public static readonly LocString ImageFailed = new("common.imageFailed", "Couldn't load image");
+        public static readonly LocString Pin = new("common.pin", "Pin");
+        public static readonly LocString Unpin = new("common.unpin", "Unpin");
+        public static readonly LocString ChangePhoto = new("common.changePhoto", "Change photo");
+        public static readonly LocString ImportFromPc = new("common.importFromPc", "Import from PC");
+        public static readonly LocString SaveToGallery = new("common.saveToGallery", "Save to gallery");
+        public static readonly LocString SavedToGallery = new("common.savedToGallery", "Saved to gallery");
+        public static readonly LocString NoPhotos = new("common.noPhotos", "No photos in your gallery yet");
     }
 
     internal static class Social
@@ -184,6 +191,7 @@ internal static class L
 
     internal static class Message
     {
+        public static readonly LocString ThreadEmpty = new("message.threadEmpty", "Say hello");
         public static readonly LocString TabChats = new("message.tabChats", "Chats");
         public static readonly LocString Archived = new("message.archived", "Archived");
         public static readonly LocString Archive = new("message.archive", "Archive");

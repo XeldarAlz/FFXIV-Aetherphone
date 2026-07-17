@@ -23,7 +23,7 @@ internal sealed partial class MessageApp
     private void DrawChatImagePicker(Rect area, string conversationId)
     {
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Velvet.ChangePhoto), back);
+        AppHeader.Draw(context, Loc.T(L.Common.ChangePhoto), back);
         if (chatPickerConversationId != conversationId)
         {
             chatPickerConversationId = conversationId;
@@ -43,7 +43,7 @@ internal sealed partial class MessageApp
         var importHeight = 46f * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
-        if (ui.PillButton(importRect, Loc.T(L.Velvet.ImportFromPc), true))
+        if (ui.PillButton(importRect, Loc.T(L.Common.ImportFromPc), true))
         {
             LaunchChatImageDialog();
         }
@@ -54,7 +54,7 @@ internal sealed partial class MessageApp
             if (chatPickerPaths.Length == 0)
             {
                 Typography.DrawCentered(new Vector2(gridRect.Center.X, gridRect.Min.Y + 60f * scale),
-                    Loc.T(L.Velvet.NoPhotos), ui.MutedInk);
+                    Loc.T(L.Common.NoPhotos), ui.MutedInk);
                 return;
             }
 
@@ -95,7 +95,7 @@ internal sealed partial class MessageApp
 
     private void LaunchChatImageDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Velvet.ChangePhoto)).ContinueWith(task =>
+        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Common.ChangePhoto)).ContinueWith(task =>
         {
             if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
             {
@@ -173,7 +173,7 @@ internal sealed partial class MessageApp
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, string.Empty, back);
         var saved = imageSaveOutcome == 1;
-        var label = saved ? Loc.T(L.Velvet.SavedToGallery) : Loc.T(L.Velvet.SaveToGallery);
+        var label = saved ? Loc.T(L.Common.SavedToGallery) : Loc.T(L.Common.SaveToGallery);
         var buttonWidth = MathF.Min(240f * scale, area.Width - 32f * scale);
         var buttonHeight = 42f * scale;
         var buttonTop = area.Max.Y - footerHeight + (footerHeight - buttonHeight) * 0.5f;

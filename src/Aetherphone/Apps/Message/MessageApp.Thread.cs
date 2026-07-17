@@ -97,7 +97,7 @@ internal sealed partial class MessageApp
         onThreadLoadOlder ??= store.LoadOlder;
         var model = new ChatTranscriptModel(conversationId, transcriptMessages, store.MyUserId, ui.Accent, theme,
             AppPalettes.Message.MutedInk, AppPalettes.Message.BodyInk, store.OtherTyping, store.LoadingThread,
-            isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
+            isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Message.ThreadEmpty), Loc.T(L.Common.Loading),
             onMessageContext, onQuoteClick, onReactionClick, voiceStateFor, onVoiceToggle,
             store.HasMoreOlder, store.LoadingOlder, onThreadLoadOlder);
         transcript.Draw(listRect, model);

@@ -284,7 +284,7 @@ internal sealed partial class MessageApp
         var isPinned = configuration.MessagePinnedChats.Contains(id);
         var isArchived = configuration.MessageArchivedChats.Contains(id);
         var isMuted = FindConversationDto(id)?.Muted ?? false;
-        chatMenuItems[0] = new DropdownMenu.Item(Loc.T(isPinned ? L.Velvet.Unpin : L.Velvet.Pin),
+        chatMenuItems[0] = new DropdownMenu.Item(Loc.T(isPinned ? L.Common.Unpin : L.Common.Pin),
             FontAwesomeIcon.Thumbtack.ToIconString());
         chatMenuItems[1] = new DropdownMenu.Item(Loc.T(isArchived ? L.Message.Unarchive : L.Message.Archive),
             FontAwesomeIcon.BoxOpen.ToIconString());
