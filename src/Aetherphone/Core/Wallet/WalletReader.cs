@@ -43,6 +43,8 @@ internal static unsafe class WalletReader
 
     private static readonly Def[] OtherDefs = { new(26807, BicolorCap), };
 
+    private static readonly List<uint> TomestoneScratch = new(4);
+
     public static WalletEntry BuildGil(GameData gameData)
     {
         ResolveItem(gameData, GilItemId, out var iconId, out var name);
@@ -84,6 +86,48 @@ internal static unsafe class WalletReader
                 entries[entryIndex].Amount = ReadAmount(manager, entries[entryIndex]);
             }
         }
+    }
+
+    public static int CountCapped(GameData gameData)
+    {
+        var manager = InventoryManager.Instance();
+        if (manager is null)
+        {
+            return 0;
+        }
+
+        var count = CountCappedDefs(manager, HuntDefs) + CountCappedDefs(manager, PvpDefs) +
+                    CountCappedDefs(manager, ScripDefs) + CountCappedDefs(manager, OtherDefs);
+        TomestoneScratch.Clear();
+        gameData.CollectTomestoneItemIds(TomestoneScratch);
+        for (var index = 0; index < TomestoneScratch.Count; index++)
+        {
+            if ((long)manager->GetTomestoneCount(TomestoneScratch[index]) >= TomestoneCap)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountCappedDefs(InventoryManager* manager, Def[] defs)
+    {
+        var count = 0;
+        for (var index = 0; index < defs.Length; index++)
+        {
+            if (defs[index].Cap <= 0)
+            {
+                continue;
+            }
+
+            if ((long)manager->GetInventoryItemCount(defs[index].ItemId, false, true, true, 0) >= defs[index].Cap)
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private static WalletEntry[] BuildCurrency(GameData gameData)

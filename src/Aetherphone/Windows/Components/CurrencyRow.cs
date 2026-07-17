@@ -12,77 +12,44 @@ namespace Aetherphone.Windows.Components;
 
 internal static class CurrencyRow
 {
-    public const float Height = 54f;
+    public const float Height = 62f;
+    private const float HeroHeight = 132f;
+    private const float HeroRounding = 24f;
+    private const float IconSize = 38f;
+    private const float TextGap = 14f;
 
-    public static void Draw(Rect row, WalletEntry entry, ITextureProvider textures, PhoneTheme theme)
+    private static readonly Vector4 CappedTint = new(0.98f, 0.80f, 0.36f, 1f);
+    private static readonly Vector4 IconBacking = new(1f, 1f, 1f, 0.05f);
+
+    public static Rect Hero(WalletEntry gil, ITextureProvider textures, in AppPalette palette)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var iconSize = 30f * scale;
-        var iconMin = new Vector2(row.Min.X, row.Center.Y - iconSize * 0.5f);
-        var iconMax = iconMin + new Vector2(iconSize, iconSize);
-        DrawIcon(drawList, entry.IconId, iconMin, iconMax, scale, textures);
-        var textLeft = iconMax.X + Metrics.Space.Md * scale;
-        var gap = 10f * scale;
-        var amountText = Format(entry.Amount);
-        if (entry.Cap <= 0)
-        {
-            var amountSize = Typography.Measure(amountText, 1.1f);
-            var amountX = row.Max.X - amountSize.X;
-            Typography.Draw(new Vector2(amountX, row.Center.Y - amountSize.Y * 0.5f), amountText, theme.Accent, 1.1f);
-            var name = Fit(entry.Name, amountX - gap - textLeft, 1f);
-            var nameSize = Typography.Measure(name);
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), name, theme.TextStrong);
-            return;
-        }
-
-        var topY = row.Min.Y + 9f * scale;
-        var capText = " / " + Format(entry.Cap);
-        var capSize = Typography.Measure(capText, 0.82f);
-        var amountSize2 = Typography.Measure(amountText, 1.1f);
-        var amountX2 = row.Max.X - capSize.X - amountSize2.X;
-        Typography.Draw(new Vector2(amountX2, topY), amountText, theme.Accent, 1.1f);
-        Typography.Draw(new Vector2(row.Max.X - capSize.X, topY + 3f * scale), capText, theme.TextMuted, 0.82f);
-        var fittedName = Fit(entry.Name, amountX2 - gap - textLeft, 1f);
-        Typography.Draw(new Vector2(textLeft, topY), fittedName, theme.TextStrong);
-        var barTop = row.Max.Y - 14f * scale;
-        var barMin = new Vector2(textLeft, barTop);
-        var barMax = new Vector2(row.Max.X, barTop + 5f * scale);
-        var rounding = (barMax.Y - barMin.Y) * 0.5f;
-        drawList.AddRectFilled(barMin, barMax, ImGui.GetColorU32(theme.SurfaceMuted), rounding);
-        var fraction = Math.Clamp((float)((double)entry.Amount / entry.Cap), 0f, 1f);
-        if (fraction > 0.001f)
-        {
-            var fillColor = entry.Amount >= entry.Cap ? theme.Danger : theme.Accent;
-            var fillMax = new Vector2(barMin.X + (barMax.X - barMin.X) * fraction, barMax.Y);
-            drawList.AddRectFilled(barMin, fillMax, ImGui.GetColorU32(fillColor), rounding);
-        }
-    }
-
-    public static void Hero(WalletEntry gil, ITextureProvider textures, PhoneTheme theme)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
-        var drawList = ImGui.GetWindowDrawList();
-        var centerX = origin.X + width * 0.5f;
-        var height = 104f * scale;
-        var cardMin = origin;
-        var cardMax = new Vector2(origin.X + width, origin.Y + height);
-        var rounding = 22f * scale;
-        Elevation.Card(drawList, cardMin, cardMax, rounding, scale, 0.7f);
-        Squircle.Fill(drawList, cardMin, cardMax, rounding, ImGui.GetColorU32(theme.GroupedCard));
-        Material.TopGlow(drawList, cardMin, cardMax, rounding, theme.Accent, 0.82f, 0.15f);
-        Material.EdgeSquircle(drawList, cardMin, cardMax, rounding, scale);
-        Typography.DrawCentered(new Vector2(centerX, cardMin.Y + 22f * scale), Loc.T(L.Wallet.GilBalance),
-            theme.TextMuted, TextStyles.Caption1);
+        var height = HeroHeight * scale;
+        var min = origin;
+        var max = new Vector2(origin.X + width, origin.Y + height);
+        var rounding = HeroRounding * scale;
+        var surface = Palette.Lighten(palette.BackdropTop, 0.12f) with { W = 1f };
+        Elevation.Card(drawList, min, max, rounding, scale, 0.9f);
+        Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(surface));
+        Material.TopGlow(drawList, min, max, rounding, palette.Accent, 0.92f, 0.22f);
+        Material.EdgeSquircle(drawList, min, max, rounding, scale);
+
+        var centerX = min.X + width * 0.5f;
+        Typography.DrawCentered(drawList, new Vector2(centerX, min.Y + 27f * scale), Loc.T(L.Wallet.GilBalance),
+            palette.HeaderInk, TextStyles.FootnoteEmphasized);
+
         var amountText = Format(gil.Amount);
-        var amountSize = Typography.Measure(amountText, TextStyles.LargeTitle);
-        var iconSize = 30f * scale;
-        var gap = 10f * scale;
         var hasIcon = gil.IconId != 0;
+        var iconSize = 36f * scale;
+        var gap = 12f * scale;
+        var available = width - 44f * scale - (hasIcon ? iconSize + gap : 0f);
+        var amountScale = FitScale(amountText, available, 2.35f, FontWeight.Bold);
+        var amountSize = Typography.Measure(amountText, amountScale, FontWeight.Bold);
         var totalWidth = amountSize.X + (hasIcon ? iconSize + gap : 0f);
-        var rowCenterY = cardMin.Y + height * 0.60f;
+        var rowCenterY = min.Y + height * 0.62f;
         var startX = centerX - totalWidth * 0.5f;
         if (hasIcon)
         {
@@ -91,10 +58,104 @@ internal static class CurrencyRow
             startX += iconSize + gap;
         }
 
-        Typography.Draw(new Vector2(startX, rowCenterY - amountSize.Y * 0.5f), amountText, theme.TextStrong,
-            TextStyles.LargeTitle);
+        Typography.Draw(drawList, new Vector2(startX, rowCenterY - amountSize.Y * 0.5f), amountText, palette.TitleInk,
+            amountScale, FontWeight.Bold);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + 4f * scale));
+        return new Rect(min, max);
+    }
+
+    public static void Draw(Rect band, Rect content, WalletEntry entry, ITextureProvider textures,
+        in AppPalette palette, float cardRounding, bool roundTop, bool roundBottom)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        DrawHover(drawList, band, cardRounding, roundTop, roundBottom, scale);
+
+        var iconSize = IconSize * scale;
+        var iconMin = new Vector2(content.Min.X, content.Center.Y - iconSize * 0.5f);
+        var iconMax = iconMin + new Vector2(iconSize, iconSize);
+        Squircle.Fill(drawList, iconMin, iconMax, iconSize * Metrics.Radius.TileFactor, ImGui.GetColorU32(IconBacking));
+        DrawIcon(drawList, entry.IconId, iconMin, iconMax, scale, textures);
+        var textLeft = iconMax.X + TextGap * scale;
+        var amountText = Format(entry.Amount);
+
+        if (entry.Cap <= 0)
+        {
+            var amountSize = Typography.Measure(amountText, TextStyles.Title2);
+            var amountX = content.Max.X - amountSize.X;
+            Typography.Draw(drawList, new Vector2(amountX, content.Center.Y - amountSize.Y * 0.5f), amountText,
+                palette.Accent, TextStyles.Title2);
+            var name = Typography.FitText(entry.Name, amountX - 12f * scale - textLeft, TextStyles.Headline);
+            var nameSize = Typography.Measure(name, TextStyles.Headline);
+            Typography.Draw(drawList, new Vector2(textLeft, content.Center.Y - nameSize.Y * 0.5f), name,
+                palette.TitleInk, TextStyles.Headline);
+            return;
+        }
+
+        var capped = entry.Amount >= entry.Cap;
+        var accent = capped ? CappedTint : palette.Accent;
+        var barTop = content.Max.Y - 15f * scale;
+        var lineCenterY = (content.Min.Y + barTop) * 0.5f;
+        var capText = " / " + Format(entry.Cap);
+        var capSize = Typography.Measure(capText, TextStyles.Footnote);
+        var amountMeasure = Typography.Measure(amountText, TextStyles.Title3);
+        var amountX2 = content.Max.X - capSize.X - amountMeasure.X;
+        var amountY = lineCenterY - amountMeasure.Y * 0.5f;
+        Typography.Draw(drawList, new Vector2(amountX2, amountY), amountText, accent, TextStyles.Title3);
+        Typography.Draw(drawList, new Vector2(content.Max.X - capSize.X, amountY + 4f * scale), capText,
+            palette.MutedInk, TextStyles.Footnote);
+
+        var label = Typography.FitText(entry.Name, amountX2 - 12f * scale - textLeft, TextStyles.Headline);
+        var labelSize = Typography.Measure(label, TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(textLeft, lineCenterY - labelSize.Y * 0.5f), label, palette.TitleInk,
+            TextStyles.Headline);
+
+        var barMin = new Vector2(textLeft, barTop);
+        var barMax = new Vector2(content.Max.X, barTop + 6f * scale);
+        var barRounding = (barMax.Y - barMin.Y) * 0.5f;
+        Squircle.Fill(drawList, barMin, barMax, barRounding, ImGui.GetColorU32(Palette.WithAlpha(palette.TitleInk, 0.10f)));
+        var fraction = Math.Clamp((float)((double)entry.Amount / entry.Cap), 0f, 1f);
+        if (fraction > 0.001f)
+        {
+            var fillMax = new Vector2(barMin.X + (barMax.X - barMin.X) * fraction, barMax.Y);
+            Squircle.Fill(drawList, barMin, fillMax, barRounding, ImGui.GetColorU32(accent));
+        }
+    }
+
+    private static void DrawHover(ImDrawListPtr drawList, Rect band, float cardRounding, bool roundTop,
+        bool roundBottom, float scale)
+    {
+        if (!UiInteract.Hover(band.Min, band.Max))
+        {
+            return;
+        }
+
+        var inset = 1.5f * scale;
+        var min = new Vector2(band.Min.X + inset, band.Min.Y + (roundTop ? inset : 0f));
+        var max = new Vector2(band.Max.X - inset, band.Max.Y - (roundBottom ? inset : 0f));
+        var rounding = MathF.Max(0f, cardRounding - inset);
+        ImDrawFlags flags;
+        if (roundTop && roundBottom)
+        {
+            flags = ImDrawFlags.RoundCornersAll;
+        }
+        else if (roundTop)
+        {
+            flags = ImDrawFlags.RoundCornersTop;
+        }
+        else if (roundBottom)
+        {
+            flags = ImDrawFlags.RoundCornersBottom;
+        }
+        else
+        {
+            flags = ImDrawFlags.RoundCornersAll;
+            rounding = 0f;
+        }
+
+        var alpha = ImGui.IsMouseDown(ImGuiMouseButton.Left) ? 0.10f : 0.055f;
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)), rounding, flags);
     }
 
     private static void DrawIcon(ImDrawListPtr drawList, uint iconId, Vector2 min, Vector2 max, float scale,
@@ -106,46 +167,19 @@ internal static class CurrencyRow
         }
 
         var texture = textures.GetFromGameIcon(new GameIconLookup(iconId)).GetWrapOrEmpty();
-        drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, 6f * scale);
+        drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, 7f * scale);
+    }
+
+    private static float FitScale(string text, float maxWidth, float maxScale, FontWeight weight)
+    {
+        var candidate = maxScale;
+        while (candidate > 1.2f && Typography.Measure(text, candidate, weight).X > maxWidth)
+        {
+            candidate -= 0.15f;
+        }
+
+        return candidate;
     }
 
     private static string Format(long amount) => amount.ToString("N0", Loc.Culture);
-
-    private static string Fit(string text, float maxWidth, float scale)
-    {
-        if (text.Length == 0)
-        {
-            return text;
-        }
-
-        if (maxWidth <= 0f)
-        {
-            return string.Empty;
-        }
-
-        if (Typography.Measure(text, scale).X <= maxWidth)
-        {
-            return text;
-        }
-
-        var low = 1;
-        var high = text.Length;
-        var best = "…";
-        while (low <= high)
-        {
-            var mid = (low + high) / 2;
-            var candidate = text.Substring(0, mid) + "…";
-            if (Typography.Measure(candidate, scale).X <= maxWidth)
-            {
-                best = candidate;
-                low = mid + 1;
-            }
-            else
-            {
-                high = mid - 1;
-            }
-        }
-
-        return best;
-    }
 }
