@@ -99,23 +99,7 @@ internal sealed class ChirperStore : SocialFeedStore
 
     private static PostDto ApplyReaction(PostDto post, int newKind)
     {
-        var counts = (int[])post.ReactionCounts.Clone();
-        if (post.MyReaction >= 0 && post.MyReaction < counts.Length && counts[post.MyReaction] > 0)
-        {
-            counts[post.MyReaction]--;
-        }
-
-        if (newKind >= 0 && newKind < counts.Length)
-        {
-            counts[newKind]++;
-        }
-
-        var total = 0;
-        for (var index = 0; index < counts.Length; index++)
-        {
-            total += counts[index];
-        }
-
+        var (counts, total) = ReactionTally.Shift(post.ReactionCounts, post.MyReaction, newKind);
         return post with { ReactionCounts = counts, TotalReactions = total, MyReaction = newKind };
     }
 }

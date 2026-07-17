@@ -949,6 +949,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public void ToggleReaction(VelvetPostDto post, int kind)
     {
         var target = post.MyReaction == kind ? -1 : kind;
+        AcceptPostEverywhere(ApplyReaction(post, target));
         if (target >= 0)
         {
             Plugin.Analytics.Track(AnalyticsEvents.Reaction("velvet"));
@@ -961,13 +962,24 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 : await client.ReactAsync(post.Id, target, token).ConfigureAwait(false);
             if (result is not null)
             {
-                feed = CopyOnWrite.Replace(feed, result);
-                if (fetchedPost?.Id == result.Id)
-                {
-                    fetchedPost = result;
-                }
+                AcceptPostEverywhere(result);
             }
         });
+    }
+
+    private void AcceptPostEverywhere(VelvetPostDto post)
+    {
+        feed = CopyOnWrite.Replace(feed, post);
+        if (fetchedPost?.Id == post.Id)
+        {
+            fetchedPost = post;
+        }
+    }
+
+    private static VelvetPostDto ApplyReaction(VelvetPostDto post, int nextKind)
+    {
+        var (counts, total) = ReactionTally.Shift(post.ReactionCounts, post.MyReaction, nextKind);
+        return post with { ReactionCounts = counts, TotalReactions = total, MyReaction = nextKind };
     }
 
     public void Report(string targetType, string targetId, string? reason, Action<bool> onComplete)

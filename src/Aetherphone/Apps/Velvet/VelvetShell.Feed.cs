@@ -15,11 +15,21 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
+    private readonly FeedVirtualizer feedVirtualizer = new(400f);
+    private float sinceFeedRefresh;
+
     private void DrawFeed(Rect area)
     {
         var scale = ImGuiHelpers.GlobalScale;
         if (!store.FeedLoaded && !store.LoadingFeed)
         {
+            store.RefreshFeed();
+        }
+
+        sinceFeedRefresh += ImGui.GetIO().DeltaTime;
+        if (store.FeedLoaded && !store.LoadingFeed && sinceFeedRefresh >= SocialProfilePages.FeedRefreshSeconds)
+        {
+            sinceFeedRefresh = 0f;
             store.RefreshFeed();
         }
 
@@ -43,10 +53,17 @@ internal sealed partial class VelvetShell
             else
             {
                 Gap(10f);
+                feedVirtualizer.BeginFrame();
                 for (var index = 0; index < feed.Length; index++)
                 {
+                    if (feedVirtualizer.Skip(feed[index].Id))
+                    {
+                        continue;
+                    }
+
                     DrawPostCard(feed[index], width);
                     Gap(30f);
+                    feedVirtualizer.Record(feed[index].Id);
                 }
 
                 if (store.HasMoreFeed && !store.LoadingMoreFeed &&
