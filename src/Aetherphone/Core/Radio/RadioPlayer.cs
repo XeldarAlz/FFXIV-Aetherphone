@@ -17,6 +17,7 @@ internal sealed class RadioPlayer : IDisposable
     private static readonly TimeSpan BufferDuration = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan PrebufferThreshold = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan BackpressureThreshold = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(20);
     private readonly HttpClient client;
     private readonly object gate = new();
     private CancellationTokenSource? cancellation;
@@ -31,7 +32,7 @@ internal sealed class RadioPlayer : IDisposable
 
     public RadioPlayer()
     {
-        client = new HttpClient();
+        client = new HttpClient { Timeout = Timeout.InfiniteTimeSpan };
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
             $"Aetherphone/{AepConstants.Version} (+https://github.com/XeldarAlz/FFXIV-Aetherphone)");
     }
@@ -198,7 +199,11 @@ internal sealed class RadioPlayer : IDisposable
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
-            response = client.Send(request, HttpCompletionOption.ResponseHeadersRead, token);
+            using (var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(token))
+            {
+                connectTimeout.CancelAfter(ConnectTimeout);
+                response = client.Send(request, HttpCompletionOption.ResponseHeadersRead, connectTimeout.Token);
+            }
             if (!TryPublishResponse(response, workerSession))
             {
                 return;
@@ -265,9 +270,6 @@ internal sealed class RadioPlayer : IDisposable
             {
                 TrySetState(workerSession, RadioPlaybackState.Stopped);
             }
-        }
-        catch (OperationCanceledException)
-        {
         }
         catch (Exception) when (token.IsCancellationRequested)
         {

@@ -8,7 +8,9 @@ namespace Aetherphone.Core.Telephony;
 internal sealed class RealtimeConnection : IDisposable
 {
     private const int ReceiveBufferBytes = 16 * 1024;
+    private const int MaxMessageBytes = 1024 * 1024;
     private static readonly TimeSpan HealthyConnectionThreshold = TimeSpan.FromSeconds(60);
+    private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(10);
     private readonly AethernetSession session;
     private readonly object gate = new();
     private readonly SemaphoreSlim sendLock = new(1, 1);
@@ -121,7 +123,9 @@ internal sealed class RealtimeConnection : IDisposable
             var heldLongEnough = connectedAtUtc != DateTime.MinValue
                 && DateTime.UtcNow - connectedAtUtc >= HealthyConnectionThreshold;
             attempt = heldLongEnough ? 1 : attempt + 1;
-            var seconds = attempt == 1 ? 0.5d : Math.Min(15d, Math.Pow(2, Math.Min(attempt - 1, 4)));
+            var seconds = attempt == 1
+                ? 0.5d + Random.Shared.NextDouble() * 4.5d
+                : Math.Min(15d, Math.Pow(2, Math.Min(attempt - 1, 4))) * (0.5d + Random.Shared.NextDouble());
             try
             {
                 await Task.Delay(TimeSpan.FromSeconds(seconds), token).ConfigureAwait(false);
@@ -150,6 +154,11 @@ internal sealed class RealtimeConnection : IDisposable
                 }
 
                 message.Write(buffer, 0, chunk.Count);
+                if (message.Length > MaxMessageBytes)
+                {
+                    AepLog.Warning("Realtime message exceeded the size limit; dropping the connection.");
+                    return;
+                }
             } while (!chunk.EndOfMessage);
 
             if (chunk.MessageType == WebSocketMessageType.Text)
@@ -212,7 +221,13 @@ internal sealed class RealtimeConnection : IDisposable
         await sendLock.WaitAsync().ConfigureAwait(false);
         try
         {
-            await ws.SendAsync(payload, type, true, CancellationToken.None).ConfigureAwait(false);
+            using var timeout = new CancellationTokenSource(SendTimeout);
+            await ws.SendAsync(payload, type, true, timeout.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            AepLog.Warning("Realtime send timed out; dropping the connection.");
+            ws.Abort();
         }
         catch (Exception exception)
         {

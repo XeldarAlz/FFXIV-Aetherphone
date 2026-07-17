@@ -48,6 +48,10 @@ internal sealed class DirectMessagesStore : IDisposable
     private volatile bool loadingOlder;
     private volatile bool hasMoreOlder;
     private volatile bool loadingThread;
+    private volatile bool refreshingThread;
+    private volatile bool refreshingTyping;
+    private int pollFailureStreak;
+    private DateTime pollBackoffUntilUtc = DateTime.MinValue;
     private volatile bool sending;
     private volatile bool otherTyping;
 
@@ -381,14 +385,16 @@ internal sealed class DirectMessagesStore : IDisposable
     public void RefreshThread()
     {
         var current = conversationId;
-        if (current is null || loadingThread)
+        if (current is null || loadingThread || refreshingThread || DateTime.UtcNow < pollBackoffUntilUtc)
         {
             return;
         }
 
+        refreshingThread = true;
         work.Run("thread refresh", async token =>
         {
             var page = await client.ChatMessagesAsync(current, null, token).ConfigureAwait(false);
+            NotePollResult(page is not null);
             if (conversationId == current && page is not null)
             {
                 var decorated = DecorateMessages(current, page.Items);
@@ -397,7 +403,21 @@ internal sealed class DirectMessagesStore : IDisposable
                     messages = MergeById(messages, decorated);
                 }
             }
-        });
+        }, () => refreshingThread = false);
+    }
+
+    private void NotePollResult(bool succeeded)
+    {
+        if (succeeded)
+        {
+            pollFailureStreak = 0;
+            pollBackoffUntilUtc = DateTime.MinValue;
+            return;
+        }
+
+        var streak = Math.Min(pollFailureStreak + 1, 4);
+        pollFailureStreak = streak;
+        pollBackoffUntilUtc = DateTime.UtcNow.AddSeconds(Math.Pow(2, streak) * 2.5);
     }
 
     public void LoadOlder()
@@ -501,14 +521,21 @@ internal sealed class DirectMessagesStore : IDisposable
 
     public void RefreshTyping(string id)
     {
+        if (refreshingTyping || DateTime.UtcNow < pollBackoffUntilUtc)
+        {
+            return;
+        }
+
+        refreshingTyping = true;
         work.Run("typing state", async token =>
         {
             var result = await client.ChatTypingAsync(id, token).ConfigureAwait(false);
+            NotePollResult(result is not null);
             if (conversationId == id && result is not null)
             {
                 otherTyping = result.TypingUserIds.Length > 0;
             }
-        });
+        }, () => refreshingTyping = false);
     }
 
     public void SendMessage(string id, string body, Action<bool> onComplete, string? replyToId = null)

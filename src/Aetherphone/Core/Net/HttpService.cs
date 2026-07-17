@@ -9,14 +9,26 @@ namespace Aetherphone.Core.Net;
 internal sealed class HttpService : IDisposable
 {
     private const int MaxAttempts = 3;
+    private const long MaxResponseBytes = 32 * 1024 * 1024;
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan UploadTimeout = TimeSpan.FromSeconds(60);
     private readonly HttpClient client;
 
     public HttpService()
     {
-        client = new HttpClient { Timeout = RequestTimeout, };
+        client = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(10), })
+        {
+            Timeout = Timeout.InfiniteTimeSpan, MaxResponseContentBufferSize = MaxResponseBytes,
+        };
         client.DefaultRequestHeaders.UserAgent.ParseAdd(
             $"Aetherphone/{AepConstants.Version} (+https://github.com/XeldarAlz/FFXIV-Aetherphone)");
+    }
+
+    private static CancellationTokenSource TimeoutScope(CancellationToken token, TimeSpan timeout)
+    {
+        var scope = CancellationTokenSource.CreateLinkedTokenSource(token);
+        scope.CancelAfter(timeout);
+        return scope;
     }
 
     public async Task<byte[]?> GetBytesAsync(Uri uri, CancellationToken token)
@@ -25,7 +37,8 @@ internal sealed class HttpService : IDisposable
         {
             try
             {
-                using var response = await client.GetAsync(uri, token).ConfigureAwait(false);
+                using var scope = TimeoutScope(token, RequestTimeout);
+                using var response = await client.GetAsync(uri, scope.Token).ConfigureAwait(false);
                 if (response.StatusCode == HttpStatusCode.TooManyRequests)
                 {
                     await BackOffAsync(attempt, response, token).ConfigureAwait(false);
@@ -37,7 +50,7 @@ internal sealed class HttpService : IDisposable
                     return null;
                 }
 
-                return await response.Content.ReadAsByteArrayAsync(token).ConfigureAwait(false);
+                return await response.Content.ReadAsByteArrayAsync(scope.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
@@ -96,7 +109,8 @@ internal sealed class HttpService : IDisposable
         request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         try
         {
-            using var response = await client.SendAsync(request, token).ConfigureAwait(false);
+            using var scope = TimeoutScope(token, UploadTimeout);
+            using var response = await client.SendAsync(request, scope.Token).ConfigureAwait(false);
             return response.IsSuccessStatusCode;
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -120,7 +134,8 @@ internal sealed class HttpService : IDisposable
         ApplyHeaders(request, bearer, appScope);
         try
         {
-            using var response = await client.SendAsync(request, token).ConfigureAwait(false);
+            using var scope = TimeoutScope(token, RequestTimeout);
+            using var response = await client.SendAsync(request, scope.Token).ConfigureAwait(false);
             onStatus?.Invoke((int)response.StatusCode);
             return response.IsSuccessStatusCode;
         }
@@ -142,7 +157,8 @@ internal sealed class HttpService : IDisposable
         ApplyHeaders(request, bearer, appScope);
         try
         {
-            using var response = await client.SendAsync(request, token).ConfigureAwait(false);
+            using var scope = TimeoutScope(token, RequestTimeout);
+            using var response = await client.SendAsync(request, scope.Token).ConfigureAwait(false);
             onStatus?.Invoke((int)response.StatusCode);
             return response.IsSuccessStatusCode;
         }
@@ -163,15 +179,16 @@ internal sealed class HttpService : IDisposable
         ApplyHeaders(request, bearer, appScope);
         try
         {
-            using var response = await client.SendAsync(request, token).ConfigureAwait(false);
+            using var scope = TimeoutScope(token, RequestTimeout);
+            using var response = await client.SendAsync(request, scope.Token).ConfigureAwait(false);
             onStatus?.Invoke((int)response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
                 return default;
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-            return await JsonSerializer.DeserializeAsync(stream, typeInfo, token).ConfigureAwait(false);
+            await using var stream = await response.Content.ReadAsStreamAsync(scope.Token).ConfigureAwait(false);
+            return await JsonSerializer.DeserializeAsync(stream, typeInfo, scope.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
@@ -200,7 +217,9 @@ internal sealed class HttpService : IDisposable
     private static async Task BackOffAsync(int attempt, HttpResponseMessage? response, CancellationToken token)
     {
         var retryAfter = response?.Headers.RetryAfter?.Delta;
-        var delay = retryAfter ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+        var delay = retryAfter is { } directed
+            ? directed + TimeSpan.FromSeconds(Random.Shared.NextDouble())
+            : TimeSpan.FromSeconds(Math.Pow(2, attempt) * (0.5 + Random.Shared.NextDouble()));
         await Task.Delay(delay, token).ConfigureAwait(false);
     }
 
