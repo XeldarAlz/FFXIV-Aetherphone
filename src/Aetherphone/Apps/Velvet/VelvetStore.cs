@@ -21,6 +21,8 @@ internal sealed class VelvetStore : IDisposable
     private const int AvatarSize = 512;
     private const int PostSize = 1080;
     private const int DmImageMaxDimension = 1280;
+    private const int ImageMediaKind = 1;
+    private const int VoiceMediaKind = 3;
     private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(600);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
@@ -1070,13 +1072,14 @@ internal sealed class VelvetStore : IDisposable
         work.Run("send image", async token =>
         {
             var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
+            var outbound = PrepareMedia(id, baked.Bytes, caption.Trim(), ImageMediaKind);
             var upload = await media.UploadUrlAsync("image/jpeg", "velvet-dm", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, outbound.UploadBytes, "image/jpeg", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
@@ -1084,13 +1087,15 @@ internal sealed class VelvetStore : IDisposable
             }
 
             var sent = await client
-                .SendMessageAsync(id, caption.Trim(), 1, null, token, upload.Key, baked.Width, baked.Height)
+                .SendMessageAsync(id, outbound.Body, ImageMediaKind, null, token, upload.Key, baked.Width,
+                    baked.Height, encVersion: outbound.EncVersion, commitmentTag: outbound.CommitmentTag)
                 .ConfigureAwait(false);
             if (sent is null)
             {
                 return false;
             }
 
+            sent = RecordMediaCaption(sent, outbound, caption.Trim());
             if (threadId == id)
             {
                 messages = CopyOnWrite.Append(messages, sent);
@@ -1112,26 +1117,29 @@ internal sealed class VelvetStore : IDisposable
         sending = true;
         work.Run("send voice", async token =>
         {
+            var outbound = PrepareMedia(id, wavBytes, string.Empty, VoiceMediaKind);
             var upload = await media.UploadUrlAsync("audio/wav", "velvet-voice", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, wavBytes, "audio/wav", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, outbound.UploadBytes, "audio/wav", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
                 return false;
             }
 
-            var sent = await client.SendMessageAsync(id, string.Empty, 3, null, token, upload.Key,
-                durationSecs: durationSecs).ConfigureAwait(false);
+            var sent = await client.SendMessageAsync(id, outbound.Body, VoiceMediaKind, null, token, upload.Key,
+                encVersion: outbound.EncVersion, commitmentTag: outbound.CommitmentTag, durationSecs: durationSecs)
+                .ConfigureAwait(false);
             if (sent is null)
             {
                 return false;
             }
 
+            sent = RecordMediaCaption(sent, outbound, string.Empty);
             if (threadId == id)
             {
                 messages = CopyOnWrite.Append(messages, sent);
@@ -1141,6 +1149,51 @@ internal sealed class VelvetStore : IDisposable
             Plugin.Analytics.Track(AnalyticsEvents.DmSent("velvet"));
             return true;
         }, onComplete, () => sending = false);
+    }
+
+    private OutboundMedia PrepareMedia(string id, byte[] plaintextBytes, string caption, int mediaKind)
+    {
+        var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, id));
+        return cipher.PrepareOutboundMedia(scope, keys.CurrentGeneration(scope), MyUserId, plaintextBytes, caption,
+            mediaKind, EncryptingCurrent && threadId == id);
+    }
+
+    private VelvetMessageDto RecordMediaCaption(VelvetMessageDto sent, OutboundMedia outbound, string caption)
+    {
+        if (outbound.EncVersion != EnvelopeCodec.VersionEnvelope || outbound.FrankingKey is null)
+        {
+            return sent;
+        }
+
+        cipher.RecordDecrypted(sent.Id, caption, outbound.FrankingKey);
+        cipher.RecordGeneration(sent.Id, outbound.Generation);
+        return sent with { Body = caption };
+    }
+
+    public VelvetMessageDto? FindMessage(string messageId)
+    {
+        var snapshot = messages;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].Id == messageId)
+            {
+                return snapshot[index];
+            }
+        }
+
+        return null;
+    }
+
+    public byte[]? DecryptMedia(VelvetMessageDto message, byte[] sealedBytes, string threadPartnerId)
+    {
+        if (message.EncVersion != EnvelopeCodec.VersionEnvelope
+            || !cipher.TryGetGeneration(message.Id, out var generation))
+        {
+            return null;
+        }
+
+        var scope = ConversationKeyStore.VelvetScope(ConversationKeyStore.Pair(MyUserId, threadPartnerId));
+        return cipher.TryDecryptMedia(scope, generation, sealedBytes, message.SenderId, message.Kind);
     }
 
     public void SetReaction(string messageId, string reactionToken)

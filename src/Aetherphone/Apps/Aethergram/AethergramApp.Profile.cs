@@ -15,8 +15,6 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
-// Profile screens: the shared SocialProfilePages component draws the header/stats/edit/user-list
-// surfaces; this partial keeps the Aethergram-specific photo grid, search tab, and home top bar.
 internal sealed partial class AethergramApp
 {
     private void DrawProfileGrid() => DrawProfileGrid(store.ProfilePosts, L.Aethergram.Empty);

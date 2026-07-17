@@ -422,13 +422,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void LaunchFileDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Wallpaper.Add)).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref pendingFilePath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage(Loc.T(L.Wallpaper.Add), path => Interlocked.Exchange(ref pendingFilePath, path));
     }
 
     private string ActiveSelectedId() => editingDark ? configuration.DarkWallpaperId : configuration.LightWallpaperId;

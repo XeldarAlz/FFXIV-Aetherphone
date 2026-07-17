@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Platform;
 using Aetherphone.Windows.Components;
@@ -95,13 +96,7 @@ internal sealed partial class MessageApp
 
     private void LaunchChatImageDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Common.ChangePhoto)).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref chatPendingPickedPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage(Loc.T(L.Common.ChangePhoto), path => Interlocked.Exchange(ref chatPendingPickedPath, path));
     }
 
     private static void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)
@@ -158,8 +153,7 @@ internal sealed partial class MessageApp
         var footerHeight = 60f * scale;
         var fitMin = new Vector2(area.Min.X + 8f * scale, area.Min.Y + headerHeight);
         var fitMax = new Vector2(area.Max.X - 8f * scale, area.Max.Y - footerHeight);
-        var url = store.DmMediaUrl(messageId);
-        var texture = images.Get(url);
+        var texture = ResolveThreadImage(messageId);
         if (texture is null)
         {
             Typography.DrawCentered(new Vector2(area.Center.X, (fitMin.Y + fitMax.Y) * 0.5f), Loc.T(L.Common.Loading),
@@ -181,24 +175,30 @@ internal sealed partial class MessageApp
             new Vector2(area.Center.X + buttonWidth * 0.5f, buttonTop + buttonHeight));
         if (ui.PillButton(buttonRect, label, !saved) && !saved && !imageSaveBusy && texture is not null)
         {
-            SaveChatImage(url);
+            SaveChatImage(messageId);
         }
     }
 
-    private void SaveChatImage(string? url)
+    private void SaveChatImage(string messageId)
     {
-        if (string.IsNullOrEmpty(url) || imageSaveBusy)
+        var url = store.DmMediaUrl(messageId);
+        var message = store.FindMessage(messageId);
+        if (string.IsNullOrEmpty(url) || imageSaveBusy || message is null)
         {
             return;
         }
 
+        var encrypted = message.EncVersion == EnvelopeCodec.VersionEnvelope;
         imageSaveBusy = true;
         _ = Task.Run(async () =>
         {
             var succeeded = false;
             try
             {
-                var bytes = await http.GetBytesAsync(new Uri(url), CancellationToken.None).ConfigureAwait(false);
+                var raw = await http.GetBytesAsync(new Uri(url), CancellationToken.None).ConfigureAwait(false);
+                var bytes = encrypted && raw is not null
+                    ? store.DecryptMedia(message, raw)
+                    : raw;
                 if (bytes is not null)
                 {
                     using var image = SixLabors.ImageSharp.Image.Load<SixLabors.ImageSharp.PixelFormats.Rgba32>(bytes);

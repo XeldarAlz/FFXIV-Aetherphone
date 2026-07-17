@@ -16,6 +16,21 @@ internal static class NativeFileDialog
 
     public static Task<string?> OpenAudioAsync(string title) => OpenAsync(title, AudioFilter, "[Sound]");
 
+    public static void PickImage(string title, Action<string> onPicked) => Complete(OpenImageAsync(title), onPicked);
+
+    public static void PickAudio(string title, Action<string> onPicked) => Complete(OpenAudioAsync(title), onPicked);
+
+    private static void Complete(Task<string?> dialog, Action<string> onPicked)
+    {
+        _ = dialog.ContinueWith(task =>
+        {
+            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
+            {
+                onPicked(task.Result);
+            }
+        });
+    }
+
     private static Task<string?> OpenAsync(string title, string filter, string logTag)
     {
         var completion = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);

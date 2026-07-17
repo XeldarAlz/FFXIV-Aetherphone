@@ -378,13 +378,7 @@ internal sealed class FeedbackApp : IPhoneApp
 
     private void LaunchFileDialog()
     {
-        _ = NativeFileDialog.OpenImageAsync(Loc.T(L.Feedback.AddPhotos)).ContinueWith(task =>
-        {
-            if (task.Status == TaskStatus.RanToCompletion && !string.IsNullOrEmpty(task.Result))
-            {
-                Interlocked.Exchange(ref pendingPickedPath, task.Result);
-            }
-        });
+        NativeFileDialog.PickImage(Loc.T(L.Feedback.AddPhotos), path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 
     private void DrawThankYou(Rect area)

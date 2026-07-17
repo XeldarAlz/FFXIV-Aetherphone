@@ -14,6 +14,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
@@ -39,6 +40,7 @@ internal sealed partial class MessageApp
     private ChatMessageDto[] transcriptSource = Array.Empty<ChatMessageDto>();
     private TranscriptMessage[] transcriptCache = Array.Empty<TranscriptMessage>();
     private Func<string, string?>? threadMediaUrl;
+    private Func<string, IDalamudTextureWrap?>? resolveThreadImage;
     private Action<string>? onThreadImageClick;
     private Action? onThreadLoadOlder;
     private readonly VoiceNotePlayer voicePlayer = new();
@@ -88,6 +90,7 @@ internal sealed partial class MessageApp
             new Vector2(area.Max.X, area.Max.Y - composerHeight - accessoryHeight));
         DrawEncryptionBanner(ref listRect, conversation, isGroup);
         threadMediaUrl ??= store.DmMediaUrl;
+        resolveThreadImage ??= ResolveThreadImage;
         onThreadImageClick ??= id => router.Push(MessageRoute.ImageView(id));
         onMessageContext ??= OpenMessageMenu;
         onQuoteClick ??= transcript.RequestScrollTo;
@@ -99,7 +102,7 @@ internal sealed partial class MessageApp
             AppPalettes.Message.MutedInk, AppPalettes.Message.BodyInk, store.OtherTyping, store.LoadingThread,
             isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Message.ThreadEmpty), Loc.T(L.Common.Loading),
             onMessageContext, onQuoteClick, onReactionClick, voiceStateFor, onVoiceToggle,
-            store.HasMoreOlder, store.LoadingOlder, onThreadLoadOlder);
+            store.HasMoreOlder, store.LoadingOlder, onThreadLoadOlder, resolveThreadImage);
         transcript.Draw(listRect, model);
         composerPickImage ??= id => router.Push(MessageRoute.ChatImage(id));
         composerSendText ??= ComposerSendText;
@@ -249,6 +252,32 @@ internal sealed partial class MessageApp
         });
     }
 
+    private IDalamudTextureWrap? ResolveThreadImage(string messageId)
+    {
+        var message = store.FindMessage(messageId);
+        if (message is null)
+        {
+            return null;
+        }
+
+        if (message.EncVersion != EnvelopeCodec.VersionEnvelope)
+        {
+            return images.Get(store.DmMediaUrl(messageId));
+        }
+
+        var url = store.DmMediaUrl(messageId);
+        if (url is null)
+        {
+            return null;
+        }
+
+        return images.GetKeyed(messageId, async token =>
+        {
+            var data = await http.GetBytesAsync(new Uri(url), token).ConfigureAwait(false);
+            return data is null ? null : store.DecryptMedia(message, data);
+        });
+    }
+
     private void ToggleVoice(string messageId)
     {
         if (voiceBytes.TryGetValue(messageId, out var bytes))
@@ -282,7 +311,14 @@ internal sealed partial class MessageApp
                 var data = await http.GetBytesAsync(new Uri(url), CancellationToken.None).ConfigureAwait(false);
                 if (data is not null)
                 {
-                    voiceBytes[messageId] = data;
+                    var message = store.FindMessage(messageId);
+                    var plain = message is { EncVersion: EnvelopeCodec.VersionEnvelope }
+                        ? store.DecryptMedia(message, data)
+                        : data;
+                    if (plain is not null)
+                    {
+                        voiceBytes[messageId] = plain;
+                    }
                 }
             }
             catch (Exception exception)
