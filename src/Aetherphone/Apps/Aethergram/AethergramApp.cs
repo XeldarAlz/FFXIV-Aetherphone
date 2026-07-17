@@ -800,19 +800,7 @@ internal sealed partial class AethergramApp : IPhoneApp
                 ImDrawFlags.RoundCornersAll);
         }
 
-        if (!ContentModeration.IsInReview(scanStatus))
-        {
-            return;
-        }
-
-        Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)));
-        var center = rect.Center;
-        AppSkin.Icon(new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Hourglass.ToIconString(),
-            new Vector4(1f, 1f, 1f, 0.92f), 1.6f);
-        Typography.DrawCentered(center, Loc.T(L.Moderation.InReview), new Vector4(1f, 1f, 1f, 0.95f), 1f,
-            FontWeight.SemiBold);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 22f * scale), Loc.T(L.Moderation.InReviewHint),
-            new Vector4(1f, 1f, 1f, 0.75f), 0.8f);
+        ModerationOverlay.Draw(drawList, rect.Min, rect.Max, rounding, scanStatus);
     }
 
     private void DrawBottomNav(Rect bar)

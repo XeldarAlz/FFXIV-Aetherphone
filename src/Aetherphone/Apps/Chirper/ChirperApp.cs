@@ -783,37 +783,12 @@ internal sealed partial class ChirperApp : IPhoneApp
 
     private void DrawCommentComposer(Rect bar, Rect screen, string postId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
-            1f);
-        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 8f * scale);
-        var pillMax = new Vector2(bar.Max.X - 56f * scale, bar.Max.Y - 8f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(AppPalettes.Chirper.FieldSurface));
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
-        var submitted = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.TitleInk))
-        {
-            submitted = MentionField.SingleLineWithHint("##chirperComment", Loc.T(L.Chirper.AddComment),
-                ref commentDraft, MaxCommentLength, commentMentions);
-        }
-
-        var picked = mentionPopup.Draw(commentMentions, screen, theme, images, lodestone);
-        if (picked >= 0)
-        {
-            commentMentions.Pick(picked);
-        }
-
-        mentionPopup.Gate(commentMentions);
-
-        var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
-        var sendCenter = new Vector2(bar.Max.X - 28f * scale, bar.Center.Y);
-        if ((ui.IconButton(sendCenter, 16f * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
-                canSend ? Accent : AppPalettes.Chirper.MutedInk, new Vector4(0f, 0f, 0f, 0f), 0.95f) || submitted) && canSend)
+        var style = new CommentComposerStyle(new Vector4(1f, 1f, 1f, 0.10f), AppPalettes.Chirper.FieldSurface,
+            AppPalettes.Chirper.TitleInk, Accent, AppPalettes.Chirper.MutedInk, default, false, 8f, 56f, 0.95f);
+        var focusPending = false;
+        if (CommentComposerBar.Draw(bar, screen, ui, theme, style, "##chirperComment", Loc.T(L.Chirper.AddComment),
+                ref commentDraft, MaxCommentLength, commentMentions, mentionPopup, images, lodestone, store.Commenting,
+                ref focusPending))
         {
             var text = commentDraft;
             commentDraft = string.Empty;

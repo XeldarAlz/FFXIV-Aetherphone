@@ -320,52 +320,12 @@ internal sealed partial class VelvetShell
 
     private void DrawCommentComposer(Rect bar, Rect screen, string postId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), VelvetTheme.Hairline.Packed(), 1f);
-        var sendRadius = 15f * scale;
-        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
-        var pillMax = new Vector2(bar.Max.X - 54f * scale, bar.Max.Y - 9f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, VelvetTheme.PlumWell.Packed());
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
-        var submitted = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, AppSkin.Transparent))
-        using (ImRaii.PushColor(ImGuiCol.Text, VelvetTheme.TitleInk))
-        {
-            if (MentionField.SingleLineWithHint("##velvetComment", Loc.T(L.Velvet.AddComment), ref commentDraft, 500,
-                    commentMentions))
-            {
-                submitted = true;
-            }
-        }
-
-        var pickedMention = mentionPopup.Draw(commentMentions, screen, theme, images, lodestone);
-        if (pickedMention >= 0)
-        {
-            commentMentions.Pick(pickedMention);
-        }
-
-        mentionPopup.Gate(commentMentions);
-
-        var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
-        var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, bar.Center.Y);
-        drawList.AddCircleFilled(sendCenter, sendRadius, (canSend ? VelvetTheme.Rose : VelvetTheme.PlumWell).Packed(),
-            24);
-        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), VelvetTheme.OnAccent, 0.85f);
-        var sendRect = new Rect(sendCenter - new Vector2(sendRadius, sendRadius),
-            sendCenter + new Vector2(sendRadius, sendRadius));
-        if (UiInteract.Hover(sendRect.Min, sendRect.Max))
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && canSend)
-            {
-                submitted = true;
-            }
-        }
-
-        if (submitted && canSend)
+        var style = new CommentComposerStyle(VelvetTheme.Hairline, VelvetTheme.PlumWell, VelvetTheme.TitleInk,
+            VelvetTheme.Rose, VelvetTheme.PlumWell, VelvetTheme.OnAccent, true, 9f, 54f, 0.85f);
+        var focusPending = false;
+        if (CommentComposerBar.Draw(bar, screen, ui, theme, style, "##velvetComment", Loc.T(L.Velvet.AddComment),
+                ref commentDraft, 500, commentMentions, mentionPopup, images, lodestone, store.Commenting,
+                ref focusPending))
         {
             store.AddComment(postId, commentDraft, _ => { });
             commentDraft = string.Empty;

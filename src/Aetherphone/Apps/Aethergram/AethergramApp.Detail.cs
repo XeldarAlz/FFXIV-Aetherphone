@@ -327,46 +327,12 @@ internal sealed partial class AethergramApp
 
     private void DrawCommentComposer(Rect bar, Rect screen, string postId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var drawList = ImGui.GetWindowDrawList();
-        drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
-            1f);
-        var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + 9f * scale);
-        var pillMax = new Vector2(bar.Max.X - 54f * scale, bar.Max.Y - 9f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f,
-            ImGui.GetColorU32(AppPalettes.Aethergram.FieldSurface));
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
-        if (commentFocusPending)
-        {
-            ImGui.SetKeyboardFocusHere();
-            commentFocusPending = false;
-        }
-
-        var submitted = false;
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.TitleInk))
-        {
-            submitted = MentionField.SingleLineWithHint("##gramComment", Loc.T(L.Aethergram.AddComment),
-                ref commentDraft, MaxCommentLength, commentMentions);
-        }
-
-        var pickedMention = mentionPopup.Draw(commentMentions, screen, theme, images, lodestone);
-        if (pickedMention >= 0)
-        {
-            commentMentions.Pick(pickedMention);
-        }
-
-        mentionPopup.Gate(commentMentions);
-
-        var canSend = commentDraft.Trim().Length > 0 && !store.Commenting;
-        var sendRadius = 15f * scale;
-        var sendCenter = new Vector2(pillMax.X + 6f * scale + sendRadius, bar.Center.Y);
-        drawList.AddCircleFilled(sendCenter, sendRadius, ImGui.GetColorU32(canSend ? Accent : theme.SurfaceMuted), 24);
-        AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), new Vector4(1f, 1f, 1f, 1f), 0.8f);
-        if ((UiInteract.HoverClick(sendCenter - new Vector2(sendRadius, sendRadius),
-                sendCenter + new Vector2(sendRadius, sendRadius)) || submitted) && canSend)
+        var style = new CommentComposerStyle(new Vector4(1f, 1f, 1f, 0.10f), AppPalettes.Aethergram.FieldSurface,
+            AppPalettes.Aethergram.TitleInk, Accent, theme.SurfaceMuted, new Vector4(1f, 1f, 1f, 1f), true, 9f, 54f,
+            0.8f);
+        if (CommentComposerBar.Draw(bar, screen, ui, theme, style, "##gramComment", Loc.T(L.Aethergram.AddComment),
+                ref commentDraft, MaxCommentLength, commentMentions, mentionPopup, images, lodestone, store.Commenting,
+                ref commentFocusPending))
         {
             var text = commentDraft;
             commentDraft = string.Empty;
