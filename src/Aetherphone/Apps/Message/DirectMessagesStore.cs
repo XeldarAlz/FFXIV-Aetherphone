@@ -1,114 +1,45 @@
-using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Message;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
-using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Message;
 
-internal sealed class DirectMessagesStore : IDisposable
+internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, ConversationDto>
 {
-    private const int DmImageMaxDimension = 1280;
-    private const int ImageMediaKind = 1;
-    private const int VoiceMediaKind = 3;
-    private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(600);
-    private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
-    private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
-
-    private readonly AethernetSession session;
     private readonly ChatClient client;
-    private readonly SafetyClient safety;
-    private readonly MediaClient media;
-    private readonly NotificationService notifications;
-    private readonly KeyVault vault;
-    private readonly ConversationKeyStore keys;
     private readonly PeerKeyDirectory peers;
     private readonly RealtimeSignalBus signals;
-    private readonly PollCadence inboxCadence;
-    private readonly StoreWork work = new("Messages");
-    private readonly object messagesLock = new();
-    private readonly ConcurrentDictionary<string, string> dmMediaUrls = new();
-    private readonly ConcurrentDictionary<string, byte> dmMediaLoading = new();
-    private readonly MessageCipher cipher;
-    private readonly Dictionary<string, long> inboxLastAt = new();
 
-    private volatile ConversationDto[] conversations = Array.Empty<ConversationDto>();
-    private volatile bool loadingConversations;
-    private volatile bool conversationsLoaded;
-    private volatile string? conversationId;
     private volatile ConversationDto? conversation;
     private volatile ConversationMemberDto[] members = Array.Empty<ConversationMemberDto>();
-    private volatile ChatMessageDto[] messages = Array.Empty<ChatMessageDto>();
-    private volatile string? olderCursor;
-    private volatile bool loadingOlder;
-    private volatile bool hasMoreOlder;
-    private volatile bool loadingThread;
-    private volatile bool refreshingThread;
-    private volatile bool refreshingTyping;
-    private int pollFailureStreak;
-    private DateTime pollBackoffUntilUtc = DateTime.MinValue;
-    private volatile bool sending;
-    private volatile bool otherTyping;
-
-    private volatile bool inboxPolling;
-    private bool inboxPrimed;
-    private volatile string? viewingConversationId;
-    private DateTime lastViewingUtc = DateTime.MinValue;
-    private volatile bool vaultRefreshRequested;
-    private volatile bool vaultRefreshInFlight;
-    private DateTime nextVaultRetryUtc = DateTime.MinValue;
-    private volatile bool keyStatusRefreshing;
-    private DateTime lastKeyStatusUtc = DateTime.MinValue;
-    private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
 
     public DirectMessagesStore(AethernetSession session, ChatClient client, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
         PhoneVisibility visibility, RealtimeSignalBus signals)
+        : base("Messages", session, safety, media, notifications, vault, keys, visibility)
     {
-        this.session = session;
         this.client = client;
-        this.safety = safety;
-        this.media = media;
-        this.notifications = notifications;
-        this.vault = vault;
-        this.keys = keys;
         this.peers = peers;
         this.signals = signals;
-        cipher = new MessageCipher(vault, keys);
-        inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
-        signals.ChatPinged += inboxCadence.RequestImmediate;
-        vault.Changed += OnVaultChanged;
-        Plugin.Framework.Update += OnFrameworkTick;
+        signals.ChatPinged += InboxCadence.RequestImmediate;
     }
 
-    public bool IsSignedIn => session.IsSignedIn;
-    public string MyUserId => session.CurrentUser?.Id ?? string.Empty;
-    public ConversationDto[] Conversations => conversations;
-    public bool LoadingConversations => loadingConversations;
-    public bool ConversationsLoaded => conversationsLoaded;
-    public string? ConversationId => conversationId;
+    public ConversationDto[] Conversations => ThreadListItems;
+    public bool LoadingConversations => LoadingThreadList;
+    public bool ConversationsLoaded => ThreadListLoaded;
+    public string? ConversationId => CurrentThreadId;
     public ConversationDto? Conversation => conversation;
     public ConversationMemberDto[] Members => members;
-    public ChatMessageDto[] Messages => messages;
-    public bool LoadingOlder => loadingOlder;
-    public bool HasMoreOlder => hasMoreOlder;
-    public bool LoadingThread => loadingThread;
-    public bool Sending => sending;
-    public bool OtherTyping => otherTyping;
-    public KeyVaultState VaultState => vault.State;
-    public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
-    public bool EncryptingCurrent => cipher.IsUnlocked && currentKeyStatus.CanEncrypt;
     public string? MyPublicKey => vault.PublicKey;
     public int MyKeyVersion => vault.KeyVersion;
+    public int UnreadTotal => ComputeUnread();
 
     public UserPublicKeyDto? PeerKey(string userId) => peers.Cached(userId);
 
@@ -117,176 +48,136 @@ internal sealed class DirectMessagesStore : IDisposable
         work.Run("peer keys", async token => await peers.ResolveAsync(userIds, token).ConfigureAwait(false));
     }
 
-    public DmDecryptedBody DecryptionState(string messageId) => cipher.DecryptionState(messageId);
-
     public bool HasRotationNotice(string userId) => peers.HasRotationNotice(userId);
 
     public void ClearRotationNotice(string userId) => peers.ClearRotationNotice(userId);
 
-    public int UnreadTotal
-    {
-        get
-        {
-            var snapshot = conversations;
-            var total = 0;
-            for (var index = 0; index < snapshot.Length; index++)
-            {
-                if (!snapshot[index].Muted)
-                {
-                    total += snapshot[index].UnreadCount;
-                }
-            }
+    public void NoteConversationViewed(string id) => NoteThreadViewedCore(id);
 
-            return total;
-        }
+    public void RefreshConversations() => RefreshThreadListCore();
+
+    public void OpenConversation(string id) => OpenThreadCore(id);
+
+    protected override string AnalyticsSource => "dm";
+    protected override string ImageUploadScope => "chat-dm";
+    protected override string VoiceUploadScope => "chat-voice";
+    protected override string ReportTargetType => "chat_message";
+
+    protected override string ScopeFor(string threadId) => ConversationKeyStore.ChatScope(threadId);
+
+    protected override Task HydrateKeysAsync(CancellationToken token) => keys.HydrateAsync(token);
+
+    protected override Task<ChatKeyStatus> EnsureThreadKeysAsync(string threadId, CancellationToken token) =>
+        keys.EnsureChatKeysAsync(threadId, token);
+
+    protected override async Task<ConversationDto[]?> FetchThreadListAsync(CancellationToken token)
+    {
+        var page = await client.ConversationsAsync(token).ConfigureAwait(false);
+        return page?.Items;
     }
 
-    public void NoteConversationViewed(string id)
+    protected override async Task<MessagePage?> FetchMessagesPageAsync(string threadId, string? cursor,
+        CancellationToken token)
     {
-        viewingConversationId = id;
-        lastViewingUtc = DateTime.UtcNow;
-        notifications.RemoveGroup(id);
+        var page = await client.MessagesAsync(threadId, cursor, token).ConfigureAwait(false);
+        return page is null ? null : new MessagePage(page.Items, page.NextCursor);
     }
 
-    private void OnFrameworkTick(IFramework framework)
+    protected override Task<ChatMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
+        CancellationToken token, string? mediaKey, int mediaWidth, int mediaHeight, int encVersion,
+        string? commitmentTag, string? replyToId, int durationSecs)
     {
-        if (!session.IsSignedIn)
-        {
-            inboxPrimed = false;
-            vaultRefreshRequested = false;
-            return;
-        }
-
-        EnsureVaultRefreshed();
-        var now = DateTime.UtcNow;
-        EnsureConversationKeysFresh(now);
-        if (!inboxCadence.Due(now))
-        {
-            return;
-        }
-
-        PollInbox();
+        return client.SendMessageAsync(threadId, body, kind, token, mediaKey, mediaWidth, mediaHeight, encVersion,
+            commitmentTag, replyToId, durationSecs: durationSecs);
     }
 
-    private void EnsureVaultRefreshed()
+    protected override Task<ChatMessageDto?> EditMessageRequestAsync(string messageId, string body,
+        CancellationToken token, int encVersion, string? commitmentTag)
     {
-        if (session.CurrentUser is null || vaultRefreshInFlight || vault.State == KeyVaultState.Unsupported)
-        {
-            return;
-        }
-
-        if (vaultRefreshRequested
-            && (vault.State == KeyVaultState.Unlocked || DateTime.UtcNow < nextVaultRetryUtc))
-        {
-            return;
-        }
-
-        vaultRefreshRequested = true;
-        vaultRefreshInFlight = true;
-        work.Run("vault refresh", async token =>
-        {
-            await vault.RefreshAsync(token).ConfigureAwait(false);
-            if (vault.State == KeyVaultState.Unlocked)
-            {
-                await keys.HydrateAsync(token).ConfigureAwait(false);
-            }
-        }, () =>
-        {
-            nextVaultRetryUtc = DateTime.UtcNow + VaultRetryInterval;
-            vaultRefreshInFlight = false;
-        });
+        return client.EditMessageAsync(messageId, body, token, encVersion, commitmentTag);
     }
 
-    private void EnsureConversationKeysFresh(DateTime now)
-    {
-        var id = conversationId;
-        if (id is null || keyStatusRefreshing || vault.State != KeyVaultState.Unlocked
-            || currentKeyStatus.CanEncrypt || now - lastKeyStatusUtc < KeyStatusRetryInterval)
-        {
-            return;
-        }
+    protected override Task<bool> DeleteMessageRequestAsync(string messageId, CancellationToken token) =>
+        client.DeleteMessageAsync(messageId, token);
 
-        keyStatusRefreshing = true;
-        lastKeyStatusUtc = now;
-        work.Run("key status refresh", async token =>
-        {
-            var status = await keys.EnsureChatKeysAsync(id, token).ConfigureAwait(false);
-            if (conversationId == id)
-            {
-                currentKeyStatus = status;
-            }
-        }, () => keyStatusRefreshing = false);
+    protected override Task SetReactionRequestAsync(string messageId, string reactionToken, CancellationToken token) =>
+        client.SetReactionAsync(messageId, reactionToken, token);
+
+    protected override Task<ReactionListDto?> FetchReactionsAsync(string messageId, CancellationToken token) =>
+        client.ReactionsAsync(messageId, token);
+
+    protected override Task SendTypingRequestAsync(string threadId, CancellationToken token) =>
+        client.SendTypingAsync(threadId, token);
+
+    protected override async Task<bool?> FetchOtherTypingAsync(string threadId, CancellationToken token)
+    {
+        var result = await client.TypingAsync(threadId, token).ConfigureAwait(false);
+        return result is null ? null : result.TypingUserIds.Length > 0;
     }
 
-    private void OnVaultChanged()
+    protected override async Task<string?> FetchMediaUrlRequestAsync(string messageId, CancellationToken token)
     {
-        cipher.Clear();
-        if (vault.State != KeyVaultState.Unlocked)
-        {
-            currentKeyStatus = ChatKeyStatus.None;
-            return;
-        }
-
-        work.Run("vault unlocked", async token =>
-        {
-            await keys.HydrateAsync(token).ConfigureAwait(false);
-            var current = conversationId;
-            if (current is not null)
-            {
-                var status = await keys.EnsureChatKeysAsync(current, token).ConfigureAwait(false);
-                if (conversationId == current)
-                {
-                    currentKeyStatus = status;
-                }
-            }
-
-            conversationsLoaded = false;
-        });
+        var result = await client.DmMediaUrlAsync(messageId, token).ConfigureAwait(false);
+        return result?.Url;
     }
 
-    private void PollInbox()
-    {
-        if (inboxPolling)
-        {
-            return;
-        }
+    protected override long MessageTimeOf(ChatMessageDto message) => message.CreatedAtUnix;
 
-        inboxPolling = true;
-        work.Run("inbox poll", async token =>
+    protected override int MessageEncVersionOf(ChatMessageDto message) => message.EncVersion;
+
+    protected override string MessageBodyOf(ChatMessageDto message) => message.Body;
+
+    protected override ReactionSummaryDto[]? ReactionsOf(ChatMessageDto message) => message.Reactions;
+
+    protected override ChatMessageDto WithReactions(ChatMessageDto message, ReactionSummaryDto[]? reactions) =>
+        message with { Reactions = reactions };
+
+    protected override ChatMessageDto WithBody(ChatMessageDto message, string body) => message with { Body = body };
+
+    protected override ChatMessageDto PreserveLocalFields(ChatMessageDto updated, ChatMessageDto existing) =>
+        updated with { Reactions = existing.Reactions, ReadAtUnix = existing.ReadAtUnix };
+
+    protected override ChatMessageDto Tombstone(ChatMessageDto message)
+    {
+        return message with
         {
-            var page = await client.ConversationsAsync(token).ConfigureAwait(false);
-            if (page is not null)
-            {
-                var decorated = DecorateConversations(page.Items);
-                conversations = decorated;
-                RaiseInboxNotifications(decorated);
-            }
-        }, () => inboxPolling = false);
+            Deleted = true,
+            Body = string.Empty,
+            EncVersion = 0,
+            CommitmentTag = null,
+            Forwarded = false,
+            DurationSecs = 0,
+            Reactions = null,
+        };
     }
 
-    private void RaiseInboxNotifications(ConversationDto[] items)
+    protected override ChatMessageDto ResolveOutgoingReply(string scope, ChatMessageDto message)
     {
-        var primed = inboxPrimed;
-        for (var index = 0; index < items.Length; index++)
+        if (message.ReplyEncVersion != EnvelopeCodec.VersionEnvelope)
         {
-            var item = items[index];
-            var previous = inboxLastAt.GetValueOrDefault(item.Id, 0L);
-            inboxLastAt[item.Id] = item.LastMessageAtUnix;
-            if (!primed || item.LastMessageAtUnix <= previous || item.UnreadCount <= 0 || item.Muted)
-            {
-                continue;
-            }
-
-            if (viewingConversationId == item.Id && DateTime.UtcNow - lastViewingUtc < ViewingGrace)
-            {
-                continue;
-            }
-
-            notifications.Notify(new PhoneNotification("message", DisplayTitle(item), PreviewText(item), DateTime.Now,
-                AppPalettes.Message.Accent, item.Id));
+            return message;
         }
 
-        inboxPrimed = true;
+        return message with
+        {
+            ReplyBody = cipher.ResolveQuotedBody(scope, message.ReplyToId, message.ReplyBody, message.ReplySenderId),
+        };
+    }
+
+    protected override bool ShouldRevealForReport(ChatMessageDto message) => message.Kind != 2;
+
+    protected override string ThreadKeyOf(ConversationDto thread) => thread.Id;
+
+    protected override long ThreadLastMessageAtOf(ConversationDto thread) => thread.LastMessageAtUnix;
+
+    protected override int ThreadUnreadCountOf(ConversationDto thread) => thread.UnreadCount;
+
+    protected override bool IsThreadMuted(ConversationDto thread) => thread.Muted;
+
+    protected override PhoneNotification BuildInboxNotification(ConversationDto thread)
+    {
+        return new PhoneNotification("message", DisplayTitle(thread), PreviewText(thread), DateTime.Now,
+            AppPalettes.Message.Accent, thread.Id);
     }
 
     public static string DisplayTitle(ConversationDto item)
@@ -314,192 +205,24 @@ internal sealed class DirectMessagesStore : IDisposable
         };
     }
 
-    public void RefreshConversations()
+    protected override void OnThreadOpening(string threadId)
     {
-        if (!session.IsSignedIn)
-        {
-            return;
-        }
-
-        loadingConversations = true;
-        work.Run("conversations", async token =>
-        {
-            var page = await client.ConversationsAsync(token).ConfigureAwait(false);
-            if (page is not null)
-            {
-                conversations = DecorateConversations(page.Items);
-            }
-        }, () =>
-        {
-            loadingConversations = false;
-            conversationsLoaded = true;
-        });
+        conversation = FindConversation(threadId);
     }
 
-    public void OpenConversation(string id)
+    protected override async Task PrefetchThreadAsync(string threadId, CancellationToken token)
     {
-        if (conversationId == id && (messages.Length > 0 || loadingThread))
+        var detail = await client.ConversationAsync(threadId, token).ConfigureAwait(false);
+        if (ConversationId == threadId && detail is not null)
         {
-            return;
+            conversation = detail.Conversation;
+            members = detail.Members;
         }
-
-        conversationId = id;
-        conversation = FindConversation(id);
-        messages = Array.Empty<ChatMessageDto>();
-        olderCursor = null;
-        hasMoreOlder = false;
-        loadingOlder = false;
-        otherTyping = false;
-        loadingThread = true;
-        currentKeyStatus = ChatKeyStatus.None;
-        lastKeyStatusUtc = DateTime.UtcNow;
-        work.Run("thread open", async token =>
-        {
-            var detail = await client.ConversationAsync(id, token).ConfigureAwait(false);
-            if (conversationId == id && detail is not null)
-            {
-                conversation = detail.Conversation;
-                members = detail.Members;
-            }
-
-            var status = await keys.EnsureChatKeysAsync(id, token).ConfigureAwait(false);
-            if (conversationId == id)
-            {
-                currentKeyStatus = status;
-            }
-
-            var page = await client.MessagesAsync(id, null, token).ConfigureAwait(false);
-            if (conversationId == id && page is not null)
-            {
-                messages = DecorateMessages(id, page.Items);
-                olderCursor = page.NextCursor;
-                hasMoreOlder = page.NextCursor is not null;
-            }
-        }, () =>
-        {
-            if (conversationId == id)
-            {
-                loadingThread = false;
-            }
-        });
-    }
-
-    public void RefreshThread()
-    {
-        var current = conversationId;
-        if (current is null || loadingThread || refreshingThread || DateTime.UtcNow < pollBackoffUntilUtc)
-        {
-            return;
-        }
-
-        refreshingThread = true;
-        work.Run("thread refresh", async token =>
-        {
-            var page = await client.MessagesAsync(current, null, token).ConfigureAwait(false);
-            NotePollResult(page is not null);
-            if (conversationId == current && page is not null)
-            {
-                var decorated = DecorateMessages(current, page.Items);
-                lock (messagesLock)
-                {
-                    messages = MergeById(messages, decorated);
-                }
-            }
-        }, () => refreshingThread = false);
-    }
-
-    private void NotePollResult(bool succeeded)
-    {
-        if (succeeded)
-        {
-            pollFailureStreak = 0;
-            pollBackoffUntilUtc = DateTime.MinValue;
-            return;
-        }
-
-        var streak = Math.Min(pollFailureStreak + 1, 4);
-        pollFailureStreak = streak;
-        pollBackoffUntilUtc = DateTime.UtcNow.AddSeconds(Math.Pow(2, streak) * 2.5);
-    }
-
-    public void LoadOlder()
-    {
-        var current = conversationId;
-        if (current is null || loadingThread || loadingOlder || !hasMoreOlder)
-        {
-            return;
-        }
-
-        var cursor = olderCursor;
-        if (cursor is null)
-        {
-            hasMoreOlder = false;
-            return;
-        }
-
-        loadingOlder = true;
-        work.Run("thread older", async token =>
-        {
-            var page = await client.MessagesAsync(current, cursor, token).ConfigureAwait(false);
-            if (conversationId == current && page is not null)
-            {
-                var decorated = DecorateMessages(current, page.Items);
-                lock (messagesLock)
-                {
-                    messages = MergeById(messages, decorated);
-                }
-
-                olderCursor = page.NextCursor;
-                hasMoreOlder = page.NextCursor is not null;
-            }
-        }, () => loadingOlder = false);
-    }
-
-    private static ChatMessageDto[] MergeById(ChatMessageDto[] existing, ChatMessageDto[] incoming)
-    {
-        if (existing.Length == 0)
-        {
-            return incoming;
-        }
-
-        if (incoming.Length == 0)
-        {
-            return existing;
-        }
-
-        var incomingIds = new HashSet<string>(StringComparer.Ordinal);
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            incomingIds.Add(incoming[index].Id);
-        }
-
-        var merged = new List<ChatMessageDto>(existing.Length + incoming.Length);
-        for (var index = 0; index < existing.Length; index++)
-        {
-            if (!incomingIds.Contains(existing[index].Id))
-            {
-                merged.Add(existing[index]);
-            }
-        }
-
-        for (var index = 0; index < incoming.Length; index++)
-        {
-            merged.Add(incoming[index]);
-        }
-
-        merged.Sort(CompareByCreatedAt);
-        return merged.ToArray();
-    }
-
-    private static int CompareByCreatedAt(ChatMessageDto left, ChatMessageDto right)
-    {
-        var byTime = left.CreatedAtUnix.CompareTo(right.CreatedAtUnix);
-        return byTime != 0 ? byTime : string.CompareOrdinal(left.Id, right.Id);
     }
 
     public void RefreshDetail()
     {
-        var current = conversationId;
+        var current = ConversationId;
         if (current is null)
         {
             return;
@@ -508,216 +231,12 @@ internal sealed class DirectMessagesStore : IDisposable
         work.Run("thread detail", async token =>
         {
             var detail = await client.ConversationAsync(current, token).ConfigureAwait(false);
-            if (conversationId == current && detail is not null)
+            if (ConversationId == current && detail is not null)
             {
                 conversation = detail.Conversation;
                 members = detail.Members;
             }
         });
-    }
-
-    public void SendTyping(string id)
-    {
-        work.Run("typing", async token => await client.SendTypingAsync(id, token).ConfigureAwait(false));
-    }
-
-    public void RefreshTyping(string id)
-    {
-        if (refreshingTyping || DateTime.UtcNow < pollBackoffUntilUtc)
-        {
-            return;
-        }
-
-        refreshingTyping = true;
-        work.Run("typing state", async token =>
-        {
-            var result = await client.TypingAsync(id, token).ConfigureAwait(false);
-            NotePollResult(result is not null);
-            if (conversationId == id && result is not null)
-            {
-                otherTyping = result.TypingUserIds.Length > 0;
-            }
-        }, () => refreshingTyping = false);
-    }
-
-    public void SendMessage(string id, string body, Action<bool> onComplete, string? replyToId = null)
-    {
-        var trimmed = body.Trim();
-        if (trimmed.Length == 0 || sending)
-        {
-            return;
-        }
-
-        sending = true;
-        work.Run("send", async token =>
-        {
-            ChatMessageDto? sent;
-            var scope = ConversationKeyStore.ChatScope(id);
-            var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && conversationId == id
-                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
-            {
-                sent = await client.SendMessageAsync(id, encoded.Envelope, 0, token,
-                    encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
-                    replyToId: replyToId)
-                    .ConfigureAwait(false);
-                if (sent is not null)
-                {
-                    cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
-                    sent = sent with { Body = trimmed };
-                }
-            }
-            else
-            {
-                sent = await client.SendMessageAsync(id, trimmed, 0, token, replyToId: replyToId)
-                    .ConfigureAwait(false);
-            }
-
-            if (sent is null)
-            {
-                return false;
-            }
-
-            if (sent.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
-            {
-                sent = sent with
-                {
-                    ReplyBody = cipher.ResolveQuotedBody(scope, sent.ReplyToId, sent.ReplyBody, sent.ReplySenderId),
-                };
-            }
-
-            if (conversationId == id)
-            {
-                messages = CopyOnWrite.Append(messages, sent);
-            }
-
-            conversationsLoaded = false;
-            Plugin.Analytics.Track(AnalyticsEvents.DmSent("dm"));
-            return true;
-        }, onComplete, () => sending = false);
-    }
-
-    public void SendImageMessage(string id, string sourcePath, string caption, Action<bool> onComplete)
-    {
-        if (sending)
-        {
-            return;
-        }
-
-        sending = true;
-        work.Run("send image", async token =>
-        {
-            var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
-            var outbound = PrepareMedia(id, baked.Bytes, caption.Trim(), ImageMediaKind);
-            var upload = await media.UploadUrlAsync("image/jpeg", "chat-dm", token).ConfigureAwait(false);
-            if (upload is null)
-            {
-                return false;
-            }
-
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, outbound.UploadBytes, "image/jpeg", token)
-                .ConfigureAwait(false);
-            if (!uploaded)
-            {
-                return false;
-            }
-
-            var sent = await client
-                .SendMessageAsync(id, outbound.Body, ImageMediaKind, token, upload.Key, baked.Width, baked.Height,
-                    encVersion: outbound.EncVersion, commitmentTag: outbound.CommitmentTag)
-                .ConfigureAwait(false);
-            if (sent is null)
-            {
-                return false;
-            }
-
-            sent = RecordMediaCaption(sent, outbound, caption.Trim());
-            if (conversationId == id)
-            {
-                messages = CopyOnWrite.Append(messages, sent);
-            }
-
-            conversationsLoaded = false;
-            Plugin.Analytics.Track(AnalyticsEvents.DmSent("dm"));
-            return true;
-        }, onComplete, () => sending = false);
-    }
-
-    public void SendVoiceMessage(string id, byte[] wavBytes, int durationSecs, Action<bool> onComplete)
-    {
-        if (sending)
-        {
-            return;
-        }
-
-        sending = true;
-        work.Run("send voice", async token =>
-        {
-            var outbound = PrepareMedia(id, wavBytes, string.Empty, VoiceMediaKind);
-            var upload = await media.UploadUrlAsync("audio/wav", "chat-voice", token).ConfigureAwait(false);
-            if (upload is null)
-            {
-                return false;
-            }
-
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, outbound.UploadBytes, "audio/wav", token)
-                .ConfigureAwait(false);
-            if (!uploaded)
-            {
-                return false;
-            }
-
-            var sent = await client.SendMessageAsync(id, outbound.Body, VoiceMediaKind, token, upload.Key,
-                encVersion: outbound.EncVersion, commitmentTag: outbound.CommitmentTag, durationSecs: durationSecs)
-                .ConfigureAwait(false);
-            if (sent is null)
-            {
-                return false;
-            }
-
-            sent = RecordMediaCaption(sent, outbound, string.Empty);
-            if (conversationId == id)
-            {
-                messages = CopyOnWrite.Append(messages, sent);
-            }
-
-            conversationsLoaded = false;
-            Plugin.Analytics.Track(AnalyticsEvents.DmSent("dm"));
-            return true;
-        }, onComplete, () => sending = false);
-    }
-
-    private OutboundMedia PrepareMedia(string id, byte[] plaintextBytes, string caption, int mediaKind)
-    {
-        var scope = ConversationKeyStore.ChatScope(id);
-        return cipher.PrepareOutboundMedia(scope, keys.CurrentGeneration(scope), MyUserId, plaintextBytes, caption,
-            mediaKind, EncryptingCurrent && conversationId == id);
-    }
-
-    private ChatMessageDto RecordMediaCaption(ChatMessageDto sent, OutboundMedia outbound, string caption)
-    {
-        if (outbound.EncVersion != EnvelopeCodec.VersionEnvelope || outbound.FrankingKey is null)
-        {
-            return sent;
-        }
-
-        cipher.RecordDecrypted(sent.Id, caption, outbound.FrankingKey);
-        cipher.RecordGeneration(sent.Id, outbound.Generation);
-        return sent with { Body = caption };
-    }
-
-    public ChatMessageDto? FindMessage(string messageId)
-    {
-        var snapshot = messages;
-        for (var index = 0; index < snapshot.Length; index++)
-        {
-            if (snapshot[index].Id == messageId)
-            {
-                return snapshot[index];
-            }
-        }
-
-        return null;
     }
 
     public byte[]? DecryptMedia(ChatMessageDto message, byte[] sealedBytes)
@@ -732,212 +251,6 @@ internal sealed class DirectMessagesStore : IDisposable
         return cipher.TryDecryptMedia(scope, generation, sealedBytes, message.SenderId, message.Kind);
     }
 
-    public void SetReaction(string messageId, string reactionToken)
-    {
-        messages = ApplyLocalReaction(messages, messageId, reactionToken);
-        work.Run("react", async token =>
-            await client.SetReactionAsync(messageId, reactionToken, token).ConfigureAwait(false));
-    }
-
-    public string MyReactionTo(string messageId)
-    {
-        var snapshot = messages;
-        for (var index = 0; index < snapshot.Length; index++)
-        {
-            if (snapshot[index].Id != messageId)
-            {
-                continue;
-            }
-
-            var reactions = snapshot[index].Reactions;
-            if (reactions is null)
-            {
-                return string.Empty;
-            }
-
-            for (var reactionIndex = 0; reactionIndex < reactions.Length; reactionIndex++)
-            {
-                if (reactions[reactionIndex].Mine)
-                {
-                    return reactions[reactionIndex].Token;
-                }
-            }
-
-            return string.Empty;
-        }
-
-        return string.Empty;
-    }
-
-    private static ChatMessageDto[] ApplyLocalReaction(ChatMessageDto[] items, string messageId, string reactionToken)
-    {
-        for (var index = 0; index < items.Length; index++)
-        {
-            if (items[index].Id != messageId)
-            {
-                continue;
-            }
-
-            var current = items[index].Reactions ?? Array.Empty<ReactionSummaryDto>();
-            var next = new List<ReactionSummaryDto>(current.Length + 1);
-            var added = false;
-            for (var summaryIndex = 0; summaryIndex < current.Length; summaryIndex++)
-            {
-                var summary = current[summaryIndex];
-                if (summary.Mine)
-                {
-                    summary = summary with { Count = summary.Count - 1, Mine = false };
-                }
-
-                if (summary.Token == reactionToken)
-                {
-                    summary = summary with { Count = summary.Count + 1, Mine = true };
-                    added = true;
-                }
-
-                if (summary.Count > 0)
-                {
-                    next.Add(summary);
-                }
-            }
-
-            if (!added && reactionToken.Length > 0)
-            {
-                next.Add(new ReactionSummaryDto(reactionToken, 1, true));
-            }
-
-            var updated = (ChatMessageDto[])items.Clone();
-            updated[index] = items[index] with { Reactions = next.Count > 0 ? next.ToArray() : null };
-            return updated;
-        }
-
-        return items;
-    }
-
-    public void EditMessage(string id, string messageId, string body, Action<bool> onComplete)
-    {
-        var trimmed = body.Trim();
-        if (trimmed.Length == 0)
-        {
-            return;
-        }
-
-        work.Run("edit message", async token =>
-        {
-            ChatMessageDto? edited;
-            var scope = ConversationKeyStore.ChatScope(id);
-            var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && conversationId == id
-                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
-            {
-                edited = await client.EditMessageAsync(messageId, encoded.Envelope, token,
-                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
-                if (edited is not null)
-                {
-                    cipher.RecordDecrypted(edited.Id, trimmed, encoded.FrankingKeyBase64);
-                    edited = edited with { Body = trimmed };
-                }
-            }
-            else
-            {
-                edited = await client.EditMessageAsync(messageId, trimmed, token).ConfigureAwait(false);
-                if (edited is not null)
-                {
-                    cipher.Forget(messageId);
-                }
-            }
-
-            if (edited is null)
-            {
-                return false;
-            }
-
-            if (edited.ReplyEncVersion == EnvelopeCodec.VersionEnvelope)
-            {
-                edited = edited with
-                {
-                    ReplyBody = cipher.ResolveQuotedBody(scope, edited.ReplyToId, edited.ReplyBody, edited.ReplySenderId),
-                };
-            }
-
-            if (conversationId == id)
-            {
-                messages = ReplaceMessage(messages, edited);
-            }
-
-            conversationsLoaded = false;
-            return true;
-        }, onComplete);
-    }
-
-    private static ChatMessageDto[] ReplaceMessage(ChatMessageDto[] items, ChatMessageDto updated)
-    {
-        for (var index = 0; index < items.Length; index++)
-        {
-            if (items[index].Id != updated.Id)
-            {
-                continue;
-            }
-
-            var next = (ChatMessageDto[])items.Clone();
-            next[index] = updated with { Reactions = items[index].Reactions, ReadAtUnix = items[index].ReadAtUnix };
-            return next;
-        }
-
-        return items;
-    }
-
-    public void LoadReactions(string messageId, Action<ReactorDto[]?> onResult)
-    {
-        work.Run("reaction list", async token =>
-        {
-            var result = await client.ReactionsAsync(messageId, token).ConfigureAwait(false);
-            onResult(result?.Items);
-        });
-    }
-
-    public void DeleteMessage(string messageId, Action<bool> onComplete)
-    {
-        work.Run("delete message", async token =>
-        {
-            var ok = await client.DeleteMessageAsync(messageId, token).ConfigureAwait(false);
-            if (!ok)
-            {
-                return false;
-            }
-
-            messages = TombstoneLocal(messages, messageId);
-            conversationsLoaded = false;
-            return true;
-        }, onComplete);
-    }
-
-    private static ChatMessageDto[] TombstoneLocal(ChatMessageDto[] items, string messageId)
-    {
-        for (var index = 0; index < items.Length; index++)
-        {
-            if (items[index].Id != messageId)
-            {
-                continue;
-            }
-
-            var updated = (ChatMessageDto[])items.Clone();
-            updated[index] = items[index] with
-            {
-                Deleted = true,
-                Body = string.Empty,
-                EncVersion = 0,
-                CommitmentTag = null,
-                Forwarded = false,
-                DurationSecs = 0,
-                Reactions = null,
-            };
-            return updated;
-        }
-
-        return items;
-    }
-
     public void SetMuted(string id, bool muted, Action<bool> onComplete)
     {
         work.Run("mute", async token =>
@@ -948,7 +261,7 @@ internal sealed class DirectMessagesStore : IDisposable
                 return false;
             }
 
-            conversations = ApplyLocalMute(conversations, id, muted);
+            ThreadListItems = ApplyLocalMute(ThreadListItems, id, muted);
             return true;
         }, onComplete);
     }
@@ -1030,38 +343,15 @@ internal sealed class DirectMessagesStore : IDisposable
                 return false;
             }
 
-            if (conversationId == targetId)
+            if (ConversationId == targetId)
             {
-                messages = CopyOnWrite.Append(messages, sent);
+                MessageItems = CopyOnWrite.Append(MessageItems, sent);
             }
 
-            conversationsLoaded = false;
-            Plugin.Analytics.Track(AnalyticsEvents.DmSent("dm"));
+            InvalidateThreadList();
+            TrackMessageSent();
             return true;
         }, onComplete);
-    }
-
-    public string? DmMediaUrl(string messageId)
-    {
-        if (dmMediaUrls.TryGetValue(messageId, out var url))
-        {
-            return url;
-        }
-
-        if (!dmMediaLoading.TryAdd(messageId, 0))
-        {
-            return null;
-        }
-
-        work.Run("dm media url", async token =>
-        {
-            var result = await client.DmMediaUrlAsync(messageId, token).ConfigureAwait(false);
-            if (result is not null)
-            {
-                dmMediaUrls[messageId] = result.Url;
-            }
-        }, () => dmMediaLoading.TryRemove(messageId, out _));
-        return null;
     }
 
     public void CreateDirect(string userId, Action<string?> onResult)
@@ -1073,7 +363,7 @@ internal sealed class DirectMessagesStore : IDisposable
             if (detail is not null)
             {
                 await keys.EnsureChatKeysAsync(detail.Conversation.Id, token).ConfigureAwait(false);
-                conversationsLoaded = false;
+                InvalidateThreadList();
             }
 
             onResult(detail?.Conversation.Id);
@@ -1090,7 +380,7 @@ internal sealed class DirectMessagesStore : IDisposable
             if (detail is not null)
             {
                 await keys.EnsureChatKeysAsync(detail.Conversation.Id, token).ConfigureAwait(false);
-                conversationsLoaded = false;
+                InvalidateThreadList();
             }
 
             onResult(detail?.Conversation.Id);
@@ -1107,19 +397,15 @@ internal sealed class DirectMessagesStore : IDisposable
                 return false;
             }
 
-            if (conversationId == id)
+            if (ConversationId == id)
             {
                 conversation = detail.Conversation;
                 members = detail.Members;
             }
 
             var status = await keys.EnsureChatKeysAsync(id, token).ConfigureAwait(false);
-            if (conversationId == id)
-            {
-                currentKeyStatus = status;
-            }
-
-            conversationsLoaded = false;
+            SetKeyStatusIfCurrent(id, status);
+            InvalidateThreadList();
             return true;
         }, onComplete);
     }
@@ -1137,13 +423,10 @@ internal sealed class DirectMessagesStore : IDisposable
             if (userId != MyUserId)
             {
                 var status = await keys.EnsureChatKeysAsync(id, token).ConfigureAwait(false);
-                if (conversationId == id)
-                {
-                    currentKeyStatus = status;
-                }
+                SetKeyStatusIfCurrent(id, status);
             }
 
-            conversationsLoaded = false;
+            InvalidateThreadList();
             return true;
         }, onComplete);
     }
@@ -1158,20 +441,20 @@ internal sealed class DirectMessagesStore : IDisposable
                 return false;
             }
 
-            if (conversationId == id)
+            if (ConversationId == id)
             {
                 conversation = detail.Conversation;
                 members = detail.Members;
             }
 
-            conversationsLoaded = false;
+            InvalidateThreadList();
             return true;
         }, onComplete);
     }
 
     private ConversationDto? FindConversation(string id)
     {
-        var snapshot = conversations;
+        var snapshot = ThreadListItems;
         for (var index = 0; index < snapshot.Length; index++)
         {
             if (snapshot[index].Id == id)
@@ -1183,61 +466,9 @@ internal sealed class DirectMessagesStore : IDisposable
         return null;
     }
 
-    public void ReportMessage(string messageId, string? reason, Action<bool> onComplete)
+    protected override ChatMessageDto[] DecorateMessages(string threadId, ChatMessageDto[] items)
     {
-        var snapshot = messages;
-        var targetIndex = -1;
-        for (var index = 0; index < snapshot.Length; index++)
-        {
-            if (snapshot[index].Id == messageId)
-            {
-                targetIndex = index;
-                break;
-            }
-        }
-
-        if (targetIndex < 0)
-        {
-            onComplete(false);
-            return;
-        }
-
-        var reveals = new List<RevealedMessageDto>(6);
-        AppendReveal(reveals, snapshot[targetIndex]);
-        for (var index = targetIndex - 1; index >= 0 && reveals.Count < 6; index--)
-        {
-            AppendReveal(reveals, snapshot[index]);
-        }
-
-        var revealed = reveals.Count > 0 && reveals[0].MessageId == messageId ? reveals.ToArray() : null;
-        work.Run("report message", async token =>
-            await safety.ReportAsync("chat_message", messageId, reason, token, revealed).ConfigureAwait(false),
-            onComplete);
-    }
-
-    private void AppendReveal(List<RevealedMessageDto> reveals, ChatMessageDto message)
-    {
-        if (message.Kind == 2)
-        {
-            return;
-        }
-
-        if (message.EncVersion == 0)
-        {
-            reveals.Add(new RevealedMessageDto(message.Id, message.Body, null));
-            return;
-        }
-
-        var state = DecryptionState(message.Id);
-        if (state.State == DmBodyState.Decrypted)
-        {
-            reveals.Add(new RevealedMessageDto(message.Id, state.Text, state.FrankingKey));
-        }
-    }
-
-    private ChatMessageDto[] DecorateMessages(string id, ChatMessageDto[] items)
-    {
-        var scope = ConversationKeyStore.ChatScope(id);
+        var scope = ConversationKeyStore.ChatScope(threadId);
         ChatMessageDto[]? decorated = null;
         for (var index = 0; index < items.Length; index++)
         {
@@ -1271,7 +502,7 @@ internal sealed class DirectMessagesStore : IDisposable
         return decorated ?? items;
     }
 
-    private ConversationDto[] DecorateConversations(ConversationDto[] items)
+    protected override ConversationDto[] DecorateThreadList(ConversationDto[] items)
     {
         ConversationDto[]? decorated = null;
         for (var index = 0; index < items.Length; index++)
@@ -1294,11 +525,8 @@ internal sealed class DirectMessagesStore : IDisposable
         return decorated ?? items;
     }
 
-    public void Dispose()
+    protected override void DisposeCore()
     {
-        signals.ChatPinged -= inboxCadence.RequestImmediate;
-        vault.Changed -= OnVaultChanged;
-        Plugin.Framework.Update -= OnFrameworkTick;
-        work.Dispose();
+        signals.ChatPinged -= InboxCadence.RequestImmediate;
     }
 }
