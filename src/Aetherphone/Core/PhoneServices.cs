@@ -156,7 +156,7 @@ internal sealed class PhoneServices : IDisposable
         var sound = new SoundService(configuration, soundLibrary, new SoundEffectPlayer(), framework);
         var notifications = new NotificationService(sound, configuration, framework);
         var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
-        var messages = new MessageStore(messageArchive);
+        var messages = new MessageStore(messageArchive, configuration);
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
         var messageLauncher = new MessageLauncher();
         var velvetLauncher = new VelvetLauncher();

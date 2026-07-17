@@ -5,12 +5,14 @@ internal sealed class MessageStore
     private readonly Dictionary<string, Conversation> byTarget = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<Conversation> ordered = new();
     private readonly MessageArchive archive;
+    private readonly Configuration configuration;
     public IReadOnlyList<Conversation> Conversations => ordered;
     public event Action? Changed;
 
-    public MessageStore(MessageArchive archive)
+    public MessageStore(MessageArchive archive, Configuration configuration)
     {
         this.archive = archive;
+        this.configuration = configuration;
         var stored = archive.LoadAll();
         for (var index = 0; index < stored.Count; index++)
         {
@@ -33,7 +35,11 @@ internal sealed class MessageStore
         conversation.Append(line);
         ordered.Remove(conversation);
         ordered.Insert(0, conversation);
-        archive.Save(conversation.Contact, conversation.SendTarget, conversation.Lines);
+        if (configuration.ArchiveTellsToDisk)
+        {
+            archive.Save(conversation.Contact, conversation.SendTarget, conversation.Lines);
+        }
+
         Changed?.Invoke();
     }
 

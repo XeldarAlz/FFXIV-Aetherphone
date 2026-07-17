@@ -143,6 +143,15 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
             Typography.Plain(Loc.T(L.Encryption.KeyVersion, vault.KeyVersion));
         }
 
+        if (vault.LocalCacheUnavailable)
+        {
+            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
+            {
+                Typography.Wrapped(Loc.T(L.Encryption.LocalStoreUnavailable));
+            }
+        }
+
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         if (Button(Loc.T(L.Encryption.ResetButton), theme) && !busy)
         {

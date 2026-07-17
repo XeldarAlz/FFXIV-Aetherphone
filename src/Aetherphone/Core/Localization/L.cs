@@ -492,12 +492,15 @@ internal static class L
         public static readonly LocString PrivacyOn = new("settings.privacyOn", "Sharing");
         public static readonly LocString PrivacyOff = new("settings.privacyOff", "Private");
         public static readonly LocString PrivacyAnalytics = new("settings.privacyAnalytics", "Share anonymous usage");
-        public static readonly LocString PrivacyHint = new("settings.privacyHint", "Aetherphone is made by one solo developer. Sharing anonymous usage, which apps you open and for how long plus your region, helps me see what to build next. It never includes your character name, your messages, or any personal data.");
+        public static readonly LocString PrivacyHint = new("settings.privacyHint", "Aetherphone is made by one solo developer. Sharing anonymous usage helps me see what to build next: which apps you open and for how long, your region and language, basic settings like theme, mini-game scores, and a short error code when something breaks. It is tied to a random install ID, never to your account, and it never includes your character name, your messages, or who you talk to.");
+        public static readonly LocString TellArchiveTitle = new("settings.tellArchiveTitle", "Chat History");
+        public static readonly LocString TellArchive = new("settings.tellArchive", "Save tell history on this PC");
+        public static readonly LocString TellArchiveHint = new("settings.tellArchiveHint", "Tells are saved as plain text files on this PC so conversations survive a restart. They are never uploaded anywhere. Turn this off to keep new tells in memory only. Deleting a conversation also deletes its file.");
         public static readonly LocString ReadReceipts = new("settings.readReceipts", "Read receipts");
         public static readonly LocString LastSeenOnline = new("settings.lastSeenOnline", "Last seen online");
         public static readonly LocString ChatPrivacyHint = new("settings.chatPrivacyHint", "These apply to the Message app. If you turn read receipts or last seen off, you will not send them and you will not see them from others either.");
         public static readonly LocString ConsentTitle = new("settings.consentTitle", "Analytics & Consent");
-        public static readonly LocString ConsentMessage = new("settings.consentMessage", "Aetherphone is made by one solo developer. To keep making it better for everyone, it really helps to know which apps people use and where to focus next.\n\nWith your OK, the app shares anonymous usage only: which apps you open and for how long, plus your region. It never includes your character name, your messages, or any personal data.\n\nYou can change this anytime in Settings, under Privacy. Thank you for helping shape Aetherphone.");
+        public static readonly LocString ConsentMessage = new("settings.consentMessage", "Aetherphone is made by one solo developer. To keep making it better for everyone, it really helps to know which apps people use and where to focus next.\n\nWith your OK, the app shares anonymous usage tied to a random install ID: which apps you open and for how long, your region and language, basic settings like theme, mini-game scores, and a short error code when something breaks. It never includes your character name, your messages, or who you talk to, and it is never linked to your account.\n\nYou can change this anytime in Settings, under Privacy. Thank you for helping shape Aetherphone.");
         public static readonly LocString ConsentAccept = new("settings.consentAccept", "Sure, count me in");
         public static readonly LocString ConsentDecline = new("settings.consentDecline", "No thanks");
         public static readonly LocString Commands = new("settings.commands", "Commands");
@@ -1040,6 +1043,7 @@ internal static class L
         public static readonly LocString UnsupportedSummary = new("encryption.unsupportedSummary", "This PC cannot set up encryption, so messages here are not encrypted.");
         public static readonly LocString ActiveHint = new("encryption.activeHint", "Encryption is active on this device. It works automatically. There is nothing to set up.");
         public static readonly LocString NewDeviceHint = new("encryption.newDeviceHint", "On a new computer a fresh key is created automatically. Older messages become readable again once your chat partners come online.");
+        public static readonly LocString LocalStoreUnavailable = new("encryption.localStoreUnavailable", "This PC can't store the encryption key securely, so a fresh key will be created each session. Older messages become readable again once your chat partners come online.");
         public static readonly LocString ForgotTitle = new("encryption.forgotTitle", "Reset encryption key");
         public static readonly LocString ForgotBody = new("encryption.forgotBody", "A new key will be created. Messages encrypted with the old key become readable again once your chat partners come online.");
         public static readonly LocString ForgotConfirm = new("encryption.forgotConfirm", "Reset key");

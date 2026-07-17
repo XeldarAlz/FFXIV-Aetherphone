@@ -107,6 +107,7 @@ internal sealed class Configuration : IPluginConfiguration
     public Dictionary<string, string> MessageContactNotes { get; set; } = new();
     public Dictionary<string, string> MessageDrafts { get; set; } = new();
     public List<StarredMessage> MessageStarredMessages { get; set; } = new();
+    public bool ArchiveTellsToDisk { get; set; } = true;
     public bool MessageMigrated { get; set; }
     public bool MessagesMergeMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();

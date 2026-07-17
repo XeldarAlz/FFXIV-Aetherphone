@@ -32,6 +32,8 @@ internal sealed class KeyVault : IDisposable
 
     public KeyVaultState State { get; private set; } = KeyVaultState.Unavailable;
 
+    public bool LocalCacheUnavailable { get; private set; }
+
     public int KeyVersion => serverBundle?.KeyVersion ?? 0;
 
     public string? PublicKey => serverBundle?.PublicKey;
@@ -226,8 +228,10 @@ internal sealed class KeyVault : IDisposable
         }
 
         var protectedBlob = LocalKeyProtector.Protect(pkcs8, userId);
+        LocalCacheUnavailable = protectedBlob is null;
         if (protectedBlob is null)
         {
+            Changed?.Invoke();
             return;
         }
 
@@ -268,8 +272,8 @@ internal static class LocalKeyProtector
         }
         catch (Exception exception)
         {
-            AepLog.Warning($"Key protection unavailable ({exception.GetType().Name}); storing the encryption key unprotected.");
-            return RawPrefix + Convert.ToBase64String(secret);
+            AepLog.Warning($"Key protection unavailable ({exception.GetType().Name}); the key will not be saved on this device.");
+            return null;
         }
     }
 

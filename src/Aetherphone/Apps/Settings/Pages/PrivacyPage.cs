@@ -61,8 +61,27 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             SettingsSection.Hint(Loc.T(L.Settings.PrivacyHint), theme);
+            DrawTellArchive(theme, scale);
             DrawChatPrivacy(theme, scale);
         }
+    }
+
+    private void DrawTellArchive(PhoneTheme theme, float scale)
+    {
+        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        SettingsSection.Header(Loc.T(L.Settings.TellArchiveTitle), theme);
+        var card = GroupCard.Begin(theme, 1);
+        var archive = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.TellArchive),
+            configuration.ArchiveTellsToDisk, theme);
+        card.End();
+        if (archive != configuration.ArchiveTellsToDisk)
+        {
+            configuration.ArchiveTellsToDisk = archive;
+            configuration.Save();
+        }
+
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        SettingsSection.Hint(Loc.T(L.Settings.TellArchiveHint), theme);
     }
 
     private void DrawChatPrivacy(PhoneTheme theme, float scale)
