@@ -67,6 +67,32 @@ internal sealed class MessageCipher
         decryptedBodies[messageId] = new DmDecryptedBody(DmBodyState.Decrypted, plaintext, frankingKeyBase64, true);
     }
 
+    // Attachments and voice notes are sealed with the same conversation CEK as the text body. The AAD
+    // adds a "media" domain and the message kind so a text envelope, an image, and a voice note can
+    // never be swapped for one another, and neither can media from another conversation or generation.
+    public bool TryEncryptMedia(string scope, int generation, byte[] plaintext, string senderId, int mediaKind,
+        out byte[] sealedBytes)
+    {
+        if (generation > 0 && keys.TryGetCek(scope, generation, out var cek))
+        {
+            sealedBytes = MediaEnvelope.Seal(plaintext, cek, scope, generation, senderId, mediaKind);
+            return true;
+        }
+
+        sealedBytes = Array.Empty<byte>();
+        return false;
+    }
+
+    public byte[]? TryDecryptMedia(string scope, int generation, byte[] sealedBytes, string senderId, int mediaKind)
+    {
+        if (generation > 0 && keys.TryGetCek(scope, generation, out var cek))
+        {
+            return MediaEnvelope.Open(sealedBytes, cek, scope, generation, senderId, mediaKind);
+        }
+
+        return null;
+    }
+
     public DmDecryptedBody ResolveBody(string scope, string messageId, string body, string senderId, string? commitmentTag)
     {
         if (decryptedBodies.TryGetValue(messageId, out var cached)
