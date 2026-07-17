@@ -4,7 +4,6 @@ using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
-using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Telephony.Contracts;
 
 namespace Aetherphone.Core.Telephony;
@@ -20,25 +19,19 @@ internal sealed class CallHub : IDisposable
     private readonly AethernetSession session;
     private readonly NotificationService notifications;
     private readonly SoundService sound;
-    private readonly PlaybackHub playback;
-    private readonly RealtimeSignalBus signals;
-    private readonly RealtimeConnection connection;
+    private readonly CallSignalRouter router;
+    private readonly CallAudioController audio;
+    private readonly CallLogStore log;
     private readonly object gate = new();
-    private readonly HashSet<int> remoteSlots = new();
     private CallState state = CallState.Idle;
     private Guid callId;
     private ParticipantInfo[] roster = Array.Empty<ParticipantInfo>();
     private ParticipantInfo? incomingFrom;
     private CallContact? dialingTo;
-    private CallSession? activeSession;
-    private bool muted;
-    private float volume = 0.85f;
-    private long callStartTicks;
     private float ringTimer;
     private float stateTimer;
     private long connectionLostTicks;
     private volatile bool callScreenRequested;
-    private readonly CallLogStore log;
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
         SoundService sound, PlaybackHub playback, RealtimeSignalBus signals)
@@ -47,16 +40,15 @@ internal sealed class CallHub : IDisposable
         this.session = session;
         this.notifications = notifications;
         this.sound = sound;
-        this.playback = playback;
-        this.signals = signals;
-        connection = new RealtimeConnection(session);
+        router = new CallSignalRouter(session, signals);
+        audio = new CallAudioController(configuration, playback, router.Connection);
         log = new CallLogStore(configuration);
     }
 
     public event Action? IncomingCallPresented;
     public bool Enabled => configuration.CallsEnabled;
     public bool SignedIn => session.IsSignedIn;
-    public bool Connected => connection.Connected;
+    public bool Connected => router.Connected;
     public string LocalUserId => session.CurrentUser?.Id ?? string.Empty;
     public CallLogEntry[] CallLog => log.Entries;
     public int UnseenMissed => log.UnseenMissed;
@@ -65,8 +57,13 @@ internal sealed class CallHub : IDisposable
 
     public void Start()
     {
-        connection.ControlReceived += OnControl;
-        connection.ConnectedChanged += OnConnectedChanged;
+        router.IncomingReceived += HandleIncoming;
+        router.RosterReceived += HandleRoster;
+        router.DeclinedReceived += HandleDeclined;
+        router.UnavailableReceived += HandleUnavailable;
+        router.EndedReceived += HandleEnded;
+        router.HandledElsewhereReceived += HandleHandledElsewhere;
+        router.ConnectedChanged += OnConnectedChanged;
         session.Changed += Reconcile;
         Reconcile();
     }
@@ -85,11 +82,9 @@ internal sealed class CallHub : IDisposable
         {
             var localId = LocalUserId;
             var others = CountOthers(localId);
-            var seconds = state == CallState.Active && callStartTicks != 0
-                ? (int)((Environment.TickCount64 - callStartTicks) / 1000)
-                : 0;
-            return new CallView(state, muted, volume, activeSession?.MicLevel ?? 0f, seconds, roster, incomingFrom,
-                connection.Connected && connectionLostTicks == 0, localId, BuildPeerLabel(localId), others);
+            var seconds = state == CallState.Active ? audio.ElapsedSecondsLocked : 0;
+            return new CallView(state, audio.MutedLocked, audio.VolumeLocked, audio.MicLevelLocked, seconds, roster,
+                incomingFrom, router.Connected && connectionLostTicks == 0, localId, BuildPeerLabel(localId), others);
         }
     }
 
@@ -98,7 +93,7 @@ internal sealed class CallHub : IDisposable
         CallSession? current;
         lock (gate)
         {
-            current = activeSession;
+            current = audio.SessionLocked;
         }
 
         return current?.LevelOf(participant.Slot) ?? 0f;
@@ -173,8 +168,8 @@ internal sealed class CallHub : IDisposable
         }
 
         log.Add(target, CallDirection.Outgoing);
-        AepLog.Info($"[calls] start-sent call={id:D} to={target.UserId} realtime_connected={connection.Connected}");
-        Send(new CallControl
+        AepLog.Info($"[calls] start-sent call={id:D} to={target.UserId} realtime_connected={router.Connected}");
+        router.Send(new CallControl
         {
             Type = SignalType.Start, CallId = id.ToString("D"), InviteeIds = new[] { target.UserId },
         });
@@ -213,7 +208,7 @@ internal sealed class CallHub : IDisposable
         }
 
         log.Add(target, CallDirection.Outgoing);
-        Send(new CallControl { Type = SignalType.Invite, CallId = id, InviteeIds = new[] { target.UserId }, });
+        router.Send(new CallControl { Type = SignalType.Invite, CallId = id, InviteeIds = new[] { target.UserId }, });
     }
 
     public void Accept()
@@ -233,7 +228,7 @@ internal sealed class CallHub : IDisposable
         }
 
         sound.StopCallRing();
-        Send(new CallControl { Type = SignalType.Accept, CallId = id });
+        router.Send(new CallControl { Type = SignalType.Accept, CallId = id });
         if (from is not null)
         {
             log.Add(new CallContact(from.UserId, from.Name, from.World, from.DisplayName), CallDirection.Incoming);
@@ -257,7 +252,7 @@ internal sealed class CallHub : IDisposable
             from = incomingFrom;
         }
 
-        Send(new CallControl { Type = SignalType.Decline, CallId = id });
+        router.Send(new CallControl { Type = SignalType.Decline, CallId = id });
         EndCall(notify: false, reason: null);
         LogMissed(from, notify: timedOut);
     }
@@ -275,7 +270,7 @@ internal sealed class CallHub : IDisposable
             id = callId.ToString("D");
         }
 
-        Send(new CallControl { Type = SignalType.Leave, CallId = id });
+        router.Send(new CallControl { Type = SignalType.Leave, CallId = id });
         EndCall(notify: false, reason: null);
     }
 
@@ -283,11 +278,7 @@ internal sealed class CallHub : IDisposable
     {
         lock (gate)
         {
-            muted = !muted;
-            if (activeSession is not null)
-            {
-                activeSession.Muted = muted;
-            }
+            audio.ToggleMuteLocked();
         }
     }
 
@@ -295,11 +286,7 @@ internal sealed class CallHub : IDisposable
     {
         lock (gate)
         {
-            volume = Math.Clamp(value, 0f, 1f);
-            if (activeSession is not null)
-            {
-                activeSession.Volume = volume;
-            }
+            audio.SetVolumeLocked(value);
         }
     }
 
@@ -365,46 +352,9 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void OnControl(CallControl message)
+    private void HandleIncoming(Guid id, CallControl message)
     {
-        switch (message.Type)
-        {
-            case SignalType.Incoming:
-                HandleIncoming(message);
-                break;
-            case SignalType.Roster:
-                HandleRoster(message);
-                break;
-            case SignalType.Declined:
-                HandleDeclined(message);
-                break;
-            case SignalType.Unavailable:
-                HandleUnavailable(message);
-                break;
-            case SignalType.Ended:
-                HandleEnded(message);
-                break;
-            case SignalType.Handled:
-                HandleHandledElsewhere(message);
-                break;
-            case SignalType.ChatPing:
-                signals.PublishChat();
-                break;
-            case SignalType.VelvetPing:
-                signals.PublishVelvet();
-                break;
-            case SignalType.SocialPing:
-                signals.PublishSocial();
-                break;
-            default:
-                AepLog.Warning($"[calls] unhandled-signal type={message.Type} call={message.CallId} reason={message.Reason}");
-                break;
-        }
-    }
-
-    private void HandleIncoming(CallControl message)
-    {
-        if (!Guid.TryParse(message.CallId, out var id) || message.From is null)
+        if (message.From is null)
         {
             return;
         }
@@ -429,7 +379,7 @@ internal sealed class CallHub : IDisposable
 
         if (busy)
         {
-            Send(new CallControl { Type = SignalType.Decline, CallId = message.CallId, Reason = "busy" });
+            router.Send(new CallControl { Type = SignalType.Decline, CallId = message.CallId, Reason = "busy" });
             LogMissed(message.From, notify: true);
             return;
         }
@@ -441,13 +391,8 @@ internal sealed class CallHub : IDisposable
         Plugin.Analytics.Track(AnalyticsEvents.Call("received"));
     }
 
-    private void HandleRoster(CallControl message)
+    private void HandleRoster(Guid id, CallControl message)
     {
-        if (!Guid.TryParse(message.CallId, out var id))
-        {
-            return;
-        }
-
         var participants = message.Participants ?? Array.Empty<ParticipantInfo>();
         CallSession? sessionToDispose = null;
         var connected = false;
@@ -478,23 +423,13 @@ internal sealed class CallHub : IDisposable
 
             if (activeOthers > 0)
             {
-                if (activeSession is null)
-                {
-                    StartSessionLocked(localSlot);
-                    connected = true;
-                }
-                else if (localSlot >= 0)
-                {
-                    activeSession.SetLocalSlot(localSlot);
-                }
-
-                SyncRemotesLocked(participants, localId);
+                connected = audio.EnsureStartedLocked(callId, localSlot);
+                audio.SyncRemotesLocked(participants, localId);
                 state = CallState.Active;
             }
-            else if (activeSession is not null)
+            else if (audio.HasSessionLocked)
             {
-                sessionToDispose = activeSession;
-                ClearLocked();
+                sessionToDispose = ClearLocked();
             }
         }
 
@@ -505,13 +440,8 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void HandleDeclined(CallControl message)
+    private void HandleDeclined(Guid id, CallControl message)
     {
-        if (!Guid.TryParse(message.CallId, out var id))
-        {
-            return;
-        }
-
         var ended = false;
         var localId = LocalUserId;
         lock (gate)
@@ -543,13 +473,8 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void HandleUnavailable(CallControl message)
+    private void HandleUnavailable(Guid id, CallControl message)
     {
-        if (!Guid.TryParse(message.CallId, out var id))
-        {
-            return;
-        }
-
         var matched = false;
         lock (gate)
         {
@@ -562,13 +487,8 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void HandleEnded(CallControl message)
+    private void HandleEnded(Guid id, CallControl message)
     {
-        if (!Guid.TryParse(message.CallId, out var id))
-        {
-            return;
-        }
-
         var matched = false;
         ParticipantInfo? missedFrom = null;
         lock (gate)
@@ -587,13 +507,8 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void HandleHandledElsewhere(CallControl message)
+    private void HandleHandledElsewhere(Guid id, CallControl message)
     {
-        if (!Guid.TryParse(message.CallId, out var id))
-        {
-            return;
-        }
-
         bool matched;
         lock (gate)
         {
@@ -663,83 +578,10 @@ internal sealed class CallHub : IDisposable
             return;
         }
 
-        Send(new CallControl { Type = SignalType.Rejoin, CallId = id });
+        router.Send(new CallControl { Type = SignalType.Rejoin, CallId = id });
         if (resendAccept)
         {
-            Send(new CallControl { Type = SignalType.Accept, CallId = id });
-        }
-    }
-
-    private void StartSessionLocked(int localSlot)
-    {
-        var input = AudioDevices.ResolveInput(configuration.CallInputDevice);
-        var output = AudioDevices.ResolveOutput(configuration.CallOutputDevice);
-        var created = new CallSession(callId, connection, input, output, volume) { Muted = muted, };
-        if (localSlot >= 0)
-        {
-            created.SetLocalSlot(localSlot);
-        }
-
-        activeSession = created;
-        remoteSlots.Clear();
-        callStartTicks = Environment.TickCount64;
-        playback.Stop();
-    }
-
-    private void SyncRemotesLocked(ParticipantInfo[] participants, string localId)
-    {
-        if (activeSession is null)
-        {
-            return;
-        }
-
-        Span<int> present = participants.Length <= 16
-            ? stackalloc int[participants.Length]
-            : new int[participants.Length];
-        var presentCount = 0;
-        for (var index = 0; index < participants.Length; index++)
-        {
-            var participant = participants[index];
-            if (participant.UserId == localId || participant.State != ParticipantState.Active)
-            {
-                continue;
-            }
-
-            present[presentCount++] = participant.Slot;
-            if (remoteSlots.Add(participant.Slot))
-            {
-                activeSession.AddRemote(participant.Slot);
-            }
-        }
-
-        if (remoteSlots.Count == presentCount)
-        {
-            return;
-        }
-
-        var stale = new List<int>();
-        foreach (var slot in remoteSlots)
-        {
-            var found = false;
-            for (var index = 0; index < presentCount; index++)
-            {
-                if (present[index] == slot)
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            if (!found)
-            {
-                stale.Add(slot);
-            }
-        }
-
-        for (var index = 0; index < stale.Count; index++)
-        {
-            activeSession.RemoveRemote(stale[index]);
-            remoteSlots.Remove(stale[index]);
+            router.Send(new CallControl { Type = SignalType.Accept, CallId = id });
         }
     }
 
@@ -757,10 +599,9 @@ internal sealed class CallHub : IDisposable
             }
 
             priorState = state;
-            wasConnected = callStartTicks != 0;
-            durationMs = wasConnected ? Environment.TickCount64 - callStartTicks : 0;
-            toDispose = activeSession;
-            ClearLocked();
+            wasConnected = audio.StartTicksLocked != 0;
+            durationMs = wasConnected ? Environment.TickCount64 - audio.StartTicksLocked : 0;
+            toDispose = ClearLocked();
         }
 
         AepLog.Info($"[calls] ended from={priorState} reason={reason ?? "server hung up"} connected={wasConnected} duration_ms={durationMs:F0}");
@@ -774,20 +615,17 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void ClearLocked()
+    private CallSession? ClearLocked()
     {
         state = CallState.Idle;
         callId = default;
         roster = Array.Empty<ParticipantInfo>();
         incomingFrom = null;
         dialingTo = null;
-        activeSession = null;
-        remoteSlots.Clear();
-        muted = false;
-        callStartTicks = 0;
         connectionLostTicks = 0;
         ringTimer = 0f;
         stateTimer = 0f;
+        return audio.TakeLocked();
     }
 
     private int CountOthers(string localId)
@@ -851,33 +689,32 @@ internal sealed class CallHub : IDisposable
     {
         if (configuration.CallsEnabled && session.IsSignedIn)
         {
-            connection.Start();
+            router.Start();
         }
         else
         {
             EndCall(notify: false, reason: null);
-            connection.Stop();
+            router.Stop();
         }
-    }
-
-    private void Send(CallControl control)
-    {
-        _ = connection.SendControlAsync(control);
     }
 
     public void Dispose()
     {
-        connection.ControlReceived -= OnControl;
-        connection.ConnectedChanged -= OnConnectedChanged;
+        router.IncomingReceived -= HandleIncoming;
+        router.RosterReceived -= HandleRoster;
+        router.DeclinedReceived -= HandleDeclined;
+        router.UnavailableReceived -= HandleUnavailable;
+        router.EndedReceived -= HandleEnded;
+        router.HandledElsewhereReceived -= HandleHandledElsewhere;
+        router.ConnectedChanged -= OnConnectedChanged;
         session.Changed -= Reconcile;
         CallSession? toDispose;
         lock (gate)
         {
-            toDispose = activeSession;
-            activeSession = null;
+            toDispose = audio.TakeLocked();
         }
 
         toDispose?.Dispose();
-        connection.Dispose();
+        router.Dispose();
     }
 }
