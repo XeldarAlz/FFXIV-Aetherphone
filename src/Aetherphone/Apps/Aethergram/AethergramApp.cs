@@ -28,13 +28,9 @@ namespace Aetherphone.Apps.Aethergram;
 
 internal sealed partial class AethergramApp : IPhoneApp
 {
-    private const float FeedRefreshSeconds = 25f;
     private const int MaxCaptionLength = 500;
     private const int MaxPhotoTags = 20;
     private const int MaxCommentLength = 500;
-    private const int DisplayNameMax = 40;
-    private const int HandleMax = 15;
-    private const int BioMax = 200;
     private const float BottomNavHeight = 52f;
     private const int NavTabCount = 4;
     private const float NavHitRadius = 17f;
@@ -76,6 +72,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private string? pendingViewUrl;
     private double pendingViewAt;
     private readonly AppSkin ui = new(AppPalettes.Aethergram);
+    private readonly SocialProfilePages profile;
     private readonly RichTextCache bodyLayouts = new();
     private readonly Dictionary<string, (float Height, bool HasComments)> feedRowHeights = new();
     private float feedRowWidth;
@@ -93,8 +90,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     private AethergramTab activeTab = AethergramTab.Home;
     private readonly Spring[] navHover = new Spring[NavTabCount];
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
-    private float sinceForYou;
-    private float sinceFollowing;
     private bool commentFocusPending;
     private ComposeStage composeStage = ComposeStage.Pick;
     private bool composeAvatarMode;
@@ -127,16 +122,8 @@ internal sealed partial class AethergramApp : IPhoneApp
     private bool cropDragging;
     private Vector2 cropLastDrag;
     private string commentDraft = string.Empty;
-    private string searchDraft = string.Empty;
     private string likeBurstPostId = string.Empty;
     private double likeBurstStart;
-    private string editDisplay = string.Empty;
-    private string editHandle = string.Empty;
-    private string editBio = string.Empty;
-    private string editStatus = string.Empty;
-    private string? editLoadedFor;
-    private volatile bool editBusy;
-    private volatile int editOutcome;
 
     public AethergramApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
@@ -161,6 +148,36 @@ internal sealed partial class AethergramApp : IPhoneApp
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);
         openActivityPost = item => OpenDetailFromLink(item.PostId!);
+        profile = new SocialProfilePages(store, ui, new SocialProfileStyle
+        {
+            Palette = AppPalettes.Aethergram,
+            SearchInputId = "##aethergramSearch",
+            StatsPostsFirst = true,
+            CountGrams = true,
+            CardUserRows = false,
+            EditProfile = L.Aethergram.EditProfile,
+            Follow = L.Aethergram.Follow,
+            Following = L.Aethergram.Following,
+            Posts = L.Aethergram.Posts,
+            Save = L.Aethergram.Save,
+            Saving = L.Aethergram.Saving,
+            HandleTaken = L.Aethergram.HandleTaken,
+            HandleRules = L.Aethergram.HandleRules,
+            HandleLabel = L.Aethergram.HandleLabel,
+            DisplayNameLabel = L.Aethergram.DisplayNameLabel,
+            BioLabel = L.Aethergram.BioLabel,
+            ChangePhoto = L.Aethergram.ChangePhoto,
+            ProfileError = L.Aethergram.ProfileError,
+            NameOrWorld = L.Aethergram.NameOrWorld,
+            SearchByName = L.Aethergram.SearchByName,
+            DeleteConfirmMessage = L.Aethergram.DeleteConfirmMessage,
+            DeleteConfirm = L.Aethergram.DeleteConfirm,
+            DeleteCancel = L.Aethergram.DeleteCancel,
+            DeleteFailed = L.Aethergram.DeleteFailed,
+            DeleteCommentConfirmMessage = L.Aethergram.DeleteCommentConfirmMessage,
+            DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
+        }, images, lodestone, avatarLightbox, configuration, gameData,
+            () => router.Push(AethergramRoute.EditProfile), () => StartCompose(true), OpenProfile, OpenUserList, back);
     }
 
     private enum ComposeStage
@@ -199,7 +216,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         router.Reset();
         avatarLightbox.Reset();
         caption = string.Empty;
-        searchDraft = string.Empty;
+        profile.SearchDraft = string.Empty;
         commentDraft = string.Empty;
         store.ClearDiscover();
         stories.Close();
@@ -254,10 +271,10 @@ internal sealed partial class AethergramApp : IPhoneApp
                 DrawProfile(area, route.Id!);
                 break;
             case AethergramScreen.EditProfile:
-                DrawEditProfile(area);
+                profile.DrawEditProfile(area, theme, navigation);
                 break;
             case AethergramScreen.UserList:
-                DrawUserList(area, route.Id!, route.Kind);
+                profile.DrawUserList(area, theme, navigation, route.Id!, route.Kind);
                 break;
             default:
                 DrawRoot(area);
@@ -342,9 +359,8 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     private void DrawFeedTab(Rect area)
     {
-        sinceForYou += ImGui.GetIO().DeltaTime;
-        sinceFollowing += ImGui.GetIO().DeltaTime;
-        TickRefresh(activeScope);
+        profile.Tick(ImGui.GetIO().DeltaTime);
+        profile.TickRefresh(activeScope);
         DrawFeedList(area, activeScope);
     }
 
@@ -381,11 +397,11 @@ internal sealed partial class AethergramApp : IPhoneApp
         switch (tab)
         {
             case AethergramTab.Home:
-                EnsureLoaded(activeScope);
+                profile.EnsureLoaded(activeScope);
                 break;
             case AethergramTab.Search:
                 store.ClearDiscover();
-                searchDraft = string.Empty;
+                profile.SearchDraft = string.Empty;
                 break;
             case AethergramTab.Activity:
                 social.RefreshNow();
@@ -418,7 +434,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         if (scope != activeScope)
         {
             activeScope = scope;
-            EnsureLoaded(activeScope);
+            profile.EnsureLoaded(activeScope);
         }
     }
 
@@ -468,7 +484,7 @@ internal sealed partial class AethergramApp : IPhoneApp
 
         if (mine)
         {
-            AskDeletePost(post.Id);
+            profile.AskDeletePost(post.Id, back);
             return;
         }
 
@@ -480,33 +496,11 @@ internal sealed partial class AethergramApp : IPhoneApp
 
         if (picked == viewOffset + 1)
         {
-            OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
+            profile.OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
             return;
         }
 
-        AskBlock(post);
-    }
-
-    private void AskBlock(PostDto post)
-    {
-        var name = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
-        Plugin.Confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Social.BlockConfirm, name),
-            ConfirmLabel = Loc.T(L.Social.BlockAction),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = true,
-            Confirm = () => store.Block(post.AuthorId, _ => { }),
-        });
-    }
-
-    private void OpenReport(string targetType, string targetId, string title)
-    {
-        Plugin.Report.Open(new ReportPrompt
-        {
-            Title = title,
-            Submit = (reason, done) => store.Report(targetType, targetId, reason, done),
-        });
+        profile.AskBlock(post.AuthorDisplayName, post.AuthorHandle, post.AuthorId);
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
@@ -959,46 +953,6 @@ internal sealed partial class AethergramApp : IPhoneApp
             lodestone, monogramScale, segments);
     }
 
-    private void DrawField(string label, string id, ref string value, int maxLength, bool multiline)
-    {
-        ui.Field(label, id, ref value, maxLength, multiline);
-    }
-
-    private void DrawHandleField()
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.MutedInk))
-        {
-            Typography.Plain(Loc.T(L.Aethergram.HandleLabel));
-        }
-
-        var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
-        var height = 34f * scale;
-        var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale,
-            ImGui.GetColorU32(AppPalettes.Aethergram.FieldSurface));
-        Typography.Draw(new Vector2(origin.X + 12f * scale, origin.Y + height * 0.5f - 8f * scale), "@",
-            AppPalettes.Aethergram.MutedInk, 1f);
-        ImGui.SetCursorScreenPos(new Vector2(origin.X + 26f * scale,
-            origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(width - 38f * scale);
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, IsHandleValid(editHandle) ? theme.TextStrong : theme.Danger))
-        {
-            if (ImGui.InputText("##editHandle", ref editHandle, HandleMax, ImGuiInputTextFlags.CharsNoBlank))
-            {
-                editHandle = editHandle.ToLowerInvariant();
-            }
-        }
-
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, height));
-        Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale),
-            Loc.T(L.Aethergram.HandleRules), AppPalettes.Aethergram.MutedInk, 0.78f);
-        ImGui.Dummy(new Vector2(width, 16f * scale));
-    }
-
     private void OpenProfile(string userId)
     {
         profileTab = 0;
@@ -1037,68 +991,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     {
         store.OpenUserList(sourceId, kind);
         router.Push(AethergramRoute.UserList(sourceId, kind));
-    }
-
-    private void EnsureLoaded(SocialFeedScope scope)
-    {
-        if (store.Feed(scope).Length == 0 && !store.IsLoading(scope))
-        {
-            store.RefreshFeed(scope);
-        }
-    }
-
-    private void TickRefresh(SocialFeedScope scope)
-    {
-        if (store.IsLoading(scope))
-        {
-            return;
-        }
-
-        if (scope == SocialFeedScope.ForYou && sinceForYou >= FeedRefreshSeconds)
-        {
-            sinceForYou = 0f;
-            store.RefreshFeed(scope);
-        }
-        else if (scope == SocialFeedScope.Following && sinceFollowing >= FeedRefreshSeconds)
-        {
-            sinceFollowing = 0f;
-            store.RefreshFeed(scope);
-        }
-    }
-
-    private static bool IsHandleValid(string handle)
-    {
-        var value = handle.Trim();
-        if (value.Length < 3 || value.Length > HandleMax)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < value.Length; index++)
-        {
-            var character = value[index];
-            var ok = character is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_';
-            if (!ok)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static string PostsLabel(int count)
-    {
-        var plural = Loc.Plural(L.Aethergram.Posts, count);
-        var parts = plural.Split(' ', 2);
-        return parts.Length > 1 ? parts[1] : plural;
-    }
-
-    private static string FollowersLabel(int count)
-    {
-        var plural = Loc.Plural(L.Account.Followers, count);
-        var parts = plural.Split(' ', 2);
-        return parts.Length > 1 ? parts[1] : plural;
     }
 
     public void Dispose()

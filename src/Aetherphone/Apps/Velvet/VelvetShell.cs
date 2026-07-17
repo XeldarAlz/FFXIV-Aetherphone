@@ -47,7 +47,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
-    private readonly VelvetAvatarComposer avatar;
+    private readonly AvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly ViewRouter<VelvetView> router;
     private readonly RouterDraw<VelvetView> drawView;
@@ -79,7 +79,9 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.http = http;
         this.images = images;
         this.social = social;
-        avatar = new VelvetAvatarComposer(store, library);
+        avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
+            new AvatarComposerLabels(L.Velvet.ChangePhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,
+                L.Velvet.MoveAndScale, L.Velvet.Use, L.Velvet.Saving, L.Velvet.GestureHint), library);
         post = new VelvetPostComposer(store, stories, library, images, lodestone);
         router = new ViewRouter<VelvetView>(VelvetView.Root, Id);
         drawView = DrawView;

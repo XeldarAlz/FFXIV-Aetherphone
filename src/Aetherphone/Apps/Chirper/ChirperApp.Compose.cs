@@ -31,8 +31,7 @@ internal sealed partial class ChirperApp
             composeOutcome = 0;
             draft = string.Empty;
             composeStatus = string.Empty;
-            sinceForYou = FeedRefreshSeconds;
-            sinceFollowing = FeedRefreshSeconds;
+            profile.ForceRefreshSoon();
             router.Pop();
             return;
         }

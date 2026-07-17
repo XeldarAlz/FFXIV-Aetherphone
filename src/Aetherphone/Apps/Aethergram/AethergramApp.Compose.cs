@@ -71,8 +71,7 @@ internal sealed partial class AethergramApp
             if (!composeAvatarMode)
             {
                 caption = string.Empty;
-                sinceForYou = FeedRefreshSeconds;
-                sinceFollowing = FeedRefreshSeconds;
+                profile.ForceRefreshSoon();
             }
 
             router.Pop();

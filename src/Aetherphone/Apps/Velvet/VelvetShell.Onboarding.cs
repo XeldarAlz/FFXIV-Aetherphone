@@ -43,7 +43,7 @@ internal sealed partial class VelvetShell
             var overlay = SceneChrome.ScreenFrom(area, theme, scale);
             ui.Backdrop(overlay);
             var overlayContext = new PhoneContext(area, theme, navigation);
-            if (avatar.Draw(area, ui, overlayContext))
+            if (avatar.Draw(area, overlayContext, ui.Accent))
             {
                 onboardAvatarEditing = false;
             }

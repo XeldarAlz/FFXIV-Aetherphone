@@ -54,7 +54,7 @@ internal sealed partial class VelvetShell
         if (avatarEditing)
         {
             var context = new PhoneContext(area, theme, navigation);
-            if (avatar.Draw(area, ui, context))
+            if (avatar.Draw(area, context, ui.Accent))
             {
                 avatarEditing = false;
             }

@@ -26,11 +26,7 @@ namespace Aetherphone.Apps.Chirper;
 
 internal sealed partial class ChirperApp : IPhoneApp
 {
-    private const float FeedRefreshSeconds = 25f;
     private const int MaxPostLength = 500;
-    private const int DisplayNameMax = 40;
-    private const int HandleMax = 15;
-    private const int BioMax = 200;
     private const float FeedTopPadding = 8f;
     private const int MaxCommentLength = 500;
     public string Id => "chirper";
@@ -45,7 +41,8 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly LodestoneService lodestone;
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
-    private readonly ChirperAvatarComposer avatar;
+    private readonly AvatarComposer avatar;
+    private readonly SocialProfilePages profile;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
     private readonly RichTextCache bodyLayouts = new();
     private readonly RichTextCache commentLayouts = new();
@@ -65,22 +62,12 @@ internal sealed partial class ChirperApp : IPhoneApp
     private INavigator navigation = null!;
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
     private float tabSegmentAnim;
-    private float sinceForYou;
-    private float sinceFollowing;
     private string draft = string.Empty;
     private bool composeFocus;
     private string composeStatus = string.Empty;
     private volatile int composeOutcome;
-    private string searchDraft = string.Empty;
     private readonly ChirperActionReveal actions = new();
     private string commentDraft = string.Empty;
-    private string editDisplay = string.Empty;
-    private string editHandle = string.Empty;
-    private string editBio = string.Empty;
-    private string editStatus = string.Empty;
-    private string? editLoadedFor;
-    private volatile bool editBusy;
-    private volatile int editOutcome;
 
     public ChirperApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
@@ -95,12 +82,45 @@ internal sealed partial class ChirperApp : IPhoneApp
         this.lodestone = lodestone;
         this.images = images;
         this.social = social;
-        avatar = new ChirperAvatarComposer(store, library);
+        avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
+            new AvatarComposerLabels(L.Chirper.ChangePhoto, L.Chirper.ImportFromPc, L.Photos.NoPhotos,
+                L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library);
         router = new ViewRouter<ChirperRoute>(ChirperRoute.Home, Id);
         drawView = DrawView;
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);
         openActivityPost = item => OpenThreadFromLink(item.PostId!);
+        profile = new SocialProfilePages(store, ui, new SocialProfileStyle
+        {
+            Palette = AppPalettes.Chirper,
+            SearchInputId = "##chirperSearch",
+            StatsPostsFirst = false,
+            CountGrams = false,
+            CardUserRows = true,
+            HandleValidInk = AppPalettes.Chirper.TitleInk,
+            EditProfile = L.Chirper.EditProfile,
+            Follow = L.Chirper.Follow,
+            Following = L.Chirper.Following,
+            Posts = L.Chirper.Posts,
+            Save = L.Chirper.Save,
+            Saving = L.Chirper.Saving,
+            HandleTaken = L.Chirper.HandleTaken,
+            HandleRules = L.Chirper.HandleRules,
+            HandleLabel = L.Chirper.HandleLabel,
+            DisplayNameLabel = L.Chirper.DisplayNameLabel,
+            BioLabel = L.Chirper.BioLabel,
+            ChangePhoto = L.Chirper.ChangePhoto,
+            ProfileError = L.Chirper.ProfileError,
+            NameOrWorld = L.Chirper.NameOrWorld,
+            SearchByName = L.Chirper.SearchByName,
+            DeleteConfirmMessage = L.Chirper.DeleteConfirmMessage,
+            DeleteConfirm = L.Chirper.DeleteConfirm,
+            DeleteCancel = L.Chirper.DeleteCancel,
+            DeleteFailed = L.Chirper.DeleteFailed,
+            DeleteCommentConfirmMessage = L.Chirper.DeleteCommentConfirmMessage,
+            DeleteCommentFailed = L.Chirper.DeleteCommentFailed,
+        }, images, lodestone, avatarLightbox, configuration, gameData,
+            () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back);
     }
 
     public void OnOpened()
@@ -132,7 +152,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         router.Reset();
         avatarLightbox.Reset();
         draft = string.Empty;
-        searchDraft = string.Empty;
+        profile.SearchDraft = string.Empty;
         actions.Reset();
         commentDraft = string.Empty;
         store.ClearDiscover();
@@ -169,7 +189,7 @@ internal sealed partial class ChirperApp : IPhoneApp
                 DrawProfile(area, route.UserId!);
                 break;
             case ChirperScreen.EditProfile:
-                DrawEditProfile(area);
+                profile.DrawEditProfile(area, theme, navigation);
                 break;
             case ChirperScreen.Avatar:
                 DrawAvatarCompose(area);
@@ -181,7 +201,7 @@ internal sealed partial class ChirperApp : IPhoneApp
                 DrawThread(area, route.PostId!);
                 break;
             case ChirperScreen.UserList:
-                DrawUserList(area, route.UserId!, route.Kind);
+                profile.DrawUserList(area, theme, navigation, route.UserId!, route.Kind);
                 break;
             case ChirperScreen.Activity:
                 DrawActivity(area);
@@ -216,12 +236,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         {
             activeScope = (SocialFeedScope)selected;
             actions.Reset();
-            EnsureLoaded(activeScope);
+            profile.EnsureLoaded(activeScope);
         }
 
-        sinceForYou += ImGui.GetIO().DeltaTime;
-        sinceFollowing += ImGui.GetIO().DeltaTime;
-        TickRefresh(activeScope);
+        profile.Tick(ImGui.GetIO().DeltaTime);
+        profile.TickRefresh(activeScope);
         var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y + 6f * scale), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(listRect, "##chirperComposeFab", Accent, FontAwesomeIcon.Feather.ToIconString(),
@@ -608,7 +627,7 @@ internal sealed partial class ChirperApp : IPhoneApp
                     ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Chirper.DeleteConfirm),
                     interactive))
             {
-                AskDeletePost(post.Id);
+                profile.AskDeletePost(post.Id);
                 actions.Dismiss();
             }
 
@@ -620,7 +639,7 @@ internal sealed partial class ChirperApp : IPhoneApp
                 Palette.WithAlpha(theme.Danger, 0.16f), 0.95f,
                 ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Report.Action), interactive))
         {
-            OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
+            profile.OpenReport("post", post.Id, Loc.T(L.Report.PostTitle));
             actions.Dismiss();
         }
 
@@ -644,22 +663,9 @@ internal sealed partial class ChirperApp : IPhoneApp
                 Palette.WithAlpha(theme.Danger, 0.16f), 0.95f,
                 ChirperActionReveal.Stagger(actions.Progress, slot, count), Loc.T(L.Social.BlockAction), interactive))
         {
-            AskBlock(post);
+            profile.AskBlock(post.AuthorDisplayName, post.AuthorHandle, post.AuthorId);
             actions.Dismiss();
         }
-    }
-
-    private void AskBlock(PostDto post)
-    {
-        var name = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
-        Plugin.Confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Social.BlockConfirm, name),
-            ConfirmLabel = Loc.T(L.Social.BlockAction),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = true,
-            Confirm = () => store.Block(post.AuthorId, _ => { }),
-        });
     }
 
     private void DrawThread(Rect area, string postId)
@@ -774,7 +780,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             if (ui.IconButton(trashCenter, 12f * scale, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Chirper.MutedInk,
                     new Vector4(0f, 0f, 0f, 0f), 0.85f, Loc.T(L.Chirper.DeleteComment)))
             {
-                AskDeleteComment(post.Id, comment.Id);
+                profile.AskDeleteComment(post.Id, comment.Id);
             }
         }
 
@@ -924,61 +930,6 @@ internal sealed partial class ChirperApp : IPhoneApp
         commentDraft = string.Empty;
         store.OpenDetailById(postId);
         router.Push(ChirperRoute.Thread(postId));
-    }
-
-    private void EnsureLoaded(SocialFeedScope scope)
-    {
-        if (store.Feed(scope).Length == 0 && !store.IsLoading(scope))
-        {
-            store.RefreshFeed(scope);
-        }
-    }
-
-    private void TickRefresh(SocialFeedScope scope)
-    {
-        if (store.IsLoading(scope))
-        {
-            return;
-        }
-
-        if (scope == SocialFeedScope.ForYou && sinceForYou >= FeedRefreshSeconds)
-        {
-            sinceForYou = 0f;
-            store.RefreshFeed(scope);
-        }
-        else if (scope == SocialFeedScope.Following && sinceFollowing >= FeedRefreshSeconds)
-        {
-            sinceFollowing = 0f;
-            store.RefreshFeed(scope);
-        }
-    }
-
-    private static bool IsHandleValid(string handle)
-    {
-        var value = handle.Trim();
-        if (value.Length < 3 || value.Length > HandleMax)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < value.Length; index++)
-        {
-            var character = value[index];
-            var ok = character is (>= 'a' and <= 'z') or (>= '0' and <= '9') or '_';
-            if (!ok)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static string PostsLabel(int count)
-    {
-        var plural = Loc.Plural(L.Chirper.Posts, count);
-        var parts = plural.Split(' ', 2);
-        return parts.Length > 1 ? parts[1] : plural;
     }
 
     public void Dispose()
