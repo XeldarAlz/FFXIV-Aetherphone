@@ -372,7 +372,7 @@ internal sealed partial class MessageApp
     private void AskRemoveContact(ContactDto contact)
     {
         var userId = contact.UserId;
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Friends.ConfirmRemove, ContactBook.DisplayLabel(contact)),
             ConfirmLabel = Loc.T(L.Friends.Remove),

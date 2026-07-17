@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
@@ -32,6 +33,7 @@ internal sealed partial class ClockApp : IPhoneApp
     public int BadgeCount => 0;
 
     private readonly Configuration configuration;
+    private readonly ConfirmService confirm;
     private readonly AppSkin ui = new(AppPalettes.Clock);
     private readonly ViewRouter<ClockScreen> router;
     private readonly RouterDraw<ClockScreen> drawView;
@@ -41,9 +43,10 @@ internal sealed partial class ClockApp : IPhoneApp
     private INavigator navigation = null!;
     private int activeTab;
 
-    public ClockApp(Configuration configuration)
+    public ClockApp(Configuration configuration, ConfirmService confirm)
     {
         this.configuration = configuration;
+        this.confirm = confirm;
         router = new ViewRouter<ClockScreen>(ClockScreen.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();

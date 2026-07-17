@@ -63,6 +63,8 @@ internal sealed class SocialProfilePages
     private readonly AvatarLightbox avatarLightbox;
     private readonly Configuration configuration;
     private readonly GameData gameData;
+    private readonly ConfirmService confirm;
+    private readonly ReportService report;
     private readonly Action openEditProfile;
     private readonly Action openAvatarComposer;
     private readonly Action<string> openProfile;
@@ -81,8 +83,8 @@ internal sealed class SocialProfilePages
 
     public SocialProfilePages(SocialFeedStore store, AppSkin ui, SocialProfileStyle style, RemoteImageCache images,
         LodestoneService lodestone, AvatarLightbox avatarLightbox, Configuration configuration, GameData gameData,
-        Action openEditProfile, Action openAvatarComposer, Action<string> openProfile,
-        Action<string, UserListKind> openUserList, Action back)
+        ConfirmService confirm, ReportService report, Action openEditProfile, Action openAvatarComposer,
+        Action<string> openProfile, Action<string, UserListKind> openUserList, Action back)
     {
         this.store = store;
         this.ui = ui;
@@ -92,6 +94,8 @@ internal sealed class SocialProfilePages
         this.avatarLightbox = avatarLightbox;
         this.configuration = configuration;
         this.gameData = gameData;
+        this.confirm = confirm;
+        this.report = report;
         this.openEditProfile = openEditProfile;
         this.openAvatarComposer = openAvatarComposer;
         this.openProfile = openProfile;
@@ -606,7 +610,7 @@ internal sealed class SocialProfilePages
 
     public void OpenReport(string targetType, string targetId, string title)
     {
-        Plugin.Report.Open(new ReportPrompt
+        report.Open(new ReportPrompt
         {
             Title = title,
             Submit = (reason, done) => store.Report(targetType, targetId, reason, done),
@@ -616,7 +620,7 @@ internal sealed class SocialProfilePages
     public void AskBlock(string authorDisplayName, string authorHandle, string authorId)
     {
         var name = SocialIdentity.Name(authorDisplayName, authorHandle);
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Social.BlockConfirm, name),
             ConfirmLabel = Loc.T(L.Social.BlockAction),
@@ -628,7 +632,7 @@ internal sealed class SocialProfilePages
 
     public void AskDeletePost(string postId, Action? deleted = null)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(style.DeleteConfirmMessage),
             ConfirmLabel = Loc.T(style.DeleteConfirm),
@@ -649,7 +653,7 @@ internal sealed class SocialProfilePages
 
     public void AskDeleteComment(string postId, string commentId)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(style.DeleteCommentConfirmMessage),
             ConfirmLabel = Loc.T(style.DeleteConfirm),

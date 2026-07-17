@@ -226,7 +226,7 @@ internal sealed partial class ClockApp
 
     private void AskDeleteAlarm(Guid id)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Clock.DeleteAlarmConfirm),
             ConfirmLabel = Loc.T(L.Clock.Delete),

@@ -31,6 +31,7 @@ internal sealed class CalendarApp : IPhoneApp
 
     private readonly CalendarEvents events;
     private readonly Configuration configuration;
+    private readonly ConfirmService confirm;
     private readonly AppSkin ui = new(AppPalettes.Calendar(PhoneTheme.Default));
     private readonly ViewRouter<CalendarScreen> router;
     private readonly RouterDraw<CalendarScreen> drawView;
@@ -44,10 +45,11 @@ internal sealed class CalendarApp : IPhoneApp
     private int newEventHour;
     private int newEventMinute;
 
-    public CalendarApp(Configuration configuration, CalendarEvents events)
+    public CalendarApp(Configuration configuration, CalendarEvents events, ConfirmService confirm)
     {
         this.configuration = configuration;
         this.events = events;
+        this.confirm = confirm;
         selectedDate = DateTime.Today;
         router = new ViewRouter<CalendarScreen>(CalendarScreen.Month, Id);
         drawView = DrawView;
@@ -285,7 +287,7 @@ internal sealed class CalendarApp : IPhoneApp
 
     private void AskDeleteCustomEvent(Guid id)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Calendar.DeleteConfirmMessage),
             ConfirmLabel = Loc.T(L.Calendar.DeleteConfirm),

@@ -211,7 +211,7 @@ internal sealed partial class VelvetShell
 
     private void AskDisconnect(string userId)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Velvet.DisconnectConfirmMessage),
             ConfirmLabel = Loc.T(L.Velvet.Disconnect),

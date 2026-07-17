@@ -35,6 +35,7 @@ internal sealed partial class MarketApp : IPhoneApp
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
     private readonly Configuration configuration;
+    private readonly IAnalyticsService analytics;
     private readonly ViewRouter<MarketView?> router;
     private readonly RouterDraw<MarketView?> drawView;
     private readonly Action backToList;
@@ -64,7 +65,8 @@ internal sealed partial class MarketApp : IPhoneApp
     private readonly AppSkin ui = new(AppPalettes.Market);
 
     public MarketApp(MarketboardService market, MarketItemIndex index, MarketAlertService alerts,
-        MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration)
+        MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration,
+        IAnalyticsService analytics)
     {
         this.market = market;
         this.index = index;
@@ -73,6 +75,7 @@ internal sealed partial class MarketApp : IPhoneApp
         this.gameData = gameData;
         this.textures = textures;
         this.configuration = configuration;
+        this.analytics = analytics;
         router = new ViewRouter<MarketView?>(null, Id);
         drawView = DrawView;
         backToList = () => router.Pop();
@@ -176,7 +179,7 @@ internal sealed partial class MarketApp : IPhoneApp
         searchSettleSeconds += ImGui.GetIO().DeltaTime;
         if (searchSettleSeconds >= SearchReportDelaySeconds)
         {
-            Plugin.Analytics.Track(AnalyticsEvents.MarketSearch());
+            analytics.Track(AnalyticsEvents.MarketSearch());
             reportedSearch = query;
         }
     }

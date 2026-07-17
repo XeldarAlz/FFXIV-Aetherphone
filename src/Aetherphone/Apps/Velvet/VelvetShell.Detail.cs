@@ -392,7 +392,7 @@ internal sealed partial class VelvetShell
 
     private void AskDeletePost(string postId)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Velvet.DeleteConfirmMessage),
             ConfirmLabel = Loc.T(L.Velvet.DeleteConfirm),
@@ -413,7 +413,7 @@ internal sealed partial class VelvetShell
 
     private void AskDeleteComment(string postId, string commentId)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Velvet.DeleteCommentConfirmMessage),
             ConfirmLabel = Loc.T(L.Velvet.DeleteConfirm),

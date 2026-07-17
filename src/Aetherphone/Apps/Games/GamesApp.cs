@@ -56,6 +56,7 @@ internal sealed class GamesApp : IPhoneApp
     private const float GameRowHeight = 64f;
     private const int FeaturedStep = 5;
     private readonly GameStatsStore stats;
+    private readonly IAnalyticsService analytics;
     private readonly IMiniGame[] games;
     private readonly int[] tileOrder;
     private readonly ViewRouter<GameRoute> router;
@@ -77,9 +78,10 @@ internal sealed class GamesApp : IPhoneApp
     public string Glyph => ">";
     public int BadgeCount => 0;
 
-    public GamesApp(GameStatsStore stats)
+    public GamesApp(GameStatsStore stats, IAnalyticsService analytics)
     {
         this.stats = stats;
+        this.analytics = analytics;
         games = new IMiniGame[]
         {
             new SweeperApp(), new PairsApp(), new GemSwapApp(), new TetrisApp(), new Twenty48App(),
@@ -517,7 +519,7 @@ internal sealed class GamesApp : IPhoneApp
         gameStartedAt = DateTime.UtcNow;
         activeGameId = game.Id;
         game.Open();
-        Plugin.Analytics.Track(AnalyticsEvents.GameStarted(game.Id));
+        analytics.Track(AnalyticsEvents.GameStarted(game.Id));
         router.Push(GameRoute.Playing);
     }
 
@@ -536,7 +538,7 @@ internal sealed class GamesApp : IPhoneApp
             var finalStats = stats.Get(activeGameId);
             var improved = finalStats.BestScore > preGameBestScore
                 || (finalStats.BestTimeSeconds > 0 && (preGameBestTime == 0 || finalStats.BestTimeSeconds < preGameBestTime));
-            Plugin.Analytics.Track(AnalyticsEvents.GameEnded(activeGameId, finalStats.BestScore, durationMs, improved));
+            analytics.Track(AnalyticsEvents.GameEnded(activeGameId, finalStats.BestScore, durationMs, improved));
             activeGameId = null;
         }
 

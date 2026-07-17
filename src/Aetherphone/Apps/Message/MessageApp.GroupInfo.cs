@@ -266,7 +266,7 @@ internal sealed partial class MessageApp
     private void AskLeave(string conversationId)
     {
         var myId = store.MyUserId;
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.DirectMessages.ConfirmLeave),
             ConfirmLabel = Loc.T(L.DirectMessages.LeaveChat),

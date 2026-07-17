@@ -62,8 +62,9 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public VelvetStore(AethernetSession session, VelvetClient client, AccountClient account, SafetyClient safety,
         MediaClient media, NotificationService notifications, Configuration configuration, KeyVault vault,
-        ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals)
-        : base("Velvet", session, safety, media, notifications, vault, keys, visibility)
+        ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals,
+        IAnalyticsService analytics)
+        : base("Velvet", session, safety, media, notifications, vault, keys, visibility, analytics)
     {
         this.client = client;
         this.account = account;
@@ -749,7 +750,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 return false;
             }
 
-            Plugin.Analytics.Track(AnalyticsEvents.PostCreated("velvet"));
+            analytics.Track(AnalyticsEvents.PostCreated("velvet"));
             return true;
         }, onComplete, () => posting = false);
     }
@@ -856,7 +857,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 detailComments = CopyOnWrite.Append(detailComments, created);
             }
 
-            Plugin.Analytics.Track(AnalyticsEvents.Comment("velvet"));
+            analytics.Track(AnalyticsEvents.Comment("velvet"));
             return true;
         }, onComplete, () => commenting = false);
     }
@@ -892,7 +893,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         AcceptPostEverywhere(ApplyReaction(post, target));
         if (target >= 0)
         {
-            Plugin.Analytics.Track(AnalyticsEvents.Reaction("velvet"));
+            analytics.Track(AnalyticsEvents.Reaction("velvet"));
         }
 
         work.Run("reaction", async token =>

@@ -22,6 +22,7 @@ internal sealed class StoryPresenter : IDisposable
     private readonly StoryRingPainter painter;
     private readonly AppPalette palette;
     private readonly StoryConfirmLabels labels;
+    private readonly ConfirmService confirm;
     private readonly Action onCompose;
     private readonly Func<StoryDto, StoryViewers> viewersSource;
     private StoryRingDto? pendingRing;
@@ -29,7 +30,7 @@ internal sealed class StoryPresenter : IDisposable
 
     public StoryPresenter(AethernetSession session, GramClient client, MediaClient media, RemoteImageCache images,
         LodestoneService lodestone, StoryRingPainter painter, AppPalette palette, StoryConfirmLabels labels,
-        string logTag, Action onCompose)
+        ConfirmService confirm, string logTag, Action onCompose)
     {
         stories = new StoryStore(session, client, media, logTag);
         tray = new StoryTrayRow(images, lodestone);
@@ -37,6 +38,7 @@ internal sealed class StoryPresenter : IDisposable
         this.painter = painter;
         this.palette = palette;
         this.labels = labels;
+        this.confirm = confirm;
         this.onCompose = onCompose;
         viewersSource = ViewersFor;
     }
@@ -56,7 +58,7 @@ internal sealed class StoryPresenter : IDisposable
         tray.Draw(theme, palette, stories.Rings, stories.HasOwnRing, painter, onCompose, OpenRing);
 
     public void DrawViewer(Rect screen, PhoneTheme theme) =>
-        viewer.Draw(screen, theme, Plugin.Confirm.Active is not null);
+        viewer.Draw(screen, theme, confirm.Active is not null);
 
     public void OpenRing(StoryRingDto ring)
     {
@@ -132,7 +134,7 @@ internal sealed class StoryPresenter : IDisposable
 
     private void AskDelete(StoryDto story)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Story.DeleteMessage),
             ConfirmLabel = Loc.T(labels.Confirm),

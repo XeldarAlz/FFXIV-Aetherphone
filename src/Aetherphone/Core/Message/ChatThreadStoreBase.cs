@@ -30,6 +30,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected readonly ConversationKeyStore keys;
     protected readonly StoreWork work;
     protected readonly MessageCipher cipher;
+    protected readonly IAnalyticsService analytics;
     private readonly NotificationService notifications;
     private readonly PollCadence inboxCadence;
     private readonly object messagesLock = new();
@@ -66,7 +67,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
 
     protected ChatThreadStoreBase(string logTag, AethernetSession session, SafetyClient safety, MediaClient media,
-        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility)
+        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility,
+        IAnalyticsService analytics)
     {
         this.session = session;
         this.safety = safety;
@@ -74,6 +76,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         this.notifications = notifications;
         this.vault = vault;
         this.keys = keys;
+        this.analytics = analytics;
         work = new StoreWork(logTag);
         cipher = new MessageCipher(vault, keys);
         messageOrder = CompareByCreatedAt;
@@ -224,7 +227,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }
     }
 
-    protected void TrackMessageSent() => Plugin.Analytics.Track(AnalyticsEvents.DmSent(AnalyticsSource));
+    protected void TrackMessageSent() => analytics.Track(AnalyticsEvents.DmSent(AnalyticsSource));
 
     protected int ComputeUnread()
     {

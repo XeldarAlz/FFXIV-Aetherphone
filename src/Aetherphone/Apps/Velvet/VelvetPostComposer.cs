@@ -6,6 +6,7 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Social;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -29,14 +30,14 @@ internal sealed class VelvetPostComposer
     private string status = string.Empty;
 
     public VelvetPostComposer(VelvetStore store, StoryPresenter stories, PhotoLibrary library,
-        RemoteImageCache images, LodestoneService lodestone)
+        RemoteImageCache images, LodestoneService lodestone, WallpaperImageCache wallpaperImages)
     {
         this.store = store;
         this.stories = stories;
         this.images = images;
         this.lodestone = lodestone;
         captionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
-        session = new PhotoComposeSession(library);
+        session = new PhotoComposeSession(library, wallpaperImages);
     }
 
     private static PhotoComposeStyle Style => new(AppPalettes.Velvet.Accent, AppPalettes.Velvet.MutedInk,

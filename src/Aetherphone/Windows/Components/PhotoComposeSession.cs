@@ -35,6 +35,7 @@ internal sealed class PhotoComposeSession
     private const float CropSmoothTime = 0.10f;
 
     private readonly PhotoLibrary library;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly List<string> selected = new();
     private readonly List<WallpaperCrop> crops = new();
     private string[] pickerPaths = Array.Empty<string>();
@@ -48,9 +49,10 @@ internal sealed class PhotoComposeSession
     private bool cropDragging;
     private Vector2 cropLastDrag;
 
-    public PhotoComposeSession(PhotoLibrary library)
+    public PhotoComposeSession(PhotoLibrary library, WallpaperImageCache wallpaperImages)
     {
         this.library = library;
+        this.wallpaperImages = wallpaperImages;
     }
 
     private static WallpaperCrop DefaultCrop => new(1f, 0.5f, 0.5f);
@@ -264,11 +266,11 @@ internal sealed class PhotoComposeSession
             TextStyles.FootnoteEmphasized);
     }
 
-    public static void DrawLocalThumbnail(string path, Vector2 min, Vector2 max, float scale, Vector4 placeholderFill)
+    public void DrawLocalThumbnail(string path, Vector2 min, Vector2 max, float scale, Vector4 placeholderFill)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
-        var texture = Plugin.WallpaperImages.Get(path);
+        var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(placeholderFill));
@@ -294,7 +296,7 @@ internal sealed class PhotoComposeSession
             new Vector2(area.Max.X - 16f * scale, area.Max.Y - 96f * scale));
         var preview = ImageFit.CenteredRect(stageRect, aspect);
         var rounding = 18f * scale;
-        var texture = Plugin.WallpaperImages.Get(CurrentPath);
+        var texture = wallpaperImages.Get(CurrentPath);
         if (texture is null)
         {
             Squircle.Fill(drawList, preview.Min, preview.Max, rounding, ImGui.GetColorU32(style.PlaceholderFill));
@@ -404,7 +406,7 @@ internal sealed class PhotoComposeSession
     public bool TryGetPreviewUv(float aspect, out IDalamudTextureWrap texture, out Vector2 uv0, out Vector2 uv1)
     {
         var index = ClampedPreviewIndex;
-        var loaded = Plugin.WallpaperImages.Get(index < selected.Count ? selected[index] : string.Empty);
+        var loaded = wallpaperImages.Get(index < selected.Count ? selected[index] : string.Empty);
         if (loaded is null)
         {
             texture = null!;

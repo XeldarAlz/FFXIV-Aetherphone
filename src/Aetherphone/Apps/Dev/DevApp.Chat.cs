@@ -308,7 +308,7 @@ internal sealed partial class DevApp
             return;
         }
 
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = "Delete this message for everyone?",
             ConfirmLabel = "Delete",
@@ -550,11 +550,11 @@ internal sealed partial class DevApp
         NativeFileDialog.PickImage("Send Picture", path => Interlocked.Exchange(ref chatPendingPickedPath, path));
     }
 
-    private static void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)
+    private void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
-        var texture = Plugin.WallpaperImages.Get(path);
+        var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));

@@ -45,7 +45,7 @@ internal sealed partial class VelvetShell
 
     private void OpenReport(string targetType, string targetId, string title)
     {
-        Plugin.Report.Open(new ReportPrompt
+        report.Open(new ReportPrompt
         {
             Title = title,
             Submit = (reason, done) => store.Report(targetType, targetId, reason, done),

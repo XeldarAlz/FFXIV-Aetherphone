@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -26,6 +27,7 @@ internal sealed partial class KupoAiApp : IPhoneApp, IChatTranscriptInteractions
     public int BadgeCount => 0;
 
     private readonly KupoAiStore store;
+    private readonly ConfirmService confirm;
     private readonly AppSkin ui = new(AppPalettes.KupoAi);
     private readonly ViewRouter<KupoAiView> router;
     private readonly RouterDraw<KupoAiView> drawView;
@@ -43,9 +45,10 @@ internal sealed partial class KupoAiApp : IPhoneApp, IChatTranscriptInteractions
     private string? menuMessageId;
     private bool composerFocus;
 
-    public KupoAiApp(KupoAiStore store)
+    public KupoAiApp(KupoAiStore store, ConfirmService confirm)
     {
         this.store = store;
+        this.confirm = confirm;
         router = new ViewRouter<KupoAiView>(KupoAiView.List, Id);
         drawView = DrawView;
         back = HandleBack;

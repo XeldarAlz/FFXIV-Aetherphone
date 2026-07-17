@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
@@ -11,8 +12,10 @@ using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Report;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -51,6 +54,9 @@ internal sealed partial class MessageApp : IPhoneApp
     private readonly PhotoLibrary library;
     private readonly HttpService http;
     private readonly Configuration configuration;
+    private readonly ConfirmService confirm;
+    private readonly ReportService report;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly AppSkin ui = new(AppPalettes.Message);
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<MessageRoute> router;
@@ -66,7 +72,8 @@ internal sealed partial class MessageApp : IPhoneApp
 
     public MessageApp(DirectMessagesStore store, ContactBook contacts, CallHub calls, AethernetSession session,
         RemoteImageCache images, LodestoneService lodestone, DmLauncher launcher, PhotoLibrary library,
-        HttpService http, Configuration configuration)
+        HttpService http, Configuration configuration, ConfirmService confirm, ReportService report,
+        WallpaperImageCache wallpaperImages)
     {
         this.store = store;
         this.contacts = contacts;
@@ -78,6 +85,9 @@ internal sealed partial class MessageApp : IPhoneApp
         this.library = library;
         this.http = http;
         this.configuration = configuration;
+        this.confirm = confirm;
+        this.report = report;
+        this.wallpaperImages = wallpaperImages;
         router = new ViewRouter<MessageRoute>(MessageRoute.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();

@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -110,21 +111,22 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     public AethergramApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
-        Configuration configuration, SocialNotificationService social)
+        Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages,
+        IAnalyticsService analytics, ConfirmService confirm, ReportService report)
     {
-        store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media);
+        store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media, analytics);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         personPicker = new PersonPicker(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, AethergramArt.StoryRing,
             AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
-                L.Aethergram.Saving), "Aethergram stories", StartStoryCompose);
+                L.Aethergram.Saving), confirm, "Aethergram stories", StartStoryCompose);
         this.launcher = launcher;
         this.gameData = gameData;
         this.configuration = configuration;
         this.lodestone = lodestone;
         this.library = library;
-        composeSession = new PhotoComposeSession(library);
+        composeSession = new PhotoComposeSession(library, wallpaperImages);
         this.images = images;
         this.social = social;
         router = new ViewRouter<AethergramRoute>(AethergramRoute.Home, Id);
@@ -160,7 +162,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             DeleteFailed = L.Aethergram.DeleteFailed,
             DeleteCommentConfirmMessage = L.Aethergram.DeleteCommentConfirmMessage,
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
-        }, images, lodestone, avatarLightbox, configuration, gameData,
+        }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
             () => router.Push(AethergramRoute.EditProfile), () => StartCompose(true), OpenProfile, OpenUserList, back);
     }
 

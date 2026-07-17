@@ -12,8 +12,8 @@ internal sealed class ChirperStore : SocialFeedStore
     private volatile bool avatarBusy;
 
     public ChirperStore(AethernetSession session, AccountClient account, SocialClient client, SafetyClient safety,
-        MediaClient media)
-        : base(session, account, client, safety, media, "Chirper", "chirper")
+        MediaClient media, IAnalyticsService analytics)
+        : base(session, account, client, safety, media, analytics, "Chirper", "chirper")
     {
     }
 
@@ -53,7 +53,7 @@ internal sealed class ChirperStore : SocialFeedStore
         ReplacePost(ApplyReaction(post, target));
         if (target >= 0)
         {
-            Plugin.Analytics.Track(AnalyticsEvents.Reaction("chirper"));
+            analytics.Track(AnalyticsEvents.Reaction("chirper"));
         }
 
         work.Run("reaction", async token =>

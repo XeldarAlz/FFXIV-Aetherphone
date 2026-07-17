@@ -205,7 +205,7 @@ internal sealed partial class LinkpearlApp
 
     private void AskDeleteHistory(Conversation conversation)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Title = conversation.Contact,
             Message = Loc.T(L.Messages.DeleteHistoryConfirm),

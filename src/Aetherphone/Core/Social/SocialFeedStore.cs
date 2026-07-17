@@ -23,6 +23,7 @@ internal abstract class SocialFeedStore : IDisposable
     protected readonly SafetyClient safety;
     protected readonly MediaClient media;
     protected readonly StoreWork work;
+    protected readonly IAnalyticsService analytics;
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
     private readonly string analyticsChannel;
     private volatile UserDto? me;
@@ -56,6 +57,7 @@ internal abstract class SocialFeedStore : IDisposable
         SocialClient client,
         SafetyClient safety,
         MediaClient media,
+        IAnalyticsService analytics,
         string logTag,
         string analyticsChannel)
     {
@@ -64,6 +66,7 @@ internal abstract class SocialFeedStore : IDisposable
         this.client = client;
         this.safety = safety;
         this.media = media;
+        this.analytics = analytics;
         this.analyticsChannel = analyticsChannel;
         work = new StoreWork(logTag);
     }
@@ -273,7 +276,7 @@ internal abstract class SocialFeedStore : IDisposable
             }
 
             BumpCommentCount(postId, 1);
-            Plugin.Analytics.Track(AnalyticsEvents.Comment(analyticsChannel));
+            analytics.Track(AnalyticsEvents.Comment(analyticsChannel));
             return true;
         }, onComplete, () => commenting = false);
     }
@@ -350,7 +353,7 @@ internal abstract class SocialFeedStore : IDisposable
         ApplyFollowEverywhere(userId, follow);
         if (follow)
         {
-            Plugin.Analytics.Track(AnalyticsEvents.Follow(analyticsChannel));
+            analytics.Track(AnalyticsEvents.Follow(analyticsChannel));
         }
 
         work.Run("follow", async token =>
@@ -570,7 +573,7 @@ internal abstract class SocialFeedStore : IDisposable
             profilePosts = CopyOnWrite.Prepend(profilePosts, created);
         }
 
-        Plugin.Analytics.Track(AnalyticsEvents.PostCreated(analyticsChannel));
+        analytics.Track(AnalyticsEvents.PostCreated(analyticsChannel));
     }
 
     protected void ReplacePost(PostDto updated)

@@ -123,7 +123,7 @@ internal sealed partial class KupoAiApp
 
     private void ConfirmDelete(KupoAiConversation conversation)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Title = Loc.T(L.KupoAi.Delete),
             Message = Loc.T(L.KupoAi.DeleteConfirm),

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
@@ -41,6 +42,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
     private readonly NotificationService notifications;
     private readonly GameData gameData;
     private readonly LookupService lookup;
+    private readonly ConfirmService confirm;
     private readonly ViewRouter<LinkpearlRoute> router;
     private readonly RouterDraw<LinkpearlRoute> drawView;
     private readonly Action backToList;
@@ -50,7 +52,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
 
     public LinkpearlApp(MessageStore store, LinkshellStore linkshells, LinkshellMuteStore mutes, ChatBridge bridge,
         LinkshellBridge linkshellBridge, LinkpearlLauncher launcher, LodestoneService lodestone,
-        NotificationService notifications, GameData gameData, LookupService lookup)
+        NotificationService notifications, GameData gameData, LookupService lookup, ConfirmService confirm)
     {
         this.store = store;
         this.linkshells = linkshells;
@@ -62,6 +64,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
         this.notifications = notifications;
         this.gameData = gameData;
         this.lookup = lookup;
+        this.confirm = confirm;
         router = new ViewRouter<LinkpearlRoute>(LinkpearlRoute.Root, Id);
         drawView = DrawView;
         backToList = () => router.Pop();

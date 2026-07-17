@@ -3,11 +3,13 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -39,6 +41,8 @@ internal sealed partial class DevApp : IPhoneApp
     private readonly PhotoLibrary library;
     private readonly HttpService http;
     private readonly RemoteImageCache images;
+    private readonly ConfirmService confirm;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly AppSkin ui = new(AppPalettes.Dev);
     private readonly ViewRouter<DevRoute> router;
     private readonly RouterDraw<DevRoute> drawView;
@@ -78,7 +82,8 @@ internal sealed partial class DevApp : IPhoneApp
     private readonly int[] segmentLabelCounts = { -1, -1, -1 };
 
     public DevApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
-        Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images)
+        Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
+        ConfirmService confirm, WallpaperImageCache wallpaperImages)
     {
         this.session = session;
         account = net.Account;
@@ -87,6 +92,8 @@ internal sealed partial class DevApp : IPhoneApp
         this.http = http;
         store = new DevStore(session, net.Dev, net.Account, net.Media, configuration);
         this.images = images;
+        this.confirm = confirm;
+        this.wallpaperImages = wallpaperImages;
         router = new ViewRouter<DevRoute>(DevRoute.Root, Id);
         drawView = DrawView;
         back = () => router.Pop();

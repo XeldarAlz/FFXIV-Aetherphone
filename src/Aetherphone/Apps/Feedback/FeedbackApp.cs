@@ -9,6 +9,7 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -35,6 +36,9 @@ internal sealed class FeedbackApp : IPhoneApp
 
     private readonly FeedbackStore store;
     private readonly PhotoLibrary library;
+    private readonly Configuration configuration;
+    private readonly ConfirmService confirm;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly AppSkin ui = new(AppPalettes.Feedback);
     private readonly List<string> attachments = new();
 
@@ -47,10 +51,14 @@ internal sealed class FeedbackApp : IPhoneApp
     private string[] pickerPaths = Array.Empty<string>();
     private string? pendingPickedPath;
 
-    public FeedbackApp(AethernetSession session, FeedbackClient client, MediaClient media, PhotoLibrary library)
+    public FeedbackApp(AethernetSession session, FeedbackClient client, MediaClient media, PhotoLibrary library,
+        Configuration configuration, ConfirmService confirm, WallpaperImageCache wallpaperImages)
     {
         store = new FeedbackStore(session, client, media);
         this.library = library;
+        this.configuration = configuration;
+        this.confirm = confirm;
+        this.wallpaperImages = wallpaperImages;
     }
 
     public void OnOpened()
@@ -98,8 +106,8 @@ internal sealed class FeedbackApp : IPhoneApp
             draft = string.Empty;
             attachments.Clear();
             sent = true;
-            Plugin.Cfg.LastFeedbackSentUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            Plugin.Cfg.Save();
+            configuration.LastFeedbackSentUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            configuration.Save();
         }
 
         var scale = ImGuiHelpers.GlobalScale;
@@ -236,7 +244,7 @@ internal sealed class FeedbackApp : IPhoneApp
     private bool DrawAttachmentThumb(ImDrawListPtr drawList, string path, Vector2 min, Vector2 max, float rounding,
         float scale)
     {
-        var texture = Plugin.WallpaperImages.Get(path);
+        var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
@@ -334,7 +342,7 @@ internal sealed class FeedbackApp : IPhoneApp
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
-        var texture = Plugin.WallpaperImages.Get(path);
+        var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(theme.SurfaceMuted));
@@ -454,7 +462,7 @@ internal sealed class FeedbackApp : IPhoneApp
 
         var pending = draft;
         var pendingImages = attachments.ToArray();
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Feedback.ConfirmMessage),
             ConfirmLabel = Loc.T(L.Feedback.Send),
@@ -475,10 +483,10 @@ internal sealed class FeedbackApp : IPhoneApp
     }
 
 
-    private static int CooldownRemaining()
+    private int CooldownRemaining()
     {
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        var remaining = CooldownSeconds - (now - Plugin.Cfg.LastFeedbackSentUnix);
+        var remaining = CooldownSeconds - (now - configuration.LastFeedbackSentUnix);
         return remaining > 0 ? (int)remaining : 0;
     }
 

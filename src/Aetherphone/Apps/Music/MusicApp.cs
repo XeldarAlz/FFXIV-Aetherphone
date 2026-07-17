@@ -66,6 +66,7 @@ internal sealed partial class MusicApp : IPhoneApp
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly FeatureFlags flags;
+    private readonly IAnalyticsService analytics;
     private readonly ArtworkCache artwork;
     private readonly ViewRouter<View> router;
     private readonly RouterDraw<View> drawView;
@@ -115,7 +116,8 @@ internal sealed partial class MusicApp : IPhoneApp
     private float clock;
 
     public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history,
-        MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags)
+        MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags,
+        IAnalyticsService analytics)
     {
         this.radio = radio;
         this.songSearch = songSearch;
@@ -124,6 +126,7 @@ internal sealed partial class MusicApp : IPhoneApp
         this.media = media;
         this.http = http;
         this.flags = flags;
+        this.analytics = analytics;
         artwork = new ArtworkCache(textures);
         router = new ViewRouter<View>(View.Home, Id);
         drawView = DrawView;
@@ -317,7 +320,7 @@ internal sealed partial class MusicApp : IPhoneApp
         }
 
         nowPlayingOpen = true;
-        Plugin.Analytics.Track(AnalyticsEvents.ScreenView(Id, "NowPlaying"));
+        analytics.Track(AnalyticsEvents.ScreenView(Id, "NowPlaying"));
     }
 
     private void CloseNowPlaying() => nowPlayingOpen = false;

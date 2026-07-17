@@ -16,8 +16,8 @@ internal sealed class AethergramStore : SocialFeedStore
     private readonly GramClient grams;
 
     public AethergramStore(AethernetSession session, AccountClient account, SocialClient client, GramClient grams,
-        SafetyClient safety, MediaClient media)
-        : base(session, account, client, safety, media, "Aethergram", "aethergram")
+        SafetyClient safety, MediaClient media, IAnalyticsService analytics)
+        : base(session, account, client, safety, media, analytics, "Aethergram", "aethergram")
     {
         this.grams = grams;
     }
@@ -92,7 +92,7 @@ internal sealed class AethergramStore : SocialFeedStore
         ReplacePost(ApplyLike(post, liked));
         if (liked)
         {
-            Plugin.Analytics.Track(AnalyticsEvents.Reaction("aethergram"));
+            analytics.Track(AnalyticsEvents.Reaction("aethergram"));
         }
 
         work.Run("like", async token =>

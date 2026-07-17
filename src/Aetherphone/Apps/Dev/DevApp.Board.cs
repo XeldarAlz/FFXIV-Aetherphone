@@ -283,7 +283,7 @@ internal sealed partial class DevApp
 
     private void AskDeleteCard(string cardId)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = "Delete this card for everyone?",
             ConfirmLabel = "Delete",

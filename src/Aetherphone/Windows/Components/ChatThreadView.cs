@@ -15,6 +15,7 @@ using Aetherphone.Core.Platform;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -37,6 +38,9 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     protected readonly HttpService http;
     protected readonly PhotoLibrary library;
     protected readonly Configuration configuration;
+    private readonly ConfirmService confirm;
+    private readonly ReportService report;
+    private readonly WallpaperImageCache wallpaperImages;
     protected readonly ChatTranscript transcript = new();
     protected readonly ChatMenuController menuController = new();
     protected readonly ChatComposer composer = new();
@@ -71,6 +75,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     protected ChatThreadView(ChatThreadStoreBase<TMessage, TThread> store, AppSkin ui, RemoteImageCache images,
         LodestoneService lodestone, HttpService http, PhotoLibrary library, Configuration configuration,
+        ConfirmService confirm, ReportService report, WallpaperImageCache wallpaperImages,
         float threadPollSeconds, float typingSendSeconds)
     {
         this.store = store;
@@ -80,6 +85,9 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         this.http = http;
         this.library = library;
         this.configuration = configuration;
+        this.confirm = confirm;
+        this.report = report;
+        this.wallpaperImages = wallpaperImages;
         this.threadPollSeconds = threadPollSeconds;
         this.typingSendSeconds = typingSendSeconds;
         sinceTypingSend = typingSendSeconds;
@@ -369,7 +377,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     protected void AskDeleteMessage(string messageId)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Message.DeleteConfirm),
             ConfirmLabel = Loc.T(L.Message.DeleteAction),
@@ -381,7 +389,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     protected void OpenReportMessage(string messageId)
     {
-        Plugin.Report.Open(new ReportPrompt
+        report.Open(new ReportPrompt
         {
             Title = Loc.T(L.Encryption.ReportMessageAction),
             Disclosure = Loc.T(L.Encryption.ReportDisclosure),
@@ -679,11 +687,11 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         PopScreen();
     }
 
-    private static void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)
+    private void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
-        var texture = Plugin.WallpaperImages.Get(path);
+        var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
             Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));

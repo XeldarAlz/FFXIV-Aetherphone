@@ -35,6 +35,7 @@ internal sealed class NotesApp : IPhoneApp
     public int BadgeCount => 0;
 
     private readonly Configuration configuration;
+    private readonly ConfirmService confirm;
     private readonly AppSkin ui = new(AppPalettes.Notes(PhoneTheme.Default));
     private readonly ViewRouter<NotesScreen> router;
     private readonly RouterDraw<NotesScreen> drawView;
@@ -55,9 +56,10 @@ internal sealed class NotesApp : IPhoneApp
     private int reminderHour;
     private int reminderMinute;
 
-    public NotesApp(Configuration configuration)
+    public NotesApp(Configuration configuration, ConfirmService confirm)
     {
         this.configuration = configuration;
+        this.confirm = confirm;
         router = new ViewRouter<NotesScreen>(NotesScreen.List, Id);
         drawView = DrawView;
         back = CloseEditor;
@@ -555,7 +557,7 @@ internal sealed class NotesApp : IPhoneApp
 
     private void AskDeleteNote(PhoneNote note)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Notes.DeleteNoteConfirm),
             ConfirmLabel = Loc.T(L.Notes.Delete),
@@ -575,7 +577,7 @@ internal sealed class NotesApp : IPhoneApp
 
     private void AskDeleteReminder(Guid id)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Notes.DeleteReminderConfirm),
             ConfirmLabel = Loc.T(L.Notes.Delete),

@@ -30,6 +30,7 @@ internal sealed partial class PhotosApp : IPhoneApp
     public int BadgeCount => 0;
 
     private readonly PhotoLibrary library;
+    private readonly ConfirmService confirm;
     private readonly AppSkin ui = new(AppPalettes.Photos);
     private readonly TextureLedger thumbnails = new(ThumbnailBudgetBytes);
     private readonly TextureLedger fullImages = new(FullImageBudgetBytes);
@@ -52,9 +53,10 @@ internal sealed partial class PhotosApp : IPhoneApp
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public PhotosApp(PhotoLibrary library)
+    public PhotosApp(PhotoLibrary library, ConfirmService confirm)
     {
         this.library = library;
+        this.confirm = confirm;
         router = new ViewRouter<PhotoView>(PhotoView.Grid(), Id);
         drawView = DrawView;
         back = () => router.Pop();
@@ -189,7 +191,7 @@ internal sealed partial class PhotosApp : IPhoneApp
 
     private void AskDelete(string path)
     {
-        Plugin.Confirm.Ask(new ConfirmRequest
+        confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Photos.DeleteConfirmMessage),
             ConfirmLabel = Loc.T(L.Photos.DeleteConfirm),
