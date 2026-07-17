@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
@@ -12,19 +13,23 @@ internal sealed class AethergramStore : SocialFeedStore
     private const int LoveKind = 1;
     private const int GramSize = 1080;
 
-    public AethergramStore(AethernetSession session, AethernetClient client)
-        : base(session, client, "Aethergram", "aethergram")
+    private readonly GramClient grams;
+
+    public AethergramStore(AethernetSession session, AccountClient account, SocialClient client, GramClient grams,
+        SafetyClient safety, MediaClient media)
+        : base(session, account, client, safety, media, "Aethergram", "aethergram")
     {
+        this.grams = grams;
     }
 
     protected override Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, CancellationToken token) =>
-        client.GramFeedAsync(feedKey, cursor, token);
+        grams.FeedAsync(feedKey, cursor, token);
 
     protected override Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token) =>
-        client.UserGramsAsync(userId, token);
+        grams.UserGramsAsync(userId, token);
 
     protected override Task<FeedPage?> FetchTaggedPostsAsync(string userId, CancellationToken token) =>
-        client.UserTaggedGramsAsync(userId, token);
+        grams.UserTaggedAsync(userId, token);
 
     public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, string caption, PhotoTagInput[]? photoTags,
         Action<bool> onComplete)
@@ -41,13 +46,13 @@ internal sealed class AethergramStore : SocialFeedStore
             for (var index = 0; index < sourcePaths.Length; index++)
             {
                 var baked = ImageProcessor.BakeSquareJpeg(sourcePaths[index], crops[index], GramSize);
-                var upload = await client.UploadUrlAsync("image/jpeg", "gram", token).ConfigureAwait(false);
+                var upload = await media.UploadUrlAsync("image/jpeg", "gram", token).ConfigureAwait(false);
                 if (upload is null)
                 {
                     return false;
                 }
 
-                var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+                var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                     .ConfigureAwait(false);
                 if (!uploaded)
                 {
@@ -57,7 +62,7 @@ internal sealed class AethergramStore : SocialFeedStore
                 keys[index] = upload.Key;
             }
 
-            var created = await client.CreateGramAsync(caption.Trim(), keys, GramSize, GramSize, photoTags, token)
+            var created = await grams.CreateAsync(caption.Trim(), keys, GramSize, GramSize, photoTags, token)
                 .ConfigureAwait(false);
             if (created is null)
             {

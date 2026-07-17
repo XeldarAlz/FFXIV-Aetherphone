@@ -57,21 +57,21 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Download Dalamud dev build
+      - name: Download Dalamud
         shell: pwsh
-        # Track staging while API 15 / Patch 7.50 is in beta; the release
-        # channel is still API 14 and won't satisfy Dalamud.NET.Sdk 15.x.
-        # Revert to /latest.zip once Dalamud 15 GAs.
         run: |
-          $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/stg/latest.zip"
+          $dalamudUrl = "https://goatcorp.github.io/dalamud-distrib/latest.zip"
           $dalamudDir = "$env:AppData\XIVLauncher\addon\Hooks\dev"
           New-Item -ItemType Directory -Force -Path $dalamudDir | Out-Null
           Invoke-WebRequest -Uri $dalamudUrl -OutFile dalamud.zip
           Expand-Archive -Path dalamud.zip -DestinationPath $dalamudDir -Force
           Remove-Item dalamud.zip
 
+      - name: Restore (locked)
+        run: dotnet restore Aetherphone.sln --locked-mode
+
       - name: Build (Release)
-        run: dotnet build Aetherphone.sln --configuration Release
+        run: dotnet build Aetherphone.sln --configuration Release --no-restore
 
       - name: Stage latest.zip
         shell: pwsh
@@ -81,7 +81,7 @@ jobs:
           Copy-Item $src 'latest.zip' -Force
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           tag_name: ${{ steps.tag.outputs.target }}
           name: ${{ steps.tag.outputs.target }}

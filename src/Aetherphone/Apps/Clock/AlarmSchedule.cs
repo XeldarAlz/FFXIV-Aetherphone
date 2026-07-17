@@ -1,3 +1,4 @@
+using Aetherphone.Core.Clock;
 using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Clock;

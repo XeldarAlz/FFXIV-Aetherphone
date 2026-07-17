@@ -2,7 +2,7 @@ using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
@@ -17,17 +17,17 @@ internal sealed class NotificationsApp : IPhoneApp
     public string Glyph => "N";
     public int BadgeCount => notifications.UnreadCount;
     private readonly NotificationService notifications;
-    private readonly MessageLauncher messageLauncher;
+    private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
     private readonly SocialLauncher socialLauncher;
     private NotificationCenter? center;
 
-    public NotificationsApp(NotificationService notifications, MessageLauncher messageLauncher,
+    public NotificationsApp(NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
         VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
     {
         this.notifications = notifications;
-        this.messageLauncher = messageLauncher;
+        this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
         this.socialLauncher = socialLauncher;
@@ -45,7 +45,7 @@ internal sealed class NotificationsApp : IPhoneApp
     {
         AppHeader.Draw(context, DisplayName);
         center ??= new NotificationCenter(notifications,
-            new NotificationRouter(context.Navigation, notifications, messageLauncher, velvetLauncher, dmLauncher,
+            new NotificationRouter(context.Navigation, notifications, linkpearlLauncher, velvetLauncher, dmLauncher,
                 socialLauncher));
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;

@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -33,7 +34,9 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     public FontAwesomeIcon Icon => FontAwesomeIcon.User;
     public Vector4 Tint => new(0.36f, 0.72f, 0.62f, 1f);
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AuthClient auth;
+    private readonly AccountClient account;
+    private readonly MediaClient media;
     private readonly GameData gameData;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
@@ -46,12 +49,14 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private volatile bool avatarBusy;
     private bool meRequested;
 
-    public AccountPage(AethernetSession session, AethernetClient client, GameData gameData,
-        RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
+    public AccountPage(AethernetSession session, AuthClient auth, AccountClient account, MediaClient media,
+        GameData gameData, RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
         ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary)
     {
         this.session = session;
-        this.client = client;
+        this.auth = auth;
+        this.account = account;
+        this.media = media;
         this.gameData = gameData;
         this.images = images;
         this.lodestone = lodestone;
@@ -59,7 +64,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.profilePage = profilePage;
         this.encryptionPage = encryptionPage;
         this.photoLibrary = photoLibrary;
-        flow = new SignInFlow(session, client);
+        flow = new SignInFlow(session, auth);
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -147,6 +152,16 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
         signOut.End();
         ImGui.Dummy(new Vector2(0f, 14f * scale));
+        var deleteAccount = GroupCard.Begin(theme, 1);
+        if (SettingsRow.Action(deleteAccount.NextRow(), Loc.T(L.Account.DeleteAccount), theme.Danger, theme))
+        {
+            AskDeleteAccount();
+        }
+
+        deleteAccount.End();
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        SettingsSection.Hint(Loc.T(L.Account.DeleteAccountHint), theme);
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
     }
 
     private void DrawIdentityHeader(UserDto user, PhoneTheme theme, float scale)
@@ -200,7 +215,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         avatarBusy = true;
-        AvatarUploader.Upload(client, session, sourcePath, crop, cancellation.Token, uploaded =>
+        AvatarUploader.Upload(account, media, session, sourcePath, crop, cancellation.Token, uploaded =>
         {
             avatarBusy = false;
             onComplete(uploaded);
@@ -217,8 +232,72 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             CancelLabel = Loc.T(L.Common.Cancel),
             Confirm = () =>
             {
+                RevokeCurrentToken();
                 session.SignOut();
                 ResetFlow();
+            },
+        });
+    }
+
+    private void RevokeCurrentToken()
+    {
+        var bearer = session.Token;
+        if (bearer is null)
+        {
+            return;
+        }
+
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await auth.RevokeTokenAsync(bearer, token).ConfigureAwait(false);
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Token revoke failed: {exception.Message}");
+            }
+        });
+    }
+
+    private void AskDeleteAccount()
+    {
+        Plugin.Confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Account.DeleteConfirmTitle),
+            Message = Loc.T(L.Account.DeleteConfirmBody),
+            ConfirmLabel = Loc.T(L.Account.DeleteConfirmAction),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            ConfirmAsync = done =>
+            {
+                var token = cancellation.Token;
+                _ = Task.Run(async () =>
+                {
+                    var erased = false;
+                    try
+                    {
+                        erased = await account.DeleteAsync(token).ConfigureAwait(false);
+                    }
+                    catch (Exception exception)
+                    {
+                        AepLog.Warning($"Account deletion failed: {exception.Message}");
+                    }
+
+                    if (erased)
+                    {
+                        session.SignOut();
+                        ResetFlow();
+                    }
+
+                    done(true);
+                    if (!erased)
+                    {
+                        Plugin.Confirm.Alert(Loc.T(L.Account.DeleteConfirmTitle), Loc.T(L.Account.DeleteFailed),
+                            Loc.T(L.Account.FailDismiss));
+                    }
+                });
             },
         });
     }
@@ -500,7 +579,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             try
             {
-                var me = await client.MeAsync(token).ConfigureAwait(false);
+                var me = await account.MeAsync(token).ConfigureAwait(false);
                 if (me is not null)
                 {
                     session.SetUser(me);

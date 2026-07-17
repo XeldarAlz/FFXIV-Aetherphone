@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Crypto;
@@ -17,13 +18,13 @@ internal sealed class KeyVault : IDisposable
 {
     private readonly Configuration configuration;
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly KeysClient client;
     private readonly SemaphoreSlim gate = new(1, 1);
     private ECDiffieHellman? privateKey;
     private MyKeysDto? serverBundle;
     private volatile bool refreshing;
 
-    public KeyVault(Configuration configuration, AethernetSession session, AethernetClient client)
+    public KeyVault(Configuration configuration, AethernetSession session, KeysClient client)
     {
         this.configuration = configuration;
         this.session = session;
@@ -31,6 +32,8 @@ internal sealed class KeyVault : IDisposable
     }
 
     public KeyVaultState State { get; private set; } = KeyVaultState.Unavailable;
+
+    public bool LocalCacheUnavailable { get; private set; }
 
     public int KeyVersion => serverBundle?.KeyVersion ?? 0;
 
@@ -226,8 +229,10 @@ internal sealed class KeyVault : IDisposable
         }
 
         var protectedBlob = LocalKeyProtector.Protect(pkcs8, userId);
+        LocalCacheUnavailable = protectedBlob is null;
         if (protectedBlob is null)
         {
+            Changed?.Invoke();
             return;
         }
 
@@ -268,8 +273,8 @@ internal static class LocalKeyProtector
         }
         catch (Exception exception)
         {
-            AepLog.Warning($"Key protection unavailable ({exception.GetType().Name}); storing the encryption key unprotected.");
-            return RawPrefix + Convert.ToBase64String(secret);
+            AepLog.Warning($"Key protection unavailable ({exception.GetType().Name}); the key will not be saved on this device.");
+            return null;
         }
     }
 

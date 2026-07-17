@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
@@ -17,7 +18,10 @@ internal abstract class SocialFeedStore : IDisposable
 {
     protected const int AvatarSize = 512;
     protected readonly AethernetSession session;
-    protected readonly AethernetClient client;
+    protected readonly AccountClient account;
+    protected readonly SocialClient client;
+    protected readonly SafetyClient safety;
+    protected readonly MediaClient media;
     protected readonly StoreWork work;
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
     private readonly string analyticsChannel;
@@ -55,17 +59,23 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected SocialFeedStore(
         AethernetSession session,
-        AethernetClient client,
+        AccountClient account,
+        SocialClient client,
+        SafetyClient safety,
+        MediaClient media,
         string logTag,
         string analyticsChannel)
     {
         this.session = session;
+        this.account = account;
         this.client = client;
+        this.safety = safety;
+        this.media = media;
         this.analyticsChannel = analyticsChannel;
         work = new StoreWork(logTag);
     }
 
-    public MentionSuggestions NewMentionSuggestions() => new(client, work);
+    public MentionSuggestions NewMentionSuggestions() => new(account, work);
 
     public bool IsSignedIn => session.IsSignedIn;
     public UserDto? Me => me;
@@ -148,7 +158,7 @@ internal abstract class SocialFeedStore : IDisposable
         loadingMe = true;
         work.Run("profile load", async token =>
         {
-            var profile = await client.MeAsync(token).ConfigureAwait(false);
+            var profile = await account.MeAsync(token).ConfigureAwait(false);
             if (profile is not null)
             {
                 me = profile;
@@ -482,7 +492,28 @@ internal abstract class SocialFeedStore : IDisposable
 
     public void Report(string targetType, string targetId, string? reason, Action<bool> onComplete)
     {
-        work.Run("report", token => client.ReportAsync(targetType, targetId, reason, token), onComplete);
+        work.Run("report", token => safety.ReportAsync(targetType, targetId, reason, token), onComplete);
+    }
+
+    public void Block(string userId, Action<bool> onComplete)
+    {
+        RemoveAuthorEverywhere(userId);
+        work.Run("block", token => safety.BlockAsync(userId, token), onComplete);
+    }
+
+    private void RemoveAuthorEverywhere(string userId)
+    {
+        forYou = CopyOnWrite.RemoveWhere(forYou, post => post.AuthorId == userId);
+        following = CopyOnWrite.RemoveWhere(following, post => post.AuthorId == userId);
+        profilePosts = CopyOnWrite.RemoveWhere(profilePosts, post => post.AuthorId == userId);
+        taggedPosts = CopyOnWrite.RemoveWhere(taggedPosts, post => post.AuthorId == userId);
+        detailComments = CopyOnWrite.RemoveWhere(detailComments, comment => comment.AuthorId == userId);
+        discoverResults = CopyOnWrite.RemoveWhere(discoverResults, user => user.Id == userId);
+        if (detailPost is { } current && current.AuthorId == userId)
+        {
+            detailPost = null;
+            detailPostId = null;
+        }
     }
 
     public void OpenProfile(string userId)
@@ -500,7 +531,7 @@ internal abstract class SocialFeedStore : IDisposable
         ClearTagged();
         work.Run("profile open", async token =>
         {
-            var user = await client.UserAsync(userId, token).ConfigureAwait(false);
+            var user = await account.UserAsync(userId, token).ConfigureAwait(false);
             var posts = await FetchProfilePostsAsync(userId, token).ConfigureAwait(false);
             if (profileUserId != userId)
             {
@@ -583,7 +614,7 @@ internal abstract class SocialFeedStore : IDisposable
     {
         work.Run("profile update", async token =>
         {
-            var updated = await client.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token)
+            var updated = await account.UpdateProfileAsync(new UpdateProfileRequest(displayName, handle, bio), token)
                 .ConfigureAwait(false);
             if (updated is null)
             {
@@ -607,7 +638,7 @@ internal abstract class SocialFeedStore : IDisposable
         searching = true;
         work.Run("search", async token =>
         {
-            var result = await client.SearchAsync(trimmed, token).ConfigureAwait(false);
+            var result = await account.SearchAsync(trimmed, token).ConfigureAwait(false);
             if (result is not null)
             {
                 discoverResults = result.Users;
@@ -620,20 +651,20 @@ internal abstract class SocialFeedStore : IDisposable
     protected async Task<bool> UploadAvatarAsync(string sourcePath, WallpaperCrop crop, CancellationToken token)
     {
         var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarSize);
-        var upload = await client.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
+        var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
         if (upload is null)
         {
             return false;
         }
 
-        var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+        var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
             .ConfigureAwait(false);
         if (!uploaded)
         {
             return false;
         }
 
-        var updated = await client
+        var updated = await account
             .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
             .ConfigureAwait(false);
         if (updated is null)

@@ -1,5 +1,6 @@
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
@@ -51,6 +52,7 @@ internal sealed partial class MusicApp : IPhoneApp
     };
 
     public string Id => "music";
+    public bool IsAvailable => flags.MusicEnabled;
     public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Music);
     public string Glyph => "M";
@@ -61,6 +63,7 @@ internal sealed partial class MusicApp : IPhoneApp
     private readonly SongHistory history;
     private readonly MediaCache media;
     private readonly HttpService http;
+    private readonly FeatureFlags flags;
     private readonly ArtworkCache artwork;
     private readonly ViewRouter<View> router;
     private readonly RouterDraw<View> drawView;
@@ -97,7 +100,7 @@ internal sealed partial class MusicApp : IPhoneApp
     private float clock;
 
     public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history,
-        MediaCache media, HttpService http, ITextureProvider textures)
+        MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags)
     {
         this.radio = radio;
         this.songSearch = songSearch;
@@ -105,6 +108,7 @@ internal sealed partial class MusicApp : IPhoneApp
         this.history = history;
         this.media = media;
         this.http = http;
+        this.flags = flags;
         artwork = new ArtworkCache(textures);
         router = new ViewRouter<View>(View.Home, Id);
         drawView = DrawView;
@@ -605,5 +609,6 @@ internal sealed partial class MusicApp : IPhoneApp
         featuredFetch?.Cancel();
         featuredFetch?.Dispose();
         artwork.Dispose();
+        flags.Dispose();
     }
 }

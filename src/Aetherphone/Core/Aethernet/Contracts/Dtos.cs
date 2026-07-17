@@ -108,6 +108,8 @@ internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
 internal sealed record UserSearchResult(UserDto[] Users);
 
+internal sealed record FeatureFlagsDto(bool Music);
+
 internal sealed record UserListPage(UserDto[] Items, string? NextCursor);
 
 internal sealed record UploadUrlRequest(string ContentType, string Scope);

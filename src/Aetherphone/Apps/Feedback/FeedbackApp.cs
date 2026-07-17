@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
@@ -46,9 +47,9 @@ internal sealed class FeedbackApp : IPhoneApp
     private string[] pickerPaths = Array.Empty<string>();
     private string? pendingPickedPath;
 
-    public FeedbackApp(AethernetSession session, AethernetClient client, PhotoLibrary library)
+    public FeedbackApp(AethernetSession session, FeedbackClient client, MediaClient media, PhotoLibrary library)
     {
-        store = new FeedbackStore(session, client);
+        store = new FeedbackStore(session, client, media);
         this.library = library;
     }
 

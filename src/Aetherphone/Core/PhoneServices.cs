@@ -10,7 +10,8 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.News;
 using Aetherphone.Core.Notifications;
@@ -27,119 +28,54 @@ namespace Aetherphone.Core;
 
 internal sealed class PhoneServices : IDisposable
 {
-    public Configuration Configuration { get; }
-    public ThemeProvider Themes { get; }
-    public GameData GameData { get; }
-    public MapData Maps { get; }
-    public ITextureProvider Textures { get; }
-    public WeatherService Weather { get; }
-    public NotificationService Notifications { get; }
-    public SocialNotificationService SocialNotifications { get; }
-    public SoundService Sound { get; }
-    public MessageStore Messages { get; }
-    public ChatBridge ChatBridge { get; }
-    public MessageLauncher MessageLauncher { get; }
-    public VelvetLauncher VelvetLauncher { get; }
-    public DmLauncher DmLauncher { get; }
-    public SocialLauncher SocialLauncher { get; }
-    public LinkshellMuteStore LinkshellMutes { get; }
-    public LinkshellStore Linkshells { get; }
-    public LinkshellBridge LinkshellBridge { get; }
-    public HttpService Http { get; }
-    public MediaCache Media { get; }
-    public RemoteImageCache RemoteImages { get; }
-    public LodestoneService Lodestone { get; }
-    public CollectService Collect { get; }
-    public LookupService Lookup { get; }
-    public AethernetSession AethernetSession { get; }
-    public AethernetClient AethernetClient { get; }
-    public KeyVault KeyVault { get; }
-    public PeerKeyDirectory PeerKeys { get; }
-    public ConversationKeyStore ConversationKeys { get; }
-    public IAnalyticsService Analytics { get; }
-    public MarketItemIndex MarketIndex { get; }
-    public MarketboardService Market { get; }
-    public MarketLauncher MarketLauncher { get; }
-    public MarketAlertService MarketAlerts { get; }
-    public NewsService News { get; }
-    public RadioService Radio { get; }
-    public RadioPlayer RadioPlayer { get; }
-    public SongSearchService SongSearch { get; }
-    public SongPlayer SongPlayer { get; }
-    public SongHistory SongHistory { get; }
-    public PlaybackHub Playback { get; }
-    public GameStatsStore GameStats { get; }
-    public VenuesService Venues { get; }
-    public CollectionsCatalogService Collections { get; }
-    public InventoryCaptureService InventoryCapture { get; }
-    public CallHub Calls { get; }
-    public PhoneVisibility Visibility { get; }
-    public RealtimeSignalBus RealtimeSignals { get; }
-
-    private PhoneServices(Configuration configuration, ThemeProvider themes, GameData gameData, MapData maps,
-        ITextureProvider textures, WeatherService weather, NotificationService notifications, SoundService sound,
-        MessageStore messages, ChatBridge chatBridge, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
-        DmLauncher dmLauncher, SocialLauncher socialLauncher, LinkshellMuteStore linkshellMutes,
-        LinkshellStore linkshells, LinkshellBridge linkshellBridge, HttpService http,
-        MediaCache media, RemoteImageCache remoteImages,
-        LodestoneService lodestone, CollectService collect, LookupService lookup, AethernetSession aethernetSession,
-        AethernetClient aethernetClient, KeyVault keyVault, PeerKeyDirectory peerKeys,
-        ConversationKeyStore conversationKeys, IAnalyticsService analytics, MarketItemIndex marketIndex,
-        MarketboardService market, MarketLauncher marketLauncher, MarketAlertService marketAlerts, NewsService news,
-        RadioService radio, RadioPlayer radioPlayer, SongSearchService songSearch, SongPlayer songPlayer,
-        SongHistory songHistory, PlaybackHub playback, GameStatsStore gameStats, VenuesService venues,
-        CollectionsCatalogService collections, InventoryCaptureService inventoryCapture, CallHub calls,
-        SocialNotificationService socialNotifications, PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
-    {
-        Configuration = configuration;
-        Themes = themes;
-        GameData = gameData;
-        Maps = maps;
-        Textures = textures;
-        Weather = weather;
-        Notifications = notifications;
-        SocialNotifications = socialNotifications;
-        Sound = sound;
-        Messages = messages;
-        ChatBridge = chatBridge;
-        MessageLauncher = messageLauncher;
-        VelvetLauncher = velvetLauncher;
-        DmLauncher = dmLauncher;
-        SocialLauncher = socialLauncher;
-        LinkshellMutes = linkshellMutes;
-        Linkshells = linkshells;
-        LinkshellBridge = linkshellBridge;
-        Http = http;
-        Media = media;
-        RemoteImages = remoteImages;
-        Lodestone = lodestone;
-        Collect = collect;
-        Lookup = lookup;
-        AethernetSession = aethernetSession;
-        AethernetClient = aethernetClient;
-        KeyVault = keyVault;
-        PeerKeys = peerKeys;
-        ConversationKeys = conversationKeys;
-        Analytics = analytics;
-        MarketIndex = marketIndex;
-        Market = market;
-        MarketLauncher = marketLauncher;
-        MarketAlerts = marketAlerts;
-        News = news;
-        Radio = radio;
-        RadioPlayer = radioPlayer;
-        SongSearch = songSearch;
-        SongPlayer = songPlayer;
-        SongHistory = songHistory;
-        Playback = playback;
-        GameStats = gameStats;
-        Venues = venues;
-        Collections = collections;
-        InventoryCapture = inventoryCapture;
-        Calls = calls;
-        Visibility = visibility;
-        RealtimeSignals = realtimeSignals;
-    }
+    public required Configuration Configuration { get; init; }
+    public required ThemeProvider Themes { get; init; }
+    public required GameData GameData { get; init; }
+    public required MapData Maps { get; init; }
+    public required ITextureProvider Textures { get; init; }
+    public required WeatherService Weather { get; init; }
+    public required NotificationService Notifications { get; init; }
+    public required SocialNotificationService SocialNotifications { get; init; }
+    public required SoundService Sound { get; init; }
+    public required MessageStore Messages { get; init; }
+    public required ChatBridge ChatBridge { get; init; }
+    public required LinkpearlLauncher LinkpearlLauncher { get; init; }
+    public required VelvetLauncher VelvetLauncher { get; init; }
+    public required DmLauncher DmLauncher { get; init; }
+    public required SocialLauncher SocialLauncher { get; init; }
+    public required LinkshellMuteStore LinkshellMutes { get; init; }
+    public required LinkshellStore Linkshells { get; init; }
+    public required LinkshellBridge LinkshellBridge { get; init; }
+    public required HttpService Http { get; init; }
+    public required MediaCache Media { get; init; }
+    public required RemoteImageCache RemoteImages { get; init; }
+    public required LodestoneService Lodestone { get; init; }
+    public required CollectService Collect { get; init; }
+    public required LookupService Lookup { get; init; }
+    public required AethernetSession AethernetSession { get; init; }
+    public required AethernetApi Aethernet { get; init; }
+    public required KeyVault KeyVault { get; init; }
+    public required PeerKeyDirectory PeerKeys { get; init; }
+    public required ConversationKeyStore ConversationKeys { get; init; }
+    public required IAnalyticsService Analytics { get; init; }
+    public required MarketItemIndex MarketIndex { get; init; }
+    public required MarketboardService Market { get; init; }
+    public required MarketLauncher MarketLauncher { get; init; }
+    public required MarketAlertService MarketAlerts { get; init; }
+    public required NewsService News { get; init; }
+    public required RadioService Radio { get; init; }
+    public required RadioPlayer RadioPlayer { get; init; }
+    public required SongSearchService SongSearch { get; init; }
+    public required SongPlayer SongPlayer { get; init; }
+    public required SongHistory SongHistory { get; init; }
+    public required PlaybackHub Playback { get; init; }
+    public required GameStatsStore GameStats { get; init; }
+    public required VenuesService Venues { get; init; }
+    public required CollectionsCatalogService Collections { get; init; }
+    public required InventoryCaptureService InventoryCapture { get; init; }
+    public required CallHub Calls { get; init; }
+    public required PhoneVisibility Visibility { get; init; }
+    public required RealtimeSignalBus RealtimeSignals { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, ITextureProvider textures,
@@ -156,9 +92,9 @@ internal sealed class PhoneServices : IDisposable
         var sound = new SoundService(configuration, soundLibrary, new SoundEffectPlayer(), framework);
         var notifications = new NotificationService(sound, configuration, framework);
         var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
-        var messages = new MessageStore(messageArchive);
+        var messages = new MessageStore(messageArchive, configuration);
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
-        var messageLauncher = new MessageLauncher();
+        var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
         var socialLauncher = new SocialLauncher();
@@ -178,10 +114,10 @@ internal sealed class PhoneServices : IDisposable
         var collect = new CollectService(http, collectCache);
         var lookup = new LookupService(lodestone);
         var aethernetSession = new AethernetSession(configuration, framework);
-        var aethernetClient = new AethernetClient(http, aethernetSession);
-        var keyVault = new KeyVault(configuration, aethernetSession, aethernetClient);
-        var peerKeys = new PeerKeyDirectory(configuration, aethernetClient);
-        var conversationKeys = new ConversationKeyStore(aethernetClient, keyVault);
+        var aethernet = new AethernetApi(http, aethernetSession);
+        var keyVault = new KeyVault(configuration, aethernetSession, aethernet.Keys);
+        var peerKeys = new PeerKeyDirectory(configuration, aethernet.Keys);
+        var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault);
         var gameRegion = clientState.ClientLanguage switch
         {
             Dalamud.Game.ClientLanguage.German => "de",
@@ -215,14 +151,58 @@ internal sealed class PhoneServices : IDisposable
         var realtimeSignals = new RealtimeSignalBus();
         var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals);
         var visibility = new PhoneVisibility();
-        var socialNotifications = new SocialNotificationService(aethernetSession, aethernetClient, notifications, configuration, framework, visibility, realtimeSignals);
-        return new PhoneServices(configuration, themes, gameData, maps, textures, weather, notifications, sound,
-            messages, chatBridge, messageLauncher, velvetLauncher, dmLauncher, socialLauncher, linkshellMutes, linkshells,
-            linkshellBridge, http, media, remoteImages, lodestone,
-            collect, lookup, aethernetSession, aethernetClient, keyVault, peerKeys, conversationKeys,
-            analytics, marketIndex, market, marketLauncher,
-            marketAlerts, news, radio, radioPlayer, songSearch, songPlayer, songHistory, playback, gameStats, venues,
-            collections, inventoryCapture, calls, socialNotifications, visibility, realtimeSignals);
+        var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals);
+        return new PhoneServices
+        {
+            Configuration = configuration,
+            Themes = themes,
+            GameData = gameData,
+            Maps = maps,
+            Textures = textures,
+            Weather = weather,
+            Notifications = notifications,
+            SocialNotifications = socialNotifications,
+            Sound = sound,
+            Messages = messages,
+            ChatBridge = chatBridge,
+            LinkpearlLauncher = linkpearlLauncher,
+            VelvetLauncher = velvetLauncher,
+            DmLauncher = dmLauncher,
+            SocialLauncher = socialLauncher,
+            LinkshellMutes = linkshellMutes,
+            Linkshells = linkshells,
+            LinkshellBridge = linkshellBridge,
+            Http = http,
+            Media = media,
+            RemoteImages = remoteImages,
+            Lodestone = lodestone,
+            Collect = collect,
+            Lookup = lookup,
+            AethernetSession = aethernetSession,
+            Aethernet = aethernet,
+            KeyVault = keyVault,
+            PeerKeys = peerKeys,
+            ConversationKeys = conversationKeys,
+            Analytics = analytics,
+            MarketIndex = marketIndex,
+            Market = market,
+            MarketLauncher = marketLauncher,
+            MarketAlerts = marketAlerts,
+            News = news,
+            Radio = radio,
+            RadioPlayer = radioPlayer,
+            SongSearch = songSearch,
+            SongPlayer = songPlayer,
+            SongHistory = songHistory,
+            Playback = playback,
+            GameStats = gameStats,
+            Venues = venues,
+            Collections = collections,
+            InventoryCapture = inventoryCapture,
+            Calls = calls,
+            Visibility = visibility,
+            RealtimeSignals = realtimeSignals,
+        };
     }
 
     public void Dispose()

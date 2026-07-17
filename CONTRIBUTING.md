@@ -20,7 +20,7 @@ Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Loca
 - `src/Aetherphone/Apps/`: the phone's apps (Messages, Contacts, Settings, and friends), one folder each.
 - `src/Aetherphone/Windows/`: the ImGui window plus a reusable `Components/` UI library.
 - `src/Aetherphone/`: plugin entry point, config, command wiring.
-- `docs/`: product (`DESIGN.md`) and technical (`ARCHITECTURE.md`) docs.
+- `src/Aetherphone/Core/`: shared services (networking, crypto, media, localization) the apps build on.
 
 Keep logic small and direct, and prefer the existing `Components/` over hand-rolling one-off UI.
 

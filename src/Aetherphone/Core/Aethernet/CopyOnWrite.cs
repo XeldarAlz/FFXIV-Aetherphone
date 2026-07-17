@@ -50,6 +50,35 @@ internal static class CopyOnWrite
         return result;
     }
 
+    public static T[] RemoveWhere<T>(T[] source, Func<T, bool> match)
+    {
+        var count = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (!match(source[index]))
+            {
+                count++;
+            }
+        }
+
+        if (count == source.Length)
+        {
+            return source;
+        }
+
+        var result = new T[count];
+        var resultIndex = 0;
+        for (var index = 0; index < source.Length; index++)
+        {
+            if (!match(source[index]))
+            {
+                result[resultIndex++] = source[index];
+            }
+        }
+
+        return result;
+    }
+
     public static T[] Prepend<T>(T[] source, T item) where T : class, IIdentified
     {
         for (var index = 0; index < source.Length; index++)

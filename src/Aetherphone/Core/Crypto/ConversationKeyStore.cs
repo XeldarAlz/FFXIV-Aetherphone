@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Crypto;
@@ -15,12 +15,12 @@ internal sealed record ChatKeyStatus(
 
 internal sealed class ConversationKeyStore
 {
-    private readonly AethernetClient client;
+    private readonly KeysClient client;
     private readonly KeyVault vault;
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, byte[]>> keysByScope = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, int> currentGenerations = new(StringComparer.Ordinal);
 
-    public ConversationKeyStore(AethernetClient client, KeyVault vault)
+    public ConversationKeyStore(KeysClient client, KeyVault vault)
     {
         this.client = client;
         this.vault = vault;

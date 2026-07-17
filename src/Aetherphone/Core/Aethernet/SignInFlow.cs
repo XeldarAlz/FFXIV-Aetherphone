@@ -1,3 +1,4 @@
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows;
@@ -7,7 +8,7 @@ namespace Aetherphone.Core.Aethernet;
 internal sealed class SignInFlow : IDisposable
 {
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AuthClient client;
     private readonly CancellationTokenSource cancellation = new();
     private CancellationTokenSource? xivFlowCancellation;
     private volatile bool busy;
@@ -19,7 +20,7 @@ internal sealed class SignInFlow : IDisposable
     private volatile string xivUserCode = string.Empty;
     private volatile string? xivVerificationUri;
 
-    public SignInFlow(AethernetSession session, AethernetClient client)
+    public SignInFlow(AethernetSession session, AuthClient client)
     {
         this.session = session;
         this.client = client;

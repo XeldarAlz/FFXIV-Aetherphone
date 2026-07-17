@@ -22,7 +22,7 @@ internal sealed class AnalyticsClient
             batch,
             AethernetJsonContext.Default.AnalyticsBatchRequest,
             AethernetJsonContext.Default.AnalyticsAckDto,
-            session.Token,
+            null,
             token);
     }
 

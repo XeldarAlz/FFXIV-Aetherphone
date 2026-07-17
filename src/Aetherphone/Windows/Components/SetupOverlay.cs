@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
@@ -53,7 +54,8 @@ internal sealed partial class SetupOverlay : IDisposable
     };
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AccountClient account;
+    private readonly MediaClient media;
     private readonly GameData gameData;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
@@ -81,16 +83,17 @@ internal sealed partial class SetupOverlay : IDisposable
     private volatile bool avatarBusy;
     private volatile int avatarOutcome;
 
-    public SetupOverlay(AethernetSession session, AethernetClient client, GameData gameData,
+    public SetupOverlay(AethernetSession session, AethernetApi aethernet, GameData gameData,
         RemoteImageCache images, LodestoneService lodestone, PhotoLibrary photoLibrary, INavigator navigation)
     {
         this.session = session;
-        this.client = client;
+        account = aethernet.Account;
+        media = aethernet.Media;
         this.gameData = gameData;
         this.images = images;
         this.lodestone = lodestone;
         this.navigation = navigation;
-        flow = new SignInFlow(session, client);
+        flow = new SignInFlow(session, aethernet.Auth);
         picker = new ImagePickCrop(photoLibrary);
     }
 
@@ -372,7 +375,7 @@ internal sealed partial class SetupOverlay : IDisposable
         {
             try
             {
-                var updated = await client
+                var updated = await account
                     .UpdateProfileAsync(new UpdateProfileRequest(display, handle, null, null), token)
                     .ConfigureAwait(false);
                 if (updated is null)

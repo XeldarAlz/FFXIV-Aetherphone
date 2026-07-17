@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 using Aetherphone.Core;
+using Aetherphone.Core.Message;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -10,7 +11,6 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Telephony.Audio;
 using Aetherphone.Core.Theme;
-using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -97,7 +97,7 @@ internal sealed partial class MessageApp
         onThreadLoadOlder ??= store.LoadOlder;
         var model = new ChatTranscriptModel(conversationId, transcriptMessages, store.MyUserId, ui.Accent, theme,
             AppPalettes.Message.MutedInk, AppPalettes.Message.BodyInk, store.OtherTyping, store.LoadingThread,
-            isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Velvet.ThreadEmpty), Loc.T(L.Common.Loading),
+            isGroup, images, threadMediaUrl, onThreadImageClick, Loc.T(L.Message.ThreadEmpty), Loc.T(L.Common.Loading),
             onMessageContext, onQuoteClick, onReactionClick, voiceStateFor, onVoiceToggle,
             store.HasMoreOlder, store.LoadingOlder, onThreadLoadOlder);
         transcript.Draw(listRect, model);

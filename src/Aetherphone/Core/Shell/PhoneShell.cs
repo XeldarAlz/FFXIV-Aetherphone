@@ -9,7 +9,7 @@ using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Playback;
@@ -62,33 +62,30 @@ internal sealed class PhoneShell : IDisposable
     private CallState lastCallState;
     private DateTime lastVisibleDrawUtc = DateTime.MinValue;
 
-    public PhoneShell(ThemeProvider themes, AppBundle bundle, NotificationService notifications,
-        PlaybackHub playback, CallHub calls, MessageLauncher messageLauncher, VelvetLauncher velvetLauncher,
-        DmLauncher dmLauncher, SocialLauncher socialLauncher, ConfirmService confirm, ReportService report,
-        AethernetSession aethernetSession, AethernetClient aethernetClient, GameData gameData,
-        RemoteImageCache remoteImages, LodestoneService lodestone)
+    public PhoneShell(PhoneServices services, AppBundle bundle, ConfirmService confirm, ReportService report)
     {
-        this.themes = themes;
+        themes = services.Themes;
         apps = bundle.Apps;
         widgets = bundle.Widgets;
-        this.calls = calls;
-        this.notifications = notifications;
+        calls = services.Calls;
+        notifications = services.Notifications;
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
-        var router = new NotificationRouter(navigation, notifications, messageLauncher, velvetLauncher, dmLauncher, socialLauncher);
+        var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
+            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
-        island = new DynamicIsland(playback, calls);
-        controlCenter = new ControlCenter(themes, playback, calls, navigation, notifications, router);
+        island = new DynamicIsland(services.Playback, calls);
+        controlCenter = new ControlCenter(themes, services.Playback, calls, navigation, notifications, router);
         minimizedView = new MinimizedPhone(notifications);
         home = new HomeScreen(apps, bundle.Widgets);
         navigation.ReturningHome += home.PrepareReveal;
         incomingOverlay = new IncomingCallOverlay(calls);
         confirmOverlay = new ConfirmOverlay(confirm);
         reportOverlay = new ReportOverlay(report);
-        setup = new SetupOverlay(aethernetSession, aethernetClient, gameData, remoteImages, lodestone,
-            bundle.Photos, navigation);
+        setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
+            services.RemoteImages, services.Lodestone, bundle.Photos, navigation);
     }
 
     public void OnOpened()
@@ -656,7 +653,25 @@ internal sealed class PhoneShell : IDisposable
             DeviceChrome.FillScreen(screen, theme, content.AppBackground);
         }
 
-        app.Draw(new PhoneContext(ContentRect(screen, theme), content, navigation));
+        var contentRect = ContentRect(screen, theme);
+        try
+        {
+            app.Draw(new PhoneContext(contentRect, content, navigation));
+        }
+        catch (Exception exception)
+        {
+            AepLog.Error($"[shell] app-draw {app.Id} threw: {exception.Message}");
+            DrawAppFailure(contentRect, content);
+        }
+    }
+
+    private static void DrawAppFailure(Rect content, PhoneTheme theme)
+    {
+        var draw = ImGui.GetWindowDrawList();
+        var text = Loc.T(L.Common.AppDrawFailure);
+        var size = ImGui.CalcTextSize(text);
+        var position = new Vector2(content.Center.X - size.X * 0.5f, content.Center.Y - size.Y * 0.5f);
+        draw.AddText(position, ImGui.ColorConvertFloat4ToU32(theme.TextMuted), text);
     }
 
     private static Rect ContentRect(Rect screen, PhoneTheme theme)

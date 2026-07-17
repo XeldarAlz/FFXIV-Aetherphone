@@ -1,8 +1,8 @@
 using System.Numerics;
-using Aetherphone.Apps.Calendar;
-using Aetherphone.Apps.Clock;
-using Aetherphone.Apps.DirectMessages;
-using Aetherphone.Apps.Notes;
+using Aetherphone.Core.Calendar;
+using Aetherphone.Core.Message;
+using Aetherphone.Core.Clock;
+using Aetherphone.Core.Notes;
 using Aetherphone.Core.Changelog;
 using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
@@ -107,6 +107,7 @@ internal sealed class Configuration : IPluginConfiguration
     public Dictionary<string, string> MessageContactNotes { get; set; } = new();
     public Dictionary<string, string> MessageDrafts { get; set; } = new();
     public List<StarredMessage> MessageStarredMessages { get; set; } = new();
+    public bool ArchiveTellsToDisk { get; set; } = true;
     public bool MessageMigrated { get; set; }
     public bool MessagesMergeMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();
@@ -417,5 +418,14 @@ internal sealed class Configuration : IPluginConfiguration
         return parsed.IsLoopback;
     }
 
-    public void Save() => Plugin.PluginInterface.SavePluginConfig(this);
+    public void Save()
+    {
+        if (Plugin.Framework.IsInFrameworkUpdateThread)
+        {
+            Plugin.PluginInterface.SavePluginConfig(this);
+            return;
+        }
+
+        _ = Plugin.Framework.RunOnFrameworkThread(() => Plugin.PluginInterface.SavePluginConfig(this));
+    }
 }

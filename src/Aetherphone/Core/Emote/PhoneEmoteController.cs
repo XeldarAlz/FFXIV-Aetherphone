@@ -1,5 +1,5 @@
 using System.Numerics;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;

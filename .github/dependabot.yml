@@ -20,3 +20,13 @@ updates:
     labels:
       - dependencies
     open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /tools/icon-generator
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: deps
+    labels:
+      - dependencies
+    open-pull-requests-limit: 5

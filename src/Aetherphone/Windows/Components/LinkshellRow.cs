@@ -1,7 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;

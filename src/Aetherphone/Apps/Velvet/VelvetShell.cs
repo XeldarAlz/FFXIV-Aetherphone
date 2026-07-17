@@ -2,6 +2,7 @@ using System.Numerics;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Crypto;
@@ -9,7 +10,7 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
-using Aetherphone.Core.Messaging;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
@@ -46,7 +47,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
-    private readonly VelvetAvatarComposer avatar;
+    private readonly AvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly ViewRouter<VelvetView> router;
     private readonly RouterDraw<VelvetView> drawView;
@@ -57,15 +58,16 @@ internal sealed partial class VelvetShell : IPhoneApp
     private VelvetPage activeTab = VelvetPage.Discover;
     private float sinceHeartbeat = HeartbeatSeconds;
 
-    public VelvetShell(AethernetSession session, AethernetClient client, LodestoneService lodestone,
+    public VelvetShell(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
         SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
         PhoneVisibility visibility, RealtimeSignalBus realtimeSignals)
     {
-        store = new VelvetStore(session, client, notifications, configuration, keyVault, conversationKeys, visibility, realtimeSignals);
+        store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
+            keyVault, conversationKeys, visibility, realtimeSignals);
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
-        stories = new StoryPresenter(session, client, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
+        stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
             new StoryConfirmLabels(L.Velvet.DeleteConfirm, L.Velvet.DeleteCancel, L.Velvet.Saving), "Velvet stories",
             StartStoryCompose);
         this.launcher = launcher;
@@ -77,7 +79,9 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.http = http;
         this.images = images;
         this.social = social;
-        avatar = new VelvetAvatarComposer(store, library);
+        avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
+            new AvatarComposerLabels(L.Velvet.ChangePhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,
+                L.Velvet.MoveAndScale, L.Velvet.Use, L.Velvet.Saving, L.Velvet.GestureHint), library);
         post = new VelvetPostComposer(store, stories, library, images, lodestone);
         router = new ViewRouter<VelvetView>(VelvetView.Root, Id);
         drawView = DrawView;

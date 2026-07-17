@@ -1,9 +1,9 @@
 using System.Collections.Concurrent;
 using System.Numerics;
-using Aetherphone.Apps.DirectMessages;
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;

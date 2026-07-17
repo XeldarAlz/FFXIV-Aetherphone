@@ -15,7 +15,7 @@
     <Content Include="Images\Icon.png" Condition="Exists('Images\Icon.png')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Fonts\*.ttf">
+    <Content Include="Fonts\*.ttf;Fonts\Inter-OFL.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Icons\*.png">
@@ -36,6 +36,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Aetherphone.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="System" />
     <Using Include="System.Collections" />
     <Using Include="System.Collections.Generic" />
@@ -51,9 +55,9 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.*" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.0" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
-    <PackageReference Include="YoutubeExplode" Version="6.*" />
+    <PackageReference Include="YoutubeExplode" Version="6.6.0" />
   </ItemGroup>
 </Project>

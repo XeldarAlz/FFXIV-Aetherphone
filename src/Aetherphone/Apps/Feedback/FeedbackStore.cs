@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Media;
 
@@ -14,7 +15,8 @@ internal sealed class FeedbackStore : IDisposable
     private const int MaxImageDimension = 1600;
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly FeedbackClient client;
+    private readonly MediaClient media;
     private readonly StoreWork work = new StoreWork("Feedback");
 
     private volatile bool posting;
@@ -23,10 +25,11 @@ internal sealed class FeedbackStore : IDisposable
     public bool Posting => posting;
     public UserDto? Me => session.CurrentUser;
 
-    public FeedbackStore(AethernetSession session, AethernetClient client)
+    public FeedbackStore(AethernetSession session, FeedbackClient client, MediaClient media)
     {
         this.session = session;
         this.client = client;
+        this.media = media;
     }
 
     public void Compose(string text, IReadOnlyList<string> imagePaths, Action<bool> onComplete)
@@ -46,7 +49,7 @@ internal sealed class FeedbackStore : IDisposable
                 return false;
             }
 
-            var created = await client.CreateFeedbackAsync(trimmed, keys, token).ConfigureAwait(false);
+            var created = await client.CreateAsync(trimmed, keys, token).ConfigureAwait(false);
             return created is not null;
         }, onComplete, () => posting = false);
     }
@@ -62,13 +65,13 @@ internal sealed class FeedbackStore : IDisposable
         for (var index = 0; index < imagePaths.Count; index++)
         {
             var baked = ImageProcessor.BakeJpeg(imagePaths[index], MaxImageDimension);
-            var upload = await client.UploadUrlAsync("image/jpeg", "feedback", token).ConfigureAwait(false);
+            var upload = await media.UploadUrlAsync("image/jpeg", "feedback", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return null;
             }
 
-            var uploaded = await client.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {

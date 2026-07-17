@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
@@ -32,7 +33,7 @@ internal sealed partial class DevApp : IPhoneApp
     public bool IsAvailable => session.HasDevAccess;
 
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AccountClient account;
     private readonly DevStore store;
     private readonly LodestoneService lodestone;
     private readonly PhotoLibrary library;
@@ -76,15 +77,15 @@ internal sealed partial class DevApp : IPhoneApp
     private readonly string[] segmentLabels = { ColumnLabels[0], ColumnLabels[1], ColumnLabels[2] };
     private readonly int[] segmentLabelCounts = { -1, -1, -1 };
 
-    public DevApp(AethernetSession session, AethernetClient client, LodestoneService lodestone,
+    public DevApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images)
     {
         this.session = session;
-        this.client = client;
+        account = net.Account;
         this.lodestone = lodestone;
         this.library = library;
         this.http = http;
-        store = new DevStore(session, client, configuration);
+        store = new DevStore(session, net.Dev, net.Account, net.Media, configuration);
         this.images = images;
         router = new ViewRouter<DevRoute>(DevRoute.Root, Id);
         drawView = DrawView;
@@ -100,7 +101,7 @@ internal sealed partial class DevApp : IPhoneApp
         sinceChatPoll = 0f;
         sinceBoardPoll = 0f;
         chatPickerLoaded = false;
-        client.EnsureCurrentUser();
+        account.EnsureCurrentUser();
         if (session.HasDevAccess)
         {
             store.EnsureLoaded();

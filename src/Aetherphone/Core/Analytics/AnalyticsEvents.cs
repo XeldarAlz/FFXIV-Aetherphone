@@ -184,13 +184,12 @@ internal static class AnalyticsEvents
         return new AnalyticsEvent(AnalyticsEventType.GameEnded, gameId, properties);
     }
 
-    public static AnalyticsEvent ErrorOccurred(string component, string operation, string message)
+    public static AnalyticsEvent ErrorOccurred(string component, string operation)
     {
-        var properties = new Dictionary<string, string>(3)
+        var properties = new Dictionary<string, string>(2)
         {
             ["component"] = component,
             ["operation"] = operation,
-            ["message"] = message,
         };
         return new AnalyticsEvent(AnalyticsEventType.ErrorOccurred, Properties: properties);
     }

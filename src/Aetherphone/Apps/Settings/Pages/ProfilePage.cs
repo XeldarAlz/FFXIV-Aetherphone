@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
@@ -23,12 +24,12 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
     public Vector4 Tint => new(0.42f, 0.58f, 0.86f, 1f);
     private readonly Configuration configuration;
     private readonly AethernetSession session;
-    private readonly AethernetClient client;
+    private readonly AccountClient client;
     private readonly GameData gameData;
     private readonly CancellationTokenSource cancellation = new();
     private bool initialSynced;
 
-    public ProfilePage(Configuration configuration, AethernetSession session, AethernetClient client, GameData gameData)
+    public ProfilePage(Configuration configuration, AethernetSession session, AccountClient client, GameData gameData)
     {
         this.configuration = configuration;
         this.session = session;

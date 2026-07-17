@@ -4,6 +4,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
@@ -24,12 +25,16 @@ internal sealed class PhotosApp : IPhoneApp
     }
 
     private const int Columns = 3;
+    private const int ThumbnailMaxDimension = 256;
+    private const long ThumbnailBudgetBytes = 48L * 1024 * 1024;
+    private const long FullImageBudgetBytes = 96L * 1024 * 1024;
     public string Id => "photos";
     public string DisplayName => Loc.T(L.Apps.Photos);
     public string Glyph => "P";
     public int BadgeCount => 0;
     private readonly PhotoLibrary library;
-    private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
+    private readonly TextureLedger thumbnails = new(ThumbnailBudgetBytes);
+    private readonly TextureLedger fullImages = new(FullImageBudgetBytes);
     private readonly ConcurrentDictionary<string, byte> loading = new();
     private readonly ConcurrentDictionary<string, byte> failed = new();
     private readonly CancellationTokenSource cancellation = new();
@@ -116,24 +121,45 @@ internal sealed class PhotosApp : IPhoneApp
             var gap = 6f * scale;
             var avail = ScrollLayout.StableContentWidth();
             var cell = (avail - gap * (Columns - 1)) / Columns;
-            for (var index = 0; index < paths.Length; index++)
+            var rowCount = (paths.Length + Columns - 1) / Columns;
+            var rowStride = cell + gap;
+            var scrollY = ImGui.GetScrollY();
+            var viewHeight = ImGui.GetWindowSize().Y;
+            var firstVisibleRow = Math.Max(0, (int)(scrollY / rowStride) - 1);
+            var lastVisibleRow = Math.Min(rowCount - 1, (int)((scrollY + viewHeight) / rowStride) + 1);
+            for (var row = 0; row < rowCount; row++)
             {
-                using (ImRaii.PushId(index))
+                if (row < firstVisibleRow || row > lastVisibleRow)
                 {
-                    var clicked = ImGui.InvisibleButton("cell", new Vector2(cell, cell));
-                    PhotosChrome.Thumbnail(Get(paths[index]), ImGui.GetItemRectMin(), ImGui.GetItemRectMax(),
-                        ImGui.IsItemHovered(), scale);
-                    if (clicked)
-                    {
-                        viewerIndex = index;
-                        zoomView.Reset();
-                        router.Push(PhotoRoute.Viewer);
-                    }
+                    ImGui.Dummy(new Vector2(avail, cell));
+                    continue;
                 }
 
-                if (index % Columns != Columns - 1)
+                for (var column = 0; column < Columns; column++)
                 {
-                    ImGui.SameLine();
+                    var index = row * Columns + column;
+                    if (index >= paths.Length)
+                    {
+                        break;
+                    }
+
+                    using (ImRaii.PushId(index))
+                    {
+                        var clicked = ImGui.InvisibleButton("cell", new Vector2(cell, cell));
+                        PhotosChrome.Thumbnail(GetThumbnail(paths[index]), ImGui.GetItemRectMin(),
+                            ImGui.GetItemRectMax(), ImGui.IsItemHovered(), scale);
+                        if (clicked)
+                        {
+                            viewerIndex = index;
+                            zoomView.Reset();
+                            router.Push(PhotoRoute.Viewer);
+                        }
+                    }
+
+                    if (column < Columns - 1 && index + 1 < paths.Length)
+                    {
+                        ImGui.SameLine();
+                    }
                 }
             }
         }
@@ -145,7 +171,7 @@ internal sealed class PhotosApp : IPhoneApp
         var theme = context.Theme;
         var content = context.Content;
         var path = paths[index];
-        var texture = Get(path);
+        var texture = GetFull(path) ?? thumbnails.Get(path);
         var stage = new Rect(new Vector2(content.Min.X, content.Min.Y + 44f * scale),
             new Vector2(content.Max.X, content.Max.Y - 36f * scale));
         if (texture is not null)
@@ -211,9 +237,14 @@ internal sealed class PhotosApp : IPhoneApp
     {
         var path = paths[index];
         library.Delete(path);
-        if (ready.TryRemove(path, out var wrap))
+        if (thumbnails.TryRemove(path, out var thumbWrap))
         {
-            wrap.Dispose();
+            DisposeLater(thumbWrap);
+        }
+
+        if (fullImages.TryRemove(path, out var fullWrap))
+        {
+            DisposeLater(fullWrap);
         }
 
         Refresh();
@@ -232,30 +263,59 @@ internal sealed class PhotosApp : IPhoneApp
         paths = library.List();
     }
 
-    private IDalamudTextureWrap? Get(string path)
+    private IDalamudTextureWrap? GetThumbnail(string path)
     {
-        if (ready.TryGetValue(path, out var wrap))
+        if (thumbnails.Get(path) is { } wrap)
         {
             return wrap;
         }
 
-        if (failed.ContainsKey(path) || !loading.TryAdd(path, 0))
+        if (failed.ContainsKey(path) || !loading.TryAdd("thumb:" + path, 0))
         {
             return null;
         }
 
-        _ = LoadAsync(path);
+        _ = LoadThumbnailAsync(path);
         return null;
     }
 
-    private async Task LoadAsync(string path)
+    private IDalamudTextureWrap? GetFull(string path)
+    {
+        if (fullImages.Get(path) is { } wrap)
+        {
+            return wrap;
+        }
+
+        if (failed.ContainsKey(path) || !loading.TryAdd("full:" + path, 0))
+        {
+            return null;
+        }
+
+        _ = LoadFullAsync(path);
+        return null;
+    }
+
+    private async Task LoadThumbnailAsync(string path)
     {
         try
         {
             var token = cancellation.Token;
-            var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
-            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, path, token).ConfigureAwait(false);
-            if (!ready.TryAdd(path, wrap))
+            var thumbnailPath = library.ThumbnailPathFor(path);
+            byte[] bytes;
+            if (File.Exists(thumbnailPath) && File.GetLastWriteTimeUtc(thumbnailPath) >= File.GetLastWriteTimeUtc(path))
+            {
+                bytes = await File.ReadAllBytesAsync(thumbnailPath, token).ConfigureAwait(false);
+            }
+            else
+            {
+                bytes = ImageProcessor.BakeJpeg(path, ThumbnailMaxDimension).Bytes;
+                Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath)!);
+                await File.WriteAllBytesAsync(thumbnailPath, bytes, token).ConfigureAwait(false);
+            }
+
+            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, "thumb:" + path, token)
+                .ConfigureAwait(false);
+            if (!thumbnails.TryAdd(path, wrap))
             {
                 wrap.Dispose();
             }
@@ -266,23 +326,51 @@ internal sealed class PhotosApp : IPhoneApp
         catch (Exception exception)
         {
             failed.TryAdd(path, 0);
-            AepLog.Warning($"[Photos] failed to load {path}: {exception.Message}");
+            AepLog.Warning($"[Photos] thumbnail failed for {Path.GetFileName(path)}: {exception.Message}");
         }
         finally
         {
-            loading.TryRemove(path, out _);
+            loading.TryRemove("thumb:" + path, out _);
         }
+    }
+
+    private async Task LoadFullAsync(string path)
+    {
+        try
+        {
+            var token = cancellation.Token;
+            var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
+            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, path, token).ConfigureAwait(false);
+            if (!fullImages.TryAdd(path, wrap))
+            {
+                wrap.Dispose();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception exception)
+        {
+            failed.TryAdd(path, 0);
+            AepLog.Warning($"[Photos] failed to load {Path.GetFileName(path)}: {exception.Message}");
+        }
+        finally
+        {
+            loading.TryRemove("full:" + path, out _);
+        }
+    }
+
+    private static void DisposeLater(IDalamudTextureWrap wrap)
+    {
+        _ = Task.Delay(TimeSpan.FromSeconds(1))
+            .ContinueWith(_ => Plugin.Framework.RunOnFrameworkThread(wrap.Dispose), TaskScheduler.Default);
     }
 
     public void Dispose()
     {
         cancellation.Cancel();
-        foreach (var wrap in ready.Values)
-        {
-            wrap.Dispose();
-        }
-
-        ready.Clear();
+        thumbnails.DisposeAll();
+        fullImages.DisposeAll();
         cancellation.Dispose();
     }
 }

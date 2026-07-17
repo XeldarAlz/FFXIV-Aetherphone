@@ -1,6 +1,7 @@
 using System.Numerics;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
@@ -48,7 +49,7 @@ internal sealed class PollsApp : IPhoneApp
     private INavigator navigation = null!;
     private float sinceRefresh;
 
-    public PollsApp(AethernetSession session, AethernetClient client)
+    public PollsApp(AethernetSession session, PollsClient client)
     {
         store = new PollsStore(session, client);
     }

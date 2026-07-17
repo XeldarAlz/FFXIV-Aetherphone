@@ -305,7 +305,7 @@ internal sealed partial class AethergramApp
             if (ui.IconButton(trashCenter, 11f * scale, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Aethergram.MutedInk,
                     AppSkin.Transparent, 0.85f, Loc.T(L.Aethergram.DeleteComment)) && store.DetailPost is { } post)
             {
-                AskDeleteComment(post.Id, comment.Id);
+                profile.AskDeleteComment(post.Id, comment.Id);
             }
         }
 
@@ -414,7 +414,7 @@ internal sealed partial class AethergramApp
 
         using (AppSurface.Begin(body))
         {
-            DrawProfileHeader(user);
+            profile.DrawProfileHeader(user, theme);
             var scale = ImGuiHelpers.GlobalScale;
             var tabRow = new Rect(
                 new Vector2(ImGui.GetCursorScreenPos().X + 14f * scale, ImGui.GetCursorScreenPos().Y + 4f * scale),
@@ -438,40 +438,6 @@ internal sealed partial class AethergramApp
                 DrawProfileGrid(store.TaggedPosts, L.PhotoTag.NoTagged);
             }
         }
-    }
-
-    private void AskDeletePost(string postId)
-    {
-        Plugin.Confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Aethergram.DeleteConfirmMessage),
-            ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
-            CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
-            BusyLabel = Loc.T(L.Aethergram.Saving),
-            FailedMessage = Loc.T(L.Aethergram.DeleteFailed),
-            ConfirmAsync = done => store.DeletePost(postId, ok =>
-            {
-                if (ok)
-                {
-                    back();
-                }
-
-                done(ok);
-            }),
-        });
-    }
-
-    private void AskDeleteComment(string postId, string commentId)
-    {
-        Plugin.Confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Aethergram.DeleteCommentConfirmMessage),
-            ConfirmLabel = Loc.T(L.Aethergram.DeleteConfirm),
-            CancelLabel = Loc.T(L.Aethergram.DeleteCancel),
-            BusyLabel = Loc.T(L.Aethergram.Saving),
-            FailedMessage = Loc.T(L.Aethergram.DeleteCommentFailed),
-            ConfirmAsync = done => store.DeleteComment(postId, commentId, done),
-        });
     }
 
 }

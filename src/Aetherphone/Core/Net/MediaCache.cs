@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Aetherphone.Core.Media;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 
@@ -18,12 +19,13 @@ internal readonly struct MediaResult
 
 internal sealed class MediaCache : IDisposable
 {
+    private const long TextureBudgetBytes = 96L * 1024 * 1024;
     private static readonly TimeSpan MaxAge = TimeSpan.FromDays(30);
     private static readonly TimeSpan FailureRetryFor = TimeSpan.FromMinutes(2);
     private readonly ITextureProvider textures;
     private readonly DiskCache disk;
     private readonly CancellationTokenSource cancellation = new();
-    private readonly ConcurrentDictionary<string, IDalamudTextureWrap> ready = new();
+    private readonly TextureLedger ready = new(TextureBudgetBytes);
     private readonly ConcurrentDictionary<string, byte> inFlight = new();
     private readonly ConcurrentDictionary<string, DateTime> failed = new();
     private volatile bool disposed;
@@ -36,7 +38,7 @@ internal sealed class MediaCache : IDisposable
 
     public MediaResult GetOrRequest(string key, Func<CancellationToken, Task<byte[]?>> source)
     {
-        if (ready.TryGetValue(key, out var wrap))
+        if (ready.Get(key) is { } wrap)
         {
             return new MediaResult(wrap, false);
         }
@@ -111,14 +113,7 @@ internal sealed class MediaCache : IDisposable
     {
         disposed = true;
         cancellation.Cancel();
-        foreach (var key in ready.Keys)
-        {
-            if (ready.TryRemove(key, out var wrap))
-            {
-                wrap.Dispose();
-            }
-        }
-
+        ready.DisposeAll();
         cancellation.Dispose();
     }
 }

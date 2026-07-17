@@ -29,11 +29,21 @@ internal sealed class PhotoLibrary
         return files;
     }
 
+    public string ThumbnailPathFor(string path)
+    {
+        return Path.Combine(directory, ".thumbs", Path.GetFileNameWithoutExtension(path) + ".jpg");
+    }
+
     public void Delete(string path)
     {
         try
         {
             File.Delete(path);
+            var thumbnail = ThumbnailPathFor(path);
+            if (File.Exists(thumbnail))
+            {
+                File.Delete(thumbnail);
+            }
         }
         catch (Exception exception)
         {

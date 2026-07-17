@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Social;
@@ -7,11 +8,11 @@ internal sealed class MentionSuggestions
 {
     private static readonly MentionSuggestDto[] NoResults = Array.Empty<MentionSuggestDto>();
 
-    private readonly AethernetClient client;
+    private readonly AccountClient client;
     private readonly StoreWork work;
     private long generation;
 
-    public MentionSuggestions(AethernetClient client, StoreWork work)
+    public MentionSuggestions(AccountClient client, StoreWork work)
     {
         this.client = client;
         this.work = work;

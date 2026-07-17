@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 namespace Aetherphone.Core.Aethernet;
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true)]
+[JsonSerializable(typeof(FeatureFlagsDto))]
 [JsonSerializable(typeof(ChallengeRequest))]
 [JsonSerializable(typeof(ChallengeResponse))]
 [JsonSerializable(typeof(VerifyRequest))]
