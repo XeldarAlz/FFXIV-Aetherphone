@@ -443,6 +443,7 @@
   "settings.commandAbout": "Open credits and links",
   "settings.commandReset": "Move the phone back to the center of the screen",
   "settings.commandTest": "Send a sample notification",
+  "changelog.r0981.0": "Fixed the Discord link so it now opens the current server",
   "changelog.r0980.0": "Activity is now a daily tracker: close your rings as you clear roulettes and duties, keep a history of your streaks, and watch a home widget fill up through the day",
   "changelog.r0980.1": "Dailies has been rebuilt around gradient cards and now fills itself in, detecting the roulettes and hunt bills you have already done",
   "changelog.r0980.2": "The Photos gallery has been rebuilt with a day-by-day library, smart month albums, and a full-screen viewer",

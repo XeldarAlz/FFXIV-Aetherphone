@@ -516,6 +516,11 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0981 =
+        {
+            new("changelog.r0981.0", "Fixed the Discord link so it now opens the current server"),
+        };
+
         public static readonly LocString[] Release0980 =
         {
             new("changelog.r0980.0", "Activity is now a daily tracker: close your rings as you clear roulettes and duties, keep a history of your streaks, and watch a home widget fill up through the day"),

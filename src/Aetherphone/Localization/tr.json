@@ -443,6 +443,7 @@
   "settings.commandAbout": "Künye ve bağlantıları açar",
   "settings.commandReset": "Telefonu ekranın ortasına geri getirir",
   "settings.commandTest": "Örnek bir bildirim gönderir",
+  "changelog.r0981.0": "Discord bağlantısı düzeltildi: artık güncel sunucuyu açıyor",
   "changelog.r0980.0": "Etkinlik artık bir günlük takip aracı: ruletleri ve görevleri tamamladıkça halkalarınızı kapatın, seri geçmişinizi tutun ve ana ekran widget'ının gün boyunca dolmasını izleyin",
   "changelog.r0980.1": "Günlükler, degrade kartların çevresinde yeniden inşa edildi ve artık zaten tamamladığınız ruletleri ve av kâğıtlarını algılayarak kendini dolduruyor",
   "changelog.r0980.2": "Fotoğraflar galerisi yeniden inşa edildi: gün gün düzenlenen bir kütüphane, akıllı ay albümleri ve tam ekran bir görüntüleyici içeriyor",

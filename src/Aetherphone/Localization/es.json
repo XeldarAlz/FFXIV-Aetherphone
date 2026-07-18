@@ -443,6 +443,7 @@
   "settings.commandAbout": "Abrir créditos y enlaces",
   "settings.commandReset": "Mover el teléfono de vuelta al centro de la pantalla",
   "settings.commandTest": "Enviar una notificación de prueba",
+  "changelog.r0981.0": "Se ha corregido el enlace de Discord para que ahora abra el servidor actual",
   "changelog.r0980.0": "Actividad ahora es un seguimiento diario: cierra tus anillos al completar ruletas y misiones, guarda un historial de tus rachas y mira cómo un widget de inicio se llena a lo largo del día",
   "changelog.r0980.1": "Diarias se ha reconstruido en torno a tarjetas con degradado y ahora se rellena solo, detectando las ruletas y los encargos de caza que ya has hecho",
   "changelog.r0980.2": "La galería de Fotos se ha reconstruido con una biblioteca día a día, álbumes mensuales inteligentes y un visor a pantalla completa",
