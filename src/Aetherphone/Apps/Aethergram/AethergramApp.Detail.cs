@@ -35,7 +35,7 @@ internal sealed partial class AethergramApp
         using (AppSurface.Begin(body))
         {
             var origin = ImGui.GetCursorScreenPos();
-            var width = ImGui.GetContentRegionAvail().X;
+            var width = ScrollLayout.StableContentWidth();
             var headerHeight = 52f * scale;
             var avatarRadius = 20f * scale;
             var avatarCenter = new Vector2(origin.X + avatarRadius + 6f * scale, origin.Y + headerHeight * 0.5f);
@@ -213,7 +213,7 @@ internal sealed partial class AethergramApp
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = ScrollLayout.StableContentWidth();
         var avatarRadius = 20f * scale;
         var avatarCenterX = origin.X + avatarRadius + 5f * scale;
         var mine = store.Me is { } me && me.Id == comment.AuthorId;

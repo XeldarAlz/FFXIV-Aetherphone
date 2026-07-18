@@ -530,7 +530,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = ScrollLayout.StableContentWidth();
         var pad = 14f * scale;
         var innerX = origin.X + pad;
         var innerWidth = width - pad * 2f;

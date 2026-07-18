@@ -164,7 +164,7 @@ internal sealed class NewsApp : IPhoneApp
             for (var index = 0; index < count; index++)
             {
                 var origin = ImGui.GetCursorScreenPos();
-                var width = ImGui.GetContentRegionAvail().X;
+                var width = ScrollLayout.StableContentWidth();
                 var height = DrawTopicCard(items[index], origin, width, scale);
                 ImGui.SetCursorScreenPos(origin);
                 ImGui.Dummy(new Vector2(width, height));

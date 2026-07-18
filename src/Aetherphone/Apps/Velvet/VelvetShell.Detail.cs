@@ -61,7 +61,7 @@ internal sealed partial class VelvetShell
         using (AppSurface.Begin(body))
         {
             var origin = ImGui.GetCursorScreenPos();
-            var width = ImGui.GetContentRegionAvail().X;
+            var width = ScrollLayout.StableContentWidth();
             var drawList = ImGui.GetWindowDrawList();
             var headerHeight = 48f * scale;
             var avatarRadius = 18f * scale;
@@ -242,7 +242,7 @@ internal sealed partial class VelvetShell
     private void DrawCommentRow(VelvetCommentDto comment, float scale)
     {
         var origin = ImGui.GetCursorScreenPos();
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = ScrollLayout.StableContentWidth();
         var drawList = ImGui.GetWindowDrawList();
         var avatarRadius = 15f * scale;
         var avatarCenter = new Vector2(origin.X + avatarRadius, origin.Y + avatarRadius);

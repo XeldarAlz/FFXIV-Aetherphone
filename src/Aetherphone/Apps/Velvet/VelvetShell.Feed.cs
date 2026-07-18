@@ -34,7 +34,7 @@ internal sealed partial class VelvetShell
         using (AppSurface.Begin(area))
         {
             stories.DrawTray(theme);
-            var width = ImGui.GetContentRegionAvail().X;
+            var width = ScrollLayout.StableContentWidth();
             var feed = store.Feed;
             if (feed.Length == 0)
             {

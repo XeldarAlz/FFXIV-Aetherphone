@@ -191,7 +191,7 @@ internal sealed partial class VelvetShell
     private void DrawPersonCard(VelvetProfileDto profile, VelvetPostDto[] feed)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var width = ImGui.GetContentRegionAvail().X;
+        var width = ScrollLayout.StableContentWidth();
         var name = DisplayNameOf(profile.DisplayName, profile.Handle);
         var region = RegionOf(profile.World);
         var pad = 14f * scale;
