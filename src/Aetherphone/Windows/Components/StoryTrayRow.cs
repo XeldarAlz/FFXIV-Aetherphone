@@ -137,8 +137,7 @@ internal sealed class StoryTrayRow
         drawList.AddCircleFilled(center, radius - 2f * scale, ImGui.GetColorU32(palette.FieldSurface), 32);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.18f)), 32, 1.4f * scale);
         AppSkin.Icon(center, FontAwesomeIcon.Plus.ToIconString(), palette.BodyInk, 1.2f);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + radius + 11f * scale), Loc.T(L.Story.YourStory),
-            palette.MutedInk, TextStyles.Caption1);
+        DrawLabel(drawList, center, radius, Loc.T(L.Story.YourStory), palette, scale);
         if (ClickedTile(center, radius))
         {
             onAddStory();
@@ -154,12 +153,20 @@ internal sealed class StoryTrayRow
         var label = ring.IsMe ? Loc.T(L.Story.YourStory) : SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
         AvatarView.DrawRemote(drawList, center, radius - 4f * scale, theme, label, string.Empty, ring.AuthorAvatarUrl,
             images, lodestone, 0.8f, 32);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + radius + 11f * scale), label, palette.MutedInk,
-            TextStyles.Caption1);
+        DrawLabel(drawList, center, radius, label, palette, scale);
         if (ClickedTile(center, radius))
         {
             onOpenRing(ring);
         }
+    }
+
+    private static void DrawLabel(ImDrawListPtr drawList, Vector2 center, float radius, string label,
+        AppPalette palette, float scale)
+    {
+        var maxWidth = TileWidth * scale - 8f * scale;
+        var fitted = Typography.FitText(label, maxWidth, TextStyles.Caption1);
+        var baseline = new Vector2(center.X, center.Y + radius + 11f * scale);
+        Typography.DrawCentered(drawList, baseline, fitted, palette.MutedInk, TextStyles.Caption1);
     }
 
 }
