@@ -42,14 +42,11 @@ internal sealed class FeedLane<TPost> where TPost : class, IIdentified
     {
         lock (gate)
         {
-            if (items.Length == 0)
+            var wasEmpty = items.Length == 0;
+            items = IdentifiedMerge.ReconcileNewestPage(items, incoming, order);
+            if (wasEmpty)
             {
-                items = incoming;
                 cursor = nextCursor;
-            }
-            else
-            {
-                items = IdentifiedMerge.MergeById(items, incoming, order);
             }
         }
     }
