@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://www.aetherphone.net/"><img alt="Website" src="https://img.shields.io/badge/website-aetherphone.net-blue?style=flat-square"></a>
-  <a href="https://discord.gg/fgE8QFj7Y"><img alt="Discord" src="https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white"></a>
+  <a href="https://discord.gg/3HbJCscMyS"><img alt="Discord" src="https://img.shields.io/badge/Discord-join-5865F2?style=flat-square&logo=discord&logoColor=white"></a>
   <a href="https://github.com/XeldarAlz/FFXIV-Aetherphone/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/XeldarAlz/FFXIV-Aetherphone?style=flat-square&color=blue"></a>
   <a href="https://github.com/XeldarAlz/FFXIV-Aetherphone/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/XeldarAlz/FFXIV-Aetherphone/total?style=flat-square&color=blue&cacheSeconds=300"></a>
   <a href="https://github.com/XeldarAlz/FFXIV-Aetherphone/actions/workflows/release.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/XeldarAlz/FFXIV-Aetherphone/release.yml?style=flat-square"></a>
@@ -77,7 +77,7 @@ Cochez **Enabled**, cliquez sur **+**, puis sur **Save and Close**. Ouvrez `/xlp
 
 Des questions, des idées, ou juste envie de discuter avec d'autres joueurs ? Passez nous dire bonjour sur Discord.
 
-→ [Rejoignez notre Discord](https://discord.gg/fgE8QFj7Y)
+→ [Rejoignez notre Discord](https://discord.gg/3HbJCscMyS)
 
 ## Plus de ma part
 
