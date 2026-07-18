@@ -516,6 +516,14 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0982 =
+        {
+            new("changelog.r0982.0", "Fixed sending a photo or voice note in a chat sometimes failing to go through"),
+            new("changelog.r0982.1", "Fixed a post removed by moderation still showing in your feed until you reloaded the phone"),
+            new("changelog.r0982.2", "Fixed long names in the story tray overlapping the tiles beside them"),
+            new("changelog.r0982.3", "Fixed image feeds shaking, and their photos and text reflowing, while you scrolled or moved between screens"),
+        };
+
         public static readonly LocString[] Release0981 =
         {
             new("changelog.r0981.0", "Fixed the Discord link so it now opens the current server"),

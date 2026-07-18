@@ -41,6 +41,7 @@ body:
       label: Plugin version
       description: Shown in `/xlplugins` next to "Aetherphone".
       options:
+        - 0.9.8.2
         - 0.9.8.1
         - 0.9.8.0
         - 0.9.7.0
