@@ -31,6 +31,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected readonly StoreWork work;
     protected readonly MessageCipher cipher;
     protected readonly IAnalyticsService analytics;
+    private readonly string logTag;
     private readonly NotificationService notifications;
     private readonly PollCadence inboxCadence;
     private readonly object messagesLock = new();
@@ -77,6 +78,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         this.vault = vault;
         this.keys = keys;
         this.analytics = analytics;
+        this.logTag = logTag;
         work = new StoreWork(logTag);
         cipher = new MessageCipher(vault, keys);
         messageOrder = CompareByCreatedAt;
@@ -624,6 +626,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             var upload = await media.UploadUrlAsync("image/jpeg", ImageUploadScope, token).ConfigureAwait(false);
             if (upload is null)
             {
+                AepLog.Warning($"[{logTag}] send image aborted: upload-url denied (scope={ImageUploadScope}, enc={outbound.EncVersion})");
                 return false;
             }
 
@@ -631,6 +634,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 .ConfigureAwait(false);
             if (!uploaded)
             {
+                AepLog.Warning($"[{logTag}] send image aborted: R2 upload failed ({outbound.UploadBytes.Length} bytes, enc={outbound.EncVersion})");
                 return false;
             }
 
@@ -639,6 +643,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 .ConfigureAwait(false);
             if (sent is null)
             {
+                AepLog.Warning($"[{logTag}] send image aborted: message create rejected (enc={outbound.EncVersion}, hasTag={outbound.CommitmentTag is not null})");
                 return false;
             }
 
@@ -668,6 +673,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             var upload = await media.UploadUrlAsync("audio/wav", VoiceUploadScope, token).ConfigureAwait(false);
             if (upload is null)
             {
+                AepLog.Warning($"[{logTag}] send voice aborted: upload-url denied (scope={VoiceUploadScope}, enc={outbound.EncVersion})");
                 return false;
             }
 
@@ -675,6 +681,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 .ConfigureAwait(false);
             if (!uploaded)
             {
+                AepLog.Warning($"[{logTag}] send voice aborted: R2 upload failed ({outbound.UploadBytes.Length} bytes, enc={outbound.EncVersion})");
                 return false;
             }
 
@@ -683,6 +690,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 .ConfigureAwait(false);
             if (sent is null)
             {
+                AepLog.Warning($"[{logTag}] send voice aborted: message create rejected (enc={outbound.EncVersion}, hasTag={outbound.CommitmentTag is not null})");
                 return false;
             }
 
