@@ -518,6 +518,16 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0983 =
+        {
+            new("changelog.r0983.0", "Music now has playlists: create your own, add songs from Now Playing or search, and play, rename, or delete them whenever you like"),
+            new("changelog.r0983.1", "The phone can now stay open during Group Pose for photo shoots, with a new Show in Group Pose toggle in Settings under Immersion"),
+            new("changelog.r0983.2", "Velvet's Discover list now keeps loading more people as you scroll, instead of stopping after the first page"),
+            new("changelog.r0983.3", "A warm welcome to all our new Brazilian friends: Aetherphone now speaks Português (Brasil)"),
+            new("changelog.r0983.4", "Fixed Music, ringtones, and call audio turning down the whole game's volume and leaving it lowered; the phone now keeps its own volume separate from the game"),
+            new("changelog.r0983.5", "Fixed Chinese and Japanese text running off the right edge of the screen instead of wrapping onto the next line"),
+        };
+
         public static readonly LocString[] Release0982 =
         {
             new("changelog.r0982.0", "Fixed sending a photo or voice note in a chat sometimes failing to go through"),

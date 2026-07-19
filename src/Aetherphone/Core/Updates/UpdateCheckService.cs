@@ -26,7 +26,7 @@ internal sealed class UpdateCheckService : IDisposable
 
     public bool UpdateAvailable => Latest is { } latest && latest > installed;
 
-    public string LatestText => Latest is { } latest ? latest.ToString(3) : string.Empty;
+    public string LatestText => Latest is { } latest ? latest.ToString(4) : string.Empty;
 
     public void Poll()
     {
