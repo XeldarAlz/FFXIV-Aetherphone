@@ -31,6 +31,11 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile VelvetProfileDto[] discoverResults = Array.Empty<VelvetProfileDto>();
     private volatile bool loadingDiscover;
     private volatile bool discoverLoaded;
+    private volatile string? discoverCursor;
+    private volatile bool loadingMoreDiscover;
+    private volatile int discoverLookingFor;
+    private volatile string discoverTags = string.Empty;
+    private volatile int discoverEpoch;
     private volatile VelvetConnectionDto[] connections = Array.Empty<VelvetConnectionDto>();
     private volatile bool loadingConnections;
     private volatile bool connectionsLoaded;
@@ -81,6 +86,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public VelvetProfileDto[] DiscoverResults => discoverResults;
     public bool LoadingDiscover => loadingDiscover;
     public bool DiscoverLoaded => discoverLoaded;
+    public bool HasMoreDiscover => discoverCursor is not null;
+    public bool LoadingMoreDiscover => loadingMoreDiscover;
     public VelvetConnectionDto[] Connections => connections;
     public bool LoadingConnections => loadingConnections;
     public bool ConnectionsLoaded => connectionsLoaded;
@@ -452,19 +459,85 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
             return;
         }
 
+        var epoch = ++discoverEpoch;
+        discoverLookingFor = lookingFor;
+        discoverTags = tags;
+        discoverCursor = null;
         loadingDiscover = true;
         work.Run("discover", async token =>
         {
             var page = await client.DiscoverAsync(lookingFor, tags, null, token).ConfigureAwait(false);
-            if (page is not null)
+            if (page is not null && epoch == discoverEpoch)
             {
                 discoverResults = page.Users;
+                discoverCursor = page.NextCursor;
             }
         }, () =>
         {
             loadingDiscover = false;
             discoverLoaded = true;
         });
+    }
+
+    public void LoadMoreDiscover()
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        var cursor = discoverCursor;
+        if (cursor is null || loadingMoreDiscover || loadingDiscover)
+        {
+            return;
+        }
+
+        var epoch = discoverEpoch;
+        loadingMoreDiscover = true;
+        work.Run("discover more", async token =>
+        {
+            var page = await client.DiscoverAsync(discoverLookingFor, discoverTags, cursor, token).ConfigureAwait(false);
+            if (page is not null && epoch == discoverEpoch)
+            {
+                discoverResults = AppendUniqueDiscover(discoverResults, page.Users);
+                discoverCursor = page.NextCursor;
+            }
+        }, () => loadingMoreDiscover = false);
+    }
+
+    private static VelvetProfileDto[] AppendUniqueDiscover(VelvetProfileDto[] existing, VelvetProfileDto[] incoming)
+    {
+        if (incoming.Length == 0)
+        {
+            return existing;
+        }
+
+        var seen = new HashSet<string>(existing.Length + incoming.Length);
+        for (var index = 0; index < existing.Length; index++)
+        {
+            seen.Add(existing[index].UserId);
+        }
+
+        var picked = new VelvetProfileDto[incoming.Length];
+        var count = 0;
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            if (seen.Add(incoming[index].UserId))
+            {
+                picked[count] = incoming[index];
+                count++;
+            }
+        }
+
+        if (count == 0)
+        {
+            return existing;
+        }
+
+        var merged = new VelvetProfileDto[existing.Length + count];
+        Array.Copy(existing, merged, existing.Length);
+        Array.Copy(picked, 0, merged, existing.Length, count);
+        return merged;
     }
 
     public void RefreshConnections()
@@ -969,7 +1042,11 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         }, onComplete);
     }
 
-    public void ClearDiscover() => discoverResults = Array.Empty<VelvetProfileDto>();
+    public void ClearDiscover()
+    {
+        discoverResults = Array.Empty<VelvetProfileDto>();
+        discoverCursor = null;
+    }
 
     public void InvalidateLists()
     {

@@ -84,7 +84,17 @@ internal sealed partial class VelvetShell
                 Gap(26f);
             }
 
+            if (store.LoadingMoreDiscover)
+            {
+                InfiniteScroll.DrawLoadingRow(listRect.Center.X, VelvetTheme.MutedInk);
+            }
+
             ImGui.Dummy(new Vector2(0f, 24f * scale));
+
+            if (InfiniteScroll.ReachedBottom() && store.HasMoreDiscover && !store.LoadingMoreDiscover)
+            {
+                store.LoadMoreDiscover();
+            }
         }
     }
 
