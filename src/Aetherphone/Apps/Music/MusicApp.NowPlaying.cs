@@ -171,9 +171,15 @@ internal sealed partial class MusicApp
         Typography.DrawCentered(drawList, new Vector2(frame.Center.X, barCenterY - 8f * scale), caption,
             ui.HeaderInk, TextStyles.Caption2);
         var source = playSource.Length > 0 ? playSource : DisplayName;
-        var fitted = Typography.FitText(source, frame.Width - 140f * scale, TextStyles.FootnoteEmphasized);
+        var fitted = Typography.FitText(source, frame.Width - 160f * scale, TextStyles.FootnoteEmphasized);
         Typography.DrawCentered(drawList, new Vector2(frame.Center.X, barCenterY + 8f * scale), fitted, ui.TitleInk,
             TextStyles.FootnoteEmphasized);
+        if (playback.SongActive && ui.IconButton(new Vector2(frame.Max.X - 58f * scale, barCenterY), 14f * scale,
+                FontAwesomeIcon.Plus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Music.AddToPlaylist)))
+        {
+            OpenPicker(CurrentSong());
+        }
+
         if (ui.IconButton(new Vector2(frame.Max.X - 26f * scale, barCenterY), 14f * scale,
                 FontAwesomeIcon.Stop.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.72f))
         {

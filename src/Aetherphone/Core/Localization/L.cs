@@ -1184,6 +1184,21 @@ internal static class L
         public static readonly LocString SearchStations = new("music.searchStations", "Search stations");
         public static readonly LocString RadioSearchTitle = new("music.radioSearchTitle", "Find your station");
         public static readonly LocString RadioSearchSub = new("music.radioSearchSub", "Search by name, genre, or country");
+        public static readonly LocString YourPlaylists = new("music.yourPlaylists", "Your playlists");
+        public static readonly LocString AddToPlaylist = new("music.addToPlaylist", "Add to playlist");
+        public static readonly LocString NewPlaylist = new("music.newPlaylist", "New playlist");
+        public static readonly LocString PlaylistNameHint = new("music.playlistNameHint", "Playlist name");
+        public static readonly LocString CreatePlaylist = new("music.createPlaylist", "Create");
+        public static readonly LocString RenamePlaylist = new("music.renamePlaylist", "Rename");
+        public static readonly LocString DeletePlaylist = new("music.deletePlaylist", "Delete playlist");
+        public static readonly LocString DeletePlaylistButton = new("music.deletePlaylistButton", "Delete");
+        public static readonly LocString DeletePlaylistConfirm = new("music.deletePlaylistConfirm", "Delete this playlist? This cannot be undone.");
+        public static readonly LocString PlayAll = new("music.playAll", "Play all");
+        public static readonly LocString PlaylistEmptyTitle = new("music.playlistEmptyTitle", "No songs yet");
+        public static readonly LocString PlaylistEmptySub = new("music.playlistEmptySub", "Add songs from search or while you listen");
+        public static readonly LocString NoPlaylistsYet = new("music.noPlaylistsYet", "No playlists yet");
+        public static readonly LocString SongOne = new("music.songOne", "1 song");
+        public static readonly LocString SongsMany = new("music.songsMany", "{0} songs");
     }
 
     internal static class Messages

@@ -71,6 +71,7 @@ internal sealed class PhoneServices : IDisposable
     public required SongSearchService SongSearch { get; init; }
     public required SongPlayer SongPlayer { get; init; }
     public required SongHistory SongHistory { get; init; }
+    public required PlaylistStore Playlists { get; init; }
     public required PlaybackHub Playback { get; init; }
     public required GameStatsStore GameStats { get; init; }
     public required VenuesService Venues { get; init; }
@@ -151,6 +152,7 @@ internal sealed class PhoneServices : IDisposable
         var audioCache = new DiskCache(audioRoot, 256L * 1024 * 1024);
         var songPlayer = new SongPlayer(youtube, audioCache);
         var songHistory = new SongHistory(configuration);
+        var playlists = new PlaylistStore(configuration);
         var playback = new PlaybackHub(radioPlayer, songPlayer, analytics, configuration);
         var gameStats = new GameStatsStore(configuration);
         var venues = new VenuesService(http, notifications, configuration, gameData);
@@ -209,6 +211,7 @@ internal sealed class PhoneServices : IDisposable
             SongSearch = songSearch,
             SongPlayer = songPlayer,
             SongHistory = songHistory,
+            Playlists = playlists,
             Playback = playback,
             GameStats = gameStats,
             Venues = venues,

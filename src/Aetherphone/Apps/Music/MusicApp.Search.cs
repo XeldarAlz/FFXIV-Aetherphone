@@ -4,6 +4,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Songs;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Music;
@@ -117,7 +118,8 @@ internal sealed partial class MusicApp
         var artMin = new Vector2(min.X + 6f * scale, min.Y + (rowHeight - artSize) * 0.5f);
         var artMax = artMin + new Vector2(artSize, artSize);
         DrawCover(drawList, artMin, artMax, song.ThumbnailUrl, song.Title, 6f * scale);
-        var trailing = current ? 32f * scale : 10f * scale;
+        var showAdd = hovered && !current;
+        var trailing = current ? 32f * scale : showAdd ? 40f * scale : 10f * scale;
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - trailing - textLeft;
         var title = Typography.FitText(song.Title, textWidth, TextStyles.BodyEmphasized);
@@ -125,14 +127,26 @@ internal sealed partial class MusicApp
             TextStyles.BodyEmphasized);
         var subtitle = Typography.FitText(SongRowSubtitle(song), textWidth, TextStyles.Caption1);
         Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), subtitle, ui.MutedInk, TextStyles.Caption1);
+        var addClicked = false;
         if (current)
         {
             Equalizer.Draw(drawList, new Vector2(max.X - 18f * scale, min.Y + rowHeight * 0.5f), scale, 17f * scale,
                 clock, ui.Accent, 1f, playback.IsPlaying);
         }
+        else if (showAdd)
+        {
+            addClicked = ui.IconButton(new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f), 15f * scale,
+                FontAwesomeIcon.Plus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Music.AddToPlaylist));
+        }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
+        if (addClicked)
+        {
+            OpenPicker(song);
+            return;
+        }
+
         if (!hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             return;

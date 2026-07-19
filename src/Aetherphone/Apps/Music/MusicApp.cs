@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Playback;
@@ -25,6 +26,7 @@ internal sealed partial class MusicApp : IPhoneApp
         Search,
         CountryFilter,
         LanguageFilter,
+        PlaylistDetail,
     }
 
     private const float TopBarHeight = 46f;
@@ -62,10 +64,12 @@ internal sealed partial class MusicApp : IPhoneApp
     private readonly SongSearchService songSearch;
     private readonly PlaybackHub playback;
     private readonly SongHistory history;
+    private readonly PlaylistStore playlists;
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly FeatureFlags flags;
     private readonly IAnalyticsService analytics;
+    private readonly ConfirmService confirm;
     private readonly ArtworkCache artwork;
     private readonly ViewRouter<View> router;
     private readonly RouterDraw<View> drawView;
@@ -115,17 +119,19 @@ internal sealed partial class MusicApp : IPhoneApp
     private float clock;
 
     public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history,
-        MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags,
-        IAnalyticsService analytics)
+        PlaylistStore playlists, MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags,
+        IAnalyticsService analytics, ConfirmService confirm)
     {
         this.radio = radio;
         this.songSearch = songSearch;
         this.playback = playback;
         this.history = history;
+        this.playlists = playlists;
         this.media = media;
         this.http = http;
         this.flags = flags;
         this.analytics = analytics;
+        this.confirm = confirm;
         artwork = new ArtworkCache(textures);
         router = new ViewRouter<View>(View.Home, Id);
         drawView = DrawView;
@@ -137,6 +143,7 @@ internal sealed partial class MusicApp : IPhoneApp
         router.Reset();
         nowPlayingOpen = false;
         sheetPresence.SnapTo(0f);
+        DismissOverlay(true);
         miniPresence.SnapTo(playback.IsActive ? 1f : 0f);
         featuredIndex = (featuredIndex + 1) % FeaturedSeeds.Length;
         featuredRequested = false;
@@ -150,6 +157,7 @@ internal sealed partial class MusicApp : IPhoneApp
         router.Reset();
         nowPlayingOpen = false;
         sheetPresence.SnapTo(0f);
+        DismissOverlay(true);
     }
 
     public void Draw(in PhoneContext context)
@@ -160,6 +168,7 @@ internal sealed partial class MusicApp : IPhoneApp
         navigation = context.Navigation;
         ui.Theme = theme;
         radioSortMenu.Gate();
+        playlistMenu.Gate();
         CaptureRecent();
         if (!playback.IsActive)
         {
@@ -171,17 +180,24 @@ internal sealed partial class MusicApp : IPhoneApp
         var content = context.Content;
         miniPresence.Step(playback.IsActive && !nowPlayingOpen ? 1f : 0f, MiniSmoothTime, delta);
         sheetPresence.Step(nowPlayingOpen ? 1f : 0f, SheetSmoothTime, delta);
+        overlayPresence.Step(overlay != OverlayMode.None ? 1f : 0f, SheetSmoothTime, delta);
         var sheetValue = Math.Clamp(sheetPresence.Value, 0f, 1f);
+        var overlayValue = Math.Clamp(overlayPresence.Value, 0f, 1f);
 
         var screen = SceneChrome.ScreenFrom(content, theme, scale);
         ui.Backdrop(screen);
-        using (InputShield.Engage(sheetValue > 0.15f))
+        using (InputShield.Engage(sheetValue > 0.15f || overlayValue > 0.15f))
         {
             router.Draw(content, AppSkin.Transparent, delta, drawView);
         }
 
-        DrawMiniPlayer(content, scale);
-        DrawNowPlayingSheet(content, scale, sheetValue, delta);
+        using (InputShield.Engage(overlayValue > 0.15f))
+        {
+            DrawMiniPlayer(content, scale);
+            DrawNowPlayingSheet(content, scale, sheetValue, delta);
+        }
+
+        DrawPlaylistOverlay(content, scale, overlayValue, delta);
     }
 
     private void DrawView(View view, Rect area, int depth)
@@ -201,6 +217,9 @@ internal sealed partial class MusicApp : IPhoneApp
                 break;
             case View.LanguageFilter:
                 DrawFacetPicker(context, false);
+                break;
+            case View.PlaylistDetail:
+                DrawPlaylistDetail(context);
                 break;
             default:
                 DrawHome(context);

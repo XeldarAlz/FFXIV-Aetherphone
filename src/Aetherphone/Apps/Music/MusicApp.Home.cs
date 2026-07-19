@@ -38,6 +38,8 @@ internal sealed partial class MusicApp
             DrawRecentChips(scale, gridWidth);
             DrawShelfHeading(Loc.T(L.Music.MadeForYou), scale);
             DrawFeaturedShelf(scale, gridWidth);
+            DrawShelfHeading(Loc.T(L.Music.YourPlaylists), scale);
+            DrawPlaylistShelf(scale, gridWidth);
             DrawRadioHeading(scale);
             DrawCategoryGrid(scale, gridWidth);
             ImGui.Dummy(new Vector2(0f, 10f * scale));
