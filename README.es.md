@@ -18,6 +18,7 @@
   <a href="README.de.md"><img alt="Deutsch" src="https://img.shields.io/badge/Deutsch-lightgrey?style=flat-square"></a>
   <a href="README.fr.md"><img alt="Français" src="https://img.shields.io/badge/Fran%C3%A7ais-lightgrey?style=flat-square"></a>
   <a href="README.es.md"><img alt="Español" src="https://img.shields.io/badge/Espa%C3%B1ol-blue?style=flat-square"></a>
+  <a href="README.pt.md"><img alt="Português" src="https://img.shields.io/badge/Portugu%C3%AAs-lightgrey?style=flat-square"></a>
   <a href="README.tr.md"><img alt="Türkçe" src="https://img.shields.io/badge/T%C3%BCrk%C3%A7e-lightgrey?style=flat-square"></a>
   <a href="README.zh.md"><img alt="中文" src="https://img.shields.io/badge/%E4%B8%AD%E6%96%87-lightgrey?style=flat-square"></a>
   <a href="README.ja.md"><img alt="日本語" src="https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-lightgrey?style=flat-square"></a>

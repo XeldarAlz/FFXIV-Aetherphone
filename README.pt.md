@@ -18,15 +18,15 @@
   <a href="README.de.md"><img alt="Deutsch" src="https://img.shields.io/badge/Deutsch-lightgrey?style=flat-square"></a>
   <a href="README.fr.md"><img alt="Français" src="https://img.shields.io/badge/Fran%C3%A7ais-lightgrey?style=flat-square"></a>
   <a href="README.es.md"><img alt="Español" src="https://img.shields.io/badge/Espa%C3%B1ol-lightgrey?style=flat-square"></a>
-  <a href="README.pt.md"><img alt="Português" src="https://img.shields.io/badge/Portugu%C3%AAs-lightgrey?style=flat-square"></a>
+  <a href="README.pt.md"><img alt="Português" src="https://img.shields.io/badge/Portugu%C3%AAs-blue?style=flat-square"></a>
   <a href="README.tr.md"><img alt="Türkçe" src="https://img.shields.io/badge/T%C3%BCrk%C3%A7e-lightgrey?style=flat-square"></a>
-  <a href="README.zh.md"><img alt="中文" src="https://img.shields.io/badge/%E4%B8%AD%E6%96%87-blue?style=flat-square"></a>
+  <a href="README.zh.md"><img alt="中文" src="https://img.shields.io/badge/%E4%B8%AD%E6%96%87-lightgrey?style=flat-square"></a>
   <a href="README.ja.md"><img alt="日本語" src="https://img.shields.io/badge/%E6%97%A5%E6%9C%AC%E8%AA%9E-lightgrey?style=flat-square"></a>
   <a href="README.ru.md"><img alt="Русский" src="https://img.shields.io/badge/%D0%A0%D1%83%D1%81%D1%81%D0%BA%D0%B8%D0%B9-lightgrey?style=flat-square"></a>
 </p>
 
 <p align="center">
-  <em>一部为你打造的智能手机。基于 Dalamud 构建。</em>
+  <em>Um smartphone, feito para você. Construído sobre o Dalamud.</em>
 </p>
 
 <p align="center">
@@ -39,53 +39,53 @@
   <img src="src/Aetherphone/Images/screenshots/Home.png" width="280" alt="Aetherphone in-game" />
 </p>
 
-## 这是什么
+## O que é
 
-Aetherphone 是一款免费、开源的 Dalamud 插件，在 FINAL FANTASY XIV 中把一部真正的智能手机搬上屏幕：一台停靠、常驻显示的设备，配有主屏幕、通知、铃声以及可换主题的壁纸。应用背后运行着一个面向 Aetherphone 用户的社交网络，因此它们可以跨角色、跨会话工作，而不仅限于本地。
+O Aetherphone é um plugin de Dalamud gratuito e de código aberto que coloca um smartphone de verdade na tela em FINAL FANTASY XIV: um dispositivo ancorado e sempre ativo, com tela de início, notificações, toques e papéis de parede personalizáveis. Por trás dos aplicativos há uma rede social própria para os usuários do Aetherphone, então eles funcionam entre personagens e sessões, não apenas localmente.
 
-隐私与安全至上：文字消息、附件与语音留言端到端加密，通话在传输中加密；帖子与图片都会经过 AI 审核，并遵循明确的内容规则。
+A privacidade e a segurança vêm em primeiro lugar: as mensagens de texto, os anexos e as mensagens de voz têm criptografia de ponta a ponta, as chamadas são criptografadas em trânsito, e as publicações e imagens passam por moderação com IA com regras de conteúdo claras.
 
-## 亮点
+## Destaques
 
-- **社交**：Chirper 微博、Aethergram 照片信息流、支持语音留言与群组通话的私密消息应用 ChocoChat，以及可选的 18+ 伴侣应用 Velvet。
-- **实用工具**：市场板追踪、场所与活动目录、游戏内音乐、天气、钱包、计时器与重置、照片库与相机，还有一座掌上小游戏街机，尽在 30 多款应用之中。
-- **专属于你**：强调色配色、壁纸、Lodestone 角色立绘、自定义铃声，以及一个无障碍的文字大小缩放。
+- **Social**: o microblog Chirper, o feed de fotos Aethergram, o ChocoChat para mensagens privadas com mensagens de voz e chamadas em grupo, e o Velvet, um aplicativo complementar opcional para maiores de 18 anos.
+- **Utilidades**: um rastreador do mercado, um diretório de locais e eventos, música no jogo, o clima, uma carteira, cronômetros e resets, uma biblioteca de fotos e câmera, e um fliperama de bolso com minijogos, entre mais de 30 aplicativos.
+- **Deixe do seu jeito**: paletas de destaque, papéis de parede, retratos de personagem do Lodestone, toques personalizados e um zoom de acessibilidade para o tamanho do texto.
 
-完整的功能介绍、截图与细节都在官网：
+O tour completo pelos recursos, capturas de tela e detalhes estão no site:
 
 → **[www.aetherphone.net](https://www.aetherphone.net/)**
 
-## 安装
+## Instalação
 
-在游戏中：`/xlsettings` → **Experimental** → 粘贴到 **Custom Plugin Repositories**：
+No jogo: `/xlsettings` → **Experimental** → cole em **Custom Plugin Repositories**:
 
 ```
 https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
 ```
 
-勾选 **Enabled**，点击 **+**，然后点击 **Save and Close**。打开 `/xlplugins` → **All Plugins**，搜索 **Aetherphone** 并安装。
+Marque **Enabled**, clique em **+** e depois em **Save and Close**. Abra `/xlplugins` → **All Plugins**, busque **Aetherphone** e instale.
 
-## 指令
+## Comandos
 
-| 指令 | 作用 |
+| Comando | Ação |
 |---|---|
-| `/phone` | 切换手机显示 |
-| `/aetherphone` | `/phone` 的别名 |
-| `/phone about` | 打开鸣谢 / 链接 |
-| `/phone reset` | 将手机重新居中于屏幕 |
+| `/phone` | Mostrar/ocultar o telefone |
+| `/aetherphone` | Atalho para `/phone` |
+| `/phone about` | Abrir créditos / links |
+| `/phone reset` | Recentralizar o telefone na tela |
 
-## 社区
+## Comunidade
 
-有问题、想法，或只是想和其他玩家一起聊聊？来 Discord 打个招呼吧。
+Tem dúvidas, ideias ou só quer bater um papo com outros jogadores? Venha dar um oi no Discord.
 
-→ [加入我们的 Discord](https://discord.gg/3HbJCscMyS)
+→ [Entre no nosso Discord](https://discord.gg/3HbJCscMyS)
 
-## 我的更多作品
+## Mais coisas minhas
 
-如果你喜欢这个插件，不妨看看我的其他 Dalamud 作品。也许你会在那里找到别的适合你的东西。
+Se você gostou deste plugin, dê uma olhada nos meus outros trabalhos para Dalamud. Talvez encontre algo mais para você lá.
 
 → [XeldarAlz Dalamud Plugins](https://github.com/XeldarAlz/DalamudPlugins)
 
-## 许可证
+## Licença
 
-AGPL-3.0-or-later。参见 [LICENSE.md](LICENSE.md)。
+AGPL-3.0-or-later. Consulte [LICENSE.md](LICENSE.md).
