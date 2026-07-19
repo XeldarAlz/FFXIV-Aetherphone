@@ -445,6 +445,7 @@
   "settings.commandAbout": "Abrir créditos y enlaces",
   "settings.commandReset": "Mover el teléfono de vuelta al centro de la pantalla",
   "settings.commandTest": "Enviar una notificación de prueba",
+  "changelog.r0984.0": "KupoAI está en mantenimiento y por ahora permanece oculta en el teléfono; volverá en una actualización posterior con respuestas más inteligentes y acertadas",
   "changelog.r0983.0": "Música ahora tiene listas: crea las tuyas, añade canciones desde Reproduciendo ahora o desde la búsqueda, y reprodúcelas, cámbiales el nombre o elimínalas cuando quieras",
   "changelog.r0983.1": "El teléfono ahora puede permanecer abierto durante la Pose de grupo para tus sesiones de fotos, con un nuevo interruptor Mostrar en Pose de grupo en Ajustes, dentro de Inmersión",
   "changelog.r0983.2": "La lista Descubrir de Velvet ahora sigue cargando más personas a medida que te desplazas, en lugar de detenerse tras la primera página",

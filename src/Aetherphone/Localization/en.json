@@ -445,6 +445,7 @@
   "settings.commandAbout": "Open credits and links",
   "settings.commandReset": "Move the phone back to the center of the screen",
   "settings.commandTest": "Send a sample notification",
+  "changelog.r0984.0": "KupoAI is in maintenance and is hidden from the phone for now; it will return in a later update with smarter, more intelligent answers",
   "changelog.r0983.0": "Music now has playlists: create your own, add songs from Now Playing or search, and play, rename, or delete them whenever you like",
   "changelog.r0983.1": "The phone can now stay open during Group Pose for photo shoots, with a new Show in Group Pose toggle in Settings under Immersion",
   "changelog.r0983.2": "Velvet's Discover list now keeps loading more people as you scroll, instead of stopping after the first page",

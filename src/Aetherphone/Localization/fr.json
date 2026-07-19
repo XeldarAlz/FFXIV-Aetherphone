@@ -445,6 +445,7 @@
   "settings.commandAbout": "Ouvre les crédits et liens",
   "settings.commandReset": "Ramène le téléphone au centre de l'écran",
   "settings.commandTest": "Envoie une notification d'exemple",
+  "changelog.r0984.0": "KupoAI est en maintenance et reste masquée sur le téléphone pour le moment ; elle reviendra dans une mise à jour ultérieure avec des réponses plus intelligentes et pertinentes",
   "changelog.r0983.0": "Musique a désormais des playlists : créez les vôtres, ajoutez des morceaux depuis En cours de lecture ou la recherche, puis lisez-les, renommez-les ou supprimez-les quand vous voulez",
   "changelog.r0983.1": "Le téléphone peut désormais rester ouvert pendant le Photodrame pour vos séances photo, grâce à la nouvelle option Afficher dans le Photodrame dans les Réglages, sous Immersion",
   "changelog.r0983.2": "La liste Découvrir de Velvet charge désormais d'autres personnes au fil du défilement, au lieu de s'arrêter après la première page",

@@ -445,6 +445,7 @@
   "settings.commandAbout": "Künye ve bağlantıları açar",
   "settings.commandReset": "Telefonu ekranın ortasına geri getirir",
   "settings.commandTest": "Örnek bir bildirim gönderir",
+  "changelog.r0984.0": "KupoAI bakımda ve şimdilik telefondan gizlendi; daha akıllı ve daha isabetli yanıtlarla ileriki bir güncellemede geri dönecek",
   "changelog.r0983.0": "Müzik'e artık çalma listeleri geldi: kendi listelerini oluştur, Şimdi çalıyor ekranından veya aramadan şarkı ekle, ardından istediğin zaman çal, yeniden adlandır veya sil",
   "changelog.r0983.1": "Telefon artık fotoğraf çekimleri için Grup pozunda açık kalabiliyor; Ayarlar'da Atmosfer altındaki yeni Grup pozunda göster anahtarıyla açılıp kapatılıyor",
   "changelog.r0983.2": "Velvet'in Keşfet listesi artık kaydırdıkça daha fazla kişi yüklemeye devam ediyor, ilk sayfadan sonra durmuyor",

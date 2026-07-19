@@ -518,6 +518,11 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0984 =
+        {
+            new("changelog.r0984.0", "KupoAI is in maintenance and is hidden from the phone for now; it will return in a later update with smarter, more intelligent answers"),
+        };
+
         public static readonly LocString[] Release0983 =
         {
             new("changelog.r0983.0", "Music now has playlists: create your own, add songs from Now Playing or search, and play, rename, or delete them whenever you like"),
