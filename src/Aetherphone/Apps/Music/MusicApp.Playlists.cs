@@ -200,7 +200,8 @@ internal sealed partial class MusicApp
             var playlist = list[index];
             drawList.AddImageRounded(artwork.HandleForName(playlist.Name), min, max, Vector2.Zero, Vector2.One,
                 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
-            Squircle.FillVerticalGradient(drawList, min, max, rounding, 0x00000000u, 0xC0000000u);
+            var scrimTop = max.Y - tileHeight * 0.6f;
+            drawList.AddRectFilledMultiColor(new Vector2(min.X, scrimTop), max, 0u, 0u, 0xC8000000u, 0xC8000000u);
             if (hovered)
             {
                 drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)), rounding);
