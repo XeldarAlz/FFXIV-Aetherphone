@@ -172,22 +172,11 @@ internal sealed class ChangelogPage : ISettingsPage
 
     private void WrapLine(string text, float maxWidth)
     {
-        var words = text.Split(' ');
-        var current = string.Empty;
-        for (var index = 0; index < words.Length; index++)
+        var lines = Typography.WrapText(text, TextStyles.Callout, maxWidth);
+        for (var index = 0; index < lines.Length; index++)
         {
-            var candidate = current.Length == 0 ? words[index] : string.Concat(current, " ", words[index]);
-            if (current.Length > 0 && Typography.Measure(candidate, TextStyles.Callout).X > maxWidth)
-            {
-                wrappedLines.Add(current);
-                current = words[index];
-                continue;
-            }
-
-            current = candidate;
+            wrappedLines.Add(lines[index]);
         }
-
-        wrappedLines.Add(current);
     }
 
     private static string FormatDate(string isoDate)

@@ -228,109 +228,65 @@ internal static class Typography
     public static float DrawWrappedCentered(ImDrawListPtr drawList, string text, in TextStyle style, Vector4 color,
         Vector2 topCenter, float maxWidth, float lineSpacing = 1.25f)
     {
-        var lineHeight = Measure("Ay", style).Y * lineSpacing;
-        var y = topCenter.Y;
-        var segmentStart = 0;
-        for (var index = 0; index <= text.Length; index++)
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
-            if (index != text.Length && text[index] != '\n')
+            Plugin.Fonts.NoticeText(text);
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
+            var packed = ImGui.GetColorU32(color);
+            var lineHeight = ImGui.CalcTextSize("Ay").Y * lineSpacing;
+            var buffer = new List<string>();
+            var y = topCenter.Y;
+            var segments = text.Split('\n');
+            for (var segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
             {
-                continue;
+                var segment = segments[segmentIndex].TrimEnd('\r');
+                if (segment.Length == 0)
+                {
+                    y += lineHeight;
+                    continue;
+                }
+
+                buffer.Clear();
+                WrapSegment(segment, maxWidth, buffer);
+                for (var lineIndex = 0; lineIndex < buffer.Count; lineIndex++)
+                {
+                    var line = buffer[lineIndex];
+                    var size = ImGui.CalcTextSize(line);
+                    drawList.AddText(font, fontSize,
+                        new Vector2(topCenter.X - size.X * 0.5f, y + (lineHeight - size.Y) * 0.5f), packed, line);
+                    y += lineHeight;
+                }
             }
 
-            var segment = text.Substring(segmentStart, index - segmentStart).TrimEnd('\r');
-            segmentStart = index + 1;
-            if (segment.Length == 0)
-            {
-                y += lineHeight;
-                continue;
-            }
-
-            y = DrawWrappedSegment(drawList, segment, style, color, topCenter.X, y, maxWidth, lineHeight);
+            return y;
         }
-
-        return y;
-    }
-
-    private static float DrawWrappedSegment(ImDrawListPtr drawList, string text, in TextStyle style, Vector4 color,
-        float centerX, float y, float maxWidth, float lineHeight)
-    {
-        var length = text.Length;
-        var lineStart = 0;
-        var lastSpace = -1;
-        for (var index = 0; index <= length; index++)
-        {
-            var atEnd = index == length;
-            if (!atEnd && text[index] != ' ')
-            {
-                continue;
-            }
-
-            var candidate = text.Substring(lineStart, index - lineStart);
-            if (Measure(candidate, style).X > maxWidth && lastSpace > lineStart)
-            {
-                var line = text.Substring(lineStart, lastSpace - lineStart);
-                DrawCentered(drawList, new Vector2(centerX, y + lineHeight * 0.5f), line, color, style);
-                y += lineHeight;
-                lineStart = lastSpace + 1;
-            }
-
-            lastSpace = index;
-            if (atEnd)
-            {
-                var tail = text.Substring(lineStart);
-                DrawCentered(drawList, new Vector2(centerX, y + lineHeight * 0.5f), tail, color, style);
-                y += lineHeight;
-            }
-        }
-
-        return y;
     }
 
     public static int CountWrappedLines(string text, in TextStyle style, float maxWidth)
     {
-        var lines = 0;
-        var segmentStart = 0;
-        for (var index = 0; index <= text.Length; index++)
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
         {
-            if (index != text.Length && text[index] != '\n')
+            Plugin.Fonts.NoticeText(text);
+            var buffer = new List<string>();
+            var lines = 0;
+            var segments = text.Split('\n');
+            for (var segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
             {
-                continue;
+                var segment = segments[segmentIndex].TrimEnd('\r');
+                if (segment.Length == 0)
+                {
+                    lines++;
+                    continue;
+                }
+
+                buffer.Clear();
+                WrapSegment(segment, maxWidth, buffer);
+                lines += buffer.Count;
             }
 
-            var segment = text.Substring(segmentStart, index - segmentStart).TrimEnd('\r');
-            segmentStart = index + 1;
-            lines += segment.Length == 0 ? 1 : CountSegmentLines(segment, style, maxWidth);
+            return lines;
         }
-
-        return lines;
-    }
-
-    private static int CountSegmentLines(string text, in TextStyle style, float maxWidth)
-    {
-        var length = text.Length;
-        var lines = 1;
-        var lineStart = 0;
-        var lastSpace = -1;
-        for (var index = 0; index <= length; index++)
-        {
-            var atEnd = index == length;
-            if (!atEnd && text[index] != ' ')
-            {
-                continue;
-            }
-
-            var candidate = text.Substring(lineStart, index - lineStart);
-            if (Measure(candidate, style).X > maxWidth && lastSpace > lineStart)
-            {
-                lines++;
-                lineStart = lastSpace + 1;
-            }
-
-            lastSpace = index;
-        }
-
-        return lines;
     }
 
     public static void DrawCenteredHalo(Vector2 center, string text, Vector4 color, Vector4 halo, float haloRadius,
@@ -409,6 +365,20 @@ internal static class Typography
         }
     }
 
+    public static string[] WrapText(string text, in TextStyle style, float maxWidth) =>
+        WrapText(text, style.Scale, style.Weight, maxWidth);
+
+    public static string[] WrapText(string text, float scale, FontWeight weight, float maxWidth)
+    {
+        using (Plugin.Fonts.Push(scale, weight))
+        {
+            Plugin.Fonts.NoticeText(text);
+            return WrapLines(text, maxWidth);
+        }
+    }
+
+    public static string[] WrapCurrent(string text, float maxWidth) => WrapLines(text, maxWidth);
+
     private static string[] WrapLines(string text, float maxWidth)
     {
         InvalidateCachesOnFontChange();
@@ -440,6 +410,13 @@ internal static class Typography
         return lines.ToArray();
     }
 
+    private static bool IsCjk(char value)
+    {
+        return value >= '⺀' && value <= '鿿'
+            || value >= '豈' && value <= '﫿'
+            || value >= '＀' && value <= '￯';
+    }
+
     private static void WrapSegment(string segment, float maxWidth, List<string> lines)
     {
         if (segment.Length == 0)
@@ -449,23 +426,56 @@ internal static class Typography
         }
 
         var builder = new StringBuilder();
-        var words = segment.Split(' ');
-        for (var index = 0; index < words.Length; index++)
+        var length = segment.Length;
+        var index = 0;
+        var pendingSpace = false;
+        while (index < length)
         {
-            var word = words[index];
-            if (builder.Length == 0)
+            if (segment[index] == ' ')
             {
-                builder.Append(word);
+                pendingSpace = true;
+                index++;
                 continue;
             }
 
-            builder.Append(' ').Append(word);
+            string token;
+            if (IsCjk(segment[index]))
+            {
+                token = segment[index].ToString();
+                index++;
+            }
+            else
+            {
+                var start = index;
+                while (index < length && segment[index] != ' ' && !IsCjk(segment[index]))
+                {
+                    index++;
+                }
+
+                token = segment.Substring(start, index - start);
+            }
+
+            if (builder.Length == 0)
+            {
+                builder.Append(token);
+                pendingSpace = false;
+                continue;
+            }
+
+            var separatorLength = pendingSpace ? 1 : 0;
+            if (pendingSpace)
+            {
+                builder.Append(' ');
+            }
+
+            builder.Append(token);
+            pendingSpace = false;
             if (ImGui.CalcTextSize(builder.ToString()).X > maxWidth)
             {
-                builder.Length -= word.Length + 1;
+                builder.Length -= token.Length + separatorLength;
                 lines.Add(builder.ToString());
                 builder.Clear();
-                builder.Append(word);
+                builder.Append(token);
             }
         }
 

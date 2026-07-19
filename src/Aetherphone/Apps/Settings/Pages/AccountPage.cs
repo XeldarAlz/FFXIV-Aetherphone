@@ -540,24 +540,16 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var numberSize = Typography.Measure(number, 0.85f, FontWeight.Bold);
         Typography.Draw(badgeCenter - (numberSize * 0.5f), number, ink, 0.85f, FontWeight.Bold);
         var lineY = start.Y;
-        var line = string.Empty;
-        var words = text.Split(' ');
-        for (var wordIndex = 0; wordIndex < words.Length; wordIndex++)
+        var lines = Typography.WrapText(text, 1f, FontWeight.Regular, wrapWidth);
+        for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
         {
-            var candidate = line.Length == 0 ? words[wordIndex] : string.Concat(line, " ", words[wordIndex]);
-            if (line.Length > 0 && Typography.Measure(candidate).X > wrapWidth)
+            if (lineIndex > 0)
             {
-                Typography.Draw(new Vector2(textLeft, lineY), line, theme.TextStrong);
                 lineY += lineStep;
-                line = words[wordIndex];
             }
-            else
-            {
-                line = candidate;
-            }
-        }
 
-        Typography.Draw(new Vector2(textLeft, lineY), line, theme.TextStrong);
+            Typography.Draw(new Vector2(textLeft, lineY), lines[lineIndex], theme.TextStrong);
+        }
         var bottom = MathF.Max(start.Y + badgeDiameter, lineY + lineHeight);
         ImGui.SetCursorScreenPos(start);
         ImGui.Dummy(new Vector2(available, (bottom - start.Y) + 10f * scale));

@@ -321,27 +321,8 @@ public sealed class AboutWindow : Window, IDisposable
         ImGui.Dummy(new Vector2(fullAvail, height));
     }
 
-    private static List<string> WrapLines(string text, float maxWidth)
-    {
-        var lines = new List<string>();
-        var cur = "";
-        foreach (var word in text.Split(' '))
-        {
-            var test = cur.Length == 0 ? word : cur + " " + word;
-            if (cur.Length > 0 && ImGui.CalcTextSize(test).X > maxWidth)
-            {
-                lines.Add(cur);
-                cur = word;
-            }
-            else
-            {
-                cur = test;
-            }
-        }
-
-        if (cur.Length > 0) lines.Add(cur);
-        return lines;
-    }
+    private static IReadOnlyList<string> WrapLines(string text, float maxWidth) =>
+        Typography.WrapCurrent(text, maxWidth);
 
     private static void SponsorButton(Vector2 origin, Vector2 size, Vector4 accent)
     {
