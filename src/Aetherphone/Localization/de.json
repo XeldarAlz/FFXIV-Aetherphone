@@ -389,6 +389,8 @@
   "settings.immersion": "Immersion",
   "settings.scrollWhileIdle": "Im Leerlauf scrollen",
   "settings.scrollWhileIdleHint": "Dein Charakter scrollt durch sein Handy (Tomescroll-Emote), während er still steht und sich nicht im Kampf befindet. Ohne Wirkung, falls die Emote nicht freigeschaltet ist.",
+  "settings.showInGpose": "In Gruppenpose anzeigen",
+  "settings.showInGposeHint": "Hält das Handy in der Gruppenpose verfügbar, damit du es während eines Fotoshootings öffnen kannst. Schalte es aus, um deinen Bildschirm für Screenshots frei zu halten.",
   "settings.openOnStartup": "Beim Start öffnen",
   "settings.openMinimized": "Minimiert öffnen",
   "settings.startupHint": "Öffnet das Telefon automatisch beim Anmelden. Minimiert öffnen zeigt es als kleine Leiste, die du zum Vergrößern antippst.",

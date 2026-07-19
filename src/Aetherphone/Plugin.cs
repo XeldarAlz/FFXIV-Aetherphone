@@ -120,6 +120,7 @@ public sealed class Plugin : IDalamudPlugin
             CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
             PluginInterface.UiBuilder.Draw += windowSystem.Draw;
             PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
+            PluginInterface.UiBuilder.DisableGposeUiHide = Cfg.ShowInGpose;
             ClientState.Login += OnLogin;
 
             if (Cfg.OpenOnStartup && ClientState.IsLoggedIn)

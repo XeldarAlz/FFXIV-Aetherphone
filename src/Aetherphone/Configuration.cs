@@ -29,6 +29,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool TutorialsEnabled { get; set; } = true;
     public Dictionary<string, int> OnboardingCompleted { get; set; } = new();
     public bool LockPosition { get; set; }
+    public bool ShowInGpose { get; set; } = true;
     public Vector2? MaximizedPosition { get; set; }
     public Vector2? MinimizedPosition { get; set; }
     public bool DoNotDisturb { get; set; }

@@ -389,6 +389,8 @@
   "settings.immersion": "沉浸感",
   "settings.scrollWhileIdle": "待机时滑动手机",
   "settings.scrollWhileIdleHint": "你的角色在站立且非战斗状态下会滑动手机（使用神典石情感动作）。如果未解锁该动作则无效。",
+  "settings.showInGpose": "集体动作时显示",
+  "settings.showInGposeHint": "在集体动作模式下也能使用手机，方便你在拍照时打开它。若想让画面保持干净以便截图，请关闭此项。",
   "settings.openOnStartup": "启动时打开",
   "settings.openMinimized": "最小化打开",
   "settings.startupHint": "登录时自动打开手机。选择“最小化打开”将显示为一个小托盘，点击即可展开。",

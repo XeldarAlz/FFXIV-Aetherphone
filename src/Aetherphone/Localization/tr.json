@@ -389,6 +389,8 @@
   "settings.immersion": "Atmosfer",
   "settings.scrollWhileIdle": "Boştayken kaydır",
   "settings.scrollWhileIdleHint": "Karakterin hareketsiz ve savaş dışındayken telefonunda gezinir (Tomescroll emotu). Bu emotu açmadıysan hiçbir şey yapmaz.",
+  "settings.showInGpose": "Grup pozunda göster",
+  "settings.showInGposeHint": "Grup pozundayken telefonu açık tutar, böylece fotoğraf çekimleri sırasında açabilirsin. Ekranı ekran görüntüleri için temiz tutmak istersen kapat.",
   "settings.openOnStartup": "Açılışta aç",
   "settings.openMinimized": "Küçültülmüş aç",
   "settings.startupHint": "Giriş yaptığında telefonu otomatik açar. Küçültülmüş aç, onu büyütmek için dokunacağın küçük bir panel olarak gösterir.",

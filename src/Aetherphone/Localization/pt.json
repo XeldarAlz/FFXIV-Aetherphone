@@ -389,6 +389,8 @@
   "settings.immersion": "Imersão",
   "settings.scrollWhileIdle": "Rolar quando parado",
   "settings.scrollWhileIdleHint": "Seu personagem rola o telefone (emote Tomescroll) enquanto fica parado e fora de combate. Não faz nada se você não desbloqueou o emote.",
+  "settings.showInGpose": "Mostrar no Group Pose",
+  "settings.showInGposeHint": "Mantém o telefone disponível enquanto você está no Group Pose, para abri-lo durante as sessões de fotos. Desative para deixar a tela limpa para as capturas.",
   "settings.openOnStartup": "Abrir ao iniciar",
   "settings.openMinimized": "Abrir minimizado",
   "settings.startupHint": "Abre o telefone automaticamente quando você faz login. Abrir minimizado o mostra como um dock pequeno que você toca para expandir.",

@@ -458,6 +458,8 @@ internal static class L
         public static readonly LocString Immersion = new("settings.immersion", "Immersion");
         public static readonly LocString ScrollWhileIdle = new("settings.scrollWhileIdle", "Scroll while idle");
         public static readonly LocString ScrollWhileIdleHint = new("settings.scrollWhileIdleHint", "Your character scrolls through their phone (Tomescroll emote) while standing still and out of combat. Does nothing if you haven't unlocked the emote.");
+        public static readonly LocString ShowInGpose = new("settings.showInGpose", "Show in Group Pose");
+        public static readonly LocString ShowInGposeHint = new("settings.showInGposeHint", "Keep the phone available while you're in Group Pose, so you can open it during photo shoots. Turn it off to keep your screen clear for screenshots.");
         public static readonly LocString OpenOnStartup = new("settings.openOnStartup", "Open at startup");
         public static readonly LocString OpenMinimized = new("settings.openMinimized", "Open minimized");
         public static readonly LocString StartupHint = new("settings.startupHint", "Open the phone automatically when you log in. Open minimized shows it as a small dock that you tap to expand.");

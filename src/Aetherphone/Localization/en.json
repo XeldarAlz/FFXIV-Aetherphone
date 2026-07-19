@@ -389,6 +389,8 @@
   "settings.immersion": "Immersion",
   "settings.scrollWhileIdle": "Scroll while idle",
   "settings.scrollWhileIdleHint": "Your character scrolls through their phone (Tomescroll emote) while standing still and out of combat. Does nothing if you haven't unlocked the emote.",
+  "settings.showInGpose": "Show in Group Pose",
+  "settings.showInGposeHint": "Keep the phone available while you're in Group Pose, so you can open it during photo shoots. Turn it off to keep your screen clear for screenshots.",
   "settings.openOnStartup": "Open at startup",
   "settings.openMinimized": "Open minimized",
   "settings.startupHint": "Open the phone automatically when you log in. Open minimized shows it as a small dock that you tap to expand.",

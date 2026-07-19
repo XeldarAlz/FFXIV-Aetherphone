@@ -389,6 +389,8 @@
   "settings.immersion": "Inmersión",
   "settings.scrollWhileIdle": "Desplazar estando inactivo",
   "settings.scrollWhileIdleHint": "Tu personaje revisa su teléfono (emote Tomescroll) mientras está quieto y fuera de combate. No hace nada si no has desbloqueado el emote.",
+  "settings.showInGpose": "Mostrar en Pose de grupo",
+  "settings.showInGposeHint": "Mantén el teléfono disponible mientras estás en Pose de grupo, para poder abrirlo durante las sesiones de fotos. Desactívalo para dejar la pantalla despejada para las capturas.",
   "settings.openOnStartup": "Abrir al iniciar",
   "settings.openMinimized": "Abrir minimizado",
   "settings.startupHint": "Abre el teléfono automáticamente cuando inicias sesión. Abrir minimizado lo muestra como un dock pequeño que tocas para expandir.",

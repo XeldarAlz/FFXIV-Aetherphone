@@ -389,6 +389,8 @@
   "settings.immersion": "没入感",
   "settings.scrollWhileIdle": "待機中にスクロール",
   "settings.scrollWhileIdleHint": "立ち止まっていて非戦闘状態の時、キャラクターが電話をスクロールする（トームストーン）エモートを実行します。エモートを解放していない場合は機能しません。",
+  "settings.showInGpose": "グループポーズ中に表示",
+  "settings.showInGposeHint": "グループポーズ中もスマホを使えるようにして、撮影中に開けます。スクリーンショット用に画面をすっきりさせたい場合はオフにしてください。",
   "settings.openOnStartup": "起動時に開く",
   "settings.openMinimized": "最小化して開く",
   "settings.startupHint": "ログイン時に自動的に電話を開きます。「最小化して開く」をオンにすると、タップして展開できる小さなドックとして表示されます。",

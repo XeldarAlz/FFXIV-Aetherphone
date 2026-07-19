@@ -55,6 +55,22 @@ internal sealed class ImmersionPage : ISettingsPage
             SettingsSection.Hint(Loc.T(L.Settings.ScrollWhileIdleHint), theme);
 
             ImGui.Dummy(new Vector2(0f, 12f * scale));
+            var gposeCard = GroupCard.Begin(theme, 1);
+            var showInGpose = SettingsRow.Bool(gposeCard.NextRow(), Loc.T(L.Settings.ShowInGpose),
+                configuration.ShowInGpose, theme);
+            gposeCard.End();
+            if (showInGpose != configuration.ShowInGpose)
+            {
+                configuration.ShowInGpose = showInGpose;
+                Plugin.PluginInterface.UiBuilder.DisableGposeUiHide = showInGpose;
+                analytics.Track(AnalyticsEvents.SettingChanged("show_in_gpose", showInGpose ? "1" : "0"));
+                configuration.Save();
+            }
+
+            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            SettingsSection.Hint(Loc.T(L.Settings.ShowInGposeHint), theme);
+
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
             var startupCard = GroupCard.Begin(theme, 2);
             var openStartup = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenOnStartup),
                 configuration.OpenOnStartup, theme);

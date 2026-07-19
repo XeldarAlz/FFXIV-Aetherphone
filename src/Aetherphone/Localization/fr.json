@@ -389,6 +389,8 @@
   "settings.immersion": "Immersion",
   "settings.scrollWhileIdle": "Faire défiler à l'arrêt",
   "settings.scrollWhileIdleHint": "Votre personnage fait défiler son téléphone (émote Tomescroll) lorsqu'il reste immobile et hors combat. Sans effet si vous n'avez pas débloqué l'émote.",
+  "settings.showInGpose": "Afficher dans le Photodrame",
+  "settings.showInGposeHint": "Garde le téléphone accessible pendant le Photodrame, pour pouvoir l'ouvrir lors de vos séances photo. Désactivez l'option pour garder un écran net pour vos captures d'écran.",
   "settings.openOnStartup": "Ouvrir au démarrage",
   "settings.openMinimized": "Ouvrir réduit",
   "settings.startupHint": "Ouvre le téléphone automatiquement à la connexion. Ouvrir réduit l'affiche sous forme de petit module que vous touchez pour l'agrandir.",
