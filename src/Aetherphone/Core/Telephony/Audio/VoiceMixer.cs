@@ -1,5 +1,6 @@
 using Concentus;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace Aetherphone.Core.Telephony.Audio;
 
@@ -30,6 +31,7 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
     private readonly byte[] pcmBytes = new byte[OpusAudio.FrameSamples * 6 * sizeof(short)];
     private float[] mixScratch = Array.Empty<float>();
     private WaveOutEvent? output;
+    private VolumeSampleProvider? volumeProvider;
     private float volume = 0.85f;
     public WaveFormat WaveFormat => format;
 
@@ -39,10 +41,10 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
         set
         {
             volume = Math.Clamp(value, 0f, 1f);
-            var device = output;
-            if (device is not null)
+            var provider = volumeProvider;
+            if (provider is not null)
             {
-                device.Volume = volume;
+                provider.Volume = volume;
             }
         }
     }
@@ -53,9 +55,11 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
         volume = Math.Clamp(startVolume, 0f, 1f);
         try
         {
-            var device = new WaveOutEvent { DeviceNumber = deviceNumber, DesiredLatency = 140, Volume = volume, };
-            device.Init(this.ToWaveProvider16());
+            var provider = new VolumeSampleProvider(this) { Volume = volume };
+            var device = new WaveOutEvent { DeviceNumber = deviceNumber, DesiredLatency = 140, };
+            device.Init(provider.ToWaveProvider16());
             device.Play();
+            volumeProvider = provider;
             output = device;
         }
         catch (Exception exception)
@@ -68,6 +72,7 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
     {
         var device = output;
         output = null;
+        volumeProvider = null;
         if (device is not null)
         {
             try

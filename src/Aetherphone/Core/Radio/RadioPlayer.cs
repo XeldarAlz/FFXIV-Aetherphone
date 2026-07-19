@@ -1,5 +1,5 @@
-using Aetherphone.Core.Playback;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace Aetherphone.Core.Radio;
 
@@ -191,11 +191,11 @@ internal sealed class RadioPlayer : IDisposable
     private void Stream(string url, CancellationToken token, int workerSession)
     {
         IWavePlayer? output = null;
+        VolumeSampleProvider? volumeProvider = null;
         IMp3FrameDecompressor? decompressor = null;
         BufferedWaveProvider? buffer = null;
         HttpResponseMessage? response = null;
         var decoded = new byte[16384 * 4];
-        var lastAppliedVolume = -1f;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
@@ -217,9 +217,9 @@ internal sealed class RadioPlayer : IDisposable
                 if (buffer is not null && buffer.BufferedDuration > BackpressureThreshold)
                 {
                     Thread.Sleep(200);
-                    if (output is not null)
+                    if (volumeProvider is not null)
                     {
-                        WaveVolume.Apply(output, volume, ref lastAppliedVolume);
+                        volumeProvider.Volume = volume;
                     }
 
                     continue;
@@ -253,16 +253,16 @@ internal sealed class RadioPlayer : IDisposable
                 buffer!.AddSamples(decoded, 0, count);
                 if (output is null && buffer.BufferedDuration >= PrebufferThreshold)
                 {
+                    volumeProvider = new VolumeSampleProvider(buffer.ToSampleProvider()) { Volume = volume };
                     output = new WaveOutEvent();
-                    output.Init(buffer);
+                    output.Init(volumeProvider, true);
                     output.Play();
-                    WaveVolume.Apply(output, volume, ref lastAppliedVolume);
                     TrySetState(workerSession, RadioPlaybackState.Playing);
                 }
 
-                if (output is not null)
+                if (volumeProvider is not null)
                 {
-                    WaveVolume.Apply(output, volume, ref lastAppliedVolume);
+                    volumeProvider.Volume = volume;
                 }
             }
 

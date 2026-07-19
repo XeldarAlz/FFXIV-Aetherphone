@@ -1,4 +1,5 @@
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -54,8 +55,13 @@ internal sealed class SoundEffectPlayer : IDisposable
         try
         {
             reader = new MediaFoundationReader(path);
-            output = new WaveOutEvent { Volume = Math.Clamp(volume, 0f, 1f) };
-            output.Init(new LoopStream(reader));
+            var loop = new LoopStream(reader);
+            var volumeProvider = new VolumeSampleProvider(loop.ToSampleProvider())
+            {
+                Volume = Math.Clamp(volume, 0f, 1f),
+            };
+            output = new WaveOutEvent();
+            output.Init(volumeProvider, true);
         }
         catch (Exception exception)
         {
@@ -115,8 +121,9 @@ internal sealed class SoundEffectPlayer : IDisposable
         try
         {
             reader = new MediaFoundationReader(path);
-            output = new WaveOutEvent { Volume = volume };
-            output.Init(reader);
+            var volumeProvider = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume };
+            output = new WaveOutEvent();
+            output.Init(volumeProvider, true);
             lock (gate)
             {
                 if (disposed)

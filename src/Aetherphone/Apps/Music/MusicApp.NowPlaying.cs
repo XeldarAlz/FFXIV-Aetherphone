@@ -315,6 +315,11 @@ internal sealed partial class MusicApp
         {
             playback.Volume = slider.Value;
         }
+
+        if (slider.Released)
+        {
+            playback.CommitVolume();
+        }
     }
 
     private string SheetStatusLine(out Vector4 color)

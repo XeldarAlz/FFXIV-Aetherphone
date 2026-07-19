@@ -151,7 +151,7 @@ internal sealed class PhoneServices : IDisposable
         var audioCache = new DiskCache(audioRoot, 256L * 1024 * 1024);
         var songPlayer = new SongPlayer(youtube, audioCache);
         var songHistory = new SongHistory(configuration);
-        var playback = new PlaybackHub(radioPlayer, songPlayer, analytics);
+        var playback = new PlaybackHub(radioPlayer, songPlayer, analytics, configuration);
         var gameStats = new GameStatsStore(configuration);
         var venues = new VenuesService(http, notifications, configuration, gameData);
         var collectionsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collections"));

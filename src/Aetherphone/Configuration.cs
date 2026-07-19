@@ -60,6 +60,7 @@ internal sealed class Configuration : IPluginConfiguration
     public string NotificationSound { get; set; } = SoundTokens.DefaultGame;
     public float RingtoneVolume { get; set; } = 0.8f;
     public float NotificationVolume { get; set; } = 0.8f;
+    public float MusicVolume { get; set; } = 0.6f;
     public bool SoundSettingsMigrated { get; set; }
     public const string DefaultAethernetBaseUrl = "https://api.aetherphone.net";
     private const string LegacyAethernetHost = "ffxiv-aethernet-production.up.railway.app";

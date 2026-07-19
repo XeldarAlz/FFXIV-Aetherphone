@@ -1,7 +1,7 @@
 using Aetherphone.Core.Net;
-using Aetherphone.Core.Playback;
 using NAudio.MediaFoundation;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 using YoutubeExplode;
 using YoutubeExplode.Videos.Streams;
 
@@ -236,7 +236,6 @@ internal sealed class SongPlayer : IDisposable
         MemoryStream? audio = null;
         MediaFoundationReader? reader = null;
         WaveOutEvent? output = null;
-        var lastAppliedVolume = -1f;
         try
         {
             var bytes = cache.Get(videoId, CacheMaxAge);
@@ -283,10 +282,10 @@ internal sealed class SongPlayer : IDisposable
                 reader.CurrentTime = TimeSpan.FromSeconds(clampedResume);
             }
 
+            var volumeProvider = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume };
             output = new WaveOutEvent();
-            output.Init(reader);
+            output.Init(volumeProvider, true);
             output.Play();
-            WaveVolume.Apply(output, volume, ref lastAppliedVolume);
             TrySetState(workerSession, SongPlaybackState.Playing);
             while (!token.IsCancellationRequested)
             {
@@ -321,7 +320,7 @@ internal sealed class SongPlayer : IDisposable
                     positionSeconds = (float)reader.CurrentTime.TotalSeconds;
                 }
 
-                WaveVolume.Apply(output, volume, ref lastAppliedVolume);
+                volumeProvider.Volume = volume;
                 Thread.Sleep(80);
             }
 

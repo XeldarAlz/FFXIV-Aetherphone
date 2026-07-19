@@ -11,15 +11,18 @@ internal sealed class PlaybackHub
     private readonly RadioPlayer radio;
     private readonly IAnalyticsService analytics;
     private readonly SongPlayer songs;
-    private float volume = 0.6f;
+    private readonly Configuration configuration;
+    private float volume;
     private string listenStation = string.Empty;
     private long listenStartTicks;
 
-    public PlaybackHub(RadioPlayer radio, SongPlayer songs, IAnalyticsService analytics)
+    public PlaybackHub(RadioPlayer radio, SongPlayer songs, IAnalyticsService analytics, Configuration configuration)
     {
         this.radio = radio;
         this.songs = songs;
         this.analytics = analytics;
+        this.configuration = configuration;
+        volume = Math.Clamp(configuration.MusicVolume, 0f, 1f);
         radio.Volume = volume;
         songs.Volume = volume;
     }
@@ -49,7 +52,13 @@ internal sealed class PlaybackHub
             volume = Math.Clamp(value, 0f, 1f);
             radio.Volume = volume;
             songs.Volume = volume;
+            configuration.MusicVolume = volume;
         }
+    }
+
+    public void CommitVolume()
+    {
+        configuration.Save();
     }
 
     public void PlayStations(RadioStation[] stations, int index)
