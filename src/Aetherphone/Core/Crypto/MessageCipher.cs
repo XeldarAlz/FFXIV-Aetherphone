@@ -142,7 +142,7 @@ internal sealed class MessageCipher
         }
         else if (!keys.TryGetCek(scope, generation, out var cek))
         {
-            resolved = vault.State == KeyVaultState.Unlocked
+            resolved = vault.State is KeyVaultState.Unlocked or KeyVaultState.Locked
                 ? new DmDecryptedBody(DmBodyState.NoKey, Loc.T(L.Encryption.NoKeyPlaceholder), null, false)
                 : new DmDecryptedBody(DmBodyState.Pending, Loc.T(L.Encryption.EncryptedPlaceholder), null, false);
         }
@@ -183,7 +183,7 @@ internal sealed class MessageCipher
 
         if (!keys.TryGetCek(scope, generation, out var cek))
         {
-            return vault.State == KeyVaultState.Unlocked
+            return vault.State is KeyVaultState.Unlocked or KeyVaultState.Locked
                 ? Loc.T(L.Encryption.NoKeyPlaceholder)
                 : Loc.T(L.Encryption.EncryptedPlaceholder);
         }

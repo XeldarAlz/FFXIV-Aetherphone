@@ -21,6 +21,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     {
         KeyVaultState.Unlocked => Loc.T(L.Encryption.StateActive),
         KeyVaultState.Provisioning => Loc.T(L.Encryption.StateSettingUp),
+        KeyVaultState.Locked => Loc.T(L.Encryption.StateLocked),
         KeyVaultState.Unsupported => Loc.T(L.Encryption.StateUnsupported),
         _ => Loc.T(L.Encryption.StateUnavailable),
     };
@@ -35,6 +36,8 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     private volatile string status = string.Empty;
     private volatile bool busy;
     private volatile bool refreshRequested;
+    private volatile string generatedCode = string.Empty;
+    private string codeEntry = string.Empty;
 
     public EncryptionPage(AethernetSession session, KeyVault vault, ConfirmService confirm)
     {
@@ -49,20 +52,30 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         using (AppSurface.Begin(body))
         {
             EnsureRefreshed();
-            switch (vault.State)
+            if (generatedCode.Length > 0)
             {
-                case KeyVaultState.Unavailable:
-                    DrawUnavailable(theme);
-                    break;
-                case KeyVaultState.Provisioning:
-                    DrawProvisioning(theme);
-                    break;
-                case KeyVaultState.Unsupported:
-                    DrawUnsupported(theme);
-                    break;
-                default:
-                    DrawActive(theme);
-                    break;
+                DrawGeneratedCode(theme);
+            }
+            else
+            {
+                switch (vault.State)
+                {
+                    case KeyVaultState.Unavailable:
+                        DrawUnavailable(theme);
+                        break;
+                    case KeyVaultState.Provisioning:
+                        DrawProvisioning(theme);
+                        break;
+                    case KeyVaultState.Unsupported:
+                        DrawUnsupported(theme);
+                        break;
+                    case KeyVaultState.Locked:
+                        DrawLocked(theme);
+                        break;
+                    default:
+                        DrawActive(theme);
+                        break;
+                }
             }
 
             DrawStatus(theme);
@@ -71,7 +84,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private void EnsureRefreshed()
     {
-        if (refreshRequested || !session.IsSignedIn || vault.IsRefreshing)
+        if (refreshRequested || !session.IsSignedIn || session.CurrentUser is null || vault.IsRefreshing)
         {
             if (!session.IsSignedIn)
             {
@@ -129,6 +142,148 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         }
     }
 
+    private void DrawLocked(PhoneTheme theme)
+    {
+        if (vault.RecoveryConfigured)
+        {
+            DrawLockedRecover(theme);
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            Typography.Wrapped(Loc.T(L.Encryption.LockedBody));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        if (Button(Loc.T(L.Encryption.NewKeyButton), theme) && !busy)
+        {
+            AskReset();
+        }
+    }
+
+    private void DrawLockedRecover(PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            Typography.Wrapped(Loc.T(L.Encryption.LockedRecoverBody));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 10f * scale));
+        DrawCodeInput(theme);
+        ImGui.Dummy(new Vector2(0f, 10f * scale));
+        if (Button(Loc.T(L.Encryption.RecoveryUnlockButton), theme)
+            && !busy && RecoveryKey.Canonicalize(codeEntry).Length > 0)
+        {
+            BeginRecover();
+        }
+
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        if (Button(Loc.T(L.Encryption.NewKeyButton), theme) && !busy)
+        {
+            AskReset();
+        }
+    }
+
+    private void DrawCodeInput(PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            Typography.Plain(Loc.T(L.Encryption.RecoveryCodeLabel));
+        }
+
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = 34f * scale;
+        var drawList = ImGui.GetWindowDrawList();
+        Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 9f * scale,
+            ImGui.GetColorU32(theme.GroupedCard));
+        ImGui.SetCursorScreenPos(new Vector2(origin.X + 12f * scale,
+            origin.Y + height * 0.5f - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(width - 24f * scale);
+        using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)).Push(ImGuiCol.Text, theme.TextStrong))
+        {
+            ImGui.InputText("##recoveryCode", ref codeEntry, 64);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+    }
+
+    private void DrawGeneratedCode(PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        {
+            Typography.Wrapped(Loc.T(L.Encryption.RecoverySaveTitle));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 10f * scale));
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = 46f * scale;
+        var drawList = ImGui.GetWindowDrawList();
+        Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 10f * scale,
+            ImGui.GetColorU32(theme.GroupedCard));
+        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + height * 0.5f), generatedCode,
+            theme.TextStrong, 1.15f, FontWeight.SemiBold);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        if (Button(Loc.T(L.Encryption.RecoveryCopy), theme))
+        {
+            ImGui.SetClipboardText(generatedCode);
+            status = Loc.T(L.Friends.Copied);
+        }
+
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            Typography.Wrapped(Loc.T(L.Encryption.RecoverySaveBody));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        if (Button(Loc.T(L.Encryption.RecoverySavedButton), theme))
+        {
+            generatedCode = string.Empty;
+            status = string.Empty;
+        }
+    }
+
+    private void DrawRecoverySection(PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        {
+            Typography.Plain(Loc.T(L.Encryption.RecoverySectionTitle));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 4f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+        {
+            Typography.Wrapped(vault.RecoveryConfigured
+                ? Loc.T(L.Encryption.RecoveryConfiguredBody)
+                : Loc.T(L.Encryption.RecoveryNotSetBody));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        var label = vault.RecoveryConfigured
+            ? Loc.T(L.Encryption.RecoveryRegenerateButton)
+            : Loc.T(L.Encryption.RecoverySetupButton);
+        if (Button(label, theme) && !busy)
+        {
+            BeginCreateRecoveryCode();
+        }
+    }
+
     private void DrawActive(PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -153,7 +308,9 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
             }
         }
 
-        ImGui.Dummy(new Vector2(0f, 12f * scale));
+        DrawRecoverySection(theme);
+
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
         if (Button(Loc.T(L.Encryption.ResetButton), theme) && !busy)
         {
             AskReset();
@@ -193,6 +350,75 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
             catch (Exception exception)
             {
                 AepLog.Warning($"Encryption reset failed: {exception.Message}");
+                status = Loc.T(L.Encryption.Failed);
+            }
+            finally
+            {
+                busy = false;
+            }
+        });
+    }
+
+    private void BeginCreateRecoveryCode()
+    {
+        busy = true;
+        status = Loc.T(L.Encryption.Working);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var code = await vault.CreateRecoveryCodeAsync(cancellation.Token).ConfigureAwait(false);
+                if (code is not null)
+                {
+                    generatedCode = code;
+                    status = string.Empty;
+                }
+                else
+                {
+                    status = Loc.T(L.Encryption.Failed);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Recovery code setup failed: {exception.Message}");
+                status = Loc.T(L.Encryption.Failed);
+            }
+            finally
+            {
+                busy = false;
+            }
+        });
+    }
+
+    private void BeginRecover()
+    {
+        var code = codeEntry;
+        busy = true;
+        status = Loc.T(L.Encryption.Working);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var recovered = await vault.RecoverWithCodeAsync(code, cancellation.Token).ConfigureAwait(false);
+                if (recovered)
+                {
+                    codeEntry = string.Empty;
+                    status = string.Empty;
+                }
+                else
+                {
+                    status = Loc.T(L.Encryption.RecoveryWrongCode);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Recovery failed: {exception.Message}");
                 status = Loc.T(L.Encryption.Failed);
             }
             finally

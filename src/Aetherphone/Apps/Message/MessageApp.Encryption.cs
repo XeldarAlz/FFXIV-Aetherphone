@@ -103,6 +103,11 @@ internal sealed partial class MessageApp
             return Loc.T(L.Encryption.SettingUp);
         }
 
+        if (store.VaultState == KeyVaultState.Locked)
+        {
+            return Loc.T(L.Encryption.LockedSummary);
+        }
+
         var waiting = store.CurrentKeyStatus.MembersWithoutKeys;
         if (waiting.Length > 0)
         {
