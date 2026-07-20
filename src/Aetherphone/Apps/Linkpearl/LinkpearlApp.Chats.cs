@@ -151,6 +151,31 @@ internal sealed partial class LinkpearlApp
         return false;
     }
 
+    private bool DrawNotificationPauseButton(in PhoneContext context)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var content = context.Content;
+        var center = new Vector2(content.Max.X - 22f * scale, content.Min.Y + AppHeader.Height * scale * 0.5f);
+        var radius = 16f * scale;
+        var min = center - new Vector2(radius, radius);
+        var max = center + new Vector2(radius, radius);
+        var paused = notificationGate.Paused;
+        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var color = paused ? context.Theme.Accent : hovered ? context.Theme.TextStrong : context.Theme.TextMuted;
+        ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), center,
+            paused ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell, color, 15f * scale);
+        var toggleRect = new Rect(min, max);
+        UiAnchors.Report("messages.notifications.toggle", toggleRect);
+        HoverTooltip.Show(toggleRect,
+            Loc.T(paused ? L.Messages.ResumeNotifications : L.Messages.PauseNotifications));
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
     private void DrawDirectThread(Rect area, Conversation conversation)
     {
         conversation.MarkRead();

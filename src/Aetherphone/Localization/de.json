@@ -1001,6 +1001,8 @@
   "messages.crossWorldLinkshell": "Cross-World-Linkshell {0}",
   "messages.mute": "Stummschalten",
   "messages.unmute": "Ton einschalten",
+  "messages.pauseNotifications": "Benachrichtigungen pausieren",
+  "messages.resumeNotifications": "Benachrichtigungen fortsetzen",
   "messages.copyMessage": "Nachricht kopieren",
   "messages.copyName": "Namen kopieren",
   "character.logInToView": "Melde dich an, um deinen Charakter zu sehen",

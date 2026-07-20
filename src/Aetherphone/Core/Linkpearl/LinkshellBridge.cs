@@ -13,15 +13,17 @@ internal sealed class LinkshellBridge : IDisposable
     private readonly LinkshellStore store;
     private readonly LinkshellMuteStore mutes;
     private readonly NotificationService notifications;
+    private readonly LinkpearlNotificationGate gate;
     private readonly IChatGui chatGui;
     private readonly GameData gameData;
 
     public LinkshellBridge(LinkshellStore store, LinkshellMuteStore mutes, NotificationService notifications,
-        IChatGui chatGui, GameData gameData)
+        LinkpearlNotificationGate gate, IChatGui chatGui, GameData gameData)
     {
         this.store = store;
         this.mutes = mutes;
         this.notifications = notifications;
+        this.gate = gate;
         this.chatGui = chatGui;
         this.gameData = gameData;
         chatGui.ChatMessage += OnChatMessage;
@@ -60,7 +62,7 @@ internal sealed class LinkshellBridge : IDisposable
 
         store.Append(channel, display,
             new ChatLine(MessageDirection.Incoming, text, DateTime.Now, new MessageAuthor(name, world)));
-        if (mutes.IsMuted(channel))
+        if (gate.Paused || mutes.IsMuted(channel))
         {
             return;
         }

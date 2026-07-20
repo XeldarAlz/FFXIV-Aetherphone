@@ -1001,6 +1001,8 @@
   "messages.crossWorldLinkshell": "クロスワールドリンクシェル {0}",
   "messages.mute": "ミュート",
   "messages.unmute": "ミュート解除",
+  "messages.pauseNotifications": "通知を一時停止",
+  "messages.resumeNotifications": "通知を再開",
   "messages.copyMessage": "メッセージをコピー",
   "messages.copyName": "名前をコピー",
   "character.logInToView": "ログインしてキャラクターを見る",

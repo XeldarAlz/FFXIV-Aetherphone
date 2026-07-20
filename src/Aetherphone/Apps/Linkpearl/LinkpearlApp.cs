@@ -34,6 +34,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
     private readonly MessageStore store;
     private readonly LinkshellStore linkshells;
     private readonly LinkshellMuteStore mutes;
+    private readonly LinkpearlNotificationGate notificationGate;
     private readonly ChatBridge bridge;
     private readonly LinkshellBridge linkshellBridge;
     private readonly LinkpearlLauncher launcher;
@@ -49,13 +50,15 @@ internal sealed partial class LinkpearlApp : IPhoneApp
     private INavigator frameNavigation = null!;
     private MessagesTab activeTab;
 
-    public LinkpearlApp(MessageStore store, LinkshellStore linkshells, LinkshellMuteStore mutes, ChatBridge bridge,
+    public LinkpearlApp(MessageStore store, LinkshellStore linkshells, LinkshellMuteStore mutes,
+        LinkpearlNotificationGate notificationGate, ChatBridge bridge,
         LinkshellBridge linkshellBridge, LinkpearlLauncher launcher, LodestoneService lodestone,
         NotificationService notifications, GameData gameData, LookupService lookup, ConfirmService confirm)
     {
         this.store = store;
         this.linkshells = linkshells;
         this.mutes = mutes;
+        this.notificationGate = notificationGate;
         this.bridge = bridge;
         this.linkshellBridge = linkshellBridge;
         this.launcher = launcher;
@@ -175,6 +178,11 @@ internal sealed partial class LinkpearlApp : IPhoneApp
         if (activeTab == MessagesTab.Contacts && DrawRefreshButton(in context))
         {
             RequestRefresh();
+        }
+
+        if (activeTab == MessagesTab.Chats && DrawNotificationPauseButton(in context))
+        {
+            notificationGate.Toggle();
         }
 
         var scale = ImGuiHelpers.GlobalScale;

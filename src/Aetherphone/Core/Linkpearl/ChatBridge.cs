@@ -13,13 +13,16 @@ internal sealed class ChatBridge : IDisposable
     private static readonly Vector4 MessagesAccent = new(0.30f, 0.78f, 0.42f, 1f);
     private readonly MessageStore store;
     private readonly NotificationService notifications;
+    private readonly LinkpearlNotificationGate gate;
     private readonly IChatGui chatGui;
     private readonly GameData gameData;
 
-    public ChatBridge(MessageStore store, NotificationService notifications, IChatGui chatGui, GameData gameData)
+    public ChatBridge(MessageStore store, NotificationService notifications, LinkpearlNotificationGate gate,
+        IChatGui chatGui, GameData gameData)
     {
         this.store = store;
         this.notifications = notifications;
+        this.gate = gate;
         this.chatGui = chatGui;
         this.gameData = gameData;
         chatGui.ChatMessage += OnChatMessage;
@@ -58,7 +61,7 @@ internal sealed class ChatBridge : IDisposable
         var text = message.Message.TextValue;
         store.Append(display, sendTarget,
             new ChatLine(incoming ? MessageDirection.Incoming : MessageDirection.Outgoing, text, DateTime.Now));
-        if (incoming)
+        if (incoming && !gate.Paused)
         {
             notifications.Notify(new PhoneNotification("messages", display, text, DateTime.Now, MessagesAccent,
                 sendTarget));

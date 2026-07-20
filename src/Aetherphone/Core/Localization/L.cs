@@ -1258,6 +1258,8 @@ internal static class L
         public static readonly LocString CrossWorldLinkshell = new("messages.crossWorldLinkshell", "Crossworld Linkshell {0}");
         public static readonly LocString Mute = new("messages.mute", "Mute");
         public static readonly LocString Unmute = new("messages.unmute", "Unmute");
+        public static readonly LocString PauseNotifications = new("messages.pauseNotifications", "Pause notifications");
+        public static readonly LocString ResumeNotifications = new("messages.resumeNotifications", "Resume notifications");
         public static readonly LocString CopyMessage = new("messages.copyMessage", "Copy message");
         public static readonly LocString CopyName = new("messages.copyName", "Copy name");
     }

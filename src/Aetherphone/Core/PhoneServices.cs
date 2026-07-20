@@ -49,6 +49,7 @@ internal sealed class PhoneServices : IDisposable
     public required DmLauncher DmLauncher { get; init; }
     public required SocialLauncher SocialLauncher { get; init; }
     public required LinkshellMuteStore LinkshellMutes { get; init; }
+    public required LinkpearlNotificationGate LinkpearlNotificationGate { get; init; }
     public required LinkshellStore Linkshells { get; init; }
     public required LinkshellBridge LinkshellBridge { get; init; }
     public required HttpService Http { get; init; }
@@ -112,14 +113,16 @@ internal sealed class PhoneServices : IDisposable
         var characterWatch = new CharacterWatch(framework);
         var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
         var messages = new MessageStore(messageArchive, configuration, characterWatch);
-        var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
+        var linkpearlNotificationGate = new LinkpearlNotificationGate(configuration);
+        var chatBridge = new ChatBridge(messages, notifications, linkpearlNotificationGate, chatGui, gameData);
         var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
         var socialLauncher = new SocialLauncher();
         var linkshellMutes = new LinkshellMuteStore(configuration, characterWatch);
         var linkshells = new LinkshellStore(linkshellMutes, characterWatch);
-        var linkshellBridge = new LinkshellBridge(linkshells, linkshellMutes, notifications, chatGui, gameData);
+        var linkshellBridge = new LinkshellBridge(linkshells, linkshellMutes, notifications, linkpearlNotificationGate,
+            chatGui, gameData);
         var cacheRoot = new DirectoryInfo(Path.Combine(configDirectory.FullName, "cache"));
         cacheRoot.Create();
         var mediaRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "media"));
@@ -194,6 +197,7 @@ internal sealed class PhoneServices : IDisposable
             DmLauncher = dmLauncher,
             SocialLauncher = socialLauncher,
             LinkshellMutes = linkshellMutes,
+            LinkpearlNotificationGate = linkpearlNotificationGate,
             Linkshells = linkshells,
             LinkshellBridge = linkshellBridge,
             Http = http,

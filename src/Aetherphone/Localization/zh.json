@@ -1001,6 +1001,8 @@
   "messages.crossWorldLinkshell": "跨服通讯贝 {0}",
   "messages.mute": "静音",
   "messages.unmute": "取消静音",
+  "messages.pauseNotifications": "暂停通知",
+  "messages.resumeNotifications": "恢复通知",
   "messages.copyMessage": "复制消息",
   "messages.copyName": "复制名字",
   "character.logInToView": "登录后查看你的角色",
