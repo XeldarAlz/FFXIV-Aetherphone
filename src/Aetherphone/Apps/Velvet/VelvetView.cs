@@ -24,6 +24,7 @@ internal enum VelvetScreenId
     ImageView,
     Intro,
     Reactions,
+    RequestDetail,
 }
 
 internal readonly record struct VelvetView(VelvetScreenId Screen, string? Arg = null)
@@ -43,6 +44,7 @@ internal readonly record struct VelvetView(VelvetScreenId Screen, string? Arg = 
     public static VelvetView ImageView(string messageId) => new(VelvetScreenId.ImageView, messageId);
     public static VelvetView Intro(string userId) => new(VelvetScreenId.Intro, userId);
     public static VelvetView Reactions(string messageId) => new(VelvetScreenId.Reactions, messageId);
+    public static VelvetView RequestDetail(string userId) => new(VelvetScreenId.RequestDetail, userId);
 }
 
 internal enum VelvetMessagesTab

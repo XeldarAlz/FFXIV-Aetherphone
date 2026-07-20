@@ -189,8 +189,150 @@ internal sealed partial class VelvetShell
                 store.DeclineRequest(request.UserId);
                 break;
             case VRowHit.Body:
-                OpenThread(request.UserId);
+                OpenRequest(request.UserId);
                 break;
+        }
+    }
+
+    private void OpenRequest(string userId)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        router.Push(VelvetView.RequestDetail(userId));
+    }
+
+    private VelvetConnectionDto? FindRequest(string userId)
+    {
+        var requests = store.Requests;
+        for (var index = 0; index < requests.Length; index++)
+        {
+            if (requests[index].UserId == userId)
+            {
+                return requests[index];
+            }
+        }
+
+        return null;
+    }
+
+    private string ResolveRequestIntro(VelvetConnectionDto request)
+    {
+        if (store.CurrentThreadId == request.UserId)
+        {
+            var messages = store.Messages;
+            for (var index = 0; index < messages.Length; index++)
+            {
+                var message = messages[index];
+                if (message.Deleted || message.Kind != 0 || message.Body.Trim().Length == 0)
+                {
+                    continue;
+                }
+
+                if (message.EncVersion != 0 && store.DecryptionState(message.Id).IsPlaceholder)
+                {
+                    continue;
+                }
+
+                return message.Body;
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(request.Intro) ? Loc.T(L.Velvet.WantsToConnect) : request.Intro;
+    }
+
+    private void DrawRequestDetail(Rect area, string userId)
+    {
+        var request = FindRequest(userId);
+        var name = request is { } found ? DisplayNameOf(found.DisplayName, found.Handle) : Loc.T(L.Velvet.Requests);
+        if (VHeader.Push(area, name, theme))
+        {
+            router.Pop();
+            return;
+        }
+
+        if (request is not { } req)
+        {
+            router.Pop();
+            return;
+        }
+
+        if (store.CurrentThreadId != userId)
+        {
+            store.OpenThread(userId);
+        }
+
+        var introText = ResolveRequestIntro(req);
+        var scale = ImGuiHelpers.GlobalScale;
+        var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
+        using (AppSurface.Begin(body))
+        {
+            Gap(26f);
+            var width = ImGui.GetContentRegionAvail().X;
+            var drawList = ImGui.GetWindowDrawList();
+            var top = ImGui.GetCursorScreenPos();
+            var centerX = top.X + width * 0.5f;
+            var radius = 46f * scale;
+            var avatarCenter = new Vector2(centerX, top.Y + radius);
+            VAvatar.Draw(drawList, avatarCenter, radius, theme, name, string.Empty, req.AvatarUrl, images, lodestone, -1,
+                VelvetTheme.Moonlight);
+
+            var nameY = avatarCenter.Y + radius + 14f * scale;
+            Typography.DrawCentered(new Vector2(centerX, nameY), name, VelvetTheme.TitleInk, TextStyles.Title2);
+            var lineBottom = nameY + Typography.Measure(name, TextStyles.Title2).Y;
+            if (req.Handle.Length > 0)
+            {
+                lineBottom += 6f * scale;
+                var handle = "@" + req.Handle;
+                Typography.DrawCentered(new Vector2(centerX, lineBottom), handle, VelvetTheme.MutedInk,
+                    TextStyles.Subheadline);
+                lineBottom += Typography.Measure(handle, TextStyles.Subheadline).Y;
+            }
+
+            ImGui.SetCursorScreenPos(top);
+            ImGui.Dummy(new Vector2(width, lineBottom - top.Y + 22f * scale));
+            if (UiInteract.HoverClick(new Vector2(avatarCenter.X - radius, avatarCenter.Y - radius),
+                    new Vector2(avatarCenter.X + radius, avatarCenter.Y + radius)))
+            {
+                OpenProfile(userId);
+            }
+
+            var pad = 14f * scale;
+            var innerWidth = width - pad * 2f;
+            var textSize = Typography.MeasureWrappedBlock(introText, TextStyles.Body, innerWidth);
+            var cardHeight = textSize.Y + pad * 2f;
+            var cardOrigin = ImGui.GetCursorScreenPos();
+            Squircle.Fill(drawList, cardOrigin, new Vector2(cardOrigin.X + width, cardOrigin.Y + cardHeight),
+                Metrics.Radius.Md * scale, VelvetTheme.Alpha(VelvetTheme.TitleInk, 0.06f).Packed());
+            Typography.DrawWrappedLeft(new Vector2(cardOrigin.X + pad, cardOrigin.Y + pad), introText,
+                VelvetTheme.BodyInk, TextStyles.Body, innerWidth);
+            ImGui.SetCursorScreenPos(cardOrigin);
+            ImGui.Dummy(new Vector2(width, cardHeight));
+
+            Gap(26f);
+            if (ui.PillButton(Reserve(48f), Loc.T(L.Velvet.Accept), true))
+            {
+                store.AcceptRequest(userId);
+                router.Pop(false);
+                OpenThread(userId);
+            }
+
+            Gap(10f);
+            if (ui.GhostButton(Reserve(44f), Loc.T(L.Phone.Decline)))
+            {
+                store.DeclineRequest(userId);
+                router.Pop();
+            }
+
+            Gap(6f);
+            if (ui.GhostButton(Reserve(42f), Loc.T(L.Social.ViewProfile)))
+            {
+                OpenProfile(userId);
+            }
+
+            Gap(30f);
         }
     }
 
@@ -254,7 +396,7 @@ internal sealed partial class VelvetShell
 
     private void SendIntro(string userId)
     {
-        store.Connect(userId, introText.Trim());
+        store.SendIntro(userId, introText.Trim(), _ => { });
         introText = string.Empty;
         router.Pop();
     }

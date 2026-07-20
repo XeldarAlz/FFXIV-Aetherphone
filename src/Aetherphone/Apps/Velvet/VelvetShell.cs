@@ -273,6 +273,9 @@ internal sealed partial class VelvetShell : IPhoneApp
             case VelvetScreenId.Intro:
                 DrawIntro(area, view.Arg ?? string.Empty);
                 break;
+            case VelvetScreenId.RequestDetail:
+                DrawRequestDetail(area, view.Arg ?? string.Empty);
+                break;
             case VelvetScreenId.Reactions:
                 threadView.DrawReactions(area, view.Arg ?? string.Empty);
                 break;

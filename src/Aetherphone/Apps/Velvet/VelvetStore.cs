@@ -28,6 +28,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile VelvetProfileDto? me;
     private volatile bool loadingMe;
     private volatile bool avatarBusy;
+    private volatile bool introBusy;
     private volatile VelvetProfileDto[] discoverResults = Array.Empty<VelvetProfileDto>();
     private volatile bool loadingDiscover;
     private volatile bool discoverLoaded;
@@ -83,6 +84,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public VelvetProfileDto? Me => me;
     public bool HasProfile => me is not null;
     public bool AvatarBusy => avatarBusy;
+    public bool IntroBusy => introBusy;
     public VelvetProfileDto[] DiscoverResults => discoverResults;
     public bool LoadingDiscover => loadingDiscover;
     public bool DiscoverLoaded => discoverLoaded;
@@ -748,6 +750,42 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         sentRequestsLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
         work.Run("connect", async token => await client.ConnectAsync(userId, intro, token).ConfigureAwait(false));
+    }
+
+    public void SendIntro(string userId, string intro, Action<bool> onComplete)
+    {
+        var trimmed = intro.Trim();
+        if (trimmed.Length == 0 || introBusy)
+        {
+            return;
+        }
+
+        introBusy = true;
+        sentRequestsLoaded = false;
+        SetConnectionStateEverywhere(userId, VelvetConnectionState.OutgoingRequest);
+        work.Run("intro", async token =>
+        {
+            await client.ConnectAsync(userId, trimmed, token).ConfigureAwait(false);
+            var status = await keys.EnsureVelvetKeysAsync(userId, MyUserId, token).ConfigureAwait(false);
+            var scope = ScopeFor(userId);
+            if (status.CanEncrypt
+                && cipher.TryEncrypt(scope, status.CurrentGeneration, trimmed, MyUserId, out var encoded))
+            {
+                var sent = await SendMessageRequestAsync(userId, encoded.Envelope, 0, token, null, 0, 0,
+                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag, null, 0).ConfigureAwait(false);
+                if (sent is not null)
+                {
+                    cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
+                }
+            }
+            else
+            {
+                await SendMessageRequestAsync(userId, trimmed, 0, token, null, 0, 0, 0, null, null, 0)
+                    .ConfigureAwait(false);
+            }
+
+            return true;
+        }, onComplete, () => introBusy = false);
     }
 
     public void Disconnect(string userId)
