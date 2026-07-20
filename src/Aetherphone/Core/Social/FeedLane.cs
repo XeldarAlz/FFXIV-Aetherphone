@@ -59,4 +59,15 @@ internal sealed class FeedLane<TPost> where TPost : class, IIdentified
             cursor = nextCursor;
         }
     }
+
+    public void Clear()
+    {
+        lock (gate)
+        {
+            items = Array.Empty<TPost>();
+            cursor = null;
+            loading = false;
+            loadingMore = false;
+        }
+    }
 }

@@ -35,6 +35,7 @@ internal sealed class PhoneServices : IDisposable
     public required Configuration Configuration { get; init; }
     public required ThemeProvider Themes { get; init; }
     public required GameData GameData { get; init; }
+    public required CharacterWatch CharacterWatch { get; init; }
     public required MapData Maps { get; init; }
     public required ITextureProvider Textures { get; init; }
     public required WeatherService Weather { get; init; }
@@ -56,6 +57,7 @@ internal sealed class PhoneServices : IDisposable
     public required LodestoneService Lodestone { get; init; }
     public required LookupService Lookup { get; init; }
     public required AethernetSession AethernetSession { get; init; }
+    public required CharacterSessionManager CharacterSwitcher { get; init; }
     public required AethernetApi Aethernet { get; init; }
     public required KeyVault KeyVault { get; init; }
     public required PeerKeyDirectory PeerKeys { get; init; }
@@ -107,15 +109,16 @@ internal sealed class PhoneServices : IDisposable
         var soundLibrary = new SoundLibrary(soundBundledDirectory, soundUserDirectory);
         var sound = new SoundService(configuration, soundLibrary, new SoundEffectPlayer(), framework);
         var notifications = new NotificationService(sound, configuration, framework);
+        var characterWatch = new CharacterWatch(framework);
         var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
-        var messages = new MessageStore(messageArchive, configuration);
+        var messages = new MessageStore(messageArchive, configuration, characterWatch);
         var chatBridge = new ChatBridge(messages, notifications, chatGui, gameData);
         var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
         var socialLauncher = new SocialLauncher();
-        var linkshellMutes = new LinkshellMuteStore(configuration);
-        var linkshells = new LinkshellStore(linkshellMutes);
+        var linkshellMutes = new LinkshellMuteStore(configuration, characterWatch);
+        var linkshells = new LinkshellStore(linkshellMutes, characterWatch);
         var linkshellBridge = new LinkshellBridge(linkshells, linkshellMutes, notifications, chatGui, gameData);
         var cacheRoot = new DirectoryInfo(Path.Combine(configDirectory.FullName, "cache"));
         cacheRoot.Create();
@@ -169,12 +172,15 @@ internal sealed class PhoneServices : IDisposable
             analytics);
         var visibility = new PhoneVisibility();
         var confirm = new ConfirmService();
+        var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
+            gameData, configuration, confirm);
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm);
         return new PhoneServices
         {
             Configuration = configuration,
             Themes = themes,
             GameData = gameData,
+            CharacterWatch = characterWatch,
             Maps = maps,
             Textures = textures,
             Weather = weather,
@@ -196,6 +202,7 @@ internal sealed class PhoneServices : IDisposable
             Lodestone = lodestone,
             Lookup = lookup,
             AethernetSession = aethernetSession,
+            CharacterSwitcher = characterSwitcher,
             Aethernet = aethernet,
             KeyVault = keyVault,
             PeerKeys = peerKeys,
@@ -232,6 +239,8 @@ internal sealed class PhoneServices : IDisposable
 
     public void Dispose()
     {
+        CharacterSwitcher.Dispose();
+        CharacterWatch.Dispose();
         SocialNotifications.Dispose();
         KeyVault.Dispose();
         Calls.Dispose();

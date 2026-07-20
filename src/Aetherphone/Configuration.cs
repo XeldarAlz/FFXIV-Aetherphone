@@ -1,3 +1,4 @@
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Calendar;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Clock;
@@ -70,6 +71,11 @@ internal sealed class Configuration : IPluginConfiguration
     public string EncryptionKeyCache { get; set; } = string.Empty;
     public string EncryptionKeyCacheUserId { get; set; } = string.Empty;
     public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
+    public Dictionary<ulong, CharacterSession> CharacterSessions { get; set; } = new();
+    public string LegacyUnclaimedToken { get; set; } = string.Empty;
+    public string LegacyUnclaimedEncryptionKey { get; set; } = string.Empty;
+    public string LegacyUnclaimedEncryptionUserId { get; set; } = string.Empty;
+    public bool CharacterSessionsMigrated { get; set; }
     public string AnalyticsInstallId { get; set; } = string.Empty;
     public bool AnalyticsEnabled { get; set; } = true;
     public bool AnalyticsConsentPrompted { get; set; }
@@ -115,8 +121,11 @@ internal sealed class Configuration : IPluginConfiguration
     public bool ArchiveTellsToDisk { get; set; } = true;
     public bool MessageMigrated { get; set; }
     public bool MessagesMergeMigrated { get; set; }
+    public bool MessagesPerCharacterMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();
     public List<string> MutedLinkshells { get; set; } = new();
+    public Dictionary<ulong, List<string>> MutedLinkshellsByCharacter { get; set; } = new();
+    public bool LinkshellMutesPerCharacterMigrated { get; set; }
     public long DevChatLastSeenUnix { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
@@ -179,6 +188,27 @@ internal sealed class Configuration : IPluginConfiguration
 
         ControlPanel = null;
         ControlPanelRepacked = true;
+        Save();
+    }
+
+    public void MigrateCharacterSessions()
+    {
+        if (CharacterSessionsMigrated)
+        {
+            return;
+        }
+
+        CharacterSessionsMigrated = true;
+        if (AethernetToken.Length > 0)
+        {
+            LegacyUnclaimedToken = AethernetToken;
+            LegacyUnclaimedEncryptionKey = EncryptionKeyCache;
+            LegacyUnclaimedEncryptionUserId = EncryptionKeyCacheUserId;
+            AethernetToken = string.Empty;
+            EncryptionKeyCache = string.Empty;
+            EncryptionKeyCacheUserId = string.Empty;
+        }
+
         Save();
     }
 

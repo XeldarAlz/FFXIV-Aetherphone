@@ -40,24 +40,86 @@ internal sealed class MessageArchive
 {
     private const int MaxStoredLines = 500;
     private readonly object sync = new();
-    private readonly DirectoryInfo root;
+    private readonly DirectoryInfo baseDir;
+    private DirectoryInfo? activeRoot;
 
-    public MessageArchive(DirectoryInfo root)
+    public MessageArchive(DirectoryInfo baseDir)
     {
-        this.root = root;
-        if (!root.Exists)
+        this.baseDir = baseDir;
+        if (!baseDir.Exists)
         {
-            root.Create();
+            baseDir.Create();
+        }
+    }
+
+    public void SetCharacter(ulong contentId)
+    {
+        lock (sync)
+        {
+            if (contentId == 0)
+            {
+                activeRoot = null;
+                return;
+            }
+
+            var directory = new DirectoryInfo(Path.Combine(baseDir.FullName, contentId.ToString("x16")));
+            if (!directory.Exists)
+            {
+                directory.Create();
+            }
+
+            activeRoot = directory;
+        }
+    }
+
+    public void MigrateLegacyTo(ulong contentId)
+    {
+        if (contentId == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            lock (sync)
+            {
+                var target = new DirectoryInfo(Path.Combine(baseDir.FullName, contentId.ToString("x16")));
+                if (!target.Exists)
+                {
+                    target.Create();
+                }
+
+                var legacy = baseDir.GetFiles("*.json");
+                for (var index = 0; index < legacy.Length; index++)
+                {
+                    File.Move(legacy[index].FullName, Path.Combine(target.FullName, legacy[index].Name), true);
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"MessageArchive legacy migration failed: {exception.Message}");
         }
     }
 
     public List<ArchivedConversation> LoadAll()
     {
         var result = new List<ArchivedConversation>();
+        DirectoryInfo? directory;
+        lock (sync)
+        {
+            directory = activeRoot;
+        }
+
+        if (directory is null)
+        {
+            return result;
+        }
+
         FileInfo[] files;
         try
         {
-            files = root.GetFiles("*.json");
+            files = directory.GetFiles("*.json");
         }
         catch (Exception exception)
         {
@@ -115,7 +177,12 @@ internal sealed class MessageArchive
         {
             lock (sync)
             {
-                var path = PathFor(sendTarget);
+                if (activeRoot is null)
+                {
+                    return;
+                }
+
+                var path = PathFor(activeRoot, sendTarget);
                 var temp = path + ".tmp";
                 File.WriteAllText(temp, JsonConvert.SerializeObject(stored));
                 File.Move(temp, path, true);
@@ -138,7 +205,12 @@ internal sealed class MessageArchive
         {
             lock (sync)
             {
-                var path = PathFor(sendTarget);
+                if (activeRoot is null)
+                {
+                    return;
+                }
+
+                var path = PathFor(activeRoot, sendTarget);
                 if (File.Exists(path))
                 {
                     File.Delete(path);
@@ -167,7 +239,7 @@ internal sealed class MessageArchive
         }
     }
 
-    private string PathFor(string sendTarget)
+    private static string PathFor(DirectoryInfo directory, string sendTarget)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sendTarget.ToLowerInvariant()));
         var builder = new StringBuilder(hash.Length * 2 + 5);
@@ -177,6 +249,6 @@ internal sealed class MessageArchive
         }
 
         builder.Append(".json");
-        return Path.Combine(root.FullName, builder.ToString());
+        return Path.Combine(directory.FullName, builder.ToString());
     }
 }

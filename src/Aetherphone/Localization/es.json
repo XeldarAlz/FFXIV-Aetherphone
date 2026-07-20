@@ -859,6 +859,8 @@
   "account.xivConnecting": "Conectando con XIVAuth…",
   "account.followers.one": "{0} seguidor",
   "account.followers.other": "{0} seguidores",
+  "account.altSignInTitle": "No has iniciado sesión en este personaje",
+  "account.altSignInBody": "Ahora estás jugando con {0}. Este personaje no ha iniciado sesión en Aethernet, así que las apps sociales, los mensajes y las llamadas estarán vacíos hasta que inicies sesión.",
   "account.fail.dismiss": "Entendido",
   "account.fail.characterNotFound.title": "Personaje no encontrado",
   "account.fail.characterNotFound.body": "No pudimos encontrar a {0} en {1} en la búsqueda de Lodestone. En los ajustes de tu personaje, pon la Búsqueda de personaje en Público y vuelve a verificar.",

@@ -859,6 +859,8 @@
   "account.xivConnecting": "正在连接 XIVAuth…",
   "account.followers.one": "{0} 粉丝",
   "account.followers.other": "{0} 粉丝",
+  "account.altSignInTitle": "此角色尚未登录",
+  "account.altSignInBody": "你正在使用{0}。此角色尚未登录 Aethernet，因此在登录前，社交应用、消息和通话都将为空。",
   "account.fail.dismiss": "知道了",
   "account.fail.characterNotFound.title": "未找到角色",
   "account.fail.characterNotFound.body": "在 Lodestone 搜索中未能找到 {1} 的 {0}。请在角色设置中将角色搜索设为公开，然后重新验证。",

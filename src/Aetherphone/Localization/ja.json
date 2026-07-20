@@ -859,6 +859,8 @@
   "account.xivConnecting": "XIVAuthに接続中…",
   "account.followers.one": "{0} フォロワー",
   "account.followers.other": "{0} フォロワー",
+  "account.altSignInTitle": "このキャラクターはサインインしていません",
+  "account.altSignInBody": "現在{0}をプレイ中です。このキャラクターはAethernetにサインインしていないため、サインインするまでソーシャルアプリ、メッセージ、通話は利用できません。",
   "account.fail.dismiss": "OK",
   "account.fail.characterNotFound.title": "キャラクターが見つかりません",
   "account.fail.characterNotFound.body": "Lodestone検索で{1}の{0}が見つかりませんでした。キャラクター設定でキャラクター検索を「公開」にしてから、もう一度認証してください。",

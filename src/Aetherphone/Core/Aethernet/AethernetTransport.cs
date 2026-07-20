@@ -71,6 +71,12 @@ internal sealed class AethernetTransport
         return http.PostJsonAsync(Url(path), body, requestInfo, responseInfo, null, token, onStatus, appScope);
     }
 
+    public Task<T?> GetWithBearerAsync<T>(string path, string bearer, JsonTypeInfo<T> responseInfo,
+        CancellationToken token)
+    {
+        return http.GetJsonAsync(Url(path), responseInfo, bearer, token, static _ => { }, appScope);
+    }
+
     public Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token)
     {
         return http.PutBytesAsync(uri, content, contentType, token);

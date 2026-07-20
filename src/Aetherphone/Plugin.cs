@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Device;
+using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Emote;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -76,11 +77,13 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateMessagesMerge();
             Cfg.MigrateSetupCompleted();
             Cfg.MigrateControlPanelRepack();
+            Cfg.MigrateCharacterSessions();
             InitializeLocalization();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
                 TextureProvider, PluginInterface.ConfigDirectory);
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
+            EmojiCatalog.Load();
             sessionStartedAt = DateTime.UtcNow;
             Analytics = services.Analytics;
             Wallpapers = services.Wallpapers;
@@ -105,7 +108,8 @@ public sealed class Plugin : IDalamudPlugin
             calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
             clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
             reminders = new ReminderService(Cfg, Framework, services.Notifications);
-            services.Aethernet.Account.EnsureCurrentUser();
+            services.CharacterSwitcher.Start();
+            services.CharacterWatch.Start();
             services.Calls.IncomingCallPresented += OnIncomingCall;
             services.Calls.Start();
             dtrEntry = DtrBar.Get(AepConstants.Name);
@@ -361,7 +365,10 @@ public sealed class Plugin : IDalamudPlugin
         properties["scale"] = Cfg.PhoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
         properties["wallpaper"] = Cfg.DarkWallpaperId;
         properties["tutorials"] = Cfg.TutorialsEnabled ? "1" : "0";
-        properties["logged_in"] = Cfg.AethernetToken.Length > 0 ? "1" : "0";
+        properties["logged_in"] =
+            Cfg.CharacterSessions.Count > 0 || Cfg.LegacyUnclaimedToken.Length > 0 || Cfg.AethernetToken.Length > 0
+                ? "1"
+                : "0";
         properties["dnd"] = Cfg.DoNotDisturb ? "1" : "0";
         properties["calls"] = Cfg.CallsEnabled ? "1" : "0";
 

@@ -27,11 +27,28 @@ internal sealed class ContactBook : IDisposable
     private volatile NumberChangeStatusDto? numberChange;
     private volatile bool loading;
     private long lastRefreshTicks;
+    private string? lastAccountId;
 
     public ContactBook(ContactsClient client, AethernetSession session)
     {
         this.client = client;
         this.session = session;
+        session.Changed += OnSessionChanged;
+    }
+
+    private void OnSessionChanged()
+    {
+        var accountId = session.CurrentUser?.Id;
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastAccountId = accountId;
+        contacts = Array.Empty<ContactDto>();
+        myNumber = string.Empty;
+        numberChange = null;
+        lastRefreshTicks = 0;
     }
 
     public ContactDto[] Contacts => contacts;
@@ -272,6 +289,7 @@ internal sealed class ContactBook : IDisposable
 
     public void Dispose()
     {
+        session.Changed -= OnSessionChanged;
         cancellation.Cancel();
         cancellation.Dispose();
     }

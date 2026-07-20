@@ -859,6 +859,8 @@
   "account.xivConnecting": "Connexion à XIVAuth…",
   "account.followers.one": "{0} abonné",
   "account.followers.other": "{0} abonnés",
+  "account.altSignInTitle": "Non connecté sur ce personnage",
+  "account.altSignInBody": "Vous jouez maintenant {0}. Ce personnage n'est pas connecté à Aethernet, donc les applis sociales, la messagerie et les appels resteront vides jusqu'à ce que vous vous connectiez.",
   "account.fail.dismiss": "Compris",
   "account.fail.characterNotFound.title": "Personnage introuvable",
   "account.fail.characterNotFound.body": "Nous n'avons pas trouvé {0} sur {1} dans la recherche Lodestone. Dans les paramètres de votre personnage, réglez la Recherche de personnage sur Public, puis vérifiez de nouveau.",

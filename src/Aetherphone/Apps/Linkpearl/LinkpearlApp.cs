@@ -120,9 +120,21 @@ internal sealed partial class LinkpearlApp : IPhoneApp
         switch (route.Screen)
         {
             case LinkpearlScreen.DirectThread when route.Conversation is { } conversation:
+                if (!store.Contains(conversation))
+                {
+                    router.Reset();
+                    break;
+                }
+
                 DrawDirectThread(area, conversation);
                 break;
             case LinkpearlScreen.LinkshellThread when route.Linkshell is { } thread:
+                if (!linkshells.Contains(thread))
+                {
+                    router.Reset();
+                    break;
+                }
+
                 DrawLinkshellThread(area, thread);
                 break;
             case LinkpearlScreen.FriendDetail when route.Friend is { } friend:

@@ -859,6 +859,8 @@
   "account.xivConnecting": "Verbinde mit XIVAuth…",
   "account.followers.one": "{0} Abonnent",
   "account.followers.other": "{0} Abonnenten",
+  "account.altSignInTitle": "Auf diesem Charakter nicht angemeldet",
+  "account.altSignInBody": "Du spielst jetzt {0}. Dieser Charakter ist nicht bei Aethernet angemeldet, daher bleiben soziale Apps, Nachrichten und Anrufe leer, bis du dich anmeldest.",
   "account.fail.dismiss": "Verstanden",
   "account.fail.characterNotFound.title": "Charakter nicht gefunden",
   "account.fail.characterNotFound.body": "Wir konnten {0} auf {1} in der Lodestone-Suche nicht finden. Stelle in deinen Charaktereinstellungen die Charaktersuche auf Öffentlich und überprüfe dann erneut.",

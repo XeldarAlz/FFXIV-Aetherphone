@@ -16,6 +16,11 @@ internal sealed class AccountClient
         return net.GetAsync("/me", AethernetJsonContext.Default.UserDto, token);
     }
 
+    public Task<UserDto?> MeWithBearerAsync(string bearer, CancellationToken token)
+    {
+        return net.GetWithBearerAsync("/me", bearer, AethernetJsonContext.Default.UserDto, token);
+    }
+
     public void EnsureCurrentUser()
     {
         var session = net.Session;

@@ -50,6 +50,7 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile PostDto[] taggedPosts = Array.Empty<PostDto>();
     private volatile string? taggedUserId;
     private volatile bool taggedLoading;
+    private string? lastAccountId;
 
     protected SocialFeedStore(
         AethernetSession session,
@@ -69,6 +70,34 @@ internal abstract class SocialFeedStore : IDisposable
         this.analytics = analytics;
         this.analyticsChannel = analyticsChannel;
         work = new StoreWork(logTag);
+        session.Changed += OnSessionChanged;
+    }
+
+    private void OnSessionChanged()
+    {
+        var accountId = session.CurrentUser?.Id;
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastAccountId = accountId;
+        me = null;
+        meGate.Reset();
+        forYouLane.Clear();
+        followingLane.Clear();
+        profilePosts = Array.Empty<PostDto>();
+        detailPost = null;
+        profileUserId = null;
+        profileUser = null;
+        profileLoading = false;
+        profileFailed = false;
+        detailPostId = null;
+        detailComments = Array.Empty<CommentDto>();
+        discoverResults = Array.Empty<UserDto>();
+        userListKey = null;
+        userListResults = Array.Empty<UserDto>();
+        ClearTagged();
     }
 
     public MentionSuggestions NewMentionSuggestions() => new(account, work);
@@ -635,5 +664,9 @@ internal abstract class SocialFeedStore : IDisposable
                 IsFollowing = follow, Followers = Math.Max(0, user.Followers + (follow ? 1 : -1))
             });
 
-    public void Dispose() => work.Dispose();
+    public void Dispose()
+    {
+        session.Changed -= OnSessionChanged;
+        work.Dispose();
+    }
 }

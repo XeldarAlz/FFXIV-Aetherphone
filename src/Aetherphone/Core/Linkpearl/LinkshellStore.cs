@@ -1,3 +1,5 @@
+using Aetherphone.Core.Game;
+
 namespace Aetherphone.Core.Linkpearl;
 
 internal sealed class LinkshellStore
@@ -8,9 +10,35 @@ internal sealed class LinkshellStore
     public IReadOnlyList<LinkshellThread> Threads => ordered;
     public event Action? Changed;
 
-    public LinkshellStore(LinkshellMuteStore mutes)
+    public LinkshellStore(LinkshellMuteStore mutes, CharacterWatch characterWatch)
     {
         this.mutes = mutes;
+        characterWatch.Changed += _ => Clear();
+    }
+
+    public void Clear()
+    {
+        if (ordered.Count == 0 && byChannel.Count == 0)
+        {
+            return;
+        }
+
+        byChannel.Clear();
+        ordered.Clear();
+        Changed?.Invoke();
+    }
+
+    public bool Contains(LinkshellThread thread)
+    {
+        for (var index = 0; index < ordered.Count; index++)
+        {
+            if (ReferenceEquals(ordered[index], thread))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void Append(LinkshellChannel channel, string name, ChatLine line)

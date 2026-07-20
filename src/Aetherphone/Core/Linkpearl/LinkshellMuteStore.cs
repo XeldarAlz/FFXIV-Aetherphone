@@ -1,15 +1,39 @@
+using Aetherphone.Core.Game;
+
 namespace Aetherphone.Core.Linkpearl;
 
 internal sealed class LinkshellMuteStore
 {
     private readonly Configuration configuration;
-    private readonly HashSet<string> muted;
+    private HashSet<string> muted = new(StringComparer.Ordinal);
+    private ulong contentId;
     public event Action? Changed;
 
-    public LinkshellMuteStore(Configuration configuration)
+    public LinkshellMuteStore(Configuration configuration, CharacterWatch characterWatch)
     {
         this.configuration = configuration;
-        muted = new HashSet<string>(configuration.MutedLinkshells, StringComparer.Ordinal);
+        characterWatch.Changed += OnCharacterChanged;
+    }
+
+    private void OnCharacterChanged(ulong id)
+    {
+        contentId = id;
+        if (id != 0 && !configuration.LinkshellMutesPerCharacterMigrated)
+        {
+            if (configuration.MutedLinkshells.Count > 0)
+            {
+                configuration.MutedLinkshellsByCharacter[id] = new List<string>(configuration.MutedLinkshells);
+                configuration.MutedLinkshells = new List<string>();
+            }
+
+            configuration.LinkshellMutesPerCharacterMigrated = true;
+            configuration.Save();
+        }
+
+        muted = configuration.MutedLinkshellsByCharacter.TryGetValue(id, out var list)
+            ? new HashSet<string>(list, StringComparer.Ordinal)
+            : new HashSet<string>(StringComparer.Ordinal);
+        Changed?.Invoke();
     }
 
     public bool IsMuted(LinkshellChannel channel) => muted.Contains(channel.Key);
@@ -29,8 +53,12 @@ internal sealed class LinkshellMuteStore
             return;
         }
 
-        configuration.MutedLinkshells = new List<string>(muted);
-        configuration.Save();
+        if (contentId != 0)
+        {
+            configuration.MutedLinkshellsByCharacter[contentId] = new List<string>(muted);
+            configuration.Save();
+        }
+
         Changed?.Invoke();
     }
 }

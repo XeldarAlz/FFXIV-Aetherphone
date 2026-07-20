@@ -259,6 +259,14 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         {
             inboxPrimed = false;
             vaultRefreshRequested = false;
+            if (threadList.Length > 0 || messages.Length > 0 || currentThreadId is not null)
+            {
+                threadList = Array.Empty<TThread>();
+                messages = Array.Empty<TMessage>();
+                currentThreadId = null;
+                threadListLoaded = false;
+            }
+
             return;
         }
 

@@ -26,6 +26,7 @@ internal sealed class SocialNotificationService : IDisposable
     private volatile NotificationDto[] latest = Array.Empty<NotificationDto>();
     private volatile bool polling;
     private volatile bool primed;
+    private string? lastAccountId;
 
     public SocialNotificationService(AethernetSession session, AccountClient client, NotificationService notifications,
         Configuration configuration, IFramework framework, PhoneVisibility visibility, RealtimeSignalBus signals,
@@ -40,7 +41,21 @@ internal sealed class SocialNotificationService : IDisposable
         this.signals = signals;
         cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
         signals.SocialPinged += cadence.RequestImmediate;
+        session.Changed += OnSessionChanged;
         framework.Update += OnFrameworkTick;
+    }
+
+    private void OnSessionChanged()
+    {
+        var accountId = session.CurrentUser?.Id;
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastAccountId = accountId;
+        latest = Array.Empty<NotificationDto>();
+        primed = false;
     }
 
     public NotificationDto[] Latest => latest;
@@ -217,6 +232,7 @@ internal sealed class SocialNotificationService : IDisposable
 
     public void Dispose()
     {
+        session.Changed -= OnSessionChanged;
         signals.SocialPinged -= cadence.RequestImmediate;
         framework.Update -= OnFrameworkTick;
         cancellation.Cancel();

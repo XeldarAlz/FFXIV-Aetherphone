@@ -859,6 +859,8 @@
   "account.xivConnecting": "XIVAuth'a bağlanılıyor…",
   "account.followers.one": "{0} takipçi",
   "account.followers.other": "{0} takipçi",
+  "account.altSignInTitle": "Bu karakterle giriş yapılmadı",
+  "account.altSignInBody": "Şu anda {0} ile oynuyorsun. Bu karakter Aethernet'e giriş yapmadı, bu yüzden giriş yapana kadar sosyal uygulamalar, mesajlaşma ve aramalar boş kalır.",
   "account.fail.dismiss": "Anladım",
   "account.fail.characterNotFound.title": "Karakter bulunamadı",
   "account.fail.characterNotFound.body": "Lodestone aramasında {1} sunucusundaki {0} bulunamadı. Karakter ayarlarından Karakter Aramasını Herkese Açık yap, sonra tekrar doğrula.",

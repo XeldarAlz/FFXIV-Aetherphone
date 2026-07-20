@@ -858,6 +858,8 @@
   "account.xivConnecting": "Connecting to XIVAuth…",
   "account.followers.one": "{0} follower",
   "account.followers.other": "{0} followers",
+  "account.altSignInTitle": "Not signed in on this character",
+  "account.altSignInBody": "You're now playing {0}. This character isn't signed in to Aethernet, so social apps, messaging, and calls stay empty until you sign in.",
   "account.fail.dismiss": "Got it",
   "account.fail.characterNotFound.title": "Character not found",
   "account.fail.characterNotFound.body": "We couldn't find {0} on {1} in the Lodestone search. In your Character settings, set Character Search to Public, then Verify again.",

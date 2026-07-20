@@ -859,6 +859,8 @@
   "account.xivConnecting": "Подключение к XIVAuth…",
   "account.followers.one": "{0} подписчик",
   "account.followers.other": "{0} подписчиков",
+  "account.altSignInTitle": "Вход не выполнен для этого персонажа",
+  "account.altSignInBody": "Сейчас вы играете за {0}. Этот персонаж не вошёл в Aethernet, поэтому соцприложения, сообщения и звонки будут пустыми, пока вы не войдёте.",
   "account.fail.dismiss": "Понятно",
   "account.fail.characterNotFound.title": "Персонаж не найден",
   "account.fail.characterNotFound.body": "Не удалось найти {0} на {1} в поиске Lodestone. В настройках персонажа включите публичный поиск персонажа и повторите проверку.",

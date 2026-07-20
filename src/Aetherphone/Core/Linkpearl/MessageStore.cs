@@ -1,3 +1,5 @@
+using Aetherphone.Core.Game;
+
 namespace Aetherphone.Core.Linkpearl;
 
 internal sealed class MessageStore
@@ -9,10 +11,25 @@ internal sealed class MessageStore
     public IReadOnlyList<Conversation> Conversations => ordered;
     public event Action? Changed;
 
-    public MessageStore(MessageArchive archive, Configuration configuration)
+    public MessageStore(MessageArchive archive, Configuration configuration, CharacterWatch characterWatch)
     {
         this.archive = archive;
         this.configuration = configuration;
+        characterWatch.Changed += OnCharacterChanged;
+    }
+
+    private void OnCharacterChanged(ulong contentId)
+    {
+        if (contentId != 0 && !configuration.MessagesPerCharacterMigrated)
+        {
+            archive.MigrateLegacyTo(contentId);
+            configuration.MessagesPerCharacterMigrated = true;
+            configuration.Save();
+        }
+
+        archive.SetCharacter(contentId);
+        byTarget.Clear();
+        ordered.Clear();
         var stored = archive.LoadAll();
         for (var index = 0; index < stored.Count; index++)
         {
@@ -22,6 +39,21 @@ internal sealed class MessageStore
             byTarget[record.SendTarget] = conversation;
             ordered.Add(conversation);
         }
+
+        Changed?.Invoke();
+    }
+
+    public bool Contains(Conversation conversation)
+    {
+        for (var index = 0; index < ordered.Count; index++)
+        {
+            if (ReferenceEquals(ordered[index], conversation))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void Append(string display, string sendTarget, ChatLine line)
