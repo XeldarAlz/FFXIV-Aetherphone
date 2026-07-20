@@ -244,16 +244,7 @@ internal sealed partial class VelvetShell
             }
         }
 
-        var connections = store.Connections;
-        for (var index = 0; index < connections.Length; index++)
-        {
-            if (connections[index].UserId == threadId)
-            {
-                return connections[index].UtcOffsetMinutes;
-            }
-        }
-
-        return null;
+        return FindConnectionInfo(threadId)?.UtcOffsetMinutes;
     }
 
     private string ThreadTitle(string threadId)
@@ -269,15 +260,9 @@ internal sealed partial class VelvetShell
             }
         }
 
-        var connections = store.Connections;
-        for (var index = 0; index < connections.Length; index++)
+        if (FindConnectionInfo(threadId) is { } connection)
         {
-            if (connections[index].UserId == threadId)
-            {
-                return string.IsNullOrEmpty(connections[index].DisplayName)
-                    ? connections[index].Handle
-                    : connections[index].DisplayName;
-            }
+            return string.IsNullOrEmpty(connection.DisplayName) ? connection.Handle : connection.DisplayName;
         }
 
         return string.Empty;
@@ -297,21 +282,48 @@ internal sealed partial class VelvetShell
             }
         }
 
-        var connections = store.Connections;
-        for (var index = 0; index < connections.Length; index++)
+        if (FindConnectionInfo(threadId) is { } connection)
         {
-            if (connections[index].UserId == threadId)
-            {
-                var connection = connections[index];
-                monogram = Monogram(connection.DisplayName, connection.Handle);
-                presence = connection.Presence;
-                return lodestone.Remote(connection.UserId, ToUri(connection.AvatarUrl));
-            }
+            monogram = Monogram(connection.DisplayName, connection.Handle);
+            presence = connection.Presence;
+            return lodestone.Remote(connection.UserId, ToUri(connection.AvatarUrl));
         }
 
         monogram = "?";
         presence = VelvetPresence.Offline;
         return AvatarHandle.Disabled;
+    }
+
+    private VelvetConnectionDto? FindConnectionInfo(string userId)
+    {
+        var connections = store.Connections;
+        for (var index = 0; index < connections.Length; index++)
+        {
+            if (connections[index].UserId == userId)
+            {
+                return connections[index];
+            }
+        }
+
+        var requests = store.Requests;
+        for (var index = 0; index < requests.Length; index++)
+        {
+            if (requests[index].UserId == userId)
+            {
+                return requests[index];
+            }
+        }
+
+        var sent = store.SentRequests;
+        for (var index = 0; index < sent.Length; index++)
+        {
+            if (sent[index].UserId == userId)
+            {
+                return sent[index];
+            }
+        }
+
+        return null;
     }
 
     private static string Monogram(string displayName, string handle)

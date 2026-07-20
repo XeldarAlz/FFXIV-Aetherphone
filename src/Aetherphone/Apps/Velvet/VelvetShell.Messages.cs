@@ -154,7 +154,7 @@ internal sealed partial class VelvetShell
                 }
                 else if (hit == VRowHit.Body)
                 {
-                    OpenProfile(request.UserId);
+                    OpenThread(request.UserId);
                 }
             }
         }
@@ -189,7 +189,7 @@ internal sealed partial class VelvetShell
                 store.DeclineRequest(request.UserId);
                 break;
             case VRowHit.Body:
-                OpenProfile(request.UserId);
+                OpenThread(request.UserId);
                 break;
         }
     }

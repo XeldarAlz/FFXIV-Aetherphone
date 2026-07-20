@@ -619,7 +619,15 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public void AcceptRequest(string userId)
     {
+        var index = Array.FindIndex(requests, item => item.UserId == userId);
+        var accepted = index >= 0 ? requests[index] : null;
         requests = RemoveConnection(requests, userId);
+        if (accepted is not null)
+        {
+            connections = CopyOnWrite.Append(RemoveConnection(connections, userId),
+                accepted with { State = VelvetConnectionState.Connected });
+        }
+
         connectionsLoaded = false;
         SetConnectionStateEverywhere(userId, VelvetConnectionState.Connected);
         work.Run("accept", async token => await client.ConnectAsync(userId, string.Empty, token).ConfigureAwait(false));
