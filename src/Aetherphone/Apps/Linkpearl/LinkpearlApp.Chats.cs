@@ -171,7 +171,10 @@ internal sealed partial class LinkpearlApp
             var lines = conversation.Lines;
             for (var index = 0; index < lines.Count; index++)
             {
-                ChatBubble.Draw(lines[index], frameTheme, entrance.Progress(index));
+                if (ChatBubble.Draw(lines[index], frameTheme, entrance.Progress(index)))
+                {
+                    OpenChatMenu(lines[index], conversation.Contact);
+                }
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
@@ -182,6 +185,7 @@ internal sealed partial class LinkpearlApp
         }
 
         DrawComposer(composerBar, frameTheme, text => bridge.Send(conversation, text));
+        DrawChatMenu(area);
     }
 
     private bool DrawDeleteHistoryButton(Rect area)
@@ -241,7 +245,10 @@ internal sealed partial class LinkpearlApp
             var lines = thread.Lines;
             for (var index = 0; index < lines.Count; index++)
             {
-                ChatBubble.Draw(lines[index], frameTheme, entrance.Progress(index), GroupContext(lines, index));
+                if (ChatBubble.Draw(lines[index], frameTheme, entrance.Progress(index), GroupContext(lines, index)))
+                {
+                    OpenChatMenu(lines[index], SenderName(lines[index]));
+                }
             }
 
             ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
@@ -252,6 +259,7 @@ internal sealed partial class LinkpearlApp
         }
 
         DrawComposer(composerBar, frameTheme, text => linkshellBridge.Send(thread, text));
+        DrawChatMenu(area);
     }
 
     private bool DrawMuteButton(Rect area, LinkshellChannel channel)

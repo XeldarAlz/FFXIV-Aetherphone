@@ -28,8 +28,9 @@ internal readonly struct GroupBubble
 
 internal static class ChatBubble
 {
-    public static void Draw(ChatLine line, PhoneTheme theme, float entrance = 1f, GroupBubble group = default)
+    public static bool Draw(ChatLine line, PhoneTheme theme, float entrance = 1f, GroupBubble group = default)
     {
+        var contextRequested = false;
         var scale = ImGuiHelpers.GlobalScale;
         var available = ImGui.GetContentRegionAvail().X;
         var padding = 10f * scale;
@@ -71,6 +72,9 @@ internal static class ChatBubble
         {
             ImGui.SetCursorPos(new Vector2(start.X + offsetX, bubbleTop));
             var bubbleScreen = ImGui.GetCursorScreenPos();
+            var bubbleEnd = bubbleScreen + new Vector2(bubbleWidth, bubbleHeight);
+            contextRequested = !UiInteract.InputBlocked && ImGui.IsMouseHoveringRect(bubbleScreen, bubbleEnd)
+                && ImGui.IsMouseClicked(ImGuiMouseButton.Right);
             Squircle.Fill(ImGui.GetWindowDrawList(), bubbleScreen,
                 bubbleScreen + new Vector2(bubbleWidth, bubbleHeight), 13f * scale, ImGui.GetColorU32(fillColor));
             if (linkLayout is null)
@@ -92,6 +96,7 @@ internal static class ChatBubble
         }
 
         ImGui.SetCursorPos(new Vector2(start.X, bubbleTop + bubbleHeight + 6f * scale));
+        return contextRequested;
     }
 
     private static void DrawEntering(string text, RichTextLayout? linkLayout, float scale, Vector2 start,

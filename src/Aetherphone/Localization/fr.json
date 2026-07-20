@@ -1001,6 +1001,8 @@
   "messages.crossWorldLinkshell": "Linkshell inter-mondes {0}",
   "messages.mute": "Couper le son",
   "messages.unmute": "Activer le son",
+  "messages.copyMessage": "Copier le message",
+  "messages.copyName": "Copier le nom",
   "character.logInToView": "Connectez-vous pour voir votre personnage",
   "character.activity": "Activité",
   "character.today": "Aujourd'hui",

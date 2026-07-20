@@ -1001,6 +1001,8 @@
   "messages.crossWorldLinkshell": "クロスワールドリンクシェル {0}",
   "messages.mute": "ミュート",
   "messages.unmute": "ミュート解除",
+  "messages.copyMessage": "メッセージをコピー",
+  "messages.copyName": "名前をコピー",
   "character.logInToView": "ログインしてキャラクターを見る",
   "character.activity": "アクティビティ",
   "character.today": "今日",

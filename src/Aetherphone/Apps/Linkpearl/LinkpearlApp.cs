@@ -66,7 +66,11 @@ internal sealed partial class LinkpearlApp : IPhoneApp
         this.confirm = confirm;
         router = new ViewRouter<LinkpearlRoute>(LinkpearlRoute.Root, Id);
         drawView = DrawView;
-        backToList = () => router.Pop();
+        backToList = () =>
+        {
+            chatMenu.Close();
+            router.Pop();
+        };
     }
 
     public void OnOpened()
@@ -99,6 +103,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
 
     public void OnClosed()
     {
+        chatMenu.Close();
         router.Reset();
         draft = string.Empty;
         trackedThread = null;
@@ -112,6 +117,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
         TickContacts(delta);
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
+        chatMenu.Gate();
         router.Draw(context.Content, context.Theme.AppBackground, delta, drawView);
     }
 

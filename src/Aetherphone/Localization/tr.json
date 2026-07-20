@@ -1001,6 +1001,8 @@
   "messages.crossWorldLinkshell": "Dünyalar arası Linkshell {0}",
   "messages.mute": "Sessize al",
   "messages.unmute": "Sesi aç",
+  "messages.copyMessage": "Mesajı kopyala",
+  "messages.copyName": "Adı kopyala",
   "character.logInToView": "Karakterini görmek için oturum aç",
   "character.activity": "Etkinlik",
   "character.today": "Bugün",

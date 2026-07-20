@@ -1001,6 +1001,8 @@
   "messages.crossWorldLinkshell": "Межмировой линкшелл {0}",
   "messages.mute": "Без звука",
   "messages.unmute": "Включить звук",
+  "messages.copyMessage": "Копировать сообщение",
+  "messages.copyName": "Копировать имя",
   "character.logInToView": "Войдите, чтобы увидеть персонажа",
   "character.activity": "Активность",
   "character.today": "Сегодня",

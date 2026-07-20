@@ -1000,6 +1000,8 @@
   "messages.crossWorldLinkshell": "Crossworld Linkshell {0}",
   "messages.mute": "Mute",
   "messages.unmute": "Unmute",
+  "messages.copyMessage": "Copy message",
+  "messages.copyName": "Copy name",
   "character.logInToView": "Log in to view your character",
   "character.activity": "Activity",
   "character.today": "Today",
