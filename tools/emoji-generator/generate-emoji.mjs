@@ -50,24 +50,6 @@ function twemojiFile(sequence) {
   return toCodePoint(normalized);
 }
 
-function codePointCount(sequence) {
-  let count = 0;
-  for (const _ of sequence) {
-    count++;
-  }
-  return count;
-}
-
-function matchKeys(sequence, allowBare) {
-  const keys = new Set();
-  keys.add(sequence);
-  const stripped = sequence.replace(VARIATION_SELECTOR, "");
-  if (stripped !== sequence && (allowBare || codePointCount(stripped) > 1)) {
-    keys.add(stripped);
-  }
-  return [...keys];
-}
-
 async function pooledForEach(items, worker) {
   let cursor = 0;
   const runners = new Array(Math.min(CONCURRENCY, items.length)).fill(0).map(async () => {
@@ -98,6 +80,20 @@ async function download(file, attempt = 0) {
   }
 }
 
+const SHORTCODES = require("emojibase-data/en/shortcodes/emojibase.json");
+
+function shortcodesFor(file, hexcode) {
+  const normalize = (value) => (value === undefined ? null : Array.isArray(value) ? value : [value]);
+  let codes = normalize(SHORTCODES[file.toUpperCase()]);
+  if (!codes && hexcode) {
+    codes = normalize(SHORTCODES[hexcode]) ?? normalize(SHORTCODES[hexcode.replace(/-FE0F/g, "")]);
+  }
+  if (!codes) {
+    codes = [file];
+  }
+  return codes.map((code) => code.toLowerCase());
+}
+
 function loadEmojibase() {
   const data = require("emojibase-data/en/data.json");
   return data.filter((entry) => KEPT_GROUPS.includes(entry.group));
@@ -107,7 +103,6 @@ function buildCatalogEntries(source) {
   const groupIndex = new Map(KEPT_GROUPS.map((group, index) => [group, index]));
   const entries = [];
   for (const item of source) {
-    const isEmojiPresentation = item.type === 1;
     const tones = [];
     if (Array.isArray(item.skins)) {
       for (const skin of item.skins) {
@@ -118,20 +113,17 @@ function buildCatalogEntries(source) {
         tones.push({
           tone: skin.tone,
           file: twemojiFile(skin.emoji),
-          char: skin.emoji,
-          match: matchKeys(skin.emoji, true),
         });
       }
     }
 
     entries.push({
       file: twemojiFile(item.emoji),
-      char: item.emoji,
+      short: shortcodesFor(twemojiFile(item.emoji), item.hexcode),
       group: groupIndex.get(item.group),
       order: item.order ?? 0,
       label: item.label,
       tags: Array.isArray(item.tags) ? item.tags.join(" ") : "",
-      match: matchKeys(item.emoji, isEmojiPresentation),
       tones,
     });
   }

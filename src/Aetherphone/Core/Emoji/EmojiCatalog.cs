@@ -5,28 +5,28 @@ namespace Aetherphone.Core.Emoji;
 internal readonly struct EmojiTone
 {
     public readonly string File;
-    public readonly string Char;
+    public readonly string Shortcode;
 
-    public EmojiTone(string file, string character)
+    public EmojiTone(string file, string shortcode)
     {
         File = file;
-        Char = character;
+        Shortcode = shortcode;
     }
 }
 
 internal readonly struct EmojiGlyph
 {
     public readonly string File;
-    public readonly string Char;
+    public readonly string Shortcode;
     public readonly string Label;
     public readonly string Search;
     public readonly byte Group;
     public readonly EmojiTone[] Tones;
 
-    public EmojiGlyph(string file, string character, string label, string search, byte group, EmojiTone[] tones)
+    public EmojiGlyph(string file, string shortcode, string label, string search, byte group, EmojiTone[] tones)
     {
         File = file;
-        Char = character;
+        Shortcode = shortcode;
         Label = label;
         Search = search;
         Group = group;
@@ -39,13 +39,11 @@ internal readonly struct EmojiGlyph
 internal static class EmojiCatalog
 {
     private static readonly EmojiTone[] NoTones = Array.Empty<EmojiTone>();
-    private static readonly Dictionary<string, string> Lookup = new(StringComparer.Ordinal);
-    private static readonly bool[] Starter = new bool[char.MaxValue + 1];
+    private static readonly Dictionary<string, string> ShortcodeToFile = new(StringComparer.OrdinalIgnoreCase);
 
     private static string[] groups = Array.Empty<string>();
     private static EmojiGlyph[] glyphs = Array.Empty<EmojiGlyph>();
     private static int[] groupStart = Array.Empty<int>();
-    private static int maxUnits;
     private static bool loaded;
 
     public static bool Ready => loaded && glyphs.Length > 0;
@@ -53,8 +51,6 @@ internal static class EmojiCatalog
     public static string[] Groups => groups;
 
     public static ReadOnlySpan<EmojiGlyph> Glyphs => glyphs;
-
-    public static int MaxMatchUnits => maxUnits;
 
     public static void Load()
     {
@@ -82,32 +78,8 @@ internal static class EmojiCatalog
         }
     }
 
-    public static bool IsStarter(char value) => Starter[value];
-
-    public static bool TryMatch(ReadOnlySpan<char> text, int start, out int length, out string file)
-    {
-        length = 0;
-        file = string.Empty;
-        var first = text[start];
-        if (first < 0x0080 || !Starter[first])
-        {
-            return false;
-        }
-
-        var lookup = Lookup.GetAlternateLookup<ReadOnlySpan<char>>();
-        var longest = Math.Min(maxUnits, text.Length - start);
-        for (var span = longest; span >= 1; span--)
-        {
-            if (lookup.TryGetValue(text.Slice(start, span), out var candidate))
-            {
-                length = span;
-                file = candidate;
-                return true;
-            }
-        }
-
-        return false;
-    }
+    public static bool TryResolve(string shortcode, out string file) =>
+        ShortcodeToFile.TryGetValue(shortcode, out file!);
 
     public static ReadOnlySpan<EmojiGlyph> GlyphsInGroup(int group)
     {
@@ -116,9 +88,7 @@ internal static class EmojiCatalog
             return ReadOnlySpan<EmojiGlyph>.Empty;
         }
 
-        var from = groupStart[group];
-        var to = groupStart[group + 1];
-        return glyphs.AsSpan(from, to - from);
+        return glyphs.AsSpan(groupStart[group], groupStart[group + 1] - groupStart[group]);
     }
 
     public static void GroupRange(int group, out int start, out int end)
@@ -156,11 +126,31 @@ internal static class EmojiCatalog
     private static EmojiGlyph ParseGlyph(JObject node)
     {
         var file = node["file"]!.ToString();
-        var character = node["char"]?.ToString() ?? string.Empty;
         var label = node["label"]?.ToString() ?? string.Empty;
         var tags = node["tags"]?.ToString() ?? string.Empty;
         var group = (byte)(node["group"]?.Value<int>() ?? 0);
-        Register(node["match"] as JArray, file);
+        var shortArray = node["short"] as JArray;
+        var primary = file;
+        var search = string.IsNullOrEmpty(tags) ? label : string.Concat(label, " ", tags);
+        if (shortArray is { Count: > 0 })
+        {
+            primary = shortArray[0].ToString();
+            for (var index = 0; index < shortArray.Count; index++)
+            {
+                var code = shortArray[index].ToString();
+                if (code.Length == 0)
+                {
+                    continue;
+                }
+
+                ShortcodeToFile[code] = file;
+                search = string.Concat(search, " ", code);
+            }
+        }
+        else
+        {
+            ShortcodeToFile[file] = file;
+        }
 
         var tonesNode = node["tones"] as JArray;
         var tones = NoTones;
@@ -171,41 +161,14 @@ internal static class EmojiCatalog
             {
                 var tone = (JObject)tonesNode[index];
                 var toneFile = tone["file"]!.ToString();
-                tones[index] = new EmojiTone(toneFile, tone["char"]?.ToString() ?? string.Empty);
-                Register(tone["match"] as JArray, toneFile);
+                var toneNumber = tone["tone"]?.Value<int>() ?? index + 1;
+                var toneCode = string.Concat(primary, "_tone", toneNumber.ToString());
+                tones[index] = new EmojiTone(toneFile, toneCode);
+                ShortcodeToFile[toneCode] = toneFile;
             }
         }
 
-        var search = string.IsNullOrEmpty(tags) ? label : string.Concat(label, " ", tags);
-        return new EmojiGlyph(file, character, label, search.ToLowerInvariant(), group, tones);
-    }
-
-    private static void Register(JArray? matches, string file)
-    {
-        if (matches is null)
-        {
-            return;
-        }
-
-        for (var index = 0; index < matches.Count; index++)
-        {
-            var key = matches[index].ToString();
-            if (key.Length == 0)
-            {
-                continue;
-            }
-
-            Lookup[key] = file;
-            if (key.Length > maxUnits)
-            {
-                maxUnits = key.Length;
-            }
-
-            if (key[0] >= 0x0080)
-            {
-                Starter[key[0]] = true;
-            }
-        }
+        return new EmojiGlyph(file, primary, label, search.ToLowerInvariant(), group, tones);
     }
 
     private static void BuildGroupIndex()

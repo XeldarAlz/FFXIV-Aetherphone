@@ -1,6 +1,4 @@
-using System.Text;
 using Aetherphone.Core;
-using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
@@ -155,33 +153,17 @@ internal sealed class ChatComposer : IDisposable
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y), ImGui.GetColorU32(theme.Separator), 1f);
-        var buttonRadius = 16f * scale;
-        var pillLeftAnchor = area.Min.X + 12f * scale;
-        if (model.CanImage)
-        {
-            var pictureCenter = new Vector2(area.Min.X + 12f * scale + buttonRadius, area.Center.Y);
-            var pictureMin = pictureCenter - new Vector2(buttonRadius, buttonRadius);
-            var pictureMax = pictureCenter + new Vector2(buttonRadius, buttonRadius);
-            var pictureHovered = ImGui.IsMouseHoveringRect(pictureMin, pictureMax);
-            drawList.AddCircleFilled(pictureCenter, buttonRadius,
-                ImGui.GetColorU32(pictureHovered ? Palette.Mix(ui.Accent, theme.TextStrong, 0.12f) : ui.Accent), 24);
-            AppSkin.Icon(pictureCenter, FontAwesomeIcon.Image.ToIconString(), White, 0.85f);
-            HoverTooltip.Show(new Rect(pictureMin, pictureMax), Loc.T(L.Velvet.SendPicture), HoverLabelSide.Above);
-            if (pictureHovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    model.OnPickImage(model.ConversationId);
-                }
-            }
+        var buttonRadius = 18f * scale;
+        var iconRadius = 15f * scale;
+        var edgePad = 10f * scale;
+        var sendCenter = new Vector2(area.Max.X - edgePad - buttonRadius, area.Center.Y);
+        var pillMin = new Vector2(area.Min.X + edgePad, area.Min.Y + 7f * scale);
+        var pillMax = new Vector2(sendCenter.X - buttonRadius - 8f * scale, area.Max.Y - 7f * scale);
+        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(FieldFill));
 
-            pillLeftAnchor = pictureMax.X + 10f * scale;
-        }
-
-        var emojiCenter = new Vector2(pillLeftAnchor + buttonRadius, area.Center.Y);
-        var emojiMin = emojiCenter - new Vector2(buttonRadius, buttonRadius);
-        var emojiMax = emojiCenter + new Vector2(buttonRadius, buttonRadius);
+        var emojiCenter = new Vector2(pillMin.X + iconRadius + 5f * scale, area.Center.Y);
+        var emojiMin = emojiCenter - new Vector2(iconRadius, iconRadius);
+        var emojiMax = emojiCenter + new Vector2(iconRadius, iconRadius);
         var emojiHovered = ImGui.IsMouseHoveringRect(emojiMin, emojiMax);
         var emojiColor = emojiOpen ? ui.Accent : emojiHovered ? theme.TextStrong : ui.MutedInk;
         AppSkin.Icon(emojiCenter, FontAwesomeIcon.Smile.ToIconString(), emojiColor, 0.95f);
@@ -195,15 +177,32 @@ internal sealed class ChatComposer : IDisposable
             }
         }
 
-        pillLeftAnchor = emojiMax.X + 6f * scale;
+        var textRight = pillMax.X - 14f * scale;
+        if (model.CanImage)
+        {
+            var pictureCenter = new Vector2(pillMax.X - iconRadius - 5f * scale, area.Center.Y);
+            var pictureMin = pictureCenter - new Vector2(iconRadius, iconRadius);
+            var pictureMax = pictureCenter + new Vector2(iconRadius, iconRadius);
+            var pictureHovered = ImGui.IsMouseHoveringRect(pictureMin, pictureMax);
+            AppSkin.Icon(pictureCenter, FontAwesomeIcon.Image.ToIconString(),
+                pictureHovered ? theme.TextStrong : ui.MutedInk, 0.95f);
+            HoverTooltip.Show(new Rect(pictureMin, pictureMax), Loc.T(L.Velvet.SendPicture), HoverLabelSide.Above);
+            if (pictureHovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    model.OnPickImage(model.ConversationId);
+                }
+            }
 
-        var sendWidth = 40f * scale;
-        var pillMin = new Vector2(pillLeftAnchor, area.Min.Y + 8f * scale);
-        var pillMax = new Vector2(area.Max.X - sendWidth - 12f * scale, area.Max.Y - 8f * scale);
-        Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(FieldFill));
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
+            textRight = pictureMin.X - 6f * scale;
+        }
+
+        var textLeft = emojiMax.X + 4f * scale;
+        ImGui.SetCursorScreenPos(new Vector2(textLeft,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
+        ImGui.SetNextItemWidth(MathF.Max(1f, textRight - textLeft));
         if (focus)
         {
             ImGui.SetKeyboardFocusHere();
@@ -212,10 +211,8 @@ internal sealed class ChatComposer : IDisposable
 
         var submitted = false;
         Plugin.Fonts.NoticeText(draft);
-        var overlayEmoji = EmojiScanner.MightContain(draft);
-        var inputTextColor = overlayEmoji ? new Vector4(0f, 0f, 0f, 0f) : theme.TextStrong;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, inputTextColor))
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             if (ImGui.InputTextWithHint("##chatComposerInput", Loc.T(L.Velvet.MessageHint), ref draft, model.MaxLength,
                     ImGuiInputTextFlags.EnterReturnsTrue))
@@ -224,20 +221,13 @@ internal sealed class ChatComposer : IDisposable
             }
         }
 
-        if (overlayEmoji)
-        {
-            DrawComposerEmojiOverlay(pillMin, pillMax, scale, theme, ImGui.IsItemActive());
-        }
-
         var hasDraft = draft.Trim().Length > 0;
         var canSend = hasDraft && !model.Sending;
-        var sendCenter = new Vector2(area.Max.X - sendWidth * 0.5f - 8f * scale, area.Center.Y);
-        var sendHitRadius = 16f * scale;
-        var sendRect = new Rect(sendCenter - new Vector2(sendHitRadius, sendHitRadius),
-            sendCenter + new Vector2(sendHitRadius, sendHitRadius));
+        var sendRect = new Rect(sendCenter - new Vector2(buttonRadius, buttonRadius),
+            sendCenter + new Vector2(buttonRadius, buttonRadius));
         if (hasDraft)
         {
-            drawList.AddCircleFilled(sendCenter, 16f * scale,
+            drawList.AddCircleFilled(sendCenter, buttonRadius,
                 ImGui.GetColorU32(canSend ? ui.Accent : theme.SurfaceMuted), 24);
             AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), White, 0.9f);
             HoverTooltip.Show(sendRect, Loc.T(L.Velvet.Send), HoverLabelSide.Above);
@@ -252,7 +242,7 @@ internal sealed class ChatComposer : IDisposable
         }
         else if (model.CanVoice)
         {
-            drawList.AddCircleFilled(sendCenter, 16f * scale, ImGui.GetColorU32(ui.Accent), 24);
+            drawList.AddCircleFilled(sendCenter, buttonRadius, ImGui.GetColorU32(ui.Accent), 24);
             AppSkin.Icon(sendCenter, FontAwesomeIcon.Microphone.ToIconString(), White, 0.9f);
             HoverTooltip.Show(sendRect, Loc.T(L.Message.RecordVoiceHint), HoverLabelSide.Above);
             if (UiInteract.Hover(sendRect.Min, sendRect.Max))
@@ -266,7 +256,7 @@ internal sealed class ChatComposer : IDisposable
         }
         else
         {
-            drawList.AddCircleFilled(sendCenter, 16f * scale, ImGui.GetColorU32(theme.SurfaceMuted), 24);
+            drawList.AddCircleFilled(sendCenter, buttonRadius, ImGui.GetColorU32(theme.SurfaceMuted), 24);
             AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), White, 0.9f);
         }
 
@@ -307,40 +297,11 @@ internal sealed class ChatComposer : IDisposable
             return;
         }
 
-        if (Encoding.UTF8.GetByteCount(draft) + Encoding.UTF8.GetByteCount(picked) < model.MaxLength)
+        if (draft.Length + picked.Length < model.MaxLength)
         {
             draft += picked;
             Plugin.Fonts.NoticeText(draft);
-            focus = true;
         }
-    }
-
-    private void DrawComposerEmojiOverlay(Vector2 pillMin, Vector2 pillMax, float scale, PhoneTheme theme, bool active)
-    {
-        if (draft.Length == 0)
-        {
-            return;
-        }
-
-        var drawList = ImGui.GetWindowDrawList();
-        var fontSize = ImGui.GetFontSize();
-        var textLeft = pillMin.X + 14f * scale;
-        var fieldRight = pillMax.X - 10f * scale;
-        var fieldWidth = MathF.Max(1f, fieldRight - textLeft);
-        var textTop = (pillMin.Y + pillMax.Y) * 0.5f - fontSize * 0.5f;
-        var width = EmojiText.MeasureWidth(draft, fontSize);
-        var scrollX = MathF.Max(0f, width - fieldWidth);
-        var ink = ImGui.GetColorU32(theme.TextStrong);
-        drawList.PushClipRect(new Vector2(textLeft, pillMin.Y), new Vector2(fieldRight, pillMax.Y), true);
-        var caretX = EmojiText.DrawLine(drawList, draft, new Vector2(textLeft, textTop), fontSize, ink, scrollX);
-        if (active && ImGui.GetTime() % 1.0 < 0.5)
-        {
-            var cursorX = MathF.Min(caretX, fieldRight);
-            drawList.AddLine(new Vector2(cursorX, textTop + 1f * scale),
-                new Vector2(cursorX, textTop + fontSize - 1f * scale), ink, MathF.Max(1f, scale));
-        }
-
-        drawList.PopClipRect();
     }
 
     private void DrawRecordingComposer(Rect area, in ChatComposerModel model)

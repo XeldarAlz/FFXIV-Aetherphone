@@ -246,5 +246,5 @@ internal sealed class EmojiPicker
         glyph.HasTones && tone > 0 ? glyph.Tones[tone - 1].File : glyph.File;
 
     private string CharFor(in EmojiGlyph glyph) =>
-        glyph.HasTones && tone > 0 ? glyph.Tones[tone - 1].Char : glyph.Char;
+        string.Concat(":", glyph.HasTones && tone > 0 ? glyph.Tones[tone - 1].Shortcode : glyph.Shortcode, ":");
 }

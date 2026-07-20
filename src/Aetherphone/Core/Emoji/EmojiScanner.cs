@@ -16,39 +16,39 @@ internal readonly struct EmojiSpan
 
 internal static class EmojiScanner
 {
-    public static bool MightContain(ReadOnlySpan<char> text)
-    {
-        if (!EmojiCatalog.Ready)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < text.Length; index++)
-        {
-            var value = text[index];
-            if (value >= 0x0080 && EmojiCatalog.IsStarter(value))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    public static bool MightContain(ReadOnlySpan<char> text) =>
+        EmojiCatalog.Ready && text.IndexOf(':') >= 0;
 
     public static void Collect(string text, List<EmojiSpan> target)
     {
-        var position = 0;
         var length = text.Length;
-        while (position < length)
+        var index = 0;
+        while (index < length)
         {
-            if (EmojiCatalog.TryMatch(text, position, out var matched, out var file))
+            if (text[index] != ':')
             {
-                target.Add(new EmojiSpan(position, matched, file));
-                position += matched;
+                index++;
                 continue;
             }
 
-            position++;
+            var end = index + 1;
+            while (end < length && IsShortcodeChar(text[end]))
+            {
+                end++;
+            }
+
+            if (end < length && end > index + 1 && text[end] == ':'
+                && EmojiCatalog.TryResolve(text.Substring(index + 1, end - index - 1), out var file))
+            {
+                target.Add(new EmojiSpan(index, end - index + 1, file));
+                index = end + 1;
+                continue;
+            }
+
+            index++;
         }
     }
+
+    private static bool IsShortcodeChar(char value) =>
+        value is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9') or '_' or '-';
 }

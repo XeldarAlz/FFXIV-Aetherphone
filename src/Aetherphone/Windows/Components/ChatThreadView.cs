@@ -212,7 +212,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         DrawHeader(area, threadId);
         var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
-        var composerHeight = 52f * scale;
+        var composerHeight = 56f * scale;
         var accessoryHeight = composer.AccessoryHeight;
         var transcriptMessages = BuildTranscript(store.Messages);
         if (searchController.Open)
