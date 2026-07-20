@@ -69,6 +69,11 @@ internal static class TimeText
 
     public static string Short(DateTime localMoment)
     {
+        if (localMoment == default)
+        {
+            return string.Empty;
+        }
+
         var delta = DateTime.Now - localMoment;
         if (delta.TotalMinutes < 1)
         {

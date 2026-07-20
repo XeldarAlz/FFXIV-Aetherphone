@@ -157,7 +157,7 @@ internal sealed partial class LinkpearlApp
         notifications.RemoveGroup(conversation.SendTarget);
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, conversation.Contact, backToList);
-        if (conversation.Lines.Count > 0 && DrawDeleteHistoryButton(area))
+        if (DrawDeleteHistoryButton(area))
         {
             AskDeleteHistory(conversation);
         }
