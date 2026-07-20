@@ -521,9 +521,14 @@ internal static class L
     {
         public static readonly LocString[] Release0985 =
         {
+            new("changelog.r0985.3", "Aetherphone now has full-color emoji: tap the new emoji button to add them to your chats, posts, and comments, and they render inline right where you type"),
+            new("changelog.r0985.4", "Aetherphone now gives each character its own social accounts: switch characters in game and the social apps sign out, ready for you to sign in as whoever you are playing"),
+            new("changelog.r0985.5", "Your encrypted chats can now move with you: save a recovery code and use it to restore them when you sign in on a new device"),
             new("changelog.r0985.0", "Velvet's Discover filters now include a region, so you can narrow the people you see to NA, EU, JP, or OCE"),
             new("changelog.r0985.1", "Linkpearl now has a bell button on the Chats tab that pauses every chat and linkshell notification at once, and turns them back on when you tap it again"),
             new("changelog.r0985.2", "Fixed search in Velvet so you can find people by name, handle, or the tags on their profile"),
+            new("changelog.r0985.6", "Fixed the Doman Enclave restoration showing up as a daily in Dailies; it now tracks on its weekly reset"),
+            new("changelog.r0985.7", "Fixed the sample notification from the /phone test command refusing to clear from the notification center"),
         };
 
         public static readonly LocString[] Release0984 =
