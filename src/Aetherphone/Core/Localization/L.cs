@@ -1066,6 +1066,13 @@ internal static class L
         public static readonly LocString Use = new("account.use", "Use");
         public static readonly LocString Saving = new("account.saving", "Saving…");
         public static readonly LocString GestureHint = new("account.gestureHint", "Drag to move · scroll to zoom");
+        public static readonly LocString NameTitle = new("account.nameTitle", "Name and Username");
+        public static readonly LocString NameHint = new("account.nameHint", "This is how you appear across every Aethernet app. Your character name and home world stay private.");
+        public static readonly LocString DisplayNameLabel = new("account.displayNameLabel", "Display name");
+        public static readonly LocString HandleLabel = new("account.handleLabel", "Username");
+        public static readonly LocString HandleRules = new("account.handleRules", "3-15 characters: letters, numbers, or _");
+        public static readonly LocString HandleTaken = new("account.handleTaken", "That username is taken");
+        public static readonly LocString Save = new("account.save", "Save");
         public static readonly LocString SignIn = new("account.signIn", "Sign in with Lodestone");
         public static readonly LocString XivSignIn = new("account.xivSignIn", "Sign in with XIVAuth");
         public static readonly LocString LodestoneHint = new("account.lodestoneHint", "No XIVAuth account? Verify with a Lodestone code instead.");

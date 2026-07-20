@@ -41,6 +41,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
     private readonly ISettingsNavigator navigator;
+    private readonly NamePage namePage;
     private readonly ISettingsPage profilePage;
     private readonly ISettingsPage encryptionPage;
     private readonly PhotoLibrary photoLibrary;
@@ -53,8 +54,8 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     public AccountPage(AethernetSession session, AuthClient auth, AccountClient account, MediaClient media,
         GameData gameData, RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
-        ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary, ConfirmService confirm,
-        WallpaperImageCache wallpaperImages, IAnalyticsService analytics)
+        NamePage namePage, ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary,
+        ConfirmService confirm, WallpaperImageCache wallpaperImages, IAnalyticsService analytics)
     {
         this.session = session;
         this.auth = auth;
@@ -64,6 +65,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.images = images;
         this.lodestone = lodestone;
         this.navigator = navigator;
+        this.namePage = namePage;
         this.profilePage = profilePage;
         this.encryptionPage = encryptionPage;
         this.photoLibrary = photoLibrary;
@@ -133,7 +135,13 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         details.End();
 
         ImGui.Dummy(new Vector2(0f, 14f * scale));
-        var links = GroupCard.Begin(theme, 2);
+        var links = GroupCard.Begin(theme, 3);
+        if (SettingsRow.Link(links.NextRow(), namePage.Icon, namePage.Tint, namePage.Title, namePage.Summary, theme))
+        {
+            namePage.ResetEdit();
+            navigator.Open(namePage);
+        }
+
         if (SettingsRow.Link(links.NextRow(), profilePage.Icon, profilePage.Tint, profilePage.Title,
                 profilePage.Summary, theme))
         {

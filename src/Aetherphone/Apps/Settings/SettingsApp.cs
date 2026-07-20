@@ -27,6 +27,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
     private readonly AccountPage accountPage;
+    private readonly NamePage namePage;
     private readonly ProfilePage profilePage;
     private readonly EncryptionPage encryptionPage;
     private readonly ChangelogPage changelogPage;
@@ -51,9 +52,10 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var wallpaperImages = services.WallpaperImages;
         profilePage = new ProfilePage(configuration, aethernetSession, aethernet.Account, gameData);
         encryptionPage = new EncryptionPage(aethernetSession, keyVault, confirm);
+        namePage = new NamePage(aethernetSession, aethernet.Account, this);
         accountPage = new AccountPage(aethernetSession, aethernet.Auth, aethernet.Account, aethernet.Media, gameData,
-            remoteImages, lodestone, this, profilePage, encryptionPage, photoLibrary, confirm, wallpaperImages,
-            analytics);
+            remoteImages, lodestone, this, namePage, profilePage, encryptionPage, photoLibrary, confirm,
+            wallpaperImages, analytics);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary, analytics, confirm, wallpapers,
             wallpaperImages);
         var language = new LanguagePage(configuration, analytics);
@@ -163,6 +165,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     public void Dispose()
     {
         accountPage.Dispose();
+        namePage.Dispose();
         profilePage.Dispose();
         encryptionPage.Dispose();
         privacyPage.Dispose();
