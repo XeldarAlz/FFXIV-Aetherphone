@@ -39,6 +39,8 @@ internal static class VelvetTheme
     public static readonly Vector4 Gold = new(0.910f, 0.784f, 0.475f, 1f);
     public static readonly Vector4 GoldInk = new(0.953f, 0.851f, 0.561f, 1f);
 
+    public static readonly Vector4 RegionAccent = new(0.435f, 0.761f, 0.816f, 1f);
+
     public static readonly Vector4 Danger = new(0.784f, 0.196f, 0.290f, 1f);
     public static readonly Vector4 OnAccent = new(1f, 1f, 1f, 1f);
     public static readonly Vector4 Scrim = new(0f, 0f, 0f, 0.55f);

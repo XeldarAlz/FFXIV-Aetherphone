@@ -1181,6 +1181,8 @@
   "velvet.messageHint": "メッセージを入力…",
   "velvet.send": "送信",
   "velvet.lookingForLabel": "探しているもの",
+  "velvet.regionLabel": "地域",
+  "velvet.regionAny": "すべて",
   "velvet.lookingCollab": "コラボ",
   "velvet.lookingErp": "ERP/RP",
   "velvet.lookingGpose": "グルポのパートナー",

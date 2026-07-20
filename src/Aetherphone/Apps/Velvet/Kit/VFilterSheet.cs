@@ -1,11 +1,14 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Velvet.Kit;
+
+internal readonly record struct VFilterSelection(int Mask, string Region);
 
 internal sealed class VFilterSheet
 {
@@ -13,6 +16,8 @@ internal sealed class VFilterSheet
     private const float PanelWidth = 250f;
     private const float HeaderHeight = 34f;
     private const float RowHeight = 42f;
+    private const float RegionHeaderHeight = 30f;
+    private const float RegionRowHeight = 46f;
     private const float FooterHeight = 54f;
 
     private bool open;
@@ -46,11 +51,11 @@ internal sealed class VFilterSheet
         }
     }
 
-    public int Draw(Rect screen, float scale, int mask)
+    public VFilterSelection Draw(Rect screen, float scale, int mask, string region)
     {
         if (!open)
         {
-            return mask;
+            return new VFilterSelection(mask, region);
         }
 
         var defs = VelvetIntent.All;
@@ -64,7 +69,8 @@ internal sealed class VFilterSheet
         var footerHeight = FooterHeight * scale;
         var padY = 8f * scale;
         var radius = 16f * scale;
-        var height = padY + headerHeight + defs.Length * rowHeight + footerHeight + padY;
+        var height = padY + headerHeight + defs.Length * rowHeight
+            + RegionHeaderHeight * scale + RegionRowHeight * scale + footerHeight + padY;
 
         var margin = 8f * scale;
         var left = Math.Clamp(anchor.Max.X - width, screen.Min.X + margin,
@@ -133,7 +139,10 @@ internal sealed class VFilterSheet
             }
         }
 
-        var footerTop = rowsTop + defs.Length * rowHeight;
+        var regionTop = rowsTop + defs.Length * rowHeight;
+        DrawRegionSection(drawList, min, max, regionTop, scale, alpha, ref region);
+
+        var footerTop = regionTop + RegionHeaderHeight * scale + RegionRowHeight * scale;
         drawList.AddLine(new Vector2(min.X + 12f * scale, footerTop), new Vector2(max.X - 12f * scale, footerTop),
             VelvetTheme.Alpha(VelvetTheme.Divider, alpha).Packed(), 1f);
         var footerCenterY = footerTop + footerHeight * 0.5f;
@@ -142,7 +151,7 @@ internal sealed class VFilterSheet
         var clearSize = Typography.Measure(clearLabel, 0.9f, FontWeight.Medium);
         var clearMin = new Vector2(min.X + 12f * scale, footerCenterY - 16f * scale);
         var clearMax = new Vector2(clearMin.X + clearSize.X + 16f * scale, footerCenterY + 16f * scale);
-        var clearEnabled = VelvetIntent.Sanitize(mask) != 0;
+        var clearEnabled = VelvetIntent.Sanitize(mask) != 0 || region.Length > 0;
         var clearHovered = clearEnabled && ImGui.IsMouseHoveringRect(clearMin, clearMax);
         var clearInk = !clearEnabled ? VelvetTheme.Faint : clearHovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
         Typography.Draw(drawList, new Vector2(clearMin.X + 8f * scale, footerCenterY - clearSize.Y * 0.5f), clearLabel,
@@ -153,6 +162,7 @@ internal sealed class VFilterSheet
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
                 mask = VelvetIntent.Any;
+                region = string.Empty;
             }
         }
 
@@ -183,7 +193,65 @@ internal sealed class VFilterSheet
             Close();
         }
 
-        return mask;
+        return new VFilterSelection(mask, region);
+    }
+
+    private static void DrawRegionSection(ImDrawListPtr drawList, Vector2 min, Vector2 max, float top, float scale,
+        float alpha, ref string region)
+    {
+        var headerHeight = RegionHeaderHeight * scale;
+        var rowHeight = RegionRowHeight * scale;
+        var headerCenterY = top + headerHeight * 0.5f;
+        var headerLabel = Loc.T(L.Velvet.RegionLabel);
+        var headerSize = Typography.Measure(headerLabel, 0.82f, FontWeight.SemiBold);
+        Typography.Draw(drawList, new Vector2(min.X + 16f * scale, headerCenterY - headerSize.Y * 0.5f), headerLabel,
+            VelvetTheme.Alpha(VelvetTheme.HeaderInk, alpha), 0.82f, FontWeight.SemiBold);
+
+        var codes = SocialRegion.Codes;
+        var segmentCount = codes.Length + 1;
+        var barHeight = 32f * scale;
+        var segMin = new Vector2(min.X + 12f * scale, top + headerHeight + (rowHeight - barHeight) * 0.5f);
+        var segMax = new Vector2(max.X - 12f * scale, segMin.Y + barHeight);
+        Squircle.Fill(drawList, segMin, segMax, 9f * scale, VelvetTheme.Alpha(VelvetTheme.Sunken, alpha).Packed());
+        var segmentWidth = (segMax.X - segMin.X) / segmentCount;
+
+        for (var index = 1; index < segmentCount; index++)
+        {
+            var dividerX = segMin.X + index * segmentWidth;
+            drawList.AddLine(new Vector2(dividerX, segMin.Y + 7f * scale), new Vector2(dividerX, segMax.Y - 7f * scale),
+                VelvetTheme.Alpha(VelvetTheme.Divider, alpha).Packed(), 1f);
+        }
+
+        for (var index = 0; index < segmentCount; index++)
+        {
+            var code = index == 0 ? string.Empty : codes[index - 1];
+            var label = index == 0 ? Loc.T(L.Velvet.RegionAny) : code;
+            var segLeft = segMin.X + index * segmentWidth;
+            var segRight = index == segmentCount - 1 ? segMax.X : segLeft + segmentWidth;
+            var selected = string.Equals(region, code, StringComparison.Ordinal);
+            var hovered = ImGui.IsMouseHoveringRect(new Vector2(segLeft, segMin.Y), new Vector2(segRight, segMax.Y));
+            if (selected)
+            {
+                Squircle.Fill(drawList, new Vector2(segLeft + 3f * scale, segMin.Y + 3f * scale),
+                    new Vector2(segRight - 3f * scale, segMax.Y - 3f * scale), 7f * scale,
+                    VelvetTheme.Alpha(VelvetTheme.RegionAccent, 0.92f * alpha).Packed());
+            }
+
+            var ink = selected ? VelvetTheme.OnAccent : hovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
+            var labelSize = Typography.Measure(label, 0.82f, FontWeight.SemiBold);
+            Typography.Draw(drawList,
+                new Vector2((segLeft + segRight) * 0.5f - labelSize.X * 0.5f, (segMin.Y + segMax.Y) * 0.5f - labelSize.Y * 0.5f),
+                label, VelvetTheme.Alpha(ink, alpha), 0.82f, FontWeight.SemiBold);
+
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    region = code;
+                }
+            }
+        }
     }
 
     private static void DrawCheckbox(ImDrawListPtr drawList, Vector2 center, bool selected, Vector4 hue, float alpha,

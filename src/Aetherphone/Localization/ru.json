@@ -1181,6 +1181,8 @@
   "velvet.messageHint": "Напишите сообщение…",
   "velvet.send": "Отправить",
   "velvet.lookingForLabel": "Ищу",
+  "velvet.regionLabel": "Регион",
+  "velvet.regionAny": "Любой",
   "velvet.lookingCollab": "Коллаб",
   "velvet.lookingErp": "E/RP",
   "velvet.lookingGpose": "Партнёр для Gpose",

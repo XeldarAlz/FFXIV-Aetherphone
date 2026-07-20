@@ -1181,6 +1181,8 @@
   "velvet.messageHint": "写点什么…",
   "velvet.send": "发送",
   "velvet.lookingForLabel": "正在寻找",
+  "velvet.regionLabel": "地区",
+  "velvet.regionAny": "全部",
   "velvet.lookingCollab": "合作",
   "velvet.lookingErp": "E/RP",
   "velvet.lookingGpose": "拍照伙伴",

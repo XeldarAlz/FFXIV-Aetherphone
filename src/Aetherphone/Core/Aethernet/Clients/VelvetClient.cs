@@ -31,12 +31,18 @@ internal sealed class VelvetClient
         return net.GetAsync($"/velvet/users/{Uri.EscapeDataString(userId)}", AethernetJsonContext.Default.VelvetProfileDto, token);
     }
 
-    public Task<VelvetDiscoverPage?> DiscoverAsync(int lookingFor, string tags, string? cursor, CancellationToken token)
+    public Task<VelvetDiscoverPage?> DiscoverAsync(int lookingFor, string tags, string region, string? cursor,
+        CancellationToken token)
     {
         var path = $"/velvet/discover?lookingFor={lookingFor}";
         if (tags.Length > 0)
         {
             path += $"&tags={Uri.EscapeDataString(tags)}";
+        }
+
+        if (region.Length > 0)
+        {
+            path += $"&region={Uri.EscapeDataString(region)}";
         }
 
         if (cursor is not null)

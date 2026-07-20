@@ -1450,6 +1450,8 @@ internal static class L
         public static readonly LocString MessageHint = new("velvet.messageHint", "Write a message…");
         public static readonly LocString Send = new("velvet.send", "Send");
         public static readonly LocString LookingForLabel = new("velvet.lookingForLabel", "Looking for");
+        public static readonly LocString RegionLabel = new("velvet.regionLabel", "Region");
+        public static readonly LocString RegionAny = new("velvet.regionAny", "Any");
         public static readonly LocString LookingCollab = new("velvet.lookingCollab", "Collab");
         public static readonly LocString LookingErp = new("velvet.lookingErp", "E/RP");
         public static readonly LocString LookingGpose = new("velvet.lookingGpose", "Gpose partner");

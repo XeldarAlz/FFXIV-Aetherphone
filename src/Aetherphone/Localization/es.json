@@ -1181,6 +1181,8 @@
   "velvet.messageHint": "Escribe un mensaje…",
   "velvet.send": "Enviar",
   "velvet.lookingForLabel": "Busco",
+  "velvet.regionLabel": "Región",
+  "velvet.regionAny": "Todas",
   "velvet.lookingCollab": "Colaboración",
   "velvet.lookingErp": "E/RP",
   "velvet.lookingGpose": "Compañero de Gpose",
