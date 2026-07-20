@@ -47,6 +47,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly RichTextCache commentLayouts = new();
     private readonly MentionPopup mentionPopup = new();
     private readonly MentionAutocomplete commentMentions;
+    private readonly EmojiComposer commentEmoji = new();
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();

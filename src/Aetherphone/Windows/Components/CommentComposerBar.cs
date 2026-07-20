@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
@@ -26,7 +27,7 @@ internal static class CommentComposerBar
     public static bool Draw(Rect bar, Rect screen, AppSkin ui, PhoneTheme theme, in CommentComposerStyle style,
         string inputId, string hint, ref string draft, int maxLength, MentionAutocomplete mentions,
         MentionPopup mentionPopup, RemoteImageCache images, LodestoneService lodestone, bool busy,
-        ref bool focusPending)
+        ref bool focusPending, EmojiComposer emoji)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -34,9 +35,14 @@ internal static class CommentComposerBar
         var pillMin = new Vector2(bar.Min.X + 12f * scale, bar.Min.Y + style.PillPadY * scale);
         var pillMax = new Vector2(bar.Max.X - style.PillRightInset * scale, bar.Max.Y - style.PillPadY * scale);
         Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(style.FieldFill));
-        ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 14f * scale,
+        var emojiRadius = 14f * scale;
+        var emojiCenter = new Vector2(pillMin.X + 11f * scale + emojiRadius, bar.Center.Y);
+        emoji.DrawToggle(ui, emojiCenter, emojiRadius, style.SendEnabled,
+            Palette.WithAlpha(style.TextInk, 0.5f), Loc.T(L.Common.Emoji));
+        var textLeft = emojiCenter.X + emojiRadius + 6f * scale;
+        ImGui.SetCursorScreenPos(new Vector2(textLeft,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 24f * scale);
+        ImGui.SetNextItemWidth(pillMax.X - textLeft - 10f * scale);
         if (focusPending)
         {
             ImGui.SetKeyboardFocusHere();
@@ -82,6 +88,13 @@ internal static class CommentComposerBar
             {
                 submitted = true;
             }
+        }
+
+        var panelHeight = emoji.PanelHeight(scale);
+        if (panelHeight > 0f)
+        {
+            emoji.DrawPanel(new Rect(new Vector2(bar.Min.X, bar.Min.Y - panelHeight),
+                new Vector2(bar.Max.X, bar.Min.Y)), ui, ref draft, maxLength);
         }
 
         return submitted && canSend;

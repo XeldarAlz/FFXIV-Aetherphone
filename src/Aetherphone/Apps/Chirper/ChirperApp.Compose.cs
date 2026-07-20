@@ -20,6 +20,7 @@ internal sealed partial class ChirperApp
             composeOutcome = 0;
             draft = string.Empty;
             composeStatus = string.Empty;
+            composeEmoji.Close();
             profile.ForceRefreshSoon();
             router.Pop();
             return;
@@ -48,8 +49,10 @@ internal sealed partial class ChirperApp
             var origin = ImGui.GetCursorScreenPos();
             var width = ImGui.GetContentRegionAvail().X;
             var footerHeight = 40f * scale;
+            var emojiHeight = composeEmoji.PanelHeight(scale);
+            var panelTop = area.Max.Y - footerHeight - emojiHeight;
             var cardMin = origin;
-            var cardMax = new Vector2(origin.X + width, area.Max.Y - footerHeight);
+            var cardMax = new Vector2(origin.X + width, emojiHeight > 0f ? panelTop - 8f * scale : panelTop);
             ui.Card(drawList, cardMin, cardMax, 18f * scale);
             var pad = 14f * scale;
             var radius = 20f * scale;
@@ -107,11 +110,23 @@ internal sealed partial class ChirperApp
                     AppPalettes.Chirper.MutedInk, 1.15f);
             }
 
+            if (composeEmoji.Open)
+            {
+                var panel = new Rect(new Vector2(area.Min.X, panelTop),
+                    new Vector2(area.Max.X, area.Max.Y - footerHeight));
+                composeEmoji.DrawPanel(panel, ui, ref draft, MaxPostLength);
+            }
+
             var footerY = area.Max.Y - footerHeight * 0.5f;
+            var emojiRadius = 15f * scale;
+            var emojiCenter = new Vector2(origin.X + 4f * scale + emojiRadius, footerY);
+            composeEmoji.DrawToggle(ui, emojiCenter, emojiRadius, Accent, AppPalettes.Chirper.MutedInk,
+                Loc.T(L.Common.Emoji));
             if (composeStatus.Length > 0)
             {
                 Typography.Draw(
-                    new Vector2(origin.X + 2f * scale, footerY - Typography.Measure(composeStatus, 0.85f).Y * 0.5f),
+                    new Vector2(emojiCenter.X + emojiRadius + 10f * scale,
+                        footerY - Typography.Measure(composeStatus, 0.85f).Y * 0.5f),
                     composeStatus, theme.Danger, 0.85f);
             }
 

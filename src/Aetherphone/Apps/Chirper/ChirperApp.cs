@@ -26,7 +26,7 @@ namespace Aetherphone.Apps.Chirper;
 
 internal sealed partial class ChirperApp : IPhoneApp
 {
-    private const int MaxPostLength = 500;
+    private const int MaxPostLength = 300;
     private const float FeedTopPadding = 8f;
     private const int MaxCommentLength = 500;
     public string Id => "chirper";
@@ -50,6 +50,8 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly MentionPopup mentionPopup = new();
     private readonly MentionAutocomplete composeMentions;
     private readonly MentionAutocomplete commentMentions;
+    private readonly EmojiComposer composeEmoji = new();
+    private readonly EmojiComposer commentEmoji = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
@@ -790,7 +792,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var focusPending = false;
         if (CommentComposerBar.Draw(bar, screen, ui, theme, style, "##chirperComment", Loc.T(L.Chirper.AddComment),
                 ref commentDraft, MaxCommentLength, commentMentions, mentionPopup, images, lodestone, store.Commenting,
-                ref focusPending))
+                ref focusPending, commentEmoji))
         {
             var text = commentDraft;
             commentDraft = string.Empty;

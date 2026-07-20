@@ -322,7 +322,7 @@ internal sealed partial class AethergramApp
             0.8f);
         if (CommentComposerBar.Draw(bar, screen, ui, theme, style, "##gramComment", Loc.T(L.Aethergram.AddComment),
                 ref commentDraft, MaxCommentLength, commentMentions, mentionPopup, images, lodestone, store.Commenting,
-                ref commentFocusPending))
+                ref commentFocusPending, commentEmoji))
         {
             var text = commentDraft;
             commentDraft = string.Empty;

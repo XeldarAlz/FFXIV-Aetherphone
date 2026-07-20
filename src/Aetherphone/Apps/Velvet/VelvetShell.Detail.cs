@@ -324,7 +324,7 @@ internal sealed partial class VelvetShell
         var focusPending = false;
         if (CommentComposerBar.Draw(bar, screen, ui, theme, style, "##velvetComment", Loc.T(L.Velvet.AddComment),
                 ref commentDraft, 500, commentMentions, mentionPopup, images, lodestone, store.Commenting,
-                ref focusPending))
+                ref focusPending, commentEmoji))
         {
             store.AddComment(postId, commentDraft, _ => { });
             commentDraft = string.Empty;
