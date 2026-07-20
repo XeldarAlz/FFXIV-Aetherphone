@@ -1416,7 +1416,7 @@ internal static class L
         public static readonly LocString GateWorking = new("velvet.gateWorking", "One moment…");
         public static readonly LocString TabDiscover = new("velvet.tabDiscover", "Discover");
         public static readonly LocString TabFeed = new("velvet.tabFeed", "Feed");
-        public static readonly LocString SearchPeopleHint = new("velvet.searchPeopleHint", "Search people by tag");
+        public static readonly LocString SearchPeopleHint = new("velvet.searchPeopleHint", "Search by name or tag");
         public static readonly LocString Messages = new("velvet.messages", "Messages");
         public static readonly LocString MessagesEmpty = new("velvet.messagesEmpty", "No conversations yet");
         public static readonly LocString ThreadEmpty = new("velvet.threadEmpty", "Say hello");
