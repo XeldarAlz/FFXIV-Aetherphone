@@ -519,6 +519,13 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0985 =
+        {
+            new("changelog.r0985.0", "Velvet's Discover filters now include a region, so you can narrow the people you see to NA, EU, JP, or OCE"),
+            new("changelog.r0985.1", "Linkpearl now has a bell button on the Chats tab that pauses every chat and linkshell notification at once, and turns them back on when you tap it again"),
+            new("changelog.r0985.2", "Fixed search in Velvet so you can find people by name, handle, or the tags on their profile"),
+        };
+
         public static readonly LocString[] Release0984 =
         {
             new("changelog.r0984.0", "KupoAI is in maintenance and is hidden from the phone for now; it will return in a later update with smarter, more intelligent answers"),
