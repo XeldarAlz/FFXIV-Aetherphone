@@ -1,4 +1,6 @@
+using System.Text;
 using Aetherphone.Core;
+using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
@@ -34,8 +36,10 @@ internal sealed class ChatComposer : IDisposable
     private static readonly Vector4 BarFill = new(1f, 1f, 1f, 0.05f);
 
     private readonly VoiceNoteRecorder recorder = new();
+    private readonly EmojiPicker emojiPicker = new();
     private string draft = string.Empty;
     private bool focus;
+    private bool emojiOpen;
     private string? replyTargetId;
     private string replyBarName = string.Empty;
     private string replyBarPreview = string.Empty;
@@ -175,6 +179,24 @@ internal sealed class ChatComposer : IDisposable
             pillLeftAnchor = pictureMax.X + 10f * scale;
         }
 
+        var emojiCenter = new Vector2(pillLeftAnchor + buttonRadius, area.Center.Y);
+        var emojiMin = emojiCenter - new Vector2(buttonRadius, buttonRadius);
+        var emojiMax = emojiCenter + new Vector2(buttonRadius, buttonRadius);
+        var emojiHovered = ImGui.IsMouseHoveringRect(emojiMin, emojiMax);
+        var emojiColor = emojiOpen ? ui.Accent : emojiHovered ? theme.TextStrong : ui.MutedInk;
+        AppSkin.Icon(emojiCenter, FontAwesomeIcon.Smile.ToIconString(), emojiColor, 0.95f);
+        HoverTooltip.Show(new Rect(emojiMin, emojiMax), Loc.T(L.Common.Emoji), HoverLabelSide.Above);
+        if (emojiHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                emojiOpen = !emojiOpen;
+            }
+        }
+
+        pillLeftAnchor = emojiMax.X + 6f * scale;
+
         var sendWidth = 40f * scale;
         var pillMin = new Vector2(pillLeftAnchor, area.Min.Y + 8f * scale);
         var pillMax = new Vector2(area.Max.X - sendWidth - 12f * scale, area.Max.Y - 8f * scale);
@@ -190,14 +212,21 @@ internal sealed class ChatComposer : IDisposable
 
         var submitted = false;
         Plugin.Fonts.NoticeText(draft);
+        var overlayEmoji = EmojiScanner.MightContain(draft);
+        var inputTextColor = overlayEmoji ? new Vector4(0f, 0f, 0f, 0f) : theme.TextStrong;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
-        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        using (ImRaii.PushColor(ImGuiCol.Text, inputTextColor))
         {
             if (ImGui.InputTextWithHint("##chatComposerInput", Loc.T(L.Velvet.MessageHint), ref draft, model.MaxLength,
                     ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 submitted = true;
             }
+        }
+
+        if (overlayEmoji)
+        {
+            DrawComposerEmojiOverlay(pillMin, pillMax, scale, theme, ImGui.IsItemActive());
         }
 
         var hasDraft = draft.Trim().Length > 0;
@@ -255,8 +284,63 @@ internal sealed class ChatComposer : IDisposable
                 ClearReply();
             }
 
+            emojiOpen = false;
             focus = true;
         }
+
+        if (emojiOpen)
+        {
+            DrawEmojiPanel(area, model);
+        }
+    }
+
+    private void DrawEmojiPanel(Rect composerArea, in ChatComposerModel model)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var height = 250f * scale;
+        var bottom = composerArea.Min.Y - AccessoryHeight;
+        var panel = new Rect(new Vector2(composerArea.Min.X, bottom - height),
+            new Vector2(composerArea.Max.X, bottom));
+        var picked = emojiPicker.Draw(panel, model.Ui);
+        if (picked is null)
+        {
+            return;
+        }
+
+        if (Encoding.UTF8.GetByteCount(draft) + Encoding.UTF8.GetByteCount(picked) < model.MaxLength)
+        {
+            draft += picked;
+            Plugin.Fonts.NoticeText(draft);
+            focus = true;
+        }
+    }
+
+    private void DrawComposerEmojiOverlay(Vector2 pillMin, Vector2 pillMax, float scale, PhoneTheme theme, bool active)
+    {
+        if (draft.Length == 0)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var fontSize = ImGui.GetFontSize();
+        var textLeft = pillMin.X + 14f * scale;
+        var fieldRight = pillMax.X - 10f * scale;
+        var fieldWidth = MathF.Max(1f, fieldRight - textLeft);
+        var textTop = (pillMin.Y + pillMax.Y) * 0.5f - fontSize * 0.5f;
+        var width = EmojiText.MeasureWidth(draft, fontSize);
+        var scrollX = MathF.Max(0f, width - fieldWidth);
+        var ink = ImGui.GetColorU32(theme.TextStrong);
+        drawList.PushClipRect(new Vector2(textLeft, pillMin.Y), new Vector2(fieldRight, pillMax.Y), true);
+        var caretX = EmojiText.DrawLine(drawList, draft, new Vector2(textLeft, textTop), fontSize, ink, scrollX);
+        if (active && ImGui.GetTime() % 1.0 < 0.5)
+        {
+            var cursorX = MathF.Min(caretX, fieldRight);
+            drawList.AddLine(new Vector2(cursorX, textTop + 1f * scale),
+                new Vector2(cursorX, textTop + fontSize - 1f * scale), ink, MathF.Max(1f, scale));
+        }
+
+        drawList.PopClipRect();
     }
 
     private void DrawRecordingComposer(Rect area, in ChatComposerModel model)

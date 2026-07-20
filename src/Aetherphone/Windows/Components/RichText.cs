@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
@@ -12,6 +13,7 @@ internal enum RichTextRunKind : byte
     Plain,
     Link,
     Mention,
+    Emoji,
 }
 
 internal readonly struct MentionSpan
@@ -50,17 +52,19 @@ internal sealed class RichTextLayout
 {
     public readonly RichTextRun[] Runs;
     public readonly string[] Urls;
+    public readonly string[] EmojiFiles;
     public readonly MentionSpan[] Mentions;
     public readonly Vector2 Size;
     public readonly float WrapWidth;
     public readonly float FontSize;
     public readonly int FontGeneration;
 
-    public RichTextLayout(RichTextRun[] runs, string[] urls, MentionSpan[] mentions, Vector2 size, float wrapWidth,
-        float fontSize, int fontGeneration)
+    public RichTextLayout(RichTextRun[] runs, string[] urls, string[] emojiFiles, MentionSpan[] mentions, Vector2 size,
+        float wrapWidth, float fontSize, int fontGeneration)
     {
         Runs = runs;
         Urls = urls;
+        EmojiFiles = emojiFiles;
         Mentions = mentions;
         Size = size;
         WrapWidth = wrapWidth;
@@ -108,6 +112,7 @@ internal static class RichText
 {
     private static readonly MentionSpan[] NoMentions = Array.Empty<MentionSpan>();
     private static readonly string[] NoUrls = Array.Empty<string>();
+    private static readonly string[] NoEmoji = Array.Empty<string>();
 
     public static RichTextLayout? Build(string text, ReadOnlySpan<MentionSpan> mentions, float wrapWidth)
     {
@@ -117,19 +122,22 @@ internal static class RichText
         }
 
         var hasMention = mentions.Length > 0 && text.IndexOf('@') >= 0;
-        if (!hasMention && (text.Length < 7 || !HasLinkCandidate(text)))
+        var hasLink = text.Length >= 7 && HasLinkCandidate(text);
+        var hasEmoji = EmojiScanner.MightContain(text);
+        if (!hasMention && !hasLink && !hasEmoji)
         {
             return null;
         }
 
-        var spans = ParseSpans(text, mentions, out var urls);
+        var spans = ParseSpans(text, mentions, out var urls, out var emojiFiles);
         if (spans is null)
         {
             return null;
         }
 
         Plugin.Fonts.NoticeText(text);
-        return BuildLayout(text, spans, urls, mentions, wrapWidth, ImGui.GetFontSize(), Plugin.Fonts.Generation);
+        return BuildLayout(text, spans, urls, emojiFiles, mentions, wrapWidth, ImGui.GetFontSize(),
+            Plugin.Fonts.Generation);
     }
 
     public static void Draw(ImDrawListPtr drawList, RichTextLayout layout, Vector2 origin, in RichTextInk ink,
@@ -147,7 +155,7 @@ internal static class RichText
             for (var index = 0; index < runs.Length; index++)
             {
                 var run = runs[index];
-                if (run.Kind == RichTextRunKind.Plain)
+                if (run.Kind is RichTextRunKind.Plain or RichTextRunKind.Emoji)
                 {
                     continue;
                 }
@@ -175,6 +183,12 @@ internal static class RichText
             if (run.Kind == RichTextRunKind.Plain)
             {
                 drawList.AddText(font, fontSize, position, inkPacked, run.Text);
+                continue;
+            }
+
+            if (run.Kind == RichTextRunKind.Emoji)
+            {
+                EmojiRender.Draw(drawList, layout.EmojiFiles[run.TargetIndex], position, fontSize, ink.Alpha);
                 continue;
             }
 
@@ -224,10 +238,12 @@ internal static class RichText
         }
     }
 
-    private static List<RichSpan>? ParseSpans(string text, ReadOnlySpan<MentionSpan> mentions, out string[] urls)
+    private static List<RichSpan>? ParseSpans(string text, ReadOnlySpan<MentionSpan> mentions, out string[] urls,
+        out string[] emojiFiles)
     {
         var spans = ParseLinks(text, out urls);
         ScanMentions(text, mentions, ref spans);
+        emojiFiles = ScanEmoji(text, ref spans);
         if (spans is null || spans.Count == 0)
         {
             return null;
@@ -235,6 +251,38 @@ internal static class RichText
 
         spans.Sort(static (first, second) => first.Start.CompareTo(second.Start));
         return spans;
+    }
+
+    private static string[] ScanEmoji(string text, ref List<RichSpan>? spans)
+    {
+        if (!EmojiCatalog.Ready)
+        {
+            return NoEmoji;
+        }
+
+        var found = new List<EmojiSpan>();
+        EmojiScanner.Collect(text, found);
+        if (found.Count == 0)
+        {
+            return NoEmoji;
+        }
+
+        List<string>? files = null;
+        for (var index = 0; index < found.Count; index++)
+        {
+            var emoji = found[index];
+            if (InsideLink(spans, emoji.Start))
+            {
+                continue;
+            }
+
+            spans ??= new List<RichSpan>();
+            files ??= new List<string>();
+            spans.Add(new RichSpan(emoji.Start, emoji.Length, RichTextRunKind.Emoji, files.Count));
+            files.Add(emoji.File);
+        }
+
+        return files is null ? NoEmoji : files.ToArray();
     }
 
     private static void ScanMentions(string text, ReadOnlySpan<MentionSpan> mentions, ref List<RichSpan>? spans)
@@ -495,7 +543,7 @@ internal static class RichText
         return false;
     }
 
-    private static RichTextLayout BuildLayout(string text, List<RichSpan> spans, string[] urls,
+    private static RichTextLayout BuildLayout(string text, List<RichSpan> spans, string[] urls, string[] emojiFiles,
         ReadOnlySpan<MentionSpan> mentions, float wrapWidth, float fontSize, int fontGeneration)
     {
         var runs = new List<RichTextRun>();
@@ -562,6 +610,7 @@ internal static class RichText
                 runX = x;
             }
 
+            var isEmoji = spanIndex >= 0 && spans[spanIndex].Kind == RichTextRunKind.Emoji;
             var isSpace = character is ' ' or '\t';
             var atomEnd = position + 1;
             if (!isSpace)
@@ -578,14 +627,14 @@ internal static class RichText
                 }
             }
 
-            var atomWidth = MeasureWidth(text, position, atomEnd);
+            var atomWidth = isEmoji ? EmojiRender.Advance(fontSize) : MeasureWidth(text, position, atomEnd);
             if (!isSpace && x > 0f && x + atomWidth > wrapWidth)
             {
                 Flush(position);
                 StartLine(position);
             }
 
-            if (!isSpace && atomWidth > wrapWidth)
+            if (!isSpace && !isEmoji && atomWidth > wrapWidth)
             {
                 var charPosition = position;
                 while (charPosition < atomEnd)
@@ -616,8 +665,8 @@ internal static class RichText
         Flush(length);
         var height = length == 0 ? lineHeight : y + lineHeight;
         var mentionCopy = mentions.Length == 0 ? NoMentions : mentions.ToArray();
-        return new RichTextLayout(runs.ToArray(), urls, mentionCopy, new Vector2(maxWidth, height), wrapWidth,
-            fontSize, fontGeneration);
+        return new RichTextLayout(runs.ToArray(), urls, emojiFiles, mentionCopy, new Vector2(maxWidth, height),
+            wrapWidth, fontSize, fontGeneration);
     }
 
     private static int SpanIndexAt(List<RichSpan> spans, int position)

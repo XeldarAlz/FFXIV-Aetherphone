@@ -8,6 +8,7 @@ internal static class L
         public static readonly LocString AppDrawFailure = new("common.appDrawFailure", "This app hit a problem. Reopen it to try again.");
         public static readonly LocString Searching = new("common.searching", "Searching…");
         public static readonly LocString Search = new("common.search", "Search");
+        public static readonly LocString Emoji = new("common.emoji", "Emoji");
         public static readonly LocString Cancel = new("common.cancel", "Cancel");
         public static readonly LocString Close = new("common.close", "Close");
         public static readonly LocString Alerts = new("common.alerts", "Alerts");

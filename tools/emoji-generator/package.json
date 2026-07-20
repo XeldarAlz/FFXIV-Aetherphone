@@ -1,0 +1,13 @@
+{
+  "name": "aetherphone-emoji-generator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Downloads Twemoji (CC-BY 4.0) color emoji PNGs and builds the Aetherphone emoji catalog from emojibase-data (CC0).",
+  "scripts": {
+    "build": "node generate-emoji.mjs"
+  },
+  "dependencies": {
+    "emojibase-data": "^15.3.2"
+  }
+}
