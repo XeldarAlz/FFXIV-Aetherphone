@@ -41,6 +41,7 @@ internal sealed partial class AethergramApp
         composeStatus = string.Empty;
         composeTags.Clear();
         composeTagMode = false;
+        captionEmoji.Close();
         personPicker.Close();
         composeSession.Open(avatarMode || storyMode);
         router.Push(AethergramRoute.Compose);
@@ -444,6 +445,17 @@ internal sealed partial class AethergramApp
 
         var counterInk = caption.Length >= MaxCaptionLength - 50 ? theme.Danger : AppPalettes.Aethergram.MutedInk;
         Typography.Draw(counterPos, counter, counterInk, 0.72f);
+
+        var emojiRadius = 13f * scale;
+        var emojiCenter = new Vector2(card.Min.X + padding + emojiRadius, counterPos.Y + counterSize.Y * 0.5f);
+        captionEmoji.DrawToggle(ui, emojiCenter, emojiRadius, Accent, AppPalettes.Aethergram.MutedInk,
+            Loc.T(L.Common.Emoji));
+        var panelHeight = captionEmoji.PanelHeight(scale);
+        if (panelHeight > 0f)
+        {
+            captionEmoji.DrawPanel(new Rect(new Vector2(screen.Min.X, card.Min.Y - panelHeight),
+                new Vector2(screen.Max.X, card.Min.Y)), ui, ref caption, MaxCaptionLength);
+        }
     }
 
     private bool DrawShareBar(Rect rect, string label, bool enabled)

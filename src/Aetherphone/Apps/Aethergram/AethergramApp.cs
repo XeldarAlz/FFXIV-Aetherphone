@@ -76,6 +76,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly RichTextCache commentLayouts = new();
     private readonly MentionPopup mentionPopup = new();
     private readonly EmojiComposer commentEmoji = new();
+    private readonly EmojiComposer captionEmoji = new();
     private readonly MentionAutocomplete composeMentions;
     private readonly MentionAutocomplete commentMentions;
     private readonly ViewRouter<AethergramRoute> router;

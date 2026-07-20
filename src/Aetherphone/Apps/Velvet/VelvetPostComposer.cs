@@ -21,6 +21,7 @@ internal sealed class VelvetPostComposer
     private readonly LodestoneService lodestone;
     private readonly MentionPopup mentionPopup = new();
     private readonly MentionAutocomplete captionMentions;
+    private readonly EmojiComposer captionEmoji = new();
     private readonly PhotoComposeSession session;
     private bool storyMode;
     private volatile int outcome;
@@ -55,6 +56,7 @@ internal sealed class VelvetPostComposer
         closeRequested = false;
         caption = string.Empty;
         status = string.Empty;
+        captionEmoji.Close();
         session.Open(story);
     }
 
@@ -185,9 +187,13 @@ internal sealed class VelvetPostComposer
             new Vector2(area.Max.X - 16f * scale, captionY + captionHeight));
         Squircle.Fill(drawList, captionRect.Min, captionRect.Max, 9f * scale,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)));
-        ImGui.SetCursorScreenPos(new Vector2(captionRect.Min.X + 12f * scale,
-            captionRect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(captionRect.Width - 24f * scale);
+        var emojiRadius = 13f * scale;
+        var emojiCenter = new Vector2(captionRect.Min.X + 10f * scale + emojiRadius, captionRect.Center.Y);
+        captionEmoji.DrawToggle(ui, emojiCenter, emojiRadius, AppPalettes.Velvet.Accent, AppPalettes.Velvet.MutedInk,
+            Loc.T(L.Common.Emoji));
+        var textLeft = emojiCenter.X + emojiRadius + 6f * scale;
+        ImGui.SetCursorScreenPos(new Vector2(textLeft, captionRect.Center.Y - ImGui.GetFrameHeight() * 0.5f));
+        ImGui.SetNextItemWidth(captionRect.Max.X - textLeft - 12f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Velvet.TitleInk))
         {
@@ -202,6 +208,13 @@ internal sealed class VelvetPostComposer
         }
 
         mentionPopup.Gate(captionMentions);
+
+        var panelHeight = captionEmoji.PanelHeight(scale);
+        if (panelHeight > 0f)
+        {
+            captionEmoji.DrawPanel(new Rect(new Vector2(area.Min.X, captionRect.Min.Y - panelHeight),
+                new Vector2(area.Max.X, captionRect.Min.Y)), ui, ref caption, 500);
+        }
     }
 
     private void DrawCaptionPreview(Rect region, float scale)
