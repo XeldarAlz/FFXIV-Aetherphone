@@ -531,6 +531,18 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0988 =
+        {
+            new("changelog.r0988.0", "Chirper now lets you rechirp a post so your followers see it, or quote it to add your own thoughts above the original"),
+            new("changelog.r0988.1", "Velvet profiles now have a gender field, and Discover has a matching filter so you can choose how you appear and narrow who you see"),
+            new("changelog.r0988.2", "Velvet now asks for your gender while you set up your profile, so you can be found from the moment you join"),
+            new("changelog.r0988.3", "Chirper, Aethergram, and Velvet now show the community guidelines the first time you open each one, so the ground rules are clear before you post"),
+            new("changelog.r0988.4", "If a character is banned, the phone now shows a full-screen notice with the reason"),
+            new("changelog.r0988.5", "You now get a notification when a moderator sends you a warning or updates one of your reports"),
+            new("changelog.r0988.6", "Music now has a repeat mode, so you can loop the current song or your whole queue"),
+            new("changelog.r0988.7", "Calls now let you know clearly when one is declined, goes unanswered, or drops"),
+        };
+
         public static readonly LocString[] Release0987 =
         {
             new("changelog.r0987.3", "After hearing your concerns, we have completely removed anonymous usage analytics for everyone; Aetherphone no longer collects any analytics at all, so feel free to use the phone all you like"),
