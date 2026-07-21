@@ -17,6 +17,7 @@ internal sealed partial class VelvetShell
     private bool onboardSeeded;
     private int onboardStep;
     private int onboardIntent;
+    private int onboardGender;
     private int onboardWho;
     private string onboardName = string.Empty;
     private string onboardHandle = string.Empty;
@@ -34,6 +35,7 @@ internal sealed partial class VelvetShell
         {
             onboardName = seed.DisplayName;
             onboardHandle = seed.Handle;
+            onboardGender = VelvetGender.Sanitize(seed.Gender);
             onboardSeeded = true;
         }
 
@@ -319,6 +321,11 @@ internal sealed partial class VelvetShell
             ui.Field(Loc.T(L.Velvet.YourIntro), "##ob_intro", ref onboardIntro, 400, true, 120f);
             Gap(18f);
 
+            VSectionHeader.Card(FontAwesomeIcon.VenusMars, Loc.T(L.Velvet.CardGender));
+            Gap(6f);
+            DrawGenderPicker(ref onboardGender);
+            Gap(18f);
+
             if (VelvetIntent.IncludesErp(onboardIntent))
             {
                 VSectionHeader.Card(FontAwesomeIcon.Heart, Loc.T(L.Velvet.YourRole));
@@ -406,7 +413,8 @@ internal sealed partial class VelvetShell
         var role = VelvetIntent.IncludesErp(onboardIntent) ? onboardRole.ToArray() : Array.Empty<string>();
         var dynamic = VelvetTags.Join(role);
         var request = new UpdateVelvetProfileRequest(onboardIntro.Trim(), null, dynamic, onboardTags.ToArray(), null,
-            VelvetIntent.Sanitize(onboardIntent), null, onboardDiscoverable, onboardWho);
+            VelvetIntent.Sanitize(onboardIntent), null, onboardDiscoverable, onboardWho,
+            VelvetGender.Sanitize(onboardGender));
 
         var me = store.Me;
         var identityChanged = me is not null &&

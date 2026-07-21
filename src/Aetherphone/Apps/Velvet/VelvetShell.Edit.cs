@@ -95,7 +95,7 @@ internal sealed partial class VelvetShell
 
             VSectionHeader.Card(FontAwesomeIcon.VenusMars, Loc.T(L.Velvet.CardGender));
             Gap(6f);
-            DrawGenderEditor();
+            DrawGenderPicker(ref editGender);
             Gap(16f);
 
             VSectionHeader.Card(FontAwesomeIcon.Compass, Loc.T(L.Velvet.CardIntent));
@@ -183,7 +183,7 @@ internal sealed partial class VelvetShell
         }
     }
 
-    private void DrawGenderEditor()
+    private void DrawGenderPicker(ref int gender)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = ImGui.GetContentRegionAvail().X;
@@ -192,7 +192,7 @@ internal sealed partial class VelvetShell
         for (var index = 0; index < options.Length; index++)
         {
             var value = options[index];
-            var selected = editGender == value;
+            var selected = gender == value;
             models[index] = new VChipModel(VelvetGender.Label(value), selected ? VChipStyle.Solid : VChipStyle.Ghost,
                 selected ? VelvetTheme.Rose : VelvetTheme.Moonlight);
         }
@@ -201,7 +201,7 @@ internal sealed partial class VelvetShell
         if (clicked >= 0)
         {
             var value = options[clicked];
-            editGender = editGender == value ? VelvetGender.None : value;
+            gender = gender == value ? VelvetGender.None : value;
         }
     }
 
