@@ -531,6 +531,11 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0989 =
+        {
+            new("changelog.r0989.0", "Velvet is now hidden on Lalafell characters while a community poll on the matter gathers votes"),
+        };
+
         public static readonly LocString[] Release0988 =
         {
             new("changelog.r0988.0", "Chirper now lets you rechirp a post so your followers see it, or quote it to add your own thoughts above the original"),

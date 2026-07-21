@@ -545,6 +545,7 @@
   "settings.commandAbout": "打开制作人员名单和链接",
   "settings.commandReset": "将手机移回屏幕中央",
   "settings.commandTest": "发送测试通知",
+  "changelog.r0989.0": "现在，在拉拉菲尔族角色上会隐藏 Velvet，直到关于此事的社区投票收集到足够的票数",
   "changelog.r0988.0": "Chirper 现在支持转发帖子让你的关注者看到，或引用帖子并在原文上方加上你自己的想法",
   "changelog.r0988.1": "Velvet 个人资料现在有了性别栏位，发现页也加入了对应的筛选，让你选择自己的呈现方式并缩小看到的人群",
   "changelog.r0988.2": "Velvet 现在会在你设置个人资料时询问性别，让你从加入的那一刻起就能被找到",

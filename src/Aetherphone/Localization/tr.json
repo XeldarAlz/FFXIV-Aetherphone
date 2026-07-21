@@ -545,6 +545,7 @@
   "settings.commandAbout": "Künye ve bağlantıları açar",
   "settings.commandReset": "Telefonu ekranın ortasına geri getirir",
   "settings.commandTest": "Örnek bir bildirim gönderir",
+  "changelog.r0989.0": "Bu konudaki topluluk anketi yeterince oy toplayana dek Velvet artık Lalafell karakterlerde gizleniyor",
   "changelog.r0988.0": "Chirper artık bir gönderiyi takipçilerinin görmesi için yeniden çırpmana ya da alıntılayıp orijinalin üstüne kendi düşüncelerini eklemene olanak tanıyor",
   "changelog.r0988.1": "Velvet profillerine artık bir cinsiyet alanı, Keşfet'e de buna uygun bir filtre geldi; böylece nasıl göründüğünü seçebilir ve kimleri gördüğünü daraltabilirsin",
   "changelog.r0988.2": "Velvet artık profilini oluştururken cinsiyetini soruyor, böylece katıldığın andan itibaren bulunabilirsin",

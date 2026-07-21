@@ -545,6 +545,7 @@
   "settings.commandAbout": "Abrir créditos y enlaces",
   "settings.commandReset": "Mover el teléfono de vuelta al centro de la pantalla",
   "settings.commandTest": "Enviar una notificación de prueba",
+  "changelog.r0989.0": "Velvet ahora está oculto en los personajes Lalafell mientras una encuesta de la comunidad sobre el tema reúne votos",
   "changelog.r0988.0": "Chirper ahora te permite volver a chirpear una publicación para que la vean tus seguidores, o citarla para añadir tu propia opinión encima de la original",
   "changelog.r0988.1": "Los perfiles de Velvet ahora tienen un campo de género, y Descubrir tiene un filtro a juego para que elijas cómo apareces y limites a quién ves",
   "changelog.r0988.2": "Velvet ahora te pregunta tu género mientras configuras tu perfil, para que puedan encontrarte desde el momento en que te unes",

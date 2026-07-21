@@ -545,6 +545,7 @@
   "settings.commandAbout": "Öffnet Credits und Links",
   "settings.commandReset": "Holt das Telefon zurück in die Bildschirmmitte",
   "settings.commandTest": "Sendet eine Beispielbenachrichtigung",
+  "changelog.r0989.0": "Velvet ist auf Lalafell-Charakteren jetzt ausgeblendet, solange eine Community-Umfrage dazu noch Stimmen sammelt",
   "changelog.r0988.0": "Chirper lässt dich jetzt einen Beitrag rechirpen, damit deine Follower ihn sehen, oder ihn zitieren, um deine eigenen Gedanken darüberzusetzen",
   "changelog.r0988.1": "Velvet-Profile haben jetzt ein Geschlechtsfeld, und Entdecken hat einen passenden Filter, damit du wählen kannst, wie du erscheinst, und eingrenzen kannst, wen du siehst",
   "changelog.r0988.2": "Velvet fragt jetzt schon beim Einrichten deines Profils nach deinem Geschlecht, damit du von Anfang an gefunden werden kannst",
