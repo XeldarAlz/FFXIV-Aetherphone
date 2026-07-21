@@ -450,6 +450,7 @@
   "changelog.r0985.5": "Your encrypted chats can now move with you: save a recovery code and use it to restore them when you sign in on a new device",
   "changelog.r0985.6": "Fixed the Doman Enclave restoration showing up as a daily in Dailies; it now tracks on its weekly reset",
   "changelog.r0985.7": "Fixed the sample notification from the /phone test command refusing to clear from the notification center",
+  "changelog.r0986.0": "Fixed a connection issue with the server, so the phone now stays connected more reliably",
   "changelog.r0985.0": "Velvet's Discover filters now include a region, so you can narrow the people you see to NA, EU, JP, or OCE",
   "changelog.r0985.1": "Linkpearl now has a bell button on the Chats tab that pauses every chat and linkshell notification at once, and turns them back on when you tap it again",
   "changelog.r0985.2": "Fixed search in Velvet so you can find people by name, handle, or the tags on their profile",

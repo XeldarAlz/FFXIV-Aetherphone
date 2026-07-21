@@ -451,6 +451,7 @@
   "changelog.r0985.5": "Vos discussions chiffrées peuvent désormais vous suivre : enregistrez un code de récupération et utilisez-le pour les restaurer lorsque vous vous connectez sur un nouvel appareil",
   "changelog.r0985.6": "Correction de la reconstruction de l'Enclave doman qui apparaissait comme une tâche quotidienne dans Dailies ; elle suit désormais sa réinitialisation hebdomadaire",
   "changelog.r0985.7": "Correction de la notification d'exemple de la commande /phone test qui refusait de disparaître du centre de notifications",
+  "changelog.r0986.0": "Correction d'un problème de connexion au serveur, pour que le téléphone reste connecté de façon plus fiable",
   "changelog.r0985.0": "Les filtres de Découvrir de Velvet incluent désormais une région, pour que vous puissiez limiter les personnes affichées à NA, EU, JP ou OCE",
   "changelog.r0985.1": "Linkpearl dispose maintenant d'un bouton en forme de cloche dans l'onglet Discussions qui met en pause toutes les notifications de chat et de linkshell d'un coup, et les réactive quand vous le touchez à nouveau",
   "changelog.r0985.2": "La recherche dans Velvet a été corrigée pour que vous puissiez trouver des personnes par nom, nom d'utilisateur ou les tags de leur profil",
