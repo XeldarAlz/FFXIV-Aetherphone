@@ -1,6 +1,5 @@
 using Aetherphone.Core.Activity;
 using Aetherphone.Core.Aethernet;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Collections;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
@@ -63,7 +62,6 @@ internal sealed class PhoneServices : IDisposable
     public required KeyVault KeyVault { get; init; }
     public required PeerKeyDirectory PeerKeys { get; init; }
     public required ConversationKeyStore ConversationKeys { get; init; }
-    public required IAnalyticsService Analytics { get; init; }
     public required MarketItemIndex MarketIndex { get; init; }
     public required MarketboardService Market { get; init; }
     public required MarketLauncher MarketLauncher { get; init; }
@@ -139,14 +137,6 @@ internal sealed class PhoneServices : IDisposable
         var keyVault = new KeyVault(configuration, aethernetSession, aethernet.Keys);
         var peerKeys = new PeerKeyDirectory(configuration, aethernet.Keys);
         var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault);
-        var gameRegion = clientState.ClientLanguage switch
-        {
-            Dalamud.Game.ClientLanguage.German => "de",
-            Dalamud.Game.ClientLanguage.French => "fr",
-            Dalamud.Game.ClientLanguage.Japanese => "ja",
-            _ => "en",
-        };
-        var analytics = new AnalyticsService(new AnalyticsClient(http, aethernetSession), configuration, gameRegion);
         var marketIndex = new MarketItemIndex(dataManager);
         var market = new MarketboardService(http);
         var marketLauncher = new MarketLauncher();
@@ -161,7 +151,7 @@ internal sealed class PhoneServices : IDisposable
         var songPlayer = new SongPlayer(youtube, audioCache);
         var songHistory = new SongHistory(configuration);
         var playlists = new PlaylistStore(configuration);
-        var playback = new PlaybackHub(radioPlayer, songPlayer, analytics, configuration);
+        var playback = new PlaybackHub(radioPlayer, songPlayer, configuration);
         var gameStats = new GameStatsStore(configuration);
         var venues = new VenuesService(http, notifications, configuration, gameData);
         var collectionsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collections"));
@@ -173,8 +163,7 @@ internal sealed class PhoneServices : IDisposable
         var activity = new ActivityTracker(framework, clientState, dutyState, gameData, configDirectory);
         var ringNotifier = new ActivityRingNotifier(framework, activity, configuration, notifications);
         var realtimeSignals = new RealtimeSignalBus();
-        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals,
-            analytics);
+        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals);
         var visibility = new PhoneVisibility();
         var confirm = new ConfirmService();
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
@@ -213,7 +202,6 @@ internal sealed class PhoneServices : IDisposable
             KeyVault = keyVault,
             PeerKeys = peerKeys,
             ConversationKeys = conversationKeys,
-            Analytics = analytics,
             MarketIndex = marketIndex,
             Market = market,
             MarketLauncher = marketLauncher,
@@ -270,7 +258,6 @@ internal sealed class PhoneServices : IDisposable
         Sound.Dispose();
         Media.Dispose();
         RemoteImages.Dispose();
-        Analytics.Dispose();
         Http.Dispose();
         Wallpapers.Dispose();
         WallpaperImages.Dispose();

@@ -46,9 +46,6 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(CommentDto))]
 [JsonSerializable(typeof(CreateCommentRequest))]
 [JsonSerializable(typeof(CommentPage))]
-[JsonSerializable(typeof(AnalyticsBatchRequest))]
-[JsonSerializable(typeof(AnalyticsEventDto))]
-[JsonSerializable(typeof(AnalyticsAckDto))]
 [JsonSerializable(typeof(ReportRequest))]
 [JsonSerializable(typeof(RevealedMessageDto))]
 [JsonSerializable(typeof(VelvetProfileDto))]
@@ -124,11 +121,6 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(ConversationKeysDto))]
 [JsonSerializable(typeof(ConversationWrapsDto))]
 [JsonSerializable(typeof(MyConversationKeysDto))]
-[JsonSerializable(typeof(AssistantTurnDto))]
-[JsonSerializable(typeof(AssistantAskRequest))]
-[JsonSerializable(typeof(AssistantSourceDto))]
-[JsonSerializable(typeof(AssistantAskResponse))]
-[JsonSerializable(typeof(AssistantStatusResponse))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 internal sealed partial class AethernetJsonContext : JsonSerializerContext
 {

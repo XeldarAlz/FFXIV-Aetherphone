@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Linkpearl;
@@ -21,19 +20,16 @@ internal sealed class NotificationsApp : IPhoneApp
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
     private readonly SocialLauncher socialLauncher;
-    private readonly IAnalyticsService analytics;
     private NotificationCenter? center;
 
     public NotificationsApp(NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher,
-        IAnalyticsService analytics)
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
     {
         this.notifications = notifications;
         this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
         this.socialLauncher = socialLauncher;
-        this.analytics = analytics;
     }
 
     public void OnOpened()
@@ -49,7 +45,7 @@ internal sealed class NotificationsApp : IPhoneApp
         AppHeader.Draw(context, DisplayName);
         center ??= new NotificationCenter(notifications,
             new NotificationRouter(context.Navigation, notifications, linkpearlLauncher, velvetLauncher, dmLauncher,
-                socialLauncher, analytics));
+                socialLauncher));
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);

@@ -4,10 +4,8 @@ internal interface INavigator
 {
     bool AtHome { get; }
     void OpenApp(IPhoneApp app);
-    void OpenApp(IPhoneApp app, string source);
-    void OpenAppFrom(IPhoneApp app, string source, Rect origin);
+    void OpenAppFrom(IPhoneApp app, Rect origin);
     void Open(string appId);
-    void Open(string appId, string source);
     void Back();
     void GoHome();
 }

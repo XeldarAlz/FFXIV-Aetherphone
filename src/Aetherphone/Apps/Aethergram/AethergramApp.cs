@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -111,9 +110,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     public AethergramApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
         Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages,
-        IAnalyticsService analytics, ConfirmService confirm, ReportService report)
+        ConfirmService confirm, ReportService report)
     {
-        store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media, analytics);
+        store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         personPicker = new PersonPicker(store.NewMentionSuggestions());
@@ -128,7 +127,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         composeSession = new PhotoComposeSession(library, wallpaperImages);
         this.images = images;
         this.social = social;
-        router = new ViewRouter<AethergramRoute>(AethergramRoute.Home, Id);
+        router = new ViewRouter<AethergramRoute>(AethergramRoute.Home);
         drawView = DrawView;
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);

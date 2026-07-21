@@ -1,5 +1,4 @@
 using Aetherphone.Core.Aethernet;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
@@ -18,7 +17,6 @@ internal sealed class CallHub : IDisposable
     private readonly AethernetSession session;
     private readonly NotificationService notifications;
     private readonly SoundService sound;
-    private readonly IAnalyticsService analytics;
     private readonly CallSignalRouter router;
     private readonly CallAudioController audio;
     private readonly CallLogStore log;
@@ -34,13 +32,12 @@ internal sealed class CallHub : IDisposable
     private volatile bool callScreenRequested;
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
-        SoundService sound, PlaybackHub playback, RealtimeSignalBus signals, IAnalyticsService analytics)
+        SoundService sound, PlaybackHub playback, RealtimeSignalBus signals)
     {
         this.configuration = configuration;
         this.session = session;
         this.notifications = notifications;
         this.sound = sound;
-        this.analytics = analytics;
         router = new CallSignalRouter(session, signals);
         audio = new CallAudioController(configuration, playback, router.Connection);
         log = new CallLogStore(configuration);
@@ -73,7 +70,6 @@ internal sealed class CallHub : IDisposable
     {
         configuration.CallsEnabled = value;
         configuration.Save();
-        analytics.Track(AnalyticsEvents.SettingChanged("calls_enabled", value ? "1" : "0"));
         Reconcile();
     }
 
@@ -174,7 +170,6 @@ internal sealed class CallHub : IDisposable
         {
             Type = SignalType.Start, CallId = id.ToString("D"), InviteeIds = new[] { target.UserId },
         });
-        analytics.Track(AnalyticsEvents.Call("placed"));
     }
 
     private bool InvolvesLocked(string userId)
@@ -389,14 +384,12 @@ internal sealed class CallHub : IDisposable
         notifications.Notify(new PhoneNotification("message", message.From.DisplayName, Loc.T(L.Phone.IncomingCallBody), DateTime.Now,
             Accent));
         IncomingCallPresented?.Invoke();
-        analytics.Track(AnalyticsEvents.Call("received"));
     }
 
     private void HandleRoster(Guid id, CallControl message)
     {
         var participants = message.Participants ?? Array.Empty<ParticipantInfo>();
         CallSession? sessionToDispose = null;
-        var connected = false;
         var localId = LocalUserId;
         lock (gate)
         {
@@ -424,7 +417,7 @@ internal sealed class CallHub : IDisposable
 
             if (activeOthers > 0)
             {
-                connected = audio.EnsureStartedLocked(callId, localSlot);
+                audio.EnsureStartedLocked(callId, localSlot);
                 audio.SyncRemotesLocked(participants, localId);
                 state = CallState.Active;
             }
@@ -435,10 +428,6 @@ internal sealed class CallHub : IDisposable
         }
 
         sessionToDispose?.Dispose();
-        if (connected)
-        {
-            analytics.Track(AnalyticsEvents.Call("connected"));
-        }
     }
 
     private void HandleDeclined(Guid id, CallControl message)
@@ -609,7 +598,6 @@ internal sealed class CallHub : IDisposable
 
         sound.StopCallRing();
         toDispose?.Dispose();
-        analytics.Track(AnalyticsEvents.CallEnded(durationMs, wasConnected));
         if (notify && reason is not null)
         {
             notifications.Notify(new PhoneNotification("message", reason, Loc.T(L.Phone.CallEnded), DateTime.Now, Accent));

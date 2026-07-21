@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -13,29 +12,25 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class SoundSettingsPage : ISettingsPage
 {
     private readonly SoundService sound;
-    private readonly IAnalyticsService analytics;
     private readonly LocString title;
     private readonly FontAwesomeIcon icon;
     private readonly Vector4 tint;
     private readonly string segmentId;
-    private readonly string analyticsKey;
     private readonly Func<string> getToken;
     private readonly Action<string> setToken;
     private readonly Func<float> getVolume;
     private readonly Action<float> setVolume;
     private readonly SoundImport import = new();
 
-    public SoundSettingsPage(SoundService sound, IAnalyticsService analytics, LocString title, FontAwesomeIcon icon,
-        Vector4 tint, string segmentId, string analyticsKey, Func<string> getToken, Action<string> setToken,
+    public SoundSettingsPage(SoundService sound, LocString title, FontAwesomeIcon icon,
+        Vector4 tint, string segmentId, Func<string> getToken, Action<string> setToken,
         Func<float> getVolume, Action<float> setVolume)
     {
         this.sound = sound;
-        this.analytics = analytics;
         this.title = title;
         this.icon = icon;
         this.tint = tint;
         this.segmentId = segmentId;
-        this.analyticsKey = analyticsKey;
         this.getToken = getToken;
         this.setToken = setToken;
         this.getVolume = getVolume;
@@ -70,8 +65,6 @@ internal sealed class SoundSettingsPage : ISettingsPage
             if (MathF.Abs(volume - getVolume()) > 0.001f)
             {
                 setVolume(volume);
-                analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey + "_volume",
-                    volume.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 sound.Preview(getToken(), volume);
             }
 
@@ -96,7 +89,6 @@ internal sealed class SoundSettingsPage : ISettingsPage
         }
 
         setToken(token);
-        analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, token));
         sound.Preview(token, getVolume());
     }
 
@@ -106,7 +98,6 @@ internal sealed class SoundSettingsPage : ISettingsPage
         {
             var token = sound.AddUserFile(path);
             setToken(token);
-            analytics.Track(AnalyticsEvents.SettingChanged(analyticsKey, "file"));
             sound.Preview(token, getVolume());
         }
         catch (Exception exception)

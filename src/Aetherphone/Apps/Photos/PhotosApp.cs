@@ -56,7 +56,7 @@ internal sealed partial class PhotosApp : IPhoneApp
     {
         this.library = library;
         this.confirm = confirm;
-        router = new ViewRouter<PhotoView>(PhotoView.Grid(), Id);
+        router = new ViewRouter<PhotoView>(PhotoView.Grid());
         drawView = DrawView;
         back = () => router.Pop();
     }

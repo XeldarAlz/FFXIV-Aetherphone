@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
@@ -160,7 +159,7 @@ internal sealed class DynamicIsland
                 calls.RequestCallScreen();
             }
 
-            navigation.Open(shownKind == ActivityKind.Call ? "message" : "music", AppOpenSource.Island);
+            navigation.Open(shownKind == ActivityKind.Call ? "message" : "music");
         }
     }
 
@@ -194,7 +193,7 @@ internal sealed class DynamicIsland
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            navigation.Open("music", AppOpenSource.Island);
+            navigation.Open("music");
         }
     }
 

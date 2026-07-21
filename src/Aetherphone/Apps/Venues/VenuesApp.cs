@@ -56,7 +56,7 @@ internal sealed partial class VenuesApp : IPhoneApp
         this.gameData = gameData;
         this.configuration = configuration;
         artwork = new ArtworkCache(textures);
-        router = new ViewRouter<VenueRoute>(VenueRoute.List, Id);
+        router = new ViewRouter<VenueRoute>(VenueRoute.List);
         drawView = DrawView;
         back = () => router.Pop();
     }

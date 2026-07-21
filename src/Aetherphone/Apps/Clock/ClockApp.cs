@@ -46,7 +46,7 @@ internal sealed partial class ClockApp : IPhoneApp
     {
         this.configuration = configuration;
         this.confirm = confirm;
-        router = new ViewRouter<ClockScreen>(ClockScreen.Root, Id);
+        router = new ViewRouter<ClockScreen>(ClockScreen.Root);
         drawView = DrawView;
         back = () => router.Pop();
         swLaps = new List<double>();

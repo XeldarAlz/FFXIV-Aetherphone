@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Home;
@@ -24,20 +23,18 @@ internal sealed class AppearancePage : ISettingsPage
     private readonly ThemeProvider themes;
     private readonly ISettingsNavigator navigator;
     private readonly PhotoLibrary photos;
-    private readonly IAnalyticsService analytics;
     private readonly ConfirmService confirm;
     private readonly WallpaperLibrary wallpapers;
     private readonly WallpaperImageCache wallpaperImages;
 
     public AppearancePage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator,
-        PhotoLibrary photos, IAnalyticsService analytics, ConfirmService confirm, WallpaperLibrary wallpapers,
+        PhotoLibrary photos, ConfirmService confirm, WallpaperLibrary wallpapers,
         WallpaperImageCache wallpaperImages)
     {
         this.configuration = configuration;
         this.themes = themes;
         this.navigator = navigator;
         this.photos = photos;
-        this.analytics = analytics;
         this.confirm = confirm;
         this.wallpapers = wallpapers;
         this.wallpaperImages = wallpaperImages;
@@ -56,7 +53,6 @@ internal sealed class AppearancePage : ISettingsPage
             if (mode != configuration.ThemeMode)
             {
                 configuration.ThemeMode = mode;
-                analytics.Track(AnalyticsEvents.SettingChanged("theme_mode", mode.ToString().ToLowerInvariant()));
                 ApplyTheme();
             }
 
@@ -66,14 +62,13 @@ internal sealed class AppearancePage : ISettingsPage
             if (accentName != configuration.AccentName)
             {
                 configuration.AccentName = accentName;
-                analytics.Track(AnalyticsEvents.SettingChanged("accent", accentName));
                 ApplyTheme();
             }
 
             if (SettingsRow.Disclosure(card.NextRow(), Loc.T(L.Settings.Wallpaper), string.Empty, theme))
             {
-                navigator.Open(new WallpaperPage(configuration, themes, navigator, photos, wallpapers, wallpaperImages,
-                    analytics));
+                navigator.Open(new WallpaperPage(configuration, themes, navigator, photos, wallpapers,
+                    wallpaperImages));
             }
 
             card.End();
@@ -86,7 +81,6 @@ internal sealed class AppearancePage : ISettingsPage
             if (MathF.Abs(zoom - configuration.TextZoom) > 0.001f)
             {
                 configuration.TextZoom = zoom;
-                analytics.Track(AnalyticsEvents.SettingChanged("text_zoom", zoom.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 Plugin.Fonts.SetZoom(zoom);
                 configuration.Save();
             }
@@ -100,7 +94,6 @@ internal sealed class AppearancePage : ISettingsPage
             if (MathF.Abs(phoneScale - configuration.PhoneScale) > 0.001f)
             {
                 configuration.PhoneScale = phoneScale;
-                analytics.Track(AnalyticsEvents.SettingChanged("phone_scale", phoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)));
                 configuration.Save();
             }
 
@@ -118,7 +111,6 @@ internal sealed class AppearancePage : ISettingsPage
         if (rows != configuration.HomeGridRows)
         {
             configuration.HomeGridRows = rows;
-            analytics.Track(AnalyticsEvents.SettingChanged("home_grid_rows", rows.ToString()));
             configuration.Save();
         }
 
@@ -142,7 +134,6 @@ internal sealed class AppearancePage : ISettingsPage
     {
         configuration.Home = null;
         configuration.Save();
-        analytics.Track(AnalyticsEvents.SettingChanged("home_layout", "reset"));
     }
 
     private static readonly int[] GridRowOptions = { 5, 6, 7 };

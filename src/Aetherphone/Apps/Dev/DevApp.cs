@@ -93,7 +93,7 @@ internal sealed partial class DevApp : IPhoneApp
         this.images = images;
         this.confirm = confirm;
         this.wallpaperImages = wallpaperImages;
-        router = new ViewRouter<DevRoute>(DevRoute.Root, Id);
+        router = new ViewRouter<DevRoute>(DevRoute.Root);
         drawView = DrawView;
         back = () => router.Pop();
     }

@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Device;
 using Aetherphone.Core.Emoji;
@@ -43,7 +42,6 @@ public sealed class Plugin : IDalamudPlugin
     internal static FontService Fonts { get; private set; } = null!;
     internal static WallpaperLibrary Wallpapers { get; private set; } = null!;
     internal static DeviceStatus Device { get; private set; } = null!;
-    internal static IAnalyticsService Analytics { get; private set; } = null!;
     internal static UpdateCheckService Updates { get; private set; } = null!;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
@@ -56,7 +54,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly CalendarReminderService calendarReminders;
     private readonly ClockAlarmService clockAlarms;
     private readonly ReminderService reminders;
-    private readonly DateTime sessionStartedAt;
     private readonly IDtrBarEntry dtrEntry;
     private static CommandInfo? primaryCommand;
     private static CommandInfo? aliasCommand;
@@ -84,18 +81,10 @@ public sealed class Plugin : IDalamudPlugin
                 TextureProvider, PluginInterface.ConfigDirectory);
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
             EmojiCatalog.Load();
-            sessionStartedAt = DateTime.UtcNow;
-            Analytics = services.Analytics;
             Wallpapers = services.Wallpapers;
-            if (Analytics.IsFirstRun)
-            {
-                Analytics.Track(AnalyticsEvents.FirstRun());
-            }
-
-            Analytics.Track(AnalyticsEvents.SessionStart(BuildSessionProperties()));
             aboutWindow = new AboutWindow();
             shell = new PhoneShell(services, AppRegistry.BuildDefault(services, ShowAbout));
-            phoneWindow = new PhoneWindow(shell, Cfg, services.Analytics);
+            phoneWindow = new PhoneWindow(shell, Cfg);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
             windowSystem.AddWindow(phoneWindow);
@@ -223,7 +212,6 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        phoneWindow.MarkOpenTrigger("startup");
         if (Cfg.OpenMinimizedOnStartup)
         {
             phoneWindow.StartMinimized();
@@ -255,8 +243,6 @@ public sealed class Plugin : IDalamudPlugin
         reminders.Dispose();
         Updates.Dispose();
         shell.Dispose();
-        var sessionDuration = (DateTime.UtcNow - sessionStartedAt).TotalSeconds;
-        Analytics.Track(AnalyticsEvents.SessionEnd(sessionDuration));
         services.Dispose();
         Device.Dispose();
         Fonts.Dispose();
@@ -352,33 +338,9 @@ public sealed class Plugin : IDalamudPlugin
 
     private void ShowAbout() => aboutWindow.IsOpen = true;
 
-    private Dictionary<string, string> BuildSessionProperties()
-    {
-        var properties = new Dictionary<string, string>(8);
-
-        if (Cfg.Language.Length > 0)
-        {
-            properties["language"] = Cfg.Language;
-        }
-
-        properties["theme"] = Cfg.ThemeMode.ToString().ToLowerInvariant();
-        properties["scale"] = Cfg.PhoneScale.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
-        properties["wallpaper"] = Cfg.DarkWallpaperId;
-        properties["tutorials"] = Cfg.TutorialsEnabled ? "1" : "0";
-        properties["logged_in"] =
-            Cfg.CharacterSessions.Count > 0 || Cfg.LegacyUnclaimedToken.Length > 0 || Cfg.AethernetToken.Length > 0
-                ? "1"
-                : "0";
-        properties["dnd"] = Cfg.DoNotDisturb ? "1" : "0";
-        properties["calls"] = Cfg.CallsEnabled ? "1" : "0";
-
-        return properties;
-    }
-
     private void OnIncomingCall()
     {
         phoneWindow.Maximize();
-        phoneWindow.MarkOpenTrigger("call");
         phoneWindow.IsOpen = true;
     }
 
@@ -409,9 +371,8 @@ public sealed class Plugin : IDalamudPlugin
     {
         services.MarketLauncher.RequestItem(itemId);
         phoneWindow.Maximize();
-        phoneWindow.MarkOpenTrigger("command");
         phoneWindow.IsOpen = true;
-        shell.OpenApp("market", AppOpenSource.Command);
+        shell.OpenApp("market");
     }
 
     private void OpenMarket(string query)
@@ -422,9 +383,8 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         phoneWindow.Maximize();
-        phoneWindow.MarkOpenTrigger("command");
         phoneWindow.IsOpen = true;
-        shell.OpenApp("market", AppOpenSource.Command);
+        shell.OpenApp("market");
     }
 
     private static readonly string[] SampleSenders = { "Alisaie", "Y'shtola", "Thancred" };

@@ -50,7 +50,7 @@ internal sealed class CalendarApp : IPhoneApp
         this.events = events;
         this.confirm = confirm;
         selectedDate = DateTime.Today;
-        router = new ViewRouter<CalendarScreen>(CalendarScreen.Month, Id);
+        router = new ViewRouter<CalendarScreen>(CalendarScreen.Month);
         drawView = DrawView;
         back = () => router.Pop();
     }

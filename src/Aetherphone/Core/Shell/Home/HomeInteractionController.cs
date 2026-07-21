@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
@@ -256,7 +255,7 @@ internal sealed class HomeInteractionController
             }
             else if (widgets.AppFor(pressTile.Widget!) is { } app)
             {
-                navigation.OpenAppFrom(app, AppOpenSource.Widget, rect);
+                navigation.OpenAppFrom(app, rect);
             }
 
             return;
@@ -270,7 +269,7 @@ internal sealed class HomeInteractionController
 
         if (!editing)
         {
-            navigation.OpenAppFrom(pressTile.App!, pressFromDock ? AppOpenSource.Dock : AppOpenSource.Home, rect);
+            navigation.OpenAppFrom(pressTile.App!, rect);
         }
     }
 

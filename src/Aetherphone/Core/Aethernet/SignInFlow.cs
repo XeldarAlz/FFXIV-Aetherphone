@@ -1,5 +1,4 @@
 using Aetherphone.Core.Aethernet.Clients;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows;
 
@@ -9,7 +8,6 @@ internal sealed class SignInFlow : IDisposable
 {
     private readonly AethernetSession session;
     private readonly AuthClient client;
-    private readonly IAnalyticsService analytics;
     private readonly CancellationTokenSource cancellation = new();
     private CancellationTokenSource? xivFlowCancellation;
     private volatile bool busy;
@@ -21,11 +19,10 @@ internal sealed class SignInFlow : IDisposable
     private volatile string xivUserCode = string.Empty;
     private volatile string? xivVerificationUri;
 
-    public SignInFlow(AethernetSession session, AuthClient client, IAnalyticsService analytics)
+    public SignInFlow(AethernetSession session, AuthClient client)
     {
         this.session = session;
         this.client = client;
-        this.analytics = analytics;
     }
 
     public bool Busy => busy;
@@ -51,7 +48,6 @@ internal sealed class SignInFlow : IDisposable
     {
         busy = true;
         status = Loc.T(L.Account.RequestingCode);
-        analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Began));
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
@@ -61,14 +57,12 @@ internal sealed class SignInFlow : IDisposable
                 if (response is null)
                 {
                     status = Loc.T(L.Account.CannotReach);
-                    analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
                     return;
                 }
 
                 code = response.Code;
                 challengeId = response.ChallengeId;
                 status = string.Empty;
-                analytics.Track(AnalyticsEvents.SignupStep(SignupStage.CodeShown));
             }
             catch (OperationCanceledException)
             {
@@ -77,7 +71,6 @@ internal sealed class SignInFlow : IDisposable
             {
                 AepLog.Warning($"Aethernet challenge failed: {exception.Message}");
                 status = Loc.T(L.Account.CannotReach);
-                analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed));
             }
             finally
             {
@@ -96,7 +89,6 @@ internal sealed class SignInFlow : IDisposable
 
         busy = true;
         status = Loc.T(L.Account.Verifying);
-        analytics.Track(AnalyticsEvents.SignupStep(SignupStage.VerifyPending));
         var token = cancellation.Token;
         _ = Task.Run(async () =>
         {
@@ -106,13 +98,11 @@ internal sealed class SignInFlow : IDisposable
                 if (result.Auth is { } auth)
                 {
                     session.SignIn(auth.Token, auth.User);
-                    analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
                     Reset();
                     return;
                 }
 
                 var reason = result.FailureReason ?? VerifyFailure.CodeNotFound;
-                analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
                 status = string.Empty;
                 failureReason = reason;
             }
@@ -122,7 +112,6 @@ internal sealed class SignInFlow : IDisposable
             catch (Exception exception)
             {
                 AepLog.Warning($"Aethernet verify failed: {exception.Message}");
-                analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, VerifyFailure.Network));
                 status = string.Empty;
                 failureReason = VerifyFailure.Network;
             }
@@ -137,7 +126,6 @@ internal sealed class SignInFlow : IDisposable
     {
         busy = true;
         status = Loc.T(L.Account.XivConnecting);
-        analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Began));
         var flowCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellation.Token);
         Interlocked.Exchange(ref xivFlowCancellation, flowCancellation)?.Dispose();
         var token = flowCancellation.Token;
@@ -151,7 +139,6 @@ internal sealed class SignInFlow : IDisposable
                     var reason = response?.Reason ?? VerifyFailure.Network;
                     status = string.Empty;
                     failureReason = reason;
-                    analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
                     busy = false;
                     return;
                 }
@@ -160,7 +147,6 @@ internal sealed class SignInFlow : IDisposable
                 xivVerificationUri = response.VerificationUriComplete ?? response.VerificationUri;
                 xivAuthActive = true;
                 status = string.Empty;
-                analytics.Track(AnalyticsEvents.SignupStep(SignupStage.CodeShown));
                 UrlActions.OpenInBrowser(xivVerificationUri);
                 await PollXivLoopAsync(response.FlowId, response.IntervalSeconds, response.ExpiresInSeconds, token)
                     .ConfigureAwait(false);
@@ -191,7 +177,6 @@ internal sealed class SignInFlow : IDisposable
             if (result.Auth is { } auth)
             {
                 session.SignIn(auth.Token, auth.User);
-                analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Linked));
                 Reset();
                 return;
             }
@@ -220,7 +205,6 @@ internal sealed class SignInFlow : IDisposable
                 reason = VerifyFailure.XivCharacterNotVerified;
             }
 
-            analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, reason));
             status = string.Empty;
             failureReason = reason;
             ResetXivFlow();
@@ -229,7 +213,6 @@ internal sealed class SignInFlow : IDisposable
 
         if (!token.IsCancellationRequested)
         {
-            analytics.Track(AnalyticsEvents.SignupStep(SignupStage.Failed, VerifyFailure.Timeout));
             status = string.Empty;
             failureReason = VerifyFailure.Timeout;
             ResetXivFlow();

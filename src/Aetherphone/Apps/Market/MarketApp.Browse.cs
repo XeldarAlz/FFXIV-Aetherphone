@@ -32,7 +32,6 @@ internal sealed partial class MarketApp
         }
 
         lastIndexReady = index.Ready;
-        ReportSearch(query);
         var body = new Rect(new Vector2(area.Min.X, searchBar.Max.Y), area.Max);
         using (AppSurface.Begin(body))
         {

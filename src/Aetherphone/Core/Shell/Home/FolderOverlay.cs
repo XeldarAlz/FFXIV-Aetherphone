@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
@@ -143,7 +142,7 @@ internal sealed class FolderOverlay
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
                     RequestClose();
-                    navigation.OpenAppFrom(app, AppOpenSource.Home, iconRect);
+                    navigation.OpenAppFrom(app, iconRect);
                     return;
                 }
             }

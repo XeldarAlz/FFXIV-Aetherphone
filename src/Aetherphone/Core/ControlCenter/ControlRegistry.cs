@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.ControlCenter.Modules;
 using Aetherphone.Core.Localization;
@@ -45,12 +44,12 @@ internal sealed class ControlRegistry
             () => playback.Volume, value => playback.Volume = value, () => { }));
         Add(new ToggleModule("camera", FontAwesomeIcon.Camera, L.Apps.Camera, () => false, () =>
         {
-            navigation.Open("camera", AppOpenSource.ControlCenter);
+            navigation.Open("camera");
             dismiss();
         }));
         Add(new ToggleModule("settings", FontAwesomeIcon.Cog, L.Apps.Settings, () => false, () =>
         {
-            navigation.Open("settings", AppOpenSource.ControlCenter);
+            navigation.Open("settings");
             dismiss();
         }));
         Add(new AccentModule(themes, configuration));

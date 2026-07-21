@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
@@ -55,7 +54,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     public AccountPage(AethernetSession session, AuthClient auth, AccountClient account, MediaClient media,
         GameData gameData, RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
         NamePage namePage, ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary,
-        ConfirmService confirm, WallpaperImageCache wallpaperImages, IAnalyticsService analytics)
+        ConfirmService confirm, WallpaperImageCache wallpaperImages)
     {
         this.session = session;
         this.auth = auth;
@@ -71,7 +70,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.photoLibrary = photoLibrary;
         this.confirm = confirm;
         this.wallpaperImages = wallpaperImages;
-        flow = new SignInFlow(session, auth, analytics);
+        flow = new SignInFlow(session, auth);
     }
 
     public void Draw(in PhoneContext context, Rect body)

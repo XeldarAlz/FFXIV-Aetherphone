@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
@@ -37,7 +36,6 @@ internal sealed class WallpaperPage : ISettingsPage
     private readonly PhotoLibrary photos;
     private readonly WallpaperLibrary wallpapers;
     private readonly WallpaperImageCache wallpaperImages;
-    private readonly IAnalyticsService analytics;
     private readonly Action<string> assign;
     private Overlay overlay = Overlay.None;
     private string[] photoPaths = Array.Empty<string>();
@@ -45,8 +43,7 @@ internal sealed class WallpaperPage : ISettingsPage
     private bool editingDark;
 
     public WallpaperPage(Configuration configuration, ThemeProvider themes, ISettingsNavigator navigator,
-        PhotoLibrary photos, WallpaperLibrary wallpapers, WallpaperImageCache wallpaperImages,
-        IAnalyticsService analytics)
+        PhotoLibrary photos, WallpaperLibrary wallpapers, WallpaperImageCache wallpaperImages)
     {
         this.configuration = configuration;
         this.themes = themes;
@@ -54,7 +51,6 @@ internal sealed class WallpaperPage : ISettingsPage
         this.photos = photos;
         this.wallpapers = wallpapers;
         this.wallpaperImages = wallpaperImages;
-        this.analytics = analytics;
         assign = Assign;
         editingDark = wallpapers.Darkness >= 0.5f;
     }
@@ -439,12 +435,10 @@ internal sealed class WallpaperPage : ISettingsPage
         if (editingDark)
         {
             configuration.DarkWallpaperId = id;
-            analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_dark", id));
         }
         else
         {
             configuration.LightWallpaperId = id;
-            analytics.Track(AnalyticsEvents.SettingChanged("wallpaper_light", id));
         }
 
         themes.Apply(configuration);

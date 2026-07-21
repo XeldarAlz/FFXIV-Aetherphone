@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
@@ -17,14 +16,13 @@ namespace Aetherphone.Apps.Settings.Pages;
 internal sealed class PrivacyPage : ISettingsPage, IDisposable
 {
     public string Title => Loc.T(L.Settings.Privacy);
-    public string Summary => configuration.AnalyticsEnabled ? Loc.T(L.Settings.PrivacyOn) : Loc.T(L.Settings.PrivacyOff);
+    public string Summary => string.Empty;
     public FontAwesomeIcon Icon => FontAwesomeIcon.UserShield;
     public Vector4 Tint => new(0.42f, 0.56f, 0.86f, 1f);
     private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AccountClient client;
     private readonly SafetyClient safety;
-    private readonly IAnalyticsService analytics;
     private readonly ConfirmService confirm;
     private readonly CancellationTokenSource cancellation = new();
     private static readonly TimeSpan BlockedListMaxAge = TimeSpan.FromSeconds(30);
@@ -38,13 +36,12 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
     private DateTime blockedLoadedAtUtc = DateTime.MinValue;
 
     public PrivacyPage(Configuration configuration, AethernetSession session, AccountClient client, SafetyClient safety,
-        IAnalyticsService analytics, ConfirmService confirm)
+        ConfirmService confirm)
     {
         this.configuration = configuration;
         this.session = session;
         this.client = client;
         this.safety = safety;
-        this.analytics = analytics;
         this.confirm = confirm;
     }
 
@@ -54,24 +51,6 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         var theme = context.Theme;
         using (AppSurface.Begin(body))
         {
-            SettingsSection.Header(Loc.T(L.Settings.Privacy), theme);
-            var card = GroupCard.Begin(theme, 1);
-            var share = SettingsRow.Bool(card.NextRow(), Loc.T(L.Settings.PrivacyAnalytics),
-                configuration.AnalyticsEnabled, theme);
-            card.End();
-            if (share != configuration.AnalyticsEnabled)
-            {
-                configuration.AnalyticsEnabled = share;
-                configuration.AnalyticsConsentPrompted = true;
-                configuration.Save();
-                if (share)
-                {
-                    analytics.Track(AnalyticsEvents.SettingChanged("analytics_enabled", "1"));
-                }
-            }
-
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            SettingsSection.Hint(Loc.T(L.Settings.PrivacyHint), theme);
             DrawTellArchive(theme, scale);
             DrawChatPrivacy(theme, scale);
             DrawBlockedUsers(theme, scale);

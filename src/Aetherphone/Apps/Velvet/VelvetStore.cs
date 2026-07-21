@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Message;
@@ -69,9 +68,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public VelvetStore(AethernetSession session, VelvetClient client, AccountClient account, SafetyClient safety,
         MediaClient media, NotificationService notifications, Configuration configuration, KeyVault vault,
-        ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals,
-        IAnalyticsService analytics)
-        : base("Velvet", session, safety, media, notifications, vault, keys, visibility, analytics)
+        ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals)
+        : base("Velvet", session, safety, media, notifications, vault, keys, visibility)
     {
         this.client = client;
         this.account = account;
@@ -126,7 +124,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public void RefreshThreads() => RefreshThreadListCore();
 
-    protected override string AnalyticsSource => "velvet";
     protected override string ImageUploadScope => "velvet-dm";
     protected override string VoiceUploadScope => "velvet-voice";
     protected override string ReportTargetType => "velvet_message";
@@ -872,7 +869,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 return false;
             }
 
-            analytics.Track(AnalyticsEvents.PostCreated("velvet"));
             return true;
         }, onComplete, () => posting = false);
     }
@@ -979,7 +975,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 detailComments = CopyOnWrite.Append(detailComments, created);
             }
 
-            analytics.Track(AnalyticsEvents.Comment("velvet"));
             return true;
         }, onComplete, () => commenting = false);
     }
@@ -1013,11 +1008,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     {
         var target = post.MyReaction == kind ? -1 : kind;
         AcceptPostEverywhere(ApplyReaction(post, target));
-        if (target >= 0)
-        {
-            analytics.Track(AnalyticsEvents.Reaction("velvet"));
-        }
-
         work.Run("reaction", async token =>
         {
             var result = target < 0

@@ -51,7 +51,7 @@ internal sealed class InventoryApp : IPhoneApp
         this.gameData = gameData;
         this.textures = textures;
         search = new InventorySearch(gameData);
-        router = new ViewRouter<InventoryView>(InventoryView.Root(), Id);
+        router = new ViewRouter<InventoryView>(InventoryView.Root());
         drawView = DrawView;
         back = () => router.Pop();
     }

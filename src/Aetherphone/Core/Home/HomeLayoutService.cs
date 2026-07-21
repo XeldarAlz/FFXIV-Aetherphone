@@ -10,7 +10,7 @@ internal sealed class HomeLayoutService
     public const int MaxRows = 8;
     public const int DefaultRows = 6;
     private const string DefaultWidgetId = "skywatcher.forecast";
-    private static readonly string[] DefaultDockApps = { "message", "messages", "kupoai", "settings" };
+    private static readonly string[] DefaultDockApps = { "message", "messages", "settings" };
 
     private static readonly string[] DefaultFirstPageApps =
     {

@@ -85,7 +85,7 @@ internal sealed partial class MessageApp : IPhoneApp
         this.confirm = confirm;
         this.report = report;
         this.wallpaperImages = wallpaperImages;
-        router = new ViewRouter<MessageRoute>(MessageRoute.Root, Id);
+        router = new ViewRouter<MessageRoute>(MessageRoute.Root);
         drawView = DrawView;
         back = () => router.Pop();
         threadView = new ThreadView(this);

@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -30,7 +29,6 @@ internal sealed class PhoneShell : IDisposable
 
     private readonly Configuration configuration;
     private readonly LoadingScreen loading;
-    private readonly ConfirmService confirm;
     private readonly WallpaperLibrary wallpapers;
     private readonly ThemeProvider themes;
     private readonly IReadOnlyList<IPhoneApp> apps;
@@ -49,7 +47,6 @@ internal sealed class PhoneShell : IDisposable
     private readonly ShellOverlayCoordinator overlays;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
     private bool closeRequested;
-    private bool analyticsConsentRequested;
     private bool indicatorPressActive;
     private Vector2 indicatorPressPos;
     private CallState lastCallState;
@@ -59,18 +56,17 @@ internal sealed class PhoneShell : IDisposable
     {
         configuration = services.Configuration;
         loading = services.Loading;
-        confirm = services.Confirm;
         wallpapers = services.Wallpapers;
         themes = services.Themes;
         apps = bundle.Apps;
         widgets = bundle.Widgets;
         calls = services.Calls;
         var notifications = services.Notifications;
-        navigation = new NavigationStack(apps, services.Analytics);
-        director = new OnboardingDirector(navigation, services.Analytics);
+        navigation = new NavigationStack(apps);
+        director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
-            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher, services.Analytics);
+            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);
@@ -84,7 +80,7 @@ internal sealed class PhoneShell : IDisposable
         var reportOverlay = new ReportOverlay(services.Report);
         setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
             services.RemoteImages, services.Lodestone, bundle.Photos, services.WallpaperImages, navigation,
-            configuration, services.Confirm, services.Analytics);
+            configuration, services.Confirm);
         painter = new ShellScreenPainter(themes, navigation, home);
         transition = new ShellTransitionRenderer(themes, navigation, home, painter);
         morph = new MinimizeMorphView(themes, minimize, minimizedView, notifications, painter);
@@ -102,63 +98,20 @@ internal sealed class PhoneShell : IDisposable
         director.OnPhoneOpened();
     }
 
-    private void MaybeAskAnalyticsConsent(bool busy)
-    {
-        if (analyticsConsentRequested || configuration.AnalyticsConsentPrompted)
-        {
-            return;
-        }
-
-        if (busy || director.CapturesPointer || !WelcomeOnboardingSettled())
-        {
-            return;
-        }
-
-        analyticsConsentRequested = true;
-        confirm.Ask(new ConfirmRequest
-        {
-            Title = Loc.T(L.Settings.ConsentTitle),
-            Message = Loc.T(L.Settings.ConsentMessage),
-            ConfirmLabel = Loc.T(L.Settings.ConsentAccept),
-            CancelLabel = Loc.T(L.Settings.ConsentDecline),
-            Danger = false,
-            Confirm = () => SetAnalyticsConsent(true),
-            Cancel = () => SetAnalyticsConsent(false),
-        });
-    }
-
-    private static bool WelcomeOnboardingSettled()
-    {
-        if (!OnboardingState.Enabled)
-        {
-            return true;
-        }
-
-        var welcome = TourRegistry.GetWelcome();
-        return OnboardingState.HasCompleted(welcome.Id, welcome.ContentVersion);
-    }
-
-    private void SetAnalyticsConsent(bool enabled)
-    {
-        configuration.AnalyticsEnabled = enabled;
-        configuration.AnalyticsConsentPrompted = true;
-        configuration.Save();
-    }
-
     public void OnClosed()
     {
         loading.Cancel();
         director.Suspend();
     }
 
-    public void OpenApp(string appId, string source)
+    public void OpenApp(string appId)
     {
         if (navigation.Current?.Id == appId)
         {
             return;
         }
 
-        navigation.Open(appId, source);
+        navigation.Open(appId);
     }
 
     public bool ConsumeCloseRequest()
@@ -262,7 +215,6 @@ internal sealed class PhoneShell : IDisposable
         SyncCallNavigation();
         var state = overlays.Assess(screen);
         director.Advance(delta, state.Busy, navigation.AtHome, navigation.Current?.Id);
-        MaybeAskAnalyticsConsent(state.Busy);
         UiAnchors.BeginFrame(director.WantsAnchors);
         UiAnchors.Report("chrome.lock", DeviceChrome.LockButtonRect(device));
         UiAnchors.Report("chrome.minimize", DeviceChrome.SideButtonRect(device));
@@ -307,7 +259,7 @@ internal sealed class PhoneShell : IDisposable
         if (engaged && !wasEngaged && navigation.Current?.Id != "message")
         {
             calls.RequestCallScreen();
-            navigation.Open("message", AppOpenSource.System);
+            navigation.Open("message");
         }
 
         lastCallState = state;

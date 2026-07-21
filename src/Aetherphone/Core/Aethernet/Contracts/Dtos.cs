@@ -181,17 +181,6 @@ internal sealed record CreateCommentRequest(string Text);
 
 internal sealed record CommentPage(CommentDto[] Items, string? NextCursor);
 
-internal sealed record AnalyticsEventDto(string Type, string? AppId, DateTime? ClientTime, string? Props);
-
-internal sealed record AnalyticsBatchRequest(
-    string InstallId,
-    string SessionId,
-    string PluginVersion,
-    string GameRegion,
-    AnalyticsEventDto[] Events);
-
-internal sealed record AnalyticsAckDto(int Accepted);
-
 internal sealed record RevealedMessageDto(string MessageId, string PlainText, string? FrankingKey);
 
 internal sealed record ReportRequest(
@@ -611,18 +600,3 @@ internal sealed record ConversationKeysDto(
 internal sealed record ConversationWrapsDto(string ConversationId, int CurrentGeneration, KeyWrapDto[] Wraps);
 
 internal sealed record MyConversationKeysDto(ConversationWrapsDto[] Items);
-
-internal sealed record AssistantTurnDto(string Role, string Text);
-
-internal sealed record AssistantAskRequest(string Question, AssistantTurnDto[]? History = null, string? ConversationId = null);
-
-internal sealed record AssistantSourceDto(string Title, string Url);
-
-internal sealed record AssistantAskResponse(
-    string Status,
-    string? Answer,
-    AssistantSourceDto[] Sources,
-    int RemainingToday,
-    int DailyLimit);
-
-internal sealed record AssistantStatusResponse(bool Ready, int RemainingToday, int DailyLimit);

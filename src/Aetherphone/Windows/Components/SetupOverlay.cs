@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -25,7 +24,6 @@ internal sealed partial class SetupOverlay : IDisposable
     private const ImGuiWindowFlags OverlayFlags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
                                                   ImGuiWindowFlags.NoBackground;
 
-    private const string SetupTourId = "setup";
     private const float SlideSeconds = 0.5f;
     private const float ExitSeconds = 0.7f;
     private const int DisplayNameMax = 32;
@@ -41,7 +39,6 @@ internal sealed partial class SetupOverlay : IDisposable
         Account,
         Profile,
         Photo,
-        Analytics,
         Features,
         Feedback,
         Ready,
@@ -50,7 +47,7 @@ internal sealed partial class SetupOverlay : IDisposable
     private static readonly SetupPage[] Order =
     {
         SetupPage.Welcome, SetupPage.Account, SetupPage.Profile, SetupPage.Photo,
-        SetupPage.Analytics, SetupPage.Features, SetupPage.Feedback, SetupPage.Ready,
+        SetupPage.Features, SetupPage.Feedback, SetupPage.Ready,
     };
 
     private readonly AethernetSession session;
@@ -58,7 +55,6 @@ internal sealed partial class SetupOverlay : IDisposable
     private readonly MediaClient media;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
-    private readonly IAnalyticsService analytics;
     private readonly GameData gameData;
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
@@ -71,7 +67,6 @@ internal sealed partial class SetupOverlay : IDisposable
     private SetupPage fromPage = SetupPage.Welcome;
     private float slideClock = SlideSeconds;
     private int slideDirection = 1;
-    private bool began;
     private bool exiting;
     private float exitClock;
 
@@ -89,7 +84,7 @@ internal sealed partial class SetupOverlay : IDisposable
     public SetupOverlay(AethernetSession session, AethernetApi aethernet, GameData gameData,
         RemoteImageCache images, LodestoneService lodestone, PhotoLibrary photoLibrary,
         WallpaperImageCache wallpaperImages, INavigator navigation, Configuration configuration,
-        ConfirmService confirm, IAnalyticsService analytics)
+        ConfirmService confirm)
     {
         this.session = session;
         account = aethernet.Account;
@@ -100,8 +95,7 @@ internal sealed partial class SetupOverlay : IDisposable
         this.navigation = navigation;
         this.configuration = configuration;
         this.confirm = confirm;
-        this.analytics = analytics;
-        flow = new SignInFlow(session, aethernet.Auth, analytics);
+        flow = new SignInFlow(session, aethernet.Auth);
         picker = new ImagePickCrop(photoLibrary, wallpaperImages);
     }
 
@@ -121,12 +115,6 @@ internal sealed partial class SetupOverlay : IDisposable
         }
 
         ConsumeOutcomes();
-        if (!began && interactive)
-        {
-            began = true;
-            TrackStep(OnboardingAction.Begin);
-        }
-
         slideClock = MathF.Min(slideClock + delta, SlideSeconds);
         var exitProgress = 0f;
         if (exiting)
@@ -178,9 +166,6 @@ internal sealed partial class SetupOverlay : IDisposable
                 break;
             case SetupPage.Photo:
                 DrawPhoto(screen, theme, offset, alpha, live);
-                break;
-            case SetupPage.Analytics:
-                DrawAnalytics(screen, theme, offset, alpha, live);
                 break;
             case SetupPage.Features:
                 DrawFeatures(screen, theme, offset, alpha, live);
@@ -243,7 +228,6 @@ internal sealed partial class SetupOverlay : IDisposable
         }
 
         BeginSlide(Order[nextIndex], 1);
-        TrackStep(OnboardingAction.Advance);
     }
 
     private void BackPage()
@@ -277,18 +261,6 @@ internal sealed partial class SetupOverlay : IDisposable
         configuration.Save();
         exiting = true;
         exitClock = 0f;
-        TrackStep(OnboardingAction.Complete);
-    }
-
-    private void TrackStep(string action) =>
-        analytics.Track(AnalyticsEvents.OnboardingStep(SetupTourId, Array.IndexOf(Order, page), Order.Length,
-            action));
-
-    private void SetAnalyticsConsent(bool enabled)
-    {
-        configuration.AnalyticsEnabled = enabled;
-        configuration.AnalyticsConsentPrompted = true;
-        configuration.Save();
     }
 
     private void DrawBackButton(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, float alpha, bool live)

@@ -1,7 +1,6 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
 
@@ -12,8 +11,8 @@ internal sealed class ChirperStore : SocialFeedStore
     private volatile bool avatarBusy;
 
     public ChirperStore(AethernetSession session, AccountClient account, SocialClient client, SafetyClient safety,
-        MediaClient media, IAnalyticsService analytics)
-        : base(session, account, client, safety, media, analytics, "Chirper", "chirper")
+        MediaClient media)
+        : base(session, account, client, safety, media, "Chirper")
     {
     }
 
@@ -51,11 +50,6 @@ internal sealed class ChirperStore : SocialFeedStore
     {
         var target = post.MyReaction == kind ? -1 : kind;
         ReplacePost(ApplyReaction(post, target));
-        if (target >= 0)
-        {
-            analytics.Track(AnalyticsEvents.Reaction("chirper"));
-        }
-
         work.Run("reaction", async token =>
         {
             var result = target < 0

@@ -1,7 +1,6 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Wallpapers;
@@ -16,8 +15,8 @@ internal sealed class AethergramStore : SocialFeedStore
     private readonly GramClient grams;
 
     public AethergramStore(AethernetSession session, AccountClient account, SocialClient client, GramClient grams,
-        SafetyClient safety, MediaClient media, IAnalyticsService analytics)
-        : base(session, account, client, safety, media, analytics, "Aethergram", "aethergram")
+        SafetyClient safety, MediaClient media)
+        : base(session, account, client, safety, media, "Aethergram")
     {
         this.grams = grams;
     }
@@ -90,11 +89,6 @@ internal sealed class AethergramStore : SocialFeedStore
     {
         var liked = post.MyReaction < 0;
         ReplacePost(ApplyLike(post, liked));
-        if (liked)
-        {
-            analytics.Track(AnalyticsEvents.Reaction("aethergram"));
-        }
-
         work.Run("like", async token =>
         {
             var result = liked

@@ -16,7 +16,6 @@ using Aetherphone.Apps.Games.Twenty48;
 using Aetherphone.Apps.Games.WaterSort;
 using Aetherphone.Apps.Games.Whack;
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
@@ -55,7 +54,6 @@ internal sealed class GamesApp : IPhoneApp
     private const float GameRowHeight = 64f;
     private const int FeaturedStep = 5;
     private readonly GameStatsStore stats;
-    private readonly IAnalyticsService analytics;
     private readonly IMiniGame[] games;
     private readonly int[] tileOrder;
     private readonly ViewRouter<GameRoute> router;
@@ -66,10 +64,6 @@ internal sealed class GamesApp : IPhoneApp
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private IMiniGame? currentGame;
-    private DateTime gameStartedAt;
-    private string? activeGameId;
-    private int preGameBestScore;
-    private int preGameBestTime;
     private int featuredIndex;
     private float entrance;
     public string Id => "games";
@@ -77,10 +71,9 @@ internal sealed class GamesApp : IPhoneApp
     public string Glyph => ">";
     public int BadgeCount => 0;
 
-    public GamesApp(GameStatsStore stats, IAnalyticsService analytics)
+    public GamesApp(GameStatsStore stats)
     {
         this.stats = stats;
-        this.analytics = analytics;
         games = new IMiniGame[]
         {
             new SweeperApp(), new PairsApp(), new GemSwapApp(), new TetrisApp(), new Twenty48App(),
@@ -89,7 +82,7 @@ internal sealed class GamesApp : IPhoneApp
         };
         tileOrder = new int[games.Length];
         RebuildLayout();
-        router = new ViewRouter<GameRoute>(GameRoute.Launcher, Id);
+        router = new ViewRouter<GameRoute>(GameRoute.Launcher);
         drawView = DrawView;
         back = () => router.Pop();
     }
@@ -512,13 +505,7 @@ internal sealed class GamesApp : IPhoneApp
     private void OpenGame(IMiniGame game)
     {
         currentGame = game;
-        var gameStats = stats.Get(game.Id);
-        preGameBestScore = gameStats.BestScore;
-        preGameBestTime = gameStats.BestTimeSeconds;
-        gameStartedAt = DateTime.UtcNow;
-        activeGameId = game.Id;
         game.Open();
-        analytics.Track(AnalyticsEvents.GameStarted(game.Id));
         router.Push(GameRoute.Playing);
     }
 
@@ -530,17 +517,6 @@ internal sealed class GamesApp : IPhoneApp
         }
 
         currentGame.Close();
-
-        if (activeGameId is not null)
-        {
-            var durationMs = (DateTime.UtcNow - gameStartedAt).TotalMilliseconds;
-            var finalStats = stats.Get(activeGameId);
-            var improved = finalStats.BestScore > preGameBestScore
-                || (finalStats.BestTimeSeconds > 0 && (preGameBestTime == 0 || finalStats.BestTimeSeconds < preGameBestTime));
-            analytics.Track(AnalyticsEvents.GameEnded(activeGameId, finalStats.BestScore, durationMs, improved));
-            activeGameId = null;
-        }
-
         currentGame = null;
     }
 }

@@ -59,7 +59,7 @@ internal sealed class NotesApp : IPhoneApp
     {
         this.configuration = configuration;
         this.confirm = confirm;
-        router = new ViewRouter<NotesScreen>(NotesScreen.List, Id);
+        router = new ViewRouter<NotesScreen>(NotesScreen.List);
         drawView = DrawView;
         back = CloseEditor;
     }

@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -17,21 +16,17 @@ internal sealed class PhoneWindow : Window
     private const int RecenterFrameCount = 3;
     private readonly PhoneShell shell;
     private readonly Configuration configuration;
-    private readonly IAnalyticsService analytics;
     private int recenterFrames;
     private int pendingFrames;
     private Vector2? pendingPosition;
     private Vector2? maximizedPosition;
     private Vector2? minimizedPosition;
-    private string pendingOpenTrigger = "toggle";
-    private DateTime shellOpenedAt;
 
-    public PhoneWindow(PhoneShell shell, Configuration configuration, IAnalyticsService analytics)
+    public PhoneWindow(PhoneShell shell, Configuration configuration)
         : base(AepConstants.Name, BaseFlags)
     {
         this.shell = shell;
         this.configuration = configuration;
-        this.analytics = analytics;
         Size = PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
         SizeCondition = ImGuiCond.Always;
         RespectCloseHotkey = false;
@@ -59,8 +54,6 @@ internal sealed class PhoneWindow : Window
         shell.ForceMinimized();
     }
 
-    public void MarkOpenTrigger(string trigger) => pendingOpenTrigger = trigger;
-
     public void PersistPositions()
     {
         if (configuration.MaximizedPosition == maximizedPosition && configuration.MinimizedPosition == minimizedPosition)
@@ -79,7 +72,6 @@ internal sealed class PhoneWindow : Window
         recenterFrames = RecenterFrameCount;
         pendingFrames = 0;
         minimizedPosition = null;
-        pendingOpenTrigger = "command";
         IsOpen = true;
     }
 
@@ -92,7 +84,6 @@ internal sealed class PhoneWindow : Window
         }
 
         Maximize();
-        pendingOpenTrigger = "toggle";
         IsOpen = true;
     }
 
@@ -109,16 +100,11 @@ internal sealed class PhoneWindow : Window
 
     public override void OnOpen()
     {
-        shellOpenedAt = DateTime.UtcNow;
-        analytics.Track(AnalyticsEvents.ShellOpened(pendingOpenTrigger));
-        pendingOpenTrigger = "toggle";
         shell.OnOpened();
     }
 
     public override void OnClose()
     {
-        var durationMs = (DateTime.UtcNow - shellOpenedAt).TotalMilliseconds;
-        analytics.Track(AnalyticsEvents.ShellClosed(durationMs));
         PersistPositions();
         shell.OnClosed();
     }

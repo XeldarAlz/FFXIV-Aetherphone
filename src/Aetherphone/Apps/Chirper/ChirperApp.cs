@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -72,9 +71,9 @@ internal sealed partial class ChirperApp : IPhoneApp
     public ChirperApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
         Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages,
-        IAnalyticsService analytics, ConfirmService confirm, ReportService report)
+        ConfirmService confirm, ReportService report)
     {
-        store = new ChirperStore(session, net.Account, net.Social, net.Safety, net.Media, analytics);
+        store = new ChirperStore(session, net.Account, net.Social, net.Safety, net.Media);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         this.launcher = launcher;
@@ -87,7 +86,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             new AvatarComposerLabels(L.Chirper.ChangePhoto, L.Chirper.ImportFromPc, L.Photos.NoPhotos,
                 L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library,
             wallpaperImages);
-        router = new ViewRouter<ChirperRoute>(ChirperRoute.Home, Id);
+        router = new ViewRouter<ChirperRoute>(ChirperRoute.Home);
         drawView = DrawView;
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);

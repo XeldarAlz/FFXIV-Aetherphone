@@ -81,7 +81,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
         this.media = media;
         this.http = http;
         this.gameData = gameData;
-        router = new ViewRouter<CollectionView>(CollectionView.Root(), Id);
+        router = new ViewRouter<CollectionView>(CollectionView.Root());
         drawView = DrawView;
         back = () => router.Pop();
     }

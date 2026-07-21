@@ -67,7 +67,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
         this.gameData = gameData;
         this.lookup = lookup;
         this.confirm = confirm;
-        router = new ViewRouter<LinkpearlRoute>(LinkpearlRoute.Root, Id);
+        router = new ViewRouter<LinkpearlRoute>(LinkpearlRoute.Root);
         drawView = DrawView;
         backToList = () =>
         {

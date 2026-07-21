@@ -21,7 +21,6 @@ internal sealed class AethernetApi
         Feedback = new FeedbackClient(net);
         Dev = new DevClient(net);
         Polls = new PollsClient(net);
-        Assistant = new AssistantClient(net);
     }
 
     public AuthClient Auth { get; }
@@ -37,5 +36,4 @@ internal sealed class AethernetApi
     public FeedbackClient Feedback { get; }
     public DevClient Dev { get; }
     public PollsClient Polls { get; }
-    public AssistantClient Assistant { get; }
 }

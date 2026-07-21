@@ -364,28 +364,6 @@ internal sealed partial class SetupOverlay
         }
     }
 
-    private void DrawAnalytics(Rect screen, PhoneTheme theme, Vector2 offset, float alpha, bool live)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        var body = Loc.T(L.Settings.ConsentMessage);
-        var contentHeight = HeaderHeight(screen, body, TextStyles.Subheadline);
-        var top = CenteredTop(screen, contentHeight, 2) + offset.Y;
-        DrawHeader(drawList, screen, offset, alpha, FontAwesomeIcon.ChartBar, new Vector4(0.33f, 0.62f, 0.96f, 1f),
-            Loc.T(L.Setup.AnalyticsTitle), body, TextStyles.Subheadline, top);
-        if (Primary(drawList, ButtonRect(screen, offset, 1), Loc.T(L.Settings.ConsentAccept), theme.Accent, alpha,
-                live))
-        {
-            SetAnalyticsConsent(true);
-            AdvancePage();
-        }
-
-        if (Secondary(drawList, ButtonRect(screen, offset, 0), Loc.T(L.Settings.ConsentDecline), alpha, live))
-        {
-            SetAnalyticsConsent(false);
-            AdvancePage();
-        }
-    }
-
     private void DrawFeatures(Rect screen, PhoneTheme theme, Vector2 offset, float alpha, bool live)
     {
         var drawList = ImGui.GetWindowDrawList();

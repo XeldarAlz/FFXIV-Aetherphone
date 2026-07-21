@@ -1,6 +1,5 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
@@ -68,7 +67,6 @@ internal sealed partial class MusicApp : IPhoneApp
     private readonly MediaCache media;
     private readonly HttpService http;
     private readonly FeatureFlags flags;
-    private readonly IAnalyticsService analytics;
     private readonly ConfirmService confirm;
     private readonly ArtworkCache artwork;
     private readonly ViewRouter<View> router;
@@ -120,7 +118,7 @@ internal sealed partial class MusicApp : IPhoneApp
 
     public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history,
         PlaylistStore playlists, MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags,
-        IAnalyticsService analytics, ConfirmService confirm)
+        ConfirmService confirm)
     {
         this.radio = radio;
         this.songSearch = songSearch;
@@ -130,10 +128,9 @@ internal sealed partial class MusicApp : IPhoneApp
         this.media = media;
         this.http = http;
         this.flags = flags;
-        this.analytics = analytics;
         this.confirm = confirm;
         artwork = new ArtworkCache(textures);
-        router = new ViewRouter<View>(View.Home, Id);
+        router = new ViewRouter<View>(View.Home);
         drawView = DrawView;
         artBreath = new Spring(1f);
     }
@@ -338,7 +335,6 @@ internal sealed partial class MusicApp : IPhoneApp
         }
 
         nowPlayingOpen = true;
-        analytics.Track(AnalyticsEvents.ScreenView(Id, "NowPlaying"));
     }
 
     private void CloseNowPlaying() => nowPlayingOpen = false;

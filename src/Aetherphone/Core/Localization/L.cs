@@ -153,7 +153,6 @@ internal static class L
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
         public static readonly LocString Linkpearl = new("app.linkpearl", "Linkpearl");
         public static readonly LocString Message = new("app.message", "Message");
-        public static readonly LocString KupoAi = new("app.kupoai", "KupoAI");
     }
 
     internal static class DirectMessages
@@ -499,20 +498,12 @@ internal static class L
         public static readonly LocString TutorialsReset = new("settings.tutorialsReset", "Reset all tutorials");
         public static readonly LocString TutorialsHint = new("settings.tutorialsHint", "Tips appear once the first time you open each app. Reset to see them all again.");
         public static readonly LocString Privacy = new("settings.privacy", "Privacy");
-        public static readonly LocString PrivacyOn = new("settings.privacyOn", "Sharing");
-        public static readonly LocString PrivacyOff = new("settings.privacyOff", "Private");
-        public static readonly LocString PrivacyAnalytics = new("settings.privacyAnalytics", "Share anonymous usage");
-        public static readonly LocString PrivacyHint = new("settings.privacyHint", "Aetherphone is made by one solo developer. Sharing anonymous usage helps me see what to build next: which apps you open and for how long, your region and language, basic settings like theme, mini-game scores, and a short error code when something breaks. It is tied to a random install ID, never to your account, and it never includes your character name, your messages, or who you talk to.");
         public static readonly LocString TellArchiveTitle = new("settings.tellArchiveTitle", "Chat History");
         public static readonly LocString TellArchive = new("settings.tellArchive", "Save tell history on this PC");
         public static readonly LocString TellArchiveHint = new("settings.tellArchiveHint", "Tells are saved as plain text files on this PC so conversations survive a restart. They are never uploaded anywhere. Turn this off to keep new tells in memory only. Deleting a conversation also deletes its file.");
         public static readonly LocString ReadReceipts = new("settings.readReceipts", "Read receipts");
         public static readonly LocString LastSeenOnline = new("settings.lastSeenOnline", "Last seen online");
         public static readonly LocString ChatPrivacyHint = new("settings.chatPrivacyHint", "These apply to the Message app. If you turn read receipts or last seen off, you will not send them and you will not see them from others either.");
-        public static readonly LocString ConsentTitle = new("settings.consentTitle", "Analytics & Consent");
-        public static readonly LocString ConsentMessage = new("settings.consentMessage", "Aetherphone is made by one solo developer. To keep making it better for everyone, it really helps to know which apps people use and where to focus next.\n\nWith your OK, the app shares anonymous usage tied to a random install ID: which apps you open and for how long, your region and language, basic settings like theme, mini-game scores, and a short error code when something breaks. It never includes your character name, your messages, or who you talk to, and it is never linked to your account.\n\nYou can change this anytime in Settings, under Privacy. Thank you for helping shape Aetherphone.");
-        public static readonly LocString ConsentAccept = new("settings.consentAccept", "Sure, count me in");
-        public static readonly LocString ConsentDecline = new("settings.consentDecline", "No thanks");
         public static readonly LocString Commands = new("settings.commands", "Commands");
         public static readonly LocString CommandsSummary = new("settings.commandsSummary", "Slash commands");
         public static readonly LocString CommandsHint = new("settings.commandsHint", "Type these into the chat box. Reset brings the phone back to the middle of your screen if you ever move it out of view.");
@@ -2092,29 +2083,6 @@ internal static class L
         public static readonly LocString NoGallery = new("feedback.noGallery", "No photos in your gallery yet");
     }
 
-    internal static class KupoAi
-    {
-        public static readonly LocString NewChat = new("kupoai.newChat", "New chat");
-        public static readonly LocString EmptyTitle = new("kupoai.emptyTitle", "Ask me anything about Eorzea");
-        public static readonly LocString EmptyHint = new("kupoai.emptyHint", "Quests, items, jobs, mechanics, lore. All from the wiki, kupo!");
-        public static readonly LocString AskHint = new("kupoai.askHint", "Ask about FFXIV…");
-        public static readonly LocString ThreadEmpty = new("kupoai.threadEmpty", "Ask your first question, kupo!");
-        public static readonly LocString QuotaLeft = new("kupoai.quotaLeft", "{0} of {1} questions left today");
-        public static readonly LocString QuotaExhausted = new("kupoai.quotaExhausted", "All {0} daily questions used. Resets at midnight UTC, kupo!");
-        public static readonly LocString GlobalQuota = new("kupoai.globalQuota", "KupoAI needs a rest today. Try again tomorrow, kupo!");
-        public static readonly LocString Indexing = new("kupoai.indexing", "KupoAI is still reading the wiki. Check back soon!");
-        public static readonly LocString NoMatch = new("kupoai.noMatch", "Nothing found in the wiki. Try different words, kupo!");
-        public static readonly LocString Offline = new("kupoai.offline", "Couldn't reach Aethernet. Please try again later.");
-        public static readonly LocString RateLimited = new("kupoai.rateLimited", "Slow down a little, kupo! Try again in a minute.");
-        public static readonly LocString Error = new("kupoai.error", "Something went wrong. Please try again.");
-        public static readonly LocString SourcesLabel = new("kupoai.sourcesLabel", "Sources:");
-        public static readonly LocString OpenSource = new("kupoai.openSource", "Open {0}");
-        public static readonly LocString CopyAnswer = new("kupoai.copyAnswer", "Copy text");
-        public static readonly LocString Delete = new("kupoai.delete", "Delete chat");
-        public static readonly LocString DeleteConfirm = new("kupoai.deleteConfirm", "Delete this chat? This can't be undone.");
-        public static readonly LocString SignedOut = new("kupoai.signedOut", "Sign in to Aethernet in Settings to chat with KupoAI");
-    }
-
     internal static class Polls
     {
         public static readonly LocString SignInRequired = new("polls.signInRequired", "Sign in to Aethernet in Settings to see polls");
@@ -2520,7 +2488,6 @@ internal static class L
         public static readonly LocString PhotoTitle = new("setup.photoTitle", "Profile Photo");
         public static readonly LocString PhotoBody = new("setup.photoBody", "Add a photo so friends recognize you. Without one, your Lodestone portrait is shown instead.");
         public static readonly LocString ChoosePhoto = new("setup.choosePhoto", "Choose a Photo");
-        public static readonly LocString AnalyticsTitle = new("setup.analyticsTitle", "Analytics");
         public static readonly LocString FeatureMessageTitle = new("setup.featureMessageTitle", "Stay in touch");
         public static readonly LocString FeatureMessageBody = new("setup.featureMessageBody", "Chats, calls and contacts with players everywhere.");
         public static readonly LocString FeatureSocialTitle = new("setup.featureSocialTitle", "Share your story");

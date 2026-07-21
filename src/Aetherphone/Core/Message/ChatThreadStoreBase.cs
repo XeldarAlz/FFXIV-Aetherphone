@@ -2,7 +2,6 @@ using System.Collections.Concurrent;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
@@ -30,7 +29,6 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected readonly ConversationKeyStore keys;
     protected readonly StoreWork work;
     protected readonly MessageCipher cipher;
-    protected readonly IAnalyticsService analytics;
     private readonly string logTag;
     private readonly NotificationService notifications;
     private readonly PollCadence inboxCadence;
@@ -68,8 +66,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
 
     protected ChatThreadStoreBase(string logTag, AethernetSession session, SafetyClient safety, MediaClient media,
-        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility,
-        IAnalyticsService analytics)
+        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility)
     {
         this.session = session;
         this.safety = safety;
@@ -77,7 +74,6 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         this.notifications = notifications;
         this.vault = vault;
         this.keys = keys;
-        this.analytics = analytics;
         this.logTag = logTag;
         work = new StoreWork(logTag);
         cipher = new MessageCipher(vault, keys);
@@ -88,8 +84,6 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     }
 
     protected readonly record struct MessagePage(TMessage[] Items, string? NextCursor);
-
-    protected abstract string AnalyticsSource { get; }
 
     protected abstract string ImageUploadScope { get; }
 
@@ -228,8 +222,6 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             messages = Array.Empty<TMessage>();
         }
     }
-
-    protected void TrackMessageSent() => analytics.Track(AnalyticsEvents.DmSent(AnalyticsSource));
 
     protected int ComputeUnread()
     {
@@ -614,7 +606,6 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
 
             threadListLoaded = false;
-            TrackMessageSent();
             return true;
         }, onComplete, () => sending = false);
     }
@@ -662,7 +653,6 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
 
             threadListLoaded = false;
-            TrackMessageSent();
             return true;
         }, onComplete, () => sending = false);
     }
@@ -709,7 +699,6 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
 
             threadListLoaded = false;
-            TrackMessageSent();
             return true;
         }, onComplete, () => sending = false);
     }

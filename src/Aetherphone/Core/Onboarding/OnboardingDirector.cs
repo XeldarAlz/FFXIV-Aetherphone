@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Theme;
@@ -13,7 +12,6 @@ internal sealed class OnboardingDirector
     private const float AnchorMissGrace = 0.4f;
     private const float AnchorSmoothing = 16f;
     private readonly INavigator navigation;
-    private readonly IAnalyticsService analytics;
     private readonly CoachmarkOverlay coachmark = new();
     private GuideSequence? active;
     private int stepIndex;
@@ -33,10 +31,9 @@ internal sealed class OnboardingDirector
     private bool anchorInitialized;
     private float missTimer;
 
-    public OnboardingDirector(INavigator navigation, IAnalyticsService analytics)
+    public OnboardingDirector(INavigator navigation)
     {
         this.navigation = navigation;
-        this.analytics = analytics;
     }
 
     public bool CapturesPointer => active.HasValue && !suppressed;
@@ -222,18 +219,15 @@ internal sealed class OnboardingDirector
                 {
                     stepIndex = sequence.Steps.Length - 1;
                     BeginExit(true);
-                    TrackStep(sequence, sequence.Steps.Length, OnboardingAction.Complete);
                 }
                 else
                 {
                     ResetForStep();
-                    TrackStep(sequence, stepIndex, OnboardingAction.Advance);
                 }
 
                 break;
             case CoachmarkAction.Skip:
                 BeginExit(false);
-                TrackStep(sequence, stepIndex, OnboardingAction.Skip);
                 break;
         }
     }
@@ -243,12 +237,6 @@ internal sealed class OnboardingDirector
         active = sequence;
         stepIndex = 0;
         ResetForTour();
-        TrackStep(sequence, 0, OnboardingAction.Begin);
-    }
-
-    private void TrackStep(GuideSequence sequence, int step, string action)
-    {
-        analytics.Track(AnalyticsEvents.OnboardingStep(sequence.Id, step, sequence.Steps.Length, action));
     }
 
     private void BeginExit(bool completesCoveredTours)

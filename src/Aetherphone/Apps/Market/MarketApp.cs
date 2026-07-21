@@ -1,5 +1,4 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -15,7 +14,6 @@ namespace Aetherphone.Apps.Market;
 internal sealed partial class MarketApp : IPhoneApp
 {
     private const float ScopeBarHeight = 38f;
-    private const float SearchReportDelaySeconds = 1f;
     private const float SearchHeight = 46f;
     private const int MaxResults = 50;
     private const int MaxRecents = 12;
@@ -31,7 +29,6 @@ internal sealed partial class MarketApp : IPhoneApp
     private readonly GameData gameData;
     private readonly ITextureProvider textures;
     private readonly Configuration configuration;
-    private readonly IAnalyticsService analytics;
     private readonly ViewRouter<MarketView?> router;
     private readonly RouterDraw<MarketView?> drawView;
     private readonly Action backToList;
@@ -46,9 +43,6 @@ internal sealed partial class MarketApp : IPhoneApp
     private bool showHq;
     private string search = string.Empty;
     private string lastSearch = " ";
-    private string settledQuery = string.Empty;
-    private string reportedSearch = string.Empty;
-    private float searchSettleSeconds;
     private bool lastIndexReady;
     private uint pendingOpenId;
     private MarketItemRef lastHovered;
@@ -61,8 +55,7 @@ internal sealed partial class MarketApp : IPhoneApp
     private readonly AppSkin ui = new(AppPalettes.Market);
 
     public MarketApp(MarketboardService market, MarketItemIndex index, MarketAlertService alerts,
-        MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration,
-        IAnalyticsService analytics)
+        MarketLauncher launcher, GameData gameData, ITextureProvider textures, Configuration configuration)
     {
         this.market = market;
         this.index = index;
@@ -71,8 +64,7 @@ internal sealed partial class MarketApp : IPhoneApp
         this.gameData = gameData;
         this.textures = textures;
         this.configuration = configuration;
-        this.analytics = analytics;
-        router = new ViewRouter<MarketView?>(null, Id);
+        router = new ViewRouter<MarketView?>(null);
         drawView = DrawView;
         backToList = () => router.Pop();
     }
@@ -155,28 +147,6 @@ internal sealed partial class MarketApp : IPhoneApp
         else
         {
             DrawRoot(area);
-        }
-    }
-
-    private void ReportSearch(string query)
-    {
-        if (!string.Equals(query, settledQuery, StringComparison.Ordinal))
-        {
-            settledQuery = query;
-            searchSettleSeconds = 0f;
-            return;
-        }
-
-        if (query.Length < 2 || string.Equals(query, reportedSearch, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        searchSettleSeconds += ImGui.GetIO().DeltaTime;
-        if (searchSettleSeconds >= SearchReportDelaySeconds)
-        {
-            analytics.Track(AnalyticsEvents.MarketSearch());
-            reportedSearch = query;
         }
     }
 

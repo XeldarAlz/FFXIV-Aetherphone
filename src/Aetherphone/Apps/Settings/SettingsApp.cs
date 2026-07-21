@@ -46,7 +46,6 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var remoteImages = services.RemoteImages;
         var lodestone = services.Lodestone;
         var calls = services.Calls;
-        var analytics = services.Analytics;
         var confirm = services.Confirm;
         var wallpapers = services.Wallpapers;
         var wallpaperImages = services.WallpaperImages;
@@ -55,17 +54,16 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         namePage = new NamePage(aethernetSession, aethernet.Account, this);
         accountPage = new AccountPage(aethernetSession, aethernet.Auth, aethernet.Account, aethernet.Media, gameData,
             remoteImages, lodestone, this, namePage, profilePage, encryptionPage, photoLibrary, confirm,
-            wallpaperImages, analytics);
-        var appearance = new AppearancePage(configuration, themes, this, photoLibrary, analytics, confirm, wallpapers,
             wallpaperImages);
-        var language = new LanguagePage(configuration, analytics);
-        var immersion = new ImmersionPage(configuration, analytics);
+        var appearance = new AppearancePage(configuration, themes, this, photoLibrary, confirm, wallpapers,
+            wallpaperImages);
+        var language = new LanguagePage(configuration);
+        var immersion = new ImmersionPage(configuration);
         var tutorials = new TutorialsPage(configuration);
         var callsPage = new CallsPage(calls, configuration);
-        var appNotifications = new AppNotificationPage(configuration, sound, analytics);
-        var notificationSoundPage = new SoundSettingsPage(sound, analytics, L.Settings.NotificationSound,
+        var appNotifications = new AppNotificationPage(configuration, sound);
+        var notificationSoundPage = new SoundSettingsPage(sound, L.Settings.NotificationSound,
             FontAwesomeIcon.Bell, new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume",
-            "notification_sound",
             () => configuration.NotificationSound, token =>
             {
                 configuration.NotificationSound = token;
@@ -75,10 +73,9 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.NotificationVolume = volume;
                 configuration.Save();
             });
-        var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage,
-            analytics);
-        var ringtonePage = new SoundSettingsPage(sound, analytics, L.Settings.Ringtone, FontAwesomeIcon.Music,
-            new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume", "ringtone",
+        var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage);
+        var ringtonePage = new SoundSettingsPage(sound, L.Settings.Ringtone, FontAwesomeIcon.Music,
+            new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
             () => configuration.RingtoneSound, token =>
             {
                 configuration.RingtoneSound = token;
@@ -89,7 +86,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.Save();
             });
         var commands = new CommandsPage();
-        privacyPage = new PrivacyPage(configuration, aethernetSession, aethernet.Account, aethernet.Safety, analytics,
+        privacyPage = new PrivacyPage(configuration, aethernetSession, aethernet.Account, aethernet.Safety,
             confirm);
         tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernet.Account, this);
         var about = new AboutPage(showAbout);
@@ -102,7 +99,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             new SettingsGroup(new ISettingsPage[] { commands, privacyPage, tagsMentionsPage, changelogPage, about }),
         };
         router = new ViewRouter<ISettingsPage>(
-            new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage), Id);
+            new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage));
         drawPage = DrawPage;
         popBack = PopBack;
     }

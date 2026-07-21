@@ -1,7 +1,6 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Wallpapers;
@@ -23,9 +22,7 @@ internal abstract class SocialFeedStore : IDisposable
     protected readonly SafetyClient safety;
     protected readonly MediaClient media;
     protected readonly StoreWork work;
-    protected readonly IAnalyticsService analytics;
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
-    private readonly string analyticsChannel;
     private volatile UserDto? me;
     protected readonly FeedLane<PostDto> forYouLane = new(ByNewestFirst);
     protected readonly FeedLane<PostDto> followingLane = new(ByNewestFirst);
@@ -58,17 +55,13 @@ internal abstract class SocialFeedStore : IDisposable
         SocialClient client,
         SafetyClient safety,
         MediaClient media,
-        IAnalyticsService analytics,
-        string logTag,
-        string analyticsChannel)
+        string logTag)
     {
         this.session = session;
         this.account = account;
         this.client = client;
         this.safety = safety;
         this.media = media;
-        this.analytics = analytics;
-        this.analyticsChannel = analyticsChannel;
         work = new StoreWork(logTag);
         session.Changed += OnSessionChanged;
     }
@@ -305,7 +298,6 @@ internal abstract class SocialFeedStore : IDisposable
             }
 
             BumpCommentCount(postId, 1);
-            analytics.Track(AnalyticsEvents.Comment(analyticsChannel));
             return true;
         }, onComplete, () => commenting = false);
     }
@@ -380,11 +372,6 @@ internal abstract class SocialFeedStore : IDisposable
     public void SetFollow(string userId, bool follow)
     {
         ApplyFollowEverywhere(userId, follow);
-        if (follow)
-        {
-            analytics.Track(AnalyticsEvents.Follow(analyticsChannel));
-        }
-
         work.Run("follow", async token =>
         {
             if (follow)
@@ -601,8 +588,6 @@ internal abstract class SocialFeedStore : IDisposable
         {
             profilePosts = CopyOnWrite.Prepend(profilePosts, created);
         }
-
-        analytics.Track(AnalyticsEvents.PostCreated(analyticsChannel));
     }
 
     protected void ReplacePost(PostDto updated)

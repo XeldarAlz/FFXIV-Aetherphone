@@ -76,9 +76,6 @@ internal sealed class Configuration : IPluginConfiguration
     public string LegacyUnclaimedEncryptionKey { get; set; } = string.Empty;
     public string LegacyUnclaimedEncryptionUserId { get; set; } = string.Empty;
     public bool CharacterSessionsMigrated { get; set; }
-    public string AnalyticsInstallId { get; set; } = string.Empty;
-    public bool AnalyticsEnabled { get; set; } = true;
-    public bool AnalyticsConsentPrompted { get; set; }
     public bool CallsEnabled { get; set; }
     public string CallInputDevice { get; set; } = string.Empty;
     public string CallOutputDevice { get; set; } = string.Empty;

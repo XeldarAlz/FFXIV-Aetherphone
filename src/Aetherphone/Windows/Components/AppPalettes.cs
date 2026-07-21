@@ -190,24 +190,6 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
-    public static readonly AppPalette KupoAi = new()
-    {
-        Accent = AppAccents.For("kupoai"),
-        TitleInk = new(0.97f, 0.96f, 1f, 1f),
-        BodyInk = new(0.90f, 0.88f, 0.97f, 0.96f),
-        MutedInk = new(0.71f, 0.68f, 0.85f, 0.85f),
-        HeaderInk = new(0.80f, 0.72f, 1f, 0.95f),
-        HeadingInk = new(0.97f, 0.96f, 1f, 1f),
-        BackdropTop = new(0.14f, 0.10f, 0.26f, 1f),
-        BackdropBottom = new(0.04f, 0.03f, 0.09f, 1f),
-        BloomTop = new(0.66f, 0.50f, 0.98f, 0.24f),
-        BloomBottom = new(0.30f, 0.20f, 0.60f, 0f),
-        CardFill = GlassFill,
-        CardStroke = GlassStroke,
-        FieldSurface = GlassField,
-        HoverTint = DefaultHover,
-    };
-
     public static readonly AppPalette Dev = new()
     {
         Accent = AppAccents.For("dev"),

@@ -17,7 +17,6 @@ internal static class OnboardingState
 
         Plugin.Cfg.TutorialsEnabled = enabled;
         Plugin.Cfg.Save();
-        Plugin.Analytics.Track(Analytics.AnalyticsEvents.SettingChanged("tutorials", enabled ? "1" : "0"));
     }
 
     public static void MarkCompleted(string id, int version)

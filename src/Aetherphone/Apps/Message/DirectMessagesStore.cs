@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Message;
@@ -22,8 +21,8 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public DirectMessagesStore(AethernetSession session, ChatClient client, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
-        PhoneVisibility visibility, RealtimeSignalBus signals, IAnalyticsService analytics)
-        : base("Messages", session, safety, media, notifications, vault, keys, visibility, analytics)
+        PhoneVisibility visibility, RealtimeSignalBus signals)
+        : base("Messages", session, safety, media, notifications, vault, keys, visibility)
     {
         this.client = client;
         this.peers = peers;
@@ -58,7 +57,6 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public void OpenConversation(string id) => OpenThread(id);
 
-    protected override string AnalyticsSource => "dm";
     protected override string ImageUploadScope => "chat-dm";
     protected override string VoiceUploadScope => "chat-voice";
     protected override string ReportTargetType => "chat_message";
@@ -349,7 +347,6 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
             }
 
             InvalidateThreadList();
-            TrackMessageSent();
             return true;
         }, onComplete);
     }

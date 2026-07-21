@@ -1,4 +1,3 @@
-using Aetherphone.Core.Analytics;
 using Aetherphone.Core.Animation;
 
 namespace Aetherphone.Core.Apps;
@@ -13,7 +12,6 @@ internal enum ShellMotion
 internal sealed class NavigationStack : INavigator
 {
     private readonly IReadOnlyList<IPhoneApp> apps;
-    private readonly IAnalyticsService analytics;
     private readonly Stack<IPhoneApp> history = new();
     private Spring cover;
     private float coverTarget;
@@ -24,13 +22,10 @@ internal sealed class NavigationStack : INavigator
     private ShellMotion motion = ShellMotion.None;
     private Rect? pendingOrigin;
     private Rect? motionOrigin;
-    private DateTime appOpenedAt;
-    private string? trackedAppId;
 
-    public NavigationStack(IReadOnlyList<IPhoneApp> apps, IAnalyticsService analytics)
+    public NavigationStack(IReadOnlyList<IPhoneApp> apps)
     {
         this.apps = apps;
-        this.analytics = analytics;
     }
 
     public event Action<string>? AppOpened;
@@ -59,16 +54,14 @@ internal sealed class NavigationStack : INavigator
         }
     }
 
-    public void OpenApp(IPhoneApp app) => OpenApp(app, AppOpenSource.Home);
-
-    public void OpenAppFrom(IPhoneApp app, string source, Rect origin)
+    public void OpenAppFrom(IPhoneApp app, Rect origin)
     {
         pendingOrigin = origin;
-        OpenApp(app, source);
+        OpenApp(app);
         pendingOrigin = null;
     }
 
-    public void OpenApp(IPhoneApp app, string source)
+    public void OpenApp(IPhoneApp app)
     {
         if (motion == ShellMotion.None && ReferenceEquals(current, app))
         {
@@ -91,16 +84,11 @@ internal sealed class NavigationStack : INavigator
 
         current = app;
         app.OnOpened();
-        appOpenedAt = DateTime.UtcNow;
-        trackedAppId = app.Id;
-        analytics.Track(AnalyticsEvents.AppOpen(app.Id, source));
         AppOpened?.Invoke(app.Id);
         BeginPresent(app, under);
     }
 
-    public void Open(string appId) => Open(appId, AppOpenSource.CrossApp);
-
-    public void Open(string appId, string source)
+    public void Open(string appId)
     {
         if (current?.Id == appId && motion == ShellMotion.None)
         {
@@ -111,7 +99,7 @@ internal sealed class NavigationStack : INavigator
         {
             if (apps[index].Id == appId)
             {
-                OpenApp(apps[index], source);
+                OpenApp(apps[index]);
                 return;
             }
         }
@@ -229,12 +217,6 @@ internal sealed class NavigationStack : INavigator
         else if (motion == ShellMotion.Dismiss)
         {
             motionOver?.OnClosed();
-            if (trackedAppId is not null && string.Equals(trackedAppId, motionOver?.Id, StringComparison.Ordinal))
-            {
-                var durationMs = (DateTime.UtcNow - appOpenedAt).TotalMilliseconds;
-                analytics.Track(AnalyticsEvents.AppClose(trackedAppId, durationMs));
-                trackedAppId = null;
-            }
         }
 
         motion = ShellMotion.None;
