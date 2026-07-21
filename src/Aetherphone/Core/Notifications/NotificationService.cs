@@ -17,6 +17,7 @@ internal sealed class NotificationService : IDisposable
     private long sequence;
     public int UnreadCount { get; private set; }
     public IReadOnlyList<PhoneNotification> Recent => recent;
+    public Func<string, bool>? AppAvailability { get; set; }
     public event Action? Changed;
     public event Action<PhoneNotification>? Presented;
 
@@ -44,6 +45,11 @@ internal sealed class NotificationService : IDisposable
     private void Present(PhoneNotification notification)
     {
         if (!configuration.IsAppNotificationEnabled(notification.AppId))
+        {
+            return;
+        }
+
+        if (AppAvailability is { } available && !available(notification.AppId))
         {
             return;
         }

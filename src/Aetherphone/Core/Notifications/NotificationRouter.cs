@@ -39,6 +39,12 @@ internal sealed class NotificationRouter
 
     public void Open(PhoneNotification notification)
     {
+        if (!navigation.IsAvailable(notification.AppId))
+        {
+            notifications.RemoveGroup(notification.StackKey);
+            return;
+        }
+
         notifications.RemoveGroup(notification.StackKey);
 
         if (notification.AppId == MessagesAppId && !string.IsNullOrEmpty(notification.GroupKey))

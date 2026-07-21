@@ -63,6 +63,7 @@ internal sealed class PhoneShell : IDisposable
         calls = services.Calls;
         var notifications = services.Notifications;
         navigation = new NavigationStack(apps);
+        notifications.AppAvailability = navigation.IsAvailable;
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
         navigation.AppOpened += services.Conduct.NotifyAppOpened;

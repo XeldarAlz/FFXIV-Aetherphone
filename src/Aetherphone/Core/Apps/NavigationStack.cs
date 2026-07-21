@@ -88,6 +88,19 @@ internal sealed class NavigationStack : INavigator
         BeginPresent(app, under);
     }
 
+    public bool IsAvailable(string appId)
+    {
+        for (var index = 0; index < apps.Count; index++)
+        {
+            if (apps[index].Id == appId)
+            {
+                return apps[index].IsAvailable;
+            }
+        }
+
+        return false;
+    }
+
     public void Open(string appId)
     {
         if (current?.Id == appId && motion == ShellMotion.None)
@@ -97,7 +110,7 @@ internal sealed class NavigationStack : INavigator
 
         for (var index = 0; index < apps.Count; index++)
         {
-            if (apps[index].Id == appId)
+            if (apps[index].Id == appId && apps[index].IsAvailable)
             {
                 OpenApp(apps[index]);
                 return;
