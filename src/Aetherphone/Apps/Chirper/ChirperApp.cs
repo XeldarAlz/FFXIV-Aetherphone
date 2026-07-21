@@ -67,6 +67,9 @@ internal sealed partial class ChirperApp : IPhoneApp
     private volatile int composeOutcome;
     private readonly ChirperActionReveal actions = new();
     private string commentDraft = string.Empty;
+    private PostDto? quoteTarget;
+    private string? quoteTargetId;
+    private readonly HashSet<string> renderedUnderlyingIds = new(StringComparer.Ordinal);
 
     public ChirperApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
@@ -247,6 +250,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (ComposeFab.Draw(listRect, "##chirperComposeFab", Accent, FontAwesomeIcon.Feather.ToIconString(),
                 Loc.T(L.Chirper.NewChirp), "chirper.compose"))
         {
+            quoteTarget = null;
+            quoteTargetId = null;
             composeFocus = true;
             router.Push(ChirperRoute.Compose);
         }
@@ -286,9 +291,15 @@ internal sealed partial class ChirperApp : IPhoneApp
             {
                 ImGui.Dummy(new Vector2(0f, FeedTopPadding * ImGuiHelpers.GlobalScale));
                 feedVirtualizer.BeginFrame();
+                renderedUnderlyingIds.Clear();
                 for (var index = 0; index < snapshot.Length; index++)
                 {
                     var post = snapshot[index];
+                    if (!renderedUnderlyingIds.Add(post.RepostOfId ?? post.Id))
+                    {
+                        continue;
+                    }
+
                     if (feedVirtualizer.Skip(post.Id))
                     {
                         continue;
@@ -312,21 +323,37 @@ internal sealed partial class ChirperApp : IPhoneApp
         }
     }
 
-    private void DrawPost(PostDto post, bool isThreadHead = false)
+    private void DrawPost(PostDto post, bool isThreadHead = false, PostDto? repostBy = null)
     {
+        if (post.RepostOfId is not null)
+        {
+            if (post.ReferencedPost is not null)
+            {
+                DrawPost(post.ReferencedPost, isThreadHead, post);
+            }
+            else
+            {
+                DrawUnavailableCard();
+            }
+
+            return;
+        }
+
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var pad = 14f * scale;
+        var headerHeight = repostBy is not null ? 22f * scale : 0f;
+        var contentTop = origin.Y + headerHeight;
         var radius = 20f * scale;
-        var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + pad + radius);
+        var avatarCenter = new Vector2(origin.X + pad + radius, contentTop + pad + radius);
         var contentLeft = avatarCenter.X + radius + 12f * scale;
         var contentRight = origin.X + width - pad;
         var contentWidth = contentRight - contentLeft;
         var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var nameSize = Typography.Measure(displayName, 1.05f, FontWeight.SemiBold);
-        var textTop = origin.Y + pad + nameSize.Y + 6f * scale;
+        var textTop = contentTop + pad + nameSize.Y + 6f * scale;
         RichTextLayout? bodyLayout = null;
         if (post.Text.Length > 0)
         {
@@ -339,18 +366,28 @@ internal sealed partial class ChirperApp : IPhoneApp
         var textHeight = post.Text.Length == 0
             ? 0f
             : bodyLayout?.Size.Y ?? Typography.MeasureWrapped(post.Text, contentWidth, 1.05f);
-        var contentBottom = MathF.Max(avatarCenter.Y + radius, textTop + textHeight);
+        var hasQuote = post.QuotedPostId is not null;
+        var quoteGap = hasQuote ? 8f * scale : 0f;
+        var quoteHeight = hasQuote ? QuotedCardHeight(post.ReferencedPost, contentWidth) : 0f;
+        var quoteTop = textTop + textHeight + quoteGap;
+        var contentBody = hasQuote ? quoteTop + quoteHeight : textTop + textHeight;
+        var contentBottom = MathF.Max(avatarCenter.Y + radius, contentBody);
         var actionsTop = contentBottom + 8f * scale;
         var actionsHeight = 30f * scale;
         var cardBottom = actionsTop + actionsHeight + pad * 0.5f;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 18f * scale);
+        if (repostBy is not null)
+        {
+            DrawRepostHeader(origin, contentLeft, headerHeight, repostBy);
+        }
+
         DrawAvatar(drawList, avatarCenter, radius, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl, 0.95f, 48);
         if (UiInteract.HoverClick(avatarCenter - new Vector2(radius, radius), avatarCenter + new Vector2(radius, radius)))
         {
             OpenProfile(post.AuthorId);
         }
 
-        Typography.Draw(new Vector2(contentLeft, origin.Y + pad), displayName, theme.TextStrong, 1.05f,
+        Typography.Draw(new Vector2(contentLeft, contentTop + pad), displayName, theme.TextStrong, 1.05f,
             FontWeight.SemiBold);
         var meta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
         if (ContentModeration.IsInReview(post.ScanStatus))
@@ -360,10 +397,10 @@ internal sealed partial class ChirperApp : IPhoneApp
 
         var metaSize = Typography.Measure(meta, 0.95f);
         Typography.Draw(
-            new Vector2(contentLeft + nameSize.X + 7f * scale, origin.Y + pad + (nameSize.Y - metaSize.Y) * 0.5f), meta,
+            new Vector2(contentLeft + nameSize.X + 7f * scale, contentTop + pad + (nameSize.Y - metaSize.Y) * 0.5f), meta,
             AppPalettes.Chirper.MutedInk, 0.95f);
-        if (UiInteract.HoverClick(new Vector2(contentLeft, origin.Y + pad),
-                new Vector2(contentRight - 24f * scale, origin.Y + pad + nameSize.Y)))
+        if (UiInteract.HoverClick(new Vector2(contentLeft, contentTop + pad),
+                new Vector2(contentRight - 24f * scale, contentTop + pad + nameSize.Y)))
         {
             OpenProfile(post.AuthorId);
         }
@@ -389,6 +426,11 @@ internal sealed partial class ChirperApp : IPhoneApp
             }
         }
 
+        if (hasQuote)
+        {
+            DrawQuotedCard(drawList, new Vector2(contentLeft, quoteTop), contentWidth, quoteHeight, post.ReferencedPost, true);
+        }
+
         DrawPostActions(post, contentLeft, contentWidth, actionsTop + actionsHeight * 0.5f, isThreadHead);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y));
@@ -400,6 +442,10 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (actions.IsShowing(post.Id, ChirperActionReveal.Panel.Picker))
         {
             DrawReactionPicker(post, left, centerY);
+        }
+        else if (actions.IsShowing(post.Id, ChirperActionReveal.Panel.Repost))
+        {
+            DrawRepostMenu(post, left, centerY);
         }
         else if (actions.IsShowing(post.Id, ChirperActionReveal.Panel.Menu))
         {
@@ -429,6 +475,25 @@ internal sealed partial class ChirperApp : IPhoneApp
             Typography.Draw(new Vector2(cursorX, centerY - countSize.Y * 0.5f), countText, AppPalettes.Chirper.MutedInk,
                 0.95f, FontWeight.Medium);
             cursorX += countSize.X + 6f * scale;
+        }
+
+        cursorX += 12f * scale;
+        var repostColor = post.MyReposted ? theme.Accent : AppPalettes.Chirper.MutedInk;
+        var repostCenter = new Vector2(cursorX + 12f * scale, centerY);
+        if (ui.IconButton(repostCenter, 15f * scale, FontAwesomeIcon.Retweet.ToIconString(), repostColor,
+                new Vector4(0f, 0f, 0f, 0f), 1.1f, Loc.T(post.MyReposted ? L.Chirper.Unrepost : L.Chirper.Repost)))
+        {
+            actions.Open(post.Id, ChirperActionReveal.Panel.Repost);
+        }
+
+        cursorX = repostCenter.X + 22f * scale;
+        if (post.RepostCount > 0)
+        {
+            var repostText = post.RepostCount.ToString(Loc.Culture);
+            var repostSize = Typography.Measure(repostText, 0.95f, FontWeight.Medium);
+            Typography.Draw(new Vector2(cursorX, centerY - repostSize.Y * 0.5f), repostText, repostColor,
+                0.95f, FontWeight.Medium);
+            cursorX += repostSize.X + 6f * scale;
         }
 
         cursorX += 12f * scale;
@@ -586,6 +651,147 @@ internal sealed partial class ChirperApp : IPhoneApp
         {
             actions.Dismiss();
         }
+    }
+
+    private void DrawRepostMenu(PostDto post, float left, float centerY)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var step = 34f * scale;
+        var iconRadius = 15f * scale;
+        var interactive = !actions.Closing;
+        const int count = 3;
+
+        var reposted = post.MyReposted;
+        var repostColor = reposted ? theme.Accent : AppPalettes.Chirper.MutedInk;
+        var repostCenter = new Vector2(left + iconRadius, centerY);
+        if (DrawRevealIcon(repostCenter, iconRadius, FontAwesomeIcon.Retweet.ToIconString(), repostColor,
+                reposted ? Palette.WithAlpha(theme.Accent, 0.20f) : AppPalettes.Chirper.FieldSurface, 1.1f,
+                ChirperActionReveal.Stagger(actions.Progress, 0, count),
+                Loc.T(reposted ? L.Chirper.Unrepost : L.Chirper.Repost), interactive))
+        {
+            store.ToggleRepost(post);
+            actions.Dismiss();
+        }
+
+        var quoteCenter = new Vector2(left + iconRadius + step, centerY);
+        if (DrawRevealIcon(quoteCenter, iconRadius, FontAwesomeIcon.QuoteRight.ToIconString(), theme.TextStrong,
+                AppPalettes.Chirper.FieldSurface, 0.95f, ChirperActionReveal.Stagger(actions.Progress, 1, count),
+                Loc.T(L.Chirper.Quote), interactive))
+        {
+            BeginQuote(post);
+            actions.Dismiss();
+        }
+
+        var closeCenter = new Vector2(left + iconRadius + step * 2f, centerY);
+        if (DrawRevealIcon(closeCenter, iconRadius, FontAwesomeIcon.Times.ToIconString(), AppPalettes.Chirper.MutedInk,
+                AppPalettes.Chirper.FieldSurface, 1f, ChirperActionReveal.Stagger(actions.Progress, 2, count),
+                Loc.T(L.Common.Close), interactive))
+        {
+            actions.Dismiss();
+        }
+    }
+
+    private void DrawRepostHeader(Vector2 origin, float contentLeft, float headerHeight, PostDto repostBy)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var centerY = origin.Y + headerHeight * 0.5f + 2f * scale;
+        AppSkin.Icon(new Vector2(contentLeft - 16f * scale, centerY), FontAwesomeIcon.Retweet.ToIconString(),
+            AppPalettes.Chirper.MutedInk, 0.72f);
+        var who = SocialIdentity.Name(repostBy.AuthorDisplayName, repostBy.AuthorHandle);
+        var label = string.Format(Loc.Culture, Loc.T(L.Chirper.Reposted), who);
+        var labelSize = Typography.Measure(label, 0.82f, FontWeight.Medium);
+        Typography.Draw(new Vector2(contentLeft, centerY - labelSize.Y * 0.5f), label, AppPalettes.Chirper.MutedInk,
+            0.82f, FontWeight.Medium);
+    }
+
+    private void DrawUnavailableCard()
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var pad = 14f * scale;
+        var height = 44f * scale;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 18f * scale);
+        Typography.Draw(new Vector2(origin.X + pad, origin.Y + pad), Loc.T(L.Chirper.Unavailable),
+            AppPalettes.Chirper.MutedInk, 0.9f);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height));
+        ImGui.Dummy(new Vector2(0f, 10f * scale));
+    }
+
+    private static float QuotedCardHeight(PostDto? quoted, float width)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var innerPad = 10f * scale;
+        var nameHeight = Typography.Measure("Ag", 0.85f, FontWeight.SemiBold).Y;
+        if (quoted is null)
+        {
+            return innerPad + nameHeight + innerPad;
+        }
+
+        var innerWidth = width - innerPad * 2f;
+        var textHeight = quoted.Text.Length > 0
+            ? MathF.Min(Typography.MeasureWrapped(quoted.Text, innerWidth, 0.9f), nameHeight * 4f)
+            : 0f;
+        var gap = quoted.Text.Length > 0 ? 4f * scale : 0f;
+        return innerPad + nameHeight + gap + textHeight + innerPad;
+    }
+
+    private void DrawQuotedCard(ImDrawListPtr drawList, Vector2 min, float width, float height, PostDto? quoted,
+        bool tappable)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var max = new Vector2(min.X + width, min.Y + height);
+        var innerPad = 10f * scale;
+        Squircle.Fill(drawList, min, max, 12f * scale, ImGui.GetColorU32(AppPalettes.Chirper.FieldSurface));
+        if (quoted is null)
+        {
+            Typography.Draw(new Vector2(min.X + innerPad, min.Y + innerPad), Loc.T(L.Chirper.Unavailable),
+                AppPalettes.Chirper.MutedInk, 0.85f);
+            return;
+        }
+
+        var name = SocialIdentity.Name(quoted.AuthorDisplayName, quoted.AuthorHandle);
+        var nameSize = Typography.Measure(name, 0.85f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(min.X + innerPad, min.Y + innerPad), name, theme.TextStrong, 0.85f,
+            FontWeight.SemiBold);
+        var meta = SocialIdentity.FeedMeta(quoted.AuthorHandle, TimeText.Short(quoted.CreatedAtUnix));
+        var metaSize = Typography.Measure(meta, 0.8f);
+        Typography.Draw(new Vector2(min.X + innerPad + nameSize.X + 6f * scale,
+            min.Y + innerPad + (nameSize.Y - metaSize.Y) * 0.5f), meta, AppPalettes.Chirper.MutedInk, 0.8f);
+        if (quoted.Text.Length > 0)
+        {
+            var innerWidth = width - innerPad * 2f;
+            ImGui.PushClipRect(min, max, true);
+            ImGui.SetCursorScreenPos(new Vector2(min.X + innerPad, min.Y + innerPad + nameSize.Y + 4f * scale));
+            ImGui.PushTextWrapPos(min.X + innerPad + innerWidth - ImGui.GetWindowPos().X);
+            using (Plugin.Fonts.Push(0.9f))
+            using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Chirper.BodyInk))
+            {
+                Typography.Wrapped(quoted.Text);
+            }
+
+            ImGui.PopTextWrapPos();
+            ImGui.PopClipRect();
+        }
+
+        if (tappable && UiInteract.HoverClick(min, max))
+        {
+            OpenThread(quoted);
+        }
+    }
+
+    private void BeginQuote(PostDto post)
+    {
+        actions.Reset();
+        var target = post.RepostOfId is not null && post.ReferencedPost is not null ? post.ReferencedPost : post;
+        quoteTarget = target;
+        quoteTargetId = target.Id;
+        draft = string.Empty;
+        composeStatus = string.Empty;
+        composeFocus = true;
+        router.Push(ChirperRoute.Compose);
     }
 
     private void DrawOverflowMenuRow(PostDto post, float left, float width, float centerY)

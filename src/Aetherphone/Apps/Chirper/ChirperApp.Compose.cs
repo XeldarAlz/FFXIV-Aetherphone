@@ -21,6 +21,8 @@ internal sealed partial class ChirperApp
             draft = string.Empty;
             composeStatus = string.Empty;
             composeEmoji.Close();
+            quoteTarget = null;
+            quoteTargetId = null;
             profile.ForceRefreshSoon();
             router.Pop();
             return;
@@ -33,7 +35,7 @@ internal sealed partial class ChirperApp
         }
 
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Chirper.NewChirp), back);
+        AppHeader.Draw(context, Loc.T(quoteTarget is not null ? L.Chirper.QuoteTitle : L.Chirper.NewChirp), back);
         var canPost = !string.IsNullOrWhiteSpace(draft) && !store.Posting;
         if (ui.HeaderAction(area, store.Posting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Post), canPost))
         {
@@ -77,7 +79,10 @@ internal sealed partial class ChirperApp
 
             var inputTop = cardMin.Y + pad + nameSize.Y + 6f * scale;
             var inputWidth = width - inputLeft - pad;
-            var inputHeight = cardMax.Y - inputTop - pad;
+            var quotePreviewHeight = quoteTarget is not null
+                ? QuotedCardHeight(quoteTarget, inputWidth) + 8f * scale
+                : 0f;
+            var inputHeight = cardMax.Y - inputTop - pad - quotePreviewHeight;
             ImGui.SetCursorScreenPos(new Vector2(inputX, inputTop));
             ImGui.SetNextItemWidth(inputWidth);
             if (composeFocus)
@@ -108,6 +113,13 @@ internal sealed partial class ChirperApp
             {
                 Typography.Draw(new Vector2(inputX + 4f * scale, inputTop + 2f * scale), Loc.T(L.Chirper.Compose),
                     AppPalettes.Chirper.MutedInk, 1.15f);
+            }
+
+            if (quoteTarget is not null)
+            {
+                var quoteMin = new Vector2(inputX, inputTop + inputHeight + 8f * scale);
+                DrawQuotedCard(drawList, quoteMin, inputWidth, QuotedCardHeight(quoteTarget, inputWidth), quoteTarget,
+                    false);
             }
 
             if (composeEmoji.Open)
@@ -149,6 +161,13 @@ internal sealed partial class ChirperApp
         }
 
         composeStatus = string.Empty;
-        store.Compose(draft, ok => composeOutcome = ok ? 1 : 2);
+        if (quoteTargetId is not null)
+        {
+            store.Quote(draft, quoteTargetId, ok => composeOutcome = ok ? 1 : 2);
+        }
+        else
+        {
+            store.Compose(draft, ok => composeOutcome = ok ? 1 : 2);
+        }
     }
 }

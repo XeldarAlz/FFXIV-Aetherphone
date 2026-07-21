@@ -63,6 +63,7 @@ internal sealed class Configuration : IPluginConfiguration
     public float RingtoneVolume { get; set; } = 0.8f;
     public float NotificationVolume { get; set; } = 0.8f;
     public float MusicVolume { get; set; } = 0.6f;
+    public int MusicRepeat { get; set; }
     public bool SoundSettingsMigrated { get; set; }
     public const string DefaultAethernetBaseUrl = "https://api.aetherphone.net";
     private const string LegacyAethernetHost = "ffxiv-aethernet-production.up.railway.app";
@@ -122,6 +123,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool MessagesPerCharacterMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();
     public long ModerationNoticeSeenUnix { get; set; }
+    public Dictionary<string, int> ConductAcknowledged { get; set; } = new();
     public List<string> MutedLinkshells { get; set; } = new();
     public Dictionary<ulong, List<string>> MutedLinkshellsByCharacter { get; set; } = new();
     public bool LinkshellMutesPerCharacterMigrated { get; set; }
@@ -376,6 +378,20 @@ internal sealed class Configuration : IPluginConfiguration
                 placed = true;
             }
         }
+    }
+
+    public bool HasAcknowledgedConduct(string appId, int version) =>
+        ConductAcknowledged.TryGetValue(appId, out var seen) && seen >= version;
+
+    public void AcknowledgeConduct(string appId, int version)
+    {
+        if (HasAcknowledgedConduct(appId, version))
+        {
+            return;
+        }
+
+        ConductAcknowledged[appId] = version;
+        Save();
     }
 
     public bool IsAppNotificationEnabled(string appId) =>

@@ -52,8 +52,14 @@ internal sealed partial class ChirperApp
             }
             else
             {
+                renderedUnderlyingIds.Clear();
                 for (var index = 0; index < posts.Length; index++)
                 {
+                    if (!renderedUnderlyingIds.Add(posts[index].RepostOfId ?? posts[index].Id))
+                    {
+                        continue;
+                    }
+
                     DrawPost(posts[index]);
                 }
 

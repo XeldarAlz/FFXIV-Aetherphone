@@ -16,6 +16,12 @@ internal enum SongPlaybackState : byte
     Failed,
 }
 
+internal enum SongRepeatMode : byte
+{
+    Off,
+    One,
+}
+
 internal sealed class SongPlayer : IDisposable
 {
     private const int StreamedThresholdSeconds = 600;
@@ -33,6 +39,7 @@ internal sealed class SongPlayer : IDisposable
     private volatile string currentTitle = string.Empty;
     private volatile string currentAuthor = string.Empty;
     private volatile string currentThumbnail = string.Empty;
+    private volatile SongRepeatMode repeat = SongRepeatMode.Off;
     private float volume = 0.6f;
     private float positionSeconds;
     private float durationSeconds;
@@ -56,6 +63,12 @@ internal sealed class SongPlayer : IDisposable
     public bool HasQueue => queue.Length > 1;
     public float Position => positionSeconds;
     public float Duration => durationSeconds;
+
+    public SongRepeatMode Repeat
+    {
+        get => repeat;
+        set => repeat = value;
+    }
 
     public float Volume
     {
@@ -141,6 +154,11 @@ internal sealed class SongPlayer : IDisposable
     {
         CancelWorker();
         paused = false;
+        ResetTrackState();
+    }
+
+    private void ResetTrackState()
+    {
         state = SongPlaybackState.Stopped;
         currentVideoId = string.Empty;
         currentTitle = string.Empty;
@@ -422,20 +440,26 @@ internal sealed class SongPlayer : IDisposable
                 return;
             }
 
-            if (queue.Length == 0 || queueIndex + 1 >= queue.Length)
+            if (queue.Length == 0)
             {
-                state = SongPlaybackState.Stopped;
-                currentVideoId = string.Empty;
-                currentTitle = string.Empty;
-                currentAuthor = string.Empty;
-                currentThumbnail = string.Empty;
-                positionSeconds = 0f;
-                durationSeconds = 0f;
+                ResetTrackState();
                 return;
             }
 
-            queueIndex++;
-            next = queue[queueIndex];
+            if (repeat == SongRepeatMode.One)
+            {
+                next = queue[queueIndex];
+            }
+            else if (queueIndex + 1 < queue.Length)
+            {
+                queueIndex++;
+                next = queue[queueIndex];
+            }
+            else
+            {
+                ResetTrackState();
+                return;
+            }
         }
 
         StartSong(next);

@@ -409,6 +409,15 @@ internal static class L
         public static readonly LocString NoRecentCallsHint = new("phone.noRecentCallsHint", "Calls you make and receive will appear here");
         public static readonly LocString ContactInfo = new("phone.contactInfo", "Info");
         public static readonly LocString MissedCallBody = new("phone.missedCallBody", "Missed call");
+        public static readonly LocString OutcomeUnavailableTitle = new("phone.outcomeUnavailableTitle", "Couldn't reach {0}");
+        public static readonly LocString OutcomeUnavailableBody = new("phone.outcomeUnavailableBody", "They're not available right now.");
+        public static readonly LocString OutcomeDeclinedTitle = new("phone.outcomeDeclinedTitle", "{0} declined");
+        public static readonly LocString OutcomeDeclinedBody = new("phone.outcomeDeclinedBody", "They can't take the call right now.");
+        public static readonly LocString OutcomeNoAnswerBody = new("phone.outcomeNoAnswerBody", "{0} didn't pick up.");
+        public static readonly LocString OutcomeDroppedTitle = new("phone.outcomeDroppedTitle", "Call dropped");
+        public static readonly LocString OutcomeDroppedBody = new("phone.outcomeDroppedBody", "The connection was lost.");
+        public static readonly LocString OutcomeDismiss = new("phone.outcomeDismiss", "OK");
+        public static readonly LocString End = new("phone.end", "End");
     }
 
     internal static class Friends
@@ -1250,6 +1259,7 @@ internal static class L
         public static readonly LocString CouldntPlay = new("music.couldntPlay", "Couldn't play this track");
         public static readonly LocString NowPlayingState = new("music.nowPlayingState", "Now playing");
         public static readonly LocString PlaybackFailed = new("music.playbackFailed", "Playback failed");
+        public static readonly LocString Repeat = new("music.repeat", "Repeat");
         public static readonly LocString GoodMorning = new("music.goodMorning", "Good morning");
         public static readonly LocString GoodAfternoon = new("music.goodAfternoon", "Good afternoon");
         public static readonly LocString GoodEvening = new("music.goodEvening", "Good evening");
@@ -1410,6 +1420,12 @@ internal static class L
         public static readonly LocString ChirpsTitle = new("chirper.chirpsTitle", "Chirps");
         public static readonly LocString Reply = new("chirper.reply", "Reply");
         public static readonly LocString More = new("chirper.more", "More");
+        public static readonly LocString Repost = new("chirper.repost", "Rechirp");
+        public static readonly LocString Unrepost = new("chirper.unrepost", "Undo rechirp");
+        public static readonly LocString Reposted = new("chirper.reposted", "{0} rechirped");
+        public static readonly LocString Quote = new("chirper.quote", "Quote");
+        public static readonly LocString QuoteTitle = new("chirper.quoteTitle", "Quote Chirp");
+        public static readonly LocString Unavailable = new("chirper.unavailable", "This chirp is unavailable");
     }
 
     internal static class Aethergram
@@ -2517,5 +2533,124 @@ internal static class L
         public static readonly LocString FeaturePlayBody = new("setup.featurePlayBody", "Music, radio and a shelf of mini-games.");
         public static readonly LocString ReadyBody = new("setup.readyBody", "You're all set. Enjoy your Aetherphone.");
         public static readonly LocString StartUsing = new("setup.startUsing", "Start Using Aetherphone");
+    }
+
+    internal static class Conduct
+    {
+        public static readonly LocString Eyebrow = new("conduct.eyebrow", "Community Guidelines");
+        public static readonly LocString Acknowledge = new("conduct.acknowledge", "I have read and understood these rules. I accept that breaking them may get my account suspended or banned.");
+        public static readonly LocString AgreeAction = new("conduct.agreeAction", "I understand and agree");
+        public static readonly LocString WaitAction = new("conduct.waitAction", "Please read the rules… {0}");
+
+        public static readonly LocString SectionEncouraged = new("conduct.section.encouraged", "Encouraged Content");
+        public static readonly LocString SectionPermittedMature = new("conduct.section.permittedMature", "Permitted Mature Content");
+        public static readonly LocString SectionNotAllowed = new("conduct.section.notAllowed", "Not Allowed");
+
+        public static readonly LocString ChirperTitle = new("conduct.chirper.title", "Chirper Community Rules");
+        public static readonly LocString ChirperIntro = new("conduct.chirper.intro", "Before you start posting, please read the rules of the community.");
+        public static readonly LocString[] ChirperEncouraged =
+        {
+            new("conduct.chirper.enc.1", "Daily adventures"),
+            new("conduct.chirper.enc.2", "Roleplay updates"),
+            new("conduct.chirper.enc.3", "Community discussions"),
+            new("conduct.chirper.enc.4", "Questions and guides"),
+            new("conduct.chirper.enc.5", "Humor and memes"),
+            new("conduct.chirper.enc.6", "Creative writing"),
+        };
+        public static readonly LocString[] ChirperNotAllowed =
+        {
+            new("conduct.chirper.no.1", "Harassment or targeted bullying"),
+            new("conduct.chirper.no.2", "Hate speech or discriminatory language"),
+            new("conduct.chirper.no.3", "Threats or encouragement of violence"),
+            new("conduct.chirper.no.4", "Spam or excessive self-promotion"),
+            new("conduct.chirper.no.5", "Impersonation of other players or communities"),
+            new("conduct.chirper.no.6", "Posting personal information without permission"),
+            new("conduct.chirper.no.7", "NSFW images or explicit sexual content"),
+            new("conduct.chirper.no.8", "Malicious links or scams"),
+        };
+
+        public static readonly LocString AethergramTitle = new("conduct.aethergram.title", "Aethergram Community Rules");
+        public static readonly LocString AethergramIntro = new("conduct.aethergram.intro", "Before you start sharing photos, please read the rules of the community.");
+        public static readonly LocString[] AethergramEncouraged =
+        {
+            new("conduct.aethergram.enc.1", "Glamour showcases"),
+            new("conduct.aethergram.enc.2", "Housing tours"),
+            new("conduct.aethergram.enc.3", "Gpose photography"),
+            new("conduct.aethergram.enc.4", "Artwork and commissions"),
+            new("conduct.aethergram.enc.5", "Raid clears"),
+            new("conduct.aethergram.enc.6", "Event highlights"),
+            new("conduct.aethergram.enc.7", "Memes"),
+        };
+        public static readonly LocString[] AethergramNotAllowed =
+        {
+            new("conduct.aethergram.no.1", "Stolen artwork or screenshots presented as your own"),
+            new("conduct.aethergram.no.2", "Explicit NSFW imagery"),
+            new("conduct.aethergram.no.3", "Graphic violence"),
+            new("conduct.aethergram.no.4", "Excessive watermark spam"),
+            new("conduct.aethergram.no.5", "Copyright infringement"),
+            new("conduct.aethergram.no.6", "AI-generated content"),
+            new("conduct.aethergram.no.7", "Harassment through edited images"),
+        };
+
+        public static readonly LocString VelvetTitle = new("conduct.velvet.title", "Velvet Community Rules");
+        public static readonly LocString VelvetIntro = new("conduct.velvet.intro", "Velvet is an 18+ space. Before you continue, please read the rules of the community.");
+        public static readonly LocString[] VelvetPermitted =
+        {
+            new("conduct.velvet.enc.1", "Mature roleplay advertisements"),
+            new("conduct.velvet.enc.2", "Suggestive screenshots (nudity is allowed)"),
+            new("conduct.velvet.enc.3", "Adult-oriented discussions"),
+            new("conduct.velvet.enc.4", "Relationship communities"),
+            new("conduct.velvet.enc.5", "Character storytelling"),
+        };
+        public static readonly LocString[] VelvetNotAllowed =
+        {
+            new("conduct.velvet.no.1", "Sexual content involving minors or child-like characters, including Lalafell profiles."),
+            new("conduct.velvet.no.2", "Non-consensual sexual content"),
+            new("conduct.velvet.no.3", "Exploitative or abusive material"),
+            new("conduct.velvet.no.4", "Real-life revenge pornography"),
+            new("conduct.velvet.no.5", "Doxxing"),
+            new("conduct.velvet.no.6", "Harassment"),
+            new("conduct.velvet.no.7", "Gore intended to shock"),
+            new("conduct.velvet.no.8", "Sale or promotion of illegal services"),
+        };
+
+        public static readonly LocString PlatformTitle = new("conduct.platform.title", "Platform-wide Standards");
+        public static readonly LocString PlatformLead = new("conduct.platform.lead", "These rules apply across all Aetherphone social applications.");
+        public static readonly LocString RespectTitle = new("conduct.platform.respect.title", "Respect Others");
+        public static readonly LocString RespectBody = new("conduct.platform.respect.body", "Treat fellow adventurers with courtesy. Personal attacks, harassment, discrimination, or repeated unwanted interactions are not permitted.");
+        public static readonly LocString PrivacyTitle = new("conduct.platform.privacy.title", "Keep Information Private");
+        public static readonly LocString PrivacyLead = new("conduct.platform.privacy.lead", "Do not share another person's:");
+        public static readonly LocString[] PrivacyItems =
+        {
+            new("conduct.platform.privacy.1", "Real name"),
+            new("conduct.platform.privacy.2", "Address"),
+            new("conduct.platform.privacy.3", "Phone number"),
+            new("conduct.platform.privacy.4", "Email"),
+            new("conduct.platform.privacy.5", "Personal photographs"),
+            new("conduct.platform.privacy.6", "Private conversations without permission"),
+        };
+        public static readonly LocString SpamTitle = new("conduct.platform.spam.title", "No Spam");
+        public static readonly LocString SpamLead = new("conduct.platform.spam.lead", "Do not:");
+        public static readonly LocString[] SpamItems =
+        {
+            new("conduct.platform.spam.1", "Flood feeds"),
+            new("conduct.platform.spam.2", "Post repetitive advertisements"),
+            new("conduct.platform.spam.3", "Manipulate engagement"),
+            new("conduct.platform.spam.4", "Use automated spam accounts"),
+        };
+        public static readonly LocString IpTitle = new("conduct.platform.ip.title", "Intellectual Property");
+        public static readonly LocString IpBody = new("conduct.platform.ip.body", "Only upload content you own or have permission to share. Always provide attribution where appropriate.");
+        public static readonly LocString EnforcementTitle = new("conduct.platform.enforcement.title", "Reports and Enforcement");
+        public static readonly LocString EnforcementLead = new("conduct.platform.enforcement.lead", "Violations may result in:");
+        public static readonly LocString[] EnforcementItems =
+        {
+            new("conduct.platform.enforcement.1", "Content removal"),
+            new("conduct.platform.enforcement.2", "Temporary posting restrictions"),
+            new("conduct.platform.enforcement.3", "Temporary account suspension"),
+            new("conduct.platform.enforcement.4", "Permanent account termination"),
+        };
+        public static readonly LocString EnforcementNote = new("conduct.platform.enforcement.note", "Severe violations may bypass warning stages.");
+        public static readonly LocString AppealsTitle = new("conduct.platform.appeals.title", "Appeals");
+        public static readonly LocString AppealsBody = new("conduct.platform.appeals.body", "If you believe moderation action was taken in error, you may submit an appeal through the Aetherphone Discord support system.");
     }
 }

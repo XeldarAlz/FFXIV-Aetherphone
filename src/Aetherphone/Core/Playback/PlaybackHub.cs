@@ -19,6 +19,7 @@ internal sealed class PlaybackHub
         volume = Math.Clamp(configuration.MusicVolume, 0f, 1f);
         radio.Volume = volume;
         songs.Volume = volume;
+        songs.Repeat = configuration.MusicRepeat == 0 ? SongRepeatMode.Off : SongRepeatMode.One;
     }
 
     public RadioPlayer Radio => radio;
@@ -52,6 +53,16 @@ internal sealed class PlaybackHub
 
     public void CommitVolume()
     {
+        configuration.Save();
+    }
+
+    public SongRepeatMode RepeatMode => songs.Repeat;
+
+    public void ToggleRepeat()
+    {
+        var next = songs.Repeat == SongRepeatMode.Off ? SongRepeatMode.One : SongRepeatMode.Off;
+        songs.Repeat = next;
+        configuration.MusicRepeat = (int)next;
         configuration.Save();
     }
 

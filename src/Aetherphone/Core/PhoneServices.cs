@@ -1,6 +1,7 @@
 using Aetherphone.Core.Activity;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Collections;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
@@ -86,6 +87,7 @@ internal sealed class PhoneServices : IDisposable
     public required LoadingScreen Loading { get; init; }
     public required ConfirmService Confirm { get; init; }
     public required ReportService Report { get; init; }
+    public required ConductGateService Conduct { get; init; }
     public required WallpaperLibrary Wallpapers { get; init; }
     public required WallpaperImageCache WallpaperImages { get; init; }
 
@@ -163,9 +165,9 @@ internal sealed class PhoneServices : IDisposable
         var activity = new ActivityTracker(framework, clientState, dutyState, gameData, configDirectory);
         var ringNotifier = new ActivityRingNotifier(framework, activity, configuration, notifications);
         var realtimeSignals = new RealtimeSignalBus();
-        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals);
         var visibility = new PhoneVisibility();
         var confirm = new ConfirmService();
+        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals, confirm);
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
             gameData, configuration, confirm);
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm);
@@ -226,6 +228,7 @@ internal sealed class PhoneServices : IDisposable
             Loading = new LoadingScreen(configuration),
             Confirm = confirm,
             Report = new ReportService(),
+            Conduct = new ConductGateService(configuration),
             Wallpapers = wallpapers,
             WallpaperImages = new WallpaperImageCache(),
         };

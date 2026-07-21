@@ -69,14 +69,14 @@ internal sealed class IncomingCallOverlay
         dl.AddCircle(avatarCenter, avatarRadius + (6f + 7f * pulse) * scale,
             ImGui.GetColorU32(Palette.WithAlpha(Green, (0.30f + 0.25f * pulse) * alpha)), 64, 2.5f * scale);
         dl.AddCircleFilled(avatarCenter, avatarRadius, ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, alpha)), 64);
-        Typography.DrawCentered(dl, avatarCenter, Initial(caller), Ink with { W = alpha }, 2.3f, FontWeight.Regular);
-        Typography.DrawCentered(dl, new Vector2(centerX, avatarCenter.Y + avatarRadius + 30f * scale), caller,
-            Palette.WithAlpha(theme.TextStrong, alpha), 1.7f, FontWeight.Regular);
+        Typography.DrawCentered(dl, avatarCenter, Initial(caller), Ink with { W = alpha }, TextStyles.LargeTitle);
+        Typography.DrawCentered(dl, new Vector2(centerX, avatarCenter.Y + avatarRadius + 32f * scale), caller,
+            Palette.WithAlpha(theme.TextStrong, alpha), TextStyles.Title1);
         var subtitle = view.OthersCount > 1
             ? string.Concat(AepConstants.Name, " · ", Loc.T(L.Phone.PlusOthers, view.OthersCount - 1))
             : Loc.T(L.Phone.AudioCall);
-        Typography.DrawCentered(dl, new Vector2(centerX, avatarCenter.Y + avatarRadius + 56f * scale), subtitle,
-            Palette.WithAlpha(theme.TextMuted, alpha), 0.95f, FontWeight.Regular);
+        Typography.DrawCentered(dl, new Vector2(centerX, avatarCenter.Y + avatarRadius + 58f * scale), subtitle,
+            Palette.WithAlpha(theme.TextMuted, alpha), TextStyles.Callout);
         var buttonY = screen.Max.Y - 96f * scale + rise;
         var buttonRadius = 32f * scale;
         if (ActionButton(new Vector2(centerX - 70f * scale, buttonY), buttonRadius, FontAwesomeIcon.PhoneSlash,
@@ -114,7 +114,7 @@ internal sealed class IncomingCallOverlay
         }
 
         Typography.DrawCentered(dl, new Vector2(center.X, center.Y + radius + 16f * scale), label,
-            Palette.WithAlpha(theme.TextMuted, alpha), 0.85f, FontWeight.Regular);
+            Palette.WithAlpha(theme.TextMuted, alpha), TextStyles.Caption1);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

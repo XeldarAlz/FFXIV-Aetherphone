@@ -268,6 +268,11 @@ internal sealed partial class MusicApp
             playback.TogglePlayPause();
         }
 
+        if (songActive)
+        {
+            DrawRepeatButton(drawList, new Vector2(frame.Max.X - pad - 4f * scale, transportY), scale);
+        }
+
         DrawVolumeRow(frame, volumeY, pad, scale);
     }
 
@@ -305,6 +310,27 @@ internal sealed partial class MusicApp
         drawList.AddCircleFilled(new Vector2(labelPosition.X - 9f * scale, labelPosition.Y + labelSize.Y * 0.5f),
             3f * scale, ImGui.GetColorU32(ui.Accent), 16);
         Typography.Draw(drawList, labelPosition, label, ui.TitleInk, TextStyles.FootnoteEmphasized);
+    }
+
+    private void DrawRepeatButton(ImDrawListPtr drawList, Vector2 center, float scale)
+    {
+        var active = playback.RepeatMode == SongRepeatMode.One;
+        var hitRadius = 15f * scale;
+        var hit = new Vector2(hitRadius, hitRadius);
+        var hovered = UiInteract.Hover(center - hit, center + hit);
+        var baseColor = active ? ui.Accent : Palette.WithAlpha(ui.TitleInk, 0.5f);
+        var color = hovered ? Palette.Mix(baseColor, White, 0.25f) : baseColor;
+        MediaGlyph.Repeat(drawList, center, 8.5f * scale, ImGui.GetColorU32(color));
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        HoverTooltip.Show(new Rect(center - hit, center + hit), Loc.T(L.Music.Repeat), HoverLabelSide.Above);
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            playback.ToggleRepeat();
+        }
     }
 
     private void DrawVolumeRow(Rect frame, float volumeY, float pad, float scale)

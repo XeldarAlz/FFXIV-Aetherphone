@@ -62,6 +62,99 @@ internal sealed class ChirperStore : SocialFeedStore
         });
     }
 
+    public void ToggleRepost(PostDto post)
+    {
+        var original = post.RepostOfId is not null && post.ReferencedPost is not null ? post.ReferencedPost : post;
+        var next = !original.MyReposted;
+        var updated = original with
+        {
+            MyReposted = next,
+            RepostCount = Math.Max(0, original.RepostCount + (next ? 1 : -1)),
+        };
+        ReplacePost(updated);
+        if (next)
+        {
+            InsertLocalRepost(updated);
+        }
+        else
+        {
+            RemoveLocalReposts(updated.Id);
+        }
+
+        work.Run("repost", async token =>
+        {
+            var result = next
+                ? await client.RepostAsync(original.Id, token).ConfigureAwait(false)
+                : await client.UnrepostAsync(original.Id, token).ConfigureAwait(false);
+            if (result is not null)
+            {
+                ReplacePost(result);
+            }
+        });
+    }
+
+    private void InsertLocalRepost(PostDto original)
+    {
+        if (Me is not { } me)
+        {
+            return;
+        }
+
+        RemoveLocalReposts(original.Id);
+        var row = original with
+        {
+            Id = "pending-repost-" + original.Id,
+            AuthorId = me.Id,
+            AuthorName = me.Name,
+            AuthorWorld = me.World,
+            AuthorDisplayName = me.DisplayName,
+            AuthorHandle = me.Handle,
+            AuthorAvatarUrl = me.AvatarUrl,
+            Text = string.Empty,
+            CreatedAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            RepostOfId = original.Id,
+            ReferencedPost = original,
+        };
+        AcceptCreatedPost(row);
+    }
+
+    private void RemoveLocalReposts(string originalId)
+    {
+        if (Me is not { } me)
+        {
+            return;
+        }
+
+        forYouLane.Items = CopyOnWrite.RemoveWhere(forYouLane.Items,
+            post => post.RepostOfId == originalId && post.AuthorId == me.Id);
+        followingLane.Items = CopyOnWrite.RemoveWhere(followingLane.Items,
+            post => post.RepostOfId == originalId && post.AuthorId == me.Id);
+        profilePosts = CopyOnWrite.RemoveWhere(profilePosts,
+            post => post.RepostOfId == originalId && post.AuthorId == me.Id);
+    }
+
+    public void Quote(string text, string quotedPostId, Action<bool> onComplete)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0 || posting)
+        {
+            return;
+        }
+
+        posting = true;
+        work.Run("quote", async token =>
+        {
+            var created = await client.QuotePostAsync(trimmed, quotedPostId, token).ConfigureAwait(false);
+            if (created is null)
+            {
+                return false;
+            }
+
+            AcceptCreatedPost(created);
+            return true;
+        }, onComplete, () => posting = false);
+    }
+
     public void UpdateAvatar(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
     {
         if (avatarBusy)

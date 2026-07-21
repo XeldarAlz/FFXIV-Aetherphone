@@ -52,7 +52,7 @@ internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffset
 
 internal sealed record UpdateChatPrivacyRequest(bool? ShareReadReceipts, bool? SharePresence);
 
-internal sealed record CreatePostRequest(string Text);
+internal sealed record CreatePostRequest(string Text, string? QuotedPostId = null);
 
 internal sealed record ReactRequest(int Kind);
 
@@ -102,7 +102,12 @@ internal sealed record PostDto(
     string ScanStatus = "clean",
     string[]? MediaUrls = null,
     MentionDto[]? Mentions = null,
-    PhotoTagDto[]? PhotoTags = null) : IIdentified;
+    PhotoTagDto[]? PhotoTags = null,
+    string? RepostOfId = null,
+    string? QuotedPostId = null,
+    PostDto? ReferencedPost = null,
+    int RepostCount = 0,
+    bool MyReposted = false) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 

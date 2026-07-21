@@ -7,6 +7,7 @@ internal sealed class ChirperActionReveal
         None,
         Picker,
         Menu,
+        Repost,
     }
 
     private const float OpenSeconds = 0.22f;

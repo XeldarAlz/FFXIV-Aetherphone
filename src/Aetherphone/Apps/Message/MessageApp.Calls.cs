@@ -9,7 +9,6 @@ using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
 
@@ -369,39 +368,79 @@ internal sealed partial class MessageApp
         var drawList = ImGui.GetWindowDrawList();
         var others = Others(view);
         var centerX = content.Center.X;
-        var avatarTop = content.Min.Y + 40f * scale;
+        var connecting = view.State is CallState.Dialing or CallState.Connecting;
+        var avatarTop = content.Min.Y + 54f * scale;
         if (others.Count <= 1)
         {
-            var radius = 52f * scale;
+            var radius = 56f * scale;
             var avatarCenter = new Vector2(centerX, avatarTop + radius);
+            DrawAvatarBloom(drawList, avatarCenter, radius, screenTheme, scale);
+            if (connecting)
+            {
+                DrawCallingPulse(drawList, avatarCenter, radius, scale);
+            }
+
             if (others.Count == 1)
             {
-                DrawSpeakingHalo(drawList, avatarCenter, radius, calls.LevelOf(others[0]), scale);
-                AvatarView.Draw(drawList, avatarCenter, radius, screenTheme.Accent, Initial(view.PeerLabel), 2.4f,
+                if (view.State == CallState.Active)
+                {
+                    DrawSpeakingHalo(drawList, avatarCenter, radius, calls.LevelOf(others[0]), scale);
+                }
+
+                AvatarView.Draw(drawList, avatarCenter, radius, screenTheme.Accent, Initial(view.PeerLabel), 2.6f,
                     lodestone.Avatar(others[0].Name, others[0].World), 64);
             }
             else
             {
                 drawList.AddCircleFilled(avatarCenter, radius, ImGui.GetColorU32(screenTheme.Accent), 64);
-                Typography.DrawCentered(avatarCenter, Initial(view.PeerLabel), White, 2.4f);
+                Typography.DrawCentered(avatarCenter, Initial(view.PeerLabel), White, TextStyles.LargeTitle);
             }
+
+            DrawCallHeadings(centerX, avatarCenter.Y + radius + 34f * scale, view, screenTheme, scale);
         }
         else
         {
             DrawParticipantGrid(content, others, screenTheme, scale, avatarTop);
-        }
-
-        var labelY = others.Count <= 1 ? avatarTop + 104f * scale + 22f * scale : avatarTop + 150f * scale;
-        Typography.DrawCentered(new Vector2(centerX, labelY), view.PeerLabel, screenTheme.TextStrong, 1.6f);
-        Typography.DrawCentered(new Vector2(centerX, labelY + 28f * scale), StatusLine(view),
-            Palette.WithAlpha(screenTheme.TextStrong, 0.75f), 0.95f);
-        if (view.State == CallState.Active)
-        {
-            Typography.DrawCentered(new Vector2(centerX, labelY + 50f * scale), Loc.T(L.Phone.UseHeadphones),
-                screenTheme.TextMuted, 0.75f);
+            DrawCallHeadings(centerX, avatarTop + 150f * scale, view, screenTheme, scale);
         }
 
         DrawCallControls(context, view, scale, screenTheme);
+    }
+
+    private void DrawCallHeadings(float centerX, float nameCenterY, CallView view, PhoneTheme screenTheme, float scale)
+    {
+        Typography.DrawCentered(new Vector2(centerX, nameCenterY), view.PeerLabel, screenTheme.TextStrong,
+            TextStyles.Title1);
+        var statusColor = view.Connected
+            ? Palette.WithAlpha(screenTheme.TextStrong, 0.72f)
+            : Palette.WithAlpha(CallGreen, 0.95f);
+        Typography.DrawCentered(new Vector2(centerX, nameCenterY + 32f * scale), StatusLine(view), statusColor,
+            TextStyles.Callout);
+        if (view.State == CallState.Active)
+        {
+            Typography.DrawCentered(new Vector2(centerX, nameCenterY + 58f * scale), Loc.T(L.Phone.UseHeadphones),
+                Palette.WithAlpha(screenTheme.TextStrong, 0.45f), TextStyles.Footnote);
+        }
+    }
+
+    private static void DrawAvatarBloom(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme screenTheme,
+        float scale)
+    {
+        for (var ring = 3; ring >= 1; ring--)
+        {
+            var bloomRadius = radius + ring * 15f * scale;
+            drawList.AddCircleFilled(center, bloomRadius,
+                ImGui.GetColorU32(Palette.WithAlpha(screenTheme.Accent, 0.05f)), 64);
+        }
+    }
+
+    private static void DrawCallingPulse(ImDrawListPtr drawList, Vector2 center, float radius, float scale)
+    {
+        var phase = (float)(ImGui.GetTime() % 2.0) * 0.5f;
+        var spread = (8f + 34f * phase) * scale;
+        var alpha = 0.4f * (1f - phase);
+        drawList.AddCircle(center, radius + spread, ImGui.GetColorU32(Palette.WithAlpha(CallGreen, alpha)), 64,
+            2.2f * scale);
     }
 
     private void DrawParticipantGrid(Rect content, List<ParticipantInfo> others, PhoneTheme screenTheme, float scale,
@@ -430,48 +469,50 @@ internal sealed partial class MessageApp
     {
         var content = context.Content;
         var centerX = content.Center.X;
-        var controlsY = content.Max.Y - 54f * scale;
-        var muteFill = view.Muted ? CallGreen : Palette.WithAlpha(screenTheme.TextStrong, 0.16f);
-        if (CircleButton(new Vector2(centerX - 76f * scale, controlsY), 24f * scale,
-                view.Muted ? FontAwesomeIcon.MicrophoneSlash : FontAwesomeIcon.Microphone, muteFill,
-                screenTheme.TextStrong))
+        var controlsY = content.Max.Y - 74f * scale;
+        var spacing = 84f * scale;
+        var frost = Palette.WithAlpha(screenTheme.TextStrong, 0.16f);
+        var ink = screenTheme.TextStrong;
+        var labelColor = Palette.WithAlpha(screenTheme.TextStrong, 0.72f);
+        var muteFill = view.Muted ? White : frost;
+        var muteInk = view.Muted ? new Vector4(0.10f, 0.11f, 0.14f, 1f) : ink;
+        if (ControlButton(new Vector2(centerX - spacing, controlsY), 27f * scale,
+                view.Muted ? FontAwesomeIcon.MicrophoneSlash : FontAwesomeIcon.Microphone, muteFill, muteInk,
+                Loc.T(L.Message.MuteAction), labelColor, 1f, true))
         {
             calls.ToggleMute();
         }
 
-        if (CircleButton(new Vector2(centerX, controlsY), 30f * scale, FontAwesomeIcon.PhoneSlash, screenTheme.Danger,
-                White))
+        if (ControlButton(new Vector2(centerX, controlsY), 33f * scale, FontAwesomeIcon.PhoneSlash, screenTheme.Danger,
+                White, Loc.T(L.Phone.End), labelColor, 1.15f, true))
         {
             calls.Hangup();
         }
 
         var canAdd = view.State == CallState.Active;
-        if (CircleButton(new Vector2(centerX + 76f * scale, controlsY), 24f * scale, FontAwesomeIcon.UserPlus,
-                Palette.WithAlpha(screenTheme.TextStrong, 0.16f), screenTheme.TextStrong, canAdd) && canAdd)
+        if (ControlButton(new Vector2(centerX + spacing, controlsY), 27f * scale, FontAwesomeIcon.UserPlus, frost, ink,
+                Loc.T(L.Friends.Add), labelColor, 1f, canAdd) && canAdd)
         {
             router.Push(MessageRoute.AddToCall);
         }
     }
 
-    private static bool CircleButton(Vector2 center, float radius, FontAwesomeIcon icon, Vector4 fill, Vector4 ink,
-        bool enabled = true)
+    private static bool ControlButton(Vector2 center, float radius, FontAwesomeIcon icon, Vector4 fill, Vector4 ink,
+        string label, Vector4 labelColor, float iconScale, bool enabled)
     {
         var drawList = ImGui.GetWindowDrawList();
+        var scale = ImGuiHelpers.GlobalScale;
         var min = center - new Vector2(radius, radius);
         var max = center + new Vector2(radius, radius);
         var hovered = enabled && ImGui.IsMouseHoveringRect(min, max);
-        var color = hovered ? Palette.Mix(fill, White, 0.14f) : fill;
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, enabled ? color.W : 0.4f)),
-            32);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        var baseFill = hovered ? Palette.Mix(fill, White, 0.14f) : fill;
+        var fillAlpha = enabled ? MathF.Max(baseFill.W, 0.16f) : baseFill.W * 0.4f;
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(baseFill, fillAlpha)), 40);
+        AppSkin.Icon(center, icon.ToIconString(), Palette.WithAlpha(ink, enabled ? 1f : 0.45f), iconScale);
+        if (label.Length > 0)
         {
-            var glyph = icon.ToIconString();
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(center - size * 0.5f);
-            using (ImRaii.PushColor(ImGuiCol.Text, Palette.WithAlpha(ink, enabled ? 1f : 0.5f)))
-            {
-                Typography.Plain(glyph);
-            }
+            Typography.DrawCentered(new Vector2(center.X, max.Y + 14f * scale), label,
+                Palette.WithAlpha(labelColor, enabled ? 1f : 0.45f), TextStyles.Caption1);
         }
 
         if (hovered)

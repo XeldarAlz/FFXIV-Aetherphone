@@ -65,6 +65,7 @@ internal sealed class PhoneShell : IDisposable
         navigation = new NavigationStack(apps);
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
+        navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
             services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
@@ -79,6 +80,7 @@ internal sealed class PhoneShell : IDisposable
         var banOverlay = new BanOverlay(services.AethernetSession);
         var confirmOverlay = new ConfirmOverlay(services.Confirm);
         var reportOverlay = new ReportOverlay(services.Report);
+        var conductOverlay = new ConductGateOverlay(services.Conduct);
         setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
             services.RemoteImages, services.Lodestone, bundle.Photos, services.WallpaperImages, navigation,
             configuration, services.Confirm);
@@ -86,7 +88,7 @@ internal sealed class PhoneShell : IDisposable
         transition = new ShellTransitionRenderer(themes, navigation, home, painter);
         morph = new MinimizeMorphView(themes, minimize, minimizedView, notifications, painter);
         overlays = new ShellOverlayCoordinator(configuration, loading, navigation, controlCenter, banner, island,
-            incomingOverlay, banOverlay, confirmOverlay, reportOverlay, director, setup);
+            incomingOverlay, banOverlay, confirmOverlay, reportOverlay, conductOverlay, director, setup);
     }
 
     public void OnOpened()

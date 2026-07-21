@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
@@ -20,6 +21,7 @@ internal sealed class CallHub : IDisposable
     private readonly CallSignalRouter router;
     private readonly CallAudioController audio;
     private readonly CallLogStore log;
+    private readonly ConfirmService confirm;
     private readonly object gate = new();
     private CallState state = CallState.Idle;
     private Guid callId;
@@ -32,15 +34,25 @@ internal sealed class CallHub : IDisposable
     private volatile bool callScreenRequested;
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
-        SoundService sound, PlaybackHub playback, RealtimeSignalBus signals)
+        SoundService sound, PlaybackHub playback, RealtimeSignalBus signals, ConfirmService confirm)
     {
         this.configuration = configuration;
         this.session = session;
         this.notifications = notifications;
         this.sound = sound;
+        this.confirm = confirm;
         router = new CallSignalRouter(session, signals);
         audio = new CallAudioController(configuration, playback, router.Connection);
         log = new CallLogStore(configuration);
+    }
+
+    private enum CallEndReason : byte
+    {
+        None,
+        Declined,
+        Unavailable,
+        NoAnswer,
+        ConnectionLost,
     }
 
     public event Action? IncomingCallPresented;
@@ -249,11 +261,13 @@ internal sealed class CallHub : IDisposable
         }
 
         router.Send(new CallControl { Type = SignalType.Decline, CallId = id });
-        EndCall(notify: false, reason: null);
+        EndCall(CallEndReason.None);
         LogMissed(from, notify: timedOut);
     }
 
-    public void Hangup()
+    public void Hangup() => Leave(CallEndReason.None);
+
+    private void Leave(CallEndReason reason)
     {
         string? id;
         lock (gate)
@@ -267,7 +281,7 @@ internal sealed class CallHub : IDisposable
         }
 
         router.Send(new CallControl { Type = SignalType.Leave, CallId = id });
-        EndCall(notify: false, reason: null);
+        EndCall(reason);
     }
 
     public void ToggleMute()
@@ -327,7 +341,7 @@ internal sealed class CallHub : IDisposable
 
         if (reconnectTimeout)
         {
-            EndCall(notify: true, reason: Loc.T(L.Phone.ConnectionLost));
+            EndCall(CallEndReason.ConnectionLost);
             return;
         }
 
@@ -342,9 +356,7 @@ internal sealed class CallHub : IDisposable
         }
         else if (dialTimeout)
         {
-            Hangup();
-            notifications.Notify(new PhoneNotification("message", Loc.T(L.Phone.NoAnswerTitle), Loc.T(L.Phone.NoAnswerBody), DateTime.Now,
-                Accent));
+            Leave(CallEndReason.NoAnswer);
         }
     }
 
@@ -459,7 +471,7 @@ internal sealed class CallHub : IDisposable
 
         if (ended)
         {
-            EndCall(notify: true, reason: Loc.T(L.Phone.CallDeclined));
+            EndCall(CallEndReason.Declined);
         }
     }
 
@@ -473,7 +485,7 @@ internal sealed class CallHub : IDisposable
 
         if (matched)
         {
-            EndCall(notify: true, reason: Loc.T(L.Phone.Unavailable));
+            EndCall(CallEndReason.Unavailable);
         }
     }
 
@@ -492,7 +504,7 @@ internal sealed class CallHub : IDisposable
 
         if (matched)
         {
-            EndCall(notify: false, reason: null);
+            EndCall(CallEndReason.None);
             LogMissed(missedFrom, notify: true);
         }
     }
@@ -507,7 +519,7 @@ internal sealed class CallHub : IDisposable
 
         if (matched)
         {
-            EndCall(notify: false, reason: null);
+            EndCall(CallEndReason.None);
         }
     }
 
@@ -541,7 +553,7 @@ internal sealed class CallHub : IDisposable
 
         if (abandonRinging)
         {
-            EndCall(notify: false, reason: null);
+            EndCall(CallEndReason.None);
             LogMissed(missedFrom, notify: false);
         }
     }
@@ -575,12 +587,13 @@ internal sealed class CallHub : IDisposable
         }
     }
 
-    private void EndCall(bool notify, string? reason)
+    private void EndCall(CallEndReason reason)
     {
         CallSession? toDispose;
         bool wasConnected;
         double durationMs;
         CallState priorState;
+        string peerName;
         lock (gate)
         {
             if (state == CallState.Idle)
@@ -589,19 +602,65 @@ internal sealed class CallHub : IDisposable
             }
 
             priorState = state;
+            peerName = PeerNameLocked();
             wasConnected = audio.StartTicksLocked != 0;
             durationMs = wasConnected ? Environment.TickCount64 - audio.StartTicksLocked : 0;
             toDispose = ClearLocked();
         }
 
-        AepLog.Info($"[calls] ended from={priorState} reason={reason ?? "server hung up"} connected={wasConnected} duration_ms={durationMs:F0}");
+        AepLog.Info($"[calls] ended from={priorState} reason={reason} connected={wasConnected} duration_ms={durationMs:F0}");
 
         sound.StopCallRing();
         toDispose?.Dispose();
-        if (notify && reason is not null)
+        RaiseOutcome(reason, peerName);
+    }
+
+    private void RaiseOutcome(CallEndReason reason, string peerName)
+    {
+        string title;
+        string body;
+        switch (reason)
         {
-            notifications.Notify(new PhoneNotification("message", reason, Loc.T(L.Phone.CallEnded), DateTime.Now, Accent));
+            case CallEndReason.Unavailable:
+                title = Loc.T(L.Phone.OutcomeUnavailableTitle, peerName);
+                body = Loc.T(L.Phone.OutcomeUnavailableBody);
+                break;
+            case CallEndReason.Declined:
+                title = Loc.T(L.Phone.OutcomeDeclinedTitle, peerName);
+                body = Loc.T(L.Phone.OutcomeDeclinedBody);
+                break;
+            case CallEndReason.NoAnswer:
+                title = Loc.T(L.Phone.NoAnswerTitle);
+                body = Loc.T(L.Phone.OutcomeNoAnswerBody, peerName);
+                break;
+            case CallEndReason.ConnectionLost:
+                title = Loc.T(L.Phone.OutcomeDroppedTitle);
+                body = Loc.T(L.Phone.OutcomeDroppedBody);
+                break;
+            default:
+                return;
         }
+
+        confirm.Alert(title, body, Loc.T(L.Phone.OutcomeDismiss));
+    }
+
+    private string PeerNameLocked()
+    {
+        if (dialingTo is not null && dialingTo.DisplayName.Length > 0)
+        {
+            return dialingTo.DisplayName;
+        }
+
+        var localId = LocalUserId;
+        for (var index = 0; index < roster.Length; index++)
+        {
+            if (roster[index].UserId != localId && roster[index].DisplayName.Length > 0)
+            {
+                return roster[index].DisplayName;
+            }
+        }
+
+        return incomingFrom?.DisplayName ?? string.Empty;
     }
 
     private CallSession? ClearLocked()
@@ -682,7 +741,7 @@ internal sealed class CallHub : IDisposable
         }
         else
         {
-            EndCall(notify: false, reason: null);
+            EndCall(CallEndReason.None);
             router.Stop();
         }
     }

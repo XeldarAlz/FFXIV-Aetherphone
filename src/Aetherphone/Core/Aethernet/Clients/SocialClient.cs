@@ -97,6 +97,21 @@ internal sealed class SocialClient
         return net.RequestAsync(HttpMethod.Delete, $"/posts/{postId}/like", AethernetJsonContext.Default.PostDto, token);
     }
 
+    public Task<PostDto?> RepostAsync(string postId, CancellationToken token)
+    {
+        return net.RequestAsync(HttpMethod.Post, $"/posts/{postId}/repost", AethernetJsonContext.Default.PostDto, token);
+    }
+
+    public Task<PostDto?> UnrepostAsync(string postId, CancellationToken token)
+    {
+        return net.RequestAsync(HttpMethod.Delete, $"/posts/{postId}/repost", AethernetJsonContext.Default.PostDto, token);
+    }
+
+    public Task<PostDto?> QuotePostAsync(string text, string quotedPostId, CancellationToken token)
+    {
+        return net.PostAsync("/posts", new CreatePostRequest(text, quotedPostId), AethernetJsonContext.Default.CreatePostRequest, AethernetJsonContext.Default.PostDto, token);
+    }
+
     public Task<CommentPage?> CommentsAsync(string postId, string? cursor, CancellationToken token)
     {
         var path = $"/posts/{postId}/comments";
