@@ -519,8 +519,11 @@ internal static class L
     {
         public static readonly LocString[] Release0987 =
         {
+            new("changelog.r0987.3", "After hearing your concerns, we have completely removed anonymous usage analytics for everyone; Aetherphone no longer collects any analytics at all, so feel free to use the phone all you like"),
+            new("changelog.r0987.4", "We have removed AI moderation completely; your posts and comments are no longer reviewed by AI"),
+            new("changelog.r0987.6", "Removed the KupoAI app from the phone; there are no longer any AI features in Aetherphone"),
+            new("changelog.r0987.5", "Moderation is now handled through your reports, with new protections added to the report system, and members now receive a warning for any bad behavior"),
             new("changelog.r0987.0", "Photos and avatars now load faster: images are cached on your device instead of being downloaded again every time you scroll"),
-            new("changelog.r0987.1", "Your own comments now show an In review tag while automatic moderation checks them, so you know why others cannot see them yet"),
             new("changelog.r0987.2", "When moderation removes one of your comments, the notification now says it was a comment and gives the reason"),
         };
 
