@@ -451,6 +451,7 @@
   "changelog.r0985.5": "Deine verschlüsselten Chats ziehen jetzt mit dir um: Speichere einen Wiederherstellungscode und nutze ihn, um sie auf einem neuen Gerät wiederherzustellen, wenn du dich anmeldest",
   "changelog.r0985.6": "Behoben, dass der Wiederaufbau der Doman-Enklave in Dailies als tägliche Aufgabe erschien; er richtet sich jetzt nach seinem wöchentlichen Reset",
   "changelog.r0985.7": "Behoben, dass sich die Beispielbenachrichtigung des Befehls /phone test nicht aus dem Benachrichtigungscenter entfernen ließ",
+  "changelog.r0986.0": "Ein Verbindungsproblem mit dem Server wurde behoben, sodass das Telefon jetzt zuverlässiger verbunden bleibt",
   "changelog.r0985.0": "Die Entdecken-Filter in Velvet enthalten jetzt eine Region, sodass du die angezeigten Leute auf NA, EU, JP oder OCE eingrenzen kannst",
   "changelog.r0985.1": "Linkpearl hat jetzt im Tab Chats eine Glockenschaltfläche, die alle Chat- und Linkshell-Benachrichtigungen auf einmal pausiert und beim erneuten Antippen wieder einschaltet",
   "changelog.r0985.2": "Die Suche in Velvet wurde behoben, sodass du Leute nach Name, Benutzername oder den Tags in ihrem Profil finden kannst",

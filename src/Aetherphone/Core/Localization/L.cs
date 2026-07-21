@@ -519,6 +519,11 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0986 =
+        {
+            new("changelog.r0986.0", "Fixed a connection issue with the server, so the phone now stays connected more reliably"),
+        };
+
         public static readonly LocString[] Release0985 =
         {
             new("changelog.r0985.3", "Aetherphone now has full-color emoji: tap the new emoji button to add them to your chats, posts, and comments, and they render inline right where you type"),

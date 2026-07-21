@@ -451,6 +451,7 @@
   "changelog.r0985.5": "Şifreli sohbetlerin artık seninle birlikte taşınabiliyor: bir kurtarma kodu kaydet ve yeni bir cihazda oturum açtığında sohbetlerini geri yüklemek için kullan",
   "changelog.r0985.6": "Doman Enclave yeniden inşasının Dailies'te günlük görev olarak görünmesi düzeltildi; artık haftalık sıfırlamasına göre takip ediliyor",
   "changelog.r0985.7": "/phone test komutundan gelen örnek bildirimin bildirim merkezinden kaldırılamaması düzeltildi",
+  "changelog.r0986.0": "Sunucuya bağlanmayla ilgili bir sorun düzeltildi; artık telefon daha güvenilir şekilde bağlı kalıyor",
   "changelog.r0985.0": "Velvet'in Keşfet filtreleri artık bir bölge içeriyor, böylece gördüğün kişileri NA, EU, JP veya OCE ile daraltabilirsin",
   "changelog.r0985.1": "Linkpearl'de artık Sohbetler sekmesinde, tüm sohbet ve linkshell bildirimlerini tek seferde duraklatan ve tekrar dokununca yeniden açan bir zil düğmesi var",
   "changelog.r0985.2": "Velvet'teki arama düzeltildi; artık kişileri ada, kullanıcı adına veya profillerindeki etiketlere göre bulabilirsin",
