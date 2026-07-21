@@ -6,7 +6,7 @@ internal readonly record struct VoiceNoteState(bool Current, bool Playing, float
 
 internal sealed class VoiceNotePlayer : IDisposable
 {
-    private WaveOutEvent? output;
+    private IWavePlayer? output;
     private WaveFileReader? reader;
     private string? playingId;
 
@@ -54,7 +54,7 @@ internal sealed class VoiceNotePlayer : IDisposable
         try
         {
             reader = new WaveFileReader(new MemoryStream(wavBytes, writable: false));
-            output = new WaveOutEvent();
+            output = AudioOutputFactory.Create();
             output.Init(reader);
             output.Play();
             playingId = messageId;
