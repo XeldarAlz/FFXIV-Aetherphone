@@ -76,6 +76,7 @@ internal sealed class PhoneShell : IDisposable
         var home = new HomeScreen(apps, bundle.Widgets, configuration);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);
+        var banOverlay = new BanOverlay(services.AethernetSession);
         var confirmOverlay = new ConfirmOverlay(services.Confirm);
         var reportOverlay = new ReportOverlay(services.Report);
         setup = new SetupOverlay(services.AethernetSession, services.Aethernet, services.GameData,
@@ -85,7 +86,7 @@ internal sealed class PhoneShell : IDisposable
         transition = new ShellTransitionRenderer(themes, navigation, home, painter);
         morph = new MinimizeMorphView(themes, minimize, minimizedView, notifications, painter);
         overlays = new ShellOverlayCoordinator(configuration, loading, navigation, controlCenter, banner, island,
-            incomingOverlay, confirmOverlay, reportOverlay, director, setup);
+            incomingOverlay, banOverlay, confirmOverlay, reportOverlay, director, setup);
     }
 
     public void OnOpened()

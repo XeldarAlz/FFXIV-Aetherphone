@@ -74,6 +74,39 @@ internal static class VelvetRelationship
         };
 }
 
+internal static class VelvetGender
+{
+    public const int None = 0;
+    public const int Female = 1 << 0;
+    public const int Male = 1 << 1;
+    public const int Femboy = 1 << 2;
+    public const int FemalePlus = 1 << 3;
+    public const int MalePlus = 1 << 4;
+    public const int Other = 1 << 5;
+
+    public const int Mask = Female | Male | Femboy | FemalePlus | MalePlus | Other;
+
+    public static readonly int[] All = { Female, Male, Femboy, FemalePlus, MalePlus, Other };
+
+    public static bool Has(int mask, int flag) => (mask & flag) != 0;
+
+    public static int Toggle(int mask, int flag) => (mask & flag) != 0 ? mask & ~flag : mask | flag;
+
+    public static int Sanitize(int mask) => mask & Mask;
+
+    public static string Label(int flag) =>
+        flag switch
+        {
+            Female => Loc.T(L.Velvet.GenderFemale),
+            Male => Loc.T(L.Velvet.GenderMale),
+            Femboy => Loc.T(L.Velvet.GenderFemboy),
+            FemalePlus => Loc.T(L.Velvet.GenderFemalePlus),
+            MalePlus => Loc.T(L.Velvet.GenderMalePlus),
+            Other => Loc.T(L.Velvet.GenderOther),
+            _ => string.Empty,
+        };
+}
+
 internal static class VelvetConnectionState
 {
     public const int None = 0;

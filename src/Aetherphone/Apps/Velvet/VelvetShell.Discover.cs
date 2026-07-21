@@ -14,13 +14,16 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed partial class VelvetShell
 {
-    private const int RegionChipFlag = -1;
+    private const int IntentChipKind = 0;
+    private const int RegionChipKind = 1;
+    private const int GenderChipKind = 2;
     private const int RegionFilterFill = 8;
 
     private string discoverQuery = string.Empty;
     private string discoverApplied = string.Empty;
     private float discoverDebounce;
     private int discoverIntent;
+    private int discoverGender;
     private string discoverRegion = string.Empty;
 
     private void DrawDiscover(Rect area)
@@ -42,7 +45,7 @@ internal sealed partial class VelvetShell
 
         if (!store.DiscoverLoaded && !store.LoadingDiscover)
         {
-            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverRegion);
+            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
         }
 
         var listRect = new Rect(new Vector2(area.Min.X, searchRect.Max.Y + 8f * scale), area.Max);
@@ -114,7 +117,8 @@ internal sealed partial class VelvetShell
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var active = VelvetIntent.Sanitize(discoverIntent) != 0 || discoverRegion.Length > 0;
+        var active = VelvetIntent.Sanitize(discoverIntent) != 0 || VelvetGender.Sanitize(discoverGender) != 0
+            || discoverRegion.Length > 0;
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = Metrics.Radius.Field * scale;
         var fill = active
@@ -151,43 +155,70 @@ internal sealed partial class VelvetShell
     {
         var scale = ImGuiHelpers.GlobalScale;
         var mask = VelvetIntent.Sanitize(discoverIntent);
+        var genderMask = VelvetGender.Sanitize(discoverGender);
         var hasRegion = discoverRegion.Length > 0;
-        if (mask == 0 && !hasRegion)
+        if (mask == 0 && genderMask == 0 && !hasRegion)
         {
             Gap(6f);
             return;
         }
 
-        var defs = VelvetIntent.All;
+        var intentDefs = VelvetIntent.All;
+        var genderDefs = VelvetGender.All;
         var count = hasRegion ? 1 : 0;
-        for (var index = 0; index < defs.Length; index++)
+        for (var index = 0; index < genderDefs.Length; index++)
         {
-            if ((mask & defs[index].Flag) != 0)
+            if ((genderMask & genderDefs[index]) != 0)
+            {
+                count++;
+            }
+        }
+
+        for (var index = 0; index < intentDefs.Length; index++)
+        {
+            if ((mask & intentDefs[index].Flag) != 0)
             {
                 count++;
             }
         }
 
         var models = new VChipModel[count];
+        var kinds = new int[count];
         var flags = new int[count];
         var cursor = 0;
         if (hasRegion)
         {
             models[cursor] = new VChipModel(discoverRegion, VChipStyle.Tint, VelvetTheme.RegionAccent,
                 FontAwesomeIcon.Globe, true);
-            flags[cursor] = RegionChipFlag;
+            kinds[cursor] = RegionChipKind;
             cursor++;
         }
 
-        for (var index = 0; index < defs.Length; index++)
+        for (var index = 0; index < genderDefs.Length; index++)
         {
-            var def = defs[index];
+            var flag = genderDefs[index];
+            if ((genderMask & flag) == 0)
+            {
+                continue;
+            }
+
+            models[cursor] = new VChipModel(VelvetGender.Label(flag), VChipStyle.Tint, VelvetTheme.Rose,
+                FontAwesomeIcon.VenusMars, true);
+            kinds[cursor] = GenderChipKind;
+            flags[cursor] = flag;
+            cursor++;
+        }
+
+        for (var index = 0; index < intentDefs.Length; index++)
+        {
+            var def = intentDefs[index];
             if ((mask & def.Flag) == 0)
             {
                 continue;
             }
 
             models[cursor] = new VChipModel(Loc.T(def.Label), VChipStyle.Tint, def.Hue, def.Icon, true);
+            kinds[cursor] = IntentChipKind;
             flags[cursor] = def.Flag;
             cursor++;
         }
@@ -196,16 +227,20 @@ internal sealed partial class VelvetShell
         var removed = VChipFlow.Draw(models, width, scale);
         if (removed >= 0)
         {
-            if (flags[removed] == RegionChipFlag)
+            switch (kinds[removed])
             {
-                discoverRegion = string.Empty;
-            }
-            else
-            {
-                discoverIntent = VelvetIntent.Toggle(discoverIntent, flags[removed]);
+                case RegionChipKind:
+                    discoverRegion = string.Empty;
+                    break;
+                case GenderChipKind:
+                    discoverGender = VelvetGender.Toggle(discoverGender, flags[removed]);
+                    break;
+                default:
+                    discoverIntent = VelvetIntent.Toggle(discoverIntent, flags[removed]);
+                    break;
             }
 
-            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverRegion);
+            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
         }
 
         Gap(10f);
@@ -219,13 +254,14 @@ internal sealed partial class VelvetShell
         }
 
         var scale = ImGuiHelpers.GlobalScale;
-        var selection = filterSheet.Draw(screen, scale, discoverIntent, discoverRegion);
-        if (selection.Mask != discoverIntent ||
+        var selection = filterSheet.Draw(screen, scale, discoverIntent, discoverGender, discoverRegion);
+        if (selection.Mask != discoverIntent || selection.GenderMask != discoverGender ||
             !string.Equals(selection.Region, discoverRegion, StringComparison.Ordinal))
         {
             discoverIntent = selection.Mask;
+            discoverGender = selection.GenderMask;
             discoverRegion = selection.Region;
-            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverRegion);
+            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
         }
     }
 
@@ -421,7 +457,7 @@ internal sealed partial class VelvetShell
 
         discoverApplied = discoverQuery;
         discoverDebounce = 0f;
-        store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverRegion);
+        store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
     }
 
     private void DrawSearchField(Rect rect, ref string value, string hint)

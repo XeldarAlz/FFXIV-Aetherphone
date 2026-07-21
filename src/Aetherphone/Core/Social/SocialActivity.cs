@@ -15,6 +15,8 @@ internal static class SocialActivity
     public const int TypeMention = 7;
     public const int TypeCommentMention = 8;
     public const int TypePhotoTag = 9;
+    public const int TypeWarning = 10;
+    public const int TypeReportUpdate = 11;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";
@@ -66,6 +68,10 @@ internal static class SocialActivity
                 return string.IsNullOrEmpty(item.CommentId)
                     ? ContentModeration.RemovalMessage(item.Preview)
                     : ContentModeration.CommentRemovalMessage(item.Preview);
+            case TypeWarning:
+                return string.IsNullOrEmpty(item.Preview) ? Loc.T(L.Moderation.WarningBody) : item.Preview;
+            case TypeReportUpdate:
+                return ContentModeration.ReportOutcomeMessage(item.Preview);
             default:
                 return string.Empty;
         }

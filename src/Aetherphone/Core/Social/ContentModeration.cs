@@ -39,4 +39,13 @@ internal static class ContentModeration
             _ => Loc.T(L.Moderation.RemovedCommentPolicy),
         };
     }
+
+    public static string ReportOutcomeMessage(string? outcomeCode)
+    {
+        return (outcomeCode ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "resolved" => Loc.T(L.Moderation.ReportResolvedBody),
+            _ => Loc.T(L.Moderation.ReportDismissedBody),
+        };
+    }
 }

@@ -35,6 +35,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile bool loadingMoreDiscover;
     private volatile int discoverLookingFor;
     private volatile string discoverTags = string.Empty;
+    private volatile int discoverGender;
     private volatile string discoverRegion = string.Empty;
     private volatile int discoverEpoch;
     private volatile VelvetConnectionDto[] connections = Array.Empty<VelvetConnectionDto>();
@@ -452,7 +453,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         }, onComplete);
     }
 
-    public void RefreshDiscover(int lookingFor, string tags, string region)
+    public void RefreshDiscover(int lookingFor, string tags, int gender, string region)
     {
         if (!session.IsSignedIn)
         {
@@ -462,12 +463,13 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         var epoch = ++discoverEpoch;
         discoverLookingFor = lookingFor;
         discoverTags = tags;
+        discoverGender = gender;
         discoverRegion = region;
         discoverCursor = null;
         loadingDiscover = true;
         work.Run("discover", async token =>
         {
-            var page = await client.DiscoverAsync(lookingFor, tags, region, null, token).ConfigureAwait(false);
+            var page = await client.DiscoverAsync(lookingFor, tags, gender, region, null, token).ConfigureAwait(false);
             if (page is not null && epoch == discoverEpoch)
             {
                 discoverResults = page.Users;
@@ -497,7 +499,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         loadingMoreDiscover = true;
         work.Run("discover more", async token =>
         {
-            var page = await client.DiscoverAsync(discoverLookingFor, discoverTags, discoverRegion, cursor, token)
+            var page = await client.DiscoverAsync(discoverLookingFor, discoverTags, discoverGender, discoverRegion, cursor,
+                    token)
                 .ConfigureAwait(false);
             if (page is not null && epoch == discoverEpoch)
             {

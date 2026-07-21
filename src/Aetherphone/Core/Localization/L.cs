@@ -118,6 +118,11 @@ internal static class L
         public static readonly LocString RemovedCommentHate = new("moderation.removedCommentHate", "Your comment was removed because it appears to contain hateful content.");
         public static readonly LocString RemovedCommentSelfHarm = new("moderation.removedCommentSelfHarm", "Your comment was removed because it appears to reference self-harm.");
         public static readonly LocString RemovedCommentPolicy = new("moderation.removedCommentPolicy", "Your comment was removed for violating the community guidelines.");
+        public static readonly LocString WarningTitle = new("moderation.warningTitle", "Warning from moderators");
+        public static readonly LocString WarningBody = new("moderation.warningBody", "A moderator reviewed your activity. Please follow the community guidelines. Repeated violations can lead to a ban.");
+        public static readonly LocString ReportUpdateTitle = new("moderation.reportUpdateTitle", "Report update");
+        public static readonly LocString ReportResolvedBody = new("moderation.reportResolvedBody", "Thanks for your report. We reviewed it and took action.");
+        public static readonly LocString ReportDismissedBody = new("moderation.reportDismissedBody", "Thanks for your report. We reviewed it and found nothing that breaks the rules this time.");
     }
 
     internal static class Apps
@@ -1123,6 +1128,10 @@ internal static class L
         public static readonly LocString FailChallengeExpiredBody = new("account.fail.challengeExpired.body", "This sign-in code expired. Start again to get a fresh one.");
         public static readonly LocString FailBannedTitle = new("account.fail.banned.title", "Character blocked");
         public static readonly LocString FailBannedBody = new("account.fail.banned.body", "This character can't sign in to Aethernet. Reach out to support if you think this is a mistake.");
+        public static readonly LocString BanScreenTitle = new("account.ban.title", "Account suspended");
+        public static readonly LocString BanScreenBody = new("account.ban.body", "This character has been banned from Aethernet and can no longer sign in.");
+        public static readonly LocString BanScreenReason = new("account.ban.reason", "Reason: {0}");
+        public static readonly LocString BanScreenContact = new("account.ban.contact", "If you believe this is a mistake, contact support.");
         public static readonly LocString FailRateLimitedTitle = new("account.fail.rateLimited.title", "Too many attempts");
         public static readonly LocString FailRateLimitedBody = new("account.fail.rateLimited.body", "You've tried a few times in a row. Wait a minute, then try again.");
         public static readonly LocString FailNetworkTitle = new("account.fail.network.title", "Can't reach Aethernet");
@@ -1626,6 +1635,13 @@ internal static class L
         public static readonly LocString CardRelationship = new("velvet.cardRelationship", "Relationship");
         public static readonly LocString CardTags = new("velvet.cardTags", "Tags");
         public static readonly LocString CardLimits = new("velvet.cardLimits", "Limits");
+        public static readonly LocString CardGender = new("velvet.cardGender", "Gender");
+        public static readonly LocString GenderFemale = new("velvet.genderFemale", "Female");
+        public static readonly LocString GenderMale = new("velvet.genderMale", "Male");
+        public static readonly LocString GenderFemboy = new("velvet.genderFemboy", "Femboy");
+        public static readonly LocString GenderFemalePlus = new("velvet.genderFemalePlus", "Female+");
+        public static readonly LocString GenderMalePlus = new("velvet.genderMalePlus", "Male+");
+        public static readonly LocString GenderOther = new("velvet.genderOther", "Other");
         public static readonly LocString LikesTitle = new("velvet.likesTitle", "Likes");
         public static readonly LocString NoLikes = new("velvet.noLikes", "No likes yet.");
         public static readonly LocString CommentsCount = new("velvet.commentsCount", "Comments · {0}");

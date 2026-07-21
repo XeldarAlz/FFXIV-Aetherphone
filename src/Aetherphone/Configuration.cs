@@ -121,6 +121,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool MessagesMergeMigrated { get; set; }
     public bool MessagesPerCharacterMigrated { get; set; }
     public Dictionary<string, long> SocialActivitySeenUnix { get; set; } = new();
+    public long ModerationNoticeSeenUnix { get; set; }
     public List<string> MutedLinkshells { get; set; } = new();
     public Dictionary<ulong, List<string>> MutedLinkshellsByCharacter { get; set; } = new();
     public bool LinkshellMutesPerCharacterMigrated { get; set; }

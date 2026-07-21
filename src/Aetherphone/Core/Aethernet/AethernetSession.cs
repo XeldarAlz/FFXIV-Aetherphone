@@ -9,6 +9,8 @@ internal sealed class AethernetSession
     private readonly IFramework framework;
     private volatile bool tokenRejected;
     private volatile bool hasDevAccess;
+    private volatile bool banned;
+    private volatile string? banReason;
     private ulong activeContentId;
 
     public AethernetSession(Configuration configuration, IFramework framework)
@@ -26,6 +28,8 @@ internal sealed class AethernetSession
     public bool IsSignedIn => Token is not null && !tokenRejected;
     public bool TokenRejected => tokenRejected;
     public bool HasDevAccess => hasDevAccess && IsSignedIn;
+    public bool IsBanned => banned;
+    public string? BanReason => banReason;
     public UserDto? CurrentUser { get; private set; }
 
     public ulong ActiveContentId => activeContentId;
@@ -49,6 +53,8 @@ internal sealed class AethernetSession
         _ = framework.RunOnFrameworkThread(() =>
         {
             tokenRejected = false;
+            banned = false;
+            banReason = null;
             LegacyClaimPending = false;
             configuration.AethernetToken = token;
             CurrentUser = user;
@@ -75,6 +81,8 @@ internal sealed class AethernetSession
         {
             tokenRejected = false;
             hasDevAccess = false;
+            banned = false;
+            banReason = null;
             LegacyClaimPending = false;
             if (activeContentId != 0)
             {
@@ -105,6 +113,19 @@ internal sealed class AethernetSession
         });
     }
 
+    public void ReportBanned(string? reason)
+    {
+        banned = true;
+        banReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        tokenRejected = true;
+        hasDevAccess = false;
+        _ = framework.RunOnFrameworkThread(() =>
+        {
+            CurrentUser = null;
+            Changed?.Invoke();
+        });
+    }
+
     public void SwitchTo(ulong contentId)
     {
         if (contentId == activeContentId)
@@ -116,6 +137,8 @@ internal sealed class AethernetSession
         activeContentId = contentId;
         tokenRejected = false;
         hasDevAccess = false;
+        banned = false;
+        banReason = null;
         CurrentUser = null;
         LegacyClaimPending = false;
         if (contentId != 0 && configuration.CharacterSessions.TryGetValue(contentId, out var stored))
@@ -147,6 +170,8 @@ internal sealed class AethernetSession
         configuration.LegacyUnclaimedEncryptionUserId = string.Empty;
         LegacyClaimPending = false;
         tokenRejected = false;
+        banned = false;
+        banReason = null;
         CurrentUser = user;
         StashActive();
         configuration.Save();

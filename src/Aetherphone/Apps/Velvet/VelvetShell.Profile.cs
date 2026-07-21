@@ -143,6 +143,15 @@ internal sealed partial class VelvetShell
             Gap(24f);
             DrawGallery(user, isMe, connected);
 
+            var genderLabel = VelvetGender.Label(VelvetGender.Sanitize(user.Gender));
+            if (genderLabel.Length > 0)
+            {
+                Gap(20f);
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardGender));
+                Gap(4f);
+                DrawDisplayTokens(new[] { genderLabel }, VChipStyle.Tint, VelvetTheme.Rose);
+            }
+
             if (user.Intro.Length > 0)
             {
                 Gap(20f);

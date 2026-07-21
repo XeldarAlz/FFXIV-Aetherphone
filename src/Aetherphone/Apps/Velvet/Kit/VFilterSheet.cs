@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Velvet;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
@@ -8,7 +9,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Velvet.Kit;
 
-internal readonly record struct VFilterSelection(int Mask, string Region);
+internal readonly record struct VFilterSelection(int Mask, int GenderMask, string Region);
 
 internal sealed class VFilterSheet
 {
@@ -18,6 +19,10 @@ internal sealed class VFilterSheet
     private const float RowHeight = 42f;
     private const float RegionHeaderHeight = 30f;
     private const float RegionRowHeight = 46f;
+    private const float GenderHeaderHeight = 30f;
+    private const float GenderRowHeight = 34f;
+    private const int GenderColumns = 2;
+    private const int GenderRows = 3;
     private const float FooterHeight = 54f;
 
     private bool open;
@@ -51,11 +56,11 @@ internal sealed class VFilterSheet
         }
     }
 
-    public VFilterSelection Draw(Rect screen, float scale, int mask, string region)
+    public VFilterSelection Draw(Rect screen, float scale, int mask, int genderMask, string region)
     {
         if (!open)
         {
-            return new VFilterSelection(mask, region);
+            return new VFilterSelection(mask, genderMask, region);
         }
 
         var defs = VelvetIntent.All;
@@ -69,7 +74,8 @@ internal sealed class VFilterSheet
         var footerHeight = FooterHeight * scale;
         var padY = 8f * scale;
         var radius = 16f * scale;
-        var height = padY + headerHeight + defs.Length * rowHeight
+        var genderSectionHeight = GenderHeaderHeight * scale + GenderRows * GenderRowHeight * scale;
+        var height = padY + headerHeight + defs.Length * rowHeight + genderSectionHeight
             + RegionHeaderHeight * scale + RegionRowHeight * scale + footerHeight + padY;
 
         var margin = 8f * scale;
@@ -139,7 +145,10 @@ internal sealed class VFilterSheet
             }
         }
 
-        var regionTop = rowsTop + defs.Length * rowHeight;
+        var genderTop = rowsTop + defs.Length * rowHeight;
+        DrawGenderSection(drawList, min, max, genderTop, scale, alpha, ref genderMask);
+
+        var regionTop = genderTop + genderSectionHeight;
         DrawRegionSection(drawList, min, max, regionTop, scale, alpha, ref region);
 
         var footerTop = regionTop + RegionHeaderHeight * scale + RegionRowHeight * scale;
@@ -151,7 +160,8 @@ internal sealed class VFilterSheet
         var clearSize = Typography.Measure(clearLabel, 0.9f, FontWeight.Medium);
         var clearMin = new Vector2(min.X + 12f * scale, footerCenterY - 16f * scale);
         var clearMax = new Vector2(clearMin.X + clearSize.X + 16f * scale, footerCenterY + 16f * scale);
-        var clearEnabled = VelvetIntent.Sanitize(mask) != 0 || region.Length > 0;
+        var clearEnabled = VelvetIntent.Sanitize(mask) != 0 || VelvetGender.Sanitize(genderMask) != 0
+            || region.Length > 0;
         var clearHovered = clearEnabled && ImGui.IsMouseHoveringRect(clearMin, clearMax);
         var clearInk = !clearEnabled ? VelvetTheme.Faint : clearHovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
         Typography.Draw(drawList, new Vector2(clearMin.X + 8f * scale, footerCenterY - clearSize.Y * 0.5f), clearLabel,
@@ -162,6 +172,7 @@ internal sealed class VFilterSheet
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
                 mask = VelvetIntent.Any;
+                genderMask = VelvetGender.None;
                 region = string.Empty;
             }
         }
@@ -193,7 +204,78 @@ internal sealed class VFilterSheet
             Close();
         }
 
-        return new VFilterSelection(mask, region);
+        return new VFilterSelection(mask, genderMask, region);
+    }
+
+    private static void DrawGenderSection(ImDrawListPtr drawList, Vector2 min, Vector2 max, float top, float scale,
+        float alpha, ref int genderMask)
+    {
+        var headerHeight = GenderHeaderHeight * scale;
+        var headerCenterY = top + headerHeight * 0.5f;
+        var headerLabel = Loc.T(L.Velvet.CardGender);
+        var headerSize = Typography.Measure(headerLabel, 0.82f, FontWeight.SemiBold);
+        Typography.Draw(drawList, new Vector2(min.X + 16f * scale, headerCenterY - headerSize.Y * 0.5f), headerLabel,
+            VelvetTheme.Alpha(VelvetTheme.HeaderInk, alpha), 0.82f, FontWeight.SemiBold);
+
+        var options = VelvetGender.All;
+        var gridLeft = min.X + 12f * scale;
+        var gridRight = max.X - 12f * scale;
+        var gridTop = top + headerHeight;
+        var rowHeight = GenderRowHeight * scale;
+        var colGap = 8f * scale;
+        var cellWidth = (gridRight - gridLeft - colGap * (GenderColumns - 1)) / GenderColumns;
+        var pillHeight = 28f * scale;
+
+        for (var index = 0; index < options.Length; index++)
+        {
+            var flag = options[index];
+            var column = index % GenderColumns;
+            var row = index / GenderColumns;
+            var cellLeft = gridLeft + column * (cellWidth + colGap);
+            var cellTop = gridTop + row * rowHeight;
+            var pillMin = new Vector2(cellLeft, cellTop + (rowHeight - pillHeight) * 0.5f);
+            var pillMax = new Vector2(cellLeft + cellWidth, pillMin.Y + pillHeight);
+            var selected = VelvetGender.Has(genderMask, flag);
+            var hovered = ImGui.IsMouseHoveringRect(pillMin, pillMax);
+
+            Vector4 fill;
+            if (selected)
+            {
+                fill = VelvetTheme.Alpha(VelvetTheme.Rose, 0.92f * alpha);
+            }
+            else if (hovered)
+            {
+                fill = VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.10f * alpha);
+            }
+            else
+            {
+                fill = VelvetTheme.Alpha(VelvetTheme.Sunken, alpha);
+            }
+
+            Squircle.Fill(drawList, pillMin, pillMax, pillHeight * 0.5f, fill.Packed());
+            if (!selected)
+            {
+                Squircle.Stroke(drawList, pillMin, pillMax, pillHeight * 0.5f,
+                    VelvetTheme.Alpha(VelvetTheme.CardStroke, alpha).Packed(), 1f * scale);
+            }
+
+            var ink = selected ? VelvetTheme.OnAccent : hovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
+            var label = VelvetGender.Label(flag);
+            var labelSize = Typography.Measure(label, 0.82f, FontWeight.SemiBold);
+            Typography.Draw(drawList,
+                new Vector2((pillMin.X + pillMax.X) * 0.5f - labelSize.X * 0.5f,
+                    (pillMin.Y + pillMax.Y) * 0.5f - labelSize.Y * 0.5f),
+                label, VelvetTheme.Alpha(ink, alpha), 0.82f, FontWeight.SemiBold);
+
+            if (hovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    genderMask = VelvetGender.Toggle(genderMask, flag);
+                }
+            }
+        }
     }
 
     private static void DrawRegionSection(ImDrawListPtr drawList, Vector2 min, Vector2 max, float top, float scale,

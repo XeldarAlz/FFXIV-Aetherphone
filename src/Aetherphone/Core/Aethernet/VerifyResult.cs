@@ -18,15 +18,15 @@ internal static class VerifyFailure
     public const string XivCharacterNotVerified = "xiv_character_not_verified";
 }
 
-internal readonly record struct VerifyResult(AuthResponse? Auth, string? FailureReason)
+internal readonly record struct VerifyResult(AuthResponse? Auth, string? FailureReason, string? BanReason = null)
 {
     public static VerifyResult Success(AuthResponse auth)
     {
         return new VerifyResult(auth, null);
     }
 
-    public static VerifyResult Failure(string reason)
+    public static VerifyResult Failure(string reason, string? banReason = null)
     {
-        return new VerifyResult(null, reason);
+        return new VerifyResult(null, reason, banReason);
     }
 }

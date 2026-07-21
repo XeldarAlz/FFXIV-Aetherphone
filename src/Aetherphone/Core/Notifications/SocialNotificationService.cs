@@ -174,10 +174,21 @@ internal sealed class SocialNotificationService : IDisposable
     private void Ingest(NotificationDto[] items)
     {
         var wasPrimed = primed;
+        var moderationMarker = configuration.ModerationNoticeSeenUnix;
+        var moderationSeeded = moderationMarker != 0;
+        var newestModeration = moderationMarker;
         for (var index = items.Length - 1; index >= 0; index--)
         {
             var item = items[index];
-            if (wasPrimed && !seenIds.Contains(item.Id))
+            var isModeration = IsModerationNotice(item.Type);
+            if (isModeration && item.CreatedAtUnix > newestModeration)
+            {
+                newestModeration = item.CreatedAtUnix;
+            }
+
+            var freshModeration = isModeration && moderationSeeded && item.CreatedAtUnix > moderationMarker;
+            var freshSession = wasPrimed && !seenIds.Contains(item.Id);
+            if (freshModeration || freshSession)
             {
                 Present(item);
             }
@@ -189,8 +200,21 @@ internal sealed class SocialNotificationService : IDisposable
             seenIds.Add(items[index].Id);
         }
 
+        if (newestModeration > configuration.ModerationNoticeSeenUnix)
+        {
+            configuration.ModerationNoticeSeenUnix = newestModeration;
+            configuration.Save();
+        }
+
         latest = items;
         primed = true;
+    }
+
+    private static bool IsModerationNotice(int type)
+    {
+        return type is SocialActivity.TypePostRemoved
+            or SocialActivity.TypeWarning
+            or SocialActivity.TypeReportUpdate;
     }
 
     private void Present(NotificationDto item)
@@ -201,11 +225,8 @@ internal sealed class SocialNotificationService : IDisposable
             return;
         }
 
-        var removed = item.Type == SocialActivity.TypePostRemoved;
-        var removedTitle = string.IsNullOrEmpty(item.CommentId)
-            ? L.Moderation.RemovedTitle
-            : L.Moderation.RemovedCommentTitle;
-        var title = removed ? Loc.T(removedTitle) : SocialActivity.ActorLabel(item);
+        var moderationTitle = ModerationTitle(item);
+        var title = moderationTitle ?? SocialActivity.ActorLabel(item);
         notifications.Notify(new PhoneNotification(item.App, title, body, DateTime.Now,
             AccentFor(item.App))
         {
@@ -214,13 +235,26 @@ internal sealed class SocialNotificationService : IDisposable
             SocialType = item.Type,
         });
 
-        if (removed)
+        if (moderationTitle is not null)
         {
-            confirm.Alert(
-                Loc.T(removedTitle),
-                $"{body}\n\n{Loc.T(L.Moderation.RemovedFooter)}",
-                Loc.T(L.Moderation.RemovedDismiss));
+            var alertBody = item.Type == SocialActivity.TypePostRemoved
+                ? $"{body}\n\n{Loc.T(L.Moderation.RemovedFooter)}"
+                : body;
+            confirm.Alert(moderationTitle, alertBody, Loc.T(L.Moderation.RemovedDismiss));
         }
+    }
+
+    private static string? ModerationTitle(NotificationDto item)
+    {
+        return item.Type switch
+        {
+            SocialActivity.TypePostRemoved => Loc.T(string.IsNullOrEmpty(item.CommentId)
+                ? L.Moderation.RemovedTitle
+                : L.Moderation.RemovedCommentTitle),
+            SocialActivity.TypeWarning => Loc.T(L.Moderation.WarningTitle),
+            SocialActivity.TypeReportUpdate => Loc.T(L.Moderation.ReportUpdateTitle),
+            _ => null,
+        };
     }
 
     private static Vector4 AccentFor(string app)

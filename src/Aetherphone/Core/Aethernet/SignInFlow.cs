@@ -104,7 +104,14 @@ internal sealed class SignInFlow : IDisposable
 
                 var reason = result.FailureReason ?? VerifyFailure.CodeNotFound;
                 status = string.Empty;
-                failureReason = reason;
+                if (reason == VerifyFailure.Banned)
+                {
+                    session.ReportBanned(result.BanReason);
+                }
+                else
+                {
+                    failureReason = reason;
+                }
             }
             catch (OperationCanceledException)
             {
@@ -206,7 +213,15 @@ internal sealed class SignInFlow : IDisposable
             }
 
             status = string.Empty;
-            failureReason = reason;
+            if (reason == VerifyFailure.Banned)
+            {
+                session.ReportBanned(result.BanReason);
+            }
+            else
+            {
+                failureReason = reason;
+            }
+
             ResetXivFlow();
             return;
         }

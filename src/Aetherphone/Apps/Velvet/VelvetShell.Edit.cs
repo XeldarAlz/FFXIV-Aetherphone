@@ -16,6 +16,7 @@ internal sealed partial class VelvetShell
     private string editHandle = string.Empty;
     private string editIntro = string.Empty;
     private string editPronouns = string.Empty;
+    private int editGender;
     private int editIntent;
     private int editRelationship;
     private readonly List<string> editRole = new();
@@ -36,6 +37,7 @@ internal sealed partial class VelvetShell
         editHandle = me.Handle;
         editIntro = me.Intro;
         editPronouns = me.Pronouns;
+        editGender = VelvetGender.Sanitize(me.Gender);
         editIntent = VelvetIntent.Sanitize(me.LookingFor);
         editRelationship = me.RelationshipStatus;
         editRole.Clear();
@@ -89,6 +91,11 @@ internal sealed partial class VelvetShell
             Gap(4f);
             ui.Field(Loc.T(L.Velvet.IntroduceYourself), "##ed_intro", ref editIntro, 400, true);
             ui.Field(Loc.T(L.Velvet.PronounsLabel), "##ed_pronouns", ref editPronouns, 40, false);
+            Gap(16f);
+
+            VSectionHeader.Card(FontAwesomeIcon.VenusMars, Loc.T(L.Velvet.CardGender));
+            Gap(6f);
+            DrawGenderEditor();
             Gap(16f);
 
             VSectionHeader.Card(FontAwesomeIcon.Compass, Loc.T(L.Velvet.CardIntent));
@@ -176,6 +183,28 @@ internal sealed partial class VelvetShell
         }
     }
 
+    private void DrawGenderEditor()
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = ImGui.GetContentRegionAvail().X;
+        var options = VelvetGender.All;
+        var models = new VChipModel[options.Length];
+        for (var index = 0; index < options.Length; index++)
+        {
+            var value = options[index];
+            var selected = editGender == value;
+            models[index] = new VChipModel(VelvetGender.Label(value), selected ? VChipStyle.Solid : VChipStyle.Ghost,
+                selected ? VelvetTheme.Rose : VelvetTheme.Moonlight);
+        }
+
+        var clicked = VChipFlow.Draw(models, width, scale);
+        if (clicked >= 0)
+        {
+            var value = options[clicked];
+            editGender = editGender == value ? VelvetGender.None : value;
+        }
+    }
+
     private void DrawRelationshipEditor()
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -210,7 +239,8 @@ internal sealed partial class VelvetShell
             (editDisplayName.Trim() != me.DisplayName || editHandle.Trim() != me.Handle);
         var dynamic = VelvetTags.Join(editRole.ToArray());
         var request = new UpdateVelvetProfileRequest(editIntro.Trim(), editPronouns.Trim(), dynamic, editTags.ToArray(),
-            editLimits.ToArray(), VelvetIntent.Sanitize(editIntent), editRelationship, null);
+            editLimits.ToArray(), VelvetIntent.Sanitize(editIntent), editRelationship, null,
+            Gender: VelvetGender.Sanitize(editGender));
         if (identityChanged)
         {
             store.UpdateIdentity(editDisplayName.Trim(), editHandle.Trim(),

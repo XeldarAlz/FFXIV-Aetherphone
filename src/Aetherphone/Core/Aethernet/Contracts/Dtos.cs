@@ -8,7 +8,7 @@ internal sealed record VerifyRequest(string ChallengeId);
 
 internal sealed record AuthResponse(string Token, UserDto User);
 
-internal sealed record VerifyResponse(bool Ok, string? Reason, string? Token, UserDto? User);
+internal sealed record VerifyResponse(bool Ok, string? Reason, string? Token, UserDto? User, string? BanReason = null);
 
 internal sealed record XivAuthStartRequest(string Name, string World);
 
@@ -201,6 +201,7 @@ internal sealed record VelvetProfileDto(
     string[] Limits,
     int LookingFor,
     int RelationshipStatus,
+    int Gender,
     string DataCenter,
     string World,
     int ConnectionState,
@@ -220,7 +221,8 @@ internal sealed record UpdateVelvetProfileRequest(
     int? LookingFor,
     int? RelationshipStatus,
     bool? Discoverable,
-    int? WhoCanMessage = null);
+    int? WhoCanMessage = null,
+    int? Gender = null);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 
