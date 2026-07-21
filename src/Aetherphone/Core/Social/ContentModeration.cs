@@ -26,4 +26,17 @@ internal static class ContentModeration
             _ => Loc.T(L.Moderation.RemovedPolicy),
         };
     }
+
+    public static string CommentRemovalMessage(string? reasonCode)
+    {
+        return (reasonCode ?? string.Empty).Trim().ToLowerInvariant() switch
+        {
+            "adult-content" => Loc.T(L.Moderation.RemovedCommentAdult),
+            "violence" => Loc.T(L.Moderation.RemovedCommentViolence),
+            "harassment" => Loc.T(L.Moderation.RemovedCommentHarassment),
+            "hate" => Loc.T(L.Moderation.RemovedCommentHate),
+            "self-harm" => Loc.T(L.Moderation.RemovedCommentSelfHarm),
+            _ => Loc.T(L.Moderation.RemovedCommentPolicy),
+        };
+    }
 }

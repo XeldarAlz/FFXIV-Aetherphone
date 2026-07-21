@@ -741,6 +741,10 @@ internal sealed partial class ChirperApp : IPhoneApp
         var metaSize = Typography.Measure(meta, 0.85f);
         Typography.Draw(new Vector2(textLeft + nameSize.X + 7f * scale, origin.Y + (nameSize.Y - metaSize.Y) * 0.5f),
             meta, AppPalettes.Chirper.MutedInk, 0.85f);
+        CommentReviewTag.Draw(
+            new Vector2(textLeft + nameSize.X + 7f * scale + metaSize.X + 7f * scale,
+                origin.Y + (nameSize.Y - metaSize.Y) * 0.5f),
+            origin.X + width - 30f * scale, comment.ScanStatus, 0.85f);
         var bodyOrigin = new Vector2(textLeft, origin.Y + nameSize.Y + 6f * scale);
         ImGui.SetCursorScreenPos(bodyOrigin);
         var commentRight = origin.X + width - 30f * scale;

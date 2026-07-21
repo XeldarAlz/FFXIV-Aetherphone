@@ -258,6 +258,10 @@ internal sealed partial class VelvetShell
         {
             Typography.Draw(new Vector2(textLeft + nameWidth + 8f * scale, origin.Y + 1f * scale), time,
                 VelvetTheme.MutedInk, TextStyles.Footnote);
+            var timeWidth = Typography.Measure(time, TextStyles.Footnote).X;
+            CommentReviewTag.Draw(
+                new Vector2(textLeft + nameWidth + 8f * scale + timeWidth + 8f * scale, origin.Y + 1f * scale),
+                textLeft + wrapWidth, comment.ScanStatus, 0.8f);
         }
 
         var textTop = origin.Y + 18f * scale;

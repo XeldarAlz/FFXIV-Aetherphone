@@ -63,7 +63,9 @@ internal static class SocialActivity
             case TypeConnectAccept:
                 return Loc.T(L.Social.ConnectionAccepted);
             case TypePostRemoved:
-                return ContentModeration.RemovalMessage(item.Preview);
+                return string.IsNullOrEmpty(item.CommentId)
+                    ? ContentModeration.RemovalMessage(item.Preview)
+                    : ContentModeration.CommentRemovalMessage(item.Preview);
             default:
                 return string.Empty;
         }

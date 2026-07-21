@@ -262,6 +262,9 @@ internal sealed partial class AethergramApp
         {
             Typography.Draw(new Vector2(metaLeft, nameTop + (nameHeight - metaSize.Y) * 0.5f), meta,
                 AppPalettes.Aethergram.MutedInk, 0.8f);
+            CommentReviewTag.Draw(
+                new Vector2(metaLeft + metaSize.X + 8f * scale, nameTop + (nameHeight - metaSize.Y) * 0.5f),
+                metaRightBound, comment.ScanStatus, 0.8f);
         }
 
         var textTop = nameTop + nameHeight + 4f * scale;

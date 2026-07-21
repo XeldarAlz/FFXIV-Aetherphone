@@ -174,7 +174,8 @@ internal sealed record CommentDto(
     long CreatedAtUnix,
     int LikeCount,
     bool Liked,
-    MentionDto[]? Mentions = null) : IIdentified;
+    MentionDto[]? Mentions = null,
+    string ScanStatus = "clean") : IIdentified;
 
 internal sealed record CreateCommentRequest(string Text);
 
@@ -277,7 +278,8 @@ internal sealed record VelvetCommentDto(
     long CreatedAtUnix,
     int LikeCount,
     bool Liked,
-    MentionDto[]? Mentions = null) : IIdentified;
+    MentionDto[]? Mentions = null,
+    string ScanStatus = "clean") : IIdentified;
 
 internal sealed record VelvetCommentPage(VelvetCommentDto[] Items, string? NextCursor);
 
@@ -366,7 +368,8 @@ internal sealed record NotificationDto(
     string ActorHandle,
     string? ActorAvatarUrl,
     string? Preview,
-    long CreatedAtUnix) : IIdentified;
+    long CreatedAtUnix,
+    string? CommentId = null) : IIdentified;
 
 internal sealed record NotificationPage(NotificationDto[] Items);
 

@@ -202,7 +202,10 @@ internal sealed class SocialNotificationService : IDisposable
         }
 
         var removed = item.Type == SocialActivity.TypePostRemoved;
-        var title = removed ? Loc.T(L.Moderation.RemovedTitle) : SocialActivity.ActorLabel(item);
+        var removedTitle = string.IsNullOrEmpty(item.CommentId)
+            ? L.Moderation.RemovedTitle
+            : L.Moderation.RemovedCommentTitle;
+        var title = removed ? Loc.T(removedTitle) : SocialActivity.ActorLabel(item);
         notifications.Notify(new PhoneNotification(item.App, title, body, DateTime.Now,
             AccentFor(item.App))
         {
@@ -214,7 +217,7 @@ internal sealed class SocialNotificationService : IDisposable
         if (removed)
         {
             confirm.Alert(
-                Loc.T(L.Moderation.RemovedTitle),
+                Loc.T(removedTitle),
                 $"{body}\n\n{Loc.T(L.Moderation.RemovedFooter)}",
                 Loc.T(L.Moderation.RemovedDismiss));
         }

@@ -111,6 +111,13 @@ internal static class L
         public static readonly LocString RemovedPolicy = new("moderation.removedPolicy", "Your post was removed for violating the community guidelines.");
         public static readonly LocString RemovedFooter = new("moderation.removedFooter", "If you believe this is a mistake, let us know through the Feedback app.");
         public static readonly LocString RemovedDismiss = new("moderation.removedDismiss", "OK");
+        public static readonly LocString RemovedCommentTitle = new("moderation.removedCommentTitle", "Comment removed");
+        public static readonly LocString RemovedCommentAdult = new("moderation.removedCommentAdult", "Your comment was removed because it appears to contain adult content, which is not allowed here.");
+        public static readonly LocString RemovedCommentViolence = new("moderation.removedCommentViolence", "Your comment was removed because it appears to contain violent or graphic content.");
+        public static readonly LocString RemovedCommentHarassment = new("moderation.removedCommentHarassment", "Your comment was removed because it appears to contain abusive or harassing language.");
+        public static readonly LocString RemovedCommentHate = new("moderation.removedCommentHate", "Your comment was removed because it appears to contain hateful content.");
+        public static readonly LocString RemovedCommentSelfHarm = new("moderation.removedCommentSelfHarm", "Your comment was removed because it appears to reference self-harm.");
+        public static readonly LocString RemovedCommentPolicy = new("moderation.removedCommentPolicy", "Your comment was removed for violating the community guidelines.");
     }
 
     internal static class Apps
@@ -519,6 +526,13 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release0987 =
+        {
+            new("changelog.r0987.0", "Photos and avatars now load faster: images are cached on your device instead of being downloaded again every time you scroll"),
+            new("changelog.r0987.1", "Your own comments now show an In review tag while automatic moderation checks them, so you know why others cannot see them yet"),
+            new("changelog.r0987.2", "When moderation removes one of your comments, the notification now says it was a comment and gives the reason"),
+        };
+
         public static readonly LocString[] Release0986 =
         {
             new("changelog.r0986.0", "Fixed a connection issue with the server, so the phone now stays connected more reliably"),
