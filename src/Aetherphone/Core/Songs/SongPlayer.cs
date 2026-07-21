@@ -253,7 +253,7 @@ internal sealed class SongPlayer : IDisposable
     {
         MemoryStream? audio = null;
         MediaFoundationReader? reader = null;
-        WaveOutEvent? output = null;
+        IWavePlayer? output = null;
         try
         {
             var bytes = cache.Get(videoId, CacheMaxAge);
@@ -301,7 +301,7 @@ internal sealed class SongPlayer : IDisposable
             }
 
             var volumeProvider = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume };
-            output = new WaveOutEvent();
+            output = AudioOutputFactory.Create();
             output.Init(volumeProvider, true);
             output.Play();
             TrySetState(workerSession, SongPlaybackState.Playing);

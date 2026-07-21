@@ -254,7 +254,7 @@ internal sealed class RadioPlayer : IDisposable
                 if (output is null && buffer.BufferedDuration >= PrebufferThreshold)
                 {
                     volumeProvider = new VolumeSampleProvider(buffer.ToSampleProvider()) { Volume = volume };
-                    output = new WaveOutEvent();
+                    output = AudioOutputFactory.Create();
                     output.Init(volumeProvider, true);
                     output.Play();
                     TrySetState(workerSession, RadioPlaybackState.Playing);

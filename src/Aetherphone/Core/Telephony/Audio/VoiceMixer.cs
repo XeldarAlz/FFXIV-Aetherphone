@@ -30,7 +30,7 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
     private readonly short[] decodeBuffer = new short[OpusAudio.FrameSamples * 6];
     private readonly byte[] pcmBytes = new byte[OpusAudio.FrameSamples * 6 * sizeof(short)];
     private float[] mixScratch = Array.Empty<float>();
-    private WaveOutEvent? output;
+    private IWavePlayer? output;
     private VolumeSampleProvider? volumeProvider;
     private float volume = 0.85f;
     public WaveFormat WaveFormat => format;
@@ -55,8 +55,9 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
         volume = Math.Clamp(startVolume, 0f, 1f);
         try
         {
+            _ = deviceNumber; // WASAPI plays on the system default output; winmm device indices no longer apply.
             var provider = new VolumeSampleProvider(this) { Volume = volume };
-            var device = new WaveOutEvent { DeviceNumber = deviceNumber, DesiredLatency = 140, };
+            var device = AudioOutputFactory.Create(140);
             device.Init(provider.ToWaveProvider16());
             device.Play();
             volumeProvider = provider;

@@ -6,8 +6,8 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class SoundEffectPlayer : IDisposable
 {
     private readonly object gate = new();
-    private readonly List<WaveOutEvent> oneShots = new();
-    private WaveOutEvent? loopOutput;
+    private readonly List<IWavePlayer> oneShots = new();
+    private IWavePlayer? loopOutput;
     private MediaFoundationReader? loopReader;
     private bool disposed;
 
@@ -23,7 +23,7 @@ internal sealed class SoundEffectPlayer : IDisposable
 
     public void StopOneShots()
     {
-        WaveOutEvent[] snapshot;
+        IWavePlayer[] snapshot;
         lock (gate)
         {
             if (oneShots.Count == 0)
@@ -51,7 +51,7 @@ internal sealed class SoundEffectPlayer : IDisposable
     {
         StopLoop();
         MediaFoundationReader reader;
-        WaveOutEvent output;
+        IWavePlayer output;
         try
         {
             reader = new MediaFoundationReader(path);
@@ -60,7 +60,7 @@ internal sealed class SoundEffectPlayer : IDisposable
             {
                 Volume = Math.Clamp(volume, 0f, 1f),
             };
-            output = new WaveOutEvent();
+            output = AudioOutputFactory.Create();
             output.Init(volumeProvider, true);
         }
         catch (Exception exception)
@@ -87,7 +87,7 @@ internal sealed class SoundEffectPlayer : IDisposable
 
     public void StopLoop()
     {
-        WaveOutEvent? output;
+        IWavePlayer? output;
         MediaFoundationReader? reader;
         lock (gate)
         {
@@ -117,12 +117,12 @@ internal sealed class SoundEffectPlayer : IDisposable
     private void RunOnce(string path, float volume)
     {
         MediaFoundationReader? reader = null;
-        WaveOutEvent? output = null;
+        IWavePlayer? output = null;
         try
         {
             reader = new MediaFoundationReader(path);
             var volumeProvider = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume };
-            output = new WaveOutEvent();
+            output = AudioOutputFactory.Create();
             output.Init(volumeProvider, true);
             lock (gate)
             {
