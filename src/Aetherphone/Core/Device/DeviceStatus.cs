@@ -131,7 +131,7 @@ internal sealed class DeviceStatus : IDisposable
         long roundtrip = 0;
         try
         {
-            var reply = await ping.SendPingAsync(endpoint, PingTimeoutMilliseconds).ConfigureAwait(false);
+            var reply = await Task.Run(() => ping.Send(endpoint, PingTimeoutMilliseconds)).ConfigureAwait(false);
             if (reply.Status == IPStatus.Success)
             {
                 succeeded = true;
