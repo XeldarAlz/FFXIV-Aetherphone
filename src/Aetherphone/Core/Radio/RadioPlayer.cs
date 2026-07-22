@@ -26,6 +26,7 @@ internal sealed class RadioPlayer : IDisposable
     private int session;
     private volatile RadioPlaybackState state = RadioPlaybackState.Stopped;
     private volatile string currentStation = string.Empty;
+    private RadioStation currentStationInfo;
     private float volume = 0.6f;
     private RadioStation[] queue = Array.Empty<RadioStation>();
     private int queueIndex = -1;
@@ -39,6 +40,7 @@ internal sealed class RadioPlayer : IDisposable
 
     public RadioPlaybackState State => state;
     public string CurrentStation => currentStation;
+    public RadioStation CurrentStationInfo => currentStationInfo;
     public bool HasQueue => queue.Length > 1;
 
     public float Volume
@@ -90,6 +92,7 @@ internal sealed class RadioPlayer : IDisposable
         lock (gate)
         {
             currentStation = station.Name;
+            currentStationInfo = station;
             state = RadioPlaybackState.Buffering;
             cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
@@ -108,6 +111,7 @@ internal sealed class RadioPlayer : IDisposable
         Suspend();
         state = RadioPlaybackState.Stopped;
         currentStation = string.Empty;
+        currentStationInfo = default;
     }
 
     public void Pause()

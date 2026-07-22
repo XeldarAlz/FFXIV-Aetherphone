@@ -180,6 +180,18 @@ internal sealed partial class MusicApp
             OpenPicker(CurrentSong());
         }
 
+        if (playback.RadioActive)
+        {
+            var currentStation = playback.Radio.CurrentStationInfo;
+            var favorite = IsFavoriteStation(currentStation.StreamUrl);
+            if (ui.IconButton(new Vector2(frame.Max.X - 58f * scale, barCenterY), 14f * scale,
+                    FontAwesomeIcon.Star.ToIconString(), favorite ? ui.Accent : ui.MutedInk, AppSkin.Transparent,
+                    0.82f))
+            {
+                ToggleFavoriteStation(currentStation);
+            }
+        }
+
         if (ui.IconButton(new Vector2(frame.Max.X - 26f * scale, barCenterY), 14f * scale,
                 FontAwesomeIcon.Stop.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.72f))
         {

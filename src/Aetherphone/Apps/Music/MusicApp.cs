@@ -68,6 +68,7 @@ internal sealed partial class MusicApp : IPhoneApp
     private readonly HttpService http;
     private readonly FeatureFlags flags;
     private readonly ConfirmService confirm;
+    private readonly Configuration configuration;
     private readonly ArtworkCache artwork;
     private readonly ViewRouter<View> router;
     private readonly RouterDraw<View> drawView;
@@ -118,7 +119,7 @@ internal sealed partial class MusicApp : IPhoneApp
 
     public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history,
         PlaylistStore playlists, MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags,
-        ConfirmService confirm)
+        ConfirmService confirm, Configuration configuration)
     {
         this.radio = radio;
         this.songSearch = songSearch;
@@ -129,6 +130,7 @@ internal sealed partial class MusicApp : IPhoneApp
         this.http = http;
         this.flags = flags;
         this.confirm = confirm;
+        this.configuration = configuration;
         artwork = new ArtworkCache(textures);
         router = new ViewRouter<View>(View.Home);
         drawView = DrawView;
@@ -579,6 +581,14 @@ internal sealed partial class MusicApp : IPhoneApp
         playback.PlayStations(stations, index);
     }
 
+    private void PlayStationFromFavorites(int index)
+    {
+        var favoriteRadioStations = GetFavoriteRadioStations();
+        playSource = Loc.T(L.Music.FavoriteStations);
+        radio.ReportClick(favoriteRadioStations[index].Uuid);
+        playback.PlayStations(favoriteRadioStations, index);
+    }
+
     private void CaptureRecent()
     {
         var songs = playback.Songs;
@@ -647,6 +657,34 @@ internal sealed partial class MusicApp : IPhoneApp
     {
         return playback.RadioActive && playback.Radio.CurrentStation == station.Name;
     }
+
+    private bool IsFavoriteStation(string streamUrl)
+    {
+        return !string.IsNullOrEmpty(streamUrl) &&
+               configuration.RadioFavorites.Exists(favorite => favorite.StreamUrl == streamUrl);
+    }
+
+    private void ToggleFavoriteStation(RadioStation station)
+    {
+        if (string.IsNullOrEmpty(station.StreamUrl))
+        {
+            return;
+        }
+
+        var removed = configuration.RadioFavorites.RemoveAll(f => f.StreamUrl == station.StreamUrl);
+        if (removed == 0)
+        {
+            configuration.RadioFavorites.Add(RadioStationRecord.From(station));
+        }
+
+        configuration.Save();
+    }
+
+    private RadioStation[] GetFavoriteRadioStations()
+    {
+        return configuration.RadioFavorites.Select(c => c.ToStation()).ToArray();
+    }
+
 
     private bool IsCurrentSong(Song song)
     {
