@@ -20,7 +20,7 @@ internal sealed class SideButton
     private float held;
     private bool closeFired;
 
-    public SideButtonAction Update(Rect bounds, PhoneTheme theme, float delta)
+    public SideButtonAction Update(Rect bounds, PhoneTheme theme, float delta, bool isLandscape)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var hitMin = new Vector2(bounds.Min.X - 8f * scale, bounds.Min.Y - 8f * scale);
@@ -56,7 +56,7 @@ internal sealed class SideButton
         }
 
         var progress = armed ? Math.Clamp(held / HoldSeconds, 0f, 1f) : 0f;
-        DrawButton(bounds, theme, hovered, progress, armed);
+        DrawButton(bounds, theme, hovered, progress, armed, isLandscape);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -66,9 +66,10 @@ internal sealed class SideButton
         return action;
     }
 
-    private static void DrawButton(Rect bounds, PhoneTheme theme, bool hovered, float progress, bool pressing)
+    private static void DrawButton(Rect bounds, PhoneTheme theme, bool hovered, float progress, bool pressing, bool isLandscape)
     {
         var press = pressing ? 0.35f + 0.65f * progress : 0f;
-        HardwareButton.Draw(ImGui.GetWindowDrawList(), bounds, theme, RailSide.Right, hovered, press, 0f);
+        var side = isLandscape ? RailSide.Top : RailSide.Right;
+        HardwareButton.Draw(ImGui.GetWindowDrawList(), bounds, theme, side, hovered, press, 0f);
     }
 }

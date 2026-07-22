@@ -36,6 +36,9 @@
     <Content Include="Sounds\*.mp3;Sounds\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Cores\*_libretro.dll;Cores\*-LICENSE.txt;Cores\GPL-*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

@@ -6,6 +6,7 @@ using Aetherphone.Core.Notes;
 using Aetherphone.Core.Changelog;
 using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
+using Aetherphone.Core.Emulation;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Market;
@@ -90,7 +91,8 @@ internal sealed class Configuration : IPluginConfiguration
     public List<SongRecord> SongRecents { get; set; } = new();
     public List<PlaylistRecord> Playlists { get; set; } = new();
     public List<GameStatRecord> GameStats { get; set; } = new();
-    public HomeLayout? Home { get; set; }
+    public EmulatorSettings Emulator { get; set; } = new();
+    public HomeLayout? Home { get; set; } = null;
     public int HomeGridRows { get; set; } = 6;
     public ControlLayout? ControlPanel { get; set; }
     public bool ControlPanelRepacked { get; set; }
