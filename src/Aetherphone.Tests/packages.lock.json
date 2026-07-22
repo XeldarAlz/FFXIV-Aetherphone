@@ -102,6 +102,11 @@
           "NAudio.Core": "2.3.0"
         }
       },
+      "NEbml": {
+        "type": "Transitive",
+        "resolved": "0.11.0",
+        "contentHash": "ifuKvobGQbnIo1lGM4ApeKygc4t9e1yv5IEWzVbOuBKCJ0p9NSrgT4irwPBTfTxLxw52vFPpGv3VFAmHQf6jeg=="
+      },
       "NetStone": {
         "type": "Transitive",
         "resolved": "1.4.1",
@@ -229,6 +234,7 @@
           "DalamudPackager": "[15.0.0, )",
           "NAudio.Wasapi": "[2.3.0, )",
           "NAudio.WinMM": "[2.3.0, )",
+          "NEbml": "[0.11.0, )",
           "NetStone": "[1.4.1, )",
           "Newtonsoft.Json": "[13.0.4, )",
           "SixLabors.ImageSharp": "[3.1.12, )",
