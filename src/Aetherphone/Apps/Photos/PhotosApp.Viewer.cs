@@ -44,7 +44,7 @@ internal sealed partial class PhotosApp
         Typography.DrawCentered(drawList, new Vector2(area.Center.X, area.Min.Y + 15f * scale), caption, White,
             TextStyles.Headline);
         Typography.DrawCentered(drawList, new Vector2(area.Center.X, area.Min.Y + 35f * scale),
-            taken.ToString("t", Loc.Culture), WhiteMuted, TextStyles.Footnote);
+            TimeText.Clock(taken), WhiteMuted, TextStyles.Footnote);
 
         var backCenter = new Vector2(area.Min.X + 20f * scale, rowCenterY);
         var backHit = new Vector2(20f * scale, 20f * scale);

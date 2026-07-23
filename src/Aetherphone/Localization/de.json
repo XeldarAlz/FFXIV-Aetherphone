@@ -478,6 +478,8 @@
   "settings.wallpaper": "Hintergrundbild",
   "settings.textSize": "Textgröße",
   "settings.phoneSize": "Telefongröße",
+  "settings.clockFormat": "Uhr",
+  "settings.use24HourClock": "24-Stunden-Format",
   "settings.notifications": "Mitteilungen",
   "settings.doNotDisturb": "Nicht stören",
   "settings.vibration": "Vibration",

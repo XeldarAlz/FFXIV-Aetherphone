@@ -252,6 +252,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public static void OnLanguageChanged()
     {
+        TimeText.ApplyClockPreference(Cfg.Use24HourClock);
         if (primaryCommand is not null)
         {
             primaryCommand.HelpMessage = Loc.T(L.Plugin.CommandHelp);
@@ -273,7 +274,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         Loc.Initialize(Cfg.Language, directory);
-        TimeText.Use24Hour = Cfg.Use24HourClock;
+        TimeText.ApplyClockPreference(Cfg.Use24HourClock);
     }
 
     private static string DetectLanguage()

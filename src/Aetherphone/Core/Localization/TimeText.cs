@@ -2,15 +2,24 @@ namespace Aetherphone.Core.Localization;
 
 internal static class TimeText
 {
+    private const string Pattern24Hour = "HH:mm";
+    private const string Pattern12Hour = "h:mm tt";
     private static bool use24Hour = true;
+    private static int formatVersion;
 
-    public static bool Use24Hour
+    public static bool Use24Hour => use24Hour;
+
+    public static int FormatVersion => formatVersion;
+
+    public static string ClockPattern => use24Hour ? Pattern24Hour : Pattern12Hour;
+
+    public static void ApplyClockPreference(bool? preference)
     {
-        get => use24Hour;
-        set => use24Hour = value;
+        use24Hour = preference ?? CultureUses24Hour();
+        formatVersion++;
     }
 
-    public static string ClockPattern => use24Hour ? "HH:mm" : "h:mm tt";
+    private static bool CultureUses24Hour() => Loc.Culture.DateTimeFormat.ShortTimePattern.Contains('H');
 
     public static string Clock(DateTime moment) => moment.ToString(ClockPattern, Loc.Culture);
 
@@ -114,7 +123,7 @@ internal static class TimeText
             return string.Empty;
         }
 
-    return Clock(DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime());
+        return Clock(DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime());
     }
 
     public static string DayLabel(long unixSeconds)

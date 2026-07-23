@@ -23,16 +23,16 @@ internal static class StatusBar
     private const float IslandTop = 9f;
     private static string cachedTime = string.Empty;
     private static int cachedTimeKey = -1;
-    private static bool cachedUse24Hour = true;
+    private static int cachedFormatVersion = -1;
 
     private static string CurrentTime()
     {
         var now = DateTime.Now;
         var key = now.Hour * 60 + now.Minute;
-        if (key != cachedTimeKey || cachedUse24Hour != TimeText.Use24Hour)
+        if (key != cachedTimeKey || cachedFormatVersion != TimeText.FormatVersion)
         {
             cachedTimeKey = key;
-            cachedUse24Hour = TimeText.Use24Hour;
+            cachedFormatVersion = TimeText.FormatVersion;
             cachedTime = TimeText.Clock(now);
         }
 

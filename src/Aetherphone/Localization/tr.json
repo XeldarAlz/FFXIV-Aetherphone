@@ -478,6 +478,8 @@
   "settings.wallpaper": "Duvar kâğıdı",
   "settings.textSize": "Metin boyutu",
   "settings.phoneSize": "Telefon boyutu",
+  "settings.clockFormat": "Saat",
+  "settings.use24HourClock": "24 saat biçimi",
   "settings.notifications": "Bildirimler",
   "settings.doNotDisturb": "Rahatsız etme",
   "settings.vibration": "Titreşim",

@@ -38,7 +38,7 @@ internal sealed class ReminderService : IDisposable
 
             reminder.Notified = true;
             dirty = true;
-            notifications.Notify(new PhoneNotification("notes", reminder.Title, due.ToString("t", Loc.Culture),
+            notifications.Notify(new PhoneNotification("notes", reminder.Title, TimeText.Clock(due),
                 DateTime.Now, Accent));
         }
 

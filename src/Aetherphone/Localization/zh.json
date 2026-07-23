@@ -478,6 +478,8 @@
   "settings.wallpaper": "壁纸",
   "settings.textSize": "文本大小",
   "settings.phoneSize": "手机尺寸",
+  "settings.clockFormat": "时钟",
+  "settings.use24HourClock": "24 小时制",
   "settings.notifications": "通知",
   "settings.doNotDisturb": "免打扰",
   "settings.vibration": "振动",

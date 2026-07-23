@@ -478,6 +478,8 @@
   "settings.wallpaper": "壁紙",
   "settings.textSize": "テキストサイズ",
   "settings.phoneSize": "電話のサイズ",
+  "settings.clockFormat": "時計",
+  "settings.use24HourClock": "24時間表示",
   "settings.notifications": "通知",
   "settings.doNotDisturb": "おやすみモード",
   "settings.vibration": "バイブレーション",

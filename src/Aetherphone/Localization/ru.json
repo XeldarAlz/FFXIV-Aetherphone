@@ -478,6 +478,8 @@
   "settings.wallpaper": "Обои",
   "settings.textSize": "Размер текста",
   "settings.phoneSize": "Размер телефона",
+  "settings.clockFormat": "Часы",
+  "settings.use24HourClock": "24-часовой формат",
   "settings.notifications": "Уведомления",
   "settings.doNotDisturb": "Не беспокоить",
   "settings.vibration": "Вибрация",

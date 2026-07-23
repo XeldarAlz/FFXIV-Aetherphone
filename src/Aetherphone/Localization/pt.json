@@ -478,6 +478,8 @@
   "settings.wallpaper": "Papel de parede",
   "settings.textSize": "Tamanho do texto",
   "settings.phoneSize": "Tamanho do telefone",
+  "settings.clockFormat": "Relógio",
+  "settings.use24HourClock": "Formato de 24 horas",
   "settings.notifications": "Notificações",
   "settings.doNotDisturb": "Não perturbe",
   "settings.vibration": "Vibração",

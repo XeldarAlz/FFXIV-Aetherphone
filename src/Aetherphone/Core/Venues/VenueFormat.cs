@@ -1,5 +1,5 @@
-using System.Globalization;
 using Aetherphone.Core.Localization;
+
 namespace Aetherphone.Core.Venues;
 
 internal static class VenueFormat
@@ -10,7 +10,7 @@ internal static class VenueFormat
         var startText = TimeText.Clock(start);
         if (!IsToday(start))
         {
-            startText = start.ToString("dd/MM " + TimeText.ClockPattern, CultureInfo.InvariantCulture);
+            startText = start.ToString("dd/MM " + TimeText.ClockPattern, Loc.Culture);
         }
 
         if (venue.EndUtc is not { } endUtc)

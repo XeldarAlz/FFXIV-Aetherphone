@@ -477,6 +477,8 @@
   "settings.wallpaper": "Wallpaper",
   "settings.textSize": "Text Size",
   "settings.phoneSize": "Phone Size",
+  "settings.clockFormat": "Clock",
+  "settings.use24HourClock": "24-hour time",
   "settings.notifications": "Notifications",
   "settings.doNotDisturb": "Do Not Disturb",
   "settings.vibration": "Vibration",

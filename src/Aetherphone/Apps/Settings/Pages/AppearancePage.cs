@@ -99,15 +99,16 @@ internal sealed class AppearancePage : ISettingsPage
 
             SettingsSection.Header(Loc.T(L.Settings.ClockFormat), theme);
             var clockCard = GroupCard.Begin(theme, 1);
-            var use24 = SettingsRow.Bool(clockCard.NextRow(), Loc.T(L.Settings.Use24HourClock),
-                                         configuration.Use24HourClock, theme);
+            var use24Hour = SettingsRow.Bool(clockCard.NextRow(), Loc.T(L.Settings.Use24HourClock),
+                TimeText.Use24Hour, theme);
             clockCard.End();
-            if (use24 != configuration.Use24HourClock)
+            if (use24Hour != TimeText.Use24Hour)
             {
-                configuration.Use24HourClock = use24;
-                TimeText.Use24Hour = use24;
+                configuration.Use24HourClock = use24Hour;
+                TimeText.ApplyClockPreference(use24Hour);
                 configuration.Save();
             }
+
             DrawHomeSection(theme);
         }
     }

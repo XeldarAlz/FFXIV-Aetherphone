@@ -350,7 +350,7 @@ internal sealed partial class MessageApp
         var today = DateTimeOffset.Now.Date;
         if (local.Date == today)
         {
-            return local.ToString("t", Loc.Culture);
+            return TimeText.Clock(local);
         }
 
         return (today - local.Date).TotalDays < 7d

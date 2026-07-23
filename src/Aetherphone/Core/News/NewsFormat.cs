@@ -18,8 +18,8 @@ internal static class NewsFormat
         var localEnd = end.ToLocalTime();
         var startText = localStart.ToString("MMM d, " + TimeText.ClockPattern, Loc.Culture);
         var endText = localStart.Date == localEnd.Date
-        ? TimeText.Clock(localEnd)
-        : localEnd.ToString("MMM d, " + TimeText.ClockPattern, Loc.Culture);
+            ? TimeText.Clock(localEnd)
+            : localEnd.ToString("MMM d, " + TimeText.ClockPattern, Loc.Culture);
         return string.Concat(startText, " – ", endText);
     }
 
