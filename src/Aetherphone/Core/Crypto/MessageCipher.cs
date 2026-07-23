@@ -90,18 +90,17 @@ internal sealed class MessageCipher
         decryptedBodies[messageId] = new DmDecryptedBody(DmBodyState.Decrypted, plaintext, frankingKeyBase64, true);
     }
 
-    public OutboundMedia PrepareOutboundMedia(string scope, int generation, string senderId, byte[] plaintextBytes,
-        string caption, int mediaKind, bool encrypt)
+    public OutboundMedia? PrepareOutboundMedia(string scope, int generation, string senderId, byte[] plaintextBytes,
+        string caption, int mediaKind)
     {
-        if (encrypt
-            && TryEncryptMedia(scope, generation, plaintextBytes, senderId, mediaKind, out var sealedBytes)
+        if (TryEncryptMedia(scope, generation, plaintextBytes, senderId, mediaKind, out var sealedBytes)
             && TryEncrypt(scope, generation, caption, senderId, out var capEnvelope))
         {
             return new OutboundMedia(sealedBytes, capEnvelope.Envelope, EnvelopeCodec.VersionEnvelope, generation,
                 capEnvelope.CommitmentTag, capEnvelope.FrankingKeyBase64);
         }
 
-        return new OutboundMedia(plaintextBytes, caption, EnvelopeCodec.VersionPlaintext, 0, null, null);
+        return null;
     }
 
     public bool TryEncryptMedia(string scope, int generation, byte[] plaintext, string senderId, int mediaKind,

@@ -21,6 +21,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan SendBlockedNoticeDuration = TimeSpan.FromSeconds(6);
 
     protected readonly AethernetSession session;
     protected readonly SafetyClient safety;
@@ -64,6 +65,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private volatile bool keyStatusRefreshing;
     private DateTime lastKeyStatusUtc = DateTime.MinValue;
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
+    private long lastSendBlockedTicks;
 
     protected ChatThreadStoreBase(string logTag, AethernetSession session, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility)
@@ -183,6 +185,14 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     public bool OtherTyping => otherTyping;
     public KeyVaultState VaultState => vault.State;
     public bool EscrowConfigured => vault.RecoveryConfigured;
+
+    public bool SendRecentlyBlocked =>
+        DateTime.UtcNow.Ticks - Interlocked.Read(ref lastSendBlockedTicks) < SendBlockedNoticeDuration.Ticks;
+
+    protected void NoteSendBlocked()
+    {
+        Interlocked.Exchange(ref lastSendBlockedTicks, DateTime.UtcNow.Ticks);
+    }
     public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
     public bool EncryptingCurrent => cipher.IsUnlocked && currentKeyStatus.CanEncrypt;
 
@@ -564,44 +574,35 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }, () => refreshingTyping = false);
     }
 
-    public void SendMessage(string id, string body, Action<bool> onComplete, string? replyToId = null)
+    public bool SendMessage(string id, string body, Action<bool> onComplete, string? replyToId = null)
     {
         var trimmed = body.Trim();
         if (trimmed.Length == 0 || sending)
         {
-            return;
+            return false;
+        }
+
+        var scope = ScopeFor(id);
+        if (!cipher.TryEncrypt(scope, keys.CurrentGeneration(scope), trimmed, MyUserId, out var encoded))
+        {
+            NoteSendBlocked();
+            return false;
         }
 
         sending = true;
         work.Run("send", async token =>
         {
-            TMessage? sent;
-            var scope = ScopeFor(id);
-            var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && currentThreadId == id
-                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
-            {
-                sent = await SendMessageRequestAsync(id, encoded.Envelope, 0, token,
-                    encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
-                    replyToId: replyToId)
-                    .ConfigureAwait(false);
-                if (sent is not null)
-                {
-                    cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
-                    sent = WithBody(sent, trimmed);
-                }
-            }
-            else
-            {
-                sent = await SendMessageRequestAsync(id, trimmed, 0, token, replyToId: replyToId)
-                    .ConfigureAwait(false);
-            }
-
+            var sent = await SendMessageRequestAsync(id, encoded.Envelope, 0, token,
+                encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
+                replyToId: replyToId)
+                .ConfigureAwait(false);
             if (sent is null)
             {
                 return false;
             }
 
+            cipher.RecordDecrypted(sent.Id, trimmed, encoded.FrankingKeyBase64);
+            sent = WithBody(sent, trimmed);
             sent = ResolveOutgoingReply(scope, sent);
             if (currentThreadId == id)
             {
@@ -611,6 +612,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             threadListLoaded = false;
             return true;
         }, onComplete, () => sending = false);
+        return true;
     }
 
     public void SendImageMessage(string id, string sourcePath, string caption, Action<bool> onComplete)
@@ -624,7 +626,14 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         work.Run("send image", async token =>
         {
             var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
-            var outbound = PrepareMedia(id, baked.Bytes, caption.Trim(), ImageMediaKind);
+            var prepared = PrepareMedia(id, baked.Bytes, caption.Trim(), ImageMediaKind);
+            if (prepared is null)
+            {
+                AepLog.Warning($"[{logTag}] send image aborted: encryption unavailable for this thread");
+                return false;
+            }
+
+            var outbound = prepared.Value;
             var upload = await media.UploadUrlAsync("image/jpeg", ImageUploadScope, token).ConfigureAwait(false);
             if (upload is null)
             {
@@ -670,7 +679,14 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         sending = true;
         work.Run("send voice", async token =>
         {
-            var outbound = PrepareMedia(id, wavBytes, string.Empty, VoiceMediaKind);
+            var prepared = PrepareMedia(id, wavBytes, string.Empty, VoiceMediaKind);
+            if (prepared is null)
+            {
+                AepLog.Warning($"[{logTag}] send voice aborted: encryption unavailable for this thread");
+                return false;
+            }
+
+            var outbound = prepared.Value;
             var upload = await media.UploadUrlAsync("audio/wav", VoiceUploadScope, token).ConfigureAwait(false);
             if (upload is null)
             {
@@ -706,11 +722,17 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         }, onComplete, () => sending = false);
     }
 
-    private OutboundMedia PrepareMedia(string id, byte[] plaintextBytes, string caption, int mediaKind)
+    private OutboundMedia? PrepareMedia(string id, byte[] plaintextBytes, string caption, int mediaKind)
     {
         var scope = ScopeFor(id);
-        return cipher.PrepareOutboundMedia(scope, keys.CurrentGeneration(scope), MyUserId, plaintextBytes, caption,
-            mediaKind, EncryptingCurrent && currentThreadId == id);
+        var outbound = cipher.PrepareOutboundMedia(scope, keys.CurrentGeneration(scope), MyUserId, plaintextBytes,
+            caption, mediaKind);
+        if (outbound is null)
+        {
+            NoteSendBlocked();
+        }
+
+        return outbound;
     }
 
     private TMessage RecordMediaCaption(TMessage sent, OutboundMedia outbound, string caption)
@@ -830,43 +852,32 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         });
     }
 
-    public void EditMessage(string id, string messageId, string body, Action<bool> onComplete)
+    public bool EditMessage(string id, string messageId, string body, Action<bool> onComplete)
     {
         var trimmed = body.Trim();
         if (trimmed.Length == 0)
         {
-            return;
+            return false;
+        }
+
+        var scope = ScopeFor(id);
+        if (!cipher.TryEncrypt(scope, keys.CurrentGeneration(scope), trimmed, MyUserId, out var encoded))
+        {
+            NoteSendBlocked();
+            return false;
         }
 
         work.Run("edit message", async token =>
         {
-            TMessage? edited;
-            var scope = ScopeFor(id);
-            var generation = keys.CurrentGeneration(scope);
-            if (EncryptingCurrent && currentThreadId == id
-                && cipher.TryEncrypt(scope, generation, trimmed, MyUserId, out var encoded))
-            {
-                edited = await EditMessageRequestAsync(messageId, encoded.Envelope, token,
-                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
-                if (edited is not null)
-                {
-                    cipher.RecordDecrypted(edited.Id, trimmed, encoded.FrankingKeyBase64);
-                    edited = WithBody(edited, trimmed);
-                }
-            }
-            else
-            {
-                edited = await EditMessageRequestAsync(messageId, trimmed, token).ConfigureAwait(false);
-                if (edited is not null)
-                {
-                    cipher.Forget(messageId);
-                }
-            }
-
+            var edited = await EditMessageRequestAsync(messageId, encoded.Envelope, token,
+                EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag).ConfigureAwait(false);
             if (edited is null)
             {
                 return false;
             }
+
+            cipher.RecordDecrypted(edited.Id, trimmed, encoded.FrankingKeyBase64);
+            edited = WithBody(edited, trimmed);
 
             edited = ResolveOutgoingReply(scope, edited);
             if (currentThreadId == id)
@@ -877,6 +888,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             threadListLoaded = false;
             return true;
         }, onComplete);
+        return true;
     }
 
     private TMessage[] ReplaceMessage(TMessage[] items, TMessage updated)

@@ -20,8 +20,8 @@ internal struct ChatComposerModel
     public bool CanHandleEscape;
     public Func<int> ResolveVoiceInput;
     public Action<string> OnPickImage;
-    public Action<string, string, string?> OnSendText;
-    public Action<string, string, string> OnEditText;
+    public Func<string, string, string?, bool> OnSendText;
+    public Func<string, string, string, bool> OnEditText;
     public Action<string, byte[], int> OnSendVoice;
 }
 
@@ -264,17 +264,19 @@ internal sealed class ChatComposer : IDisposable
         {
             if (editTargetId is { } editId)
             {
-                model.OnEditText(model.ConversationId, editId, draft);
-                ClearEdit();
+                if (model.OnEditText(model.ConversationId, editId, draft))
+                {
+                    ClearEdit();
+                    emojiOpen = false;
+                }
             }
-            else
+            else if (model.OnSendText(model.ConversationId, draft, replyTargetId))
             {
-                model.OnSendText(model.ConversationId, draft, replyTargetId);
                 draft = string.Empty;
                 ClearReply();
+                emojiOpen = false;
             }
 
-            emojiOpen = false;
             focus = true;
         }
 

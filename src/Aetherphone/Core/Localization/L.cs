@@ -1227,7 +1227,8 @@ internal static class L
         public static readonly LocString ReportMessageAction = new("encryption.reportMessageAction", "Report message");
         public static readonly LocString CopyTextAction = new("encryption.copyTextAction", "Copy text");
         public static readonly LocString InfoTitle = new("encryption.infoTitle", "Encryption");
-        public static readonly LocString WaitingMembers = new("encryption.waitingMembers", "{0} can't receive encrypted messages yet. Messages stay unencrypted until everyone has an encryption key.");
+        public static readonly LocString WaitingMembers = new("encryption.waitingMembers", "{0} can't receive encrypted messages yet. You can't send messages here until everyone has an encryption key. Nothing is ever sent unencrypted.");
+        public static readonly LocString SendBlockedNotice = new("encryption.sendBlockedNotice", "Not sent. Encryption isn't ready for this chat, and Aetherphone never sends messages unencrypted.");
         public static readonly LocString SecurityCode = new("encryption.securityCode", "Security code");
         public static readonly LocString SecurityCodeHint = new("encryption.securityCodeHint", "Compare this code with {0}. If both phones show the same code, this chat is end-to-end encrypted.");
         public static readonly LocString SecurityCodeUnavailable = new("encryption.securityCodeUnavailable", "The security code appears once both of you have encryption keys.");

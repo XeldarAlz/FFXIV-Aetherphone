@@ -51,8 +51,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private readonly float threadPollSeconds;
     private readonly float typingSendSeconds;
     private readonly Action<string> pickImage;
-    private readonly Action<string, string, string?> sendText;
-    private readonly Action<string, string, string> editText;
+    private readonly Func<string, string, string?, bool> sendText;
+    private readonly Func<string, string, string, bool> editText;
     private readonly Action<string, byte[], int> sendVoice;
     private readonly Func<int> resolveVoiceInput;
     private readonly Func<string, bool> canRevealBody;
@@ -250,6 +250,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             Paging = this,
         };
         transcript.Draw(listRect, model);
+        DrawSendBlockedNotice(area, composerHeight);
         composer.Draw(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), new ChatComposerModel
         {
             Ui = ui,
@@ -266,6 +267,27 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             OnSendVoice = sendVoice,
         });
         DrawMessageMenu(area);
+    }
+
+    private void DrawSendBlockedNotice(Rect area, float composerHeight)
+    {
+        if (!store.SendRecentlyBlocked)
+        {
+            return;
+        }
+
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var text = Loc.T(L.Encryption.SendBlockedNotice);
+        var maxWidth = area.Max.X - area.Min.X - 48f * scale;
+        var size = Typography.MeasureWrappedBlock(text, TextStyles.Footnote, maxWidth);
+        var pad = 8f * scale;
+        var bottom = area.Max.Y - composerHeight - 6f * scale;
+        var min = new Vector2((area.Min.X + area.Max.X) * 0.5f - size.X * 0.5f - pad, bottom - size.Y - pad * 2f);
+        var max = new Vector2((area.Min.X + area.Max.X) * 0.5f + size.X * 0.5f + pad, bottom);
+        Squircle.Fill(drawList, min, max, 10f * scale, ImGui.GetColorU32(Palette.WithAlpha(Theme.Danger, 0.92f)));
+        Typography.DrawWrappedCentered(new Vector2((min.X + max.X) * 0.5f, min.Y + pad), text,
+            new Vector4(1f, 1f, 1f, 1f), TextStyles.Footnote, maxWidth);
     }
 
     private ReadOnlySpan<TranscriptMessage> BuildTranscript(TMessage[] source)
@@ -409,19 +431,29 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         });
     }
 
-    private void ComposerSendText(string threadId, string text, string? replyToId)
+    private bool ComposerSendText(string threadId, string text, string? replyToId)
     {
-        store.SendMessage(threadId, text, _ => { }, replyToId);
+        if (!store.SendMessage(threadId, text, _ => { }, replyToId))
+        {
+            return false;
+        }
+
         transcript.RequestSnapToBottom();
         lastTypingDraft = string.Empty;
         OnDraftConsumed(threadId);
+        return true;
     }
 
-    private void ComposerEditText(string threadId, string editId, string text)
+    private bool ComposerEditText(string threadId, string editId, string text)
     {
-        store.EditMessage(threadId, editId, text, _ => { });
+        if (!store.EditMessage(threadId, editId, text, _ => { }))
+        {
+            return false;
+        }
+
         lastTypingDraft = string.Empty;
         OnDraftConsumed(threadId);
+        return true;
     }
 
     private void ComposerSendVoice(string threadId, byte[] wavBytes, int durationSecs)

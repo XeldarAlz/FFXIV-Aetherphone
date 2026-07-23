@@ -293,61 +293,47 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     {
         work.Run("forward", async token =>
         {
-            ChatMessageDto? sent;
             if (source.Kind != 0)
             {
-                if (source.EncVersion == EnvelopeCodec.VersionEnvelope)
-                {
-                    return false;
-                }
-
-                sent = await client.SendMessageAsync(targetId, source.Body ?? string.Empty, source.Kind, token,
-                    forwardOfId: source.Id).ConfigureAwait(false);
+                return false;
             }
-            else
+
+            var plaintext = source.Body ?? string.Empty;
+            if (source.EncVersion == EnvelopeCodec.VersionEnvelope)
             {
-                var plaintext = source.Body ?? string.Empty;
-                if (source.EncVersion == EnvelopeCodec.VersionEnvelope)
-                {
-                    var state = DecryptionState(source.Id);
-                    if (state.State != DmBodyState.Decrypted)
-                    {
-                        return false;
-                    }
-
-                    plaintext = state.Text;
-                }
-
-                if (plaintext.Trim().Length == 0)
+                var state = DecryptionState(source.Id);
+                if (state.State != DmBodyState.Decrypted)
                 {
                     return false;
                 }
 
-                var scope = ConversationKeyStore.ChatScope(targetId);
-                var status = await keys.EnsureChatKeysAsync(targetId, token).ConfigureAwait(false);
-                if (cipher.IsUnlocked && status.CanEncrypt
-                    && cipher.TryEncrypt(scope, status.CurrentGeneration, plaintext, MyUserId, out var encoded))
-                {
-                    sent = await client.SendMessageAsync(targetId, encoded.Envelope, 0, token,
-                        encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
-                        forwarded: true).ConfigureAwait(false);
-                    if (sent is not null)
-                    {
-                        cipher.RecordDecrypted(sent.Id, plaintext, encoded.FrankingKeyBase64);
-                        sent = sent with { Body = plaintext };
-                    }
-                }
-                else
-                {
-                    sent = await client.SendMessageAsync(targetId, plaintext, 0, token, forwarded: true)
-                        .ConfigureAwait(false);
-                }
+                plaintext = state.Text;
             }
 
+            if (plaintext.Trim().Length == 0)
+            {
+                return false;
+            }
+
+            var scope = ConversationKeyStore.ChatScope(targetId);
+            var status = await keys.EnsureChatKeysAsync(targetId, token).ConfigureAwait(false);
+            if (!cipher.IsUnlocked || !status.CanEncrypt
+                || !cipher.TryEncrypt(scope, status.CurrentGeneration, plaintext, MyUserId, out var encoded))
+            {
+                NoteSendBlocked();
+                return false;
+            }
+
+            var sent = await client.SendMessageAsync(targetId, encoded.Envelope, 0, token,
+                encVersion: EnvelopeCodec.VersionEnvelope, commitmentTag: encoded.CommitmentTag,
+                forwarded: true).ConfigureAwait(false);
             if (sent is null)
             {
                 return false;
             }
+
+            cipher.RecordDecrypted(sent.Id, plaintext, encoded.FrankingKeyBase64);
+            sent = sent with { Body = plaintext };
 
             if (ConversationId == targetId)
             {
