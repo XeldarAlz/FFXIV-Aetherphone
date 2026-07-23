@@ -163,9 +163,10 @@ internal sealed class WallpaperPage : ISettingsPage
             {
                 using (ImRaii.PushId(index))
                 {
-                    var clicked = ImGui.InvisibleButton("tile", new Vector2(cellWidth, cellHeight)) && interactive;
+                    ImGui.Dummy(new Vector2(cellWidth, cellHeight));
                     var min = ImGui.GetItemRectMin();
                     var max = ImGui.GetItemRectMax();
+                    var clicked = interactive && UiInteract.Click(min, max, UiInteract.Hover(min, max));
                     if (index < entries.Count)
                     {
                         DrawWallpaperTile(entries[index], min, max, theme, interactive, clicked);
@@ -238,8 +239,10 @@ internal sealed class WallpaperPage : ISettingsPage
         var scale = ImGuiHelpers.GlobalScale;
         var dl = ImGui.GetWindowDrawList();
         var radius = 11f * scale;
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var extent = new Vector2(radius, radius);
+        var min = center - extent;
+        var max = center + extent;
+        var hovered = ImGui.IsMouseHoveringRect(min, max);
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.72f : 0.55f)), 24);
         var arm = 4f * scale;
         var ink = ImGui.GetColorU32(hovered ? theme.Danger : new Vector4(1f, 1f, 1f, 0.9f));
@@ -252,7 +255,7 @@ internal sealed class WallpaperPage : ISettingsPage
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private void DrawSheet(Rect body, PhoneTheme theme, bool canDismiss)
@@ -348,24 +351,30 @@ internal sealed class WallpaperPage : ISettingsPage
             return;
         }
 
+        var photosKey = ImGui.GetID("##wallpaperPhotos");
         ImGui.SetCursorScreenPos(grid.Min);
         var gap = 6f * scale;
         using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
-        using (var child = ImRaii.Child("##wallpaperPhotos", grid.Size, false, ImGuiWindowFlags.NoBackground))
+        using (var child = ImRaii.Child("##wallpaperPhotos", grid.Size, false,
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
             if (!child)
             {
                 return;
             }
 
+            DragScrollHost.Begin(photosKey);
+
             var cell = (ScrollLayout.StableContentWidth() - gap * (PhotoColumns - 1)) / PhotoColumns;
             for (var index = 0; index < photoPaths.Length; index++)
             {
                 using (ImRaii.PushId(index))
                 {
-                    var clicked = ImGui.InvisibleButton("photo", new Vector2(cell, cell));
-                    DrawPhotoThumb(photoPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), theme);
-                    if (clicked)
+                    ImGui.Dummy(new Vector2(cell, cell));
+                    var min = ImGui.GetItemRectMin();
+                    var max = ImGui.GetItemRectMax();
+                    DrawPhotoThumb(photoPaths[index], min, max, theme);
+                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                     {
                         overlay = Overlay.None;
                         navigator.Open(new WallpaperCropPage(photoPaths[index], navigator, assign, wallpapers,

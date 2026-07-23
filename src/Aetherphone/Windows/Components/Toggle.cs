@@ -17,13 +17,15 @@ internal static class Toggle
     {
         var scale = ImGuiHelpers.GlobalScale;
         var result = value;
-        if (ImGui.IsMouseHoveringRect(bounds.Min, bounds.Max))
+        var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
+        if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                result = !value;
-            }
+        }
+
+        if (UiInteract.Click(bounds.Min, bounds.Max, hovered))
+        {
+            result = !value;
         }
 
         var progress = Animate(id, value ? 1f : 0f);

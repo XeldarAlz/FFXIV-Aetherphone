@@ -156,9 +156,12 @@ internal sealed class ConductGateOverlay
             return;
         }
 
+        var rulesKey = ImGui.GetID("##conductRules");
         ImGui.SetCursorScreenPos(listRect.Min);
-        using (ImRaii.Child("##conductRules", listRect.Size, false, ImGuiWindowFlags.NoBackground))
+        using (ImRaii.Child("##conductRules", listRect.Size, false,
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
+            DragScrollHost.Begin(rulesKey);
             var width = ScrollLayout.StableContentWidth();
             for (var index = 0; index < gate.Sections.Length; index++)
             {

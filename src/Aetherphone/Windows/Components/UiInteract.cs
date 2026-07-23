@@ -10,10 +10,15 @@ internal static class UiInteract
     private static int blockedFrame = -1;
     private static Rect overlayRect;
     private static int overlayFrame = -1;
+    private static Vector2 pendingTapPos;
+    private static bool hasPendingTap;
 
     public static void BlockThisFrame() => blockedFrame = ImGui.GetFrameCount();
 
     public static bool InputBlocked => blockedFrame == ImGui.GetFrameCount();
+
+    /// <summary>Discards the in-flight tap without activating it (called when a drag starts).</summary>
+    public static void CancelPendingTap() => hasPendingTap = false;
 
     public static bool HoverOverlay(Rect rect)
     {
@@ -29,15 +34,58 @@ internal static class UiInteract
     public static bool Hover(Vector2 min, Vector2 max) =>
         !InputBlocked && !MouseOverOverlay && ImGui.IsMouseHoveringRect(min, max);
 
-    public static bool HoverClick(Vector2 min, Vector2 max)
+    /// <summary>
+    /// Release-triggered activation for a rect the caller has already hover-tested, so a drag can
+    /// cancel the pending tap before it fires. Pass the same rect <paramref name="hovered"/> was
+    /// computed from.
+    /// </summary>
+    public static bool Click(Vector2 min, Vector2 max, bool hovered)
     {
-        if (!Hover(min, max))
+        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) && !ImGui.IsMouseReleased(ImGuiMouseButton.Left))
+        {
+            hasPendingTap = false;
+        }
+
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            pendingTapPos = ImGui.GetMousePos();
+            hasPendingTap = true;
+        }
+
+        if (!hasPendingTap || !ImGui.IsMouseReleased(ImGuiMouseButton.Left))
         {
             return false;
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        var activated = hovered &&
+            pendingTapPos.X >= min.X && pendingTapPos.X <= max.X &&
+            pendingTapPos.Y >= min.Y && pendingTapPos.Y <= max.Y;
+
+        if (activated)
+        {
+            hasPendingTap = false;
+        }
+
+        return activated;
+    }
+
+    /// <summary>
+    /// <see cref="Click(Vector2, Vector2, bool)"/> gated by the standard <see cref="Hover"/> test.
+    /// </summary>
+    public static bool Click(Vector2 min, Vector2 max) => Click(min, max, Hover(min, max));
+
+    /// <summary>
+    /// <see cref="Click(Vector2, Vector2, bool)"/> plus the hand cursor while hovered.
+    /// </summary>
+    public static bool HoverClick(Vector2 min, Vector2 max)
+    {
+        var hovering = Hover(min, max);
+        if (hovering)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return Click(min, max, hovering);
     }
 
     public static bool HoverClickCircle(Vector2 center, float radius)

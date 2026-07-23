@@ -372,8 +372,9 @@ internal sealed partial class VelvetShell
             Typography.FitText(VelvetIntent.Summary(mask), textWidth, TextStyles.Footnote), VelvetTheme.RoseInk,
             TextStyles.SubheadlineEmphasized);
 
-        if (!pillClicked && UiInteract.Hover(card.Min, card.Max) && !UiInteract.Hover(pillRect.Min, pillRect.Max) &&
-            ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var cardHovered = !pillClicked && UiInteract.Hover(card.Min, card.Max) &&
+            !UiInteract.Hover(pillRect.Min, pillRect.Max);
+        if (UiInteract.Click(card.Min, card.Max, cardHovered))
         {
             OpenProfile(profile.UserId);
         }

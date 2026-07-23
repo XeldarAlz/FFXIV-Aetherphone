@@ -73,16 +73,18 @@ internal sealed class SkywatcherApp : IPhoneApp
             scale, 1f, false);
         SceneChrome.BackChevron(content, context.Navigation, palette.Ink, scale);
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + 40f * scale), content.Max);
+        var skyKey = ImGui.GetID("##sky");
         ImGui.SetCursorScreenPos(body.Min);
         using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, new Vector2(14f * scale, 4f * scale)))
         using (var child = ImRaii.Child("##sky", body.Size, false,
-                   ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar))
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
             if (!child)
             {
                 return;
             }
 
+            DragScrollHost.Begin(skyKey);
             var width = ImGui.GetContentRegionAvail().X;
             DrawHero(width, screen, palette, kind, isDay, scale);
             SectionLabel(Loc.T(L.Skywatcher.NextFewHours), palette.InkSoft, scale);

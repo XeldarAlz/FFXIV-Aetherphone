@@ -271,13 +271,12 @@ internal sealed class MapsApp : IPhoneApp
             expansion.Name, frameTheme.TextStrong, TextStyles.Headline);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
-        if (!hovered)
+        if (hovered)
         {
-            return false;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private void DrawDestinationRow(Rect row, MapAetheryte aetheryte)
@@ -286,8 +285,9 @@ internal sealed class MapsApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var starRadius = 9f * scale;
         var starCenter = new Vector2(row.Min.X + starRadius, row.Center.Y);
-        var starHovered = ImGui.IsMouseHoveringRect(new Vector2(row.Min.X, row.Min.Y),
-            new Vector2(starCenter.X + starRadius + 6f * scale, row.Max.Y));
+        var starMin = new Vector2(row.Min.X, row.Min.Y);
+        var starMax = new Vector2(starCenter.X + starRadius + 6f * scale, row.Max.Y);
+        var starHovered = ImGui.IsMouseHoveringRect(starMin, starMax);
         var rowHovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         var actionHovered = rowHovered && !starHovered;
         if (actionHovered)
@@ -305,29 +305,28 @@ internal sealed class MapsApp : IPhoneApp
         var arrowTip = new Vector2(row.Max.X, row.Center.Y);
         MapGlyphs.ChevronRight(arrowTip, 6f * scale, 2.2f * scale,
             actionHovered ? frameTheme.Accent : frameTheme.TextMuted);
+        var starClicked = UiInteract.Click(starMin, starMax, starHovered);
+        var rowClicked = UiInteract.Click(row.Min, row.Max, rowHovered);
         if (starHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        }
+        else if (rowHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (!lifestreamAvailable)
             {
-                ToggleFavorite(aetheryte.RowId);
+                HoverTooltip.Show(row, Loc.T(L.Maps.NeedsLifestream), HoverLabelSide.Above);
             }
+        }
 
+        if (starClicked)
+        {
+            ToggleFavorite(aetheryte.RowId);
             return;
         }
 
-        if (!rowHovered)
-        {
-            return;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (!lifestreamAvailable)
-        {
-            HoverTooltip.Show(row, Loc.T(L.Maps.NeedsLifestream), HoverLabelSide.Above);
-        }
-
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (rowClicked)
         {
             Teleport(aetheryte);
         }

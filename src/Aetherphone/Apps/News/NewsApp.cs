@@ -192,10 +192,11 @@ internal sealed class NewsApp : IPhoneApp
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    UrlActions.OpenInBrowser(items[index].Url);
-                }
+            }
+
+            if (UiInteract.Click(row.Min, row.Max, hovered))
+            {
+                UrlActions.OpenInBrowser(items[index].Url);
             }
         }
 
@@ -436,16 +437,16 @@ internal sealed class NewsApp : IPhoneApp
 
     private void InteractCard(Rect rect, float rounding, string url, ImDrawListPtr drawList)
     {
-        if (!ImGui.IsMouseHoveringRect(rect.Min, rect.Max))
+        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        if (hovered)
         {
-            return;
+            var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
+            var wash = pressed ? new Vector4(0f, 0f, 0f, 0.08f) : new Vector4(1f, 1f, 1f, 0.05f);
+            Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(wash));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var wash = pressed ? new Vector4(0f, 0f, 0f, 0.08f) : new Vector4(1f, 1f, 1f, 0.05f);
-        Squircle.Fill(drawList, rect.Min, rect.Max, rounding, ImGui.GetColorU32(wash));
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (!string.IsNullOrEmpty(url) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!string.IsNullOrEmpty(url) && UiInteract.Click(rect.Min, rect.Max, hovered))
         {
             UrlActions.OpenInBrowser(url);
         }

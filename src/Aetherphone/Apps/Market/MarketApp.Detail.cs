@@ -276,7 +276,7 @@ internal sealed partial class MarketApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private void DrawTrendSection(MarketSnapshot snapshot, bool hq)

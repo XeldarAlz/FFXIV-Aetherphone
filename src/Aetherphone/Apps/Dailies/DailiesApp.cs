@@ -329,7 +329,7 @@ internal sealed class DailiesApp : IPhoneApp
 
         ImGui.PopClipRect();
 
-        if (tappable && hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (tappable && UiInteract.Click(band.Min, band.Max, hovered))
         {
             checkStore.SetChecked(item, !complete, utcNow);
             RefreshAuto();

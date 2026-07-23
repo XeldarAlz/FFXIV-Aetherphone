@@ -26,7 +26,7 @@ internal static class SettingsHero
         var width = ImGui.GetContentRegionAvail().X;
         var min = origin;
         var max = new Vector2(origin.X + width, origin.Y + Height * scale);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var radius = Metrics.Radius.Card * scale;
         var fill = hovered ? Palette.Mix(theme.GroupedCard, theme.TextStrong, 0.05f) : theme.GroupedCard;
         Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(fill));
@@ -62,7 +62,7 @@ internal static class SettingsHero
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private static void DrawAvatar(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme theme,

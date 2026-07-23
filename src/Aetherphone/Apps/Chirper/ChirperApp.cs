@@ -52,6 +52,11 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly EmojiComposer composeEmoji = new();
     private readonly EmojiComposer commentEmoji = new();
     private readonly AvatarLightbox avatarLightbox = new();
+    private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
+    {
+        { SocialFeedScope.ForYou, new() },
+        { SocialFeedScope.Following, new() }
+    };
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
     private readonly Action back;
@@ -279,6 +284,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
+            pullToRefresh[scope].Draw(listRect, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
+                store.IsLoading(scope), AppPalettes.Chirper.MutedInk, () => store.RefreshFeed(scope));
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
@@ -613,10 +620,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                store.ToggleReaction(post, kind);
-            }
+        }
+
+        if (UiInteract.Click(min, max, hovered))
+        {
+            store.ToggleReaction(post, kind);
         }
 
         return chipWidth + 6f * scale;
@@ -1015,8 +1023,9 @@ internal sealed partial class ChirperApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var eased = Easing.EaseOutQuint(Math.Clamp(reveal, 0f, 1f));
         var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.6f, 0f, 1f));
-        var hovered = interactive && UiInteract.Hover(center - new Vector2(hitRadius, hitRadius),
-            center + new Vector2(hitRadius, hitRadius));
+        var hitMin = center - new Vector2(hitRadius, hitRadius);
+        var hitMax = center + new Vector2(hitRadius, hitRadius);
+        var hovered = interactive && UiInteract.Hover(hitMin, hitMax);
         if (background.W > 0f)
         {
             var fill = hovered ? Palette.Mix(background, theme.TextStrong, 0.08f) : background;
@@ -1033,11 +1042,10 @@ internal sealed partial class ChirperApp : IPhoneApp
 
         if (reveal > 0.6f)
         {
-            HoverTooltip.Show(new Rect(center - new Vector2(hitRadius, hitRadius),
-                center + new Vector2(hitRadius, hitRadius)), tooltip, HoverLabelSide.Above);
+            HoverTooltip.Show(new Rect(hitMin, hitMax), tooltip, HoverLabelSide.Above);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 
 
@@ -1079,10 +1087,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                OpenUserList(post.Id, UserListKind.Likers);
-            }
+        }
+
+        if (UiInteract.Click(pos, pos + size, hovered))
+        {
+            OpenUserList(post.Id, UserListKind.Likers);
         }
 
         ImGui.SetCursorScreenPos(origin);

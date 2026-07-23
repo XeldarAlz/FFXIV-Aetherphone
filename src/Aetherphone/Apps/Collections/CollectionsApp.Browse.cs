@@ -127,7 +127,7 @@ internal sealed partial class CollectionsApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private void DrawTileRing(Rect rect, SummaryEntry? summary, CategoryProgress? progress, float pad, float scale)
@@ -407,10 +407,11 @@ internal sealed partial class CollectionsApp
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    OpenItem(category, item);
-                }
+            }
+
+            if (UiInteract.Click(rowMin, rowMax, hovered))
+            {
+                OpenItem(category, item);
             }
         }
 
@@ -505,13 +506,17 @@ internal sealed partial class CollectionsApp
         var baseX = center.X + (left ? 3.5f : -3.5f) * scale;
         drawList.AddLine(new Vector2(baseX, center.Y - 5.5f * scale), new Vector2(tipX, center.Y), color, thickness);
         drawList.AddLine(new Vector2(baseX, center.Y + 5.5f * scale), new Vector2(tipX, center.Y), color, thickness);
-        if (!hovered)
+        if (!enabled)
         {
             return false;
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(center - new Vector2(radius, radius), center + new Vector2(radius, radius), hovered);
     }
 
     private void DrawOwnershipSegments(Rect bar)
@@ -574,13 +579,12 @@ internal sealed partial class CollectionsApp
             TextStyles.FootnoteEmphasized);
         DrawChevron(drawList, new Vector2(max.X - 16f * scale, bar.Center.Y), 4.5f * scale, sourceMenuOpen, ui.MutedInk,
             scale);
-        if (!hovered)
+        if (hovered)
         {
-            return;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(min, max, hovered))
         {
             sourceMenuOpen = !sourceMenuOpen;
         }
@@ -633,7 +637,7 @@ internal sealed partial class CollectionsApp
                 DrawCheck(drawList, new Vector2(rowMax.X - 13f * scale, centerY), ui.Accent, scale);
             }
 
-            if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(rowMin, rowMax, hovered))
             {
                 clicked = index;
             }

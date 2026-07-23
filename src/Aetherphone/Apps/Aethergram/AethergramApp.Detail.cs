@@ -90,10 +90,11 @@ internal sealed partial class AethergramApp
                 if (likeHovered)
                 {
                     ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                    {
-                        OpenUserList(post.Id, UserListKind.Likers);
-                    }
+                }
+
+                if (UiInteract.Click(likePos, likePos + likeSize, likeHovered))
+                {
+                    OpenUserList(post.Id, UserListKind.Likers);
                 }
 
                 actionCursorX += likeSize.X + 16f * scale;

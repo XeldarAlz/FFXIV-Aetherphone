@@ -46,6 +46,11 @@ internal sealed partial class AethergramApp : IPhoneApp
     public string Glyph => "Ag";
     public int BadgeCount => 0;
     private const string ScopeMenuId = "scope";
+    private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
+    {
+        { SocialFeedScope.ForYou, new() },
+        { SocialFeedScope.Following, new() }
+    };
     private readonly AethergramStore store;
     private readonly SocialLauncher launcher;
     private readonly GameData gameData;
@@ -485,6 +490,8 @@ internal sealed partial class AethergramApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
+            pullToRefresh[scope].Draw(listRect, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
+                store.IsLoading(scope), AppPalettes.Aethergram.MutedInk, () => store.RefreshFeed(scope));
             stories.DrawTray(theme);
             if (snapshot.Length == 0)
             {
@@ -744,7 +751,18 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     private void AdvancePendingPhotoView()
     {
-        if (pendingViewUrl is not { } url || ImGui.GetTime() - pendingViewAt < 0.30)
+        if (pendingViewUrl is not { } url)
+        {
+            return;
+        }
+
+        if (DragScrollHost.CurrentDragging)
+        {
+            pendingViewUrl = null;
+            return;
+        }
+
+        if (ImGui.GetTime() - pendingViewAt < 0.30)
         {
             return;
         }

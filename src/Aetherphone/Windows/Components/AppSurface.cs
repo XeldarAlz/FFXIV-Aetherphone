@@ -11,8 +11,11 @@ internal static class AppSurface
     {
         var scale = ImGuiHelpers.GlobalScale;
         ImGui.SetCursorScreenPos(area.Min);
+        var key = ImGui.GetID("##appSurface");
         var padding = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, new Vector2(16f * scale, 8f * scale));
-        var child = ImRaii.Child("##appSurface", area.Size, false, ImGuiWindowFlags.NoBackground);
+        var child = ImRaii.Child("##appSurface", area.Size, false,
+            DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground));
+        DragScrollHost.Begin(key);
         return new SurfaceScope(child, padding);
     }
 

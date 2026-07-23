@@ -318,7 +318,7 @@ internal sealed class GamesApp : IPhoneApp
         var subtitle = string.IsNullOrEmpty(best) ? game.Genre : $"{Loc.T(L.Games.Best)} · {best}";
         Typography.Draw(new Vector2(textX, row.Center.Y + 2f * scale), subtitle, theme.TextMuted, TextStyles.Footnote);
         DrawPlayPill(drawList, row, accent, scale);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 
     private static void DrawPlayPill(ImDrawListPtr drawList, Rect row, Vector4 accent, float scale)
@@ -408,7 +408,7 @@ internal sealed class GamesApp : IPhoneApp
             return true;
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private static void DrawHeroGlow(ImDrawListPtr drawList, Vector2 min, Vector2 max, Vector4 accent)
