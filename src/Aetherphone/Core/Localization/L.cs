@@ -1289,6 +1289,9 @@ internal static class L
         public static readonly LocString RadioSearchSub = new("music.radioSearchSub", "Search by name, genre, or country");
         public static readonly LocString YourPlaylists = new("music.yourPlaylists", "Your playlists");
         public static readonly LocString AddToPlaylist = new("music.addToPlaylist", "Add to playlist");
+        public static readonly LocString AddFavoriteStation = new("music.addFavoriteStation", "Add to Favorites");
+        public static readonly LocString RemoveFavoriteStation = new("music.removeFavoriteStation", "Remove from Favorites");
+        public static readonly LocString FavoriteStations = new("music.favoriteStations", "Favorite stations");
         public static readonly LocString NewPlaylist = new("music.newPlaylist", "New playlist");
         public static readonly LocString PlaylistNameHint = new("music.playlistNameHint", "Playlist name");
         public static readonly LocString CreatePlaylist = new("music.createPlaylist", "Create");

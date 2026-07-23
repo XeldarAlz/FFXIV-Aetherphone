@@ -10,6 +10,7 @@ using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Radio;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
@@ -100,6 +101,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool VenueNotifyNewEvents { get; set; } = true;
     public List<string> VenueFavorites { get; set; } = new();
     public List<uint> MapFavorites { get; set; } = new();
+    public List<RadioStationRecord> RadioFavorites { get; set; } = new();
     public const int VelvetGateVersion = 1;
     public const int VelvetOnboardVersion = 2;
     public bool VelvetAcknowledgedGate { get; set; }
