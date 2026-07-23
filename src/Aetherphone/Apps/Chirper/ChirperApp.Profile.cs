@@ -108,6 +108,12 @@ internal sealed partial class ChirperApp
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), DisplayName, AppPalettes.Chirper.TitleInk,
             1.3f, FontWeight.Bold);
+        var titleSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
+        var titleMin = new Vector2(area.Center.X - titleSize.X * 0.5f, rowCenterY - titleSize.Y * 0.5f);
+        if (UiInteract.HoverClick(titleMin, titleMin + titleSize))
+        {
+            feedScrollTopPending = true;
+        }
         if (store.Me is { } me)
         {
             var radius = 16f * scale;

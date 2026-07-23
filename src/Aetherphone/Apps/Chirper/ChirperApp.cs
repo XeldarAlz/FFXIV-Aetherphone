@@ -63,6 +63,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     private float tabSegmentAnim;
     private string draft = string.Empty;
     private bool composeFocus;
+    private bool feedScrollTopPending;
     private string composeStatus = string.Empty;
     private volatile int composeOutcome;
     private readonly ChirperActionReveal actions = new();
@@ -279,11 +280,17 @@ internal sealed partial class ChirperApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
+            if (feedScrollTopPending)
+            {
+                ImGui.SetScrollY(0f);
+                feedScrollTopPending = false;
+            }
+
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
-                    scope == SocialFeedScope.Following ? Loc.T(L.Chirper.FollowingEmpty) :
-                    Loc.T(L.Chirper.ExploreEmpty);
+    scope == SocialFeedScope.Following ? Loc.T(L.Chirper.FollowingEmpty) :
+                Loc.T(L.Chirper.ExploreEmpty);
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 90f * ImGuiHelpers.GlobalScale),
                     message, AppPalettes.Chirper.MutedInk);
             }
