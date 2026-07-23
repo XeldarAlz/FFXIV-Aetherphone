@@ -158,6 +158,7 @@ internal static class L
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
         public static readonly LocString Linkpearl = new("app.linkpearl", "Linkpearl");
         public static readonly LocString Message = new("app.message", "Message");
+        public static readonly LocString Jobs = new("app.jobs", "Jobs");
     }
 
     internal static class DirectMessages
@@ -468,6 +469,8 @@ internal static class L
         public static readonly LocString Wallpaper = new("settings.wallpaper", "Wallpaper");
         public static readonly LocString TextSize = new("settings.textSize", "Text Size");
         public static readonly LocString PhoneSize = new("settings.phoneSize", "Phone Size");
+        public static readonly LocString ClockFormat = new("settings.clockFormat", "Clock");
+        public static readonly LocString Use24HourClock = new("settings.use24HourClock", "24-hour time");
         public static readonly LocString Notifications = new("settings.notifications", "Notifications");
         public static readonly LocString DoNotDisturb = new("settings.doNotDisturb", "Do Not Disturb");
         public static readonly LocString Vibration = new("settings.vibration", "Vibration");
@@ -1289,6 +1292,9 @@ internal static class L
         public static readonly LocString RadioSearchSub = new("music.radioSearchSub", "Search by name, genre, or country");
         public static readonly LocString YourPlaylists = new("music.yourPlaylists", "Your playlists");
         public static readonly LocString AddToPlaylist = new("music.addToPlaylist", "Add to playlist");
+        public static readonly LocString AddFavoriteStation = new("music.addFavoriteStation", "Add to Favorites");
+        public static readonly LocString RemoveFavoriteStation = new("music.removeFavoriteStation", "Remove from Favorites");
+        public static readonly LocString FavoriteStations = new("music.favoriteStations", "Favorite stations");
         public static readonly LocString NewPlaylist = new("music.newPlaylist", "New playlist");
         public static readonly LocString PlaylistNameHint = new("music.playlistNameHint", "Playlist name");
         public static readonly LocString CreatePlaylist = new("music.createPlaylist", "Create");
@@ -1956,6 +1962,29 @@ internal static class L
         public static readonly LocString SectionPvp = new("wallet.sectionPvp", "PvP");
         public static readonly LocString SectionCrafting = new("wallet.sectionCrafting", "Crafting & Gathering");
         public static readonly LocString SectionOther = new("wallet.sectionOther", "Other");
+    }
+
+    internal static class Jobs
+    {
+        public static readonly LocString LogInToView = new("jobs.logInToView", "Log in to view your jobs");
+        public static readonly LocString NoGearsets = new("jobs.noGearsets", "Create a gearset for a job in-game to see it here.");
+        public static readonly LocString SectionTank = new("jobs.sectionTank", "Tank");
+        public static readonly LocString SectionHealer = new("jobs.sectionHealer", "Healer");
+        public static readonly LocString SectionMelee = new("jobs.sectionMelee", "Melee DPS");
+        public static readonly LocString SectionPhysicalRanged = new("jobs.sectionPhysicalRanged", "Physical Ranged DPS");
+        public static readonly LocString SectionMagicalRanged = new("jobs.sectionMagicalRanged", "Magical Ranged DPS");
+        public static readonly LocString SectionHand = new("jobs.sectionHand", "Disciples of the Hand");
+        public static readonly LocString SectionLand = new("jobs.sectionLand", "Disciples of the Land");
+        public static readonly LocString LevelItemLevel = new("jobs.levelItemLevel", "{0} · Lv{1} · iLv{2}");
+        public static readonly LocString LevelOnly = new("jobs.levelOnly", "{0} · Lv{1}");
+        public static readonly LocString Active = new("jobs.active", "ACTIVE");
+        public static readonly LocString BackgroundColor = new("jobs.backgroundColor", "Background color");
+        public static readonly LocString CustomColor = new("jobs.customColor", "Custom color…");
+        public static readonly LocString ColorNamePlaceholder = new("jobs.colorNamePlaceholder", "Name this color");
+        public static readonly LocString SaveColor = new("jobs.saveColor", "Save");
+        public static readonly LocString UpdateColor = new("jobs.updateColor", "Update");
+        public static readonly LocString DeleteColor = new("jobs.deleteColor", "Delete");
+        public static readonly LocString DeleteColorConfirm = new("jobs.deleteColorConfirm", "Delete \"{0}\"? This can't be undone.");
     }
 
     internal static class Inventory

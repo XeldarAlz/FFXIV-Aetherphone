@@ -177,10 +177,10 @@ internal sealed class CalendarWidget : IHomeWidget
     {
         if (begin.Date == DateTime.Today)
         {
-            return begin.ToString("HH:mm");
+            return TimeText.Clock(begin);
         }
 
-        return string.Concat(begin.ToString("ddd"), " ", begin.ToString("HH:mm"));
+        return string.Concat(begin.ToString("ddd"), " ", TimeText.Clock(begin));
     }
 
     public void Dispose()

@@ -325,7 +325,7 @@ internal sealed partial class PhotosApp : IPhoneApp
                 await File.WriteAllBytesAsync(thumbnailPath, bytes, token).ConfigureAwait(false);
             }
 
-            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, "thumb:" + path, token)
+            var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes, "thumb:" + path, token)
                 .ConfigureAwait(false);
             if (!thumbnails.TryAdd(path, wrap))
             {
@@ -352,7 +352,8 @@ internal sealed partial class PhotosApp : IPhoneApp
         {
             var token = cancellation.Token;
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
-            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, path, token).ConfigureAwait(false);
+            var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes, path, token)
+                .ConfigureAwait(false);
             if (!fullImages.TryAdd(path, wrap))
             {
                 wrap.Dispose();

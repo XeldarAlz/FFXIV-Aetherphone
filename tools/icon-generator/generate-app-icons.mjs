@@ -28,6 +28,7 @@ const map = {
   market: "chart-bar",
   wallet: "wallet",
   inventory: "backpack",
+  jobs: "swords",
   music: "music",
   clock: "clock",
   timers: "hourglass",

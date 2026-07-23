@@ -8,8 +8,10 @@ using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Radio;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
@@ -54,6 +56,8 @@ internal sealed class Configuration : IPluginConfiguration
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
+    public string JobsAccentName { get; set; } = "Blue";
+    public List<JobsCustomColor> JobsCustomColors { get; set; } = new();
     public string LightWallpaperId { get; set; } = "DuskLight";
     public string DarkWallpaperId { get; set; } = "DuskDark";
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
@@ -100,6 +104,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool VenueNotifyNewEvents { get; set; } = true;
     public List<string> VenueFavorites { get; set; } = new();
     public List<uint> MapFavorites { get; set; } = new();
+    public List<RadioStationRecord> RadioFavorites { get; set; } = new();
     public const int VelvetGateVersion = 1;
     public const int VelvetOnboardVersion = 2;
     public bool VelvetAcknowledgedGate { get; set; }
@@ -128,6 +133,7 @@ internal sealed class Configuration : IPluginConfiguration
     public Dictionary<ulong, List<string>> MutedLinkshellsByCharacter { get; set; } = new();
     public bool LinkshellMutesPerCharacterMigrated { get; set; }
     public long DevChatLastSeenUnix { get; set; }
+    public bool? Use24HourClock { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
     public bool RegionManual { get; set; }

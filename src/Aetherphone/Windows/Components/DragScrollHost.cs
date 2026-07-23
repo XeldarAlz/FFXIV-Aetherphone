@@ -18,6 +18,7 @@ internal static class DragScrollHost
 
     private static readonly Dictionary<uint, Region> Regions = new();
     private static readonly List<uint> stale = new();
+    private static Region? current;
     private static float currentPull;
     private static bool currentDragging;
 
@@ -43,6 +44,7 @@ internal static class DragScrollHost
 
         var gapped = region.LastFrame != frame - 1;
         region.LastFrame = frame;
+        current = region;
 
         var scroller = region.Scroller;
         scroller.Scale = ImGuiHelpers.GlobalScale;
@@ -135,6 +137,20 @@ internal static class DragScrollHost
 
         currentPull = scroller.PullDistance;
         currentDragging = scroller.IsDragging;
+    }
+
+    /// <summary>Snaps the surface opened this frame back to the top, dropping any drag, momentum, or pull.</summary>
+    public static void JumpToTop()
+    {
+        ImGui.SetScrollY(0f);
+        if (current is not null)
+        {
+            current.Scroller.Reset();
+            current.Pressed = false;
+        }
+
+        currentPull = 0f;
+        currentDragging = false;
     }
 
     private static void EvictStale(int frame)

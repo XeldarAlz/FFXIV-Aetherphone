@@ -76,7 +76,15 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         this.account = account;
         this.configuration = configuration;
         this.signals = signals;
-        signals.VelvetPinged += InboxCadence.RequestImmediate;
+        signals.VelvetPinged += OnVelvetPinged;
+    }
+
+    public override bool RealtimePushActive => signals.RealtimeActive;
+
+    private void OnVelvetPinged()
+    {
+        InboxCadence.RequestImmediate();
+        RefreshThread();
     }
 
     public MentionSuggestions NewMentionSuggestions() => new(account, work);
@@ -1150,6 +1158,6 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     protected override void DisposeCore()
     {
-        signals.VelvetPinged -= InboxCadence.RequestImmediate;
+        signals.VelvetPinged -= OnVelvetPinged;
     }
 }

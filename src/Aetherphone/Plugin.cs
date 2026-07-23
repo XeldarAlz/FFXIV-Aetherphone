@@ -37,6 +37,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IUnlockState UnlockState { get; private set; } = null!;
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
@@ -78,7 +79,7 @@ public sealed class Plugin : IDalamudPlugin
             InitializeLocalization();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
-                TextureProvider, PluginInterface.ConfigDirectory);
+                TextureProvider, PluginInterface.ConfigDirectory, UnlockState);
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
             EmojiCatalog.Load();
             Wallpapers = services.Wallpapers;
@@ -252,6 +253,7 @@ public sealed class Plugin : IDalamudPlugin
 
     public static void OnLanguageChanged()
     {
+        TimeText.ApplyClockPreference(Cfg.Use24HourClock);
         if (primaryCommand is not null)
         {
             primaryCommand.HelpMessage = Loc.T(L.Plugin.CommandHelp);
@@ -273,6 +275,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         Loc.Initialize(Cfg.Language, directory);
+        TimeText.ApplyClockPreference(Cfg.Use24HourClock);
     }
 
     private static string DetectLanguage()

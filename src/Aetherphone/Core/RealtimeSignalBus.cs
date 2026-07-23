@@ -2,9 +2,18 @@ namespace Aetherphone.Core;
 
 internal sealed class RealtimeSignalBus
 {
+    private volatile bool realtimeActive;
+
     public event Action? ChatPinged;
     public event Action? VelvetPinged;
     public event Action? SocialPinged;
+
+    public bool RealtimeActive => realtimeActive;
+
+    public void SetActive(bool active)
+    {
+        realtimeActive = active;
+    }
 
     public void PublishChat()
     {

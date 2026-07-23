@@ -38,6 +38,12 @@
           "NAudio.Core": "2.3.0"
         }
       },
+      "NEbml": {
+        "type": "Direct",
+        "requested": "[0.11.0, )",
+        "resolved": "0.11.0",
+        "contentHash": "ifuKvobGQbnIo1lGM4ApeKygc4t9e1yv5IEWzVbOuBKCJ0p9NSrgT4irwPBTfTxLxw52vFPpGv3VFAmHQf6jeg=="
+      },
       "NetStone": {
         "type": "Direct",
         "requested": "[1.4.1, )",

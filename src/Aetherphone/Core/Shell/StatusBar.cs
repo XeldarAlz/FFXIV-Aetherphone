@@ -1,3 +1,4 @@
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -22,15 +23,17 @@ internal static class StatusBar
     private const float IslandTop = 9f;
     private static string cachedTime = string.Empty;
     private static int cachedTimeKey = -1;
+    private static int cachedFormatVersion = -1;
 
     private static string CurrentTime()
     {
         var now = DateTime.Now;
         var key = now.Hour * 60 + now.Minute;
-        if (key != cachedTimeKey)
+        if (key != cachedTimeKey || cachedFormatVersion != TimeText.FormatVersion)
         {
             cachedTimeKey = key;
-            cachedTime = now.ToString("HH:mm");
+            cachedFormatVersion = TimeText.FormatVersion;
+            cachedTime = TimeText.Clock(now);
         }
 
         return cachedTime;

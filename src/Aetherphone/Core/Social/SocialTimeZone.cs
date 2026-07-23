@@ -41,7 +41,7 @@ internal static class SocialTimeZone
     public static string ClockLabel(int minutes)
     {
         var localTime = DateTime.UtcNow.AddMinutes(minutes);
-        return localTime.ToString("t", Loc.Culture);
+        return TimeText.Clock(localTime);
     }
 
     public static string Describe(int minutes) => $"{ClockLabel(minutes)} · {FormatOffset(minutes)}";

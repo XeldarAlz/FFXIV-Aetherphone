@@ -153,6 +153,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected virtual bool TickActive => session.IsSignedIn;
 
+    public virtual bool RealtimePushActive => false;
+
     protected virtual bool IsThreadMuted(TThread thread) => false;
 
     protected virtual bool ShouldRevealForReport(TMessage message) => true;

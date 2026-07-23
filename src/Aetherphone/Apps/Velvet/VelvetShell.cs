@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
@@ -41,6 +42,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly SocialNotificationService social;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
+    private readonly ConductGateService conduct;
     private readonly WallpaperImageCache wallpaperImages;
     private readonly AppSkin ui = new(VelvetTheme.Palette);
     private readonly RichTextCache detailBodyLayouts = new();
@@ -69,7 +71,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
         SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
         PhoneVisibility visibility, RealtimeSignalBus realtimeSignals, WallpaperImageCache wallpaperImages,
-        ConfirmService confirm, ReportService report)
+        ConfirmService confirm, ReportService report, ConductGateService conduct)
     {
         store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
             keyVault, conversationKeys, visibility, realtimeSignals);
@@ -88,6 +90,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.social = social;
         this.confirm = confirm;
         this.report = report;
+        this.conduct = conduct;
         this.wallpaperImages = wallpaperImages;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Velvet.ChangePhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,

@@ -60,7 +60,10 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private volatile string? pendingVoicePlay;
     private TMessage[] transcriptSource = Array.Empty<TMessage>();
     private TranscriptMessage[] transcriptCache = Array.Empty<TranscriptMessage>();
+    private const float PushActivePollMultiplier = 3f;
+
     private float sinceThreadPoll;
+    private float sinceTypingPoll;
     private float sinceTypingSend;
     private string lastTypingDraft = string.Empty;
     private string? imageViewId;
@@ -198,7 +201,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             }
 
             store.OpenThread(threadId);
-            sinceThreadPoll = threadPollSeconds;
+            sinceThreadPoll = threadPollSeconds * PushActivePollMultiplier;
+            sinceTypingPoll = threadPollSeconds;
             lastTypingDraft = string.Empty;
             composer.ClearTargets();
             searchController.Close();
@@ -280,12 +284,21 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     {
         PumpPendingVoice();
         var delta = ImGui.GetIO().DeltaTime;
+        sinceTypingPoll += delta;
+        if (sinceTypingPoll >= threadPollSeconds)
+        {
+            sinceTypingPoll = 0f;
+            store.RefreshTyping(threadId);
+        }
+
         sinceThreadPoll += delta;
-        if (sinceThreadPoll >= threadPollSeconds)
+        var messagePollSeconds = store.RealtimePushActive
+            ? threadPollSeconds * PushActivePollMultiplier
+            : threadPollSeconds;
+        if (sinceThreadPoll >= messagePollSeconds)
         {
             sinceThreadPoll = 0f;
             store.RefreshThread();
-            store.RefreshTyping(threadId);
         }
 
         sinceTypingSend += delta;

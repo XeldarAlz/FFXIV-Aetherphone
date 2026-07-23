@@ -2,17 +2,28 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
 internal sealed class DropdownMenu
 {
-    public readonly record struct Item(string Label, string Glyph = "", bool Danger = false, bool Selected = false);
+    public readonly record struct Item(string Label, string Glyph = "", bool Danger = false, bool Selected = false,
+        bool CanEdit = false, bool CanDelete = false);
+
+    public enum RowAction
+    {
+        Select,
+        Edit,
+        Delete,
+    }
 
     private const float RevealSeconds = 0.14f;
     private const float RowHeight = 36f;
     private const float MinWidth = 168f;
+    private const float ActionSlotWidth = 24f;
+    private const float ActionIconRadius = 11f;
     private string ownerId = string.Empty;
     private bool open;
     private Rect anchor;
@@ -52,8 +63,11 @@ internal sealed class DropdownMenu
         }
     }
 
-    public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items)
+    public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items) => Draw(screen, theme, items, out _);
+
+    public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items, out RowAction action)
     {
+        action = RowAction.Select;
         if (!open || items.Length == 0)
         {
             return -1;
@@ -68,14 +82,17 @@ internal sealed class DropdownMenu
         var rowHeight = RowHeight * scale;
         var glyphReserve = 26f * scale;
         var checkReserve = 22f * scale;
+        var actionSlot = ActionSlotWidth * scale;
         var width = MinWidth * scale;
         var anyGlyph = false;
         var anySelected = false;
+        var anyEdit = false;
         for (var index = 0; index < items.Length; index++)
         {
             var textWidth = Typography.Measure(items[index].Label, 0.9f, FontWeight.Medium).X;
             anyGlyph |= items[index].Glyph.Length > 0;
             anySelected |= items[index].Selected;
+            anyEdit |= items[index].CanEdit;
             width = MathF.Max(width, textWidth + padX * 2f);
         }
 
@@ -87,6 +104,11 @@ internal sealed class DropdownMenu
         if (anySelected)
         {
             width += checkReserve;
+        }
+
+        if (anyEdit)
+        {
+            width += actionSlot;
         }
 
         var height = items.Length * rowHeight + padY * 2f;
@@ -112,21 +134,47 @@ internal sealed class DropdownMenu
             ImGui.GetColorU32(Palette.WithAlpha(theme.GroupedCard, MathF.Min(0.98f, theme.GroupedCard.W + 0.4f) * alpha)));
         Material.EdgeSquircle(drawList, min, max, 14f * scale, scale);
         var clicked = -1;
+        var clickedAction = RowAction.Select;
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
             var rowMin = new Vector2(min.X + padY, min.Y + padY * revealScale + index * rowHeight * revealScale);
             var rowMax = new Vector2(max.X - padY, rowMin.Y + rowHeight * revealScale);
             var centerY = (rowMin.Y + rowMax.Y) * 0.5f;
-            var hovered = ImGui.IsMouseHoveringRect(rowMin, rowMax);
-            if (hovered)
+
+            // Reserved slots are laid out right-to-left so every row's icons line up regardless of that
+            // row's own capabilities: checkmark, then edit. Delete has no icon of its own: it is a right-click
+            // anywhere on the row (confirmed by the caller before anything is actually removed).
+            var cursorRight = rowMax.X - 10f * scale;
+            if (anySelected)
+            {
+                cursorRight -= checkReserve;
+            }
+
+            Rect? editRect = null;
+            if (anyEdit)
+            {
+                var center = new Vector2(cursorRight - actionSlot * 0.5f, centerY);
+                editRect = new Rect(center - new Vector2(ActionIconRadius * scale), center + new Vector2(ActionIconRadius * scale));
+                cursorRight -= actionSlot;
+            }
+
+            var rowHovered = ImGui.IsMouseHoveringRect(rowMin, rowMax);
+            var editHovered = item.CanEdit && editRect is { } er && ImGui.IsMouseHoveringRect(er.Min, er.Max);
+            if (rowHovered)
             {
                 Squircle.Fill(drawList, rowMin, rowMax, 9f * scale,
                     ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.07f * alpha)));
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (item.CanDelete && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
                 {
                     clicked = index;
+                    clickedAction = RowAction.Delete;
+                }
+                else if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    clicked = index;
+                    clickedAction = editHovered ? RowAction.Edit : RowAction.Select;
                 }
             }
 
@@ -150,10 +198,17 @@ internal sealed class DropdownMenu
             {
                 DrawCheck(drawList, new Vector2(rowMax.X - 16f * scale, centerY), theme.Accent, alpha, scale);
             }
+
+            if (item.CanEdit && editRect is { } editIconRect)
+            {
+                var tint = editHovered ? theme.Accent : Palette.WithAlpha(theme.TextMuted, theme.TextMuted.W * alpha);
+                AppSkin.Icon(drawList, editIconRect.Center, FontAwesomeIcon.Pen.ToIconString(), tint, 0.7f);
+            }
         }
 
         if (clicked >= 0)
         {
+            action = clickedAction;
             Close();
             return clicked;
         }

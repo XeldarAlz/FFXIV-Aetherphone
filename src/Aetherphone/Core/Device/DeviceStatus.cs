@@ -86,7 +86,7 @@ internal sealed class DeviceStatus : IDisposable
             try
             {
                 SampleBattery();
-                await SampleNetworkAsync(ping).ConfigureAwait(false);
+                SampleNetwork(ping);
                 await Task.Delay(SampleIntervalMilliseconds, token).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
@@ -124,14 +124,14 @@ internal sealed class DeviceStatus : IDisposable
         charging = false;
     }
 
-    private async Task SampleNetworkAsync(Ping ping)
+    private void SampleNetwork(Ping ping)
     {
         var endpoint = target;
         var succeeded = false;
         long roundtrip = 0;
         try
         {
-            var reply = await ping.SendPingAsync(endpoint, PingTimeoutMilliseconds).ConfigureAwait(false);
+            var reply = ping.Send(endpoint, PingTimeoutMilliseconds);
             if (reply.Status == IPStatus.Success)
             {
                 succeeded = true;

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Media;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
@@ -288,8 +289,8 @@ internal sealed class WallpaperLibrary : IDisposable
         {
             var token = cancellation.Token;
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
-            var wrap = await textures.CreateFromImageAsync(bytes, $"Aetherphone.Wallpaper.{path}", token)
-                .ConfigureAwait(false);
+            var wrap = await ImageProcessor.DecodeToTextureAsync(textures, bytes, $"Aetherphone.Wallpaper.{path}",
+                token).ConfigureAwait(false);
             RecordBrightness(path, bytes);
             if (!ready.TryAdd(path, wrap))
             {
