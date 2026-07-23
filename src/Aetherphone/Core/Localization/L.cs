@@ -159,6 +159,147 @@ internal static class L
         public static readonly LocString Linkpearl = new("app.linkpearl", "Linkpearl");
         public static readonly LocString Message = new("app.message", "Message");
         public static readonly LocString Jobs = new("app.jobs", "Jobs");
+        public static readonly LocString AppStore = new("app.appstore", "App Store");
+    }
+
+    internal static class Store
+    {
+        public static readonly LocString Today = new("store.today", "Today");
+        public static readonly LocString Apps = new("store.apps", "Apps");
+        public static readonly LocString Search = new("store.search", "Search");
+        public static readonly LocString SearchHint = new("store.searchHint", "Apps and features");
+        public static readonly LocString Get = new("store.get", "GET");
+        public static readonly LocString Open = new("store.open", "OPEN");
+        public static readonly LocString Remove = new("store.remove", "Remove");
+        public static readonly LocString Installing = new("store.installing", "Installing");
+        public static readonly LocString OnHome = new("store.onHome", "On your Home Screen");
+        public static readonly LocString NotInstalled = new("store.notInstalled", "Not installed");
+        public static readonly LocString AppOfTheDay = new("store.appOfTheDay", "APP OF THE DAY");
+        public static readonly LocString NewHere = new("store.newHere", "NEW TO YOUR PHONE");
+        public static readonly LocString EverythingInstalled =
+            new("store.everythingInstalled", "Everything is on your Home Screen");
+        public static readonly LocString EverythingInstalledHint =
+            new("store.everythingInstalledHint", "Remove an app and it comes back here");
+        public static readonly LocString NoResults = new("store.noResults", "No apps match that");
+        public static readonly LocString Information = new("store.information", "Information");
+        public static readonly LocString Preview = new("store.preview", "Preview");
+        public static readonly LocString Description = new("store.description", "About");
+        public static readonly LocString Developer = new("store.developer", "Developer");
+        public static readonly LocString DeveloperName = new("store.developerName", "Aetherphone");
+        public static readonly LocString Category = new("store.category", "Category");
+        public static readonly LocString Languages = new("store.languages", "Languages");
+        public static readonly LocString LanguageCount = new("store.languageCount", "{0} languages");
+        public static readonly LocString Age = new("store.age", "Age Rating");
+        public static readonly LocString AgeEveryone = new("store.ageEveryone", "4+");
+        public static readonly LocString AgeAdult = new("store.ageAdult", "17+");
+        public static readonly LocString Unavailable = new("store.unavailable", "Not available right now");
+        public static readonly LocString CategorySocial = new("store.categorySocial", "Social");
+        public static readonly LocString CategoryChat = new("store.categoryChat", "Communication");
+        public static readonly LocString CategoryCreativity = new("store.categoryCreativity", "Photo & Video");
+        public static readonly LocString CategoryPlay = new("store.categoryPlay", "Entertainment");
+        public static readonly LocString CategoryAdventure = new("store.categoryAdventure", "Adventuring");
+        public static readonly LocString CategoryWork = new("store.categoryWork", "Productivity");
+        public static readonly LocString CategoryTools = new("store.categoryTools", "Utilities");
+    }
+
+    internal static class StoreCopy
+    {
+        public static readonly LocString ChirperSub = new("storeCopy.chirperSub", "Short posts, whole realm");
+        public static readonly LocString ChirperBody = new("storeCopy.chirperBody",
+            "Follow adventurers across every world, post what you are up to, and catch the timeline between duties.");
+        public static readonly LocString AethergramSub = new("storeCopy.aethergramSub", "Your screenshots, shared");
+        public static readonly LocString AethergramBody = new("storeCopy.aethergramBody",
+            "Post your best shots, build a grid worth scrolling, and see what everyone else is capturing.");
+        public static readonly LocString VelvetSub = new("storeCopy.velvetSub", "After dark, adults only");
+        public static readonly LocString VelvetBody = new("storeCopy.velvetBody",
+            "An 18+ space for connections, collaborative writing and private messages, kept well apart from the rest of your phone.");
+        public static readonly LocString PollsSub = new("storeCopy.pollsSub", "Ask the whole server");
+        public static readonly LocString PollsBody = new("storeCopy.pollsBody",
+            "Put a question to Eorzea and watch the votes land while you wait.");
+        public static readonly LocString VenuesSub = new("storeCopy.venuesSub", "Nightlife, mapped");
+        public static readonly LocString VenuesBody = new("storeCopy.venuesBody",
+            "Find player-run venues, opening hours and directions without leaving the game.");
+        public static readonly LocString LinkpearlSub = new("storeCopy.linkpearlSub", "Every channel, one app");
+        public static readonly LocString LinkpearlBody = new("storeCopy.linkpearlBody",
+            "Linkshells, tells and free company chat gathered into one readable place, with mute controls and search.");
+        public static readonly LocString MessageSub = new("storeCopy.messageSub", "Calls and chats");
+        public static readonly LocString MessageBody = new("storeCopy.messageBody",
+            "Message and call the people you have swapped numbers with. Photos, voice notes and group chats included.");
+        public static readonly LocString CameraSub = new("storeCopy.cameraSub", "Snap the moment");
+        public static readonly LocString CameraBody = new("storeCopy.cameraBody",
+            "Take a shot straight from the phone and drop it into your gallery.");
+        public static readonly LocString PhotosSub = new("storeCopy.photosSub", "Your gallery");
+        public static readonly LocString PhotosBody = new("storeCopy.photosBody",
+            "Browse everything you have captured by day or album, and open any shot full screen.");
+        public static readonly LocString MusicSub = new("storeCopy.musicSub", "Radio for the realm");
+        public static readonly LocString MusicBody = new("storeCopy.musicBody",
+            "Stream stations from around the world or queue up songs, with a mini player that follows you.");
+        public static readonly LocString GamesSub = new("storeCopy.gamesSub", "Pocket distractions");
+        public static readonly LocString GamesBody = new("storeCopy.gamesBody",
+            "A small arcade for queue times, with high scores worth chasing.");
+        public static readonly LocString NewsSub = new("storeCopy.newsSub", "Patch notes and posts");
+        public static readonly LocString NewsBody = new("storeCopy.newsBody",
+            "The Lodestone straight to your phone: maintenance, patch notes and announcements.");
+        public static readonly LocString FishingSub = new("storeCopy.fishingSub", "Routes and windows");
+        public static readonly LocString FishingBody = new("storeCopy.fishingBody",
+            "Track ocean fishing rotations, baits and the windows worth waiting for.");
+        public static readonly LocString SkywatcherSub = new("storeCopy.skywatcherSub", "Weather ahead");
+        public static readonly LocString SkywatcherBody = new("storeCopy.skywatcherBody",
+            "See the forecast for any zone and plan around the weather you actually need.");
+        public static readonly LocString MapsSub = new("storeCopy.mapsSub", "Find your way");
+        public static readonly LocString MapsBody = new("storeCopy.mapsBody",
+            "Every zone map with aetherytes and markers, in your pocket.");
+        public static readonly LocString CollectionsSub = new("storeCopy.collectionsSub", "Everything you own");
+        public static readonly LocString CollectionsBody = new("storeCopy.collectionsBody",
+            "Mounts, minions, orchestrion rolls and more, with whatever is still missing.");
+        public static readonly LocString InventorySub = new("storeCopy.inventorySub", "Bags at a glance");
+        public static readonly LocString InventoryBody = new("storeCopy.inventoryBody",
+            "Search every bag, retainer and saddlebag without opening a single window.");
+        public static readonly LocString JobsSub = new("storeCopy.jobsSub", "Levels and gear");
+        public static readonly LocString JobsBody = new("storeCopy.jobsBody",
+            "Every class and job with levels, gear and progress in one place.");
+        public static readonly LocString CharacterSub = new("storeCopy.characterSub", "Your day, tracked");
+        public static readonly LocString CharacterBody = new("storeCopy.characterBody",
+            "Rings, streaks and history for the things you do every day.");
+        public static readonly LocString WalletSub = new("storeCopy.walletSub", "Gil and currencies");
+        public static readonly LocString WalletBody = new("storeCopy.walletBody",
+            "Every currency you carry, with caps and totals you can actually read.");
+        public static readonly LocString MarketSub = new("storeCopy.marketSub", "Prices, live");
+        public static readonly LocString MarketBody = new("storeCopy.marketBody",
+            "Universalis prices for any item, with alerts when something drops.");
+        public static readonly LocString DailiesSub = new("storeCopy.dailiesSub", "Never miss a reset");
+        public static readonly LocString DailiesBody = new("storeCopy.dailiesBody",
+            "Daily and weekly duties, what is done, and when the next reset lands.");
+        public static readonly LocString NotesSub = new("storeCopy.notesSub", "Quick thoughts");
+        public static readonly LocString NotesBody = new("storeCopy.notesBody",
+            "Jot down macros, rotations and reminders, and find them again later.");
+        public static readonly LocString CalendarSub = new("storeCopy.calendarSub", "Plan the week");
+        public static readonly LocString CalendarBody = new("storeCopy.calendarBody",
+            "Events, reminders and reset days on one calendar.");
+        public static readonly LocString TimersSub = new("storeCopy.timersSub", "Count it down");
+        public static readonly LocString TimersBody = new("storeCopy.timersBody",
+            "Timers for crafting, cooldowns and anything you cannot afford to miss.");
+        public static readonly LocString ClockSub = new("storeCopy.clockSub", "Eorzea and local");
+        public static readonly LocString ClockBody = new("storeCopy.clockBody",
+            "World clock, alarms and Eorzea time side by side.");
+        public static readonly LocString CalculatorSub = new("storeCopy.calculatorSub", "Numbers, fast");
+        public static readonly LocString CalculatorBody = new("storeCopy.calculatorBody",
+            "A calculator that stays out of your way.");
+        public static readonly LocString SettingsSub = new("storeCopy.settingsSub", "Make it yours");
+        public static readonly LocString SettingsBody = new("storeCopy.settingsBody",
+            "Wallpapers, themes, sounds, language and everything else about the phone.");
+        public static readonly LocString NotificationsSub = new("storeCopy.notificationsSub", "Everything you missed");
+        public static readonly LocString NotificationsBody = new("storeCopy.notificationsBody",
+            "One place for every alert your phone has raised.");
+        public static readonly LocString FeedbackSub = new("storeCopy.feedbackSub", "Tell us what broke");
+        public static readonly LocString FeedbackBody = new("storeCopy.feedbackBody",
+            "Send a bug report or an idea, with screenshots attached.");
+        public static readonly LocString DevSub = new("storeCopy.devSub", "Behind the curtain");
+        public static readonly LocString DevBody = new("storeCopy.devBody",
+            "Tools for the people building the phone.");
+        public static readonly LocString StoreSub = new("storeCopy.storeSub", "Apps for your phone");
+        public static readonly LocString StoreBody = new("storeCopy.storeBody",
+            "Browse everything the phone can do and put it on your Home Screen.");
     }
 
     internal static class DirectMessages
@@ -1888,9 +2029,6 @@ internal static class L
     {
         public static readonly LocString Done = new("home.done", "Done");
         public static readonly LocString NewFolder = new("home.newFolder", "Folder");
-        public static readonly LocString AppLibrary = new("home.appLibrary", "App Library");
-        public static readonly LocString AppLibraryEmpty = new("home.appLibraryEmpty",
-            "Drag apps here to keep them off your Home Screen");
         public static readonly LocString Widgets = new("home.widgets", "Widgets");
         public static readonly LocString AddWidget = new("home.addWidget", "Add Widget");
         public static readonly LocString Remove = new("home.remove", "Remove");

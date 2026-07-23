@@ -33,7 +33,7 @@ internal sealed class HomeGridRenderer
         drawList.PushClipRect(metrics.Content.Min, new Vector2(metrics.Content.Max.X, metrics.DockBar.Min.Y), true);
         var scroll = pager.Value;
         var first = Math.Max(0, (int)MathF.Floor(scroll) - 1);
-        var last = Math.Min(layout.TotalPageCount - 1, (int)MathF.Ceiling(scroll) + 1);
+        var last = Math.Min(layout.PageCount - 1, (int)MathF.Ceiling(scroll) + 1);
         for (var page = first; page <= last; page++)
         {
             DrawPage(metrics, theme, page, delta, labelAlpha, motion);
@@ -66,29 +66,6 @@ internal sealed class HomeGridRenderer
             DrawTile(metrics, theme, tile, rect, labelAlpha, delta, motion,
                 ReferenceEquals(tile, interaction.FolderTarget));
         }
-
-        if (page >= layout.HomePageCount && tiles.Count == 0)
-        {
-            DrawLibraryEmptyState(metrics, theme, pageOffset, labelAlpha);
-        }
-    }
-
-    private static void DrawLibraryEmptyState(in HomeMetrics metrics, PhoneTheme theme, Vector2 pageOffset,
-        float labelAlpha)
-    {
-        if (labelAlpha <= 0.01f)
-        {
-            return;
-        }
-
-        var center = metrics.Grid.Center + pageOffset;
-        var scale = metrics.Scale;
-        var titleColor = Palette.WithAlpha(theme.TextStrong, 0.7f * labelAlpha);
-        var subtitleColor = Palette.WithAlpha(theme.TextStrong, 0.4f * labelAlpha);
-        Typography.DrawCentered(center - new Vector2(0f, 10f * scale), Loc.T(L.Home.AppLibrary), titleColor, 1.05f,
-            FontWeight.SemiBold);
-        Typography.DrawCentered(center + new Vector2(0f, 12f * scale), Loc.T(L.Home.AppLibraryEmpty), subtitleColor,
-            0.78f);
     }
 
     private void DrawTile(in HomeMetrics metrics, PhoneTheme theme, HomeTile tile, Rect rect, float labelAlpha,
@@ -142,6 +119,13 @@ internal sealed class HomeGridRenderer
         HomeTileView.DrawApp(center, rect.Width, tile.App!, theme,
             interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
             labelAlpha, metrics.CellWidth, zoom);
+        if (interaction.RemoveBadgesLive(motion) && HomeLayoutService.CanUninstall(tile.App!.Id) &&
+            HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
+        {
+            layout.Uninstall(tile.App!.Id);
+            interaction.ConsumeEditGesture();
+        }
+
         ReportIconAnchor(tile, center, rect.Width, motion);
     }
 

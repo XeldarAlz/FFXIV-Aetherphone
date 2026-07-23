@@ -57,6 +57,7 @@ internal sealed class HomeInteractionController
     private HomeTile? dragTile;
     private bool dragFromDock;
     private int dragPage;
+    private bool extraPage;
     private Vector2 dragPos;
     private Vector2 grabOffset;
     private Spring lift;
@@ -95,9 +96,7 @@ internal sealed class HomeInteractionController
 
     public void Advance(float delta) => editClock += delta;
 
-    public int DisplayPageCount() => layout.TotalPageCount;
-
-    public bool CanAddWidget => pager.Page < layout.HomePageCount;
+    public int DisplayPageCount() => layout.PageCount + (dragTile is not null && extraPage ? 1 : 0);
 
     public void Suspend()
     {
@@ -113,6 +112,7 @@ internal sealed class HomeInteractionController
         if (dragTile is not null)
         {
             dragTile = null;
+            extraPage = false;
         }
     }
 
@@ -225,7 +225,7 @@ internal sealed class HomeInteractionController
             return true;
         }
 
-        if (CanAddWidget && HomeChrome.AddRect(content, metrics).Contains(mouse))
+        if (HomeChrome.AddRect(content, metrics).Contains(mouse))
         {
             gallery.Open(pager.Page);
             pressActive = false;
@@ -297,7 +297,7 @@ internal sealed class HomeInteractionController
             return null;
         }
 
-        var page = Math.Clamp((int)MathF.Round(pager.Value), 0, layout.TotalPageCount - 1);
+        var page = Math.Clamp((int)MathF.Round(pager.Value), 0, layout.PageCount - 1);
         var cell = metrics.CellFromPoint(page, pager.Value, mouse);
         var tiles = layout.Page(page);
         var cells = layout.Placements(page);
@@ -320,6 +320,7 @@ internal sealed class HomeInteractionController
         dragTile = tile;
         dragFromDock = pressFromDock;
         dragPage = dragFromDock ? pager.Page : LocatePage(tile);
+        extraPage = false;
         var center = CommittedRect(metrics, tile)?.Center ?? mouse;
         grabOffset = mouse - center;
         dragPos = center;
@@ -398,12 +399,21 @@ internal sealed class HomeInteractionController
                 edgeDwell = 0f;
             }
         }
-        else if (mouse.X > content.Max.X - edge && dragPage < layout.TotalPageCount - 1)
+        else if (mouse.X > content.Max.X - edge)
         {
             edgeDwell += delta;
             if (edgeDwell > EdgeFlipSeconds)
             {
-                dragPage++;
+                if (dragPage < layout.PageCount - 1)
+                {
+                    dragPage++;
+                }
+                else if (!extraPage && dragPage == layout.PageCount - 1 && PageHasOthers(dragPage))
+                {
+                    extraPage = true;
+                    dragPage = layout.PageCount;
+                }
+
                 pager.AnimateTo(dragPage, DisplayPageCount());
                 edgeDwell = 0f;
             }
@@ -414,7 +424,7 @@ internal sealed class HomeInteractionController
         }
 
         folderTarget = null;
-        if (dragPage >= layout.TotalPageCount)
+        if (dragPage >= layout.PageCount)
         {
             insertIndex = 0;
             return;
@@ -449,7 +459,7 @@ internal sealed class HomeInteractionController
 
     private bool PageContainsTile(int page, HomeTile tile)
     {
-        if (page >= layout.TotalPageCount)
+        if (page >= layout.PageCount)
         {
             return false;
         }
@@ -458,6 +468,20 @@ internal sealed class HomeInteractionController
         for (var index = 0; index < tiles.Count; index++)
         {
             if (ReferenceEquals(tiles[index], tile))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool PageHasOthers(int page)
+    {
+        var tiles = layout.Page(page);
+        for (var index = 0; index < tiles.Count; index++)
+        {
+            if (!ReferenceEquals(tiles[index], dragTile))
             {
                 return true;
             }
@@ -486,7 +510,7 @@ internal sealed class HomeInteractionController
     private void BuildSiblings(int page)
     {
         previewTiles.Clear();
-        if (page >= layout.TotalPageCount)
+        if (page >= layout.PageCount)
         {
             return;
         }
@@ -546,8 +570,9 @@ internal sealed class HomeInteractionController
 
         dragTile = null;
         folderTarget = null;
+        extraPage = false;
         overDock = false;
-        pager.AnimateTo(pager.Page, layout.TotalPageCount);
+        pager.AnimateTo(pager.Page, layout.PageCount);
     }
 
     private void BeginSettle(HomeTile tile, in HomeMetrics metrics)

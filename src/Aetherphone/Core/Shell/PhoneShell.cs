@@ -77,6 +77,7 @@ internal sealed class PhoneShell : IDisposable
             notifications, router);
         minimizedView = new MinimizedPhone(notifications, configuration);
         home = new HomeScreen(apps, bundle.Widgets, configuration);
+        services.Installer.Bind(home.Layout);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);
         var banOverlay = new BanOverlay(services.AethernetSession);

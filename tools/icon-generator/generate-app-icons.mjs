@@ -43,6 +43,7 @@ const map = {
   polls: "chart-bar-popular",
   message: "messages",
   kupoai: "message-chatbot",
+  appstore: "brand-appstore",
 };
 
 function recolor(svg) {

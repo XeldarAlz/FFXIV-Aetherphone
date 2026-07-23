@@ -33,6 +33,8 @@ internal sealed class HomeScreen
 
     public bool Editing => interaction.Editing;
 
+    public HomeLayoutService Layout => layout;
+
     public void Draw(Rect screen, Rect content, PhoneTheme theme, INavigator navigation, in HomeMotion motion)
     {
         layout.EnsureCurrent();
@@ -80,7 +82,7 @@ internal sealed class HomeScreen
         var page = PageContaining(appId);
         if (page >= 0)
         {
-            pager.SnapTo(page, layout.TotalPageCount);
+            pager.SnapTo(page, layout.PageCount);
         }
     }
 
@@ -97,7 +99,7 @@ internal sealed class HomeScreen
             }
         }
 
-        for (var page = 0; page < layout.TotalPageCount; page++)
+        for (var page = 0; page < layout.PageCount; page++)
         {
             var tiles = layout.Page(page);
             var cells = layout.Placements(page);
@@ -138,7 +140,7 @@ internal sealed class HomeScreen
 
     private int PageContaining(string appId)
     {
-        for (var page = 0; page < layout.TotalPageCount; page++)
+        for (var page = 0; page < layout.PageCount; page++)
         {
             var tiles = layout.Page(page);
             for (var index = 0; index < tiles.Count; index++)
