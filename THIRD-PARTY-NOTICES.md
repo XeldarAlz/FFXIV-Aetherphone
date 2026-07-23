@@ -97,6 +97,7 @@ once at the end of this section:
 | AngleSharp | 1.4.0 | AngleSharp contributors (https://github.com/AngleSharp/AngleSharp) |
 | HtmlAgilityPack | 1.11.74 | ZZZ Projects and contributors (https://github.com/zzzprojects/html-agility-pack) |
 | System.Security.Cryptography.ProtectedData | 10.0.0 | Microsoft Corporation (https://github.com/dotnet/runtime) |
+| NEbml | 0.11.0 | Oleg Zee (https://github.com/Oleg-Zee/NEbml) |
 
 ```
 MIT License
