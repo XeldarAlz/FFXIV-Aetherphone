@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -74,7 +75,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     public ChirperApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
         Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages,
-        ConfirmService confirm, ReportService report)
+        ConfirmService confirm, ReportService report, ConductGateService conduct)
     {
         store = new ChirperStore(session, net.Account, net.Social, net.Safety, net.Media);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -124,7 +125,8 @@ internal sealed partial class ChirperApp : IPhoneApp
             DeleteCommentConfirmMessage = L.Chirper.DeleteCommentConfirmMessage,
             DeleteCommentFailed = L.Chirper.DeleteCommentFailed,
         }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
-            () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back);
+            () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back,
+            () => conduct.ShowRules(Id));
     }
 
     public void OnOpened()

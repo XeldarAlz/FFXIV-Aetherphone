@@ -86,6 +86,7 @@ internal sealed class ConductGateOverlay
         var scale = ImGuiHelpers.GlobalScale;
         var accent = AppAccents.For(gate.AppId);
         var drawList = ImGui.GetWindowDrawList();
+        var reviewing = service.ActiveIsReview;
 
         var panel = new Rect(
             new Vector2(screen.Min.X + SideMargin * scale, screen.Min.Y + TopMargin * scale),
@@ -100,22 +101,63 @@ internal sealed class ConductGateOverlay
         var innerWidth = panel.Width - pad * 2f;
         var centerX = panel.Center.X;
 
-        var ack = Loc.T(L.Conduct.Acknowledge);
-        var ackHeight = Typography.MeasureWrappedBlock(ack, TextStyles.Footnote, innerWidth).Y;
-        var footerHeight = ackHeight + BarGap * scale + BarHeight * scale + BarGap * scale + ButtonHeight * scale;
-        var footerTop = panel.Max.Y - pad - footerHeight;
+        var ack = string.Empty;
+        var ackHeight = 0f;
+        float footerTop;
+        if (reviewing)
+        {
+            // Reopened voluntarily (the "?" button): no need to re-agree, just an X to close.
+            footerTop = panel.Max.Y - pad;
+        }
+        else
+        {
+            ack = Loc.T(L.Conduct.Acknowledge);
+            ackHeight = Typography.MeasureWrappedBlock(ack, TextStyles.Footnote, innerWidth).Y;
+            var footerHeight = ackHeight + BarGap * scale + BarHeight * scale + BarGap * scale + ButtonHeight * scale;
+            footerTop = panel.Max.Y - pad - footerHeight;
+        }
 
         var headerBottom = DrawHeader(panel, theme, gate, accent, opacity, centerX, innerWidth, pad);
 
         var listRect = new Rect(new Vector2(innerLeft, headerBottom + 10f * scale),
-            new Vector2(innerLeft + innerWidth, footerTop - 12f * scale));
+            new Vector2(innerLeft + innerWidth, footerTop - (reviewing ? 0f : 12f * scale)));
         DrawRules(listRect, theme, gate, opacity);
 
-        ImGui.GetWindowDrawList().AddLine(new Vector2(innerLeft, footerTop - 12f * scale),
-            new Vector2(innerLeft + innerWidth, footerTop - 12f * scale),
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), 1f);
+        if (reviewing)
+        {
+            DrawCloseButton(drawList, new Vector2(panel.Max.X - pad * 0.85f, panel.Min.Y + pad * 0.85f), 13f * scale,
+                theme, opacity, interactive);
+        }
+        else
+        {
+            ImGui.GetWindowDrawList().AddLine(new Vector2(innerLeft, footerTop - 12f * scale),
+                new Vector2(innerLeft + innerWidth, footerTop - 12f * scale),
+                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), 1f);
 
-        DrawFooter(theme, gate, accent, opacity, interactive, centerX, innerLeft, innerWidth, footerTop, ack, ackHeight);
+            DrawFooter(theme, gate, accent, opacity, interactive, centerX, innerLeft, innerWidth, footerTop, ack,
+                ackHeight);
+        }
+    }
+
+    private void DrawCloseButton(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme theme,
+        float opacity, bool interactive)
+    {
+        var hit = new Vector2(radius, radius);
+        var hovered = interactive && ImGui.IsMouseHoveringRect(center - hit, center + hit);
+        drawList.AddCircleFilled(center, radius,
+            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, (hovered ? 0.18f : 0.10f) * opacity)), 24);
+        AppSkin.Icon(drawList, center, FontAwesomeIcon.Times.ToIconString(),
+            Palette.WithAlpha(theme.TextStrong, opacity), 0.5f);
+        if (!hovered)
+        {
+            return;
+        }
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            service.Dismiss();
+        }
     }
 
     private static float DrawHeader(Rect panel, PhoneTheme theme, ConductGate gate, Vector4 accent, float opacity,
