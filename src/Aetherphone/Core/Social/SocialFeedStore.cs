@@ -105,6 +105,10 @@ internal abstract class SocialFeedStore : IDisposable
 
     public bool LoadingMore(SocialFeedScope scope) => Lane(scope).LoadingMore;
 
+    public const int FeedCap = 300;
+
+    public void TrimFeed(SocialFeedScope scope, int max) => Lane(scope).Trim(max);
+
     private FeedLane<PostDto> Lane(SocialFeedScope scope) =>
         scope == SocialFeedScope.ForYou ? forYouLane : followingLane;
 

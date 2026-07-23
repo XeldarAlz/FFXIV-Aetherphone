@@ -60,6 +60,26 @@ internal sealed class FeedLane<TPost> where TPost : class, IIdentified
         }
     }
 
+    public void Trim(int max)
+    {
+        if (max <= 0)
+        {
+            return;
+        }
+
+        lock (gate)
+        {
+            if (items.Length <= max)
+            {
+                return;
+            }
+
+            var trimmed = new TPost[max];
+            Array.Copy(items, trimmed, max);
+            items = trimmed;
+        }
+    }
+
     public void Clear()
     {
         lock (gate)

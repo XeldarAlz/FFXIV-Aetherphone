@@ -279,6 +279,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
+            if (ImGui.GetScrollY() < 1f)
+            {
+                store.TrimFeed(scope, SocialFeedStore.FeedCap);
+
+            }
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
