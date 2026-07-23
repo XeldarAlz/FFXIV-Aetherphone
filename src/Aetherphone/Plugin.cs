@@ -75,6 +75,7 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateSetupCompleted();
             Cfg.MigrateControlPanelRepack();
             Cfg.MigrateCharacterSessions();
+            Cfg.MigrateEncryptionKeyStore();
             InitializeLocalization();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,

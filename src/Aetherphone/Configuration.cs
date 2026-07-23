@@ -71,6 +71,8 @@ internal sealed class Configuration : IPluginConfiguration
     public string AethernetToken { get; set; } = string.Empty;
     public string EncryptionKeyCache { get; set; } = string.Empty;
     public string EncryptionKeyCacheUserId { get; set; } = string.Empty;
+    public Dictionary<string, string> EncryptionKeysByUserId { get; set; } = new();
+    public bool EncryptionKeyStoreMigrated { get; set; }
     public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
     public Dictionary<ulong, CharacterSession> CharacterSessions { get; set; } = new();
     public string LegacyUnclaimedToken { get; set; } = string.Empty;
@@ -211,6 +213,34 @@ internal sealed class Configuration : IPluginConfiguration
         }
 
         Save();
+    }
+
+    public void MigrateEncryptionKeyStore()
+    {
+        if (EncryptionKeyStoreMigrated)
+        {
+            return;
+        }
+
+        EncryptionKeyStoreMigrated = true;
+        foreach (var snapshot in CharacterSessions.Values)
+        {
+            AdoptLegacyKeySlot(snapshot.EncryptionKeyCacheUserId, snapshot.EncryptionKeyCache);
+        }
+
+        AdoptLegacyKeySlot(LegacyUnclaimedEncryptionUserId, LegacyUnclaimedEncryptionKey);
+        AdoptLegacyKeySlot(EncryptionKeyCacheUserId, EncryptionKeyCache);
+        Save();
+    }
+
+    private void AdoptLegacyKeySlot(string userId, string protectedKey)
+    {
+        if (userId.Length == 0 || protectedKey.Length == 0)
+        {
+            return;
+        }
+
+        EncryptionKeysByUserId[userId] = protectedKey;
     }
 
     public void MigrateMessage()

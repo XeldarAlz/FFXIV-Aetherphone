@@ -64,6 +64,8 @@ internal static class RecoveryKey
         return builder.ToString();
     }
 
+    public const int MinPassphraseChars = 8;
+
     public static WrappedPrivateKeyDto? Wrap(byte[] pkcs8, string code)
     {
         var canonical = Canonicalize(code);
@@ -72,9 +74,25 @@ internal static class RecoveryKey
             return null;
         }
 
+        return WrapSecret(pkcs8, canonical, EscrowKinds.RecoveryCode);
+    }
+
+    public static WrappedPrivateKeyDto? WrapPassphrase(byte[] pkcs8, string passphrase)
+    {
+        var trimmed = passphrase.Trim();
+        if (trimmed.Length < MinPassphraseChars)
+        {
+            return null;
+        }
+
+        return WrapSecret(pkcs8, trimmed, EscrowKinds.Passphrase);
+    }
+
+    private static WrappedPrivateKeyDto WrapSecret(byte[] pkcs8, string secret, int kind)
+    {
         var salt = RandomNumberGenerator.GetBytes(SaltBytes);
         var nonce = RandomNumberGenerator.GetBytes(NonceBytes);
-        var wrapKey = DeriveKey(canonical, salt, Iterations);
+        var wrapKey = DeriveKey(secret, salt, Iterations);
         var cipher = new byte[pkcs8.Length + TagBytes];
         try
         {
@@ -90,13 +108,35 @@ internal static class RecoveryKey
             Convert.ToBase64String(salt),
             Iterations,
             Convert.ToBase64String(nonce),
-            Convert.ToBase64String(cipher));
+            Convert.ToBase64String(cipher),
+            kind);
     }
 
     public static byte[]? Unwrap(WrappedPrivateKeyDto escrow, string code)
     {
+        if (escrow.Kind != EscrowKinds.RecoveryCode)
+        {
+            return null;
+        }
+
         var canonical = Canonicalize(code);
-        if (canonical.Length == 0 || escrow.Iterations <= 0)
+        return canonical.Length == 0 ? null : UnwrapSecret(escrow, canonical);
+    }
+
+    public static byte[]? UnwrapPassphrase(WrappedPrivateKeyDto escrow, string passphrase)
+    {
+        if (escrow.Kind != EscrowKinds.Passphrase)
+        {
+            return null;
+        }
+
+        var trimmed = passphrase.Trim();
+        return trimmed.Length == 0 ? null : UnwrapSecret(escrow, trimmed);
+    }
+
+    private static byte[]? UnwrapSecret(WrappedPrivateKeyDto escrow, string secret)
+    {
+        if (escrow.Iterations <= 0)
         {
             return null;
         }
@@ -120,7 +160,7 @@ internal static class RecoveryKey
             return null;
         }
 
-        var wrapKey = DeriveKey(canonical, salt, escrow.Iterations);
+        var wrapKey = DeriveKey(secret, salt, escrow.Iterations);
         var plaintext = new byte[cipher.Length - TagBytes];
         try
         {
@@ -139,9 +179,9 @@ internal static class RecoveryKey
         }
     }
 
-    private static byte[] DeriveKey(string canonicalCode, byte[] salt, int iterations)
+    private static byte[] DeriveKey(string secret, byte[] salt, int iterations)
     {
-        var password = Encoding.UTF8.GetBytes(canonicalCode);
+        var password = Encoding.UTF8.GetBytes(secret);
         try
         {
             return Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, WrapKeyBytes);

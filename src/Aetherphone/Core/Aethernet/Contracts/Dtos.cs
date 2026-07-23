@@ -564,9 +564,15 @@ internal sealed record ChatTypingDto(string[] TypingUserIds);
 
 internal sealed record ChatMediaUrlDto(string Url, long ExpiresAtUnix);
 
-internal sealed record WrappedPrivateKeyDto(string Salt, int Iterations, string Nonce, string Ciphertext);
+internal static class EscrowKinds
+{
+    public const int RecoveryCode = 0;
+    public const int Passphrase = 1;
+}
 
-internal sealed record PutMyKeysRequest(string PublicKey, WrappedPrivateKeyDto? PrivateKey = null);
+internal sealed record WrappedPrivateKeyDto(string Salt, int Iterations, string Nonce, string Ciphertext, int Kind = EscrowKinds.RecoveryCode);
+
+internal sealed record PutMyKeysRequest(string PublicKey, WrappedPrivateKeyDto? PrivateKey = null, bool Rotate = false);
 
 internal sealed record MyKeysDto(
     string PublicKey,

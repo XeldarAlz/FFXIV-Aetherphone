@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
@@ -38,6 +39,8 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     private volatile bool refreshRequested;
     private volatile string generatedCode = string.Empty;
     private string codeEntry = string.Empty;
+    private string passphraseEntry = string.Empty;
+    private bool editingPassphrase;
 
     public EncryptionPage(AethernetSession session, KeyVault vault, ConfirmService confirm)
     {
@@ -167,19 +170,33 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     private void DrawLockedRecover(PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
+        var passphraseEscrow = vault.EscrowKind == EscrowKinds.Passphrase;
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            Typography.Wrapped(Loc.T(L.Encryption.LockedRecoverBody));
+            Typography.Wrapped(Loc.T(passphraseEscrow ? L.Encryption.LockedPassphraseBody : L.Encryption.LockedRecoverBody));
         }
 
         ImGui.Dummy(new Vector2(0f, 10f * scale));
-        DrawCodeInput(theme);
-        ImGui.Dummy(new Vector2(0f, 10f * scale));
-        if (Button(Loc.T(L.Encryption.RecoveryUnlockButton), theme)
-            && !busy && RecoveryKey.Canonicalize(codeEntry).Length > 0)
+        if (passphraseEscrow)
         {
-            BeginRecover();
+            DrawSecretInput(theme, Loc.T(L.Encryption.PassphraseLabel), "##unlockPassphrase", ref passphraseEntry, password: true);
+            ImGui.Dummy(new Vector2(0f, 10f * scale));
+            if (Button(Loc.T(L.Encryption.RecoveryUnlockButton), theme)
+                && !busy && passphraseEntry.Trim().Length > 0)
+            {
+                BeginUnlockWithPassphrase();
+            }
+        }
+        else
+        {
+            DrawSecretInput(theme, Loc.T(L.Encryption.RecoveryCodeLabel), "##recoveryCode", ref codeEntry, password: false);
+            ImGui.Dummy(new Vector2(0f, 10f * scale));
+            if (Button(Loc.T(L.Encryption.RecoveryUnlockButton), theme)
+                && !busy && RecoveryKey.Canonicalize(codeEntry).Length > 0)
+            {
+                BeginRecover();
+            }
         }
 
         ImGui.Dummy(new Vector2(0f, 6f * scale));
@@ -189,12 +206,12 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         }
     }
 
-    private void DrawCodeInput(PhoneTheme theme)
+    private static void DrawSecretInput(PhoneTheme theme, string label, string id, ref string entry, bool password)
     {
         var scale = ImGuiHelpers.GlobalScale;
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            Typography.Plain(Loc.T(L.Encryption.RecoveryCodeLabel));
+            Typography.Plain(label);
         }
 
         var origin = ImGui.GetCursorScreenPos();
@@ -208,7 +225,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.SetNextItemWidth(width - 24f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)).Push(ImGuiCol.Text, theme.TextStrong))
         {
-            ImGui.InputText("##recoveryCode", ref codeEntry, 64);
+            ImGui.InputText(id, ref entry, 128, password ? ImGuiInputTextFlags.Password : ImGuiInputTextFlags.None);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -257,6 +274,54 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         }
     }
 
+    private void DrawPassphraseSection(PhoneTheme theme)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var configured = vault.RecoveryConfigured && vault.EscrowKind == EscrowKinds.Passphrase;
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
+        {
+            Typography.Plain(Loc.T(L.Encryption.PassphraseSectionTitle));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 4f * scale));
+        using (ImRaii.PushColor(ImGuiCol.Text, configured ? theme.TextMuted : theme.Danger))
+        {
+            Typography.Wrapped(configured
+                ? Loc.T(L.Encryption.PassphraseConfiguredBody)
+                : Loc.T(L.Encryption.PassphraseNotSetBody));
+        }
+
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        if (!editingPassphrase)
+        {
+            var label = configured
+                ? Loc.T(L.Encryption.PassphraseChangeButton)
+                : Loc.T(L.Encryption.PassphraseSetButton);
+            if (Button(label, theme) && !busy)
+            {
+                editingPassphrase = true;
+                passphraseEntry = string.Empty;
+            }
+
+            return;
+        }
+
+        DrawSecretInput(theme, Loc.T(L.Encryption.PassphraseLabel), "##newPassphrase", ref passphraseEntry, password: true);
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        if (Button(Loc.T(L.Encryption.PassphraseSetButton), theme) && !busy)
+        {
+            if (passphraseEntry.Trim().Length < RecoveryKey.MinPassphraseChars)
+            {
+                status = Loc.T(L.Encryption.PassphraseTooShort);
+            }
+            else
+            {
+                BeginSetPassphrase();
+            }
+        }
+    }
+
     private void DrawRecoverySection(PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -269,13 +334,13 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 4f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
-            Typography.Wrapped(vault.RecoveryConfigured
+            Typography.Wrapped(vault.RecoveryConfigured && vault.EscrowKind == EscrowKinds.RecoveryCode
                 ? Loc.T(L.Encryption.RecoveryConfiguredBody)
                 : Loc.T(L.Encryption.RecoveryNotSetBody));
         }
 
         ImGui.Dummy(new Vector2(0f, 8f * scale));
-        var label = vault.RecoveryConfigured
+        var label = vault.RecoveryConfigured && vault.EscrowKind == EscrowKinds.RecoveryCode
             ? Loc.T(L.Encryption.RecoveryRegenerateButton)
             : Loc.T(L.Encryption.RecoverySetupButton);
         if (Button(label, theme) && !busy)
@@ -299,15 +364,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
             Typography.Plain(Loc.T(L.Encryption.KeyVersion, vault.KeyVersion));
         }
 
-        if (vault.LocalCacheUnavailable)
-        {
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
-            {
-                Typography.Wrapped(Loc.T(L.Encryption.LocalStoreUnavailable));
-            }
-        }
-
+        DrawPassphraseSection(theme);
         DrawRecoverySection(theme);
 
         ImGui.Dummy(new Vector2(0f, 14f * scale));
@@ -385,6 +442,77 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
             {
                 AepLog.Warning($"Recovery code setup failed: {exception.Message}");
                 status = Loc.T(L.Encryption.Failed);
+            }
+            finally
+            {
+                busy = false;
+            }
+        });
+    }
+
+    private void BeginSetPassphrase()
+    {
+        var passphrase = passphraseEntry;
+        busy = true;
+        status = Loc.T(L.Encryption.Working);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var stored = await vault.CreatePassphraseEscrowAsync(passphrase, cancellation.Token).ConfigureAwait(false);
+                if (stored)
+                {
+                    passphraseEntry = string.Empty;
+                    editingPassphrase = false;
+                    status = Loc.T(L.Encryption.PassphraseSaved);
+                }
+                else
+                {
+                    status = Loc.T(L.Encryption.Failed);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Passphrase setup failed: {exception.Message}");
+                status = Loc.T(L.Encryption.Failed);
+            }
+            finally
+            {
+                busy = false;
+            }
+        });
+    }
+
+    private void BeginUnlockWithPassphrase()
+    {
+        var passphrase = passphraseEntry;
+        busy = true;
+        status = Loc.T(L.Encryption.Working);
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var unlocked = await vault.UnlockWithPassphraseAsync(passphrase, cancellation.Token).ConfigureAwait(false);
+                if (unlocked)
+                {
+                    passphraseEntry = string.Empty;
+                    status = string.Empty;
+                }
+                else
+                {
+                    status = Loc.T(L.Encryption.PassphraseWrong);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Passphrase unlock failed: {exception.Message}");
+                status = Loc.T(L.Encryption.PassphraseWrong);
             }
             finally
             {

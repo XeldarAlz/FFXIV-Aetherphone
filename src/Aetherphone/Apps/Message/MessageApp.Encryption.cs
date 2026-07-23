@@ -84,6 +84,16 @@ internal sealed partial class MessageApp
             ui.MutedInk, TextStyles.Subheadline, maxWidth);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + 22f * scale));
+        if (!encrypted || store.EscrowConfigured)
+        {
+            return;
+        }
+
+        var hintOrigin = ImGui.GetCursorScreenPos();
+        var hintHeight = Typography.DrawWrappedCentered(new Vector2(hintOrigin.X + width * 0.5f, hintOrigin.Y),
+            Loc.T(L.Encryption.EscrowPromptHint), ui.Accent, TextStyles.Footnote, maxWidth);
+        ImGui.SetCursorScreenPos(hintOrigin);
+        ImGui.Dummy(new Vector2(width, hintHeight + 18f * scale));
     }
 
     private string NotEncryptedSummary()

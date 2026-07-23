@@ -22,6 +22,7 @@ internal sealed class KeyVault : IDisposable
     private readonly KeysClient client;
     private readonly SemaphoreSlim gate = new(1, 1);
     private ECDiffieHellman? privateKey;
+    private string? loadedUserId;
     private MyKeysDto? serverBundle;
     private volatile bool refreshing;
 
@@ -35,7 +36,7 @@ internal sealed class KeyVault : IDisposable
 
     private void OnSessionChanged()
     {
-        if (session.IsSignedIn)
+        if (session.IsSignedIn && (MyUserId is null || string.Equals(MyUserId, loadedUserId, StringComparison.Ordinal)))
         {
             return;
         }
@@ -45,8 +46,6 @@ internal sealed class KeyVault : IDisposable
 
     public KeyVaultState State { get; private set; } = KeyVaultState.Unavailable;
 
-    public bool LocalCacheUnavailable { get; private set; }
-
     public int KeyVersion => serverBundle?.KeyVersion ?? 0;
 
     public string? PublicKey => serverBundle?.PublicKey;
@@ -55,81 +54,95 @@ internal sealed class KeyVault : IDisposable
 
     public bool RecoveryConfigured => serverBundle?.PrivateKey is not null;
 
+    public int EscrowKind => serverBundle?.PrivateKey?.Kind ?? EscrowKinds.RecoveryCode;
+
     public bool IsRefreshing => refreshing;
 
     public event Action? Changed;
 
     public async Task RefreshAsync(CancellationToken token)
     {
-        if (!session.IsSignedIn)
+        refreshing = true;
+        try
         {
             await gate.WaitAsync(token).ConfigureAwait(false);
-            try
+        }
+        catch
+        {
+            refreshing = false;
+            throw;
+        }
+
+        try
+        {
+            if (!session.IsSignedIn)
             {
                 ClearKey();
                 serverBundle = null;
                 SetState(KeyVaultState.Unavailable);
+                return;
             }
-            finally
+
+            if (State == KeyVaultState.Unsupported)
             {
-                gate.Release();
+                return;
             }
 
-            return;
-        }
+            var userId = MyUserId;
+            if (userId is null)
+            {
+                ClearKey();
+                serverBundle = null;
+                SetState(KeyVaultState.Unavailable);
+                return;
+            }
 
-        if (State == KeyVaultState.Unsupported)
-        {
-            return;
-        }
-
-        refreshing = true;
-        await gate.WaitAsync(token).ConfigureAwait(false);
-        try
-        {
             var (bundle, status) = await client.MyKeysAsync(token).ConfigureAwait(false);
+            if (!string.Equals(MyUserId, userId, StringComparison.Ordinal))
+            {
+                ClearKey();
+                serverBundle = null;
+                SetState(KeyVaultState.Unavailable);
+                return;
+            }
+
             if (status == 404)
             {
                 serverBundle = null;
-                await ProvisionAsync(token).ConfigureAwait(false);
+                await ProvisionAsync(userId, rotate: false, token).ConfigureAwait(false);
                 return;
             }
 
             if (bundle is null)
             {
+                if (privateKey is null)
+                {
+                    SetState(KeyVaultState.Unavailable);
+                }
+
                 return;
             }
 
             serverBundle = bundle;
             if (privateKey is not null
+                && string.Equals(loadedUserId, userId, StringComparison.Ordinal)
                 && string.Equals(CryptoBox.ExportPublicKey(privateKey), bundle.PublicKey, StringComparison.Ordinal))
             {
-                EnsureLocalCachePersisted();
+                EnsureLocalKeyPersisted(userId);
                 SetState(KeyVaultState.Unlocked);
                 return;
             }
 
             ClearKey();
-            if (TryLoadLocalCache(bundle))
+            if (TryLoadLocalKey(userId, bundle.PublicKey))
             {
                 SetState(KeyVaultState.Unlocked);
                 return;
             }
 
-            if (MyUserId is null)
-            {
-                return;
-            }
-
-            if (HasStoredKeyForCurrentUser() || bundle.PrivateKey is not null)
-            {
-                AepLog.Warning(
-                    $"[Encryption] no usable local key for this account; locking this device instead of creating a new key (recovery available: {bundle.PrivateKey is not null}).");
-                SetState(KeyVaultState.Locked);
-                return;
-            }
-
-            await ProvisionAsync(token).ConfigureAwait(false);
+            AepLog.Warning(
+                $"[Encryption] no usable local key for this account; locking this device (escrow available: {bundle.PrivateKey is not null}).");
+            SetState(KeyVaultState.Locked);
         }
         finally
         {
@@ -143,7 +156,13 @@ internal sealed class KeyVault : IDisposable
         await gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            return await ProvisionAsync(token).ConfigureAwait(false);
+            var userId = MyUserId;
+            if (userId is null)
+            {
+                return false;
+            }
+
+            return await ProvisionAsync(userId, rotate: true, token).ConfigureAwait(false);
         }
         finally
         {
@@ -156,36 +175,14 @@ internal sealed class KeyVault : IDisposable
         await gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            var key = privateKey;
-            var bundle = serverBundle;
-            if (State != KeyVaultState.Unlocked || key is null || bundle is null)
-            {
-                return null;
-            }
-
-            var pkcs8 = CryptoBox.TryExportPrivateKey(key);
-            if (pkcs8 is null)
-            {
-                return null;
-            }
-
             var code = RecoveryKey.GenerateCode();
-            var escrow = RecoveryKey.Wrap(pkcs8, code);
-            CryptographicOperations.ZeroMemory(pkcs8);
+            var escrow = WrapCurrentKey(pkcs8 => RecoveryKey.Wrap(pkcs8, code));
             if (escrow is null)
             {
                 return null;
             }
 
-            var stored = await client.PutMyKeysAsync(
-                new PutMyKeysRequest(bundle.PublicKey, escrow), token).ConfigureAwait(false);
-            if (stored is null)
-            {
-                return null;
-            }
-
-            serverBundle = stored;
-            return code;
+            return await StoreEscrowAsync(escrow, token).ConfigureAwait(false) ? code : null;
         }
         finally
         {
@@ -193,54 +190,33 @@ internal sealed class KeyVault : IDisposable
         }
     }
 
-    public async Task<bool> RecoverWithCodeAsync(string code, CancellationToken token)
+    public async Task<bool> CreatePassphraseEscrowAsync(string passphrase, CancellationToken token)
     {
         await gate.WaitAsync(token).ConfigureAwait(false);
         try
         {
-            var (bundle, _) = await client.MyKeysAsync(token).ConfigureAwait(false);
-            if (bundle is null)
+            var escrow = WrapCurrentKey(pkcs8 => RecoveryKey.WrapPassphrase(pkcs8, passphrase));
+            if (escrow is null)
             {
                 return false;
             }
 
-            serverBundle = bundle;
-            if (bundle.PrivateKey is null)
-            {
-                return false;
-            }
-
-            var pkcs8 = RecoveryKey.Unwrap(bundle.PrivateKey, code);
-            if (pkcs8 is null)
-            {
-                return false;
-            }
-
-            var imported = CryptoBox.ImportPrivateKey(pkcs8);
-            if (imported is null)
-            {
-                CryptographicOperations.ZeroMemory(pkcs8);
-                return false;
-            }
-
-            if (!string.Equals(CryptoBox.ExportPublicKey(imported), bundle.PublicKey, StringComparison.Ordinal))
-            {
-                imported.Dispose();
-                CryptographicOperations.ZeroMemory(pkcs8);
-                return false;
-            }
-
-            ClearKey();
-            privateKey = imported;
-            StoreLocalCache(pkcs8);
-            CryptographicOperations.ZeroMemory(pkcs8);
-            SetState(KeyVaultState.Unlocked);
-            return true;
+            return await StoreEscrowAsync(escrow, token).ConfigureAwait(false);
         }
         finally
         {
             gate.Release();
         }
+    }
+
+    public Task<bool> RecoverWithCodeAsync(string code, CancellationToken token)
+    {
+        return RecoverAsync(escrow => RecoveryKey.Unwrap(escrow, code), token);
+    }
+
+    public Task<bool> UnlockWithPassphraseAsync(string passphrase, CancellationToken token)
+    {
+        return RecoverAsync(escrow => RecoveryKey.UnwrapPassphrase(escrow, passphrase), token);
     }
 
     public byte[]? UnwrapCek(string wrappedKey)
@@ -256,18 +232,103 @@ internal sealed class KeyVault : IDisposable
         gate.Dispose();
     }
 
-    private async Task<bool> ProvisionAsync(CancellationToken token)
+    private async Task<bool> RecoverAsync(Func<WrappedPrivateKeyDto, byte[]?> unwrap, CancellationToken token)
     {
-        if (MyUserId is null)
+        await gate.WaitAsync(token).ConfigureAwait(false);
+        try
         {
-            AepLog.Warning("[Encryption] skipped creating a key because the account has not resolved yet.");
+            var userId = MyUserId;
+            if (userId is null)
+            {
+                return false;
+            }
+
+            var (bundle, _) = await client.MyKeysAsync(token).ConfigureAwait(false);
+            if (bundle is null || !string.Equals(MyUserId, userId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            serverBundle = bundle;
+            if (bundle.PrivateKey is null)
+            {
+                return false;
+            }
+
+            var pkcs8 = unwrap(bundle.PrivateKey);
+            if (pkcs8 is null)
+            {
+                return false;
+            }
+
+            var imported = CryptoBox.ImportPrivateKey(pkcs8);
+            if (imported is null
+                || !string.Equals(CryptoBox.ExportPublicKey(imported), bundle.PublicKey, StringComparison.Ordinal))
+            {
+                imported?.Dispose();
+                CryptographicOperations.ZeroMemory(pkcs8);
+                return false;
+            }
+
+            StoreLocalKey(userId, pkcs8);
+            CryptographicOperations.ZeroMemory(pkcs8);
+            ClearKey();
+            privateKey = imported;
+            loadedUserId = userId;
+            SetState(KeyVaultState.Unlocked);
+            return true;
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private WrappedPrivateKeyDto? WrapCurrentKey(Func<byte[], WrappedPrivateKeyDto?> wrap)
+    {
+        var key = privateKey;
+        if (State != KeyVaultState.Unlocked || key is null || serverBundle is null)
+        {
+            return null;
+        }
+
+        var pkcs8 = CryptoBox.TryExportPrivateKey(key);
+        if (pkcs8 is null)
+        {
+            return null;
+        }
+
+        var escrow = wrap(pkcs8);
+        CryptographicOperations.ZeroMemory(pkcs8);
+        return escrow;
+    }
+
+    private async Task<bool> StoreEscrowAsync(WrappedPrivateKeyDto escrow, CancellationToken token)
+    {
+        var bundle = serverBundle;
+        if (bundle is null)
+        {
             return false;
         }
 
+        var stored = await client.PutMyKeysAsync(new PutMyKeysRequest(bundle.PublicKey, escrow), token).ConfigureAwait(false);
+        if (stored is null)
+        {
+            return false;
+        }
+
+        serverBundle = stored;
+        Changed?.Invoke();
+        return true;
+    }
+
+    private async Task<bool> ProvisionAsync(string userId, bool rotate, CancellationToken token)
+    {
         SetState(KeyVaultState.Provisioning);
         var identity = CryptoBox.TryGenerateIdentity();
         var publicKey = identity is null ? null : CryptoBox.TryExportPublicKey(identity);
-        if (identity is null || publicKey is null)
+        var pkcs8 = identity is null ? null : CryptoBox.TryExportPrivateKey(identity);
+        if (identity is null || publicKey is null || pkcs8 is null)
         {
             identity?.Dispose();
             AepLog.Warning("[Encryption] identity unsupported: this system cannot create an encryption key.");
@@ -275,95 +336,128 @@ internal sealed class KeyVault : IDisposable
             return false;
         }
 
-        var stored = await client.PutMyKeysAsync(new PutMyKeysRequest(publicKey), token).ConfigureAwait(false);
-        if (stored is null)
+        if (!StoreAndVerifyLocalKey(userId, pkcs8, publicKey))
         {
             identity.Dispose();
+            CryptographicOperations.ZeroMemory(pkcs8);
+            AepLog.Warning("[Encryption] refusing to create a key that cannot be stored on this device.");
+            SetState(KeyVaultState.Unsupported);
+            return false;
+        }
+
+        CryptographicOperations.ZeroMemory(pkcs8);
+        var stored = await client.PutMyKeysAsync(new PutMyKeysRequest(publicKey, null, rotate), token).ConfigureAwait(false);
+        if (stored is null)
+        {
+            RemoveLocalKey(userId);
+            identity.Dispose();
+            SetState(KeyVaultState.Unavailable);
             return false;
         }
 
         serverBundle = stored;
         ClearKey();
         privateKey = identity;
-        var pkcs8 = CryptoBox.TryExportPrivateKey(identity);
-        if (pkcs8 is not null)
-        {
-            StoreLocalCache(pkcs8);
-            CryptographicOperations.ZeroMemory(pkcs8);
-        }
-
+        loadedUserId = userId;
         SetState(KeyVaultState.Unlocked);
         return true;
     }
 
-    private bool TryLoadLocalCache(MyKeysDto bundle)
+    private bool TryLoadLocalKey(string userId, string expectedPublicKey)
     {
-        var userId = MyUserId;
-        if (userId is null
-            || configuration.EncryptionKeyCache.Length == 0
-            || !string.Equals(configuration.EncryptionKeyCacheUserId, userId, StringComparison.Ordinal))
+        if (!configuration.EncryptionKeysByUserId.TryGetValue(userId, out var stored) || stored.Length == 0)
         {
             return false;
         }
 
-        var pkcs8 = LocalKeyProtector.Unprotect(configuration.EncryptionKeyCache, userId);
+        var pkcs8 = LocalKeyProtector.Unprotect(stored, userId);
         if (pkcs8 is null)
         {
             return false;
         }
 
         var imported = CryptoBox.ImportPrivateKey(pkcs8);
+        CryptographicOperations.ZeroMemory(pkcs8);
         if (imported is null)
         {
-            CryptographicOperations.ZeroMemory(pkcs8);
             return false;
         }
 
-        if (!string.Equals(CryptoBox.ExportPublicKey(imported), bundle.PublicKey, StringComparison.Ordinal))
+        if (!string.Equals(CryptoBox.ExportPublicKey(imported), expectedPublicKey, StringComparison.Ordinal))
         {
             imported.Dispose();
-            CryptographicOperations.ZeroMemory(pkcs8);
             return false;
         }
 
-        CryptographicOperations.ZeroMemory(pkcs8);
         privateKey = imported;
+        loadedUserId = userId;
         return true;
     }
 
-    private void StoreLocalCache(byte[] pkcs8)
+    private bool StoreAndVerifyLocalKey(string userId, byte[] pkcs8, string expectedPublicKey)
     {
-        var userId = MyUserId;
-        if (userId is null)
+        StoreLocalKey(userId, pkcs8);
+        if (!configuration.EncryptionKeysByUserId.TryGetValue(userId, out var stored) || stored.Length == 0)
         {
-            return;
+            return false;
         }
 
+        var restored = LocalKeyProtector.Unprotect(stored, userId);
+        if (restored is null)
+        {
+            RemoveLocalKey(userId);
+            return false;
+        }
+
+        var imported = CryptoBox.ImportPrivateKey(restored);
+        CryptographicOperations.ZeroMemory(restored);
+        if (imported is null)
+        {
+            RemoveLocalKey(userId);
+            return false;
+        }
+
+        var matches = string.Equals(CryptoBox.ExportPublicKey(imported), expectedPublicKey, StringComparison.Ordinal);
+        imported.Dispose();
+        if (!matches)
+        {
+            RemoveLocalKey(userId);
+        }
+
+        return matches;
+    }
+
+    private void StoreLocalKey(string userId, byte[] pkcs8)
+    {
         var protectedBlob = LocalKeyProtector.Protect(pkcs8, userId);
-        LocalCacheUnavailable = protectedBlob is null;
-        if (protectedBlob is null)
+        configuration.EncryptionKeysByUserId[userId] = protectedBlob;
+        if (string.Equals(MyUserId, userId, StringComparison.Ordinal))
         {
-            Changed?.Invoke();
-            return;
+            configuration.EncryptionKeyCache = protectedBlob;
+            configuration.EncryptionKeyCacheUserId = userId;
         }
 
-        configuration.EncryptionKeyCache = protectedBlob;
-        configuration.EncryptionKeyCacheUserId = userId;
         configuration.Save();
         session.PersistActiveKeyCache();
     }
 
-    private void EnsureLocalCachePersisted()
+    private void RemoveLocalKey(string userId)
     {
-        var userId = MyUserId;
-        var key = privateKey;
-        if (userId is null || key is null)
+        configuration.EncryptionKeysByUserId.Remove(userId);
+        if (string.Equals(configuration.EncryptionKeyCacheUserId, userId, StringComparison.Ordinal))
         {
-            return;
+            configuration.EncryptionKeyCache = string.Empty;
+            configuration.EncryptionKeyCacheUserId = string.Empty;
         }
 
-        if (configuration.EncryptionKeyCache.Length > 0
-            && string.Equals(configuration.EncryptionKeyCacheUserId, userId, StringComparison.Ordinal))
+        configuration.Save();
+        session.PersistActiveKeyCache();
+    }
+
+    private void EnsureLocalKeyPersisted(string userId)
+    {
+        var key = privateKey;
+        if (key is null || configuration.EncryptionKeysByUserId.ContainsKey(userId))
         {
             return;
         }
@@ -374,22 +468,15 @@ internal sealed class KeyVault : IDisposable
             return;
         }
 
-        StoreLocalCache(pkcs8);
+        StoreLocalKey(userId, pkcs8);
         CryptographicOperations.ZeroMemory(pkcs8);
-    }
-
-    private bool HasStoredKeyForCurrentUser()
-    {
-        var userId = MyUserId;
-        return userId is not null
-            && configuration.EncryptionKeyCache.Length > 0
-            && string.Equals(configuration.EncryptionKeyCacheUserId, userId, StringComparison.Ordinal);
     }
 
     private void ClearKey()
     {
         privateKey?.Dispose();
         privateKey = null;
+        loadedUserId = null;
     }
 
     private void SetState(KeyVaultState next)
@@ -408,7 +495,7 @@ internal static class LocalKeyProtector
 {
     private const string RawPrefix = "raw.";
 
-    public static string? Protect(byte[] secret, string userId)
+    public static string Protect(byte[] secret, string userId)
     {
         try
         {
@@ -418,8 +505,8 @@ internal static class LocalKeyProtector
         }
         catch (Exception exception)
         {
-            AepLog.Warning($"Key protection unavailable ({exception.GetType().Name}); the key will not be saved on this device.");
-            return null;
+            AepLog.Warning($"Key protection unavailable ({exception.GetType().Name}); storing the key without OS protection so it survives restarts.");
+            return RawPrefix + Convert.ToBase64String(secret);
         }
     }
 

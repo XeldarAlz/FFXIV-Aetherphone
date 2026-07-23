@@ -182,6 +182,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     public bool Sending => sending;
     public bool OtherTyping => otherTyping;
     public KeyVaultState VaultState => vault.State;
+    public bool EscrowConfigured => vault.RecoveryConfigured;
     public ChatKeyStatus CurrentKeyStatus => currentKeyStatus;
     public bool EncryptingCurrent => cipher.IsUnlocked && currentKeyStatus.CanEncrypt;
 
