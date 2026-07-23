@@ -158,7 +158,7 @@ internal sealed class PhoneServices : IDisposable
         var venues = new VenuesService(http, notifications, configuration, gameData);
         var collectionsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collections"));
         var collectionsDisk = new DiskCache(collectionsRoot, 32L * 1024 * 1024);
-        var collections = new CollectionsCatalogService(http, collectionsDisk, dataManager, unlockState);
+        var collections = new CollectionsCatalogService(http, collectionsDisk, dataManager, unlockState, framework);
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);

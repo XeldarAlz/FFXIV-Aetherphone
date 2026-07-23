@@ -68,7 +68,7 @@ internal sealed partial class CollectionsApp
         var tileWidth = (width - gap) / columns;
         var tileHeight = (available - (rows - 1) * gap - bottomMargin) / rows;
         tileHeight = Math.Clamp(tileHeight, TileHeight * scale, MaxTileHeight * scale);
-        var summary = lodestoneId is not null ? catalog.RequestSummary(lodestoneId) : null;
+        var summary = catalog.RequestSummary(lodestoneId);
 
         for (var index = 0; index < count; index++)
         {
@@ -190,8 +190,8 @@ internal sealed partial class CollectionsApp
         var top = area.Min.Y + AppHeader.Height * scale;
         contentBottom = area.Max.Y;
         var entry = catalog.RequestCatalog(category);
-        var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
-        var summary = lodestoneId is not null ? catalog.RequestSummary(lodestoneId) : null;
+        var owned = catalog.RequestOwned(lodestoneId, category);
+        var summary = catalog.RequestSummary(lodestoneId);
         var progress = summary is { State: SummaryState.Ready } ? summary.For(category) : null;
         var trackable = progress?.HasPercent ?? true;
         var ownedUi = trackable ? owned : null;
@@ -287,11 +287,12 @@ internal sealed partial class CollectionsApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var drawList = ImGui.GetWindowDrawList();
-        if (owned is { State: OwnedState.Ready } && entry.Total > 0)
+        var ownedTotal = owned is { Total: > 0 } ? owned.Total : entry.Total;
+        if (owned is { State: OwnedState.Ready } && ownedTotal > 0)
         {
-            var fraction = Math.Clamp(owned.Count / (float)entry.Total, 0f, 1f);
+            var fraction = Math.Clamp(owned.Count / (float)ownedTotal, 0f, 1f);
             var percent = (int)MathF.Round(fraction * 100f);
-            var label = $"{owned.Count} / {entry.Total}";
+            var label = $"{owned.Count} / {ownedTotal}";
             Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + 2f * scale), label, ui.TitleInk,
                 TextStyles.Title3);
             var pctLabel = Loc.T(L.Collections.CompletePercent, percent);
