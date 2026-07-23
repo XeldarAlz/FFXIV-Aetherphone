@@ -101,7 +101,7 @@ internal sealed class DailiesApp : IPhoneApp
         return item.Tracking switch
         {
             DailyTracking.Manual => DailyAutoStatus.Unavailable,
-            DailyTracking.DutyRoulettes => DailiesReader.ReadDutyRoulettes(gameData.DailyBonusRouletteIndices()),
+            DailyTracking.DutyRoulettes => DailiesReader.ReadDutyRoulettes(gameData.DailyBonusRouletteRowIds()),
             DailyTracking.HuntBills => DailiesReader.ReadHuntBills(gameData.WeeklyHuntBillIndices()),
             _ => DailiesReader.Read(item.Tracking, item.Goal),
         };

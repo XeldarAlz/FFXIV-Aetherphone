@@ -127,18 +127,18 @@ internal static unsafe class DailiesReader
         return new DailyAutoStatus(true, true, current, goal);
     }
 
-    public static DailyAutoStatus ReadDutyRoulettes(IReadOnlyList<byte> bonusIndices)
+    public static DailyAutoStatus ReadDutyRoulettes(IReadOnlyList<byte> rouletteRowIds)
     {
         var content = InstanceContent.Instance();
-        if (content is null || bonusIndices.Count == 0)
+        if (content is null || rouletteRowIds.Count == 0)
         {
             return DailyAutoStatus.Unavailable;
         }
 
         var claimed = 0;
-        for (var index = 0; index < bonusIndices.Count; index++)
+        for (var index = 0; index < rouletteRowIds.Count; index++)
         {
-            if (content->IsRouletteComplete(bonusIndices[index]))
+            if (content->IsRouletteComplete(rouletteRowIds[index]))
             {
                 claimed++;
             }
