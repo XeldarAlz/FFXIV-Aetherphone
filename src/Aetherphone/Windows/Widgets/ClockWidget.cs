@@ -45,7 +45,7 @@ internal sealed class ClockWidget : IHomeWidget
         var bell = EorzeaTime.Now();
         var bellSeconds = EorzeaTime.CurrentSeconds() % 60;
         DrawFace(context, new Vector2(bounds.Min.X + bounds.Width * 0.27f, faceCenterY), radius, now.Hour, now.Minute,
-            now.Second + now.Millisecond / 1000f, Loc.T(L.Home.Local), now.ToString("HH:mm"), context.Theme, scale);
+            now.Second + now.Millisecond / 1000f, Loc.T(L.Home.Local), TimeText.Clock(now), context.Theme, scale);
         DrawFace(context, new Vector2(bounds.Min.X + bounds.Width * 0.73f, faceCenterY), radius, bell.Hour,
             bell.Minute, bellSeconds, Loc.T(L.Home.Eorzea), bell.Formatted, context.Theme, scale);
     }

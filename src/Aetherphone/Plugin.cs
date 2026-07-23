@@ -273,6 +273,7 @@ public sealed class Plugin : IDalamudPlugin
         }
 
         Loc.Initialize(Cfg.Language, directory);
+        TimeText.Use24Hour = Cfg.Use24HourClock;
     }
 
     private static string DetectLanguage()

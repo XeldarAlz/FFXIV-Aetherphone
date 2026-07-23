@@ -97,6 +97,17 @@ internal sealed class AppearancePage : ISettingsPage
                 configuration.Save();
             }
 
+            SettingsSection.Header(Loc.T(L.Settings.ClockFormat), theme);
+            var clockCard = GroupCard.Begin(theme, 1);
+            var use24 = SettingsRow.Bool(clockCard.NextRow(), Loc.T(L.Settings.Use24HourClock),
+                                         configuration.Use24HourClock, theme);
+            clockCard.End();
+            if (use24 != configuration.Use24HourClock)
+            {
+                configuration.Use24HourClock = use24;
+                TimeText.Use24Hour = use24;
+                configuration.Save();
+            }
             DrawHomeSection(theme);
         }
     }

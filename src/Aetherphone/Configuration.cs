@@ -128,6 +128,7 @@ internal sealed class Configuration : IPluginConfiguration
     public Dictionary<ulong, List<string>> MutedLinkshellsByCharacter { get; set; } = new();
     public bool LinkshellMutesPerCharacterMigrated { get; set; }
     public long DevChatLastSeenUnix { get; set; }
+    public bool Use24HourClock { get; set; } = true;
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
     public bool RegionManual { get; set; }

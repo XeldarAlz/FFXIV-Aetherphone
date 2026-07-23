@@ -468,6 +468,8 @@ internal static class L
         public static readonly LocString Wallpaper = new("settings.wallpaper", "Wallpaper");
         public static readonly LocString TextSize = new("settings.textSize", "Text Size");
         public static readonly LocString PhoneSize = new("settings.phoneSize", "Phone Size");
+        public static readonly LocString ClockFormat = new("settings.clockFormat", "Clock");
+        public static readonly LocString Use24HourClock = new("settings.use24HourClock", "24-hour time");
         public static readonly LocString Notifications = new("settings.notifications", "Notifications");
         public static readonly LocString DoNotDisturb = new("settings.doNotDisturb", "Do Not Disturb");
         public static readonly LocString Vibration = new("settings.vibration", "Vibration");

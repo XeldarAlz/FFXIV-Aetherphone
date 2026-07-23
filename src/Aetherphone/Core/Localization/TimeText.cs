@@ -2,6 +2,20 @@ namespace Aetherphone.Core.Localization;
 
 internal static class TimeText
 {
+    private static bool use24Hour = true;
+
+    public static bool Use24Hour
+    {
+        get => use24Hour;
+        set => use24Hour = value;
+    }
+
+    public static string ClockPattern => use24Hour ? "HH:mm" : "h:mm tt";
+
+    public static string Clock(DateTime moment) => moment.ToString(ClockPattern, Loc.Culture);
+
+    public static string Clock(DateTimeOffset moment) => moment.ToString(ClockPattern, Loc.Culture);
+
     public static string Ago(DateTime utcMoment)
     {
         if (utcMoment == default)
@@ -100,7 +114,7 @@ internal static class TimeText
             return string.Empty;
         }
 
-        return DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime().ToString("t", Loc.Culture);
+    return Clock(DateTimeOffset.FromUnixTimeSeconds(unixSeconds).ToLocalTime());
     }
 
     public static string DayLabel(long unixSeconds)
