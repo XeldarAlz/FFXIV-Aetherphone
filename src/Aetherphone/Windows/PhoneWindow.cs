@@ -21,6 +21,7 @@ internal sealed class PhoneWindow : Window
     private Vector2? pendingPosition;
     private Vector2? maximizedPosition;
     private Vector2? minimizedPosition;
+    private bool landscape;
 
     public PhoneWindow(PhoneShell shell, Configuration configuration)
         : base(AepConstants.Name, BaseFlags)
@@ -113,7 +114,25 @@ internal sealed class PhoneWindow : Window
     {
         var phase = shell.MinimizePhase;
         var minimized = phase == MinimizePhase.Minimized;
-        var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
+        var wantsLandscape = shell.WantsLandscape;
+        var requestedSize = minimized
+            ? MinimizeTransition.MinimizedSize
+            : wantsLandscape
+                ? PhoneSizeCatalog.LandscapeSizeFor(configuration.PhoneScale)
+                : PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
+        var size = SnapLogicalSize(requestedSize);
+        if (!minimized && wantsLandscape != landscape)
+        {
+            if (LastSize.X > 0f && LastSize.Y > 0f)
+            {
+                var center = LastPosition + LastSize * 0.5f;
+                Position = center - size * ImGuiHelpers.GlobalScale * 0.5f;
+                PositionCondition = ImGuiCond.Always;
+            }
+
+            landscape = wantsLandscape;
+        }
+
         Size = size;
         SizeCondition = ImGuiCond.Always;
         Flags = !minimized && configuration.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
@@ -166,7 +185,10 @@ internal sealed class PhoneWindow : Window
         var phase = shell.MinimizePhase;
         if (phase == MinimizePhase.None)
         {
-            maximizedPosition = ImGui.GetWindowPos();
+            if (!landscape)
+            {
+                maximizedPosition = ImGui.GetWindowPos();
+            }
         }
         else if (phase == MinimizePhase.Minimized)
         {
@@ -177,5 +199,13 @@ internal sealed class PhoneWindow : Window
         {
             IsOpen = false;
         }
+    }
+
+    private static Vector2 SnapLogicalSize(Vector2 logicalSize)
+    {
+        var scale = MathF.Max(0.01f, ImGuiHelpers.GlobalScale);
+        var physical = logicalSize * scale;
+        var snapped = new Vector2(MathF.Round(physical.X), MathF.Round(physical.Y));
+        return snapped / scale;
     }
 }

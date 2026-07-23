@@ -131,6 +131,8 @@ internal sealed class PhoneShell : IDisposable
 
     public float MinimizeEased => minimize.EasedProgress;
 
+    public bool WantsLandscape => navigation.Current?.WantsLandscape == true;
+
     public void ForceMaximize() => minimize.SnapFull();
 
     public void ForceMinimized() => minimize.SnapMinimized();
@@ -189,9 +191,10 @@ internal sealed class PhoneShell : IDisposable
 
         banner.Advance(delta);
         calls.Advance(delta);
+        var isLandscape = device.Width > device.Height;
         if (!loading.IsActive)
         {
-            switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta))
+            switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta, isLandscape))
             {
                 case SideButtonAction.Minimize:
                     minimize.BeginCollapse();
@@ -202,14 +205,14 @@ internal sealed class PhoneShell : IDisposable
             }
 
             if (SideToggle.Update(DeviceChrome.MuteButtonRect(device), theme, configuration.DoNotDisturb,
-                    Loc.T(configuration.DoNotDisturb ? L.Plugin.DndDisableHint : L.Plugin.DndEnableHint)))
+                    Loc.T(configuration.DoNotDisturb ? L.Plugin.DndDisableHint : L.Plugin.DndEnableHint), isLandscape))
             {
                 configuration.DoNotDisturb = !configuration.DoNotDisturb;
                 configuration.Save();
             }
 
             if (SideToggle.Update(DeviceChrome.LockButtonRect(device), theme, configuration.LockPosition,
-                    Loc.T(configuration.LockPosition ? L.Plugin.UnlockPositionHint : L.Plugin.LockPositionHint)))
+                    Loc.T(configuration.LockPosition ? L.Plugin.UnlockPositionHint : L.Plugin.LockPositionHint), isLandscape))
             {
                 configuration.LockPosition = !configuration.LockPosition;
                 configuration.Save();

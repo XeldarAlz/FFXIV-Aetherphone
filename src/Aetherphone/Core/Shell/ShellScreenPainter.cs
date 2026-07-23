@@ -11,6 +11,7 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed class ShellScreenPainter
 {
+    public const float ImmersiveInset = 8f;
     private readonly ThemeProvider themes;
     private readonly NavigationStack navigation;
     private readonly HomeScreen home;
