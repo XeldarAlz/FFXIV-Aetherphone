@@ -1,5 +1,5 @@
 using System.Globalization;
-
+using Aetherphone.Core.Localization;
 namespace Aetherphone.Core.Venues;
 
 internal static class VenueFormat
@@ -7,10 +7,10 @@ internal static class VenueFormat
     public static string Range(VenueEvent venue)
     {
         var start = venue.StartUtc.ToLocalTime();
-        var startText = start.ToString("HH:mm", CultureInfo.InvariantCulture);
+        var startText = TimeText.Clock(start);
         if (!IsToday(start))
         {
-            startText = start.ToString("dd/MM HH:mm", CultureInfo.InvariantCulture);
+            startText = start.ToString("dd/MM " + TimeText.ClockPattern, CultureInfo.InvariantCulture);
         }
 
         if (venue.EndUtc is not { } endUtc)
@@ -19,7 +19,7 @@ internal static class VenueFormat
         }
 
         var end = endUtc.ToLocalTime();
-        return $"{startText} – {end:HH:mm}";
+        return $"{startText} – {TimeText.Clock(end)}";
     }
 
     public static string EndsAt(VenueEvent venue)
@@ -29,7 +29,7 @@ internal static class VenueFormat
             return string.Empty;
         }
 
-        return endUtc.ToLocalTime().ToString("HH:mm", CultureInfo.InvariantCulture);
+        return TimeText.Clock(endUtc.ToLocalTime());
     }
 
     public static string Starts(VenueEvent venue, DateTime nowUtc)

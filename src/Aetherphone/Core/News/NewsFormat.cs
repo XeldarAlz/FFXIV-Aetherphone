@@ -16,10 +16,10 @@ internal static class NewsFormat
     {
         var localStart = start.ToLocalTime();
         var localEnd = end.ToLocalTime();
-        var startText = localStart.ToString("MMM d, HH:mm", Loc.Culture);
+        var startText = localStart.ToString("MMM d, " + TimeText.ClockPattern, Loc.Culture);
         var endText = localStart.Date == localEnd.Date
-            ? localEnd.ToString("HH:mm", Loc.Culture)
-            : localEnd.ToString("MMM d, HH:mm", Loc.Culture);
+        ? TimeText.Clock(localEnd)
+        : localEnd.ToString("MMM d, " + TimeText.ClockPattern, Loc.Culture);
         return string.Concat(startText, " – ", endText);
     }
 
