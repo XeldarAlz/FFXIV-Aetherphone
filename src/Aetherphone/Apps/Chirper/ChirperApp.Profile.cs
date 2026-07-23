@@ -106,8 +106,19 @@ internal sealed partial class ChirperApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), DisplayName, AppPalettes.Chirper.TitleInk,
-            1.3f, FontWeight.Bold);
+        const float titleScale = 1.3f;
+        var titleCenter = new Vector2(area.Center.X, rowCenterY);
+        var titleSize = Typography.Measure(DisplayName, titleScale, FontWeight.Bold);
+        var titlePadding = new Vector2(12f * scale, 6f * scale);
+        var titleMin = titleCenter - titleSize * 0.5f - titlePadding;
+        var titleMax = titleCenter + titleSize * 0.5f + titlePadding;
+        UiInteract.HoverHighlight(ImGui.GetWindowDrawList(), titleMin, titleMax, (titleMax.Y - titleMin.Y) * 0.5f);
+        Typography.DrawCentered(titleCenter, DisplayName, AppPalettes.Chirper.TitleInk, titleScale, FontWeight.Bold);
+        if (UiInteract.HoverClick(titleMin, titleMax))
+        {
+            feedScrollTopPending = true;
+            store.RefreshFeed(activeScope);
+        }
         if (store.Me is { } me)
         {
             var radius = 16f * scale;

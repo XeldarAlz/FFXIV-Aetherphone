@@ -86,6 +86,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private AethergramTab activeTab = AethergramTab.Home;
     private readonly Spring[] navHover = new Spring[NavTabCount];
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
+    private bool feedScrollTopPending;
     private bool commentFocusPending;
     private readonly PhotoComposeSession composeSession;
     private bool composeAvatarMode;
@@ -364,6 +365,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     {
         if (tab == AethergramTab.Home && activeTab == AethergramTab.Home)
         {
+            feedScrollTopPending = true;
             store.RefreshFeed(activeScope);
             return;
         }
@@ -485,6 +487,11 @@ internal sealed partial class AethergramApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
+            if (feedScrollTopPending)
+            {
+                ImGui.SetScrollY(0f);
+                feedScrollTopPending = false;
+            }
             stories.DrawTray(theme);
             if (snapshot.Length == 0)
             {
