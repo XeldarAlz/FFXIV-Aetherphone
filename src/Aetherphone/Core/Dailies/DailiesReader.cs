@@ -1,6 +1,9 @@
 using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
+using Lumina.Excel;
+using MobHuntOrder = Lumina.Excel.Sheets.MobHuntOrder;
+using MobHuntOrderType = Lumina.Excel.Sheets.MobHuntOrderType;
 
 namespace Aetherphone.Core.Dailies;
 
@@ -127,18 +130,18 @@ internal static unsafe class DailiesReader
         return new DailyAutoStatus(true, true, current, goal);
     }
 
-    public static DailyAutoStatus ReadDutyRoulettes(IReadOnlyList<byte> bonusIndices)
+    public static DailyAutoStatus ReadDutyRoulettes(IReadOnlyList<byte> rouletteRowIds)
     {
         var content = InstanceContent.Instance();
-        if (content is null || bonusIndices.Count == 0)
+        if (content is null || rouletteRowIds.Count == 0)
         {
             return DailyAutoStatus.Unavailable;
         }
 
         var claimed = 0;
-        for (var index = 0; index < bonusIndices.Count; index++)
+        for (var index = 0; index < rouletteRowIds.Count; index++)
         {
-            if (content->IsRouletteComplete(bonusIndices[index]))
+            if (content->IsRouletteComplete(rouletteRowIds[index]))
             {
                 claimed++;
             }
@@ -148,7 +151,8 @@ internal static unsafe class DailiesReader
         return new DailyAutoStatus(true, complete, complete ? 0 : 1, 1);
     }
 
-    public static DailyAutoStatus ReadHuntBills(IReadOnlyList<byte> weeklyIndices)
+    public static DailyAutoStatus ReadHuntBills(IReadOnlyList<byte> weeklyIndices,
+        ExcelSheet<MobHuntOrderType> orderTypes, SubrowExcelSheet<MobHuntOrder> orders)
     {
         var hunt = MobHunt.Instance();
         if (hunt is null || weeklyIndices.Count == 0)
@@ -167,7 +171,7 @@ internal static unsafe class DailiesReader
             }
 
             unlocked++;
-            if (!hunt->IsMarkBillObtained(billIndex) && hunt->GetAvailableHuntOrderRowId(billIndex) == 0)
+            if (IsWeeklyBillComplete(hunt, billIndex, orderTypes, orders))
             {
                 done++;
             }
@@ -179,6 +183,34 @@ internal static unsafe class DailiesReader
         }
 
         return new DailyAutoStatus(true, done >= unlocked, unlocked - done, unlocked);
+    }
+
+    private static bool IsWeeklyBillComplete(MobHunt* hunt, byte billIndex,
+        ExcelSheet<MobHuntOrderType> orderTypes, SubrowExcelSheet<MobHuntOrder> orders)
+    {
+        if (hunt->GetAvailableHuntOrderRowId(billIndex) != hunt->GetObtainedHuntOrderRowId(billIndex))
+        {
+            return false;
+        }
+
+        var obtainedMark = hunt->ObtainedMarkId[billIndex];
+        if (obtainedMark == 0)
+        {
+            return false;
+        }
+
+        if (!orderTypes.TryGetRow(billIndex, out var orderType))
+        {
+            return false;
+        }
+
+        var targetRow = orderType.OrderStart.RowId + obtainedMark - 1u;
+        if (!orders.TryGetSubrow(targetRow, 0, out var eliteTarget))
+        {
+            return false;
+        }
+
+        return hunt->CurrentKills[billIndex][0] == eliteTarget.NeededKills;
     }
 
     public static TimerWindow ReadFashionReportWindow(DateTime utcNow) => GameSchedule.FashionReport(utcNow);
