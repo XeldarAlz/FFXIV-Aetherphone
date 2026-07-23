@@ -93,7 +93,7 @@ internal sealed class PhoneServices : IDisposable
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
-        ITextureProvider textures, DirectoryInfo configDirectory)
+        ITextureProvider textures, DirectoryInfo configDirectory, IUnlockState unlockState)
     {
         var builtInWallpaperDirectory = new DirectoryInfo(
             Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
@@ -158,7 +158,7 @@ internal sealed class PhoneServices : IDisposable
         var venues = new VenuesService(http, notifications, configuration, gameData);
         var collectionsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collections"));
         var collectionsDisk = new DiskCache(collectionsRoot, 32L * 1024 * 1024);
-        var collections = new CollectionsCatalogService(http, collectionsDisk);
+        var collections = new CollectionsCatalogService(http, collectionsDisk, dataManager, unlockState);
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
