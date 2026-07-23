@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Aetherphone.Core.Net;
+using Dalamud.Plugin.Services;
+using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Collections;
 
@@ -26,6 +28,13 @@ internal sealed class CategoryProgress
     public CollectionAccess Access;
 
     public bool HasPercent => Access == CollectionAccess.Public || Count > 0;
+}
+
+internal sealed class CategoryDescriptor
+{
+    public required Func<IDataManager, IEnumerable<object>> GetAll;
+    public required Func<IUnlockState, object, bool> IsUnlocked;
+    public required Func<object, int> GetId;
 }
 
 internal sealed class SummaryEntry
@@ -57,15 +66,20 @@ internal sealed class CollectionsCatalogService : IDisposable
     private readonly HttpService http;
     private readonly DiskCache disk;
     private readonly RequestThrottle throttle;
+    private readonly IDataManager dataManager;
+    private readonly IUnlockState unlockState;
     private readonly CancellationTokenSource cancellation = new();
     private readonly ConcurrentDictionary<CollectionCategory, CatalogEntry> catalogs = new();
     private readonly ConcurrentDictionary<string, OwnedEntry> owned = new();
     private readonly ConcurrentDictionary<string, SummaryEntry> summaries = new();
+    private readonly ConcurrentDictionary<CollectionCategory, object> allCache = new();
 
-    public CollectionsCatalogService(HttpService http, DiskCache disk)
+    public CollectionsCatalogService(HttpService http, DiskCache disk, IDataManager dataManager, IUnlockState unlockState)
     {
         this.http = http;
         this.disk = disk;
+        this.dataManager = dataManager;
+        this.unlockState = unlockState;
         throttle = new RequestThrottle(2, TimeSpan.FromMilliseconds(600));
     }
 
@@ -91,7 +105,7 @@ internal sealed class CollectionsCatalogService : IDisposable
         if (entry.State == OwnedState.Unknown || retryFailed)
         {
             entry.State = OwnedState.Loading;
-            _ = LoadOwnedAsync(lodestoneId, category, entry);
+            LoadOwned(lodestoneId, category, entry);
         }
 
         return entry;
@@ -183,6 +197,98 @@ internal sealed class CollectionsCatalogService : IDisposable
                 .ConfigureAwait(false);
         }
     }
+    
+    private static readonly Dictionary<CollectionCategory, CategoryDescriptor> Descriptors = new()
+    {
+        [CollectionCategory.Mounts] = new CategoryDescriptor
+        {
+            GetAll = dm => dm.GetExcelSheet<Mount>().Where(row => row.Singular != "" && row.Order != -1).Cast<object>(),
+            IsUnlocked = (u, row) => u.IsMountUnlocked((Mount)row),
+            GetId = row => (int)((Mount)row).RowId,
+        },
+        [CollectionCategory.Minions] = new CategoryDescriptor
+        {
+            GetAll = dm => dm.GetExcelSheet<Companion>().Where(row => row.Singular != "").Cast<object>(),
+            IsUnlocked = (u, row) => u.IsCompanionUnlocked((Companion)row),
+            GetId = row => (int)((Companion)row).RowId,
+        },
+        [CollectionCategory.Emotes] = new CategoryDescriptor
+        {
+            GetAll = dm => dm.GetExcelSheet<Lumina.Excel.Sheets.Emote>()
+                             .Where(row => row.Name != "" && row.Icon != 0 && row.UnlockLink != 0)
+                             .Cast<object>(),
+            IsUnlocked = (u, row) => u.IsEmoteUnlocked((Lumina.Excel.Sheets.Emote)row),
+            GetId = row => (int)((Lumina.Excel.Sheets.Emote)row).RowId,
+        },
+        [CollectionCategory.Orchestrions] = new CategoryDescriptor
+        {
+            GetAll = dm => dm.GetExcelSheet<Orchestrion>().Where(row => row.Name != "" && row.Name != "0").Cast<object>(),
+            IsUnlocked = (u, row) => u.IsOrchestrionUnlocked((Orchestrion)row),
+            GetId = row => (int)((Orchestrion)row).RowId,
+        },
+        [CollectionCategory.Hairstyles] = new CategoryDescriptor
+        {
+            GetAll = dm => dm.GetExcelSheet<CharaMakeCustomize>()
+                             .Where(row => row.IsPurchasable
+                                           && (row.RowId <= 100 || (row.RowId >= 2050 && row.RowId < 2100))
+                                           && (int)row.Icon != 131094)
+                             .Cast<object>(),
+            IsUnlocked = (u, row) => u.IsCharaMakeCustomizeUnlocked((CharaMakeCustomize)row),
+            GetId = row => ((CharaMakeCustomize)row).UnlockLink, // note: id source differs from RowId here
+        },
+        [CollectionCategory.Facewear] = new CategoryDescriptor
+        {
+            GetAll = dm => dm.GetExcelSheet<Glasses>().Where(row => row.Icon != 0 && row.Name == row.Style.Value.Name).Cast<object>(),
+            IsUnlocked = (u, row) => u.IsGlassesUnlocked((Glasses)row),
+            GetId = row => (int)((Glasses)row).RowId,
+        },
+        [CollectionCategory.TriadCards] = new CategoryDescriptor
+        {
+            GetAll = dm => dm.GetExcelSheet<TripleTriadCard>().Where(row => row.Name != "" && row.Name != "0").Cast<object>(),
+            IsUnlocked = (u, row) => u.IsTripleTriadCardUnlocked((TripleTriadCard)row),
+            GetId = row => (int)((TripleTriadCard)row).RowId,
+        },
+    };
+
+    private List<object> GetAllRaw(CollectionCategory category)
+    {
+        return (List<object>)allCache.GetOrAdd(category, static (cat, self) =>
+            Descriptors[cat].GetAll(self.dataManager).ToList(), this);
+    }
+
+    private (int Total, int Owned) GetCategoryCounts(CollectionCategory category)
+    {
+        var descriptor = Descriptors[category];
+        var all = GetAllRaw(category);
+        return (all.Count, all.Count(row => descriptor.IsUnlocked(unlockState, row)));
+    }
+
+    private HashSet<int> GetOwnedIdsInCategory(CollectionCategory category)
+    {
+        var descriptor = Descriptors[category];
+        var ids = new HashSet<int>();
+        foreach (var row in GetAllRaw(category))
+            if (descriptor.IsUnlocked(unlockState, row))
+                ids.Add(descriptor.GetId(row));
+        return ids;
+    }
+
+    private void LoadOwned(string lodestoneId, CollectionCategory category, OwnedEntry entry)
+    {
+        entry.FetchedUtc = DateTime.UtcNow;
+        
+        if (category == CollectionCategory.Achievements)
+        {
+            _ = LoadOwnedAsync(lodestoneId, category, entry);
+            return;
+        }
+
+        var ids = GetOwnedIdsInCategory(category);
+
+        entry.Ids = ids;
+        entry.Count = ids.Count;
+        entry.State = OwnedState.Ready;
+    }
 
     private async Task LoadOwnedAsync(string lodestoneId, CollectionCategory category, OwnedEntry entry)
     {
@@ -229,6 +335,12 @@ internal sealed class CollectionsCatalogService : IDisposable
             AepLog.Warning($"Collections owned fetch failed for {category}: {exception.Message}");
         }
     }
+    
+    private CharacterCollectionStat MakeStatFromLocalData(CollectionCategory category, CharacterCollectionStat? stat)
+    {
+        var (totalInCategory, ownedFromCategory) = GetCategoryCounts(category);
+        return new CharacterCollectionStat { Public = true, Total = stat?.Total ?? totalInCategory, Count = ownedFromCategory };
+    }
 
     private async Task LoadSummaryAsync(string lodestoneId, SummaryEntry entry)
     {
@@ -252,14 +364,14 @@ internal sealed class CollectionsCatalogService : IDisposable
                 return;
             }
 
-            Apply(entry, CollectionCategory.Mounts, dto.Mounts);
-            Apply(entry, CollectionCategory.Minions, dto.Minions);
-            Apply(entry, CollectionCategory.Emotes, dto.Emotes);
-            Apply(entry, CollectionCategory.Orchestrions, dto.Orchestrions);
-            Apply(entry, CollectionCategory.Hairstyles, dto.Hairstyles);
-            Apply(entry, CollectionCategory.Facewear, dto.Facewear);
+            Apply(entry, CollectionCategory.Mounts, MakeStatFromLocalData(CollectionCategory.Mounts, dto.Mounts));
+            Apply(entry, CollectionCategory.Minions, MakeStatFromLocalData(CollectionCategory.Minions, dto.Minions));
+            Apply(entry, CollectionCategory.Emotes, MakeStatFromLocalData(CollectionCategory.Emotes, dto.Emotes));
+            Apply(entry, CollectionCategory.Orchestrions, MakeStatFromLocalData(CollectionCategory.Orchestrions, dto.Orchestrions));
+            Apply(entry, CollectionCategory.Hairstyles, MakeStatFromLocalData(CollectionCategory.Hairstyles, dto.Hairstyles));
+            Apply(entry, CollectionCategory.Facewear, MakeStatFromLocalData(CollectionCategory.Facewear, dto.Facewear));
             Apply(entry, CollectionCategory.Achievements, dto.Achievements);
-            Apply(entry, CollectionCategory.TriadCards, dto.Cards);
+            Apply(entry, CollectionCategory.TriadCards, MakeStatFromLocalData(CollectionCategory.TriadCards, dto.Cards));
             entry.State = SummaryState.Ready;
         }
         catch (OperationCanceledException)
