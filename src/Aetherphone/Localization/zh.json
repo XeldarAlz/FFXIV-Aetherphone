@@ -1621,6 +1621,8 @@
   "controlCenter.editHint": "拖动以重新排列 · 点按 ⤢ 调整大小",
   "home.done": "完成",
   "home.newFolder": "文件夹",
+  "home.appLibrary": "App 资源库",
+  "home.appLibraryEmpty": "将 App 拖到这里，即可不在主屏幕上显示",
   "home.widgets": "小组件",
   "home.addWidget": "添加小组件",
   "home.remove": "移除",

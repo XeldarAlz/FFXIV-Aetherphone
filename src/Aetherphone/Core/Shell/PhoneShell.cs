@@ -128,7 +128,7 @@ internal sealed class PhoneShell : IDisposable
 
     public bool MinimizedResting => minimize.MinimizedResting;
 
-    public bool HomeEditing => home.Editing;
+    public bool HomeEditing => home.Editing && navigation.Current is null;
 
     public MinimizePhase MinimizePhase => minimize.Phase;
 

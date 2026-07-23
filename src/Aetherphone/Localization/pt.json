@@ -1621,6 +1621,8 @@
   "controlCenter.editHint": "Arraste para reorganizar · toque em ⤢ para redimensionar",
   "home.done": "OK",
   "home.newFolder": "Pasta",
+  "home.appLibrary": "Biblioteca de apps",
+  "home.appLibraryEmpty": "Arraste apps para cá para deixá-los fora da Tela de Início",
   "home.widgets": "Widgets",
   "home.addWidget": "Adicionar widget",
   "home.remove": "Remover",

@@ -372,9 +372,18 @@ internal sealed class HomeLayoutService
         }
 
         unplaced.Sort((a, b) => string.Compare(a.DisplayName, b.DisplayName, StringComparison.OrdinalIgnoreCase));
+        var knownHome = CollectKnownHome(saved);
         for (var index = 0; index < unplaced.Count; index++)
         {
-            AppendToLibrary(HomeTile.ForApp(unplaced[index]));
+            var tile = HomeTile.ForApp(unplaced[index]);
+            if (saved is null || knownHome.Contains(unplaced[index].Id))
+            {
+                AppendToHome(tile);
+            }
+            else
+            {
+                AppendToLibrary(tile);
+            }
         }
 
         Normalize();
@@ -527,6 +536,20 @@ internal sealed class HomeLayoutService
         pages.Add(new List<HomeTile> { tile });
     }
 
+    private void AppendToHome(HomeTile tile)
+    {
+        var last = pages[homePageCount - 1];
+        last.Add(tile);
+        if (HomeGridSolver.Fits(last, Columns, rows))
+        {
+            return;
+        }
+
+        last.RemoveAt(last.Count - 1);
+        pages.Insert(homePageCount, new List<HomeTile> { tile });
+        homePageCount++;
+    }
+
     private void AppendToLibrary(HomeTile tile)
     {
         if (pages.Count == homePageCount)
@@ -641,9 +664,126 @@ internal sealed class HomeLayoutService
 
         SerializePages(layout.Pages, 0, homePageCount);
         SerializePages(layout.LibraryPages, homePageCount, pages.Count);
+        layout.KnownHome = BuildKnownHome();
 
         configuration.Home = layout;
         configuration.Save();
+    }
+
+    private static HashSet<string> CollectKnownHome(HomeLayout? saved)
+    {
+        var known = new HashSet<string>();
+        if (saved is null)
+        {
+            return known;
+        }
+
+        for (var index = 0; index < saved.KnownHome.Count; index++)
+        {
+            known.Add(saved.KnownHome[index]);
+        }
+
+        return known;
+    }
+
+    private List<string> BuildKnownHome()
+    {
+        var known = CollectKnownHome(configuration.Home);
+        var ids = new List<string>();
+        CollectSavedHomeIds(configuration.Home, ids);
+        AddAll(known, ids);
+
+        ids.Clear();
+        for (var page = homePageCount; page < pages.Count; page++)
+        {
+            CollectAppIds(pages[page], ids);
+        }
+
+        RemoveAll(known, ids);
+
+        ids.Clear();
+        for (var page = 0; page < homePageCount; page++)
+        {
+            CollectAppIds(pages[page], ids);
+        }
+
+        for (var index = 0; index < dock.Count; index++)
+        {
+            ids.Add(dock[index].App!.Id);
+        }
+
+        AddAll(known, ids);
+        return new List<string>(known);
+    }
+
+    private static void AddAll(HashSet<string> target, List<string> ids)
+    {
+        for (var index = 0; index < ids.Count; index++)
+        {
+            target.Add(ids[index]);
+        }
+    }
+
+    private static void RemoveAll(HashSet<string> target, List<string> ids)
+    {
+        for (var index = 0; index < ids.Count; index++)
+        {
+            target.Remove(ids[index]);
+        }
+    }
+
+    private static void CollectSavedHomeIds(HomeLayout? saved, List<string> target)
+    {
+        if (saved is null)
+        {
+            return;
+        }
+
+        for (var page = 0; page < saved.Pages.Count; page++)
+        {
+            var items = saved.Pages[page].Items;
+            for (var index = 0; index < items.Count; index++)
+            {
+                var item = items[index];
+                if (!string.IsNullOrEmpty(item.AppId))
+                {
+                    target.Add(item.AppId);
+                }
+
+                for (var appIndex = 0; appIndex < item.AppIds.Count; appIndex++)
+                {
+                    target.Add(item.AppIds[appIndex]);
+                }
+            }
+        }
+
+        if (saved.Dock is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < saved.Dock.Count; index++)
+        {
+            target.Add(saved.Dock[index]);
+        }
+    }
+
+    private static void CollectAppIds(List<HomeTile> tiles, List<string> target)
+    {
+        for (var index = 0; index < tiles.Count; index++)
+        {
+            var tile = tiles[index];
+            if (tile.App is not null)
+            {
+                target.Add(tile.App.Id);
+                continue;
+            }
+
+            for (var appIndex = 0; appIndex < tile.Apps.Count; appIndex++)
+            {
+                target.Add(tile.Apps[appIndex].Id);
+            }
+        }
     }
 
     private void SerializePages(List<HomePage> target, int start, int end)

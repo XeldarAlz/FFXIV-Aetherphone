@@ -97,6 +97,8 @@ internal sealed class HomeInteractionController
 
     public int DisplayPageCount() => layout.TotalPageCount;
 
+    public bool CanAddWidget => pager.Page < layout.HomePageCount;
+
     public void Suspend()
     {
         pressActive = false;
@@ -106,6 +108,7 @@ internal sealed class HomeInteractionController
     public void ResetForReveal()
     {
         pressActive = false;
+        editing = false;
         CancelTap();
         if (dragTile is not null)
         {
@@ -222,13 +225,9 @@ internal sealed class HomeInteractionController
             return true;
         }
 
-        if (HomeChrome.AddRect(content, metrics).Contains(mouse))
+        if (CanAddWidget && HomeChrome.AddRect(content, metrics).Contains(mouse))
         {
-            if (pager.Page < layout.HomePageCount)
-            {
-                gallery.Open(pager.Page);
-            }
-
+            gallery.Open(pager.Page);
             pressActive = false;
             return true;
         }

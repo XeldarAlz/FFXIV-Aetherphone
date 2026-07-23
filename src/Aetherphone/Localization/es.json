@@ -1621,6 +1621,8 @@
   "controlCenter.editHint": "Arrastra para reorganizar · toca ⤢ para cambiar el tamaño",
   "home.done": "Listo",
   "home.newFolder": "Carpeta",
+  "home.appLibrary": "Biblioteca de apps",
+  "home.appLibraryEmpty": "Arrastra apps aquí para mantenerlas fuera de la pantalla de inicio",
   "home.widgets": "Widgets",
   "home.addWidget": "Añadir widget",
   "home.remove": "Eliminar",

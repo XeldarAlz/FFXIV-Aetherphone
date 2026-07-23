@@ -1621,6 +1621,8 @@
   "controlCenter.editHint": "Zum Umordnen ziehen · ⤢ tippen zum Skalieren",
   "home.done": "Fertig",
   "home.newFolder": "Ordner",
+  "home.appLibrary": "App-Mediathek",
+  "home.appLibraryEmpty": "Ziehe Apps hierher, um sie vom Home-Bildschirm fernzuhalten",
   "home.widgets": "Widgets",
   "home.addWidget": "Widget hinzufügen",
   "home.remove": "Entfernen",
