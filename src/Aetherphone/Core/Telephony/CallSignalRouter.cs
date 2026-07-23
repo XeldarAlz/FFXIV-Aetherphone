@@ -36,7 +36,11 @@ internal sealed class CallSignalRouter : IDisposable
         _ = connection.SendControlAsync(control);
     }
 
-    private void OnConnected(bool isConnected) => ConnectedChanged?.Invoke(isConnected);
+    private void OnConnected(bool isConnected)
+    {
+        signals.SetActive(isConnected);
+        ConnectedChanged?.Invoke(isConnected);
+    }
 
     private void OnControl(CallControl message)
     {
