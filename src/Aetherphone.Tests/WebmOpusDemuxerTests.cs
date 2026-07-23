@@ -20,7 +20,7 @@ public sealed class WebmOpusDemuxerTests
 
         var packet = demuxer.ReadNextPacket();
         Assert.NotNull(packet);
-        Assert.Equal(payload, packet);
+        Assert.Equal(payload, packet.Value.ToArray());
 
         Assert.Null(demuxer.ReadNextPacket());
     }
@@ -41,7 +41,8 @@ public sealed class WebmOpusDemuxerTests
         demuxer.ReadHeader();
 
         var packet = demuxer.ReadNextPacket();
-        Assert.Equal(wantedPayload, packet);
+        Assert.NotNull(packet);
+        Assert.Equal(wantedPayload, packet.Value.ToArray());
         Assert.Null(demuxer.ReadNextPacket());
     }
 

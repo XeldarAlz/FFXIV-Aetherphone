@@ -89,7 +89,7 @@ internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
             return false;
         }
 
-        var decodedPerChannel = decoder.Decode(packet.AsSpan(), pending.AsSpan(), MaxOpusFrameSamples, false);
+        var decodedPerChannel = decoder.Decode(packet.Value.Span, pending.AsSpan(), MaxOpusFrameSamples, false);
         pendingCount = decodedPerChannel * channels;
         pendingOffset = 0;
         positionSeconds += (double)decodedPerChannel / decoder.SampleRate;

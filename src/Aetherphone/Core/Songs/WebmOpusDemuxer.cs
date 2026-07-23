@@ -31,6 +31,12 @@ internal sealed class WebmOpusDemuxer
     private bool hasPendingFirstCluster;
     private bool insideCluster;
 
+    // Reused across packets so a busy decode loop (and a deep seek's catch-up burst) doesn't
+    // allocate two byte[] per Opus frame on the game's shared CLR. Grows monotonically to the
+    // largest block seen. Slices handed out by ReadNextPacket alias this and are only valid
+    // until the next ReadNextPacket call.
+    private byte[] blockBuffer = new byte[4096];
+
     public double? DurationSeconds { get; private set; }
 
     public WebmOpusDemuxer(Stream source)
@@ -149,9 +155,10 @@ internal sealed class WebmOpusDemuxer
     /// <summary>
     /// Reads the next raw Opus packet belonging to the audio track, skipping SimpleBlocks/Blocks
     /// for any other track (there shouldn't be any in an audio-only stream, but don't assume).
+    /// The returned memory aliases an internal buffer and stays valid only until the next call.
     /// Returns null once the container is exhausted.
     /// </summary>
-    public byte[]? ReadNextPacket()
+    public ReadOnlyMemory<byte>? ReadNextPacket()
     {
         if (opusTrackNumber is null)
         {
@@ -196,7 +203,7 @@ internal sealed class WebmOpusDemuxer
         }
     }
 
-    private byte[]? ReadPacketsWithinCluster()
+    private ReadOnlyMemory<byte>? ReadPacketsWithinCluster()
     {
         while (reader.ReadNext())
         {
@@ -212,7 +219,7 @@ internal sealed class WebmOpusDemuxer
             else if (id == BlockGroupId)
             {
                 reader.EnterContainer();
-                byte[]? packet = null;
+                ReadOnlyMemory<byte>? packet = null;
                 while (reader.ReadNext())
                 {
                     if (reader.ElementId.EncodedValue == BlockId)
@@ -239,14 +246,18 @@ internal sealed class WebmOpusDemuxer
     /// audio-only Opus DASH streams do not lace frames. Laced blocks throw rather than silently
     /// producing corrupt audio, so this gap is visible if it turns out to matter in practice.
     /// </summary>
-    private byte[]? ReadBlockPayload()
+    private ReadOnlyMemory<byte>? ReadBlockPayload()
     {
         var size = (int)reader.ElementSize;
-        var buffer = new byte[size];
+        if (size > blockBuffer.Length)
+        {
+            blockBuffer = new byte[size];
+        }
+
         var read = 0;
         while (read < size)
         {
-            var bytesRead = reader.ReadBinary(buffer, read, size - read);
+            var bytesRead = reader.ReadBinary(blockBuffer, read, size - read);
             if (bytesRead < 0)
             {
                 break;
@@ -256,9 +267,9 @@ internal sealed class WebmOpusDemuxer
         }
 
         var offset = 0;
-        var trackNumber = ReadMatroskaVint(buffer, ref offset);
+        var trackNumber = ReadMatroskaVint(blockBuffer, ref offset);
         offset += 2; // signed 16-bit timecode, relative to the cluster - not needed for playback order.
-        var flags = buffer[offset];
+        var flags = blockBuffer[offset];
         offset += 1;
 
         var lacing = (flags >> 1) & 0x3;
@@ -273,9 +284,7 @@ internal sealed class WebmOpusDemuxer
             return null;
         }
 
-        var frame = new byte[size - offset];
-        Array.Copy(buffer, offset, frame, 0, frame.Length);
-        return frame;
+        return blockBuffer.AsMemory(offset, size - offset);
     }
 
     /// <summary>
