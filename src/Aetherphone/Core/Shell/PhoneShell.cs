@@ -45,6 +45,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly ShellTransitionRenderer transition;
     private readonly MinimizeMorphView morph;
     private readonly ShellOverlayCoordinator overlays;
+    private readonly HomeScreen home;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
     private bool closeRequested;
     private bool indicatorPressActive;
@@ -75,7 +76,7 @@ internal sealed class PhoneShell : IDisposable
         var controlCenter = new ControlCenter(configuration, themes, services.Playback, calls, navigation,
             notifications, router);
         minimizedView = new MinimizedPhone(notifications, configuration);
-        var home = new HomeScreen(apps, bundle.Widgets, configuration);
+        home = new HomeScreen(apps, bundle.Widgets, configuration);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);
         var banOverlay = new BanOverlay(services.AethernetSession);
@@ -126,6 +127,8 @@ internal sealed class PhoneShell : IDisposable
     }
 
     public bool MinimizedResting => minimize.MinimizedResting;
+
+    public bool HomeEditing => home.Editing && navigation.Current is null;
 
     public MinimizePhase MinimizePhase => minimize.Phase;
 

@@ -1622,6 +1622,8 @@
   "controlCenter.editHint": "Drag to rearrange · tap ⤢ to resize",
   "home.done": "Done",
   "home.newFolder": "Folder",
+  "home.appLibrary": "App Library",
+  "home.appLibraryEmpty": "Drag apps here to keep them off your Home Screen",
   "home.widgets": "Widgets",
   "home.addWidget": "Add Widget",
   "home.remove": "Remove",

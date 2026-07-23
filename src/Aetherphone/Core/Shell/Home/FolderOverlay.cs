@@ -11,6 +11,7 @@ namespace Aetherphone.Core.Shell.Home;
 internal sealed class FolderOverlay
 {
     private const float OpenSmoothTime = 0.20f;
+    private static readonly Vector4 NoTintSwatch = new(0.55f, 0.56f, 0.60f, 1f);
 
     private readonly HomeLayoutService layout;
     private HomeTile? folder;
@@ -18,6 +19,7 @@ internal sealed class FolderOverlay
     private Spring anim;
     private Rect origin;
     private string nameBuffer = string.Empty;
+    private float scrollY;
 
     public FolderOverlay(HomeLayoutService layout)
     {
@@ -34,6 +36,7 @@ internal sealed class FolderOverlay
         anim.SnapTo(0f);
         origin = originRect;
         nameBuffer = tile.FolderName;
+        scrollY = 0f;
     }
 
     public void RequestClose()
@@ -77,8 +80,9 @@ internal sealed class FolderOverlay
         var cellWidth = (panelWidth - pad * 2f) / columns;
         var iconSize = MathF.Min(cellWidth * 0.62f, 52f * scale);
         var cellHeight = iconSize + 26f * scale;
-        var headerHeight = 48f * scale;
-        var panelHeight = headerHeight + rows * cellHeight + pad;
+        var swatchRowHeight = 34f * scale;
+        var headerHeight = 48f * scale + swatchRowHeight;
+        var panelHeight = MathF.Min(headerHeight + rows * cellHeight + pad, content.Height * 0.82f);
         var targetMin = new Vector2(content.Center.X - panelWidth * 0.5f, content.Center.Y - panelHeight * 0.5f);
         var target = new Rect(targetMin, targetMin + new Vector2(panelWidth, panelHeight));
         var panel = new Rect(Vector2.Lerp(origin.Min, target.Min, eased), Vector2.Lerp(origin.Max, target.Max, eased));
@@ -110,13 +114,32 @@ internal sealed class FolderOverlay
             ApplyRename();
         }
 
+        DrawTintRow(panel, current, pad, scale);
+
         var gridTop = panel.Min.Y + headerHeight;
+        var gridView = new Rect(new Vector2(panel.Min.X, gridTop), panel.Max);
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.PushClipRect(gridView.Min, gridView.Max, true);
+        if (ImGui.IsMouseHoveringRect(gridView.Min, gridView.Max))
+        {
+            scrollY -= ImGui.GetIO().MouseWheel * 40f * scale;
+        }
+
+        var rows = (current.Apps.Count + columns - 1) / columns;
+        var contentHeight = rows * cellHeight;
+        scrollY = Math.Clamp(scrollY, 0f, MathF.Max(0f, contentHeight - gridView.Height));
+
         for (var index = 0; index < current.Apps.Count; index++)
         {
             var column = index % columns;
             var row = index / columns;
             var center = new Vector2(panel.Min.X + pad + (column + 0.5f) * cellWidth,
-                gridTop + (row + 0.5f) * cellHeight);
+                gridTop - scrollY + (row + 0.5f) * cellHeight);
+            if (center.Y + cellHeight * 0.5f < gridView.Min.Y || center.Y - cellHeight * 0.5f > gridView.Max.Y)
+            {
+                continue;
+            }
+
             var app = current.Apps[index];
             HomeTileView.DrawApp(center, iconSize, app, theme, 1f, 1f, cellWidth);
             var half = iconSize * 0.5f;
@@ -133,6 +156,7 @@ internal sealed class FolderOverlay
                         RequestClose();
                     }
 
+                    drawList.PopClipRect();
                     return;
                 }
             }
@@ -143,8 +167,42 @@ internal sealed class FolderOverlay
                 {
                     RequestClose();
                     navigation.OpenAppFrom(app, iconRect);
+                    drawList.PopClipRect();
                     return;
                 }
+            }
+        }
+
+        drawList.PopClipRect();
+    }
+
+    private void DrawTintRow(Rect panel, HomeTile current, float pad, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var rowY = panel.Min.Y + 48f * scale + 17f * scale;
+        var innerLeft = panel.Min.X + pad;
+        var innerRight = panel.Max.X - pad;
+        var accents = ThemeCatalog.Accents;
+        var totalSwatches = accents.Count + 1;
+        var cell = (innerRight - innerLeft) / totalSwatches;
+        var swatchRadius = MathF.Min(cell * 0.32f, 11f * scale);
+
+        var noneCenter = new Vector2(innerLeft + cell * 0.5f, rowY);
+        var noneSelected = string.IsNullOrEmpty(current.FolderTint);
+        if (ControlTile.Swatch(drawList, noneCenter, swatchRadius, NoTintSwatch, noneSelected, 1f, true) &&
+            !noneSelected)
+        {
+            layout.SetFolderTint(current, string.Empty);
+        }
+
+        for (var index = 0; index < accents.Count; index++)
+        {
+            var accent = accents[index];
+            var center = new Vector2(innerLeft + cell * (index + 1.5f), rowY);
+            var selected = current.FolderTint == accent.Name;
+            if (ControlTile.Swatch(drawList, center, swatchRadius, accent.Color, selected, 1f, true) && !selected)
+            {
+                layout.SetFolderTint(current, accent.Name);
             }
         }
     }

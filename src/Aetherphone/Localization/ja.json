@@ -1623,6 +1623,8 @@
   "controlCenter.editHint": "ドラッグで並べ替え · ⤢ をタップでサイズ変更",
   "home.done": "完了",
   "home.newFolder": "フォルダ",
+  "home.appLibrary": "Appライブラリ",
+  "home.appLibraryEmpty": "ホーム画面から外したいアプリはここにドラッグ",
   "home.widgets": "ウィジェット",
   "home.addWidget": "ウィジェットを追加",
   "home.remove": "削除",

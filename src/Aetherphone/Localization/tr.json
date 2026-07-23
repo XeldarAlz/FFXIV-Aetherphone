@@ -1623,6 +1623,8 @@
   "controlCenter.editHint": "Yeniden düzenlemek için sürükle · yeniden boyutlandırmak için ⤢ öğesine dokun",
   "home.done": "Bitti",
   "home.newFolder": "Klasör",
+  "home.appLibrary": "Uygulama Kitaplığı",
+  "home.appLibraryEmpty": "Uygulamaları Ana Ekran dışında tutmak için buraya sürükle",
   "home.widgets": "Widget'lar",
   "home.addWidget": "Widget Ekle",
   "home.remove": "Kaldır",

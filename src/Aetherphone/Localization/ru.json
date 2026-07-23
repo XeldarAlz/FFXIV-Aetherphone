@@ -1623,6 +1623,8 @@
   "controlCenter.editHint": "Перетащите для перестановки · нажмите ⤢ для изменения размера",
   "home.done": "Готово",
   "home.newFolder": "Папка",
+  "home.appLibrary": "Библиотека приложений",
+  "home.appLibraryEmpty": "Перетащи приложения сюда, чтобы убрать их с домашнего экрана",
   "home.widgets": "Виджеты",
   "home.addWidget": "Добавить виджет",
   "home.remove": "Удалить",

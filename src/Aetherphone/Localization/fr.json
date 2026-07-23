@@ -1623,6 +1623,8 @@
   "controlCenter.editHint": "Glissez pour réorganiser · touchez ⤢ pour redimensionner",
   "home.done": "OK",
   "home.newFolder": "Dossier",
+  "home.appLibrary": "Bibliothèque d'apps",
+  "home.appLibraryEmpty": "Faites glisser des apps ici pour les retirer de l'écran d'accueil",
   "home.widgets": "Widgets",
   "home.addWidget": "Ajouter le widget",
   "home.remove": "Supprimer",
