@@ -15,6 +15,7 @@ internal sealed class GameData
     private uint[]? collectableMinionIds;
     private byte[]? dailyBonusRouletteRowIds;
     private byte[]? weeklyHuntBillIndices;
+    private Dictionary<uint, uint[]>? classJobIdsByCategory;
     private Dictionary<string, string>? worldRegionCodes;
 
     public GameData(IDataManager data, IObjectTable objectTable)
@@ -79,14 +80,17 @@ internal sealed class GameData
         return string.Empty;
     }
 
-    public bool TryGetClassJobDivision(uint rowId, out byte jobType, out byte uiPriority, out uint classJobCategoryId)
+    public bool TryGetClassJobDivision(uint rowId, out byte jobType, out byte role, out byte uiPriority,
+        out uint classJobCategoryId)
     {
         jobType = 0;
+        role = 0;
         uiPriority = 0;
         classJobCategoryId = 0;
         if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
         {
             jobType = job.JobType;
+            role = job.Role;
             uiPriority = job.UIPriority;
             classJobCategoryId = job.ClassJobCategory.RowId;
             return true;
@@ -95,21 +99,42 @@ internal sealed class GameData
         return false;
     }
 
-    /// <summary>Enumerates every ClassJob row belonging to the given ClassJobCategory (e.g. Disciple of the Hand/Land).</summary>
-    public IEnumerable<uint> ClassJobIdsInCategory(uint classJobCategoryId)
+    /// <summary>Every ClassJob row belonging to the given ClassJobCategory (e.g. Disciple of the Hand/Land).</summary>
+    public uint[] ClassJobIdsInCategory(uint classJobCategoryId)
     {
+        classJobIdsByCategory ??= new Dictionary<uint, uint[]>();
+        if (classJobIdsByCategory.TryGetValue(classJobCategoryId, out var cached))
+        {
+            return cached;
+        }
+
+        var rowIds = new List<uint>(16);
         foreach (var job in data.GetExcelSheet<ClassJob>())
         {
             if (job.RowId != 0 && job.ClassJobCategory.RowId == classJobCategoryId)
             {
-                yield return job.RowId;
+                rowIds.Add(job.RowId);
             }
         }
+
+        cached = rowIds.Count > 0 ? rowIds.ToArray() : Array.Empty<uint>();
+        classJobIdsByCategory[classJobCategoryId] = cached;
+        return cached;
     }
 
-    public bool ItemUsableByClassJob(uint itemId, uint classJobId) =>
-        itemId != 0 && classJobId != 0 && data.GetExcelSheet<Item>().TryGetRow(itemId, out var item) &&
-        item.ClassJobUse.RowId == classJobId;
+    public bool TryGetItemClassJobUse(uint itemId, out uint classJobId, out uint iconId)
+    {
+        classJobId = 0;
+        iconId = 0;
+        if (itemId == 0 || !data.GetExcelSheet<Item>().TryGetRow(itemId, out var item))
+        {
+            return false;
+        }
+
+        classJobId = item.ClassJobUse.RowId;
+        iconId = item.Icon;
+        return classJobId != 0;
+    }
 
     public int JobExpArrayIndex(uint rowId)
     {

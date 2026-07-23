@@ -40,7 +40,7 @@ internal sealed class JobsApp : IPhoneApp
     private readonly ITextureProvider textures;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
-    private readonly AppSkin ui = new(AppPalettes.JobsFor(ThemeCatalog.ResolveAccent("Blue")));
+    private readonly AppSkin ui = new(AppPalettes.JobsFor(AppAccents.For("jobs")));
     private readonly DropdownMenu colorMenu = new();
     private JobRoleSection[] sections = Array.Empty<JobRoleSection>();
     private bool loaded;
@@ -448,13 +448,13 @@ internal sealed class JobsApp : IPhoneApp
 
         var textLeft = iconMax.X + 14f * scale;
         var textRight = contentRect.Max.X - (job.IsActive ? 78f * scale : 0f);
-        var name = Fit(job.Name, textRight - textLeft, TextStyles.Headline);
+        var name = Typography.FitText(job.Name, textRight - textLeft, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(textLeft, contentRect.Min.Y + 12f * scale), name, ui.TitleInk,
             TextStyles.Headline);
         var subtitle = job.ItemLevel >= 0
             ? Loc.T(L.Jobs.LevelItemLevel, job.Abbreviation, job.Level, job.ItemLevel)
             : Loc.T(L.Jobs.LevelOnly, job.Abbreviation, job.Level);
-        var fittedSubtitle = Fit(subtitle, textRight - textLeft, TextStyles.Footnote);
+        var fittedSubtitle = Typography.FitText(subtitle, textRight - textLeft, TextStyles.Footnote);
         Typography.Draw(drawList, new Vector2(textLeft, contentRect.Min.Y + 36f * scale), fittedSubtitle, ui.MutedInk,
             TextStyles.Footnote);
 
@@ -491,39 +491,6 @@ internal sealed class JobsApp : IPhoneApp
         Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.2f)));
         Typography.Draw(drawList, new Vector2(min.X + padX, rightCenter.Y - textSize.Y * 0.5f), text, ui.Accent,
             TextStyles.Caption2);
-    }
-
-    private static string Fit(string text, float maxWidth, in TextStyle style)
-    {
-        if (text.Length == 0 || maxWidth <= 0f)
-        {
-            return text;
-        }
-
-        if (Typography.Measure(text, style).X <= maxWidth)
-        {
-            return text;
-        }
-
-        var low = 1;
-        var high = text.Length;
-        var best = "…";
-        while (low <= high)
-        {
-            var mid = (low + high) / 2;
-            var candidate = text.Substring(0, mid) + "…";
-            if (Typography.Measure(candidate, style).X <= maxWidth)
-            {
-                best = candidate;
-                low = mid + 1;
-            }
-            else
-            {
-                high = mid - 1;
-            }
-        }
-
-        return best;
     }
 
     public void Dispose()

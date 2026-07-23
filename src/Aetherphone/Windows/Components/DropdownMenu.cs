@@ -143,7 +143,7 @@ internal sealed class DropdownMenu
             var centerY = (rowMin.Y + rowMax.Y) * 0.5f;
 
             // Reserved slots are laid out right-to-left so every row's icons line up regardless of that
-            // row's own capabilities: checkmark, then edit. Delete has no icon of its own — it's a right-click
+            // row's own capabilities: checkmark, then edit. Delete has no icon of its own: it is a right-click
             // anywhere on the row (confirmed by the caller before anything is actually removed).
             var cursorRight = rowMax.X - 10f * scale;
             if (anySelected)

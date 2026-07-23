@@ -37,7 +37,9 @@ internal static unsafe class GearsetActions
         for (var index = 0; index < armory->Size; index++)
         {
             var item = armory->GetInventorySlot(index);
-            if (item is null || item->ItemId == 0 || !gameData.ItemUsableByClassJob(item->ItemId, classJobId))
+            if (item is null || item->ItemId == 0 ||
+                !gameData.TryGetItemClassJobUse(item->ItemId, out var itemClassJobId, out _) ||
+                itemClassJobId != classJobId)
             {
                 continue;
             }

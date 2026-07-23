@@ -8,9 +8,10 @@ namespace Aetherphone.Core.Jobs;
 
 internal static unsafe class JobsReader
 {
-    // ClassJobCategory sheet rows for the two crafting/gathering divisions in the Character window.
-    private const uint HandCategoryId = 33; // "Disciple of the Hand"
+    // ClassJobCategory sheet rows for the divisions the Character window groups by.
+    private const uint WarCategoryId = 30; // "Disciple of War"
     private const uint LandCategoryId = 32; // "Disciple of the Land"
+    private const uint HandCategoryId = 33; // "Disciple of the Hand"
     private const int RoleCount = 7;
 
     public static JobRoleSection[] Build(GameData gameData)
@@ -28,9 +29,10 @@ internal static unsafe class JobsReader
         }
 
         var levels = playerState->ClassJobLevels;
+        var armoryTools = ArmoryToolsByJob(gameData);
         BuildGearsetEntries(gameData, levels, buckets);
-        BuildToolEntries(gameData, levels, buckets, HandCategoryId, (int)JobRole.Hand);
-        BuildToolEntries(gameData, levels, buckets, LandCategoryId, (int)JobRole.Land);
+        BuildToolEntries(gameData, levels, buckets, armoryTools, HandCategoryId, (int)JobRole.Hand);
+        BuildToolEntries(gameData, levels, buckets, armoryTools, LandCategoryId, (int)JobRole.Land);
 
         var sections = new List<JobRoleSection>(RoleCount);
         for (var bucketIndex = 0; bucketIndex < buckets.Length; bucketIndex++)
@@ -76,12 +78,13 @@ internal static unsafe class JobsReader
             }
 
             var classJobId = (uint)entry.ClassJob;
-            if (!gameData.TryGetClassJobDivision(classJobId, out var jobType, out var uiPriority, out _))
+            if (!gameData.TryGetClassJobDivision(classJobId, out var jobType, out var role, out var uiPriority,
+                    out var categoryId))
             {
                 continue;
             }
 
-            var bucketIndex = CombatBucketFor(jobType);
+            var bucketIndex = CombatBucketFor(jobType, role, categoryId);
             if (bucketIndex < 0)
             {
                 continue;
@@ -97,20 +100,38 @@ internal static unsafe class JobsReader
     }
 
     private static void BuildToolEntries(GameData gameData, Span<short> levels,
-        List<(JobEntry Entry, byte UiPriority)>[] buckets, uint classJobCategoryId, int bucketIndex)
+        List<(JobEntry Entry, byte UiPriority)>[] buckets, Dictionary<uint, uint> armoryTools, uint classJobCategoryId,
+        int bucketIndex)
     {
         var currentJobId = gameData.LocalPlayer?.ClassJob.RowId ?? 0u;
-        foreach (var classJobId in gameData.ClassJobIdsInCategory(classJobCategoryId))
+        var classJobIds = gameData.ClassJobIdsInCategory(classJobCategoryId);
+        for (var index = 0; index < classJobIds.Length; index++)
         {
-            if (!gameData.TryGetClassJobDivision(classJobId, out _, out var uiPriority, out _))
+            var classJobId = classJobIds[index];
+            if (!gameData.TryGetClassJobDivision(classJobId, out _, out _, out var uiPriority, out _))
             {
                 continue;
             }
 
-            var level = LevelFor(gameData, levels, classJobId);
             var isActive = classJobId == currentJobId;
-            var itemLevel = isActive ? CurrentMainHandItemLevel(gameData) : -1;
-            var iconId = ToolIconId(gameData, classJobId);
+            var itemLevel = -1;
+            var iconId = 0u;
+            if (isActive)
+            {
+                // The active job's tool is equipped, so it is never in the Armoury Chest the map was built from.
+                TryGetEquippedMainHand(gameData, out iconId, out itemLevel);
+            }
+            else
+            {
+                armoryTools.TryGetValue(classJobId, out iconId);
+            }
+
+            var level = LevelFor(gameData, levels, classJobId);
+            if (level == 0 && iconId == 0)
+            {
+                continue;
+            }
+
             var jobEntry = new JobEntry(JobEntryKind.Tool, -1, classJobId, gameData.JobAbbreviation(classJobId),
                 gameData.JobName(classJobId), level, itemLevel, iconId, isActive);
             buckets[bucketIndex].Add((jobEntry, uiPriority));
@@ -123,48 +144,58 @@ internal static unsafe class JobsReader
         return expArrayIndex >= 0 && expArrayIndex < levels.Length ? levels[expArrayIndex] : 0;
     }
 
-    private static int CurrentMainHandItemLevel(GameData gameData)
+    private static bool TryGetEquippedMainHand(GameData gameData, out uint iconId, out int itemLevel)
     {
+        iconId = 0;
+        itemLevel = -1;
         var manager = InventoryManager.Instance();
         var equipped = manager is null ? null : manager->GetInventoryContainer(InventoryType.EquippedItems);
         if (equipped is null || !equipped->IsLoaded)
         {
-            return -1;
+            return false;
         }
 
         var mainHand = equipped->GetInventorySlot((int)RaptureGearsetModule.GearsetItemIndex.MainHand);
-        if (mainHand is null || mainHand->ItemId == 0)
+        if (mainHand is null || mainHand->ItemId == 0 ||
+            !gameData.TryGetItem(mainHand->ItemId, out _, out var mainHandIconId, out var mainHandItemLevel))
         {
-            return -1;
+            return false;
         }
 
-        return gameData.TryGetItem(mainHand->ItemId, out _, out _, out var itemLevel) ? itemLevel : -1;
+        iconId = mainHandIconId;
+        itemLevel = mainHandItemLevel;
+        return true;
     }
 
-    private static uint ToolIconId(GameData gameData, uint classJobId)
+    private static Dictionary<uint, uint> ArmoryToolsByJob(GameData gameData)
     {
+        var toolsByJob = new Dictionary<uint, uint>();
         var manager = InventoryManager.Instance();
         var armory = manager is null ? null : manager->GetInventoryContainer(InventoryType.ArmoryMainHand);
         if (armory is null || !armory->IsLoaded)
         {
-            return 0;
+            return toolsByJob;
         }
 
         for (var index = 0; index < armory->Size; index++)
         {
             var item = armory->GetInventorySlot(index);
-            if (item is null || item->ItemId == 0 || !gameData.ItemUsableByClassJob(item->ItemId, classJobId))
+            if (item is null || item->ItemId == 0 ||
+                !gameData.TryGetItemClassJobUse(item->ItemId, out var classJobId, out var iconId))
             {
                 continue;
             }
 
-            return gameData.TryGetItem(item->ItemId, out _, out var iconId, out _) ? iconId : 0u;
+            toolsByJob.TryAdd(classJobId, iconId);
         }
 
-        return 0;
+        return toolsByJob;
     }
 
-    private static int CombatBucketFor(byte jobType) =>
+    // JobType splits the combat roles the way the in-game job guide does, but it reads 0 for the base classes
+    // (Gladiator, Archer, Arcanist and friends), which would drop their gearsets entirely. Those fall back to
+    // Role, which cannot tell physical from magical ranged: the Disciple of War/Magic category settles that.
+    private static int CombatBucketFor(byte jobType, byte role, uint classJobCategoryId) =>
         jobType switch
         {
             1 => (int)JobRole.Tank,
@@ -172,7 +203,14 @@ internal static unsafe class JobsReader
             3 => (int)JobRole.Melee,
             4 => (int)JobRole.PhysicalRanged,
             5 => (int)JobRole.MagicalRanged,
-            _ => -1,
+            _ => role switch
+            {
+                1 => (int)JobRole.Tank,
+                2 => (int)JobRole.Melee,
+                3 => classJobCategoryId == WarCategoryId ? (int)JobRole.PhysicalRanged : (int)JobRole.MagicalRanged,
+                4 => (int)JobRole.Healer,
+                _ => -1,
+            },
         };
 
     private static LocString TitleFor(JobRole role) =>
