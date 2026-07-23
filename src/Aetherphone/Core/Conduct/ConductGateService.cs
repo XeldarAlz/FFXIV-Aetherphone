@@ -11,17 +11,10 @@ internal sealed class ConductGateService
 
     public ConductGate? Active { get; private set; }
 
-    /// <summary>True when <see cref="Active"/> was opened voluntarily (e.g. a "?" button) rather than as a
-    /// first-open gate, so the overlay shows a plain close (X) instead of the read-it countdown and agree button.</summary>
     public bool ActiveIsReview { get; private set; }
 
     public void NotifyAppOpened(string appId)
     {
-        if (Active is not null)
-        {
-            return;
-        }
-
         if (ConductRules.For(appId) is not { } gate)
         {
             return;
@@ -32,25 +25,28 @@ internal sealed class ConductGateService
             return;
         }
 
-        Active = gate;
-        ActiveIsReview = false;
+        Open(gate, false);
     }
 
-    /// <summary>Reopens the community rules for an app on demand, regardless of prior acknowledgement.</summary>
     public void ShowRules(string appId)
+    {
+        if (ConductRules.For(appId) is not { } gate)
+        {
+            return;
+        }
+
+        Open(gate, true);
+    }
+
+    private void Open(ConductGate gate, bool review)
     {
         if (Active is not null)
         {
             return;
         }
 
-        if (ConductRules.For(appId) is not { } gate)
-        {
-            return;
-        }
-
         Active = gate;
-        ActiveIsReview = true;
+        ActiveIsReview = review;
     }
 
     public void Acknowledge()
@@ -64,7 +60,6 @@ internal sealed class ConductGateService
         Active = null;
     }
 
-    /// <summary>Closes a voluntary review (see <see cref="ShowRules"/>) without touching acknowledgement state.</summary>
     public void Dismiss()
     {
         Active = null;

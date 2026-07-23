@@ -27,6 +27,7 @@ internal sealed class ConductGateOverlay
     private const float ButtonHeight = 50f;
     private const float BarGap = 12f;
     private const float BarHeight = 4f;
+    private const float CloseRadius = 13f;
 
     private static readonly Vector4 EncouragedColor = new(0.34f, 0.74f, 0.48f, 1f);
 
@@ -101,60 +102,40 @@ internal sealed class ConductGateOverlay
         var innerWidth = panel.Width - pad * 2f;
         var centerX = panel.Center.X;
 
-        var ack = string.Empty;
-        var ackHeight = 0f;
-        float footerTop;
-        if (reviewing)
-        {
-            // Reopened voluntarily (the "?" button): no need to re-agree, just an X to close.
-            footerTop = panel.Max.Y - pad;
-        }
-        else
-        {
-            ack = Loc.T(L.Conduct.Acknowledge);
-            ackHeight = Typography.MeasureWrappedBlock(ack, TextStyles.Footnote, innerWidth).Y;
-            var footerHeight = ackHeight + BarGap * scale + BarHeight * scale + BarGap * scale + ButtonHeight * scale;
-            footerTop = panel.Max.Y - pad - footerHeight;
-        }
+        var ack = reviewing ? string.Empty : Loc.T(L.Conduct.Acknowledge);
+        var ackHeight = reviewing ? 0f : Typography.MeasureWrappedBlock(ack, TextStyles.Footnote, innerWidth).Y;
+        var footerHeight = reviewing
+            ? 0f
+            : ackHeight + BarGap * scale + BarHeight * scale + BarGap * scale + ButtonHeight * scale;
+        var footerTop = panel.Max.Y - pad - footerHeight;
+        var listBottom = reviewing ? footerTop : footerTop - 12f * scale;
 
         var headerBottom = DrawHeader(panel, theme, gate, accent, opacity, centerX, innerWidth, pad);
 
         var listRect = new Rect(new Vector2(innerLeft, headerBottom + 10f * scale),
-            new Vector2(innerLeft + innerWidth, footerTop - (reviewing ? 0f : 12f * scale)));
+            new Vector2(innerLeft + innerWidth, listBottom));
         DrawRules(listRect, theme, gate, opacity);
 
         if (reviewing)
         {
-            DrawCloseButton(drawList, new Vector2(panel.Max.X - pad * 0.85f, panel.Min.Y + pad * 0.85f), 13f * scale,
-                theme, opacity, interactive);
-        }
-        else
-        {
-            ImGui.GetWindowDrawList().AddLine(new Vector2(innerLeft, footerTop - 12f * scale),
-                new Vector2(innerLeft + innerWidth, footerTop - 12f * scale),
-                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), 1f);
-
-            DrawFooter(theme, gate, accent, opacity, interactive, centerX, innerLeft, innerWidth, footerTop, ack,
-                ackHeight);
-        }
-    }
-
-    private void DrawCloseButton(ImDrawListPtr drawList, Vector2 center, float radius, PhoneTheme theme,
-        float opacity, bool interactive)
-    {
-        var hit = new Vector2(radius, radius);
-        var hovered = interactive && ImGui.IsMouseHoveringRect(center - hit, center + hit);
-        drawList.AddCircleFilled(center, radius,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, (hovered ? 0.18f : 0.10f) * opacity)), 24);
-        AppSkin.Icon(drawList, center, FontAwesomeIcon.Times.ToIconString(),
-            Palette.WithAlpha(theme.TextStrong, opacity), 0.5f);
-        if (!hovered)
-        {
+            DrawCloseButton(new Vector2(panel.Max.X - pad * 0.85f, panel.Min.Y + pad * 0.85f), theme, opacity,
+                interactive);
             return;
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        drawList.AddLine(new Vector2(innerLeft, listBottom), new Vector2(innerLeft + innerWidth, listBottom),
+            ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), 1f);
+
+        DrawFooter(theme, gate, accent, opacity, interactive, centerX, innerLeft, innerWidth, footerTop, ack,
+            ackHeight);
+    }
+
+    private void DrawCloseButton(Vector2 center, PhoneTheme theme, float opacity, bool interactive)
+    {
+        var pressed = AppSkin.IconButton(center, CloseRadius * ImGuiHelpers.GlobalScale,
+            FontAwesomeIcon.Times.ToIconString(), Palette.WithAlpha(theme.TextStrong, opacity),
+            Palette.WithAlpha(theme.TextStrong, 0.10f * opacity), 0.5f, theme);
+        if (pressed && interactive && opacity > 0.5f)
         {
             service.Dismiss();
         }
