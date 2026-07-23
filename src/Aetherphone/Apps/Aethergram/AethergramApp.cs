@@ -485,6 +485,10 @@ internal sealed partial class AethergramApp : IPhoneApp
         var snapshot = store.Feed(scope);
         using (AppSurface.Begin(listRect))
         {
+            if (ImGui.GetScrollY() < 1f)
+            {
+                store.TrimFeed(scope, SocialFeedStore.FeedCap);
+            }
             stories.DrawTray(theme);
             if (snapshot.Length == 0)
             {
