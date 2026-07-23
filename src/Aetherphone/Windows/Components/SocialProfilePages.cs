@@ -69,6 +69,7 @@ internal sealed class SocialProfilePages
     private readonly Action<string> openProfile;
     private readonly Action<string, UserListKind> openUserList;
     private readonly Action back;
+    private readonly Action openConductRules;
 
     private float sinceForYou;
     private float sinceFollowing;
@@ -83,7 +84,8 @@ internal sealed class SocialProfilePages
     public SocialProfilePages(SocialFeedStore store, AppSkin ui, SocialProfileStyle style, RemoteImageCache images,
         LodestoneService lodestone, AvatarLightbox avatarLightbox, Configuration configuration, GameData gameData,
         ConfirmService confirm, ReportService report, Action openEditProfile, Action openAvatarComposer,
-        Action<string> openProfile, Action<string, UserListKind> openUserList, Action back)
+        Action<string> openProfile, Action<string, UserListKind> openUserList, Action back,
+        Action openConductRules)
     {
         this.store = store;
         this.ui = ui;
@@ -100,6 +102,7 @@ internal sealed class SocialProfilePages
         this.openProfile = openProfile;
         this.openUserList = openUserList;
         this.back = back;
+        this.openConductRules = openConductRules;
     }
 
     public string SearchDraft = string.Empty;
@@ -220,6 +223,14 @@ internal sealed class SocialProfilePages
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
         if (user.IsMe)
         {
+            var rulesCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
+            if (ui.IconButton(rulesCenter, buttonHeight * 0.5f, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                    style.Palette.MutedInk, Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f,
+                    Loc.T(L.Conduct.Eyebrow)))
+            {
+                openConductRules();
+            }
+
             if (ui.PillButton(buttonRect, Loc.T(style.EditProfile), false))
             {
                 editLoadedFor = null;
