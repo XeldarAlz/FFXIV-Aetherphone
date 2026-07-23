@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
 using Xunit;
@@ -113,13 +114,53 @@ public sealed class RecoveryKeyTests
 
         var escrow = RecoveryKey.WrapPassphrase(pkcs8, "correct horse battery staple");
         Assert.NotNull(escrow);
-        Assert.Equal(EscrowKinds.Passphrase, escrow.Kind);
+        Assert.Equal(EscrowKinds.Argon2Passphrase, escrow.Kind);
 
         var recovered = RecoveryKey.UnwrapPassphrase(escrow, "correct horse battery staple");
         Assert.NotNull(recovered);
         Assert.Equal(pkcs8, recovered);
 
         Assert.Null(RecoveryKey.UnwrapPassphrase(escrow, "wrong passphrase entirely"));
+    }
+
+    [Fact]
+    public void PassphraseWrapUsesArgon2Params()
+    {
+        var pkcs8 = CryptoBox.TryExportPrivateKey(CryptoBox.TryGenerateIdentity()!);
+        Assert.NotNull(pkcs8);
+
+        var escrow = RecoveryKey.WrapPassphrase(pkcs8, "a memory hard passphrase");
+        Assert.NotNull(escrow);
+        Assert.Equal(EscrowKinds.Argon2Passphrase, escrow.Kind);
+        Assert.Equal(65_536, escrow.MemoryKb);
+        Assert.Equal(3, escrow.Iterations);
+        Assert.Equal(1, escrow.Parallelism);
+    }
+
+    [Fact]
+    public void LegacyPbkdf2PassphraseEscrowStillUnwraps()
+    {
+        var pkcs8 = CryptoBox.TryExportPrivateKey(CryptoBox.TryGenerateIdentity()!);
+        Assert.NotNull(pkcs8);
+
+        // Reproduce a pre-Argon2 escrow: Kind=Passphrase with PBKDF2 parameters, as older clients wrote.
+        using var derived = new Rfc2898DeriveBytes("legacy passphrase here",
+            Convert.FromBase64String("AAAAAAAAAAAAAAAAAAAAAA=="), 600_000, HashAlgorithmName.SHA256);
+        var wrapKey = derived.GetBytes(32);
+        var nonce = new byte[12];
+        var cipher = new byte[pkcs8.Length + 16];
+        using (var aes = new AesGcm(wrapKey, 16))
+        {
+            aes.Encrypt(nonce, pkcs8, cipher.AsSpan(0, pkcs8.Length), cipher.AsSpan(pkcs8.Length, 16));
+        }
+
+        var legacy = new WrappedPrivateKeyDto(
+            "AAAAAAAAAAAAAAAAAAAAAA==", 600_000, Convert.ToBase64String(nonce),
+            Convert.ToBase64String(cipher), EscrowKinds.Passphrase);
+
+        var recovered = RecoveryKey.UnwrapPassphrase(legacy, "legacy passphrase here");
+        Assert.NotNull(recovered);
+        Assert.Equal(pkcs8, recovered);
     }
 
     [Fact]

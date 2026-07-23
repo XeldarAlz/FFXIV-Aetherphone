@@ -170,7 +170,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     private void DrawLockedRecover(PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var passphraseEscrow = vault.EscrowKind == EscrowKinds.Passphrase;
+        var passphraseEscrow = vault.EscrowKind is EscrowKinds.Passphrase or EscrowKinds.Argon2Passphrase;
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -277,7 +277,8 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     private void DrawPassphraseSection(PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var configured = vault.RecoveryConfigured && vault.EscrowKind == EscrowKinds.Passphrase;
+        var configured = vault.RecoveryConfigured
+            && vault.EscrowKind is EscrowKinds.Passphrase or EscrowKinds.Argon2Passphrase;
         ImGui.Dummy(new Vector2(0f, 14f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {

@@ -568,9 +568,17 @@ internal static class EscrowKinds
 {
     public const int RecoveryCode = 0;
     public const int Passphrase = 1;
+    public const int Argon2Passphrase = 2;
 }
 
-internal sealed record WrappedPrivateKeyDto(string Salt, int Iterations, string Nonce, string Ciphertext, int Kind = EscrowKinds.RecoveryCode);
+internal sealed record WrappedPrivateKeyDto(
+    string Salt,
+    int Iterations,
+    string Nonce,
+    string Ciphertext,
+    int Kind = EscrowKinds.RecoveryCode,
+    int MemoryKb = 0,
+    int Parallelism = 0);
 
 internal sealed record PutMyKeysRequest(string PublicKey, WrappedPrivateKeyDto? PrivateKey = null, bool Rotate = false);
 

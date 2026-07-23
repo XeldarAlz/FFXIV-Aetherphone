@@ -65,6 +65,9 @@ internal static class RecoveryKey
     }
 
     public const int MinPassphraseChars = 8;
+    private const int Argon2MemoryKb = 65_536;
+    private const int Argon2Iterations = 3;
+    private const int Argon2Parallelism = 1;
 
     public static WrappedPrivateKeyDto? Wrap(byte[] pkcs8, string code)
     {
@@ -74,7 +77,9 @@ internal static class RecoveryKey
             return null;
         }
 
-        return WrapSecret(pkcs8, canonical, EscrowKinds.RecoveryCode);
+        var salt = RandomNumberGenerator.GetBytes(SaltBytes);
+        var wrapKey = DerivePbkdf2(canonical, salt, Iterations);
+        return SealWrapKey(pkcs8, wrapKey, salt, EscrowKinds.RecoveryCode, Iterations, 0, 0);
     }
 
     public static WrappedPrivateKeyDto? WrapPassphrase(byte[] pkcs8, string passphrase)
@@ -85,14 +90,16 @@ internal static class RecoveryKey
             return null;
         }
 
-        return WrapSecret(pkcs8, trimmed, EscrowKinds.Passphrase);
+        var salt = RandomNumberGenerator.GetBytes(SaltBytes);
+        var wrapKey = DeriveArgon2(trimmed, salt, Argon2MemoryKb, Argon2Iterations, Argon2Parallelism);
+        return SealWrapKey(pkcs8, wrapKey, salt, EscrowKinds.Argon2Passphrase,
+            Argon2Iterations, Argon2MemoryKb, Argon2Parallelism);
     }
 
-    private static WrappedPrivateKeyDto WrapSecret(byte[] pkcs8, string secret, int kind)
+    private static WrappedPrivateKeyDto SealWrapKey(byte[] pkcs8, byte[] wrapKey, byte[] salt, int kind,
+        int iterations, int memoryKb, int parallelism)
     {
-        var salt = RandomNumberGenerator.GetBytes(SaltBytes);
         var nonce = RandomNumberGenerator.GetBytes(NonceBytes);
-        var wrapKey = DeriveKey(secret, salt, Iterations);
         var cipher = new byte[pkcs8.Length + TagBytes];
         try
         {
@@ -106,10 +113,12 @@ internal static class RecoveryKey
 
         return new WrappedPrivateKeyDto(
             Convert.ToBase64String(salt),
-            Iterations,
+            iterations,
             Convert.ToBase64String(nonce),
             Convert.ToBase64String(cipher),
-            kind);
+            kind,
+            memoryKb,
+            parallelism);
     }
 
     public static byte[]? Unwrap(WrappedPrivateKeyDto escrow, string code)
@@ -125,7 +134,7 @@ internal static class RecoveryKey
 
     public static byte[]? UnwrapPassphrase(WrappedPrivateKeyDto escrow, string passphrase)
     {
-        if (escrow.Kind != EscrowKinds.Passphrase)
+        if (escrow.Kind is not (EscrowKinds.Passphrase or EscrowKinds.Argon2Passphrase))
         {
             return null;
         }
@@ -160,7 +169,9 @@ internal static class RecoveryKey
             return null;
         }
 
-        var wrapKey = DeriveKey(secret, salt, escrow.Iterations);
+        var wrapKey = escrow.Kind == EscrowKinds.Argon2Passphrase
+            ? DeriveArgon2(secret, salt, escrow.MemoryKb, escrow.Iterations, escrow.Parallelism)
+            : DerivePbkdf2(secret, salt, escrow.Iterations);
         var plaintext = new byte[cipher.Length - TagBytes];
         try
         {
@@ -179,12 +190,32 @@ internal static class RecoveryKey
         }
     }
 
-    private static byte[] DeriveKey(string secret, byte[] salt, int iterations)
+    private static byte[] DerivePbkdf2(string secret, byte[] salt, int iterations)
     {
         var password = Encoding.UTF8.GetBytes(secret);
         try
         {
             return Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, WrapKeyBytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(password);
+        }
+    }
+
+    private static byte[] DeriveArgon2(string secret, byte[] salt, int memoryKb, int iterations, int parallelism)
+    {
+        var password = Encoding.UTF8.GetBytes(secret);
+        try
+        {
+            using var argon2 = new Konscious.Security.Cryptography.Argon2id(password)
+            {
+                Salt = salt,
+                MemorySize = memoryKb,
+                Iterations = iterations,
+                DegreeOfParallelism = parallelism,
+            };
+            return argon2.GetBytes(WrapKeyBytes);
         }
         finally
         {
