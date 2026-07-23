@@ -158,6 +158,7 @@ internal static class L
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
         public static readonly LocString Linkpearl = new("app.linkpearl", "Linkpearl");
         public static readonly LocString Message = new("app.message", "Message");
+        public static readonly LocString Jobs = new("app.jobs", "Jobs");
     }
 
     internal static class DirectMessages
@@ -1956,6 +1957,29 @@ internal static class L
         public static readonly LocString SectionPvp = new("wallet.sectionPvp", "PvP");
         public static readonly LocString SectionCrafting = new("wallet.sectionCrafting", "Crafting & Gathering");
         public static readonly LocString SectionOther = new("wallet.sectionOther", "Other");
+    }
+
+    internal static class Jobs
+    {
+        public static readonly LocString LogInToView = new("jobs.logInToView", "Log in to view your jobs");
+        public static readonly LocString NoGearsets = new("jobs.noGearsets", "Create a gearset for a job in-game to see it here.");
+        public static readonly LocString SectionTank = new("jobs.sectionTank", "Tank");
+        public static readonly LocString SectionHealer = new("jobs.sectionHealer", "Healer");
+        public static readonly LocString SectionMelee = new("jobs.sectionMelee", "Melee DPS");
+        public static readonly LocString SectionPhysicalRanged = new("jobs.sectionPhysicalRanged", "Physical Ranged DPS");
+        public static readonly LocString SectionMagicalRanged = new("jobs.sectionMagicalRanged", "Magical Ranged DPS");
+        public static readonly LocString SectionHand = new("jobs.sectionHand", "Disciples of the Hand");
+        public static readonly LocString SectionLand = new("jobs.sectionLand", "Disciples of the Land");
+        public static readonly LocString LevelItemLevel = new("jobs.levelItemLevel", "{0} · Lv{1} · iLv{2}");
+        public static readonly LocString LevelOnly = new("jobs.levelOnly", "{0} · Lv{1}");
+        public static readonly LocString Active = new("jobs.active", "ACTIVE");
+        public static readonly LocString BackgroundColor = new("jobs.backgroundColor", "Background color");
+        public static readonly LocString CustomColor = new("jobs.customColor", "Custom color…");
+        public static readonly LocString ColorNamePlaceholder = new("jobs.colorNamePlaceholder", "Name this color");
+        public static readonly LocString SaveColor = new("jobs.saveColor", "Save");
+        public static readonly LocString UpdateColor = new("jobs.updateColor", "Update");
+        public static readonly LocString DeleteColor = new("jobs.deleteColor", "Delete");
+        public static readonly LocString DeleteColorConfirm = new("jobs.deleteColorConfirm", "Delete \"{0}\"? This can't be undone.");
     }
 
     internal static class Inventory

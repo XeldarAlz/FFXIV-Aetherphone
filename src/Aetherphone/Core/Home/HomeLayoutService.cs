@@ -24,7 +24,7 @@ internal sealed class HomeLayoutService
         "skywatcher", "collections", "inventory", "fishing",
         "clock", "notes", "calculator", "timers",
         "wallet", "dailies", "calendar", "news",
-        "character", "notifications",
+        "character", "notifications", "jobs",
     };
 
     private static readonly string[] DefaultTrailingApps = { "dev" };

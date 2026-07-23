@@ -9,6 +9,7 @@ using Aetherphone.Apps.Dailies;
 using Aetherphone.Apps.Fishing;
 using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Inventory;
+using Aetherphone.Apps.Jobs;
 using Aetherphone.Apps.Calculator;
 using Aetherphone.Apps.Maps;
 using Aetherphone.Apps.Market;
@@ -66,6 +67,7 @@ internal static class AppRegistry
         apps.Add(new MarketApp(services.Market, services.MarketIndex, services.MarketAlerts, services.MarketLauncher, services.GameData, services.Textures, services.Configuration));
         apps.Add(new WalletApp(services.GameData, services.Textures));
         apps.Add(new InventoryApp(services.InventoryCapture, services.GameData, services.Textures));
+        apps.Add(new JobsApp(services.GameData, services.Textures, services.Configuration, services.Confirm));
         apps.Add(new MusicApp(services.Radio, services.SongSearch, services.Playback, services.SongHistory, services.Playlists, services.Media, services.Http, services.Textures, new FeatureFlags(services.Http, services.AethernetSession), services.Confirm));
         apps.Add(new ClockApp(services.Configuration, services.Confirm));
         apps.Add(new NotesApp(services.Configuration, services.Confirm));

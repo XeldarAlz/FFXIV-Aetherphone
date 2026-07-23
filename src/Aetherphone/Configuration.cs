@@ -8,6 +8,7 @@ using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Songs;
@@ -54,6 +55,8 @@ internal sealed class Configuration : IPluginConfiguration
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
+    public string JobsAccentName { get; set; } = "Blue";
+    public List<JobsCustomColor> JobsCustomColors { get; set; } = new();
     public string LightWallpaperId { get; set; } = "DuskLight";
     public string DarkWallpaperId { get; set; } = "DuskDark";
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
