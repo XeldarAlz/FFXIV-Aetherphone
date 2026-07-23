@@ -116,7 +116,9 @@ internal sealed class PhoneWindow : Window
         var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
         Size = size;
         SizeCondition = ImGuiCond.Always;
-        Flags = !minimized && configuration.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
+        Flags = !minimized && (configuration.LockPosition || shell.HomeEditing)
+            ? BaseFlags | ImGuiWindowFlags.NoMove
+            : BaseFlags;
 
         if (recenterFrames > 0)
         {

@@ -31,6 +31,8 @@ internal sealed class HomeScreen
         chrome = new HomeChrome(pager, interaction);
     }
 
+    public bool Editing => interaction.Editing;
+
     public void Draw(Rect screen, Rect content, PhoneTheme theme, INavigator navigation, in HomeMotion motion)
     {
         layout.EnsureCurrent();
@@ -78,7 +80,7 @@ internal sealed class HomeScreen
         var page = PageContaining(appId);
         if (page >= 0)
         {
-            pager.SnapTo(page, layout.PageCount);
+            pager.SnapTo(page, layout.TotalPageCount);
         }
     }
 
@@ -95,7 +97,7 @@ internal sealed class HomeScreen
             }
         }
 
-        for (var page = 0; page < layout.PageCount; page++)
+        for (var page = 0; page < layout.TotalPageCount; page++)
         {
             var tiles = layout.Page(page);
             var cells = layout.Placements(page);
@@ -136,7 +138,7 @@ internal sealed class HomeScreen
 
     private int PageContaining(string appId)
     {
-        for (var page = 0; page < layout.PageCount; page++)
+        for (var page = 0; page < layout.TotalPageCount; page++)
         {
             var tiles = layout.Page(page);
             for (var index = 0; index < tiles.Count; index++)
