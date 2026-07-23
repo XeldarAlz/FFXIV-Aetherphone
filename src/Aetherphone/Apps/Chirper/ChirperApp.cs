@@ -289,8 +289,8 @@ internal sealed partial class ChirperApp : IPhoneApp
             if (snapshot.Length == 0)
             {
                 var message = store.IsLoading(scope) ? Loc.T(L.Common.Loading) :
-    scope == SocialFeedScope.Following ? Loc.T(L.Chirper.FollowingEmpty) :
-                Loc.T(L.Chirper.ExploreEmpty);
+                    scope == SocialFeedScope.Following ? Loc.T(L.Chirper.FollowingEmpty) :
+                    Loc.T(L.Chirper.ExploreEmpty);
                 Typography.DrawCentered(new Vector2(listRect.Center.X, listRect.Min.Y + 90f * ImGuiHelpers.GlobalScale),
                     message, AppPalettes.Chirper.MutedInk);
             }
