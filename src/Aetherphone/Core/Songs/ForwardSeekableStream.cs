@@ -19,8 +19,8 @@ namespace Aetherphone.Core.Songs;
 internal sealed class ForwardSeekableStream : Stream
 {
     private readonly Stream inner;
+    private readonly byte[] discardBuffer = new byte[8192];
     private long position;
-    private byte[] discardBuffer = Array.Empty<byte>();
 
     public ForwardSeekableStream(Stream inner) => this.inner = inner;
 
@@ -64,11 +64,6 @@ internal sealed class ForwardSeekableStream : Stream
         var remaining = offset;
         while (remaining > 0)
         {
-            if (discardBuffer.Length == 0)
-            {
-                discardBuffer = new byte[8192];
-            }
-
             var chunk = Read(discardBuffer, 0, (int)Math.Min(remaining, discardBuffer.Length));
             if (chunk <= 0)
             {

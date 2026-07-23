@@ -115,9 +115,9 @@ public sealed class WebmOpusDemuxerTests
             _ => 4,
         };
         var bytes = new byte[length];
-        for (var i = length - 1; i >= 0; i--)
+        for (var index = length - 1; index >= 0; index--)
         {
-            bytes[i] = (byte)(id & 0xFF);
+            bytes[index] = (byte)(id & 0xFF);
             id >>= 8;
         }
 

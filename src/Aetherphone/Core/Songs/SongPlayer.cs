@@ -258,6 +258,11 @@ internal sealed class SongPlayer : IDisposable
         {
             var bytes = cache.Get(OpusCacheKey(videoId), CacheMaxAge);
             var bytesAreOpus = bytes is not null;
+            if (bytes is null)
+            {
+                bytes = cache.Get(videoId, CacheMaxAge);
+            }
+
             if (bytes is null && !allowStreaming)
             {
                 var downloaded = Download(videoId, token);
@@ -268,10 +273,15 @@ internal sealed class SongPlayer : IDisposable
             if (bytes is not null && bytes.Length > 0)
             {
                 TrySetState(workerSession, SongPlaybackState.Buffering);
-                audio = new MemoryStream(bytes, false);
-                reader = bytesAreOpus
-                    ? new OpusWebmSampleProvider(audio)
-                    : new MediaFoundationSongReader(new StreamMediaFoundationReader(audio));
+                if (bytesAreOpus)
+                {
+                    reader = new OpusWebmSampleProvider(() => new MemoryStream(bytes, false));
+                }
+                else
+                {
+                    audio = new MemoryStream(bytes, false);
+                    reader = new MediaFoundationSongReader(new StreamMediaFoundationReader(audio));
+                }
             }
             else if (allowStreaming)
             {
@@ -396,8 +406,8 @@ internal sealed class SongPlayer : IDisposable
         TrySetState(workerSession, SongPlaybackState.Buffering);
         if (IsOpus(best))
         {
-            var networkStream = youtube.Videos.Streams.GetAsync(best, token).GetAwaiter().GetResult();
-            return new OpusWebmSampleProvider(new ForwardSeekableStream(networkStream));
+            return new OpusWebmSampleProvider(() =>
+                new ForwardSeekableStream(youtube.Videos.Streams.GetAsync(best, token).GetAwaiter().GetResult()));
         }
 
         return new MediaFoundationSongReader(new MediaFoundationReader(best.Url));
@@ -452,9 +462,6 @@ internal sealed class SongPlayer : IDisposable
             }
         }
 
-        // Opus/webm decodes through Concentus/NEbml (no native dependency, works under Wine).
-        // mp4/AAC is a fallback for the rare video that only offers that format, still going
-        // through Media Foundation - same Wine limitation as before for just that edge case.
         return bestOpus ?? bestMp4;
     }
 

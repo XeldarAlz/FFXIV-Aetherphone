@@ -1,10 +1,7 @@
 using System.Collections.Concurrent;
 using Aetherphone.Core.Media;
-using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace Aetherphone.Core.Net;
 
@@ -86,7 +83,7 @@ internal sealed class MediaCache : IDisposable
                 return;
             }
 
-            var wrap = await DecodeToTextureAsync(bytes, key, token).ConfigureAwait(false);
+            var wrap = await ImageProcessor.DecodeToTextureAsync(textures, bytes, key, token).ConfigureAwait(false);
             if (!ready.TryAdd(key, wrap))
             {
                 wrap.Dispose();
@@ -110,29 +107,6 @@ internal sealed class MediaCache : IDisposable
         {
             inFlight.TryRemove(key, out _);
         }
-    }
-
-    /// <summary>
-    /// Decodes with ImageSharp (pure managed, cross-platform) and hands Dalamud already-decoded
-    /// pixels via CreateFromRawAsync, instead of raw JPEG bytes via CreateFromImageAsync. The
-    /// latter goes through a native WIC/COM decode path that has been observed to fail 100% of
-    /// the time for these thumbnails under Wine, in a way that (unlike the search/network code)
-    /// is not itself the cause of any exception this method's catch block was designed for -
-    /// it just never produces a usable texture. Decoding is CPU-bound, so run it off whatever
-    /// thread is awaiting this rather than blocking it.
-    /// </summary>
-    private async Task<IDalamudTextureWrap> DecodeToTextureAsync(byte[] bytes, string key, CancellationToken token)
-    {
-        var (pixels, width, height) = await Task.Run(() =>
-        {
-            using var image = Image.Load<Rgba32>(bytes);
-            var buffer = new byte[image.Width * image.Height * 4];
-            image.CopyPixelDataTo(buffer);
-            return (buffer, image.Width, image.Height);
-        }, token).ConfigureAwait(false);
-
-        return await textures.CreateFromRawAsync(RawImageSpecification.Rgba32(width, height), pixels, key, token)
-            .ConfigureAwait(false);
     }
 
     public void Dispose()

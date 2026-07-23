@@ -28,6 +28,8 @@ internal sealed class WebmOpusDemuxer
     private readonly EbmlReader reader;
     private ulong timestampScale = 1_000_000; // Matroska default: 1ms per tick, in nanoseconds.
     private ulong? opusTrackNumber;
+    private bool hasPendingFirstCluster;
+    private bool insideCluster;
 
     public double? DurationSeconds { get; private set; }
 
@@ -86,8 +88,6 @@ internal sealed class WebmOpusDemuxer
             }
         }
     }
-
-    private bool hasPendingFirstCluster;
 
     private void ReadInfo()
     {
@@ -151,8 +151,6 @@ internal sealed class WebmOpusDemuxer
     /// for any other track (there shouldn't be any in an audio-only stream, but don't assume).
     /// Returns null once the container is exhausted.
     /// </summary>
-    private bool insideCluster;
-
     public byte[]? ReadNextPacket()
     {
         if (opusTrackNumber is null)
@@ -248,13 +246,13 @@ internal sealed class WebmOpusDemuxer
         var read = 0;
         while (read < size)
         {
-            var n = reader.ReadBinary(buffer, read, size - read);
-            if (n < 0)
+            var bytesRead = reader.ReadBinary(buffer, read, size - read);
+            if (bytesRead < 0)
             {
                 break;
             }
 
-            read += n;
+            read += bytesRead;
         }
 
         var offset = 0;
@@ -302,9 +300,9 @@ internal sealed class WebmOpusDemuxer
         }
 
         ulong value = (ulong)(first & (mask - 1));
-        for (var i = 1; i < length; i++)
+        for (var index = 1; index < length; index++)
         {
-            value = (value << 8) | buffer[offset + i];
+            value = (value << 8) | buffer[offset + index];
         }
 
         offset += length;

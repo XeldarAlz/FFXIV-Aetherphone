@@ -1,27 +1,20 @@
-using Concentus.Structs;
+using Aetherphone.Core.Telephony.Audio;
+using Concentus;
 using NAudio.Wave;
 
 namespace Aetherphone.Core.Songs;
 
-/// <summary>
-/// Decodes a WebM/Opus audio stream (from disk or a live network stream) into PCM samples,
-/// without depending on Windows Media Foundation. Replaces MediaFoundationReader for songs
-/// so playback no longer relies on Wine's partial/stub MF implementation, which is the source
-/// of the "constantly buffering" behaviour reported on Linux.
-///
-/// Seeking is implemented as decode-and-discard up to the target time: correct, but O(n) in
-/// the seek distance. Acceptable for a song player where seeks are infrequent and songs are a
-/// few minutes long; revisit if that assumption stops holding.
-/// </summary>
 internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
 {
-    private const int OpusFrameSizeSamples = 960; // 20ms at 48kHz, matches YouTube's Opus streams.
+    private const int MaxOpusFrameSamples = 5760; // 120ms at 48kHz, the largest possible Opus frame.
 
-    private readonly Stream source;
-    private readonly WebmOpusDemuxer demuxer;
-    private readonly OpusDecoder decoder;
+    private readonly Func<Stream> openSource;
     private readonly int channels;
-    private float[] pending = Array.Empty<float>();
+    private readonly int sampleRate;
+    private readonly float[] pending;
+    private Stream source = null!;
+    private WebmOpusDemuxer demuxer = null!;
+    private IOpusDecoder decoder = null!;
     private int pendingOffset;
     private int pendingCount;
     private double positionSeconds;
@@ -37,20 +30,29 @@ internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
         set => SeekTo(value.TotalSeconds);
     }
 
-    public OpusWebmSampleProvider(Stream source, int channels = 2, int sampleRate = 48_000)
+    public OpusWebmSampleProvider(Func<Stream> openSource, int channels = 2, int sampleRate = 48_000)
     {
-        this.source = source;
+        this.openSource = openSource;
         this.channels = channels;
+        this.sampleRate = sampleRate;
+        pending = new float[MaxOpusFrameSamples * channels];
+        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channels);
+        Reopen();
+        TotalTime = TimeSpan.FromSeconds(demuxer.DurationSeconds ?? 0);
+    }
+
+    private void Reopen()
+    {
+        source?.Dispose();
+        decoder?.Dispose();
+        source = openSource();
         demuxer = new WebmOpusDemuxer(source);
         demuxer.ReadHeader();
-#pragma warning disable CS0618 // Obsolete in favor of OpusCodecFactory, which P/Invokes a native
-                              // libopus when present. That's the exact native/Wine-fragile
-                              // dependency this class exists to avoid, so the plain managed
-                              // constructor is the deliberate choice here, not an oversight.
-        decoder = new OpusDecoder(sampleRate, channels);
-#pragma warning restore CS0618
-        WaveFormat = WaveFormat.CreateIeeeFloatWaveFormat(sampleRate, channels);
-        TotalTime = TimeSpan.FromSeconds(demuxer.DurationSeconds ?? 0);
+        decoder = OpusCodecFactory.CreateDecoder(OpusAudio.SampleRate, channels);
+        pendingOffset = 0;
+        pendingCount = 0;
+        positionSeconds = 0;
+        endOfStream = false;
     }
 
     public int Read(float[] buffer, int offset, int count)
@@ -87,13 +89,7 @@ internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
             return false;
         }
 
-        var samplesNeeded = OpusFrameSizeSamples * channels;
-        if (pending.Length < samplesNeeded)
-        {
-            pending = new float[samplesNeeded];
-        }
-
-        var decodedPerChannel = decoder.Decode(packet.AsSpan(), pending.AsSpan(0, samplesNeeded), OpusFrameSizeSamples);
+        var decodedPerChannel = decoder.Decode(packet.AsSpan(), pending.AsSpan(), MaxOpusFrameSamples, false);
         pendingCount = decodedPerChannel * channels;
         pendingOffset = 0;
         positionSeconds += (double)decodedPerChannel / decoder.SampleRate;
@@ -102,14 +98,7 @@ internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
 
     private void SeekTo(double targetSeconds)
     {
-        if (targetSeconds < positionSeconds)
-        {
-            // Can't seek backwards without re-opening the stream from the start; the caller
-            // (SongPlayer) only seeks forward in practice (scrubbing ahead, resuming after a
-            // retry), so this is a documented limitation rather than a bug fix target here.
-            throw new NotSupportedException("Backward seeking is not supported by OpusWebmSampleProvider.");
-        }
-
+        Reopen();
         while (positionSeconds < targetSeconds)
         {
             if (!TryDecodeNextFrame())
