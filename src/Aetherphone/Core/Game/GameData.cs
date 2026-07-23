@@ -79,6 +79,38 @@ internal sealed class GameData
         return string.Empty;
     }
 
+    public bool TryGetClassJobDivision(uint rowId, out byte jobType, out byte uiPriority, out uint classJobCategoryId)
+    {
+        jobType = 0;
+        uiPriority = 0;
+        classJobCategoryId = 0;
+        if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
+        {
+            jobType = job.JobType;
+            uiPriority = job.UIPriority;
+            classJobCategoryId = job.ClassJobCategory.RowId;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Enumerates every ClassJob row belonging to the given ClassJobCategory (e.g. Disciple of the Hand/Land).</summary>
+    public IEnumerable<uint> ClassJobIdsInCategory(uint classJobCategoryId)
+    {
+        foreach (var job in data.GetExcelSheet<ClassJob>())
+        {
+            if (job.RowId != 0 && job.ClassJobCategory.RowId == classJobCategoryId)
+            {
+                yield return job.RowId;
+            }
+        }
+    }
+
+    public bool ItemUsableByClassJob(uint itemId, uint classJobId) =>
+        itemId != 0 && classJobId != 0 && data.GetExcelSheet<Item>().TryGetRow(itemId, out var item) &&
+        item.ClassJobUse.RowId == classJobId;
+
     public int JobExpArrayIndex(uint rowId)
     {
         if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
