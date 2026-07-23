@@ -176,11 +176,23 @@ internal sealed class ConversationKeyStore
         return true;
     }
 
-    private async Task FixVelvetWrapsAsync(string otherId, string scope, ConversationKeysDto keys, CancellationToken token)
+    private Task FixVelvetWrapsAsync(string otherId, string scope, ConversationKeysDto keys, CancellationToken token)
     {
-        if (keys.MissingWrapUserIds.Length == 0 && keys.StaleWrapUserIds.Length == 0)
+        var wraps = BuildCurrentGenerationRepairWraps(scope, keys);
+        return wraps is null
+            ? Task.CompletedTask
+            : client.AddVelvetWrapsAsync(otherId, new AddWrapsRequest(keys.CurrentGeneration, wraps), token);
+    }
+
+    private NewWrapDto[]? BuildCurrentGenerationRepairWraps(string scope, ConversationKeysDto keys)
+    {
+        // Only the current generation is ever re-wrapped. Past generations stay sealed to the key versions
+        // that already held them, so a rotated or replaced key can never buy its way into conversation history.
+        if (keys.CurrentGeneration == 0
+            || (keys.MissingWrapUserIds.Length == 0 && keys.StaleWrapUserIds.Length == 0)
+            || !TryGetCek(scope, keys.CurrentGeneration, out var cek))
         {
-            return;
+            return null;
         }
 
         var memberKeys = new Dictionary<string, UserPublicKeyDto>(StringComparer.Ordinal);
@@ -189,46 +201,24 @@ internal sealed class ConversationKeyStore
             memberKeys[keys.MemberKeys[index].UserId] = keys.MemberKeys[index];
         }
 
-        if (!keysByScope.TryGetValue(scope, out var generations))
+        var recipients = new List<UserPublicKeyDto>();
+        for (var index = 0; index < keys.StaleWrapUserIds.Length; index++)
         {
-            return;
+            if (memberKeys.TryGetValue(keys.StaleWrapUserIds[index], out var key))
+            {
+                recipients.Add(key);
+            }
         }
 
-        foreach (var (generation, cek) in generations)
+        for (var index = 0; index < keys.MissingWrapUserIds.Length; index++)
         {
-            var recipients = new List<UserPublicKeyDto>();
-            for (var index = 0; index < keys.StaleWrapUserIds.Length; index++)
+            if (memberKeys.TryGetValue(keys.MissingWrapUserIds[index], out var key))
             {
-                if (memberKeys.TryGetValue(keys.StaleWrapUserIds[index], out var key))
-                {
-                    recipients.Add(key);
-                }
+                recipients.Add(key);
             }
-
-            if (generation == keys.CurrentGeneration)
-            {
-                for (var index = 0; index < keys.MissingWrapUserIds.Length; index++)
-                {
-                    if (memberKeys.TryGetValue(keys.MissingWrapUserIds[index], out var key))
-                    {
-                        recipients.Add(key);
-                    }
-                }
-            }
-
-            if (recipients.Count == 0)
-            {
-                continue;
-            }
-
-            var wraps = BuildWraps(cek, recipients);
-            if (wraps is null)
-            {
-                continue;
-            }
-
-            await client.AddVelvetWrapsAsync(otherId, new AddWrapsRequest(generation, wraps), token).ConfigureAwait(false);
         }
+
+        return recipients.Count == 0 ? null : BuildWraps(cek, recipients);
     }
 
     public async Task<ChatKeyStatus> EnsureChatKeysAsync(string conversationId, CancellationToken token)
@@ -330,59 +320,12 @@ internal sealed class ConversationKeyStore
         return true;
     }
 
-    private async Task FixWrapsAsync(string conversationId, string scope, ConversationKeysDto keys, CancellationToken token)
+    private Task FixWrapsAsync(string conversationId, string scope, ConversationKeysDto keys, CancellationToken token)
     {
-        if (keys.MissingWrapUserIds.Length == 0 && keys.StaleWrapUserIds.Length == 0)
-        {
-            return;
-        }
-
-        var memberKeys = new Dictionary<string, UserPublicKeyDto>(StringComparer.Ordinal);
-        for (var index = 0; index < keys.MemberKeys.Length; index++)
-        {
-            memberKeys[keys.MemberKeys[index].UserId] = keys.MemberKeys[index];
-        }
-
-        if (!keysByScope.TryGetValue(scope, out var generations))
-        {
-            return;
-        }
-
-        foreach (var (generation, cek) in generations)
-        {
-            var recipients = new List<UserPublicKeyDto>();
-            for (var index = 0; index < keys.StaleWrapUserIds.Length; index++)
-            {
-                if (memberKeys.TryGetValue(keys.StaleWrapUserIds[index], out var key))
-                {
-                    recipients.Add(key);
-                }
-            }
-
-            if (generation == keys.CurrentGeneration)
-            {
-                for (var index = 0; index < keys.MissingWrapUserIds.Length; index++)
-                {
-                    if (memberKeys.TryGetValue(keys.MissingWrapUserIds[index], out var key))
-                    {
-                        recipients.Add(key);
-                    }
-                }
-            }
-
-            if (recipients.Count == 0)
-            {
-                continue;
-            }
-
-            var wraps = BuildWraps(cek, recipients);
-            if (wraps is null)
-            {
-                continue;
-            }
-
-            await client.AddConversationWrapsAsync(conversationId, new AddWrapsRequest(generation, wraps), token).ConfigureAwait(false);
-        }
+        var wraps = BuildCurrentGenerationRepairWraps(scope, keys);
+        return wraps is null
+            ? Task.CompletedTask
+            : client.AddConversationWrapsAsync(conversationId, new AddWrapsRequest(keys.CurrentGeneration, wraps), token);
     }
 
     private static NewWrapDto[]? BuildWraps(byte[] cek, IReadOnlyList<UserPublicKeyDto> recipients)
