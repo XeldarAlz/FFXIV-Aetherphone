@@ -416,7 +416,7 @@ internal sealed class GameData
                 continue;
             }
 
-            indices.Add((byte)row.CompletionArrayIndex);
+            indices.Add((byte)row.RowId);
         }
 
         dailyBonusRouletteIndices = indices.Count > 0 ? indices.ToArray() : Array.Empty<byte>();
