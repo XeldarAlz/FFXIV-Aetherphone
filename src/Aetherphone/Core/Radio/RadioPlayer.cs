@@ -40,7 +40,18 @@ internal sealed class RadioPlayer : IDisposable
 
     public RadioPlaybackState State => state;
     public string CurrentStation => currentStation;
-    public RadioStation CurrentStationInfo => currentStationInfo;
+
+    public RadioStation CurrentStationInfo
+    {
+        get
+        {
+            lock (gate)
+            {
+                return currentStationInfo;
+            }
+        }
+    }
+
     public bool HasQueue => queue.Length > 1;
 
     public float Volume
@@ -111,7 +122,10 @@ internal sealed class RadioPlayer : IDisposable
         Suspend();
         state = RadioPlaybackState.Stopped;
         currentStation = string.Empty;
-        currentStationInfo = default;
+        lock (gate)
+        {
+            currentStationInfo = default;
+        }
     }
 
     public void Pause()

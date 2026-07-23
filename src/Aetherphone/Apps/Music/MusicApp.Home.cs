@@ -418,7 +418,7 @@ internal sealed partial class MusicApp
         var artMax = artMin + new Vector2(artSize, artSize);
         drawList.AddImageRounded(artwork.HandleForName(station.Name), artMin, artMax, Vector2.Zero, Vector2.One,
             0xFFFFFFFFu, 8f * scale, ImDrawFlags.RoundCornersAll);
-        var trailing = current ? 32f * scale : 10f * scale;
+        var trailing = current ? 50f * scale : 33f * scale;
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - trailing - textLeft;
         var name = Typography.FitText(station.Name, textWidth, TextStyles.BodyEmphasized);
@@ -433,33 +433,34 @@ internal sealed partial class MusicApp
         }
 
         var favoriteStar = false;
-        var isFavoriteStation = IsFavoriteStation(station.StreamUrl);
+        var isFavoriteStation = favoriteRadioStations.Contains(station);
 
         if (isFavoriteStation || hovered)
         {
+            var tooltip = Loc.T(isFavoriteStation ? L.Music.RemoveFavoriteStation : L.Music.AddFavoriteStation);
+
             var starX = current ? max.X - 36f * scale : max.X - 18f * scale;
             favoriteStar = ui.IconButton(new Vector2(starX, min.Y + rowHeight * 0.5f), 14f * scale,
                 FontAwesomeIcon.Star.ToIconString(), isFavoriteStation ? ui.Accent : ui.MutedInk, AppSkin.Transparent,
-                0.82f);
+                0.82f, tooltip);
             if (favoriteStar)
             {
                 ToggleFavoriteStation(station);
             }
         }
 
-
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
-        if (!hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (favoriteStar || !hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             return;
         }
 
-        if (current && !favoriteStar)
+        if (current)
         {
             playback.TogglePlayPause();
         }
-        else if (!favoriteStar)
+        else
         {
             onPlay(index);
         }
@@ -467,7 +468,6 @@ internal sealed partial class MusicApp
 
     private void DrawFavoriteRadioStationsSection(string header, float scale)
     {
-        var favoriteRadioStations = GetFavoriteRadioStations();
         if (favoriteRadioStations.Length == 0)
         {
             return;

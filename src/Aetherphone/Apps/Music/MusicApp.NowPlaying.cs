@@ -183,10 +183,12 @@ internal sealed partial class MusicApp
         if (playback.RadioActive)
         {
             var currentStation = playback.Radio.CurrentStationInfo;
-            var favorite = IsFavoriteStation(currentStation.StreamUrl);
+            var isFavoriteStation = favoriteRadioStations.Contains(currentStation);
+            var tooltip = Loc.T(isFavoriteStation ? L.Music.RemoveFavoriteStation : L.Music.AddFavoriteStation);
+
             if (ui.IconButton(new Vector2(frame.Max.X - 58f * scale, barCenterY), 14f * scale,
-                    FontAwesomeIcon.Star.ToIconString(), favorite ? ui.Accent : ui.MutedInk, AppSkin.Transparent,
-                    0.82f))
+                    FontAwesomeIcon.Star.ToIconString(), isFavoriteStation ? ui.Accent : ui.MutedInk, AppSkin.Transparent,
+                    0.82f, tooltip))
             {
                 ToggleFavoriteStation(currentStation);
             }

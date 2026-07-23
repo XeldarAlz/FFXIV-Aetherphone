@@ -77,6 +77,7 @@ internal sealed partial class MusicApp : IPhoneApp
     private INavigator navigation = null!;
     private int categoryIndex = -1;
     private RadioStation[] stations = Array.Empty<RadioStation>();
+    private RadioStation[] favoriteRadioStations = Array.Empty<RadioStation>();
     private volatile bool loading;
     private CancellationTokenSource? fetch;
     private string radioSearchDraft = string.Empty;
@@ -149,6 +150,7 @@ internal sealed partial class MusicApp : IPhoneApp
         featuredLoading = false;
         featured = Array.Empty<Song>();
         featuredFetch?.Cancel();
+        LoadFavoriteRadioStations();
     }
 
     public void OnClosed()
@@ -583,7 +585,6 @@ internal sealed partial class MusicApp : IPhoneApp
 
     private void PlayStationFromFavorites(int index)
     {
-        var favoriteRadioStations = GetFavoriteRadioStations();
         playSource = Loc.T(L.Music.FavoriteStations);
         radio.ReportClick(favoriteRadioStations[index].Uuid);
         playback.PlayStations(favoriteRadioStations, index);
@@ -658,12 +659,6 @@ internal sealed partial class MusicApp : IPhoneApp
         return playback.RadioActive && playback.Radio.CurrentStation == station.Name;
     }
 
-    private bool IsFavoriteStation(string streamUrl)
-    {
-        return !string.IsNullOrEmpty(streamUrl) &&
-               configuration.RadioFavorites.Exists(favorite => favorite.StreamUrl == streamUrl);
-    }
-
     private void ToggleFavoriteStation(RadioStation station)
     {
         if (string.IsNullOrEmpty(station.StreamUrl))
@@ -671,20 +666,22 @@ internal sealed partial class MusicApp : IPhoneApp
             return;
         }
 
-        var removed = configuration.RadioFavorites.RemoveAll(f => f.StreamUrl == station.StreamUrl);
+        var removed = configuration.RadioFavorites
+            .RemoveAll(stationRecord => stationRecord.StreamUrl == station.StreamUrl);
         if (removed == 0)
         {
             configuration.RadioFavorites.Add(RadioStationRecord.From(station));
         }
 
         configuration.Save();
+        LoadFavoriteRadioStations();
     }
 
-    private RadioStation[] GetFavoriteRadioStations()
+    private void LoadFavoriteRadioStations()
     {
-        return configuration.RadioFavorites.Select(c => c.ToStation()).ToArray();
+        favoriteRadioStations = configuration.RadioFavorites
+            .Select(stationRecord => stationRecord.ToStation()).ToArray();
     }
-
 
     private bool IsCurrentSong(Song song)
     {
