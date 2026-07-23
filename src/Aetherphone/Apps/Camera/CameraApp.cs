@@ -4,6 +4,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
@@ -39,6 +40,9 @@ internal sealed class CameraApp : IPhoneApp
     private float reticleAge = ReticleDuration + 1f;
     private Vector2 reticlePos;
     private IDalamudTextureWrap? lastShot;
+    private int captureCountdown = -1;
+    private Rect pendingCaptureRect;
+    private bool plateHandlerAttached;
 
     public CameraApp(PhotoCaptureService capture, PhotoLibrary library)
     {
@@ -55,6 +59,7 @@ internal sealed class CameraApp : IPhoneApp
 
     public void OnClosed()
     {
+       DetachPlateHandler();
     }
 
     public void Draw(in PhoneContext context)
@@ -96,6 +101,15 @@ internal sealed class CameraApp : IPhoneApp
         {
             reticleAge += delta;
         }
+
+        if (captureCountdown >= 0)
+        {
+            captureCountdown--;
+            if (captureCountdown < 0)
+            {
+                CompleteCapture();
+            }
+        }
     }
 
     private bool DrawTray(Rect screen, Rect captureRect, INavigator navigation, float scale, float rounding)
@@ -129,6 +143,20 @@ internal sealed class CameraApp : IPhoneApp
         return consumed;
     }
 
+    private void StripNamePlates(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
+    {
+        for (var index = 0; index < handlers.Count; index++)
+        {
+            var handler = handlers[index];
+            handler.RemoveName();
+            handler.RemoveTitle();
+            handler.RemoveFreeCompanyTag();
+            handler.RemoveLevelPrefix();
+            handler.RemoveStatusPrefix();
+            handler.RemoveTargetSuffix();
+        }
+    }
+
     private void Shoot(Rect captureRect)
     {
         shutterPress = 1f;
@@ -137,16 +165,62 @@ internal sealed class CameraApp : IPhoneApp
             flashAge = 0f;
         }
 
-        if (!capture.TryCapture(captureRect, out var pixels, out var width, out var height))
+        if (captureCountdown >= 0)
         {
             return;
         }
 
-        lastShot?.Dispose();
-        lastShot = Plugin.TextureProvider.CreateFromRaw(RawImageSpecification.Rgba32(width, height), pixels,
-            "Aetherphone.Photo.Last");
-        library.Save(pixels, width, height);
+        pendingCaptureRect = captureRect;
+        if (!plateHandlerAttached)
+        {
+            Plugin.NamePlateGui.OnNamePlateUpdate += StripNamePlates;
+            plateHandlerAttached = true;
+        }
+
+        Plugin.NamePlateGui.RequestRedraw();
+        captureCountdown = 2;
     }
+
+    private void CompleteCapture()
+    {
+        try
+        {
+            if (!capture.TryCapture(pendingCaptureRect, out var pixels, out var width, out var height))
+            {
+                return;
+            }
+
+            lastShot?.Dispose();
+            lastShot = Plugin.TextureProvider.CreateFromRaw(RawImageSpecification.Rgba32(width, height), pixels,
+                                                            "Aetherphone.Photo.Last");
+            library.Save(pixels, width, height);
+        }
+        finally
+        {
+            DetachPlateHandler();
+        }
+    }
+
+    private void DetachPlateHandler()
+    {
+        if (!plateHandlerAttached)
+        {
+            return;
+        }
+
+        Plugin.NamePlateGui.OnNamePlateUpdate -= StripNamePlates;
+        plateHandlerAttached = false;
+        captureCountdown = -1;
+        Plugin.NamePlateGui.RequestRedraw();
+    }
+
+    public void Dispose()
+    {
+        DetachPlateHandler();
+        lastShot?.Dispose();
+        lastShot = null;
+    }
+
 
     private void HandleFocusTap(Rect viewfinder, bool consumed)
     {
@@ -186,9 +260,5 @@ internal sealed class CameraApp : IPhoneApp
         return new Rect(min, max);
     }
 
-    public void Dispose()
-    {
-        lastShot?.Dispose();
-        lastShot = null;
-    }
+
 }
