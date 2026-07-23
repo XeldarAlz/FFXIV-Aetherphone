@@ -1,5 +1,6 @@
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using NLayer.NAudioSupport;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -8,7 +9,7 @@ internal sealed class SoundEffectPlayer : IDisposable
     private readonly object gate = new();
     private readonly List<IWavePlayer> oneShots = new();
     private IWavePlayer? loopOutput;
-    private MediaFoundationReader? loopReader;
+    private WaveStream? loopReader;
     private bool disposed;
 
     public void PlayOnce(string path, float volume)
@@ -50,11 +51,11 @@ internal sealed class SoundEffectPlayer : IDisposable
     public void PlayLoop(string path, float volume)
     {
         StopLoop();
-        MediaFoundationReader reader;
+        WaveStream reader;
         IWavePlayer output;
         try
         {
-            reader = new MediaFoundationReader(path);
+            reader = OpenReader(path);
             var loop = new LoopStream(reader);
             var volumeProvider = new VolumeSampleProvider(loop.ToSampleProvider())
             {
@@ -88,7 +89,7 @@ internal sealed class SoundEffectPlayer : IDisposable
     public void StopLoop()
     {
         IWavePlayer? output;
-        MediaFoundationReader? reader;
+        WaveStream? reader;
         lock (gate)
         {
             output = loopOutput;
@@ -116,11 +117,11 @@ internal sealed class SoundEffectPlayer : IDisposable
 
     private void RunOnce(string path, float volume)
     {
-        MediaFoundationReader? reader = null;
+        WaveStream? reader = null;
         IWavePlayer? output = null;
         try
         {
-            reader = new MediaFoundationReader(path);
+            reader = OpenReader(path);
             var volumeProvider = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume };
             output = AudioOutputFactory.Create();
             output.Init(volumeProvider, true);
@@ -158,6 +159,17 @@ internal sealed class SoundEffectPlayer : IDisposable
 
             reader?.Dispose();
         }
+    }
+
+    internal static WaveStream OpenReader(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".wav" => new WaveFileReader(path),
+            ".mp3" => new Mp3FileReaderBase(path,
+                frame => new Mp3FrameDecompressor(frame)),
+            _ => throw new NotSupportedException($"Unsupported sound format: {Path.GetExtension(path)}"),
+        };
     }
 
     public void Dispose()

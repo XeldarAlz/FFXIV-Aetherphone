@@ -19,4 +19,10 @@
     <ProjectReference Include="..\Aetherphone\Aetherphone.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Fixtures\tone.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>
