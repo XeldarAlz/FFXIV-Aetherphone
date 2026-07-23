@@ -1,6 +1,5 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
-using Aetherphone.Core.Shell;
 using Xunit;
 
 namespace Aetherphone.Tests;
@@ -12,7 +11,7 @@ public sealed class HomeLayoutServiceLibraryTests
     {
         var apps = MakeApps();
         var widgets = new WidgetRegistry(Array.Empty<IHomeWidget>(), apps);
-        var configuration = new Configuration();
+        var configuration = new FakeHomeConfiguration();
 
         var layout = new HomeLayoutService(apps, widgets, configuration);
 
@@ -25,7 +24,7 @@ public sealed class HomeLayoutServiceLibraryTests
     {
         var apps = MakeApps();
         var widgets = new WidgetRegistry(Array.Empty<IHomeWidget>(), apps);
-        var configuration = new Configuration
+        var configuration = new FakeHomeConfiguration
         {
             Home = new HomeLayout
             {
@@ -57,7 +56,7 @@ public sealed class HomeLayoutServiceLibraryTests
     {
         var apps = MakeApps();
         var widgets = new WidgetRegistry(Array.Empty<IHomeWidget>(), apps);
-        var configuration = new Configuration
+        var configuration = new FakeHomeConfiguration
         {
             Home = new HomeLayout
             {
@@ -112,7 +111,7 @@ public sealed class HomeLayoutServiceLibraryTests
             new FakeApp("e"), new FakeApp("f"), new FakeApp("g"), new FakeApp("h"),
         };
         var widgets = new WidgetRegistry(Array.Empty<IHomeWidget>(), apps);
-        var configuration = new Configuration
+        var configuration = new FakeHomeConfiguration
         {
             Home = new HomeLayout
             {
@@ -177,5 +176,15 @@ public sealed class HomeLayoutServiceLibraryTests
         public void OnClosed() { }
         public void Draw(in PhoneContext context) { }
         public void Dispose() { }
+    }
+
+    // Deliberately not `Configuration` — that type implements Dalamud's IPluginConfiguration, which
+    // pulls in the Dalamud assembly the moment it's loaded. This satisfies only the narrow surface
+    // HomeLayoutService actually needs, so these tests stay Dalamud-free like the rest of the suite.
+    private sealed class FakeHomeConfiguration : IHomeConfiguration
+    {
+        public HomeLayout? Home { get; set; }
+        public int HomeGridRows { get; set; }
+        public void Save() { }
     }
 }

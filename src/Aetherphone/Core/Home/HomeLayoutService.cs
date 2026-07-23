@@ -31,7 +31,7 @@ internal sealed class HomeLayoutService
 
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly WidgetRegistry widgets;
-    private readonly Configuration configuration;
+    private readonly IHomeConfiguration configuration;
     private readonly Dictionary<string, IPhoneApp> byId = new();
     private readonly List<List<HomeTile>> pages = new();
     private readonly List<HomeTile> dock = new();
@@ -43,7 +43,7 @@ internal sealed class HomeLayoutService
     private int homePageCount;
     private bool placementsDirty = true;
 
-    public HomeLayoutService(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets, Configuration configuration)
+    public HomeLayoutService(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets, IHomeConfiguration configuration)
     {
         this.apps = apps;
         this.widgets = widgets;

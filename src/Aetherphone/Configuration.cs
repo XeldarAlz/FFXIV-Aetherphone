@@ -20,7 +20,7 @@ using Dalamud.Configuration;
 namespace Aetherphone;
 
 [Serializable]
-internal sealed class Configuration : IPluginConfiguration
+internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
 {
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
