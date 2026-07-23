@@ -1882,6 +1882,9 @@ internal static class L
     {
         public static readonly LocString Done = new("home.done", "Done");
         public static readonly LocString NewFolder = new("home.newFolder", "Folder");
+        public static readonly LocString AppLibrary = new("home.appLibrary", "App Library");
+        public static readonly LocString AppLibraryEmpty = new("home.appLibraryEmpty",
+            "Drag apps here to keep them off your Home Screen");
         public static readonly LocString Widgets = new("home.widgets", "Widgets");
         public static readonly LocString AddWidget = new("home.addWidget", "Add Widget");
         public static readonly LocString Remove = new("home.remove", "Remove");
