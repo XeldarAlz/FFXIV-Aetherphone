@@ -246,8 +246,6 @@ internal sealed partial class ChirperApp : IPhoneApp
             profile.EnsureLoaded(activeScope);
         }
 
-        profile.Tick(ImGui.GetIO().DeltaTime);
-        profile.TickRefresh(activeScope);
         var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y + 6f * scale), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(listRect, "##chirperComposeFab", Accent, FontAwesomeIcon.Feather.ToIconString(),
@@ -275,6 +273,18 @@ internal sealed partial class ChirperApp : IPhoneApp
         social.RefreshNow();
         social.MarkSeen(Id);
         router.Push(ChirperRoute.Activity);
+    }
+
+    private void RefreshActiveFeed()
+    {
+        if (!store.IsSignedIn || store.IsLoading(activeScope))
+        {
+            return;
+        }
+
+        feedScrollTopPending = true;
+        actions.Reset();
+        store.RefreshFeed(activeScope);
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)

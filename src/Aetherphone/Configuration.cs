@@ -42,7 +42,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool NotifyWeeklyReset { get; set; }
     public bool NotifyGrandCompanyReset { get; set; }
     public bool NotifyRetainerVentures { get; set; }
-    public bool NotifyDailiesReset { get; set; }
+    public bool ShowDailiesBadge { get; set; } = true;
     public List<DailyCheckRecord> DailyChecks { get; set; } = new();
     public float ActivityGoalLevels { get; set; } = 1f;
     public int ActivityGoalDuties { get; set; } = 3;

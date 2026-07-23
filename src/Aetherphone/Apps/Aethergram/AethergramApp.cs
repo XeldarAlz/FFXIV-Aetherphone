@@ -55,6 +55,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly PhotoLibrary library;
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
+    private readonly ConductGateService conduct;
     private readonly DropdownMenu scopeMenu = new();
     private readonly DropdownMenu postMenu = new();
     private readonly DropdownMenu.Item[] scopeItems = new DropdownMenu.Item[2];
@@ -129,6 +130,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         composeSession = new PhotoComposeSession(library, wallpaperImages);
         this.images = images;
         this.social = social;
+        this.conduct = conduct;
         router = new ViewRouter<AethergramRoute>(AethergramRoute.Home);
         drawView = DrawView;
         back = () => router.Pop();
@@ -164,7 +166,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
         }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
             () => router.Push(AethergramRoute.EditProfile), () => StartCompose(true), OpenProfile, OpenUserList, back,
-            () => conduct.ShowRules(Id));
+            null);
     }
 
     public void OnOpened()
@@ -339,11 +341,20 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     private void DrawFeedTab(Rect area)
     {
-        profile.Tick(ImGui.GetIO().DeltaTime);
-        profile.TickRefresh(activeScope);
         DrawFeedList(area, activeScope);
     }
 
+    private void RefreshActiveFeed()
+    {
+        if (!store.IsSignedIn || store.IsLoading(activeScope))
+        {
+            return;
+        }
+
+        feedScrollTopPending = true;
+        store.RefreshFeed(activeScope);
+        stories.RefreshTray();
+    }
 
     private void DrawActivityTab(Rect area)
     {
@@ -367,8 +378,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     {
         if (tab == AethergramTab.Home && activeTab == AethergramTab.Home)
         {
-            feedScrollTopPending = true;
-            store.RefreshFeed(activeScope);
+            RefreshActiveFeed();
             return;
         }
 
