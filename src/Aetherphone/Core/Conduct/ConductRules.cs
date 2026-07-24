@@ -79,7 +79,20 @@ internal static class ConductRules
             new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null, L.Conduct.VelvetNotAllowed)),
     };
 
-    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet };
+    public static readonly ConductGate Muster = new()
+    {
+        AppId = "muster",
+        Version = 1,
+        CountdownSeconds = 30f,
+        Icon = FontAwesomeIcon.Bullhorn,
+        Title = L.Conduct.MusterTitle,
+        Intro = L.Conduct.MusterIntro,
+        Sections = WithPlatform(
+            new ConductSection(ConductTone.Encouraged, L.Conduct.SectionEncouraged, null, L.Conduct.MusterEncouraged),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null, L.Conduct.MusterNotAllowed)),
+    };
+
+    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet, Muster };
 
     public static ConductGate? For(string appId)
     {

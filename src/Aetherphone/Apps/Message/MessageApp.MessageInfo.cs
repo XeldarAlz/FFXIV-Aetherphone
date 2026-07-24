@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
+using Aetherphone.Core.Muster;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -77,6 +78,10 @@ internal sealed partial class MessageApp
         else if (LocationShare.TryParse(message.Body, out var location))
         {
             text = LocationShare.Summary(location);
+        }
+        else if (MusterShare.IsToken(message.Body))
+        {
+            text = Loc.T(L.Muster.InvitePreview);
         }
         else
         {

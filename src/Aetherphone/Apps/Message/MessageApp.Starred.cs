@@ -56,12 +56,13 @@ internal sealed partial class MessageApp
             Typography.FitText(title, textWidth, 0.88f, FontWeight.SemiBold), theme.TextStrong, 0.88f,
             FontWeight.SemiBold);
         var previewLeft = origin.X + pad;
-        if (entry.Kind is 1 or 3 or ChatText.LocationKind)
+        if (entry.Kind is 1 or 3 or ChatText.LocationKind or ChatText.MusterKind)
         {
             var glyph = entry.Kind switch
             {
                 3 => FontAwesomeIcon.Microphone,
                 ChatText.LocationKind => FontAwesomeIcon.MapMarkerAlt,
+                ChatText.MusterKind => FontAwesomeIcon.Bullhorn,
                 _ => FontAwesomeIcon.Camera,
             };
             AppSkin.Icon(new Vector2(previewLeft + 6f * scale, origin.Y + 38f * scale), glyph.ToIconString(),

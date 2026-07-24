@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -210,6 +211,13 @@ internal sealed partial class MessageApp
         {
             AppSkin.Icon(new Vector2(markerRight - 12f * scale, origin.Y + 18f * scale),
                 FontAwesomeIcon.BellSlash.ToIconString(), ui.MutedInk, 0.6f);
+            markerRight -= 20f * scale;
+        }
+
+        if (!item.IsGroup && musters.ContactMusterFor(item.OtherUserId) is not null)
+        {
+            AppSkin.Icon(new Vector2(markerRight - 12f * scale, origin.Y + 18f * scale),
+                FontAwesomeIcon.Bullhorn.ToIconString(), AppAccents.For(MusterStore.AppId), 0.6f);
             markerRight -= 20f * scale;
         }
 

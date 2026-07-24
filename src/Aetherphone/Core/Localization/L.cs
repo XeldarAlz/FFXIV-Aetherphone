@@ -175,6 +175,7 @@ internal static class L
         public static readonly LocString FindPeople = new("app.findpeople", "Find People");
         public static readonly LocString Feedback = new("app.feedback", "Feedback");
         public static readonly LocString Polls = new("app.polls", "Polls");
+        public static readonly LocString Muster = new("app.muster", "Muster");
         public static readonly LocString Calendar = new("app.calendar", "Calendar");
         public static readonly LocString Notes = new("app.notes", "Notes");
         public static readonly LocString Calculator = new("app.calculator", "Calculator");
@@ -239,6 +240,9 @@ internal static class L
         public static readonly LocString VenuesSub = new("storeCopy.venuesSub", "Nightlife, mapped");
         public static readonly LocString VenuesBody = new("storeCopy.venuesBody",
             "Find player-run venues, opening hours and directions without leaving the game.");
+        public static readonly LocString MusterSub = new("storeCopy.musterSub", "Call a meetup, see who's coming");
+        public static readonly LocString MusterBody = new("storeCopy.musterBody",
+            "Announce a spontaneous meetup with a real map location and watch the RSVPs land with one tap. Your friends always see your musters, everyone else can find the public ones, and it all disappears when the muster ends.");
         public static readonly LocString LinkpearlSub = new("storeCopy.linkpearlSub", "Every channel, one app");
         public static readonly LocString LinkpearlBody = new("storeCopy.linkpearlBody",
             "Linkshells, tells and free company chat gathered into one readable place, with mute controls and search.");
@@ -488,6 +492,95 @@ internal static class L
         public static readonly LocString TryAgain = new("collections.tryAgain", "Try again");
         public static readonly LocString NoResults = new("collections.noResults", "No items match your filters.");
         public static readonly LocString CompletePercent = new("collections.completePercent", "{0}% complete");
+    }
+
+    internal static class Muster
+    {
+        public static readonly LocString NotifStartedTitle = new("muster.notifStartedTitle", "Muster called");
+        public static readonly LocString NotifStartedBody = new("muster.notifStartedBody", "{0} called a muster");
+        public static readonly LocString NotifRsvpTitle = new("muster.notifRsvpTitle", "On their way");
+        public static readonly LocString NotifRsvpBody = new("muster.notifRsvpBody", "{0} is on their way to your muster");
+        public static readonly LocString NotifEndedTitle = new("muster.notifEndedTitle", "Muster called off");
+        public static readonly LocString NotifEndedBody = new("muster.notifEndedBody", "A muster you joined was called off early");
+        public static readonly LocString SetUpAccount = new("muster.setUpAccount", "Set up your account in Settings");
+        public static readonly LocString CategorySocial = new("muster.categorySocial", "Social");
+        public static readonly LocString CategoryRoleplay = new("muster.categoryRoleplay", "Roleplay");
+        public static readonly LocString CategoryPve = new("muster.categoryPve", "PvE");
+        public static readonly LocString CategoryPvp = new("muster.categoryPvp", "PvP");
+        public static readonly LocString CategoryHuntTrain = new("muster.categoryHuntTrain", "Hunt train");
+        public static readonly LocString CategoryTreasureHunt = new("muster.categoryTreasureHunt", "Treasure hunt");
+        public static readonly LocString CategoryDeepDungeon = new("muster.categoryDeepDungeon", "Deep dungeon");
+        public static readonly LocString CategoryFishing = new("muster.categoryFishing", "Fishing");
+        public static readonly LocString CategoryGoldSaucer = new("muster.categoryGoldSaucer", "Gold Saucer");
+        public static readonly LocString CategoryGpose = new("muster.categoryGpose", "Gpose");
+        public static readonly LocString CategoryFates = new("muster.categoryFates", "FATEs");
+        public static readonly LocString CategoryOther = new("muster.categoryOther", "Other");
+        public static readonly LocString RegionNa = new("muster.regionNa", "NA");
+        public static readonly LocString RegionEu = new("muster.regionEu", "EU");
+        public static readonly LocString RegionJp = new("muster.regionJp", "JP");
+        public static readonly LocString RegionOce = new("muster.regionOce", "OCE");
+        public static readonly LocString YourMuster = new("muster.yourMuster", "Your muster");
+        public static readonly LocString StartMuster = new("muster.startMuster", "Start a muster");
+        public static readonly LocString FriendsSection = new("muster.friendsSection", "Friends");
+        public static readonly LocString HappeningNow = new("muster.happeningNow", "Happening now");
+        public static readonly LocString StartingSoon = new("muster.startingSoon", "Starting soon");
+        public static readonly LocString LoadMore = new("muster.loadMore", "Load more");
+        public static readonly LocString EmptyTitle = new("muster.emptyTitle", "No musters right now");
+        public static readonly LocString EmptyHint = new("muster.emptyHint", "Start one and let people know where to find you");
+        public static readonly LocString StartsIn = new("muster.startsIn", "in {0}");
+        public static readonly LocString EndsIn = new("muster.endsIn", "ends in {0}");
+        public static readonly LocString StartsAt = new("muster.startsAt", "starts at {0}");
+        public static readonly LocString RunsFor = new("muster.runsFor", "runs for {0}");
+        public static readonly LocString DurationHoursMinutes = new("muster.durationHoursMinutes", "{0}h {1}m");
+        public static readonly LocString DurationHours = new("muster.durationHours", "{0}h");
+        public static readonly LocString DurationMinutes = new("muster.durationMinutes", "{0}m");
+        public static readonly LocString GoingCount = new("muster.goingCount", "{0} going");
+        public static readonly LocString AtCapacity = new("muster.atCapacity", "at capacity");
+        public static readonly LocString UnavailableTitle = new("muster.unavailableTitle", "Nothing to see here");
+        public static readonly LocString UnavailableHint = new("muster.unavailableHint", "This muster has ended or is unavailable");
+        public static readonly LocString FlagOnMap = new("muster.flagOnMap", "Flag on map");
+        public static readonly LocString CopyDetails = new("muster.copyDetails", "Copy details");
+        public static readonly LocString Copied = new("muster.copied", "Copied");
+        public static readonly LocString OnMyWay = new("muster.onMyWay", "On my way");
+        public static readonly LocString CantMakeIt = new("muster.cantMakeIt", "Can't make it");
+        public static readonly LocString ManageAction = new("muster.manageAction", "Manage");
+        public static readonly LocString ReportTitle = new("muster.reportTitle", "Report muster");
+        public static readonly LocString WhereSection = new("muster.whereSection", "Where");
+        public static readonly LocString NewMuster = new("muster.newMuster", "New muster");
+        public static readonly LocString CategorySection = new("muster.categorySection", "Category");
+        public static readonly LocString DescriptionLabel = new("muster.descriptionLabel", "What's happening");
+        public static readonly LocString UseMyLocation = new("muster.useMyLocation", "Use my location");
+        public static readonly LocString ClearLocation = new("muster.clearLocation", "Clear");
+        public static readonly LocString MeetingSpot = new("muster.meetingSpot", "Meeting spot");
+        public static readonly LocString WhenSection = new("muster.whenSection", "When");
+        public static readonly LocString StartLabel = new("muster.startLabel", "Starts");
+        public static readonly LocString DurationLabel = new("muster.durationLabel", "For");
+        public static readonly LocString Now = new("muster.now", "Now");
+        public static readonly LocString WhoSection = new("muster.whoSection", "Who");
+        public static readonly LocString LimitAttendance = new("muster.limitAttendance", "Limit attendance");
+        public static readonly LocString UnlistWhenFull = new("muster.unlistWhenFull", "Hide from directory when full");
+        public static readonly LocString ListPublicly = new("muster.listPublicly", "List publicly");
+        public static readonly LocString PublicHint = new("muster.publicHint", "Your contacts always see your muster, even when it is not listed publicly.");
+        public static readonly LocString CallIt = new("muster.callIt", "Call the muster");
+        public static readonly LocString NeedWhere = new("muster.needWhere", "Add your location or name a meeting spot");
+        public static readonly LocString NeedDescription = new("muster.needDescription", "Say what you are mustering for");
+        public static readonly LocString ErrorAlreadyHosting = new("muster.errorAlreadyHosting", "You are already hosting a muster");
+        public static readonly LocString ErrorInvalid = new("muster.errorInvalid", "Check the details and try again");
+        public static readonly LocString ErrorRateLimited = new("muster.errorRateLimited", "Too many musters in a row, try again later");
+        public static readonly LocString ErrorFailed = new("muster.errorFailed", "Couldn't start the muster");
+        public static readonly LocString AttendeesSection = new("muster.attendeesSection", "Who's coming");
+        public static readonly LocString NoAttendees = new("muster.noAttendees", "No one yet, give it a moment");
+        public static readonly LocString CapacityLine = new("muster.capacityLine", "{0} of {1} spots filled");
+        public static readonly LocString ListedPublicly = new("muster.listedPublicly", "Listed publicly");
+        public static readonly LocString ListedPrivately = new("muster.listedPrivately", "Contacts only");
+        public static readonly LocString CopyInvite = new("muster.copyInvite", "Copy invite");
+        public static readonly LocString EndMuster = new("muster.endMuster", "End muster");
+        public static readonly LocString EndConfirm = new("muster.endConfirm", "End this muster? It disappears for everyone right away.");
+        public static readonly LocString EndFailed = new("muster.endFailed", "Couldn't end the muster");
+        public static readonly LocString Ending = new("muster.ending", "Ending…");
+        public static readonly LocString InvitePreview = new("muster.invitePreview", "Muster invite");
+        public static readonly LocString InviteUnavailable = new("muster.inviteUnavailable", "This muster has ended");
+        public static readonly LocString InviteOpen = new("muster.inviteOpen", "View muster");
     }
 
     internal static class Venues
@@ -2826,6 +2919,27 @@ internal static class L
             new("conduct.velvet.no.6", "Harassment"),
             new("conduct.velvet.no.7", "Gore intended to shock"),
             new("conduct.velvet.no.8", "Sale or promotion of illegal services"),
+        };
+
+        public static readonly LocString MusterTitle = new("conduct.muster.title", "Muster Ground Rules");
+        public static readonly LocString MusterIntro = new("conduct.muster.intro", "Musters are players meeting up with players: say what you are doing, where to find you, and when. A few rules keep the directory honest.");
+
+        public static readonly LocString[] MusterEncouraged =
+        {
+            new("conduct.muster.enc.1", "Spontaneous meetups and hangouts"),
+            new("conduct.muster.enc.2", "Hunt trains, map parties, and duty groups"),
+            new("conduct.muster.enc.3", "Roleplay scenes and social gatherings"),
+            new("conduct.muster.enc.4", "Showing up when you say you will"),
+            new("conduct.muster.enc.5", "Ending your muster once it is done"),
+        };
+
+        public static readonly LocString[] MusterNotAllowed =
+        {
+            new("conduct.muster.no.1", "Advertising venues, clubs, or anything with a business behind it"),
+            new("conduct.muster.no.2", "Paid services of any kind, whether gil or real money"),
+            new("conduct.muster.no.3", "NSFW descriptions or meeting spots"),
+            new("conduct.muster.no.4", "Musters aimed at singling out or harassing a player"),
+            new("conduct.muster.no.5", "Fake locations or misleading listings"),
         };
 
         public static readonly LocString PlatformTitle = new("conduct.platform.title", "Platform-wide Standards");

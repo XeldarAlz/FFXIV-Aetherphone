@@ -353,12 +353,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             return;
         }
 
-        var kind = KindOf(message);
-        if (kind == 0 && LocationShare.IsToken(BodyOf(message)))
-        {
-            kind = ChatText.LocationKind;
-        }
-
+        var kind = ChatText.EffectiveKind(BodyOf(message), KindOf(message));
         menuController.Open(messageId, SenderIdOf(message) == MyUserId, kind);
     }
 
@@ -391,8 +386,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     protected void BeginEdit(string messageId)
     {
         var message = FindMessage(messageId);
-        if (message is null || KindOf(message) != 0 || IsDeleted(message)
-            || LocationShare.IsToken(BodyOf(message)))
+        if (message is null || IsDeleted(message)
+            || ChatText.EffectiveKind(BodyOf(message), KindOf(message)) != 0)
         {
             return;
         }

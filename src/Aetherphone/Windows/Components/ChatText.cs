@@ -1,5 +1,6 @@
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
+using Aetherphone.Core.Muster;
 
 namespace Aetherphone.Windows.Components;
 
@@ -12,6 +13,8 @@ internal static class ChatText
     private const int PreviewLength = 90;
 
     public const int LocationKind = 6;
+
+    public const int MusterKind = 7;
 
     public static string QuotePreview(string? body, int kind)
     {
@@ -41,12 +44,27 @@ internal static class ChatText
             return Loc.T(L.DirectMessages.LocationPreview);
         }
 
+        if (kind == MusterKind || MusterShare.IsToken(text))
+        {
+            return Loc.T(L.Muster.InvitePreview);
+        }
+
         return UiText.Truncate(text.Replace('\n', ' ').Replace('\r', ' '), PreviewLength);
     }
 
     public static int EffectiveKind(string? body, int kind)
     {
-        return kind == 0 && LocationShare.IsToken(body) ? LocationKind : kind;
+        if (kind != 0)
+        {
+            return kind;
+        }
+
+        if (LocationShare.IsToken(body))
+        {
+            return LocationKind;
+        }
+
+        return MusterShare.IsToken(body) ? MusterKind : kind;
     }
 
     public static string ListPreview(string? text)
@@ -54,6 +72,11 @@ internal static class ChatText
         if (LocationShare.IsToken(text))
         {
             return Loc.T(L.DirectMessages.LocationPreview);
+        }
+
+        if (MusterShare.IsToken(text))
+        {
+            return Loc.T(L.Muster.InvitePreview);
         }
 
         return text ?? string.Empty;

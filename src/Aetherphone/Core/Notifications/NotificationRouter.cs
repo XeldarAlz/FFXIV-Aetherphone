@@ -1,5 +1,6 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Linkpearl;
+using Aetherphone.Core.Muster;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -10,6 +11,7 @@ internal sealed class NotificationRouter
     private const string VelvetAppId = "velvet";
     private const string ChirperAppId = "chirper";
     private const string AethergramAppId = "aethergram";
+    private const string MusterAppId = "muster";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -30,9 +32,11 @@ internal sealed class NotificationRouter
     private readonly DmLauncher dmLauncher;
     private readonly GramDmLauncher gramDmLauncher;
     private readonly SocialLauncher socialLauncher;
+    private readonly MusterLauncher musterLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher)
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher,
+        MusterLauncher musterLauncher)
     {
         this.navigation = navigation;
         this.notifications = notifications;
@@ -41,6 +45,7 @@ internal sealed class NotificationRouter
         this.dmLauncher = dmLauncher;
         this.gramDmLauncher = gramDmLauncher;
         this.socialLauncher = socialLauncher;
+        this.musterLauncher = musterLauncher;
     }
 
     public void Open(PhoneNotification notification)
@@ -76,6 +81,10 @@ internal sealed class NotificationRouter
                  && !string.IsNullOrEmpty(notification.GroupKey))
         {
             gramDmLauncher.Request(notification.GroupKey);
+        }
+        else if (notification.AppId == MusterAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            musterLauncher.RequestDetail(notification.GroupKey);
         }
         else if (SocialLinkFor(notification) is { } link)
         {

@@ -11,6 +11,7 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Net;
@@ -81,6 +82,8 @@ internal sealed class PhoneServices : IDisposable
     public required PlaybackHub Playback { get; init; }
     public required GameStatsStore GameStats { get; init; }
     public required VenuesService Venues { get; init; }
+    public required MusterStore Musters { get; init; }
+    public required MusterLauncher MusterLauncher { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
     public required ActivityTracker Activity { get; init; }
@@ -177,6 +180,8 @@ internal sealed class PhoneServices : IDisposable
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
             gameData, configuration, confirm);
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm);
+        var musters = new MusterStore(aethernetSession, aethernet.Musters, notifications, configuration,
+            visibility, realtimeSignals);
         return new PhoneServices
         {
             Configuration = configuration,
@@ -226,6 +231,8 @@ internal sealed class PhoneServices : IDisposable
             Playback = playback,
             GameStats = gameStats,
             Venues = venues,
+            Musters = musters,
+            MusterLauncher = new MusterLauncher(),
             Collections = collections,
             InventoryCapture = inventoryCapture,
             Activity = activity,
@@ -255,6 +262,7 @@ internal sealed class PhoneServices : IDisposable
         RingNotifier.Dispose();
         Activity.Dispose();
         Venues.Dispose();
+        Musters.Dispose();
         SongPlayer.Dispose();
         SongSearch.Dispose();
         RadioPlayer.Dispose();

@@ -3,6 +3,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Shell.Home;
@@ -69,7 +70,9 @@ internal sealed class PhoneShell : IDisposable
         navigation.AppOpened += director.OnAppOpened;
         navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
-            services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher);
+            services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher,
+            services.MusterLauncher);
+        MusterChatBridge.Bind(services.Musters, services.MusterLauncher, navigation);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);
@@ -356,6 +359,7 @@ internal sealed class PhoneShell : IDisposable
 
     public void Dispose()
     {
+        MusterChatBridge.Clear();
         banner.Shown -= OnBannerShown;
         banner.Dispose();
         minimizedView.Dispose();

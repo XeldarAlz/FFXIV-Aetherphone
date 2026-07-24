@@ -104,6 +104,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
     public bool VenueAllDataCenters { get; set; }
     public bool VenueNotifyNewEvents { get; set; } = true;
     public List<string> VenueFavorites { get; set; } = new();
+    public int MusterCategoryFilter { get; set; }
+    public int MusterRegionFilter { get; set; }
     public List<uint> MapFavorites { get; set; } = new();
     public List<RadioStationRecord> RadioFavorites { get; set; } = new();
     public const int VelvetGateVersion = 1;

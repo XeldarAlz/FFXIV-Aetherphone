@@ -3,6 +3,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -327,6 +328,11 @@ internal sealed class ChatTranscript
                          && LocationShare.TryParse(message.Body, out var location))
                 {
                     DrawLocationBubble(message, index, location, model);
+                }
+                else if ((message.Flags & TranscriptFlags.Deleted) == 0
+                         && MusterShare.TryParse(message.Body, out var musterId))
+                {
+                    DrawMusterBubble(message, index, musterId, model);
                 }
                 else
                 {
@@ -867,6 +873,150 @@ internal sealed class ChatTranscript
                 {
                     LocationShare.OpenMap(location);
                 }
+            }
+
+            if (model.Interactions is { } interactions && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+            {
+                interactions.OnMessageContext(message.Id);
+            }
+        }
+
+        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
+        ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
+    }
+
+    private void DrawMusterBubble(TranscriptMessage message, int index, string musterId, in ChatTranscriptModel model)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var mine = message.SenderId == model.MyUserId;
+        var placeholder = (message.Flags & TranscriptFlags.Placeholder) != 0;
+        var drawList = ImGui.GetWindowDrawList();
+        var available = ScrollLayout.StableContentWidth();
+        var paddingX = 11f * scale;
+        var paddingY = 9f * scale;
+        var badgeRadius = 16f * scale;
+        var badgeColumn = badgeRadius * 2f + 10f * scale;
+
+        var resolution = MusterChatBridge.Resolve(musterId);
+        var muster = resolution.Muster;
+        var nowUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var over = muster is not null && muster.EndsAtUnix <= nowUnix;
+        var eyebrow = Loc.T(L.Muster.InvitePreview);
+        string title;
+        var hostLine = string.Empty;
+        var detailLine = string.Empty;
+        if (muster is not null && !over)
+        {
+            title = Loc.T(MusterCategories.Label(muster.Category));
+            hostLine = MusterText.Identity(muster);
+            detailLine = muster.StartsAtUnix <= nowUnix
+                ? $"{Loc.T(L.Common.Live)} · {Loc.T(L.Muster.EndsIn, MusterText.Span(muster.EndsAtUnix - nowUnix))}"
+                : Loc.T(L.Muster.StartsIn, MusterText.Span(muster.StartsAtUnix - nowUnix));
+        }
+        else if (resolution.Missed || over)
+        {
+            title = Loc.T(L.Muster.InviteUnavailable);
+        }
+        else
+        {
+            title = Loc.T(L.Common.Loading);
+        }
+
+        var stamp = MeasureStamp(message, mine, scale);
+        var maxTextWidth = available * 0.74f - paddingX * 2f - badgeColumn;
+        var eyebrowSize = Typography.Measure(eyebrow, TextStyles.FootnoteEmphasized);
+        var titleSize = Typography.Measure(title, TextStyles.SubheadlineEmphasized);
+        var hostSize = hostLine.Length > 0 ? Typography.Measure(hostLine, TextStyles.Footnote) : Vector2.Zero;
+        var detailSize = detailLine.Length > 0 ? Typography.Measure(detailLine, TextStyles.Footnote) : Vector2.Zero;
+        var textWidth = MathF.Min(maxTextWidth,
+            MathF.Max(MathF.Max(eyebrowSize.X, titleSize.X), MathF.Max(hostSize.X, detailSize.X)));
+        var forwardLabel = MeasureForwardLabel(message, scale);
+        var contentWidth = MathF.Max(badgeColumn + textWidth, stamp.Width);
+        if (forwardLabel.Y > 0f)
+        {
+            contentWidth = MathF.Max(contentWidth, forwardLabel.X);
+        }
+
+        var textHeight = eyebrowSize.Y + 3f * scale + titleSize.Y
+                         + (hostSize.Y > 0f ? 2f * scale + hostSize.Y : 0f)
+                         + (detailSize.Y > 0f ? 2f * scale + detailSize.Y : 0f);
+        var forwardBlock = forwardLabel.Y > 0f ? forwardLabel.Y + 3f * scale : 0f;
+        var bubbleWidth = contentWidth + paddingX * 2f;
+        var bubbleHeight = paddingY + forwardBlock + textHeight + 4f * scale + stamp.Height + paddingY;
+        var start = ImGui.GetCursorScreenPos();
+        var bubbleMin = new Vector2(mine ? start.X + available - bubbleWidth : start.X, start.Y);
+        var bubbleMax = bubbleMin + new Vector2(bubbleWidth, bubbleHeight);
+        ConsumeScrollTarget(message.Id, bubbleMin.Y);
+        var entrance = entrances.Progress(index);
+        var fx = BubblePop.For(entrance, scale, new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y));
+        var scaledMin = fx.Apply(bubbleMin);
+        var scaledMax = fx.Apply(bubbleMax);
+        var fill = mine ? model.Accent : new Vector4(1f, 1f, 1f, 0.10f);
+        var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
+        var mutedInk = mine ? new Vector4(1f, 1f, 1f, 0.78f) : Palette.WithAlpha(model.MutedInk, 0.95f);
+        var accentInk = mine ? new Vector4(1f, 1f, 1f, 0.88f) : model.Accent;
+        if (placeholder)
+        {
+            fill = Palette.WithAlpha(fill, fill.W * 0.55f);
+            ink = model.MutedInk;
+        }
+
+        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * fx.Alpha)));
+        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * fx.Pop, mine, model);
+        var contentTop = bubbleMin.Y + paddingY;
+        if (forwardBlock > 0f)
+        {
+            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + paddingX, contentTop), fx, mine, model, scale);
+            contentTop += forwardBlock;
+        }
+
+        var badgeCenter = new Vector2(bubbleMin.X + paddingX + badgeRadius, contentTop + textHeight * 0.5f);
+        var badgeFill = mine ? new Vector4(1f, 1f, 1f, 0.20f) : Palette.WithAlpha(model.Accent, 0.18f);
+        drawList.AddCircleFilled(fx.Apply(badgeCenter), badgeRadius * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(badgeFill, badgeFill.W * fx.Alpha)), 32);
+        AppSkin.Icon(drawList, fx.Apply(badgeCenter), FontAwesomeIcon.Bullhorn.ToIconString(),
+            Palette.WithAlpha(accentInk, accentInk.W * fx.Alpha), 1.0f * fx.Pop);
+
+        var textLeft = bubbleMin.X + paddingX + badgeColumn;
+        Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+            Typography.FitText(eyebrow, textWidth, TextStyles.FootnoteEmphasized),
+            Palette.WithAlpha(accentInk, accentInk.W * fx.Alpha),
+            TextStyles.FootnoteEmphasized.Scale * fx.Pop, TextStyles.FootnoteEmphasized.Weight);
+        contentTop += eyebrowSize.Y + 3f * scale;
+        Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+            Typography.FitText(title, textWidth, TextStyles.SubheadlineEmphasized),
+            Palette.WithAlpha(ink, ink.W * fx.Alpha),
+            TextStyles.SubheadlineEmphasized.Scale * fx.Pop, TextStyles.SubheadlineEmphasized.Weight);
+        contentTop += titleSize.Y;
+        if (hostSize.Y > 0f)
+        {
+            contentTop += 2f * scale;
+            Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+                Typography.FitText(hostLine, textWidth, TextStyles.Footnote),
+                Palette.WithAlpha(mutedInk, mutedInk.W * fx.Alpha),
+                TextStyles.Footnote.Scale * fx.Pop, TextStyles.Footnote.Weight);
+            contentTop += hostSize.Y;
+        }
+
+        if (detailSize.Y > 0f)
+        {
+            contentTop += 2f * scale;
+            Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+                Typography.FitText(detailLine, textWidth, TextStyles.Footnote),
+                Palette.WithAlpha(mutedInk, mutedInk.W * fx.Alpha),
+                TextStyles.Footnote.Scale * fx.Pop, TextStyles.Footnote.Weight);
+        }
+
+        var timeColor = mine ? new Vector4(1f, 1f, 1f, 0.72f) : Palette.WithAlpha(model.MutedInk, 0.95f);
+        DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), fx, timeColor);
+        if (entrance >= 1f && Hovering(bubbleMin, bubbleMax))
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            HoverTooltip.Show(new Rect(bubbleMin, bubbleMax), Loc.T(L.Muster.InviteOpen), HoverLabelSide.Above);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                MusterChatBridge.Open(musterId);
             }
 
             if (model.Interactions is { } interactions && ImGui.IsMouseClicked(ImGuiMouseButton.Right))

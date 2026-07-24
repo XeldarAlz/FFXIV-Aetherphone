@@ -172,6 +172,24 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    public static readonly AppPalette Muster = new()
+    {
+        Accent = AppAccents.For("muster"),
+        TitleInk = new(0.99f, 0.97f, 0.94f, 1f),
+        BodyInk = new(0.95f, 0.90f, 0.84f, 0.96f),
+        MutedInk = new(0.80f, 0.72f, 0.62f, 0.85f),
+        HeaderInk = new(0.99f, 0.80f, 0.55f, 0.95f),
+        HeadingInk = new(0.99f, 0.94f, 0.87f, 1f),
+        BackdropTop = new(0.16f, 0.10f, 0.05f, 1f),
+        BackdropBottom = new(0.05f, 0.03f, 0.02f, 1f),
+        BloomTop = new(0.94f, 0.55f, 0.20f, 0.22f),
+        BloomBottom = new(0.50f, 0.26f, 0.08f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static readonly AppPalette Feedback = new()
     {
         Accent = AppAccents.For("feedback"),
