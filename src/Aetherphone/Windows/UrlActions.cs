@@ -24,6 +24,23 @@ internal static class UrlActions
         }
     }
 
+    public static void OpenFolder(string path)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+
+        }
+        catch (Exception e)
+        {
+            Plugin.Log.Error($"Failed to open the folder: {path}", e);
+        }
+    }
+
     private static bool IsWebUrl(string url)
     {
         if (!Uri.TryCreate(url, UriKind.Absolute, out var parsed))

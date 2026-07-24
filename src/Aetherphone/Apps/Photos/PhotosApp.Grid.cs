@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -299,12 +300,7 @@ internal sealed partial class PhotosApp
         if (!ComposeFab.Draw(rect, "##openFolderFab", Accent, FontAwesomeIcon.Folder.ToIconString(),
                              Loc.T(L.Photos.OpenFolder), "photos.openFolder")) return;
         
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "explorer.exe",
-            Arguments = $"\"{library.GetDirectory()}\"",
-            UseShellExecute = true
-        });
+        UrlActions.OpenFolder(library.GetDirectory());
     }
 
     private bool DrawAlbumCard(ImDrawListPtr drawList, Rect rect, string title, int coverStart, int coverCount,
