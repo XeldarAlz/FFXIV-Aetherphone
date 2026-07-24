@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -40,6 +41,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly LodestoneService lodestone;
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
+    private readonly ConductGateService conduct;
     private readonly AvatarComposer avatar;
     private readonly SocialProfilePages profile;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
@@ -52,11 +54,18 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly EmojiComposer composeEmoji = new();
     private readonly EmojiComposer commentEmoji = new();
     private readonly AvatarLightbox avatarLightbox = new();
+    private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
+    {
+        { SocialFeedScope.ForYou, new() },
+        { SocialFeedScope.Following, new() }
+    };
     private readonly ViewRouter<ChirperRoute> router;
     private readonly RouterDraw<ChirperRoute> drawView;
     private readonly Action back;
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
+    private readonly SocialActivityFeed activityFeed;
+    private readonly Action loadOlderActivity;
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
@@ -75,7 +84,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     public ChirperApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
         Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages,
-        ConfirmService confirm, ReportService report)
+        ConfirmService confirm, ReportService report, ConductGateService conduct)
     {
         store = new ChirperStore(session, net.Account, net.Social, net.Safety, net.Media);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -86,6 +95,9 @@ internal sealed partial class ChirperApp : IPhoneApp
         this.lodestone = lodestone;
         this.images = images;
         this.social = social;
+        this.conduct = conduct;
+        activityFeed = new SocialActivityFeed(SocialActivity.ChirperApp, session, net.Account);
+        loadOlderActivity = activityFeed.LoadOlder;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Chirper.ChangePhoto, L.Chirper.ImportFromPc, L.Photos.NoPhotos,
                 L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library,
@@ -125,7 +137,8 @@ internal sealed partial class ChirperApp : IPhoneApp
             DeleteCommentConfirmMessage = L.Chirper.DeleteCommentConfirmMessage,
             DeleteCommentFailed = L.Chirper.DeleteCommentFailed,
         }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
-            () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back);
+            () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back,
+            null);
     }
 
     public void OnOpened()
@@ -244,8 +257,6 @@ internal sealed partial class ChirperApp : IPhoneApp
             profile.EnsureLoaded(activeScope);
         }
 
-        profile.Tick(ImGui.GetIO().DeltaTime);
-        profile.TickRefresh(activeScope);
         var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y + 6f * scale), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(listRect, "##chirperComposeFab", Accent, FontAwesomeIcon.Feather.ToIconString(),
@@ -264,27 +275,49 @@ internal sealed partial class ChirperApp : IPhoneApp
         AppHeader.Draw(context, Loc.T(L.Social.ActivityTitle), back);
         var top = area.Min.Y + AppHeader.Height * ImGuiHelpers.GlobalScale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        SocialActivityList.Draw(body, ui, AppPalettes.Chirper, theme, social.Latest, Id, images, lodestone,
-            openActivityActor, openActivityPost);
+        activityFeed.EnsureFresh(social.Latest);
+        SocialActivityList.Draw(body, ui, AppPalettes.Chirper, theme, activityFeed.Items, Id, images, lodestone,
+            openActivityActor, openActivityPost, loadOlderActivity);
     }
 
     private void OpenActivity()
     {
         social.RefreshNow();
         social.MarkSeen(Id);
+        activityFeed.Invalidate();
         router.Push(ChirperRoute.Activity);
+    }
+
+    private void RefreshActiveFeed()
+    {
+        if (!store.IsSignedIn || store.IsLoading(activeScope))
+        {
+            return;
+        }
+
+        feedScrollTopPending = true;
+        RefreshFeed(activeScope);
+    }
+
+    private void RefreshFeed(SocialFeedScope scope)
+    {
+        actions.Reset();
+        store.RefreshFeed(scope);
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
     {
         var snapshot = store.Feed(scope);
-        using (AppSurface.Begin(listRect))
+        using (var surface = AppSurface.Begin(listRect))
         {
             if (feedScrollTopPending)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 feedScrollTopPending = false;
             }
+
+            pullToRefresh[scope].Draw(listRect, surface.Pull, surface.Dragging,
+                store.IsLoading(scope), AppPalettes.Chirper.MutedInk, () => RefreshFeed(scope));
 
             if (snapshot.Length == 0)
             {
@@ -644,10 +677,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                store.ToggleReaction(post, kind);
-            }
+        }
+
+        if (UiInteract.Click(min, max, hovered))
+        {
+            store.ToggleReaction(post, kind);
         }
 
         return chipWidth + 6f * scale;
@@ -1076,8 +1110,9 @@ internal sealed partial class ChirperApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         var eased = Easing.EaseOutQuint(Math.Clamp(reveal, 0f, 1f));
         var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.6f, 0f, 1f));
-        var hovered = interactive && UiInteract.Hover(center - new Vector2(hitRadius, hitRadius),
-            center + new Vector2(hitRadius, hitRadius));
+        var hitMin = center - new Vector2(hitRadius, hitRadius);
+        var hitMax = center + new Vector2(hitRadius, hitRadius);
+        var hovered = interactive && UiInteract.Hover(hitMin, hitMax);
         if (background.W > 0f)
         {
             var fill = hovered ? Palette.Mix(background, theme.TextStrong, 0.08f) : background;
@@ -1094,11 +1129,10 @@ internal sealed partial class ChirperApp : IPhoneApp
 
         if (reveal > 0.6f)
         {
-            HoverTooltip.Show(new Rect(center - new Vector2(hitRadius, hitRadius),
-                center + new Vector2(hitRadius, hitRadius)), tooltip, HoverLabelSide.Above);
+            HoverTooltip.Show(new Rect(hitMin, hitMax), tooltip, HoverLabelSide.Above);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 
 
@@ -1140,10 +1174,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                OpenUserList(post.Id, UserListKind.Likers);
-            }
+        }
+
+        if (UiInteract.Click(pos, pos + size, hovered))
+        {
+            OpenUserList(post.Id, UserListKind.Likers);
         }
 
         ImGui.SetCursorScreenPos(origin);

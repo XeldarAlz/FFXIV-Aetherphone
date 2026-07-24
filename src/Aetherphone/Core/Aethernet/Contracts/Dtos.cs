@@ -44,9 +44,16 @@ internal sealed record UserDto(
     bool SharePresence = true,
     int MentionPolicy = 0,
     int TagPolicy = 0,
-    bool RequireTagApproval = false) : IIdentified;
+    bool RequireTagApproval = false,
+    bool FollowsYou = false,
+    int FollowedByCount = 0,
+    string[]? FollowedByPreview = null,
+    bool CanMessage = false,
+    int MessagePolicy = 0) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
+
+internal sealed record UpdateMessagePrivacyRequest(int? MessagePolicy);
 
 internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffsetMinutes);
 
@@ -215,7 +222,9 @@ internal sealed record VelvetProfileDto(
     long GateAckAtUnix,
     bool ShareTimeZone = true,
     int? UtcOffsetMinutes = null,
-    int WhoCanMessage = 0);
+    int WhoCanMessage = 0,
+    int Sexuality = 0,
+    string[]? Kinks = null);
 
 internal sealed record UpdateVelvetProfileRequest(
     string? Intro,
@@ -227,7 +236,9 @@ internal sealed record UpdateVelvetProfileRequest(
     int? RelationshipStatus,
     bool? Discoverable,
     int? WhoCanMessage = null,
-    int? Gender = null);
+    int? Gender = null,
+    int? Sexuality = null,
+    string[]? Kinks = null);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 
@@ -367,7 +378,7 @@ internal sealed record NotificationDto(
     long CreatedAtUnix,
     string? CommentId = null) : IIdentified;
 
-internal sealed record NotificationPage(NotificationDto[] Items);
+internal sealed record NotificationPage(NotificationDto[] Items, string? NextCursor = null);
 
 internal sealed record CreateFeedbackRequest(string Text, string[] ImageKeys);
 

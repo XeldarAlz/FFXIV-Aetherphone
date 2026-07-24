@@ -189,7 +189,7 @@ internal sealed partial class MusicApp
             if (index == list.Count)
             {
                 DrawNewPlaylistTile(drawList, min, max, rounding, hovered, scale);
-                if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                if (UiInteract.Click(min, max, hovered))
                 {
                     BeginCreateFromHome();
                 }
@@ -214,7 +214,7 @@ internal sealed partial class MusicApp
             var count = Typography.FitText(SongCountLabel(playlist.Songs.Count), textWidth, TextStyles.Caption1);
             Typography.Draw(new Vector2(min.X + 12f * scale, max.Y - 18f * scale), count,
                 new Vector4(1f, 1f, 1f, 0.82f), TextStyles.Caption1);
-            if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(min, max, hovered))
             {
                 OpenPlaylist(playlist.Id);
             }
@@ -336,9 +336,12 @@ internal sealed partial class MusicApp
         var newRowTop = card.Max.Y - PickPad * scale - PickNewRowHeight * scale;
         var rowsRegion = new Rect(new Vector2(card.Min.X + 6f * scale, card.Min.Y + PickHeaderHeight * scale),
             new Vector2(card.Max.X - 6f * scale, newRowTop));
+        var rowsKey = ImGui.GetID("##musicPickRows");
         ImGui.SetCursorScreenPos(rowsRegion.Min);
-        using (ImRaii.Child("##musicPickRows", rowsRegion.Size, false, ImGuiWindowFlags.NoBackground))
+        using (ImRaii.Child("##musicPickRows", rowsRegion.Size, false,
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
+            DragScrollHost.Begin(rowsKey);
             var list = playlists.All;
             if (list.Count == 0)
             {
@@ -645,7 +648,7 @@ internal sealed partial class MusicApp
             return;
         }
 
-        if (!hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!UiInteract.Click(min, max, hovered))
         {
             return;
         }

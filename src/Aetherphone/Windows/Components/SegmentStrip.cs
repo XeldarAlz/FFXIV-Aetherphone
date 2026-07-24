@@ -42,13 +42,13 @@ internal static class SegmentStrip
         {
             var segmentMin = new Vector2(trackMin.X + index * segmentWidth, trackMin.Y);
             var segmentMax = new Vector2(trackMin.X + (index + 1) * segmentWidth, trackMax.Y);
-            if (!ImGui.IsMouseHoveringRect(segmentMin, segmentMax))
+            var segmentHovered = UiInteract.Hover(segmentMin, segmentMax);
+            if (segmentHovered)
             {
-                continue;
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(segmentMin, segmentMax, segmentHovered))
             {
                 result = index;
             }

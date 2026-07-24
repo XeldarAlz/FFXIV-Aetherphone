@@ -1,5 +1,6 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -21,13 +22,25 @@ internal enum WeatherKind
 
 internal readonly record struct SkyPalette(Vector4 Top, Vector4 Bottom, Vector4 Glow, Vector4 Ink)
 {
+    private static Vector4 Paper => new(1f, 1f, 1f, 1f);
     public Vector4 InkSoft => Ink with { W = Ink.W * 0.66f };
     public Vector4 InkFaint => Ink with { W = Ink.W * 0.40f };
     public Vector4 Horizon => Vector4.Lerp(Top, Bottom, 0.5f);
+    public bool LightSky => Ink.X < 0.5f;
+    public Vector4 SurfaceTop => LightSky
+        ? Vector4.Lerp(Horizon, Paper, 0.68f) with { W = 1f }
+        : Vector4.Lerp(Horizon, Paper, 0.17f) with { W = 1f };
+    public Vector4 SurfaceBottom => LightSky
+        ? Vector4.Lerp(Horizon, Paper, 0.46f) with { W = 1f }
+        : Vector4.Lerp(Horizon, Paper, 0.05f) with { W = 1f };
+    public Vector4 CardStroke => LightSky ? Ink with { W = 0.16f } : Paper with { W = 0.22f };
+    public Vector4 Sheen => LightSky ? Paper with { W = 0.70f } : Paper with { W = 0.30f };
+    public Vector4 Shadow => new(0.02f, 0.03f, 0.05f, LightSky ? 0.20f : 0.28f);
 }
 
 internal static class WeatherSky
 {
+    private const float InkLuminanceSplit = 0.52f;
     private static readonly Vector4 InkLight = new(0.98f, 0.99f, 1.00f, 1f);
     private static readonly Vector4 InkDark = new(0.12f, 0.15f, 0.21f, 1f);
     private static readonly Vector4 TwilightHorizon = new(1.00f, 0.56f, 0.32f, 1f);
@@ -116,13 +129,13 @@ internal static class WeatherSky
                         new(0.78f, 0.84f, 1.00f, 1f), InkLight);
             case WeatherKind.Clouds:
                 return isDay
-                    ? new SkyPalette(new(0.40f, 0.50f, 0.60f, 1f), new(0.66f, 0.72f, 0.78f, 1f),
+                    ? new SkyPalette(new(0.37f, 0.46f, 0.56f, 1f), new(0.60f, 0.66f, 0.73f, 1f),
                         new(0.96f, 0.97f, 1.00f, 1f), InkDark)
                     : new SkyPalette(new(0.09f, 0.11f, 0.16f, 1f), new(0.18f, 0.21f, 0.28f, 1f),
                         new(0.52f, 0.57f, 0.66f, 1f), InkLight);
             case WeatherKind.Fog:
                 return isDay
-                    ? new SkyPalette(new(0.52f, 0.55f, 0.58f, 1f), new(0.73f, 0.75f, 0.77f, 1f),
+                    ? new SkyPalette(new(0.47f, 0.50f, 0.54f, 1f), new(0.66f, 0.68f, 0.71f, 1f),
                         new(0.93f, 0.94f, 0.96f, 1f), InkDark)
                     : new SkyPalette(new(0.11f, 0.12f, 0.15f, 1f), new(0.23f, 0.25f, 0.29f, 1f),
                         new(0.46f, 0.49f, 0.55f, 1f), InkLight);
@@ -190,10 +203,16 @@ internal static class WeatherSky
         var night = Resolve(kind, false);
         var day = Resolve(kind, true);
         var twilight = daylight * (1f - daylight) * 4f * TwilightStrength(kind);
+        var top = Vector4.Lerp(night.Top, day.Top, daylight);
         var bottom = Vector4.Lerp(Vector4.Lerp(night.Bottom, day.Bottom, daylight), TwilightHorizon, twilight);
         var glow = Vector4.Lerp(Vector4.Lerp(night.Glow, day.Glow, daylight), TwilightGlow, twilight * 0.6f);
-        return new SkyPalette(Vector4.Lerp(night.Top, day.Top, daylight), bottom, glow,
-            Vector4.Lerp(night.Ink, day.Ink, daylight));
+        return new SkyPalette(top, bottom, glow, ReadableInk(top, bottom));
+    }
+
+    private static Vector4 ReadableInk(Vector4 top, Vector4 bottom)
+    {
+        var background = Vector4.Lerp(top, bottom, 0.5f);
+        return Palette.Luminance(background) > InkLuminanceSplit ? InkDark : InkLight;
     }
 
     private static float TwilightStrength(WeatherKind kind) => kind switch

@@ -155,7 +155,7 @@ internal sealed partial class MusicApp
             return;
         }
 
-        if (!hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!UiInteract.Click(min, max, hovered))
         {
             return;
         }

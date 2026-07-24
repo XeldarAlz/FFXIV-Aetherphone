@@ -23,7 +23,8 @@ internal sealed partial class ChirperApp
             composeEmoji.Close();
             quoteTarget = null;
             quoteTargetId = null;
-            profile.ForceRefreshSoon();
+            store.RefreshFeed(SocialFeedScope.ForYou);
+            store.RefreshFeed(SocialFeedScope.Following);
             router.Pop();
             return;
         }

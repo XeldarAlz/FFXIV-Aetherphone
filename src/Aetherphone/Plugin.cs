@@ -5,6 +5,7 @@ using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Emote;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Updates;
 using Aetherphone.Core.Wallpapers;
@@ -35,8 +36,10 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static ITextureProvider TextureProvider { get; private set; } = null!;
     [PluginService] internal static ITextureSubstitutionProvider TextureSubstitution { get; private set; } = null!;
     [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static INamePlateGui NamePlateGui { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IUnlockState UnlockState { get; private set; } = null!;
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
@@ -78,7 +81,7 @@ public sealed class Plugin : IDalamudPlugin
             InitializeLocalization();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
-                TextureProvider, PluginInterface.ConfigDirectory);
+                TextureProvider, PluginInterface.ConfigDirectory, UnlockState, Condition);
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
             EmojiCatalog.Load();
             Wallpapers = services.Wallpapers;
@@ -112,6 +115,7 @@ public sealed class Plugin : IDalamudPlugin
             CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
             CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
             PluginInterface.UiBuilder.Draw += windowSystem.Draw;
+            PluginInterface.UiBuilder.Draw += FilePicker.Draw;
             PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
             PluginInterface.UiBuilder.DisableGposeUiHide = Cfg.ShowInGpose;
             ClientState.Login += OnLogin;
@@ -139,6 +143,7 @@ public sealed class Plugin : IDalamudPlugin
     private void TearDownPartialConstruction()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        PluginInterface.UiBuilder.Draw -= FilePicker.Draw;
         if (phoneWindow is not null)
         {
             PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
@@ -227,6 +232,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        PluginInterface.UiBuilder.Draw -= FilePicker.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
         ClientState.Login -= OnLogin;
         Framework.Update -= OnAutoOpenTick;

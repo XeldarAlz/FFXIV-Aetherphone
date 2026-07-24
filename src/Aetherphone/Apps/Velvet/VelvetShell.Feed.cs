@@ -14,7 +14,7 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed partial class VelvetShell
 {
     private readonly FeedVirtualizer feedVirtualizer = new(400f);
-    private float sinceFeedRefresh;
+    private bool feedScrollTopPending;
 
     private void DrawFeed(Rect area)
     {
@@ -24,15 +24,17 @@ internal sealed partial class VelvetShell
             store.RefreshFeed();
         }
 
-        sinceFeedRefresh += ImGui.GetIO().DeltaTime;
-        if (store.FeedLoaded && !store.LoadingFeed && sinceFeedRefresh >= SocialProfilePages.FeedRefreshSeconds)
+        using (var surface = AppSurface.Begin(area))
         {
-            sinceFeedRefresh = 0f;
-            store.RefreshFeed();
-        }
+            if (feedScrollTopPending)
+            {
+                surface.JumpToTop();
+                feedScrollTopPending = false;
+            }
 
-        using (AppSurface.Begin(area))
-        {
+            pullToRefresh.Draw(area, surface.Pull, surface.Dragging,
+                store.LoadingFeed, VelvetTheme.MutedInk, RefreshFeedContent);
+
             stories.DrawTray(theme);
             var width = ScrollLayout.StableContentWidth();
             var feed = store.Feed;
@@ -80,6 +82,23 @@ internal sealed partial class VelvetShell
             post.Open();
             router.Push(VelvetView.Compose);
         }
+    }
+
+    private void RefreshFeed()
+    {
+        if (!store.IsSignedIn || store.LoadingFeed)
+        {
+            return;
+        }
+
+        feedScrollTopPending = true;
+        RefreshFeedContent();
+    }
+
+    private void RefreshFeedContent()
+    {
+        store.RefreshFeed();
+        stories.RefreshTray();
     }
 
     private void StartStoryCompose()
@@ -138,7 +157,7 @@ internal sealed partial class VelvetShell
         {
             stories.OpenRing(authorRing);
         }
-        else if (UiInteract.Hover(headerHitMin, headerHitMax) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        else if (UiInteract.Click(headerHitMin, headerHitMax))
         {
             OpenProfile(entry.OwnerId);
         }
@@ -148,7 +167,7 @@ internal sealed partial class VelvetShell
         var photos = PostMedia.Photos(entry.MediaUrls, entry.MediaUrl);
         var result = DrawPostCarousel(drawList, new Rect(imageMin, imageMax), entry, photos,
             Metrics.Radius.Md * scale);
-        if (result.Tapped)
+        if (result.Tapped && !UiInteract.InputBlocked)
         {
             store.EnsurePost(entry.Id);
             router.Push(VelvetView.PostDetail(entry.Id));
@@ -233,7 +252,13 @@ internal sealed partial class VelvetShell
     private void DrawCompose(Rect area)
     {
         var context = new PhoneContext(area, theme, navigation);
-        if (post.Draw(area, ui, context))
+        var result = post.Draw(area, ui, context);
+        if (result == VelvetComposeResult.Posted)
+        {
+            RefreshFeed();
+        }
+
+        if (result != VelvetComposeResult.Open)
         {
             router.Pop();
         }

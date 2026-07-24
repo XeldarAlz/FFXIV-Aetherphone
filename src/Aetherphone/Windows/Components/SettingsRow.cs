@@ -48,7 +48,7 @@ internal static class SettingsRow
         bool badge = false)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         var dl = ImGui.GetWindowDrawList();
         if (hovered)
         {
@@ -82,13 +82,13 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     public static bool AppLink(Rect row, string appId, Vector4 tint, string label, string value, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         var dl = ImGui.GetWindowDrawList();
         if (hovered)
         {
@@ -122,13 +122,13 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     public static bool Disclosure(Rect row, string label, string value, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         if (hovered)
         {
             DrawRowHighlight(row, theme);
@@ -148,7 +148,7 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private static void DrawTwoColumnText(Rect row, string label, string value, PhoneTheme theme, float labelStartX,
@@ -179,7 +179,7 @@ internal static class SettingsRow
     public static bool Selectable(Rect row, string label, bool selected, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         if (hovered)
         {
             DrawRowHighlight(row, theme);
@@ -205,12 +205,12 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     public static bool Action(Rect row, string label, Vector4 color, PhoneTheme theme)
     {
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         if (hovered)
         {
             DrawRowHighlight(row, theme);
@@ -224,7 +224,7 @@ internal static class SettingsRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private static void DrawRowHighlight(Rect row, PhoneTheme theme)

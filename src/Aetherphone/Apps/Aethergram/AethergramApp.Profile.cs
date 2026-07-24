@@ -32,14 +32,13 @@ internal sealed partial class AethergramApp
         {
             for (var index = 0; index < posts.Length; index++)
             {
-                using (ImRaii.PushId(index))
+                ImGui.Dummy(new Vector2(cell, cell));
+                var min = ImGui.GetItemRectMin();
+                var max = ImGui.GetItemRectMax();
+                DrawGridThumbnail(posts[index], min, max);
+                if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                 {
-                    var clicked = ImGui.InvisibleButton("gram", new Vector2(cell, cell));
-                    DrawGridThumbnail(posts[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
-                    if (clicked)
-                    {
-                        OpenDetail(posts[index]);
-                    }
+                    OpenDetail(posts[index]);
                 }
 
                 if (index % GridColumns != GridColumns - 1)
@@ -109,6 +108,35 @@ internal sealed partial class AethergramApp
                 AppSkin.Transparent, 0.85f))
         {
             scopeMenu.Toggle(ScopeMenuId, anchor);
+        }
+
+        var inboxCenter = new Vector2(area.Max.X - 132f * scale, rowCenterY);
+        if (ui.IconButton(inboxCenter, 16f * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
+                AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.1f, Loc.T(L.Aethergram.InboxTitle),
+                HoverLabelSide.Below))
+        {
+            OpenInbox();
+        }
+
+        ActivityBadge.Draw(inboxCenter + new Vector2(11f * scale, -10f * scale), dmStore.UnreadCount, theme, scale);
+        var refreshCenter = new Vector2(area.Max.X - 96f * scale, rowCenterY);
+        if (store.IsLoading(activeScope))
+        {
+            LoadingPulse.Spinner(refreshCenter, 8f * scale, ui.Accent);
+        }
+        else if (ui.IconButton(refreshCenter, 16f * scale, FontAwesomeIcon.Sync.ToIconString(),
+                     AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.1f, Loc.T(L.Common.Refresh),
+                     HoverLabelSide.Below))
+        {
+            RefreshActiveFeed();
+        }
+
+        var rulesCenter = new Vector2(area.Max.X - 60f * scale, rowCenterY);
+        if (ui.IconButton(rulesCenter, 16f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                AppPalettes.Aethergram.MutedInk, AppSkin.Transparent, 1.1f, Loc.T(L.Conduct.Eyebrow),
+                HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
         }
 
         var composeCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);

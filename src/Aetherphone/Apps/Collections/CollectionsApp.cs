@@ -96,10 +96,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
         lodestoneId = ResolveLocalId();
         catalog.ResetOwned();
         catalog.ResetSummaries();
-        if (lodestoneId is not null)
-        {
-            catalog.RequestSummary(lodestoneId);
-        }
+        catalog.RequestSummary(lodestoneId);
 
         for (var index = 0; index < CollectionCategories.All.Length; index++)
         {
@@ -186,11 +183,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
         ResetFilters();
         resetScroll = true;
         catalog.RequestCatalog(category);
-        if (lodestoneId is not null)
-        {
-            catalog.RequestOwned(lodestoneId, category);
-        }
-
+        catalog.RequestOwned(lodestoneId, category);
         router.Push(CollectionView.ForCategory(category));
     }
 

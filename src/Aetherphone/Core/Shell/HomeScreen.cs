@@ -33,6 +33,10 @@ internal sealed class HomeScreen
         chrome = new HomeChrome(pager, interaction);
     }
 
+    public bool Editing => interaction.Editing;
+
+    public HomeLayoutService Layout => layout;
+
     public void Draw(Rect screen, Rect content, PhoneTheme theme, INavigator navigation, in HomeMotion motion)
     {
         layout.EnsureCurrent();

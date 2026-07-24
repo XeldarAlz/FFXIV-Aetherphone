@@ -8,7 +8,7 @@ internal sealed class SoundImport
 
     public void Launch(string title)
     {
-        NativeFileDialog.PickAudio(title, path => Interlocked.Exchange(ref pendingPath, path));
+        FilePicker.PickAudio(title, path => Interlocked.Exchange(ref pendingPath, path));
     }
 
     public bool TryTake(out string path)

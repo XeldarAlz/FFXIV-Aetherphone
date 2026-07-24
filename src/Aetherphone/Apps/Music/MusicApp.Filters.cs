@@ -195,7 +195,7 @@ internal sealed partial class MusicApp
             TextStyles.Body, selected ? ui.Accent : ui.TitleInk, hovered);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private static string CountText(int count)

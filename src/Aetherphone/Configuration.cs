@@ -8,6 +8,7 @@ using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Radio;
@@ -21,7 +22,7 @@ using Dalamud.Configuration;
 namespace Aetherphone;
 
 [Serializable]
-internal sealed class Configuration : IPluginConfiguration
+internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
 {
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
@@ -41,7 +42,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool NotifyWeeklyReset { get; set; }
     public bool NotifyGrandCompanyReset { get; set; }
     public bool NotifyRetainerVentures { get; set; }
-    public bool NotifyDailiesReset { get; set; }
+    public bool ShowDailiesBadge { get; set; } = true;
     public List<DailyCheckRecord> DailyChecks { get; set; } = new();
     public float ActivityGoalLevels { get; set; } = 1f;
     public int ActivityGoalDuties { get; set; } = 3;
@@ -55,6 +56,8 @@ internal sealed class Configuration : IPluginConfiguration
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
+    public string JobsAccentName { get; set; } = "Blue";
+    public List<JobsCustomColor> JobsCustomColors { get; set; } = new();
     public string LightWallpaperId { get; set; } = "DuskLight";
     public string DarkWallpaperId { get; set; } = "DuskDark";
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
@@ -469,7 +472,11 @@ internal sealed class Configuration : IPluginConfiguration
             return true;
         }
 
+#if DEBUG
+        return false;
+#else
         return parsed.IsLoopback;
+#endif
     }
 
     public void Save()
@@ -482,4 +489,6 @@ internal sealed class Configuration : IPluginConfiguration
 
         _ = Plugin.Framework.RunOnFrameworkThread(() => Plugin.PluginInterface.SavePluginConfig(this));
     }
+
+    public void SaveNow() => Plugin.PluginInterface.SavePluginConfig(this);
 }

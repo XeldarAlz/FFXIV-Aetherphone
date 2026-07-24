@@ -27,6 +27,7 @@ internal sealed class ConductGateOverlay
     private const float ButtonHeight = 50f;
     private const float BarGap = 12f;
     private const float BarHeight = 4f;
+    private const float CloseRadius = 13f;
 
     private static readonly Vector4 EncouragedColor = new(0.34f, 0.74f, 0.48f, 1f);
 
@@ -86,6 +87,7 @@ internal sealed class ConductGateOverlay
         var scale = ImGuiHelpers.GlobalScale;
         var accent = AppAccents.For(gate.AppId);
         var drawList = ImGui.GetWindowDrawList();
+        var reviewing = service.ActiveIsReview;
 
         var panel = new Rect(
             new Vector2(screen.Min.X + SideMargin * scale, screen.Min.Y + TopMargin * scale),
@@ -100,22 +102,43 @@ internal sealed class ConductGateOverlay
         var innerWidth = panel.Width - pad * 2f;
         var centerX = panel.Center.X;
 
-        var ack = Loc.T(L.Conduct.Acknowledge);
-        var ackHeight = Typography.MeasureWrappedBlock(ack, TextStyles.Footnote, innerWidth).Y;
-        var footerHeight = ackHeight + BarGap * scale + BarHeight * scale + BarGap * scale + ButtonHeight * scale;
+        var ack = reviewing ? string.Empty : Loc.T(L.Conduct.Acknowledge);
+        var ackHeight = reviewing ? 0f : Typography.MeasureWrappedBlock(ack, TextStyles.Footnote, innerWidth).Y;
+        var footerHeight = reviewing
+            ? 0f
+            : ackHeight + BarGap * scale + BarHeight * scale + BarGap * scale + ButtonHeight * scale;
         var footerTop = panel.Max.Y - pad - footerHeight;
+        var listBottom = reviewing ? footerTop : footerTop - 12f * scale;
 
         var headerBottom = DrawHeader(panel, theme, gate, accent, opacity, centerX, innerWidth, pad);
 
         var listRect = new Rect(new Vector2(innerLeft, headerBottom + 10f * scale),
-            new Vector2(innerLeft + innerWidth, footerTop - 12f * scale));
+            new Vector2(innerLeft + innerWidth, listBottom));
         DrawRules(listRect, theme, gate, opacity);
 
-        ImGui.GetWindowDrawList().AddLine(new Vector2(innerLeft, footerTop - 12f * scale),
-            new Vector2(innerLeft + innerWidth, footerTop - 12f * scale),
+        if (reviewing)
+        {
+            DrawCloseButton(new Vector2(panel.Max.X - pad * 0.85f, panel.Min.Y + pad * 0.85f), theme, opacity,
+                interactive);
+            return;
+        }
+
+        drawList.AddLine(new Vector2(innerLeft, listBottom), new Vector2(innerLeft + innerWidth, listBottom),
             ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f * opacity)), 1f);
 
-        DrawFooter(theme, gate, accent, opacity, interactive, centerX, innerLeft, innerWidth, footerTop, ack, ackHeight);
+        DrawFooter(theme, gate, accent, opacity, interactive, centerX, innerLeft, innerWidth, footerTop, ack,
+            ackHeight);
+    }
+
+    private void DrawCloseButton(Vector2 center, PhoneTheme theme, float opacity, bool interactive)
+    {
+        var pressed = AppSkin.IconButton(center, CloseRadius * ImGuiHelpers.GlobalScale,
+            FontAwesomeIcon.Times.ToIconString(), Palette.WithAlpha(theme.TextStrong, opacity),
+            Palette.WithAlpha(theme.TextStrong, 0.10f * opacity), 0.5f, theme);
+        if (pressed && interactive && opacity > 0.5f)
+        {
+            service.Dismiss();
+        }
     }
 
     private static float DrawHeader(Rect panel, PhoneTheme theme, ConductGate gate, Vector4 accent, float opacity,
@@ -156,9 +179,12 @@ internal sealed class ConductGateOverlay
             return;
         }
 
+        var rulesKey = ImGui.GetID("##conductRules");
         ImGui.SetCursorScreenPos(listRect.Min);
-        using (ImRaii.Child("##conductRules", listRect.Size, false, ImGuiWindowFlags.NoBackground))
+        using (ImRaii.Child("##conductRules", listRect.Size, false,
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
+            DragScrollHost.Begin(rulesKey);
             var width = ScrollLayout.StableContentWidth();
             for (var index = 0; index < gate.Sections.Length; index++)
             {

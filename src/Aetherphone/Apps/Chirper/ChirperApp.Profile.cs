@@ -116,8 +116,7 @@ internal sealed partial class ChirperApp
         Typography.DrawCentered(titleCenter, DisplayName, AppPalettes.Chirper.TitleInk, titleScale, FontWeight.Bold);
         if (UiInteract.HoverClick(titleMin, titleMax))
         {
-            feedScrollTopPending = true;
-            store.RefreshFeed(activeScope);
+            RefreshActiveFeed();
         }
         if (store.Me is { } me)
         {
@@ -128,6 +127,29 @@ internal sealed partial class ChirperApp
             {
                 OpenProfile(me.Id);
             }
+        }
+
+        if (store.IsSignedIn)
+        {
+            var refreshCenter = new Vector2(area.Min.X + 68f * scale, rowCenterY);
+            if (store.IsLoading(activeScope))
+            {
+                LoadingPulse.Spinner(refreshCenter, 8f * scale, ui.Accent);
+            }
+            else if (ui.IconButton(refreshCenter, 16f * scale, FontAwesomeIcon.Sync.ToIconString(),
+                         AppPalettes.Chirper.BodyInk, new Vector4(0f, 0f, 0f, 0f), 1.1f, Loc.T(L.Common.Refresh),
+                         HoverLabelSide.Below))
+            {
+                RefreshActiveFeed();
+            }
+        }
+
+        var rulesCenter = new Vector2(area.Max.X - 96f * scale, rowCenterY);
+        if (ui.IconButton(rulesCenter, 16f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                AppPalettes.Chirper.MutedInk, new Vector4(0f, 0f, 0f, 0f), 1.1f, Loc.T(L.Conduct.Eyebrow),
+                HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
         }
 
         var searchCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);

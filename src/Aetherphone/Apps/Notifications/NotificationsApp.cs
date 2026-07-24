@@ -19,16 +19,19 @@ internal sealed class NotificationsApp : IPhoneApp
     private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
+    private readonly GramDmLauncher gramDmLauncher;
     private readonly SocialLauncher socialLauncher;
     private NotificationCenter? center;
 
     public NotificationsApp(NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher,
+        SocialLauncher socialLauncher)
     {
         this.notifications = notifications;
         this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
+        this.gramDmLauncher = gramDmLauncher;
         this.socialLauncher = socialLauncher;
     }
 
@@ -45,7 +48,7 @@ internal sealed class NotificationsApp : IPhoneApp
         AppHeader.Draw(context, DisplayName);
         center ??= new NotificationCenter(notifications,
             new NotificationRouter(context.Navigation, notifications, linkpearlLauncher, velvetLauncher, dmLauncher,
-                socialLauncher));
+                gramDmLauncher, socialLauncher));
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + AppHeader.Height * scale), content.Max);

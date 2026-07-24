@@ -177,7 +177,7 @@ internal static class VRow
                 innerWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, subtitleHovering);
         }
 
-        if (hit == VRowHit.None && hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (hit == VRowHit.None && UiInteract.Click(min, max, hovered))
         {
             hit = VRowHit.Body;
         }

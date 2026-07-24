@@ -52,7 +52,7 @@ internal static class HoverButton
             HoverTooltip.Enqueue(bounds, label, eased * alpha, side);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     public static void CircleStatic(ImDrawListPtr dl, Vector2 center, float radius, FontAwesomeIcon icon, Vector4 tint,

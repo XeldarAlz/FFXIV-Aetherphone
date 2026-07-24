@@ -106,7 +106,7 @@ internal sealed partial class MusicApp
         }
 
         AppSkin.Icon(iconCenter, FontAwesomeIcon.Search.ToIconString(), ui.MutedInk, 0.9f);
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(iconMin, iconMax, hovered))
         {
             OpenRadioSearch();
         }
@@ -165,13 +165,12 @@ internal sealed partial class MusicApp
                     15f * scale, clock, ui.Accent, 1f, playback.IsPlaying);
             }
 
-            if (!hovered)
+            if (hovered)
             {
-                continue;
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (!UiInteract.Click(min, max, hovered))
             {
                 continue;
             }
@@ -245,7 +244,7 @@ internal sealed partial class MusicApp
                 new Vector2(artMin.X + textWidth, featAuthorY + featAuthorSize.Y));
             Marquee.DrawLeft("music.featured.author." + song.VideoId, song.Author, artMin.X, featAuthorY,
                 textWidth, TextStyles.Caption1, ui.MutedInk, featAuthorHovering);
-            if (badgeClicked || (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left)))
+            if (badgeClicked || UiInteract.Click(min, cardMax, hovered))
             {
                 if (current)
                 {
@@ -329,7 +328,7 @@ internal sealed partial class MusicApp
             Marquee.DrawLeft("music.categoryTile." + categories[index].Tag, label, min.X + 12f * scale,
                 min.Y + 10f * scale, tileWidth - 24f * scale, TextStyles.SubheadlineEmphasized,
                 new Vector4(1f, 1f, 1f, 1f), hovered);
-            if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(min, max, hovered))
             {
                 OpenCategory(index);
             }
@@ -473,7 +472,8 @@ internal sealed partial class MusicApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
-        if (favoriteStar || !hovered || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var rowClicked = UiInteract.Click(min, max, hovered);
+        if (favoriteStar || !rowClicked)
         {
             return;
         }

@@ -481,6 +481,7 @@ internal abstract class SocialFeedStore : IDisposable
             {
                 UserListKind.Followers => await client.FollowersAsync(sourceId, null, token).ConfigureAwait(false),
                 UserListKind.Following => await client.FollowingAsync(sourceId, null, token).ConfigureAwait(false),
+                UserListKind.Mutuals => await client.MutualFollowersAsync(sourceId, null, token).ConfigureAwait(false),
                 _ => await client.PostLikersAsync(sourceId, null, token).ConfigureAwait(false),
             };
             if (userListKey != key)

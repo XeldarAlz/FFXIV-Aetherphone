@@ -61,6 +61,11 @@ internal sealed class AccountClient
         return net.PostAsync("/me/mention-privacy", new UpdateMentionPrivacyRequest(policy), AethernetJsonContext.Default.UpdateMentionPrivacyRequest, AethernetJsonContext.Default.UserDto, token);
     }
 
+    public Task<UserDto?> UpdateMessagePrivacyAsync(int policy, CancellationToken token)
+    {
+        return net.PostAsync("/me/message-privacy", new UpdateMessagePrivacyRequest(policy), AethernetJsonContext.Default.UpdateMessagePrivacyRequest, AethernetJsonContext.Default.UserDto, token);
+    }
+
     public Task<UserDto?> UpdateChatPrivacyAsync(UpdateChatPrivacyRequest request, CancellationToken token)
     {
         return net.PostAsync("/me/chat-privacy", request, AethernetJsonContext.Default.UpdateChatPrivacyRequest, AethernetJsonContext.Default.UserDto, token);
@@ -94,5 +99,16 @@ internal sealed class AccountClient
     public Task<NotificationPage?> NotificationsAsync(CancellationToken token)
     {
         return net.GetAsync("/notifications", AethernetJsonContext.Default.NotificationPage, token);
+    }
+
+    public Task<NotificationPage?> NotificationsAsync(string app, string? cursor, CancellationToken token)
+    {
+        var path = $"/notifications?app={Uri.EscapeDataString(app)}";
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.NotificationPage, token);
     }
 }

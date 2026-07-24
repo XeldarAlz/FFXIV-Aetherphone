@@ -116,7 +116,8 @@ internal static class CalendarMonthView
                 }
 
                 ImGui.SetCursorScreenPos(cellMin);
-                if (ImGui.InvisibleButton($"##calday{dayDate:yyyyMMdd}", cellMax - cellMin))
+                ImGui.Dummy(cellMax - cellMin);
+                if (UiInteract.Click(cellMin, cellMax, UiInteract.Hover(cellMin, cellMax)))
                 {
                     selectedDate = dayDate;
                     if (!isCurrentMonth)
@@ -124,8 +125,6 @@ internal static class CalendarMonthView
                         monthOffset = ((dayDate.Year - today.Year) * 12) + dayDate.Month - today.Month;
                     }
                 }
-
-                ImGui.SetItemAllowOverlap();
 
                 Typography.DrawCentered(drawList, numberCenter, dayText, textColor, fnScale, fnWeight);
                 DrawEventDots(ui, drawList, events, dayDate, cellX, cellY, cellWidth, rowHeight, isCurrentMonth,

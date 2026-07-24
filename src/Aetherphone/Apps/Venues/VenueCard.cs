@@ -45,8 +45,10 @@ internal static class VenueCard
         }
 
         var starCenter = new Vector2(card.Max.X - 19f * scale, card.Min.Y + 19f * scale);
-        var starHovered = UiInteract.Hover(starCenter - new Vector2(14f * scale, 14f * scale),
-            starCenter + new Vector2(14f * scale, 14f * scale));
+        var starHit = new Vector2(14f * scale, 14f * scale);
+        var starMin = starCenter - starHit;
+        var starMax = starCenter + starHit;
+        var starHovered = UiInteract.Hover(starMin, starMax);
         AppSkin.Icon(starCenter, FontAwesomeIcon.Star.ToIconString(),
             favorite ? palette.Accent : starHovered ? palette.TitleInk : Palette.WithAlpha(palette.MutedInk, 0.75f),
             0.85f);
@@ -74,12 +76,12 @@ internal static class VenueCard
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (starHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(starMin, starMax, starHovered))
         {
             return VenueCardAction.ToggleFavorite;
         }
 
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(card.Min, card.Max, hovered))
         {
             return VenueCardAction.Open;
         }

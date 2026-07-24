@@ -32,6 +32,9 @@ internal sealed class DailiesApp : IPhoneApp
     private const float HeroTitleGap = 18f;
     private const float HeroSubtitleGap = 40f;
     private const float HeroBottomPad = 16f;
+    private const float BadgePadding = 13f;
+    private const float NoteGap = 3f;
+    private const float MinNoteWidth = 60f;
 
     private static readonly Vector4 DailiesTint = AppAccents.For("dailies");
     private static readonly Vector4 HoverIdle = new(1f, 1f, 1f, 0.05f);
@@ -44,7 +47,7 @@ internal sealed class DailiesApp : IPhoneApp
 
     public string Glyph => "D";
 
-    public int BadgeCount => outstandingCount;
+    public int BadgeCount => configuration.ShowDailiesBadge ? outstandingCount : 0;
 
     private readonly Configuration configuration;
     private readonly GameData gameData;
@@ -101,8 +104,9 @@ internal sealed class DailiesApp : IPhoneApp
         return item.Tracking switch
         {
             DailyTracking.Manual => DailyAutoStatus.Unavailable,
-            DailyTracking.DutyRoulettes => DailiesReader.ReadDutyRoulettes(gameData.DailyBonusRouletteIndices()),
-            DailyTracking.HuntBills => DailiesReader.ReadHuntBills(gameData.WeeklyHuntBillIndices()),
+            DailyTracking.DutyRoulettes => DailiesReader.ReadDutyRoulettes(gameData.DailyBonusRouletteRowIds()),
+            DailyTracking.HuntBills => DailiesReader.ReadHuntBills(gameData.WeeklyHuntBillIndices(),
+                gameData.HuntOrderTypeSheet(), gameData.HuntOrderSheet()),
             _ => DailiesReader.Read(item.Tracking, item.Goal),
         };
     }
@@ -157,7 +161,7 @@ internal sealed class DailiesApp : IPhoneApp
             DrawHero(cadence, utcNow, scale);
             DrawSection(cadence, autoGroup: true, utcNow, scale);
             DrawSection(cadence, autoGroup: false, utcNow, scale);
-            DrawNotify(context.Theme, scale);
+            DrawBadgeCard(context.Theme, scale);
             ImGui.Dummy(new Vector2(0f, 12f * scale));
         }
     }
@@ -330,7 +334,7 @@ internal sealed class DailiesApp : IPhoneApp
                 TextStyles.Headline, nameColor, textHovering);
         }
 
-        if (tappable && hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (tappable && UiInteract.Click(band.Min, band.Max, hovered))
         {
             checkStore.SetChecked(item, !complete, utcNow);
             RefreshAuto();
@@ -413,45 +417,53 @@ internal sealed class DailiesApp : IPhoneApp
         };
     }
 
-    private void DrawNotify(PhoneTheme theme, float scale)
+    private void DrawBadgeCard(PhoneTheme theme, float scale)
     {
         ImGui.Dummy(new Vector2(0f, 2f * scale));
         var width = ImGui.GetContentRegionAvail().X;
-        var height = RowHeight * scale;
         var origin = ImGui.GetCursorScreenPos();
-        var card = new Rect(origin, origin + new Vector2(width, height));
-        ui.Card(ImGui.GetWindowDrawList(), card.Min, card.Max, CardRounding * scale, elevated: true);
-        UiAnchors.Report("dailies.notify", card);
-
-        var innerLeft = card.Min.X + RowPadding * scale;
-        var innerRight = card.Max.X - RowPadding * scale;
         var tile = TileSize * scale;
-        IconTile.Draw(new Vector2(innerLeft + tile * 0.5f, card.Center.Y), tile, DailiesTint, FontAwesomeIcon.Bell);
-
-        var label = Loc.T(L.Dailies.NotifyReset);
         var toggleWidth = Metrics.Size.ToggleWidth * scale;
         var toggleHeight = Metrics.Size.ToggleHeight * scale;
-        var toggleMin = new Vector2(innerRight - toggleWidth, card.Center.Y - toggleHeight * 0.5f);
-        var labelLeft = innerLeft + tile + 12f * scale;
-        var labelMaxWidth = MathF.Max(1f, toggleMin.X - 8f * scale - labelLeft);
-        var labelSize = Typography.Measure(label, TextStyles.Body);
-        var labelHovering = ImGui.IsMouseHoveringRect(new Vector2(labelLeft, card.Center.Y - labelSize.Y * 0.5f),
-            new Vector2(labelLeft + labelMaxWidth, card.Center.Y + labelSize.Y * 0.5f));
-        Marquee.DrawLeft("dailies.notifyReset.label", label, labelLeft, card.Center.Y - labelSize.Y * 0.5f,
-            labelMaxWidth, TextStyles.Body, AppPalettes.Dailies.BodyInk, labelHovering);
-        var notify = Toggle.Draw("dailies.notifyReset",
-            new Rect(toggleMin, toggleMin + new Vector2(toggleWidth, toggleHeight)), configuration.NotifyDailiesReset,
+
+        var textLeft = origin.X + RowPadding * scale + tile + 12f * scale;
+        var textRight = origin.X + width - RowPadding * scale - toggleWidth - 12f * scale;
+        var textWidth = MathF.Max(MinNoteWidth * scale, textRight - textLeft);
+
+        var title = Loc.T(L.Dailies.ShowBadge);
+        var note = Loc.T(L.Dailies.ShowBadgeNote);
+        var titleHeight = Typography.Measure(title, TextStyles.Headline).Y;
+        var noteHeight = Typography.MeasureWrappedBlock(note, TextStyles.Subheadline, textWidth).Y;
+        var textHeight = titleHeight + NoteGap * scale + noteHeight;
+        var height = MathF.Max(RowHeight * scale, textHeight + BadgePadding * 2f * scale);
+
+        var card = new Rect(origin, origin + new Vector2(width, height));
+        ui.Card(ImGui.GetWindowDrawList(), card.Min, card.Max, CardRounding * scale, elevated: true);
+        UiAnchors.Report("dailies.badge", card);
+
+        IconTile.Draw(new Vector2(card.Min.X + RowPadding * scale + tile * 0.5f, card.Center.Y), tile, DailiesTint,
+            FontAwesomeIcon.Bell);
+
+        var textTop = card.Center.Y - textHeight * 0.5f;
+        Typography.Draw(new Vector2(textLeft, textTop), Typography.FitText(title, textWidth, TextStyles.Headline),
+            AppPalettes.Dailies.TitleInk, TextStyles.Headline);
+        Typography.DrawWrappedLeft(new Vector2(textLeft, textTop + titleHeight + NoteGap * scale), note,
+            AppPalettes.Dailies.MutedInk, TextStyles.Subheadline, textWidth);
+
+        var toggleMin = new Vector2(card.Max.X - RowPadding * scale - toggleWidth, card.Center.Y - toggleHeight * 0.5f);
+        var showBadge = Toggle.Draw("dailies.showBadge",
+            new Rect(toggleMin, toggleMin + new Vector2(toggleWidth, toggleHeight)), configuration.ShowDailiesBadge,
             theme);
 
         ImGui.SetCursorScreenPos(card.Min);
         ImGui.Dummy(new Vector2(width, height));
 
-        if (notify == configuration.NotifyDailiesReset)
+        if (showBadge == configuration.ShowDailiesBadge)
         {
             return;
         }
 
-        configuration.NotifyDailiesReset = notify;
+        configuration.ShowDailiesBadge = showBadge;
         configuration.Save();
     }
 

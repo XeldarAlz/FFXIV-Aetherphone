@@ -146,6 +146,6 @@ internal static class ProgressRing
         ImGui.Dummy(max - min);
         if (!enabled) return false;
         if (hovered) ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 }

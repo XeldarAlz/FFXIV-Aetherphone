@@ -17,14 +17,25 @@ internal sealed partial class VelvetShell
     private const int IntentChipKind = 0;
     private const int RegionChipKind = 1;
     private const int GenderChipKind = 2;
+    private const int SexualityChipKind = 3;
+    private const int RelationshipChipKind = 4;
+    private const int RoleChipKind = 5;
+    private const int KinkChipKind = 6;
+    private const int LimitChipKind = 7;
     private const int RegionFilterFill = 8;
+
+    private static readonly Func<int, string> GenderLabelOf = VelvetGender.Label;
+    private static readonly Func<int, string> SexualityLabelOf = VelvetSexuality.Label;
 
     private string discoverQuery = string.Empty;
     private string discoverApplied = string.Empty;
     private float discoverDebounce;
-    private int discoverIntent;
-    private int discoverGender;
     private string discoverRegion = string.Empty;
+    private readonly List<VChipModel> activeFilterChips = new();
+    private readonly List<int> activeFilterKinds = new();
+    private readonly List<int> activeFilterFlags = new();
+    private readonly List<string> activeFilterTokens = new();
+    private readonly List<bool> activeFilterExcluded = new();
 
     private void DrawDiscover(Rect area)
     {
@@ -45,7 +56,7 @@ internal sealed partial class VelvetShell
 
         if (!store.DiscoverLoaded && !store.LoadingDiscover)
         {
-            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
+            ApplyDiscoverFilters();
         }
 
         var listRect = new Rect(new Vector2(area.Min.X, searchRect.Max.Y + 8f * scale), area.Max);
@@ -117,8 +128,7 @@ internal sealed partial class VelvetShell
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var active = VelvetIntent.Sanitize(discoverIntent) != 0 || VelvetGender.Sanitize(discoverGender) != 0
-            || discoverRegion.Length > 0;
+        var active = DiscoverFilterActive || discoverRegion.Length > 0;
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = Metrics.Radius.Field * scale;
         var fill = active
@@ -146,7 +156,7 @@ internal sealed partial class VelvetShell
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
-                filterSheet.Toggle(rect);
+                router.Push(VelvetView.DiscoverFilters);
             }
         }
     }
@@ -154,114 +164,194 @@ internal sealed partial class VelvetShell
     private void DrawActiveFilters(float width)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var mask = VelvetIntent.Sanitize(discoverIntent);
-        var genderMask = VelvetGender.Sanitize(discoverGender);
         var hasRegion = discoverRegion.Length > 0;
-        if (mask == 0 && genderMask == 0 && !hasRegion)
+        if (!DiscoverFilterActive && !hasRegion)
         {
             Gap(6f);
             return;
         }
 
-        var intentDefs = VelvetIntent.All;
-        var genderDefs = VelvetGender.All;
-        var count = hasRegion ? 1 : 0;
-        for (var index = 0; index < genderDefs.Length; index++)
-        {
-            if ((genderMask & genderDefs[index]) != 0)
-            {
-                count++;
-            }
-        }
+        activeFilterChips.Clear();
+        activeFilterKinds.Clear();
+        activeFilterFlags.Clear();
+        activeFilterTokens.Clear();
+        activeFilterExcluded.Clear();
 
-        for (var index = 0; index < intentDefs.Length; index++)
-        {
-            if ((mask & intentDefs[index].Flag) != 0)
-            {
-                count++;
-            }
-        }
-
-        var models = new VChipModel[count];
-        var kinds = new int[count];
-        var flags = new int[count];
-        var cursor = 0;
         if (hasRegion)
         {
-            models[cursor] = new VChipModel(discoverRegion, VChipStyle.Tint, VelvetTheme.RegionAccent,
-                FontAwesomeIcon.Globe, true);
-            kinds[cursor] = RegionChipKind;
-            cursor++;
+            AddActiveFilterChip(new VChipModel(discoverRegion, VChipStyle.Tint, VelvetTheme.RegionAccent,
+                FontAwesomeIcon.Globe, true), RegionChipKind, 0, string.Empty, false);
         }
 
-        for (var index = 0; index < genderDefs.Length; index++)
-        {
-            var flag = genderDefs[index];
-            if ((genderMask & flag) == 0)
-            {
-                continue;
-            }
-
-            models[cursor] = new VChipModel(VelvetGender.Label(flag), VChipStyle.Tint, VelvetTheme.Rose,
-                FontAwesomeIcon.VenusMars, true);
-            kinds[cursor] = GenderChipKind;
-            flags[cursor] = flag;
-            cursor++;
-        }
-
+        var intentDefs = VelvetIntent.All;
         for (var index = 0; index < intentDefs.Length; index++)
         {
             var def = intentDefs[index];
-            if ((mask & def.Flag) == 0)
+            if ((filterIntentInclude & def.Flag) != 0)
             {
-                continue;
+                AddActiveFilterChip(new VChipModel(Loc.T(def.Label), VChipStyle.Tint, def.Hue, def.Icon, true),
+                    IntentChipKind, def.Flag, string.Empty, false);
             }
 
-            models[cursor] = new VChipModel(Loc.T(def.Label), VChipStyle.Tint, def.Hue, def.Icon, true);
-            kinds[cursor] = IntentChipKind;
-            flags[cursor] = def.Flag;
-            cursor++;
+            if ((filterIntentExclude & def.Flag) != 0)
+            {
+                AddActiveFilterChip(new VChipModel(Loc.T(def.Label), VChipStyle.Tint, VelvetTheme.Danger,
+                    FontAwesomeIcon.Ban, true), IntentChipKind, def.Flag, string.Empty, true);
+            }
         }
 
-        Gap(4f);
-        var removed = VChipFlow.Draw(models, width, scale);
-        if (removed >= 0)
+        AddMaskFilterChips(GenderChipKind, filterGenderInclude, filterGenderExclude, VelvetGender.All, GenderLabelOf,
+            FontAwesomeIcon.VenusMars);
+        AddMaskFilterChips(SexualityChipKind, filterSexualityInclude, filterSexualityExclude, VelvetSexuality.All,
+            SexualityLabelOf, FontAwesomeIcon.Rainbow);
+
+        var statuses = VelvetRelationship.All;
+        for (var index = 0; index < statuses.Length; index++)
         {
-            switch (kinds[removed])
+            var flag = 1 << statuses[index];
+            if ((filterRelationshipInclude & flag) != 0)
             {
-                case RegionChipKind:
-                    discoverRegion = string.Empty;
-                    break;
-                case GenderChipKind:
-                    discoverGender = VelvetGender.Toggle(discoverGender, flags[removed]);
-                    break;
-                default:
-                    discoverIntent = VelvetIntent.Toggle(discoverIntent, flags[removed]);
-                    break;
+                AddActiveFilterChip(new VChipModel(VelvetRelationship.Label(statuses[index]), VChipStyle.Tint,
+                    VelvetTheme.Rose, FontAwesomeIcon.HandHoldingHeart, true), RelationshipChipKind, flag,
+                    string.Empty, false);
             }
 
-            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
+            if ((filterRelationshipExclude & flag) != 0)
+            {
+                AddActiveFilterChip(new VChipModel(VelvetRelationship.Label(statuses[index]), VChipStyle.Tint,
+                    VelvetTheme.Danger, FontAwesomeIcon.Ban, true), RelationshipChipKind, flag, string.Empty, true);
+            }
+        }
+
+        AddTokenFilterChips(RoleChipKind, VelvetSuggestions.Roles, filterRolesInclude, filterRolesExclude,
+            VelvetTheme.Rose);
+        AddTokenFilterChips(KinkChipKind, VelvetSuggestions.Kinks, filterKinksInclude, filterKinksExclude,
+            KinkViolet);
+        AddTokenFilterChips(LimitChipKind, VelvetSuggestions.Limits, filterLimitsInclude, filterLimitsExclude,
+            VelvetTheme.Gold);
+
+        Gap(4f);
+        var removed = VChipFlow.Draw(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(activeFilterChips),
+            width, scale);
+        if (removed >= 0)
+        {
+            RemoveActiveFilter(activeFilterKinds[removed], activeFilterFlags[removed], activeFilterTokens[removed],
+                activeFilterExcluded[removed]);
+            ApplyDiscoverFilters();
         }
 
         Gap(10f);
     }
 
-    private void DrawDiscoverFilterSheet(Rect screen)
+    private void AddMaskFilterChips(int kind, int includeMask, int excludeMask, int[] options,
+        Func<int, string> labelOf, FontAwesomeIcon icon)
     {
-        if (!filterSheet.Open)
+        for (var index = 0; index < options.Length; index++)
         {
-            return;
-        }
+            var flag = options[index];
+            if ((includeMask & flag) != 0)
+            {
+                AddActiveFilterChip(new VChipModel(labelOf(flag), VChipStyle.Tint, VelvetTheme.Rose, icon, true),
+                    kind, flag, string.Empty, false);
+            }
 
-        var scale = ImGuiHelpers.GlobalScale;
-        var selection = filterSheet.Draw(screen, scale, discoverIntent, discoverGender, discoverRegion);
-        if (selection.Mask != discoverIntent || selection.GenderMask != discoverGender ||
-            !string.Equals(selection.Region, discoverRegion, StringComparison.Ordinal))
+            if ((excludeMask & flag) != 0)
+            {
+                AddActiveFilterChip(new VChipModel(labelOf(flag), VChipStyle.Tint, VelvetTheme.Danger,
+                    FontAwesomeIcon.Ban, true), kind, flag, string.Empty, true);
+            }
+        }
+    }
+
+    private void AddTokenFilterChips(int kind, string[] catalog, HashSet<string> include, HashSet<string> exclude,
+        Vector4 accent)
+    {
+        for (var index = 0; index < catalog.Length; index++)
         {
-            discoverIntent = selection.Mask;
-            discoverGender = selection.GenderMask;
-            discoverRegion = selection.Region;
-            store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
+            var token = catalog[index];
+            if (include.Contains(token))
+            {
+                AddActiveFilterChip(new VChipModel(token, VChipStyle.Tint, accent, null, true), kind, 0, token,
+                    false);
+            }
+
+            if (exclude.Contains(token))
+            {
+                AddActiveFilterChip(new VChipModel(token, VChipStyle.Tint, VelvetTheme.Danger, FontAwesomeIcon.Ban,
+                    true), kind, 0, token, true);
+            }
+        }
+    }
+
+    private void AddActiveFilterChip(in VChipModel model, int kind, int flag, string token, bool excluded)
+    {
+        activeFilterChips.Add(model);
+        activeFilterKinds.Add(kind);
+        activeFilterFlags.Add(flag);
+        activeFilterTokens.Add(token);
+        activeFilterExcluded.Add(excluded);
+    }
+
+    private void RemoveActiveFilter(int kind, int flag, string token, bool excluded)
+    {
+        switch (kind)
+        {
+            case RegionChipKind:
+                discoverRegion = string.Empty;
+                break;
+            case IntentChipKind:
+                if (excluded)
+                {
+                    filterIntentExclude &= ~flag;
+                }
+                else
+                {
+                    filterIntentInclude &= ~flag;
+                }
+
+                break;
+            case GenderChipKind:
+                if (excluded)
+                {
+                    filterGenderExclude &= ~flag;
+                }
+                else
+                {
+                    filterGenderInclude &= ~flag;
+                }
+
+                break;
+            case SexualityChipKind:
+                if (excluded)
+                {
+                    filterSexualityExclude &= ~flag;
+                }
+                else
+                {
+                    filterSexualityInclude &= ~flag;
+                }
+
+                break;
+            case RelationshipChipKind:
+                if (excluded)
+                {
+                    filterRelationshipExclude &= ~flag;
+                }
+                else
+                {
+                    filterRelationshipInclude &= ~flag;
+                }
+
+                break;
+            case RoleChipKind:
+                (excluded ? filterRolesExclude : filterRolesInclude).Remove(token);
+                break;
+            case KinkChipKind:
+                (excluded ? filterKinksExclude : filterKinksInclude).Remove(token);
+                break;
+            case LimitChipKind:
+                (excluded ? filterLimitsExclude : filterLimitsInclude).Remove(token);
+                break;
         }
     }
 
@@ -356,7 +446,6 @@ internal sealed partial class VelvetShell
 
         var textLeft = card.Min.X + pad;
         var textWidth = pillRect.Min.X - 10f * scale - textLeft;
-        var cardHovered = UiInteract.Hover(card.Min, card.Max);
         var nameMaxWidth = MathF.Max(1f, textWidth - 24f * scale);
         var nameSize = Typography.Measure(name, TextStyles.Title2);
         var nameY = card.Max.Y - pad - 58f * scale;
@@ -378,16 +467,9 @@ internal sealed partial class VelvetShell
             textLeft, metaY, textWidth, TextStyles.Subheadline, VelvetTheme.BodyInk,
             metaHovered);
 
-        var summaryY = card.Max.Y - pad - 15f * scale;
-        var summarySize = Typography.Measure(VelvetIntent.Summary(mask), TextStyles.SubheadlineEmphasized);
-        var summaryHovered = UiInteract.Hover(new Vector2(textLeft, summaryY),
-            new Vector2(textLeft + textWidth, summaryY + summarySize.Y));
-        Marquee.DrawLeft("velvet.discover.summary." + profile.UserId, VelvetIntent.Summary(mask), textLeft,
-            summaryY, textWidth, TextStyles.SubheadlineEmphasized, VelvetTheme.RoseInk,
-            summaryHovered);
-
-        if (!pillClicked && cardHovered && !UiInteract.Hover(pillRect.Min, pillRect.Max) &&
-            ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        var cardHovered = !pillClicked && UiInteract.Hover(card.Min, card.Max) &&
+            !UiInteract.Hover(pillRect.Min, pillRect.Max);
+        if (UiInteract.Click(card.Min, card.Max, cardHovered))
         {
             OpenProfile(profile.UserId);
         }
@@ -471,7 +553,7 @@ internal sealed partial class VelvetShell
 
         discoverApplied = discoverQuery;
         discoverDebounce = 0f;
-        store.RefreshDiscover(discoverIntent, discoverApplied.Trim(), discoverGender, discoverRegion);
+        ApplyDiscoverFilters();
     }
 
     private void DrawSearchField(Rect rect, ref string value, string hint)

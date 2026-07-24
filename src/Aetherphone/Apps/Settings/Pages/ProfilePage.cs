@@ -168,7 +168,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private void AdjustOffset(int deltaMinutes)

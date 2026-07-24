@@ -266,6 +266,6 @@ internal static class ConfirmDialog
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 }

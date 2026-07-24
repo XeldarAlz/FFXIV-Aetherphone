@@ -352,6 +352,43 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    public static readonly AppPalette AppStore = new()
+    {
+        Accent = AppAccents.For("appstore"),
+        TitleInk = new(0.97f, 0.98f, 1f, 1f),
+        BodyInk = new(0.87f, 0.90f, 0.96f, 0.96f),
+        MutedInk = new(0.66f, 0.71f, 0.82f, 0.88f),
+        HeaderInk = new(0.62f, 0.74f, 0.98f, 0.95f),
+        HeadingInk = new(0.96f, 0.98f, 1f, 1f),
+        BackdropTop = new(0.07f, 0.09f, 0.14f, 1f),
+        BackdropBottom = new(0.02f, 0.025f, 0.045f, 1f),
+        BloomTop = new(0.10f, 0.40f, 0.92f, 0.22f),
+        BloomBottom = new(0.06f, 0.18f, 0.46f, 0f),
+        CardFill = new(1f, 1f, 1f, 0.05f),
+        CardStroke = new(1f, 1f, 1f, 0.07f),
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    /// <summary>The Jobs app lets the user pick its accent, so its palette is derived rather than fixed.</summary>
+    public static AppPalette JobsFor(Vector4 accent) => new()
+    {
+        Accent = accent,
+        TitleInk = new(0.96f, 0.98f, 1f, 1f),
+        BodyInk = new(0.88f, 0.92f, 0.99f, 0.96f),
+        MutedInk = new(0.67f, 0.75f, 0.87f, 0.86f),
+        HeaderInk = Palette.Lighten(accent, 0.35f),
+        HeadingInk = new(0.95f, 0.98f, 1f, 1f),
+        BackdropTop = Palette.Darken(accent, 0.90f),
+        BackdropBottom = Palette.Darken(accent, 0.965f),
+        BloomTop = Palette.WithAlpha(accent, 0.22f),
+        BloomBottom = Palette.WithAlpha(Palette.Darken(accent, 0.45f), 0f),
+        CardFill = new(1f, 1f, 1f, 0.05f),
+        CardStroke = new(1f, 1f, 1f, 0.07f),
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static readonly AppPalette Photos = new()
     {
         Accent = AppAccents.For("photos"),

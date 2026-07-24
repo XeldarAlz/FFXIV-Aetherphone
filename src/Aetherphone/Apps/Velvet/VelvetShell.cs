@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
@@ -14,6 +15,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
@@ -39,8 +41,11 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly HttpService http;
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
+    private readonly SocialActivityFeed activityFeed;
+    private readonly Action loadOlderActivity;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
+    private readonly ConductGateService conduct;
     private readonly WallpaperImageCache wallpaperImages;
     private readonly AppSkin ui = new(VelvetTheme.Palette);
     private readonly RichTextCache detailBodyLayouts = new();
@@ -51,6 +56,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
+    private readonly PullToRefresh pullToRefresh = new();
     private readonly AvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly ViewRouter<VelvetView> router;
@@ -68,7 +74,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
         SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
         PhoneVisibility visibility, RealtimeSignalBus realtimeSignals, WallpaperImageCache wallpaperImages,
-        ConfirmService confirm, ReportService report)
+        ConfirmService confirm, ReportService report, ConductGateService conduct)
     {
         store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
             keyVault, conversationKeys, visibility, realtimeSignals);
@@ -85,8 +91,11 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.http = http;
         this.images = images;
         this.social = social;
+        activityFeed = new SocialActivityFeed(SocialActivity.VelvetApp, session, net.Account);
+        loadOlderActivity = activityFeed.LoadOlder;
         this.confirm = confirm;
         this.report = report;
+        this.conduct = conduct;
         this.wallpaperImages = wallpaperImages;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Velvet.ChangePhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,
@@ -169,7 +178,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         router.Reset();
         avatarLightbox.Reset();
         store.ClearDiscover();
-        filterSheet.Close();
+        ClearDiscoverFilters();
         activeTab = VelvetPage.Discover;
         stories.Close();
     }
@@ -303,6 +312,9 @@ internal sealed partial class VelvetShell : IPhoneApp
             case VelvetScreenId.Reactions:
                 threadView.DrawReactions(area, view.Arg ?? string.Empty);
                 break;
+            case VelvetScreenId.DiscoverFilters:
+                DrawDiscoverFilters(area);
+                break;
             default:
                 DrawRoot(area);
                 break;
@@ -348,7 +360,30 @@ internal sealed partial class VelvetShell : IPhoneApp
         };
         if (VHeader.Root(headerRect, title, theme, 0))
         {
+            activityFeed.Invalidate();
             router.Push(VelvetView.Activity);
+        }
+
+        if (activeTab == VelvetPage.Feed)
+        {
+            var refreshCenter = new Vector2(headerRect.Max.X - 92f * scale, headerRect.Min.Y + headerHeight * 0.5f);
+            if (store.LoadingFeed)
+            {
+                LoadingPulse.Spinner(refreshCenter, 8f * scale, ui.Accent);
+            }
+            else if (ui.IconButton(refreshCenter, 16f * scale, FontAwesomeIcon.Sync.ToIconString(),
+                         VelvetTheme.TitleInk, AppSkin.Transparent, 0.9f, Loc.T(L.Common.Refresh),
+                         HoverLabelSide.Below))
+            {
+                RefreshFeed();
+            }
+        }
+
+        var rulesCenter = new Vector2(headerRect.Max.X - 56f * scale, headerRect.Min.Y + headerHeight * 0.5f);
+        if (ui.IconButton(rulesCenter, 16f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                VelvetTheme.MutedInk, AppSkin.Transparent, 0.9f, Loc.T(L.Conduct.Eyebrow), HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
         }
 
         switch (activeTab)
@@ -365,11 +400,6 @@ internal sealed partial class VelvetShell : IPhoneApp
             default:
                 DrawDiscover(bodyRect);
                 break;
-        }
-
-        if (activeTab == VelvetPage.Discover)
-        {
-            DrawDiscoverFilterSheet(area);
         }
 
         var messageBadge = store.UnreadCount + store.RequestCount;
@@ -392,11 +422,12 @@ internal sealed partial class VelvetShell : IPhoneApp
         var picked = VTabBar.Draw(tabRect, tabs, (int)activeTab, scale);
         if (picked >= 0)
         {
-            activeTab = (VelvetPage)picked;
-            if (activeTab != VelvetPage.Discover)
+            if (picked == (int)VelvetPage.Feed && activeTab == VelvetPage.Feed)
             {
-                filterSheet.Close();
+                RefreshFeed();
             }
+
+            activeTab = (VelvetPage)picked;
         }
     }
 
@@ -417,7 +448,6 @@ internal sealed partial class VelvetShell : IPhoneApp
             return;
         }
 
-        filterSheet.Close();
         store.OpenProfile(userId);
         router.Push(VelvetView.Profile(userId));
     }
@@ -429,7 +459,6 @@ internal sealed partial class VelvetShell : IPhoneApp
             return;
         }
 
-        filterSheet.Close();
         activeTab = VelvetPage.Messages;
         router.Push(VelvetView.Thread(userId));
     }

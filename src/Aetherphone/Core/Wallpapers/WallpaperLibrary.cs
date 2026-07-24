@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
@@ -15,6 +16,7 @@ internal sealed class WallpaperLibrary : IDisposable
     private const int DayStartHour = 7;
     private const int NightStartHour = 19;
     private const float DayNightSmoothTime = 0.6f;
+    private const float ThemeSwitchSmoothTime = 0.35f;
     private const int BrightnessSampleSize = 24;
     private const float BrightPixelThreshold = 0.65f;
     private const float DefaultBrightness = 0.35f;
@@ -36,6 +38,9 @@ internal sealed class WallpaperLibrary : IDisposable
     private readonly CancellationTokenSource cancellation = new();
     private Spring darknessSpring;
     private bool dayNightInitialized;
+    private Spring themeDarknessSpring;
+    private bool themeDarknessInitialized;
+    private float themeDarkness;
 
     public WallpaperLibrary(ITextureProvider textures, DirectoryInfo builtInDirectory, DirectoryInfo customDirectory,
         Configuration configuration)
@@ -51,6 +56,16 @@ internal sealed class WallpaperLibrary : IDisposable
     public IReadOnlyList<WallpaperEntry> Entries { get; private set; }
     public float CurrentTargetAspect { get; set; } = 0.5f;
     public float Darkness { get; private set; }
+
+    public float ThemeDarkness => themeDarkness;
+
+    private float ThemeDarknessTarget =>
+        configuration.ThemeMode switch
+        {
+            ThemeMode.Light => 0f,
+            ThemeMode.Dark => 1f,
+            _ => Darkness,
+        };
 
     public WallpaperEntry Resolve(string id)
     {
@@ -76,6 +91,19 @@ internal sealed class WallpaperLibrary : IDisposable
         }
 
         Darkness = Math.Clamp(darknessSpring.Step(target, DayNightSmoothTime, deltaSeconds), 0f, 1f);
+        StepThemeDarkness(deltaSeconds);
+    }
+
+    private void StepThemeDarkness(float deltaSeconds)
+    {
+        var target = ThemeDarknessTarget;
+        if (!themeDarknessInitialized)
+        {
+            themeDarknessSpring.SnapTo(target);
+            themeDarknessInitialized = true;
+        }
+
+        themeDarkness = Math.Clamp(themeDarknessSpring.Step(target, ThemeSwitchSmoothTime, deltaSeconds), 0f, 1f);
     }
 
     public ImTextureID? HandlePath(string path)
@@ -103,14 +131,15 @@ internal sealed class WallpaperLibrary : IDisposable
 
     public float HomeBrightness(string lightId, string darkId)
     {
+        var darkness = ThemeDarkness;
         var light = BrightnessOfPath(Resolve(lightId).FilePath);
-        if (Darkness <= 0.001f)
+        if (darkness <= 0.001f)
         {
             return light;
         }
 
         var dark = BrightnessOfPath(Resolve(darkId).FilePath);
-        return light + (dark - light) * Darkness;
+        return light + (dark - light) * darkness;
     }
 
     private float BrightnessOfPath(string path) =>

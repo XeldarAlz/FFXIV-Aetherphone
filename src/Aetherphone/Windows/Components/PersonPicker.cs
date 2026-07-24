@@ -121,15 +121,17 @@ internal sealed class PersonPicker
                 break;
             }
 
-            if (ImGui.IsMouseHoveringRect(rowMin, rowMax))
+            var rowHovered = UiInteract.Hover(rowMin, rowMax);
+            if (rowHovered)
             {
                 Squircle.Fill(drawList, rowMin, rowMax, 9f * scale,
                     ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f)));
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    picked = rows[index];
-                }
+            }
+
+            if (UiInteract.Click(rowMin, rowMax, rowHovered))
+            {
+                picked = rows[index];
             }
 
             var row = rows[index];

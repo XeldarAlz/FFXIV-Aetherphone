@@ -17,12 +17,15 @@ internal static class SocialActivity
     public const int TypePhotoTag = 9;
     public const int TypeWarning = 10;
     public const int TypeReportUpdate = 11;
+    public const int TypeRepost = 12;
+    public const int TypeQuote = 13;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";
 
     public static bool OpensPost(NotificationDto item) =>
         item.Type is TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention or TypePhotoTag
+            or TypeRepost or TypeQuote
         && !string.IsNullOrEmpty(item.PostId);
 
     public static string ActorLabel(NotificationDto item)
@@ -58,6 +61,11 @@ internal static class SocialActivity
                     : $"{commentMentionAction}: “{item.Preview}”";
             case TypePhotoTag:
                 return Loc.T(L.Social.TaggedPhoto);
+            case TypeRepost:
+                return Loc.T(isPhoto ? L.Social.RepostedPhoto : L.Social.RepostedChirp);
+            case TypeQuote:
+                var quoteAction = Loc.T(isPhoto ? L.Social.QuotedPhoto : L.Social.QuotedChirp);
+                return string.IsNullOrEmpty(item.Preview) ? quoteAction : $"{quoteAction}: “{item.Preview}”";
             case TypeFollow:
                 return Loc.T(L.Social.Followed);
             case TypeConnectRequest:

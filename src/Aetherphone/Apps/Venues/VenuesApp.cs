@@ -376,10 +376,11 @@ internal sealed partial class VenuesApp : IPhoneApp
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    ToggleTag(tag);
-                }
+            }
+
+            if (UiInteract.Click(min, max, hovered))
+            {
+                ToggleTag(tag);
             }
 
             cursorX += chipWidth + gap;

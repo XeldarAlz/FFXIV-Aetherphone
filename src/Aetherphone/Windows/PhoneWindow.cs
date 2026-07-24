@@ -63,7 +63,7 @@ internal sealed class PhoneWindow : Window
 
         configuration.MaximizedPosition = maximizedPosition;
         configuration.MinimizedPosition = minimizedPosition;
-        configuration.Save();
+        configuration.SaveNow();
     }
 
     public void Recenter()
@@ -116,7 +116,11 @@ internal sealed class PhoneWindow : Window
         var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
         Size = size;
         SizeCondition = ImGuiCond.Always;
-        Flags = !minimized && configuration.LockPosition ? BaseFlags | ImGuiWindowFlags.NoMove : BaseFlags;
+        var locked = !minimized && configuration.LockPosition;
+        Flags = locked || (!minimized && shell.HomeEditing)
+            ? BaseFlags | ImGuiWindowFlags.NoMove
+            : BaseFlags;
+        Components.DragScrollHost.Enabled = locked;
 
         if (recenterFrames > 0)
         {

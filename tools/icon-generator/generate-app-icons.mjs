@@ -28,6 +28,7 @@ const map = {
   market: "chart-bar",
   wallet: "wallet",
   inventory: "backpack",
+  jobs: "swords",
   music: "music",
   clock: "clock",
   timers: "hourglass",
@@ -42,6 +43,7 @@ const map = {
   polls: "chart-bar-popular",
   message: "messages",
   kupoai: "message-chatbot",
+  appstore: "apps",
 };
 
 function recolor(svg) {

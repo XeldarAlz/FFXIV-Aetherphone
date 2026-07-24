@@ -25,6 +25,7 @@ internal enum VelvetScreenId
     Intro,
     Reactions,
     RequestDetail,
+    DiscoverFilters,
 }
 
 internal readonly record struct VelvetView(VelvetScreenId Screen, string? Arg = null)
@@ -35,6 +36,7 @@ internal readonly record struct VelvetView(VelvetScreenId Screen, string? Arg = 
     public static readonly VelvetView Settings = new(VelvetScreenId.Settings);
     public static readonly VelvetView Activity = new(VelvetScreenId.Activity);
     public static readonly VelvetView Blocked = new(VelvetScreenId.Blocked);
+    public static readonly VelvetView DiscoverFilters = new(VelvetScreenId.DiscoverFilters);
 
     public static VelvetView Profile(string userId) => new(VelvetScreenId.Profile, userId);
     public static VelvetView Thread(string userId) => new(VelvetScreenId.Thread, userId);

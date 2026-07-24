@@ -22,6 +22,7 @@ internal static class SignalType
     public const string Unavailable = "call.unavailable";
     public const string ChatPing = "chat.ping";
     public const string VelvetPing = "velvet.ping";
+    public const string GramPing = "gram.ping";
     public const string SocialPing = "social.ping";
     public const string Error = "error";
 }

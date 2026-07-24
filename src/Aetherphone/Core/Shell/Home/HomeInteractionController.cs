@@ -32,9 +32,6 @@ internal sealed class HomeInteractionController
     private readonly WidgetSizeMenu sizeMenu;
     private readonly WidgetGallery gallery;
     private readonly TilePoseCache poses;
-    private readonly List<HomeTile> previewTiles = new();
-    private readonly List<GridCell> previewCells = new();
-    private readonly List<GridCell> scratchCells = new();
 
     private bool pressActive;
     private Vector2 pressPos;
@@ -57,12 +54,12 @@ internal sealed class HomeInteractionController
     private HomeTile? dragTile;
     private bool dragFromDock;
     private int dragPage;
-    private bool extraPage;
     private Vector2 dragPos;
     private Vector2 grabOffset;
     private Spring lift;
     private float edgeDwell;
-    private int insertIndex;
+    private GridCell dropCell;
+    private bool dropValid;
     private bool overDock;
     private bool dockAccepts;
     private int dockInsertIndex;
@@ -86,6 +83,9 @@ internal sealed class HomeInteractionController
 
     public bool Editing => editing;
     public HomeTile? DragTile => dragTile;
+    public int DragPage => dragPage;
+    public GridCell DropCell => dropCell;
+    public bool DropTargetLive => dragTile is not null && dropValid && !overDock && folderTarget is null;
     public HomeTile? SettleTile => settleTile;
     public HomeTile? FolderTarget => folderTarget;
     public bool OverDock => overDock;
@@ -96,7 +96,7 @@ internal sealed class HomeInteractionController
 
     public void Advance(float delta) => editClock += delta;
 
-    public int DisplayPageCount() => layout.PageCount + (dragTile is not null && extraPage ? 1 : 0);
+    public int DisplayPageCount() => layout.PageCount;
 
     public void Suspend()
     {
@@ -107,11 +107,11 @@ internal sealed class HomeInteractionController
     public void ResetForReveal()
     {
         pressActive = false;
+        editing = false;
         CancelTap();
         if (dragTile is not null)
         {
             dragTile = null;
-            extraPage = false;
         }
     }
 
@@ -319,7 +319,6 @@ internal sealed class HomeInteractionController
         dragTile = tile;
         dragFromDock = pressFromDock;
         dragPage = dragFromDock ? pager.Page : LocatePage(tile);
-        extraPage = false;
         var center = CommittedRect(metrics, tile)?.Center ?? mouse;
         grabOffset = mouse - center;
         dragPos = center;
@@ -327,7 +326,7 @@ internal sealed class HomeInteractionController
         edgeDwell = 0f;
         folderTarget = null;
         overDock = false;
-        insertIndex = 0;
+        dropValid = false;
         pressActive = false;
         editing = true;
         settleTile = null;
@@ -398,21 +397,12 @@ internal sealed class HomeInteractionController
                 edgeDwell = 0f;
             }
         }
-        else if (mouse.X > content.Max.X - edge)
+        else if (mouse.X > content.Max.X - edge && dragPage < layout.PageCount - 1)
         {
             edgeDwell += delta;
             if (edgeDwell > EdgeFlipSeconds)
             {
-                if (dragPage < layout.PageCount - 1)
-                {
-                    dragPage++;
-                }
-                else if (!extraPage && dragPage == layout.PageCount - 1 && PageHasOthers(dragPage))
-                {
-                    extraPage = true;
-                    dragPage = layout.PageCount;
-                }
-
+                dragPage++;
                 pager.AnimateTo(dragPage, DisplayPageCount());
                 edgeDwell = 0f;
             }
@@ -425,7 +415,7 @@ internal sealed class HomeInteractionController
         folderTarget = null;
         if (dragPage >= layout.PageCount)
         {
-            insertIndex = 0;
+            dropValid = false;
             return;
         }
 
@@ -452,97 +442,16 @@ internal sealed class HomeInteractionController
             }
         }
 
-        var cursorCell = metrics.CellFromPoint(dragPage, pager.Value, mouse);
-        insertIndex = InsertIndexFor(cursorCell);
+        dropValid = layout.TryResolveDrop(dragPage, dragTile, HoveredCell(metrics), out dropCell);
     }
 
-    private bool PageContainsTile(int page, HomeTile tile)
+    private GridCell HoveredCell(in HomeMetrics metrics)
     {
-        if (page >= layout.PageCount)
-        {
-            return false;
-        }
-
-        var tiles = layout.Page(page);
-        for (var index = 0; index < tiles.Count; index++)
-        {
-            if (ReferenceEquals(tiles[index], tile))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private bool PageHasOthers(int page)
-    {
-        var tiles = layout.Page(page);
-        for (var index = 0; index < tiles.Count; index++)
-        {
-            if (!ReferenceEquals(tiles[index], dragTile))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private int InsertIndexFor(GridCell cursor)
-    {
-        BuildSiblings(dragPage);
-        HomeGridSolver.Solve(previewTiles, HomeLayoutService.Columns, layout.Rows, scratchCells);
-        var cursorOrder = HomeGridSolver.ScanOrder(cursor, HomeLayoutService.Columns);
-        var index = 0;
-        for (; index < scratchCells.Count; index++)
-        {
-            if (HomeGridSolver.ScanOrder(scratchCells[index], HomeLayoutService.Columns) >= cursorOrder)
-            {
-                break;
-            }
-        }
-
-        return index;
-    }
-
-    private void BuildSiblings(int page)
-    {
-        previewTiles.Clear();
-        if (page >= layout.PageCount)
-        {
-            return;
-        }
-
-        var tiles = layout.Page(page);
-        for (var index = 0; index < tiles.Count; index++)
-        {
-            if (!ReferenceEquals(tiles[index], dragTile))
-            {
-                previewTiles.Add(tiles[index]);
-            }
-        }
-    }
-
-    public bool TryPreviewPage(int page, out IReadOnlyList<HomeTile> tiles, out IReadOnlyList<GridCell> cells)
-    {
-        tiles = previewTiles;
-        cells = previewCells;
-        var previewInsert = dragTile is not null && page == dragPage && !overDock && folderTarget is null;
-        var previewCompact = dragTile is not null && !previewInsert && PageContainsTile(page, dragTile);
-        if (!previewInsert && !previewCompact)
-        {
-            return false;
-        }
-
-        BuildSiblings(page);
-        if (previewInsert)
-        {
-            previewTiles.Insert(Math.Clamp(insertIndex, 0, previewTiles.Count), dragTile!);
-        }
-
-        HomeGridSolver.Solve(previewTiles, HomeLayoutService.Columns, layout.Rows, previewCells);
-        return true;
+        var anchor = dragPos - new Vector2(metrics.CellWidth * (dragTile!.ColumnSpan - 1) * 0.5f,
+            metrics.CellHeight * (dragTile.RowSpan - 1) * 0.5f);
+        var cell = metrics.CellFromPoint(dragPage, pager.Value, anchor);
+        return new GridCell(Math.Min(cell.Column, HomeLayoutService.Columns - dragTile.ColumnSpan),
+            Math.Min(cell.Row, layout.Rows - dragTile.RowSpan));
     }
 
     private void CommitDrag(in HomeMetrics metrics)
@@ -559,7 +468,11 @@ internal sealed class HomeInteractionController
         }
         else if (!overDock)
         {
-            layout.MoveTile(tile, dragPage, insertIndex);
+            if (dropValid)
+            {
+                layout.MoveTile(tile, dragPage, dropCell);
+            }
+
             BeginSettle(tile, metrics);
         }
         else
@@ -569,8 +482,8 @@ internal sealed class HomeInteractionController
 
         dragTile = null;
         folderTarget = null;
-        extraPage = false;
         overDock = false;
+        dropValid = false;
         pager.AnimateTo(pager.Page, layout.PageCount);
     }
 

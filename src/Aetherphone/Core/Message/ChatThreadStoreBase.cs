@@ -17,7 +17,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected const int ImageMediaKind = 1;
     protected const int VoiceMediaKind = 3;
     private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(600);
+    private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);

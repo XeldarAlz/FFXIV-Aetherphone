@@ -216,7 +216,7 @@ internal sealed partial class LinkpearlApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private void DrawCharacterDetail(Rect area, LinkpearlRoute route)
@@ -545,8 +545,9 @@ internal sealed partial class LinkpearlApp
         float scale)
     {
         var box = 16f * scale;
-        var hovered = enabled &&
-                      ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
+        var min = center - new Vector2(box, box);
+        var max = center + new Vector2(box, box);
+        var hovered = enabled && ImGui.IsMouseHoveringRect(min, max);
         var color = enabled ? (hovered ? theme.TextStrong : theme.Accent) : Palette.WithAlpha(theme.TextMuted, 0.35f);
         ProgressRing.CenterIcon(center, icon, color, 16f * scale);
         if (!enabled)
@@ -559,7 +560,7 @@ internal sealed partial class LinkpearlApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private bool DrawLookupState(Rect body, LookupState state, PhoneTheme theme, float scale)

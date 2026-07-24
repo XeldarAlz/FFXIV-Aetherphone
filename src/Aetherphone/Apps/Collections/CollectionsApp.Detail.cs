@@ -50,7 +50,7 @@ internal sealed partial class CollectionsApp
         Typography.Draw(new Vector2(textLeft, min.Y + pad), name, ui.TitleInk, TextStyles.Title3);
 
         var cursorY = min.Y + pad + 32f * scale;
-        var owned = lodestoneId is not null ? catalog.RequestOwned(lodestoneId, category) : null;
+        var owned = catalog.RequestOwned(lodestoneId, category);
         if (owned is { State: OwnedState.Ready })
         {
             var isOwned = owned.Ids.Contains(item.Id);

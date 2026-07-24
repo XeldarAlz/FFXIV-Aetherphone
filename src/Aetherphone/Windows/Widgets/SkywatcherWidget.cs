@@ -45,7 +45,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var bell = EorzeaTime.Now();
         var daylight = WeatherSky.Daylight(bell.Hour + bell.Minute / 60f);
         var isDay = daylight >= 0.5f;
-        var kind = forecast.Count > 0 ? WeatherSky.Classify(forecast[0].Weather) : WeatherKind.Clouds;
+        var kind = forecast.Count > 0 ? WeatherSky.Classify(forecast[0].Weather.EnglishKey) : WeatherKind.Clouds;
         var palette = WeatherSky.Blend(kind, forecast.Count > 0 ? daylight : 0f);
         WidgetChrome.Tinted(context.DrawList, context.Bounds, palette.Top, palette.Bottom, context.Scale,
             context.Opacity);
@@ -111,7 +111,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
             time, Palette.WithAlpha(palette.InkSoft, opacity), TextStyles.FootnoteEmphasized);
 
         var weatherTop = rowTop + glyphRadius * 2f + 6f * scale;
-        var weatherText = FitScaled(forecast[0].Weather, bounds.Width - pad * 2f, 1.06f, FontWeight.SemiBold,
+        var weatherText = FitScaled(forecast[0].Weather.Name, bounds.Width - pad * 2f, 1.06f, FontWeight.SemiBold,
             out var weatherScale);
         var weatherSize = Typography.Measure(weatherText, weatherScale, FontWeight.SemiBold);
         Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, weatherTop), weatherText,
@@ -164,7 +164,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var conditionY = bounds.Min.Y + conditionYOffset;
         var conditionStyle = new TextStyle(heroScale, FontWeight.SemiBold);
         var conditionMaxHeight = MathF.Max(0f, contentBottom - conditionY);
-        var conditionHeight = DrawConditionText(drawList, forecast[0].Weather, new Vector2(left, conditionY),
+        var conditionHeight = DrawConditionText(drawList, forecast[0].Weather.Name, new Vector2(left, conditionY),
             conditionStyle, Palette.WithAlpha(palette.Ink, opacity), bounds.Width - rightColumn - pad * 2f,
             conditionMaxHeight);
         Typography.Draw(drawList, new Vector2(bounds.Max.X - pad - timeSize.X, conditionY), time,
@@ -230,7 +230,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
             var centerX = bounds.Min.X + pad + cellWidth * (columnIndex + 0.5f);
             Typography.DrawCentered(drawList, new Vector2(centerX, labelTop), When(window),
                 Palette.WithAlpha(palette.InkSoft, opacity), labelStyle.Scale, labelStyle.Weight);
-            var columnKind = WeatherSky.Classify(window.Weather);
+            var columnKind = WeatherSky.Classify(window.Weather.EnglishKey);
             var columnIsDay = IsDayWindow(window);
             WeatherGlyph.Draw(columnKind, new Vector2(centerX, glyphY), glyphRadius,
                 WeatherSky.Resolve(columnKind, columnIsDay), columnIsDay, sky);
@@ -256,9 +256,9 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var minConditionY = bounds.Min.Y + pad + eyebrowHeight + 8f * scale;
         var conditionY = MathF.Max(minConditionY, bounds.Min.Y + bounds.Height * 0.40f);
         var conditionStyle = new TextStyle(1.62f, FontWeight.SemiBold);
-        var conditionTextHeight = Typography.Measure(forecast[0].Weather, conditionStyle).Y;
+        var conditionTextHeight = Typography.Measure(forecast[0].Weather.Name, conditionStyle).Y;
         var secondLineY = MathF.Max(bounds.Max.Y - pad - 16f * scale, conditionY + conditionTextHeight + 6f * scale);
-        DrawConditionText(drawList, forecast[0].Weather, new Vector2(left, conditionY), conditionStyle,
+        DrawConditionText(drawList, forecast[0].Weather.Name, new Vector2(left, conditionY), conditionStyle,
             Palette.WithAlpha(palette.Ink, opacity), bounds.Width - rightColumn - pad * 2f,
             MathF.Max(0f, secondLineY - conditionY - 4f * scale));
         var secondLineText = FitScaled(SecondLine(), bounds.Width - rightColumn - pad * 2f,
@@ -299,12 +299,12 @@ internal sealed class SkywatcherWidget : IHomeWidget
             Typography.Draw(drawList,
                 new Vector2(bounds.Min.X + pad, rowCenterY - Typography.Measure(when, TextStyles.Footnote).Y * 0.5f),
                 when, Palette.WithAlpha(palette.InkSoft, opacity), TextStyles.Footnote);
-            var rowKind = WeatherSky.Classify(window.Weather);
+            var rowKind = WeatherSky.Classify(window.Weather.EnglishKey);
             var rowIsDay = IsDayWindow(window);
             var rowPalette = WeatherSky.Resolve(rowKind, rowIsDay);
             WeatherGlyph.Draw(rowKind, new Vector2(bounds.Min.X + bounds.Width * 0.42f, rowCenterY), 10f * scale,
                 rowPalette, rowIsDay, Vector4.Lerp(palette.Top, palette.Bottom, 0.5f));
-            var name = FitScaled(window.Weather, bounds.Width * 0.42f, TextStyles.FootnoteEmphasized.Scale,
+            var name = FitScaled(window.Weather.Name, bounds.Width * 0.42f, TextStyles.FootnoteEmphasized.Scale,
                 TextStyles.FootnoteEmphasized.Weight, out var nameScale);
             var nameSize = Typography.Measure(name, nameScale, TextStyles.FootnoteEmphasized.Weight);
             Typography.Draw(drawList, new Vector2(bounds.Max.X - pad - nameSize.X, rowCenterY - nameSize.Y * 0.5f),
@@ -327,11 +327,11 @@ internal sealed class SkywatcherWidget : IHomeWidget
     {
         for (var index = 1; index < forecast.Count; index++)
         {
-            if (!string.Equals(forecast[index].Weather, forecast[0].Weather, StringComparison.Ordinal))
+            if (forecast[index].Weather.Id != forecast[0].Weather.Id)
             {
                 return zone.Length > 0
-                    ? string.Concat(zone, " · ", forecast[index].Weather, " ", When(forecast[index]))
-                    : string.Concat(forecast[index].Weather, " ", When(forecast[index]));
+                    ? string.Concat(zone, " · ", forecast[index].Weather.Name, " ", When(forecast[index]))
+                    : string.Concat(forecast[index].Weather.Name, " ", When(forecast[index]));
             }
         }
 

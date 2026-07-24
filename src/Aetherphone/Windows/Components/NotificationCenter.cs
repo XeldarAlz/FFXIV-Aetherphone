@@ -26,6 +26,7 @@ internal sealed class NotificationCenter
     private const float SwipeRightClamp = 10f;
     private const float SwipeCommitFraction = 0.42f;
     private const float TapSlop = 6f;
+    private const float DragAxisThreshold = 6f;
     private const float ExpandSmoothTime = 0.26f;
     private const float SwipeSmoothTime = 0.18f;
     private readonly NotificationService notifications;
@@ -38,8 +39,11 @@ internal sealed class NotificationCenter
     private readonly Dictionary<string, GroupState> states = new();
     private readonly List<string> staleKeys = new();
     private readonly List<Candidate> candidates = new();
+    private readonly KineticScroller scroller = new();
     private Rect interactionBounds;
     private float scrollY;
+    private bool scrollGesture;
+    private bool axisLocked;
     private long dragId;
     private string dragKey = string.Empty;
     private bool dragGroup;
@@ -67,6 +71,9 @@ internal sealed class NotificationCenter
         dragNotification = null;
         swipeOffset = 0f;
         scrollY = 0f;
+        scroller.Reset();
+        scrollGesture = false;
+        axisLocked = false;
         animActive = false;
         states.Clear();
         groups.Clear();
@@ -283,19 +290,55 @@ internal sealed class NotificationCenter
     private void DrawList(ImDrawListPtr dl, PhoneTheme theme, Rect listArea, float scale, float opacity,
         bool interactive)
     {
+        var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+        var maxScroll = MathF.Max(0f, ContentHeight(scale) - listArea.Height);
+        scroller.Scale = scale;
+        scroller.SetBounds(maxScroll);
+
         if (drag.Active)
         {
-            swipeOffset = Math.Clamp(drag.Delta.X, -SwipeMaxReveal * scale, SwipeRightClamp * scale);
+            var delta = drag.Delta;
+            if (!axisLocked && (MathF.Abs(delta.X) >= DragAxisThreshold * scale ||
+                MathF.Abs(delta.Y) >= DragAxisThreshold * scale))
+            {
+                axisLocked = true;
+                scrollGesture = DragScrollHost.Enabled && MathF.Abs(delta.Y) > MathF.Abs(delta.X);
+            }
+
+            if (scrollGesture)
+            {
+                scroller.Move(ImGui.GetMousePos().Y, deltaSeconds);
+                swipeOffset = 0f;
+            }
+            else
+            {
+                swipeOffset = Math.Clamp(delta.X, -SwipeMaxReveal * scale, SwipeRightClamp * scale);
+            }
+        }
+        else
+        {
+            scroller.Tick(deltaSeconds);
+            if (interactive && listArea.Contains(ImGui.GetMousePos()))
+            {
+                var wheel = ImGui.GetIO().MouseWheel;
+                if (wheel != 0f)
+                {
+                    var basis = scroller.IsControlling ? scroller.Offset : scrollY;
+                    scrollY = Math.Clamp(basis - wheel * WheelStep * scale, 0f, maxScroll);
+                    scroller.Reset();
+                    scroller.SetBounds(maxScroll);
+                    scroller.SyncOffset(scrollY);
+                }
+            }
         }
 
-        var maxScroll = MathF.Max(0f, ContentHeight(scale) - listArea.Height);
-        if (interactive && !drag.Active && listArea.Contains(ImGui.GetMousePos()))
+        if (scroller.IsControlling)
         {
-            var wheel = ImGui.GetIO().MouseWheel;
-            if (wheel != 0f)
-            {
-                scrollY -= wheel * WheelStep * scale;
-            }
+            scrollY = scroller.Offset;
+        }
+        else
+        {
+            scroller.SyncOffset(Math.Clamp(scrollY, 0f, maxScroll));
         }
 
         scrollY = Math.Clamp(scrollY, 0f, maxScroll);
@@ -461,7 +504,17 @@ internal sealed class NotificationCenter
 
         if (drag.Released(out var totalDelta, out _))
         {
-            ResolveGesture(totalDelta, scale);
+            if (scrollGesture)
+            {
+                scroller.Release();
+                scrollGesture = false;
+                axisLocked = false;
+                dragNotification = null;
+            }
+            else
+            {
+                ResolveGesture(totalDelta, scale);
+            }
         }
     }
 
@@ -479,6 +532,9 @@ internal sealed class NotificationCenter
         dragWidth = candidate.Width;
         dragNotification = candidate.Notification;
         swipeOffset = 0f;
+        scroller.Press(ImGui.GetMousePos().Y);
+        scrollGesture = false;
+        axisLocked = false;
     }
 
     private void ResolveGesture(Vector2 totalDelta, float scale)

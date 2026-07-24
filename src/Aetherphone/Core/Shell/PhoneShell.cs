@@ -45,6 +45,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly ShellTransitionRenderer transition;
     private readonly MinimizeMorphView morph;
     private readonly ShellOverlayCoordinator overlays;
+    private readonly HomeScreen home;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
     private bool closeRequested;
     private bool indicatorPressActive;
@@ -68,14 +69,15 @@ internal sealed class PhoneShell : IDisposable
         navigation.AppOpened += director.OnAppOpened;
         navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
-            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
+            services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);
         var controlCenter = new ControlCenter(configuration, themes, services.Playback, calls, navigation,
             notifications, router);
         minimizedView = new MinimizedPhone(notifications, configuration);
-        var home = new HomeScreen(apps, bundle.Widgets, configuration);
+        home = new HomeScreen(apps, bundle.Widgets, configuration);
+        services.Installer.Bind(home.Layout);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);
         var banOverlay = new BanOverlay(services.AethernetSession);
@@ -126,6 +128,8 @@ internal sealed class PhoneShell : IDisposable
     }
 
     public bool MinimizedResting => minimize.MinimizedResting;
+
+    public bool HomeEditing => home.Editing && navigation.Current is null;
 
     public MinimizePhase MinimizePhase => minimize.Phase;
 
