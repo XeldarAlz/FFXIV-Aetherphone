@@ -2847,7 +2847,7 @@ internal static class L
         };
         public static readonly LocString[] VelvetNotAllowed =
         {
-            new("conduct.velvet.no.1", "Sexual content involving minors or child-like characters, including Lalafell profiles."),
+            new("conduct.velvet.no.1", "Sexual content involving minors or child-like characters."),
             new("conduct.velvet.no.2", "Non-consensual sexual content"),
             new("conduct.velvet.no.3", "Exploitative or abusive material"),
             new("conduct.velvet.no.4", "Real-life revenge pornography"),
