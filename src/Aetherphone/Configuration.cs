@@ -471,7 +471,11 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
             return true;
         }
 
+#if DEBUG
+        return false;
+#else
         return parsed.IsLoopback;
+#endif
     }
 
     public void Save()
