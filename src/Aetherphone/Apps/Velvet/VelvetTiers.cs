@@ -2,32 +2,6 @@ using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Apps.Velvet;
 
-internal static class VelvetLookingFor
-{
-    public const int Any = 0;
-    public const int Collab = 1;
-    public const int Erp = 2;
-    public const int Gpose = 3;
-    public const int Sharing = 4;
-    public const int Relationship = 5;
-    public const int Friends = 6;
-    public const int Wandering = 7;
-    public static readonly int[] All = { Any, Erp, Gpose, Relationship, Collab, Friends, Sharing, Wandering };
-
-    public static string Label(int value) =>
-        value switch
-        {
-            Collab => Loc.T(L.Velvet.LookingCollab),
-            Erp => Loc.T(L.Velvet.LookingErp),
-            Gpose => Loc.T(L.Velvet.LookingGpose),
-            Sharing => Loc.T(L.Velvet.LookingSharing),
-            Relationship => Loc.T(L.Velvet.LookingRelationship),
-            Friends => Loc.T(L.Velvet.LookingFriends),
-            Wandering => Loc.T(L.Velvet.LookingWandering),
-            _ => Loc.T(L.Velvet.LookingAny),
-        };
-}
-
 internal static class VelvetPresence
 {
     public const int Offline = 0;
@@ -61,13 +35,15 @@ internal static class VelvetRelationship
     public const int Taken = 2;
     public const int Open = 3;
     public const int Complicated = 4;
-    public static readonly int[] All = { NotSaying, Single, Taken, Open, Complicated };
+    public const int Poly = 5;
+    public static readonly int[] All = { NotSaying, Single, Taken, Poly, Open, Complicated };
 
     public static string Label(int value) =>
         value switch
         {
             Single => Loc.T(L.Velvet.RelSingle),
             Taken => Loc.T(L.Velvet.RelTaken),
+            Poly => Loc.T(L.Velvet.RelPoly),
             Open => Loc.T(L.Velvet.RelOpen),
             Complicated => Loc.T(L.Velvet.RelComplicated),
             _ => Loc.T(L.Velvet.RelNotSaying),
@@ -82,11 +58,14 @@ internal static class VelvetGender
     public const int Femboy = 1 << 2;
     public const int FemalePlus = 1 << 3;
     public const int MalePlus = 1 << 4;
-    public const int Other = 1 << 5;
+    public const int Genderfluid = 1 << 6;
+    public const int Nonbinary = 1 << 7;
+    public const int Transgender = 1 << 8;
 
-    public const int Mask = Female | Male | Femboy | FemalePlus | MalePlus | Other;
+    public const int Mask = Female | Male | Femboy | FemalePlus | MalePlus | Genderfluid | Nonbinary | Transgender;
 
-    public static readonly int[] All = { Female, Male, Femboy, FemalePlus, MalePlus, Other };
+    public static readonly int[] All =
+        { Male, Female, MalePlus, FemalePlus, Genderfluid, Nonbinary, Transgender, Femboy };
 
     public static bool Has(int mask, int flag) => (mask & flag) != 0;
 
@@ -102,7 +81,62 @@ internal static class VelvetGender
             Femboy => Loc.T(L.Velvet.GenderFemboy),
             FemalePlus => Loc.T(L.Velvet.GenderFemalePlus),
             MalePlus => Loc.T(L.Velvet.GenderMalePlus),
-            Other => Loc.T(L.Velvet.GenderOther),
+            Genderfluid => Loc.T(L.Velvet.GenderGenderfluid),
+            Nonbinary => Loc.T(L.Velvet.GenderNonbinary),
+            Transgender => Loc.T(L.Velvet.GenderTransgender),
+            _ => string.Empty,
+        };
+}
+
+internal static class VelvetSexuality
+{
+    public const int None = 0;
+    public const int Straight = 1 << 0;
+    public const int Gay = 1 << 1;
+    public const int Bi = 1 << 2;
+    public const int Pan = 1 << 3;
+    public const int Asexual = 1 << 4;
+    public const int Demisexual = 1 << 5;
+
+    public const int Mask = Straight | Gay | Bi | Pan | Asexual | Demisexual;
+
+    public static readonly int[] All = { Straight, Gay, Bi, Pan, Asexual, Demisexual };
+
+    public static bool Has(int mask, int flag) => (mask & flag) != 0;
+
+    public static int Toggle(int mask, int flag) => (mask & flag) != 0 ? mask & ~flag : mask | flag;
+
+    public static int Sanitize(int mask) => mask & Mask;
+
+    public static string[] Labels(int mask)
+    {
+        mask = Sanitize(mask);
+        if (mask == None)
+        {
+            return Array.Empty<string>();
+        }
+
+        var labels = new List<string>(All.Length);
+        for (var index = 0; index < All.Length; index++)
+        {
+            if ((mask & All[index]) != 0)
+            {
+                labels.Add(Label(All[index]));
+            }
+        }
+
+        return labels.ToArray();
+    }
+
+    public static string Label(int flag) =>
+        flag switch
+        {
+            Straight => Loc.T(L.Velvet.SexualityStraight),
+            Gay => Loc.T(L.Velvet.SexualityGay),
+            Bi => Loc.T(L.Velvet.SexualityBi),
+            Pan => Loc.T(L.Velvet.SexualityPan),
+            Asexual => Loc.T(L.Velvet.SexualityAsexual),
+            Demisexual => Loc.T(L.Velvet.SexualityDemisexual),
             _ => string.Empty,
         };
 }

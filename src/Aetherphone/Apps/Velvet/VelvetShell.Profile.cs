@@ -152,6 +152,15 @@ internal sealed partial class VelvetShell
                 DrawDisplayTokens(new[] { genderLabel }, VChipStyle.Tint, VelvetTheme.Rose);
             }
 
+            var sexualityLabels = VelvetSexuality.Labels(user.Sexuality);
+            if (sexualityLabels.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardSexuality));
+                Gap(4f);
+                DrawDisplayTokens(sexualityLabels, VChipStyle.Tint, VelvetTheme.Rose);
+            }
+
             if (user.Intro.Length > 0)
             {
                 Gap(20f);
@@ -166,6 +175,15 @@ internal sealed partial class VelvetShell
                 VSectionHeader.Bar(Loc.T(L.Velvet.CardRole));
                 Gap(4f);
                 DrawDisplayTokens(VelvetTags.Parse(user.Dynamic), VChipStyle.Tint, new Vector4(0.62f, 0.22f, 0.60f, 1f));
+            }
+
+            var kinks = user.Kinks ?? Array.Empty<string>();
+            if (VelvetIntent.IncludesErp(user.LookingFor) && kinks.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardKinks));
+                Gap(4f);
+                DrawDisplayTokens(kinks, VChipStyle.Tint, new Vector4(0.647f, 0.482f, 0.839f, 1f));
             }
 
             if (user.Tags.Length > 0)

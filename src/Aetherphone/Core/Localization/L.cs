@@ -1665,14 +1665,6 @@ internal static class L
         public static readonly LocString LookingForLabel = new("velvet.lookingForLabel", "Looking for");
         public static readonly LocString RegionLabel = new("velvet.regionLabel", "Region");
         public static readonly LocString RegionAny = new("velvet.regionAny", "Any");
-        public static readonly LocString LookingCollab = new("velvet.lookingCollab", "Collab");
-        public static readonly LocString LookingErp = new("velvet.lookingErp", "E/RP");
-        public static readonly LocString LookingGpose = new("velvet.lookingGpose", "Gpose partner");
-        public static readonly LocString LookingSharing = new("velvet.lookingSharing", "Just sharing");
-        public static readonly LocString LookingRelationship = new("velvet.lookingRelationship", "Relationship");
-        public static readonly LocString LookingFriends = new("velvet.lookingFriends", "Friends");
-        public static readonly LocString LookingWandering = new("velvet.lookingWandering", "Just wandering");
-        public static readonly LocString LookingAny = new("velvet.lookingAny", "Anything");
         public static readonly LocString PresenceOnline = new("velvet.presenceOnline", "Online");
         public static readonly LocString PresenceAway = new("velvet.presenceAway", "Away");
         public static readonly LocString PresenceDnd = new("velvet.presenceDnd", "Do not disturb");
@@ -1714,7 +1706,8 @@ internal static class L
         public static readonly LocString RelNotSaying = new("velvet.relNotSaying", "Rather not say");
         public static readonly LocString RelSingle = new("velvet.relSingle", "Single");
         public static readonly LocString RelTaken = new("velvet.relTaken", "Taken");
-        public static readonly LocString RelOpen = new("velvet.relOpen", "Open");
+        public static readonly LocString RelPoly = new("velvet.relPoly", "Poly");
+        public static readonly LocString RelOpen = new("velvet.relOpen", "Open relationship");
         public static readonly LocString RelComplicated = new("velvet.relComplicated", "It's complicated");
         public static readonly LocString DisplayNameLabel = new("velvet.displayNameLabel", "Display name");
         public static readonly LocString HandleLabel = new("velvet.handleLabel", "Handle");
@@ -1761,9 +1754,11 @@ internal static class L
             new("velvet.intentFriendsBlurb", "Just here to make friends");
         public static readonly LocString IntentSharingBlurb = new("velvet.intentSharingBlurb", "Trading photos and media");
         public static readonly LocString IntentWanderingBlurb = new("velvet.intentWanderingBlurb", "Seeing who is around");
-        public static readonly LocString CatDominant = new("velvet.catDominant", "Dominant");
-        public static readonly LocString CatSubmissive = new("velvet.catSubmissive", "Submissive");
-        public static readonly LocString CatSwitch = new("velvet.catSwitch", "Switch");
+        public static readonly LocString IntentIrl = new("velvet.intentIrl", "IRL");
+        public static readonly LocString IntentNonIrl = new("velvet.intentNonIrl", "Non-IRL");
+        public static readonly LocString IntentIrlBlurb = new("velvet.intentIrlBlurb", "Open to more than the game");
+        public static readonly LocString IntentNonIrlBlurb =
+            new("velvet.intentNonIrlBlurb", "In character and in game only");
         public static readonly LocString CatTone = new("velvet.catTone", "Tone");
         public static readonly LocString CatPace = new("velvet.catPace", "Pace");
         public static readonly LocString CatStyle = new("velvet.catStyle", "Style");
@@ -1820,7 +1815,17 @@ internal static class L
         public static readonly LocString GenderFemboy = new("velvet.genderFemboy", "Femboy");
         public static readonly LocString GenderFemalePlus = new("velvet.genderFemalePlus", "Female+");
         public static readonly LocString GenderMalePlus = new("velvet.genderMalePlus", "Male+");
-        public static readonly LocString GenderOther = new("velvet.genderOther", "Other");
+        public static readonly LocString GenderGenderfluid = new("velvet.genderGenderfluid", "Genderfluid");
+        public static readonly LocString GenderNonbinary = new("velvet.genderNonbinary", "Nonbinary");
+        public static readonly LocString GenderTransgender = new("velvet.genderTransgender", "Transgender");
+        public static readonly LocString CardSexuality = new("velvet.cardSexuality", "Sexuality");
+        public static readonly LocString SexualityStraight = new("velvet.sexualityStraight", "Straight");
+        public static readonly LocString SexualityGay = new("velvet.sexualityGay", "Gay");
+        public static readonly LocString SexualityBi = new("velvet.sexualityBi", "Bi");
+        public static readonly LocString SexualityPan = new("velvet.sexualityPan", "Pan");
+        public static readonly LocString SexualityAsexual = new("velvet.sexualityAsexual", "Asexual");
+        public static readonly LocString SexualityDemisexual = new("velvet.sexualityDemisexual", "Demisexual");
+        public static readonly LocString CardKinks = new("velvet.cardKinks", "Kinks");
         public static readonly LocString LikesTitle = new("velvet.likesTitle", "Likes");
         public static readonly LocString NoLikes = new("velvet.noLikes", "No likes yet.");
         public static readonly LocString CommentsCount = new("velvet.commentsCount", "Comments · {0}");

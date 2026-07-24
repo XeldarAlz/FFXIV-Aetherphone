@@ -16,14 +16,14 @@ internal sealed class VFilterSheet
     private const float RevealSeconds = 0.16f;
     private const float PanelWidth = 250f;
     private const float HeaderHeight = 34f;
-    private const float RowHeight = 42f;
     private const float RegionHeaderHeight = 30f;
     private const float RegionRowHeight = 46f;
     private const float GenderHeaderHeight = 30f;
-    private const float GenderRowHeight = 34f;
-    private const int GenderColumns = 2;
-    private const int GenderRows = 3;
+    private const float PillRowHeight = 34f;
+    private const int PillColumns = 2;
     private const float FooterHeight = 54f;
+
+    private static int PillRowsFor(int optionCount) => (optionCount + PillColumns - 1) / PillColumns;
 
     private bool open;
     private double openedAt;
@@ -70,12 +70,13 @@ internal sealed class VFilterSheet
 
         var width = MathF.Min(PanelWidth * scale, screen.Width - 24f * scale);
         var headerHeight = HeaderHeight * scale;
-        var rowHeight = RowHeight * scale;
         var footerHeight = FooterHeight * scale;
         var padY = 8f * scale;
         var radius = 16f * scale;
-        var genderSectionHeight = GenderHeaderHeight * scale + GenderRows * GenderRowHeight * scale;
-        var height = padY + headerHeight + defs.Length * rowHeight + genderSectionHeight
+        var intentGridHeight = PillRowsFor(defs.Length) * PillRowHeight * scale;
+        var genderSectionHeight = GenderHeaderHeight * scale
+            + PillRowsFor(VelvetGender.All.Length) * PillRowHeight * scale;
+        var height = padY + headerHeight + intentGridHeight + genderSectionHeight
             + RegionHeaderHeight * scale + RegionRowHeight * scale + footerHeight + padY;
 
         var margin = 8f * scale;
@@ -109,43 +110,14 @@ internal sealed class VFilterSheet
         for (var index = 0; index < defs.Length; index++)
         {
             var def = defs[index];
-            var rowMin = new Vector2(min.X + 6f * scale, rowsTop + index * rowHeight);
-            var rowMax = new Vector2(max.X - 6f * scale, rowMin.Y + rowHeight);
-            var centerY = (rowMin.Y + rowMax.Y) * 0.5f;
             var selected = VelvetIntent.Has(mask, def.Flag);
-            var hovered = ImGui.IsMouseHoveringRect(rowMin, rowMax);
-            if (selected)
+            if (DrawPill(drawList, min, max, rowsTop, index, Loc.T(def.Label), def.Hue, selected, alpha, scale))
             {
-                Squircle.Fill(drawList, rowMin, rowMax, 10f * scale, VelvetTheme.Alpha(def.Hue, 0.16f * alpha).Packed());
-            }
-            else if (hovered)
-            {
-                Squircle.Fill(drawList, rowMin, rowMax, 10f * scale,
-                    VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.06f * alpha).Packed());
-            }
-
-            var iconCenter = new Vector2(rowMin.X + 20f * scale, centerY);
-            AppSkin.Icon(drawList, iconCenter, def.Icon.ToIconString(), VelvetTheme.Alpha(def.Hue, alpha), 0.9f);
-
-            var labelInk = selected ? VelvetTheme.TitleInk : VelvetTheme.BodyInk;
-            var label = Loc.T(def.Label);
-            var labelSize = Typography.Measure(label, 0.95f, FontWeight.Medium);
-            Typography.Draw(drawList, new Vector2(iconCenter.X + 22f * scale, centerY - labelSize.Y * 0.5f), label,
-                VelvetTheme.Alpha(labelInk, alpha), 0.95f, FontWeight.Medium);
-
-            DrawCheckbox(drawList, new Vector2(rowMax.X - 22f * scale, centerY), selected, def.Hue, alpha, scale);
-
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    mask = VelvetIntent.Toggle(mask, def.Flag);
-                }
+                mask = VelvetIntent.Toggle(mask, def.Flag);
             }
         }
 
-        var genderTop = rowsTop + defs.Length * rowHeight;
+        var genderTop = rowsTop + intentGridHeight;
         DrawGenderSection(drawList, min, max, genderTop, scale, alpha, ref genderMask);
 
         var regionTop = genderTop + genderSectionHeight;
@@ -218,64 +190,72 @@ internal sealed class VFilterSheet
             VelvetTheme.Alpha(VelvetTheme.HeaderInk, alpha), 0.82f, FontWeight.SemiBold);
 
         var options = VelvetGender.All;
-        var gridLeft = min.X + 12f * scale;
-        var gridRight = max.X - 12f * scale;
         var gridTop = top + headerHeight;
-        var rowHeight = GenderRowHeight * scale;
-        var colGap = 8f * scale;
-        var cellWidth = (gridRight - gridLeft - colGap * (GenderColumns - 1)) / GenderColumns;
-        var pillHeight = 28f * scale;
-
         for (var index = 0; index < options.Length; index++)
         {
             var flag = options[index];
-            var column = index % GenderColumns;
-            var row = index / GenderColumns;
-            var cellLeft = gridLeft + column * (cellWidth + colGap);
-            var cellTop = gridTop + row * rowHeight;
-            var pillMin = new Vector2(cellLeft, cellTop + (rowHeight - pillHeight) * 0.5f);
-            var pillMax = new Vector2(cellLeft + cellWidth, pillMin.Y + pillHeight);
             var selected = VelvetGender.Has(genderMask, flag);
-            var hovered = ImGui.IsMouseHoveringRect(pillMin, pillMax);
-
-            Vector4 fill;
-            if (selected)
+            if (DrawPill(drawList, min, max, gridTop, index, VelvetGender.Label(flag), VelvetTheme.Rose, selected,
+                    alpha, scale))
             {
-                fill = VelvetTheme.Alpha(VelvetTheme.Rose, 0.92f * alpha);
-            }
-            else if (hovered)
-            {
-                fill = VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.10f * alpha);
-            }
-            else
-            {
-                fill = VelvetTheme.Alpha(VelvetTheme.Sunken, alpha);
-            }
-
-            Squircle.Fill(drawList, pillMin, pillMax, pillHeight * 0.5f, fill.Packed());
-            if (!selected)
-            {
-                Squircle.Stroke(drawList, pillMin, pillMax, pillHeight * 0.5f,
-                    VelvetTheme.Alpha(VelvetTheme.CardStroke, alpha).Packed(), 1f * scale);
-            }
-
-            var ink = selected ? VelvetTheme.OnAccent : hovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
-            var label = VelvetGender.Label(flag);
-            var labelSize = Typography.Measure(label, 0.82f, FontWeight.SemiBold);
-            Typography.Draw(drawList,
-                new Vector2((pillMin.X + pillMax.X) * 0.5f - labelSize.X * 0.5f,
-                    (pillMin.Y + pillMax.Y) * 0.5f - labelSize.Y * 0.5f),
-                label, VelvetTheme.Alpha(ink, alpha), 0.82f, FontWeight.SemiBold);
-
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    genderMask = VelvetGender.Toggle(genderMask, flag);
-                }
+                genderMask = VelvetGender.Toggle(genderMask, flag);
             }
         }
+    }
+
+    private static bool DrawPill(ImDrawListPtr drawList, Vector2 min, Vector2 max, float gridTop, int index,
+        string label, Vector4 accent, bool selected, float alpha, float scale)
+    {
+        var gridLeft = min.X + 12f * scale;
+        var gridRight = max.X - 12f * scale;
+        var rowHeight = PillRowHeight * scale;
+        var colGap = 8f * scale;
+        var cellWidth = (gridRight - gridLeft - colGap * (PillColumns - 1)) / PillColumns;
+        var pillHeight = 28f * scale;
+        var column = index % PillColumns;
+        var row = index / PillColumns;
+        var cellLeft = gridLeft + column * (cellWidth + colGap);
+        var cellTop = gridTop + row * rowHeight;
+        var pillMin = new Vector2(cellLeft, cellTop + (rowHeight - pillHeight) * 0.5f);
+        var pillMax = new Vector2(cellLeft + cellWidth, pillMin.Y + pillHeight);
+        var hovered = ImGui.IsMouseHoveringRect(pillMin, pillMax);
+
+        Vector4 fill;
+        if (selected)
+        {
+            fill = VelvetTheme.Alpha(accent, 0.92f * alpha);
+        }
+        else if (hovered)
+        {
+            fill = VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.10f * alpha);
+        }
+        else
+        {
+            fill = VelvetTheme.Alpha(VelvetTheme.Sunken, alpha);
+        }
+
+        Squircle.Fill(drawList, pillMin, pillMax, pillHeight * 0.5f, fill.Packed());
+        if (!selected)
+        {
+            Squircle.Stroke(drawList, pillMin, pillMax, pillHeight * 0.5f,
+                VelvetTheme.Alpha(VelvetTheme.CardStroke, alpha).Packed(), 1f * scale);
+        }
+
+        var ink = selected ? VelvetTheme.OnAccent : hovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
+        var fitted = Typography.FitText(label, cellWidth - 12f * scale, 0.82f, FontWeight.SemiBold);
+        var labelSize = Typography.Measure(fitted, 0.82f, FontWeight.SemiBold);
+        Typography.Draw(drawList,
+            new Vector2((pillMin.X + pillMax.X) * 0.5f - labelSize.X * 0.5f,
+                (pillMin.Y + pillMax.Y) * 0.5f - labelSize.Y * 0.5f),
+            fitted, VelvetTheme.Alpha(ink, alpha), 0.82f, FontWeight.SemiBold);
+
+        if (!hovered)
+        {
+            return false;
+        }
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private static void DrawRegionSection(ImDrawListPtr drawList, Vector2 min, Vector2 max, float top, float scale,
@@ -336,25 +316,4 @@ internal sealed class VFilterSheet
         }
     }
 
-    private static void DrawCheckbox(ImDrawListPtr drawList, Vector2 center, bool selected, Vector4 hue, float alpha,
-        float scale)
-    {
-        var half = 10f * scale;
-        var boxMin = new Vector2(center.X - half, center.Y - half);
-        var boxMax = new Vector2(center.X + half, center.Y + half);
-        if (!selected)
-        {
-            Squircle.Stroke(drawList, boxMin, boxMax, 6f * scale,
-                VelvetTheme.Alpha(VelvetTheme.Moonlight, 0.30f * alpha).Packed(), 1.4f * scale);
-            return;
-        }
-
-        Squircle.Fill(drawList, boxMin, boxMax, 6f * scale, VelvetTheme.Alpha(hue, alpha).Packed());
-        var tick = VelvetTheme.Alpha(VelvetTheme.OnAccent, alpha).Packed();
-        var thickness = 1.9f * scale;
-        drawList.AddLine(center + new Vector2(-4f * scale, 0f), center + new Vector2(-1.2f * scale, 3.4f * scale), tick,
-            thickness);
-        drawList.AddLine(center + new Vector2(-1.2f * scale, 3.4f * scale), center + new Vector2(4.6f * scale, -3.8f * scale),
-            tick, thickness);
-    }
 }

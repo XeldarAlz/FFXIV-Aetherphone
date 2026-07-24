@@ -215,7 +215,9 @@ internal sealed record VelvetProfileDto(
     long GateAckAtUnix,
     bool ShareTimeZone = true,
     int? UtcOffsetMinutes = null,
-    int WhoCanMessage = 0);
+    int WhoCanMessage = 0,
+    int Sexuality = 0,
+    string[]? Kinks = null);
 
 internal sealed record UpdateVelvetProfileRequest(
     string? Intro,
@@ -227,7 +229,9 @@ internal sealed record UpdateVelvetProfileRequest(
     int? RelationshipStatus,
     bool? Discoverable,
     int? WhoCanMessage = null,
-    int? Gender = null);
+    int? Gender = null,
+    int? Sexuality = null,
+    string[]? Kinks = null);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 

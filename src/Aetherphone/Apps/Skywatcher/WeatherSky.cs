@@ -1,5 +1,6 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core;
+using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -21,9 +22,20 @@ internal enum WeatherKind
 
 internal readonly record struct SkyPalette(Vector4 Top, Vector4 Bottom, Vector4 Glow, Vector4 Ink)
 {
+    private static Vector4 Paper => new(1f, 1f, 1f, 1f);
     public Vector4 InkSoft => Ink with { W = Ink.W * 0.66f };
     public Vector4 InkFaint => Ink with { W = Ink.W * 0.40f };
     public Vector4 Horizon => Vector4.Lerp(Top, Bottom, 0.5f);
+    public bool LightSky => Ink.X < 0.5f;
+    public Vector4 SurfaceTop => LightSky
+        ? Vector4.Lerp(Horizon, Paper, 0.70f) with { W = 0.92f }
+        : Vector4.Lerp(Horizon, Paper, 0.22f) with { W = 0.82f };
+    public Vector4 SurfaceBottom => LightSky
+        ? Vector4.Lerp(Horizon, Paper, 0.50f) with { W = 0.92f }
+        : Vector4.Lerp(Horizon, Paper, 0.08f) with { W = 0.82f };
+    public Vector4 CardStroke => LightSky ? Ink with { W = 0.14f } : Paper with { W = 0.20f };
+    public Vector4 Sheen => LightSky ? Paper with { W = 0.65f } : Paper with { W = 0.24f };
+    public Vector4 Shadow => new(0.02f, 0.03f, 0.05f, LightSky ? 0.18f : 0.26f);
 }
 
 internal static class WeatherSky
@@ -116,7 +128,7 @@ internal static class WeatherSky
                         new(0.78f, 0.84f, 1.00f, 1f), InkLight);
             case WeatherKind.Clouds:
                 return isDay
-                    ? new SkyPalette(new(0.40f, 0.50f, 0.60f, 1f), new(0.66f, 0.72f, 0.78f, 1f),
+                    ? new SkyPalette(new(0.37f, 0.46f, 0.56f, 1f), new(0.60f, 0.66f, 0.73f, 1f),
                         new(0.96f, 0.97f, 1.00f, 1f), InkDark)
                     : new SkyPalette(new(0.09f, 0.11f, 0.16f, 1f), new(0.18f, 0.21f, 0.28f, 1f),
                         new(0.52f, 0.57f, 0.66f, 1f), InkLight);

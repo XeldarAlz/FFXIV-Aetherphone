@@ -17,9 +17,11 @@ internal sealed partial class VelvetShell
     private string editIntro = string.Empty;
     private string editPronouns = string.Empty;
     private int editGender;
+    private int editSexuality;
     private int editIntent;
     private int editRelationship;
     private readonly List<string> editRole = new();
+    private readonly List<string> editKinks = new();
     private readonly List<string> editTags = new();
     private readonly List<string> editLimits = new();
     private volatile bool editBusy;
@@ -38,10 +40,13 @@ internal sealed partial class VelvetShell
         editIntro = me.Intro;
         editPronouns = me.Pronouns;
         editGender = VelvetGender.Sanitize(me.Gender);
+        editSexuality = VelvetSexuality.Sanitize(me.Sexuality);
         editIntent = VelvetIntent.Sanitize(me.LookingFor);
         editRelationship = me.RelationshipStatus;
         editRole.Clear();
         editRole.AddRange(VelvetTags.Parse(me.Dynamic));
+        editKinks.Clear();
+        editKinks.AddRange(me.Kinks ?? Array.Empty<string>());
         editTags.Clear();
         editTags.AddRange(me.Tags);
         editLimits.Clear();
@@ -98,6 +103,11 @@ internal sealed partial class VelvetShell
             DrawGenderPicker(ref editGender);
             Gap(16f);
 
+            VSectionHeader.Card(FontAwesomeIcon.Rainbow, Loc.T(L.Velvet.CardSexuality));
+            Gap(6f);
+            DrawSexualityPicker(ref editSexuality);
+            Gap(16f);
+
             VSectionHeader.Card(FontAwesomeIcon.Compass, Loc.T(L.Velvet.CardIntent));
             Gap(6f);
             DrawIntentEditor();
@@ -105,7 +115,17 @@ internal sealed partial class VelvetShell
 
             VSectionHeader.Card(FontAwesomeIcon.Heart, Loc.T(L.Velvet.CardRole));
             Gap(6f);
-            DrawCategoryPicker(VelvetSuggestions.DynamicCategories, editRole);
+            DrawTagFlow(VelvetSuggestions.Roles, editRole, VelvetTheme.Rose);
+            Gap(16f);
+
+            VSectionHeader.Card(FontAwesomeIcon.Fire, Loc.T(L.Velvet.CardKinks));
+            Gap(6f);
+            DrawTagFlow(VelvetSuggestions.Kinks, editKinks, new Vector4(0.647f, 0.482f, 0.839f, 1f));
+            Gap(16f);
+
+            VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, Loc.T(L.Velvet.CardLimits));
+            Gap(6f);
+            DrawTokenEditor(editLimits, VelvetSuggestions.Limits, VelvetTheme.Gold);
             Gap(16f);
 
             VSectionHeader.Card(FontAwesomeIcon.HandHoldingHeart, Loc.T(L.Velvet.CardRelationship));
@@ -116,11 +136,6 @@ internal sealed partial class VelvetShell
             VSectionHeader.Card(FontAwesomeIcon.Hashtag, Loc.T(L.Velvet.CardTags));
             Gap(6f);
             DrawCategoryPicker(VelvetSuggestions.TagCategories, editTags);
-            Gap(16f);
-
-            VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, Loc.T(L.Velvet.CardLimits));
-            Gap(6f);
-            DrawTokenEditor(editLimits, VelvetSuggestions.Limits, VelvetTheme.Gold);
             Gap(16f);
 
             Gap(40f);
@@ -205,6 +220,27 @@ internal sealed partial class VelvetShell
         }
     }
 
+    private void DrawSexualityPicker(ref int sexuality)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = ImGui.GetContentRegionAvail().X;
+        var options = VelvetSexuality.All;
+        var models = new VChipModel[options.Length];
+        for (var index = 0; index < options.Length; index++)
+        {
+            var value = options[index];
+            var selected = VelvetSexuality.Has(sexuality, value);
+            models[index] = new VChipModel(VelvetSexuality.Label(value), selected ? VChipStyle.Solid : VChipStyle.Ghost,
+                selected ? VelvetTheme.Rose : VelvetTheme.Moonlight);
+        }
+
+        var clicked = VChipFlow.Draw(models, width, scale);
+        if (clicked >= 0)
+        {
+            sexuality = VelvetSexuality.Toggle(sexuality, options[clicked]);
+        }
+    }
+
     private void DrawRelationshipEditor()
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -240,7 +276,8 @@ internal sealed partial class VelvetShell
         var dynamic = VelvetTags.Join(editRole.ToArray());
         var request = new UpdateVelvetProfileRequest(editIntro.Trim(), editPronouns.Trim(), dynamic, editTags.ToArray(),
             editLimits.ToArray(), VelvetIntent.Sanitize(editIntent), editRelationship, null,
-            Gender: VelvetGender.Sanitize(editGender));
+            Gender: VelvetGender.Sanitize(editGender), Sexuality: VelvetSexuality.Sanitize(editSexuality),
+            Kinks: editKinks.ToArray());
         if (identityChanged)
         {
             store.UpdateIdentity(editDisplayName.Trim(), editHandle.Trim(),
