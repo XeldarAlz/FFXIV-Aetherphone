@@ -128,6 +128,7 @@ internal sealed partial class MusicApp
         var subtitle = Typography.FitText(SongRowSubtitle(song), textWidth, TextStyles.Caption1);
         Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), subtitle, ui.MutedInk, TextStyles.Caption1);
         var addClicked = false;
+        var overAdd = false;
         if (current)
         {
             Equalizer.Draw(drawList, new Vector2(max.X - 18f * scale, min.Y + rowHeight * 0.5f), scale, 17f * scale,
@@ -135,7 +136,11 @@ internal sealed partial class MusicApp
         }
         else if (showAdd)
         {
-            addClicked = ui.IconButton(new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f), 15f * scale,
+            var addCenter = new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f);
+            var addRadius = 15f * scale;
+            var addHit = new Vector2(addRadius, addRadius);
+            overAdd = UiInteract.Hover(addCenter - addHit, addCenter + addHit);
+            addClicked = ui.IconButton(addCenter, addRadius,
                 FontAwesomeIcon.Plus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Music.AddToPlaylist));
         }
 
@@ -147,7 +152,7 @@ internal sealed partial class MusicApp
             return;
         }
 
-        if (!UiInteract.Click(min, max, hovered))
+        if (overAdd || !UiInteract.Click(min, max, hovered))
         {
             return;
         }

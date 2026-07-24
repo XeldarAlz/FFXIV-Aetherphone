@@ -440,10 +440,11 @@ internal sealed partial class MusicApp
             var tooltip = Loc.T(isFavoriteStation ? L.Music.RemoveFavoriteStation : L.Music.AddFavoriteStation);
 
             var starX = current ? max.X - 36f * scale : max.X - 18f * scale;
-            var starY = min.Y + rowHeight * 0.5f;
-            overStar = UiInteract.Hover(new Vector2(starX - 14f * scale, starY - 14f * scale),
-                new Vector2(starX + 14f * scale, starY + 14f * scale));
-            favoriteStar = ui.IconButton(new Vector2(starX, min.Y + rowHeight * 0.5f), 14f * scale,
+            var starCenter = new Vector2(starX, min.Y + rowHeight * 0.5f);
+            var starRadius = 14f * scale;
+            var starHit = new Vector2(starRadius, starRadius);
+            overStar = UiInteract.Hover(starCenter - starHit, starCenter + starHit);
+            favoriteStar = ui.IconButton(starCenter, starRadius,
                 FontAwesomeIcon.Star.ToIconString(), isFavoriteStation ? ui.Accent : ui.MutedInk, AppSkin.Transparent,
                 0.82f, tooltip);
             if (favoriteStar)

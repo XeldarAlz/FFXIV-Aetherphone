@@ -75,7 +75,7 @@ internal static class VenueCard
             return VenueCardAction.ToggleFavorite;
         }
 
-        if (UiInteract.Click(card.Min, card.Max, hovered))
+        if (!starHovered && UiInteract.Click(card.Min, card.Max, hovered))
         {
             return VenueCardAction.Open;
         }

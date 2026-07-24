@@ -70,6 +70,8 @@ internal sealed partial class MessageApp
         Typography.Draw(new Vector2(previewLeft, origin.Y + 31f * scale),
             Typography.FitText(entry.Preview, unstarCenter.X - unstarRadius - 8f * scale - previewLeft, 0.82f,
                 FontWeight.Regular), ui.MutedInk, 0.82f);
+        var unstarHit = new Vector2(unstarRadius, unstarRadius);
+        var overUnstar = UiInteract.Hover(unstarCenter - unstarHit, unstarCenter + unstarHit);
         var unstarClicked = ui.IconButton(unstarCenter, unstarRadius, FontAwesomeIcon.Star.ToIconString(),
             ui.Accent, AppSkin.Transparent, 0.8f, Loc.T(L.Message.UnstarAction));
         if (unstarClicked)
@@ -77,7 +79,7 @@ internal sealed partial class MessageApp
             configuration.MessageStarredMessages.Remove(entry);
             configuration.Save();
         }
-        else if (UiInteract.HoverClick(origin, rowMax))
+        else if (!overUnstar && UiInteract.HoverClick(origin, rowMax))
         {
             router.Push(MessageRoute.Thread(entry.ConversationId));
             threadView.RequestScrollTo(entry.MessageId);
