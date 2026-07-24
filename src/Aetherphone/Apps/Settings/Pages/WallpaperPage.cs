@@ -52,7 +52,7 @@ internal sealed class WallpaperPage : ISettingsPage
         this.wallpapers = wallpapers;
         this.wallpaperImages = wallpaperImages;
         assign = Assign;
-        editingDark = wallpapers.Darkness >= 0.5f;
+        editingDark = wallpapers.ThemeDarkness >= 0.5f;
     }
 
     public void Draw(in PhoneContext context, Rect body)

@@ -63,7 +63,7 @@ internal sealed class PhoneWindow : Window
 
         configuration.MaximizedPosition = maximizedPosition;
         configuration.MinimizedPosition = minimizedPosition;
-        configuration.Save();
+        configuration.SaveNow();
     }
 
     public void Recenter()

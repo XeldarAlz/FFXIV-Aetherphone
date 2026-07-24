@@ -484,4 +484,6 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
 
         _ = Plugin.Framework.RunOnFrameworkThread(() => Plugin.PluginInterface.SavePluginConfig(this));
     }
+
+    public void SaveNow() => Plugin.PluginInterface.SavePluginConfig(this);
 }

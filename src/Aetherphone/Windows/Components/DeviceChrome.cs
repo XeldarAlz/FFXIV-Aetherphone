@@ -165,7 +165,7 @@ internal static class DeviceChrome
         var light = library.Resolve(theme.LightWallpaperId);
         var dark = library.Resolve(theme.DarkWallpaperId);
         WallpaperRenderer.Draw(ImGui.GetWindowDrawList(), destination, rounding, light, dark,
-            library.CurrentTargetAspect, library.Darkness, theme.ScreenBase);
+            library.CurrentTargetAspect, library.ThemeDarkness, theme.ScreenBase);
     }
 
     public static void DrawHomeScrim(Rect screen, PhoneTheme theme)
