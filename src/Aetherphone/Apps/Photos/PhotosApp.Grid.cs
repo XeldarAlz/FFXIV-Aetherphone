@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -39,6 +41,7 @@ internal sealed partial class PhotosApp
             }
 
             DrawPhotoGrid(body, 0, entries.Length);
+            DrawOpenFolder(body);
             return;
         }
 
@@ -289,6 +292,15 @@ internal sealed partial class PhotosApp
             var heightTotal = rows * cardHeight + (rows - 1) * gap;
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(width, heightTotal + 12f * scale));
+        }
+    }
+
+    private void DrawOpenFolder(Rect rect)
+    {
+        if (ComposeFab.Draw(rect, "##openFolderFab", Accent, FontAwesomeIcon.Folder.ToIconString(),
+                             Loc.T(L.Photos.OpenFolder), "photos.openFolder"))
+        {
+            UrlActions.OpenFolder(library.DirectoryPath);
         }
     }
 
