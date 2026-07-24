@@ -10,7 +10,7 @@ internal sealed class PhotoLibrary
         Directory.CreateDirectory(directory);
     }
 
-    public string GetDirectory() => directory;
+    public string DirectoryPath => directory;
 
     public void Save(byte[] pixels, int width, int height)
     {
