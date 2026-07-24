@@ -1722,6 +1722,7 @@
   "photos.recents": "最近の項目",
   "photos.today": "今日",
   "photos.yesterday": "昨日",
+  "photos.openFolder": "",
   "skywatcher.nextFewHours": "数時間後",
   "skywatcher.forecast": "天気予報",
   "skywatcher.now": "現在",
