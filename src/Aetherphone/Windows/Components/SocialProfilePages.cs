@@ -183,7 +183,12 @@ internal sealed class SocialProfilePages
         var followedByH = followedByLine.Length > 0
             ? 8f * scale + Typography.MeasureWrapped(followedByLine, innerWidth, TextStyles.Subheadline.Scale)
             : 0f;
-        var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
+        var buttonHeight = 34f * scale;
+        var hasIconRow = user.IsMe && (openConductRules is not null ||
+            (openSettings is not null && style.SettingsLabel is not null) ||
+            (openSaved is not null && style.SavedLabel is not null));
+        var iconRowHeight = hasIconRow ? buttonHeight + 8f * scale : 0f;
+        var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale + iconRowHeight;
         var cardBottom = textTop + nameH + lineGap + metaH + timeH + bioH + followedByH + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
         var avatarCenter = new Vector2(innerLeft + avatarRadius, origin.Y + pad + avatarRadius);
@@ -191,7 +196,6 @@ internal sealed class SocialProfilePages
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)), 64);
         DrawAvatar(drawList, avatarCenter, avatarRadius, theme, user.Name, user.World, user.AvatarUrl, 1.5f, 64);
         avatarLightbox.TryOpen(avatarCenter, avatarRadius, user.AvatarUrl, images);
-        var buttonHeight = 34f * scale;
         var avatarRight = avatarCenter.X + avatarRadius;
         var rightEdge = origin.X + width - pad;
         var reportReserve = user.IsMe ? 0f : buttonHeight + 10f * scale;
@@ -201,10 +205,11 @@ internal sealed class SocialProfilePages
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
         if (user.IsMe)
         {
-            var iconCenterX = buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale;
+            var iconRowY = buttonMax.Y + 8f * scale + buttonHeight * 0.5f;
+            var iconCenterX = rightEdge - buttonHeight * 0.5f;
             if (openConductRules is not null)
             {
-                if (ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                if (ui.IconButton(new Vector2(iconCenterX, iconRowY), buttonHeight * 0.5f,
                         FontAwesomeIcon.QuestionCircle.ToIconString(), style.Palette.MutedInk,
                         Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(L.Conduct.Eyebrow)))
                 {
@@ -216,7 +221,7 @@ internal sealed class SocialProfilePages
 
             if (openSettings is not null && style.SettingsLabel is { } settingsLabel)
             {
-                if (ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                if (ui.IconButton(new Vector2(iconCenterX, iconRowY), buttonHeight * 0.5f,
                         FontAwesomeIcon.Cog.ToIconString(), style.Palette.MutedInk,
                         Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(settingsLabel)))
                 {
@@ -227,7 +232,7 @@ internal sealed class SocialProfilePages
             }
 
             if (openSaved is not null && style.SavedLabel is { } savedLabel
-                && ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                && ui.IconButton(new Vector2(iconCenterX, iconRowY), buttonHeight * 0.5f,
                     FontAwesomeIcon.Bookmark.ToIconString(), style.Palette.MutedInk,
                     Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(savedLabel)))
             {

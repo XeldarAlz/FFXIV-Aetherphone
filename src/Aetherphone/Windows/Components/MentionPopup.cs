@@ -61,6 +61,8 @@ internal sealed class MentionPopup
             top = anchor.Max.Y + 6f * scale;
         }
 
+        top = MathF.Min(top, screen.Max.Y - 8f * scale - height);
+
         var min = new Vector2(left, top);
         var max = new Vector2(left + width, top + height);
         autocomplete.PointerOver = ImGui.IsMouseHoveringRect(min, max);
