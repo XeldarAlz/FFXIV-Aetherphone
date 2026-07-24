@@ -13,6 +13,7 @@ internal static class UiInteract
     private static int overlayFrame = -1;
     private static Vector2 pendingTapMin;
     private static Vector2 pendingTapMax;
+    private static Vector2 pendingTapWindowPos;
     private static bool hasPendingTap;
 
     public static void BlockThisFrame() => blockedFrame = ImGui.GetFrameCount();
@@ -45,7 +46,8 @@ internal static class UiInteract
     /// The press is claimed by the rect itself, held in the window's content space so that scrolling
     /// or a fling between press and release cannot hand the tap to whichever rect drifted under the
     /// pointer. When rects overlap, the last one to claim on the press frame owns it, matching the
-    /// draw order that put it on top.
+    /// draw order that put it on top. Content space follows the window, so the claim is dropped when
+    /// the window itself moves: dragging an unlocked phone by one of its controls is a move, not a tap.
     /// </remarks>
     public static bool Click(Vector2 min, Vector2 max, bool hovered)
     {
@@ -54,12 +56,14 @@ internal static class UiInteract
             hasPendingTap = false;
         }
 
-        var contentMin = ToContentSpace(min);
-        var contentMax = ToContentSpace(max);
+        var windowPos = ImGui.GetWindowPos();
+        var contentMin = ToContentSpace(min, windowPos);
+        var contentMax = ToContentSpace(max, windowPos);
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             pendingTapMin = contentMin;
             pendingTapMax = contentMax;
+            pendingTapWindowPos = windowPos;
             hasPendingTap = true;
         }
 
@@ -68,7 +72,8 @@ internal static class UiInteract
             return false;
         }
 
-        var activated = hovered && Claimed(contentMin, pendingTapMin) && Claimed(contentMax, pendingTapMax);
+        var activated = hovered && Claimed(windowPos, pendingTapWindowPos) &&
+            Claimed(contentMin, pendingTapMin) && Claimed(contentMax, pendingTapMax);
         if (activated)
         {
             hasPendingTap = false;
@@ -77,8 +82,8 @@ internal static class UiInteract
         return activated;
     }
 
-    private static Vector2 ToContentSpace(Vector2 screen) =>
-        screen - ImGui.GetWindowPos() + new Vector2(ImGui.GetScrollX(), ImGui.GetScrollY());
+    private static Vector2 ToContentSpace(Vector2 screen, Vector2 windowPos) =>
+        screen - windowPos + new Vector2(ImGui.GetScrollX(), ImGui.GetScrollY());
 
     private static bool Claimed(Vector2 corner, Vector2 claim) =>
         MathF.Abs(corner.X - claim.X) <= RectMatchEpsilon && MathF.Abs(corner.Y - claim.Y) <= RectMatchEpsilon;
