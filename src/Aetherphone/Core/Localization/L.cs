@@ -324,6 +324,7 @@ internal static class L
         public static readonly LocString GroupFallback = new("dm.groupFallback", "Group");
         public static readonly LocString PhotoPreview = new("dm.photoPreview", "Photo");
         public static readonly LocString VoicePreview = new("dm.voicePreview", "Voice message");
+        public static readonly LocString PostPreview = new("dm.postPreview", "Post");
         public static readonly LocString NoMutualTitle = new("dm.noMutualTitle", "No mutual friends yet");
         public static readonly LocString NoMutualFriends = new("dm.noMutualFriends", "Share numbers in-game to start messaging.");
         public static readonly LocString GroupNameHint = new("dm.groupNameHint", "Group name (optional)");
@@ -1674,6 +1675,11 @@ internal static class L
         public static readonly LocString DeleteConversation = new("aethergram.deleteConversation", "Delete conversation");
         public static readonly LocString DeleteConversationMessage = new("aethergram.deleteConversationMessage",
             "This deletes the conversation for you. This can't be undone.");
+        public static readonly LocString SendTo = new("aethergram.sendTo", "Send to");
+        public static readonly LocString SharedPost = new("aethergram.sharedPost", "Shared a post");
+        public static readonly LocString PostUnavailable = new("aethergram.postUnavailable", "Post unavailable");
+        public static readonly LocString Send = new("aethergram.send", "Send");
+        public static readonly LocString Sent = new("aethergram.sent", "Sent");
     }
 
     internal static class Velvet

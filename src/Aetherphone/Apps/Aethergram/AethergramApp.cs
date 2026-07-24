@@ -136,7 +136,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     {
         store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media);
         account = net.Account;
-        dmStore = new GramDmStore(session, net.GramDm, net.Safety, net.Media, notifications, keyVault,
+        dmStore = new GramDmStore(session, net.GramDm, net.Social, net.Safety, net.Media, notifications, keyVault,
             conversationKeys, visibility, realtimeSignals);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -239,6 +239,8 @@ internal sealed partial class AethergramApp : IPhoneApp
         caption = string.Empty;
         profile.SearchDraft = string.Empty;
         commentDraft = string.Empty;
+        shareSearchDraft = string.Empty;
+        shareSentUserIds.Clear();
         store.ClearDiscover();
         stories.Close();
     }
@@ -316,6 +318,9 @@ internal sealed partial class AethergramApp : IPhoneApp
                 break;
             case AethergramScreen.Settings:
                 DrawSettings(area);
+                break;
+            case AethergramScreen.Share:
+                DrawShare(area, route.Id!);
                 break;
             default:
                 DrawRoot(area);
@@ -722,6 +727,15 @@ internal sealed partial class AethergramApp : IPhoneApp
             actionsRight += Typography.Measure(commentText, 0.9f, FontWeight.Medium).X;
         }
 
+        var shareCenter = new Vector2(actionsRight + (post.CommentCount > 0 ? 14f : 6f) * scale + 13f * scale,
+            actionCenterY);
+        if (ui.IconButton(shareCenter, 15f * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
+                AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.15f, Loc.T(L.Aethergram.SendTo)))
+        {
+            OpenShare(post.Id);
+        }
+
+        actionsRight = shareCenter.X + 20f * scale;
         if (photos.Length > 1)
         {
             var dotsCenter = new Vector2(origin.X + width * 0.5f, actionCenterY);

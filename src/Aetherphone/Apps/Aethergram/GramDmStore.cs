@@ -1,8 +1,10 @@
+using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Notifications;
@@ -13,15 +15,19 @@ namespace Aetherphone.Apps.Aethergram;
 internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThreadDto>
 {
     private readonly GramDmClient client;
+    private readonly SocialClient social;
     private readonly RealtimeSignalBus signals;
+    private readonly ConcurrentDictionary<string, PostDto?> sharedPosts = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, byte> sharedPostFetches = new(StringComparer.Ordinal);
     private volatile bool gramKeysHydrated;
 
-    public GramDmStore(AethernetSession session, GramDmClient client, SafetyClient safety, MediaClient media,
-        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility,
-        RealtimeSignalBus signals)
+    public GramDmStore(AethernetSession session, GramDmClient client, SocialClient social, SafetyClient safety,
+        MediaClient media, NotificationService notifications, KeyVault vault, ConversationKeyStore keys,
+        PhoneVisibility visibility, RealtimeSignalBus signals)
         : base("AethergramDm", session, safety, media, notifications, vault, keys, visibility)
     {
         this.client = client;
+        this.social = social;
         this.signals = signals;
         signals.GramPinged += OnGramPinged;
     }
@@ -192,6 +198,71 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         return sent;
     }
 
+    public void SendPostShare(string otherId, string postId)
+    {
+        if (otherId.Length == 0 || postId.Length == 0)
+        {
+            return;
+        }
+
+        work.Run("send post share", async token =>
+        {
+            var status = await EnsureThreadKeysAsync(otherId, token).ConfigureAwait(false);
+            var scope = ScopeFor(otherId);
+            var generation = keys.CurrentGeneration(scope);
+            GramMessageDto? sent;
+            if (cipher.IsUnlocked && status.CanEncrypt
+                && cipher.TryEncrypt(scope, generation, postId, MyUserId, out var encoded))
+            {
+                sent = await SendMessageRequestAsync(otherId, encoded.Envelope, PostShareKind, token, null, 0, 0,
+                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag, null, 0).ConfigureAwait(false);
+                if (sent is not null)
+                {
+                    cipher.RecordDecrypted(sent.Id, postId, encoded.FrankingKeyBase64);
+                    sent = sent with { Body = postId };
+                }
+            }
+            else
+            {
+                sent = await SendMessageRequestAsync(otherId, postId, PostShareKind, token, null, 0, 0, 0, null,
+                    null, 0).ConfigureAwait(false);
+            }
+
+            if (sent is null)
+            {
+                return;
+            }
+
+            if (CurrentThreadId == otherId)
+            {
+                MessageItems = CopyOnWrite.Append(MessageItems, sent);
+            }
+
+            InvalidateThreadList();
+        });
+    }
+
+    public bool TryResolvePost(string postId, out PostDto? post)
+    {
+        if (sharedPosts.TryGetValue(postId, out post))
+        {
+            return true;
+        }
+
+        post = null;
+        if (!sharedPostFetches.TryAdd(postId, 0))
+        {
+            return false;
+        }
+
+        work.Run("shared post fetch", async token =>
+        {
+            var fetched = await social.PostAsync(postId, token).ConfigureAwait(false);
+            sharedPosts[postId] = fetched;
+        }, () => sharedPostFetches.TryRemove(postId, out _));
+        return false;
+    }
+
     protected override Task<GramMessageDto?> EditMessageRequestAsync(string messageId, string body,
         CancellationToken token, int encVersion, string? commitmentTag)
     {
@@ -274,7 +345,10 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
     protected override PhoneNotification BuildInboxNotification(GramThreadDto thread)
     {
         var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
-        return new PhoneNotification("aethergram", name, thread.LastMessagePreview, DateTime.Now,
+        var preview = thread.LastMessageKind == PostShareKind
+            ? Loc.T(L.Aethergram.SharedPost)
+            : thread.LastMessagePreview;
+        return new PhoneNotification("aethergram", name, preview, DateTime.Now,
             AppPalettes.Aethergram.Accent, thread.OtherUserId);
     }
 
@@ -322,12 +396,19 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            if (item.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope)
+            var isPostShare = item.LastMessageKind == PostShareKind;
+            if (!isPostShare && item.LastMessageEncVersion != EnvelopeCodec.VersionEnvelope)
             {
                 continue;
             }
 
             decorated ??= (GramThreadDto[])items.Clone();
+            if (isPostShare)
+            {
+                decorated[index] = item with { LastMessagePreview = Loc.T(L.Aethergram.SharedPost) };
+                continue;
+            }
+
             var scope = ScopeFor(item.OtherUserId);
             decorated[index] = item with
             {

@@ -111,6 +111,22 @@ internal readonly struct TranscriptMessage
     }
 }
 
+internal readonly record struct ChatPostCard(
+    string PostId,
+    string AuthorName,
+    string Snippet,
+    string? ThumbnailUrl,
+    bool Available);
+
+internal interface IChatTranscriptPostCards
+{
+    bool TryResolve(string messageId, string body, out ChatPostCard card);
+
+    void Open(string postId);
+
+    IDalamudTextureWrap? Thumbnail(string url);
+}
+
 internal interface IChatTranscriptMedia
 {
     IDalamudTextureWrap? Texture(string messageId);
@@ -161,6 +177,7 @@ internal readonly ref struct ChatTranscriptModel
     public IChatTranscriptInteractions? Interactions { get; init; }
     public IChatTranscriptVoice? Voice { get; init; }
     public IChatTranscriptPaging? Paging { get; init; }
+    public IChatTranscriptPostCards? PostCards { get; init; }
 }
 
 internal sealed class ChatTranscript
@@ -170,6 +187,7 @@ internal sealed class ChatTranscript
     private const int KindImage = 1;
     private const int KindSystem = 2;
     private const int KindVoice = 3;
+    private const int KindPost = 4;
     private const float StampTextScale = 0.70f;
     private const float StampTickScale = 0.58f;
     private const float BubbleGap = 3f;
@@ -283,6 +301,10 @@ internal sealed class ChatTranscript
                 else if (message.Kind == KindVoice)
                 {
                     DrawVoiceBubble(message, index, model);
+                }
+                else if (message.Kind == KindPost)
+                {
+                    DrawPostBubble(message, index, model);
                 }
                 else
                 {
@@ -535,6 +557,167 @@ internal sealed class ChatTranscript
             && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
         {
             interactions.OnMessageContext(message.Id);
+        }
+
+        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
+        ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
+    }
+
+    private void DrawPostBubble(TranscriptMessage message, int index, in ChatTranscriptModel model)
+    {
+        if ((message.Flags & TranscriptFlags.Placeholder) != 0)
+        {
+            DrawTextBubble(message, index, model);
+            return;
+        }
+
+        if (model.PostCards is { } cards && cards.TryResolve(message.Id, message.Body, out var card))
+        {
+            DrawPostCardBubble(message, index, card, cards, model);
+            return;
+        }
+
+        DrawTextBubble(WithBodyText(message, Loc.T(L.Aethergram.SharedPost)), index, model);
+    }
+
+    private static TranscriptMessage WithBodyText(in TranscriptMessage message, string body)
+    {
+        return new TranscriptMessage(message.Id, message.SenderId, body, KindText, message.CreatedAtUnix,
+            message.MediaWidth, message.MediaHeight, message.ReadAtUnix, message.SenderName, message.SenderTint,
+            message.Flags, message.ReplyToId, message.ReplySenderName, message.ReplyBody, message.ReplyKind,
+            message.DurationSecs, message.Reactions);
+    }
+
+    private void DrawPostCardBubble(TranscriptMessage message, int index, in ChatPostCard card,
+        IChatTranscriptPostCards cards, in ChatTranscriptModel model)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var mine = message.SenderId == model.MyUserId;
+        var drawList = ImGui.GetWindowDrawList();
+        var available = ScrollLayout.StableContentWidth();
+        var paddingX = 7f * scale;
+        var paddingY = 7f * scale;
+        var innerWidth = MathF.Min(available * 0.62f, 210f * scale);
+        var stamp = MeasureStamp(message, mine, scale);
+        var snippet = card.Available ? card.Snippet : string.Empty;
+        var snippetHeight = 0f;
+        if (snippet.Length > 0)
+        {
+            var lineHeight = Typography.Measure("Ag", TextStyles.Footnote).Y;
+            snippetHeight = MathF.Min(Typography.MeasureWrappedBlock(snippet, TextStyles.Footnote, innerWidth).Y,
+                lineHeight * 2f);
+        }
+
+        var unavailableLabel = Loc.T(L.Aethergram.PostUnavailable);
+        var unavailableSize = Typography.Measure(unavailableLabel, TextStyles.FootnoteEmphasized);
+        var authorHeight = card.Available
+            ? Typography.Measure(card.AuthorName, TextStyles.SubheadlineEmphasized).Y
+            : 0f;
+        float bubbleWidth;
+        float bubbleHeight;
+        if (card.Available)
+        {
+            bubbleWidth = innerWidth + paddingX * 2f;
+            bubbleHeight = paddingY + authorHeight + 6f * scale + innerWidth
+                + (snippetHeight > 0f ? 5f * scale + snippetHeight : 0f)
+                + 4f * scale + stamp.Height + paddingY;
+        }
+        else
+        {
+            var compactWidth = MathF.Max(19f * scale + unavailableSize.X, stamp.Width + 2f * scale);
+            bubbleWidth = MathF.Min(innerWidth + paddingX * 2f, paddingX * 2f + compactWidth);
+            bubbleHeight = paddingY + unavailableSize.Y + 4f * scale + stamp.Height + paddingY;
+        }
+
+        var start = ImGui.GetCursorScreenPos();
+        var bubbleMin = new Vector2(mine ? start.X + available - bubbleWidth : start.X, start.Y);
+        var bubbleMax = bubbleMin + new Vector2(bubbleWidth, bubbleHeight);
+        ConsumeScrollTarget(message.Id, bubbleMin.Y);
+        var entrance = entrances.Progress(index);
+        var fx = BubblePop.For(entrance, scale, new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y));
+        var scaledMin = fx.Apply(bubbleMin);
+        var scaledMax = fx.Apply(bubbleMax);
+        var fill = mine ? model.Accent : new Vector4(1f, 1f, 1f, 0.10f);
+        var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
+        var mutedInk = mine ? new Vector4(1f, 1f, 1f, 0.78f) : Palette.WithAlpha(model.MutedInk, 0.95f);
+        if (!card.Available)
+        {
+            fill = Palette.WithAlpha(fill, fill.W * 0.55f);
+            ink = model.MutedInk;
+        }
+
+        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * fx.Alpha)));
+        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * fx.Pop, mine, model);
+        var contentTop = bubbleMin.Y + paddingY;
+        if (card.Available)
+        {
+            var authorPos = fx.Apply(new Vector2(bubbleMin.X + paddingX + 2f * scale, contentTop));
+            Typography.Draw(drawList, authorPos,
+                Typography.FitText(card.AuthorName, innerWidth - 4f * scale, TextStyles.SubheadlineEmphasized),
+                Palette.WithAlpha(ink, ink.W * fx.Alpha), TextStyles.SubheadlineEmphasized.Scale * fx.Pop,
+                TextStyles.SubheadlineEmphasized.Weight);
+            contentTop += authorHeight + 6f * scale;
+            var thumbMin = fx.Apply(new Vector2(bubbleMin.X + paddingX, contentTop));
+            var thumbMax = fx.Apply(new Vector2(bubbleMin.X + paddingX + innerWidth, contentTop + innerWidth));
+            var rounding = 10f * scale * fx.Pop;
+            var texture = card.ThumbnailUrl is null ? null : cards.Thumbnail(card.ThumbnailUrl);
+            if (texture is null)
+            {
+                Squircle.Fill(drawList, thumbMin, thumbMax, rounding,
+                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f * fx.Alpha)));
+                AppSkin.Icon((thumbMin + thumbMax) * 0.5f, FontAwesomeIcon.Image.ToIconString(),
+                    Palette.WithAlpha(model.MutedInk, fx.Alpha), 1.2f);
+            }
+            else
+            {
+                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+                drawList.AddImageRounded(texture.Handle, thumbMin, thumbMax, uv0, uv1,
+                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, fx.Alpha)), rounding, ImDrawFlags.RoundCornersAll);
+            }
+
+            contentTop += innerWidth;
+            if (snippetHeight > 0f)
+            {
+                contentTop += 5f * scale;
+                var snippetMin = new Vector2(bubbleMin.X + paddingX, contentTop);
+                var snippetMax = new Vector2(bubbleMin.X + paddingX + innerWidth, contentTop + snippetHeight);
+                drawList.PushClipRect(fx.Apply(snippetMin), fx.Apply(snippetMax), true);
+                Typography.DrawWrappedLeft(fx.Apply(snippetMin), snippet,
+                    Palette.WithAlpha(mutedInk, mutedInk.W * fx.Alpha), TextStyles.Footnote, innerWidth);
+                drawList.PopClipRect();
+                contentTop += snippetHeight;
+            }
+        }
+        else
+        {
+            var iconCenter = new Vector2(bubbleMin.X + paddingX + 6f * scale,
+                contentTop + unavailableSize.Y * 0.5f);
+            AppSkin.Icon(drawList, fx.Apply(iconCenter), FontAwesomeIcon.EyeSlash.ToIconString(),
+                Palette.WithAlpha(ink, ink.W * fx.Alpha * 0.9f), 0.62f * fx.Pop);
+            var labelPos = fx.Apply(new Vector2(bubbleMin.X + paddingX + 16f * scale, contentTop));
+            Typography.Draw(drawList, labelPos, unavailableLabel, Palette.WithAlpha(ink, ink.W * fx.Alpha),
+                TextStyles.FootnoteEmphasized.Scale * fx.Pop, TextStyles.FootnoteEmphasized.Weight);
+        }
+
+        var timeColor = mine ? new Vector4(1f, 1f, 1f, 0.72f) : Palette.WithAlpha(model.MutedInk, 0.95f);
+        DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX - 2f * scale, bubbleMax.Y - paddingY), fx,
+            timeColor);
+        if (entrance >= 1f && Hovering(bubbleMin, bubbleMax))
+        {
+            if (card.Available)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    cards.Open(card.PostId);
+                }
+            }
+
+            if (model.Interactions is { } interactions && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+            {
+                interactions.OnMessageContext(message.Id);
+            }
         }
 
         var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);

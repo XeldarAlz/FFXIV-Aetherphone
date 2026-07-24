@@ -120,6 +120,15 @@ internal sealed partial class AethergramApp
                 actionsRight += Typography.Measure(commentText, 0.9f, FontWeight.Medium).X;
             }
 
+            var shareCenter = new Vector2(actionsRight + (post.CommentCount > 0 ? 14f : 6f) * scale + 13f * scale,
+                actionsY);
+            if (ui.IconButton(shareCenter, 15f * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
+                    AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.15f, Loc.T(L.Aethergram.SendTo)))
+            {
+                OpenShare(post.Id);
+            }
+
+            actionsRight = shareCenter.X + 20f * scale;
             var moreCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
             if (photos.Length > 1)
             {

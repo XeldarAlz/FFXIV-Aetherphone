@@ -3,10 +3,12 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Aethergram;
@@ -18,7 +20,7 @@ internal sealed partial class AethergramApp
 
     private readonly ThreadView threadView;
 
-    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>
+    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>, IChatTranscriptPostCards
     {
         private readonly AethergramApp app;
 
@@ -41,6 +43,37 @@ internal sealed partial class AethergramApp
         protected override string NoPhotosLabel => Loc.T(L.Common.NoPhotos);
         protected override string SaveLabel => Loc.T(L.Common.SaveToGallery);
         protected override string SavedLabel => Loc.T(L.Common.SavedToGallery);
+
+        protected override IChatTranscriptPostCards? PostCards => this;
+
+        public bool TryResolve(string messageId, string body, out ChatPostCard card)
+        {
+            card = default;
+            if (body.Length == 0)
+            {
+                return false;
+            }
+
+            if (!app.dmStore.TryResolvePost(body, out var post))
+            {
+                return false;
+            }
+
+            if (post is null)
+            {
+                card = new ChatPostCard(body, string.Empty, string.Empty, null, false);
+                return true;
+            }
+
+            var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+            card = new ChatPostCard(post.Id, SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle),
+                post.Text, photos.Length > 0 ? photos[0] : null, true);
+            return true;
+        }
+
+        public void Open(string postId) => app.OpenDetailFromLink(postId);
+
+        public IDalamudTextureWrap? Thumbnail(string url) => app.images.Get(url);
 
         protected override bool IsDeleted(GramMessageDto message) => message.Deleted;
 

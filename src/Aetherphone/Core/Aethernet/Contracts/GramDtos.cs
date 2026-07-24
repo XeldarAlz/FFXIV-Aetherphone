@@ -13,7 +13,8 @@ internal sealed record GramThreadDto(
     int? UtcOffsetMinutes = null,
     int LastMessageEncVersion = 0,
     string LastMessageSenderId = "",
-    bool Pending = false) : IIdentified;
+    bool Pending = false,
+    int LastMessageKind = 0) : IIdentified;
 
 internal sealed record GramThreadPage(GramThreadDto[] Items, string? NextCursor);
 
