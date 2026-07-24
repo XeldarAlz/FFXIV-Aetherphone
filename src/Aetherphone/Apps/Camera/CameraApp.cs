@@ -9,6 +9,7 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace Aetherphone.Apps.Camera;
 
@@ -159,7 +160,20 @@ internal sealed class CameraApp : IPhoneApp
             handler.RemoveLevelPrefix();
             handler.RemoveStatusPrefix();
             handler.RemoveTargetSuffix();
+            handler.MarkerIconId = 0;
+            handler.NameIconId = -1;
         }
+    }
+
+    private static unsafe void SetNamePlatesVisible(bool visible)
+    {
+        var addon = (AtkUnitBase*)Plugin.GameGui.GetAddonByName("NamePlate").Address;
+        if (addon == null || addon->RootNode == null)
+        {
+            return;
+        }
+
+        addon->RootNode->ToggleVisibility(visible);
     }
 
     private void Shoot(Rect captureRect)
@@ -212,6 +226,7 @@ internal sealed class CameraApp : IPhoneApp
         Plugin.NamePlateGui.OnNamePlateUpdate += StripNamePlates;
         Plugin.Framework.Update += ReleaseStalledCapture;
         captureHooksAttached = true;
+        SetNamePlatesVisible(false);
     }
 
     private void ReleaseStalledCapture(IFramework framework)
@@ -236,6 +251,7 @@ internal sealed class CameraApp : IPhoneApp
         Plugin.NamePlateGui.OnNamePlateUpdate -= StripNamePlates;
         Plugin.Framework.Update -= ReleaseStalledCapture;
         captureHooksAttached = false;
+        SetNamePlatesVisible(true);
         Plugin.NamePlateGui.RequestRedraw();
     }
 
