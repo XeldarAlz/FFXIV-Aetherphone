@@ -290,8 +290,13 @@ internal sealed partial class ChirperApp : IPhoneApp
         }
 
         feedScrollTopPending = true;
+        RefreshFeed(activeScope);
+    }
+
+    private void RefreshFeed(SocialFeedScope scope)
+    {
         actions.Reset();
-        store.RefreshFeed(activeScope);
+        store.RefreshFeed(scope);
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
@@ -306,7 +311,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             }
 
             pullToRefresh[scope].Draw(listRect, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
-                store.IsLoading(scope), AppPalettes.Chirper.MutedInk, () => store.RefreshFeed(scope));
+                store.IsLoading(scope), AppPalettes.Chirper.MutedInk, () => RefreshFeed(scope));
 
             if (snapshot.Length == 0)
             {

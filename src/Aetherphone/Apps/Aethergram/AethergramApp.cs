@@ -357,7 +357,12 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
 
         feedScrollTopPending = true;
-        store.RefreshFeed(activeScope);
+        RefreshFeed(activeScope);
+    }
+
+    private void RefreshFeed(SocialFeedScope scope)
+    {
+        store.RefreshFeed(scope);
         stories.RefreshTray();
     }
 
@@ -511,7 +516,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             }
 
             pullToRefresh[scope].Draw(listRect, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
-                store.IsLoading(scope), AppPalettes.Aethergram.MutedInk, () => store.RefreshFeed(scope));
+                store.IsLoading(scope), AppPalettes.Aethergram.MutedInk, () => RefreshFeed(scope));
             stories.DrawTray(theme);
             if (snapshot.Length == 0)
             {

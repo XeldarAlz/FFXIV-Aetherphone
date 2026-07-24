@@ -33,7 +33,8 @@ internal sealed partial class VelvetShell
             }
 
             pullToRefresh.Draw(area, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
-                store.LoadingFeed, VelvetTheme.MutedInk, () => store.RefreshFeed());
+                store.LoadingFeed, VelvetTheme.MutedInk, RefreshFeedContent);
+
             stories.DrawTray(theme);
             var width = ScrollLayout.StableContentWidth();
             var feed = store.Feed;
@@ -91,6 +92,11 @@ internal sealed partial class VelvetShell
         }
 
         feedScrollTopPending = true;
+        RefreshFeedContent();
+    }
+
+    private void RefreshFeedContent()
+    {
         store.RefreshFeed();
         stories.RefreshTray();
     }
