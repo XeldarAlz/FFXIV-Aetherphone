@@ -256,7 +256,11 @@ internal sealed class SocialProfilePages
                 var pillGap = 8f * scale;
                 var iconRoom = buttonHeight + 10f * scale;
                 var available = innerRight - (avatarCenter.X + avatarRadius) - 12f * scale - iconRoom;
-                var pillWidth = MathF.Min(buttonWidth, (available - pillGap) * 0.5f);
+                var followLabelWidth = Typography.Measure(user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow),
+                    0.9f, FontWeight.SemiBold).X;
+                var messageLabelWidth = Typography.Measure(Loc.T(style.MessageLabel!.Value), 0.9f, FontWeight.SemiBold).X;
+                var minPillWidth = MathF.Max(followLabelWidth, messageLabelWidth) + 24f * scale;
+                var pillWidth = MathF.Max(minPillWidth, MathF.Min(buttonWidth, (available - pillGap) * 0.5f));
                 followRect = new Rect(new Vector2(innerRight - pillWidth, buttonMax.Y - buttonHeight),
                     new Vector2(innerRight, buttonMax.Y));
                 messageRect = new Rect(new Vector2(followRect.Min.X - pillGap - pillWidth, followRect.Min.Y),
