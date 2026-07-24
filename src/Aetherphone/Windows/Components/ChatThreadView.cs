@@ -652,7 +652,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             new Vector2(area.Max.X - 16f * scale, top + 8f * scale + importHeight));
         if (ui.PillButton(importRect, ImportLabel, true))
         {
-            NativeFileDialog.PickImage(PickerTitle, path => Interlocked.Exchange(ref pendingPickedPath, path));
+            FilePicker.PickImage(PickerTitle, path => Interlocked.Exchange(ref pendingPickedPath, path));
         }
 
         var gridRect = new Rect(new Vector2(area.Min.X, importRect.Max.Y + 12f * scale), area.Max);

@@ -270,7 +270,7 @@ internal sealed class ImagePickCrop
 
     private void LaunchFileDialog(string title)
     {
-        NativeFileDialog.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
+        FilePicker.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 
     private static bool HeaderAction(Rect area, string label, bool enabled, Vector4 accent, PhoneTheme theme)

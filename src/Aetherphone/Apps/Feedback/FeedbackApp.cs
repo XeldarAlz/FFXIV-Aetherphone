@@ -382,7 +382,7 @@ internal sealed class FeedbackApp : IPhoneApp
 
     private void LaunchFileDialog()
     {
-        NativeFileDialog.PickImage(Loc.T(L.Feedback.AddPhotos), path => Interlocked.Exchange(ref pendingPickedPath, path));
+        FilePicker.PickImage(Loc.T(L.Feedback.AddPhotos), path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 
     private void DrawThankYou(Rect area)

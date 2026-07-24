@@ -434,7 +434,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void LaunchFileDialog()
     {
-        NativeFileDialog.PickImage(Loc.T(L.Wallpaper.Add), path => Interlocked.Exchange(ref pendingFilePath, path));
+        FilePicker.PickImage(Loc.T(L.Wallpaper.Add), path => Interlocked.Exchange(ref pendingFilePath, path));
     }
 
     private string ActiveSelectedId() => editingDark ? configuration.DarkWallpaperId : configuration.LightWallpaperId;

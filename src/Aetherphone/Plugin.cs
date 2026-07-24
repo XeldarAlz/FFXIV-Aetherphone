@@ -5,6 +5,7 @@ using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Emote;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Updates;
 using Aetherphone.Core.Wallpapers;
@@ -114,6 +115,7 @@ public sealed class Plugin : IDalamudPlugin
             CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
             CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
             PluginInterface.UiBuilder.Draw += windowSystem.Draw;
+            PluginInterface.UiBuilder.Draw += FilePicker.Draw;
             PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
             PluginInterface.UiBuilder.DisableGposeUiHide = Cfg.ShowInGpose;
             ClientState.Login += OnLogin;
@@ -141,6 +143,7 @@ public sealed class Plugin : IDalamudPlugin
     private void TearDownPartialConstruction()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        PluginInterface.UiBuilder.Draw -= FilePicker.Draw;
         if (phoneWindow is not null)
         {
             PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
@@ -229,6 +232,7 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        PluginInterface.UiBuilder.Draw -= FilePicker.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
         ClientState.Login -= OnLogin;
         Framework.Update -= OnAutoOpenTick;

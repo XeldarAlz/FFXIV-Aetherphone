@@ -88,7 +88,7 @@ internal sealed class PhotoComposeSession
 
     public void LaunchImportDialog(string title)
     {
-        NativeFileDialog.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
+        FilePicker.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 
     public void ConsumePendingImport()

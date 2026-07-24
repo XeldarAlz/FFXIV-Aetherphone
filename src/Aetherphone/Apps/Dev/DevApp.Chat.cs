@@ -544,7 +544,7 @@ internal sealed partial class DevApp
 
     private void LaunchChatImageDialog()
     {
-        NativeFileDialog.PickImage("Send Picture", path => Interlocked.Exchange(ref chatPendingPickedPath, path));
+        FilePicker.PickImage("Send Picture", path => Interlocked.Exchange(ref chatPendingPickedPath, path));
     }
 
     private void DrawPickerThumbnail(string path, Vector2 min, Vector2 max, float scale)
