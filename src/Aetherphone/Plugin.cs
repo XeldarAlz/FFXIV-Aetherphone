@@ -80,7 +80,7 @@ public sealed class Plugin : IDalamudPlugin
             InitializeLocalization();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
-                TextureProvider, PluginInterface.ConfigDirectory, UnlockState);
+                TextureProvider, PluginInterface.ConfigDirectory, UnlockState, Condition);
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
             EmojiCatalog.Load();
             Wallpapers = services.Wallpapers;

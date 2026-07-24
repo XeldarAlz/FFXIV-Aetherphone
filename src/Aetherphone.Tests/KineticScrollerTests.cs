@@ -104,6 +104,23 @@ public class KineticScrollerTests
     }
 
     [Fact]
+    public void CancelGesture_StopsDragButKeepsOffset()
+    {
+        var scroller = Scroller(5000f);
+        scroller.Press(400f);
+        scroller.Move(300f, 0.05f);
+        scroller.Move(200f, 0.05f);
+        var offset = scroller.Offset;
+        Assert.True(scroller.IsDragging);
+        scroller.CancelGesture();
+        Assert.False(scroller.IsDragging);
+        Assert.False(scroller.IsControlling);
+        Assert.Equal(offset, scroller.Offset, 3);
+        scroller.Move(100f, 0.05f);
+        Assert.Equal(offset, scroller.Offset, 3);
+    }
+
+    [Fact]
     public void ReleaseSpringsPullBackToZero()
     {
         var scroller = Scroller(1000f);

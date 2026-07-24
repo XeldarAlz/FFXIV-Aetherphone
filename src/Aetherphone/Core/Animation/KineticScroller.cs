@@ -170,6 +170,16 @@ internal sealed class KineticScroller
         pullDistance = 0f;
     }
 
+    /// <summary>Abandons the in-flight gesture without moving the surface, for a widget that claims the drag.</summary>
+    public void CancelGesture()
+    {
+        pressed = false;
+        dragging = false;
+        flinging = false;
+        velocity = 0f;
+        pullDistance = 0f;
+    }
+
     public void CancelMomentum()
     {
         flinging = false;

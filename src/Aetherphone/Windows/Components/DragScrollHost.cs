@@ -18,6 +18,12 @@ internal static class DragScrollHost
             Scroller.Reset();
             Pressed = false;
         }
+
+        public void CancelGesture()
+        {
+            Scroller.CancelGesture();
+            Pressed = false;
+        }
     }
 
     /// <summary>A scroll region begun this frame: its gesture state and top-snap control.</summary>
@@ -44,6 +50,9 @@ internal static class DragScrollHost
             ImGui.SetScrollY(0f);
             region?.Reset();
         }
+
+        /// <summary>Hands the gesture to a widget inside the region, leaving the scroll offset alone.</summary>
+        public void CancelDrag() => region?.CancelGesture();
     }
 
     private const int EvictAfterFrames = 240;

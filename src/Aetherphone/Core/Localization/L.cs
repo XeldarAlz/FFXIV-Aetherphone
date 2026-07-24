@@ -2072,6 +2072,24 @@ internal static class L
         public static readonly LocString NoData = new("skywatcher.noData", "No weather data here");
         public static readonly LocString Continuing = new("skywatcher.continuing", "{0} continuing");
         public static readonly LocString ForNextHours = new("skywatcher.forNextHours", "{0} for the next few hours");
+        public static readonly LocString Control = new("skywatcher.control", "Control");
+        public static readonly LocString Time = new("skywatcher.time", "Time");
+        public static readonly LocString Weather = new("skywatcher.weather", "Weather");
+        public static readonly LocString Dawn = new("skywatcher.dawn", "Dawn");
+        public static readonly LocString Noon = new("skywatcher.noon", "Noon");
+        public static readonly LocString Dusk = new("skywatcher.dusk", "Dusk");
+        public static readonly LocString Midnight = new("skywatcher.midnight", "Midnight");
+        public static readonly LocString Natural = new("skywatcher.natural", "Natural");
+        public static readonly LocString Reset = new("skywatcher.reset", "Reset");
+
+        public static readonly LocString LocalOnly = new("skywatcher.localOnly",
+            "Only you see this. Fates, mobs and fishing follow the real sky.");
+
+        public static readonly LocString CombatPaused = new("skywatcher.combatPaused",
+            "Paused while you are in combat");
+
+        public static readonly LocString NothingToChange = new("skywatcher.nothingToChange",
+            "No weather to change here");
     }
 
     internal static class News
