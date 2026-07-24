@@ -298,9 +298,10 @@ internal sealed partial class PhotosApp
     private void DrawOpenFolder(Rect rect)
     {
         if (!ComposeFab.Draw(rect, "##openFolderFab", Accent, FontAwesomeIcon.Folder.ToIconString(),
-                             Loc.T(L.Photos.OpenFolder), "photos.openFolder")) return;
-        
-        UrlActions.OpenFolder(library.GetDirectory());
+                             Loc.T(L.Photos.OpenFolder), "photos.openFolder"))
+        {
+            UrlActions.OpenFolder(library.DirectoryPath);
+        }
     }
 
     private bool DrawAlbumCard(ImDrawListPtr drawList, Rect rect, string title, int coverStart, int coverCount,
