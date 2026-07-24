@@ -12,7 +12,7 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class SocialNotificationService : IDisposable
 {
     private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(600);
+    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(120);
     private readonly AethernetSession session;
     private readonly ConfirmService confirm;
     private readonly AccountClient client;
