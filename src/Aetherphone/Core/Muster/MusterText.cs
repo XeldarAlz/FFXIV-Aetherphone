@@ -13,7 +13,6 @@ internal static class MusterText
     private static readonly Dictionary<string, string> WorldLineById = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, string> HousingById = new(StringComparer.Ordinal);
     private static readonly Dictionary<string, string> CoordinatesById = new(StringComparer.Ordinal);
-    private static readonly Dictionary<string, string> HandleByKey = new(StringComparer.Ordinal);
     private static string cachedLanguageCode = string.Empty;
 
     public static SharedLocation Location(MusterDto muster) =>
@@ -60,24 +59,11 @@ internal static class MusterText
             return cached;
         }
 
-        var identity = muster.HostHandle.Length > 0
-            ? $"{muster.HostDisplayName} · @{muster.HostHandle}"
-            : muster.HostDisplayName;
+        var identity = muster.HostWorld.Length > 0
+            ? $"{muster.HostCharacter} · {muster.HostWorld}"
+            : muster.HostCharacter;
         Store(IdentityById, muster.Id, identity);
         return identity;
-    }
-
-    public static string HandleAt(string key, string handle)
-    {
-        EnsureLanguage();
-        if (HandleByKey.TryGetValue(key, out var cached))
-        {
-            return cached;
-        }
-
-        var line = handle.Length > 0 ? "@" + handle : string.Empty;
-        Store(HandleByKey, key, line);
-        return line;
     }
 
     public static string WorldLine(MusterDto muster)
@@ -159,7 +145,6 @@ internal static class MusterText
         WorldLineById.Clear();
         HousingById.Clear();
         CoordinatesById.Clear();
-        HandleByKey.Clear();
     }
 
     private static void Store(Dictionary<string, string> cache, string key, string value)

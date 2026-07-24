@@ -578,9 +578,34 @@ internal static class L
         public static readonly LocString EndConfirm = new("muster.endConfirm", "End this muster? It disappears for everyone right away.");
         public static readonly LocString EndFailed = new("muster.endFailed", "Couldn't end the muster");
         public static readonly LocString Ending = new("muster.ending", "Ending…");
+        public static readonly LocString NotifNoticeTitle = new("muster.notifNoticeTitle", "Muster update");
+        public static readonly LocString NotifNoticeStarting = new("muster.notifNoticeStarting", "{0}: starting now, come on over");
+        public static readonly LocString NotifNoticeMoved = new("muster.notifNoticeMoved", "{0} moved the meeting spot");
+        public static readonly LocString NotifNoticeWrapping = new("muster.notifNoticeWrapping", "{0} is wrapping up");
         public static readonly LocString InvitePreview = new("muster.invitePreview", "Muster invite");
         public static readonly LocString InviteUnavailable = new("muster.inviteUnavailable", "This muster has ended");
         public static readonly LocString InviteOpen = new("muster.inviteOpen", "View muster");
+        public static readonly LocString ScopeMyDc = new("muster.scopeMyDc", "My DC");
+        public static readonly LocString ScopeRegion = new("muster.scopeRegion", "Region");
+        public static readonly LocString ScopeEverywhere = new("muster.scopeEverywhere", "Everywhere");
+        public static readonly LocString Filters = new("muster.filters", "Filters");
+        public static readonly LocString ClearFilters = new("muster.clearFilters", "Clear");
+        public static readonly LocString Done = new("muster.done", "Done");
+        public static readonly LocString GoingSection = new("muster.goingSection", "You're going");
+        public static readonly LocString DcTravel = new("muster.dcTravel", "DC travel");
+        public static readonly LocString Travel = new("muster.travel", "Travel");
+        public static readonly LocString NoticesSection = new("muster.noticesSection", "Notices");
+        public static readonly LocString NoticeStartingNow = new("muster.noticeStartingNow", "Starting now");
+        public static readonly LocString NoticeMovedSpots = new("muster.noticeMovedSpots", "Moved spots");
+        public static readonly LocString NoticeWrappingUp = new("muster.noticeWrappingUp", "Wrapping up");
+        public static readonly LocString NoticeAgo = new("muster.noticeAgo", "{0} ago");
+        public static readonly LocString StatusRunningLate = new("muster.statusRunningLate", "Running late");
+        public static readonly LocString StatusHere = new("muster.statusHere", "I'm here");
+        public static readonly LocString StatusWhereExactly = new("muster.statusWhereExactly", "Where exactly?");
+        public static readonly LocString InviteToParty = new("muster.inviteToParty", "Invite to party");
+        public static readonly LocString Invited = new("muster.invited", "Invited");
+        public static readonly LocString DifferentDataCenter = new("muster.differentDataCenter", "Different data center");
+        public static readonly LocString NeedDataCenter = new("muster.needDataCenter", "Could not detect your data center");
     }
 
     internal static class Venues

@@ -28,15 +28,28 @@ internal sealed class MusterClient
             AethernetJsonContext.Default.SetMusterRsvpRequest, AethernetJsonContext.Default.MusterRsvpResult, token);
     }
 
-    public Task<MusterPage?> DirectoryAsync(int categories, int regions, string? cursor, CancellationToken token)
+    public Task<MusterPage?> DirectoryAsync(int categories, int regions, int dataCenterId, string? cursor,
+        CancellationToken token)
     {
-        var path = $"/musters/?categories={categories}&regions={regions}";
+        var path = $"/musters/?categories={categories}&regions={regions}&dc={dataCenterId}";
         if (cursor is not null)
         {
             path += $"&cursor={Uri.EscapeDataString(cursor)}";
         }
 
         return net.GetAsync(path, AethernetJsonContext.Default.MusterPage, token);
+    }
+
+    public Task<bool> StatusAsync(string musterId, int status, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post, $"/musters/{Uri.EscapeDataString(musterId)}/status",
+            new SetMusterStatusRequest(status), AethernetJsonContext.Default.SetMusterStatusRequest, token);
+    }
+
+    public Task<bool> NoticeAsync(string musterId, SetMusterNoticeRequest request, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post, $"/musters/{Uri.EscapeDataString(musterId)}/notice",
+            request, AethernetJsonContext.Default.SetMusterNoticeRequest, token);
     }
 
     public Task<MusterSync?> SyncAsync(CancellationToken token)

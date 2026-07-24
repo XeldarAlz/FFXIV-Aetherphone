@@ -228,7 +228,9 @@ internal sealed partial class MusterApp
         var width = ImGui.GetContentRegionAvail().X;
         var descriptionLength = TrimmedLength(createDescription);
         var hasWhere = createLocation is not null || TrimmedLength(createSpot) > 0;
-        var valid = descriptionLength > 0 && createDescription.Length <= DescriptionMaxLength && hasWhere;
+        var hasDataCenter = ResolveCreateDataCenter(out _) != 0;
+        var valid = descriptionLength > 0 && createDescription.Length <= DescriptionMaxLength && hasWhere
+            && hasDataCenter;
         var cursorY = origin.Y;
         if (createOutcome is { } outcome)
         {
@@ -238,7 +240,8 @@ internal sealed partial class MusterApp
         }
         else if (!valid)
         {
-            var hint = descriptionLength == 0 ? Loc.T(L.Muster.NeedDescription) : Loc.T(L.Muster.NeedWhere);
+            var hint = descriptionLength == 0 ? Loc.T(L.Muster.NeedDescription)
+                : !hasWhere ? Loc.T(L.Muster.NeedWhere) : Loc.T(L.Muster.NeedDataCenter);
             Typography.Draw(new Vector2(origin.X, cursorY), hint, AppPalettes.Muster.MutedInk, TextStyles.Footnote);
             cursorY += 22f * scale;
         }
@@ -274,10 +277,21 @@ internal sealed partial class MusterApp
             _ => Loc.T(L.Muster.ErrorFailed),
         };
 
+    private int ResolveCreateDataCenter(out uint worldId)
+    {
+        worldId = createLocation?.WorldId ?? gameData.LocalCurrentWorldId;
+        return MusterWorlds.DataCenterIdForWorld(worldId);
+    }
+
     private void SubmitCreate()
     {
         var location = createLocation;
-        var worldId = location?.WorldId ?? gameData.LocalCurrentWorldId;
+        var dataCenterId = ResolveCreateDataCenter(out var worldId);
+        if (dataCenterId == 0)
+        {
+            return;
+        }
+
         var request = new CreateMusterRequest(
             createCategory,
             createDescription.Trim(),
@@ -291,6 +305,7 @@ internal sealed partial class MusterApp
             location?.Room ?? 0,
             createSpot.Trim(),
             MusterCategories.RegionBitForWorld(worldId),
+            dataCenterId,
             StartOffsetsMinutes[createStartIndex],
             DurationsMinutes[createDurationIndex],
             createLimit ? createMaxAttendees : 0,

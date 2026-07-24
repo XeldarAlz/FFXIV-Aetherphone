@@ -2,6 +2,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Theme;
@@ -24,7 +25,6 @@ internal static class MusterCard
     private const int MaxDescriptionLines = 3;
 
     public static readonly Vector4 LiveGreen = new(0.24f, 0.82f, 0.44f, 1f);
-    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 CapacityAmber = new(0.98f, 0.72f, 0.30f, 1f);
 
     public static float Height(MusterDto muster, float width, float scale)
@@ -34,7 +34,8 @@ internal static class MusterCard
         return (Pad * 2f + IdentityRowHeight + CategoryRowHeight + MetaRowHeight) * scale + descriptionHeight;
     }
 
-    public static bool Draw(Rect card, MusterDto muster, RemoteImageCache images, AppSkin ui, long nowUnix)
+    public static bool Draw(Rect card, MusterDto muster, RemoteImageCache images, LodestoneService lodestone,
+        PhoneTheme theme, AppSkin ui, long nowUnix, int currentDataCenterId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -46,8 +47,8 @@ internal static class MusterCard
         var right = card.Max.X - pad;
         var avatarRadius = AvatarRadius * scale;
         var avatarCenter = new Vector2(left + avatarRadius, card.Min.Y + pad + avatarRadius);
-        DrawAvatarCircle(drawList, avatarCenter, avatarRadius, muster.HostAvatarUrl, muster.HostDisplayName, images,
-            palette.Accent);
+        AvatarView.DrawRemote(drawList, avatarCenter, avatarRadius, theme, muster.HostCharacter, muster.HostWorld,
+            null, images, lodestone, 0.95f, 32);
         var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
         var live = muster.StartsAtUnix <= nowUnix;
         var status = live
@@ -64,23 +65,25 @@ internal static class MusterCard
         }
 
         var nameWidth = statusLeft - (live ? 20f : 8f) * scale - textLeft;
-        var name = Typography.FitText(muster.HostDisplayName, nameWidth, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + pad), name, palette.TitleInk,
+        var name = Typography.FitText(MusterText.Identity(muster), nameWidth, TextStyles.Headline);
+        var nameSize = Typography.Measure(name, TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(textLeft, avatarCenter.Y - nameSize.Y * 0.5f), name, palette.TitleInk,
             TextStyles.Headline);
-        var handle = MusterText.HandleAt(muster.Id, muster.HostHandle);
-        if (handle.Length > 0)
-        {
-            var fittedHandle = Typography.FitText(handle, nameWidth, TextStyles.Footnote);
-            Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + pad + 19f * scale), fittedHandle,
-                palette.MutedInk, TextStyles.Footnote);
-        }
-
         var categoryTop = card.Min.Y + (Pad + IdentityRowHeight) * scale;
         var categoryLabel = Loc.T(MusterCategories.Label(muster.Category));
         var categorySize = Typography.Measure(categoryLabel, TextStyles.FootnoteEmphasized);
         AppSkin.Icon(drawList, new Vector2(left + 7f * scale, categoryTop + categorySize.Y * 0.5f),
             MusterCategories.Icon(muster.Category).ToIconString(), palette.Accent, 0.62f);
-        Typography.Draw(drawList, new Vector2(left + 19f * scale, categoryTop), categoryLabel, palette.Accent,
+        var categoryRight = right;
+        if (currentDataCenterId != 0 && muster.DataCenterId != 0 && muster.DataCenterId != currentDataCenterId)
+        {
+            categoryRight = DrawDataCenterChip(drawList, right, categoryTop + categorySize.Y * 0.5f, palette.Accent,
+                scale) - 8f * scale;
+        }
+
+        var fittedCategory = Typography.FitText(categoryLabel, categoryRight - (left + 19f * scale),
+            TextStyles.FootnoteEmphasized);
+        Typography.Draw(drawList, new Vector2(left + 19f * scale, categoryTop), fittedCategory, palette.Accent,
             TextStyles.FootnoteEmphasized);
         var descriptionTop = categoryTop + CategoryRowHeight * scale;
         DrawDescription(drawList, muster, left, descriptionTop, card.Width, scale, palette.BodyInk);
@@ -96,24 +99,19 @@ internal static class MusterCard
         return UiInteract.Click(card.Min, card.Max, hovered);
     }
 
-    public static void DrawAvatarCircle(ImDrawListPtr drawList, Vector2 center, float radius, string? avatarUrl,
-        string displayName, RemoteImageCache images, Vector4 accent)
+    private static float DrawDataCenterChip(ImDrawListPtr drawList, float right, float centerY, Vector4 accent,
+        float scale)
     {
-        if (!string.IsNullOrEmpty(avatarUrl))
-        {
-            var texture = images.Get(avatarUrl);
-            if (texture is not null)
-            {
-                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-                var corner = new Vector2(radius, radius);
-                drawList.AddImageRounded(texture.Handle, center - corner, center + corner, uv0, uv1, 0xFFFFFFFFu,
-                    radius, ImDrawFlags.RoundCornersAll);
-                return;
-            }
-        }
-
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.85f)), 32);
-        Typography.DrawCentered(drawList, center, Initials.Of(displayName), White, 0.95f, FontWeight.SemiBold);
+        var label = Loc.T(L.Muster.DcTravel);
+        var textSize = Typography.Measure(label, TextStyles.Caption1);
+        var chipHeight = 18f * scale;
+        var chipWidth = textSize.X + 14f * scale;
+        var min = new Vector2(right - chipWidth, centerY - chipHeight * 0.5f);
+        var max = new Vector2(right, centerY + chipHeight * 0.5f);
+        Squircle.Fill(drawList, min, max, chipHeight * 0.5f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.16f)));
+        Typography.Draw(drawList, new Vector2(min.X + 7f * scale, centerY - textSize.Y * 0.5f), label,
+            Palette.WithAlpha(accent, 0.85f), TextStyles.Caption1);
+        return min.X;
     }
 
     private static void DrawLiveDot(ImDrawListPtr drawList, Vector2 center, float scale)

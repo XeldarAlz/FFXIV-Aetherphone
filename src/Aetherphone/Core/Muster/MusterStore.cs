@@ -30,7 +30,9 @@ internal sealed class MusterStore : IDisposable
     private volatile MusterDto? mine;
     private volatile MusterAttendeeDto[] mineAttendees = Array.Empty<MusterAttendeeDto>();
     private volatile MusterDto[] contactMusters = Array.Empty<MusterDto>();
+    private volatile MusterDto[] goingMusters = Array.Empty<MusterDto>();
     private volatile HashSet<string> goingIds = new(StringComparer.Ordinal);
+    private volatile Dictionary<string, int> myStatusByMusterId = new(StringComparer.Ordinal);
     private volatile Dictionary<string, MusterDto> knownMusters = new(StringComparer.Ordinal);
     private volatile bool primed;
     private volatile bool syncing;
@@ -41,6 +43,8 @@ internal sealed class MusterStore : IDisposable
     private volatile Dictionary<string, MusterDto> chatMusters = new(StringComparer.Ordinal);
 
     private volatile MusterDto[] directory = Array.Empty<MusterDto>();
+    private int directoryDataCenterId;
+    private int directoryRegions;
     private string? directoryCursor;
     private volatile bool directoryLoading;
     private volatile bool directoryLoadingMore;
@@ -75,6 +79,8 @@ internal sealed class MusterStore : IDisposable
 
     public MusterDto[] ContactMusters => contactMusters;
 
+    public MusterDto[] GoingMusters => goingMusters;
+
     public MusterDto[] Directory => directory;
 
     public bool DirectoryLoading => directoryLoading;
@@ -88,6 +94,13 @@ internal sealed class MusterStore : IDisposable
     public bool IsGoing(string musterId)
     {
         return goingIds.Contains(musterId);
+    }
+
+    /// <summary>The caller's own quickchat status for a muster they are attending; local echo only,
+    /// the server never plays it back to its author.</summary>
+    public int MyStatus(string musterId)
+    {
+        return myStatusByMusterId.TryGetValue(musterId, out var status) ? status : MusterStatuses.OnMyWay;
     }
 
     public MusterDto? ContactMusterFor(string hostAccountId)
@@ -123,6 +136,28 @@ internal sealed class MusterStore : IDisposable
         }, () => syncing = false);
     }
 
+    /// <summary>Resolves the persisted scope against the player's current world. Framework thread only,
+    /// so the world read happens here and the captured values carry through paging continuations.</summary>
+    private void CaptureScopeFilters()
+    {
+        var worldId = MusterWorlds.CurrentWorldId();
+        switch (configuration.MusterScope)
+        {
+            case MusterScopes.Everywhere:
+                directoryDataCenterId = 0;
+                directoryRegions = 0;
+                break;
+            case MusterScopes.Region:
+                directoryDataCenterId = 0;
+                directoryRegions = MusterCategories.RegionBitForWorld(worldId);
+                break;
+            default:
+                directoryDataCenterId = MusterWorlds.DataCenterIdForWorld(worldId);
+                directoryRegions = 0;
+                break;
+        }
+    }
+
     public void RefreshDirectory()
     {
         if (!session.IsSignedIn || directoryLoading)
@@ -131,11 +166,14 @@ internal sealed class MusterStore : IDisposable
         }
 
         directoryLoading = true;
+        CaptureScopeFilters();
+        var dataCenterId = directoryDataCenterId;
+        var regions = directoryRegions;
         var generation = Interlocked.Increment(ref directoryGeneration);
         work.Run("muster directory", async token =>
         {
             var page = await client.DirectoryAsync(configuration.MusterCategoryFilter,
-                configuration.MusterRegionFilter, null, token).ConfigureAwait(false);
+                regions, dataCenterId, null, token).ConfigureAwait(false);
             if (page is not null && generation == Volatile.Read(ref directoryGeneration))
             {
                 directory = page.Items;
@@ -157,10 +195,12 @@ internal sealed class MusterStore : IDisposable
         directoryLoadingMore = true;
         var generation = Volatile.Read(ref directoryGeneration);
         var cursor = directoryCursor;
+        var dataCenterId = directoryDataCenterId;
+        var regions = directoryRegions;
         work.Run("muster directory more", async token =>
         {
             var page = await client.DirectoryAsync(configuration.MusterCategoryFilter,
-                configuration.MusterRegionFilter, cursor, token).ConfigureAwait(false);
+                regions, dataCenterId, cursor, token).ConfigureAwait(false);
             if (page is not null && generation == Volatile.Read(ref directoryGeneration))
             {
                 directory = AppendNew(directory, page.Items);
@@ -316,6 +356,56 @@ internal sealed class MusterStore : IDisposable
         }, done);
     }
 
+    public void SetStatus(string musterId, int status, Action<bool> done)
+    {
+        if (!session.IsSignedIn)
+        {
+            done(false);
+            return;
+        }
+
+        work.Run("muster status", async token =>
+            await client.StatusAsync(musterId, status, token).ConfigureAwait(false),
+            ok =>
+            {
+                if (ok)
+                {
+                    var next = new Dictionary<string, int>(myStatusByMusterId, StringComparer.Ordinal);
+                    next[musterId] = status;
+                    myStatusByMusterId = next;
+                }
+
+                done(ok);
+            });
+    }
+
+    public void SetNotice(SetMusterNoticeRequest request, Action<bool> done)
+    {
+        var current = mine;
+        if (current is null || !session.IsSignedIn)
+        {
+            done(false);
+            return;
+        }
+
+        work.Run("muster notice", async token =>
+            await client.NoticeAsync(current.Id, request, token).ConfigureAwait(false),
+            ok =>
+            {
+                if (ok)
+                {
+                    mine = current with
+                    {
+                        HostNotice = request.Notice,
+                        HostNoticeAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    };
+                    cadence.RequestImmediate();
+                }
+
+                done(ok);
+            });
+    }
+
     private void OnMusterPinged()
     {
         cadence.RequestImmediate();
@@ -357,7 +447,9 @@ internal sealed class MusterStore : IDisposable
         mine = null;
         mineAttendees = Array.Empty<MusterAttendeeDto>();
         contactMusters = Array.Empty<MusterDto>();
+        goingMusters = Array.Empty<MusterDto>();
         goingIds = new HashSet<string>(StringComparer.Ordinal);
+        myStatusByMusterId = new Dictionary<string, int>(StringComparer.Ordinal);
         knownMusters = new Dictionary<string, MusterDto>(StringComparer.Ordinal);
         lock (chatLock)
         {
@@ -392,7 +484,9 @@ internal sealed class MusterStore : IDisposable
         mine = sync.Mine;
         mineAttendees = sync.MineAttendees;
         contactMusters = sync.ContactMusters;
+        goingMusters = sync.GoingMusters;
         goingIds = nextGoing;
+        PruneMyStatuses(nextGoing);
         RebuildKnown(previousKnown, sync, nextGoing);
         primed = true;
 
@@ -403,7 +497,61 @@ internal sealed class MusterStore : IDisposable
 
         NotifyNewContactMusters(previousContacts, sync.ContactMusters);
         NotifyNewAttendees(previousAttendees, sync, previousMineId);
+        NotifyHostNotices(previousKnown, sync.GoingMusters);
         NotifyEndedRsvps(previousGoing, nextGoing, previousKnown);
+    }
+
+    private void PruneMyStatuses(HashSet<string> going)
+    {
+        var current = myStatusByMusterId;
+        var stale = false;
+        foreach (var entry in current)
+        {
+            if (!going.Contains(entry.Key))
+            {
+                stale = true;
+                break;
+            }
+        }
+
+        if (!stale)
+        {
+            return;
+        }
+
+        var next = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var entry in current)
+        {
+            if (going.Contains(entry.Key))
+            {
+                next[entry.Key] = entry.Value;
+            }
+        }
+
+        myStatusByMusterId = next;
+    }
+
+    private void NotifyHostNotices(Dictionary<string, MusterDto> previousKnown, MusterDto[] going)
+    {
+        for (var index = 0; index < going.Length; index++)
+        {
+            var muster = going[index];
+            if (muster.HostNotice == MusterNotices.None
+                || !previousKnown.TryGetValue(muster.Id, out var previous)
+                || (previous.HostNotice == muster.HostNotice && previous.HostNoticeAtUnix == muster.HostNoticeAtUnix))
+            {
+                continue;
+            }
+
+            var body = muster.HostNotice switch
+            {
+                MusterNotices.StartingNow => Loc.T(L.Muster.NotifNoticeStarting, muster.HostCharacter),
+                MusterNotices.MovedSpots => Loc.T(L.Muster.NotifNoticeMoved, muster.HostCharacter),
+                _ => Loc.T(L.Muster.NotifNoticeWrapping, muster.HostCharacter),
+            };
+            notifications.Notify(new PhoneNotification(AppId, Loc.T(L.Muster.NotifNoticeTitle), body,
+                DateTime.Now, AppAccents.For(AppId), muster.Id));
+        }
     }
 
     private void NotifyNewContactMusters(MusterDto[] previous, MusterDto[] current)
@@ -424,7 +572,7 @@ internal sealed class MusterStore : IDisposable
             if (!seen)
             {
                 notifications.Notify(new PhoneNotification(AppId, Loc.T(L.Muster.NotifStartedTitle),
-                    Loc.T(L.Muster.NotifStartedBody, muster.HostDisplayName), DateTime.Now,
+                    Loc.T(L.Muster.NotifStartedBody, muster.HostCharacter), DateTime.Now,
                     AppAccents.For(AppId), muster.Id));
             }
         }
@@ -453,7 +601,7 @@ internal sealed class MusterStore : IDisposable
             if (!seen)
             {
                 notifications.Notify(new PhoneNotification(AppId, Loc.T(L.Muster.NotifRsvpTitle),
-                    Loc.T(L.Muster.NotifRsvpBody, attendee.DisplayName), DateTime.Now,
+                    Loc.T(L.Muster.NotifRsvpBody, attendee.CharacterName), DateTime.Now,
                     AppAccents.For(AppId), sync.Mine.Id));
             }
         }
@@ -489,6 +637,11 @@ internal sealed class MusterStore : IDisposable
         for (var index = 0; index < sync.ContactMusters.Length; index++)
         {
             next[sync.ContactMusters[index].Id] = sync.ContactMusters[index];
+        }
+
+        for (var index = 0; index < sync.GoingMusters.Length; index++)
+        {
+            next[sync.GoingMusters[index].Id] = sync.GoingMusters[index];
         }
 
         var directorySnapshot = directory;

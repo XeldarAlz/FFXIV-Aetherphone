@@ -4,10 +4,12 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -28,6 +30,7 @@ internal sealed partial class MusterApp : IPhoneApp
     private readonly AethernetApi api;
     private readonly GameData gameData;
     private readonly RemoteImageCache images;
+    private readonly LodestoneService lodestone;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
@@ -41,15 +44,18 @@ internal sealed partial class MusterApp : IPhoneApp
     private INavigator navigation = null!;
     private float copiedTimer;
     private string copiedKey = string.Empty;
+    private bool lifestreamAvailable;
 
     public MusterApp(MusterStore store, MusterLauncher launcher, AethernetApi api, GameData gameData,
-        RemoteImageCache images, Configuration configuration, ConfirmService confirm, ReportService report)
+        RemoteImageCache images, LodestoneService lodestone, Configuration configuration, ConfirmService confirm,
+        ReportService report)
     {
         this.store = store;
         this.launcher = launcher;
         this.api = api;
         this.gameData = gameData;
         this.images = images;
+        this.lodestone = lodestone;
         this.configuration = configuration;
         this.confirm = confirm;
         this.report = report;
@@ -63,6 +69,7 @@ internal sealed partial class MusterApp : IPhoneApp
     public void OnOpened()
     {
         router.Reset();
+        lifestreamAvailable = LifestreamBridge.IsAvailable();
         if (launcher.TryConsumeDetail(out var musterId))
         {
             ResetDetailState();
@@ -77,6 +84,8 @@ internal sealed partial class MusterApp : IPhoneApp
     {
         router.Reset();
         ResetDetailState();
+        ResetManageState();
+        filterSheetOpen = false;
         copiedTimer = 0f;
     }
 
@@ -102,6 +111,11 @@ internal sealed partial class MusterApp : IPhoneApp
         if (copiedTimer > 0f)
         {
             copiedTimer -= ImGui.GetIO().DeltaTime;
+        }
+
+        if (invitedTimer > 0f)
+        {
+            invitedTimer -= ImGui.GetIO().DeltaTime;
         }
 
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);

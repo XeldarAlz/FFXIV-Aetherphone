@@ -7,6 +7,7 @@ using Aetherphone.Core.Maps;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Report;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Venues;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -20,6 +21,12 @@ internal sealed partial class MusterApp
     private const float ActionHeight = 50f;
     private const float LocationActionHeight = 42f;
     private const float LocationRowHeight = 22f;
+    private const float NoticeBannerHeight = 44f;
+
+    private static readonly int[] QuickStatusCodes =
+    {
+        MusterStatuses.OnMyWay, MusterStatuses.RunningLate, MusterStatuses.Here, MusterStatuses.WhereExactly,
+    };
 
     private readonly string[] locationLines = new string[5];
     private string? detailFetchId;
@@ -27,6 +34,7 @@ internal sealed partial class MusterApp
     private bool detailLoading;
     private bool detailRsvpToggled;
     private bool rsvpBusy;
+    private bool statusBusy;
 
     private void ResetDetailState()
     {
@@ -35,6 +43,7 @@ internal sealed partial class MusterApp
         detailLoading = false;
         detailRsvpToggled = false;
         rsvpBusy = false;
+        statusBusy = false;
     }
 
     private void DrawDetail(Rect area, string musterId)
@@ -64,8 +73,9 @@ internal sealed partial class MusterApp
         using (AppSurface.Begin(body))
         {
             DrawDetailHero(muster, nowUnix, scale);
+            DrawNoticeBanner(muster, nowUnix, scale);
             DrawWrappedDescription(muster.Description, scale);
-            DrawLocationBlock(muster, "detail", scale);
+            DrawLocationBlock(muster, "detail", scale, includeTravel: true);
             DrawDetailActions(muster, scale);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
         }
@@ -84,6 +94,15 @@ internal sealed partial class MusterApp
             if (contacts[index].Id == musterId)
             {
                 return contacts[index];
+            }
+        }
+
+        var going = store.GoingMusters;
+        for (var index = 0; index < going.Length; index++)
+        {
+            if (going[index].Id == musterId)
+            {
+                return going[index];
             }
         }
 
@@ -123,10 +142,11 @@ internal sealed partial class MusterApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var centerX = origin.X + width * 0.5f;
-        var iconCenter = new Vector2(centerX, origin.Y + 44f * scale);
-        drawList.AddCircleFilled(iconCenter, 34f * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.16f)), 48);
-        AppSkin.Icon(drawList, iconCenter, MusterCategories.Icon(muster.Category).ToIconString(), ui.Accent, 1.45f);
-        var cursorY = iconCenter.Y + 34f * scale + 22f * scale;
+        var avatarRadius = 34f * scale;
+        var avatarCenter = new Vector2(centerX, origin.Y + 10f * scale + avatarRadius);
+        AvatarView.DrawRemote(drawList, avatarCenter, avatarRadius, theme, muster.HostCharacter, muster.HostWorld,
+            null, images, lodestone, 1.3f, 48);
+        var cursorY = avatarCenter.Y + avatarRadius + 22f * scale;
         Typography.DrawCentered(new Vector2(centerX, cursorY), Loc.T(MusterCategories.Label(muster.Category)),
             AppPalettes.Muster.TitleInk, TextStyles.Title3);
         cursorY += 26f * scale;
@@ -152,6 +172,48 @@ internal sealed partial class MusterApp
         ImGui.Dummy(new Vector2(width, cursorY - origin.Y + 26f * scale));
     }
 
+    private void DrawNoticeBanner(MusterDto muster, long nowUnix, float scale)
+    {
+        if (muster.HostNotice == MusterNotices.None)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var height = NoticeBannerHeight * scale;
+        var rounding = Metrics.Radius.Md * scale;
+        var max = new Vector2(origin.X + width, origin.Y + height);
+        Squircle.Fill(drawList, origin, max, rounding, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.14f)));
+        Squircle.Stroke(drawList, origin, max, rounding, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.35f)),
+            1f);
+        var centerY = origin.Y + height * 0.5f;
+        AppSkin.Icon(drawList, new Vector2(origin.X + 20f * scale, centerY),
+            FontAwesomeIcon.Bullhorn.ToIconString(), ui.Accent, 0.8f);
+        var ago = Loc.T(L.Muster.NoticeAgo, MusterText.Span(nowUnix - muster.HostNoticeAtUnix));
+        var agoSize = Typography.Measure(ago, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(max.X - 14f * scale - agoSize.X, centerY - agoSize.Y * 0.5f), ago,
+            AppPalettes.Muster.MutedInk, TextStyles.Footnote);
+        var label = NoticeLabel(muster.HostNotice);
+        var labelLeft = origin.X + 36f * scale;
+        var fitted = Typography.FitText(label, max.X - 22f * scale - agoSize.X - labelLeft,
+            TextStyles.BodyEmphasized);
+        var labelSize = Typography.Measure(fitted, TextStyles.BodyEmphasized);
+        Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelSize.Y * 0.5f), fitted,
+            AppPalettes.Muster.TitleInk, TextStyles.BodyEmphasized);
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
+    }
+
+    private static string NoticeLabel(int notice) =>
+        notice switch
+        {
+            MusterNotices.StartingNow => Loc.T(L.Muster.NoticeStartingNow),
+            MusterNotices.MovedSpots => Loc.T(L.Muster.NoticeMovedSpots),
+            _ => Loc.T(L.Muster.NoticeWrappingUp),
+        };
+
     private void DrawWrappedDescription(string description, float scale)
     {
         if (description.Length == 0)
@@ -170,7 +232,7 @@ internal sealed partial class MusterApp
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
     }
 
-    private void DrawLocationBlock(MusterDto muster, string copyKey, float scale)
+    private void DrawLocationBlock(MusterDto muster, string copyKey, float scale, bool includeTravel)
     {
         ui.SectionHeading(Loc.T(L.Muster.WhereSection));
         var lineCount = 0;
@@ -253,8 +315,51 @@ internal sealed partial class MusterApp
             Copy(copyKey, BuildCopySummary(muster));
         }
 
+        var travelConsumed = 0f;
+        if (includeTravel && CanTravelTo(muster))
+        {
+            var travelTop = actionTop + actionHeight + gap;
+            var travelRect = new Rect(new Vector2(origin.X, travelTop),
+                new Vector2(origin.X + width, travelTop + actionHeight));
+            var travelLabel = JustCopied("travel") ? Loc.T(L.Muster.Copied) : Loc.T(L.Muster.Travel);
+            if (ui.PillButton(travelRect, travelLabel, true))
+            {
+                TravelTo(muster);
+            }
+
+            travelConsumed = actionHeight + gap;
+        }
+
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, consumed + actionHeight + Metrics.Space.Lg * scale));
+        ImGui.Dummy(new Vector2(width, consumed + actionHeight + travelConsumed + Metrics.Space.Lg * scale));
+    }
+
+    private static bool CanTravelTo(MusterDto muster)
+    {
+        if (muster.WorldId == 0)
+        {
+            return false;
+        }
+
+        var currentWorldId = MusterWorlds.CurrentWorldId();
+        return currentWorldId != 0 && currentWorldId != (uint)muster.WorldId;
+    }
+
+    private void TravelTo(MusterDto muster)
+    {
+        var worldName = LocationShare.WorldName((uint)muster.WorldId);
+        if (worldName.Length == 0)
+        {
+            return;
+        }
+
+        if (lifestreamAvailable)
+        {
+            LifestreamBridge.Travel(worldName);
+            return;
+        }
+
+        Copy("travel", $"/li {worldName}");
     }
 
     private void DrawDetailActions(MusterDto muster, float scale)
@@ -298,19 +403,47 @@ internal sealed partial class MusterApp
             });
         }
 
-        var reportTop = rect.Max.Y + Metrics.Space.Md * scale;
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, ActionHeight * scale + Metrics.Space.Md * scale));
+        if (going)
+        {
+            DrawQuickStatus(muster, scale);
+        }
+
+        var reportOrigin = ImGui.GetCursorScreenPos();
         var reportLabel = Loc.T(L.Report.Action);
         var reportWidth = Typography.Measure(reportLabel, 0.9f, FontWeight.SemiBold).X + 40f * scale;
-        var reportRect = new Rect(new Vector2(origin.X + (width - reportWidth) * 0.5f, reportTop),
-            new Vector2(origin.X + (width + reportWidth) * 0.5f, reportTop + 34f * scale));
+        var reportRect = new Rect(new Vector2(reportOrigin.X + (width - reportWidth) * 0.5f, reportOrigin.Y),
+            new Vector2(reportOrigin.X + (width + reportWidth) * 0.5f, reportOrigin.Y + 34f * scale));
         if (ui.DangerGhostButton(reportRect, reportLabel))
         {
             OpenReport(muster.Id);
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width,
-            ActionHeight * scale + Metrics.Space.Md * scale + 34f * scale + Metrics.Space.Md * scale));
+        ImGui.SetCursorScreenPos(reportOrigin);
+        ImGui.Dummy(new Vector2(width, 34f * scale + Metrics.Space.Md * scale));
+    }
+
+    private void DrawQuickStatus(MusterDto muster, float scale)
+    {
+        var current = store.MyStatus(muster.Id);
+        chipLabels[0] = Loc.T(L.Muster.OnMyWay);
+        chipLabels[1] = Loc.T(L.Muster.StatusRunningLate);
+        chipLabels[2] = Loc.T(L.Muster.StatusHere);
+        chipLabels[3] = Loc.T(L.Muster.StatusWhereExactly);
+        for (var index = 0; index < QuickStatusCodes.Length; index++)
+        {
+            chipActive[index] = QuickStatusCodes[index] == current;
+        }
+
+        var tapped = DrawChipFlow(QuickStatusCodes.Length, scale);
+        if (tapped >= 0 && !statusBusy && QuickStatusCodes[tapped] != current)
+        {
+            statusBusy = true;
+            store.SetStatus(muster.Id, QuickStatusCodes[tapped], _ => statusBusy = false);
+        }
+
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
     }
 
     private void OpenReport(string musterId)
@@ -327,7 +460,7 @@ internal sealed partial class MusterApp
         var builder = new StringBuilder(256);
         builder.Append(Loc.T(MusterCategories.Label(muster.Category)));
         builder.Append(" · ");
-        builder.Append(muster.HostDisplayName);
+        builder.Append(MusterText.Identity(muster));
         if (muster.Description.Length > 0)
         {
             builder.Append('\n');
