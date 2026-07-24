@@ -125,7 +125,7 @@ internal sealed partial class VelvetShell
 
             VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, Loc.T(L.Velvet.CardLimits));
             Gap(6f);
-            DrawTokenEditor(editLimits, VelvetSuggestions.Limits, VelvetTheme.Gold);
+            DrawTagFlow(VelvetSuggestions.Limits, editLimits, VelvetTheme.Gold);
             Gap(16f);
 
             VSectionHeader.Card(FontAwesomeIcon.HandHoldingHeart, Loc.T(L.Velvet.CardRelationship));
@@ -207,7 +207,7 @@ internal sealed partial class VelvetShell
         for (var index = 0; index < options.Length; index++)
         {
             var value = options[index];
-            var selected = gender == value;
+            var selected = VelvetGender.Has(gender, value);
             models[index] = new VChipModel(VelvetGender.Label(value), selected ? VChipStyle.Solid : VChipStyle.Ghost,
                 selected ? VelvetTheme.Rose : VelvetTheme.Moonlight);
         }
@@ -215,8 +215,7 @@ internal sealed partial class VelvetShell
         var clicked = VChipFlow.Draw(models, width, scale);
         if (clicked >= 0)
         {
-            var value = options[clicked];
-            gender = gender == value ? VelvetGender.None : value;
+            gender = VelvetGender.Toggle(gender, options[clicked]);
         }
     }
 

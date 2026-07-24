@@ -73,6 +73,26 @@ internal static class VelvetGender
 
     public static int Sanitize(int mask) => mask & Mask;
 
+    public static string[] Labels(int mask)
+    {
+        mask = Sanitize(mask);
+        if (mask == None)
+        {
+            return Array.Empty<string>();
+        }
+
+        var labels = new List<string>(All.Length);
+        for (var index = 0; index < All.Length; index++)
+        {
+            if ((mask & All[index]) != 0)
+            {
+                labels.Add(Label(All[index]));
+            }
+        }
+
+        return labels.ToArray();
+    }
+
     public static string Label(int flag) =>
         flag switch
         {
