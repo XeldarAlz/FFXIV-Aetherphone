@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -130,10 +131,18 @@ internal sealed partial class AethergramApp
 
             actionsRight = shareCenter.X + 20f * scale;
             var moreCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
+            var bookmarkCenter = new Vector2(moreCenter.X - 32f * scale, actionsY);
+            if (ui.IconButton(bookmarkCenter, 15f * scale, FontAwesomeIcon.Bookmark.ToIconString(),
+                    post.Saved ? ui.Accent : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.15f,
+                    Loc.T(L.Aethergram.SavedTitle)))
+            {
+                store.SetSaved(post.Id, !post.Saved);
+            }
+
             if (photos.Length > 1)
             {
                 var dotsCenter = new Vector2(origin.X + width * 0.5f, actionsY);
-                var available = MathF.Min((moreCenter.X - 16f * scale - dotsCenter.X) * 2f,
+                var available = MathF.Min((bookmarkCenter.X - 16f * scale - dotsCenter.X) * 2f,
                     (dotsCenter.X - actionsRight - 10f * scale) * 2f);
                 PhotoCarousel.DrawDots(ImGui.GetWindowDrawList(), dotsCenter, photos.Length, page, available,
                     AppPalettes.Aethergram.BodyInk);
@@ -384,6 +393,12 @@ internal sealed partial class AethergramApp
         using (AppSurface.Begin(body))
         {
             profile.DrawProfileHeader(user, theme);
+            if (user.IsPrivate && !user.IsFollowing && !user.IsMe)
+            {
+                DrawPrivateProfileNotice();
+                return;
+            }
+
             var scale = ImGuiHelpers.GlobalScale;
             var tabRow = new Rect(
                 new Vector2(ImGui.GetCursorScreenPos().X + 14f * scale, ImGui.GetCursorScreenPos().Y + 4f * scale),
@@ -409,4 +424,26 @@ internal sealed partial class AethergramApp
         }
     }
 
+    private void DrawPrivateProfileNotice()
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var centerX = origin.X + width * 0.5f;
+        var lockCenter = new Vector2(centerX, origin.Y + 52f * scale);
+        drawList.AddCircle(lockCenter, 26f * scale,
+            ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.Aethergram.MutedInk, 0.5f)), 48, 1.6f * scale);
+        AppSkin.Icon(drawList, lockCenter, FontAwesomeIcon.Lock.ToIconString(), AppPalettes.Aethergram.TitleInk,
+            1.3f);
+        var titleTop = lockCenter.Y + 40f * scale;
+        var titleHeight = Typography.DrawWrappedCentered(new Vector2(centerX, titleTop),
+            Loc.T(L.Aethergram.PrivateTitle), AppPalettes.Aethergram.TitleInk, TextStyles.BodyEmphasized,
+            width - 48f * scale);
+        var subtitleTop = titleTop + titleHeight + 6f * scale;
+        var subtitleHeight = Typography.DrawWrappedCentered(new Vector2(centerX, subtitleTop),
+            Loc.T(L.Aethergram.PrivateSubtitle), AppPalettes.Aethergram.MutedInk, TextStyles.Subheadline,
+            width - 48f * scale);
+        ImGui.Dummy(new Vector2(width, subtitleTop + subtitleHeight + 24f * scale - origin.Y));
+    }
 }

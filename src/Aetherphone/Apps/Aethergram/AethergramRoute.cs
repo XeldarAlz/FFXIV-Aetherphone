@@ -25,6 +25,8 @@ internal enum AethergramScreen
     Reactions,
     Settings,
     Share,
+    FollowRequests,
+    Saved,
 }
 
 internal readonly record struct AethergramRoute(
@@ -37,6 +39,8 @@ internal readonly record struct AethergramRoute(
     public static readonly AethergramRoute EditProfile = new(AethergramScreen.EditProfile);
     public static readonly AethergramRoute Inbox = new(AethergramScreen.Inbox);
     public static readonly AethergramRoute Settings = new(AethergramScreen.Settings);
+    public static readonly AethergramRoute FollowRequests = new(AethergramScreen.FollowRequests);
+    public static readonly AethergramRoute Saved = new(AethergramScreen.Saved);
     public static AethergramRoute Detail(string postId) => new(AethergramScreen.Detail, postId);
     public static AethergramRoute Profile(string userId) => new(AethergramScreen.Profile, userId);
     public static AethergramRoute Thread(string userId) => new(AethergramScreen.Thread, userId);

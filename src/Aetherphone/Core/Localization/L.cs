@@ -79,6 +79,13 @@ internal static class L
         public static readonly LocString ActivityTitle = new("social.activityTitle", "Notifications");
         public static readonly LocString ActivityTab = new("social.activityTab", "Activity");
         public static readonly LocString ActivityEmpty = new("social.activityEmpty", "Nothing here yet. Interactions with your posts will show up here");
+        public static readonly LocString FollowRequests = new("social.followRequests", "Follow requests");
+        public static readonly LocString FollowRequestsCount = new("social.followRequestsCount", "Follow requests ({0})");
+        public static readonly LocString RequestedFollow = new("social.requestedFollow", "requested to follow you");
+        public static readonly LocString AcceptedFollow = new("social.acceptedFollow", "accepted your follow request");
+        public static readonly LocString Requested = new("social.requested", "Requested");
+        public static readonly LocString Confirm = new("social.confirm", "Confirm");
+        public static readonly LocString Delete = new("social.delete", "Delete");
     }
 
     internal static class PhotoTag
@@ -1685,6 +1692,12 @@ internal static class L
         public static readonly LocString RepliedToYourStory = new("aethergram.repliedToYourStory", "Replied to your story");
         public static readonly LocString YouRepliedToStory = new("aethergram.youRepliedToStory", "You replied to their story");
         public static readonly LocString StoryUnavailable = new("aethergram.storyUnavailable", "Story unavailable");
+        public static readonly LocString PrivateTitle = new("aethergram.privateTitle", "This account is private");
+        public static readonly LocString PrivateSubtitle = new("aethergram.privateSubtitle", "Follow this account to see their photos");
+        public static readonly LocString SavedTitle = new("aethergram.savedTitle", "Saved");
+        public static readonly LocString SavedEmpty = new("aethergram.savedEmpty", "Nothing saved yet");
+        public static readonly LocString PrivateAccount = new("aethergram.privateAccount", "Private account");
+        public static readonly LocString PrivateAccountHint = new("aethergram.privateAccountHint", "Only followers can see your photos and stories. New followers must send a request.");
     }
 
     internal static class Velvet

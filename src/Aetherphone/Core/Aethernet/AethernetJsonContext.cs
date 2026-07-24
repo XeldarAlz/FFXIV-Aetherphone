@@ -117,6 +117,8 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(EditChatMessageRequest))]
 [JsonSerializable(typeof(ReactionListDto))]
 [JsonSerializable(typeof(UpdateChatPrivacyRequest))]
+[JsonSerializable(typeof(UpdateAccountPrivacyRequest))]
+[JsonSerializable(typeof(FollowResultDto))]
 [JsonSerializable(typeof(WrappedPrivateKeyDto))]
 [JsonSerializable(typeof(PutMyKeysRequest))]
 [JsonSerializable(typeof(MyKeysDto))]

@@ -21,6 +21,8 @@ internal sealed class NotificationRouter
     private const int TypePhotoTag = 9;
     private const int TypeRepost = 12;
     private const int TypeQuote = 13;
+    private const int TypeFollowRequest = 14;
+    private const int TypeFollowAccept = 15;
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
     private readonly LinkpearlLauncher linkpearlLauncher;
@@ -96,8 +98,10 @@ internal sealed class NotificationRouter
                 or TypeRepost or TypeQuote
                 when !string.IsNullOrEmpty(notification.PostId)
                 => new SocialDeepLink(SocialLinkKind.Post, notification.PostId!),
-            TypeFollow or TypeConnectRequest or TypeConnectAccept when !string.IsNullOrEmpty(notification.ActorId)
+            TypeFollow or TypeConnectRequest or TypeConnectAccept or TypeFollowAccept
+                when !string.IsNullOrEmpty(notification.ActorId)
                 => new SocialDeepLink(SocialLinkKind.Profile, notification.ActorId!),
+            TypeFollowRequest => new SocialDeepLink(SocialLinkKind.Requests, notification.ActorId ?? string.Empty),
             _ => null,
         };
     }

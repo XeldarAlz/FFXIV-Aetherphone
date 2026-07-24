@@ -49,7 +49,10 @@ internal sealed record UserDto(
     int FollowedByCount = 0,
     string[]? FollowedByPreview = null,
     bool CanMessage = false,
-    int MessagePolicy = 0) : IIdentified;
+    int MessagePolicy = 0,
+    bool IsPrivate = false,
+    bool FollowRequested = false,
+    int PendingFollowRequests = 0) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
 
@@ -58,6 +61,10 @@ internal sealed record UpdateMessagePrivacyRequest(int? MessagePolicy);
 internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffsetMinutes);
 
 internal sealed record UpdateChatPrivacyRequest(bool? ShareReadReceipts, bool? SharePresence);
+
+internal sealed record UpdateAccountPrivacyRequest(bool? IsPrivate);
+
+internal sealed record FollowResultDto(bool Following, bool Requested);
 
 internal sealed record CreatePostRequest(string Text, string? QuotedPostId = null);
 
@@ -114,7 +121,8 @@ internal sealed record PostDto(
     string? QuotedPostId = null,
     PostDto? ReferencedPost = null,
     int RepostCount = 0,
-    bool MyReposted = false) : IIdentified;
+    bool MyReposted = false,
+    bool Saved = false) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 

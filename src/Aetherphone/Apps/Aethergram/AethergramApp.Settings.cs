@@ -15,6 +15,7 @@ internal sealed partial class AethergramApp
     private volatile int messagePolicy;
     private volatile bool messagePolicyLoaded;
     private volatile bool messagePolicyLoading;
+    private volatile bool privateAccount;
 
     private void DrawSettings(Rect area)
     {
@@ -47,7 +48,32 @@ internal sealed partial class AethergramApp
                 Loc.T(L.Social.MessagesAudienceHint), AppPalettes.Aethergram.MutedInk, TextStyles.Footnote,
                 width - 8f * scale);
             ImGui.Dummy(new Vector2(width, hintHeight + 24f * scale));
+            DrawPrivateAccountCard(drawList, width, scale);
+            ImGui.Dummy(new Vector2(width, 10f * scale));
+            var privateHintTop = ImGui.GetCursorScreenPos();
+            var privateHintHeight = Typography.DrawWrappedLeft(new Vector2(privateHintTop.X + 4f * scale, privateHintTop.Y),
+                Loc.T(L.Aethergram.PrivateAccountHint), AppPalettes.Aethergram.MutedInk, TextStyles.Footnote,
+                width - 8f * scale);
+            ImGui.Dummy(new Vector2(width, privateHintHeight + 24f * scale));
         }
+    }
+
+    private void DrawPrivateAccountCard(ImDrawListPtr drawList, float width, float scale)
+    {
+        var origin = ImGui.GetCursorScreenPos();
+        var rowHeight = 46f * scale;
+        var cardMax = new Vector2(origin.X + width, origin.Y + rowHeight);
+        ui.Card(drawList, origin, cardMax, 16f * scale);
+        var row = new Rect(new Vector2(origin.X + 16f * scale, origin.Y),
+            new Vector2(origin.X + width - 16f * scale, cardMax.Y));
+        var toggled = SettingsRow.Bool(row, Loc.T(L.Aethergram.PrivateAccount), privateAccount, theme);
+        if (toggled != privateAccount)
+        {
+            SetAccountPrivacy(toggled);
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(width, rowHeight));
     }
 
     private void DrawAudienceCard(ImDrawListPtr drawList, float width, float scale)
@@ -112,6 +138,7 @@ internal sealed partial class AethergramApp
                 if (me is not null)
                 {
                     messagePolicy = me.MessagePolicy;
+                    privateAccount = me.IsPrivate;
                     messagePolicyLoaded = true;
                 }
             }
@@ -148,6 +175,24 @@ internal sealed partial class AethergramApp
             catch (Exception exception)
             {
                 AepLog.Warning($"Aethergram message privacy update failed: {exception.Message}");
+            }
+        });
+    }
+
+    private void SetAccountPrivacy(bool isPrivate)
+    {
+        if (privateAccount == isPrivate)
+        {
+            return;
+        }
+
+        var previous = privateAccount;
+        privateAccount = isPrivate;
+        store.UpdateAccountPrivacy(isPrivate, succeeded =>
+        {
+            if (!succeeded)
+            {
+                privateAccount = previous;
             }
         });
     }
