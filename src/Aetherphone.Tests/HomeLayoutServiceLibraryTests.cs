@@ -139,7 +139,7 @@ public sealed class HomeLayoutServiceLibraryTests
         };
 
         var first = BuildLayout(apps, configuration);
-        first.MoveTile(first.Page(0)[2], first.HomePageCount, 0);
+        first.MoveTile(first.Page(0)[2], first.HomePageCount, new GridCell(0, 0));
 
         var layout = BuildLayout(apps, configuration);
 
@@ -181,7 +181,8 @@ public sealed class HomeLayoutServiceLibraryTests
     private static HomeLayoutService BuildLayout(List<IPhoneApp> apps, FakeHomeConfiguration configuration) =>
         new(apps, new WidgetRegistry(Array.Empty<IHomeWidget>(), apps), configuration);
 
-    private static void Commit(HomeLayoutService layout) => layout.MoveTile(layout.Page(0)[0], 0, 0);
+    private static void Commit(HomeLayoutService layout) =>
+        layout.MoveTile(layout.Page(0)[0], 0, layout.Page(0)[0].Cell);
 
     private static HomePage PageOf(params string[] appIds)
     {
@@ -218,25 +219,4 @@ public sealed class HomeLayoutServiceLibraryTests
             new FakeApp("b"),
             new FakeApp("c"),
         };
-
-    private sealed class FakeApp : IPhoneApp
-    {
-        public FakeApp(string id) => Id = id;
-        public string Id { get; }
-        public string DisplayName => Id;
-        public string Glyph => string.Empty;
-        public int BadgeCount => 0;
-        public bool IsAvailable { get; set; } = true;
-        public void OnOpened() { }
-        public void OnClosed() { }
-        public void Draw(in PhoneContext context) { }
-        public void Dispose() { }
-    }
-
-    private sealed class FakeHomeConfiguration : IHomeConfiguration
-    {
-        public HomeLayout? Home { get; set; }
-        public int HomeGridRows { get; set; }
-        public void Save() { }
-    }
 }

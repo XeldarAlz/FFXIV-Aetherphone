@@ -19,6 +19,8 @@ internal sealed class HomePage
 internal sealed class HomeItem
 {
     public string Kind { get; set; } = "app";
+    public int Column { get; set; } = -1;
+    public int Row { get; set; } = -1;
     public string AppId { get; set; } = string.Empty;
     public string FolderName { get; set; } = string.Empty;
     public string FolderTint { get; set; } = string.Empty;

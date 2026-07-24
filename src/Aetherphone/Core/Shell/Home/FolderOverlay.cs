@@ -150,7 +150,7 @@ internal sealed class FolderOverlay
                 if (HomeTileView.RemoveBadge(new Vector2(center.X - half + 2f * scale, center.Y - half + 2f * scale),
                         scale, theme))
                 {
-                    layout.RemoveFromFolder(current, app, currentPage, layout.Page(currentPage).Count);
+                    layout.RemoveFromFolder(current, app, currentPage);
                     if (current.Apps.Count <= 1)
                     {
                         RequestClose();

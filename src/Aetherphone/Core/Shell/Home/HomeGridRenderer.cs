@@ -45,13 +45,10 @@ internal sealed class HomeGridRenderer
     private void DrawPage(in HomeMetrics metrics, PhoneTheme theme, int page, float delta, float labelAlpha,
         in HomeMotion motion)
     {
-        if (!interaction.TryPreviewPage(page, out var tiles, out var cells))
-        {
-            tiles = layout.Page(page);
-            cells = layout.Placements(page);
-        }
-
+        var tiles = layout.Page(page);
+        var cells = layout.Placements(page);
         var pageOffset = new Vector2(metrics.PageOffsetX(page, pager.Value), 0f);
+        DrawDropTarget(metrics, theme, page, labelAlpha);
         for (var index = 0; index < tiles.Count && index < cells.Count; index++)
         {
             var tile = tiles[index];
@@ -71,6 +68,26 @@ internal sealed class HomeGridRenderer
         {
             DrawLibraryEmptyState(metrics, theme, pageOffset, labelAlpha);
         }
+    }
+
+    private void DrawDropTarget(in HomeMetrics metrics, PhoneTheme theme, int page, float labelAlpha)
+    {
+        if (!interaction.DropTargetLive || interaction.DragPage != page || labelAlpha <= 0.01f)
+        {
+            return;
+        }
+
+        var tile = interaction.DragTile!;
+        var rect = metrics.TileRect(page, pager.Value, interaction.DropCell, tile);
+        var pad = tile.IsWidget ? 0f : metrics.IconSize * 0.08f;
+        var min = rect.Min - new Vector2(pad, pad);
+        var max = rect.Max + new Vector2(pad, pad);
+        var rounding = (tile.IsWidget ? 22f * metrics.Scale : rect.Width * 0.28f) + pad;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.10f * labelAlpha)),
+            rounding);
+        drawList.AddRect(min, max, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.32f * labelAlpha)),
+            rounding, ImDrawFlags.None, 1.5f * metrics.Scale);
     }
 
     private static void DrawLibraryEmptyState(in HomeMetrics metrics, PhoneTheme theme, Vector2 pageOffset,

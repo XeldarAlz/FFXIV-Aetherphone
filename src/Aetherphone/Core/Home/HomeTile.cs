@@ -7,6 +7,7 @@ internal sealed class HomeTile : IGridTile
     public required string Key { get; init; }
     public IPhoneApp? App { get; init; }
     public IHomeWidget? Widget { get; init; }
+    public GridCell Cell { get; set; } = HomeGridSolver.Unassigned;
     public WidgetSize Size { get; set; } = WidgetSize.Medium;
     public string FolderName { get; set; } = string.Empty;
     public string FolderTint { get; set; } = string.Empty;

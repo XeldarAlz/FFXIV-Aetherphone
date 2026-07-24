@@ -13,6 +13,13 @@ using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Velvet;
 
+internal enum VelvetComposeResult
+{
+    Open,
+    Closed,
+    Posted,
+}
+
 internal sealed class VelvetPostComposer
 {
     private readonly VelvetStore store;
@@ -60,12 +67,12 @@ internal sealed class VelvetPostComposer
         session.Open(story);
     }
 
-    public bool Draw(Rect area, AppSkin ui, in PhoneContext context)
+    public VelvetComposeResult Draw(Rect area, AppSkin ui, in PhoneContext context)
     {
         if (outcome == 1)
         {
             outcome = 0;
-            return true;
+            return storyMode ? VelvetComposeResult.Closed : VelvetComposeResult.Posted;
         }
 
         if (outcome == 2)
@@ -77,7 +84,7 @@ internal sealed class VelvetPostComposer
         if (closeRequested)
         {
             closeRequested = false;
-            return true;
+            return VelvetComposeResult.Closed;
         }
 
         session.ConsumePendingImport();
@@ -94,7 +101,7 @@ internal sealed class VelvetPostComposer
                 break;
         }
 
-        return false;
+        return VelvetComposeResult.Open;
     }
 
     private void DrawPick(Rect area, AppSkin ui, in PhoneContext context)

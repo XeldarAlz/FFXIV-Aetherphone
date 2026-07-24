@@ -41,6 +41,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly LodestoneService lodestone;
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
+    private readonly ConductGateService conduct;
     private readonly AvatarComposer avatar;
     private readonly SocialProfilePages profile;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
@@ -87,6 +88,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         this.lodestone = lodestone;
         this.images = images;
         this.social = social;
+        this.conduct = conduct;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Chirper.ChangePhoto, L.Chirper.ImportFromPc, L.Photos.NoPhotos,
                 L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library,
@@ -127,7 +129,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             DeleteCommentFailed = L.Chirper.DeleteCommentFailed,
         }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
             () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back,
-            () => conduct.ShowRules(Id));
+            null);
     }
 
     public void OnOpened()

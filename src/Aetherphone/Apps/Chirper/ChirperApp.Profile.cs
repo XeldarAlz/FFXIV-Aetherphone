@@ -144,6 +144,14 @@ internal sealed partial class ChirperApp
             }
         }
 
+        var rulesCenter = new Vector2(area.Max.X - 96f * scale, rowCenterY);
+        if (ui.IconButton(rulesCenter, 16f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                AppPalettes.Chirper.MutedInk, new Vector4(0f, 0f, 0f, 0f), 1.1f, Loc.T(L.Conduct.Eyebrow),
+                HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
+        }
+
         var searchCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);
         UiAnchors.Report("chirper.search", new Rect(searchCenter - new Vector2(18f * scale, 18f * scale),
             searchCenter + new Vector2(18f * scale, 18f * scale)));

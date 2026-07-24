@@ -36,15 +36,6 @@ internal sealed partial class VelvetShell
                 OpenReport("velvet_profile", user.UserId, Loc.T(L.Velvet.ReportProfile));
             }
         }
-        else if (user != null)
-        {
-            var rulesCenter = new Vector2(area.Max.X - 22f * scale, area.Min.Y + VHeader.Height * scale * 0.5f);
-            if (ui.IconButton(rulesCenter, 15f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
-                    VelvetTheme.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Conduct.Eyebrow)))
-            {
-                conduct.ShowRules(Id);
-            }
-        }
 
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
         if (user == null)

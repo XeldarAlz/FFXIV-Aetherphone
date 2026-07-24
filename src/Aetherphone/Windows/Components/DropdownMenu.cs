@@ -129,10 +129,7 @@ internal sealed class DropdownMenu
         var revealScale = 0.94f + 0.06f * reveal;
         var min = pivot + (new Vector2(left, top) - pivot) * revealScale;
         var max = pivot + (new Vector2(left + width, top + height) - pivot) * revealScale;
-        Elevation.Floating(drawList, min, max, 14f * scale, scale);
-        Squircle.Fill(drawList, min, max, 14f * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.GroupedCard, MathF.Min(0.98f, theme.GroupedCard.W + 0.4f) * alpha)));
-        Material.EdgeSquircle(drawList, min, max, 14f * scale, scale);
+        PopoverSurface.Draw(drawList, min, max, 14f * scale, theme, scale, alpha);
         var clicked = -1;
         var clickedAction = RowAction.Select;
         for (var index = 0; index < items.Length; index++)

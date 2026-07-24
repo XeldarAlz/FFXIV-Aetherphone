@@ -14,7 +14,7 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed partial class VelvetShell
 {
     private readonly FeedVirtualizer feedVirtualizer = new(400f);
-    private float sinceFeedRefresh;
+    private bool feedScrollTopPending;
 
     private void DrawFeed(Rect area)
     {
@@ -24,15 +24,14 @@ internal sealed partial class VelvetShell
             store.RefreshFeed();
         }
 
-        sinceFeedRefresh += ImGui.GetIO().DeltaTime;
-        if (store.FeedLoaded && !store.LoadingFeed && sinceFeedRefresh >= SocialProfilePages.FeedRefreshSeconds)
-        {
-            sinceFeedRefresh = 0f;
-            store.RefreshFeed();
-        }
-
         using (AppSurface.Begin(area))
         {
+            if (feedScrollTopPending)
+            {
+                ImGui.SetScrollY(0f);
+                feedScrollTopPending = false;
+            }
+
             stories.DrawTray(theme);
             var width = ScrollLayout.StableContentWidth();
             var feed = store.Feed;
@@ -80,6 +79,18 @@ internal sealed partial class VelvetShell
             post.Open();
             router.Push(VelvetView.Compose);
         }
+    }
+
+    private void RefreshFeed()
+    {
+        if (!store.IsSignedIn || store.LoadingFeed)
+        {
+            return;
+        }
+
+        feedScrollTopPending = true;
+        store.RefreshFeed();
+        stories.RefreshTray();
     }
 
     private void StartStoryCompose()
@@ -225,7 +236,13 @@ internal sealed partial class VelvetShell
     private void DrawCompose(Rect area)
     {
         var context = new PhoneContext(area, theme, navigation);
-        if (post.Draw(area, ui, context))
+        var result = post.Draw(area, ui, context);
+        if (result == VelvetComposeResult.Posted)
+        {
+            RefreshFeed();
+        }
+
+        if (result != VelvetComposeResult.Open)
         {
             router.Pop();
         }

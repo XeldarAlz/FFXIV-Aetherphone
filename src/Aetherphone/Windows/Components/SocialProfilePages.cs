@@ -49,7 +49,6 @@ internal sealed class SocialProfileStyle
 
 internal sealed class SocialProfilePages
 {
-    public const float FeedRefreshSeconds = 25f;
     public const int DisplayNameMax = 40;
     public const int HandleMax = 15;
     public const int BioMax = 200;
