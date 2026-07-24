@@ -93,7 +93,8 @@ internal sealed partial class AethergramApp
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var logoLeft = area.Min.X + 16f * scale;
-        var trailingReserve = store.IsSignedIn ? 148f * scale : 16f * scale;
+        var chevronReserve = store.IsSignedIn ? 32f * scale : 0f;
+        var trailingReserve = (store.IsSignedIn ? 148f * scale : 16f * scale) + chevronReserve;
         var maxLogoWidth = MathF.Max(1f, area.Max.X - trailingReserve - logoLeft);
         var logoStyle = new TextStyle(1.3f, FontWeight.Bold);
         var logoHeight = Typography.Measure(DisplayName, logoStyle).Y;
