@@ -2,6 +2,12 @@
   "version": 1,
   "dependencies": {
     "net10.0-windows7.0": {
+      "BouncyCastle.Cryptography": {
+        "type": "Direct",
+        "requested": "[2.6.2, )",
+        "resolved": "2.6.2",
+        "contentHash": "7oWOcvnntmMKNzDLsdxAYqApt+AjpRpP2CShjMfIa3umZ42UQMvH0tl1qAliYPNYO6vTdcGMqnRrCPmsfzTI1w=="
+      },
       "Concentus": {
         "type": "Direct",
         "requested": "[2.2.2, )",
@@ -60,6 +66,16 @@
         "requested": "[13.0.4, )",
         "resolved": "13.0.4",
         "contentHash": "pdgNNMai3zv51W5aq268sujXUyx7SNdE2bj1wZcWjAQrKMFZV260lbqYop1d2GM67JI1huLRwxo9ZqnfF/lC6A=="
+      },
+      "NLayer.NAudioSupport": {
+        "type": "Direct",
+        "requested": "[2.0.1, )",
+        "resolved": "2.0.1",
+        "contentHash": "KA+x8ukKPSq6cyNK4CSKiPw8Wl2RNNbME/t8fohqnldHcaHAmj8+zKMu3L5eAsM+ewhBPFQHC8qVIGXM/C83PQ==",
+        "dependencies": {
+          "NAudio.Core": "2.0.0",
+          "NLayer": "2.0.1"
+        }
       },
       "SixLabors.ImageSharp": {
         "type": "Direct",
@@ -120,6 +136,11 @@
         "type": "Transitive",
         "resolved": "2.3.0",
         "contentHash": "jMd7r6dB6tAtXhOYL58ntPqwERNm1/Rhw5MKOIYvsnXzuX+PTGsa2VMam6n0npZYSwlSidKa4GAm4bFcXFUlcg=="
+      },
+      "NLayer": {
+        "type": "Transitive",
+        "resolved": "2.0.1",
+        "contentHash": "0nhnDRx98u7zXXbPIF11QYYupOOOQ9W22eqoyQyXn/gitRXbf9zAK8YfxyqS1Ix+TSqJv8EPNSk3VkDb7fChKw=="
       },
       "SharpGen.Runtime": {
         "type": "Transitive",

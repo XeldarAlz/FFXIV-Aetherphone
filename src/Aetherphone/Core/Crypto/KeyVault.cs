@@ -21,7 +21,7 @@ internal sealed class KeyVault : IDisposable
     private readonly AethernetSession session;
     private readonly KeysClient client;
     private readonly SemaphoreSlim gate = new(1, 1);
-    private ECDiffieHellman? privateKey;
+    private EcPrivateKey? privateKey;
     private MyKeysDto? serverBundle;
     private volatile bool refreshing;
 
