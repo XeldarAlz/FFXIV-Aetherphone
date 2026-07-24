@@ -152,12 +152,13 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var heroScale = roomy ? 2.0f : 1.62f;
         var timeStyle = new TextStyle(heroScale, FontWeight.Medium);
         var timeSize = Typography.Measure(time, timeStyle);
+        var stableTimeWidth = Typography.Measure("88:88", timeStyle).X;
         var eorzeaLabel = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Home.Eorzea));
         var eorzeaScale = roomy ? 0.92f : 0.72f;
         var eorzeaTracking = 1.5f * scale;
         var eorzeaWidth = Typography.Measure(eorzeaLabel, eorzeaScale, FontWeight.SemiBold).X +
                           eorzeaTracking * Math.Max(0, eorzeaLabel.Length - 1);
-        var rightColumn = MathF.Max(timeSize.X, eorzeaWidth) + pad;
+        var rightColumn = MathF.Max(stableTimeWidth, eorzeaWidth) + pad;
         var rowHeight = RowHeightAt(heroScale);
         var roomConstrainedOffset = contentBottom - bounds.Min.Y - rowHeight;
         var conditionYOffset = MathF.Max(4f * scale, MathF.Min(minTopOffset, roomConstrainedOffset));
@@ -249,9 +250,10 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var time = bell.Formatted;
         var timeStyle = new TextStyle(1.62f, FontWeight.Medium);
         var timeSize = Typography.Measure(time, timeStyle);
+        var stableTimeWidth = Typography.Measure("88:88", timeStyle).X;
         var eorzeaLabel = Loc.T(L.Home.Eorzea);
         var eyebrowWidth = WidgetChrome.EyebrowWidth(eorzeaLabel, scale);
-        var rightColumn = MathF.Max(timeSize.X, eyebrowWidth) + pad;
+        var rightColumn = MathF.Max(stableTimeWidth, eyebrowWidth) + pad;
         WidgetChrome.Eyebrow(drawList, new Vector2(left, bounds.Min.Y + pad), DisplayName, palette.InkSoft, scale,
             opacity);
         var eyebrowHeight = WidgetChrome.EyebrowHeight();
