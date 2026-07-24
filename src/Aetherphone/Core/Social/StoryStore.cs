@@ -34,6 +34,7 @@ internal sealed class StoryStore : IDisposable
     private volatile bool groupLoading;
     private volatile bool viewersLoading;
     private volatile bool posting;
+    private string? lastAccountId;
 
     public StoryStore(AethernetSession session, GramClient client, MediaClient media, string logTag)
     {
@@ -41,6 +42,26 @@ internal sealed class StoryStore : IDisposable
         this.client = client;
         this.media = media;
         work = new StoreWork(logTag);
+        session.Changed += OnSessionChanged;
+    }
+
+    private void OnSessionChanged()
+    {
+        var accountId = session.CurrentUser?.Id;
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastAccountId = accountId;
+        rings = Array.Empty<StoryRingDto>();
+        CloseAuthor();
+        ClearViewers();
+        lock (seenLock)
+        {
+            seenStoryIds.Clear();
+            seenAuthorsThrough.Clear();
+        }
     }
 
     public bool IsSignedIn => session.IsSignedIn;
@@ -295,6 +316,7 @@ internal sealed class StoryStore : IDisposable
 
     public void Dispose()
     {
+        session.Changed -= OnSessionChanged;
         work.Dispose();
     }
 }

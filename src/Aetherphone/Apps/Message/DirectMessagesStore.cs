@@ -63,6 +63,12 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public void RefreshConversations() => RefreshThreadListCore();
 
+    protected override void OnAccountSwitched()
+    {
+        conversation = null;
+        members = Array.Empty<ConversationMemberDto>();
+    }
+
     public void OpenConversation(string id) => OpenThread(id);
 
     protected override string ImageUploadScope => "chat-dm";

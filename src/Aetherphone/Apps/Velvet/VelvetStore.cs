@@ -28,6 +28,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         new FeedLane<VelvetPostDto>(ByNewestFirst),
     };
     private volatile bool velvetKeysHydrated;
+    private volatile int accountEpoch;
     private volatile VelvetProfileDto? me;
     private volatile bool loadingMe;
     private volatile bool avatarBusy;
@@ -168,6 +169,50 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     protected override void OnCipherCleared()
     {
         velvetKeysHydrated = false;
+    }
+
+    protected override void OnAccountSwitched()
+    {
+        accountEpoch++;
+        discoverEpoch++;
+        me = null;
+        meGate.Reset();
+        discoverResults = Array.Empty<VelvetProfileDto>();
+        discoverCursor = null;
+        discoverLoaded = false;
+        discoverFilter = VelvetDiscoverFilter.Empty;
+        discoverTags = string.Empty;
+        discoverRegion = string.Empty;
+        connections = Array.Empty<VelvetConnectionDto>();
+        connectionsLoaded = false;
+        requests = Array.Empty<VelvetConnectionDto>();
+        requestsLoaded = false;
+        sentRequests = Array.Empty<VelvetConnectionDto>();
+        sentRequestsLoaded = false;
+        profileUserId = null;
+        profileUser = null;
+        profileFailed = false;
+        userPostsUserId = null;
+        userPosts = Array.Empty<VelvetPostDto>();
+        userPostsTotal = 0;
+        userPostsLoaded = false;
+        userPostsFailed = false;
+        detailPostId = null;
+        detailComments = Array.Empty<VelvetCommentDto>();
+        for (var laneIndex = 0; laneIndex < feedLanes.Length; laneIndex++)
+        {
+            feedLanes[laneIndex].Clear();
+        }
+
+        feedLoadedAll = false;
+        feedLoadedConnections = false;
+        fetchedPost = null;
+        fetchingPostId = null;
+        likersPostId = null;
+        likers = Array.Empty<UserDto>();
+        likersFailed = false;
+        blocked = Array.Empty<UserDto>();
+        blockedLoaded = false;
     }
 
     private async Task EnsureVelvetHydratedAsync(CancellationToken token)
@@ -375,10 +420,11 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         }
 
         loadingMe = true;
+        var epoch = accountEpoch;
         work.Run("profile load", async token =>
         {
             var profile = await client.MeAsync(token).ConfigureAwait(false);
-            if (profile is not null)
+            if (profile is not null && epoch == accountEpoch)
             {
                 me = profile;
             }

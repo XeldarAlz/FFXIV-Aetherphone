@@ -159,6 +159,12 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         gramKeysHydrated = false;
     }
 
+    protected override void OnAccountSwitched()
+    {
+        sharedPosts.Clear();
+        sharedPostFetches.Clear();
+    }
+
     private async Task EnsureGramHydratedAsync(CancellationToken token)
     {
         if (gramKeysHydrated || vault.State != KeyVaultState.Unlocked)
