@@ -101,8 +101,10 @@ internal sealed class AppSkin
         var drawList = ImGui.GetWindowDrawList();
         var fill = Core.Theme.Palette.WithAlpha(filled ? theme.Accent : theme.GroupedCard, 0.45f);
         Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, theme.TextMuted, 0.9f, FontWeight.SemiBold);
+        var maxLabelWidth = MathF.Max(1f, rect.Width - rect.Height);
+        var fittedLabel = Typography.FitText(label, maxLabelWidth, 0.9f, FontWeight.SemiBold);
+        var textSize = Typography.Measure(fittedLabel, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(rect.Center - textSize * 0.5f, fittedLabel, theme.TextMuted, 0.9f, FontWeight.SemiBold);
         return false;
     }
 
@@ -168,8 +170,10 @@ internal sealed class AppSkin
             : (hovered ? HoverFill : surface);
         var ink = filled ? White : titleInk;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
+        var maxLabelWidth = MathF.Max(1f, rect.Width - rect.Height);
+        var fittedLabel = Typography.FitText(label, maxLabelWidth, 0.9f, FontWeight.SemiBold);
+        var textSize = Typography.Measure(fittedLabel, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(rect.Center - textSize * 0.5f, fittedLabel, ink, 0.9f, FontWeight.SemiBold);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
