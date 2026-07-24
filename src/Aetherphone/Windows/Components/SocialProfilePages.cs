@@ -200,7 +200,10 @@ internal sealed class SocialProfilePages
         var rightEdge = origin.X + width - pad;
         var reportReserve = user.IsMe ? 0f : buttonHeight + 10f * scale;
         var maxButtonAreaWidth = MathF.Max(60f * scale, rightEdge - avatarRight - 14f * scale - reportReserve);
-        var buttonWidth = MathF.Min(122f * scale, maxButtonAreaWidth);
+        var primaryLabel = user.IsMe ? Loc.T(style.EditProfile)
+            : user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow);
+        var primaryLabelWidth = Typography.Measure(primaryLabel, 0.9f, FontWeight.SemiBold).X;
+        var buttonWidth = MathF.Min(maxButtonAreaWidth, MathF.Max(122f * scale, primaryLabelWidth + 24f * scale));
         var buttonMax = new Vector2(rightEdge, avatarCenter.Y + buttonHeight * 0.5f);
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
         if (user.IsMe)
