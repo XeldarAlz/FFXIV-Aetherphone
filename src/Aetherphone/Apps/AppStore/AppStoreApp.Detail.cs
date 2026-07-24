@@ -25,7 +25,7 @@ internal sealed partial class AppStoreApp
             return;
         }
 
-        DrawDetailNavBar(area, app.DisplayName, scale);
+        DrawNavBar(area, app.DisplayName, scale);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -41,7 +41,7 @@ internal sealed partial class AppStoreApp
         }
     }
 
-    private void DrawDetailNavBar(Rect area, string title, float scale)
+    private void DrawNavBar(Rect area, string title, float scale)
     {
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var fitted = Typography.FitText(title, area.Width - 96f * scale, TextStyles.Title3);

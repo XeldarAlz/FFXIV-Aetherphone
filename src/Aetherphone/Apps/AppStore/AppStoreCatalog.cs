@@ -1,5 +1,6 @@
 using System.Collections.Frozen;
 using Aetherphone.Core.Localization;
+using Dalamud.Interface;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -69,6 +70,28 @@ internal static class AppStoreCatalog
     }.ToFrozenDictionary(StringComparer.Ordinal);
 
     public static StoreEntry For(string appId) => Entries.TryGetValue(appId, out var entry) ? entry : Fallback;
+
+    public static Vector4 Tint(StoreCategory category) => category switch
+    {
+        StoreCategory.Social => new(0.93f, 0.35f, 0.46f, 1f),
+        StoreCategory.Chat => new(0.24f, 0.55f, 0.95f, 1f),
+        StoreCategory.Creativity => new(0.97f, 0.60f, 0.25f, 1f),
+        StoreCategory.Play => new(0.95f, 0.42f, 0.38f, 1f),
+        StoreCategory.Adventure => new(0.28f, 0.72f, 0.46f, 1f),
+        StoreCategory.Work => new(0.56f, 0.42f, 0.92f, 1f),
+        _ => new(0.42f, 0.52f, 0.66f, 1f),
+    };
+
+    public static FontAwesomeIcon Icon(StoreCategory category) => category switch
+    {
+        StoreCategory.Social => FontAwesomeIcon.Users,
+        StoreCategory.Chat => FontAwesomeIcon.Comments,
+        StoreCategory.Creativity => FontAwesomeIcon.Camera,
+        StoreCategory.Play => FontAwesomeIcon.Film,
+        StoreCategory.Adventure => FontAwesomeIcon.Compass,
+        StoreCategory.Work => FontAwesomeIcon.CheckSquare,
+        _ => FontAwesomeIcon.Wrench,
+    };
 
     public static LocString Name(StoreCategory category) => category switch
     {

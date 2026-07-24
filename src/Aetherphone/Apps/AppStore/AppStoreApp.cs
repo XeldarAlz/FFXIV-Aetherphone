@@ -20,14 +20,18 @@ internal enum StoreTab
 internal enum StoreViewKind
 {
     Root,
+    Category,
     Detail,
 }
 
-internal readonly record struct StoreView(StoreViewKind Kind, string AppId)
+internal readonly record struct StoreView(StoreViewKind Kind, string AppId, StoreCategory Category)
 {
-    public static StoreView Root() => new(StoreViewKind.Root, string.Empty);
+    public static StoreView Root() => new(StoreViewKind.Root, string.Empty, StoreCategory.Social);
 
-    public static StoreView ForApp(string appId) => new(StoreViewKind.Detail, appId);
+    public static StoreView ForApp(string appId) => new(StoreViewKind.Detail, appId, StoreCategory.Social);
+
+    public static StoreView ForCategory(StoreCategory category) =>
+        new(StoreViewKind.Category, string.Empty, category);
 }
 
 internal sealed partial class AppStoreApp : IPhoneApp
@@ -97,20 +101,25 @@ internal sealed partial class AppStoreApp : IPhoneApp
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
         router.Draw(context.Content, AppSkin.Transparent, delta, drawView);
+        var content = context.Content;
+        DrawTabBar(new Rect(new Vector2(content.Min.X, content.Max.Y - TabBarHeight * scale), content.Max), scale);
     }
 
     private void DrawView(StoreView view, Rect area, int depth)
     {
         ui.Body(area);
-        if (view.Kind == StoreViewKind.Detail)
+        var scale = ImGuiHelpers.GlobalScale;
+        var body = new Rect(area.Min, new Vector2(area.Max.X, area.Max.Y - TabBarHeight * scale));
+        switch (view.Kind)
         {
-            DrawDetail(area, view.AppId);
-            return;
+            case StoreViewKind.Detail:
+                DrawDetail(body, view.AppId);
+                return;
+            case StoreViewKind.Category:
+                DrawCategoryView(body, view.Category);
+                return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
-        var tabRect = new Rect(new Vector2(area.Min.X, area.Max.Y - TabBarHeight * scale), area.Max);
-        var body = new Rect(area.Min, new Vector2(area.Max.X, tabRect.Min.Y));
         switch (tab)
         {
             case StoreTab.Apps:
@@ -123,8 +132,6 @@ internal sealed partial class AppStoreApp : IPhoneApp
                 DrawTodayTab(body);
                 break;
         }
-
-        DrawTabBar(tabRect, scale);
     }
 
     private void DrawTabBar(Rect area, float scale)
@@ -158,6 +165,7 @@ internal sealed partial class AppStoreApp : IPhoneApp
 
             tab = order[index];
             resetScroll = true;
+            router.Reset();
         }
     }
 

@@ -114,9 +114,14 @@ internal sealed partial class AppStoreApp
             return top;
         }
 
+        Typography.Draw(new Vector2(area.Min.X + Metrics.Space.Lg * scale, top), title, ui.TitleInk,
+            TextStyles.Title3);
+        return DrawRowCard(area, top + 30f * scale, entries, scale);
+    }
+
+    private float DrawRowCard(Rect area, float top, List<IPhoneApp> entries, float scale)
+    {
         var left = area.Min.X + Metrics.Space.Lg * scale;
-        Typography.Draw(new Vector2(left, top), title, ui.TitleInk, TextStyles.Title3);
-        top += 30f * scale;
         var drawList = ImGui.GetWindowDrawList();
         var cardMin = new Vector2(left, top);
         var cardMax = new Vector2(area.Max.X - Metrics.Space.Lg * scale, top + entries.Count * RowHeight * scale);

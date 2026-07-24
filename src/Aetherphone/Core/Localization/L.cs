@@ -168,6 +168,7 @@ internal static class L
         public static readonly LocString Apps = new("store.apps", "Apps");
         public static readonly LocString Search = new("store.search", "Search");
         public static readonly LocString SearchHint = new("store.searchHint", "Apps and features");
+        public static readonly LocString BrowseCategories = new("store.browseCategories", "Browse Categories");
         public static readonly LocString Get = new("store.get", "GET");
         public static readonly LocString Open = new("store.open", "OPEN");
         public static readonly LocString Remove = new("store.remove", "Remove");

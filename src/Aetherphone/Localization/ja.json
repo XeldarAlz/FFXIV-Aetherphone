@@ -2253,6 +2253,7 @@
   "store.apps": "App",
   "store.search": "検索",
   "store.searchHint": "Appや機能を検索",
+  "store.browseCategories": "カテゴリを見る",
   "store.get": "入手",
   "store.open": "開く",
   "store.remove": "削除",

@@ -2253,6 +2253,7 @@
   "store.apps": "App",
   "store.search": "搜索",
   "store.searchHint": "搜索 App 和功能",
+  "store.browseCategories": "浏览类别",
   "store.get": "获取",
   "store.open": "打开",
   "store.remove": "移除",
