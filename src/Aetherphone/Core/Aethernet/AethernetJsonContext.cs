@@ -98,6 +98,8 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(MusterPage))]
 [JsonSerializable(typeof(SetMusterRsvpRequest))]
 [JsonSerializable(typeof(MusterRsvpResult))]
+[JsonSerializable(typeof(SetMusterStatusRequest))]
+[JsonSerializable(typeof(SetMusterNoticeRequest))]
 [JsonSerializable(typeof(MusterAttendeeDto))]
 [JsonSerializable(typeof(MusterSync))]
 [JsonSerializable(typeof(ContactDto))]
