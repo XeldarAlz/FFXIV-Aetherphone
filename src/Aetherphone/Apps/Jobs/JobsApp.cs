@@ -299,7 +299,8 @@ internal sealed partial class JobsApp : IPhoneApp
 
     private void DrawJobRow(ImDrawListPtr drawList, Rect rowRect, Rect contentRect, JobEntry job, float scale)
     {
-        var hovered = UiInteract.Hover(rowRect.Min, rowRect.Max);
+        var equippable = job.Kind == JobEntryKind.Gearset && !job.IsActive;
+        var hovered = equippable && UiInteract.Hover(rowRect.Min, rowRect.Max);
         if (hovered)
         {
             var alpha = ImGui.IsMouseDown(ImGuiMouseButton.Left) ? 0.14f : 0.07f;
@@ -318,8 +319,12 @@ internal sealed partial class JobsApp : IPhoneApp
 
         Material.EdgeSquircle(drawList, iconMin, iconMax, 10f * scale, scale, 0.5f);
 
+        var note = job.IsActive ? Loc.T(L.Jobs.Active)
+            : job.Kind == JobEntryKind.NoGearset ? Loc.T(L.Jobs.NoGearset)
+            : string.Empty;
         var textLeft = iconMax.X + 14f * scale;
-        var textRight = contentRect.Max.X - (job.IsActive ? 78f * scale : 0f);
+        var textRight = contentRect.Max.X -
+                        (note.Length == 0 ? 0f : Typography.Measure(note, TextStyles.Caption2).X + 28f * scale);
         var name = Typography.FitText(job.Name, textRight - textLeft, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(textLeft, contentRect.Min.Y + 12f * scale), name, ui.TitleInk,
             TextStyles.Headline);
@@ -330,9 +335,16 @@ internal sealed partial class JobsApp : IPhoneApp
         Typography.Draw(drawList, new Vector2(textLeft, contentRect.Min.Y + 36f * scale), fittedSubtitle, ui.MutedInk,
             TextStyles.Footnote);
 
+        var noteCenter = new Vector2(contentRect.Max.X, contentRect.Center.Y);
         if (job.IsActive)
         {
-            DrawActiveBadge(drawList, new Vector2(contentRect.Max.X, contentRect.Center.Y), scale);
+            DrawActiveBadge(drawList, noteCenter, note, scale);
+        }
+        else if (note.Length > 0)
+        {
+            var noteSize = Typography.Measure(note, TextStyles.Caption2);
+            Typography.Draw(drawList, new Vector2(noteCenter.X - noteSize.X, noteCenter.Y - noteSize.Y * 0.5f), note,
+                ui.MutedInk, TextStyles.Caption2);
         }
 
         if (hovered)
@@ -340,7 +352,7 @@ internal sealed partial class JobsApp : IPhoneApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        if (!job.IsActive && UiInteract.Click(rowRect.Min, rowRect.Max, hovered) && TryEquip(job))
+        if (UiInteract.Click(rowRect.Min, rowRect.Max, hovered) && GearsetActions.Equip(job.GearsetId))
         {
             pendingEquip = job;
             sincePendingEquip = 0f;
@@ -348,14 +360,8 @@ internal sealed partial class JobsApp : IPhoneApp
         }
     }
 
-    private bool TryEquip(JobEntry job) =>
-        job.Kind == JobEntryKind.Gearset
-            ? GearsetActions.Equip(job.GearsetId)
-            : GearsetActions.EquipTool(gameData, job.ClassJobId);
-
-    private void DrawActiveBadge(ImDrawListPtr drawList, Vector2 rightCenter, float scale)
+    private void DrawActiveBadge(ImDrawListPtr drawList, Vector2 rightCenter, string text, float scale)
     {
-        var text = Loc.T(L.Jobs.Active);
         var textSize = Typography.Measure(text, TextStyles.Caption2);
         var padX = 8f * scale;
         var padY = 4f * scale;

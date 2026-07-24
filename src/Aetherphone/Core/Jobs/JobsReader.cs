@@ -29,10 +29,10 @@ internal static unsafe class JobsReader
         }
 
         var levels = playerState->ClassJobLevels;
-        var armoryTools = ArmoryToolsByJob(gameData);
-        BuildGearsetEntries(gameData, levels, buckets);
-        BuildToolEntries(gameData, levels, buckets, armoryTools, HandCategoryId, (int)JobRole.Hand);
-        BuildToolEntries(gameData, levels, buckets, armoryTools, LandCategoryId, (int)JobRole.Land);
+        var gearsetJobIds = new HashSet<uint>();
+        BuildGearsetEntries(gameData, levels, buckets, gearsetJobIds);
+        BuildClassEntries(gameData, levels, buckets, gearsetJobIds, HandCategoryId, (int)JobRole.Hand);
+        BuildClassEntries(gameData, levels, buckets, gearsetJobIds, LandCategoryId, (int)JobRole.Land);
 
         var sections = new List<JobRoleSection>(RoleCount);
         for (var bucketIndex = 0; bucketIndex < buckets.Length; bucketIndex++)
@@ -60,7 +60,7 @@ internal static unsafe class JobsReader
     }
 
     private static void BuildGearsetEntries(GameData gameData, Span<short> levels,
-        List<(JobEntry Entry, byte UiPriority)>[] buckets)
+        List<(JobEntry Entry, byte UiPriority)>[] buckets, HashSet<uint> gearsetJobIds)
     {
         var module = RaptureGearsetModule.Instance();
         if (module is null)
@@ -84,23 +84,27 @@ internal static unsafe class JobsReader
                 continue;
             }
 
-            var bucketIndex = CombatBucketFor(jobType, role, categoryId);
+            var bucketIndex = BucketFor(jobType, role, categoryId);
             if (bucketIndex < 0)
             {
                 continue;
             }
 
             var level = LevelFor(gameData, levels, classJobId);
-            var iconId = module->GetClassJobIconForGearset(entry.Id);
             var isActive = module->CurrentGearsetIndex == entry.Id;
             var jobEntry = new JobEntry(JobEntryKind.Gearset, entry.Id, classJobId, gameData.JobAbbreviation(classJobId),
-                gameData.JobName(classJobId), level, entry.ItemLevel, iconId > 0 ? (uint)iconId : 0u, isActive);
+                gameData.JobName(classJobId), level, entry.ItemLevel, GameData.JobIconId(classJobId), isActive);
             buckets[bucketIndex].Add((jobEntry, uiPriority));
+            gearsetJobIds.Add(classJobId);
         }
     }
 
-    private static void BuildToolEntries(GameData gameData, Span<short> levels,
-        List<(JobEntry Entry, byte UiPriority)>[] buckets, Dictionary<uint, uint> armoryTools, uint classJobCategoryId,
+    /// <summary>
+    /// Hand/Land classes the player has levelled but never saved a gearset for. They are listed for completeness,
+    /// but the game only switches classes by equipping a gearset, so there is nothing to click.
+    /// </summary>
+    private static void BuildClassEntries(GameData gameData, Span<short> levels,
+        List<(JobEntry Entry, byte UiPriority)>[] buckets, HashSet<uint> gearsetJobIds, uint classJobCategoryId,
         int bucketIndex)
     {
         var currentJobId = gameData.LocalPlayer?.ClassJob.RowId ?? 0u;
@@ -108,32 +112,22 @@ internal static unsafe class JobsReader
         for (var index = 0; index < classJobIds.Length; index++)
         {
             var classJobId = classJobIds[index];
-            if (!gameData.TryGetClassJobDivision(classJobId, out _, out _, out var uiPriority, out _))
+            var level = LevelFor(gameData, levels, classJobId);
+            if (level == 0 || gearsetJobIds.Contains(classJobId) ||
+                !gameData.TryGetClassJobDivision(classJobId, out _, out _, out var uiPriority, out _))
             {
                 continue;
             }
 
             var isActive = classJobId == currentJobId;
             var itemLevel = -1;
-            var iconId = 0u;
             if (isActive)
             {
-                // The active job's tool is equipped, so it is never in the Armoury Chest the map was built from.
-                TryGetEquippedMainHand(gameData, out iconId, out itemLevel);
-            }
-            else
-            {
-                armoryTools.TryGetValue(classJobId, out iconId);
+                TryGetEquippedMainHandItemLevel(gameData, out itemLevel);
             }
 
-            var level = LevelFor(gameData, levels, classJobId);
-            if (level == 0 && iconId == 0)
-            {
-                continue;
-            }
-
-            var jobEntry = new JobEntry(JobEntryKind.Tool, -1, classJobId, gameData.JobAbbreviation(classJobId),
-                gameData.JobName(classJobId), level, itemLevel, iconId, isActive);
+            var jobEntry = new JobEntry(JobEntryKind.NoGearset, -1, classJobId, gameData.JobAbbreviation(classJobId),
+                gameData.JobName(classJobId), level, itemLevel, GameData.JobIconId(classJobId), isActive);
             buckets[bucketIndex].Add((jobEntry, uiPriority));
         }
     }
@@ -144,9 +138,8 @@ internal static unsafe class JobsReader
         return expArrayIndex >= 0 && expArrayIndex < levels.Length ? levels[expArrayIndex] : 0;
     }
 
-    private static bool TryGetEquippedMainHand(GameData gameData, out uint iconId, out int itemLevel)
+    private static bool TryGetEquippedMainHandItemLevel(GameData gameData, out int itemLevel)
     {
-        iconId = 0;
         itemLevel = -1;
         var manager = InventoryManager.Instance();
         var equipped = manager is null ? null : manager->GetInventoryContainer(InventoryType.EquippedItems);
@@ -157,46 +150,32 @@ internal static unsafe class JobsReader
 
         var mainHand = equipped->GetInventorySlot((int)RaptureGearsetModule.GearsetItemIndex.MainHand);
         if (mainHand is null || mainHand->ItemId == 0 ||
-            !gameData.TryGetItem(mainHand->ItemId, out _, out var mainHandIconId, out var mainHandItemLevel))
+            !gameData.TryGetItem(mainHand->ItemId, out _, out _, out var mainHandItemLevel))
         {
             return false;
         }
 
-        iconId = mainHandIconId;
         itemLevel = mainHandItemLevel;
         return true;
-    }
-
-    private static Dictionary<uint, uint> ArmoryToolsByJob(GameData gameData)
-    {
-        var toolsByJob = new Dictionary<uint, uint>();
-        var manager = InventoryManager.Instance();
-        var armory = manager is null ? null : manager->GetInventoryContainer(InventoryType.ArmoryMainHand);
-        if (armory is null || !armory->IsLoaded)
-        {
-            return toolsByJob;
-        }
-
-        for (var index = 0; index < armory->Size; index++)
-        {
-            var item = armory->GetInventorySlot(index);
-            if (item is null || item->ItemId == 0 ||
-                !gameData.TryGetItemClassJobUse(item->ItemId, out var classJobId, out var iconId))
-            {
-                continue;
-            }
-
-            toolsByJob.TryAdd(classJobId, iconId);
-        }
-
-        return toolsByJob;
     }
 
     // JobType splits the combat roles the way the in-game job guide does, but it reads 0 for the base classes
     // (Gladiator, Archer, Arcanist and friends), which would drop their gearsets entirely. Those fall back to
     // Role, which cannot tell physical from magical ranged: the Disciple of War/Magic category settles that.
-    private static int CombatBucketFor(byte jobType, byte role, uint classJobCategoryId) =>
-        jobType switch
+    // Hand and Land read 0 for both, so their category has to be matched before either check.
+    private static int BucketFor(byte jobType, byte role, uint classJobCategoryId)
+    {
+        if (classJobCategoryId == HandCategoryId)
+        {
+            return (int)JobRole.Hand;
+        }
+
+        if (classJobCategoryId == LandCategoryId)
+        {
+            return (int)JobRole.Land;
+        }
+
+        return jobType switch
         {
             1 => (int)JobRole.Tank,
             2 or 6 => (int)JobRole.Healer,
@@ -212,6 +191,7 @@ internal static unsafe class JobsReader
                 _ => -1,
             },
         };
+    }
 
     private static LocString TitleFor(JobRole role) =>
         role switch

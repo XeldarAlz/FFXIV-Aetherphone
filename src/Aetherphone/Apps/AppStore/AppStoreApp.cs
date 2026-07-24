@@ -42,10 +42,14 @@ internal sealed partial class AppStoreApp : IPhoneApp
     private const float RowIconSize = 50f;
     private const float SearchHeight = 50f;
     private const float InstallSeconds = 0.9f;
+    private const int CategoryArtCount = 3;
+    private const string DevAppId = "dev";
     private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 0.96f);
+    private static readonly Vector4 TabBarFill = new(0.02f, 0.03f, 0.06f, 0.72f);
 
     private readonly AppInstaller installer;
     private readonly IReadOnlyList<IPhoneApp> apps;
+    private readonly IPhoneApp?[] categoryArt = new IPhoneApp?[AppStoreCatalog.Order.Length * CategoryArtCount];
     private readonly AppSkin ui = new(AppPalettes.AppStore);
     private readonly ViewRouter<StoreView> router;
     private readonly RouterDraw<StoreView> drawView;
@@ -79,6 +83,7 @@ internal sealed partial class AppStoreApp : IPhoneApp
         search = string.Empty;
         lastSearch = string.Empty;
         resetScroll = true;
+        RebuildCategoryArt();
     }
 
     public void OnClosed()
@@ -100,16 +105,15 @@ internal sealed partial class AppStoreApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
-        router.Draw(context.Content, AppSkin.Transparent, delta, drawView);
         var content = context.Content;
-        DrawTabBar(new Rect(new Vector2(content.Min.X, content.Max.Y - TabBarHeight * scale), content.Max), scale);
+        var stage = new Rect(content.Min, new Vector2(content.Max.X, content.Max.Y - TabBarHeight * scale));
+        router.Draw(stage, AppSkin.Transparent, delta, drawView);
+        DrawTabBar(new Rect(new Vector2(content.Min.X, stage.Max.Y), content.Max), scale);
     }
 
-    private void DrawView(StoreView view, Rect area, int depth)
+    private void DrawView(StoreView view, Rect body, int depth)
     {
-        ui.Body(area);
-        var scale = ImGuiHelpers.GlobalScale;
-        var body = new Rect(area.Min, new Vector2(area.Max.X, area.Max.Y - TabBarHeight * scale));
+        ui.Body(body);
         switch (view.Kind)
         {
             case StoreViewKind.Detail:
@@ -137,8 +141,9 @@ internal sealed partial class AppStoreApp : IPhoneApp
     private void DrawTabBar(Rect area, float scale)
     {
         var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(TabBarFill));
         drawList.AddLine(area.Min, new Vector2(area.Max.X, area.Min.Y),
-            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.08f)), 1f);
+            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.10f)), 1f);
         Span<StoreTab> order = stackalloc StoreTab[] { StoreTab.Today, StoreTab.Apps, StoreTab.Search };
         var cellWidth = area.Width / order.Length;
         for (var index = 0; index < order.Length; index++)
@@ -233,13 +238,38 @@ internal sealed partial class AppStoreApp : IPhoneApp
         installing[appId] = 0f;
     }
 
+    private void RebuildCategoryArt()
+    {
+        Array.Clear(categoryArt);
+        for (var categoryIndex = 0; categoryIndex < AppStoreCatalog.Order.Length; categoryIndex++)
+        {
+            var category = AppStoreCatalog.Order[categoryIndex];
+            var slot = 0;
+            for (var index = 0; index < apps.Count && slot < CategoryArtCount; index++)
+            {
+                var app = apps[index];
+                if (!Listable(app) || AppStoreCatalog.For(app.Id).Category != category)
+                {
+                    continue;
+                }
+
+                categoryArt[categoryIndex * CategoryArtCount + slot] = app;
+                slot++;
+            }
+        }
+    }
+
+    private static bool Listable(IPhoneApp app) =>
+        app.IsAvailable && AppInstaller.CanUninstall(app.Id) &&
+        !string.Equals(app.Id, DevAppId, StringComparison.Ordinal);
+
     private List<IPhoneApp> Collect(Func<IPhoneApp, bool> predicate)
     {
         scratch.Clear();
         for (var index = 0; index < apps.Count; index++)
         {
             var app = apps[index];
-            if (app.IsAvailable && predicate(app))
+            if (Listable(app) && predicate(app))
             {
                 scratch.Add(app);
             }

@@ -149,10 +149,10 @@ internal sealed partial class AppStoreApp
         Typography.Draw(drawList, new Vector2(origin.X, top), Loc.T(L.Store.Information), ui.TitleInk,
             TextStyles.Title3);
         top += 28f * scale;
-        Span<int> rows = stackalloc int[4];
+        const int rowCount = 3;
         var rowHeight = 44f * scale;
         var cardMin = new Vector2(origin.X, top);
-        var cardMax = new Vector2(origin.X + width, top + rows.Length * rowHeight);
+        var cardMax = new Vector2(origin.X + width, top + rowCount * rowHeight);
         ui.Card(drawList, cardMin, cardMax, Metrics.Radius.Card * scale, true);
         DrawInfoRow(drawList, cardMin, cardMax, 0, rowHeight, Loc.T(L.Store.Developer), Loc.T(L.Store.DeveloperName),
             scale);
@@ -160,8 +160,6 @@ internal sealed partial class AppStoreApp
             Loc.T(AppStoreCatalog.Name(entry.Category)), scale);
         DrawInfoRow(drawList, cardMin, cardMax, 2, rowHeight, Loc.T(L.Store.Languages),
             Loc.T(L.Store.LanguageCount, LanguageCount), scale);
-        DrawInfoRow(drawList, cardMin, cardMax, 3, rowHeight, Loc.T(L.Store.Age),
-            Loc.T(entry.Adult ? L.Store.AgeAdult : L.Store.AgeEveryone), scale);
         return cardMax.Y + Metrics.Space.Xl * scale;
     }
 

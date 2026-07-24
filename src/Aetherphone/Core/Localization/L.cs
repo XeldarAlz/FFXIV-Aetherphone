@@ -191,9 +191,6 @@ internal static class L
         public static readonly LocString Category = new("store.category", "Category");
         public static readonly LocString Languages = new("store.languages", "Languages");
         public static readonly LocString LanguageCount = new("store.languageCount", "{0} languages");
-        public static readonly LocString Age = new("store.age", "Age Rating");
-        public static readonly LocString AgeEveryone = new("store.ageEveryone", "4+");
-        public static readonly LocString AgeAdult = new("store.ageAdult", "17+");
         public static readonly LocString Unavailable = new("store.unavailable", "Not available right now");
         public static readonly LocString CategorySocial = new("store.categorySocial", "Social");
         public static readonly LocString CategoryChat = new("store.categoryChat", "Communication");
@@ -2112,6 +2109,7 @@ internal static class L
     {
         public static readonly LocString LogInToView = new("jobs.logInToView", "Log in to view your jobs");
         public static readonly LocString NoGearsets = new("jobs.noGearsets", "Create a gearset for a job in-game to see it here.");
+        public static readonly LocString NoGearset = new("jobs.noGearset", "No gearset");
         public static readonly LocString SectionTank = new("jobs.sectionTank", "Tank");
         public static readonly LocString SectionHealer = new("jobs.sectionHealer", "Healer");
         public static readonly LocString SectionMelee = new("jobs.sectionMelee", "Melee DPS");

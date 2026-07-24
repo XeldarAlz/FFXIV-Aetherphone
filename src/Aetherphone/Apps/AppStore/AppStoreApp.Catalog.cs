@@ -10,8 +10,13 @@ namespace Aetherphone.Apps.AppStore;
 
 internal sealed partial class AppStoreApp
 {
-    private const float CategoryCardHeight = 106f;
+    private const float CategoryCardRatio = 0.80f;
+    private const float CategoryCardMin = 100f;
+    private const float CategoryCardMax = 148f;
     private const float CategoryGap = 12f;
+    private const float CategoryPad = 13f;
+    private static readonly Vector4 CardInk = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 CardInkShadow = new(0f, 0f, 0f, 0.30f);
 
     private void DrawCatalogTab(Rect area)
     {
@@ -31,53 +36,88 @@ internal sealed partial class AppStoreApp
             Typography.Draw(new Vector2(origin.X, origin.Y), Loc.T(L.Store.BrowseCategories), ui.TitleInk,
                 TextStyles.Title3);
             var top = origin.Y + 30f * scale;
-            var cardWidth = (width - CategoryGap * scale) * 0.5f;
+            var gap = CategoryGap * scale;
+            var cardWidth = (width - gap) * 0.5f;
+            var cardHeight = Math.Clamp(cardWidth * CategoryCardRatio, CategoryCardMin * scale,
+                CategoryCardMax * scale);
             for (var index = 0; index < AppStoreCatalog.Order.Length; index++)
             {
                 var column = index % 2;
                 var row = index / 2;
-                var min = new Vector2(origin.X + column * (cardWidth + CategoryGap * scale),
-                    top + row * (CategoryCardHeight + CategoryGap) * scale);
-                var card = new Rect(min, new Vector2(min.X + cardWidth, min.Y + CategoryCardHeight * scale));
-                if (DrawCategoryCard(card, AppStoreCatalog.Order[index], scale))
+                var min = new Vector2(origin.X + column * (cardWidth + gap), top + row * (cardHeight + gap));
+                var card = new Rect(min, new Vector2(min.X + cardWidth, min.Y + cardHeight));
+                if (DrawCategoryCard(card, index, scale))
                 {
                     router.Push(StoreView.ForCategory(AppStoreCatalog.Order[index]));
                 }
             }
 
             var rows = (AppStoreCatalog.Order.Length + 1) / 2;
-            top += rows * (CategoryCardHeight + CategoryGap) * scale;
+            top += rows * (cardHeight + gap);
             ImGui.SetCursorScreenPos(new Vector2(origin.X, top));
             ImGui.Dummy(new Vector2(width, Metrics.Space.Lg * scale));
         }
     }
 
-    private bool DrawCategoryCard(Rect card, StoreCategory category, float scale)
+    private bool DrawCategoryCard(Rect card, int categoryIndex, float scale)
     {
+        var category = AppStoreCatalog.Order[categoryIndex];
         var drawList = ImGui.GetWindowDrawList();
         var hovered = UiInteract.Hover(card.Min, card.Max);
         var tint = AppStoreCatalog.Tint(category);
-        var rounding = Metrics.Radius.Card * scale;
-        var lift = hovered ? 0.06f : 0f;
-        Elevation.Floating(drawList, card.Min, card.Max, rounding, scale, hovered ? 0.7f : 0.45f);
+        var rounding = Metrics.Radius.Card * scale * 1.15f;
+        var lift = hovered ? 0.08f : 0f;
+        Elevation.Floating(drawList, card.Min, card.Max, rounding, scale, hovered ? 0.6f : 0.34f);
         Squircle.FillVerticalGradient(drawList, card.Min, card.Max, rounding,
-            ImGui.GetColorU32(Palette.Lighten(tint, 0.18f + lift)),
-            ImGui.GetColorU32(Palette.Darken(tint, 0.22f)));
-        Squircle.Stroke(drawList, card.Min, card.Max, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(Palette.Lighten(tint, 0.5f), 0.28f)), 1f * scale);
-        var glyphCenter = new Vector2(card.Max.X - 34f * scale, card.Min.Y + 40f * scale);
-        AppSkin.Icon(drawList, glyphCenter, AppStoreCatalog.Icon(category).ToIconString(),
-            new Vector4(1f, 1f, 1f, 0.92f), 1.9f);
-        var label = Typography.FitText(Loc.T(AppStoreCatalog.Name(category)), card.Width - 20f * scale,
+            ImGui.GetColorU32(Palette.Lighten(tint, 0.24f + lift)),
+            ImGui.GetColorU32(Palette.Darken(tint, 0.20f - lift * 0.5f)));
+        Material.EdgeSquircle(drawList, card.Min, card.Max, rounding, scale, 0.75f);
+        DrawCategoryArt(drawList, card, categoryIndex, category, scale);
+        var pad = CategoryPad * scale;
+        var label = Typography.FitText(Loc.T(AppStoreCatalog.Name(category)), card.Width - pad * 2f,
             TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(card.Min.X + 12f * scale, card.Max.Y - 26f * scale), label,
-            new Vector4(1f, 1f, 1f, 1f), TextStyles.Headline);
+        var labelTop = card.Max.Y - 28f * scale;
+        Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop + 1f * scale), label, CardInkShadow,
+            TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop), label, CardInk, TextStyles.Headline);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
         return UiInteract.Click(card.Min, card.Max, hovered);
+    }
+
+    private void DrawCategoryArt(ImDrawListPtr drawList, Rect card, int categoryIndex, StoreCategory category,
+        float scale)
+    {
+        var slot = categoryIndex * CategoryArtCount;
+        var front = categoryArt[slot];
+        var pad = CategoryPad * scale;
+        if (front is null)
+        {
+            AppSkin.Icon(drawList, new Vector2(card.Max.X - 36f * scale, card.Min.Y + 42f * scale),
+                AppStoreCatalog.Icon(category).ToIconString(), Palette.WithAlpha(CardInk, 0.92f), 2f);
+            return;
+        }
+
+        var frontSize = card.Height * 0.40f;
+        var frontCenter = new Vector2(card.Max.X - pad - frontSize * 0.5f, card.Min.Y + pad + frontSize * 0.62f);
+        for (var depth = CategoryArtCount - 1; depth > 0; depth--)
+        {
+            var behind = categoryArt[slot + depth];
+            if (behind is null)
+            {
+                continue;
+            }
+
+            var shrink = 1f - depth * 0.20f;
+            var center = new Vector2(frontCenter.X - frontSize * 0.52f * depth,
+                frontCenter.Y - frontSize * 0.17f * depth);
+            DrawIcon(drawList, center, frontSize * shrink, behind);
+        }
+
+        DrawIcon(drawList, frontCenter, frontSize, front);
     }
 
     private void DrawCategoryView(Rect area, StoreCategory category)
@@ -107,7 +147,7 @@ internal sealed partial class AppStoreApp
         var barTop = area.Min.Y + (HeaderHeight - 12f) * scale;
         var bar = new Rect(new Vector2(area.Min.X + Metrics.Space.Lg * scale, barTop),
             new Vector2(area.Max.X - Metrics.Space.Lg * scale, barTop + SearchHeight * scale));
-        SearchField.Draw(bar, "appstore.search", Loc.T(L.Store.SearchHint), ref search, ui.Palette);
+        SearchField.Draw(bar, "##appstoreSearch", Loc.T(L.Store.SearchHint), ref search, ui.Palette);
         if (!string.Equals(search, lastSearch, StringComparison.Ordinal))
         {
             lastSearch = search;
@@ -126,11 +166,16 @@ internal sealed partial class AppStoreApp
             var origin = ImGui.GetCursorScreenPos();
             var width = ScrollLayout.StableContentWidth();
             var query = search.Trim();
+            if (query.Length == 0)
+            {
+                return;
+            }
+
             var matches = Collect(app => Matches(app.Id, app.DisplayName, query));
             if (matches.Count == 0)
             {
                 Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + 40f * scale),
-                    Loc.T(query.Length == 0 ? L.Store.SearchHint : L.Store.NoResults), ui.MutedInk, TextStyles.Body);
+                    Loc.T(L.Store.NoResults), ui.MutedInk, TextStyles.Body);
                 return;
             }
 

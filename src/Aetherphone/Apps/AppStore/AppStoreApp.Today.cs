@@ -57,7 +57,7 @@ internal sealed partial class AppStoreApp
 
     private IPhoneApp? FeaturedApp(DateTime today)
     {
-        var pool = Collect(app => !string.Equals(app.Id, Id, StringComparison.Ordinal));
+        var pool = Collect(static _ => true);
         if (pool.Count == 0)
         {
             return null;

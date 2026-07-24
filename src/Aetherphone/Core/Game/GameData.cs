@@ -9,6 +9,8 @@ namespace Aetherphone.Core.Game;
 
 internal sealed class GameData
 {
+    private const uint FramedJobIconBaseId = 62100;
+
     private readonly IDataManager data;
     private readonly IObjectTable objectTable;
     private uint[]? collectableMountIds;
@@ -122,19 +124,8 @@ internal sealed class GameData
         return cached;
     }
 
-    public bool TryGetItemClassJobUse(uint itemId, out uint classJobId, out uint iconId)
-    {
-        classJobId = 0;
-        iconId = 0;
-        if (itemId == 0 || !data.GetExcelSheet<Item>().TryGetRow(itemId, out var item))
-        {
-            return false;
-        }
-
-        classJobId = item.ClassJobUse.RowId;
-        iconId = item.Icon;
-        return classJobId != 0;
-    }
+    /// <summary>The framed class/job icon the Character window and gear set list draw, one row per ClassJob.</summary>
+    public static uint JobIconId(uint classJobId) => classJobId == 0 ? 0u : FramedJobIconBaseId + classJobId;
 
     public int JobExpArrayIndex(uint rowId)
     {
