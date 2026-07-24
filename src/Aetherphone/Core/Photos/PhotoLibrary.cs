@@ -10,6 +10,8 @@ internal sealed class PhotoLibrary
         Directory.CreateDirectory(directory);
     }
 
+    public string GetDirectory() => directory;
+
     public void Save(byte[] pixels, int width, int height)
     {
         var fileName = $"AEP_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png";

@@ -2139,6 +2139,7 @@ internal static class L
         public static readonly LocString Recents = new("photos.recents", "Recents");
         public static readonly LocString Today = new("photos.today", "Today");
         public static readonly LocString Yesterday = new("photos.yesterday", "Yesterday");
+        public static readonly LocString OpenFolder = new("photos.openFolder", "Open Folder");
     }
 
     internal static class Skywatcher

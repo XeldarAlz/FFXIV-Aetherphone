@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
@@ -39,6 +40,7 @@ internal sealed partial class PhotosApp
             }
 
             DrawPhotoGrid(body, 0, entries.Length);
+            DrawOpenFolder(body);
             return;
         }
 
@@ -290,6 +292,19 @@ internal sealed partial class PhotosApp
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(width, heightTotal + 12f * scale));
         }
+    }
+
+    private void DrawOpenFolder(Rect rect)
+    {
+        if (!ComposeFab.Draw(rect, "##openFolderFab", Accent, FontAwesomeIcon.Folder.ToIconString(),
+                             Loc.T(L.Photos.OpenFolder), "photos.openFolder")) return;
+        
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "explorer.exe",
+            Arguments = $"\"{library.GetDirectory()}\"",
+            UseShellExecute = true
+        });
     }
 
     private bool DrawAlbumCard(ImDrawListPtr drawList, Rect rect, string title, int coverStart, int coverCount,
