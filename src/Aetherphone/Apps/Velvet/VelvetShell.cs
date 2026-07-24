@@ -20,6 +20,7 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
@@ -66,6 +67,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private INavigator navigation = null!;
     private VelvetPage activeTab = VelvetPage.Discover;
     private float sinceHeartbeat = HeartbeatSeconds;
+    private bool cachedLalafell;
 
     public VelvetShell(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
@@ -234,8 +236,28 @@ internal sealed partial class VelvetShell : IPhoneApp
         if (sinceHeartbeat >= HeartbeatSeconds)
         {
             sinceHeartbeat = 0f;
-            store.Heartbeat(SocialRegion.EffectiveCode(configuration, gameData));
+            store.Heartbeat(SocialRegion.EffectiveCode(configuration, gameData), IsLalafellCharacter());
         }
+    }
+
+    private bool IsLalafellCharacter()
+    {
+        const byte lalafellRaceId = 3;
+        if (!Plugin.Framework.IsInFrameworkUpdateThread)
+        {
+            return cachedLalafell;
+        }
+
+        var local = gameData.LocalPlayer;
+        if (local is null)
+        {
+            return cachedLalafell;
+        }
+
+        var customize = local.Customize;
+        var raceIndex = (int)CustomizeIndex.Race;
+        cachedLalafell = customize.Length > raceIndex && customize[raceIndex] == lalafellRaceId;
+        return cachedLalafell;
     }
 
     private void DrawView(VelvetView view, Rect area, int depth)

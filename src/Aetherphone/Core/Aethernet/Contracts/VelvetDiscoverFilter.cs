@@ -16,7 +16,8 @@ internal sealed record VelvetDiscoverFilter(
     string[] LimitsInclude,
     string[] LimitsExclude,
     string[] TagsInclude,
-    string[] TagsExclude)
+    string[] TagsExclude,
+    bool IncludeLalafell = false)
 {
     public static readonly VelvetDiscoverFilter Empty = new(0, 0, 0, 0, 0, 0, 0, 0,
         Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>(), Array.Empty<string>(),

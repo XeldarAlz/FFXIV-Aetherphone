@@ -114,6 +114,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
 
     public bool IsVelvetOnboarded() => VelvetOnboarded && VelvetOnboardedVersion >= VelvetOnboardVersion;
     public bool VelvetBlurByDefault { get; set; } = true;
+    public bool VelvetShowLalafell { get; set; }
     public List<string> VelvetPinnedThreads { get; set; } = new();
     public List<string> MessagePinnedChats { get; set; } = new();
     public List<string> MessageArchivedChats { get; set; } = new();

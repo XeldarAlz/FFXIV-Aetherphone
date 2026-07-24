@@ -1820,6 +1820,16 @@ internal static class L
         public static readonly LocString DiscoveryHeader = new("velvet.discoveryHeader", "Discovery");
         public static readonly LocString DiscoverableHelp =
             new("velvet.discoverableHelp", "When on, your profile can be found by others in Discover.");
+        public static readonly LocString ShowLalafellLabel =
+            new("velvet.showLalafellLabel", "Show Lalafell characters");
+        public static readonly LocString ShowLalafellHelp =
+            new("velvet.showLalafellHelp", "When on, Lalafell profiles can appear in your Discover feed.");
+        public static readonly LocString ShowLalafellConfirmTitle =
+            new("velvet.showLalafellConfirmTitle", "Show Lalafell characters?");
+        public static readonly LocString ShowLalafellConfirmMessage = new("velvet.showLalafellConfirmMessage",
+            "Lalafell profiles will appear in your Discover feed. Are you sure?");
+        public static readonly LocString ShowLalafellConfirmAction =
+            new("velvet.showLalafellConfirmAction", "Show");
         public static readonly LocString WhoCanMessage = new("velvet.whoCanMessage", "Who can message you");
         public static readonly LocString WhoEveryone = new("velvet.whoEveryone", "Everyone");
         public static readonly LocString WhoFriends = new("velvet.whoFriends", "Friends");

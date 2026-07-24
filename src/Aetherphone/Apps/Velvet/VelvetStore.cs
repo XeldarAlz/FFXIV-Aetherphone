@@ -583,7 +583,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         });
     }
 
-    public void Heartbeat(string region)
+    public void Heartbeat(string region, bool isLalafell)
     {
         if (!session.IsSignedIn)
         {
@@ -591,7 +591,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         }
 
         var offset = SocialTimeZone.EffectiveOffsetMinutes(configuration);
-        work.Run("heartbeat", async token => await client.HeartbeatAsync(offset, region, token).ConfigureAwait(false));
+        work.Run("heartbeat", async token =>
+            await client.HeartbeatAsync(offset, region, isLalafell, token).ConfigureAwait(false));
     }
 
     public void EnsureUserPosts(string userId)
