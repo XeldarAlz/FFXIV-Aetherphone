@@ -654,7 +654,8 @@ internal static class L
         public static readonly LocString Version = new("settings.version", "Version");
         public static readonly LocString Command = new("settings.command", "Command");
         public static readonly LocString CreditsLinks = new("settings.creditsLinks", "Credits & links");
-        public static readonly LocString AboutAetherphone = new("settings.aboutAetherphone", "About Aetherphone");
+        public static readonly LocString SupportAetherphone = new("settings.supportAetherphone", "Support Aetherphone");
+        public static readonly LocString SupportHint = new("settings.supportHint", "Aetherphone is free and made in my spare time. If you enjoy it, a pledge on Patreon helps me keep building and improving it. Thank you for being here.");
         public static readonly LocString JoinDiscord = new("settings.joinDiscord", "Join our Discord");
         public static readonly LocString VisitWebsite = new("settings.visitWebsite", "Visit our website");
         public static readonly LocString Changelog = new("settings.changelog", "Changelog");
@@ -681,7 +682,6 @@ internal static class L
         public static readonly LocString CommandToggle = new("settings.commandToggle", "Show or hide the phone");
         public static readonly LocString CommandAlias = new("settings.commandAlias", "Alias for /phone");
         public static readonly LocString CommandMarket = new("settings.commandMarket", "Open the market board, optionally searching an item");
-        public static readonly LocString CommandAbout = new("settings.commandAbout", "Open credits and links");
         public static readonly LocString CommandReset = new("settings.commandReset", "Move the phone back to the center of the screen");
         public static readonly LocString CommandTest = new("settings.commandTest", "Send a sample notification");
     }
@@ -2330,7 +2330,7 @@ internal static class L
 
     internal static class Plugin
     {
-        public static readonly LocString CommandHelp =new("plugin.commandHelp", "Toggle the Aetherphone. /phone market [item] opens the market board, /phone about opens credits & links, /phone reset recenters the phone, /phone test sends a sample notification.");
+        public static readonly LocString CommandHelp =new("plugin.commandHelp", "Toggle the Aetherphone. /phone market [item] opens the market board, /phone reset recenters the phone, /phone test sends a sample notification.");
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /phone.");
         public static readonly LocString SearchTheMarket = new("plugin.searchTheMarket", "Search the Market");
         public static readonly LocString SideButtonHint = new("plugin.sideButtonHint", "Tap to minimize · Hold to turn off");
@@ -2370,86 +2370,6 @@ internal static class L
         public static readonly LocString EmptySubtitle = new("polls.emptySubtitle", "New polls will land here.");
         public static readonly LocString FinalResults = new("polls.finalResults", "Final results");
         public static readonly LocPlural Votes = new("polls.votes", "{0} vote", "{0} votes");
-    }
-
-    internal static class About
-    {
-        public static readonly LocString LinkDiscussions = new("about.linkDiscussions", "Discussions");
-        public static readonly LocString LinkReportBug = new("about.linkReportBug", "Report a bug");
-        public static readonly LocString LinkMorePlugins = new("about.linkMorePlugins", "More plugins");
-        public static readonly LocString LinkSecurity = new("about.linkSecurity", "Security");
-        public static readonly LocString LinkWebsite = new("about.linkWebsite", "Website");
-        public static readonly LocString Connect = new("about.connect", "Connect");
-        public static readonly LocString MadeWithCare = new("about.madeWithCare", "Made with care");
-        public static readonly LocString SupportBody = new("about.supportBody", "I build and maintain this in my spare time. If it has helped you, a sponsorship lets me keep improving it. No pressure, and thank you for being here.");
-        public static readonly LocString BecomeSponsor = new("about.becomeSponsor", "Become a Sponsor");
-        public static readonly LocString SponsorTooltip = new("about.sponsorTooltip", "Open GitHub Sponsors · right-click to copy");
-        public static readonly LocString LinkTooltip = new("about.linkTooltip", "Click to open · right-click to copy");
-        public static readonly LocString MadeBy = new("about.madeBy", "Made by {0}");
-        public static readonly LocString ReminderHeader = new("about.reminderHeader", "A little reminder");
-        public static readonly LocString FactHeader = new("about.factHeader", "Did you know?");
-        public static readonly LocString QuoteHeader = new("about.quoteHeader", "Words to live by");
-        public static readonly LocString FunHeader = new("about.funHeader", "Just for fun");
-
-        public static readonly LocString[] Reminders =
-        {
-            new("about.reminder.0", "Been at it a while? Roll your shoulders and take one slow breath."),
-            new("about.reminder.1", "Hydration check. When did you last drink some water?"),
-            new("about.reminder.2", "Blink a few times and let your eyes rest for a moment."),
-            new("about.reminder.3", "Stand up, stretch, and shake out your hands. Future you says thanks."),
-            new("about.reminder.4", "Sit up and settle in comfortably. Your back will thank you later."),
-            new("about.reminder.5", "Remember to eat something today. You matter more than any score."),
-            new("about.reminder.6", "Eyes feel tired? Look at something far away for twenty seconds."),
-            new("about.reminder.7", "Whatever you're chasing, you're allowed to take a break whenever."),
-            new("about.reminder.8", "You're doing great. Be a little kinder to yourself today."),
-            new("about.reminder.9", "A glass of water and a quick stretch can reset a long session."),
-            new("about.reminder.10", "Unclench your jaw and drop your shoulders. There you go."),
-            new("about.reminder.11", "Rest is part of the journey too. Step away whenever you need to."),
-        };
-
-        public static readonly LocString[] Facts =
-        {
-            new("about.fact.0", "Honey never spoils. Jars over 3,000 years old have been found still edible."),
-            new("about.fact.1", "Octopuses have three hearts and blue blood."),
-            new("about.fact.2", "A day on Venus is longer than a whole year on Venus."),
-            new("about.fact.3", "Bananas are berries, but strawberries aren't."),
-            new("about.fact.4", "There are more possible chess games than atoms in the observable universe."),
-            new("about.fact.5", "Sharks have been around longer than trees have."),
-            new("about.fact.6", "A group of flamingos is called a flamboyance."),
-            new("about.fact.7", "Honeybees can recognize individual human faces."),
-            new("about.fact.8", "Wombat droppings are cube shaped."),
-            new("about.fact.9", "The Eiffel Tower can grow over 15 cm taller on a hot day."),
-            new("about.fact.10", "Hot water can sometimes freeze faster than cold water."),
-            new("about.fact.11", "A bolt of lightning is roughly five times hotter than the surface of the Sun."),
-        };
-
-        public static readonly LocString[] Quotes =
-        {
-            new("about.quote.0", "Done is better than perfect. You can always polish later."),
-            new("about.quote.1", "Small steps every day add up to surprising distances."),
-            new("about.quote.2", "Comparison is the thief of joy. Run your own race."),
-            new("about.quote.3", "Progress, not perfection."),
-            new("about.quote.4", "You don't have to be great to start, but you have to start to be great."),
-            new("about.quote.5", "Be patient with yourself. Growth takes time."),
-            new("about.quote.6", "The best time to begin was yesterday. The second best is right now."),
-            new("about.quote.7", "Celebrate the small wins. They count too."),
-            new("about.quote.8", "Slow progress is still progress."),
-            new("about.quote.9", "Your only real competition is who you were yesterday."),
-        };
-
-        public static readonly LocString[] Fun =
-        {
-            new("about.fun.0", "Why don't scientists trust atoms? Because they make up everything."),
-            new("about.fun.1", "I would tell you a chemistry joke, but I know I wouldn't get a reaction."),
-            new("about.fun.2", "Why did the scarecrow win an award? He was outstanding in his field."),
-            new("about.fun.3", "I'm reading a book about anti-gravity. It's impossible to put down."),
-            new("about.fun.4", "Why don't skeletons fight each other? They don't have the guts."),
-            new("about.fun.5", "What do you call fake spaghetti? An impasta."),
-            new("about.fun.6", "Why did the bicycle fall over? It was two tired."),
-            new("about.fun.7", "What do you call cheese that isn't yours? Nacho cheese."),
-            new("about.fun.8", "I'm on a seafood diet. I see food, and I eat it."),
-            new("about.fun.9", "I only know 25 letters of the alphabet. I don't know y."),
-        };
     }
 
     internal static class Catalogs

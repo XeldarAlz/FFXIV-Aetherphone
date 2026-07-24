@@ -39,7 +39,7 @@ namespace Aetherphone.Core.Apps;
 
 internal static class AppRegistry
 {
-    public static AppBundle BuildDefault(PhoneServices services, Action showAbout)
+    public static AppBundle BuildDefault(PhoneServices services)
     {
         var contactBook = new ContactBook(services.Aethernet.Contacts, services.AethernetSession);
         var apps = new List<IPhoneApp>
@@ -78,7 +78,7 @@ internal static class AppRegistry
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats));
         apps.Add(new NotificationsApp(services.Notifications, services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher));
-        apps.Add(new SettingsApp(services, photoLibrary, showAbout));
+        apps.Add(new SettingsApp(services, photoLibrary));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents, services.Confirm));
         apps.Add(new AppStoreApp(services.Installer, apps));
