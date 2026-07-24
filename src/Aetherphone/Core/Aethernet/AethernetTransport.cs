@@ -79,7 +79,19 @@ internal sealed class AethernetTransport
 
     public Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token)
     {
-        return http.PutBytesAsync(uri, content, contentType, token);
+        return http.PutBytesAsync(uri, content, contentType, token, UploadBearerFor(uri));
+    }
+
+    private string? UploadBearerFor(Uri uri)
+    {
+        if (!Uri.TryCreate(Session.BaseUrl, UriKind.Absolute, out var baseUri))
+        {
+            return null;
+        }
+
+        var sameHost = string.Equals(uri.Host, baseUri.Host, StringComparison.OrdinalIgnoreCase)
+            && uri.Port == baseUri.Port;
+        return sameHost ? Session.Token : null;
     }
 
     private Action<int> Sink(Action<int>? onStatus)
