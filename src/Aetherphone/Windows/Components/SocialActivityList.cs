@@ -70,9 +70,8 @@ internal static class SocialActivityList
         var textRight = origin.X + width - pad - timeSize.X - 8f * scale;
         var textWidth = textRight - textLeft;
         var actorLabel = SocialActivity.ActorLabel(item);
-        var actor = Typography.FitText(actorLabel, textWidth, 0.95f, FontWeight.SemiBold);
         var body = SocialActivity.Body(item);
-        var actorSize = Typography.Measure(actor, 0.95f, FontWeight.SemiBold);
+        var actorSize = Typography.Measure(actorLabel, 0.95f, FontWeight.SemiBold);
         var bodyHeight = body.Length > 0 ? Typography.MeasureWrapped(body, textWidth, 0.88f) : 0f;
         var contentHeight = actorSize.Y + 4f * scale + bodyHeight;
         var rowHeight = MathF.Max(radius * 2f + pad * 2f, contentHeight + pad * 2f);

@@ -27,8 +27,9 @@ internal static class ControlTile
         Squircle.Fill(dl, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         Material.EdgeSquircle(dl, rect.Min, rect.Max, radius, scale, opacity);
         var labelMaxWidth = rect.Width - 20f * scale;
-        var lineCount = Typography.WrapText(label, TextStyles.FootnoteEmphasized, labelMaxWidth).Length;
-        var blockHeight = Typography.MeasureWrappedBlock(label, TextStyles.FootnoteEmphasized, labelMaxWidth).Y;
+        var lines = Typography.WrapText(label, TextStyles.FootnoteEmphasized, labelMaxWidth);
+        var lineCount = lines.Length;
+        var blockHeight = lineCount * Typography.LineHeight(TextStyles.FootnoteEmphasized);
         var iconBottomForFit = rect.Min.Y + rect.Height * 0.34f + MathF.Min(rect.Height, rect.Width) * 0.26f;
         var labelAvailableHeight = rect.Max.Y - 6f * scale - (iconBottomForFit + 4f * scale);
         var fitsLabel = showLabel && lineCount <= 2 && blockHeight <= labelAvailableHeight;

@@ -96,7 +96,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var eyebrowY = bounds.Min.Y + pad;
         WidgetChrome.Eyebrow(drawList, new Vector2(bounds.Min.X + pad, eyebrowY), DisplayName,
             palette.InkSoft, scale, opacity);
-        var eyebrowHeight = Typography.Measure(Loc.Culture.TextInfo.ToUpper(DisplayName), 0.66f, FontWeight.SemiBold).Y;
+        var eyebrowHeight = WidgetChrome.EyebrowHeight();
 
         var glyphRadius = 16f * scale;
         var rowTop = eyebrowY + eyebrowHeight + 6f * scale;
@@ -139,7 +139,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
         WidgetChrome.Eyebrow(drawList, new Vector2(left, bounds.Min.Y + topInset), DisplayName, palette.InkSoft, scale,
             opacity);
         var time = bell.Formatted;
-        var eyebrowHeight = Typography.Measure(Loc.Culture.TextInfo.ToUpper(DisplayName), 0.66f, FontWeight.SemiBold).Y;
+        var eyebrowHeight = WidgetChrome.EyebrowHeight();
         var minTopOffset = topInset + eyebrowHeight + 10f * scale;
         var contentBottom = bounds.Max.Y - 4f * scale - StripHeight(bounds, scale) - 1f * scale;
         var availableForRow = contentBottom - bounds.Min.Y - minTopOffset;
@@ -252,7 +252,7 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var rightColumn = MathF.Max(timeSize.X, eyebrowWidth) + pad;
         WidgetChrome.Eyebrow(drawList, new Vector2(left, bounds.Min.Y + pad), DisplayName, palette.InkSoft, scale,
             opacity);
-        var eyebrowHeight = Typography.Measure(Loc.Culture.TextInfo.ToUpper(DisplayName), 0.66f, FontWeight.SemiBold).Y;
+        var eyebrowHeight = WidgetChrome.EyebrowHeight();
         var minConditionY = bounds.Min.Y + pad + eyebrowHeight + 8f * scale;
         var conditionY = MathF.Max(minConditionY, bounds.Min.Y + bounds.Height * 0.40f);
         var conditionStyle = new TextStyle(1.62f, FontWeight.SemiBold);

@@ -83,13 +83,13 @@ internal sealed partial class VelvetShell
             var authorSize = Typography.Measure(authorName, TextStyles.Headline);
             var authorHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, authorY),
                 new Vector2(nameLeft + nameMaxWidth, authorY + authorSize.Y));
-            Marquee.DrawLeft("velvet.detail.author." + post.OwnerId, authorName, nameLeft,
+            Marquee.DrawLeft("velvet.detail.author." + post.Id, authorName, nameLeft,
                 authorY, nameMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering);
             var ownerSubY = avatarCenter.Y + 3f * scale;
             var ownerSubSize = Typography.Measure(ownerSub, TextStyles.Subheadline);
             var ownerSubHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, ownerSubY),
                 new Vector2(nameLeft + nameMaxWidth, ownerSubY + ownerSubSize.Y));
-            Marquee.DrawLeft("velvet.detail.ownersub." + post.OwnerId, ownerSub, nameLeft, ownerSubY,
+            Marquee.DrawLeft("velvet.detail.ownersub." + post.Id, ownerSub, nameLeft, ownerSubY,
                 nameMaxWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, ownerSubHovering);
             if (UiInteract.HoverClick(headerRect.Min, headerRect.Max))
             {

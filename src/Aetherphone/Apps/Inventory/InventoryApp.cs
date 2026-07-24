@@ -522,14 +522,14 @@ internal sealed class InventoryApp : IPhoneApp
         {
             var row = PanelRow(drawList, origin, width, rowHeight, index, scale, separatorLeft, ui.HoverTint, true,
                 out var hovered, out _, out _);
-            DrawItemRow(row, rows[index], hovered);
+            DrawItemRow(row, rows[index], index, hovered);
         }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rows.Count * rowHeight));
     }
 
-    private void DrawItemRow(Rect row, InventoryResultRow item, bool hovered)
+    private void DrawItemRow(Rect row, InventoryResultRow item, int index, bool hovered)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -560,7 +560,7 @@ internal sealed class InventoryApp : IPhoneApp
         }
 
         var nameSize = Typography.Measure(item.Name, TextStyles.Body);
-        Marquee.DrawLeft("inventory.item." + item.ItemId, item.Name, textLeft, row.Center.Y - nameSize.Y * 0.5f,
+        Marquee.DrawLeft("inventory.item." + index, item.Name, textLeft, row.Center.Y - nameSize.Y * 0.5f,
             MathF.Max(1f, textRight - textLeft), TextStyles.Body, hovered ? ui.TitleInk : ui.BodyInk, hovered);
     }
 

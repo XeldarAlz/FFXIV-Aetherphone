@@ -22,21 +22,7 @@ internal static class Typography
         new(-0.7071f, -0.7071f),
     };
 
-    private readonly struct FitEntry
-    {
-        public readonly float Width;
-        public readonly float FontSize;
-        public readonly string Text;
-
-        public FitEntry(float width, float fontSize, string text)
-        {
-            Width = width;
-            FontSize = fontSize;
-            Text = text;
-        }
-    }
-
-    private static readonly Dictionary<string, FitEntry> FitCache = new();
+    private static readonly Dictionary<(string Text, float Width, float FontSize), string> FitCache = new();
 
     private readonly struct WrapEntry
     {
@@ -100,6 +86,14 @@ internal static class Typography
         {
             Plugin.Fonts.NoticeText(text);
             return ImGui.CalcTextSize(text, false, wrapWidth).Y;
+        }
+    }
+
+    public static float LineHeight(in TextStyle style)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            return ImGui.GetTextLineHeightWithSpacing();
         }
     }
 
@@ -516,13 +510,14 @@ internal static class Typography
 
         InvalidateCachesOnFontChange();
         var fontSize = ImGui.GetFontSize();
-        if (FitCache.TryGetValue(text, out var cached) && cached.Width == maxWidth && cached.FontSize == fontSize)
+        var key = (text, maxWidth, fontSize);
+        if (FitCache.TryGetValue(key, out var cached))
         {
-            return cached.Text;
+            return cached;
         }
 
         var result = Shorten(text, maxWidth);
-        FitCache[text] = new FitEntry(maxWidth, fontSize, result);
+        FitCache[key] = result;
         return result;
     }
 

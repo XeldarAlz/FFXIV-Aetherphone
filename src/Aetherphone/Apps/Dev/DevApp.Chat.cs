@@ -149,7 +149,7 @@ internal sealed partial class DevApp
             var senderHeight = Typography.Measure(sender, senderStyle).Y;
             var senderHovering = ImGui.IsMouseHoveringRect(labelScreen,
                 labelScreen + new Vector2(senderMaxWidth, senderHeight));
-            Marquee.DrawLeft("dev.chat.sender." + message.SenderId, sender, labelScreen.X, labelScreen.Y,
+            Marquee.DrawLeft("dev.chat.sender." + message.Id, sender, labelScreen.X, labelScreen.Y,
                 senderMaxWidth, senderStyle, Palette.Mix(Accent, theme.TextStrong, 0.4f), senderHovering);
             ImGui.SetCursorPos(new Vector2(labelOrigin.X, labelOrigin.Y + 16f * scale));
         }

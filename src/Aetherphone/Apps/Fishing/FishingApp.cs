@@ -306,10 +306,11 @@ internal sealed class FishingApp : IPhoneApp
             var blueFishLeft = textLeft + 14f * scale;
             var blueFishY = row.Center.Y + 2f * scale;
             var blueFishMaxWidth = MathF.Max(1f, textRight - blueFishLeft);
-            var blueFishSize = Typography.Measure(BlueFishNames(plan), TextStyles.Footnote);
+            var blueFishNames = BlueFishNames(plan);
+            var blueFishSize = Typography.Measure(blueFishNames, TextStyles.Footnote);
             var blueFishHovering = ImGui.IsMouseHoveringRect(new Vector2(blueFishLeft, blueFishY),
                 new Vector2(blueFishLeft + blueFishMaxWidth, blueFishY + blueFishSize.Y));
-            Marquee.DrawLeft(rowId + ".sub", BlueFishNames(plan), blueFishLeft, blueFishY, blueFishMaxWidth,
+            Marquee.DrawLeft(rowId + ".sub", blueFishNames, blueFishLeft, blueFishY, blueFishMaxWidth,
                 TextStyles.Footnote, ui.MutedInk, blueFishHovering);
         }
     }

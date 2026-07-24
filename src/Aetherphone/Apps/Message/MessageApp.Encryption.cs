@@ -292,7 +292,7 @@ internal sealed partial class MessageApp
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, member.AvatarUrl, images,
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        var textMaxWidth = origin.X + width - pad - 28f * scale - textLeft;
+        var textMaxWidth = MathF.Max(1f, origin.X + width - pad - 28f * scale - textLeft);
         var rowHovering = ImGui.IsMouseHoveringRect(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
         Marquee.DrawLeft("messageapp.encryption.member." + member.UserId, label, textLeft, origin.Y + 10f * scale,
             textMaxWidth, new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, rowHovering);

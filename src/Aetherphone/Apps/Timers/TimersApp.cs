@@ -156,7 +156,7 @@ internal sealed class TimersApp : IPhoneApp
         var card = BeginCard(retainers.Count, scale);
         for (var index = 0; index < retainers.Count; index++)
         {
-            DrawRetainerRow(CardRow(card, index, scale), retainers[index], utcNow);
+            DrawRetainerRow(CardRow(card, index, scale), retainers[index], index, utcNow);
         }
 
         EndCard(card, scale);
@@ -180,12 +180,13 @@ internal sealed class TimersApp : IPhoneApp
         EndCard(card, scale);
     }
 
-    private static void DrawRetainerRow(Rect row, RetainerVenture venture, DateTime utcNow)
+    private static void DrawRetainerRow(Rect row, RetainerVenture venture, int index, DateTime utcNow)
     {
+        var rowId = "timers.retainer." + index;
         if (!venture.HasVenture)
         {
             DrawTimerRow(row, AppPalettes.Timers.MutedInk, FontAwesomeIcon.Briefcase, venture.Name, string.Empty,
-                Loc.T(L.Timers.NoVenture), AppPalettes.Timers.MutedInk);
+                Loc.T(L.Timers.NoVenture), AppPalettes.Timers.MutedInk, rowId);
             return;
         }
 
@@ -193,17 +194,18 @@ internal sealed class TimersApp : IPhoneApp
         if (remaining <= TimeSpan.Zero)
         {
             DrawTimerRow(row, PhoneTheme.Default.ToggleOn, FontAwesomeIcon.Briefcase, venture.Name, string.Empty,
-                Loc.T(L.Timers.Ready), PhoneTheme.Default.ToggleOn);
+                Loc.T(L.Timers.Ready), PhoneTheme.Default.ToggleOn, rowId);
             return;
         }
 
         DrawTimerRow(row, Accent.Mint, FontAwesomeIcon.Briefcase, venture.Name, LocalTime(venture.CompleteUtc),
-            TimeFormat.Relative(remaining), AppPalettes.Timers.TitleInk);
+            TimeFormat.Relative(remaining), AppPalettes.Timers.TitleInk, rowId);
     }
 
     private static void DrawTimerRow(Rect row, Vector4 tint, FontAwesomeIcon icon, string name, string sublabel,
-        string value, Vector4 valueColor)
+        string value, Vector4 valueColor, string? idOverride = null)
     {
+        var id = "timers.row." + (idOverride ?? name);
         var scale = ImGuiHelpers.GlobalScale;
         var tile = TileSize * scale;
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
@@ -220,7 +222,7 @@ internal sealed class TimersApp : IPhoneApp
         var rowHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, row.Min.Y), new Vector2(textRight, row.Max.Y));
         if (sublabel.Length > 0)
         {
-            Marquee.DrawLeft("timers.row." + name, name, textLeft, row.Center.Y - 16f * scale, textMaxWidth,
+            Marquee.DrawLeft(id, name, textLeft, row.Center.Y - 16f * scale, textMaxWidth,
                 TextStyles.Headline, AppPalettes.Timers.TitleInk, rowHovering);
             var sublabelText = Typography.FitText(sublabel, textMaxWidth, TextStyles.Footnote);
             Typography.Draw(new Vector2(textLeft, row.Center.Y + 5f * scale), sublabelText, AppPalettes.Timers.MutedInk,
@@ -229,7 +231,7 @@ internal sealed class TimersApp : IPhoneApp
         else
         {
             var nameSize = Typography.Measure(name, TextStyles.Headline);
-            Marquee.DrawLeft("timers.row." + name, name, textLeft, row.Center.Y - nameSize.Y * 0.5f, textMaxWidth,
+            Marquee.DrawLeft(id, name, textLeft, row.Center.Y - nameSize.Y * 0.5f, textMaxWidth,
                 TextStyles.Headline, AppPalettes.Timers.TitleInk, rowHovering);
         }
     }

@@ -124,7 +124,7 @@ internal sealed partial class ChirperApp
             {
                 var quoteMin = new Vector2(inputX, inputTop + inputHeight + 8f * scale);
                 DrawQuotedCard(drawList, quoteMin, inputWidth, QuotedCardHeight(quoteTarget, inputWidth), quoteTarget,
-                    false);
+                    false, "compose.quote");
             }
 
             if (composeEmoji.Open)

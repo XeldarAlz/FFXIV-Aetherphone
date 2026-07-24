@@ -101,7 +101,7 @@ internal sealed partial class MarketApp
         var priceText = PriceOrDash(min);
         var pillReserve = hasHq
             ? Typography.Measure(Loc.T(L.Common.Nq), 0.82f, FontWeight.SemiBold).X + 18f * scale + 6f * scale +
-              Typography.Measure(Loc.T(L.Common.Hq), 0.82f, FontWeight.SemiBold).X + 18f * scale
+              Typography.Measure(Loc.T(L.Common.Hq), 0.82f, FontWeight.SemiBold).X + 18f * scale + 12f * scale
             : 0f;
         var priceMaxWidth = MathF.Max(1f, origin.X + width - 16f * scale - pillReserve - textX);
         var priceY = textTop + 26f * scale;
@@ -389,16 +389,8 @@ internal sealed partial class MarketApp
     private void DrawHeaderTitle(Rect area, string name)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        var leftLimit = area.Min.X + 44f * scale;
-        var rightLimit = area.Max.X - 64f * scale;
-        var maxWidth = MathF.Max(1f, rightLimit - leftLimit);
-        var titleSize = Typography.Measure(name, 1.15f, FontWeight.SemiBold);
-        var clampedWidth = MathF.Min(titleSize.X, maxWidth);
-        var titleX = leftLimit + (maxWidth - clampedWidth) * 0.5f;
-        var titleY = rowCenterY - titleSize.Y * 0.5f;
-        Marquee.DrawLeftAuto("market.detail.header." + name, name, titleX, titleY, maxWidth,
-            new TextStyle(1.15f, FontWeight.SemiBold), frameTheme.TextStrong);
+        AppHeader.DrawTitleWithReserve(area, "market.detail.header." + name, name, 64f * scale, frameTheme.TextStrong,
+            scale);
     }
 
     private void DrawHeaderButtons(Rect area, MarketView view, out bool forceRefresh)

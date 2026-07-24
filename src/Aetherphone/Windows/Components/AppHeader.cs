@@ -36,4 +36,18 @@ internal static class AppHeader
             context.Navigation.Back();
         }
     }
+
+    public static void DrawTitleWithReserve(Rect area, string id, string title, float rightReserve, Vector4 color,
+        float scale)
+    {
+        var rowCenterY = area.Min.Y + Height * scale * 0.5f;
+        var leftLimit = area.Min.X + 44f * scale;
+        var rightLimit = area.Max.X - rightReserve;
+        var maxWidth = MathF.Max(1f, rightLimit - leftLimit);
+        var titleSize = Typography.Measure(title, 1.15f, FontWeight.SemiBold);
+        var clampedWidth = MathF.Min(titleSize.X, maxWidth);
+        var titleX = leftLimit + (maxWidth - clampedWidth) * 0.5f;
+        var titleY = rowCenterY - titleSize.Y * 0.5f;
+        Marquee.DrawLeftAuto(id, title, titleX, titleY, maxWidth, new TextStyle(1.15f, FontWeight.SemiBold), color);
+    }
 }

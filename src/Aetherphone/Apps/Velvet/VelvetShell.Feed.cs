@@ -155,14 +155,14 @@ internal sealed partial class VelvetShell
         var authorSize = Typography.Measure(authorName, TextStyles.Headline);
         var authorHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, authorY),
             new Vector2(textLeft + headerTextMaxWidth, authorY + authorSize.Y));
-        Marquee.DrawLeft("velvet.feed.author." + entry.OwnerId, authorName, textLeft, authorY,
+        Marquee.DrawLeft("velvet.feed.author." + entry.Id, authorName, textLeft, authorY,
             headerTextMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering);
         var ownerSub = "@" + entry.OwnerHandle + " · " + TimeText.Short(entry.CreatedAtUnix);
         var ownerSubY = headerCenterY + 2f * scale;
         var ownerSubSize = Typography.Measure(ownerSub, TextStyles.Subheadline);
         var ownerSubHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, ownerSubY),
             new Vector2(textLeft + headerTextMaxWidth, ownerSubY + ownerSubSize.Y));
-        Marquee.DrawLeft("velvet.feed.ownersub." + entry.OwnerId, ownerSub, textLeft, ownerSubY,
+        Marquee.DrawLeft("velvet.feed.ownersub." + entry.Id, ownerSub, textLeft, ownerSubY,
             headerTextMaxWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, ownerSubHovering);
         var overRing = hasStory &&
             (ImGui.GetMousePos() - avatarCenter).LengthSquared() <= ringRadius * ringRadius;

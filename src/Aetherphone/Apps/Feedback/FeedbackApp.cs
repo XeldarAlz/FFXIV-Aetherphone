@@ -96,19 +96,9 @@ internal sealed class FeedbackApp : IPhoneApp
         DrawScreen(content);
     }
 
-    private void DrawFeedbackHeaderTitle(Rect area, string title, float rightReserve, float scale)
-    {
-        var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        var leftLimit = area.Min.X + 44f * scale;
-        var rightLimit = area.Max.X - rightReserve;
-        var maxWidth = MathF.Max(1f, rightLimit - leftLimit);
-        var titleSize = Typography.Measure(title, 1.15f, FontWeight.SemiBold);
-        var clampedWidth = MathF.Min(titleSize.X, maxWidth);
-        var titleX = leftLimit + (maxWidth - clampedWidth) * 0.5f;
-        var titleY = rowCenterY - titleSize.Y * 0.5f;
-        Marquee.DrawLeftAuto("feedback.header." + title, title, titleX, titleY, maxWidth,
-            new TextStyle(1.15f, FontWeight.SemiBold), theme.TextStrong);
-    }
+    private void DrawFeedbackHeaderTitle(Rect area, string title, float rightReserve, float scale) =>
+        AppHeader.DrawTitleWithReserve(area, "feedback.header." + title, title, rightReserve, theme.TextStrong,
+            scale);
 
     private void DrawScreen(Rect area)
     {

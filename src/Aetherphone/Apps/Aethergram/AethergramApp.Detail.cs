@@ -59,7 +59,7 @@ internal sealed partial class AethergramApp
             var headerNameY = avatarCenter.Y - (headerNameSize.Y + headerTextGap + headerMetaSize.Y) * 0.5f;
             var headerNameHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, headerNameY),
                 new Vector2(nameLeft + headerTextMaxWidth, headerNameY + headerNameSize.Y));
-            Marquee.DrawLeft("aethergram.detail.header." + post.AuthorId, displayName, nameLeft, headerNameY,
+            Marquee.DrawLeft("aethergram.detail.header." + post.Id, displayName, nameLeft, headerNameY,
                 headerTextMaxWidth, headerNameStyle, theme.TextStrong, headerNameHovering);
             var headerMetaTop = headerNameY + headerNameSize.Y + headerTextGap;
             var headerMetaHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, headerMetaTop),

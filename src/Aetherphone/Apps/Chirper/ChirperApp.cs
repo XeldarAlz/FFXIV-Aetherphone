@@ -433,7 +433,7 @@ internal sealed partial class ChirperApp : IPhoneApp
 
         var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(contentLeft, contentTop + pad),
             new Vector2(contentLeft + nameMaxWidth, contentTop + pad + nameSize.Y));
-        var drawnNameWidth = Marquee.DrawLeft("chirper.post.author." + post.AuthorId, rawDisplayName, contentLeft,
+        var drawnNameWidth = Marquee.DrawLeft("chirper.post.author." + post.Id, rawDisplayName, contentLeft,
             contentTop + pad, nameMaxWidth, new TextStyle(1.05f, FontWeight.SemiBold), theme.TextStrong, nameHovering);
         var meta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
         if (ContentModeration.IsInReview(post.ScanStatus))
@@ -478,7 +478,8 @@ internal sealed partial class ChirperApp : IPhoneApp
 
         if (hasQuote)
         {
-            DrawQuotedCard(drawList, new Vector2(contentLeft, quoteTop), contentWidth, quoteHeight, post.ReferencedPost, true);
+            DrawQuotedCard(drawList, new Vector2(contentLeft, quoteTop), contentWidth, quoteHeight, post.ReferencedPost,
+                true, post.Id);
         }
 
         DrawPostActions(post, contentLeft, contentWidth, actionsTop + actionsHeight * 0.5f, isThreadHead);
@@ -521,12 +522,10 @@ internal sealed partial class ChirperApp : IPhoneApp
         var ellipsisCenterX = left + width - 8f * scale;
         var ceiling = ellipsisCenterX - 28f * scale;
 
-        // Gap units (unscaled) that separate the fixed-width elements; these compress together
-        // when the row doesn't have enough room, instead of one seam absorbing all the slack.
         var gapUnits = 18f + 10f + 10f + 18f + 10f + 10f + (hasCommentCount ? 6f : 0f) + (hasRepostCount ? 6f : 0f);
         var fixedWidth = commentCountSize.X + repostCountSize.X;
         var available = MathF.Max(1f, ceiling - commentCenterX - fixedWidth);
-        var t = MathF.Max(0.55f, MathF.Min(1f, available / (gapUnits * scale)));
+        var t = MathF.Max(0.79f, MathF.Min(1f, available / (gapUnits * scale)));
 
         var commentCenter = new Vector2(commentCenterX, centerY);
         if (ui.IconButton(commentCenter, 15f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Chirper.MutedInk,
@@ -812,7 +811,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     }
 
     private void DrawQuotedCard(ImDrawListPtr drawList, Vector2 min, float width, float height, PostDto? quoted,
-        bool tappable)
+        bool tappable, string hostId)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var max = new Vector2(min.X + width, min.Y + height);
@@ -838,7 +837,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         var nameSize = Typography.Measure(name, 0.85f, FontWeight.SemiBold);
         var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(min.X + innerPad, min.Y + innerPad),
             new Vector2(min.X + innerPad + nameMaxWidth, min.Y + innerPad + nameSize.Y));
-        Marquee.DrawLeft("chirper.quote.author." + quoted.AuthorId, rawName, min.X + innerPad, min.Y + innerPad,
+        Marquee.DrawLeft("chirper.quote.author." + hostId, rawName, min.X + innerPad, min.Y + innerPad,
             nameMaxWidth, new TextStyle(0.85f, FontWeight.SemiBold), theme.TextStrong, nameHovering);
         var meta = SocialIdentity.FeedMeta(quoted.AuthorHandle, TimeText.Short(quoted.CreatedAtUnix));
         var metaMaxWidth = MathF.Max(1f, innerWidth - nameSize.X - 6f * scale);

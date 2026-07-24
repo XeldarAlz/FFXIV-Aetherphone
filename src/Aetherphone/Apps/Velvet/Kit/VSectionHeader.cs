@@ -51,6 +51,7 @@ internal static class VSectionHeader
                 VelvetTheme.MutedInk, TextStyles.Subheadline);
         }
 
+        barLabelMaxWidth = MathF.Max(1f, barLabelMaxWidth);
         Typography.Draw(new Vector2(barLabelLeft, origin.Y), Typography.FitText(label, barLabelMaxWidth,
             TextStyles.Headline), VelvetTheme.TitleInk, TextStyles.Headline);
 

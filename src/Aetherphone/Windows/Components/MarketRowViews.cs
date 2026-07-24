@@ -21,8 +21,10 @@ internal static class MarketRowViews
     public const float ItemRowHeight = 52f;
     public const float DataRowHeight = 52f;
 
-    public static MarketRowAction AlertRow(Rect row, MarketAlert alert, ITextureProvider textures, PhoneTheme theme)
+    public static MarketRowAction AlertRow(Rect row, MarketAlert alert, int index, ITextureProvider textures,
+        PhoneTheme theme)
     {
+        var rowId = "marketrow.alert." + index;
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var openRight = row.Max.X - 56f * scale;
@@ -63,7 +65,7 @@ internal static class MarketRowViews
         var nameSize = Typography.Measure(alert.ItemName, TextStyles.Body);
         var nameHovered = ImGui.IsMouseHoveringRect(new Vector2(textX, topY),
             new Vector2(textX + textMaxWidth, topY + nameSize.Y));
-        Marquee.DrawLeft("marketrow.alert.name." + alert.ItemName, alert.ItemName, textX, topY, textMaxWidth,
+        Marquee.DrawLeft(rowId + ".name", alert.ItemName, textX, topY, textMaxWidth,
             TextStyles.Body, theme.TextStrong, nameHovered);
         var arrow = alert.Below ? "≤" : "≥";
         var sub =
@@ -72,7 +74,7 @@ internal static class MarketRowViews
         var subTop = row.Max.Y - 9f * scale - subSize.Y;
         var subHovered = ImGui.IsMouseHoveringRect(new Vector2(textX, subTop),
             new Vector2(textX + textMaxWidth, subTop + subSize.Y));
-        Marquee.DrawLeft("marketrow.alert.sub." + alert.ItemName, sub, textX, subTop,
+        Marquee.DrawLeft(rowId + ".sub", sub, textX, subTop,
             textMaxWidth, new TextStyle(0.82f, FontWeight.Regular), theme.TextMuted, subHovered);
         if (deleteHovered)
         {

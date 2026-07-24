@@ -10,7 +10,7 @@ internal static class SettingsRow
 {
     private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 1f);
 
-    public static bool Bool(Rect row, string label, bool value, PhoneTheme theme)
+    public static bool Bool(Rect row, string label, bool value, PhoneTheme theme, string? id = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var width = Metrics.Size.ToggleWidth * scale;
@@ -18,34 +18,36 @@ internal static class SettingsRow
         var min = new Vector2(row.Max.X - width, row.Center.Y - height * 0.5f);
         var labelMaxWidth = MathF.Max(1f, min.X - 10f * scale - row.Min.X);
         var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
-        Marquee.DrawLeftAuto(label, label, row.Min.X, row.Center.Y - labelSize.Y * 0.5f, labelMaxWidth,
+        var rowId = id ?? label;
+        Marquee.DrawLeftAuto(rowId, label, row.Min.X, row.Center.Y - labelSize.Y * 0.5f, labelMaxWidth,
             TextStyles.BodyEmphasized, theme.TextStrong);
-        return Toggle.Draw(label, new Rect(min, min + new Vector2(width, height)), value, theme);
+        return Toggle.Draw(rowId, new Rect(min, min + new Vector2(width, height)), value, theme);
     }
 
-    public static void Info(Rect row, string label, string value, PhoneTheme theme)
+    public static void Info(Rect row, string label, string value, PhoneTheme theme, string? id = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var gap = 12f * scale;
         var available = row.Width - gap;
-        var labelCap = MathF.Max(1f, available * 0.5f);
+        var valueFullSize = Typography.Measure(value, TextStyles.Body);
+        var labelCap = MathF.Max(1f, available - valueFullSize.X);
         var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
         var labelY = row.Center.Y - labelSize.Y * 0.5f;
         var labelHovered = ImGui.IsMouseHoveringRect(new Vector2(row.Min.X, row.Min.Y),
             new Vector2(row.Min.X + labelCap, row.Max.Y));
-        var labelWidth = Marquee.DrawLeft(label, label, row.Min.X, labelY, labelCap, TextStyles.BodyEmphasized,
+        var rowId = id ?? label;
+        var labelWidth = Marquee.DrawLeft(rowId, label, row.Min.X, labelY, labelCap, TextStyles.BodyEmphasized,
             theme.TextStrong, labelHovered);
         var valueMaxWidth = MathF.Max(1f, available - labelWidth);
-        var valueSize = Typography.Measure(value, TextStyles.Body);
-        var valueY = row.Center.Y - valueSize.Y * 0.5f;
+        var valueY = row.Center.Y - valueFullSize.Y * 0.5f;
         var valueHovered = ImGui.IsMouseHoveringRect(new Vector2(row.Max.X - valueMaxWidth, row.Min.Y),
             new Vector2(row.Max.X, row.Max.Y));
-        Marquee.DrawRight(label + ":infoValue", value, row.Max.X, valueY, valueMaxWidth, TextStyles.Body,
+        Marquee.DrawRight(rowId + ":infoValue", value, row.Max.X, valueY, valueMaxWidth, TextStyles.Body,
             theme.TextMuted, valueHovered);
     }
 
     public static bool Link(Rect row, FontAwesomeIcon icon, Vector4 tint, string label, string value, PhoneTheme theme,
-        bool badge = false)
+        bool badge = false, string? id = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var hovered = UiInteract.Hover(row.Min, row.Max);
@@ -74,7 +76,7 @@ internal static class SettingsRow
         var midGap = 8f * scale;
         var available = chevronTip.X - chevronWidth - chevronGap - labelStartX;
         DrawTwoColumnText(row, label, value, theme, labelStartX, chevronTip.X - chevronWidth - chevronGap, available,
-            midGap);
+            midGap, id);
         DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
 
         if (hovered)
@@ -85,7 +87,8 @@ internal static class SettingsRow
         return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    public static bool AppLink(Rect row, string appId, Vector4 tint, string label, string value, PhoneTheme theme)
+    public static bool AppLink(Rect row, string appId, Vector4 tint, string label, string value, PhoneTheme theme,
+        string? id = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var hovered = UiInteract.Hover(row.Min, row.Max);
@@ -114,7 +117,7 @@ internal static class SettingsRow
         var midGap = 8f * scale;
         var available = chevronTip.X - chevronWidth - chevronGap - labelStartX;
         DrawTwoColumnText(row, label, value, theme, labelStartX, chevronTip.X - chevronWidth - chevronGap, available,
-            midGap);
+            midGap, id ?? appId);
         DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
 
         if (hovered)
@@ -125,7 +128,7 @@ internal static class SettingsRow
         return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
-    public static bool Disclosure(Rect row, string label, string value, PhoneTheme theme)
+    public static bool Disclosure(Rect row, string label, string value, PhoneTheme theme, string? id = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var hovered = UiInteract.Hover(row.Min, row.Max);
@@ -140,7 +143,7 @@ internal static class SettingsRow
         var midGap = 8f * scale;
         var available = chevronTip.X - chevronWidth - chevronGap - row.Min.X;
         DrawTwoColumnText(row, label, value, theme, row.Min.X, chevronTip.X - chevronWidth - chevronGap, available,
-            midGap);
+            midGap, id);
         DrawChevronRight(chevronTip, chevronWidth, 2.2f * scale, theme.TextMuted);
 
         if (hovered)
@@ -152,14 +155,25 @@ internal static class SettingsRow
     }
 
     private static void DrawTwoColumnText(Rect row, string label, string value, PhoneTheme theme, float labelStartX,
-        float valueBoxRight, float available, float midGap)
+        float valueBoxRight, float available, float midGap, string? id = null)
     {
-        var labelCap = string.IsNullOrEmpty(value) ? available : MathF.Max(1f, (available - midGap) * 0.5f);
+        var rowId = id ?? label;
+        float labelCap;
+        if (string.IsNullOrEmpty(value))
+        {
+            labelCap = available;
+        }
+        else
+        {
+            var valueFullWidth = Typography.Measure(value, TextStyles.Body).X;
+            labelCap = MathF.Max(1f, available - midGap - valueFullWidth);
+        }
+
         var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
         var labelY = row.Center.Y - labelSize.Y * 0.5f;
         var labelHovered = ImGui.IsMouseHoveringRect(new Vector2(labelStartX, row.Min.Y),
             new Vector2(labelStartX + labelCap, row.Max.Y));
-        var labelWidth = Marquee.DrawLeft(label, label, labelStartX, labelY, labelCap, TextStyles.BodyEmphasized,
+        var labelWidth = Marquee.DrawLeft(rowId, label, labelStartX, labelY, labelCap, TextStyles.BodyEmphasized,
             theme.TextStrong, labelHovered);
 
         if (string.IsNullOrEmpty(value))
@@ -172,11 +186,11 @@ internal static class SettingsRow
         var valueY = row.Center.Y - valueSize.Y * 0.5f;
         var valueHovered = ImGui.IsMouseHoveringRect(new Vector2(valueBoxRight - valueMaxWidth, row.Min.Y),
             new Vector2(valueBoxRight, row.Max.Y));
-        Marquee.DrawRight(label + ":value", value, valueBoxRight, valueY, valueMaxWidth, TextStyles.Body,
+        Marquee.DrawRight(rowId + ":value", value, valueBoxRight, valueY, valueMaxWidth, TextStyles.Body,
             theme.TextMuted, valueHovered);
     }
 
-    public static bool Selectable(Rect row, string label, bool selected, PhoneTheme theme)
+    public static bool Selectable(Rect row, string label, bool selected, PhoneTheme theme, string? id = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var hovered = UiInteract.Hover(row.Min, row.Max);
@@ -188,7 +202,7 @@ internal static class SettingsRow
         var checkWidth = 21f * scale;
         var labelMaxWidth = MathF.Max(1f, row.Width - checkWidth);
         var labelSize = Typography.Measure(label, TextStyles.BodyEmphasized);
-        Marquee.DrawLeft(label, label, row.Min.X, row.Center.Y - labelSize.Y * 0.5f, labelMaxWidth,
+        Marquee.DrawLeft(id ?? label, label, row.Min.X, row.Center.Y - labelSize.Y * 0.5f, labelMaxWidth,
             TextStyles.BodyEmphasized, theme.TextStrong, hovered);
 
         if (selected)

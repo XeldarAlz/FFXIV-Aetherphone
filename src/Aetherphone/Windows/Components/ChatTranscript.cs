@@ -449,7 +449,7 @@ internal sealed class ChatTranscript
         var rect = new Vector2(textLeft, origin.Y);
         var hovering = ImGui.IsMouseHoveringRect(rect, new Vector2(rect.X + maxWidth, rect.Y + 16f * scale));
         var name = FirstName(message.SenderName);
-        Marquee.DrawLeft("chattranscript.sender." + message.SenderId, name, textLeft, origin.Y, maxWidth,
+        Marquee.DrawLeft("chattranscript.sender." + message.Id, name, textLeft, origin.Y, maxWidth,
             new TextStyle(0.78f, FontWeight.SemiBold), message.SenderTint, hovering);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + 16f * scale));
     }
