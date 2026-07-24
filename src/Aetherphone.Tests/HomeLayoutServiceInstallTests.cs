@@ -98,18 +98,20 @@ public sealed class HomeLayoutServiceInstallTests
             "An installed app that was hidden for a while must come back to Home, not be treated as uninstalled");
     }
 
-    [Fact]
-    public void AppStore_IsAlwaysInstalledAndCannotBeUninstalled()
+    [Theory]
+    [InlineData("appstore")]
+    [InlineData("settings")]
+    public void MandatoryApp_IsAlwaysInstalledAndCannotBeUninstalled(string appId)
     {
-        var apps = new List<IPhoneApp> { new FakeApp("a"), new FakeApp("appstore") };
+        var apps = new List<IPhoneApp> { new FakeApp("a"), new FakeApp(appId) };
         var configuration = SavedWith("a");
 
         var layout = BuildLayout(apps, configuration);
 
-        Assert.True(layout.IsInstalled("appstore"), "The store has to stay reachable or there is no way back");
-        Assert.True(PageIndexOf(layout, "appstore") >= 0);
-        Assert.False(layout.Uninstall("appstore"));
-        Assert.True(layout.IsInstalled("appstore"));
+        Assert.True(layout.IsInstalled(appId), $"'{appId}' must stay on the phone or the user has no way back");
+        Assert.True(PageIndexOf(layout, appId) >= 0);
+        Assert.False(layout.Uninstall(appId));
+        Assert.True(layout.IsInstalled(appId));
     }
 
     [Fact]

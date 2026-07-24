@@ -29,7 +29,7 @@ internal sealed class HomeLayoutService
     };
 
     private static readonly string[] DefaultTrailingApps = { "dev" };
-    private const string MandatoryApp = "appstore";
+    private static readonly string[] MandatoryApps = { "appstore", "settings" };
 
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly WidgetRegistry widgets;
@@ -224,7 +224,18 @@ internal sealed class HomeLayoutService
 
     public bool IsInstalled(string appId) => installed.Contains(appId);
 
-    public static bool CanUninstall(string appId) => !string.Equals(appId, MandatoryApp, StringComparison.Ordinal);
+    public static bool CanUninstall(string appId)
+    {
+        for (var index = 0; index < MandatoryApps.Length; index++)
+        {
+            if (string.Equals(appId, MandatoryApps[index], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     public bool Install(string appId)
     {
@@ -444,7 +455,11 @@ internal sealed class HomeLayoutService
             SeedInstalled(saved);
         }
 
-        installed.Add(MandatoryApp);
+        for (var index = 0; index < MandatoryApps.Length; index++)
+        {
+            installed.Add(MandatoryApps[index]);
+        }
+
         var pending = new List<IPhoneApp>();
         for (var index = 0; index < apps.Count; index++)
         {
