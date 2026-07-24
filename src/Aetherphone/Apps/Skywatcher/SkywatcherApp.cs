@@ -173,22 +173,25 @@ internal sealed partial class SkywatcherApp : IPhoneApp
                 TextStyles.Title2, width - 32f * scale, palette, scale);
         }
 
-        var glyphCenter = new Vector2(centerX, MathF.Max(origin.Y + 100f * scale, origin.Y + 16f * scale + titleHeight + 44f * scale));
+        var glyphBaseline = origin.Y + 100f * scale;
+        var glyphCenter = new Vector2(centerX, MathF.Max(glyphBaseline, origin.Y + 16f * scale + titleHeight + 44f * scale));
+        var glyphOverflow = MathF.Max(0f, glyphCenter.Y - glyphBaseline);
         var radius = 50f * scale;
         WeatherGlyph.Draw(kind, glyphCenter, radius, palette, isDay, SampleSky(palette, screen, glyphCenter.Y));
         WeatherAmbience.Halo(ImGui.GetWindowDrawList(), glyphCenter, radius * 1.05f, palette.Glow,
             0.65f + 0.40f * Pulse.Wave(Pulse.Breath));
-        ShadowCentered(new Vector2(centerX, origin.Y + 176f * scale), forecast[0].Weather.Name, palette.Ink,
+        ShadowCentered(new Vector2(centerX, origin.Y + 176f * scale + glyphOverflow), forecast[0].Weather.Name, palette.Ink,
             TextStyles.LargeTitle.Scale, FontWeight.Regular, palette, scale);
-        ShadowCentered(new Vector2(centerX, origin.Y + 210f * scale), Summary(), palette.InkSoft,
+        ShadowCentered(new Vector2(centerX, origin.Y + 210f * scale + glyphOverflow), Summary(), palette.InkSoft,
             TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight, palette, scale);
+        var heroHeight = 234f * scale + glyphOverflow;
         if (UiAnchors.Recording)
         {
-            UiAnchors.Report("skywatcher.current", new Rect(origin, origin + new Vector2(width, 234f * scale)));
+            UiAnchors.Report("skywatcher.current", new Rect(origin, origin + new Vector2(width, heroHeight)));
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 234f * scale));
+        ImGui.Dummy(new Vector2(width, heroHeight));
     }
 
     private void DrawHourly(Rect screen, in SkyPalette palette, float scale)

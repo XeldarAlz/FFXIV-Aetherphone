@@ -53,6 +53,7 @@ internal static class Typography
         cacheGeneration = current;
         FitCache.Clear();
         WrapCache.Clear();
+        FitScaleCache.Clear();
     }
 
     public static void Plain(string text)
@@ -156,6 +157,9 @@ internal static class Typography
     public static string FitText(string text, float maxWidth, in TextStyle style) =>
         FitText(text, maxWidth, style.Scale, style.Weight);
 
+    private static readonly Dictionary<(string Text, float MaxWidth, float MaxScale, float MinScale, FontWeight Weight,
+        float FontSize), float> FitScaleCache = new();
+
     public static float FitScale(string text, float maxWidth, float maxScale, float minScale, FontWeight weight)
     {
         if (maxWidth <= 0f)
@@ -163,6 +167,15 @@ internal static class Typography
             return minScale;
         }
 
+        InvalidateCachesOnFontChange();
+        var fontSize = ImGui.GetFontSize();
+        var key = (text, maxWidth, maxScale, minScale, weight, fontSize);
+        if (FitScaleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var result = minScale;
         for (var scale = maxScale; scale > minScale; scale -= 0.05f)
         {
             using (Plugin.Fonts.Push(scale, weight))
@@ -170,12 +183,14 @@ internal static class Typography
                 Plugin.Fonts.NoticeText(text);
                 if (ImGui.CalcTextSize(text).X <= maxWidth)
                 {
-                    return scale;
+                    result = scale;
+                    break;
                 }
             }
         }
 
-        return minScale;
+        FitScaleCache[key] = result;
+        return result;
     }
 
     public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float scale,

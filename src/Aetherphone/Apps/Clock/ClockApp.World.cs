@@ -65,7 +65,7 @@ internal sealed partial class ClockApp
         var pad = 20f * scale;
         var minTextColumn = 100f * scale;
         var radiusFromHeight = (heroHeight - pad * 2f) * 0.5f;
-        var radiusFromWidth = MathF.Max(30f * scale, width - pad * 2f - 22f * scale - minTextColumn);
+        var radiusFromWidth = MathF.Max(30f * scale, (width - pad * 2f - 22f * scale - minTextColumn) * 0.5f);
         var clockRadius = MathF.Min(radiusFromHeight, radiusFromWidth);
         var clockCenter = new Vector2(heroMin.X + pad + clockRadius, heroMin.Y + heroHeight * 0.5f);
         ProgressRing.Glow(clockCenter, clockRadius * 0.92f, theme.Accent, 0.45f);

@@ -350,10 +350,18 @@ internal sealed class InventoryApp : IPhoneApp
         var textMaxWidth = MathF.Max(1f, textRight - textLeft);
         if (subtitle.Length > 0)
         {
-            Marquee.DrawLeft("inventory.storage.title." + kind, title, textLeft, row.Min.Y + 15f * scale,
-                textMaxWidth, TextStyles.Headline, ui.TitleInk, hovered);
-            Marquee.DrawLeft("inventory.storage.subtitle." + kind, subtitle, textLeft, row.Min.Y + 38f * scale,
-                textMaxWidth, TextStyles.Footnote, ui.MutedInk, hovered);
+            var titleY = row.Min.Y + 15f * scale;
+            var titleSize = Typography.Measure(title, TextStyles.Headline);
+            var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleY),
+                new Vector2(textLeft + textMaxWidth, titleY + titleSize.Y));
+            Marquee.DrawLeft("inventory.storage.title." + kind, title, textLeft, titleY,
+                textMaxWidth, TextStyles.Headline, ui.TitleInk, titleHovering);
+            var subtitleY = row.Min.Y + 38f * scale;
+            var subtitleSize = Typography.Measure(subtitle, TextStyles.Footnote);
+            var subtitleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, subtitleY),
+                new Vector2(textLeft + textMaxWidth, subtitleY + subtitleSize.Y));
+            Marquee.DrawLeft("inventory.storage.subtitle." + kind, subtitle, textLeft, subtitleY,
+                textMaxWidth, TextStyles.Footnote, ui.MutedInk, subtitleHovering);
         }
         else
         {
