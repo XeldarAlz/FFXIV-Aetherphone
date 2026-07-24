@@ -1684,6 +1684,7 @@
   "wallet.sectionOther": "Sonstiges",
   "jobs.logInToView": "Melde dich an, um deine Jobs zu sehen",
   "jobs.noGearsets": "Lege im Spiel ein Gearset für einen Job an, damit er hier auftaucht.",
+  "jobs.noGearset": "Kein Gearset",
   "jobs.sectionTank": "Tank",
   "jobs.sectionHealer": "Heiler",
   "jobs.sectionMelee": "Nahkämpfer",

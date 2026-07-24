@@ -2112,6 +2112,7 @@ internal static class L
     {
         public static readonly LocString LogInToView = new("jobs.logInToView", "Log in to view your jobs");
         public static readonly LocString NoGearsets = new("jobs.noGearsets", "Create a gearset for a job in-game to see it here.");
+        public static readonly LocString NoGearset = new("jobs.noGearset", "No gearset");
         public static readonly LocString SectionTank = new("jobs.sectionTank", "Tank");
         public static readonly LocString SectionHealer = new("jobs.sectionHealer", "Healer");
         public static readonly LocString SectionMelee = new("jobs.sectionMelee", "Melee DPS");

@@ -1684,6 +1684,7 @@
   "wallet.sectionOther": "その他",
   "jobs.logInToView": "ログインしてジョブを見る",
   "jobs.noGearsets": "ゲーム内でジョブのギアセットを登録すると、ここに表示されます。",
+  "jobs.noGearset": "ギアセットなし",
   "jobs.sectionTank": "タンク",
   "jobs.sectionHealer": "ヒーラー",
   "jobs.sectionMelee": "近接DPS",

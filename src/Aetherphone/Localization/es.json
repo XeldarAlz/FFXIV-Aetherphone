@@ -1684,6 +1684,7 @@
   "wallet.sectionOther": "Otros",
   "jobs.logInToView": "Inicia sesión para ver tus trabajos",
   "jobs.noGearsets": "Crea un conjunto de equipo para un trabajo en el juego para verlo aquí.",
+  "jobs.noGearset": "Sin conjunto",
   "jobs.sectionTank": "Tanque",
   "jobs.sectionHealer": "Sanador",
   "jobs.sectionMelee": "DPS cuerpo a cuerpo",

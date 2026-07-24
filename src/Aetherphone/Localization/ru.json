@@ -1684,6 +1684,7 @@
   "wallet.sectionOther": "Прочее",
   "jobs.logInToView": "Войдите, чтобы увидеть классы",
   "jobs.noGearsets": "Создайте в игре набор экипировки для класса, и он появится здесь.",
+  "jobs.noGearset": "Нет набора",
   "jobs.sectionTank": "Танк",
   "jobs.sectionHealer": "Хилер",
   "jobs.sectionMelee": "Ближний бой",

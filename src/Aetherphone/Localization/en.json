@@ -1683,6 +1683,7 @@
   "wallet.sectionOther": "Other",
   "jobs.logInToView": "Log in to view your jobs",
   "jobs.noGearsets": "Create a gearset for a job in-game to see it here.",
+  "jobs.noGearset": "No gearset",
   "jobs.sectionTank": "Tank",
   "jobs.sectionHealer": "Healer",
   "jobs.sectionMelee": "Melee DPS",

@@ -1684,6 +1684,7 @@
   "wallet.sectionOther": "Autres",
   "jobs.logInToView": "Connectez-vous pour voir vos jobs",
   "jobs.noGearsets": "Créez un ensemble d'équipement pour un job en jeu pour le voir ici.",
+  "jobs.noGearset": "Aucun ensemble",
   "jobs.sectionTank": "Tank",
   "jobs.sectionHealer": "Soigneur",
   "jobs.sectionMelee": "DPS de mêlée",

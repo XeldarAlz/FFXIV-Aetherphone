@@ -1684,6 +1684,7 @@
   "wallet.sectionOther": "Diğer",
   "jobs.logInToView": "Sınıflarını görmek için giriş yap",
   "jobs.noGearsets": "Oyun içinde bir sınıf için ekipman seti oluştur, burada görünsün.",
+  "jobs.noGearset": "Set yok",
   "jobs.sectionTank": "Tank",
   "jobs.sectionHealer": "Şifacı",
   "jobs.sectionMelee": "Yakın dövüş DPS",

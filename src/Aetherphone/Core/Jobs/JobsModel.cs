@@ -16,7 +16,7 @@ internal enum JobRole
 internal enum JobEntryKind
 {
     Gearset,
-    Tool,
+    NoGearset,
 }
 
 internal sealed class JobEntry
@@ -42,7 +42,7 @@ internal sealed class JobEntry
     public string Name { get; }
     public int Level { get; }
 
-    /// <summary>-1 when the item level is unknown (a Hand/Land job that isn't currently active).</summary>
+    /// <summary>-1 when the item level is unknown (a class with no gearset that isn't currently active).</summary>
     public int ItemLevel { get; }
     public uint IconId { get; }
     public bool IsActive { get; }
