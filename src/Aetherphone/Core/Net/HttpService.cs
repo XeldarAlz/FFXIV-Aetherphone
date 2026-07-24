@@ -108,10 +108,12 @@ internal sealed class HttpService : IDisposable
         return await SendForJsonAsync(request, responseInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
     }
 
-    public async Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token)
+    public async Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token,
+        string? bearer = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Put, uri) { Content = new ByteArrayContent(content), };
         request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        ApplyHeaders(request, bearer, null);
         try
         {
             using var scope = TimeoutScope(token, UploadTimeout);

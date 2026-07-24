@@ -72,9 +72,9 @@ internal static class PhotosChrome
         var ink = ImGui.GetColorU32(hovered ? color : color with { W = 0.85f });
         var size = Metrics.Space.Xs * scale;
         var direction = pointsLeft ? -1f : 1f;
-        var tip = new Vector2(center.X - direction * size * 0.4f, center.Y);
-        drawList.AddLine(new Vector2(tip.X + direction * size, tip.Y - size), tip, ink, 2.4f * scale);
-        drawList.AddLine(tip, new Vector2(tip.X + direction * size, tip.Y + size), ink, 2.4f * scale);
+        var tip = new Vector2(center.X + direction * size * 0.4f, center.Y);
+        drawList.AddLine(new Vector2(tip.X - direction * size, tip.Y - size), tip, ink, 2.4f * scale);
+        drawList.AddLine(tip, new Vector2(tip.X - direction * size, tip.Y + size), ink, 2.4f * scale);
         return Tapped(hovered);
     }
 
