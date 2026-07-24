@@ -230,7 +230,7 @@ internal sealed class SocialProfilePages
             }
 
             var iconAnchorX = hasMessage ? messageRect.Min.X : followRect.Min.X;
-            var reportCenter = new Vector2(iconAnchorX - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
+            var reportCenter = new Vector2(iconAnchorX - buttonHeight * 0.5f - 2f * scale, avatarCenter.Y);
             if (ui.IconButton(reportCenter, buttonHeight * 0.5f, FontAwesomeIcon.Flag.ToIconString(), theme.Danger,
                     Palette.WithAlpha(theme.Danger, 0.16f), 0.9f, Loc.T(L.Report.Action)))
             {
