@@ -35,9 +35,9 @@ internal static class UrlActions
             });
 
         }
-        catch (Exception e)
+        catch (Exception exception)
         {
-            Plugin.Log.Error($"Failed to open the folder: {path}", e);
+            Plugin.Log.Error(exception, $"Failed to open the folder: {path}");
         }
     }
 

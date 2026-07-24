@@ -297,7 +297,7 @@ internal sealed partial class PhotosApp
 
     private void DrawOpenFolder(Rect rect)
     {
-        if (!ComposeFab.Draw(rect, "##openFolderFab", Accent, FontAwesomeIcon.Folder.ToIconString(),
+        if (ComposeFab.Draw(rect, "##openFolderFab", Accent, FontAwesomeIcon.Folder.ToIconString(),
                              Loc.T(L.Photos.OpenFolder), "photos.openFolder"))
         {
             UrlActions.OpenFolder(library.DirectoryPath);
