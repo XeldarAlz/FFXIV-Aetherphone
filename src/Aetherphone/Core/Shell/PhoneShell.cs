@@ -69,7 +69,7 @@ internal sealed class PhoneShell : IDisposable
         navigation.AppOpened += director.OnAppOpened;
         navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
-            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
+            services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);

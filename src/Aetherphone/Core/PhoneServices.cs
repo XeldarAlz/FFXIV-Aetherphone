@@ -50,6 +50,7 @@ internal sealed class PhoneServices : IDisposable
     public required LinkpearlLauncher LinkpearlLauncher { get; init; }
     public required VelvetLauncher VelvetLauncher { get; init; }
     public required DmLauncher DmLauncher { get; init; }
+    public required GramDmLauncher GramDmLauncher { get; init; }
     public required SocialLauncher SocialLauncher { get; init; }
     public required LinkshellMuteStore LinkshellMutes { get; init; }
     public required LinkpearlNotificationGate LinkpearlNotificationGate { get; init; }
@@ -122,6 +123,7 @@ internal sealed class PhoneServices : IDisposable
         var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
+        var gramDmLauncher = new GramDmLauncher();
         var socialLauncher = new SocialLauncher();
         var linkshellMutes = new LinkshellMuteStore(configuration, characterWatch);
         var linkshells = new LinkshellStore(linkshellMutes, characterWatch);
@@ -193,6 +195,7 @@ internal sealed class PhoneServices : IDisposable
             LinkpearlLauncher = linkpearlLauncher,
             VelvetLauncher = velvetLauncher,
             DmLauncher = dmLauncher,
+            GramDmLauncher = gramDmLauncher,
             SocialLauncher = socialLauncher,
             LinkshellMutes = linkshellMutes,
             LinkpearlNotificationGate = linkpearlNotificationGate,

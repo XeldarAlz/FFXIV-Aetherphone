@@ -45,6 +45,7 @@ internal sealed class SocialProfileStyle
     public required LocString DeleteFailed { get; init; }
     public required LocString DeleteCommentConfirmMessage { get; init; }
     public required LocString DeleteCommentFailed { get; init; }
+    public LocString? MessageLabel { get; init; }
 }
 
 internal sealed class SocialProfilePages
@@ -69,6 +70,7 @@ internal sealed class SocialProfilePages
     private readonly Action<string, UserListKind> openUserList;
     private readonly Action back;
     private readonly Action? openConductRules;
+    private readonly Action<string>? openMessage;
 
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
@@ -82,7 +84,7 @@ internal sealed class SocialProfilePages
         LodestoneService lodestone, AvatarLightbox avatarLightbox, Configuration configuration, GameData gameData,
         ConfirmService confirm, ReportService report, Action openEditProfile, Action openAvatarComposer,
         Action<string> openProfile, Action<string, UserListKind> openUserList, Action back,
-        Action? openConductRules)
+        Action? openConductRules, Action<string>? openMessage = null)
     {
         this.store = store;
         this.ui = ui;
@@ -100,6 +102,7 @@ internal sealed class SocialProfilePages
         this.openUserList = openUserList;
         this.back = back;
         this.openConductRules = openConductRules;
+        this.openMessage = openMessage;
     }
 
     public string SearchDraft = string.Empty;
@@ -206,14 +209,36 @@ internal sealed class SocialProfilePages
         }
         else
         {
-            var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
+            var followRect = buttonRect;
+            var hasMessage = openMessage is not null && style.MessageLabel is not null && user.CanMessage;
+            var messageRect = default(Rect);
+            if (hasMessage)
+            {
+                var innerRight = origin.X + width - pad;
+                var pillGap = 8f * scale;
+                var iconRoom = buttonHeight + 10f * scale;
+                var available = innerRight - (avatarCenter.X + avatarRadius) - 12f * scale - iconRoom;
+                var pillWidth = MathF.Min(buttonWidth, (available - pillGap) * 0.5f);
+                followRect = new Rect(new Vector2(innerRight - pillWidth, buttonMax.Y - buttonHeight),
+                    new Vector2(innerRight, buttonMax.Y));
+                messageRect = new Rect(new Vector2(followRect.Min.X - pillGap - pillWidth, followRect.Min.Y),
+                    new Vector2(followRect.Min.X - pillGap, followRect.Max.Y));
+            }
+
+            var iconAnchorX = hasMessage ? messageRect.Min.X : followRect.Min.X;
+            var reportCenter = new Vector2(iconAnchorX - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
             if (ui.IconButton(reportCenter, buttonHeight * 0.5f, FontAwesomeIcon.Flag.ToIconString(), theme.Danger,
                     Palette.WithAlpha(theme.Danger, 0.16f), 0.9f, Loc.T(L.Report.Action)))
             {
                 OpenReport("user", user.Id, Loc.T(L.Report.UserTitle));
             }
 
-            if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow),
+            if (hasMessage && ui.PillButton(messageRect, Loc.T(style.MessageLabel!.Value), false))
+            {
+                openMessage!(user.Id);
+            }
+
+            if (ui.PillButton(followRect, user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow),
                     !user.IsFollowing))
             {
                 store.SetFollow(user.Id, !user.IsFollowing);

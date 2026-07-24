@@ -5,10 +5,12 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Net;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
@@ -45,7 +47,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Aethergram);
     public string Glyph => "Ag";
-    public int BadgeCount => 0;
+    public int BadgeCount => dmStore.UnreadCount;
     private const string ScopeMenuId = "scope";
     private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
     {
@@ -53,14 +55,20 @@ internal sealed partial class AethergramApp : IPhoneApp
         { SocialFeedScope.Following, new() }
     };
     private readonly AethergramStore store;
+    private readonly GramDmStore dmStore;
     private readonly SocialLauncher launcher;
+    private readonly GramDmLauncher dmLauncher;
     private readonly GameData gameData;
     private readonly Configuration configuration;
     private readonly LodestoneService lodestone;
     private readonly PhotoLibrary library;
     private readonly RemoteImageCache images;
+    private readonly HttpService http;
     private readonly SocialNotificationService social;
     private readonly ConductGateService conduct;
+    private readonly ConfirmService confirm;
+    private readonly ReportService report;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly DropdownMenu scopeMenu = new();
     private readonly DropdownMenu postMenu = new();
     private readonly DropdownMenu.Item[] scopeItems = new DropdownMenu.Item[2];
@@ -118,11 +126,15 @@ internal sealed partial class AethergramApp : IPhoneApp
     private double likeBurstStart;
 
     public AethergramApp(AethernetSession session, AethernetApi net, LodestoneService lodestone,
-        RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GameData gameData,
-        Configuration configuration, SocialNotificationService social, WallpaperImageCache wallpaperImages,
-        ConfirmService confirm, ReportService report, ConductGateService conduct)
+        RemoteImageCache images, PhotoLibrary library, SocialLauncher launcher, GramDmLauncher dmLauncher,
+        GameData gameData, Configuration configuration, SocialNotificationService social,
+        NotificationService notifications, HttpService http, KeyVault keyVault,
+        ConversationKeyStore conversationKeys, PhoneVisibility visibility, RealtimeSignalBus realtimeSignals,
+        WallpaperImageCache wallpaperImages, ConfirmService confirm, ReportService report, ConductGateService conduct)
     {
         store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media);
+        dmStore = new GramDmStore(session, net.GramDm, net.Safety, net.Media, notifications, keyVault,
+            conversationKeys, visibility, realtimeSignals);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         personPicker = new PersonPicker(store.NewMentionSuggestions());
@@ -130,14 +142,19 @@ internal sealed partial class AethergramApp : IPhoneApp
             AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
                 L.Aethergram.Saving), confirm, "Aethergram stories", StartStoryCompose);
         this.launcher = launcher;
+        this.dmLauncher = dmLauncher;
         this.gameData = gameData;
         this.configuration = configuration;
         this.lodestone = lodestone;
         this.library = library;
         composeSession = new PhotoComposeSession(library, wallpaperImages);
         this.images = images;
+        this.http = http;
         this.social = social;
         this.conduct = conduct;
+        this.confirm = confirm;
+        this.report = report;
+        this.wallpaperImages = wallpaperImages;
         activityFeed = new SocialActivityFeed(SocialActivity.AethergramApp, session, net.Account);
         loadOlderActivity = activityFeed.LoadOlder;
         router = new ViewRouter<AethergramRoute>(AethergramRoute.Home);
@@ -173,9 +190,11 @@ internal sealed partial class AethergramApp : IPhoneApp
             DeleteFailed = L.Aethergram.DeleteFailed,
             DeleteCommentConfirmMessage = L.Aethergram.DeleteCommentConfirmMessage,
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
+            MessageLabel = L.Aethergram.MessageButton,
         }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
             () => router.Push(AethergramRoute.EditProfile), () => StartCompose(true), OpenProfile, OpenUserList, back,
-            null);
+            null, OpenThread);
+        threadView = new ThreadView(this);
     }
 
     public void OnOpened()
@@ -187,6 +206,12 @@ internal sealed partial class AethergramApp : IPhoneApp
             store.RefreshFeed(SocialFeedScope.ForYou);
             store.RefreshFeed(SocialFeedScope.Following);
             stories.RefreshTray();
+        }
+
+        if (store.IsSignedIn && dmLauncher.TryConsume(out var threadUserId))
+        {
+            router.Push(AethergramRoute.Thread(threadUserId), false);
+            return;
         }
 
         if (store.IsSignedIn && launcher.TryConsume(Id, out var link))
@@ -204,6 +229,7 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     public void OnClosed()
     {
+        threadView.OnAppClosed();
         router.Reset();
         avatarLightbox.Reset();
         caption = string.Empty;
@@ -220,6 +246,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         ui.Theme = theme;
         scopeMenu.Gate();
         postMenu.Gate();
+        threadView.GateMenus();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
         AdvancePendingPhotoView();
@@ -266,6 +293,21 @@ internal sealed partial class AethergramApp : IPhoneApp
                 break;
             case AethergramScreen.UserList:
                 profile.DrawUserList(area, theme, navigation, route.Id!, route.Kind);
+                break;
+            case AethergramScreen.Inbox:
+                DrawInbox(area);
+                break;
+            case AethergramScreen.Thread:
+                threadView.Draw(area, route.Id!);
+                break;
+            case AethergramScreen.ChatImage:
+                threadView.DrawImagePicker(area, route.Id!);
+                break;
+            case AethergramScreen.ImageView:
+                threadView.DrawImageViewer(area, route.Id!);
+                break;
+            case AethergramScreen.Reactions:
+                threadView.DrawReactions(area, route.Id!);
                 break;
             default:
                 DrawRoot(area);
@@ -996,6 +1038,8 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     public void Dispose()
     {
+        threadView.Dispose();
+        dmStore.Dispose();
         store.Dispose();
         stories.Dispose();
     }

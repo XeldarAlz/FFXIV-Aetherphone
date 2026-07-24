@@ -26,16 +26,18 @@ internal sealed class NotificationRouter
     private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
+    private readonly GramDmLauncher gramDmLauncher;
     private readonly SocialLauncher socialLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher)
     {
         this.navigation = navigation;
         this.notifications = notifications;
         this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
+        this.gramDmLauncher = gramDmLauncher;
         this.socialLauncher = socialLauncher;
     }
 
@@ -67,6 +69,11 @@ internal sealed class NotificationRouter
         else if (notification.AppId == VelvetAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {
             velvetLauncher.Request(notification.GroupKey);
+        }
+        else if (notification.AppId == AethergramAppId && notification.SocialType < 0
+                 && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            gramDmLauncher.Request(notification.GroupKey);
         }
         else if (SocialLinkFor(notification) is { } link)
         {

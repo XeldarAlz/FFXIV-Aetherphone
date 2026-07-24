@@ -1660,6 +1660,11 @@ internal static class L
         public static readonly LocString Home = new("aethergram.home", "Home");
         public static readonly LocString Search = new("aethergram.search", "Search");
         public static readonly LocString Profile = new("aethergram.profile", "Profile");
+        public static readonly LocString InboxTitle = new("aethergram.inboxTitle", "Messages");
+        public static readonly LocString InboxEmpty = new("aethergram.inboxEmpty", "No messages yet");
+        public static readonly LocString InboxEmptyHint = new("aethergram.inboxEmptyHint", "Message someone from their profile");
+        public static readonly LocString MessageButton = new("aethergram.message", "Message");
+        public static readonly LocString ThreadEmpty = new("aethergram.threadEmpty", "Say hello");
     }
 
     internal static class Velvet

@@ -71,4 +71,26 @@ internal sealed class KeysClient
     {
         return net.SendJsonForStatusAsync(HttpMethod.Post, $"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request, AethernetJsonContext.Default.AddWrapsRequest, token);
     }
+
+    public Task<MyConversationKeysDto?> GramKeysAsync(CancellationToken token)
+    {
+        return net.GetAsync("/gram/keys", AethernetJsonContext.Default.MyConversationKeysDto, token);
+    }
+
+    public Task<ConversationKeysDto?> GramThreadKeysAsync(string otherId, CancellationToken token)
+    {
+        return net.GetAsync($"/gram/threads/{Uri.EscapeDataString(otherId)}/keys", AethernetJsonContext.Default.ConversationKeysDto, token);
+    }
+
+    public async Task<(bool Ok, int Status)> CreateGramGenerationAsync(string otherId, CreateGenerationRequest request, CancellationToken token)
+    {
+        var status = 0;
+        var ok = await net.SendJsonForStatusAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/keys", request, AethernetJsonContext.Default.CreateGenerationRequest, token, statusCode => status = statusCode).ConfigureAwait(false);
+        return (ok, status);
+    }
+
+    public Task<bool> AddGramWrapsAsync(string otherId, AddWrapsRequest request, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request, AethernetJsonContext.Default.AddWrapsRequest, token);
+    }
 }
