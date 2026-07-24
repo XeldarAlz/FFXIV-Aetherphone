@@ -20,7 +20,7 @@ internal sealed partial class SkywatcherApp
 
     private bool scrubbing;
 
-    private void DrawControl(Rect screen, in SkyPalette palette, float scale)
+    private void DrawControl(in SkyPalette palette, float scale)
     {
         var zoneWeathers = weather.ZoneWeathers();
         if (zoneWeathers.Count == 0)
@@ -31,10 +31,10 @@ internal sealed partial class SkywatcherApp
 
         var ink = control.CanControl ? palette : palette with { Ink = palette.Ink with { W = palette.Ink.W * 0.4f } };
         var width = ImGui.GetContentRegionAvail().X;
-        SectionLabel(Loc.T(L.Skywatcher.Time), ink.InkSoft, scale);
+        SectionLabel(Loc.T(L.Skywatcher.Time), ink, scale);
         DrawTimeCard(width, ink, scale);
-        SectionLabel(Loc.T(L.Skywatcher.Weather), ink.InkSoft, scale);
-        DrawWeatherGrid(width, screen, ink, zoneWeathers, scale);
+        SectionLabel(Loc.T(L.Skywatcher.Weather), ink, scale);
+        DrawWeatherGrid(width, ink, zoneWeathers, scale);
         DrawControlFooter(width, palette, scale);
         ImGui.Dummy(new Vector2(0f, 8f * scale));
     }
@@ -115,17 +115,17 @@ internal sealed partial class SkywatcherApp
         control.SetTime((int)MathF.Round(position * (EorzeaTime.MinutesPerDay - 1)));
     }
 
-    private void DrawWeatherGrid(float width, Rect screen, in SkyPalette palette,
-        IReadOnlyList<WeatherEntry> zoneWeathers, float scale)
+    private void DrawWeatherGrid(float width, in SkyPalette palette, IReadOnlyList<WeatherEntry> zoneWeathers,
+        float scale)
     {
         var origin = ImGui.GetCursorScreenPos();
-        var cellHeight = 78f * scale;
+        var cellHeight = 82f * scale;
         var count = zoneWeathers.Count + 1;
         var rows = (count + WeatherColumns - 1) / WeatherColumns;
-        var height = rows * cellHeight + 10f * scale;
+        var height = rows * cellHeight + 12f * scale;
         var card = new Rect(origin, origin + new Vector2(width, height));
         DrawGlass(card, palette, scale);
-        var inner = card.Inset(5f * scale);
+        var inner = card.Inset(6f * scale);
         var cellWidth = inner.Width / WeatherColumns;
         for (var index = 0; index < count; index++)
         {
@@ -139,7 +139,7 @@ internal sealed partial class SkywatcherApp
                 continue;
             }
 
-            DrawWeatherCell(cell, zoneWeathers[index - 1], screen, palette, scale);
+            DrawWeatherCell(cell, zoneWeathers[index - 1], palette, scale);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -149,28 +149,42 @@ internal sealed partial class SkywatcherApp
     private void DrawNaturalCell(Rect cell, in SkyPalette palette, float scale)
     {
         var active = !control.HasWeatherOverride;
-        var ink = CellHighlight(cell, active, palette, scale);
-        ProgressRing.CenterIcon(new Vector2(cell.Center.X, cell.Min.Y + 26f * scale), FontAwesomeIcon.Redo, ink,
-            19f * scale);
-        Typography.DrawCentered(new Vector2(cell.Center.X, cell.Min.Y + 58f * scale), Loc.T(L.Skywatcher.Natural), ink,
-            TextStyles.Caption1.Scale, active ? FontWeight.SemiBold : FontWeight.Regular);
+        var tile = CellTile(cell, scale);
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = Metrics.Radius.Md * scale;
+        Squircle.FillVerticalGradient(drawList, tile.Min, tile.Max, radius, ImGui.GetColorU32(palette.Top),
+            ImGui.GetColorU32(palette.Bottom));
+        Squircle.Stroke(drawList, tile.Min, tile.Max, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)),
+            1f * scale);
+        ProgressRing.CenterIcon(tile.Center, FontAwesomeIcon.Redo, palette.Ink, 18f * scale);
+        if (active)
+        {
+            RingActive(drawList, tile, palette, scale);
+        }
+
+        Typography.DrawCentered(new Vector2(cell.Center.X, tile.Max.Y + 12f * scale), Loc.T(L.Skywatcher.Natural),
+            active ? palette.Ink : palette.InkSoft, TextStyles.Caption1.Scale,
+            active ? FontWeight.SemiBold : FontWeight.Regular);
         if (UiInteract.HoverClick(cell.Min, cell.Max))
         {
             control.ClearWeather();
         }
     }
 
-    private void DrawWeatherCell(Rect cell, WeatherEntry entry, Rect screen, in SkyPalette palette, float scale)
+    private void DrawWeatherCell(Rect cell, WeatherEntry entry, in SkyPalette palette, float scale)
     {
         var active = control.HasWeatherOverride && control.WeatherOverride == entry.Id;
-        var ink = CellHighlight(cell, active, palette, scale);
-        var kind = WeatherSky.Classify(entry.EnglishKey);
-        var glyphCenter = new Vector2(cell.Center.X, cell.Min.Y + 26f * scale);
-        var glyphPalette = WeatherSky.Resolve(kind, true);
-        WeatherGlyph.Draw(kind, glyphCenter, 16f * scale, glyphPalette, true, SampleSky(palette, screen, glyphCenter.Y));
-        Typography.DrawCentered(new Vector2(cell.Center.X, cell.Min.Y + 58f * scale),
+        var tile = CellTile(cell, scale);
+        var drawList = ImGui.GetWindowDrawList();
+        WeatherCard.Chip(drawList, tile, WeatherSky.Classify(entry.EnglishKey), true, scale);
+        if (active)
+        {
+            RingActive(drawList, tile, palette, scale);
+        }
+
+        Typography.DrawCentered(new Vector2(cell.Center.X, tile.Max.Y + 12f * scale),
             Typography.FitText(entry.Name, cell.Width - 8f * scale, TextStyles.Caption1.Scale,
-                TextStyles.Caption1.Weight), ink, TextStyles.Caption1.Scale,
+                TextStyles.Caption1.Weight), active ? palette.Ink : palette.InkSoft, TextStyles.Caption1.Scale,
             active ? FontWeight.SemiBold : FontWeight.Regular);
         if (UiInteract.HoverClick(cell.Min, cell.Max))
         {
@@ -178,17 +192,22 @@ internal sealed partial class SkywatcherApp
         }
     }
 
-    private static Vector4 CellHighlight(Rect cell, bool active, in SkyPalette palette, float scale)
+    private static Rect CellTile(Rect cell, float scale)
     {
-        if (!active)
-        {
-            return palette.InkSoft;
-        }
+        var tileWidth = MathF.Min(cell.Width - 14f * scale, 74f * scale);
+        var tileHeight = 44f * scale;
+        var top = cell.Min.Y + 4f * scale;
+        return new Rect(new Vector2(cell.Center.X - tileWidth * 0.5f, top),
+            new Vector2(cell.Center.X + tileWidth * 0.5f, top + tileHeight));
+    }
 
-        var pill = cell.Inset(4f * scale);
-        Squircle.Fill(ImGui.GetWindowDrawList(), pill.Min, pill.Max, Metrics.Radius.Md * scale,
-            ImGui.GetColorU32(palette.Ink with { W = 0.16f }));
-        return palette.Ink;
+    private static void RingActive(ImDrawListPtr drawList, Rect tile, in SkyPalette palette, float scale)
+    {
+        var pad = 2.5f * scale;
+        var min = new Vector2(tile.Min.X - pad, tile.Min.Y - pad);
+        var max = new Vector2(tile.Max.X + pad, tile.Max.Y + pad);
+        Squircle.Stroke(drawList, min, max, Metrics.Radius.Md * scale + pad, ImGui.GetColorU32(palette.Ink),
+            2f * scale);
     }
 
     private static bool DrawPill(Rect pill, string label, bool active, in SkyPalette palette, float scale)
@@ -196,7 +215,13 @@ internal sealed partial class SkywatcherApp
         var drawList = ImGui.GetWindowDrawList();
         var rounding = pill.Height * 0.5f;
         drawList.AddRectFilled(pill.Min, pill.Max,
-            ImGui.GetColorU32(palette.Ink with { W = active ? 0.22f : 0.10f }), rounding);
+            ImGui.GetColorU32(palette.Ink with { W = active ? 0.22f : 0.08f }), rounding);
+        if (active)
+        {
+            drawList.AddRect(pill.Min, pill.Max, ImGui.GetColorU32(palette.Ink with { W = 0.24f }), rounding,
+                ImDrawFlags.RoundCornersAll, 1f * scale);
+        }
+
         Typography.DrawCentered(pill.Center, label, active ? palette.Ink : palette.InkSoft, TextStyles.Caption1.Scale,
             active ? FontWeight.SemiBold : FontWeight.Regular);
         return UiInteract.HoverClick(pill.Min, pill.Max);
@@ -210,8 +235,16 @@ internal sealed partial class SkywatcherApp
         var button = new Rect(origin, origin + new Vector2(width, height));
         var live = control.HasOverride;
         var drawList = ImGui.GetWindowDrawList();
-        drawList.AddRectFilled(button.Min, button.Max,
-            ImGui.GetColorU32(palette.Ink with { W = live ? 0.18f : 0.06f }), height * 0.5f);
+        if (live)
+        {
+            WeatherCard.Panel(drawList, button, palette, scale, height * 0.5f);
+        }
+        else
+        {
+            drawList.AddRectFilled(button.Min, button.Max, ImGui.GetColorU32(palette.Ink with { W = 0.06f }),
+                height * 0.5f);
+        }
+
         Typography.DrawCentered(button.Center, Loc.T(L.Skywatcher.Reset), live ? palette.Ink : palette.InkFaint,
             TextStyles.Caption1.Scale, live ? FontWeight.SemiBold : FontWeight.Regular);
         if (live && UiInteract.HoverClick(button.Min, button.Max))
@@ -224,8 +257,11 @@ internal sealed partial class SkywatcherApp
         ImGui.Dummy(new Vector2(0f, 10f * scale));
         var notice = control.CanControl ? Loc.T(L.Skywatcher.LocalOnly) : Loc.T(L.Skywatcher.CombatPaused);
         var noticeOrigin = ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 0f);
-        var noticeHeight = Typography.DrawWrappedLeft(noticeOrigin, notice, palette.InkFaint, TextStyles.Footnote,
-            width - 8f * scale);
+        var noticeShadow = new Vector4(0f, 0f, 0f, palette.LightSky ? 0.12f : 0.30f);
+        Typography.DrawWrappedLeft(noticeOrigin + new Vector2(0f, 1f * scale), notice, noticeShadow,
+            TextStyles.Footnote, width - 8f * scale);
+        var noticeHeight = Typography.DrawWrappedLeft(noticeOrigin, notice, palette.Ink with { W = 0.58f },
+            TextStyles.Footnote, width - 8f * scale);
         ImGui.Dummy(new Vector2(width, noticeHeight));
     }
 
