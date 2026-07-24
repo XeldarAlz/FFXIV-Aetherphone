@@ -1413,6 +1413,8 @@
   "velvet.noPhotosShared": "Пока нет фото.",
   "velvet.noPhotosMine": "Вы ещё не делились фото.",
   "velvet.connectToSeePhotos": "Свяжитесь с {0}, чтобы увидеть фото",
+  "velvet.connectToUnlock.one": "Свяжитесь, чтобы открыть {0} фото",
+  "velvet.connectToUnlock.other": "Свяжитесь, чтобы открыть {0} фото",
   "velvet.introTitle": "Отправить приветствие",
   "velvet.introduceYourselfTo": "Представьтесь: {0}",
   "velvet.yourIntro": "Ваше приветствие",

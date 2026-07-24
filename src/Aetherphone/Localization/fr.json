@@ -1413,6 +1413,8 @@
   "velvet.noPhotosShared": "Aucune photo partagée pour l'instant.",
   "velvet.noPhotosMine": "Tu n'as encore partagé aucune photo.",
   "velvet.connectToSeePhotos": "Connecte-toi avec {0} pour voir ses photos",
+  "velvet.connectToUnlock.one": "Connectez-vous pour débloquer {0} photo",
+  "velvet.connectToUnlock.other": "Connectez-vous pour débloquer {0} photos",
   "velvet.introTitle": "Envoyer une intro",
   "velvet.introduceYourselfTo": "Présente-toi à {0}",
   "velvet.yourIntro": "Ton intro",

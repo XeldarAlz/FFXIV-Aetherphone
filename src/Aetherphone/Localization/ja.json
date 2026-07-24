@@ -1413,6 +1413,8 @@
   "velvet.noPhotosShared": "まだ写真が共有されていません。",
   "velvet.noPhotosMine": "まだ写真を共有していません。",
   "velvet.connectToSeePhotos": "{0}さんとつながると写真を見られます",
+  "velvet.connectToUnlock.one": "つながると{0}枚の写真が見られます",
+  "velvet.connectToUnlock.other": "つながると{0}枚の写真が見られます",
   "velvet.introTitle": "自己紹介を送る",
   "velvet.introduceYourselfTo": "{0}さんに自己紹介しましょう",
   "velvet.yourIntro": "あなたの自己紹介",

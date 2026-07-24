@@ -1764,6 +1764,8 @@ internal static class L
         public static readonly LocString NoPhotosShared = new("velvet.noPhotosShared", "No photos shared yet.");
         public static readonly LocString NoPhotosMine = new("velvet.noPhotosMine", "You have not shared any photos yet.");
         public static readonly LocString ConnectToSeePhotos = new("velvet.connectToSeePhotos", "Connect with {0} to see their photos");
+        public static readonly LocPlural ConnectToUnlock =
+            new("velvet.connectToUnlock", "Connect to unlock {0} photo", "Connect to unlock {0} photos");
         public static readonly LocString IntroTitle = new("velvet.introTitle", "Send an intro");
         public static readonly LocString IntroduceYourselfTo = new("velvet.introduceYourselfTo", "Introduce yourself to {0}");
         public static readonly LocString YourIntro = new("velvet.yourIntro", "Your intro");

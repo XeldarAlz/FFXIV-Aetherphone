@@ -1412,6 +1412,8 @@
   "velvet.noPhotosShared": "No photos shared yet.",
   "velvet.noPhotosMine": "You have not shared any photos yet.",
   "velvet.connectToSeePhotos": "Connect with {0} to see their photos",
+  "velvet.connectToUnlock.one": "Connect to unlock {0} photo",
+  "velvet.connectToUnlock.other": "Connect to unlock {0} photos",
   "velvet.introTitle": "Send an intro",
   "velvet.introduceYourselfTo": "Introduce yourself to {0}",
   "velvet.yourIntro": "Your intro",

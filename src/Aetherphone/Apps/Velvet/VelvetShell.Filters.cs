@@ -28,6 +28,8 @@ internal sealed partial class VelvetShell
     private readonly HashSet<string> filterKinksExclude = new();
     private readonly HashSet<string> filterLimitsInclude = new();
     private readonly HashSet<string> filterLimitsExclude = new();
+    private readonly HashSet<string> filterTagsInclude = new();
+    private readonly HashSet<string> filterTagsExclude = new();
 
     private bool DiscoverFilterActive =>
         filterIntentInclude != 0 || filterIntentExclude != 0
@@ -36,7 +38,8 @@ internal sealed partial class VelvetShell
         || filterRelationshipInclude != 0 || filterRelationshipExclude != 0
         || filterRolesInclude.Count > 0 || filterRolesExclude.Count > 0
         || filterKinksInclude.Count > 0 || filterKinksExclude.Count > 0
-        || filterLimitsInclude.Count > 0 || filterLimitsExclude.Count > 0;
+        || filterLimitsInclude.Count > 0 || filterLimitsExclude.Count > 0
+        || filterTagsInclude.Count > 0 || filterTagsExclude.Count > 0;
 
     private VelvetDiscoverFilter BuildDiscoverFilter() =>
         new(VelvetIntent.Sanitize(filterIntentInclude), VelvetIntent.Sanitize(filterIntentExclude),
@@ -45,7 +48,8 @@ internal sealed partial class VelvetShell
             filterRelationshipInclude, filterRelationshipExclude,
             filterRolesInclude.ToArray(), filterRolesExclude.ToArray(),
             filterKinksInclude.ToArray(), filterKinksExclude.ToArray(),
-            filterLimitsInclude.ToArray(), filterLimitsExclude.ToArray());
+            filterLimitsInclude.ToArray(), filterLimitsExclude.ToArray(),
+            filterTagsInclude.ToArray(), filterTagsExclude.ToArray());
 
     private void ApplyDiscoverFilters() =>
         store.RefreshDiscover(BuildDiscoverFilter(), discoverApplied.Trim(), discoverRegion);
@@ -66,6 +70,8 @@ internal sealed partial class VelvetShell
         filterKinksExclude.Clear();
         filterLimitsInclude.Clear();
         filterLimitsExclude.Clear();
+        filterTagsInclude.Clear();
+        filterTagsExclude.Clear();
         discoverRegion = string.Empty;
     }
 
@@ -134,6 +140,11 @@ internal sealed partial class VelvetShell
             VSectionHeader.Card(FontAwesomeIcon.HandHoldingHeart, Loc.T(L.Velvet.CardRelationship));
             Gap(6f);
             changed |= DrawRelationshipFilterChips();
+            Gap(16f);
+
+            VSectionHeader.Card(FontAwesomeIcon.Hashtag, Loc.T(L.Velvet.CardTags));
+            Gap(6f);
+            changed |= DrawTagsFilterChips();
             Gap(24f);
 
             if (ui.PillButton(Reserve(46f), Loc.T(L.Velvet.FilterDone), true))
@@ -263,6 +274,30 @@ internal sealed partial class VelvetShell
 
         CycleMaskState(ref filterRelationshipInclude, ref filterRelationshipExclude, 1 << statuses[clicked]);
         return true;
+    }
+
+    private bool DrawTagsFilterChips()
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = ImGui.GetContentRegionAvail().X;
+        var categories = VelvetSuggestions.TagCategories;
+        var changed = false;
+        for (var index = 0; index < categories.Length; index++)
+        {
+            var category = categories[index];
+            var headerOrigin = ImGui.GetCursorScreenPos();
+            Typography.Draw(headerOrigin, Loc.Culture.TextInfo.ToUpper(Loc.T(category.Title)),
+                VelvetTheme.Lerp(category.Hue, VelvetTheme.OnAccent, 0.30f), TextStyles.SubheadlineEmphasized);
+            ImGui.SetCursorScreenPos(headerOrigin);
+            ImGui.Dummy(new Vector2(width, 24f * scale));
+            changed |= DrawTriStateTokenChips(category.Tags, category.Hue, filterTagsInclude, filterTagsExclude);
+            if (index < categories.Length - 1)
+            {
+                Gap(12f);
+            }
+        }
+
+        return changed;
     }
 
     private bool DrawTriStateTokenChips(string[] options, Vector4 accent, HashSet<string> include,

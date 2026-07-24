@@ -1413,6 +1413,8 @@
   "velvet.noPhotosShared": "Aún no ha compartido fotos.",
   "velvet.noPhotosMine": "Aún no has compartido ninguna foto.",
   "velvet.connectToSeePhotos": "Conecta con {0} para ver sus fotos",
+  "velvet.connectToUnlock.one": "Conecta para desbloquear {0} foto",
+  "velvet.connectToUnlock.other": "Conecta para desbloquear {0} fotos",
   "velvet.introTitle": "Enviar una presentación",
   "velvet.introduceYourselfTo": "Preséntate a {0}",
   "velvet.yourIntro": "Tu presentación",

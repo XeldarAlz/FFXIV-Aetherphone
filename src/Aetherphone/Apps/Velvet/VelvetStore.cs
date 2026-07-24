@@ -50,6 +50,12 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile VelvetProfileDto? profileUser;
     private volatile bool profileLoading;
     private volatile bool profileFailed;
+    private volatile string? userPostsUserId;
+    private volatile VelvetPostDto[] userPosts = Array.Empty<VelvetPostDto>();
+    private volatile int userPostsTotal;
+    private volatile bool userPostsLoading;
+    private volatile bool userPostsLoaded;
+    private volatile bool userPostsFailed;
     private volatile string? detailPostId;
     private volatile VelvetCommentDto[] detailComments = Array.Empty<VelvetCommentDto>();
     private volatile bool loadingComments;
@@ -111,6 +117,11 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public VelvetProfileDto? ProfileUser => profileUser;
     public bool ProfileLoading => profileLoading;
     public bool ProfileFailed => profileFailed;
+    public string? UserPostsUserId => userPostsUserId;
+    public VelvetPostDto[] UserPosts => userPosts;
+    public int UserPostsTotal => userPostsTotal;
+    public bool UserPostsLoaded => userPostsLoaded;
+    public bool UserPostsFailed => userPostsFailed;
     public VelvetThreadDto[] Threads => ThreadListItems;
     public bool LoadingThreads => LoadingThreadList;
     public bool ThreadsLoaded => ThreadListLoaded;
@@ -572,7 +583,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         });
     }
 
-    public void Heartbeat()
+    public void Heartbeat(string region)
     {
         if (!session.IsSignedIn)
         {
@@ -580,7 +591,45 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         }
 
         var offset = SocialTimeZone.EffectiveOffsetMinutes(configuration);
-        work.Run("heartbeat", async token => await client.HeartbeatAsync(offset, token).ConfigureAwait(false));
+        work.Run("heartbeat", async token => await client.HeartbeatAsync(offset, region, token).ConfigureAwait(false));
+    }
+
+    public void EnsureUserPosts(string userId)
+    {
+        if (!session.IsSignedIn)
+        {
+            return;
+        }
+
+        if (userPostsUserId == userId && (userPostsLoaded || userPostsLoading))
+        {
+            return;
+        }
+
+        userPostsUserId = userId;
+        userPosts = Array.Empty<VelvetPostDto>();
+        userPostsTotal = 0;
+        userPostsLoaded = false;
+        userPostsFailed = false;
+        userPostsLoading = true;
+        work.Run("user posts", async token =>
+        {
+            var page = await client.UserPostsAsync(userId, token).ConfigureAwait(false);
+            if (userPostsUserId != userId)
+            {
+                return;
+            }
+
+            if (page is null)
+            {
+                userPostsFailed = true;
+                return;
+            }
+
+            userPosts = page.Items;
+            userPostsTotal = page.TotalCount;
+            userPostsLoaded = true;
+        }, () => userPostsLoading = false);
     }
 
     public void RefreshRequests()

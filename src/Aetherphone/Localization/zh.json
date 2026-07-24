@@ -1413,6 +1413,8 @@
   "velvet.noPhotosShared": "还没有分享任何照片。",
   "velvet.noPhotosMine": "你还没有分享任何照片。",
   "velvet.connectToSeePhotos": "与 {0} 建立联系后即可查看照片",
+  "velvet.connectToUnlock.one": "建立联系即可解锁{0}张照片",
+  "velvet.connectToUnlock.other": "建立联系即可解锁{0}张照片",
   "velvet.introTitle": "发送介绍",
   "velvet.introduceYourselfTo": "向 {0} 介绍你自己",
   "velvet.yourIntro": "你的介绍",

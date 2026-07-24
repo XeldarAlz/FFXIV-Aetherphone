@@ -89,7 +89,7 @@ internal sealed partial class VelvetShell
             }
 
             lineTop += nameSize.Y + 4f * scale;
-            var region = RegionOf(user.World);
+            var region = RegionCodeOf(user);
             var meta = SocialIdentity.ProfileMeta(user.Handle, region);
             if (user.Pronouns.Length > 0)
             {
@@ -263,31 +263,47 @@ internal sealed partial class VelvetShell
     private void DrawGallery(VelvetProfileDto user, bool isMe, bool connected)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        if (!store.FeedLoaded && !store.LoadingFeed)
+        store.EnsureUserPosts(user.UserId);
+        var serverGallery = store.UserPostsUserId == user.UserId && store.UserPostsLoaded;
+        List<VelvetPostDto> owned;
+        int totalCount;
+        if (serverGallery)
         {
-            store.RefreshFeed();
+            var posts = store.UserPosts;
+            owned = new List<VelvetPostDto>(posts.Length);
+            owned.AddRange(posts);
+            totalCount = store.UserPostsTotal;
         }
-
-        var feed = store.Feed;
-        var owned = new List<VelvetPostDto>();
-        for (var index = 0; index < feed.Length; index++)
+        else
         {
-            if (feed[index].OwnerId == user.UserId)
+            if (!store.FeedLoaded && !store.LoadingFeed)
             {
-                owned.Add(feed[index]);
+                store.RefreshFeed();
             }
+
+            var feed = store.Feed;
+            owned = new List<VelvetPostDto>();
+            for (var index = 0; index < feed.Length; index++)
+            {
+                if (feed[index].OwnerId == user.UserId)
+                {
+                    owned.Add(feed[index]);
+                }
+            }
+
+            totalCount = owned.Count;
         }
 
         var width = ScrollLayout.StableContentWidth();
         VSectionHeader.Bar(isMe ? Loc.T(L.Velvet.MyPhotos) : Loc.T(L.Velvet.Photos),
-            owned.Count > 0 ? owned.Count.ToString(Loc.Culture) : string.Empty);
+            totalCount > 0 ? totalCount.ToString(Loc.Culture) : string.Empty);
         Gap(6f);
 
         if (owned.Count == 0)
         {
             if (!isMe && !connected)
             {
-                DrawLockedGallery(DisplayNameOf(user.DisplayName, user.Handle), width);
+                DrawLockedGallery(DisplayNameOf(user.DisplayName, user.Handle), width, totalCount);
             }
             else
             {
@@ -330,7 +346,7 @@ internal sealed partial class VelvetShell
         ImGui.Dummy(new Vector2(width, gridHeight));
     }
 
-    private void DrawLockedGallery(string name, float width)
+    private void DrawLockedGallery(string name, float width, int totalCount)
     {
         var scale = ImGuiHelpers.GlobalScale;
         const int columns = 3;
@@ -348,8 +364,11 @@ internal sealed partial class VelvetShell
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cell));
         Gap(12f);
+        var teaser = totalCount > 0
+            ? Loc.Plural(L.Velvet.ConnectToUnlock, totalCount)
+            : Loc.T(L.Velvet.ConnectToSeePhotos, name);
         Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, ImGui.GetCursorScreenPos().Y),
-            Loc.T(L.Velvet.ConnectToSeePhotos, name), VelvetTheme.RoseInk, TextStyles.Callout, width - 40f * scale);
+            teaser, VelvetTheme.RoseInk, TextStyles.Callout, width - 40f * scale);
         Gap(30f);
     }
 

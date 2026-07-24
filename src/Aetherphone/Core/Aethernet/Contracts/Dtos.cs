@@ -224,7 +224,8 @@ internal sealed record VelvetProfileDto(
     int? UtcOffsetMinutes = null,
     int WhoCanMessage = 0,
     int Sexuality = 0,
-    string[]? Kinks = null);
+    string[]? Kinks = null,
+    string Region = "");
 
 internal sealed record UpdateVelvetProfileRequest(
     string? Intro,
@@ -265,6 +266,8 @@ internal sealed record VelvetPostDto(
     MentionDto[]? Mentions = null) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
+
+internal sealed record VelvetUserPostsPage(VelvetPostDto[] Items, int TotalCount, string? NextCursor);
 
 internal sealed record CreateVelvetPostRequest(
     string MediaKey,

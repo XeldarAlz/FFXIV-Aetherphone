@@ -22,6 +22,7 @@ internal sealed partial class VelvetShell
     private const int RoleChipKind = 5;
     private const int KinkChipKind = 6;
     private const int LimitChipKind = 7;
+    private const int TagChipKind = 8;
     private const int RegionFilterFill = 8;
 
     private static readonly Func<int, string> GenderLabelOf = VelvetGender.Label;
@@ -229,6 +230,12 @@ internal sealed partial class VelvetShell
             KinkViolet);
         AddTokenFilterChips(LimitChipKind, VelvetSuggestions.Limits, filterLimitsInclude, filterLimitsExclude,
             VelvetTheme.Gold);
+        var tagCategories = VelvetSuggestions.TagCategories;
+        for (var index = 0; index < tagCategories.Length; index++)
+        {
+            AddTokenFilterChips(TagChipKind, tagCategories[index].Tags, filterTagsInclude, filterTagsExclude,
+                tagCategories[index].Hue);
+        }
 
         Gap(4f);
         var removed = VChipFlow.Draw(System.Runtime.InteropServices.CollectionsMarshal.AsSpan(activeFilterChips),
@@ -352,6 +359,9 @@ internal sealed partial class VelvetShell
             case LimitChipKind:
                 (excluded ? filterLimitsExclude : filterLimitsInclude).Remove(token);
                 break;
+            case TagChipKind:
+                (excluded ? filterTagsExclude : filterTagsInclude).Remove(token);
+                break;
         }
     }
 
@@ -360,7 +370,7 @@ internal sealed partial class VelvetShell
         var scale = ImGuiHelpers.GlobalScale;
         var width = ScrollLayout.StableContentWidth();
         var name = DisplayNameOf(profile.DisplayName, profile.Handle);
-        var region = RegionOf(profile.World);
+        var region = RegionCodeOf(profile);
         var pad = 14f * scale;
 
         var coverUrl = string.Empty;
@@ -590,7 +600,7 @@ internal sealed partial class VelvetShell
         var count = 0;
         for (var index = 0; index < source.Length; index++)
         {
-            if (string.Equals(RegionOf(source[index].World), discoverRegion, StringComparison.Ordinal))
+            if (string.Equals(RegionCodeOf(source[index]), discoverRegion, StringComparison.Ordinal))
             {
                 count++;
             }
@@ -605,7 +615,7 @@ internal sealed partial class VelvetShell
         var cursor = 0;
         for (var index = 0; index < source.Length; index++)
         {
-            if (string.Equals(RegionOf(source[index].World), discoverRegion, StringComparison.Ordinal))
+            if (string.Equals(RegionCodeOf(source[index]), discoverRegion, StringComparison.Ordinal))
             {
                 filtered[cursor++] = source[index];
             }
@@ -624,6 +634,9 @@ internal sealed partial class VelvetShell
         var region = gameData.RegionCodeForWorld(world);
         return region ?? string.Empty;
     }
+
+    private string RegionCodeOf(VelvetProfileDto profile) =>
+        profile.Region.Length > 0 ? profile.Region : RegionOf(profile.World);
 
     private static string DisplayNameOf(string displayName, string handle) =>
         string.IsNullOrWhiteSpace(displayName) ? "@" + handle : displayName;
