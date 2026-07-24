@@ -89,7 +89,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         var scale = ImGuiHelpers.GlobalScale;
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
-        router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        router.Draw(screen, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }
 
     private void DrawView(PhotoView view, Rect area, int depth)
@@ -100,14 +100,25 @@ internal sealed partial class PhotosApp : IPhoneApp
             return;
         }
 
-        ui.Body(area);
+        var content = ContentWithin(area);
+        ui.Body(content);
         if (view.Route == PhotoRoute.Album)
         {
-            DrawAlbum(area, view.AlbumKey);
+            DrawAlbum(content, view.AlbumKey);
             return;
         }
 
-        DrawRoot(area);
+        DrawRoot(content);
+    }
+
+    private Rect ContentWithin(Rect screen)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var min = new Vector2(screen.Min.X + frameTheme.SidePadding * scale,
+            screen.Min.Y + frameTheme.TopZoneHeight * scale);
+        var max = new Vector2(screen.Max.X - frameTheme.SidePadding * scale,
+            screen.Max.Y - frameTheme.BottomZoneHeight * scale);
+        return new Rect(min, max);
     }
 
     private void DrawNavBar(Rect area, string title, Action? onBack)
