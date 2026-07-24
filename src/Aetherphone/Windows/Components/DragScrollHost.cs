@@ -7,32 +7,76 @@ namespace Aetherphone.Windows.Components;
 /// <summary>Adds phone-style drag-to-scroll and momentum to an ImGui scroll child.</summary>
 internal static class DragScrollHost
 {
-    private sealed class Region
+    internal sealed class Region
     {
         public readonly KineticScroller Scroller = new();
         public int LastFrame = -2;
         public bool Pressed;
+
+        public void Reset()
+        {
+            Scroller.Reset();
+            Pressed = false;
+        }
+    }
+
+    /// <summary>A scroll region begun this frame: its gesture state and top-snap control.</summary>
+    public readonly struct Surface
+    {
+        private readonly Region? region;
+
+        internal Surface(Region? region, float pull, bool dragging)
+        {
+            this.region = region;
+            Pull = pull;
+            Dragging = dragging;
+        }
+
+        /// <summary>How far the region is pulled past its top edge, in pixels.</summary>
+        public float Pull { get; }
+
+        /// <summary>Whether the pointer is dragging this region right now.</summary>
+        public bool Dragging { get; }
+
+        /// <summary>Snaps the region back to the top, dropping any drag, momentum, or pull.</summary>
+        public void JumpToTop()
+        {
+            ImGui.SetScrollY(0f);
+            region?.Reset();
+        }
     }
 
     private const int EvictAfterFrames = 240;
 
     private static readonly Dictionary<uint, Region> Regions = new();
     private static readonly List<uint> stale = new();
-    private static Region? current;
-    private static float currentPull;
-    private static bool currentDragging;
-
-    public static float CurrentPull => currentPull;
-    public static bool CurrentDragging => currentDragging;
 
     /// <summary>Whether drag-to-scroll is live; set per-frame to the phone's lock state.</summary>
     public static bool Enabled { get; set; } = true;
+
+    /// <summary>Whether any live region is mid-drag; readable before this frame's regions have begun.</summary>
+    public static bool AnyDragging
+    {
+        get
+        {
+            var frame = ImGui.GetFrameCount();
+            foreach (var region in Regions.Values)
+            {
+                if (frame - region.LastFrame <= 1 && region.Scroller.IsDragging)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+    }
 
     /// <summary>Hides the ImGui scrollbar on a scroll child while drag-to-scroll is live; keeps it when unlocked.</summary>
     public static ImGuiWindowFlags ScrollFlags(ImGuiWindowFlags baseFlags) =>
         Enabled ? baseFlags | ImGuiWindowFlags.NoScrollbar : baseFlags;
 
-    public static void Begin(uint key)
+    public static Surface Begin(uint key)
     {
         var frame = ImGui.GetFrameCount();
         EvictStale(frame);
@@ -44,15 +88,13 @@ internal static class DragScrollHost
 
         var gapped = region.LastFrame != frame - 1;
         region.LastFrame = frame;
-        current = region;
 
         var scroller = region.Scroller;
         scroller.Scale = ImGuiHelpers.GlobalScale;
         scroller.SetBounds(ImGui.GetScrollMaxY());
         if (gapped)
         {
-            scroller.Reset();
-            region.Pressed = false;
+            region.Reset();
             UiInteract.CancelPendingTap();
         }
 
@@ -62,13 +104,10 @@ internal static class DragScrollHost
         {
             if (region.Pressed || scroller.IsControlling)
             {
-                scroller.Reset();
-                region.Pressed = false;
+                region.Reset();
             }
 
-            currentPull = 0f;
-            currentDragging = false;
-            return;
+            return new Surface(region, 0f, false);
         }
 
         var io = ImGui.GetIO();
@@ -135,22 +174,7 @@ internal static class DragScrollHost
             ImGui.Dummy(new Vector2(0f, scroller.PullDistance));
         }
 
-        currentPull = scroller.PullDistance;
-        currentDragging = scroller.IsDragging;
-    }
-
-    /// <summary>Snaps the surface opened this frame back to the top, dropping any drag, momentum, or pull.</summary>
-    public static void JumpToTop()
-    {
-        ImGui.SetScrollY(0f);
-        if (current is not null)
-        {
-            current.Scroller.Reset();
-            current.Pressed = false;
-        }
-
-        currentPull = 0f;
-        currentDragging = false;
+        return new Surface(region, scroller.PullDistance, scroller.IsDragging);
     }
 
     private static void EvictStale(int frame)

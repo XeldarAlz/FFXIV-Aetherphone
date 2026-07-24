@@ -32,14 +32,13 @@ internal sealed partial class AethergramApp
         {
             for (var index = 0; index < posts.Length; index++)
             {
-                using (ImRaii.PushId(index))
+                ImGui.Dummy(new Vector2(cell, cell));
+                var min = ImGui.GetItemRectMin();
+                var max = ImGui.GetItemRectMax();
+                DrawGridThumbnail(posts[index], min, max);
+                if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                 {
-                    var clicked = ImGui.InvisibleButton("gram", new Vector2(cell, cell));
-                    DrawGridThumbnail(posts[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
-                    if (clicked)
-                    {
-                        OpenDetail(posts[index]);
-                    }
+                    OpenDetail(posts[index]);
                 }
 
                 if (index % GridColumns != GridColumns - 1)

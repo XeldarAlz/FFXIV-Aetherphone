@@ -114,11 +114,11 @@ internal sealed class NewsApp : IPhoneApp
         }
 
         ui.Body(body);
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
             if (resetScroll)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 resetScroll = false;
             }
 

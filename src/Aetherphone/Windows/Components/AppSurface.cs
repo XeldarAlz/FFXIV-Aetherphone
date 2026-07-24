@@ -15,20 +15,30 @@ internal static class AppSurface
         var padding = ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, new Vector2(16f * scale, 8f * scale));
         var child = ImRaii.Child("##appSurface", area.Size, false,
             DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground));
-        DragScrollHost.Begin(key);
-        return new SurfaceScope(child, padding);
+        return new SurfaceScope(child, padding, DragScrollHost.Begin(key));
     }
 
     public ref struct SurfaceScope
     {
         private ImRaii.ChildDisposable child;
         private readonly IDisposable padding;
+        private readonly DragScrollHost.Surface surface;
 
-        internal SurfaceScope(ImRaii.ChildDisposable child, IDisposable padding)
+        internal SurfaceScope(ImRaii.ChildDisposable child, IDisposable padding, DragScrollHost.Surface surface)
         {
             this.child = child;
             this.padding = padding;
+            this.surface = surface;
         }
+
+        /// <summary>How far this surface is pulled past its top edge, in pixels.</summary>
+        public readonly float Pull => surface.Pull;
+
+        /// <summary>Whether the pointer is dragging this surface right now.</summary>
+        public readonly bool Dragging => surface.Dragging;
+
+        /// <summary>Snaps this surface back to the top, dropping any drag, momentum, or pull.</summary>
+        public readonly void JumpToTop() => surface.JumpToTop();
 
         public void Dispose()
         {

@@ -302,15 +302,15 @@ internal sealed partial class ChirperApp : IPhoneApp
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
     {
         var snapshot = store.Feed(scope);
-        using (AppSurface.Begin(listRect))
+        using (var surface = AppSurface.Begin(listRect))
         {
             if (feedScrollTopPending)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 feedScrollTopPending = false;
             }
 
-            pullToRefresh[scope].Draw(listRect, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
+            pullToRefresh[scope].Draw(listRect, surface.Pull, surface.Dragging,
                 store.IsLoading(scope), AppPalettes.Chirper.MutedInk, () => RefreshFeed(scope));
 
             if (snapshot.Length == 0)

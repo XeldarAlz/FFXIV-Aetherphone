@@ -316,14 +316,13 @@ internal sealed class FeedbackApp : IPhoneApp
             {
                 for (var index = 0; index < pickerPaths.Length; index++)
                 {
-                    using (ImRaii.PushId(index))
+                    ImGui.Dummy(new Vector2(cell, cell));
+                    var min = ImGui.GetItemRectMin();
+                    var max = ImGui.GetItemRectMax();
+                    DrawLocalThumbnail(pickerPaths[index], min, max, scale);
+                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                     {
-                        var clicked = ImGui.InvisibleButton("pick", new Vector2(cell, cell));
-                        DrawLocalThumbnail(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
-                        if (clicked)
-                        {
-                            AddAttachment(pickerPaths[index]);
-                        }
+                        AddAttachment(pickerPaths[index]);
                     }
 
                     if (index % PickerColumns != PickerColumns - 1)

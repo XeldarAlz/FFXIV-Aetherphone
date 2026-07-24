@@ -103,10 +103,10 @@ internal sealed partial class PhotosApp
                 return;
             }
 
-            DragScrollHost.Begin(gridKey);
+            var surface = DragScrollHost.Begin(gridKey);
             if (resetScroll)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 resetScroll = false;
             }
 
@@ -245,10 +245,10 @@ internal sealed partial class PhotosApp
                 return;
             }
 
-            DragScrollHost.Begin(albumsKey);
+            var surface = DragScrollHost.Begin(albumsKey);
             if (resetScroll)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 resetScroll = false;
             }
 

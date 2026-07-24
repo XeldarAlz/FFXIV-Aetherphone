@@ -24,15 +24,15 @@ internal sealed partial class VelvetShell
             store.RefreshFeed();
         }
 
-        using (AppSurface.Begin(area))
+        using (var surface = AppSurface.Begin(area))
         {
             if (feedScrollTopPending)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 feedScrollTopPending = false;
             }
 
-            pullToRefresh.Draw(area, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
+            pullToRefresh.Draw(area, surface.Pull, surface.Dragging,
                 store.LoadingFeed, VelvetTheme.MutedInk, RefreshFeedContent);
 
             stories.DrawTray(theme);

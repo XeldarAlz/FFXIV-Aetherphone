@@ -216,21 +216,18 @@ internal sealed class PhotoComposeSession
         {
             for (var index = 0; index < pickerPaths.Length; index++)
             {
-                using (ImRaii.PushId(index))
+                ImGui.Dummy(new Vector2(cell, cell));
+                var min = ImGui.GetItemRectMin();
+                var max = ImGui.GetItemRectMax();
+                DrawLocalThumbnail(pickerPaths[index], min, max, scale, style.PlaceholderFill);
+                if (showBadges)
                 {
-                    var clicked = ImGui.InvisibleButton("pick", new Vector2(cell, cell));
-                    DrawLocalThumbnail(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale,
-                        style.PlaceholderFill);
-                    if (showBadges)
-                    {
-                        DrawPickBadge(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale,
-                            style.Accent);
-                    }
+                    DrawPickBadge(pickerPaths[index], min, max, scale, style.Accent);
+                }
 
-                    if (clicked)
-                    {
-                        TakePicked(pickerPaths[index]);
-                    }
+                if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
+                {
+                    TakePicked(pickerPaths[index]);
                 }
 
                 if (index % GridColumns != GridColumns - 1)

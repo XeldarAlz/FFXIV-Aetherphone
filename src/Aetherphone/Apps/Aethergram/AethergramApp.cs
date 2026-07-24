@@ -507,15 +507,15 @@ internal sealed partial class AethergramApp : IPhoneApp
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)
     {
         var snapshot = store.Feed(scope);
-        using (AppSurface.Begin(listRect))
+        using (var surface = AppSurface.Begin(listRect))
         {
             if (feedScrollTopPending)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 feedScrollTopPending = false;
             }
 
-            pullToRefresh[scope].Draw(listRect, DragScrollHost.CurrentPull, DragScrollHost.CurrentDragging,
+            pullToRefresh[scope].Draw(listRect, surface.Pull, surface.Dragging,
                 store.IsLoading(scope), AppPalettes.Aethergram.MutedInk, () => RefreshFeed(scope));
             stories.DrawTray(theme);
             if (snapshot.Length == 0)
@@ -781,7 +781,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             return;
         }
 
-        if (DragScrollHost.CurrentDragging)
+        if (DragScrollHost.AnyDragging)
         {
             pendingViewUrl = null;
             return;

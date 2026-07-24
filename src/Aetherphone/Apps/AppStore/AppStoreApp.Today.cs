@@ -19,11 +19,11 @@ internal sealed partial class AppStoreApp
         DrawLargeTitle(area, Loc.T(L.Store.Today),
             Loc.Culture.TextInfo.ToUpper(today.ToString("dddd d MMMM", Loc.Culture)));
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + HeaderHeight * scale), area.Max);
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
             if (resetScroll)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 resetScroll = false;
             }
 

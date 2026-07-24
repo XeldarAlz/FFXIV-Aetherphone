@@ -252,11 +252,11 @@ internal sealed partial class CollectionsApp
         page = Math.Clamp(page, 0, totalPages - 1);
         var start = page * PageSize;
         var end = Math.Min(start + PageSize, total);
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
             if (resetScroll)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 resetScroll = false;
             }
 

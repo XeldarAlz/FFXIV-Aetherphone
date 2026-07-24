@@ -182,10 +182,10 @@ internal sealed class EmojiPicker
                 return null;
             }
 
-            DragScrollHost.Begin(gridKey);
+            var surface = DragScrollHost.Begin(gridKey);
             if (resetScroll)
             {
-                DragScrollHost.JumpToTop();
+                surface.JumpToTop();
                 resetScroll = false;
             }
 

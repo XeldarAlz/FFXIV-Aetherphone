@@ -6,11 +6,13 @@ namespace Aetherphone.Windows.Components;
 internal static class UiInteract
 {
     private const int OverlayReservationLifetimeFrames = 1;
+    private const float RectMatchEpsilon = 0.5f;
 
     private static int blockedFrame = -1;
     private static Rect overlayRect;
     private static int overlayFrame = -1;
-    private static Vector2 pendingTapPos;
+    private static Vector2 pendingTapMin;
+    private static Vector2 pendingTapMax;
     private static bool hasPendingTap;
 
     public static void BlockThisFrame() => blockedFrame = ImGui.GetFrameCount();
@@ -39,6 +41,12 @@ internal static class UiInteract
     /// cancel the pending tap before it fires. Pass the same rect <paramref name="hovered"/> was
     /// computed from.
     /// </summary>
+    /// <remarks>
+    /// The press is claimed by the rect itself, held in the window's content space so that scrolling
+    /// or a fling between press and release cannot hand the tap to whichever rect drifted under the
+    /// pointer. When rects overlap, the last one to claim on the press frame owns it, matching the
+    /// draw order that put it on top.
+    /// </remarks>
     public static bool Click(Vector2 min, Vector2 max, bool hovered)
     {
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) && !ImGui.IsMouseReleased(ImGuiMouseButton.Left))
@@ -46,9 +54,12 @@ internal static class UiInteract
             hasPendingTap = false;
         }
 
+        var contentMin = ToContentSpace(min);
+        var contentMax = ToContentSpace(max);
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
-            pendingTapPos = ImGui.GetMousePos();
+            pendingTapMin = contentMin;
+            pendingTapMax = contentMax;
             hasPendingTap = true;
         }
 
@@ -57,10 +68,7 @@ internal static class UiInteract
             return false;
         }
 
-        var activated = hovered &&
-            pendingTapPos.X >= min.X && pendingTapPos.X <= max.X &&
-            pendingTapPos.Y >= min.Y && pendingTapPos.Y <= max.Y;
-
+        var activated = hovered && Claimed(contentMin, pendingTapMin) && Claimed(contentMax, pendingTapMax);
         if (activated)
         {
             hasPendingTap = false;
@@ -68,6 +76,12 @@ internal static class UiInteract
 
         return activated;
     }
+
+    private static Vector2 ToContentSpace(Vector2 screen) =>
+        screen - ImGui.GetWindowPos() + new Vector2(ImGui.GetScrollX(), ImGui.GetScrollY());
+
+    private static bool Claimed(Vector2 corner, Vector2 claim) =>
+        MathF.Abs(corner.X - claim.X) <= RectMatchEpsilon && MathF.Abs(corner.Y - claim.Y) <= RectMatchEpsilon;
 
     /// <summary>
     /// <see cref="Click(Vector2, Vector2, bool)"/> gated by the standard <see cref="Hover"/> test.
