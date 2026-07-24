@@ -26,6 +26,7 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Core.Wallpapers;
+using Aetherphone.Core.YellowPages;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using YoutubeExplode;
@@ -84,6 +85,8 @@ internal sealed class PhoneServices : IDisposable
     public required VenuesService Venues { get; init; }
     public required MusterStore Musters { get; init; }
     public required MusterLauncher MusterLauncher { get; init; }
+    public required YellowPagesStore YellowPages { get; init; }
+    public required YellowPagesLauncher YellowPagesLauncher { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
     public required ActivityTracker Activity { get; init; }
@@ -182,6 +185,8 @@ internal sealed class PhoneServices : IDisposable
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm);
         var musters = new MusterStore(aethernetSession, aethernet.Musters, notifications, configuration,
             visibility, realtimeSignals);
+        var yellowPages = new YellowPagesStore(aethernetSession, aethernet.Ads, notifications, configuration,
+            visibility, realtimeSignals);
         return new PhoneServices
         {
             Configuration = configuration,
@@ -233,6 +238,8 @@ internal sealed class PhoneServices : IDisposable
             Venues = venues,
             Musters = musters,
             MusterLauncher = new MusterLauncher(),
+            YellowPages = yellowPages,
+            YellowPagesLauncher = new YellowPagesLauncher(),
             Collections = collections,
             InventoryCapture = inventoryCapture,
             Activity = activity,
@@ -263,6 +270,7 @@ internal sealed class PhoneServices : IDisposable
         Activity.Dispose();
         Venues.Dispose();
         Musters.Dispose();
+        YellowPages.Dispose();
         SongPlayer.Dispose();
         SongSearch.Dispose();
         RadioPlayer.Dispose();

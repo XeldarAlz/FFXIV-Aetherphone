@@ -190,6 +190,24 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    public static readonly AppPalette YellowPages = new()
+    {
+        Accent = AppAccents.For("yellowpages"),
+        TitleInk = new(0.99f, 0.97f, 0.92f, 1f),
+        BodyInk = new(0.96f, 0.92f, 0.82f, 0.96f),
+        MutedInk = new(0.82f, 0.75f, 0.60f, 0.85f),
+        HeaderInk = new(0.99f, 0.86f, 0.48f, 0.95f),
+        HeadingInk = new(0.99f, 0.95f, 0.85f, 1f),
+        BackdropTop = new(0.15f, 0.11f, 0.03f, 1f),
+        BackdropBottom = new(0.05f, 0.04f, 0.01f, 1f),
+        BloomTop = new(0.91f, 0.68f, 0.15f, 0.22f),
+        BloomBottom = new(0.48f, 0.32f, 0.05f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static readonly AppPalette Feedback = new()
     {
         Accent = AppAccents.For("feedback"),

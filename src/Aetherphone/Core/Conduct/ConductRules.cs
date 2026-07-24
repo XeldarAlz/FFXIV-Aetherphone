@@ -92,7 +92,22 @@ internal static class ConductRules
             new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null, L.Conduct.MusterNotAllowed)),
     };
 
-    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet, Muster };
+    public static readonly ConductGate YellowPages = new()
+    {
+        AppId = "yellowpages",
+        Version = 1,
+        CountdownSeconds = 30f,
+        Icon = FontAwesomeIcon.AddressBook,
+        Title = L.Conduct.YellowPagesTitle,
+        Intro = L.Conduct.YellowPagesIntro,
+        Sections = WithPlatform(
+            new ConductSection(ConductTone.Encouraged, L.Conduct.SectionEncouraged, null,
+                L.Conduct.YellowPagesEncouraged),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null,
+                L.Conduct.YellowPagesNotAllowed)),
+    };
+
+    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet, Muster, YellowPages };
 
     public static ConductGate? For(string appId)
     {

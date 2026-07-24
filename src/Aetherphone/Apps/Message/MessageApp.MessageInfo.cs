@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Muster;
+using Aetherphone.Core.YellowPages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -82,6 +83,10 @@ internal sealed partial class MessageApp
         else if (MusterShare.IsToken(message.Body))
         {
             text = Loc.T(L.Muster.InvitePreview);
+        }
+        else if (AdShare.IsToken(message.Body))
+        {
+            text = Loc.T(L.YellowPages.AdPreview);
         }
         else
         {

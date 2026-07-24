@@ -1,6 +1,7 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Muster;
+using Aetherphone.Core.YellowPages;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -12,6 +13,7 @@ internal sealed class NotificationRouter
     private const string ChirperAppId = "chirper";
     private const string AethergramAppId = "aethergram";
     private const string MusterAppId = "muster";
+    private const string YellowPagesAppId = "yellowpages";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -33,10 +35,11 @@ internal sealed class NotificationRouter
     private readonly GramDmLauncher gramDmLauncher;
     private readonly SocialLauncher socialLauncher;
     private readonly MusterLauncher musterLauncher;
+    private readonly YellowPagesLauncher yellowPagesLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
         VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher,
-        MusterLauncher musterLauncher)
+        MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher)
     {
         this.navigation = navigation;
         this.notifications = notifications;
@@ -46,6 +49,7 @@ internal sealed class NotificationRouter
         this.gramDmLauncher = gramDmLauncher;
         this.socialLauncher = socialLauncher;
         this.musterLauncher = musterLauncher;
+        this.yellowPagesLauncher = yellowPagesLauncher;
     }
 
     public void Open(PhoneNotification notification)
@@ -85,6 +89,10 @@ internal sealed class NotificationRouter
         else if (notification.AppId == MusterAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {
             musterLauncher.RequestDetail(notification.GroupKey);
+        }
+        else if (notification.AppId == YellowPagesAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            yellowPagesLauncher.RequestDetail(notification.GroupKey);
         }
         else if (SocialLinkFor(notification) is { } link)
         {

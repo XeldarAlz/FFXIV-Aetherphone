@@ -1,6 +1,7 @@
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Muster;
+using Aetherphone.Core.YellowPages;
 
 namespace Aetherphone.Windows.Components;
 
@@ -15,6 +16,8 @@ internal static class ChatText
     public const int LocationKind = 6;
 
     public const int MusterKind = 7;
+
+    public const int AdKind = 8;
 
     public static string QuotePreview(string? body, int kind)
     {
@@ -49,6 +52,11 @@ internal static class ChatText
             return Loc.T(L.Muster.InvitePreview);
         }
 
+        if (kind == AdKind || AdShare.IsToken(text))
+        {
+            return Loc.T(L.YellowPages.AdPreview);
+        }
+
         return UiText.Truncate(text.Replace('\n', ' ').Replace('\r', ' '), PreviewLength);
     }
 
@@ -64,7 +72,12 @@ internal static class ChatText
             return LocationKind;
         }
 
-        return MusterShare.IsToken(body) ? MusterKind : kind;
+        if (MusterShare.IsToken(body))
+        {
+            return MusterKind;
+        }
+
+        return AdShare.IsToken(body) ? AdKind : kind;
     }
 
     public static string ListPreview(string? text)
@@ -77,6 +90,11 @@ internal static class ChatText
         if (MusterShare.IsToken(text))
         {
             return Loc.T(L.Muster.InvitePreview);
+        }
+
+        if (AdShare.IsToken(text))
+        {
+            return Loc.T(L.YellowPages.AdPreview);
         }
 
         return text ?? string.Empty;

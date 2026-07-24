@@ -41,6 +41,7 @@ internal static class AppStoreCatalog
         ["polls"] = new(L.StoreCopy.PollsSub, L.StoreCopy.PollsBody, StoreCategory.Social),
         ["venues"] = new(L.StoreCopy.VenuesSub, L.StoreCopy.VenuesBody, StoreCategory.Social),
         ["muster"] = new(L.StoreCopy.MusterSub, L.StoreCopy.MusterBody, StoreCategory.Social),
+        ["yellowpages"] = new(L.StoreCopy.YellowPagesSub, L.StoreCopy.YellowPagesBody, StoreCategory.Social),
         ["messages"] = new(L.StoreCopy.LinkpearlSub, L.StoreCopy.LinkpearlBody, StoreCategory.Chat),
         ["message"] = new(L.StoreCopy.MessageSub, L.StoreCopy.MessageBody, StoreCategory.Chat),
         ["camera"] = new(L.StoreCopy.CameraSub, L.StoreCopy.CameraBody, StoreCategory.Creativity),

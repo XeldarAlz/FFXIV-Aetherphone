@@ -10,6 +10,7 @@ using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
+using Aetherphone.Core.YellowPages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -71,8 +72,9 @@ internal sealed class PhoneShell : IDisposable
         navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
             services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher,
-            services.MusterLauncher);
+            services.MusterLauncher, services.YellowPagesLauncher);
         MusterChatBridge.Bind(services.Musters, services.MusterLauncher, navigation);
+        AdChatBridge.Bind(services.YellowPages, services.YellowPagesLauncher, navigation);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);
@@ -360,6 +362,7 @@ internal sealed class PhoneShell : IDisposable
     public void Dispose()
     {
         MusterChatBridge.Clear();
+        AdChatBridge.Clear();
         banner.Shown -= OnBannerShown;
         banner.Dispose();
         minimizedView.Dispose();
