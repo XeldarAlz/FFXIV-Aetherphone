@@ -25,6 +25,7 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Core.Wallpapers;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using YoutubeExplode;
 
@@ -40,6 +41,7 @@ internal sealed class PhoneServices : IDisposable
     public required MapData Maps { get; init; }
     public required ITextureProvider Textures { get; init; }
     public required WeatherService Weather { get; init; }
+    public required WeatherControl WeatherControl { get; init; }
     public required NotificationService Notifications { get; init; }
     public required SocialNotificationService SocialNotifications { get; init; }
     public required SoundService Sound { get; init; }
@@ -94,7 +96,7 @@ internal sealed class PhoneServices : IDisposable
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
-        ITextureProvider textures, DirectoryInfo configDirectory, IUnlockState unlockState)
+        ITextureProvider textures, DirectoryInfo configDirectory, IUnlockState unlockState, ICondition condition)
     {
         var builtInWallpaperDirectory = new DirectoryInfo(
             Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
@@ -105,6 +107,7 @@ internal sealed class PhoneServices : IDisposable
         var gameData = new GameData(dataManager, objectTable);
         var maps = new MapData(dataManager, clientState);
         var weather = new WeatherService(dataManager, clientState);
+        var weatherControl = new WeatherControl(weather, framework, clientState, condition);
         var soundBundledDirectory = new DirectoryInfo(
             Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Sounds"));
         var soundUserDirectory = new DirectoryInfo(Path.Combine(configDirectory.FullName, "Sounds"));
@@ -181,6 +184,7 @@ internal sealed class PhoneServices : IDisposable
             Maps = maps,
             Textures = textures,
             Weather = weather,
+            WeatherControl = weatherControl,
             Notifications = notifications,
             SocialNotifications = socialNotifications,
             Sound = sound,
@@ -239,6 +243,7 @@ internal sealed class PhoneServices : IDisposable
     {
         CharacterSwitcher.Dispose();
         CharacterWatch.Dispose();
+        WeatherControl.Dispose();
         SocialNotifications.Dispose();
         KeyVault.Dispose();
         Calls.Dispose();
