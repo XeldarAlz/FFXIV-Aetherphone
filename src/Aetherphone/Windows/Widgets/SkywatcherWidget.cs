@@ -224,11 +224,13 @@ internal sealed class SkywatcherWidget : IHomeWidget
         var glyphRadius = (StripIconRadiusMin + (StripIconRadiusPref - StripIconRadiusMin) * t) * scale;
         var labelTop = stripTop + topPad;
         var glyphY = labelTop + labelHeight + labelGap + glyphRadius;
+        var labelMaxWidth = MathF.Max(1f, cellWidth - 4f * scale);
         for (var columnIndex = 0; columnIndex < columnCount; columnIndex++)
         {
             var window = forecast[columnIndex];
             var centerX = bounds.Min.X + pad + cellWidth * (columnIndex + 0.5f);
-            Typography.DrawCentered(drawList, new Vector2(centerX, labelTop), When(window),
+            var label = Typography.FitText(When(window), labelMaxWidth, labelStyle.Scale, labelStyle.Weight);
+            Typography.DrawCentered(drawList, new Vector2(centerX, labelTop), label,
                 Palette.WithAlpha(palette.InkSoft, opacity), labelStyle.Scale, labelStyle.Weight);
             var columnKind = WeatherSky.Classify(window.Weather.EnglishKey);
             var columnIsDay = IsDayWindow(window);
