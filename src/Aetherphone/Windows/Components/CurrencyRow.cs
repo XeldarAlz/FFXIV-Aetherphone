@@ -85,10 +85,10 @@ internal static class CurrencyRow
             var amountX = content.Max.X - amountSize.X;
             Typography.Draw(drawList, new Vector2(amountX, content.Center.Y - amountSize.Y * 0.5f), amountText,
                 palette.Accent, TextStyles.Title2);
-            var name = Typography.FitText(entry.Name, amountX - 12f * scale - textLeft, TextStyles.Headline);
-            var nameSize = Typography.Measure(name, TextStyles.Headline);
-            Typography.Draw(drawList, new Vector2(textLeft, content.Center.Y - nameSize.Y * 0.5f), name,
-                palette.TitleInk, TextStyles.Headline);
+            var nameMaxWidth = MathF.Max(1f, amountX - 12f * scale - textLeft);
+            var nameSize = Typography.Measure(entry.Name, TextStyles.Headline);
+            Marquee.DrawLeftAuto("currencyRow." + entry.Name, entry.Name, textLeft, content.Center.Y - nameSize.Y * 0.5f,
+                nameMaxWidth, TextStyles.Headline, palette.TitleInk);
             return;
         }
 
@@ -105,10 +105,10 @@ internal static class CurrencyRow
         Typography.Draw(drawList, new Vector2(content.Max.X - capSize.X, amountY + 4f * scale), capText,
             palette.MutedInk, TextStyles.Footnote);
 
-        var label = Typography.FitText(entry.Name, amountX2 - 12f * scale - textLeft, TextStyles.Headline);
-        var labelSize = Typography.Measure(label, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, lineCenterY - labelSize.Y * 0.5f), label, palette.TitleInk,
-            TextStyles.Headline);
+        var labelMaxWidth = MathF.Max(1f, amountX2 - 12f * scale - textLeft);
+        var labelSize = Typography.Measure(entry.Name, TextStyles.Headline);
+        Marquee.DrawLeftAuto("currencyRow." + entry.Name, entry.Name, textLeft, lineCenterY - labelSize.Y * 0.5f,
+            labelMaxWidth, TextStyles.Headline, palette.TitleInk);
 
         var barMin = new Vector2(textLeft, barTop);
         var barMax = new Vector2(content.Max.X, barTop + 6f * scale);

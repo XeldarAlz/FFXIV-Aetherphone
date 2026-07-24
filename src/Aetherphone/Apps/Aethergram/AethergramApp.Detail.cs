@@ -51,14 +51,22 @@ internal sealed partial class AethergramApp
             var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
             var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
             var headerMeta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
-            var headerNameSize = Typography.Measure(displayName, 0.95f, FontWeight.SemiBold);
+            var headerTextMaxWidth = MathF.Max(1f, origin.X + width - nameLeft);
+            var headerNameStyle = new TextStyle(0.95f, FontWeight.SemiBold);
+            var headerNameSize = Typography.Measure(displayName, headerNameStyle);
             var headerMetaSize = Typography.Measure(headerMeta, 0.78f);
             var headerTextGap = 3f * scale;
             var headerNameY = avatarCenter.Y - (headerNameSize.Y + headerTextGap + headerMetaSize.Y) * 0.5f;
-            Typography.Draw(new Vector2(nameLeft, headerNameY), displayName, theme.TextStrong, 0.95f,
-                FontWeight.SemiBold);
-            Typography.Draw(new Vector2(nameLeft, headerNameY + headerNameSize.Y + headerTextGap), headerMeta,
-                AppPalettes.Aethergram.MutedInk, 0.78f);
+            var headerNameHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, headerNameY),
+                new Vector2(nameLeft + headerTextMaxWidth, headerNameY + headerNameSize.Y));
+            Marquee.DrawLeft("aethergram.detail.header." + post.Id, displayName, nameLeft, headerNameY,
+                headerTextMaxWidth, headerNameStyle, theme.TextStrong, headerNameHovering);
+            var headerMetaTop = headerNameY + headerNameSize.Y + headerTextGap;
+            var headerMetaHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, headerMetaTop),
+                new Vector2(nameLeft + headerTextMaxWidth, headerMetaTop + headerMetaSize.Y));
+            Marquee.DrawLeft("aethergram.detail.headermeta." + post.Id, headerMeta, nameLeft, headerMetaTop,
+                headerTextMaxWidth, new TextStyle(0.78f, FontWeight.Regular), AppPalettes.Aethergram.MutedInk,
+                headerMetaHovering);
             if (UiInteract.HoverClick(new Vector2(origin.X, origin.Y),
                     new Vector2(origin.X + width * 0.7f, origin.Y + headerHeight)))
             {
@@ -161,8 +169,13 @@ internal sealed partial class AethergramApp
             if (post.Text.Length > 0)
             {
                 var captionPos = ImGui.GetCursorScreenPos();
-                Typography.Draw(captionPos, displayName, theme.TextStrong, 0.9f, FontWeight.SemiBold);
-                var nameWidth = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).X;
+                var captionNameMaxWidth = width * 0.5f;
+                var captionNameSize = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold);
+                var captionNameHovering = ImGui.IsMouseHoveringRect(captionPos,
+                    new Vector2(captionPos.X + captionNameMaxWidth, captionPos.Y + captionNameSize.Y));
+                var nameWidth = Marquee.DrawLeft("aethergram.detail.captionname." + post.Id, displayName,
+                    captionPos.X, captionPos.Y, captionNameMaxWidth, new TextStyle(0.9f, FontWeight.SemiBold),
+                    theme.TextStrong, captionNameHovering);
                 var captionLeft = captionPos.X + nameWidth + 6f * scale;
                 ImGui.SetCursorScreenPos(new Vector2(captionLeft, captionPos.Y));
                 RichTextLayout? captionLayout;
@@ -245,7 +258,8 @@ internal sealed partial class AethergramApp
         var textLeft = bubbleLeft + padX;
         var textRight = bubbleRight - padX - 22f * scale;
         var displayName = SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle);
-        var nameHeight = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).Y;
+        var commentNameStyle = new TextStyle(0.9f, FontWeight.SemiBold);
+        var nameHeight = Typography.Measure(displayName, commentNameStyle).Y;
         RichTextLayout? commentLayout;
         using (Plugin.Fonts.Push(0.9f))
         {
@@ -271,8 +285,10 @@ internal sealed partial class AethergramApp
             0.8f, 28);
 
         var nameTop = bubbleTop + padTop;
-        Typography.Draw(new Vector2(textLeft, nameTop), displayName, theme.TextStrong, 0.9f, FontWeight.SemiBold);
-        var nameWidth = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).X;
+        var commentNameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, nameTop),
+            new Vector2(textRight, nameTop + nameHeight));
+        var nameWidth = Marquee.DrawLeft("aethergram.comment." + comment.Id, displayName, textLeft, nameTop,
+            textRight - textLeft, commentNameStyle, theme.TextStrong, commentNameHovering);
         var meta = TimeText.Short(comment.CreatedAtUnix);
         var metaSize = Typography.Measure(meta, 0.8f);
         var metaLeft = textLeft + nameWidth + 8f * scale;

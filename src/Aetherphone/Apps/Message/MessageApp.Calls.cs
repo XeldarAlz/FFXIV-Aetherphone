@@ -180,9 +180,12 @@ internal sealed partial class MessageApp
         var missed = entry.Direction == CallDirection.Missed;
         var textLeft = avatarCenter.X + radius + 14f * scale;
         var textWidth = actionLeft - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 13f * scale),
-            Typography.FitText(title, textWidth, TextStyles.Headline), missed ? theme.Danger : ui.TitleInk,
-            TextStyles.Headline);
+        var titleTop = origin.Y + 13f * scale;
+        var titleSize = Typography.Measure(title, TextStyles.Headline);
+        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleTop),
+            new Vector2(textLeft + textWidth, titleTop + titleSize.Y));
+        Marquee.DrawLeft("messageapp.calls.title." + entry.UserId + entry.TimestampUnix, title, textLeft, titleTop,
+            textWidth, TextStyles.Headline, missed ? theme.Danger : ui.TitleInk, titleHovering);
         var directionIcon = entry.Direction == CallDirection.Outgoing
             ? FontAwesomeIcon.ArrowUp
             : FontAwesomeIcon.ArrowDown;

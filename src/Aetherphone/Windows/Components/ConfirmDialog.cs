@@ -76,7 +76,8 @@ internal static class ConfirmDialog
         if (hasTitle)
         {
             var titleColor = new Vector4(theme.TextStrong.X, theme.TextStrong.Y, theme.TextStrong.Z, opacity);
-            Typography.DrawCentered(drawList, new Vector2(centerX, cursorY + titleHeight * 0.5f), title!, titleColor,
+            Typography.DrawCentered(drawList, new Vector2(centerX, cursorY + titleHeight * 0.5f),
+                Typography.FitText(title!, wrapWidth, titleScale, FontWeight.Bold), titleColor,
                 titleScale, FontWeight.Bold);
             cursorY += titleHeight + TitleGap * s;
         }
@@ -89,7 +90,8 @@ internal static class ConfirmDialog
         {
             cursorY += StatusGap * s;
             var mutedColor = new Vector4(theme.TextMuted.X, theme.TextMuted.Y, theme.TextMuted.Z, opacity);
-            Typography.DrawCentered(drawList, new Vector2(centerX, cursorY + statusHeight * 0.5f), status!, mutedColor,
+            Typography.DrawCentered(drawList, new Vector2(centerX, cursorY + statusHeight * 0.5f),
+                Typography.FitText(status!, wrapWidth, 0.78f * cardScale, FontWeight.Regular), mutedColor,
                 0.78f * cardScale);
         }
 

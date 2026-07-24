@@ -830,10 +830,21 @@ internal sealed partial class AethergramApp : IPhoneApp
         DrawAvatar(avatarCenter, avatarRadius - 1f * scale, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl,
             0.85f, 32);
         var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
-        Typography.Draw(new Vector2(nameLeft, origin.Y + pad), displayName, theme.TextStrong, 1f,
-            FontWeight.SemiBold);
+        var headerTextRight = origin.X + width - pad - 34f * scale;
+        var headerTextMaxWidth = MathF.Max(1f, headerTextRight - nameLeft);
+        var cardNameStyle = new TextStyle(1f, FontWeight.SemiBold);
+        var cardNameHeight = Typography.Measure(displayName, cardNameStyle).Y;
+        var cardNameHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, origin.Y + pad),
+            new Vector2(nameLeft + headerTextMaxWidth, origin.Y + pad + cardNameHeight));
+        Marquee.DrawLeft("aethergram.card." + post.Id, displayName, nameLeft, origin.Y + pad, headerTextMaxWidth,
+            cardNameStyle, theme.TextStrong, cardNameHovering);
         var subline = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
-        Typography.Draw(new Vector2(nameLeft, origin.Y + pad + 21f * scale), subline, AppPalettes.Aethergram.MutedInk, 0.85f);
+        var sublineTop = origin.Y + pad + 21f * scale;
+        var sublineSize = Typography.Measure(subline, 0.85f);
+        var sublineHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, sublineTop),
+            new Vector2(nameLeft + headerTextMaxWidth, sublineTop + sublineSize.Y));
+        Marquee.DrawLeft("aethergram.card.sub." + post.Id, subline, nameLeft, sublineTop, headerTextMaxWidth,
+            new TextStyle(0.85f, FontWeight.Regular), AppPalettes.Aethergram.MutedInk, sublineHovering);
         var overRing = hasStory &&
             (ImGui.GetMousePos() - avatarCenter).LengthSquared() <= ringRadius * ringRadius;
         if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))
@@ -881,7 +892,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             cursorX += 6f * scale;
         }
 
-        var commentCenter = new Vector2(cursorX + 13f * scale, actionCenterY);
+        var commentCenter = new Vector2(cursorX + 6f * scale, actionCenterY);
         if (ui.IconButton(commentCenter, 15f * scale, FontAwesomeIcon.Comment.ToIconString(), AppPalettes.Aethergram.BodyInk,
                 AppSkin.Transparent, 1.2f, Loc.T(L.Aethergram.Comment)))
         {

@@ -84,10 +84,15 @@ internal sealed partial class MessageApp
         }
 
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale),
-            Typography.FitText(title, origin.X + width - pad - textLeft, 1f, FontWeight.SemiBold),
-            theme.TextStrong, 1f, FontWeight.SemiBold);
-        AppSkin.Icon(new Vector2(origin.X + width - pad - 8f * scale, origin.Y + rowHeight * 0.5f),
+        var iconCenterX = origin.X + width - pad - 8f * scale;
+        var textMaxWidth = MathF.Max(1f, iconCenterX - 12f * scale - textLeft);
+        var titleTop = origin.Y + rowHeight * 0.5f - 9f * scale;
+        var titleSize = Typography.Measure(title, 1f, FontWeight.SemiBold);
+        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleTop),
+            new Vector2(textLeft + textMaxWidth, titleTop + titleSize.Y));
+        Marquee.DrawLeft("forward.row." + item.Id, title, textLeft, titleTop, textMaxWidth,
+            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, titleHovering);
+        AppSkin.Icon(new Vector2(iconCenterX, origin.Y + rowHeight * 0.5f),
             FontAwesomeIcon.Share.ToIconString(), ui.MutedInk, 0.85f);
         if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)) && !forwardBusy)
         {

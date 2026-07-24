@@ -18,7 +18,8 @@ internal sealed partial class MarketApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var context = new PhoneContext(area, frameTheme, frameNavigation);
-        AppHeader.Draw(context, MarketFormat.Clip(view.Name, 18), backToList);
+        AppHeader.Draw(context, string.Empty, backToList);
+        DrawHeaderTitle(area, view.Name);
         DrawHeaderButtons(area, view, out var forceRefresh);
         var scope = CurrentScope;
         if (!scope.IsValid)
@@ -93,17 +94,27 @@ internal sealed partial class MarketApp
         Material.EdgeSquircle(drawList, iconMin, iconMax, tileRounding, scale);
         var textX = iconMax.X + 14f * scale;
         var textTop = iconMin.Y + 4f * scale;
-        Typography.Draw(new Vector2(textX, textTop), MarketFormat.Clip(view.Name, 18), frameTheme.TextStrong,
-            TextStyles.Title3);
+        var titleMaxWidth = MathF.Max(1f, origin.X + width - 16f * scale - textX);
+        Marquee.DrawLeftAuto("market.detail.hero." + view.ItemId, view.Name, textX, textTop, titleMaxWidth,
+            TextStyles.Title3, frameTheme.TextStrong);
         var min = snapshot.Min(hq);
         var priceText = PriceOrDash(min);
-        var priceSize = Typography.Measure(priceText, 1.4f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(textX, textTop + 26f * scale), priceText, AppPalettes.Market.Accent, 1.4f,
-            FontWeight.SemiBold);
+        var pillReserve = hasHq
+            ? Typography.Measure(Loc.T(L.Common.Nq), 0.82f, FontWeight.SemiBold).X + 18f * scale + 6f * scale +
+              Typography.Measure(Loc.T(L.Common.Hq), 0.82f, FontWeight.SemiBold).X + 18f * scale + 12f * scale
+            : 0f;
+        var priceMaxWidth = MathF.Max(1f, origin.X + width - 16f * scale - pillReserve - textX);
+        var priceY = textTop + 26f * scale;
+        var priceFullSize = Typography.Measure(priceText, 1.4f, FontWeight.SemiBold);
+        var priceWidth = Marquee.DrawLeftAuto("market.detail.price." + view.ItemId, priceText, textX, priceY,
+            priceMaxWidth, new TextStyle(1.4f, FontWeight.SemiBold), AppPalettes.Market.Accent);
         var cheapestLabel = hq ? Loc.T(L.Market.CheapestHq) : Loc.T(L.Market.Cheapest);
+        var labelMaxWidth = MathF.Max(1f,
+            origin.X + width - 16f * scale - pillReserve - (textX + priceWidth + 8f * scale));
+        var clippedCheapestLabel = Typography.FitText(cheapestLabel, labelMaxWidth, 0.78f, FontWeight.Regular);
         Typography.Draw(
-            new Vector2(textX + priceSize.X + 8f * scale, textTop + 28f * scale + priceSize.Y * 0.5f - 6f * scale),
-            cheapestLabel, frameTheme.TextMuted, 0.78f);
+            new Vector2(textX + priceWidth + 8f * scale, textTop + 28f * scale + priceFullSize.Y * 0.5f - 6f * scale),
+            clippedCheapestLabel, frameTheme.TextMuted, 0.78f);
         if (hasHq)
         {
             var pillGap = 6f * scale;
@@ -373,6 +384,13 @@ internal sealed partial class MarketApp
         Typography.Draw(new Vector2(row.Center.X - size.X * 0.5f, row.Center.Y - size.Y * 0.5f), message,
             frameTheme.TextMuted);
         card.End();
+    }
+
+    private void DrawHeaderTitle(Rect area, string name)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        AppHeader.DrawTitleWithReserve(area, "market.detail.header." + name, name, 64f * scale, frameTheme.TextStrong,
+            scale);
     }
 
     private void DrawHeaderButtons(Rect area, MarketView view, out bool forceRefresh)

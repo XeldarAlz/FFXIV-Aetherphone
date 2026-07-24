@@ -315,9 +315,8 @@ internal sealed class NewsApp : IPhoneApp
     {
         var titleY = row.Min.Y + 10f * scale;
         var maxTitleWidth = row.Width - 24f * scale;
-        var clippedTitle = PixelEllipsize(item.Title, maxTitleWidth, RowTitleScale, FontWeight.Medium);
-        Typography.Draw(new Vector2(row.Min.X, titleY), clippedTitle, theme.TextStrong, RowTitleScale,
-            FontWeight.Medium);
+        Marquee.DrawLeft("news.simpleRow." + item.Url, item.Title, row.Min.X, titleY, maxTitleWidth,
+            new TextStyle(RowTitleScale, FontWeight.Medium), theme.TextStrong, hovered);
         Typography.Draw(new Vector2(row.Min.X, titleY + 23f * scale), TimeText.Ago(item.Time), theme.TextMuted,
             MetaScale, FontWeight.Regular);
         DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale,
@@ -335,9 +334,8 @@ internal sealed class NewsApp : IPhoneApp
         var rightPadding = 8f * scale;
         var pillReserved = pillInfo.hasPill ? pillInfo.width + 12f * scale + rightPadding : rightPadding + 4f * scale;
         var maxTitleWidth = row.Width - pillReserved;
-        var clippedTitle = PixelEllipsize(item.Title, maxTitleWidth, RowTitleScale, FontWeight.Medium);
-        Typography.Draw(new Vector2(row.Min.X, titleY), clippedTitle, theme.TextStrong, RowTitleScale,
-            FontWeight.Medium);
+        Marquee.DrawLeft("news.maintenanceRow." + item.Url, item.Title, row.Min.X, titleY, maxTitleWidth,
+            new TextStyle(RowTitleScale, FontWeight.Medium), theme.TextStrong, hovered);
         var sub = item.Start is { } start && item.End is { } end
             ? NewsFormat.Window(start, end)
             : TimeText.Ago(item.Time);

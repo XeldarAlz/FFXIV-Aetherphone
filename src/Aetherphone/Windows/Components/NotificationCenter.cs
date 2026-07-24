@@ -431,13 +431,15 @@ internal sealed class NotificationCenter
 
     private void DrawHeader(ImDrawListPtr dl, Rect rect, string title, PhoneTheme theme, float scale, float opacity)
     {
-        var titleSize = Typography.Measure(title, TextStyles.FootnoteEmphasized);
-        Typography.Draw(dl, new Vector2(rect.Min.X + 6f * scale, rect.Center.Y - titleSize.Y * 0.5f), title,
-            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.FootnoteEmphasized.Scale,
-            TextStyles.FootnoteEmphasized.Weight);
         var label = Loc.T(L.Notifications.ShowLess);
         var labelSize = Typography.Measure(label, TextStyles.Footnote);
         var labelPos = new Vector2(rect.Max.X - 6f * scale - labelSize.X, rect.Center.Y - labelSize.Y * 0.5f);
+        var titleMaxWidth = MathF.Max(1f, labelPos.X - 14f * scale - (rect.Min.X + 6f * scale));
+        var clippedTitle = Typography.FitText(title, titleMaxWidth, TextStyles.FootnoteEmphasized);
+        var titleSize = Typography.Measure(clippedTitle, TextStyles.FootnoteEmphasized);
+        Typography.Draw(dl, new Vector2(rect.Min.X + 6f * scale, rect.Center.Y - titleSize.Y * 0.5f), clippedTitle,
+            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.FootnoteEmphasized.Scale,
+            TextStyles.FootnoteEmphasized.Weight);
         Typography.Draw(dl, labelPos, label, Palette.WithAlpha(theme.Accent, opacity), TextStyles.Footnote.Scale,
             TextStyles.Footnote.Weight);
         var chevronTip = new Vector2(labelPos.X - 10f * scale, rect.Center.Y - 1f * scale);

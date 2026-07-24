@@ -144,8 +144,13 @@ internal sealed partial class DevApp
             var labelOrigin = ImGui.GetCursorPos();
             ImGui.SetCursorPos(new Vector2(labelOrigin.X + 4f * scale, labelOrigin.Y));
             var labelScreen = ImGui.GetCursorScreenPos();
-            Typography.Draw(labelScreen, sender, Palette.Mix(Accent, theme.TextStrong, 0.4f), 0.74f,
-                FontWeight.SemiBold);
+            var senderStyle = new TextStyle(0.74f, FontWeight.SemiBold);
+            var senderMaxWidth = MathF.Max(1f, ScrollLayout.StableContentWidth() - 8f * scale);
+            var senderHeight = Typography.Measure(sender, senderStyle).Y;
+            var senderHovering = ImGui.IsMouseHoveringRect(labelScreen,
+                labelScreen + new Vector2(senderMaxWidth, senderHeight));
+            Marquee.DrawLeft("dev.chat.sender." + message.Id, sender, labelScreen.X, labelScreen.Y,
+                senderMaxWidth, senderStyle, Palette.Mix(Accent, theme.TextStrong, 0.4f), senderHovering);
             ImGui.SetCursorPos(new Vector2(labelOrigin.X, labelOrigin.Y + 16f * scale));
         }
 

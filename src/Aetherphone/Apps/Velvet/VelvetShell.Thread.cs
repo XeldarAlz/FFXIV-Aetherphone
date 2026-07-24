@@ -117,10 +117,15 @@ internal sealed partial class VelvetShell
             var name = app.ThreadTitle(threadId);
             var avatarHandle = app.ThreadAvatar(threadId, out var monogram, out var presence);
             var avatarRadius = 18f * scale;
-            var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
+            var leftLimit = area.Min.X + 48f * scale;
+            var rightLimit = area.Max.X - ChatHeaderControls.ReservedRightWidth * scale;
             var gap = 9f * scale;
+            var nameCap = MathF.Max(40f * scale,
+                MathF.Min(area.Width * 0.42f, rightLimit - leftLimit - avatarRadius * 2f - gap));
+            var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
+            nameSize.X = MathF.Min(nameSize.X, nameCap);
             var groupWidth = avatarRadius * 2f + gap + nameSize.X;
-            var startX = MathF.Max(area.Center.X - groupWidth * 0.5f, area.Min.X + 48f * scale);
+            var startX = MathF.Min(MathF.Max(area.Center.X - groupWidth * 0.5f, leftLimit), rightLimit - groupWidth);
             var avatarCenter = new Vector2(startX + avatarRadius, rowCenterY);
             AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent, monogram, 0.95f, avatarHandle, 32);
             app.PresenceDot(drawList, new Vector2(avatarCenter.X + avatarRadius - 3f * scale,
@@ -132,17 +137,27 @@ internal sealed partial class VelvetShell
             {
                 var timeText = Aetherphone.Core.Social.SocialTimeZone.Describe(minutes);
                 var subSize = Typography.Measure(timeText, 0.72f, FontWeight.Regular);
+                subSize.X = MathF.Min(subSize.X, nameCap);
                 var gapY = 1f * scale;
                 var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
-                Typography.Draw(new Vector2(nameLeft, stackTop), name, Theme.TextStrong, 1f, FontWeight.SemiBold);
-                Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), timeText, VelvetTheme.MutedInk,
-                    0.72f);
+                var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, stackTop),
+                    new Vector2(nameLeft + nameCap, stackTop + nameSize.Y));
+                Marquee.DrawLeft("velvet.thread.title." + threadId, name, nameLeft, stackTop, nameCap,
+                    new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
+                var subTop = stackTop + nameSize.Y + gapY;
+                var subHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, subTop),
+                    new Vector2(nameLeft + nameCap, subTop + subSize.Y));
+                Marquee.DrawLeft("velvet.thread.subtitle." + threadId, timeText, nameLeft, subTop, nameCap,
+                    new TextStyle(0.72f, FontWeight.Regular), VelvetTheme.MutedInk, subHovering);
                 textWidth = MathF.Max(nameSize.X, subSize.X);
             }
             else
             {
-                Typography.Draw(new Vector2(nameLeft, rowCenterY - nameSize.Y * 0.5f), name, Theme.TextStrong, 1f,
-                    FontWeight.SemiBold);
+                var soloTop = rowCenterY - nameSize.Y * 0.5f;
+                var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, soloTop),
+                    new Vector2(nameLeft + nameCap, soloTop + nameSize.Y));
+                Marquee.DrawLeft("velvet.thread.title." + threadId, name, nameLeft, soloTop,
+                    nameCap, new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
             }
 
             var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);

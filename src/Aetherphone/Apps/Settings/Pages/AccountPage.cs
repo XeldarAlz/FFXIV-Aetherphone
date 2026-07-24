@@ -495,7 +495,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var padding = 12f * scale;
         var start = ImGui.GetCursorScreenPos();
         var label = Loc.T(L.Account.SigningInAs);
-        var identity = $"{name}@{world}";
+        var identity = Typography.FitText($"{name}@{world}", width - padding * 2f, 1.05f, FontWeight.SemiBold);
         var labelSize = Typography.Measure(label, 0.82f);
         var identitySize = Typography.Measure(identity, 1.05f, FontWeight.SemiBold);
         var height = padding * 2f + labelSize.Y + 4f * scale + identitySize.Y;

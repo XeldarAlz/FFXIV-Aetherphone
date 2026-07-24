@@ -269,7 +269,9 @@ internal sealed partial class VenuesApp : IPhoneApp
         var summary =
             $"{dcLabel}  ·  {TimeFilterLabel(configuration.VenueTimeFilter)}  ·  {Loc.T(L.Venues.EventsCount, filtered.Count)}";
         var origin = ImGui.GetCursorScreenPos();
-        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y + 8f * scale), summary,
+        var summaryMaxWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X - 8f * scale);
+        var summaryFitted = Typography.FitText(summary, summaryMaxWidth, TextStyles.Footnote);
+        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y + 8f * scale), summaryFitted,
             AppPalettes.Venues.MutedInk, TextStyles.Footnote);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 30f * scale));

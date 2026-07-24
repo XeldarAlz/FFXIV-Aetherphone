@@ -502,7 +502,9 @@ internal sealed partial class SetupOverlay
         var left = rect.Min.X + 16f * scale;
         Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 10f * scale), Loc.T(L.Account.SigningInAs),
             Fade(InkMuted, alpha), TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 30f * scale), $"{name}@{world}",
+        var identityMaxWidth = rect.Max.X - 16f * scale - left;
+        Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 30f * scale),
+            Typography.FitText($"{name}@{world}", identityMaxWidth, TextStyles.Headline),
             Fade(InkStrong, alpha), TextStyles.Headline);
     }
 
@@ -587,8 +589,10 @@ internal sealed partial class SetupOverlay
         float alpha, bool live, string? prefix = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, rect.Min.Y - 20f * scale), label,
-            Fade(InkMuted, alpha), TextStyles.Footnote);
+        var labelMaxWidth = rect.Max.X - rect.Min.X - 2f * scale;
+        Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, rect.Min.Y - 20f * scale),
+            Typography.FitText(label, labelMaxWidth, TextStyles.Footnote), Fade(InkMuted, alpha),
+            TextStyles.Footnote);
         Squircle.Fill(drawList, rect.Min, rect.Max, 12f * scale, ImGui.GetColorU32(Fade(CardFill, alpha)));
         Squircle.Stroke(drawList, rect.Min, rect.Max, 12f * scale, ImGui.GetColorU32(Fade(CardStroke, alpha)), 1f);
         var textLeft = rect.Min.X + 14f * scale;
@@ -605,8 +609,10 @@ internal sealed partial class SetupOverlay
             if (value.Length > 0)
             {
                 var valueSize = Typography.Measure(value, TextStyles.Body);
-                Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - valueSize.Y * 0.5f), value,
-                    Fade(InkStrong, alpha), TextStyles.Body);
+                var valueMaxWidth = rect.Max.X - 14f * scale - textLeft;
+                Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - valueSize.Y * 0.5f),
+                    Typography.FitText(value, valueMaxWidth, TextStyles.Body), Fade(InkStrong, alpha),
+                    TextStyles.Body);
             }
 
             return;

@@ -77,11 +77,21 @@ internal sealed partial class VelvetShell
                 ownerSub = ownerSub.Length > 0 ? ownerSub + " · " + ownerTime : ownerTime;
             }
 
-            Typography.Draw(new Vector2(nameLeft, avatarCenter.Y - 13f * scale), authorName, VelvetTheme.TitleInk,
-                TextStyles.Headline);
-            Typography.Draw(new Vector2(nameLeft, avatarCenter.Y + 3f * scale), ownerSub, VelvetTheme.MutedInk,
-                TextStyles.Subheadline);
-            if (UiInteract.HoverClick(origin, new Vector2(origin.X + width * 0.7f, origin.Y + headerHeight)))
+            var headerRect = new Rect(origin, new Vector2(origin.X + width * 0.7f, origin.Y + headerHeight));
+            var nameMaxWidth = origin.X + width - 14f * scale - nameLeft;
+            var authorY = avatarCenter.Y - 13f * scale;
+            var authorSize = Typography.Measure(authorName, TextStyles.Headline);
+            var authorHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, authorY),
+                new Vector2(nameLeft + nameMaxWidth, authorY + authorSize.Y));
+            Marquee.DrawLeft("velvet.detail.author." + post.Id, authorName, nameLeft,
+                authorY, nameMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering);
+            var ownerSubY = avatarCenter.Y + 3f * scale;
+            var ownerSubSize = Typography.Measure(ownerSub, TextStyles.Subheadline);
+            var ownerSubHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, ownerSubY),
+                new Vector2(nameLeft + nameMaxWidth, ownerSubY + ownerSubSize.Y));
+            Marquee.DrawLeft("velvet.detail.ownersub." + post.Id, ownerSub, nameLeft, ownerSubY,
+                nameMaxWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, ownerSubHovering);
+            if (UiInteract.HoverClick(headerRect.Min, headerRect.Max))
             {
                 OpenProfile(post.OwnerId);
             }
@@ -252,14 +262,19 @@ internal sealed partial class VelvetShell
             images, lodestone, -1);
         var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
         var wrapWidth = origin.X + width - 28f * scale - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y), authorName, VelvetTheme.TitleInk, TextStyles.SubheadlineEmphasized);
-        var nameWidth = Typography.Measure(authorName, TextStyles.SubheadlineEmphasized).X;
+        var nameMaxWidth = wrapWidth * 0.55f;
+        var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, origin.Y),
+            new Vector2(textLeft + nameMaxWidth, origin.Y + 16f * scale));
+        var nameWidth = Marquee.DrawLeft("velvet.comment.author." + comment.Id, authorName, textLeft, origin.Y,
+            nameMaxWidth, TextStyles.SubheadlineEmphasized, VelvetTheme.TitleInk, nameHovering);
         var time = TimeText.Short(comment.CreatedAtUnix);
         if (time.Length > 0)
         {
-            Typography.Draw(new Vector2(textLeft + nameWidth + 8f * scale, origin.Y + 1f * scale), time,
+            var timeMaxWidth = MathF.Max(1f, wrapWidth - nameWidth - 40f * scale);
+            var clippedTime = Typography.FitText(time, timeMaxWidth, TextStyles.Footnote);
+            Typography.Draw(new Vector2(textLeft + nameWidth + 8f * scale, origin.Y + 1f * scale), clippedTime,
                 VelvetTheme.MutedInk, TextStyles.Footnote);
-            var timeWidth = Typography.Measure(time, TextStyles.Footnote).X;
+            var timeWidth = Typography.Measure(clippedTime, TextStyles.Footnote).X;
             CommentReviewTag.Draw(
                 new Vector2(textLeft + nameWidth + 8f * scale + timeWidth + 8f * scale, origin.Y + 1f * scale),
                 textLeft + wrapWidth, comment.ScanStatus, 0.8f);

@@ -450,8 +450,13 @@ internal sealed class ChatTranscript
     {
         var scale = ImGuiHelpers.GlobalScale;
         var origin = ImGui.GetCursorScreenPos();
-        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y), FirstName(message.SenderName),
-            message.SenderTint, 0.78f, FontWeight.SemiBold);
+        var textLeft = origin.X + 4f * scale;
+        var maxWidth = ScrollLayout.StableContentWidth() - 4f * scale;
+        var rect = new Vector2(textLeft, origin.Y);
+        var hovering = ImGui.IsMouseHoveringRect(rect, new Vector2(rect.X + maxWidth, rect.Y + 16f * scale));
+        var name = FirstName(message.SenderName);
+        Marquee.DrawLeft("chattranscript.sender." + message.Id, name, textLeft, origin.Y, maxWidth,
+            new TextStyle(0.78f, FontWeight.SemiBold), message.SenderTint, hovering);
         ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + 16f * scale));
     }
 
@@ -1369,8 +1374,11 @@ internal sealed class ChatTranscript
         if (caption.Length > 0)
         {
             var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
-            Typography.Draw(drawList, new Vector2(imageMin.X, imageMax.Y + 4f * scale * fx.Pop),
-                UiText.Truncate(caption, 60), Palette.WithAlpha(ink, fx.Alpha), 0.9f * fx.Pop);
+            var captionTop = imageMax.Y + 4f * scale * fx.Pop;
+            var captionMaxWidth = imageMax.X - imageMin.X;
+            Marquee.DrawLeftAuto("chattranscript.caption." + message.Id, caption, imageMin.X, captionTop,
+                captionMaxWidth, new TextStyle(0.9f * fx.Pop, FontWeight.Regular),
+                Palette.WithAlpha(ink, fx.Alpha));
             var timeColor = mine
                 ? new Vector4(1f, 1f, 1f, 0.72f)
                 : Palette.WithAlpha(model.MutedInk, 0.95f);

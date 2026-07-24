@@ -96,6 +96,10 @@ internal sealed class FeedbackApp : IPhoneApp
         DrawScreen(content);
     }
 
+    private void DrawFeedbackHeaderTitle(Rect area, string title, float rightReserve, float scale) =>
+        AppHeader.DrawTitleWithReserve(area, "feedback.header." + title, title, rightReserve, theme.TextStrong,
+            scale);
+
     private void DrawScreen(Rect area)
     {
         if (composeOutcome == 1)
@@ -110,12 +114,16 @@ internal sealed class FeedbackApp : IPhoneApp
 
         var scale = ImGuiHelpers.GlobalScale;
         var headerContext = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(headerContext, Loc.T(L.Feedback.SendFeedback), navigation.Back);
+        var sendLabel = store.Posting ? Loc.T(L.Feedback.Sending) : Loc.T(L.Feedback.Send);
+        var buttonReserve = sent
+            ? 0f
+            : Typography.Measure(sendLabel, 0.9f, FontWeight.SemiBold).X + 26f * scale + 20f * scale;
+        AppHeader.Draw(headerContext, string.Empty, navigation.Back);
+        DrawFeedbackHeaderTitle(area, Loc.T(L.Feedback.SendFeedback), buttonReserve, scale);
 
         if (!sent)
         {
             var canSend = !string.IsNullOrWhiteSpace(draft) && !store.Posting && CooldownRemaining() == 0;
-            var sendLabel = store.Posting ? Loc.T(L.Feedback.Sending) : Loc.T(L.Feedback.Send);
             ReportSendAnchor(area, sendLabel, scale);
             if (ui.HeaderAction(area, sendLabel, canSend))
             {
@@ -203,8 +211,11 @@ internal sealed class FeedbackApp : IPhoneApp
         if (cooldown > 0)
         {
             var notice = Loc.T(L.Feedback.Cooldown, FormatCooldown(cooldown));
-            Typography.Draw(new Vector2(origin.X + 2f * scale,
-                area.Max.Y - footerHeight * 0.5f - Typography.Measure(notice, 0.85f).Y * 0.5f), notice,
+            var noticeLeft = origin.X + 2f * scale;
+            var noticeMaxWidth = MathF.Max(1f, area.Max.X - 8f * scale - counterSize.X - noticeLeft);
+            var clippedNotice = Typography.FitText(notice, noticeMaxWidth, 0.85f, FontWeight.Regular);
+            Typography.Draw(new Vector2(noticeLeft,
+                area.Max.Y - footerHeight * 0.5f - Typography.Measure(clippedNotice, 0.85f).Y * 0.5f), clippedNotice,
                 AppPalettes.Feedback.MutedInk, 0.85f);
         }
     }

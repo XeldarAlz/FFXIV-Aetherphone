@@ -136,11 +136,11 @@ internal sealed class CalculatorApp : IPhoneApp
                     ui.BodyInk, TextStyles.SubheadlineEmphasized);
 
                 var expressionRight = row.Max.X - resultSize.X - 10f * scale;
-                ImGui.PushClipRect(new Vector2(row.Min.X, row.Min.Y), new Vector2(expressionRight, row.Max.Y), true);
-                var expressionSize = Typography.Measure(entry.Expression, TextStyles.Caption1);
-                Typography.Draw(new Vector2(row.Min.X, row.Center.Y - expressionSize.Y * 0.5f), entry.Expression,
+                var expressionMaxWidth = MathF.Max(1f, expressionRight - row.Min.X);
+                var expressionText = Typography.FitText(entry.Expression, expressionMaxWidth, TextStyles.Caption1);
+                var expressionSize = Typography.Measure(expressionText, TextStyles.Caption1);
+                Typography.Draw(new Vector2(row.Min.X, row.Center.Y - expressionSize.Y * 0.5f), expressionText,
                     ui.MutedInk, TextStyles.Caption1);
-                ImGui.PopClipRect();
 
                 ImGui.SetCursorScreenPos(origin);
                 ImGui.Dummy(new Vector2(width, rowHeight));

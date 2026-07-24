@@ -106,14 +106,20 @@ internal sealed partial class ChirperApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        const float titleScale = 1.3f;
-        var titleCenter = new Vector2(area.Center.X, rowCenterY);
-        var titleSize = Typography.Measure(DisplayName, titleScale, FontWeight.Bold);
+        var titleStyle = new TextStyle(1.3f, FontWeight.Bold);
+        var leftReserve = area.Min.X + 84f * scale;
+        var rightReserve = area.Max.X - 112f * scale;
+        var titleCenterX = (leftReserve + rightReserve) * 0.5f;
+        var maxTitleWidth = MathF.Max(1f, rightReserve - leftReserve);
+        var titleSize = Typography.Measure(DisplayName, titleStyle);
+        var clampedWidth = MathF.Min(titleSize.X, maxTitleWidth);
         var titlePadding = new Vector2(12f * scale, 6f * scale);
-        var titleMin = titleCenter - titleSize * 0.5f - titlePadding;
-        var titleMax = titleCenter + titleSize * 0.5f + titlePadding;
+        var titleTop = rowCenterY - titleSize.Y * 0.5f;
+        var titleMin = new Vector2(titleCenterX - clampedWidth * 0.5f, titleTop) - titlePadding;
+        var titleMax = new Vector2(titleCenterX + clampedWidth * 0.5f, titleTop + titleSize.Y) + titlePadding;
         UiInteract.HoverHighlight(ImGui.GetWindowDrawList(), titleMin, titleMax, (titleMax.Y - titleMin.Y) * 0.5f);
-        Typography.DrawCentered(titleCenter, DisplayName, AppPalettes.Chirper.TitleInk, titleScale, FontWeight.Bold);
+        Marquee.DrawCenteredAuto("chirper.home.title", DisplayName, titleCenterX, titleTop, maxTitleWidth, titleStyle,
+            AppPalettes.Chirper.TitleInk);
         if (UiInteract.HoverClick(titleMin, titleMax))
         {
             RefreshActiveFeed();

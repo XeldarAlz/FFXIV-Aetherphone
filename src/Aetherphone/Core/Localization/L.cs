@@ -2219,6 +2219,7 @@ internal static class L
         public static readonly LocString Eorzea = new("home.eorzea", "Eorzea");
         public static readonly LocString NoEvents = new("home.noEvents", "No upcoming events");
         public static readonly LocString HomeScreen = new("home.homeScreen", "Home Screen");
+        public static readonly LocString ShowAppNames = new("home.showAppNames", "Show App Names");
         public static readonly LocString GridComfortable = new("home.gridComfortable", "Comfortable");
         public static readonly LocString GridStandard = new("home.gridStandard", "Standard");
         public static readonly LocString GridCompact = new("home.gridCompact", "Compact");

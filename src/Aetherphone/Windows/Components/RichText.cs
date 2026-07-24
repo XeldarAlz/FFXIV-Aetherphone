@@ -547,7 +547,9 @@ internal static class RichText
         ReadOnlySpan<MentionSpan> mentions, float wrapWidth, float fontSize, int fontGeneration)
     {
         var runs = new List<RichTextRun>();
-        var lineHeight = ImGui.GetTextLineHeight();
+        var lineHeight = emojiFiles.Length > 0
+            ? MathF.Max(ImGui.GetTextLineHeight(), EmojiRender.LineHeight(fontSize))
+            : ImGui.GetTextLineHeight();
         var x = 0f;
         var y = 0f;
         var maxWidth = 0f;

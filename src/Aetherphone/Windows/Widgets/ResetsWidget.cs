@@ -50,24 +50,29 @@ internal sealed class ResetsWidget : IHomeWidget
         var scale = context.Scale;
         var radius = MathF.Min(bounds.Height * 0.24f, bounds.Width * 0.11f);
         var centerY = bounds.Min.Y + bounds.Height * 0.42f;
-        DrawColumn(context, new Vector2(bounds.Min.X + bounds.Width * 0.20f, centerY), radius,
+        var columnMaxWidth = bounds.Width * 0.30f - 6f * scale;
+        DrawColumn(context, new Vector2(bounds.Min.X + bounds.Width * 0.20f, centerY), radius, columnMaxWidth,
             Loc.T(L.Timers.DailyReset), GameSchedule.NextDailyReset(utcNow), utcNow, TimeSpan.FromDays(1),
             context.Theme.Accent);
-        DrawColumn(context, new Vector2(bounds.Min.X + bounds.Width * 0.50f, centerY), radius,
+        DrawColumn(context, new Vector2(bounds.Min.X + bounds.Width * 0.50f, centerY), radius, columnMaxWidth,
             Loc.T(L.Timers.WeeklyReset), GameSchedule.NextWeeklyReset(utcNow), utcNow, TimeSpan.FromDays(7),
             WeeklyColor);
-        DrawColumn(context, new Vector2(bounds.Min.X + bounds.Width * 0.80f, centerY), radius,
+        DrawColumn(context, new Vector2(bounds.Min.X + bounds.Width * 0.80f, centerY), radius, columnMaxWidth,
             Loc.T(L.Timers.GrandCompanyReset), GameSchedule.NextGrandCompanyReset(utcNow), utcNow,
             TimeSpan.FromDays(1), GrandCompanyColor);
     }
 
-    private static void DrawColumn(in WidgetContext context, Vector2 center, float radius, string label, DateTime next,
-        DateTime utcNow, TimeSpan period, Vector4 color)
+    private static void DrawColumn(in WidgetContext context, Vector2 center, float radius, float maxLabelWidth,
+        string label, DateTime next, DateTime utcNow, TimeSpan period, Vector4 color)
     {
         DrawRing(context, center, radius, next, utcNow, period, color);
-        var labelWidth = WidgetChrome.EyebrowWidth(label, context.Scale);
+        var upperLabel = Loc.Culture.TextInfo.ToUpper(label);
+        var trackingBudget = MathF.Max(1f, maxLabelWidth - 1.6f * context.Scale * MathF.Max(0, upperLabel.Length - 1));
+        var clippedLabel = Typography.FitText(upperLabel, trackingBudget, 0.66f, FontWeight.SemiBold);
+        var labelWidth = WidgetChrome.EyebrowWidth(clippedLabel, context.Scale);
         WidgetChrome.Eyebrow(context.DrawList, new Vector2(center.X - labelWidth * 0.5f,
-            center.Y + radius + 11f * context.Scale), label, context.Theme.TextMuted, context.Scale, context.Opacity);
+            center.Y + radius + 11f * context.Scale), clippedLabel, context.Theme.TextMuted, context.Scale,
+            context.Opacity);
     }
 
     private static void DrawRing(in WidgetContext context, Vector2 center, float radius, DateTime next,

@@ -404,8 +404,15 @@ internal sealed partial class AethergramApp
             var avatarCenter = new Vector2(card.Min.X + padding + radius, card.Min.Y + padding + radius);
             DrawAvatar(avatarCenter, radius, me.Name, me.World, me.AvatarUrl, 0.7f, 24);
             var displayName = SocialIdentity.Name(me.DisplayName, me.Handle);
-            Typography.Draw(new Vector2(avatarCenter.X + radius + 8f * scale, avatarCenter.Y - 8f * scale), displayName,
-                theme.TextStrong, 0.88f, FontWeight.SemiBold);
+            var nameStyle = new TextStyle(0.88f, FontWeight.SemiBold);
+            var nameLeft = avatarCenter.X + radius + 8f * scale;
+            var nameTop = avatarCenter.Y - 8f * scale;
+            var nameMaxWidth = MathF.Max(1f, card.Max.X - padding - nameLeft);
+            var nameHeight = Typography.Measure(displayName, nameStyle).Y;
+            var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(nameLeft, nameTop),
+                new Vector2(nameLeft + nameMaxWidth, nameTop + nameHeight));
+            Marquee.DrawLeft("aethergram.compose.author." + me.Handle, displayName, nameLeft, nameTop, nameMaxWidth,
+                nameStyle, theme.TextStrong, nameHovering);
             inputTop = avatarCenter.Y + radius + 6f * scale;
         }
 
@@ -440,7 +447,9 @@ internal sealed partial class AethergramApp
 
         if (caption.Length == 0)
         {
-            Typography.Draw(inputPos + ImGui.GetStyle().FramePadding, Loc.T(L.Aethergram.CaptionHint),
+            var hint = Typography.FitText(Loc.T(L.Aethergram.CaptionHint),
+                inputSize.X - ImGui.GetStyle().FramePadding.X * 2f, 1f, FontWeight.Regular);
+            Typography.Draw(inputPos + ImGui.GetStyle().FramePadding, hint,
                 AppPalettes.Aethergram.MutedInk, 1f);
         }
 

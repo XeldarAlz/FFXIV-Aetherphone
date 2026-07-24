@@ -197,7 +197,9 @@ internal sealed partial class MessageApp
             ChatHeaderControls.DrawSearchToggle(ui, area, rowCenterY, searchController.Open, searchController.Toggle);
             var name = conversation is null ? app.DisplayName : DirectMessagesStore.DisplayTitle(conversation);
             var avatarRadius = 18f * scale;
+            var nameCap = MathF.Max(40f * scale, area.Width * 0.42f);
             var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
+            nameSize.X = MathF.Min(nameSize.X, nameCap);
             var gap = 9f * scale;
             var groupWidth = avatarRadius * 2f + gap + nameSize.X;
             var startX = MathF.Max(area.Center.X - groupWidth * 0.5f, area.Min.X + 48f * scale);
@@ -215,13 +217,19 @@ internal sealed partial class MessageApp
             }
 
             var nameLeft = avatarCenter.X + avatarRadius + gap;
+            var maxNameRight = area.Max.X - ChatHeaderControls.ReservedRightWidth * scale;
+            nameCap = MathF.Max(1f, MathF.Min(nameCap, maxNameRight - nameLeft));
+            var titleId = "messageapp.thread.title." + (conversation?.Id ?? "self");
+            var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(avatarCenter.X - avatarRadius, area.Min.Y),
+                new Vector2(nameLeft + nameCap, area.Min.Y + AppHeader.Height * scale));
             if (isGroup && conversation is not null)
             {
                 var sub = Loc.T(L.DirectMessages.MembersCount, conversation.MemberCount);
                 var subSize = Typography.Measure(sub, 0.72f, FontWeight.Regular);
                 var gapY = 1f * scale;
                 var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
-                Typography.Draw(new Vector2(nameLeft, stackTop), name, Theme.TextStrong, 1f, FontWeight.SemiBold);
+                Marquee.DrawLeft(titleId, name, nameLeft, stackTop, nameCap, new TextStyle(1f, FontWeight.SemiBold),
+                    Theme.TextStrong, titleHovering);
                 Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), sub,
                     AppPalettes.Message.MutedInk, 0.72f);
                 var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
@@ -240,14 +248,15 @@ internal sealed partial class MessageApp
                     var subSize = Typography.Measure(presence, 0.72f, FontWeight.Regular);
                     var gapY = 1f * scale;
                     var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
-                    Typography.Draw(new Vector2(nameLeft, stackTop), name, Theme.TextStrong, 1f, FontWeight.SemiBold);
+                    Marquee.DrawLeft(titleId, name, nameLeft, stackTop, nameCap,
+                        new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
                     Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), presence,
                         conversation!.Presence == 1 ? ui.Accent : AppPalettes.Message.MutedInk, 0.72f);
                 }
                 else
                 {
-                    Typography.Draw(new Vector2(nameLeft, rowCenterY - nameSize.Y * 0.5f), name, Theme.TextStrong, 1f,
-                        FontWeight.SemiBold);
+                    Marquee.DrawLeft(titleId, name, nameLeft, rowCenterY - nameSize.Y * 0.5f, nameCap,
+                        new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
                 }
 
                 if (conversation is not null && app.contacts.Find(conversation.OtherUserId) is not null)

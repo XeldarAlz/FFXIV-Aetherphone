@@ -212,7 +212,7 @@ internal sealed class ConductGateOverlay
             var isTitle = section.Tone == ConductTone.Neutral;
             var style = isTitle ? TextStyles.Headline : TextStyles.SubheadlineEmphasized;
             var color = isTitle ? Palette.WithAlpha(theme.TextStrong, opacity) : Palette.WithAlpha(toneColor, opacity);
-            Typography.Draw(origin, text, color, style);
+            Typography.Draw(origin, Typography.FitText(text, width, style), color, style);
             var headingHeight = Typography.Measure(text, style).Y;
             ImGui.SetCursorScreenPos(origin);
             ImGui.Dummy(new Vector2(width, headingHeight + 7f * scale));

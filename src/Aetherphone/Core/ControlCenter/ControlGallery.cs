@@ -68,10 +68,13 @@ internal sealed class ControlGallery
         Material.Frosted(dl, panel.Min, panel.Max, rounding, scale, eased * opacity);
         var interactive = !closing && eased > 0.9f;
         var alpha = eased * opacity;
-        Typography.Draw(dl, new Vector2(panel.Min.X + 20f * scale, panel.Min.Y + 14f * scale),
-            Loc.T(L.ControlCenter.AddControls), Palette.WithAlpha(theme.TextStrong, alpha), 0.95f, FontWeight.Bold);
         var closeRect = new Rect(new Vector2(panel.Max.X - 42f * scale, panel.Min.Y + 8f * scale),
             new Vector2(panel.Max.X - 8f * scale, panel.Min.Y + 42f * scale));
+        var titleLeft = panel.Min.X + 20f * scale;
+        var titleMaxWidth = MathF.Max(1f, closeRect.Min.X - 8f * scale - titleLeft);
+        Typography.Draw(dl, new Vector2(titleLeft, panel.Min.Y + 14f * scale),
+            Typography.FitText(Loc.T(L.ControlCenter.AddControls), titleMaxWidth, 0.95f, FontWeight.Bold),
+            Palette.WithAlpha(theme.TextStrong, alpha), 0.95f, FontWeight.Bold);
         if (IconButton(dl, closeRect, FontAwesomeIcon.Times, theme, alpha, interactive))
         {
             Close();
@@ -122,10 +125,14 @@ internal sealed class ControlGallery
         Squircle.Fill(dl, iconRect.Min, iconRect.Max, 11f * scale,
             ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, 0.9f * alpha)));
         ProgressRing.CenterIcon(dl, iconRect.Center, module.GalleryIcon, new Vector4(1f, 1f, 1f, alpha), 15f * scale);
-        Typography.Draw(dl, new Vector2(iconRect.Max.X + 14f * scale,
-                row.Center.Y - Typography.Measure(module.GalleryLabel).Y * 0.5f), module.GalleryLabel,
-            Palette.WithAlpha(theme.TextStrong, alpha), 0.9f, FontWeight.Medium);
-        ProgressRing.CenterIcon(dl, new Vector2(row.Max.X - 20f * scale, row.Center.Y), FontAwesomeIcon.PlusCircle,
+        var addIconCenter = new Vector2(row.Max.X - 20f * scale, row.Center.Y);
+        var labelStyle = new TextStyle(0.9f, FontWeight.Medium);
+        var labelLeft = iconRect.Max.X + 14f * scale;
+        var labelMaxWidth = MathF.Max(1f, addIconCenter.X - 17f * scale - 8f * scale - labelLeft);
+        Marquee.DrawLeft(dl, "controlgallery.label." + module.Id, module.GalleryLabel, labelLeft,
+            row.Center.Y - Typography.Measure(module.GalleryLabel, labelStyle).Y * 0.5f, labelMaxWidth, labelStyle,
+            Palette.WithAlpha(theme.TextStrong, alpha), hovered);
+        ProgressRing.CenterIcon(dl, addIconCenter, FontAwesomeIcon.PlusCircle,
             Palette.WithAlpha(theme.Accent, alpha), 17f * scale);
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
