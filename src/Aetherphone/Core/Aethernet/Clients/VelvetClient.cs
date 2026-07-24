@@ -31,32 +31,84 @@ internal sealed class VelvetClient
         return net.GetAsync($"/velvet/users/{Uri.EscapeDataString(userId)}", AethernetJsonContext.Default.VelvetProfileDto, token);
     }
 
-    public Task<VelvetDiscoverPage?> DiscoverAsync(int lookingFor, string tags, int gender, string region, string? cursor,
-        CancellationToken token)
+    public Task<VelvetDiscoverPage?> DiscoverAsync(VelvetDiscoverFilter filter, string tags, string region,
+        string? cursor, CancellationToken token)
     {
-        var path = $"/velvet/discover?lookingFor={lookingFor}";
+        var path = new System.Text.StringBuilder("/velvet/discover?lookingFor=").Append(filter.IntentInclude);
+        AppendMask(path, "lookingForExclude", filter.IntentExclude);
+        AppendMask(path, "gender", filter.GenderInclude);
+        AppendMask(path, "genderExclude", filter.GenderExclude);
+        AppendMask(path, "sexuality", filter.SexualityInclude);
+        AppendMask(path, "sexualityExclude", filter.SexualityExclude);
+        AppendCsv(path, "relationship", StatusCsv(filter.RelationshipInclude));
+        AppendCsv(path, "relationshipExclude", StatusCsv(filter.RelationshipExclude));
+        AppendCsv(path, "roles", TokenCsv(filter.RolesInclude));
+        AppendCsv(path, "rolesExclude", TokenCsv(filter.RolesExclude));
+        AppendCsv(path, "kinks", TokenCsv(filter.KinksInclude));
+        AppendCsv(path, "kinksExclude", TokenCsv(filter.KinksExclude));
+        AppendCsv(path, "limits", TokenCsv(filter.LimitsInclude));
+        AppendCsv(path, "limitsExclude", TokenCsv(filter.LimitsExclude));
         if (tags.Length > 0)
         {
-            path += $"&tags={Uri.EscapeDataString(tags)}";
-        }
-
-        if (gender > 0)
-        {
-            path += $"&gender={gender}";
+            path.Append("&tags=").Append(Uri.EscapeDataString(tags));
         }
 
         if (region.Length > 0)
         {
-            path += $"&region={Uri.EscapeDataString(region)}";
+            path.Append("&region=").Append(Uri.EscapeDataString(region));
         }
 
         if (cursor is not null)
         {
-            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+            path.Append("&cursor=").Append(Uri.EscapeDataString(cursor));
         }
 
-        return net.GetAsync(path, AethernetJsonContext.Default.VelvetDiscoverPage, token);
+        return net.GetAsync(path.ToString(), AethernetJsonContext.Default.VelvetDiscoverPage, token);
     }
+
+    private static void AppendMask(System.Text.StringBuilder path, string name, int mask)
+    {
+        if (mask > 0)
+        {
+            path.Append('&').Append(name).Append('=').Append(mask);
+        }
+    }
+
+    private static void AppendCsv(System.Text.StringBuilder path, string name, string csv)
+    {
+        if (csv.Length > 0)
+        {
+            path.Append('&').Append(name).Append('=').Append(Uri.EscapeDataString(csv));
+        }
+    }
+
+    private static string StatusCsv(int mask)
+    {
+        if (mask == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new System.Text.StringBuilder();
+        for (var status = 0; status < 32; status++)
+        {
+            if ((mask & (1 << status)) == 0)
+            {
+                continue;
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.Append(',');
+            }
+
+            builder.Append(status);
+        }
+
+        return builder.ToString();
+    }
+
+    private static string TokenCsv(string[] tokens) => tokens.Length == 0 ? string.Empty : string.Join(',', tokens);
 
     public Task<bool> ConnectAsync(string userId, string intro, CancellationToken token)
     {

@@ -1430,6 +1430,8 @@
   "velvet.photoBadge.other": "{0} Fotos",
   "velvet.filterClearAll": "Zurücksetzen",
   "velvet.filterDone": "Fertig",
+  "velvet.filtersTitle": "Filter",
+  "velvet.filterHint": "Einmal tippen zum Einschließen, erneut tippen zum Ausschließen.",
   "velvet.feedNone": "Noch nichts geteilt",
   "velvet.feedNoneHint": "Sei der Erste, der etwas postet.",
   "velvet.imageUnavailable": "Bild nicht verfügbar",

@@ -178,7 +178,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         router.Reset();
         avatarLightbox.Reset();
         store.ClearDiscover();
-        filterSheet.Close();
+        ClearDiscoverFilters();
         activeTab = VelvetPage.Discover;
         stories.Close();
     }
@@ -312,6 +312,9 @@ internal sealed partial class VelvetShell : IPhoneApp
             case VelvetScreenId.Reactions:
                 threadView.DrawReactions(area, view.Arg ?? string.Empty);
                 break;
+            case VelvetScreenId.DiscoverFilters:
+                DrawDiscoverFilters(area);
+                break;
             default:
                 DrawRoot(area);
                 break;
@@ -399,11 +402,6 @@ internal sealed partial class VelvetShell : IPhoneApp
                 break;
         }
 
-        if (activeTab == VelvetPage.Discover)
-        {
-            DrawDiscoverFilterSheet(area);
-        }
-
         var messageBadge = store.UnreadCount + store.RequestCount;
         var tabs = new[]
         {
@@ -430,10 +428,6 @@ internal sealed partial class VelvetShell : IPhoneApp
             }
 
             activeTab = (VelvetPage)picked;
-            if (activeTab != VelvetPage.Discover)
-            {
-                filterSheet.Close();
-            }
         }
     }
 
@@ -454,7 +448,6 @@ internal sealed partial class VelvetShell : IPhoneApp
             return;
         }
 
-        filterSheet.Close();
         store.OpenProfile(userId);
         router.Push(VelvetView.Profile(userId));
     }
@@ -466,7 +459,6 @@ internal sealed partial class VelvetShell : IPhoneApp
             return;
         }
 
-        filterSheet.Close();
         activeTab = VelvetPage.Messages;
         router.Push(VelvetView.Thread(userId));
     }

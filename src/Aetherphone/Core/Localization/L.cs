@@ -1784,6 +1784,9 @@ internal static class L
         public static readonly LocPlural PhotoBadge = new("velvet.photoBadge", "{0} photo", "{0} photos");
         public static readonly LocString FilterClearAll = new("velvet.filterClearAll", "Clear all");
         public static readonly LocString FilterDone = new("velvet.filterDone", "Done");
+        public static readonly LocString FiltersTitle = new("velvet.filtersTitle", "Filters");
+        public static readonly LocString FilterHint =
+            new("velvet.filterHint", "Tap once to include, tap again to exclude.");
         public static readonly LocString FeedNone = new("velvet.feedNone", "Nothing shared yet");
         public static readonly LocString FeedNoneHint = new("velvet.feedNoneHint", "Be the first to post.");
         public static readonly LocString ImageUnavailable = new("velvet.imageUnavailable", "Image unavailable");

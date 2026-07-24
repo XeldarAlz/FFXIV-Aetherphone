@@ -1430,6 +1430,8 @@
   "velvet.photoBadge.other": "{0} fotoğraf",
   "velvet.filterClearAll": "Tümünü temizle",
   "velvet.filterDone": "Bitti",
+  "velvet.filtersTitle": "Filtreler",
+  "velvet.filterHint": "Dahil etmek için bir kez, hariç tutmak için tekrar dokunun.",
   "velvet.feedNone": "Henüz bir şey paylaşılmadı",
   "velvet.feedNoneHint": "İlk paylaşan sen ol.",
   "velvet.imageUnavailable": "Görsel kullanılamıyor",

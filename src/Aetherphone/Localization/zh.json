@@ -1430,6 +1430,8 @@
   "velvet.photoBadge.other": "{0} 张照片",
   "velvet.filterClearAll": "全部清除",
   "velvet.filterDone": "完成",
+  "velvet.filtersTitle": "筛选",
+  "velvet.filterHint": "点击一次表示包含，再次点击表示排除。",
   "velvet.feedNone": "还没有人分享",
   "velvet.feedNoneHint": "来做第一个发布的人吧。",
   "velvet.imageUnavailable": "图片不可用",

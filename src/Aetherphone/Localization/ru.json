@@ -1430,6 +1430,8 @@
   "velvet.photoBadge.other": "{0} фото",
   "velvet.filterClearAll": "Очистить все",
   "velvet.filterDone": "Готово",
+  "velvet.filtersTitle": "Фильтры",
+  "velvet.filterHint": "Нажмите один раз, чтобы включить, ещё раз, чтобы исключить.",
   "velvet.feedNone": "Пока ничего нет",
   "velvet.feedNoneHint": "Опубликуйте первым.",
   "velvet.imageUnavailable": "Изображение недоступно",
