@@ -157,13 +157,12 @@ internal sealed partial class AppStoreApp : IPhoneApp
             AppSkin.Icon(center, TabIcon(order[index]).ToIconString(), ink, active ? 1.02f : 0.94f);
             Typography.DrawCentered(new Vector2(center.X, center.Y + 20f * scale), Loc.T(TabLabel(order[index])), ink,
                 TextStyles.Caption1);
-            if (!hovered)
+            if (hovered)
             {
-                continue;
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (!UiInteract.Click(cellMin, cellMax, hovered))
             {
                 continue;
             }

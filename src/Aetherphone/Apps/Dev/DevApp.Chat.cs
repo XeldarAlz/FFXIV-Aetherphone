@@ -516,15 +516,13 @@ internal sealed partial class DevApp
             {
                 for (var index = 0; index < chatPickerPaths.Length; index++)
                 {
-                    using (ImRaii.PushId(index))
+                    ImGui.Dummy(new Vector2(cell, cell));
+                    var min = ImGui.GetItemRectMin();
+                    var max = ImGui.GetItemRectMax();
+                    DrawPickerThumbnail(chatPickerPaths[index], min, max, scale);
+                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                     {
-                        var clicked = ImGui.InvisibleButton("devpick", new Vector2(cell, cell));
-                        DrawPickerThumbnail(chatPickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(),
-                            scale);
-                        if (clicked)
-                        {
-                            SendChatImage(chatPickerPaths[index]);
-                        }
+                        SendChatImage(chatPickerPaths[index]);
                     }
 
                     if (index % columns != columns - 1)

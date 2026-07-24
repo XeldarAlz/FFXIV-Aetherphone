@@ -23,11 +23,11 @@ internal sealed partial class AppStoreApp
         var scale = ImGuiHelpers.GlobalScale;
         DrawLargeTitle(area, Loc.T(L.Store.Apps), null);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + (HeaderHeight - 18f) * scale), area.Max);
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 resetScroll = false;
             }
 
@@ -80,13 +80,12 @@ internal sealed partial class AppStoreApp
         Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop + 1f * scale), label, CardInkShadow,
             TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop), label, CardInk, TextStyles.Headline);
-        if (!hovered)
+        if (hovered)
         {
-            return false;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(card.Min, card.Max, hovered);
     }
 
     private void DrawCategoryArt(ImDrawListPtr drawList, Rect card, int categoryIndex, StoreCategory category,
@@ -156,11 +155,11 @@ internal sealed partial class AppStoreApp
         }
 
         var body = new Rect(new Vector2(area.Min.X, bar.Max.Y + Metrics.Space.Sm * scale), area.Max);
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 resetScroll = false;
             }
 

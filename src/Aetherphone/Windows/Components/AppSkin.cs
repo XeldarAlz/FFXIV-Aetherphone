@@ -129,7 +129,7 @@ internal sealed class AppSkin
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     public static bool FlowChip(ref float cursorX, float centerY, float gap, string label, bool active,
@@ -154,7 +154,7 @@ internal sealed class AppSkin
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private static bool PillButtonCore(Rect rect, string label, bool filled, Vector4 accent, Vector4 surface,
@@ -175,7 +175,7 @@ internal sealed class AppSkin
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     public bool DangerPillButton(Rect rect, string label) => DangerPillButton(rect, label, Theme);
@@ -194,7 +194,7 @@ internal sealed class AppSkin
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     public bool DangerGhostButton(Rect rect, string label)
@@ -219,7 +219,7 @@ internal sealed class AppSkin
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     public bool GhostButton(Rect rect, string label) => GhostButtonCore(rect, label, Palette.TitleInk);
@@ -245,7 +245,7 @@ internal sealed class AppSkin
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     public bool IconButton(Vector2 center, float hitRadius, string glyph, Vector4 color, Vector4 background,
@@ -272,7 +272,7 @@ internal sealed class AppSkin
         }
 
         HoverTooltip.Show(new Rect(center - hit, center + hit), tooltip, tooltipSide);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(center - hit, center + hit, hovered);
     }
 
     public bool Chip(Rect rect, string label, bool active) =>
@@ -301,7 +301,7 @@ internal sealed class AppSkin
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     public void ToggleRow(string label, ref bool value)

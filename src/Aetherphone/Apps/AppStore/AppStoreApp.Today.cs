@@ -19,11 +19,11 @@ internal sealed partial class AppStoreApp
         DrawLargeTitle(area, Loc.T(L.Store.Today),
             Loc.Culture.TextInfo.ToUpper(today.ToString("dddd d MMMM", Loc.Culture)));
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + HeaderHeight * scale), area.Max);
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 resetScroll = false;
             }
 
@@ -97,13 +97,13 @@ internal sealed partial class AppStoreApp
             new Vector2(card.Max.X - pad, iconCenter.Y + pillHeight * 0.5f));
         var overPill = UiInteract.Hover(pill.Min, pill.Max);
         DrawStatePill(pill, app, overPill, scale);
-        if (!hovered || overPill)
+        var cardHovered = hovered && !overPill;
+        if (cardHovered)
         {
-            return;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(card.Min, card.Max, cardHovered))
         {
             router.Push(StoreView.ForApp(app.Id));
         }

@@ -261,13 +261,13 @@ internal sealed class FeedbackApp : IPhoneApp
         drawList.AddCircleFilled(badgeCenter, badgeRadius,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, badgeHovered ? 0.9f : 0.62f)), 20);
         AppSkin.Icon(badgeCenter, FontAwesomeIcon.Times.ToIconString(), White, 0.6f);
-        if (!badgeHovered)
+        if (badgeHovered)
         {
-            return false;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(badgeCenter - new Vector2(badgeRadius, badgeRadius),
+            badgeCenter + new Vector2(badgeRadius, badgeRadius), badgeHovered);
     }
 
     private bool DrawAddTile(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, float scale)
@@ -277,13 +277,12 @@ internal sealed class FeedbackApp : IPhoneApp
             ImGui.GetColorU32(hovered ? ui.HoverTint : AppPalettes.Feedback.FieldSurface));
         Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(AddTileStroke), 1f);
         AppSkin.Icon((min + max) * 0.5f, FontAwesomeIcon.Plus.ToIconString(), AppPalettes.Feedback.BodyInk, 0.9f);
-        if (!hovered)
+        if (hovered)
         {
-            return false;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 
     private void DrawPicker(Rect area)
@@ -317,14 +316,13 @@ internal sealed class FeedbackApp : IPhoneApp
             {
                 for (var index = 0; index < pickerPaths.Length; index++)
                 {
-                    using (ImRaii.PushId(index))
+                    ImGui.Dummy(new Vector2(cell, cell));
+                    var min = ImGui.GetItemRectMin();
+                    var max = ImGui.GetItemRectMax();
+                    DrawLocalThumbnail(pickerPaths[index], min, max, scale);
+                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                     {
-                        var clicked = ImGui.InvisibleButton("pick", new Vector2(cell, cell));
-                        DrawLocalThumbnail(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
-                        if (clicked)
-                        {
-                            AddAttachment(pickerPaths[index]);
-                        }
+                        AddAttachment(pickerPaths[index]);
                     }
 
                     if (index % PickerColumns != PickerColumns - 1)

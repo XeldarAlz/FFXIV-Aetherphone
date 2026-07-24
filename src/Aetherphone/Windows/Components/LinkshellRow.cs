@@ -37,7 +37,7 @@ internal static class LinkshellRow
         var bellMax = bellCenter + new Vector2(bellRadius, bellRadius);
         var bellHovered = ImGui.IsMouseHoveringRect(bellMin, bellMax);
 
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var rowActive = hovered && !bellHovered;
         var pressed = rowActive && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         if (hovered)
@@ -123,10 +123,11 @@ internal static class LinkshellRow
         if (rowActive)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                return LinkshellRowAction.Open;
-            }
+        }
+
+        if (UiInteract.Click(min, max, rowActive))
+        {
+            return LinkshellRowAction.Open;
         }
 
         return LinkshellRowAction.None;

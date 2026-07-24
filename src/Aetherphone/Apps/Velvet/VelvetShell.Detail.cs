@@ -90,7 +90,7 @@ internal sealed partial class VelvetShell
                 new Vector2(origin.X + width, origin.Y + headerHeight + width));
             var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
             var result = DrawPostCarousel(drawList, imageRect, post, photos, Metrics.Radius.Md * scale);
-            if (result.Tapped && result.Index < photos.Length)
+            if (result.Tapped && !UiInteract.InputBlocked && result.Index < photos.Length)
             {
                 var mediaUrl = photos[result.Index];
                 photoViewer.Open(() => images.Get(mediaUrl));
@@ -117,10 +117,11 @@ internal sealed partial class VelvetShell
                 if (likeHovered)
                 {
                     ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                    {
-                        OpenLikers(post.Id);
-                    }
+                }
+
+                if (UiInteract.Click(likePos, likePos + likeSize, likeHovered))
+                {
+                    OpenLikers(post.Id);
                 }
 
                 actionCursorX += likeSize.X + 16f * scale;

@@ -24,13 +24,16 @@ internal sealed partial class VelvetShell
             store.RefreshFeed();
         }
 
-        using (AppSurface.Begin(area))
+        using (var surface = AppSurface.Begin(area))
         {
             if (feedScrollTopPending)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 feedScrollTopPending = false;
             }
+
+            pullToRefresh.Draw(area, surface.Pull, surface.Dragging,
+                store.LoadingFeed, VelvetTheme.MutedInk, RefreshFeedContent);
 
             stories.DrawTray(theme);
             var width = ScrollLayout.StableContentWidth();
@@ -89,6 +92,11 @@ internal sealed partial class VelvetShell
         }
 
         feedScrollTopPending = true;
+        RefreshFeedContent();
+    }
+
+    private void RefreshFeedContent()
+    {
         store.RefreshFeed();
         stories.RefreshTray();
     }
@@ -141,7 +149,7 @@ internal sealed partial class VelvetShell
         {
             stories.OpenRing(authorRing);
         }
-        else if (UiInteract.Hover(headerHitMin, headerHitMax) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        else if (UiInteract.Click(headerHitMin, headerHitMax))
         {
             OpenProfile(entry.OwnerId);
         }
@@ -151,7 +159,7 @@ internal sealed partial class VelvetShell
         var photos = PostMedia.Photos(entry.MediaUrls, entry.MediaUrl);
         var result = DrawPostCarousel(drawList, new Rect(imageMin, imageMax), entry, photos,
             Metrics.Radius.Md * scale);
-        if (result.Tapped)
+        if (result.Tapped && !UiInteract.InputBlocked)
         {
             store.EnsurePost(entry.Id);
             router.Push(VelvetView.PostDetail(entry.Id));

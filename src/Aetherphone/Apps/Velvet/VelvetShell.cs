@@ -53,6 +53,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly PhotoCarousel carousel = new();
+    private readonly PullToRefresh pullToRefresh = new();
     private readonly AvatarComposer avatar;
     private readonly VelvetPostComposer post;
     private readonly ViewRouter<VelvetView> router;

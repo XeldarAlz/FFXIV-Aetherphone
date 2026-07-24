@@ -84,14 +84,20 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         var navRect = new Rect(new Vector2(content.Min.X, content.Max.Y - NavHeight * scale), content.Max);
         var body = new Rect(new Vector2(content.Min.X, content.Min.Y + 40f * scale),
             new Vector2(content.Max.X, navRect.Min.Y));
+        var skyKey = ImGui.GetID("##sky");
         ImGui.SetCursorScreenPos(body.Min);
         using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, new Vector2(14f * scale, 4f * scale)))
         using (var child = ImRaii.Child("##sky", body.Size, false,
-                   ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar))
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
             if (child)
             {
+                var surface = DragScrollHost.Begin(skyKey);
                 DrawTab(screen, palette, kind, isDay, hasData, scale);
+                if (scrubbing)
+                {
+                    surface.CancelDrag();
+                }
             }
         }
 

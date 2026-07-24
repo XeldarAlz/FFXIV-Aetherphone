@@ -171,18 +171,21 @@ internal sealed class EmojiPicker
     {
         var scale = ImGuiHelpers.GlobalScale;
         string? picked = null;
+        var gridKey = ImGui.GetID("##emojiGrid");
         ImGui.SetCursorScreenPos(body.Min);
         using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
-        using (var child = ImRaii.Child("##emojiGrid", body.Size, false, ImGuiWindowFlags.NoBackground))
+        using (var child = ImRaii.Child("##emojiGrid", body.Size, false,
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
             if (!child)
             {
                 return null;
             }
 
+            var surface = DragScrollHost.Begin(gridKey);
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 resetScroll = false;
             }
 
@@ -228,7 +231,7 @@ internal sealed class EmojiPicker
                     var inset = cell * 0.14f;
                     EmojiImages.TryDraw(drawList, FileFor(glyph), min + new Vector2(inset, inset),
                         max - new Vector2(inset, inset), 0xFFFFFFFF);
-                    if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                    if (UiInteract.Click(min, max, hovered))
                     {
                         picked = CharFor(glyph);
                     }

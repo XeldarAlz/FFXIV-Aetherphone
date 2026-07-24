@@ -350,12 +350,13 @@ internal sealed partial class JobsApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && GearsetActions.Equip(job.GearsetId))
-            {
-                pendingEquip = job;
-                sincePendingEquip = 0f;
-                sinceRefresh = 0f;
-            }
+        }
+
+        if (UiInteract.Click(rowRect.Min, rowRect.Max, hovered) && GearsetActions.Equip(job.GearsetId))
+        {
+            pendingEquip = job;
+            sincePendingEquip = 0f;
+            sinceRefresh = 0f;
         }
     }
 

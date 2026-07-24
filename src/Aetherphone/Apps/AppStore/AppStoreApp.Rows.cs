@@ -57,7 +57,7 @@ internal sealed partial class AppStoreApp
             Typography.FitText(Loc.T(entry.Subtitle), textWidth, TextStyles.Footnote), ui.MutedInk,
             TextStyles.Footnote);
         DrawStatePill(pill, app, overPill, scale);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private void DrawStatePill(Rect pill, IPhoneApp app, bool hovered, float scale)
@@ -76,13 +76,12 @@ internal sealed partial class AppStoreApp
             ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, hovered ? 0.20f : 0.12f)));
         Typography.DrawCentered(drawList, pill.Center, label, Palette.Lighten(app.Accent, 0.30f),
             TextStyles.FootnoteEmphasized);
-        if (!hovered)
+        if (hovered)
         {
-            return;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!UiInteract.Click(pill.Min, pill.Max, hovered))
         {
             return;
         }

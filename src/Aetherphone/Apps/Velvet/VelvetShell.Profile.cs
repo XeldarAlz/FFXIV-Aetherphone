@@ -300,7 +300,7 @@ internal sealed partial class VelvetShell
                 MultiPhotoBadge.Draw(drawList, new Vector2(max.X - 8f * scale, min.Y + 8f * scale), scale);
             }
 
-            if (UiInteract.Hover(min, max) && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(min, max))
             {
                 store.EnsurePost(owned[index].Id);
                 router.Push(VelvetView.PostDetail(owned[index].Id));

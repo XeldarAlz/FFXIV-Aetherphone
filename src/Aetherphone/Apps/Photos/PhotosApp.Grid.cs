@@ -92,18 +92,21 @@ internal sealed partial class PhotosApp
     private void DrawPhotoGrid(Rect body, int start, int count)
     {
         var scale = ImGuiHelpers.GlobalScale;
+        var gridKey = ImGui.GetID("##photoGrid");
         ImGui.SetCursorScreenPos(body.Min);
         using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, Vector2.Zero))
-        using (var child = ImRaii.Child("##photoGrid", body.Size, false, ImGuiWindowFlags.NoBackground))
+        using (var child = ImRaii.Child("##photoGrid", body.Size, false,
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
             if (!child)
             {
                 return;
             }
 
+            var surface = DragScrollHost.Begin(gridKey);
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 resetScroll = false;
             }
 
@@ -216,13 +219,12 @@ internal sealed partial class PhotosApp
             var max = new Vector2(min.X + cell, min.Y + cell);
             var hovered = UiInteract.Hover(min, max);
             PhotosChrome.Thumbnail(drawList, GetThumbnail(entries[absolute].Path), min, max, hovered, ui.FieldSurface);
-            if (!hovered)
+            if (hovered)
             {
-                continue;
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (UiInteract.Click(min, max, hovered))
             {
                 OpenViewer(sliceStart, sliceCount, absolute);
             }
@@ -232,18 +234,21 @@ internal sealed partial class PhotosApp
     private void DrawAlbumsGrid(Rect body)
     {
         var scale = ImGuiHelpers.GlobalScale;
+        var albumsKey = ImGui.GetID("##photoAlbums");
         ImGui.SetCursorScreenPos(body.Min);
         using (ImRaii.PushStyle(ImGuiStyleVar.WindowPadding, new Vector2(14f * scale, 6f * scale)))
-        using (var child = ImRaii.Child("##photoAlbums", body.Size, false, ImGuiWindowFlags.NoBackground))
+        using (var child = ImRaii.Child("##photoAlbums", body.Size, false,
+                   DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
             if (!child)
             {
                 return;
             }
 
+            var surface = DragScrollHost.Begin(albumsKey);
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                surface.JumpToTop();
                 resetScroll = false;
             }
 
@@ -326,7 +331,7 @@ internal sealed partial class PhotosApp
         var countLabel = Loc.Plural(L.Photos.Count, coverCount);
         Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, textTop + 19f * scale), countLabel, ui.MutedInk,
             TextStyles.Footnote);
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private void OpenAlbum(int key) => router.Push(PhotoView.Album(key));

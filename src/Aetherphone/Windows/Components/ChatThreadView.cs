@@ -672,14 +672,13 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             {
                 for (var index = 0; index < pickerPaths.Length; index++)
                 {
-                    using (ImRaii.PushId(index))
+                    ImGui.Dummy(new Vector2(cell, cell));
+                    var min = ImGui.GetItemRectMin();
+                    var max = ImGui.GetItemRectMax();
+                    DrawPickerThumbnail(pickerPaths[index], min, max, scale);
+                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                     {
-                        var clicked = ImGui.InvisibleButton("chatpick", new Vector2(cell, cell));
-                        DrawPickerThumbnail(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), scale);
-                        if (clicked)
-                        {
-                            SendChatImage(threadId, pickerPaths[index]);
-                        }
+                        SendChatImage(threadId, pickerPaths[index]);
                     }
 
                     if (index % columns != columns - 1)
