@@ -33,7 +33,8 @@ internal sealed partial class AethergramApp : IPhoneApp
     private const int MaxPhotoTags = 20;
     private const int MaxCommentLength = 500;
     private const float BottomNavHeight = 52f;
-    private const int NavTabCount = 4;
+    private const int NavSlotCount = 5;
+    private const int MessagesNavSlot = 2;
     private const float NavHitRadius = 17f;
     private const float NavHoverSmoothTime = 0.12f;
     private const float NavHoverMaxFrameSeconds = 0.1f;
@@ -103,7 +104,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private AethergramTab activeTab = AethergramTab.Home;
-    private readonly Spring[] navHover = new Spring[NavTabCount];
+    private readonly Spring[] navHover = new Spring[NavSlotCount];
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
     private bool feedScrollTopPending;
     private bool commentFocusPending;
@@ -1099,31 +1100,33 @@ internal sealed partial class AethergramApp : IPhoneApp
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddLine(bar.Min, new Vector2(bar.Max.X, bar.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
             1f);
-        var slot = bar.Width / 4f;
+        var slot = bar.Width / NavSlotCount;
         var centerY = bar.Center.Y;
         var searchCenter = new Vector2(bar.Min.X + slot * 1.5f, centerY);
-        var activityCenter = new Vector2(bar.Min.X + slot * 2.5f, centerY);
-        var profileCenter = new Vector2(bar.Min.X + slot * 3.5f, centerY);
+        var messagesCenter = new Vector2(bar.Min.X + slot * 2.5f, centerY);
+        var activityCenter = new Vector2(bar.Min.X + slot * 3.5f, centerY);
+        var profileCenter = new Vector2(bar.Min.X + slot * 4.5f, centerY);
         var anchorHalf = new Vector2(20f * scale, 20f * scale);
         UiAnchors.Report("aethergram.tab.search", new Rect(searchCenter - anchorHalf, searchCenter + anchorHalf));
         UiAnchors.Report("aethergram.tab.activity", new Rect(activityCenter - anchorHalf, activityCenter + anchorHalf));
         UiAnchors.Report("aethergram.tab.profile", new Rect(profileCenter - anchorHalf, profileCenter + anchorHalf));
-        DrawNavIcon(new Vector2(bar.Min.X + slot * 0.5f, centerY), FontAwesomeIcon.Home, AethergramTab.Home,
+        DrawNavIcon(new Vector2(bar.Min.X + slot * 0.5f, centerY), FontAwesomeIcon.Home, AethergramTab.Home, 0,
             Loc.T(L.Aethergram.Home));
-        DrawNavIcon(searchCenter, FontAwesomeIcon.Search, AethergramTab.Search, Loc.T(L.Aethergram.Search));
-        DrawNavIcon(activityCenter, FontAwesomeIcon.Heart, AethergramTab.Activity, Loc.T(L.Social.ActivityTab));
+        DrawNavIcon(searchCenter, FontAwesomeIcon.Search, AethergramTab.Search, 1, Loc.T(L.Aethergram.Search));
+        DrawNavMessages(messagesCenter);
+        DrawNavIcon(activityCenter, FontAwesomeIcon.Heart, AethergramTab.Activity, 3, Loc.T(L.Social.ActivityTab));
         ActivityBadge.Draw(activityCenter + new Vector2(11f * scale, -10f * scale), social.UnseenCount(Id), theme,
             scale);
         DrawNavProfile(profileCenter);
     }
 
-    private float StepNavHover(AethergramTab tab, Vector2 center)
+    private float StepNavHover(int slot, Vector2 center)
     {
         var hit = new Vector2(NavHitRadius * ImGuiHelpers.GlobalScale, NavHitRadius * ImGuiHelpers.GlobalScale);
         var hovered = UiInteract.Hover(center - hit, center + hit);
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, NavHoverMaxFrameSeconds);
-        navHover[(int)tab].Step(hovered ? 1f : 0f, NavHoverSmoothTime, delta);
-        return Math.Clamp(navHover[(int)tab].Value, 0f, 1f);
+        navHover[slot].Step(hovered ? 1f : 0f, NavHoverSmoothTime, delta);
+        return Math.Clamp(navHover[slot].Value, 0f, 1f);
     }
 
     private void DrawNavHoverPill(Vector2 center, float hover)
@@ -1140,11 +1143,11 @@ internal sealed partial class AethergramApp : IPhoneApp
         Squircle.Fill(ImGui.GetWindowDrawList(), center - half, center + half, half.Y, ImGui.GetColorU32(tint));
     }
 
-    private void DrawNavIcon(Vector2 center, FontAwesomeIcon icon, AethergramTab tab, string label)
+    private void DrawNavIcon(Vector2 center, FontAwesomeIcon icon, AethergramTab tab, int slot, string label)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var active = activeTab == tab;
-        DrawNavHoverPill(center, StepNavHover(tab, center));
+        DrawNavHoverPill(center, StepNavHover(slot, center));
         var color = active ? AppPalettes.Aethergram.TitleInk : AppPalettes.Aethergram.MutedInk;
         if (ui.IconButton(center, NavHitRadius * scale, icon.ToIconString(), color, AppSkin.Transparent,
                 active ? 1.3f : 1.2f, label))
@@ -1153,12 +1156,25 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
     }
 
+    private void DrawNavMessages(Vector2 center)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        DrawNavHoverPill(center, StepNavHover(MessagesNavSlot, center));
+        if (ui.IconButton(center, NavHitRadius * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
+                AppPalettes.Aethergram.MutedInk, AppSkin.Transparent, 1.2f, Loc.T(L.Aethergram.InboxTitle)))
+        {
+            OpenInbox();
+        }
+
+        ActivityBadge.Draw(center + new Vector2(11f * scale, -10f * scale), dmStore.UnreadCount, theme, scale);
+    }
+
     private void DrawNavProfile(Vector2 center)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var active = activeTab == AethergramTab.Profile;
         var label = Loc.T(L.Aethergram.Profile);
-        DrawNavHoverPill(center, StepNavHover(AethergramTab.Profile, center));
+        DrawNavHoverPill(center, StepNavHover(NavSlotCount - 1, center));
         if (store.Me is not { } me)
         {
             store.EnsureMe();
