@@ -172,7 +172,7 @@ internal sealed partial class AethergramApp
         var unread = thread.UnreadCount;
         var preview = string.IsNullOrEmpty(thread.LastMessagePreview)
             ? Loc.T(L.Aethergram.ThreadEmpty)
-            : thread.LastMessagePreview;
+            : ChatText.ListPreview(thread.LastMessagePreview);
         var previewWidth = textRight - textLeft - (unread > 0 ? 22f * scale : 0f);
         Typography.Draw(new Vector2(textLeft, origin.Y + 35f * scale),
             Typography.FitText(preview, previewWidth, TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight),

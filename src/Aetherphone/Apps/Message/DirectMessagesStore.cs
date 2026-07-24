@@ -206,7 +206,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     {
         if (item.LastMessagePreview.Length > 0)
         {
-            return item.LastMessagePreview;
+            return ChatText.ListPreview(item.LastMessagePreview);
         }
 
         return item.LastMessageKind switch

@@ -355,6 +355,12 @@ internal static class L
         public static readonly LocString SysRemoved = new("dm.sysRemoved", "{0} removed {1}");
         public static readonly LocString SysLeft = new("dm.sysLeft", "{0} left");
         public static readonly LocString SysRenamed = new("dm.sysRenamed", "{0} renamed the chat to {1}");
+        public static readonly LocString LocationPreview = new("dm.locationPreview", "Location");
+        public static readonly LocString LocationShared = new("dm.locationShared", "Shared location");
+        public static readonly LocString LocationOpenMap = new("dm.locationOpenMap", "Open map");
+        public static readonly LocString LocationWard = new("dm.locationWard", "Ward {0}");
+        public static readonly LocString LocationPlot = new("dm.locationPlot", "Plot {0}");
+        public static readonly LocString LocationRoom = new("dm.locationRoom", "Room {0}");
     }
 
     internal static class Message
@@ -398,6 +404,10 @@ internal static class L
         public static readonly LocString MuteAction = new("message.muteAction", "Mute");
         public static readonly LocString UnmuteAction = new("message.unmuteAction", "Unmute");
         public static readonly LocString RecordVoiceHint = new("message.recordVoiceHint", "Record a voice message");
+        public static readonly LocString ShareLocation = new("message.shareLocation", "Share location");
+        public static readonly LocString ShareLocationConfirm = new("message.shareLocationConfirm", "Send your current location?");
+        public static readonly LocString LocationUnavailable = new("message.locationUnavailable", "Your location could not be read.");
+        public static readonly LocString LocationSendFailed = new("message.locationSendFailed", "Could not send your location.");
         public static readonly LocString EditAction = new("message.editAction", "Edit");
         public static readonly LocString EditingLabel = new("message.editingLabel", "Editing message");
         public static readonly LocString EditedAt = new("message.editedAt", "edited {0}");

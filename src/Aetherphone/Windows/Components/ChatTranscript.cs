@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Maps;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -199,6 +200,7 @@ internal sealed class ChatTranscript
     private const int KindVoice = 3;
     private const int KindPost = 4;
     private const int KindStoryReply = 5;
+    private const int KindLocation = ChatText.LocationKind;
     private const float StampTextScale = 0.70f;
     private const float StampTickScale = 0.58f;
     private const float BubbleGap = 3f;
@@ -320,6 +322,11 @@ internal sealed class ChatTranscript
                 else if (message.Kind == KindStoryReply)
                 {
                     DrawStoryReplyBubble(message, index, model);
+                }
+                else if ((message.Flags & TranscriptFlags.Deleted) == 0
+                         && LocationShare.TryParse(message.Body, out var location))
+                {
+                    DrawLocationBubble(message, index, location, model);
                 }
                 else
                 {
@@ -726,6 +733,139 @@ internal sealed class ChatTranscript
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
                     cards.Open(card.PostId);
+                }
+            }
+
+            if (model.Interactions is { } interactions && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+            {
+                interactions.OnMessageContext(message.Id);
+            }
+        }
+
+        var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
+        ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
+    }
+
+    private void DrawLocationBubble(TranscriptMessage message, int index, in SharedLocation location,
+        in ChatTranscriptModel model)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var mine = message.SenderId == model.MyUserId;
+        var placeholder = (message.Flags & TranscriptFlags.Placeholder) != 0;
+        var drawList = ImGui.GetWindowDrawList();
+        var available = ScrollLayout.StableContentWidth();
+        var paddingX = 11f * scale;
+        var paddingY = 9f * scale;
+        var badgeRadius = 16f * scale;
+        var badgeColumn = badgeRadius * 2f + 10f * scale;
+
+        var eyebrow = Loc.T(L.DirectMessages.LocationShared);
+        var zone = LocationShare.ZoneName(location.TerritoryId);
+        if (zone.Length == 0)
+        {
+            zone = Loc.T(L.DirectMessages.LocationPreview);
+        }
+
+        var worldLine = LocationShare.WorldLine(location);
+        var detailLine = location.Ward > 0 ? LocationShare.HousingLine(location) : LocationShare.CoordinateText(location);
+        var stamp = MeasureStamp(message, mine, scale);
+        var maxTextWidth = available * 0.74f - paddingX * 2f - badgeColumn;
+        var eyebrowSize = Typography.Measure(eyebrow, TextStyles.FootnoteEmphasized);
+        var zoneSize = Typography.Measure(zone, TextStyles.SubheadlineEmphasized);
+        var worldSize = worldLine.Length > 0 ? Typography.Measure(worldLine, TextStyles.Footnote) : Vector2.Zero;
+        var detailSize = detailLine.Length > 0 ? Typography.Measure(detailLine, TextStyles.Footnote) : Vector2.Zero;
+        var textWidth = MathF.Min(maxTextWidth,
+            MathF.Max(MathF.Max(eyebrowSize.X, zoneSize.X), MathF.Max(worldSize.X, detailSize.X)));
+        var forwardLabel = MeasureForwardLabel(message, scale);
+        var contentWidth = MathF.Max(badgeColumn + textWidth, stamp.Width);
+        if (forwardLabel.Y > 0f)
+        {
+            contentWidth = MathF.Max(contentWidth, forwardLabel.X);
+        }
+
+        var textHeight = eyebrowSize.Y + 3f * scale + zoneSize.Y
+                         + (worldSize.Y > 0f ? 2f * scale + worldSize.Y : 0f)
+                         + (detailSize.Y > 0f ? 2f * scale + detailSize.Y : 0f);
+        var forwardBlock = forwardLabel.Y > 0f ? forwardLabel.Y + 3f * scale : 0f;
+        var bubbleWidth = contentWidth + paddingX * 2f;
+        var bubbleHeight = paddingY + forwardBlock + textHeight + 4f * scale + stamp.Height + paddingY;
+        var start = ImGui.GetCursorScreenPos();
+        var bubbleMin = new Vector2(mine ? start.X + available - bubbleWidth : start.X, start.Y);
+        var bubbleMax = bubbleMin + new Vector2(bubbleWidth, bubbleHeight);
+        ConsumeScrollTarget(message.Id, bubbleMin.Y);
+        var entrance = entrances.Progress(index);
+        var fx = BubblePop.For(entrance, scale, new Vector2(mine ? bubbleMax.X : bubbleMin.X, bubbleMax.Y));
+        var scaledMin = fx.Apply(bubbleMin);
+        var scaledMax = fx.Apply(bubbleMax);
+        var fill = mine ? model.Accent : new Vector4(1f, 1f, 1f, 0.10f);
+        var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
+        var mutedInk = mine ? new Vector4(1f, 1f, 1f, 0.78f) : Palette.WithAlpha(model.MutedInk, 0.95f);
+        var accentInk = mine ? new Vector4(1f, 1f, 1f, 0.88f) : model.Accent;
+        if (placeholder)
+        {
+            fill = Palette.WithAlpha(fill, fill.W * 0.55f);
+            ink = model.MutedInk;
+        }
+
+        Squircle.Fill(drawList, scaledMin, scaledMax, 14f * scale * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * fx.Alpha)));
+        DrawFlash(drawList, message.Id, scaledMin, scaledMax, 14f * scale * fx.Pop, mine, model);
+        var contentTop = bubbleMin.Y + paddingY;
+        if (forwardBlock > 0f)
+        {
+            DrawForwardLabel(drawList, new Vector2(bubbleMin.X + paddingX, contentTop), fx, mine, model, scale);
+            contentTop += forwardBlock;
+        }
+
+        var badgeCenter = new Vector2(bubbleMin.X + paddingX + badgeRadius, contentTop + textHeight * 0.5f);
+        var badgeFill = mine ? new Vector4(1f, 1f, 1f, 0.20f) : Palette.WithAlpha(model.Accent, 0.18f);
+        drawList.AddCircleFilled(fx.Apply(badgeCenter), badgeRadius * fx.Pop,
+            ImGui.GetColorU32(Palette.WithAlpha(badgeFill, badgeFill.W * fx.Alpha)), 32);
+        AppSkin.Icon(drawList, fx.Apply(badgeCenter), FontAwesomeIcon.MapMarkerAlt.ToIconString(),
+            Palette.WithAlpha(accentInk, accentInk.W * fx.Alpha), 1.05f * fx.Pop);
+
+        var textLeft = bubbleMin.X + paddingX + badgeColumn;
+        Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+            Typography.FitText(eyebrow, textWidth, TextStyles.FootnoteEmphasized),
+            Palette.WithAlpha(accentInk, accentInk.W * fx.Alpha),
+            TextStyles.FootnoteEmphasized.Scale * fx.Pop, TextStyles.FootnoteEmphasized.Weight);
+        contentTop += eyebrowSize.Y + 3f * scale;
+        Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+            Typography.FitText(zone, textWidth, TextStyles.SubheadlineEmphasized),
+            Palette.WithAlpha(ink, ink.W * fx.Alpha),
+            TextStyles.SubheadlineEmphasized.Scale * fx.Pop, TextStyles.SubheadlineEmphasized.Weight);
+        contentTop += zoneSize.Y;
+        if (worldSize.Y > 0f)
+        {
+            contentTop += 2f * scale;
+            Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+                Typography.FitText(worldLine, textWidth, TextStyles.Footnote),
+                Palette.WithAlpha(mutedInk, mutedInk.W * fx.Alpha),
+                TextStyles.Footnote.Scale * fx.Pop, TextStyles.Footnote.Weight);
+            contentTop += worldSize.Y;
+        }
+
+        if (detailSize.Y > 0f)
+        {
+            contentTop += 2f * scale;
+            Typography.Draw(drawList, fx.Apply(new Vector2(textLeft, contentTop)),
+                Typography.FitText(detailLine, textWidth, TextStyles.Footnote),
+                Palette.WithAlpha(mutedInk, mutedInk.W * fx.Alpha),
+                TextStyles.Footnote.Scale * fx.Pop, TextStyles.Footnote.Weight);
+        }
+
+        var timeColor = mine ? new Vector4(1f, 1f, 1f, 0.72f) : Palette.WithAlpha(model.MutedInk, 0.95f);
+        DrawStamp(drawList, stamp, new Vector2(bubbleMax.X - paddingX, bubbleMax.Y - paddingY), fx, timeColor);
+        if (entrance >= 1f && Hovering(bubbleMin, bubbleMax))
+        {
+            if (location.MapId != 0)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                HoverTooltip.Show(new Rect(bubbleMin, bubbleMax), Loc.T(L.DirectMessages.LocationOpenMap),
+                    HoverLabelSide.Above);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    LocationShare.OpenMap(location);
                 }
             }
 
@@ -1148,7 +1288,7 @@ internal sealed class ChatTranscript
 
         var senderSize = Typography.Measure(message.ReplySenderName, QuoteSenderScale, FontWeight.SemiBold);
         var previewSize = Typography.Measure(message.ReplyBody, QuotePreviewScale);
-        var iconWidth = message.ReplyKind is KindImage or KindVoice ? 15f * scale : 0f;
+        var iconWidth = message.ReplyKind is KindImage or KindVoice or KindLocation ? 15f * scale : 0f;
         var innerWidth = MathF.Max(senderSize.X, iconWidth + previewSize.X);
         var desired = 3f * scale + 7f * scale + innerWidth + 8f * scale;
         var height = 5f * scale * 2f + senderSize.Y + 1f * scale + previewSize.Y;
@@ -1180,12 +1320,15 @@ internal sealed class ChatTranscript
         var previewInk = mine ? new Vector4(1f, 1f, 1f, 0.78f) : Palette.WithAlpha(model.MutedInk, 0.95f);
         var previewTop = quoteMin.Y + 5f * scale + quote.SenderHeight + 1f * scale;
         var previewLeft = textLeft;
-        if (message.ReplyKind is KindImage or KindVoice)
+        if (message.ReplyKind is KindImage or KindVoice or KindLocation)
         {
             var iconCenter = new Vector2(textLeft + 5f * scale, previewTop + 7f * scale);
-            var glyph = message.ReplyKind == KindVoice
-                ? FontAwesomeIcon.Microphone.ToIconString()
-                : FontAwesomeIcon.Camera.ToIconString();
+            var glyph = message.ReplyKind switch
+            {
+                KindVoice => FontAwesomeIcon.Microphone.ToIconString(),
+                KindLocation => FontAwesomeIcon.MapMarkerAlt.ToIconString(),
+                _ => FontAwesomeIcon.Camera.ToIconString(),
+            };
             AppSkin.Icon(drawList, fx.Apply(iconCenter), glyph,
                 Palette.WithAlpha(previewInk, previewInk.W * fx.Alpha), 0.62f * fx.Pop);
             previewLeft += 15f * scale;

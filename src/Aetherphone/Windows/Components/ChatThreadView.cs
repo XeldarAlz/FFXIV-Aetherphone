@@ -6,6 +6,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Maps;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Net;
@@ -51,6 +52,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private readonly float threadPollSeconds;
     private readonly float typingSendSeconds;
     private readonly Action<string> pickImage;
+    private readonly Action<string> shareLocation;
     private readonly Action<string, string, string?> sendText;
     private readonly Action<string, string, string> editText;
     private readonly Action<string, byte[], int> sendVoice;
@@ -94,6 +96,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         this.typingSendSeconds = typingSendSeconds;
         sinceTypingSend = typingSendSeconds;
         pickImage = OpenImagePicker;
+        shareLocation = AskShareLocation;
         sendText = ComposerSendText;
         editText = ComposerEditText;
         sendVoice = ComposerSendVoice;
@@ -264,9 +267,11 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             Sending = store.Sending,
             CanImage = true,
             CanVoice = true,
+            CanLocation = true,
             CanHandleEscape = !searchController.Open,
             ResolveVoiceInput = resolveVoiceInput,
             OnPickImage = pickImage,
+            OnShareLocation = shareLocation,
             OnSendText = sendText,
             OnEditText = editText,
             OnSendVoice = sendVoice,
@@ -348,7 +353,13 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             return;
         }
 
-        menuController.Open(messageId, SenderIdOf(message) == MyUserId, KindOf(message));
+        var kind = KindOf(message);
+        if (kind == 0 && LocationShare.IsToken(BodyOf(message)))
+        {
+            kind = ChatText.LocationKind;
+        }
+
+        menuController.Open(messageId, SenderIdOf(message) == MyUserId, kind);
     }
 
     private void DrawMessageMenu(Rect area)
@@ -380,7 +391,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     protected void BeginEdit(string messageId)
     {
         var message = FindMessage(messageId);
-        if (message is null || KindOf(message) != 0 || IsDeleted(message))
+        if (message is null || KindOf(message) != 0 || IsDeleted(message)
+            || LocationShare.IsToken(BodyOf(message)))
         {
             return;
         }
@@ -412,6 +424,46 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             Title = Loc.T(L.Encryption.ReportMessageAction),
             Disclosure = Loc.T(L.Encryption.ReportDisclosure),
             Submit = (reason, done) => store.ReportMessage(messageId, reason, done),
+        });
+    }
+
+    private void AskShareLocation(string threadId)
+    {
+        var captured = LocationShare.Capture();
+        if (captured is not { } location)
+        {
+            confirm.Alert(null, Loc.T(L.Message.LocationUnavailable), Loc.T(L.Account.FailDismiss));
+            return;
+        }
+
+        var summary = LocationShare.Summary(location);
+        var prompt = Loc.T(L.Message.ShareLocationConfirm);
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Message.ShareLocation),
+            Message = summary.Length > 0 ? $"{prompt}\n{summary}" : prompt,
+            ConfirmLabel = Loc.T(L.Velvet.Send),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = false,
+            FailedMessage = Loc.T(L.Message.LocationSendFailed),
+            ConfirmAsync = done =>
+            {
+                if (store.Sending)
+                {
+                    done(false);
+                    return;
+                }
+
+                store.SendMessage(threadId, LocationShare.Compose(location), sent =>
+                {
+                    if (sent)
+                    {
+                        transcript.RequestSnapToBottom();
+                    }
+
+                    done(sent);
+                });
+            },
         });
     }
 

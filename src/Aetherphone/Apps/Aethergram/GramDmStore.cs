@@ -398,7 +398,7 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
         var preview = thread.LastMessageKind == PostShareKind
             ? Loc.T(L.Aethergram.SharedPost)
-            : thread.LastMessagePreview;
+            : ChatText.ListPreview(thread.LastMessagePreview);
         return new PhoneNotification("aethergram", name, preview, DateTime.Now,
             AppPalettes.Aethergram.Accent, thread.OtherUserId);
     }

@@ -69,7 +69,7 @@ internal sealed partial class VelvetShell
             var thread = threads[index];
             var preview = string.IsNullOrEmpty(thread.LastMessagePreview)
                 ? Loc.T(L.Velvet.ThreadEmpty)
-                : thread.LastMessagePreview;
+                : ChatText.ListPreview(thread.LastMessagePreview);
             var model = new VRowModel
             {
                 Title = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
@@ -236,7 +236,7 @@ internal sealed partial class VelvetShell
                     continue;
                 }
 
-                return message.Body;
+                return ChatText.ListPreview(message.Body);
             }
         }
 

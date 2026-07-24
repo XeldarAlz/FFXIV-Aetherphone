@@ -330,7 +330,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     protected override PhoneNotification BuildInboxNotification(VelvetThreadDto thread)
     {
         var name = string.IsNullOrEmpty(thread.OtherDisplayName) ? thread.OtherHandle : thread.OtherDisplayName;
-        return new PhoneNotification("velvet", name, thread.LastMessagePreview, DateTime.Now,
+        return new PhoneNotification("velvet", name, ChatText.ListPreview(thread.LastMessagePreview), DateTime.Now,
             AppPalettes.Velvet.Accent, thread.OtherUserId);
     }
 
