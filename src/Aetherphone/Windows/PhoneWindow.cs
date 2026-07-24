@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
@@ -14,10 +15,13 @@ internal sealed class PhoneWindow : Window
                                                ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoBackground;
 
     private const int RecenterFrameCount = 3;
+    private const float RotateSeconds = 0.26f;
     private readonly PhoneShell shell;
     private readonly Configuration configuration;
     private int recenterFrames;
     private int pendingFrames;
+    private float landscapeBlend;
+    private int rotatePinFrames;
     private Vector2? pendingPosition;
     private Vector2? maximizedPosition;
     private Vector2? minimizedPosition;
@@ -113,7 +117,7 @@ internal sealed class PhoneWindow : Window
     {
         var phase = shell.MinimizePhase;
         var minimized = phase == MinimizePhase.Minimized;
-        var size = minimized ? MinimizeTransition.MinimizedSize : PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
+        var size = minimized ? MinimizeTransition.MinimizedSize : OrientedSize();
         Size = size;
         SizeCondition = ImGuiCond.Always;
         var locked = !minimized && configuration.LockPosition;
@@ -142,6 +146,12 @@ internal sealed class PhoneWindow : Window
             Position = Vector2.Lerp(homePosition, dockPosition, shell.MinimizeEased);
             PositionCondition = ImGuiCond.Always;
         }
+        else if (!minimized && rotatePinFrames > 0 && LastSize.Y > 0f)
+        {
+            rotatePinFrames--;
+            Position = CenterPinnedPosition(size);
+            PositionCondition = ImGuiCond.Always;
+        }
         else
         {
             Position = null;
@@ -152,6 +162,41 @@ internal sealed class PhoneWindow : Window
     }
 
     public override void PostDraw() => ImGui.PopStyleVar();
+
+    private Vector2 OrientedSize()
+    {
+        var portrait = PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
+        var target = shell.LandscapeActive ? 1f : 0f;
+        if (landscapeBlend != target)
+        {
+            var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+            var step = delta / RotateSeconds;
+            landscapeBlend = target > landscapeBlend
+                ? MathF.Min(target, landscapeBlend + step)
+                : MathF.Max(target, landscapeBlend - step);
+            rotatePinFrames = RecenterFrameCount;
+        }
+
+        if (landscapeBlend <= 0f)
+        {
+            return portrait;
+        }
+
+        var landscape = new Vector2(portrait.Y, portrait.X);
+        return Vector2.Lerp(portrait, landscape, Easing.SmootherStep(landscapeBlend));
+    }
+
+    private Vector2 CenterPinnedPosition(Vector2 size)
+    {
+        var scaledSize = size * ImGuiHelpers.GlobalScale;
+        var center = LastPosition + LastSize * 0.5f;
+        var viewport = ImGui.GetMainViewport();
+        var position = center - scaledSize * 0.5f;
+        var maxPosition = viewport.Pos + viewport.Size - scaledSize;
+        position.X = Math.Clamp(position.X, viewport.Pos.X, MathF.Max(viewport.Pos.X, maxPosition.X));
+        position.Y = Math.Clamp(position.Y, viewport.Pos.Y, MathF.Max(viewport.Pos.Y, maxPosition.Y));
+        return position;
+    }
 
     public override void Draw()
     {

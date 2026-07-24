@@ -131,6 +131,9 @@ internal sealed class PhoneShell : IDisposable
 
     public bool HomeEditing => home.Editing && navigation.Current is null;
 
+    public bool LandscapeActive => configuration.CameraLandscape && minimize.Phase == MinimizePhase.None &&
+                                   !navigation.IsTransitioning && navigation.Current?.Id == "camera";
+
     public MinimizePhase MinimizePhase => minimize.Phase;
 
     public float MinimizeEased => minimize.EasedProgress;

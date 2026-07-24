@@ -53,6 +53,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
     public List<string> FontGlyphLedger { get; set; } = new();
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = 1.25f;
+    public bool CameraLandscape { get; set; }
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
