@@ -48,16 +48,29 @@ internal sealed class JobEntry
     public bool IsActive { get; }
 }
 
-internal sealed class JobRoleSection
+internal sealed class JobSection
 {
-    public JobRoleSection(JobRole role, LocString title, JobEntry[] entries)
+    public JobSection(LocString roleTitle, JobEntry[] entries)
     {
-        Role = role;
-        Title = title;
+        CategoryIndex = -1;
+        RoleTitle = roleTitle;
+        CustomTitle = string.Empty;
         Entries = entries;
     }
 
-    public JobRole Role { get; }
-    public LocString Title { get; }
+    public JobSection(int categoryIndex, string customTitle, JobEntry[] entries)
+    {
+        CategoryIndex = categoryIndex;
+        RoleTitle = default;
+        CustomTitle = customTitle;
+        Entries = entries;
+    }
+
+    /// <summary>Index into the character's category list, or -1 for the built-in role sections.</summary>
+    public int CategoryIndex { get; }
+
+    public LocString RoleTitle { get; }
+    public string CustomTitle { get; }
     public JobEntry[] Entries { get; }
+    public bool IsCustom => CategoryIndex >= 0;
 }

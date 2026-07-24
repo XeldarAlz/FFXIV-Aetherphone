@@ -59,6 +59,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
     public string AccentName { get; set; } = "Violet";
     public string JobsAccentName { get; set; } = "Blue";
     public List<JobsCustomColor> JobsCustomColors { get; set; } = new();
+    public Dictionary<ulong, List<JobsCategory>> JobsCategoriesByCharacter { get; set; } = new();
     public string LightWallpaperId { get; set; } = "DuskLight";
     public string DarkWallpaperId { get; set; } = "DuskDark";
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();

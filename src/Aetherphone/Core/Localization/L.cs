@@ -2326,6 +2326,16 @@ internal static class L
         public static readonly LocString UpdateColor = new("jobs.updateColor", "Update");
         public static readonly LocString DeleteColor = new("jobs.deleteColor", "Delete");
         public static readonly LocString DeleteColorConfirm = new("jobs.deleteColorConfirm", "Delete \"{0}\"? This can't be undone.");
+        public static readonly LocString Categories = new("jobs.categories", "Categories");
+        public static readonly LocString NewCategory = new("jobs.newCategory", "New category…");
+        public static readonly LocString NewCategoryTitle = new("jobs.newCategoryTitle", "New category");
+        public static readonly LocString RenameCategory = new("jobs.renameCategory", "Rename category");
+        public static readonly LocString CategoryNamePlaceholder = new("jobs.categoryNamePlaceholder", "Name this category");
+        public static readonly LocString SaveCategory = new("jobs.saveCategory", "Save");
+        public static readonly LocString RemoveFromCategory = new("jobs.removeFromCategory", "Remove from category");
+        public static readonly LocString DeleteCategory = new("jobs.deleteCategory", "Delete");
+        public static readonly LocString DeleteCategoryConfirm = new("jobs.deleteCategoryConfirm", "Delete \"{0}\"? Its gearsets go back to their role sections.");
+        public static readonly LocString EmptyCategory = new("jobs.emptyCategory", "No gearsets here yet. Use a gearset's ··· menu to add one.");
     }
 
     internal static class Inventory

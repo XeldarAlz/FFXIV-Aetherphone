@@ -23,6 +23,8 @@ internal sealed partial class JobsApp : IPhoneApp
     private const float CardRounding = 18f;
     private const float SectionGap = 12f;
     private const string ColorMenuId = "jobs.color";
+    private const string CategoryMenuId = "jobs.categories";
+    private const string RowMenuId = "jobs.gearsetMenu";
 
     public string Id => "jobs";
     public string DisplayName => Loc.T(L.Apps.Jobs);
@@ -37,37 +39,45 @@ internal sealed partial class JobsApp : IPhoneApp
     private readonly ITextureProvider textures;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
+    private readonly CharacterWatch characterWatch;
     private readonly AppSkin ui = new(AppPalettes.JobsFor(AppAccents.For("jobs")));
-    private readonly DropdownMenu colorMenu = new();
-    private JobRoleSection[] sections = Array.Empty<JobRoleSection>();
+    private readonly DropdownMenu menu = new();
+    private JobSection[] sections = Array.Empty<JobSection>();
     private bool loaded;
     private float sinceRefresh;
     private JobEntry? pendingEquip;
     private float sincePendingEquip;
+    private int menuGearsetId = -1;
 
-    public JobsApp(GameData gameData, ITextureProvider textures, Configuration configuration, ConfirmService confirm)
+    public JobsApp(GameData gameData, ITextureProvider textures, Configuration configuration, ConfirmService confirm,
+        CharacterWatch characterWatch)
     {
         this.gameData = gameData;
         this.textures = textures;
         this.configuration = configuration;
         this.confirm = confirm;
+        this.characterWatch = characterWatch;
     }
 
     public void OnOpened() => Rebuild();
 
     public void OnClosed()
     {
-        sections = Array.Empty<JobRoleSection>();
+        sections = Array.Empty<JobSection>();
         loaded = false;
         pendingEquip = null;
         sincePendingEquip = 0f;
-        colorMenu.Close();
+        menuGearsetId = -1;
+        menu.Close();
         CloseColorPicker();
+        CloseCategoryEditor();
     }
 
     private void Rebuild()
     {
-        sections = gameData.LocalPlayer is null ? Array.Empty<JobRoleSection>() : JobsReader.Build(gameData);
+        sections = gameData.LocalPlayer is null
+            ? Array.Empty<JobSection>()
+            : JobsReader.Build(gameData, CurrentCategories());
         loaded = true;
         sinceRefresh = 0f;
         ResolvePendingEquip();
@@ -123,8 +133,8 @@ internal sealed partial class JobsApp : IPhoneApp
         ui.Theme = theme;
         ui.Palette = AppPalettes.JobsFor(Accent);
         ui.Backdrop(SceneChrome.ScreenFrom(content, theme, scale));
-        colorMenu.Gate();
-        if (pickerOpen)
+        menu.Gate();
+        if (pickerOpen || categoryEditorOpen)
         {
             UiInteract.BlockThisFrame();
         }
@@ -168,7 +178,8 @@ internal sealed partial class JobsApp : IPhoneApp
                     for (var index = 0; index < sections.Length; index++)
                     {
                         var section = sections[index];
-                        ui.SectionHeading(Loc.T(section.Title), index == 0 ? 8f : 4f);
+                        var title = section.IsCustom ? section.CustomTitle : Loc.T(section.RoleTitle);
+                        ui.SectionHeading(title, index == 0 ? 8f : 4f);
                         DrawSectionCard(section, scale);
                         ImGui.Dummy(new Vector2(0f, SectionGap * scale));
                     }
@@ -179,9 +190,16 @@ internal sealed partial class JobsApp : IPhoneApp
         }
 
         DrawColorMenu(content, theme);
+        DrawCategoriesMenu(content, theme);
+        DrawRowMenu(content, theme);
         if (pickerOpen)
         {
             DrawColorPicker(content, scale);
+        }
+
+        if (categoryEditorOpen)
+        {
+            DrawCategoryEditor(content, scale);
         }
     }
 
@@ -196,13 +214,27 @@ internal sealed partial class JobsApp : IPhoneApp
         if (ui.IconButton(buttonCenter, radius, FontAwesomeIcon.Palette.ToIconString(), ui.TitleInk,
                 Palette.WithAlpha(ui.TitleInk, 0.12f), 0.55f, Loc.T(L.Jobs.BackgroundColor)))
         {
-            colorMenu.Toggle(ColorMenuId, colorButtonRect);
+            menu.Toggle(ColorMenuId, colorButtonRect);
+        }
+
+        if (gameData.LocalPlayer is null)
+        {
+            return;
+        }
+
+        var categoriesCenter = new Vector2(buttonCenter.X - radius * 2f - 10f * scale, rowCenterY);
+        var categoriesRect = new Rect(categoriesCenter - new Vector2(radius, radius),
+            categoriesCenter + new Vector2(radius, radius));
+        if (ui.IconButton(categoriesCenter, radius, FontAwesomeIcon.FolderPlus.ToIconString(), ui.TitleInk,
+                Palette.WithAlpha(ui.TitleInk, 0.12f), 0.55f, Loc.T(L.Jobs.Categories)))
+        {
+            menu.Toggle(CategoryMenuId, categoriesRect);
         }
     }
 
     private void DrawColorMenu(Rect content, PhoneTheme theme)
     {
-        if (!colorMenu.IsOpenFor(ColorMenuId))
+        if (!menu.IsOpenFor(ColorMenuId))
         {
             return;
         }
@@ -227,7 +259,7 @@ internal sealed partial class JobsApp : IPhoneApp
         items[customIndex] = new DropdownMenu.Item(Loc.T(L.Jobs.CustomColor),
             Glyph: FontAwesomeIcon.EyeDropper.ToIconString());
 
-        var picked = colorMenu.Draw(content, theme, items, out var rowAction);
+        var picked = menu.Draw(content, theme, items, out var rowAction);
         if (picked < 0)
         {
             return;
@@ -267,10 +299,10 @@ internal sealed partial class JobsApp : IPhoneApp
             Loc.T(L.Jobs.NoGearsets), ui.MutedInk, TextStyles.Subheadline, width - 40f * scale);
     }
 
-    private void DrawSectionCard(JobRoleSection section, float scale)
+    private void DrawSectionCard(JobSection section, float scale)
     {
         var width = ImGui.GetContentRegionAvail().X;
-        var rowCount = section.Entries.Length;
+        var rowCount = Math.Max(1, section.Entries.Length);
         var rowHeight = RowHeight * scale;
         var origin = ImGui.GetCursorScreenPos();
         var min = origin;
@@ -279,8 +311,14 @@ internal sealed partial class JobsApp : IPhoneApp
         ui.Card(drawList, min, max, CardRounding * scale, elevated: true);
 
         var padding = 16f * scale;
+        if (section.Entries.Length == 0)
+        {
+            Typography.DrawWrappedCentered(new Vector2((min.X + max.X) * 0.5f, min.Y + rowHeight * 0.5f - 8f * scale),
+                Loc.T(L.Jobs.EmptyCategory), ui.MutedInk, TextStyles.Footnote, width - padding * 2f);
+        }
+
         var separator = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f));
-        for (var index = 0; index < rowCount; index++)
+        for (var index = 0; index < section.Entries.Length; index++)
         {
             var rowTop = min.Y + index * rowHeight;
             var rowRect = new Rect(new Vector2(min.X, rowTop), new Vector2(max.X, rowTop + rowHeight));
@@ -299,8 +337,13 @@ internal sealed partial class JobsApp : IPhoneApp
 
     private void DrawJobRow(ImDrawListPtr drawList, Rect rowRect, Rect contentRect, JobEntry job, float scale)
     {
+        var hasMenu = job.Kind == JobEntryKind.Gearset;
+        var menuRadius = 13f * scale;
+        var menuCenter = new Vector2(contentRect.Max.X - menuRadius, contentRect.Center.Y);
+        var menuHalf = new Vector2(menuRadius, menuRadius);
+        var overMenu = hasMenu && UiInteract.Hover(menuCenter - menuHalf, menuCenter + menuHalf);
         var equippable = job.Kind == JobEntryKind.Gearset && !job.IsActive;
-        var hovered = equippable && UiInteract.Hover(rowRect.Min, rowRect.Max);
+        var hovered = equippable && !overMenu && UiInteract.Hover(rowRect.Min, rowRect.Max);
         if (hovered)
         {
             var alpha = ImGui.IsMouseDown(ImGuiMouseButton.Left) ? 0.14f : 0.07f;
@@ -323,7 +366,8 @@ internal sealed partial class JobsApp : IPhoneApp
             : job.Kind == JobEntryKind.NoGearset ? Loc.T(L.Jobs.NoGearset)
             : string.Empty;
         var textLeft = iconMax.X + 14f * scale;
-        var textRight = contentRect.Max.X -
+        var noteRight = hasMenu ? menuCenter.X - menuRadius - 8f * scale : contentRect.Max.X;
+        var textRight = noteRight -
                         (note.Length == 0 ? 0f : Typography.Measure(note, TextStyles.Caption2).X + 28f * scale);
         var name = Typography.FitText(job.Name, textRight - textLeft, TextStyles.Headline);
         Typography.Draw(drawList, new Vector2(textLeft, contentRect.Min.Y + 12f * scale), name, ui.TitleInk,
@@ -335,7 +379,7 @@ internal sealed partial class JobsApp : IPhoneApp
         Typography.Draw(drawList, new Vector2(textLeft, contentRect.Min.Y + 36f * scale), fittedSubtitle, ui.MutedInk,
             TextStyles.Footnote);
 
-        var noteCenter = new Vector2(contentRect.Max.X, contentRect.Center.Y);
+        var noteCenter = new Vector2(noteRight, contentRect.Center.Y);
         if (job.IsActive)
         {
             DrawActiveBadge(drawList, noteCenter, note, scale);
@@ -350,6 +394,13 @@ internal sealed partial class JobsApp : IPhoneApp
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (hasMenu && ui.IconButton(menuCenter, menuRadius, FontAwesomeIcon.EllipsisH.ToIconString(), ui.MutedInk,
+                default, 0.5f))
+        {
+            menuGearsetId = job.GearsetId;
+            menu.Toggle(RowMenuId, new Rect(menuCenter - menuHalf, menuCenter + menuHalf));
         }
 
         if (UiInteract.Click(rowRect.Min, rowRect.Max, hovered) && GearsetActions.Equip(job.GearsetId))
