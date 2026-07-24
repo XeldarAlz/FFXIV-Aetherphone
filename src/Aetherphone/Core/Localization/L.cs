@@ -66,6 +66,14 @@ internal static class L
         public static readonly LocString FollowingTitle = new("social.followingTitle", "Following");
         public static readonly LocString LikedByTitle = new("social.likedByTitle", "Liked by");
         public static readonly LocString ListEmpty = new("social.listEmpty", "No one here yet");
+        public static readonly LocString MutualsTitle = new("social.mutualsTitle", "Followed by");
+        public static readonly LocString FollowsYou = new("social.followsYou", "Follows you");
+        public static readonly LocString FollowedByOne = new("social.followedByOne", "Followed by {0}");
+        public static readonly LocString FollowedByTwo = new("social.followedByTwo", "Followed by {0} and {1}");
+        public static readonly LocString FollowedByOneMoreOne = new("social.followedByOneMoreOne", "Followed by {0} and 1 other");
+        public static readonly LocString FollowedByOneMoreMany = new("social.followedByOneMoreMany", "Followed by {0} and {1} others");
+        public static readonly LocString FollowedByTwoMoreOne = new("social.followedByTwoMoreOne", "Followed by {0}, {1} and 1 other");
+        public static readonly LocString FollowedByTwoMoreMany = new("social.followedByTwoMoreMany", "Followed by {0}, {1} and {2} others");
         public static readonly LocString ActivityTitle = new("social.activityTitle", "Notifications");
         public static readonly LocString ActivityTab = new("social.activityTab", "Activity");
         public static readonly LocString ActivityEmpty = new("social.activityEmpty", "Nothing here yet. Interactions with your posts will show up here");

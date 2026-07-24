@@ -44,9 +44,16 @@ internal sealed record UserDto(
     bool SharePresence = true,
     int MentionPolicy = 0,
     int TagPolicy = 0,
-    bool RequireTagApproval = false) : IIdentified;
+    bool RequireTagApproval = false,
+    bool FollowsYou = false,
+    int FollowedByCount = 0,
+    string[]? FollowedByPreview = null,
+    bool CanMessage = false,
+    int MessagePolicy = 0) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
+
+internal sealed record UpdateMessagePrivacyRequest(int? MessagePolicy);
 
 internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffsetMinutes);
 

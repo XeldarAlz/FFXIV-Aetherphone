@@ -57,6 +57,11 @@ internal sealed class SocialClient
         return UserListAsync($"/posts/{Uri.EscapeDataString(postId)}/likers", cursor, token);
     }
 
+    public Task<UserListPage?> MutualFollowersAsync(string userId, string? cursor, CancellationToken token)
+    {
+        return UserListAsync($"/users/{Uri.EscapeDataString(userId)}/mutual-followers", cursor, token);
+    }
+
     private Task<UserListPage?> UserListAsync(string path, string? cursor, CancellationToken token)
     {
         if (cursor is not null)

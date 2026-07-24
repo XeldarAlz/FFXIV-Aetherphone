@@ -5,4 +5,5 @@ internal enum UserListKind
     Followers,
     Following,
     Likers,
+    Mutuals,
 }

@@ -23,6 +23,7 @@ namespace Aetherphone.Core.Aethernet;
 [JsonSerializable(typeof(MentionSuggestDto))]
 [JsonSerializable(typeof(MentionSuggestResult))]
 [JsonSerializable(typeof(UpdateMentionPrivacyRequest))]
+[JsonSerializable(typeof(UpdateMessagePrivacyRequest))]
 [JsonSerializable(typeof(UpdateTagPrivacyRequest))]
 [JsonSerializable(typeof(PhotoTagInput))]
 [JsonSerializable(typeof(PhotoTagInput[]))]

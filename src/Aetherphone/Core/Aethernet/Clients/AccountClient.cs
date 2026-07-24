@@ -61,6 +61,11 @@ internal sealed class AccountClient
         return net.PostAsync("/me/mention-privacy", new UpdateMentionPrivacyRequest(policy), AethernetJsonContext.Default.UpdateMentionPrivacyRequest, AethernetJsonContext.Default.UserDto, token);
     }
 
+    public Task<UserDto?> UpdateMessagePrivacyAsync(int policy, CancellationToken token)
+    {
+        return net.PostAsync("/me/message-privacy", new UpdateMessagePrivacyRequest(policy), AethernetJsonContext.Default.UpdateMessagePrivacyRequest, AethernetJsonContext.Default.UserDto, token);
+    }
+
     public Task<UserDto?> UpdateChatPrivacyAsync(UpdateChatPrivacyRequest request, CancellationToken token)
     {
         return net.PostAsync("/me/chat-privacy", request, AethernetJsonContext.Default.UpdateChatPrivacyRequest, AethernetJsonContext.Default.UserDto, token);
