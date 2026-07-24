@@ -256,7 +256,7 @@ internal sealed partial class CollectionsApp
         {
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                DragScrollHost.JumpToTop();
                 resetScroll = false;
             }
 

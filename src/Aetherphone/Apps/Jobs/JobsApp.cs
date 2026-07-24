@@ -10,22 +10,19 @@ using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Jobs;
 
-internal sealed class JobsApp : IPhoneApp
+internal sealed partial class JobsApp : IPhoneApp
 {
     private const float RefreshIntervalSeconds = 2f;
+    private const float PendingEquipIntervalSeconds = 0.1f;
+    private const float PendingEquipTimeoutSeconds = 5f;
     private const float RowHeight = 64f;
     private const float CardRounding = 18f;
     private const float SectionGap = 12f;
     private const string ColorMenuId = "jobs.color";
-
-    private const ImGuiWindowFlags HostFlags = ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoDecoration |
-                                                ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
-                                                ImGuiWindowFlags.NoMove;
 
     public string Id => "jobs";
     public string DisplayName => Loc.T(L.Apps.Jobs);
@@ -45,13 +42,8 @@ internal sealed class JobsApp : IPhoneApp
     private JobRoleSection[] sections = Array.Empty<JobRoleSection>();
     private bool loaded;
     private float sinceRefresh;
-    private Rect colorButtonRect;
-    private bool showHexInput;
-    private string hexDigits = string.Empty;
-    private string hexColorName = string.Empty;
-    private string lastAppliedHexDigits = string.Empty;
-    private int hexInputOpenedFrame;
-    private int editingSavedColorIndex = -1;
+    private JobEntry? pendingEquip;
+    private float sincePendingEquip;
 
     public JobsApp(GameData gameData, ITextureProvider textures, Configuration configuration, ConfirmService confirm)
     {
@@ -67,9 +59,10 @@ internal sealed class JobsApp : IPhoneApp
     {
         sections = Array.Empty<JobRoleSection>();
         loaded = false;
+        pendingEquip = null;
+        sincePendingEquip = 0f;
         colorMenu.Close();
-        showHexInput = false;
-        editingSavedColorIndex = -1;
+        CloseColorPicker();
     }
 
     private void Rebuild()
@@ -77,6 +70,49 @@ internal sealed class JobsApp : IPhoneApp
         sections = gameData.LocalPlayer is null ? Array.Empty<JobRoleSection>() : JobsReader.Build(gameData);
         loaded = true;
         sinceRefresh = 0f;
+        ResolvePendingEquip();
+    }
+
+    // Equipping only asks the game to switch: the gearset index and the player's job still read the old values for
+    // several frames, so the row that was clicked is polled until it actually turns active instead of once up front.
+    private void ResolvePendingEquip()
+    {
+        if (pendingEquip is null)
+        {
+            return;
+        }
+
+        if (sincePendingEquip >= PendingEquipTimeoutSeconds || IsEquipped(pendingEquip))
+        {
+            pendingEquip = null;
+            sincePendingEquip = 0f;
+        }
+    }
+
+    private bool IsEquipped(JobEntry target)
+    {
+        for (var sectionIndex = 0; sectionIndex < sections.Length; sectionIndex++)
+        {
+            var entries = sections[sectionIndex].Entries;
+            for (var entryIndex = 0; entryIndex < entries.Length; entryIndex++)
+            {
+                var entry = entries[entryIndex];
+                if (entry.Kind != target.Kind)
+                {
+                    continue;
+                }
+
+                var matches = target.Kind == JobEntryKind.Gearset
+                    ? entry.GearsetId == target.GearsetId
+                    : entry.ClassJobId == target.ClassJobId;
+                if (matches)
+                {
+                    return entry.IsActive;
+                }
+            }
+        }
+
+        return false;
     }
 
     public void Draw(in PhoneContext context)
@@ -88,7 +124,7 @@ internal sealed class JobsApp : IPhoneApp
         ui.Palette = AppPalettes.JobsFor(Accent);
         ui.Backdrop(SceneChrome.ScreenFrom(content, theme, scale));
         colorMenu.Gate();
-        if (showHexInput)
+        if (pickerOpen)
         {
             UiInteract.BlockThisFrame();
         }
@@ -107,8 +143,16 @@ internal sealed class JobsApp : IPhoneApp
         }
         else
         {
-            sinceRefresh += ImGui.GetIO().DeltaTime;
-            if (sinceRefresh >= RefreshIntervalSeconds)
+            var deltaTime = ImGui.GetIO().DeltaTime;
+            sinceRefresh += deltaTime;
+            var interval = RefreshIntervalSeconds;
+            if (pendingEquip is not null)
+            {
+                sincePendingEquip += deltaTime;
+                interval = PendingEquipIntervalSeconds;
+            }
+
+            if (sinceRefresh >= interval)
             {
                 Rebuild();
             }
@@ -134,11 +178,10 @@ internal sealed class JobsApp : IPhoneApp
             }
         }
 
-        // Mirrors AethergramApp.DrawRoot: menus are drawn last, after the content they float above.
         DrawColorMenu(content, theme);
-        if (showHexInput)
+        if (pickerOpen)
         {
-            DrawHexInput(scale);
+            DrawColorPicker(content, scale);
         }
     }
 
@@ -192,7 +235,7 @@ internal sealed class JobsApp : IPhoneApp
 
         if (picked == customIndex)
         {
-            OpenHexEditor(-1);
+            OpenColorPicker(-1);
             return;
         }
 
@@ -204,7 +247,7 @@ internal sealed class JobsApp : IPhoneApp
 
         if (picked >= savedOffset && rowAction == DropdownMenu.RowAction.Edit)
         {
-            OpenHexEditor(picked - savedOffset);
+            OpenColorPicker(picked - savedOffset);
             return;
         }
 
@@ -212,177 +255,6 @@ internal sealed class JobsApp : IPhoneApp
             ? ThemeCatalog.Accents[picked].Name
             : savedColors[picked - savedOffset].Hex;
         configuration.Save();
-    }
-
-    private void OpenHexEditor(int savedIndex)
-    {
-        editingSavedColorIndex = savedIndex;
-        var startColor = savedIndex >= 0 &&
-                          HexColor.TryParse(configuration.JobsCustomColors[savedIndex].Hex, out var saved)
-            ? saved
-            : Accent;
-        hexDigits = HexColor.ToDigits(startColor);
-        hexColorName = savedIndex >= 0 ? configuration.JobsCustomColors[savedIndex].Name : string.Empty;
-        lastAppliedHexDigits = string.Empty;
-        hexInputOpenedFrame = ImGui.GetFrameCount();
-        showHexInput = true;
-    }
-
-    private void DeleteSavedColor(int index)
-    {
-        if (index < 0 || index >= configuration.JobsCustomColors.Count)
-        {
-            return;
-        }
-
-        var entry = configuration.JobsCustomColors[index];
-        confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Jobs.DeleteColorConfirm, entry.Name),
-            ConfirmLabel = Loc.T(L.Jobs.DeleteColor),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = true,
-            Confirm = () =>
-            {
-                configuration.JobsCustomColors.Remove(entry);
-                configuration.Save();
-            },
-        });
-    }
-
-    private void DrawHexInput(float scale)
-    {
-        var width = 220f * scale;
-        var pad = Metrics.Space.Lg * scale;
-        var swatchRadius = 14f * scale;
-        var hexRowHeight = swatchRadius * 2f;
-        var nameRowHeight = 26f * scale;
-        var saveRowHeight = 30f * scale;
-        var rowGap = 10f * scale;
-        var height = pad * 2f + hexRowHeight + rowGap + nameRowHeight + rowGap + saveRowHeight;
-        var top = colorButtonRect.Max.Y + 8f * scale;
-        var min = new Vector2(colorButtonRect.Max.X - width, top);
-        var max = min + new Vector2(width, height);
-        var justOpened = hexInputOpenedFrame == ImGui.GetFrameCount();
-
-        var hexRowTop = min.Y + pad;
-        var nameRowTop = hexRowTop + hexRowHeight + rowGap;
-        var saveRowTop = nameRowTop + nameRowHeight + rowGap;
-
-        // Real (but fully transparent) InputText widgets host the actual keyboard capture: ImGui/Dalamud only
-        // routes keystrokes away from the game while an active widget holds focus, which our own hand-drawn
-        // rectangles never would. The visible card is drawn separately below, on the foreground list, so it
-        // still stays on top of the job cards regardless of these host windows' place in the draw order.
-        using (ImRaii.PushColor(ImGuiCol.FrameBg, default(Vector4))
-                   .Push(ImGuiCol.FrameBgHovered, default(Vector4))
-                   .Push(ImGuiCol.FrameBgActive, default(Vector4))
-                   .Push(ImGuiCol.Text, default(Vector4))
-                   .Push(ImGuiCol.Border, default(Vector4)))
-        {
-            var hexHostMin = new Vector2(min.X + pad + hexRowHeight + 12f * scale, hexRowTop);
-            var hexHostSize = new Vector2(max.X - pad - hexHostMin.X, hexRowHeight);
-            ImGui.SetCursorScreenPos(hexHostMin);
-            using (ImRaii.Child("##jobsHexHost", hexHostSize, false, HostFlags))
-            {
-                if (justOpened)
-                {
-                    ImGui.SetKeyboardFocusHere();
-                }
-
-                ImGui.SetNextItemWidth(-1f);
-                ImGui.InputText("##jobsHexField", ref hexDigits, 6,
-                    ImGuiInputTextFlags.CharsHexadecimal | ImGuiInputTextFlags.CharsUppercase);
-            }
-
-            var nameHostMin = new Vector2(min.X + pad, nameRowTop);
-            var nameHostSize = new Vector2(width - pad * 2f, nameRowHeight);
-            ImGui.SetCursorScreenPos(nameHostMin);
-            using (ImRaii.Child("##jobsColorNameHost", nameHostSize, false, HostFlags))
-            {
-                ImGui.SetNextItemWidth(-1f);
-                ImGui.InputText("##jobsColorNameField", ref hexColorName, 24);
-            }
-        }
-
-        if (hexDigits.Length == 6 && hexDigits != lastAppliedHexDigits)
-        {
-            lastAppliedHexDigits = hexDigits;
-            configuration.JobsAccentName = "#" + hexDigits;
-            configuration.Save();
-        }
-
-        var drawList = ImGui.GetForegroundDrawList();
-        Elevation.Floating(drawList, min, max, 16f * scale, scale, 0.85f);
-        ui.Card(drawList, min, max, 16f * scale, elevated: true);
-
-        var swatchCenter = new Vector2(min.X + pad + swatchRadius, hexRowTop + swatchRadius);
-        var validHex = HexColor.TryParse(hexDigits, out var previewColor);
-        drawList.AddCircleFilled(swatchCenter, swatchRadius,
-            ImGui.GetColorU32(validHex ? previewColor : Palette.WithAlpha(ui.MutedInk, 0.25f)), 24);
-        drawList.AddCircle(swatchCenter, swatchRadius, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.18f)), 24,
-            1.4f * scale);
-
-        var hexTextLeft = swatchCenter.X + swatchRadius + 12f * scale;
-        var hexDisplay = "#" + hexDigits.PadRight(6, '_');
-        Typography.Draw(drawList, new Vector2(hexTextLeft, hexRowTop + hexRowHeight * 0.5f - 8f * scale), hexDisplay,
-            ui.TitleInk, TextStyles.BodyEmphasized);
-
-        var nameDisplay = hexColorName.Length > 0 ? hexColorName : Loc.T(L.Jobs.ColorNamePlaceholder);
-        var nameInk = hexColorName.Length > 0 ? ui.TitleInk : Palette.WithAlpha(ui.MutedInk, 0.7f);
-        Typography.Draw(drawList, new Vector2(min.X + pad, nameRowTop + nameRowHeight * 0.5f - 8f * scale), nameDisplay,
-            nameInk, TextStyles.Body);
-
-        DrawSaveButton(drawList, new Rect(new Vector2(max.X - pad - 74f * scale, saveRowTop),
-            new Vector2(max.X - pad, saveRowTop + saveRowHeight)), validHex, scale);
-
-        if (!justOpened && (ImGui.IsKeyPressed(ImGuiKey.Escape) || ImGui.IsKeyPressed(ImGuiKey.Enter) ||
-                (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max))))
-        {
-            showHexInput = false;
-        }
-    }
-
-    private void DrawSaveButton(ImDrawListPtr drawList, Rect rect, bool enabled, float scale)
-    {
-        var editing = editingSavedColorIndex >= 0 && editingSavedColorIndex < configuration.JobsCustomColors.Count;
-        var hovered = enabled && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
-        var fillAlpha = !enabled ? 0.08f : hovered ? 0.30f : 0.20f;
-        drawList.AddRectFilled(rect.Min, rect.Max, ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, fillAlpha)),
-            rect.Height * 0.5f);
-        var label = Loc.T(editing ? L.Jobs.UpdateColor : L.Jobs.SaveColor);
-        var labelSize = Typography.Measure(label, TextStyles.SubheadlineEmphasized);
-        var ink = enabled ? ui.Accent : Palette.WithAlpha(ui.MutedInk, 0.5f);
-        Typography.Draw(drawList, rect.Center - labelSize * 0.5f, label, ink, TextStyles.SubheadlineEmphasized);
-        if (!hovered)
-        {
-            return;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-        {
-            return;
-        }
-
-        var name = hexColorName.Trim();
-        if (name.Length == 0)
-        {
-            name = "#" + hexDigits;
-        }
-
-        if (editing)
-        {
-            var entry = configuration.JobsCustomColors[editingSavedColorIndex];
-            entry.Name = name;
-            entry.Hex = "#" + hexDigits;
-        }
-        else
-        {
-            configuration.JobsCustomColors.Add(new JobsCustomColor { Name = name, Hex = "#" + hexDigits });
-        }
-
-        configuration.Save();
-        showHexInput = false;
     }
 
     private void DrawHint()
@@ -470,7 +342,9 @@ internal sealed class JobsApp : IPhoneApp
 
         if (!job.IsActive && UiInteract.Click(rowRect.Min, rowRect.Max, hovered) && TryEquip(job))
         {
-            Rebuild();
+            pendingEquip = job;
+            sincePendingEquip = 0f;
+            sinceRefresh = 0f;
         }
     }
 

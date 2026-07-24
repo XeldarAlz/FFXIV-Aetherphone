@@ -32,6 +32,7 @@ namespace Aetherphone.Core;
 
 internal sealed class PhoneServices : IDisposable
 {
+    public Home.AppInstaller Installer { get; } = new();
     public required Configuration Configuration { get; init; }
     public required ThemeProvider Themes { get; init; }
     public required GameData GameData { get; init; }

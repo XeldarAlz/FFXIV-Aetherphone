@@ -41,6 +41,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly LodestoneService lodestone;
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
+    private readonly ConductGateService conduct;
     private readonly AvatarComposer avatar;
     private readonly SocialProfilePages profile;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
@@ -92,6 +93,7 @@ internal sealed partial class ChirperApp : IPhoneApp
         this.lodestone = lodestone;
         this.images = images;
         this.social = social;
+        this.conduct = conduct;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Chirper.ChangePhoto, L.Chirper.ImportFromPc, L.Photos.NoPhotos,
                 L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library,
@@ -132,7 +134,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             DeleteCommentFailed = L.Chirper.DeleteCommentFailed,
         }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
             () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back,
-            () => conduct.ShowRules(Id));
+            null);
     }
 
     public void OnOpened()
@@ -251,8 +253,6 @@ internal sealed partial class ChirperApp : IPhoneApp
             profile.EnsureLoaded(activeScope);
         }
 
-        profile.Tick(ImGui.GetIO().DeltaTime);
-        profile.TickRefresh(activeScope);
         var listRect = new Rect(new Vector2(area.Min.X, tabsRect.Max.Y + 6f * scale), area.Max);
         DrawFeedList(listRect, activeScope);
         if (ComposeFab.Draw(listRect, "##chirperComposeFab", Accent, FontAwesomeIcon.Feather.ToIconString(),
@@ -280,6 +280,18 @@ internal sealed partial class ChirperApp : IPhoneApp
         social.RefreshNow();
         social.MarkSeen(Id);
         router.Push(ChirperRoute.Activity);
+    }
+
+    private void RefreshActiveFeed()
+    {
+        if (!store.IsSignedIn || store.IsLoading(activeScope))
+        {
+            return;
+        }
+
+        feedScrollTopPending = true;
+        actions.Reset();
+        store.RefreshFeed(activeScope);
     }
 
     private void DrawFeedList(Rect listRect, SocialFeedScope scope)

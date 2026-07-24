@@ -355,6 +355,28 @@ internal sealed partial class VelvetShell : IPhoneApp
             router.Push(VelvetView.Activity);
         }
 
+        if (activeTab == VelvetPage.Feed)
+        {
+            var refreshCenter = new Vector2(headerRect.Max.X - 92f * scale, headerRect.Min.Y + headerHeight * 0.5f);
+            if (store.LoadingFeed)
+            {
+                LoadingPulse.Spinner(refreshCenter, 8f * scale, ui.Accent);
+            }
+            else if (ui.IconButton(refreshCenter, 16f * scale, FontAwesomeIcon.Sync.ToIconString(),
+                         VelvetTheme.TitleInk, AppSkin.Transparent, 0.9f, Loc.T(L.Common.Refresh),
+                         HoverLabelSide.Below))
+            {
+                RefreshFeed();
+            }
+        }
+
+        var rulesCenter = new Vector2(headerRect.Max.X - 56f * scale, headerRect.Min.Y + headerHeight * 0.5f);
+        if (ui.IconButton(rulesCenter, 16f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                VelvetTheme.MutedInk, AppSkin.Transparent, 0.9f, Loc.T(L.Conduct.Eyebrow), HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
+        }
+
         switch (activeTab)
         {
             case VelvetPage.Feed:
@@ -396,6 +418,11 @@ internal sealed partial class VelvetShell : IPhoneApp
         var picked = VTabBar.Draw(tabRect, tabs, (int)activeTab, scale);
         if (picked >= 0)
         {
+            if (picked == (int)VelvetPage.Feed && activeTab == VelvetPage.Feed)
+            {
+                RefreshFeed();
+            }
+
             activeTab = (VelvetPage)picked;
             if (activeTab != VelvetPage.Discover)
             {

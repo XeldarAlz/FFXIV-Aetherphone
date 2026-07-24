@@ -106,7 +106,7 @@ internal sealed partial class PhotosApp
             DragScrollHost.Begin(gridKey);
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                DragScrollHost.JumpToTop();
                 resetScroll = false;
             }
 
@@ -248,7 +248,7 @@ internal sealed partial class PhotosApp
             DragScrollHost.Begin(albumsKey);
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                DragScrollHost.JumpToTop();
                 resetScroll = false;
             }
 

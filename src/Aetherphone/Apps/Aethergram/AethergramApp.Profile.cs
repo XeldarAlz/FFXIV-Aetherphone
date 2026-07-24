@@ -111,6 +111,26 @@ internal sealed partial class AethergramApp
             scopeMenu.Toggle(ScopeMenuId, anchor);
         }
 
+        var refreshCenter = new Vector2(area.Max.X - 96f * scale, rowCenterY);
+        if (store.IsLoading(activeScope))
+        {
+            LoadingPulse.Spinner(refreshCenter, 8f * scale, ui.Accent);
+        }
+        else if (ui.IconButton(refreshCenter, 16f * scale, FontAwesomeIcon.Sync.ToIconString(),
+                     AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.1f, Loc.T(L.Common.Refresh),
+                     HoverLabelSide.Below))
+        {
+            RefreshActiveFeed();
+        }
+
+        var rulesCenter = new Vector2(area.Max.X - 60f * scale, rowCenterY);
+        if (ui.IconButton(rulesCenter, 16f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                AppPalettes.Aethergram.MutedInk, AppSkin.Transparent, 1.1f, Loc.T(L.Conduct.Eyebrow),
+                HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
+        }
+
         var composeCenter = new Vector2(area.Max.X - 24f * scale, rowCenterY);
         UiAnchors.Report("aethergram.compose", new Rect(composeCenter - new Vector2(18f * scale, 18f * scale),
             composeCenter + new Vector2(18f * scale, 18f * scale)));

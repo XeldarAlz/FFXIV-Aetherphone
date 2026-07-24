@@ -185,7 +185,7 @@ internal sealed class EmojiPicker
             DragScrollHost.Begin(gridKey);
             if (resetScroll)
             {
-                ImGui.SetScrollY(0f);
+                DragScrollHost.JumpToTop();
                 resetScroll = false;
             }
 

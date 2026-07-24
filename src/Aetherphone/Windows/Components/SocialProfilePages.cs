@@ -49,7 +49,6 @@ internal sealed class SocialProfileStyle
 
 internal sealed class SocialProfilePages
 {
-    public const float FeedRefreshSeconds = 25f;
     public const int DisplayNameMax = 40;
     public const int HandleMax = 15;
     public const int BioMax = 200;
@@ -69,10 +68,8 @@ internal sealed class SocialProfilePages
     private readonly Action<string> openProfile;
     private readonly Action<string, UserListKind> openUserList;
     private readonly Action back;
-    private readonly Action openConductRules;
+    private readonly Action? openConductRules;
 
-    private float sinceForYou;
-    private float sinceFollowing;
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
     private string editBio = string.Empty;
@@ -85,7 +82,7 @@ internal sealed class SocialProfilePages
         LodestoneService lodestone, AvatarLightbox avatarLightbox, Configuration configuration, GameData gameData,
         ConfirmService confirm, ReportService report, Action openEditProfile, Action openAvatarComposer,
         Action<string> openProfile, Action<string, UserListKind> openUserList, Action back,
-        Action openConductRules)
+        Action? openConductRules)
     {
         this.store = store;
         this.ui = ui;
@@ -107,52 +104,15 @@ internal sealed class SocialProfilePages
 
     public string SearchDraft = string.Empty;
 
-    public void ResetClocks()
-    {
-        sinceForYou = 0f;
-        sinceFollowing = 0f;
-    }
-
     public void ResetEdit()
     {
         editLoadedFor = null;
-    }
-
-    public void Tick(float delta)
-    {
-        sinceForYou += delta;
-        sinceFollowing += delta;
-    }
-
-    public void ForceRefreshSoon()
-    {
-        sinceForYou = FeedRefreshSeconds;
-        sinceFollowing = FeedRefreshSeconds;
     }
 
     public void EnsureLoaded(SocialFeedScope scope)
     {
         if (store.Feed(scope).Length == 0 && !store.IsLoading(scope))
         {
-            store.RefreshFeed(scope);
-        }
-    }
-
-    public void TickRefresh(SocialFeedScope scope)
-    {
-        if (store.IsLoading(scope))
-        {
-            return;
-        }
-
-        if (scope == SocialFeedScope.ForYou && sinceForYou >= FeedRefreshSeconds)
-        {
-            sinceForYou = 0f;
-            store.RefreshFeed(scope);
-        }
-        else if (scope == SocialFeedScope.Following && sinceFollowing >= FeedRefreshSeconds)
-        {
-            sinceFollowing = 0f;
             store.RefreshFeed(scope);
         }
     }
@@ -223,12 +183,15 @@ internal sealed class SocialProfilePages
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
         if (user.IsMe)
         {
-            var rulesCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-            if (ui.IconButton(rulesCenter, buttonHeight * 0.5f, FontAwesomeIcon.QuestionCircle.ToIconString(),
-                    style.Palette.MutedInk, Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f,
-                    Loc.T(L.Conduct.Eyebrow)))
+            if (openConductRules is not null)
             {
-                openConductRules();
+                var rulesCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
+                if (ui.IconButton(rulesCenter, buttonHeight * 0.5f, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                        style.Palette.MutedInk, Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f,
+                        Loc.T(L.Conduct.Eyebrow)))
+                {
+                    openConductRules();
+                }
             }
 
             if (ui.PillButton(buttonRect, Loc.T(style.EditProfile), false))
