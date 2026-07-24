@@ -72,7 +72,7 @@ internal static class DragScrollHost
         }
 
         var io = ImGui.GetIO();
-        var dt = io.DeltaTime;
+        var deltaSeconds = io.DeltaTime;
         var pointerY = io.MousePos.Y;
         var down = ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var widgetOwnsClick = ImGui.IsAnyItemActive();
@@ -93,7 +93,7 @@ internal static class DragScrollHost
             if (down)
             {
                 var wasDragging = scroller.IsDragging;
-                scroller.Move(pointerY, dt);
+                scroller.Move(pointerY, deltaSeconds);
                 if (!wasDragging && scroller.IsDragging)
                 {
                     UiInteract.CancelPendingTap();
@@ -106,7 +106,7 @@ internal static class DragScrollHost
                 shouldBlock = scroller.IsDragging;
                 scroller.Release();
                 region.Pressed = false;
-                scroller.Tick(dt);
+                scroller.Tick(deltaSeconds);
             }
         }
         else if (down && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && hovered && !widgetOwnsClick &&
@@ -117,7 +117,7 @@ internal static class DragScrollHost
         }
         else
         {
-            scroller.Tick(dt);
+            scroller.Tick(deltaSeconds);
         }
 
         if (scroller.IsControlling)

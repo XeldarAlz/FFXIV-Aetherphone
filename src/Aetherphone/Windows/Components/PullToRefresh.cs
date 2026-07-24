@@ -20,11 +20,11 @@ internal sealed class PullToRefresh
     public void Draw(Rect area, float pull, bool dragging, bool loading, Vector4 ink, Action onRefresh)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var dt = ImGui.GetIO().DeltaTime;
+        var deltaSeconds = ImGui.GetIO().DeltaTime;
 
         if (refreshing)
         {
-            spinnerElapsed += dt;
+            spinnerElapsed += deltaSeconds;
             if ((!loading && spinnerElapsed >= MinSpinnerSeconds) || spinnerElapsed >= MaxSpinnerSeconds)
             {
                 refreshing = false;
