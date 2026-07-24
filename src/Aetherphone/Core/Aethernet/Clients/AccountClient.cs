@@ -95,4 +95,15 @@ internal sealed class AccountClient
     {
         return net.GetAsync("/notifications", AethernetJsonContext.Default.NotificationPage, token);
     }
+
+    public Task<NotificationPage?> NotificationsAsync(string app, string? cursor, CancellationToken token)
+    {
+        var path = $"/notifications?app={Uri.EscapeDataString(app)}";
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.NotificationPage, token);
+    }
 }

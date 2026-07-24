@@ -64,6 +64,8 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly Action back;
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
+    private readonly SocialActivityFeed activityFeed;
+    private readonly Action loadOlderActivity;
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private SocialFeedScope activeScope = SocialFeedScope.ForYou;
@@ -94,6 +96,8 @@ internal sealed partial class ChirperApp : IPhoneApp
         this.images = images;
         this.social = social;
         this.conduct = conduct;
+        activityFeed = new SocialActivityFeed(SocialActivity.ChirperApp, session, net.Account);
+        loadOlderActivity = activityFeed.LoadOlder;
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Chirper.ChangePhoto, L.Chirper.ImportFromPc, L.Photos.NoPhotos,
                 L.Chirper.MoveAndScale, L.Chirper.Use, L.Chirper.Saving, L.Chirper.GestureHint), library,
@@ -271,14 +275,16 @@ internal sealed partial class ChirperApp : IPhoneApp
         AppHeader.Draw(context, Loc.T(L.Social.ActivityTitle), back);
         var top = area.Min.Y + AppHeader.Height * ImGuiHelpers.GlobalScale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
-        SocialActivityList.Draw(body, ui, AppPalettes.Chirper, theme, social.Latest, Id, images, lodestone,
-            openActivityActor, openActivityPost);
+        activityFeed.EnsureFresh(social.Latest);
+        SocialActivityList.Draw(body, ui, AppPalettes.Chirper, theme, activityFeed.Items, Id, images, lodestone,
+            openActivityActor, openActivityPost, loadOlderActivity);
     }
 
     private void OpenActivity()
     {
         social.RefreshNow();
         social.MarkSeen(Id);
+        activityFeed.Invalidate();
         router.Push(ChirperRoute.Activity);
     }
 

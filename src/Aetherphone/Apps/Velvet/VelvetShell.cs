@@ -15,6 +15,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
@@ -40,6 +41,8 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly HttpService http;
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
+    private readonly SocialActivityFeed activityFeed;
+    private readonly Action loadOlderActivity;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
     private readonly ConductGateService conduct;
@@ -88,6 +91,8 @@ internal sealed partial class VelvetShell : IPhoneApp
         this.http = http;
         this.images = images;
         this.social = social;
+        activityFeed = new SocialActivityFeed(SocialActivity.VelvetApp, session, net.Account);
+        loadOlderActivity = activityFeed.LoadOlder;
         this.confirm = confirm;
         this.report = report;
         this.conduct = conduct;
@@ -352,6 +357,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         };
         if (VHeader.Root(headerRect, title, theme, 0))
         {
+            activityFeed.Invalidate();
             router.Push(VelvetView.Activity);
         }
 

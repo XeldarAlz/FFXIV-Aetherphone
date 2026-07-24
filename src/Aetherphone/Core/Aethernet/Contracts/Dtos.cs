@@ -371,7 +371,7 @@ internal sealed record NotificationDto(
     long CreatedAtUnix,
     string? CommentId = null) : IIdentified;
 
-internal sealed record NotificationPage(NotificationDto[] Items);
+internal sealed record NotificationPage(NotificationDto[] Items, string? NextCursor = null);
 
 internal sealed record CreateFeedbackRequest(string Text, string[] ImageKeys);
 

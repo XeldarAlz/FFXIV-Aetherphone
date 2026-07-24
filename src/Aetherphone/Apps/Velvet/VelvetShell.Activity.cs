@@ -31,7 +31,8 @@ internal sealed partial class VelvetShell
             }
         };
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
-        SocialActivityList.Draw(body, ui, VelvetTheme.Palette, theme, social.Latest, Id, images, lodestone,
-            activityActor, activityPost);
+        activityFeed.EnsureFresh(social.Latest);
+        SocialActivityList.Draw(body, ui, VelvetTheme.Palette, theme, activityFeed.Items, Id, images, lodestone,
+            activityActor, activityPost, loadOlderActivity);
     }
 }

@@ -16,7 +16,7 @@ internal static class SocialActivityList
 {
     public static void Draw(Rect area, AppSkin ui, AppPalette palette, PhoneTheme theme, NotificationDto[] items,
         string app, RemoteImageCache images, LodestoneService lodestone, Action<NotificationDto> openActor,
-        Action<NotificationDto> openPost)
+        Action<NotificationDto> openPost, Action? loadOlder = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var count = 0;
@@ -47,6 +47,10 @@ internal static class SocialActivityList
             }
 
             ImGui.Dummy(new Vector2(0f, 16f * scale));
+            if (loadOlder is not null && ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 300f * scale)
+            {
+                loadOlder();
+            }
         }
     }
 
@@ -119,9 +123,16 @@ internal static class SocialActivityList
         {
             SocialActivity.TypeLike => (FontAwesomeIcon.Heart.ToIconString(), theme.Danger),
             SocialActivity.TypeComment => (FontAwesomeIcon.Comment.ToIconString(), theme.Accent),
+            SocialActivity.TypeFollow => (FontAwesomeIcon.UserPlus.ToIconString(), theme.Accent),
             SocialActivity.TypeConnectRequest => (FontAwesomeIcon.UserPlus.ToIconString(), theme.Accent),
             SocialActivity.TypeConnectAccept => (FontAwesomeIcon.UserCheck.ToIconString(), theme.Accent),
-            _ => (FontAwesomeIcon.UserPlus.ToIconString(), theme.Accent),
+            SocialActivity.TypeCommentLike => (FontAwesomeIcon.Heart.ToIconString(), theme.Danger),
+            SocialActivity.TypeMention => (FontAwesomeIcon.At.ToIconString(), theme.Accent),
+            SocialActivity.TypeCommentMention => (FontAwesomeIcon.At.ToIconString(), theme.Accent),
+            SocialActivity.TypePhotoTag => (FontAwesomeIcon.UserTag.ToIconString(), theme.Accent),
+            SocialActivity.TypeRepost => (FontAwesomeIcon.Retweet.ToIconString(), theme.Accent),
+            SocialActivity.TypeQuote => (FontAwesomeIcon.QuoteRight.ToIconString(), theme.Accent),
+            _ => (FontAwesomeIcon.Bell.ToIconString(), theme.Accent),
         };
         var badgeRadius = 8f * scale;
         drawList.AddCircleFilled(center, badgeRadius + 2f * scale, ImGui.GetColorU32(theme.AppBackground), 20);

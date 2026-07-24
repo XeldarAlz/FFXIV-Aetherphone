@@ -42,6 +42,10 @@ internal static class L
         public static readonly LocString MentionedChirp = new("social.mentionedChirp", "mentioned you in a chirp");
         public static readonly LocString MentionedPhoto = new("social.mentionedPhoto", "mentioned you in a photo");
         public static readonly LocString MentionedComment = new("social.mentionedComment", "mentioned you in a comment");
+        public static readonly LocString RepostedChirp = new("social.repostedChirp", "reposted your chirp");
+        public static readonly LocString RepostedPhoto = new("social.repostedPhoto", "reposted your photo");
+        public static readonly LocString QuotedChirp = new("social.quotedChirp", "quoted your chirp");
+        public static readonly LocString QuotedPhoto = new("social.quotedPhoto", "quoted your photo");
         public static readonly LocString ViewProfile = new("social.viewProfile", "View profile");
         public static readonly LocString BlockAction = new("social.blockAction", "Block");
         public static readonly LocString BlockConfirm = new("social.blockConfirm", "Block {0}? You won't see each other's posts, comments, or profile, and any follows between you are removed.");

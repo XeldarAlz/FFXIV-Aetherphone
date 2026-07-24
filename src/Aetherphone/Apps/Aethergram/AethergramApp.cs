@@ -67,6 +67,8 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly DropdownMenu.Item[] postItems = new DropdownMenu.Item[4];
     private readonly Action<NotificationDto> openActivityActor;
     private readonly Action<NotificationDto> openActivityPost;
+    private readonly SocialActivityFeed activityFeed;
+    private readonly Action loadOlderActivity;
     private PostDto? menuPost;
     private readonly StoryPresenter stories;
     private readonly PhotoViewerOverlay photoViewer = new();
@@ -136,6 +138,8 @@ internal sealed partial class AethergramApp : IPhoneApp
         this.images = images;
         this.social = social;
         this.conduct = conduct;
+        activityFeed = new SocialActivityFeed(SocialActivity.AethergramApp, session, net.Account);
+        loadOlderActivity = activityFeed.LoadOlder;
         router = new ViewRouter<AethergramRoute>(AethergramRoute.Home);
         drawView = DrawView;
         back = () => router.Pop();
@@ -368,8 +372,9 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     private void DrawActivityTab(Rect area)
     {
-        SocialActivityList.Draw(area, ui, AppPalettes.Aethergram, theme, social.Latest, Id, images, lodestone,
-            openActivityActor, openActivityPost);
+        activityFeed.EnsureFresh(social.Latest);
+        SocialActivityList.Draw(area, ui, AppPalettes.Aethergram, theme, activityFeed.Items, Id, images, lodestone,
+            openActivityActor, openActivityPost, loadOlderActivity);
     }
 
     private void DrawProfileTab(Rect area)
@@ -407,6 +412,7 @@ internal sealed partial class AethergramApp : IPhoneApp
             case AethergramTab.Activity:
                 social.RefreshNow();
                 social.MarkSeen(Id);
+                activityFeed.Invalidate();
                 break;
             case AethergramTab.Profile:
                 store.EnsureMe();

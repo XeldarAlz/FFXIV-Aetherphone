@@ -19,6 +19,8 @@ internal sealed class NotificationRouter
     private const int TypeMention = 7;
     private const int TypeCommentMention = 8;
     private const int TypePhotoTag = 9;
+    private const int TypeRepost = 12;
+    private const int TypeQuote = 13;
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
     private readonly LinkpearlLauncher linkpearlLauncher;
@@ -84,6 +86,7 @@ internal sealed class NotificationRouter
         return notification.SocialType switch
         {
             TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention or TypePhotoTag
+                or TypeRepost or TypeQuote
                 when !string.IsNullOrEmpty(notification.PostId)
                 => new SocialDeepLink(SocialLinkKind.Post, notification.PostId!),
             TypeFollow or TypeConnectRequest or TypeConnectAccept when !string.IsNullOrEmpty(notification.ActorId)
