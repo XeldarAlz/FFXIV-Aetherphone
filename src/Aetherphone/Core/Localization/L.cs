@@ -74,12 +74,18 @@ internal static class L
         public static readonly LocString FollowedByOneMoreMany = new("social.followedByOneMoreMany", "Followed by {0} and {1} others");
         public static readonly LocString FollowedByTwoMoreOne = new("social.followedByTwoMoreOne", "Followed by {0}, {1} and 1 other");
         public static readonly LocString FollowedByTwoMoreMany = new("social.followedByTwoMoreMany", "Followed by {0}, {1} and {2} others");
-        public static readonly LocString MessagesHeader = new("social.messagesHeader", "Direct messages");
         public static readonly LocString AllowMessages = new("social.allowMessages", "Who can message you");
         public static readonly LocString MessagesAudienceHint = new("social.messagesAudienceHint", "Controls who can start a new conversation with you on Aethergram. People you have replied to can always message you.");
         public static readonly LocString ActivityTitle = new("social.activityTitle", "Notifications");
         public static readonly LocString ActivityTab = new("social.activityTab", "Activity");
         public static readonly LocString ActivityEmpty = new("social.activityEmpty", "Nothing here yet. Interactions with your posts will show up here");
+        public static readonly LocString FollowRequests = new("social.followRequests", "Follow requests");
+        public static readonly LocString FollowRequestsCount = new("social.followRequestsCount", "Follow requests ({0})");
+        public static readonly LocString RequestedFollow = new("social.requestedFollow", "requested to follow you");
+        public static readonly LocString AcceptedFollow = new("social.acceptedFollow", "accepted your follow request");
+        public static readonly LocString Requested = new("social.requested", "Requested");
+        public static readonly LocString Confirm = new("social.confirm", "Confirm");
+        public static readonly LocString Delete = new("social.delete", "Delete");
     }
 
     internal static class PhotoTag
@@ -325,6 +331,8 @@ internal static class L
         public static readonly LocString GroupFallback = new("dm.groupFallback", "Group");
         public static readonly LocString PhotoPreview = new("dm.photoPreview", "Photo");
         public static readonly LocString VoicePreview = new("dm.voicePreview", "Voice message");
+        public static readonly LocString PostPreview = new("dm.postPreview", "Post");
+        public static readonly LocString StoryReplyPreview = new("dm.storyReplyPreview", "Story reply");
         public static readonly LocString NoMutualTitle = new("dm.noMutualTitle", "No mutual friends yet");
         public static readonly LocString NoMutualFriends = new("dm.noMutualFriends", "Share numbers in-game to start messaging.");
         public static readonly LocString GroupNameHint = new("dm.groupNameHint", "Group name (optional)");
@@ -347,6 +355,12 @@ internal static class L
         public static readonly LocString SysRemoved = new("dm.sysRemoved", "{0} removed {1}");
         public static readonly LocString SysLeft = new("dm.sysLeft", "{0} left");
         public static readonly LocString SysRenamed = new("dm.sysRenamed", "{0} renamed the chat to {1}");
+        public static readonly LocString LocationPreview = new("dm.locationPreview", "Location");
+        public static readonly LocString LocationShared = new("dm.locationShared", "Shared location");
+        public static readonly LocString LocationOpenMap = new("dm.locationOpenMap", "Open map");
+        public static readonly LocString LocationWard = new("dm.locationWard", "Ward {0}");
+        public static readonly LocString LocationPlot = new("dm.locationPlot", "Plot {0}");
+        public static readonly LocString LocationRoom = new("dm.locationRoom", "Room {0}");
     }
 
     internal static class Message
@@ -390,6 +404,10 @@ internal static class L
         public static readonly LocString MuteAction = new("message.muteAction", "Mute");
         public static readonly LocString UnmuteAction = new("message.unmuteAction", "Unmute");
         public static readonly LocString RecordVoiceHint = new("message.recordVoiceHint", "Record a voice message");
+        public static readonly LocString ShareLocation = new("message.shareLocation", "Share location");
+        public static readonly LocString ShareLocationConfirm = new("message.shareLocationConfirm", "Send your current location?");
+        public static readonly LocString LocationUnavailable = new("message.locationUnavailable", "Your location could not be read.");
+        public static readonly LocString LocationSendFailed = new("message.locationSendFailed", "Could not send your location.");
         public static readonly LocString EditAction = new("message.editAction", "Edit");
         public static readonly LocString EditingLabel = new("message.editingLabel", "Editing message");
         public static readonly LocString EditedAt = new("message.editedAt", "edited {0}");
@@ -655,7 +673,8 @@ internal static class L
         public static readonly LocString Version = new("settings.version", "Version");
         public static readonly LocString Command = new("settings.command", "Command");
         public static readonly LocString CreditsLinks = new("settings.creditsLinks", "Credits & links");
-        public static readonly LocString AboutAetherphone = new("settings.aboutAetherphone", "About Aetherphone");
+        public static readonly LocString SupportAetherphone = new("settings.supportAetherphone", "Support Aetherphone");
+        public static readonly LocString SupportHint = new("settings.supportHint", "Aetherphone is free and made in my spare time. If you enjoy it, a pledge on Patreon helps me keep building and improving it. Thank you for being here.");
         public static readonly LocString JoinDiscord = new("settings.joinDiscord", "Join our Discord");
         public static readonly LocString VisitWebsite = new("settings.visitWebsite", "Visit our website");
         public static readonly LocString Changelog = new("settings.changelog", "Changelog");
@@ -682,7 +701,6 @@ internal static class L
         public static readonly LocString CommandToggle = new("settings.commandToggle", "Show or hide the phone");
         public static readonly LocString CommandAlias = new("settings.commandAlias", "Alias for /phone");
         public static readonly LocString CommandMarket = new("settings.commandMarket", "Open the market board, optionally searching an item");
-        public static readonly LocString CommandAbout = new("settings.commandAbout", "Open credits and links");
         public static readonly LocString CommandReset = new("settings.commandReset", "Move the phone back to the center of the screen");
         public static readonly LocString CommandTest = new("settings.commandTest", "Send a sample notification");
     }
@@ -1665,6 +1683,31 @@ internal static class L
         public static readonly LocString InboxEmptyHint = new("aethergram.inboxEmptyHint", "Message someone from their profile");
         public static readonly LocString MessageButton = new("aethergram.message", "Message");
         public static readonly LocString ThreadEmpty = new("aethergram.threadEmpty", "Say hello");
+        public static readonly LocString Settings = new("aethergram.settings", "Settings");
+        public static readonly LocString ChatsTab = new("aethergram.chatsTab", "Chats");
+        public static readonly LocString Requests = new("aethergram.requests", "Requests");
+        public static readonly LocString RequestsCount = new("aethergram.requestsCount", "Requests ({0})");
+        public static readonly LocString RequestsEmpty = new("aethergram.requestsEmpty", "No message requests");
+        public static readonly LocString RequestBanner = new("aethergram.requestBanner", "{0} wants to send you messages");
+        public static readonly LocString AcceptRequest = new("aethergram.acceptRequest", "Accept");
+        public static readonly LocString DeleteConversation = new("aethergram.deleteConversation", "Delete conversation");
+        public static readonly LocString DeleteConversationMessage = new("aethergram.deleteConversationMessage",
+            "This deletes the conversation for you. This can't be undone.");
+        public static readonly LocString SendTo = new("aethergram.sendTo", "Send to");
+        public static readonly LocString SharedPost = new("aethergram.sharedPost", "Shared a post");
+        public static readonly LocString PostUnavailable = new("aethergram.postUnavailable", "Post unavailable");
+        public static readonly LocString Send = new("aethergram.send", "Send");
+        public static readonly LocString Sent = new("aethergram.sent", "Sent");
+        public static readonly LocString ReplyToStory = new("aethergram.replyToStory", "Reply to {0}");
+        public static readonly LocString RepliedToYourStory = new("aethergram.repliedToYourStory", "Replied to your story");
+        public static readonly LocString YouRepliedToStory = new("aethergram.youRepliedToStory", "You replied to their story");
+        public static readonly LocString StoryUnavailable = new("aethergram.storyUnavailable", "Story unavailable");
+        public static readonly LocString PrivateTitle = new("aethergram.privateTitle", "This account is private");
+        public static readonly LocString PrivateSubtitle = new("aethergram.privateSubtitle", "Follow this account to see their photos");
+        public static readonly LocString SavedTitle = new("aethergram.savedTitle", "Saved");
+        public static readonly LocString SavedEmpty = new("aethergram.savedEmpty", "Nothing saved yet");
+        public static readonly LocString PrivateAccount = new("aethergram.privateAccount", "Private account");
+        public static readonly LocString PrivateAccountHint = new("aethergram.privateAccountHint", "Only followers can see your photos and stories. New followers must send a request.");
     }
 
     internal static class Velvet
@@ -1755,6 +1798,8 @@ internal static class L
         public static readonly LocString NoPhotosShared = new("velvet.noPhotosShared", "No photos shared yet.");
         public static readonly LocString NoPhotosMine = new("velvet.noPhotosMine", "You have not shared any photos yet.");
         public static readonly LocString ConnectToSeePhotos = new("velvet.connectToSeePhotos", "Connect with {0} to see their photos");
+        public static readonly LocPlural ConnectToUnlock =
+            new("velvet.connectToUnlock", "Connect to unlock {0} photo", "Connect to unlock {0} photos");
         public static readonly LocString IntroTitle = new("velvet.introTitle", "Send an intro");
         public static readonly LocString IntroduceYourselfTo = new("velvet.introduceYourselfTo", "Introduce yourself to {0}");
         public static readonly LocString YourIntro = new("velvet.yourIntro", "Your intro");
@@ -1794,6 +1839,10 @@ internal static class L
             new("velvet.filterHint", "Tap once to include, tap again to exclude.");
         public static readonly LocString FeedNone = new("velvet.feedNone", "Nothing shared yet");
         public static readonly LocString FeedNoneHint = new("velvet.feedNoneHint", "Be the first to post.");
+        public static readonly LocString FeedScopeAll = new("velvet.feedScopeAll", "Everyone");
+        public static readonly LocString FeedScopeConnections = new("velvet.feedScopeConnections", "Connections");
+        public static readonly LocString AudienceConnections = new("velvet.audienceConnections", "Connections only");
+        public static readonly LocString AudiencePublic = new("velvet.audiencePublic", "Everyone on Velvet");
         public static readonly LocString ImageUnavailable = new("velvet.imageUnavailable", "Image unavailable");
         public static readonly LocString GateTagline =
             new("velvet.gateTagline", "A private, adults only corner of the suite. Moonlit, unhurried, yours.");
@@ -1803,6 +1852,16 @@ internal static class L
         public static readonly LocString DiscoveryHeader = new("velvet.discoveryHeader", "Discovery");
         public static readonly LocString DiscoverableHelp =
             new("velvet.discoverableHelp", "When on, your profile can be found by others in Discover.");
+        public static readonly LocString ShowLalafellLabel =
+            new("velvet.showLalafellLabel", "Show Lalafell characters");
+        public static readonly LocString ShowLalafellHelp =
+            new("velvet.showLalafellHelp", "When on, Lalafell profiles can appear in your Discover feed.");
+        public static readonly LocString ShowLalafellConfirmTitle =
+            new("velvet.showLalafellConfirmTitle", "Show Lalafell characters?");
+        public static readonly LocString ShowLalafellConfirmMessage = new("velvet.showLalafellConfirmMessage",
+            "Lalafell profiles will appear in your Discover feed. Are you sure?");
+        public static readonly LocString ShowLalafellConfirmAction =
+            new("velvet.showLalafellConfirmAction", "Show");
         public static readonly LocString WhoCanMessage = new("velvet.whoCanMessage", "Who can message you");
         public static readonly LocString WhoEveryone = new("velvet.whoEveryone", "Everyone");
         public static readonly LocString WhoFriends = new("velvet.whoFriends", "Friends");
@@ -2320,7 +2379,7 @@ internal static class L
 
     internal static class Plugin
     {
-        public static readonly LocString CommandHelp =new("plugin.commandHelp", "Toggle the Aetherphone. /phone market [item] opens the market board, /phone about opens credits & links, /phone reset recenters the phone, /phone test sends a sample notification.");
+        public static readonly LocString CommandHelp =new("plugin.commandHelp", "Toggle the Aetherphone. /phone market [item] opens the market board, /phone reset recenters the phone, /phone test sends a sample notification.");
         public static readonly LocString CommandHelpAlias = new("plugin.commandHelpAlias", "Alias for /phone.");
         public static readonly LocString SearchTheMarket = new("plugin.searchTheMarket", "Search the Market");
         public static readonly LocString SideButtonHint = new("plugin.sideButtonHint", "Tap to minimize · Hold to turn off");
@@ -2360,86 +2419,6 @@ internal static class L
         public static readonly LocString EmptySubtitle = new("polls.emptySubtitle", "New polls will land here.");
         public static readonly LocString FinalResults = new("polls.finalResults", "Final results");
         public static readonly LocPlural Votes = new("polls.votes", "{0} vote", "{0} votes");
-    }
-
-    internal static class About
-    {
-        public static readonly LocString LinkDiscussions = new("about.linkDiscussions", "Discussions");
-        public static readonly LocString LinkReportBug = new("about.linkReportBug", "Report a bug");
-        public static readonly LocString LinkMorePlugins = new("about.linkMorePlugins", "More plugins");
-        public static readonly LocString LinkSecurity = new("about.linkSecurity", "Security");
-        public static readonly LocString LinkWebsite = new("about.linkWebsite", "Website");
-        public static readonly LocString Connect = new("about.connect", "Connect");
-        public static readonly LocString MadeWithCare = new("about.madeWithCare", "Made with care");
-        public static readonly LocString SupportBody = new("about.supportBody", "I build and maintain this in my spare time. If it has helped you, a sponsorship lets me keep improving it. No pressure, and thank you for being here.");
-        public static readonly LocString BecomeSponsor = new("about.becomeSponsor", "Become a Sponsor");
-        public static readonly LocString SponsorTooltip = new("about.sponsorTooltip", "Open GitHub Sponsors · right-click to copy");
-        public static readonly LocString LinkTooltip = new("about.linkTooltip", "Click to open · right-click to copy");
-        public static readonly LocString MadeBy = new("about.madeBy", "Made by {0}");
-        public static readonly LocString ReminderHeader = new("about.reminderHeader", "A little reminder");
-        public static readonly LocString FactHeader = new("about.factHeader", "Did you know?");
-        public static readonly LocString QuoteHeader = new("about.quoteHeader", "Words to live by");
-        public static readonly LocString FunHeader = new("about.funHeader", "Just for fun");
-
-        public static readonly LocString[] Reminders =
-        {
-            new("about.reminder.0", "Been at it a while? Roll your shoulders and take one slow breath."),
-            new("about.reminder.1", "Hydration check. When did you last drink some water?"),
-            new("about.reminder.2", "Blink a few times and let your eyes rest for a moment."),
-            new("about.reminder.3", "Stand up, stretch, and shake out your hands. Future you says thanks."),
-            new("about.reminder.4", "Sit up and settle in comfortably. Your back will thank you later."),
-            new("about.reminder.5", "Remember to eat something today. You matter more than any score."),
-            new("about.reminder.6", "Eyes feel tired? Look at something far away for twenty seconds."),
-            new("about.reminder.7", "Whatever you're chasing, you're allowed to take a break whenever."),
-            new("about.reminder.8", "You're doing great. Be a little kinder to yourself today."),
-            new("about.reminder.9", "A glass of water and a quick stretch can reset a long session."),
-            new("about.reminder.10", "Unclench your jaw and drop your shoulders. There you go."),
-            new("about.reminder.11", "Rest is part of the journey too. Step away whenever you need to."),
-        };
-
-        public static readonly LocString[] Facts =
-        {
-            new("about.fact.0", "Honey never spoils. Jars over 3,000 years old have been found still edible."),
-            new("about.fact.1", "Octopuses have three hearts and blue blood."),
-            new("about.fact.2", "A day on Venus is longer than a whole year on Venus."),
-            new("about.fact.3", "Bananas are berries, but strawberries aren't."),
-            new("about.fact.4", "There are more possible chess games than atoms in the observable universe."),
-            new("about.fact.5", "Sharks have been around longer than trees have."),
-            new("about.fact.6", "A group of flamingos is called a flamboyance."),
-            new("about.fact.7", "Honeybees can recognize individual human faces."),
-            new("about.fact.8", "Wombat droppings are cube shaped."),
-            new("about.fact.9", "The Eiffel Tower can grow over 15 cm taller on a hot day."),
-            new("about.fact.10", "Hot water can sometimes freeze faster than cold water."),
-            new("about.fact.11", "A bolt of lightning is roughly five times hotter than the surface of the Sun."),
-        };
-
-        public static readonly LocString[] Quotes =
-        {
-            new("about.quote.0", "Done is better than perfect. You can always polish later."),
-            new("about.quote.1", "Small steps every day add up to surprising distances."),
-            new("about.quote.2", "Comparison is the thief of joy. Run your own race."),
-            new("about.quote.3", "Progress, not perfection."),
-            new("about.quote.4", "You don't have to be great to start, but you have to start to be great."),
-            new("about.quote.5", "Be patient with yourself. Growth takes time."),
-            new("about.quote.6", "The best time to begin was yesterday. The second best is right now."),
-            new("about.quote.7", "Celebrate the small wins. They count too."),
-            new("about.quote.8", "Slow progress is still progress."),
-            new("about.quote.9", "Your only real competition is who you were yesterday."),
-        };
-
-        public static readonly LocString[] Fun =
-        {
-            new("about.fun.0", "Why don't scientists trust atoms? Because they make up everything."),
-            new("about.fun.1", "I would tell you a chemistry joke, but I know I wouldn't get a reaction."),
-            new("about.fun.2", "Why did the scarecrow win an award? He was outstanding in his field."),
-            new("about.fun.3", "I'm reading a book about anti-gravity. It's impossible to put down."),
-            new("about.fun.4", "Why don't skeletons fight each other? They don't have the guts."),
-            new("about.fun.5", "What do you call fake spaghetti? An impasta."),
-            new("about.fun.6", "Why did the bicycle fall over? It was two tired."),
-            new("about.fun.7", "What do you call cheese that isn't yours? Nacho cheese."),
-            new("about.fun.8", "I'm on a seafood diet. I see food, and I eat it."),
-            new("about.fun.9", "I only know 25 letters of the alphabet. I don't know y."),
-        };
     }
 
     internal static class Catalogs
@@ -2839,7 +2818,7 @@ internal static class L
         };
         public static readonly LocString[] VelvetNotAllowed =
         {
-            new("conduct.velvet.no.1", "Sexual content involving minors or child-like characters, including Lalafell profiles."),
+            new("conduct.velvet.no.1", "Sexual content involving minors or child-like characters."),
             new("conduct.velvet.no.2", "Non-consensual sexual content"),
             new("conduct.velvet.no.3", "Exploitative or abusive material"),
             new("conduct.velvet.no.4", "Real-life revenge pornography"),

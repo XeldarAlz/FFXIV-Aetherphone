@@ -37,6 +37,17 @@ internal sealed partial class VelvetShell
 
             stories.DrawTray(theme);
             var width = ScrollLayout.StableContentWidth();
+            Gap(4f);
+            var scopeRect = Reserve(34f);
+            var activeScope = (int)store.FeedScope;
+            var pickedScope = VSegmented.Draw("velvetFeedScope", scopeRect,
+                new[] { Loc.T(L.Velvet.FeedScopeAll), Loc.T(L.Velvet.FeedScopeConnections) }, activeScope, scale);
+            if (pickedScope >= 0 && pickedScope != activeScope)
+            {
+                store.SetFeedScope((VelvetFeedScope)pickedScope);
+                feedScrollTopPending = true;
+            }
+
             var feed = store.Feed;
             if (feed.Length == 0)
             {
@@ -153,11 +164,13 @@ internal sealed partial class VelvetShell
             new Vector2(textLeft + headerTextMaxWidth, ownerSubY + ownerSubSize.Y));
         Marquee.DrawLeft("velvet.feed.ownersub." + entry.OwnerId, ownerSub, textLeft, ownerSubY,
             headerTextMaxWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, ownerSubHovering);
+        var overRing = hasStory &&
+            (ImGui.GetMousePos() - avatarCenter).LengthSquared() <= ringRadius * ringRadius;
         if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))
         {
             stories.OpenRing(authorRing);
         }
-        else if (UiInteract.Click(headerHitMin, headerHitMax))
+        else if (!overRing && UiInteract.Click(headerHitMin, headerHitMax))
         {
             OpenProfile(entry.OwnerId);
         }

@@ -454,6 +454,7 @@ internal sealed partial class MusicApp
         }
 
         var favoriteStar = false;
+        var overStar = false;
         var isFavoriteStation = favoriteRadioStations.Contains(station);
 
         if (isFavoriteStation || hovered)
@@ -461,7 +462,11 @@ internal sealed partial class MusicApp
             var tooltip = Loc.T(isFavoriteStation ? L.Music.RemoveFavoriteStation : L.Music.AddFavoriteStation);
 
             var starX = current ? max.X - 36f * scale : max.X - 18f * scale;
-            favoriteStar = ui.IconButton(new Vector2(starX, min.Y + rowHeight * 0.5f), 14f * scale,
+            var starCenter = new Vector2(starX, min.Y + rowHeight * 0.5f);
+            var starRadius = 14f * scale;
+            var starHit = new Vector2(starRadius, starRadius);
+            overStar = UiInteract.Hover(starCenter - starHit, starCenter + starHit);
+            favoriteStar = ui.IconButton(starCenter, starRadius,
                 FontAwesomeIcon.Star.ToIconString(), isFavoriteStation ? ui.Accent : ui.MutedInk, AppSkin.Transparent,
                 0.82f, tooltip);
             if (favoriteStar)
@@ -472,8 +477,7 @@ internal sealed partial class MusicApp
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight));
-        var rowClicked = UiInteract.Click(min, max, hovered);
-        if (favoriteStar || !rowClicked)
+        if (overStar || !UiInteract.Click(min, max, hovered))
         {
             return;
         }

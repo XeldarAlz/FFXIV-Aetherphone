@@ -50,7 +50,6 @@ public sealed class Plugin : IDalamudPlugin
     private readonly PhoneServices services;
     private readonly PhoneShell shell;
     private readonly PhoneWindow phoneWindow;
-    private readonly AboutWindow aboutWindow;
     private readonly UpdateChipWindow updateChipWindow;
     private readonly PhoneEmoteController phoneEmote;
     private readonly TimerNotifier timerNotifier;
@@ -85,14 +84,12 @@ public sealed class Plugin : IDalamudPlugin
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
             EmojiCatalog.Load();
             Wallpapers = services.Wallpapers;
-            aboutWindow = new AboutWindow();
-            shell = new PhoneShell(services, AppRegistry.BuildDefault(services, ShowAbout));
+            shell = new PhoneShell(services, AppRegistry.BuildDefault(services));
             phoneWindow = new PhoneWindow(shell, Cfg);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
             windowSystem.AddWindow(phoneWindow);
             windowSystem.AddWindow(updateChipWindow);
-            windowSystem.AddWindow(aboutWindow);
             services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false });
             phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
                 () => services.Visibility.IsVisible);
@@ -322,12 +319,6 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        if (argument.Equals("about", StringComparison.OrdinalIgnoreCase))
-        {
-            ShowAbout();
-            return;
-        }
-
         if (argument.Equals("reset", StringComparison.OrdinalIgnoreCase))
         {
             phoneWindow.Recenter();
@@ -343,8 +334,6 @@ public sealed class Plugin : IDalamudPlugin
 
         phoneWindow.ToggleShell();
     }
-
-    private void ShowAbout() => aboutWindow.IsOpen = true;
 
     private void OnIncomingCall()
     {

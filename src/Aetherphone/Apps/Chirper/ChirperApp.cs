@@ -158,7 +158,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             {
                 OpenProfile(link.Id);
             }
-            else
+            else if (link.Kind == SocialLinkKind.Post)
             {
                 OpenThreadFromLink(link.Id);
             }

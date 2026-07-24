@@ -22,7 +22,6 @@ internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
     private volatile bool loading;
     private volatile int mentionPolicy;
     private volatile int tagPolicy;
-    private volatile int messagePolicy;
     private volatile bool requireTagApproval;
 
     public TagsMentionsPage(AethernetSession session, AccountClient client, ISettingsNavigator navigator)
@@ -91,29 +90,10 @@ internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             SettingsSection.Hint(Loc.T(L.PhotoTag.ApproveHint), theme);
-
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
-            SettingsSection.Header(Loc.T(L.Social.MessagesHeader), theme);
-            var messagesCard = GroupCard.Begin(theme, 1);
-            if (SettingsRow.Disclosure(messagesCard.NextRow(), Loc.T(L.Social.AllowMessages),
-                    Loc.T(SocialAudience.Label(messagePolicy)), theme))
-            {
-                audiencePage.Show(SocialAudienceKind.Messages);
-                navigator.Open(audiencePage);
-            }
-
-            messagesCard.End();
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            SettingsSection.Hint(Loc.T(L.Social.MessagesAudienceHint), theme);
         }
     }
 
-    private int Read(SocialAudienceKind kind) => kind switch
-    {
-        SocialAudienceKind.Tags => tagPolicy,
-        SocialAudienceKind.Messages => messagePolicy,
-        _ => mentionPolicy,
-    };
+    private int Read(SocialAudienceKind kind) => kind == SocialAudienceKind.Tags ? tagPolicy : mentionPolicy;
 
     private void Write(SocialAudienceKind kind, int policy)
     {
@@ -126,13 +106,6 @@ internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
         {
             tagPolicy = policy;
             PushTags();
-            return;
-        }
-
-        if (kind == SocialAudienceKind.Messages)
-        {
-            messagePolicy = policy;
-            PushMessages();
             return;
         }
 
@@ -158,7 +131,6 @@ internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
                 {
                     mentionPolicy = me.MentionPolicy;
                     tagPolicy = me.TagPolicy;
-                    messagePolicy = me.MessagePolicy;
                     requireTagApproval = me.RequireTagApproval;
                     loaded = true;
                 }
@@ -191,27 +163,6 @@ internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
             catch (Exception exception)
             {
                 AepLog.Warning($"Mention privacy update failed: {exception.Message}");
-            }
-        });
-    }
-
-    private void PushMessages()
-    {
-        var policy = messagePolicy;
-        var token = cancellation.Token;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var me = await client.UpdateMessagePrivacyAsync(policy, token).ConfigureAwait(false);
-                if (me is not null)
-                {
-                    messagePolicy = me.MessagePolicy;
-                }
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"Message privacy update failed: {exception.Message}");
             }
         });
     }

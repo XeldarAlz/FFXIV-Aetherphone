@@ -1,3 +1,4 @@
+using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
@@ -35,6 +36,7 @@ internal sealed class VelvetPostComposer
     private bool closeRequested;
     private string caption = string.Empty;
     private string status = string.Empty;
+    private int audience = VelvetPostAudience.Connections;
 
     public VelvetPostComposer(VelvetStore store, StoryPresenter stories, PhotoLibrary library,
         RemoteImageCache images, LodestoneService lodestone, WallpaperImageCache wallpaperImages)
@@ -63,6 +65,7 @@ internal sealed class VelvetPostComposer
         closeRequested = false;
         caption = string.Empty;
         status = string.Empty;
+        audience = VelvetPostAudience.Connections;
         captionEmoji.Close();
         session.Open(story);
     }
@@ -172,14 +175,17 @@ internal sealed class VelvetPostComposer
         var top = area.Min.Y + AppHeader.Height * scale;
         var captionHeight = 34f * scale;
         var captionY = area.Max.Y - 20f * scale - captionHeight;
+        var audienceHeight = storyMode ? 0f : 30f * scale;
+        var audienceGap = storyMode ? 0f : 10f * scale;
+        var audienceTop = captionY - audienceGap - audienceHeight;
         var stripHeight = session.SelectedCount > 1 ? 52f * scale : 0f;
         var statusHeight = status.Length > 0 ? 20f * scale : 0f;
         var previewRegion = new Rect(new Vector2(area.Min.X + 16f * scale, top + 12f * scale),
-            new Vector2(area.Max.X - 16f * scale, captionY - 12f * scale - stripHeight - statusHeight));
+            new Vector2(area.Max.X - 16f * scale, audienceTop - 12f * scale - stripHeight - statusHeight));
         DrawCaptionPreview(previewRegion, scale);
         if (statusHeight > 0f)
         {
-            Typography.DrawCentered(new Vector2(area.Center.X, captionY - 12f * scale), status, context.Theme.Danger,
+            Typography.DrawCentered(new Vector2(area.Center.X, audienceTop - 12f * scale), status, context.Theme.Danger,
                 TextStyles.Footnote);
         }
 
@@ -188,6 +194,18 @@ internal sealed class VelvetPostComposer
             var strip = new Rect(new Vector2(area.Min.X + 16f * scale, previewRegion.Max.Y + 6f * scale),
                 new Vector2(area.Max.X - 16f * scale, previewRegion.Max.Y + stripHeight));
             session.DrawCaptionStrip(strip, scale, Style);
+        }
+
+        if (!storyMode)
+        {
+            var audienceRect = new Rect(new Vector2(area.Min.X + 16f * scale, audienceTop),
+                new Vector2(area.Max.X - 16f * scale, audienceTop + audienceHeight));
+            var pickedAudience = VSegmented.Draw("velvetAudience", audienceRect,
+                new[] { Loc.T(L.Velvet.AudienceConnections), Loc.T(L.Velvet.AudiencePublic) }, audience, scale);
+            if (pickedAudience >= 0)
+            {
+                audience = pickedAudience;
+            }
         }
 
         var captionRect = new Rect(new Vector2(area.Min.X + 16f * scale, captionY),
@@ -266,6 +284,6 @@ internal sealed class VelvetPostComposer
         }
 
         store.CreatePost(session.SelectedArray(), session.CropsArray(), caption, Array.Empty<string>(),
-            ok => outcome = ok ? 1 : 2);
+            audience, ok => outcome = ok ? 1 : 2);
     }
 }

@@ -17,6 +17,8 @@ internal sealed class CameraApp : IPhoneApp
 {
     private const float TopBarHeight = 88f;
     private const float TrayHeight = 172f;
+    private const float SideBarWidth = 88f;
+    private const float SideTrayWidth = 172f;
     private const float FlashDuration = 0.42f;
     private const float ReticleDuration = 1.1f;
     private const float PressDuration = 0.18f;
@@ -30,12 +32,23 @@ internal sealed class CameraApp : IPhoneApp
     public int BadgeCount => 0;
     public bool WantsTransparentScreen => true;
 
-    public Rect? TransparentViewport(Rect screen, float scale) =>
-        new(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
+    public Rect? TransparentViewport(Rect screen, float scale) => ViewfinderRect(screen, scale);
+
+    private static Rect ViewfinderRect(Rect screen, float scale)
+    {
+        if (screen.Width > screen.Height)
+        {
+            return new Rect(new Vector2(screen.Min.X + SideBarWidth * scale, screen.Min.Y),
+                new Vector2(screen.Max.X - SideTrayWidth * scale, screen.Max.Y));
+        }
+
+        return new Rect(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
             new Vector2(screen.Max.X, screen.Max.Y - TrayHeight * scale));
+    }
 
     private readonly PhotoCaptureService capture;
     private readonly PhotoLibrary library;
+    private readonly Configuration configuration;
     private int modeIndex = 1;
     private bool gridEnabled;
     private bool flashEnabled = true;
@@ -49,10 +62,11 @@ internal sealed class CameraApp : IPhoneApp
     private Rect pendingCaptureRect;
     private bool captureHooksAttached;
 
-    public CameraApp(PhotoCaptureService capture, PhotoLibrary library)
+    public CameraApp(PhotoCaptureService capture, PhotoLibrary library, Configuration configuration)
     {
         this.capture = capture;
         this.library = library;
+        this.configuration = configuration;
     }
 
     public void OnOpened()
@@ -75,20 +89,39 @@ internal sealed class CameraApp : IPhoneApp
         var rounding = theme.ScreenRounding * scale;
         AdvanceTimers(ImGui.GetIO().DeltaTime);
         var screen = ScreenFrom(context.Content, theme, scale);
-        var viewfinder = new Rect(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
-            new Vector2(screen.Max.X, screen.Max.Y - TrayHeight * scale));
+        var landscape = screen.Width > screen.Height;
+        var viewfinder = ViewfinderRect(screen, scale);
         var captureRect = CaptureRect(viewfinder);
 
-        var consumed = CameraChrome.TopBar(screen, TopBarHeight, flashEnabled, scale, rounding);
-        if (consumed)
-        {
-            flashEnabled = !flashEnabled;
-        }
+        var barAction = landscape
+            ? CameraChrome.SideBar(screen, SideBarWidth, flashEnabled, configuration.CameraLandscape, scale, rounding)
+            : CameraChrome.TopBar(screen, TopBarHeight, flashEnabled, configuration.CameraLandscape, scale, rounding);
+        var consumed = barAction != CameraBarAction.None;
+        ApplyBarAction(barAction);
 
         CameraChrome.Viewfinder(viewfinder, captureRect, gridEnabled, reticleAge, ReticleDuration, reticlePos, scale);
-        consumed |= DrawTray(screen, captureRect, context.Navigation, scale, rounding);
+        consumed |= landscape
+            ? DrawSideTray(screen, captureRect, context.Navigation, scale, rounding)
+            : DrawTray(screen, captureRect, context.Navigation, scale, rounding);
         HandleFocusTap(viewfinder, consumed);
         CameraChrome.Flash(screen, flashAge, FlashDuration, rounding);
+    }
+
+    private void ApplyBarAction(CameraBarAction action)
+    {
+        if (action == CameraBarAction.ToggleFlash)
+        {
+            flashEnabled = !flashEnabled;
+            return;
+        }
+
+        if (action != CameraBarAction.ToggleLandscape)
+        {
+            return;
+        }
+
+        configuration.CameraLandscape = !configuration.CameraLandscape;
+        configuration.Save();
     }
 
     private void AdvanceTimers(float delta)
@@ -141,6 +174,41 @@ internal sealed class CameraApp : IPhoneApp
         }
 
         if (CameraChrome.GridToggle(new Vector2(screen.Max.X - 44f * scale, shutterCenter.Y), gridEnabled, scale))
+        {
+            gridEnabled = !gridEnabled;
+            consumed = true;
+        }
+
+        return consumed;
+    }
+
+    private bool DrawSideTray(Rect screen, Rect captureRect, INavigator navigation, float scale, float rounding)
+    {
+        var trayLeft = screen.Max.X - SideTrayWidth * scale;
+        CameraChrome.SideTrayBackground(screen, trayLeft, rounding);
+
+        var trayCenterX = trayLeft + SideTrayWidth * 0.5f * scale;
+        var shutterCenter = new Vector2(trayCenterX, screen.Center.Y);
+        var shutterRadius = CameraChrome.ShutterRadius * scale;
+        var newMode = CameraChrome.ModeColumn(trayCenterX, screen.Min.Y + 44f * scale,
+            shutterCenter.Y - shutterRadius - 10f * scale, Modes, modeIndex, scale);
+        var consumed = newMode != modeIndex;
+        modeIndex = newMode;
+
+        if (CameraChrome.Shutter(shutterCenter, shutterPress, scale))
+        {
+            Shoot(captureRect);
+            consumed = true;
+        }
+
+        var wellCenterY = (shutterCenter.Y + shutterRadius + screen.Max.Y - 30f * scale) * 0.5f;
+        if (CameraChrome.ThumbnailWell(new Vector2(trayLeft + 52f * scale, wellCenterY), lastShot, scale))
+        {
+            navigation.Open("photos");
+            consumed = true;
+        }
+
+        if (CameraChrome.GridToggle(new Vector2(screen.Max.X - 52f * scale, wellCenterY), gridEnabled, scale))
         {
             gridEnabled = !gridEnabled;
             consumed = true;

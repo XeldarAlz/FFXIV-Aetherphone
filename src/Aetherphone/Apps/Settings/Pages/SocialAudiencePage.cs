@@ -11,7 +11,6 @@ internal enum SocialAudienceKind
 {
     Mentions,
     Tags,
-    Messages,
 }
 
 internal sealed class SocialAudiencePage : ISettingsPage
@@ -26,12 +25,7 @@ internal sealed class SocialAudiencePage : ISettingsPage
         this.write = write;
     }
 
-    public string Title => Loc.T(kind switch
-    {
-        SocialAudienceKind.Tags => L.PhotoTag.AllowTags,
-        SocialAudienceKind.Messages => L.Social.AllowMessages,
-        _ => L.PhotoTag.AllowMentions,
-    });
+    public string Title => Loc.T(kind == SocialAudienceKind.Tags ? L.PhotoTag.AllowTags : L.PhotoTag.AllowMentions);
     public string Summary => Loc.T(SocialAudience.Label(read(kind)));
     public FontAwesomeIcon Icon => FontAwesomeIcon.Users;
     public Vector4 Tint => new(0.22f, 0.72f, 0.68f, 1f);

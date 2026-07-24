@@ -237,7 +237,7 @@ internal sealed partial class MessageApp
         else
         {
             var preview = item.LastMessagePreview.Length > 0
-                ? item.LastMessagePreview
+                ? ChatText.ListPreview(item.LastMessagePreview)
                 : item.LastMessageKind switch
                 {
                     1 => Loc.T(L.DirectMessages.PhotoPreview),

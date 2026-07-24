@@ -46,6 +46,8 @@ internal sealed class SocialProfileStyle
     public required LocString DeleteCommentConfirmMessage { get; init; }
     public required LocString DeleteCommentFailed { get; init; }
     public LocString? MessageLabel { get; init; }
+    public LocString? SettingsLabel { get; init; }
+    public LocString? SavedLabel { get; init; }
 }
 
 internal sealed class SocialProfilePages
@@ -71,6 +73,8 @@ internal sealed class SocialProfilePages
     private readonly Action back;
     private readonly Action? openConductRules;
     private readonly Action<string>? openMessage;
+    private readonly Action? openSettings;
+    private readonly Action? openSaved;
 
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
@@ -84,7 +88,8 @@ internal sealed class SocialProfilePages
         LodestoneService lodestone, AvatarLightbox avatarLightbox, Configuration configuration, GameData gameData,
         ConfirmService confirm, ReportService report, Action openEditProfile, Action openAvatarComposer,
         Action<string> openProfile, Action<string, UserListKind> openUserList, Action back,
-        Action? openConductRules, Action<string>? openMessage = null)
+        Action? openConductRules, Action<string>? openMessage = null, Action? openSettings = null,
+        Action? openSaved = null)
     {
         this.store = store;
         this.ui = ui;
@@ -103,6 +108,8 @@ internal sealed class SocialProfilePages
         this.back = back;
         this.openConductRules = openConductRules;
         this.openMessage = openMessage;
+        this.openSettings = openSettings;
+        this.openSaved = openSaved;
     }
 
     public string SearchDraft = string.Empty;
@@ -194,15 +201,37 @@ internal sealed class SocialProfilePages
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
         if (user.IsMe)
         {
+            var iconCenterX = buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale;
             if (openConductRules is not null)
             {
-                var rulesCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-                if (ui.IconButton(rulesCenter, buttonHeight * 0.5f, FontAwesomeIcon.QuestionCircle.ToIconString(),
-                        style.Palette.MutedInk, Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f,
-                        Loc.T(L.Conduct.Eyebrow)))
+                if (ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                        FontAwesomeIcon.QuestionCircle.ToIconString(), style.Palette.MutedInk,
+                        Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(L.Conduct.Eyebrow)))
                 {
                     openConductRules();
                 }
+
+                iconCenterX -= buttonHeight + 8f * scale;
+            }
+
+            if (openSettings is not null && style.SettingsLabel is { } settingsLabel)
+            {
+                if (ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                        FontAwesomeIcon.Cog.ToIconString(), style.Palette.MutedInk,
+                        Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(settingsLabel)))
+                {
+                    openSettings();
+                }
+
+                iconCenterX -= buttonHeight + 8f * scale;
+            }
+
+            if (openSaved is not null && style.SavedLabel is { } savedLabel
+                && ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                    FontAwesomeIcon.Bookmark.ToIconString(), style.Palette.MutedInk,
+                    Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(savedLabel)))
+            {
+                openSaved();
             }
 
             if (ui.PillButton(buttonRect, Loc.T(style.EditProfile), false))
@@ -242,10 +271,9 @@ internal sealed class SocialProfilePages
                 openMessage!(user.Id);
             }
 
-            if (ui.PillButton(followRect, user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow),
-                    !user.IsFollowing))
+            if (ui.PillButton(followRect, FollowPillLabel(user), FollowPillFilled(user)))
             {
-                store.SetFollow(user.Id, !user.IsFollowing);
+                store.ToggleFollow(user);
             }
         }
 
@@ -306,6 +334,17 @@ internal sealed class SocialProfilePages
         ImGui.Dummy(new Vector2(0f, 14f * scale));
     }
 
+    private string FollowPillLabel(UserDto user) => SocialFeedStore.FollowStateOf(user) switch
+    {
+        FollowState.Following => Loc.T(style.Following),
+        FollowState.Requested => Loc.T(L.Social.Requested),
+        _ => Loc.T(style.Follow),
+    };
+
+    private static bool FollowPillFilled(UserDto user) => SocialFeedStore.FollowStateOf(user) == FollowState.None;
+
+    private static bool CanViewFollowLists(UserDto user) => user.IsMe || user.IsFollowing || !user.IsPrivate;
+
     private void DrawProfileStats(UserDto user, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
@@ -317,11 +356,15 @@ internal sealed class SocialProfilePages
         var third = width / 3f;
         var centerY = origin.Y + height * 0.5f;
         var postsColumn = style.StatsPostsFirst ? 0 : 2;
-        for (var column = 0; column < 3; column++)
+        var listsOpen = CanViewFollowLists(user);
+        if (listsOpen)
         {
-            if (column != postsColumn)
+            for (var column = 0; column < 3; column++)
             {
-                DrawStatHover(drawList, origin, third * column, third, height, scale);
+                if (column != postsColumn)
+                {
+                    DrawStatHover(drawList, origin, third * column, third, height, scale);
+                }
             }
         }
 
@@ -341,13 +384,13 @@ internal sealed class SocialProfilePages
             FollowersLabel(user.Followers));
         DrawStatColumn(origin.X + third * followingColumn, third, centerY, theme,
             user.Following.ToString(Loc.Culture), Loc.T(style.Following));
-        if (UiInteract.HoverClick(new Vector2(origin.X + third * followingColumn, origin.Y),
+        if (listsOpen && UiInteract.HoverClick(new Vector2(origin.X + third * followingColumn, origin.Y),
                 new Vector2(origin.X + third * (followingColumn + 1), origin.Y + height)))
         {
             openUserList(user.Id, UserListKind.Following);
         }
 
-        if (UiInteract.HoverClick(new Vector2(origin.X + third, origin.Y),
+        if (listsOpen && UiInteract.HoverClick(new Vector2(origin.X + third, origin.Y),
                 new Vector2(origin.X + third * 2f, origin.Y + height)))
         {
             openUserList(user.Id, UserListKind.Followers);
@@ -646,10 +689,9 @@ internal sealed class SocialProfilePages
             new Rect(
                 new Vector2(origin.X + width - pad - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f),
                 new Vector2(origin.X + width - pad, origin.Y + rowHeight * 0.5f + buttonHeight * 0.5f));
-        if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow),
-                !user.IsFollowing))
+        if (ui.PillButton(buttonRect, FollowPillLabel(user), FollowPillFilled(user)))
         {
-            store.SetFollow(user.Id, !user.IsFollowing);
+            store.ToggleFollow(user);
         }
 
         var rowMax = new Vector2(origin.X + width - buttonWidth - pad - 6f * scale, origin.Y + rowHeight);

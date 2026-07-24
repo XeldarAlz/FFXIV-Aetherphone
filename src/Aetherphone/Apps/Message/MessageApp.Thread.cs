@@ -297,12 +297,14 @@ internal sealed partial class MessageApp
 
                 var replySender = string.Empty;
                 var replyBody = string.Empty;
+                var replyKind = message.ReplyKind;
                 if (message.ReplyToId is not null)
                 {
                     replySender = message.ReplySenderId == MyUserId
                         ? Loc.T(L.Message.You)
                         : message.ReplySenderName ?? Loc.T(L.Message.OriginalUnavailable);
-                    replyBody = ChatText.QuotePreview(message.ReplyBody, message.ReplyKind);
+                    replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
+                    replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
                 }
 
                 TranscriptReaction[]? reactions = null;
@@ -319,7 +321,7 @@ internal sealed partial class MessageApp
 
                 mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                     message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, senderName,
-                    tint, MessageFlags(message), message.ReplyToId, replySender, replyBody, message.ReplyKind,
+                    tint, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
                     message.DurationSecs, reactions);
             }
 
@@ -419,7 +421,7 @@ internal sealed partial class MessageApp
             ConversationTitle = DirectMessagesStore.DisplayTitle(conversation),
             SenderName = message.SenderId == store.MyUserId ? Loc.T(L.Message.You) : message.SenderDisplayName,
             Preview = ChatText.QuotePreview(message.Body, message.Kind),
-            Kind = message.Kind,
+            Kind = ChatText.EffectiveKind(message.Body, message.Kind),
             CreatedAtUnix = message.CreatedAtUnix,
             StarredAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
         });

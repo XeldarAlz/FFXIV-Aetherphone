@@ -33,9 +33,9 @@ internal sealed class GramDmClient
         return net.GetAsync(path, AethernetJsonContext.Default.GramMessagePage, token);
     }
 
-    public Task<GramMessageDto?> SendMessageAsync(string threadId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null, string? replyToId = null, int durationSecs = 0)
+    public Task<GramMessageDto?> SendMessageAsync(string threadId, string body, int kind, CancellationToken token, string? mediaKey = null, int mediaWidth = 0, int mediaHeight = 0, int encVersion = 0, string? commitmentTag = null, string? replyToId = null, int durationSecs = 0, string? storyId = null)
     {
-        return net.PostAsync($"/gram/threads/{Uri.EscapeDataString(threadId)}/messages", new SendGramMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag, replyToId, durationSecs), AethernetJsonContext.Default.SendGramMessageRequest, AethernetJsonContext.Default.GramMessageDto, token);
+        return net.PostAsync($"/gram/threads/{Uri.EscapeDataString(threadId)}/messages", new SendGramMessageRequest(body, kind, mediaKey, mediaWidth, mediaHeight, encVersion, commitmentTag, replyToId, durationSecs, storyId), AethernetJsonContext.Default.SendGramMessageRequest, AethernetJsonContext.Default.GramMessageDto, token);
     }
 
     public Task<bool> SetReactionAsync(string messageId, string reactionToken, CancellationToken token)
@@ -56,6 +56,16 @@ internal sealed class GramDmClient
     public Task<bool> DeleteMessageAsync(string messageId, CancellationToken token)
     {
         return net.SendAsync(HttpMethod.Delete, $"/gram/messages/{Uri.EscapeDataString(messageId)}", token);
+    }
+
+    public Task<bool> AcceptThreadAsync(string otherId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/accept", token);
+    }
+
+    public Task<bool> DeleteThreadAsync(string otherId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Delete, $"/gram/threads/{Uri.EscapeDataString(otherId)}", token);
     }
 
     public Task<bool> SendTypingAsync(string userId, CancellationToken token)

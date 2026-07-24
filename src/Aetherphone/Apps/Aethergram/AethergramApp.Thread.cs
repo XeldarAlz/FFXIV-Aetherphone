@@ -3,10 +3,12 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Aethergram;
@@ -18,7 +20,8 @@ internal sealed partial class AethergramApp
 
     private readonly ThreadView threadView;
 
-    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>
+    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>, IChatTranscriptPostCards,
+        IChatTranscriptStoryReplies
     {
         private readonly AethergramApp app;
 
@@ -41,6 +44,56 @@ internal sealed partial class AethergramApp
         protected override string NoPhotosLabel => Loc.T(L.Common.NoPhotos);
         protected override string SaveLabel => Loc.T(L.Common.SaveToGallery);
         protected override string SavedLabel => Loc.T(L.Common.SavedToGallery);
+
+        protected override IChatTranscriptPostCards? PostCards => this;
+
+        public bool TryResolve(string messageId, string body, out ChatPostCard card)
+        {
+            card = default;
+            if (body.Length == 0)
+            {
+                return false;
+            }
+
+            if (!app.dmStore.TryResolvePost(body, out var post))
+            {
+                return false;
+            }
+
+            if (post is null)
+            {
+                card = new ChatPostCard(body, string.Empty, string.Empty, null, false);
+                return true;
+            }
+
+            var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+            card = new ChatPostCard(post.Id, SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle),
+                post.Text, photos.Length > 0 ? photos[0] : null, true);
+            return true;
+        }
+
+        public void Open(string postId) => app.OpenDetailFromLink(postId);
+
+        public IDalamudTextureWrap? Thumbnail(string url) => app.images.Get(url);
+
+        protected override IChatTranscriptStoryReplies? StoryReplies => this;
+
+        public bool TryResolve(string messageId, out ChatStoryReplyContext context)
+        {
+            context = default;
+            var message = FindMessage(messageId);
+            if (message is null)
+            {
+                return false;
+            }
+
+            var contextText = Loc.T(message.SenderId == MyUserId
+                ? L.Aethergram.YouRepliedToStory
+                : L.Aethergram.RepliedToYourStory);
+            var unavailable = message.StoryExpired || string.IsNullOrEmpty(message.StoryMediaUrl);
+            context = new ChatStoryReplyContext(contextText, unavailable ? null : message.StoryMediaUrl, unavailable);
+            return true;
+        }
 
         protected override bool IsDeleted(GramMessageDto message) => message.Deleted;
 
@@ -108,6 +161,47 @@ internal sealed partial class AethergramApp
             };
         }
 
+        protected override void DrawAboveTranscript(ref Rect listRect, string threadId)
+        {
+            if (!app.dmStore.IsThreadPending(threadId))
+            {
+                return;
+            }
+
+            var scale = ImGuiHelpers.GlobalScale;
+            var drawList = ImGui.GetWindowDrawList();
+            var margin = 12f * scale;
+            var pad = 14f * scale;
+            var cardMin = new Vector2(listRect.Min.X + margin, listRect.Min.Y + margin);
+            var cardMaxX = listRect.Max.X - margin;
+            var innerWidth = cardMaxX - cardMin.X - pad * 2f;
+            var text = Loc.T(L.Aethergram.RequestBanner, app.ThreadTitle(threadId));
+            var textHeight = Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, innerWidth).Y;
+            var buttonHeight = 34f * scale;
+            var cardHeight = pad + textHeight + 12f * scale + buttonHeight + pad;
+            var cardMax = new Vector2(cardMaxX, cardMin.Y + cardHeight);
+            ui.Card(drawList, cardMin, cardMax, 16f * scale);
+            Typography.DrawWrappedLeft(new Vector2(cardMin.X + pad, cardMin.Y + pad), text,
+                AppPalettes.Aethergram.BodyInk, TextStyles.Subheadline, innerWidth);
+            var buttonsTop = cardMin.Y + pad + textHeight + 12f * scale;
+            var buttonWidth = (innerWidth - 10f * scale) * 0.5f;
+            var acceptRect = new Rect(new Vector2(cardMin.X + pad, buttonsTop),
+                new Vector2(cardMin.X + pad + buttonWidth, buttonsTop + buttonHeight));
+            var deleteRect = new Rect(new Vector2(acceptRect.Max.X + 10f * scale, buttonsTop),
+                new Vector2(cardMin.X + pad + innerWidth, buttonsTop + buttonHeight));
+            if (ui.PillButton(acceptRect, Loc.T(L.Aethergram.AcceptRequest), true))
+            {
+                app.dmStore.AcceptThread(threadId);
+            }
+
+            if (ui.DangerGhostButton(deleteRect, Loc.T(L.Aethergram.DeleteConfirm)))
+            {
+                app.AskDeleteConversation(threadId);
+            }
+
+            listRect = new Rect(new Vector2(listRect.Min.X, cardMax.Y + margin), listRect.Max);
+        }
+
         protected override void DrawHeader(Rect area, string threadId)
         {
             var context = new PhoneContext(area, Theme, Navigation);
@@ -173,10 +267,12 @@ internal sealed partial class AethergramApp
 
                 var replySender = string.Empty;
                 var replyBody = string.Empty;
+                var replyKind = message.ReplyKind;
                 if (message.ReplyToId is not null)
                 {
                     replySender = message.ReplySenderId == myId ? Loc.T(L.Message.You) : otherName;
-                    replyBody = ChatText.QuotePreview(message.ReplyBody, message.ReplyKind);
+                    replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
+                    replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
                 }
 
                 TranscriptReaction[]? reactions = null;
@@ -193,7 +289,7 @@ internal sealed partial class AethergramApp
 
                 mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                     message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
-                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, message.ReplyKind,
+                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
                     message.DurationSecs, reactions);
             }
 

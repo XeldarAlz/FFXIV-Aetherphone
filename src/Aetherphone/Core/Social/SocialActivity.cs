@@ -19,6 +19,8 @@ internal static class SocialActivity
     public const int TypeReportUpdate = 11;
     public const int TypeRepost = 12;
     public const int TypeQuote = 13;
+    public const int TypeFollowRequest = 14;
+    public const int TypeFollowAccept = 15;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";
@@ -68,6 +70,10 @@ internal static class SocialActivity
                 return string.IsNullOrEmpty(item.Preview) ? quoteAction : $"{quoteAction}: “{item.Preview}”";
             case TypeFollow:
                 return Loc.T(L.Social.Followed);
+            case TypeFollowRequest:
+                return Loc.T(L.Social.RequestedFollow);
+            case TypeFollowAccept:
+                return Loc.T(L.Social.AcceptedFollow);
             case TypeConnectRequest:
                 return Loc.T(L.Social.ConnectionRequest);
             case TypeConnectAccept:

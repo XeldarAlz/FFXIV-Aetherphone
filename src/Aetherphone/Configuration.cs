@@ -53,6 +53,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
     public List<string> FontGlyphLedger { get; set; } = new();
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = 1.25f;
+    public bool CameraLandscape { get; set; }
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
@@ -115,6 +116,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
 
     public bool IsVelvetOnboarded() => VelvetOnboarded && VelvetOnboardedVersion >= VelvetOnboardVersion;
     public bool VelvetBlurByDefault { get; set; } = true;
+    public bool VelvetShowLalafell { get; set; }
     public List<string> VelvetPinnedThreads { get; set; } = new();
     public List<string> MessagePinnedChats { get; set; } = new();
     public List<string> MessageArchivedChats { get; set; } = new();

@@ -118,28 +118,6 @@ internal sealed partial class VelvetShell : IPhoneApp
 
     public int BadgeCount => store.UnreadCount + store.RequestCount;
 
-    public bool IsAvailable => !IsLalafellCharacter();
-
-    private bool IsLalafellCharacter()
-    {
-        const byte lalafellRaceId = 3;
-        if (!Plugin.Framework.IsInFrameworkUpdateThread)
-        {
-            return cachedLalafell;
-        }
-
-        var local = gameData.LocalPlayer;
-        if (local is null)
-        {
-            return cachedLalafell;
-        }
-
-        var customize = local.Customize;
-        var raceIndex = (int)CustomizeIndex.Race;
-        cachedLalafell = customize.Length > raceIndex && customize[raceIndex] == lalafellRaceId;
-        return cachedLalafell;
-    }
-
     public void OnOpened()
     {
         router.Reset();
@@ -258,8 +236,28 @@ internal sealed partial class VelvetShell : IPhoneApp
         if (sinceHeartbeat >= HeartbeatSeconds)
         {
             sinceHeartbeat = 0f;
-            store.Heartbeat();
+            store.Heartbeat(SocialRegion.EffectiveCode(configuration, gameData), IsLalafellCharacter());
         }
+    }
+
+    private bool IsLalafellCharacter()
+    {
+        const byte lalafellRaceId = 3;
+        if (!Plugin.Framework.IsInFrameworkUpdateThread)
+        {
+            return cachedLalafell;
+        }
+
+        var local = gameData.LocalPlayer;
+        if (local is null)
+        {
+            return cachedLalafell;
+        }
+
+        var customize = local.Customize;
+        var raceIndex = (int)CustomizeIndex.Race;
+        cachedLalafell = customize.Length > raceIndex && customize[raceIndex] == lalafellRaceId;
+        return cachedLalafell;
     }
 
     private void DrawView(VelvetView view, Rect area, int depth)

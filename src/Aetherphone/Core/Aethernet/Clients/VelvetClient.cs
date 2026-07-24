@@ -48,6 +48,13 @@ internal sealed class VelvetClient
         AppendCsv(path, "kinksExclude", TokenCsv(filter.KinksExclude));
         AppendCsv(path, "limits", TokenCsv(filter.LimitsInclude));
         AppendCsv(path, "limitsExclude", TokenCsv(filter.LimitsExclude));
+        AppendCsv(path, "profileTags", TokenCsv(filter.TagsInclude));
+        AppendCsv(path, "profileTagsExclude", TokenCsv(filter.TagsExclude));
+        if (filter.IncludeLalafell)
+        {
+            path.Append("&includeLalafell=true");
+        }
+
         if (tags.Length > 0)
         {
             path.Append("&tags=").Append(Uri.EscapeDataString(tags));
@@ -152,12 +159,12 @@ internal sealed class VelvetClient
         return net.GetAsync(path, AethernetJsonContext.Default.VelvetConnectionPage, token);
     }
 
-    public Task<VelvetFeedPage?> FeedAsync(string? cursor, CancellationToken token)
+    public Task<VelvetFeedPage?> FeedAsync(string scope, string? cursor, CancellationToken token)
     {
-        var path = "/velvet/feed";
+        var path = $"/velvet/feed?scope={Uri.EscapeDataString(scope)}";
         if (cursor is not null)
         {
-            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
         }
 
         return net.GetAsync(path, AethernetJsonContext.Default.VelvetFeedPage, token);
@@ -281,12 +288,23 @@ internal sealed class VelvetClient
         return net.GetAsync($"/velvet/threads/{Uri.EscapeDataString(userId)}/typing", AethernetJsonContext.Default.VelvetTypingDto, token);
     }
 
-    public Task<bool> HeartbeatAsync(int? utcOffsetMinutes, CancellationToken token)
+    public Task<bool> HeartbeatAsync(int? utcOffsetMinutes, string region, bool isLalafell, CancellationToken token)
     {
-        var path = utcOffsetMinutes is { } offset
-            ? $"/velvet/heartbeat?utcOffsetMinutes={offset}"
-            : "/velvet/heartbeat";
-        return net.SendAsync(HttpMethod.Post, path, token);
+        var path = new System.Text.StringBuilder("/velvet/heartbeat?");
+        if (utcOffsetMinutes is { } offset)
+        {
+            path.Append("utcOffsetMinutes=").Append(offset).Append('&');
+        }
+
+        path.Append("region=").Append(Uri.EscapeDataString(region));
+        path.Append("&lalafell=").Append(isLalafell ? "true" : "false");
+        return net.SendAsync(HttpMethod.Post, path.ToString(), token);
+    }
+
+    public Task<VelvetUserPostsPage?> UserPostsAsync(string userId, CancellationToken token)
+    {
+        return net.GetAsync($"/velvet/users/{Uri.EscapeDataString(userId)}/posts",
+            AethernetJsonContext.Default.VelvetUserPostsPage, token);
     }
 
     public Task<VelvetMediaUrlDto?> DmMediaUrlAsync(string messageId, CancellationToken token)

@@ -150,6 +150,12 @@ internal static class VelvetConnectionState
     public const int Blocked = 4;
 }
 
+internal static class VelvetPostAudience
+{
+    public const int Connections = 0;
+    public const int Public = 1;
+}
+
 internal static class VelvetTags
 {
     public static string[] Parse(string raw)

@@ -13,6 +13,13 @@ internal enum SocialFeedScope
     Following,
 }
 
+internal enum FollowState
+{
+    None,
+    Requested,
+    Following,
+}
+
 internal abstract class SocialFeedStore : IDisposable
 {
     protected const int AvatarSize = 512;
@@ -26,6 +33,10 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile UserDto? me;
     protected readonly FeedLane<PostDto> forYouLane = new(ByNewestFirst);
     protected readonly FeedLane<PostDto> followingLane = new(ByNewestFirst);
+    private readonly FeedLane<PostDto> savedLane = new(ByNewestFirst);
+    private volatile UserDto[] followRequests = Array.Empty<UserDto>();
+    private volatile bool followRequestsLoading;
+    private volatile bool followRequestsLoaded;
     protected volatile PostDto[] profilePosts = Array.Empty<PostDto>();
     protected volatile PostDto? detailPost;
     protected volatile bool posting;
@@ -33,6 +44,9 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile UserDto? profileUser;
     private volatile bool profileLoading;
     private volatile bool profileFailed;
+    private volatile bool profileRevalidating;
+    private DateTime profileFetchedAt;
+    private static readonly TimeSpan ProfileRevalidateAfter = TimeSpan.FromSeconds(20);
     private volatile string? detailPostId;
     private volatile CommentDto[] detailComments = Array.Empty<CommentDto>();
     private volatile bool detailLoading;
@@ -90,6 +104,9 @@ internal abstract class SocialFeedStore : IDisposable
         discoverResults = Array.Empty<UserDto>();
         userListKey = null;
         userListResults = Array.Empty<UserDto>();
+        savedLane.Clear();
+        followRequests = Array.Empty<UserDto>();
+        followRequestsLoaded = false;
         ClearTagged();
     }
 
@@ -126,6 +143,21 @@ internal abstract class SocialFeedStore : IDisposable
     public UserDto[] UserListResults => userListResults;
     public bool UserListLoading => userListLoading;
     public bool UserListFailed => userListFailed;
+    public UserDto[] FollowRequests => followRequests;
+    public bool FollowRequestsLoading => followRequestsLoading;
+
+    public int PendingFollowRequestCount =>
+        followRequestsLoaded ? followRequests.Length : Me?.PendingFollowRequests ?? 0;
+
+    public PostDto[] SavedPosts => savedLane.Items;
+    public bool SavedLoading => savedLane.Loading;
+    public bool SavedLoadingMore => savedLane.LoadingMore;
+    public bool HasMoreSaved => savedLane.HasMore;
+
+    public static FollowState FollowStateOf(UserDto user) =>
+        user.IsFollowing ? FollowState.Following
+        : user.FollowRequested ? FollowState.Requested
+        : FollowState.None;
 
     protected abstract Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, CancellationToken token);
 
@@ -369,20 +401,215 @@ internal abstract class SocialFeedStore : IDisposable
         }, onComplete);
     }
 
+    public void ToggleFollow(UserDto user)
+    {
+        switch (FollowStateOf(user))
+        {
+            case FollowState.Following:
+                SetFollow(user.Id, false);
+                break;
+            case FollowState.Requested:
+                CancelFollowRequest(user.Id);
+                break;
+            default:
+                RequestFollow(user.Id, user.IsPrivate);
+                break;
+        }
+    }
+
     public void SetFollow(string userId, bool follow)
     {
-        ApplyFollowEverywhere(userId, follow);
+        if (follow)
+        {
+            RequestFollow(userId, false);
+            return;
+        }
+
+        ApplyFollowEverywhere(userId, false, false);
+        work.Run("unfollow",
+            async token => await client.UnfollowAsync(userId, token).ConfigureAwait(false));
+    }
+
+    private void RequestFollow(string userId, bool targetIsPrivate)
+    {
+        ApplyFollowEverywhere(userId, !targetIsPrivate, targetIsPrivate);
         work.Run("follow", async token =>
         {
-            if (follow)
+            var result = await client.FollowAsync(userId, token).ConfigureAwait(false);
+            if (result is null)
             {
-                await client.FollowAsync(userId, token).ConfigureAwait(false);
+                ApplyFollowEverywhere(userId, false, false);
             }
             else
             {
-                await client.UnfollowAsync(userId, token).ConfigureAwait(false);
+                ApplyFollowEverywhere(userId, result.Following, result.Requested);
             }
         });
+    }
+
+    private void CancelFollowRequest(string userId)
+    {
+        ApplyFollowEverywhere(userId, false, false);
+        work.Run("follow cancel",
+            async token => await client.UnfollowAsync(userId, token).ConfigureAwait(false));
+    }
+
+    public void EnsureFollowRequests()
+    {
+        if (!session.IsSignedIn || followRequestsLoaded || followRequestsLoading)
+        {
+            return;
+        }
+
+        FetchFollowRequests();
+    }
+
+    public void RefreshFollowRequests()
+    {
+        if (!session.IsSignedIn || followRequestsLoading)
+        {
+            return;
+        }
+
+        FetchFollowRequests();
+    }
+
+    private void FetchFollowRequests()
+    {
+        followRequestsLoading = true;
+        work.Run("follow requests", async token =>
+        {
+            var page = await client.RequestsAsync(null, token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                followRequests = page.Items;
+                followRequestsLoaded = true;
+                SyncPendingFollowRequests(page.Items.Length);
+            }
+        }, () => followRequestsLoading = false);
+    }
+
+    public void AcceptFollowRequest(UserDto requester)
+    {
+        RemoveFollowRequest(requester.Id, true);
+        work.Run("follow accept",
+            async token => await client.AcceptFollowRequestAsync(requester.Id, token).ConfigureAwait(false));
+    }
+
+    public void DeclineFollowRequest(UserDto requester)
+    {
+        RemoveFollowRequest(requester.Id, false);
+        work.Run("follow decline",
+            async token => await client.DeclineFollowRequestAsync(requester.Id, token).ConfigureAwait(false));
+    }
+
+    private void RemoveFollowRequest(string requesterId, bool accepted)
+    {
+        followRequests = CopyOnWrite.RemoveWhere(followRequests, user => user.Id == requesterId);
+        if (me is { } current)
+        {
+            me = current with
+            {
+                PendingFollowRequests = Math.Max(0, current.PendingFollowRequests - 1),
+                Followers = accepted ? current.Followers + 1 : current.Followers,
+            };
+        }
+    }
+
+    private void SyncPendingFollowRequests(int count)
+    {
+        if (me is { } current && current.PendingFollowRequests != count)
+        {
+            me = current with { PendingFollowRequests = count };
+        }
+    }
+
+    public void RefreshSaved()
+    {
+        if (!session.IsSignedIn || savedLane.Loading)
+        {
+            return;
+        }
+
+        savedLane.Loading = true;
+        work.Run("saved refresh", async token =>
+        {
+            var page = await client.SavedAsync(null, token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                savedLane.ApplyRefresh(page.Items, page.NextCursor);
+            }
+        }, () => savedLane.Loading = false);
+    }
+
+    public void LoadMoreSaved()
+    {
+        var cursor = savedLane.Cursor;
+        if (!session.IsSignedIn || cursor is null || savedLane.LoadingMore || savedLane.Loading)
+        {
+            return;
+        }
+
+        savedLane.LoadingMore = true;
+        work.Run("saved more", async token =>
+        {
+            var page = await client.SavedAsync(cursor, token).ConfigureAwait(false);
+            if (page is not null)
+            {
+                savedLane.ApplyMore(page.Items, page.NextCursor);
+            }
+        }, () => savedLane.LoadingMore = false);
+    }
+
+    public void SetSaved(string postId, bool saved)
+    {
+        ApplySavedEverywhere(postId, saved);
+        work.Run("save toggle", async token =>
+        {
+            if (saved)
+            {
+                await client.SavePostAsync(postId, token).ConfigureAwait(false);
+            }
+            else
+            {
+                await client.UnsavePostAsync(postId, token).ConfigureAwait(false);
+            }
+        });
+    }
+
+    private void ApplySavedEverywhere(string postId, bool saved)
+    {
+        forYouLane.Items = MapSaved(forYouLane.Items, postId, saved);
+        followingLane.Items = MapSaved(followingLane.Items, postId, saved);
+        profilePosts = MapSaved(profilePosts, postId, saved);
+        taggedPosts = MapSaved(taggedPosts, postId, saved);
+        savedLane.Items = saved
+            ? MapSaved(savedLane.Items, postId, true)
+            : CopyOnWrite.RemoveById(savedLane.Items, postId);
+        if (detailPost is { } current && current.Id == postId)
+        {
+            detailPost = current with { Saved = saved };
+        }
+    }
+
+    private static PostDto[] MapSaved(PostDto[] source, string postId, bool saved) =>
+        CopyOnWrite.Map(source,
+            post => post.Id == postId && post.Saved != saved,
+            post => post with { Saved = saved });
+
+    public void UpdateAccountPrivacy(bool isPrivate, Action<bool> onComplete)
+    {
+        work.Run("account privacy", async token =>
+        {
+            var updated = await account.UpdateAccountPrivacyAsync(isPrivate, token).ConfigureAwait(false);
+            if (updated is null)
+            {
+                return false;
+            }
+
+            AcceptMe(updated);
+            return true;
+        }, onComplete);
     }
 
     public void Report(string targetType, string targetId, string? reason, Action<bool> onComplete)
@@ -415,6 +642,12 @@ internal abstract class SocialFeedStore : IDisposable
     {
         if (profileUserId == userId && (profileUser is not null || profileLoading))
         {
+            if (profileUser is not null && !profileLoading && !profileRevalidating
+                && DateTime.UtcNow - profileFetchedAt > ProfileRevalidateAfter)
+            {
+                RevalidateProfile(userId);
+            }
+
             return;
         }
 
@@ -441,6 +674,7 @@ internal abstract class SocialFeedStore : IDisposable
             {
                 profileUser = user;
                 profilePosts = posts?.Items ?? Array.Empty<PostDto>();
+                profileFetchedAt = DateTime.UtcNow;
             }
         }, () =>
         {
@@ -449,6 +683,31 @@ internal abstract class SocialFeedStore : IDisposable
                 profileLoading = false;
             }
         });
+    }
+
+    private void RevalidateProfile(string userId)
+    {
+        profileRevalidating = true;
+        work.Run("profile revalidate", async token =>
+        {
+            var user = await account.UserAsync(userId, token).ConfigureAwait(false);
+            var posts = await FetchProfilePostsAsync(userId, token).ConfigureAwait(false);
+            if (profileUserId != userId)
+            {
+                return;
+            }
+
+            if (user is not null)
+            {
+                profileUser = user;
+                profileFetchedAt = DateTime.UtcNow;
+            }
+
+            if (posts is not null)
+            {
+                profilePosts = posts.Items;
+            }
+        }, () => profileRevalidating = false);
     }
 
     public void ReloadProfile()
@@ -625,30 +884,53 @@ internal abstract class SocialFeedStore : IDisposable
         }
     }
 
-    protected virtual void ApplyFollowEverywhere(string userId, bool follow)
+    protected virtual void ApplyFollowEverywhere(string userId, bool following, bool requested)
     {
-        discoverResults = MapFollow(discoverResults, userId, follow);
-        userListResults = MapFollow(userListResults, userId, follow);
+        discoverResults = MapFollow(discoverResults, userId, following, requested);
+        userListResults = MapFollow(userListResults, userId, following, requested);
+        followRequests = MapFollow(followRequests, userId, following, requested);
+        forYouLane.Items = MapFollowByAuthor(forYouLane.Items, userId, following);
+        followingLane.Items = MapFollowByAuthor(followingLane.Items, userId, following);
+        profilePosts = MapFollowByAuthor(profilePosts, userId, following);
+        taggedPosts = MapFollowByAuthor(taggedPosts, userId, following);
+        savedLane.Items = MapFollowByAuthor(savedLane.Items, userId, following);
+        if (detailPost is { } post && post.AuthorId == userId && post.IsFollowing != following)
+        {
+            detailPost = post with { IsFollowing = following };
+        }
+
         if (profileUser is { } current && current.Id == userId)
         {
             profileUser = current with
             {
-                IsFollowing = follow, Followers = Math.Max(0, current.Followers + (follow ? 1 : -1))
+                IsFollowing = following,
+                FollowRequested = requested,
+                Followers = Math.Max(0, current.Followers + FollowerDelta(current.IsFollowing, following)),
             };
         }
     }
+
+    private static int FollowerDelta(bool wasFollowing, bool following) =>
+        wasFollowing == following ? 0 : following ? 1 : -1;
 
     private static PostDto[] MapCommentCount(PostDto[] source, string postId, int delta) =>
         CopyOnWrite.MapById(source, postId,
             post => post with { CommentCount = Math.Max(0, post.CommentCount + delta) });
 
-    private static UserDto[] MapFollow(UserDto[] source, string userId, bool follow) =>
+    private static UserDto[] MapFollow(UserDto[] source, string userId, bool following, bool requested) =>
         CopyOnWrite.Map(source,
-            user => user.Id == userId && user.IsFollowing != follow,
+            user => user.Id == userId && (user.IsFollowing != following || user.FollowRequested != requested),
             user => user with
             {
-                IsFollowing = follow, Followers = Math.Max(0, user.Followers + (follow ? 1 : -1))
+                IsFollowing = following,
+                FollowRequested = requested,
+                Followers = Math.Max(0, user.Followers + FollowerDelta(user.IsFollowing, following)),
             });
+
+    private static PostDto[] MapFollowByAuthor(PostDto[] source, string userId, bool following) =>
+        CopyOnWrite.Map(source,
+            post => post.AuthorId == userId && post.IsFollowing != following,
+            post => post with { IsFollowing = following });
 
     public void Dispose()
     {

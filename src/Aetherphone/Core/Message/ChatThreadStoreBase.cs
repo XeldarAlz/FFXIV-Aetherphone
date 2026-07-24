@@ -16,6 +16,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected const int DmImageMaxDimension = 1280;
     protected const int ImageMediaKind = 1;
     protected const int VoiceMediaKind = 3;
+    protected const int PostShareKind = 4;
+    protected const int StoryReplyKind = 5;
     private static readonly TimeSpan ForegroundInboxPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundInboxPollInterval = TimeSpan.FromSeconds(120);
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
@@ -64,6 +66,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private volatile bool keyStatusRefreshing;
     private DateTime lastKeyStatusUtc = DateTime.MinValue;
     private volatile ChatKeyStatus currentKeyStatus = ChatKeyStatus.None;
+    private string? lastAccountId;
 
     protected ChatThreadStoreBase(string logTag, AethernetSession session, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility)
@@ -80,7 +83,33 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         messageOrder = CompareByCreatedAt;
         inboxCadence = new PollCadence(visibility, ForegroundInboxPollInterval, BackgroundInboxPollInterval);
         vault.Changed += OnVaultChanged;
+        session.Changed += OnSessionAccountChanged;
         Plugin.Framework.Update += OnFrameworkTick;
+    }
+
+    private void OnSessionAccountChanged()
+    {
+        var accountId = session.CurrentUser?.Id;
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastAccountId = accountId;
+        threadList = Array.Empty<TThread>();
+        threadListLoaded = false;
+        currentThreadId = null;
+        messages = Array.Empty<TMessage>();
+        olderCursor = null;
+        hasMoreOlder = false;
+        otherTyping = false;
+        inboxPrimed = false;
+        currentKeyStatus = ChatKeyStatus.None;
+        dmMediaUrls.Clear();
+        cipher.Clear();
+        OnCipherCleared();
+        vaultRefreshRequested = false;
+        OnAccountSwitched();
     }
 
     protected readonly record struct MessagePage(TMessage[] Items, string? NextCursor);
@@ -160,6 +189,10 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected virtual bool ShouldRevealForReport(TMessage message) => true;
 
     protected virtual void OnCipherCleared()
+    {
+    }
+
+    protected virtual void OnAccountSwitched()
     {
     }
 
@@ -1007,6 +1040,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     {
         DisposeCore();
         vault.Changed -= OnVaultChanged;
+        session.Changed -= OnSessionAccountChanged;
         Plugin.Framework.Update -= OnFrameworkTick;
         work.Dispose();
     }

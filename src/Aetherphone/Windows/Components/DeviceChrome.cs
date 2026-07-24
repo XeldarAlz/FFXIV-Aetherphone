@@ -64,7 +64,15 @@ internal static class DeviceChrome
             return screen;
         }
 
-        DrawViewportBody(dl, device, screen, band, deviceRounding, screenRounding, frame, screenBase);
+        if (band.Min.Y <= screen.Min.Y + 0.5f && band.Max.Y >= screen.Max.Y - 0.5f)
+        {
+            DrawViewportBodySideways(dl, device, screen, band, deviceRounding, screenRounding, frame, screenBase);
+        }
+        else
+        {
+            DrawViewportBody(dl, device, screen, band, deviceRounding, screenRounding, frame, screenBase);
+        }
+
         RailFinish(dl, device, screen, deviceRounding, screenRounding, scale);
         return screen;
     }
@@ -80,6 +88,19 @@ internal static class DeviceChrome
         dl.AddRectFilled(new Vector2(screen.Max.X, top), new Vector2(device.Max.X, bottom), frame);
         Squircle.FillCap(dl, screen.Min, new Vector2(screen.Max.X, top), screenRounding, screenBase, true);
         Squircle.FillCap(dl, new Vector2(screen.Min.X, bottom), screen.Max, screenRounding, screenBase, false);
+    }
+
+    private static void DrawViewportBodySideways(ImDrawListPtr dl, Rect device, Rect screen, Rect band,
+        float deviceRounding, float screenRounding, uint frame, uint screenBase)
+    {
+        var left = Math.Clamp(band.Min.X, screen.Min.X, screen.Max.X);
+        var right = Math.Clamp(band.Max.X, left, screen.Max.X);
+        Squircle.FillSideCap(dl, device.Min, new Vector2(left, device.Max.Y), deviceRounding, frame, true);
+        Squircle.FillSideCap(dl, new Vector2(right, device.Min.Y), device.Max, deviceRounding, frame, false);
+        dl.AddRectFilled(new Vector2(left, device.Min.Y), new Vector2(right, screen.Min.Y), frame);
+        dl.AddRectFilled(new Vector2(left, screen.Max.Y), new Vector2(right, device.Max.Y), frame);
+        Squircle.FillSideCap(dl, screen.Min, new Vector2(left, screen.Max.Y), screenRounding, screenBase, true);
+        Squircle.FillSideCap(dl, new Vector2(right, screen.Min.Y), screen.Max, screenRounding, screenBase, false);
     }
 
     internal static void RailFinish(ImDrawListPtr dl, Rect device, Rect screen, float deviceRounding,

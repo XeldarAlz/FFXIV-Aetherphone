@@ -117,15 +117,6 @@ internal sealed partial class AethergramApp
             scopeMenu.Toggle(ScopeMenuId, anchor);
         }
 
-        var inboxCenter = new Vector2(area.Max.X - 132f * scale, rowCenterY);
-        if (ui.IconButton(inboxCenter, 16f * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
-                AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.1f, Loc.T(L.Aethergram.InboxTitle),
-                HoverLabelSide.Below))
-        {
-            OpenInbox();
-        }
-
-        ActivityBadge.Draw(inboxCenter + new Vector2(11f * scale, -10f * scale), dmStore.UnreadCount, theme, scale);
         var refreshCenter = new Vector2(area.Max.X - 96f * scale, rowCenterY);
         if (store.IsLoading(activeScope))
         {

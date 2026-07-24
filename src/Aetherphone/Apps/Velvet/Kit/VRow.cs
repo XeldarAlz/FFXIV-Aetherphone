@@ -108,9 +108,14 @@ internal static class VRow
             rightEdge -= 22f * scale;
         }
 
+        var overControl = false;
         if (model.Decline)
         {
-            if (ui.IconButton(new Vector2(rightEdge - 10f * scale, centerY), 13f * scale,
+            var declineCenter = new Vector2(rightEdge - 10f * scale, centerY);
+            var declineRadius = 13f * scale;
+            var declineHit = new Vector2(declineRadius, declineRadius);
+            overControl |= UiInteract.Hover(declineCenter - declineHit, declineCenter + declineHit);
+            if (ui.IconButton(declineCenter, declineRadius,
                     FontAwesomeIcon.Times.ToIconString(), VelvetTheme.MutedInk, AppSkin.Transparent, 0.9f))
             {
                 hit = VRowHit.Decline;
@@ -127,6 +132,7 @@ internal static class VRow
                 new Vector2(rightEdge, centerY + pillHeight * 0.5f));
             if (model.PillEnabled)
             {
+                overControl |= UiInteract.Hover(pillRect.Min, pillRect.Max);
                 if (ui.PillButton(pillRect, model.Pill, model.PillFilled))
                 {
                     hit = VRowHit.Pill;
@@ -177,7 +183,7 @@ internal static class VRow
                 innerWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, subtitleHovering);
         }
 
-        if (hit == VRowHit.None && UiInteract.Click(min, max, hovered))
+        if (hit == VRowHit.None && !overControl && UiInteract.Click(min, max, hovered))
         {
             hit = VRowHit.Body;
         }

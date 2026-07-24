@@ -12,7 +12,9 @@ internal sealed record GramThreadDto(
     int Presence,
     int? UtcOffsetMinutes = null,
     int LastMessageEncVersion = 0,
-    string LastMessageSenderId = "") : IIdentified;
+    string LastMessageSenderId = "",
+    bool Pending = false,
+    int LastMessageKind = 0) : IIdentified;
 
 internal sealed record GramThreadPage(GramThreadDto[] Items, string? NextCursor);
 
@@ -36,7 +38,10 @@ internal sealed record GramMessageDto(
     bool Deleted = false,
     int DurationSecs = 0,
     ReactionSummaryDto[]? Reactions = null,
-    long? EditedAtUnix = null) : IIdentified;
+    long? EditedAtUnix = null,
+    string? StoryId = null,
+    string? StoryMediaUrl = null,
+    bool StoryExpired = false) : IIdentified;
 
 internal sealed record GramMessagePage(GramMessageDto[] Items, string? NextCursor);
 
@@ -49,7 +54,8 @@ internal sealed record SendGramMessageRequest(
     int EncVersion = 0,
     string? CommitmentTag = null,
     string? ReplyToId = null,
-    int DurationSecs = 0);
+    int DurationSecs = 0,
+    string? StoryId = null);
 
 internal sealed record GramMediaUrlDto(string Url, long ExpiresAtUnix);
 

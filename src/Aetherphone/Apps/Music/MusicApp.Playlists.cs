@@ -629,6 +629,7 @@ internal sealed partial class MusicApp
         Marquee.DrawLeft("music.playlistSongRow.subtitle." + song.VideoId + "." + index, songSub,
             textLeft, songSubY, textWidth, TextStyles.Caption1, ui.MutedInk, songSubHovering);
         var removeClicked = false;
+        var overRemove = false;
         if (current)
         {
             Equalizer.Draw(drawList, new Vector2(max.X - 18f * scale, min.Y + rowHeight * 0.5f), scale, 17f * scale,
@@ -636,7 +637,11 @@ internal sealed partial class MusicApp
         }
         else if (showRemove)
         {
-            removeClicked = ui.IconButton(new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f), 15f * scale,
+            var removeCenter = new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f);
+            var removeRadius = 15f * scale;
+            var removeHit = new Vector2(removeRadius, removeRadius);
+            overRemove = UiInteract.Hover(removeCenter - removeHit, removeCenter + removeHit);
+            removeClicked = ui.IconButton(removeCenter, removeRadius,
                 FontAwesomeIcon.Minus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f);
         }
 
@@ -648,7 +653,7 @@ internal sealed partial class MusicApp
             return;
         }
 
-        if (!UiInteract.Click(min, max, hovered))
+        if (overRemove || !UiInteract.Click(min, max, hovered))
         {
             return;
         }

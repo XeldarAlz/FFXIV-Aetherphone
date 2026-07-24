@@ -63,6 +63,12 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public void RefreshConversations() => RefreshThreadListCore();
 
+    protected override void OnAccountSwitched()
+    {
+        conversation = null;
+        members = Array.Empty<ConversationMemberDto>();
+    }
+
     public void OpenConversation(string id) => OpenThread(id);
 
     protected override string ImageUploadScope => "chat-dm";
@@ -200,7 +206,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     {
         if (item.LastMessagePreview.Length > 0)
         {
-            return item.LastMessagePreview;
+            return ChatText.ListPreview(item.LastMessagePreview);
         }
 
         return item.LastMessageKind switch

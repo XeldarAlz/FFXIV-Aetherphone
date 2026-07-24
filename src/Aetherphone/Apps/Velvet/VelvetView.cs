@@ -8,6 +8,12 @@ internal enum VelvetPage
     Me,
 }
 
+internal enum VelvetFeedScope
+{
+    All,
+    Connections,
+}
+
 internal enum VelvetScreenId
 {
     Root,

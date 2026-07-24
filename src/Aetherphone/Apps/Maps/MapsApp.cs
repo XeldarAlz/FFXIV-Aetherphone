@@ -299,8 +299,8 @@ internal sealed class MapsApp : IPhoneApp
         var starCenter = new Vector2(row.Min.X + starRadius, row.Center.Y);
         var starMin = new Vector2(row.Min.X, row.Min.Y);
         var starMax = new Vector2(starCenter.X + starRadius + 6f * scale, row.Max.Y);
-        var starHovered = ImGui.IsMouseHoveringRect(starMin, starMax);
-        var rowHovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var starHovered = UiInteract.Hover(starMin, starMax);
+        var rowHovered = UiInteract.Hover(row.Min, row.Max);
         var actionHovered = rowHovered && !starHovered;
         if (actionHovered)
         {
@@ -321,7 +321,7 @@ internal sealed class MapsApp : IPhoneApp
         MapGlyphs.ChevronRight(arrowTip, 6f * scale, 2.2f * scale,
             actionHovered ? frameTheme.Accent : frameTheme.TextMuted);
         var starClicked = UiInteract.Click(starMin, starMax, starHovered);
-        var rowClicked = UiInteract.Click(row.Min, row.Max, rowHovered);
+        var rowClicked = !starHovered && UiInteract.Click(row.Min, row.Max, rowHovered);
         if (starHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
