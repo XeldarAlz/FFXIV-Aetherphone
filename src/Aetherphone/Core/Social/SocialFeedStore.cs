@@ -44,6 +44,9 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile UserDto? profileUser;
     private volatile bool profileLoading;
     private volatile bool profileFailed;
+    private volatile bool profileRevalidating;
+    private DateTime profileFetchedAt;
+    private static readonly TimeSpan ProfileRevalidateAfter = TimeSpan.FromSeconds(20);
     private volatile string? detailPostId;
     private volatile CommentDto[] detailComments = Array.Empty<CommentDto>();
     private volatile bool detailLoading;
@@ -639,6 +642,12 @@ internal abstract class SocialFeedStore : IDisposable
     {
         if (profileUserId == userId && (profileUser is not null || profileLoading))
         {
+            if (profileUser is not null && !profileLoading && !profileRevalidating
+                && DateTime.UtcNow - profileFetchedAt > ProfileRevalidateAfter)
+            {
+                RevalidateProfile(userId);
+            }
+
             return;
         }
 
@@ -665,6 +674,7 @@ internal abstract class SocialFeedStore : IDisposable
             {
                 profileUser = user;
                 profilePosts = posts?.Items ?? Array.Empty<PostDto>();
+                profileFetchedAt = DateTime.UtcNow;
             }
         }, () =>
         {
@@ -673,6 +683,31 @@ internal abstract class SocialFeedStore : IDisposable
                 profileLoading = false;
             }
         });
+    }
+
+    private void RevalidateProfile(string userId)
+    {
+        profileRevalidating = true;
+        work.Run("profile revalidate", async token =>
+        {
+            var user = await account.UserAsync(userId, token).ConfigureAwait(false);
+            var posts = await FetchProfilePostsAsync(userId, token).ConfigureAwait(false);
+            if (profileUserId != userId)
+            {
+                return;
+            }
+
+            if (user is not null)
+            {
+                profileUser = user;
+                profileFetchedAt = DateTime.UtcNow;
+            }
+
+            if (posts is not null)
+            {
+                profilePosts = posts.Items;
+            }
+        }, () => profileRevalidating = false);
     }
 
     public void ReloadProfile()
