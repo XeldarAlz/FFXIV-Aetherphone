@@ -247,9 +247,13 @@ internal sealed partial class MessageApp
         }
 
         var textWidth = actionLeft - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale),
-            Typography.FitText(ContactBook.DisplayLabel(contact), textWidth, 1f, FontWeight.SemiBold),
-            theme.TextStrong, 1f, FontWeight.SemiBold);
+        var nameTop = origin.Y + 12f * scale;
+        var contactName = ContactBook.DisplayLabel(contact);
+        var nameSize = Typography.Measure(contactName, 1f, FontWeight.SemiBold);
+        var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, nameTop),
+            new Vector2(textLeft + textWidth, nameTop + nameSize.Y));
+        Marquee.DrawLeft("messageapp.contacts.name." + contact.UserId, contactName, textLeft, nameTop, textWidth,
+            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, nameHovering);
         Typography.Draw(new Vector2(textLeft, origin.Y + 33f * scale),
             Typography.FitText(ContactBook.Format(contact.PhoneNumber), textWidth, 0.85f, FontWeight.Regular),
             ui.MutedInk, 0.85f);

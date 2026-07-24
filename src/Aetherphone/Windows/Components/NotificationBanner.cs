@@ -284,13 +284,15 @@ internal sealed class NotificationBanner : IDisposable
         var timeSize = Typography.Measure(time, 0.78f);
         Typography.Draw(dl, new Vector2(textRight - timeSize.X, titleTop + 1f * scale), time,
             Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
-        dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 6f * scale, max.Y), true);
-        Typography.Draw(dl, new Vector2(textLeft, titleTop), notification.Title, ink, 0.94f, FontWeight.SemiBold);
-        dl.PopClipRect();
-        dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
-        Typography.Draw(dl, new Vector2(textLeft, titleTop + BodyOffset * scale), notification.Body,
-            Palette.WithAlpha(theme.TextMuted, opacity), 0.88f);
-        dl.PopClipRect();
+        var titleMaxWidth = textRight - timeSize.X - 6f * scale - textLeft;
+        var titleStyle = new TextStyle(0.94f, FontWeight.SemiBold);
+        Marquee.DrawLeftAuto("notificationbanner.title." + notification.Id, notification.Title, textLeft, titleTop,
+            titleMaxWidth, titleStyle, ink);
+        var bodyMaxWidth = textRight - textLeft;
+        var bodyTop = titleTop + BodyOffset * scale;
+        var bodyStyle = new TextStyle(0.88f, FontWeight.Regular);
+        Marquee.DrawLeftAuto("notificationbanner.body." + notification.Id, notification.Body, textLeft,
+            bodyTop, bodyMaxWidth, bodyStyle, Palette.WithAlpha(theme.TextMuted, opacity));
     }
 
     private void OnPresented(PhoneNotification notification)

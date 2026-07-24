@@ -25,7 +25,7 @@ internal sealed class HomeGridRenderer
         this.interaction = interaction;
     }
 
-    public void DrawPages(in HomeMetrics metrics, PhoneTheme theme, float delta, float labelAlpha,
+    public void DrawPages(in HomeMetrics metrics, PhoneTheme theme, float delta, float labelAlpha, bool showLabels,
         in HomeMotion motion)
     {
         widgetAnchorReported = false;
@@ -36,14 +36,14 @@ internal sealed class HomeGridRenderer
         var last = Math.Min(layout.PageCount - 1, (int)MathF.Ceiling(scroll) + 1);
         for (var page = first; page <= last; page++)
         {
-            DrawPage(metrics, theme, page, delta, labelAlpha, motion);
+            DrawPage(metrics, theme, page, delta, labelAlpha, showLabels, motion);
         }
 
         drawList.PopClipRect();
     }
 
     private void DrawPage(in HomeMetrics metrics, PhoneTheme theme, int page, float delta, float labelAlpha,
-        in HomeMotion motion)
+        bool showLabels, in HomeMotion motion)
     {
         if (!interaction.TryPreviewPage(page, out var tiles, out var cells))
         {
@@ -63,13 +63,13 @@ internal sealed class HomeGridRenderer
             var target = metrics.TileRect(page, page, cells[index], tile);
             var local = new Rect(target.Min - metrics.Grid.Min, target.Max - metrics.Grid.Min);
             var rect = poses.Resolve(tile.Key, page, local, metrics.Grid.Min + pageOffset, delta, motion.Interactive);
-            DrawTile(metrics, theme, tile, rect, labelAlpha, delta, motion,
+            DrawTile(metrics, theme, tile, rect, labelAlpha, showLabels, delta, motion,
                 ReferenceEquals(tile, interaction.FolderTarget));
         }
     }
 
     private void DrawTile(in HomeMetrics metrics, PhoneTheme theme, HomeTile tile, Rect rect, float labelAlpha,
-        float delta, in HomeMotion motion, bool highlight)
+        bool showLabels, float delta, in HomeMotion motion, bool highlight)
     {
         var scale = metrics.Scale;
         var zoom = motion.Zoom;
@@ -104,7 +104,7 @@ internal sealed class HomeGridRenderer
         {
             HomeTileView.DrawFolder(center, rect.Width, tile, theme,
                 interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
-                labelAlpha, Loc.T(L.Home.NewFolder), metrics.CellWidth, zoom);
+                labelAlpha, showLabels, Loc.T(L.Home.NewFolder), metrics.CellWidth, zoom);
             if (interaction.RemoveBadgesLive(motion) &&
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
             {
@@ -118,7 +118,7 @@ internal sealed class HomeGridRenderer
 
         HomeTileView.DrawApp(center, rect.Width, tile.App!, theme,
             interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
-            labelAlpha, metrics.CellWidth, zoom);
+            labelAlpha, showLabels, metrics.CellWidth, zoom);
         ReportIconAnchor(tile, center, rect.Width, motion);
     }
 
@@ -177,7 +177,8 @@ internal sealed class HomeGridRenderer
 
             var jiggle = interaction.Jiggle(tile, metrics.Scale);
             HomeTileView.DrawApp(rect.Center + jiggle, rect.Width, tile.App!, theme,
-                interaction.TapScale(tile) * interaction.Magnify(rect.Center, metrics.CellWidth), 0f, 0f, motion.Zoom);
+                interaction.TapScale(tile) * interaction.Magnify(rect.Center, metrics.CellWidth), 0f, true, 0f,
+                motion.Zoom);
             ReportIconAnchor(tile, rect.Center, rect.Width, motion);
         }
     }
@@ -230,12 +231,12 @@ internal sealed class HomeGridRenderer
             metrics.IconSize * scale * 0.26f, metrics.IconSize * scale * 0.5f);
         if (tile.IsFolder)
         {
-            HomeTileView.DrawFolder(position, metrics.IconSize, tile, theme, scale, 0f, Loc.T(L.Home.NewFolder),
+            HomeTileView.DrawFolder(position, metrics.IconSize, tile, theme, scale, 0f, true, Loc.T(L.Home.NewFolder),
                 metrics.CellWidth);
             return;
         }
 
-        HomeTileView.DrawApp(position, metrics.IconSize, tile.App!, theme, scale, 0f, metrics.CellWidth);
+        HomeTileView.DrawApp(position, metrics.IconSize, tile.App!, theme, scale, 0f, true, metrics.CellWidth);
     }
 
     private static float WidgetChromeRadius(float scale) => 22f * scale;

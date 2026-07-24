@@ -118,14 +118,22 @@ internal sealed partial class VelvetShell
         VAvatar.Draw(drawList, avatarCenter, hasStory ? avatarRadius - 1f * scale : avatarRadius, theme, authorName,
             string.Empty, entry.OwnerAvatarUrl, images, lodestone, -1);
         var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
-        Typography.Draw(new Vector2(textLeft, headerCenterY - 14f * scale), authorName, VelvetTheme.TitleInk,
-            TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, headerCenterY + 2f * scale),
-            "@" + entry.OwnerHandle + " · " + TimeText.Short(entry.CreatedAtUnix), VelvetTheme.MutedInk,
-            TextStyles.Subheadline);
-
         var headerHitMin = new Vector2(card.Min.X, card.Min.Y);
         var headerHitMax = new Vector2(card.Max.X - 44f * scale, card.Min.Y + headerHeight);
+        var headerTextMaxWidth = headerHitMax.X - textLeft;
+        var authorY = headerCenterY - 14f * scale;
+        var authorSize = Typography.Measure(authorName, TextStyles.Headline);
+        var authorHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, authorY),
+            new Vector2(textLeft + headerTextMaxWidth, authorY + authorSize.Y));
+        Marquee.DrawLeft("velvet.feed.author." + entry.OwnerId, authorName, textLeft, authorY,
+            headerTextMaxWidth, TextStyles.Headline, VelvetTheme.TitleInk, authorHovering);
+        var ownerSub = "@" + entry.OwnerHandle + " · " + TimeText.Short(entry.CreatedAtUnix);
+        var ownerSubY = headerCenterY + 2f * scale;
+        var ownerSubSize = Typography.Measure(ownerSub, TextStyles.Subheadline);
+        var ownerSubHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, ownerSubY),
+            new Vector2(textLeft + headerTextMaxWidth, ownerSubY + ownerSubSize.Y));
+        Marquee.DrawLeft("velvet.feed.ownersub." + entry.OwnerId, ownerSub, textLeft, ownerSubY,
+            headerTextMaxWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, ownerSubHovering);
         if (hasStory && UiInteract.HoverClickCircle(avatarCenter, ringRadius))
         {
             stories.OpenRing(authorRing);

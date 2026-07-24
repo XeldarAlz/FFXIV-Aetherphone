@@ -58,19 +58,28 @@ internal static class MarketRowViews
         drawList.AddCircleFilled(dotCenter, 4f * scale, ImGui.GetColorU32(dotColor), 16);
         var textX = iconMax.X + 12f * scale;
         var topY = row.Min.Y + 9f * scale;
-        Typography.Draw(new Vector2(textX, topY), MarketFormat.Clip(alert.ItemName, 18), theme.TextStrong);
+        var textMaxWidth = MathF.Max(1f, dotCenter.X - 8f * scale - textX);
+        var nameSize = Typography.Measure(alert.ItemName, TextStyles.Body);
+        var nameHovered = ImGui.IsMouseHoveringRect(new Vector2(textX, topY),
+            new Vector2(textX + textMaxWidth, topY + nameSize.Y));
+        Marquee.DrawLeft("marketrow.alert.name." + alert.ItemName, alert.ItemName, textX, topY, textMaxWidth,
+            TextStyles.Body, theme.TextStrong, nameHovered);
         var arrow = alert.Below ? "≤" : "≥";
         var sub =
             $"{arrow} {MarketFormat.Gil(alert.Threshold)} · {alert.ScopeName}{(alert.HqOnly ? $" · {Loc.T(L.Common.Hq)}" : string.Empty)}";
         var subSize = Typography.Measure(sub, 0.82f);
-        Typography.Draw(new Vector2(textX, row.Max.Y - 9f * scale - subSize.Y), sub, theme.TextMuted, 0.82f);
+        var subTop = row.Max.Y - 9f * scale - subSize.Y;
+        var subHovered = ImGui.IsMouseHoveringRect(new Vector2(textX, subTop),
+            new Vector2(textX + textMaxWidth, subTop + subSize.Y));
+        Marquee.DrawLeft("marketrow.alert.sub." + alert.ItemName, sub, textX, subTop,
+            textMaxWidth, new TextStyle(0.82f, FontWeight.Regular), theme.TextMuted, subHovered);
+        var rowHovered = ImGui.IsMouseHoveringRect(row.Min, new Vector2(dotCenter.X - 8f * scale, row.Max.Y));
         if (deleteHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             return ImGui.IsMouseClicked(ImGuiMouseButton.Left) ? MarketRowAction.Delete : MarketRowAction.None;
         }
 
-        var rowHovered = ImGui.IsMouseHoveringRect(row.Min, new Vector2(dotCenter.X - 8f * scale, row.Max.Y));
         if (rowHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -103,19 +112,23 @@ internal static class MarketRowViews
                 6f * scale);
         }
 
-        var nameMaxLength = minPrice > 0 ? 20 : 28;
-        var name = MarketFormat.Clip(item.Name, nameMaxLength);
-        var nameSize = Typography.Measure(name);
-        Typography.Draw(new Vector2(iconMax.X + 12f * scale, row.Center.Y - nameSize.Y * 0.5f), name, theme.TextStrong);
         var chevronTip = new Vector2(row.Max.X, row.Center.Y);
-        DrawChevronRight(chevronTip, 6f * scale, 2.2f * scale, theme.TextMuted);
+        var rightReserve = 6f * scale + 14f * scale;
         if (minPrice > 0)
         {
             var priceText = MarketFormat.Gil(minPrice);
             var priceSize = Typography.Measure(priceText, 0.92f);
             Typography.Draw(new Vector2(chevronTip.X - 14f * scale - priceSize.X, row.Center.Y - priceSize.Y * 0.5f),
                 priceText, theme.Accent, 0.92f);
+            rightReserve += priceSize.X + 14f * scale;
         }
+
+        var nameLeft = iconMax.X + 12f * scale;
+        var nameMaxWidth = MathF.Max(1f, chevronTip.X - rightReserve - nameLeft);
+        var nameSize = Typography.Measure(item.Name);
+        Marquee.DrawLeft("marketrow.item.name." + item.Name, item.Name, nameLeft, row.Center.Y - nameSize.Y * 0.5f,
+            nameMaxWidth, TextStyles.Body, theme.TextStrong, hovered);
+        DrawChevronRight(chevronTip, 6f * scale, 2.2f * scale, theme.TextMuted);
 
         if (hovered)
         {
@@ -132,12 +145,15 @@ internal static class MarketRowViews
         var unit = MarketFormat.Gil(listing.PricePerUnit);
         Typography.Draw(new Vector2(row.Min.X, topY), unit, theme.TextStrong, 1.05f);
         var unitWidth = Typography.Measure(unit, 1.05f).X;
+        var leftReserve = unitWidth;
         if (listing.Hq)
         {
             DrawHqBadge(new Vector2(row.Min.X + unitWidth + 8f * scale, topY), scale);
+            leftReserve += 8f * scale + HqBadgeWidth(scale);
         }
 
-        var total = MarketFormat.Gil(listing.Total);
+        var totalMaxWidth = MathF.Max(1f, row.Width - leftReserve - 10f * scale);
+        var total = Typography.FitText(MarketFormat.Gil(listing.Total), totalMaxWidth, 1f, FontWeight.Regular);
         var totalSize = Typography.Measure(total);
         Typography.Draw(new Vector2(row.Max.X - totalSize.X, topY + 1f * scale), total, theme.Accent);
         var sub = BuildSub(listing.Quantity, multiWorld ? listing.World : string.Empty, listing.Retainer);
@@ -152,12 +168,15 @@ internal static class MarketRowViews
         var price = MarketFormat.Gil(sale.PricePerUnit);
         Typography.Draw(new Vector2(row.Min.X, topY), price, theme.TextStrong, 1.05f);
         var priceWidth = Typography.Measure(price, 1.05f).X;
+        var leftReserve = priceWidth;
         if (sale.Hq)
         {
             DrawHqBadge(new Vector2(row.Min.X + priceWidth + 8f * scale, topY), scale);
+            leftReserve += 8f * scale + HqBadgeWidth(scale);
         }
 
-        var ago = TimeText.Ago(sale.Time);
+        var agoMaxWidth = MathF.Max(1f, row.Width - leftReserve - 10f * scale);
+        var ago = Typography.FitText(TimeText.Ago(sale.Time), agoMaxWidth, 0.9f, FontWeight.Regular);
         var agoSize = Typography.Measure(ago, 0.9f);
         Typography.Draw(new Vector2(row.Max.X - agoSize.X, topY + 1f * scale), ago, theme.TextMuted, 0.9f);
         var sub = BuildSub(sale.Quantity, multiWorld ? sale.World : string.Empty, sale.Buyer);
@@ -189,6 +208,9 @@ internal static class MarketRowViews
         SubCache[key] = result;
         return result;
     }
+
+    private static float HqBadgeWidth(float scale) =>
+        Typography.Measure(Loc.T(L.Common.Hq), 0.72f).X + 10f * scale;
 
     private static void DrawHqBadge(Vector2 position, float scale)
     {

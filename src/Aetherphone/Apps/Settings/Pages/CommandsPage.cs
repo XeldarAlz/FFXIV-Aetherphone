@@ -50,10 +50,11 @@ internal sealed class CommandsPage : ISettingsPage
 
     private static void DrawRow(Rect row, CommandEntry entry, Core.Theme.PhoneTheme theme, float scale)
     {
-        var syntaxHeight = Typography.Measure(entry.Syntax, 0.92f, FontWeight.SemiBold).Y;
-        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale), entry.Syntax, theme.Accent, 0.92f,
+        var syntax = Typography.FitText(entry.Syntax, row.Width, 0.92f, FontWeight.SemiBold);
+        var syntaxHeight = Typography.Measure(syntax, 0.92f, FontWeight.SemiBold).Y;
+        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale), syntax, theme.Accent, 0.92f,
             FontWeight.SemiBold);
-        var description = Loc.T(entry.Description);
+        var description = Typography.FitText(Loc.T(entry.Description), row.Width, 0.8f, FontWeight.Regular);
         Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale + syntaxHeight + 4f * scale), description,
             theme.TextMuted, 0.8f);
     }

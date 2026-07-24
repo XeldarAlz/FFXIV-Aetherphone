@@ -19,9 +19,11 @@ internal sealed class HomeScreen
     private readonly HomeInteractionController interaction;
     private readonly HomeGridRenderer renderer;
     private readonly HomeChrome chrome;
+    private readonly Configuration configuration;
 
     public HomeScreen(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets, Configuration configuration)
     {
+        this.configuration = configuration;
         layout = new HomeLayoutService(apps, widgets, configuration);
         folder = new FolderOverlay(layout);
         sizeMenu = new WidgetSizeMenu(layout);
@@ -53,7 +55,7 @@ internal sealed class HomeScreen
         interaction.AdvanceTap(delta);
         interaction.UpdateMagnify(content, motion, delta);
         var labelAlpha = chromeAlpha * (folder.Active ? 0.35f : 1f);
-        renderer.DrawPages(metrics, theme, delta, labelAlpha, motion);
+        renderer.DrawPages(metrics, theme, delta, labelAlpha, configuration.ShowAppNames, motion);
         renderer.DrawDock(metrics, theme, delta, chromeAlpha, motion);
         chrome.DrawPageControls(metrics, theme, chromeAlpha, motion.Interactive);
         if (interaction.Editing && motion.Interactive)

@@ -128,9 +128,11 @@ internal sealed class VFilterSheet
             AppSkin.Icon(drawList, iconCenter, def.Icon.ToIconString(), VelvetTheme.Alpha(def.Hue, alpha), 0.9f);
 
             var labelInk = selected ? VelvetTheme.TitleInk : VelvetTheme.BodyInk;
-            var label = Loc.T(def.Label);
+            var labelLeft = iconCenter.X + 22f * scale;
+            var label = Typography.FitText(Loc.T(def.Label), rowMax.X - 8f * scale - labelLeft, 0.95f,
+                FontWeight.Medium);
             var labelSize = Typography.Measure(label, 0.95f, FontWeight.Medium);
-            Typography.Draw(drawList, new Vector2(iconCenter.X + 22f * scale, centerY - labelSize.Y * 0.5f), label,
+            Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelSize.Y * 0.5f), label,
                 VelvetTheme.Alpha(labelInk, alpha), 0.95f, FontWeight.Medium);
 
             DrawCheckbox(drawList, new Vector2(rowMax.X - 22f * scale, centerY), selected, def.Hue, alpha, scale);
@@ -260,7 +262,8 @@ internal sealed class VFilterSheet
             }
 
             var ink = selected ? VelvetTheme.OnAccent : hovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
-            var label = VelvetGender.Label(flag);
+            var label = Typography.FitText(VelvetGender.Label(flag), cellWidth - 8f * scale, 0.82f,
+                FontWeight.SemiBold);
             var labelSize = Typography.Measure(label, 0.82f, FontWeight.SemiBold);
             Typography.Draw(drawList,
                 new Vector2((pillMin.X + pillMax.X) * 0.5f - labelSize.X * 0.5f,
@@ -320,10 +323,11 @@ internal sealed class VFilterSheet
             }
 
             var ink = selected ? VelvetTheme.OnAccent : hovered ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
-            var labelSize = Typography.Measure(label, 0.82f, FontWeight.SemiBold);
+            var fittedLabel = Typography.FitText(label, segRight - segLeft - 8f * scale, 0.82f, FontWeight.SemiBold);
+            var labelSize = Typography.Measure(fittedLabel, 0.82f, FontWeight.SemiBold);
             Typography.Draw(drawList,
                 new Vector2((segLeft + segRight) * 0.5f - labelSize.X * 0.5f, (segMin.Y + segMax.Y) * 0.5f - labelSize.Y * 0.5f),
-                label, VelvetTheme.Alpha(ink, alpha), 0.82f, FontWeight.SemiBold);
+                fittedLabel, VelvetTheme.Alpha(ink, alpha), 0.82f, FontWeight.SemiBold);
 
             if (hovered)
             {

@@ -54,8 +54,12 @@ internal static class ChatBubble
         {
             var senderName = group.SenderName ?? string.Empty;
             var dl = ImGui.GetWindowDrawList();
-            Typography.Draw(dl, new Vector2(screenOrigin.X + gutter + padding, screenOrigin.Y), senderName,
-                group.SenderColor, TextStyles.Caption1.Scale, TextStyles.Caption1.Weight);
+            var headerLeft = screenOrigin.X + gutter + padding;
+            var headerMaxWidth = screenOrigin.X + available - padding - headerLeft;
+            var headerHovering = ImGui.IsMouseHoveringRect(new Vector2(headerLeft, screenOrigin.Y),
+                new Vector2(headerLeft + headerMaxWidth, screenOrigin.Y + headerHeight));
+            Marquee.DrawLeft("chatbubble.sender." + senderName, senderName, headerLeft, screenOrigin.Y,
+                headerMaxWidth, TextStyles.Caption1, group.SenderColor, headerHovering);
             var avatarCenter = new Vector2(screenOrigin.X + avatarRadius,
                 screenOrigin.Y + headerHeight + bubbleHeight - avatarRadius);
             AvatarView.Draw(dl, avatarCenter, avatarRadius, group.SenderColor, Initials.Of(senderName), 0.7f,

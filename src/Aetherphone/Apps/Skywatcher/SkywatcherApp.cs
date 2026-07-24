@@ -97,13 +97,14 @@ internal sealed class SkywatcherApp : IPhoneApp
     {
         var origin = ImGui.GetCursorScreenPos();
         var centerX = origin.X + width * 0.5f;
+        var titleHeight = 0f;
         if (zone.Length > 0)
         {
-            Typography.DrawCentered(new Vector2(centerX, origin.Y + 16f * scale), zone, palette.Ink,
-                TextStyles.Title2.Scale, TextStyles.Title2.Weight);
+            titleHeight = Typography.DrawWrappedCentered(new Vector2(centerX, origin.Y + 16f * scale), zone,
+                palette.Ink, TextStyles.Title2, width - 32f * scale);
         }
 
-        var glyphCenter = new Vector2(centerX, origin.Y + 100f * scale);
+        var glyphCenter = new Vector2(centerX, MathF.Max(origin.Y + 100f * scale, origin.Y + 16f * scale + titleHeight + 44f * scale));
         var radius = 50f * scale;
         WeatherGlyph.Draw(kind, glyphCenter, radius, palette, isDay, SampleSky(palette, screen, glyphCenter.Y));
         WeatherAmbience.Halo(ImGui.GetWindowDrawList(), glyphCenter, radius * 1.05f, palette.Glow,
@@ -149,8 +150,9 @@ internal sealed class SkywatcherApp : IPhoneApp
                     columnWidth * 0.30f);
             }
 
-            Typography.DrawCentered(new Vector2(columnCenterX, inner.Min.Y + 10f * scale), ShortWhen(window),
-                palette.InkSoft, TextStyles.Footnote);
+            var columnMaxWidth = MathF.Max(1f, columnWidth - 4f * scale);
+            Marquee.DrawCentered("skywatcher.hourly." + index, ShortWhen(window), columnCenterX,
+                inner.Min.Y + 10f * scale, columnMaxWidth, TextStyles.Footnote, palette.InkSoft, false);
             var glyphCenter = new Vector2(columnCenterX, inner.Min.Y + inner.Height * 0.62f);
             var glyphRadius = MathF.Min(columnWidth * 0.34f, inner.Height * 0.28f);
             DrawMini(window, glyphCenter, glyphRadius, screen);
@@ -184,11 +186,14 @@ internal sealed class SkywatcherApp : IPhoneApp
             }
 
             var label = window.IsCurrent ? Loc.T(L.Skywatcher.Now) : BellLabel(window);
-            var labelSize = Typography.Measure(label);
-            Typography.Draw(new Vector2(inner.Min.X + 12f * scale, rowCenterY - labelSize.Y * 0.5f), label,
+            var labelMaxWidth = MathF.Max(1f, glyphX - 8f * scale - (inner.Min.X + 12f * scale));
+            var fittedLabel = Typography.FitText(label, labelMaxWidth, TextStyles.Body);
+            var labelSize = Typography.Measure(fittedLabel);
+            Typography.Draw(new Vector2(inner.Min.X + 12f * scale, rowCenterY - labelSize.Y * 0.5f), fittedLabel,
                 window.IsCurrent ? palette.Ink : palette.InkSoft);
             DrawMini(window, new Vector2(glyphX, rowCenterY), 13f * scale, screen);
-            var name = window.Weather;
+            var nameMaxWidth = MathF.Max(1f, inner.Max.X - 10f * scale - (glyphX + 23f * scale));
+            var name = Typography.FitText(window.Weather, nameMaxWidth, 1f, FontWeight.Regular);
             var nameSize = Typography.Measure(name);
             Typography.Draw(new Vector2(inner.Max.X - 10f * scale - nameSize.X, rowCenterY - nameSize.Y * 0.5f), name,
                 palette.Ink);

@@ -40,7 +40,7 @@ internal sealed class ClockWidget : IHomeWidget
         var bounds = context.Bounds;
         var scale = context.Scale;
         var radius = MathF.Min(bounds.Height * 0.30f, bounds.Width * 0.17f);
-        var faceCenterY = bounds.Min.Y + bounds.Height * 0.42f;
+        var faceCenterY = bounds.Min.Y + bounds.Height * 0.42f - 8f * scale;
         var now = DateTime.Now;
         var bell = EorzeaTime.Now();
         var bellSeconds = EorzeaTime.CurrentSeconds() % 60;

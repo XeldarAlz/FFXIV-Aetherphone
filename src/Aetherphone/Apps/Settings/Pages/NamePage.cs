@@ -175,7 +175,8 @@ internal sealed class NamePage : ISettingsPage, IDisposable
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
         Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale),
-            Loc.T(L.Account.HandleRules), theme.TextMuted, 0.78f);
+            Typography.FitText(Loc.T(L.Account.HandleRules), width - 4f * scale, 0.78f, FontWeight.Regular),
+            theme.TextMuted, 0.78f);
         ImGui.Dummy(new Vector2(width, 16f * scale));
     }
 

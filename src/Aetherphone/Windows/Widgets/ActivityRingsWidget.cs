@@ -104,14 +104,17 @@ internal sealed class ActivityRingsWidget : IHomeWidget
         var scale = context.Scale;
         var opacity = context.Opacity;
         var drawList = context.DrawList;
+        var labelHeight = Typography.Measure(Loc.Culture.TextInfo.ToUpper(label), 0.66f, FontWeight.SemiBold).Y;
+        var valueSize = Typography.Measure(value, 0.86f, FontWeight.SemiBold);
+        var gap = 2f * scale;
+        var blockTop = position.Y - (labelHeight + gap + valueSize.Y) * 0.5f;
         var dot = 3.4f * scale;
         drawList.AddCircleFilled(new Vector2(position.X + dot, position.Y), dot,
             ImGui.GetColorU32(Palette.WithAlpha(tint, opacity)));
         var textLeft = position.X + dot * 2f + 7f * scale;
-        WidgetChrome.Eyebrow(drawList, new Vector2(textLeft, position.Y - 15f * scale), label,
+        WidgetChrome.Eyebrow(drawList, new Vector2(textLeft, blockTop), label,
             context.Theme.TextMuted, scale, opacity);
-        var valueSize = Typography.Measure(value, 0.86f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(textLeft, position.Y - valueSize.Y * 0.5f + 7f * scale), value,
+        Typography.Draw(new Vector2(textLeft, blockTop + labelHeight + gap), value,
             Palette.WithAlpha(context.Theme.TextStrong, opacity), 0.86f, FontWeight.SemiBold);
     }
 

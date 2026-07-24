@@ -104,16 +104,18 @@ internal sealed partial class VenuesApp
         var meta = BuildHeroMeta(venue);
         if (meta.Length > 0)
         {
-            meta = VenueText.Fit(meta, textWidth, TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight);
             var metaSize = Typography.Measure(meta, TextStyles.Subheadline);
-            Typography.Draw(drawList, new Vector2(textLeft, baseY - metaSize.Y), meta, HeroMutedInk,
-                TextStyles.Subheadline);
+            var metaY = baseY - metaSize.Y;
+            Marquee.DrawLeftAuto("venue.detail.meta." + venue.Id, meta, textLeft, metaY, textWidth,
+                TextStyles.Subheadline, HeroMutedInk);
             baseY -= metaSize.Y + 6f * scale;
         }
 
-        var title = VenueText.Fit(venue.Title, textWidth, TextStyles.Title1.Scale, TextStyles.Title1.Weight);
-        var titleSize = Typography.Measure(title, TextStyles.Title1);
-        Typography.Draw(drawList, new Vector2(textLeft, baseY - titleSize.Y), title, HeroInk, TextStyles.Title1);
+        var titleFull = venue.Title;
+        var titleSize = Typography.Measure(titleFull, TextStyles.Title1);
+        var titleY = baseY - titleSize.Y;
+        Marquee.DrawLeftAuto("venue.detail.title." + venue.Id, titleFull, textLeft, titleY, textWidth,
+            TextStyles.Title1, HeroInk);
         ImGui.SetCursorScreenPos(cursor);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, height - topPad + Metrics.Space.Lg * scale));
     }
@@ -244,12 +246,15 @@ internal sealed partial class VenuesApp
             : (hovered ? new Vector4(1f, 1f, 1f, 0.16f) : ui.FieldSurface);
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         var ink = filled ? new Vector4(1f, 1f, 1f, 1f) : ui.TitleInk;
-        var textSize = Typography.Measure(label, 0.95f, FontWeight.SemiBold);
         var iconAdvance = 22f * scale;
-        var left = rect.Center.X - (iconAdvance + textSize.X) * 0.5f;
+        var textMaxWidth = MathF.Max(1f, rect.Width - iconAdvance - 12f * scale);
+        var fullTextSize = Typography.Measure(label, 0.95f, FontWeight.SemiBold);
+        var displayWidth = MathF.Min(fullTextSize.X, textMaxWidth);
+        var left = rect.Center.X - (iconAdvance + displayWidth) * 0.5f;
         AppSkin.Icon(drawList, new Vector2(left + 8f * scale, rect.Center.Y), icon.ToIconString(), ink, 0.85f);
-        Typography.Draw(drawList, new Vector2(left + iconAdvance, rect.Center.Y - textSize.Y * 0.5f), label, ink,
-            0.95f, FontWeight.SemiBold);
+        Marquee.DrawLeft("venue.detail.action." + label, label, left + iconAdvance,
+            rect.Center.Y - fullTextSize.Y * 0.5f, textMaxWidth, new TextStyle(0.95f, FontWeight.SemiBold), ink,
+            hovered);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -338,11 +343,11 @@ internal sealed partial class VenuesApp
         Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelSize.Y * 0.5f), label,
             AppPalettes.Venues.MutedInk, TextStyles.Subheadline);
         var valueRight = cardOrigin.X + cardWidth - inset;
-        var valueWidth = valueRight - labelLeft - labelSize.X - 12f * scale;
-        var fitted = VenueText.Fit(value, valueWidth, TextStyles.BodyEmphasized.Scale, TextStyles.BodyEmphasized.Weight);
-        var valueSize = Typography.Measure(fitted, TextStyles.BodyEmphasized);
-        Typography.Draw(drawList, new Vector2(valueRight - valueSize.X, centerY - valueSize.Y * 0.5f), fitted,
-            AppPalettes.Venues.TitleInk, TextStyles.BodyEmphasized);
+        var valueWidth = MathF.Max(1f, valueRight - labelLeft - labelSize.X - 12f * scale);
+        var valueFullSize = Typography.Measure(value, TextStyles.BodyEmphasized);
+        var valueY = centerY - valueFullSize.Y * 0.5f;
+        Marquee.DrawRightAuto("venue.detail.row." + label, value, valueRight, valueY, valueWidth,
+            TextStyles.BodyEmphasized, AppPalettes.Venues.TitleInk);
         if (rowIndex >= rowCount - 1)
         {
             return;

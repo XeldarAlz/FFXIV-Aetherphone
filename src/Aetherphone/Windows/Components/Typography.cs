@@ -162,6 +162,28 @@ internal static class Typography
     public static string FitText(string text, float maxWidth, in TextStyle style) =>
         FitText(text, maxWidth, style.Scale, style.Weight);
 
+    public static float FitScale(string text, float maxWidth, float maxScale, float minScale, FontWeight weight)
+    {
+        if (maxWidth <= 0f)
+        {
+            return minScale;
+        }
+
+        for (var scale = maxScale; scale > minScale; scale -= 0.05f)
+        {
+            using (Plugin.Fonts.Push(scale, weight))
+            {
+                Plugin.Fonts.NoticeText(text);
+                if (ImGui.CalcTextSize(text).X <= maxWidth)
+                {
+                    return scale;
+                }
+            }
+        }
+
+        return minScale;
+    }
+
     public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float scale,
         FontWeight weight)
     {

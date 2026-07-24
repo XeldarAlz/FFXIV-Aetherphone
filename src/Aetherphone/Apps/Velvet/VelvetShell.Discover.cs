@@ -356,23 +356,37 @@ internal sealed partial class VelvetShell
 
         var textLeft = card.Min.X + pad;
         var textWidth = pillRect.Min.X - 10f * scale - textLeft;
-        var fittedName = Typography.FitText(name, textWidth - 24f * scale, TextStyles.Title2);
-        var nameSize = Typography.Measure(fittedName, TextStyles.Title2);
+        var cardHovered = UiInteract.Hover(card.Min, card.Max);
+        var nameMaxWidth = MathF.Max(1f, textWidth - 24f * scale);
+        var nameSize = Typography.Measure(name, TextStyles.Title2);
         var nameY = card.Max.Y - pad - 58f * scale;
-        Typography.Draw(new Vector2(textLeft, nameY), fittedName, VelvetTheme.TitleInk, TextStyles.Title2);
+        var nameHovered = UiInteract.Hover(new Vector2(textLeft, nameY),
+            new Vector2(textLeft + nameMaxWidth, nameY + nameSize.Y));
+        Marquee.DrawLeft("velvet.discover.name." + profile.UserId, name, textLeft, nameY, nameMaxWidth,
+            TextStyles.Title2, VelvetTheme.TitleInk, nameHovered);
         if (profile.Verified)
         {
-            DrawVerifiedBadge(drawList, new Vector2(textLeft + nameSize.X + 12f * scale, nameY + nameSize.Y * 0.5f),
-                scale);
+            DrawVerifiedBadge(drawList, new Vector2(textLeft + MathF.Min(nameSize.X, nameMaxWidth) + 12f * scale,
+                nameY + nameSize.Y * 0.5f), scale);
         }
 
-        Typography.Draw(new Vector2(textLeft, card.Max.Y - pad - 34f * scale),
-            SocialIdentity.ProfileMeta(profile.Handle, region), VelvetTheme.BodyInk, TextStyles.Subheadline);
-        Typography.Draw(new Vector2(textLeft, card.Max.Y - pad - 15f * scale),
-            Typography.FitText(VelvetIntent.Summary(mask), textWidth, TextStyles.Footnote), VelvetTheme.RoseInk,
-            TextStyles.SubheadlineEmphasized);
+        var metaY = card.Max.Y - pad - 34f * scale;
+        var metaSize = Typography.Measure(SocialIdentity.ProfileMeta(profile.Handle, region), TextStyles.Subheadline);
+        var metaHovered = UiInteract.Hover(new Vector2(textLeft, metaY),
+            new Vector2(textLeft + textWidth, metaY + metaSize.Y));
+        Marquee.DrawLeft("velvet.discover.meta." + profile.UserId, SocialIdentity.ProfileMeta(profile.Handle, region),
+            textLeft, metaY, textWidth, TextStyles.Subheadline, VelvetTheme.BodyInk,
+            metaHovered);
 
-        if (!pillClicked && UiInteract.Hover(card.Min, card.Max) && !UiInteract.Hover(pillRect.Min, pillRect.Max) &&
+        var summaryY = card.Max.Y - pad - 15f * scale;
+        var summarySize = Typography.Measure(VelvetIntent.Summary(mask), TextStyles.SubheadlineEmphasized);
+        var summaryHovered = UiInteract.Hover(new Vector2(textLeft, summaryY),
+            new Vector2(textLeft + textWidth, summaryY + summarySize.Y));
+        Marquee.DrawLeft("velvet.discover.summary." + profile.UserId, VelvetIntent.Summary(mask), textLeft,
+            summaryY, textWidth, TextStyles.SubheadlineEmphasized, VelvetTheme.RoseInk,
+            summaryHovered);
+
+        if (!pillClicked && cardHovered && !UiInteract.Hover(pillRect.Min, pillRect.Max) &&
             ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             OpenProfile(profile.UserId);
@@ -469,7 +483,8 @@ internal sealed partial class VelvetShell
             VelvetTheme.MutedInk, 0.8f);
         if (value.Length == 0)
         {
-            Typography.Draw(new Vector2(rect.Min.X + 30f * scale, rect.Center.Y - 8f * scale), hint, VelvetTheme.Faint,
+            Typography.Draw(new Vector2(rect.Min.X + 30f * scale, rect.Center.Y - 8f * scale),
+                Typography.FitText(hint, rect.Width - 56f * scale, TextStyles.Subheadline), VelvetTheme.Faint,
                 TextStyles.Subheadline);
         }
 

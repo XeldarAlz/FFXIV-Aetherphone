@@ -796,17 +796,21 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         AvatarView.DrawRemote(drawList, avatarCenter, radius, Theme, label, string.Empty, reactor.AvatarUrl, images,
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
+        var labelMaxWidth = MathF.Max(1f, origin.X + width - pad - 40f * scale - textLeft);
+        var rowHovering = ImGui.IsMouseHoveringRect(origin, rowMax);
         if (mine)
         {
-            Typography.Draw(new Vector2(textLeft, origin.Y + 10f * scale), label, Theme.TextStrong, 1f,
-                FontWeight.SemiBold);
-            Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale), Loc.T(L.Message.TapToRemove), ui.MutedInk,
+            Marquee.DrawLeft("chatthread.reactor." + reactor.UserId, label, textLeft, origin.Y + 10f * scale,
+                labelMaxWidth, new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, rowHovering);
+            Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale),
+                Typography.FitText(Loc.T(L.Message.TapToRemove), labelMaxWidth, TextStyles.Footnote), ui.MutedInk,
                 TextStyles.Footnote);
         }
         else
         {
-            Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale), label, Theme.TextStrong,
-                1f, FontWeight.SemiBold);
+            Marquee.DrawLeft("chatthread.reactor." + reactor.UserId, label, textLeft,
+                origin.Y + rowHeight * 0.5f - 9f * scale, labelMaxWidth, new TextStyle(1f, FontWeight.SemiBold),
+                Theme.TextStrong, rowHovering);
         }
 
         var tokenColor = ReactionArt.Color(reactor.Token);

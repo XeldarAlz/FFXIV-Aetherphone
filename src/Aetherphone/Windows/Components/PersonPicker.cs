@@ -138,12 +138,22 @@ internal sealed class PersonPicker
             AvatarView.DrawRemote(drawList, avatarCenter, avatarRadius, theme, row.DisplayName, string.Empty,
                 row.AvatarUrl, images, lodestone, 0.8f, 28);
             var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
+            var textMaxWidth = rowMax.X - textLeft;
             var name = SocialIdentity.Name(row.DisplayName, row.Handle);
+            var nameY = rowMin.Y + 6f * scale;
             var nameSize = Typography.Measure(name, 0.95f, FontWeight.SemiBold);
-            Typography.Draw(drawList, new Vector2(textLeft, rowMin.Y + 6f * scale), name, theme.TextStrong, 0.95f,
-                FontWeight.SemiBold);
-            Typography.Draw(drawList, new Vector2(textLeft, rowMin.Y + 6f * scale + nameSize.Y), "@" + row.Handle,
-                theme.TextMuted, 0.82f);
+            var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, nameY),
+                new Vector2(textLeft + textMaxWidth, nameY + nameSize.Y));
+            Marquee.DrawLeft("personpicker.name." + row.Handle, name, textLeft, nameY, textMaxWidth,
+                new TextStyle(0.95f, FontWeight.SemiBold), theme.TextStrong, nameHovering);
+            var handleText = "@" + row.Handle;
+            var handleY = nameY + nameSize.Y;
+            var handleSize = Typography.Measure(handleText, 0.82f, FontWeight.Regular);
+            var handleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, handleY),
+                new Vector2(textLeft + textMaxWidth, handleY + handleSize.Y));
+            Marquee.DrawLeft("personpicker.handle." + row.Handle, handleText,
+                textLeft, handleY, textMaxWidth, new TextStyle(0.82f, FontWeight.Regular),
+                theme.TextMuted, handleHovering);
         }
 
         if (ImGui.GetFrameCount() > openedFrame + 1

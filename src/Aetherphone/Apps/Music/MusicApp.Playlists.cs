@@ -209,9 +209,8 @@ internal sealed partial class MusicApp
             }
 
             var textWidth = tileWidth - 24f * scale;
-            var name = Typography.FitText(playlist.Name, textWidth, TextStyles.SubheadlineEmphasized);
-            Typography.Draw(new Vector2(min.X + 12f * scale, max.Y - 34f * scale), name, White,
-                TextStyles.SubheadlineEmphasized);
+            Marquee.DrawLeft("music.playlistShelf.name." + playlist.Id, playlist.Name, min.X + 12f * scale,
+                max.Y - 34f * scale, textWidth, TextStyles.SubheadlineEmphasized, White, hovered);
             var count = Typography.FitText(SongCountLabel(playlist.Songs.Count), textWidth, TextStyles.Caption1);
             Typography.Draw(new Vector2(min.X + 12f * scale, max.Y - 18f * scale), count,
                 new Vector4(1f, 1f, 1f, 0.82f), TextStyles.Caption1);
@@ -403,8 +402,8 @@ internal sealed partial class MusicApp
             0xFFFFFFFFu, 8f * scale, ImDrawFlags.RoundCornersAll);
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - 44f * scale - textLeft;
-        var name = Typography.FitText(playlist.Name, textWidth, TextStyles.BodyEmphasized);
-        Typography.Draw(new Vector2(textLeft, min.Y + 9f * scale), name, ui.TitleInk, TextStyles.BodyEmphasized);
+        Marquee.DrawLeft("music.pickRow.name." + playlist.Id, playlist.Name, textLeft, min.Y + 9f * scale,
+            textWidth, TextStyles.BodyEmphasized, ui.TitleInk, hovered);
         var count = Typography.FitText(SongCountLabel(playlist.Songs.Count), textWidth, TextStyles.Caption1);
         Typography.Draw(new Vector2(textLeft, min.Y + 30f * scale), count, ui.MutedInk, TextStyles.Caption1);
         var indicatorCenter = new Vector2(max.X - 24f * scale, min.Y + rowHeight * 0.5f);
@@ -613,11 +612,19 @@ internal sealed partial class MusicApp
         var trailing = current ? 32f * scale : showRemove ? 40f * scale : 10f * scale;
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - trailing - textLeft;
-        var title = Typography.FitText(song.Title, textWidth, TextStyles.BodyEmphasized);
-        Typography.Draw(new Vector2(textLeft, min.Y + 10f * scale), title, current ? ui.Accent : ui.TitleInk,
-            TextStyles.BodyEmphasized);
-        var subtitle = Typography.FitText(SongRowSubtitle(song), textWidth, TextStyles.Caption1);
-        Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), subtitle, ui.MutedInk, TextStyles.Caption1);
+        var songTitleY = min.Y + 10f * scale;
+        var songTitleSize = Typography.Measure(song.Title, TextStyles.BodyEmphasized);
+        var songTitleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, songTitleY),
+            new Vector2(textLeft + textWidth, songTitleY + songTitleSize.Y));
+        Marquee.DrawLeft("music.playlistSongRow.title." + song.VideoId + "." + index, song.Title, textLeft,
+            songTitleY, textWidth, TextStyles.BodyEmphasized, current ? ui.Accent : ui.TitleInk, songTitleHovering);
+        var songSub = SongRowSubtitle(song);
+        var songSubY = min.Y + 34f * scale;
+        var songSubSize = Typography.Measure(songSub, TextStyles.Caption1);
+        var songSubHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, songSubY),
+            new Vector2(textLeft + textWidth, songSubY + songSubSize.Y));
+        Marquee.DrawLeft("music.playlistSongRow.subtitle." + song.VideoId + "." + index, songSub,
+            textLeft, songSubY, textWidth, TextStyles.Caption1, ui.MutedInk, songSubHovering);
         var removeClicked = false;
         if (current)
         {

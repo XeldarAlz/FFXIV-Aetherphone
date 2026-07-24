@@ -189,19 +189,28 @@ internal sealed class NotesApp : IPhoneApp
 
     private void DrawNoteRow(Rect row, PhoneNote note, float scale)
     {
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         var title = note.Title();
         var hasTitle = title.Length > 0;
         var titleText = hasTitle ? title : Loc.T(L.Notes.Untitled);
-        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 12f * scale), Ellipsize(titleText, row.Width, scale),
-            hasTitle ? ui.TitleInk : ui.MutedInk, TextStyles.Headline);
+        var titleY = row.Min.Y + 12f * scale;
+        var titleSize = Typography.Measure(titleText, TextStyles.Headline);
+        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(row.Min.X, titleY),
+            new Vector2(row.Min.X + row.Width, titleY + titleSize.Y));
+        Marquee.DrawLeft("notes.noteRow.title." + note.Id, titleText, row.Min.X, titleY, row.Width,
+            TextStyles.Headline, hasTitle ? ui.TitleInk : ui.MutedInk, titleHovering);
 
         var preview = note.Preview();
         var meta = note.UpdatedAt.ToString("d", Loc.Culture);
         var secondLine = preview.Length > 0 ? $"{meta}  {preview}" : (hasTitle ? meta : Loc.T(L.Notes.NoAdditionalText));
-        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 36f * scale), Ellipsize(secondLine, row.Width, scale),
-            ui.MutedInk, TextStyles.Footnote);
+        var subY = row.Min.Y + 36f * scale;
+        var subSize = Typography.Measure(secondLine, TextStyles.Footnote);
+        var subHovering = ImGui.IsMouseHoveringRect(new Vector2(row.Min.X, subY),
+            new Vector2(row.Min.X + row.Width, subY + subSize.Y));
+        Marquee.DrawLeft("notes.noteRow.sub." + note.Id, secondLine, row.Min.X, subY, row.Width,
+            TextStyles.Footnote, ui.MutedInk, subHovering);
 
-        if (UiInteract.HoverClick(row.Min, row.Max))
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             StartEditNote(note);
         }
@@ -257,8 +266,9 @@ internal sealed class NotesApp : IPhoneApp
         var hasDue = reminder.DueAt.HasValue;
         var titleY = hasDue ? row.Center.Y - 16f * scale : row.Center.Y - 9f * scale;
         var title = reminder.Title.Length > 0 ? reminder.Title : Loc.T(L.Notes.ReminderHint);
-        Typography.Draw(new Vector2(textLeft, titleY), Ellipsize(title, textRect.Width, scale), titleInk,
-            TextStyles.Body);
+        var rowHovered = UiInteract.Hover(textRect.Min, textRect.Max);
+        Marquee.DrawLeft("notes.reminderRow.title." + reminder.Id, title, textLeft, titleY, textRect.Width,
+            TextStyles.Body, titleInk, rowHovered);
         if (hasDue)
         {
             var due = reminder.DueAt!.Value;
@@ -268,7 +278,7 @@ internal sealed class NotesApp : IPhoneApp
                 TextStyles.Footnote);
         }
 
-        if (UiInteract.HoverClick(textRect.Min, textRect.Max))
+        if (rowHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             StartEditReminder(reminder);
         }
@@ -464,12 +474,18 @@ internal sealed class NotesApp : IPhoneApp
     {
         var drawList = ImGui.GetWindowDrawList();
         ui.Card(drawList, rect.Min, rect.Max, Metrics.Radius.Md * scale);
-        Typography.Draw(new Vector2(rect.Min.X + Metrics.Space.Md * scale, rect.Center.Y - 9f * scale),
-            Loc.T(L.Notes.RemindMe), ui.TitleInk, TextStyles.Body);
         var width = Metrics.Size.ToggleWidth * scale;
         var height = Metrics.Size.ToggleHeight * scale;
         var min = new Vector2(rect.Max.X - Metrics.Space.Md * scale - width, rect.Center.Y - height * 0.5f);
         var toggleRect = new Rect(min, min + new Vector2(width, height));
+        var label = Loc.T(L.Notes.RemindMe);
+        var labelLeft = rect.Min.X + Metrics.Space.Md * scale;
+        var labelMaxWidth = MathF.Max(1f, min.X - 8f * scale - labelLeft);
+        var labelSize = Typography.Measure(label, TextStyles.Body);
+        var labelHovering = ImGui.IsMouseHoveringRect(new Vector2(labelLeft, rect.Center.Y - labelSize.Y * 0.5f),
+            new Vector2(labelLeft + labelMaxWidth, rect.Center.Y + labelSize.Y * 0.5f));
+        Marquee.DrawLeft("notes.remind.label", label, labelLeft, rect.Center.Y - 9f * scale, labelMaxWidth,
+            TextStyles.Body, ui.TitleInk, labelHovering);
         reminderHasDue = Toggle.Draw("notes.remind", toggleRect, reminderHasDue, theme);
     }
 
@@ -617,26 +633,6 @@ internal sealed class NotesApp : IPhoneApp
         }
 
         return day.ToString("ddd, MMM d", Loc.Culture);
-    }
-
-    private static string Ellipsize(string text, float maxWidth, float scale)
-    {
-        if (Typography.Measure(text, TextStyles.Body).X <= maxWidth)
-        {
-            return text;
-        }
-
-        var ellipsis = "…";
-        for (var length = text.Length - 1; length > 0; length--)
-        {
-            var candidate = text.Substring(0, length).TrimEnd() + ellipsis;
-            if (Typography.Measure(candidate, TextStyles.Body).X <= maxWidth)
-            {
-                return candidate;
-            }
-        }
-
-        return ellipsis;
     }
 
     public void Dispose()

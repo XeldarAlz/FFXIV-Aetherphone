@@ -54,7 +54,8 @@ internal static class CalendarDayList
             var cardHeight = Math.Max(textHeight + CardPaddingY * 2f * scale, 40f * scale);
             var cardMax = new Vector2(cardMin.X + contentWidth, cardMin.Y + cardHeight);
             var clickable = !string.IsNullOrEmpty(dayEvent.Url);
-            var hovered = clickable && ImGui.IsMouseHoveringRect(cardMin, cardMax);
+            var cardHovered = ImGui.IsMouseHoveringRect(cardMin, cardMax);
+            var hovered = clickable && cardHovered;
 
             ui.Card(drawList, cardMin, cardMax, CardRounding * scale);
             if (hovered)
@@ -69,10 +70,13 @@ internal static class CalendarDayList
 
             var textStartX = accentMax.X + CardPaddingX * scale;
             var textStartY = cardMin.Y + (cardHeight - textHeight) * 0.5f;
-            Typography.Draw(drawList, new Vector2(textStartX, textStartY), dayEvent.Name, ui.TitleInk, hlScale,
-                hlWeight);
+            var trailing = (dayEvent.IsCustom ? 32f * scale : 0f) + CardPaddingX * scale;
+            var textMaxWidth = MathF.Max(1f, cardMax.X - textStartX - trailing);
+            Marquee.DrawLeft("calendar.day." + dayEvent.Name + "." + index, dayEvent.Name, textStartX, textStartY,
+                textMaxWidth, new TextStyle(hlScale, hlWeight), ui.TitleInk, cardHovered);
+            var dateFitted = Typography.FitText(FormatDateRange(dayEvent), textMaxWidth, fnScale, fnWeight);
             Typography.Draw(drawList, new Vector2(textStartX, textStartY + nameSize.Y + 3f * scale),
-                FormatDateRange(dayEvent), ui.MutedInk, fnScale, fnWeight);
+                dateFitted, ui.MutedInk, fnScale, fnWeight);
 
             if (dayEvent.IsCustom)
             {

@@ -53,15 +53,21 @@ internal static class VenueCard
         var textLeft = thumb.Max.X + 12f * scale;
         var textRight = card.Max.X - 36f * scale;
         var textWidth = textRight - textLeft;
-        var title = VenueText.Fit(venue.Title, textWidth, TextStyles.Headline.Scale, TextStyles.Headline.Weight);
-        Typography.Draw(new Vector2(textLeft, card.Min.Y + 13f * scale), title, palette.TitleInk, TextStyles.Headline);
-        var subtitle = VenueText.Fit(BuildSubtitle(venue), textWidth, TextStyles.Footnote.Scale,
-            TextStyles.Footnote.Weight);
-        Typography.Draw(new Vector2(textLeft, card.Min.Y + 34f * scale), subtitle, palette.MutedInk,
-            TextStyles.Footnote);
+        var hovered = UiInteract.Hover(card.Min, card.Max);
+        var titleY = card.Min.Y + 13f * scale;
+        var titleHeight = Typography.Measure(venue.Title, TextStyles.Headline).Y;
+        var titleHovered = UiInteract.Hover(new Vector2(textLeft, titleY), new Vector2(textRight, titleY + titleHeight));
+        Marquee.DrawLeft("venuecard.title." + venue.Id, venue.Title, textLeft, titleY,
+            textWidth, TextStyles.Headline, palette.TitleInk, titleHovered);
+        var subtitleY = card.Min.Y + 34f * scale;
+        var subtitle = BuildSubtitle(venue);
+        var subtitleHeight = Typography.Measure(subtitle, TextStyles.Footnote).Y;
+        var subtitleHovered = UiInteract.Hover(new Vector2(textLeft, subtitleY),
+            new Vector2(textRight, subtitleY + subtitleHeight));
+        Marquee.DrawLeft("venuecard.subtitle." + venue.Id, subtitle, textLeft,
+            subtitleY, textWidth, TextStyles.Footnote, palette.MutedInk, subtitleHovered);
         DrawTimeRow(drawList, venue, live, textLeft, card.Min.Y + 53f * scale, card.Max.X - pad, palette, scale);
         DrawTags(drawList, venue, textLeft, card.Max.Y - pad - VenueChips.Height(scale), textRight);
-        var hovered = UiInteract.Hover(card.Min, card.Max);
         if (hovered)
         {
             UiInteract.HoverHighlight(drawList, card.Min, card.Max, rounding);
@@ -94,6 +100,12 @@ internal static class VenueCard
     private static void DrawTimeRow(ImDrawListPtr drawList, VenueEvent venue, bool live, float left, float top,
         float right, in AppPalette palette, float scale)
     {
+        var hasCount = venue.AttendeeCount > 0;
+        var count = hasCount ? venue.AttendeeCount.ToString(Loc.Culture) : string.Empty;
+        var countSize = hasCount ? Typography.Measure(count, TextStyles.Footnote) : Vector2.Zero;
+        var countReserve = hasCount ? countSize.X + 18f * scale : 0f;
+        var leftMaxWidth = MathF.Max(1f, right - countReserve - left);
+
         if (live)
         {
             var liveLabel = Loc.T(L.Common.Live);
@@ -102,23 +114,25 @@ internal static class VenueCard
             if (ends.Length > 0)
             {
                 var offset = Typography.Measure(liveLabel, TextStyles.FootnoteEmphasized).X + 7f * scale;
-                Typography.Draw(new Vector2(left + offset, top), Loc.T(L.Venues.UntilTime, ends), palette.MutedInk,
-                    TextStyles.Footnote);
+                var endsMaxWidth = MathF.Max(1f, leftMaxWidth - offset);
+                var untilText = Loc.T(L.Venues.UntilTime, ends);
+                Marquee.DrawLeftAuto("venuecard.until." + venue.Id, untilText, left + offset, top, endsMaxWidth,
+                    TextStyles.Footnote, palette.MutedInk);
             }
         }
         else
         {
-            Typography.Draw(new Vector2(left, top), VenueFormat.Range(venue), palette.Accent,
-                new TextStyle(TextStyles.Footnote.Scale, FontWeight.Medium));
+            var rangeStyle = new TextStyle(TextStyles.Footnote.Scale, FontWeight.Medium);
+            var rangeText = VenueFormat.Range(venue);
+            Marquee.DrawLeftAuto("venuecard.range." + venue.Id, rangeText, left, top, leftMaxWidth, rangeStyle,
+                palette.Accent);
         }
 
-        if (venue.AttendeeCount <= 0)
+        if (!hasCount)
         {
             return;
         }
 
-        var count = venue.AttendeeCount.ToString(Loc.Culture);
-        var countSize = Typography.Measure(count, TextStyles.Footnote);
         var countLeft = right - countSize.X;
         Typography.Draw(new Vector2(countLeft, top), count, palette.MutedInk, TextStyles.Footnote);
         AppSkin.Icon(drawList, new Vector2(countLeft - 10f * scale, top + countSize.Y * 0.5f),

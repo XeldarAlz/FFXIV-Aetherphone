@@ -180,9 +180,12 @@ internal sealed partial class MessageApp
         var pad = 14f * scale;
         AppSkin.Icon(new Vector2(origin.X + pad + 8f * scale, origin.Y + rowHeight * 0.5f), icon.ToIconString(),
             iconColor, 0.95f);
-        Typography.Draw(new Vector2(origin.X + pad + 28f * scale, origin.Y + rowHeight * 0.5f - 9f * scale), label,
-            theme.TextStrong, 1f, FontWeight.SemiBold);
         var valueSize = Typography.Measure(value, 0.85f);
+        var labelLeft = origin.X + pad + 28f * scale;
+        var labelMaxWidth = MathF.Max(1f, origin.X + width - pad - valueSize.X - 10f * scale - labelLeft);
+        var clippedLabel = Typography.FitText(label, labelMaxWidth, 1f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(labelLeft, origin.Y + rowHeight * 0.5f - 9f * scale), clippedLabel,
+            theme.TextStrong, 1f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(origin.X + width - pad - valueSize.X, origin.Y + rowHeight * 0.5f
             - valueSize.Y * 0.5f), value, ui.MutedInk, 0.85f);
         ImGui.SetCursorScreenPos(origin);
@@ -204,8 +207,12 @@ internal sealed partial class MessageApp
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, member.AvatarUrl, images,
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale), label, theme.TextStrong, 1f,
-            FontWeight.SemiBold);
+        var stampWidth = stamp.Length > 0 ? Typography.Measure(stamp, 0.80f).X + 10f * scale : 0f;
+        var labelMaxWidth = MathF.Max(1f, origin.X + width - pad - 26f * scale - stampWidth - textLeft);
+        var rowHovering = ImGui.IsMouseHoveringRect(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
+        Marquee.DrawLeft("messageapp.messageinfo.member." + member.UserId, label, textLeft,
+            origin.Y + rowHeight * 0.5f - 9f * scale, labelMaxWidth, new TextStyle(1f, FontWeight.SemiBold),
+            theme.TextStrong, rowHovering);
         var right = origin.X + width - pad;
         if (stamp.Length > 0)
         {

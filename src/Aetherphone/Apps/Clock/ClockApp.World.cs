@@ -63,15 +63,20 @@ internal sealed partial class ClockApp
         ui.Card(drawList, heroMin, heroMax, rounding, elevated: true);
 
         var pad = 20f * scale;
-        var clockRadius = (heroHeight - pad * 2f) * 0.5f;
+        var minTextColumn = 100f * scale;
+        var radiusFromHeight = (heroHeight - pad * 2f) * 0.5f;
+        var radiusFromWidth = MathF.Max(30f * scale, width - pad * 2f - 22f * scale - minTextColumn);
+        var clockRadius = MathF.Min(radiusFromHeight, radiusFromWidth);
         var clockCenter = new Vector2(heroMin.X + pad + clockRadius, heroMin.Y + heroHeight * 0.5f);
         ProgressRing.Glow(clockCenter, clockRadius * 0.92f, theme.Accent, 0.45f);
         AnalogClock.Draw(clockCenter, clockRadius, local.Hour, local.Minute, localSeconds, theme);
 
         var textX = clockCenter.X + clockRadius + 22f * scale;
-        var digital = TimeText.Clock(local);
-        var date = local.ToString("ddd d MMM", Loc.Culture);
-        var zone = $"{Loc.T(L.Clock.Local)} · {LocalOffsetLabel()}";
+        var textMaxWidth = MathF.Max(1f, heroMax.X - pad - textX);
+        var digital = Typography.FitText(TimeText.Clock(local), textMaxWidth, TextStyles.LargeTitle);
+        var date = Typography.FitText(local.ToString("ddd d MMM", Loc.Culture), textMaxWidth, TextStyles.Subheadline);
+        var zone = Typography.FitText($"{Loc.T(L.Clock.Local)} · {LocalOffsetLabel()}", textMaxWidth,
+            TextStyles.FootnoteEmphasized);
         var digitalSize = Typography.Measure(digital, TextStyles.LargeTitle);
         var dateSize = Typography.Measure(date, TextStyles.Subheadline);
         var zoneSize = Typography.Measure(zone, TextStyles.FootnoteEmphasized);
@@ -94,9 +99,14 @@ internal sealed partial class ClockApp
         var dialCenter = new Vector2(row.Min.X + dialRadius, row.Center.Y);
         AnalogClock.Draw(dialCenter, dialRadius, hours, minutes, seconds, theme);
         var textLeft = dialCenter.X + dialRadius + 16f * scale;
-        Typography.Draw(new Vector2(textLeft, row.Center.Y - 17f * scale), name, ui.TitleInk, TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, row.Center.Y + 4f * scale), sublabel, ui.MutedInk, TextStyles.Footnote);
         var digitalSize = Typography.Measure(digital, TextStyles.Title1);
+        var textMaxWidth = MathF.Max(1f, row.Max.X - 10f * scale - digitalSize.X - textLeft);
+        var clippedName = Typography.FitText(name, textMaxWidth, TextStyles.Headline);
+        var clippedSublabel = Typography.FitText(sublabel, textMaxWidth, TextStyles.Footnote);
+        Typography.Draw(new Vector2(textLeft, row.Center.Y - 17f * scale), clippedName, ui.TitleInk,
+            TextStyles.Headline);
+        Typography.Draw(new Vector2(textLeft, row.Center.Y + 4f * scale), clippedSublabel, ui.MutedInk,
+            TextStyles.Footnote);
         Typography.Draw(new Vector2(row.Max.X - digitalSize.X, row.Center.Y - digitalSize.Y * 0.5f), digital,
             ui.TitleInk, TextStyles.Title1);
     }
@@ -138,11 +148,15 @@ internal sealed partial class ClockApp
         var scale = ImGuiHelpers.GlobalScale;
         var added = configuration.WorldClocks.Exists(entry => entry.TimeZoneId == city.TimeZoneId &&
                                                               entry.City == city.City);
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - 16f * scale), city.City, ui.TitleInk, TextStyles.Headline);
+        var hovering = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var textMaxWidth = MathF.Max(1f, row.Max.X - 34f * scale - row.Min.X);
+        Marquee.DrawLeft("clock.cityPicker.name." + city.City, city.City, row.Min.X, row.Center.Y - 16f * scale,
+            textMaxWidth, TextStyles.Headline, ui.TitleInk, hovering);
         if (WorldClockCatalog.TryResolve(city.TimeZoneId, out var zone))
         {
             var cityNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);
-            Typography.Draw(new Vector2(row.Min.X, row.Center.Y + 4f * scale), CityOffsetLabel(zone, cityNow),
+            var offsetLabel = Typography.FitText(CityOffsetLabel(zone, cityNow), textMaxWidth, TextStyles.Footnote);
+            Typography.Draw(new Vector2(row.Min.X, row.Center.Y + 4f * scale), offsetLabel,
                 ui.MutedInk, TextStyles.Footnote);
         }
 

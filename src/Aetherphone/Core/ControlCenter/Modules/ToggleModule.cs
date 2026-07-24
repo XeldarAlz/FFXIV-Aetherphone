@@ -31,7 +31,7 @@ internal sealed class ToggleModule : IControlModule
     public void Draw(in ControlModuleContext context)
     {
         if (ControlTile.Toggle(context.DrawList, context.Rect, icon, Loc.T(label), isActive(), context.Theme.Accent,
-                context.Theme, context.Opacity, context.Interactive))
+                context.Theme, context.Opacity, context.Interactive, context.Span != ControlSpan.Small))
         {
             onActivate();
         }

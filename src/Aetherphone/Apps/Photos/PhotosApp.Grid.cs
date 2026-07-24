@@ -320,9 +320,8 @@ internal sealed partial class PhotosApp
         }
 
         var textTop = coverMax.Y + 7f * scale;
-        var name = Typography.FitText(title, rect.Width - 4f * scale, TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, textTop), name, ui.TitleInk,
-            TextStyles.SubheadlineEmphasized);
+        Marquee.DrawLeft("photos.albumCard." + title, title, rect.Min.X + 2f * scale, textTop,
+            rect.Width - 4f * scale, TextStyles.SubheadlineEmphasized, ui.TitleInk, hovered);
         var countLabel = Loc.Plural(L.Photos.Count, coverCount);
         Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, textTop + 19f * scale), countLabel, ui.MutedInk,
             TextStyles.Footnote);

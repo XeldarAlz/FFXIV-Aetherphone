@@ -47,11 +47,11 @@ internal static class SettingsHero
         var subtitleSize = Typography.Measure(subtitle, 0.85f);
         var gap = 3f * scale;
         var blockTop = avatarCenter.Y - (titleSize.Y + gap + subtitleSize.Y) * 0.5f;
-        Typography.Draw(drawList, new Vector2(textLeft, blockTop), Typography.FitText(title, textWidth, 1.25f,
-            FontWeight.SemiBold), theme.TextStrong, 1.25f, FontWeight.SemiBold);
-        Typography.Draw(drawList, new Vector2(textLeft, blockTop + titleSize.Y + gap),
-            Typography.FitText(subtitle, textWidth, 0.85f, FontWeight.Regular), theme.TextMuted, 0.85f,
-            FontWeight.Regular);
+        Marquee.DrawLeftAuto("settingshero.title", title, textLeft, blockTop, textWidth,
+            new TextStyle(1.25f, FontWeight.SemiBold), theme.TextStrong);
+        var subtitleTop = blockTop + titleSize.Y + gap;
+        Marquee.DrawLeftAuto("settingshero.subtitle", subtitle, textLeft, subtitleTop, textWidth,
+            new TextStyle(0.85f, FontWeight.Regular), theme.TextMuted);
 
         DrawChevron(drawList, chevronTip, 6f * scale, 2.2f * scale, theme.TextMuted);
 

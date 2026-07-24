@@ -118,7 +118,7 @@ internal sealed class FolderOverlay
             var center = new Vector2(panel.Min.X + pad + (column + 0.5f) * cellWidth,
                 gridTop + (row + 0.5f) * cellHeight);
             var app = current.Apps[index];
-            HomeTileView.DrawApp(center, iconSize, app, theme, 1f, 1f, cellWidth);
+            HomeTileView.DrawApp(center, iconSize, app, theme, 1f, 1f, true, cellWidth);
             var half = iconSize * 0.5f;
             var iconRect = new Rect(new Vector2(center.X - half, center.Y - half),
                 new Vector2(center.X + half, center.Y + half));

@@ -329,11 +329,13 @@ internal sealed class StoryViewerOverlay
         AvatarView.DrawRemote(drawList, center, radius, theme, name, string.Empty, viewer.AvatarUrl, images, lodestone,
             0.8f, 28);
         var left = center.X + radius + 10f * scale;
-        var nameSize = Typography.Measure(name, TextStyles.Subheadline);
-        Typography.Draw(new Vector2(left, center.Y - nameSize.Y * 0.5f), name, theme.TextStrong,
-            TextStyles.Subheadline);
         var stamp = TimeText.Short(viewer.ViewedAtUnix);
         var stampSize = Typography.Measure(stamp, TextStyles.Caption1);
+        var nameMaxWidth = MathF.Max(1f, origin.X + width - stampSize.X - 16f * scale - left);
+        var rowHovering = ImGui.IsMouseHoveringRect(origin, new Vector2(origin.X + width, origin.Y + height));
+        var nameSize = Typography.Measure(name, TextStyles.Subheadline);
+        Marquee.DrawLeft("storyviewer.name." + viewer.Handle, name, left, center.Y - nameSize.Y * 0.5f,
+            nameMaxWidth, TextStyles.Subheadline, theme.TextStrong, rowHovering);
         Typography.Draw(new Vector2(origin.X + width - stampSize.X - 6f * scale, center.Y - stampSize.Y * 0.5f), stamp,
             theme.TextMuted, TextStyles.Caption1);
         ImGui.SetCursorScreenPos(origin);
@@ -502,11 +504,17 @@ internal sealed class StoryViewerOverlay
         AvatarView.DrawRemote(ImGui.GetWindowDrawList(), center, radius, theme, authorLabel, string.Empty,
             authorAvatarUrl, images, lodestone, 0.8f, 24);
         var left = center.X + radius + 9f * scale;
+        var closeReserve = 34f * scale;
+        var stamp = TimeText.Short(story.CreatedAtUnix);
+        var stampWidth = Typography.Measure(stamp, TextStyles.Footnote).X;
+        var nameMaxWidth = MathF.Max(1f, row.Max.X - closeReserve - stampWidth - 8f * scale - left);
+        var headerHovering = ImGui.IsMouseHoveringRect(row.Min, row.Max);
         var nameSize = Typography.Measure(authorLabel, TextStyles.SubheadlineEmphasized);
-        Typography.Draw(new Vector2(left, row.Center.Y - nameSize.Y * 0.5f), authorLabel,
-            new Vector4(1f, 1f, 1f, 0.98f), TextStyles.SubheadlineEmphasized);
-        Typography.Draw(new Vector2(left + nameSize.X + 8f * scale, row.Center.Y - nameSize.Y * 0.5f + 1f * scale),
-            TimeText.Short(story.CreatedAtUnix), new Vector4(1f, 1f, 1f, 0.6f), TextStyles.Footnote);
+        var nameWidth = Marquee.DrawLeft("storyviewer.header.author." + authorLabel, authorLabel, left,
+            row.Center.Y - nameSize.Y * 0.5f, nameMaxWidth, TextStyles.SubheadlineEmphasized,
+            new Vector4(1f, 1f, 1f, 0.98f), headerHovering);
+        Typography.Draw(new Vector2(left + nameWidth + 8f * scale, row.Center.Y - nameSize.Y * 0.5f + 1f * scale),
+            stamp, new Vector4(1f, 1f, 1f, 0.6f), TextStyles.Footnote);
 
         var hit = new Vector2(14f * scale, 14f * scale);
         var closeCenter = new Vector2(row.Max.X - 10f * scale, row.Center.Y);

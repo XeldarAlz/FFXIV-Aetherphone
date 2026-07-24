@@ -11,7 +11,7 @@ internal static class HomeTileView
     private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 1f);
 
     public static void DrawApp(Vector2 center, float size, IPhoneApp app, PhoneTheme theme, float drawScale,
-        float labelAlpha, float labelWidth, float zoom = 1f)
+        float labelAlpha, bool showLabels, float labelWidth, float zoom = 1f)
     {
         var scale = ImGuiHelpers.GlobalScale * zoom;
         var dl = ImGui.GetWindowDrawList();
@@ -30,7 +30,7 @@ internal static class HomeTileView
             Typography.DrawCentered(center, app.Glyph, GlyphInk, glyphScale);
         }
 
-        DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, labelWidth, zoom);
+        DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, showLabels, labelWidth, zoom);
         if (app.BadgeCount > 0)
         {
             DrawBadge(center, size, app.BadgeCount, app.BadgeAsDot, theme, scale);
@@ -38,7 +38,7 @@ internal static class HomeTileView
     }
 
     public static void DrawFolder(Vector2 center, float size, HomeTile folder, PhoneTheme theme, float drawScale,
-        float labelAlpha, string fallbackName, float labelWidth, float zoom = 1f)
+        float labelAlpha, bool showLabels, string fallbackName, float labelWidth, float zoom = 1f)
     {
         var scale = ImGuiHelpers.GlobalScale * zoom;
         var dl = ImGui.GetWindowDrawList();
@@ -68,7 +68,7 @@ internal static class HomeTileView
         }
 
         var name = string.IsNullOrEmpty(folder.FolderName) ? fallbackName : folder.FolderName;
-        DrawLabel(center, size, name, theme, scale, labelAlpha, labelWidth, zoom);
+        DrawLabel(center, size, name, theme, scale, labelAlpha, showLabels, labelWidth, zoom);
         var badgeTotal = 0;
         var badgeHasDot = false;
         for (var appIndex = 0; appIndex < folder.Apps.Count; appIndex++)
@@ -132,9 +132,9 @@ internal static class HomeTileView
     }
 
     private static void DrawLabel(Vector2 center, float size, string label, PhoneTheme theme, float scale,
-        float labelAlpha, float labelWidth, float zoom)
+        float labelAlpha, bool showLabels, float labelWidth, float zoom)
     {
-        if (labelAlpha <= 0.01f)
+        if (!showLabels || labelAlpha <= 0.01f)
         {
             return;
         }

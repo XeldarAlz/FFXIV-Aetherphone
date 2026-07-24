@@ -251,8 +251,11 @@ internal sealed class GamesApp : IPhoneApp
             {
                 var section = sections[sectionIndex];
                 y += Metrics.Space.Xl * scale;
-                Typography.Draw(new Vector2(origin.X + Metrics.Space.Xxs * scale, y),
-                    games[tileOrder[section.Start]].Genre, theme.TextStrong, TextStyles.Title3);
+                var genreMaxWidth = MathF.Max(1f, availableWidth - Metrics.Space.Xxs * 2f * scale);
+                var genreText = Typography.FitText(games[tileOrder[section.Start]].Genre, genreMaxWidth,
+                    TextStyles.Title3);
+                Typography.Draw(new Vector2(origin.X + Metrics.Space.Xxs * scale, y), genreText, theme.TextStrong,
+                    TextStyles.Title3);
                 y += SectionHeaderHeight * scale;
                 ImGui.SetCursorScreenPos(new Vector2(origin.X, y));
                 if (sectionIndex == 0)
@@ -312,11 +315,15 @@ internal sealed class GamesApp : IPhoneApp
         }
 
         var textX = iconMax.X + Metrics.Space.Md * scale;
-        Typography.Draw(new Vector2(textX, row.Center.Y - 17f * scale), game.Title, theme.TextStrong,
-            TextStyles.Headline);
+        var playLabelSize = Typography.Measure(Loc.T(L.Games.Play), TextStyles.FootnoteEmphasized);
+        var pillWidth = MathF.Max(playLabelSize.X + 24f * scale, 54f * scale);
+        var textMaxWidth = MathF.Max(1f, row.Max.X - pillWidth - 8f * scale - textX);
+        Marquee.DrawLeft("games.row.title." + game.Id, game.Title, textX, row.Center.Y - 17f * scale, textMaxWidth,
+            TextStyles.Headline, theme.TextStrong, hovered);
         var best = StatValue(game.Id);
         var subtitle = string.IsNullOrEmpty(best) ? game.Genre : $"{Loc.T(L.Games.Best)} · {best}";
-        Typography.Draw(new Vector2(textX, row.Center.Y + 2f * scale), subtitle, theme.TextMuted, TextStyles.Footnote);
+        Marquee.DrawLeft("games.row.subtitle." + game.Id, subtitle, textX, row.Center.Y + 2f * scale, textMaxWidth,
+            TextStyles.Footnote, theme.TextMuted, hovered);
         DrawPlayPill(drawList, row, accent, scale);
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
@@ -378,12 +385,14 @@ internal sealed class GamesApp : IPhoneApp
         }
 
         var textX = min.X + height * 0.72f;
+        var heroTextMaxWidth = MathF.Max(1f, max.X - textX - 12f * scale);
         Typography.Draw(new Vector2(textX, center.Y - 34f * scale),
             Loc.Culture.TextInfo.ToUpper(Loc.T(L.Games.Featured)),
             GamePalette.Lighten(accent, 0.62f), TextStyles.Caption2);
-        Typography.Draw(new Vector2(textX, center.Y - 18f * scale), game.Title, ink, TextStyles.Title2);
-        Typography.Draw(new Vector2(textX, center.Y + 8f * scale), game.Genre, ink with { W = 0.72f },
-            TextStyles.Footnote);
+        Marquee.DrawLeft("games.hero.title." + game.Id, game.Title, textX, center.Y - 18f * scale, heroTextMaxWidth,
+            TextStyles.Title2, ink, hovered);
+        Marquee.DrawLeft("games.hero.genre." + game.Id, game.Genre, textX, center.Y + 8f * scale, heroTextMaxWidth,
+            TextStyles.Footnote, ink with { W = 0.72f }, hovered);
         var playCenter = new Vector2(textX + 34f * scale, center.Y + 38f * scale);
         var playClicked = GameHud.Button(playCenter, new Vector2(68f * scale, 28f * scale), Loc.T(L.Games.Play),
             new Vector4(0.97f, 0.97f, 0.99f, 1f), theme);

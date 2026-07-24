@@ -7,7 +7,9 @@ using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
@@ -46,7 +48,10 @@ internal sealed class AppearancePage : ISettingsPage
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.Theme), theme);
-            var card = GroupCard.Begin(theme, 3);
+            var accentLabel = Loc.T(L.Settings.Accent);
+            var cardWidth = ImGui.GetContentRegionAvail().X - 2f * Metrics.Space.Lg * ImGuiHelpers.GlobalScale;
+            var accentStacked = SwatchStrip.NeedsTwoRows(accentLabel, ThemeCatalog.Accents.Count, cardWidth);
+            var card = GroupCard.Begin(theme, accentStacked ? 4 : 3);
             var modeIndex = SegmentStrip.Draw("settings.themeMode", card.NextRow(), ModeLabels(), CurrentModeIndex(),
                 theme);
             var mode = ModeOrder[modeIndex];
@@ -56,8 +61,8 @@ internal sealed class AppearancePage : ISettingsPage
                 ApplyTheme();
             }
 
-            var accentIndex = SwatchStrip.Draw(card.NextRow(), Loc.T(L.Settings.Accent), ThemeCatalog.Accents,
-                ThemeCatalog.IndexOf(ThemeCatalog.Accents, configuration.AccentName), theme);
+            var accentIndex = SwatchStrip.Draw(card.NextRow(accentStacked ? 2 : 1), accentLabel, ThemeCatalog.Accents,
+                ThemeCatalog.IndexOf(ThemeCatalog.Accents, configuration.AccentName), theme, accentStacked);
             var accentName = ThemeCatalog.Accents[accentIndex].Name;
             if (accentName != configuration.AccentName)
             {
@@ -116,13 +121,21 @@ internal sealed class AppearancePage : ISettingsPage
     private void DrawHomeSection(PhoneTheme theme)
     {
         SettingsSection.Header(Loc.T(L.Home.HomeScreen), theme);
-        var card = GroupCard.Begin(theme, 2);
+        var card = GroupCard.Begin(theme, 3);
         var densityIndex = SegmentStrip.Draw("settings.homeGrid", card.NextRow(), DensityLabels(),
             DensityIndex(configuration.HomeGridRows), theme);
         var rows = GridRowOptions[densityIndex];
         if (rows != configuration.HomeGridRows)
         {
             configuration.HomeGridRows = rows;
+            configuration.Save();
+        }
+
+        var showAppNames = SettingsRow.Bool(card.NextRow(), Loc.T(L.Home.ShowAppNames), configuration.ShowAppNames,
+            theme);
+        if (showAppNames != configuration.ShowAppNames)
+        {
+            configuration.ShowAppNames = showAppNames;
             configuration.Save();
         }
 

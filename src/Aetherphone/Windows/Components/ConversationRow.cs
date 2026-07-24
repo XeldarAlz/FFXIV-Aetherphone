@@ -40,10 +40,13 @@ internal static class ConversationRow
         var timeSize = Typography.Measure(time, TextStyles.Caption1);
         Typography.Draw(new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
             hasUnread ? theme.Accent : theme.TextMuted, TextStyles.Caption1);
-        dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 8f * scale, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, min.Y + 11f * scale), conversation.Contact, theme.TextStrong,
-            TextStyles.Headline);
-        dl.PopClipRect();
+        var nameMaxWidth = textRight - timeSize.X - 8f * scale - textLeft;
+        var nameY = min.Y + 11f * scale;
+        var nameSize = Typography.Measure(conversation.Contact, TextStyles.Headline);
+        var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, nameY),
+            new Vector2(textLeft + nameMaxWidth, nameY + nameSize.Y));
+        Marquee.DrawLeft("conversationrow.name." + conversation.Contact, conversation.Contact, textLeft,
+            nameY, nameMaxWidth, TextStyles.Headline, theme.TextStrong, nameHovering);
         var previewRight = textRight;
         if (hasUnread)
         {
@@ -61,9 +64,13 @@ internal static class ConversationRow
         }
 
         var preview = conversation.Last?.Text ?? string.Empty;
-        dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(previewRight, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), preview, theme.TextMuted, TextStyles.Subheadline);
-        dl.PopClipRect();
+        var previewY = min.Y + 34f * scale;
+        var previewMaxWidth = previewRight - textLeft;
+        var previewSize = Typography.Measure(preview, TextStyles.Subheadline);
+        var previewHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, previewY),
+            new Vector2(textLeft + previewMaxWidth, previewY + previewSize.Y));
+        Marquee.DrawLeft("conversationrow.preview." + conversation.Contact, preview, textLeft, previewY,
+            previewMaxWidth, TextStyles.Subheadline, theme.TextMuted, previewHovering);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, Height * scale));
         if (hovered)

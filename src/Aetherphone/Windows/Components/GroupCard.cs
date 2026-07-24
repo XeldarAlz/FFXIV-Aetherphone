@@ -43,7 +43,7 @@ internal struct GroupCard
         return new GroupCard(theme, scale, rowHeight, origin.X, right, origin.Y, rowCount);
     }
 
-    public Rect NextRow()
+    public Rect NextRow(int rowSpan = 1)
     {
         var rowTop = startY + rowIndex * rowHeight * scale;
         if (rowIndex > 0)
@@ -53,9 +53,10 @@ internal struct GroupCard
                 ImGui.GetColorU32(theme.Separator), Metrics.Stroke.Hairline);
         }
 
-        rowIndex++;
+        rowIndex += rowSpan;
         var padding = Metrics.Space.Lg * scale;
-        return new Rect(new Vector2(left + padding, rowTop), new Vector2(right - padding, rowTop + rowHeight * scale));
+        return new Rect(new Vector2(left + padding, rowTop),
+            new Vector2(right - padding, rowTop + rowSpan * rowHeight * scale));
     }
 
     public void End()

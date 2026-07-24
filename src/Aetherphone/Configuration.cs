@@ -93,6 +93,7 @@ internal sealed class Configuration : IPluginConfiguration
     public List<GameStatRecord> GameStats { get; set; } = new();
     public HomeLayout? Home { get; set; }
     public int HomeGridRows { get; set; } = 6;
+    public bool ShowAppNames { get; set; } = true;
     public ControlLayout? ControlPanel { get; set; }
     public bool ControlPanelRepacked { get; set; }
     public VenueTimeFilter VenueTimeFilter { get; set; } = VenueTimeFilter.LiveNow;
