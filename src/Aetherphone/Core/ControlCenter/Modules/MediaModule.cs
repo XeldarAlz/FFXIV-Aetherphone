@@ -55,7 +55,7 @@ internal sealed class MediaModule : IControlModule
         DrawArt(dl, artRect, theme, active, opacity);
         var band = hasQueue ? 100f * scale : 44f * scale;
         var textLeft = artRect.Max.X + 12f * scale;
-        DrawText(textLeft, rect.Center.Y, rect.Max.X - band - textLeft, title, subtitle, theme, opacity, scale);
+        DrawText(dl, textLeft, rect.Center.Y, rect.Max.X - band - textLeft, title, subtitle, theme, opacity, scale);
         DrawTransport(dl, rect.Max.X - band * 0.5f, rect.Center.Y, 34f * scale, accent, ink, opacity, active, hasQueue,
             interactive, scale);
     }
@@ -72,9 +72,10 @@ internal sealed class MediaModule : IControlModule
         var contentBottom = active ? rect.Max.Y - pad - 32f * scale - 6f * scale : rect.Max.Y - pad;
         var titleCenterY = MathF.Min(artRect.Max.Y + 16f * scale, contentBottom);
         var titleSize = Typography.Measure(title, TextStyles.Headline);
-        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(rect.Center.X - textWidth * 0.5f, titleCenterY),
-            new Vector2(rect.Center.X + textWidth * 0.5f, titleCenterY + titleSize.Y));
-        Marquee.DrawCentered("media.large.title", title, rect.Center.X, titleCenterY, textWidth, TextStyles.Headline,
+        var titleTopY = titleCenterY - titleSize.Y * 0.5f;
+        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(rect.Center.X - textWidth * 0.5f, titleTopY),
+            new Vector2(rect.Center.X + textWidth * 0.5f, titleTopY + titleSize.Y));
+        Marquee.DrawCentered(dl, "media.large.title", title, rect.Center.X, titleTopY, textWidth, TextStyles.Headline,
             Palette.WithAlpha(theme.TextStrong, opacity), titleHovering);
         if (subtitle.Length > 0 && titleCenterY + 18f * scale <= contentBottom)
         {
@@ -98,7 +99,7 @@ internal sealed class MediaModule : IControlModule
             artRect.Width * 0.42f);
     }
 
-    private static void DrawText(float left, float centerY, float width, string title,
+    private static void DrawText(ImDrawListPtr dl, float left, float centerY, float width, string title,
         string subtitle, PhoneTheme theme, float opacity, float scale)
     {
         if (subtitle.Length > 0)
@@ -107,13 +108,13 @@ internal sealed class MediaModule : IControlModule
             var titleSize = Typography.Measure(title, TextStyles.Headline);
             var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(left, titleY),
                 new Vector2(left + width, titleY + titleSize.Y));
-            Marquee.DrawLeft("media.bar.title", title, left, titleY, width, TextStyles.Headline,
+            Marquee.DrawLeft(dl, "media.bar.title", title, left, titleY, width, TextStyles.Headline,
                 Palette.WithAlpha(theme.TextStrong, opacity), titleHovering);
             var subtitleY = centerY + 3f * scale;
             var subtitleSize = Typography.Measure(subtitle, TextStyles.Footnote);
             var subtitleHovering = ImGui.IsMouseHoveringRect(new Vector2(left, subtitleY),
                 new Vector2(left + width, subtitleY + subtitleSize.Y));
-            Marquee.DrawLeft("media.bar.subtitle", subtitle, left, subtitleY, width, TextStyles.Footnote,
+            Marquee.DrawLeft(dl, "media.bar.subtitle", subtitle, left, subtitleY, width, TextStyles.Footnote,
                 Palette.WithAlpha(theme.TextMuted, opacity), subtitleHovering);
             return;
         }
@@ -122,7 +123,7 @@ internal sealed class MediaModule : IControlModule
         var soloSize = Typography.Measure(title, TextStyles.Headline);
         var soloHovering = ImGui.IsMouseHoveringRect(new Vector2(left, soloY),
             new Vector2(left + width, soloY + soloSize.Y));
-        Marquee.DrawLeft("media.bar.title", title, left, soloY, width, TextStyles.Headline,
+        Marquee.DrawLeft(dl, "media.bar.title", title, left, soloY, width, TextStyles.Headline,
             Palette.WithAlpha(theme.TextStrong, opacity), soloHovering);
     }
 

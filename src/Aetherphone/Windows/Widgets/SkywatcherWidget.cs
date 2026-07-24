@@ -386,7 +386,17 @@ internal sealed class SkywatcherWidget : IHomeWidget
 
         var lineHeight = singleLineSize.Y * 1.15f;
         var lines = Typography.WrapText(text, style, maxWidth);
-        if (lines.Length <= 2 && lines.Length * lineHeight <= maxHeight)
+        var fitsWidth = true;
+        for (var index = 0; index < lines.Length; index++)
+        {
+            if (Typography.Measure(lines[index], style).X > maxWidth)
+            {
+                fitsWidth = false;
+                break;
+            }
+        }
+
+        if (fitsWidth && lines.Length <= 2 && lines.Length * lineHeight <= maxHeight)
         {
             return Typography.DrawWrappedLeft(topLeft, text, color, style, maxWidth);
         }

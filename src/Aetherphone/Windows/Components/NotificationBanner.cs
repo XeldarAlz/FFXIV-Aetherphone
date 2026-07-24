@@ -286,12 +286,12 @@ internal sealed class NotificationBanner : IDisposable
             Palette.WithAlpha(theme.TextMuted, opacity), 0.78f);
         var titleMaxWidth = textRight - timeSize.X - 6f * scale - textLeft;
         var titleStyle = new TextStyle(0.94f, FontWeight.SemiBold);
-        Marquee.DrawLeftAuto("notificationbanner.title." + notification.Id, notification.Title, textLeft, titleTop,
+        Marquee.DrawLeftAuto(dl, "notificationbanner.title." + notification.Id, notification.Title, textLeft, titleTop,
             titleMaxWidth, titleStyle, ink);
         var bodyMaxWidth = textRight - textLeft;
         var bodyTop = titleTop + BodyOffset * scale;
         var bodyStyle = new TextStyle(0.88f, FontWeight.Regular);
-        Marquee.DrawLeftAuto("notificationbanner.body." + notification.Id, notification.Body, textLeft,
+        Marquee.DrawLeftAuto(dl, "notificationbanner.body." + notification.Id, notification.Body, textLeft,
             bodyTop, bodyMaxWidth, bodyStyle, Palette.WithAlpha(theme.TextMuted, opacity));
     }
 

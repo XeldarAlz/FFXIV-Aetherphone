@@ -107,7 +107,7 @@ internal sealed partial class ChirperApp
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var titleStyle = new TextStyle(1.3f, FontWeight.Bold);
-        var leftReserve = area.Min.X + 56f * scale;
+        var leftReserve = area.Min.X + 84f * scale;
         var rightReserve = area.Max.X - 112f * scale;
         var titleCenterX = (leftReserve + rightReserve) * 0.5f;
         var maxTitleWidth = MathF.Max(1f, rightReserve - leftReserve);
@@ -132,6 +132,21 @@ internal sealed partial class ChirperApp
             if (UiInteract.HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
             {
                 OpenProfile(me.Id);
+            }
+        }
+
+        if (store.IsSignedIn)
+        {
+            var refreshCenter = new Vector2(area.Min.X + 68f * scale, rowCenterY);
+            if (store.IsLoading(activeScope))
+            {
+                LoadingPulse.Spinner(refreshCenter, 8f * scale, ui.Accent);
+            }
+            else if (ui.IconButton(refreshCenter, 16f * scale, FontAwesomeIcon.Sync.ToIconString(),
+                         AppPalettes.Chirper.BodyInk, new Vector4(0f, 0f, 0f, 0f), 1.1f, Loc.T(L.Common.Refresh),
+                         HoverLabelSide.Below))
+            {
+                RefreshActiveFeed();
             }
         }
 

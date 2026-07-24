@@ -467,6 +467,14 @@ internal sealed partial class VelvetShell
             textLeft, metaY, textWidth, TextStyles.Subheadline, VelvetTheme.BodyInk,
             metaHovered);
 
+        var summaryY = card.Max.Y - pad - 15f * scale;
+        var summarySize = Typography.Measure(VelvetIntent.Summary(mask), TextStyles.SubheadlineEmphasized);
+        var summaryHovered = UiInteract.Hover(new Vector2(textLeft, summaryY),
+            new Vector2(textLeft + textWidth, summaryY + summarySize.Y));
+        Marquee.DrawLeft("velvet.discover.summary." + profile.UserId, VelvetIntent.Summary(mask), textLeft,
+            summaryY, textWidth, TextStyles.SubheadlineEmphasized, VelvetTheme.RoseInk,
+            summaryHovered);
+
         var cardHovered = !pillClicked && UiInteract.Hover(card.Min, card.Max) &&
             !UiInteract.Hover(pillRect.Min, pillRect.Max);
         if (UiInteract.Click(card.Min, card.Max, cardHovered))

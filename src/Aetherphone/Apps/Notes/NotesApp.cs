@@ -189,7 +189,6 @@ internal sealed class NotesApp : IPhoneApp
 
     private void DrawNoteRow(Rect row, PhoneNote note, float scale)
     {
-        var hovered = UiInteract.Hover(row.Min, row.Max);
         var title = note.Title();
         var hasTitle = title.Length > 0;
         var titleText = hasTitle ? title : Loc.T(L.Notes.Untitled);
@@ -210,7 +209,7 @@ internal sealed class NotesApp : IPhoneApp
         Marquee.DrawLeft("notes.noteRow.sub." + note.Id, secondLine, row.Min.X, subY, row.Width,
             TextStyles.Footnote, ui.MutedInk, subHovering);
 
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.HoverClick(row.Min, row.Max))
         {
             StartEditNote(note);
         }
@@ -278,7 +277,7 @@ internal sealed class NotesApp : IPhoneApp
                 TextStyles.Footnote);
         }
 
-        if (rowHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.HoverClick(textRect.Min, textRect.Max))
         {
             StartEditReminder(reminder);
         }

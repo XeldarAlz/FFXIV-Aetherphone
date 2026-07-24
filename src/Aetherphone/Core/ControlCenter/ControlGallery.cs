@@ -129,7 +129,7 @@ internal sealed class ControlGallery
         var labelStyle = new TextStyle(0.9f, FontWeight.Medium);
         var labelLeft = iconRect.Max.X + 14f * scale;
         var labelMaxWidth = MathF.Max(1f, addIconCenter.X - 17f * scale - 8f * scale - labelLeft);
-        Marquee.DrawLeft("controlgallery.label." + module.Id, module.GalleryLabel, labelLeft,
+        Marquee.DrawLeft(dl, "controlgallery.label." + module.Id, module.GalleryLabel, labelLeft,
             row.Center.Y - Typography.Measure(module.GalleryLabel, labelStyle).Y * 0.5f, labelMaxWidth, labelStyle,
             Palette.WithAlpha(theme.TextStrong, alpha), hovered);
         ProgressRing.CenterIcon(dl, addIconCenter, FontAwesomeIcon.PlusCircle,
