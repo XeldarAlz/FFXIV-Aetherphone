@@ -4,9 +4,11 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
+using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Camera;
 
@@ -18,6 +20,8 @@ internal sealed class CameraApp : IPhoneApp
     private const float ReticleDuration = 1.1f;
     private const float PressDuration = 0.18f;
     private const int SquareModeIndex = 0;
+    private const int CaptureDelayFrames = 3;
+    private const int CaptureWatchdogTicks = 30;
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
     public string Id => "camera";
     public string DisplayName => Loc.T(L.Apps.Camera);
@@ -39,6 +43,10 @@ internal sealed class CameraApp : IPhoneApp
     private float reticleAge = ReticleDuration + 1f;
     private Vector2 reticlePos;
     private IDalamudTextureWrap? lastShot;
+    private int captureCountdown;
+    private int captureWatchdogTicks;
+    private Rect pendingCaptureRect;
+    private bool captureHooksAttached;
 
     public CameraApp(PhotoCaptureService capture, PhotoLibrary library)
     {
@@ -51,10 +59,12 @@ internal sealed class CameraApp : IPhoneApp
         flashAge = FlashDuration + 1f;
         reticleAge = ReticleDuration + 1f;
         shutterPress = 0f;
+        DetachCaptureHooks();
     }
 
     public void OnClosed()
     {
+        DetachCaptureHooks();
     }
 
     public void Draw(in PhoneContext context)
@@ -96,6 +106,15 @@ internal sealed class CameraApp : IPhoneApp
         {
             reticleAge += delta;
         }
+
+        if (captureCountdown > 0)
+        {
+            captureCountdown--;
+            if (captureCountdown == 0)
+            {
+                CompleteCapture();
+            }
+        }
     }
 
     private bool DrawTray(Rect screen, Rect captureRect, INavigator navigation, float scale, float rounding)
@@ -129,23 +148,95 @@ internal sealed class CameraApp : IPhoneApp
         return consumed;
     }
 
+    private static void StripNamePlates(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
+    {
+        for (var index = 0; index < handlers.Count; index++)
+        {
+            var handler = handlers[index];
+            handler.RemoveName();
+            handler.RemoveTitle();
+            handler.RemoveFreeCompanyTag();
+            handler.RemoveLevelPrefix();
+            handler.RemoveStatusPrefix();
+            handler.RemoveTargetSuffix();
+        }
+    }
+
     private void Shoot(Rect captureRect)
     {
+        if (captureCountdown > 0)
+        {
+            return;
+        }
+
         shutterPress = 1f;
         if (flashEnabled)
         {
             flashAge = 0f;
         }
 
-        if (!capture.TryCapture(captureRect, out var pixels, out var width, out var height))
+        pendingCaptureRect = captureRect;
+        AttachCaptureHooks();
+        Plugin.NamePlateGui.RequestRedraw();
+        captureCountdown = CaptureDelayFrames;
+    }
+
+    private void CompleteCapture()
+    {
+        try
+        {
+            if (!capture.TryCapture(pendingCaptureRect, out var pixels, out var width, out var height))
+            {
+                return;
+            }
+
+            lastShot?.Dispose();
+            lastShot = Plugin.TextureProvider.CreateFromRaw(RawImageSpecification.Rgba32(width, height), pixels,
+                "Aetherphone.Photo.Last");
+            library.Save(pixels, width, height);
+        }
+        finally
+        {
+            DetachCaptureHooks();
+        }
+    }
+
+    private void AttachCaptureHooks()
+    {
+        captureWatchdogTicks = CaptureWatchdogTicks;
+        if (captureHooksAttached)
         {
             return;
         }
 
-        lastShot?.Dispose();
-        lastShot = Plugin.TextureProvider.CreateFromRaw(RawImageSpecification.Rgba32(width, height), pixels,
-            "Aetherphone.Photo.Last");
-        library.Save(pixels, width, height);
+        Plugin.NamePlateGui.OnNamePlateUpdate += StripNamePlates;
+        Plugin.Framework.Update += ReleaseStalledCapture;
+        captureHooksAttached = true;
+    }
+
+    private void ReleaseStalledCapture(IFramework framework)
+    {
+        captureWatchdogTicks--;
+        if (captureWatchdogTicks > 0)
+        {
+            return;
+        }
+
+        DetachCaptureHooks();
+    }
+
+    private void DetachCaptureHooks()
+    {
+        captureCountdown = 0;
+        if (!captureHooksAttached)
+        {
+            return;
+        }
+
+        Plugin.NamePlateGui.OnNamePlateUpdate -= StripNamePlates;
+        Plugin.Framework.Update -= ReleaseStalledCapture;
+        captureHooksAttached = false;
+        Plugin.NamePlateGui.RequestRedraw();
     }
 
     private void HandleFocusTap(Rect viewfinder, bool consumed)
@@ -188,6 +279,7 @@ internal sealed class CameraApp : IPhoneApp
 
     public void Dispose()
     {
+        DetachCaptureHooks();
         lastShot?.Dispose();
         lastShot = null;
     }

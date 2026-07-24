@@ -67,7 +67,6 @@ public sealed class HomeLayoutServicePlacementTests
         {
             Dock = new List<string>(),
             Pages = new List<HomePage> { PageOf(("a", 2, HomeLayoutService.MaxRows - 1)) },
-            LibraryPages = new List<HomePage>(),
         };
 
         var layout = BuildLayout(apps, configuration);
@@ -90,7 +89,6 @@ public sealed class HomeLayoutServicePlacementTests
             {
                 Dock = new List<string>(),
                 Pages = new List<HomePage> { page },
-                LibraryPages = new List<HomePage>(),
             },
         };
 

@@ -96,9 +96,7 @@ internal sealed class HomeInteractionController
 
     public void Advance(float delta) => editClock += delta;
 
-    public int DisplayPageCount() => layout.TotalPageCount;
-
-    public bool CanAddWidget => pager.Page < layout.HomePageCount;
+    public int DisplayPageCount() => layout.PageCount;
 
     public void Suspend()
     {
@@ -226,7 +224,7 @@ internal sealed class HomeInteractionController
             return true;
         }
 
-        if (CanAddWidget && HomeChrome.AddRect(content, metrics).Contains(mouse))
+        if (HomeChrome.AddRect(content, metrics).Contains(mouse))
         {
             gallery.Open(pager.Page);
             pressActive = false;
@@ -298,7 +296,7 @@ internal sealed class HomeInteractionController
             return null;
         }
 
-        var page = Math.Clamp((int)MathF.Round(pager.Value), 0, layout.TotalPageCount - 1);
+        var page = Math.Clamp((int)MathF.Round(pager.Value), 0, layout.PageCount - 1);
         var cell = metrics.CellFromPoint(page, pager.Value, mouse);
         var tiles = layout.Page(page);
         var cells = layout.Placements(page);
@@ -399,7 +397,7 @@ internal sealed class HomeInteractionController
                 edgeDwell = 0f;
             }
         }
-        else if (mouse.X > content.Max.X - edge && dragPage < layout.TotalPageCount - 1)
+        else if (mouse.X > content.Max.X - edge && dragPage < layout.PageCount - 1)
         {
             edgeDwell += delta;
             if (edgeDwell > EdgeFlipSeconds)
@@ -415,7 +413,7 @@ internal sealed class HomeInteractionController
         }
 
         folderTarget = null;
-        if (dragPage >= layout.TotalPageCount)
+        if (dragPage >= layout.PageCount)
         {
             dropValid = false;
             return;
@@ -486,7 +484,7 @@ internal sealed class HomeInteractionController
         folderTarget = null;
         overDock = false;
         dropValid = false;
-        pager.AnimateTo(pager.Page, layout.TotalPageCount);
+        pager.AnimateTo(pager.Page, layout.PageCount);
     }
 
     private void BeginSettle(HomeTile tile, in HomeMetrics metrics)

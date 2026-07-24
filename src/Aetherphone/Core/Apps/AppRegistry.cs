@@ -16,6 +16,7 @@ using Aetherphone.Apps.Market;
 using Aetherphone.Apps.Linkpearl;
 using Aetherphone.Apps.Music;
 using Aetherphone.Apps.Activity;
+using Aetherphone.Apps.AppStore;
 using Aetherphone.Apps.News;
 using Aetherphone.Apps.Notes;
 using Aetherphone.Apps.Notifications;
@@ -80,6 +81,7 @@ internal static class AppRegistry
         apps.Add(new SettingsApp(services, photoLibrary, showAbout));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents, services.Confirm));
+        apps.Add(new AppStoreApp(services.Installer, apps));
 
         return new AppBundle
         {

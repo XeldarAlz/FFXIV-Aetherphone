@@ -4,8 +4,7 @@ namespace Aetherphone.Core.Home;
 internal sealed class HomeLayout
 {
     public List<HomePage> Pages { get; set; } = new();
-    public List<HomePage> LibraryPages { get; set; } = new();
-    public List<string> KnownHome { get; set; } = new();
+    public List<string> Installed { get; set; } = new();
     public List<string>? Dock { get; set; }
 }
 

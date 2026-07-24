@@ -113,21 +113,18 @@ internal sealed class HomeChrome
     {
         var drawList = ImGui.GetWindowDrawList();
         var scale = metrics.Scale;
-        if (interaction.CanAddWidget)
+        var add = AddRect(content, metrics);
+        var addHovered = ImGui.IsMouseHoveringRect(add.Min, add.Max);
+        var addCenter = add.Center;
+        drawList.AddCircleFilled(addCenter, add.Width * 0.5f,
+            ImGui.GetColorU32(new Vector4(1f, 1f, 1f, addHovered ? 0.26f : 0.17f)), 32);
+        var arm = add.Width * 0.22f;
+        var ink = ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.95f));
+        drawList.AddLine(addCenter - new Vector2(arm, 0f), addCenter + new Vector2(arm, 0f), ink, 2f * scale);
+        drawList.AddLine(addCenter - new Vector2(0f, arm), addCenter + new Vector2(0f, arm), ink, 2f * scale);
+        if (addHovered)
         {
-            var add = AddRect(content, metrics);
-            var addHovered = ImGui.IsMouseHoveringRect(add.Min, add.Max);
-            var addCenter = add.Center;
-            drawList.AddCircleFilled(addCenter, add.Width * 0.5f,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, addHovered ? 0.26f : 0.17f)), 32);
-            var arm = add.Width * 0.22f;
-            var ink = ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.95f));
-            drawList.AddLine(addCenter - new Vector2(arm, 0f), addCenter + new Vector2(arm, 0f), ink, 2f * scale);
-            drawList.AddLine(addCenter - new Vector2(0f, arm), addCenter + new Vector2(0f, arm), ink, 2f * scale);
-            if (addHovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            }
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
         var done = DoneRect(content, metrics);

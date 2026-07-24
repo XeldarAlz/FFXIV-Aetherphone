@@ -38,6 +38,7 @@ internal static class AppAccents
         ["fishing"] = new(0.24f, 0.62f, 0.86f, 1f),
         ["notifications"] = new(0.80f, 0.16f, 0.24f, 1f),
         ["settings"] = new(0.56f, 0.57f, 0.63f, 1f),
+        ["appstore"] = new(0.05f, 0.48f, 0.99f, 1f),
         ["feedback"] = new(0.08f, 0.66f, 0.55f, 1f),
         ["dev"] = new(0.42f, 0.46f, 0.98f, 1f),
         ["polls"] = new(0.56f, 0.44f, 0.96f, 1f),
