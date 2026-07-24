@@ -1665,6 +1665,15 @@ internal static class L
         public static readonly LocString MessageButton = new("aethergram.message", "Message");
         public static readonly LocString ThreadEmpty = new("aethergram.threadEmpty", "Say hello");
         public static readonly LocString Settings = new("aethergram.settings", "Settings");
+        public static readonly LocString ChatsTab = new("aethergram.chatsTab", "Chats");
+        public static readonly LocString Requests = new("aethergram.requests", "Requests");
+        public static readonly LocString RequestsCount = new("aethergram.requestsCount", "Requests ({0})");
+        public static readonly LocString RequestsEmpty = new("aethergram.requestsEmpty", "No message requests");
+        public static readonly LocString RequestBanner = new("aethergram.requestBanner", "{0} wants to send you messages");
+        public static readonly LocString AcceptRequest = new("aethergram.acceptRequest", "Accept");
+        public static readonly LocString DeleteConversation = new("aethergram.deleteConversation", "Delete conversation");
+        public static readonly LocString DeleteConversationMessage = new("aethergram.deleteConversationMessage",
+            "This deletes the conversation for you. This can't be undone.");
     }
 
     internal static class Velvet

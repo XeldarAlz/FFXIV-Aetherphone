@@ -108,6 +108,47 @@ internal sealed partial class AethergramApp
             };
         }
 
+        protected override void DrawAboveTranscript(ref Rect listRect, string threadId)
+        {
+            if (!app.dmStore.IsThreadPending(threadId))
+            {
+                return;
+            }
+
+            var scale = ImGuiHelpers.GlobalScale;
+            var drawList = ImGui.GetWindowDrawList();
+            var margin = 12f * scale;
+            var pad = 14f * scale;
+            var cardMin = new Vector2(listRect.Min.X + margin, listRect.Min.Y + margin);
+            var cardMaxX = listRect.Max.X - margin;
+            var innerWidth = cardMaxX - cardMin.X - pad * 2f;
+            var text = Loc.T(L.Aethergram.RequestBanner, app.ThreadTitle(threadId));
+            var textHeight = Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, innerWidth).Y;
+            var buttonHeight = 34f * scale;
+            var cardHeight = pad + textHeight + 12f * scale + buttonHeight + pad;
+            var cardMax = new Vector2(cardMaxX, cardMin.Y + cardHeight);
+            ui.Card(drawList, cardMin, cardMax, 16f * scale);
+            Typography.DrawWrappedLeft(new Vector2(cardMin.X + pad, cardMin.Y + pad), text,
+                AppPalettes.Aethergram.BodyInk, TextStyles.Subheadline, innerWidth);
+            var buttonsTop = cardMin.Y + pad + textHeight + 12f * scale;
+            var buttonWidth = (innerWidth - 10f * scale) * 0.5f;
+            var acceptRect = new Rect(new Vector2(cardMin.X + pad, buttonsTop),
+                new Vector2(cardMin.X + pad + buttonWidth, buttonsTop + buttonHeight));
+            var deleteRect = new Rect(new Vector2(acceptRect.Max.X + 10f * scale, buttonsTop),
+                new Vector2(cardMin.X + pad + innerWidth, buttonsTop + buttonHeight));
+            if (ui.PillButton(acceptRect, Loc.T(L.Aethergram.AcceptRequest), true))
+            {
+                app.dmStore.AcceptThread(threadId);
+            }
+
+            if (ui.DangerGhostButton(deleteRect, Loc.T(L.Aethergram.DeleteConfirm)))
+            {
+                app.AskDeleteConversation(threadId);
+            }
+
+            listRect = new Rect(new Vector2(listRect.Min.X, cardMax.Y + margin), listRect.Max);
+        }
+
         protected override void DrawHeader(Rect area, string threadId)
         {
             var context = new PhoneContext(area, Theme, Navigation);

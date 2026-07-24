@@ -39,7 +39,102 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
     public bool ThreadsLoaded => ThreadListLoaded;
     public int UnreadCount => ComputeUnread();
 
+    public int RequestCount
+    {
+        get
+        {
+            var snapshot = ThreadListItems;
+            var count = 0;
+            for (var index = 0; index < snapshot.Length; index++)
+            {
+                if (snapshot[index].Pending)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+    }
+
     public void RefreshThreads() => RefreshThreadListCore();
+
+    protected override bool IsThreadMuted(GramThreadDto thread) => thread.Pending;
+
+    public bool IsThreadPending(string otherId)
+    {
+        var snapshot = ThreadListItems;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].OtherUserId == otherId)
+            {
+                return snapshot[index].Pending;
+            }
+        }
+
+        return false;
+    }
+
+    public void AcceptThread(string otherId)
+    {
+        var snapshot = ThreadListItems;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].OtherUserId != otherId)
+            {
+                continue;
+            }
+
+            if (snapshot[index].Pending)
+            {
+                var updated = (GramThreadDto[])snapshot.Clone();
+                updated[index] = snapshot[index] with { Pending = false };
+                ThreadListItems = updated;
+            }
+
+            break;
+        }
+
+        work.Run("thread accept", async token =>
+            await client.AcceptThreadAsync(otherId, token).ConfigureAwait(false), RefreshThreads);
+    }
+
+    public void DeleteThread(string otherId, Action? onDone = null)
+    {
+        var snapshot = ThreadListItems;
+        for (var index = 0; index < snapshot.Length; index++)
+        {
+            if (snapshot[index].OtherUserId != otherId)
+            {
+                continue;
+            }
+
+            var updated = new GramThreadDto[snapshot.Length - 1];
+            Array.Copy(snapshot, 0, updated, 0, index);
+            Array.Copy(snapshot, index + 1, updated, index, snapshot.Length - index - 1);
+            ThreadListItems = updated;
+            break;
+        }
+
+        CloseThreadIfCurrent(otherId);
+        work.Run("thread delete", async token =>
+            await client.DeleteThreadAsync(otherId, token).ConfigureAwait(false), succeeded =>
+        {
+            RefreshThreads();
+            if (succeeded)
+            {
+                onDone?.Invoke();
+            }
+        });
+    }
+
+    private void AcceptThreadIfPending(string otherId)
+    {
+        if (IsThreadPending(otherId))
+        {
+            AcceptThread(otherId);
+        }
+    }
 
     protected override string ImageUploadScope => "gram-dm";
     protected override string VoiceUploadScope => "gram-voice";
@@ -83,12 +178,18 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         return page is null ? null : new MessagePage(page.Items, page.NextCursor);
     }
 
-    protected override Task<GramMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
+    protected override async Task<GramMessageDto?> SendMessageRequestAsync(string threadId, string body, int kind,
         CancellationToken token, string? mediaKey, int mediaWidth, int mediaHeight, int encVersion,
         string? commitmentTag, string? replyToId, int durationSecs)
     {
-        return client.SendMessageAsync(threadId, body, kind, token, mediaKey, mediaWidth, mediaHeight,
-            encVersion, commitmentTag, replyToId, durationSecs);
+        var sent = await client.SendMessageAsync(threadId, body, kind, token, mediaKey, mediaWidth, mediaHeight,
+            encVersion, commitmentTag, replyToId, durationSecs).ConfigureAwait(false);
+        if (sent is not null)
+        {
+            AcceptThreadIfPending(threadId);
+        }
+
+        return sent;
     }
 
     protected override Task<GramMessageDto?> EditMessageRequestAsync(string messageId, string body,

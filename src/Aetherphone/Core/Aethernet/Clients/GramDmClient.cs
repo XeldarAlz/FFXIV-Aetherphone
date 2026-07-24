@@ -58,6 +58,16 @@ internal sealed class GramDmClient
         return net.SendAsync(HttpMethod.Delete, $"/gram/messages/{Uri.EscapeDataString(messageId)}", token);
     }
 
+    public Task<bool> AcceptThreadAsync(string otherId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(otherId)}/accept", token);
+    }
+
+    public Task<bool> DeleteThreadAsync(string otherId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Delete, $"/gram/threads/{Uri.EscapeDataString(otherId)}", token);
+    }
+
     public Task<bool> SendTypingAsync(string userId, CancellationToken token)
     {
         return net.SendAsync(HttpMethod.Post, $"/gram/threads/{Uri.EscapeDataString(userId)}/typing", token);
