@@ -46,6 +46,7 @@ internal sealed class SocialProfileStyle
     public required LocString DeleteCommentConfirmMessage { get; init; }
     public required LocString DeleteCommentFailed { get; init; }
     public LocString? MessageLabel { get; init; }
+    public LocString? SettingsLabel { get; init; }
 }
 
 internal sealed class SocialProfilePages
@@ -71,6 +72,7 @@ internal sealed class SocialProfilePages
     private readonly Action back;
     private readonly Action? openConductRules;
     private readonly Action<string>? openMessage;
+    private readonly Action? openSettings;
 
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
@@ -84,7 +86,7 @@ internal sealed class SocialProfilePages
         LodestoneService lodestone, AvatarLightbox avatarLightbox, Configuration configuration, GameData gameData,
         ConfirmService confirm, ReportService report, Action openEditProfile, Action openAvatarComposer,
         Action<string> openProfile, Action<string, UserListKind> openUserList, Action back,
-        Action? openConductRules, Action<string>? openMessage = null)
+        Action? openConductRules, Action<string>? openMessage = null, Action? openSettings = null)
     {
         this.store = store;
         this.ui = ui;
@@ -103,6 +105,7 @@ internal sealed class SocialProfilePages
         this.back = back;
         this.openConductRules = openConductRules;
         this.openMessage = openMessage;
+        this.openSettings = openSettings;
     }
 
     public string SearchDraft = string.Empty;
@@ -190,15 +193,25 @@ internal sealed class SocialProfilePages
         var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
         if (user.IsMe)
         {
+            var iconCenterX = buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale;
             if (openConductRules is not null)
             {
-                var rulesCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-                if (ui.IconButton(rulesCenter, buttonHeight * 0.5f, FontAwesomeIcon.QuestionCircle.ToIconString(),
-                        style.Palette.MutedInk, Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f,
-                        Loc.T(L.Conduct.Eyebrow)))
+                if (ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                        FontAwesomeIcon.QuestionCircle.ToIconString(), style.Palette.MutedInk,
+                        Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(L.Conduct.Eyebrow)))
                 {
                     openConductRules();
                 }
+
+                iconCenterX -= buttonHeight + 8f * scale;
+            }
+
+            if (openSettings is not null && style.SettingsLabel is { } settingsLabel
+                && ui.IconButton(new Vector2(iconCenterX, avatarCenter.Y), buttonHeight * 0.5f,
+                    FontAwesomeIcon.Cog.ToIconString(), style.Palette.MutedInk,
+                    Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f, Loc.T(settingsLabel)))
+            {
+                openSettings();
             }
 
             if (ui.PillButton(buttonRect, Loc.T(style.EditProfile), false))

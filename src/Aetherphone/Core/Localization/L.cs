@@ -74,7 +74,6 @@ internal static class L
         public static readonly LocString FollowedByOneMoreMany = new("social.followedByOneMoreMany", "Followed by {0} and {1} others");
         public static readonly LocString FollowedByTwoMoreOne = new("social.followedByTwoMoreOne", "Followed by {0}, {1} and 1 other");
         public static readonly LocString FollowedByTwoMoreMany = new("social.followedByTwoMoreMany", "Followed by {0}, {1} and {2} others");
-        public static readonly LocString MessagesHeader = new("social.messagesHeader", "Direct messages");
         public static readonly LocString AllowMessages = new("social.allowMessages", "Who can message you");
         public static readonly LocString MessagesAudienceHint = new("social.messagesAudienceHint", "Controls who can start a new conversation with you on Aethergram. People you have replied to can always message you.");
         public static readonly LocString ActivityTitle = new("social.activityTitle", "Notifications");
@@ -1665,6 +1664,7 @@ internal static class L
         public static readonly LocString InboxEmptyHint = new("aethergram.inboxEmptyHint", "Message someone from their profile");
         public static readonly LocString MessageButton = new("aethergram.message", "Message");
         public static readonly LocString ThreadEmpty = new("aethergram.threadEmpty", "Say hello");
+        public static readonly LocString Settings = new("aethergram.settings", "Settings");
     }
 
     internal static class Velvet

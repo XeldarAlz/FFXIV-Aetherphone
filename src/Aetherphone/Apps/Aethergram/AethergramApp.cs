@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
@@ -56,6 +57,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     };
     private readonly AethergramStore store;
     private readonly GramDmStore dmStore;
+    private readonly AccountClient account;
     private readonly SocialLauncher launcher;
     private readonly GramDmLauncher dmLauncher;
     private readonly GameData gameData;
@@ -133,6 +135,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         WallpaperImageCache wallpaperImages, ConfirmService confirm, ReportService report, ConductGateService conduct)
     {
         store = new AethergramStore(session, net.Account, net.Social, net.Grams, net.Safety, net.Media);
+        account = net.Account;
         dmStore = new GramDmStore(session, net.GramDm, net.Safety, net.Media, notifications, keyVault,
             conversationKeys, visibility, realtimeSignals);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -191,9 +194,10 @@ internal sealed partial class AethergramApp : IPhoneApp
             DeleteCommentConfirmMessage = L.Aethergram.DeleteCommentConfirmMessage,
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
             MessageLabel = L.Aethergram.MessageButton,
+            SettingsLabel = L.Aethergram.Settings,
         }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report,
             () => router.Push(AethergramRoute.EditProfile), () => StartCompose(true), OpenProfile, OpenUserList, back,
-            null, OpenThread);
+            null, OpenThread, () => router.Push(AethergramRoute.Settings));
         threadView = new ThreadView(this);
     }
 
@@ -308,6 +312,9 @@ internal sealed partial class AethergramApp : IPhoneApp
                 break;
             case AethergramScreen.Reactions:
                 threadView.DrawReactions(area, route.Id!);
+                break;
+            case AethergramScreen.Settings:
+                DrawSettings(area);
                 break;
             default:
                 DrawRoot(area);
@@ -1038,6 +1045,8 @@ internal sealed partial class AethergramApp : IPhoneApp
 
     public void Dispose()
     {
+        settingsCancellation.Cancel();
+        settingsCancellation.Dispose();
         threadView.Dispose();
         dmStore.Dispose();
         store.Dispose();
