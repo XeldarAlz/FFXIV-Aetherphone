@@ -242,6 +242,51 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
         });
     }
 
+    public void SendStoryReply(string otherId, string storyId, string text)
+    {
+        if (otherId.Length == 0 || storyId.Length == 0 || text.Length == 0)
+        {
+            return;
+        }
+
+        work.Run("send story reply", async token =>
+        {
+            var status = await EnsureThreadKeysAsync(otherId, token).ConfigureAwait(false);
+            var scope = ScopeFor(otherId);
+            var generation = keys.CurrentGeneration(scope);
+            GramMessageDto? sent;
+            if (cipher.IsUnlocked && status.CanEncrypt
+                && cipher.TryEncrypt(scope, generation, text, MyUserId, out var encoded))
+            {
+                sent = await client.SendMessageAsync(otherId, encoded.Envelope, StoryReplyKind, token, null, 0, 0,
+                    EnvelopeCodec.VersionEnvelope, encoded.CommitmentTag, null, 0, storyId).ConfigureAwait(false);
+                if (sent is not null)
+                {
+                    cipher.RecordDecrypted(sent.Id, text, encoded.FrankingKeyBase64);
+                    sent = sent with { Body = text };
+                }
+            }
+            else
+            {
+                sent = await client.SendMessageAsync(otherId, text, StoryReplyKind, token, null, 0, 0, 0, null,
+                    null, 0, storyId).ConfigureAwait(false);
+            }
+
+            if (sent is null)
+            {
+                return;
+            }
+
+            AcceptThreadIfPending(otherId);
+            if (CurrentThreadId == otherId)
+            {
+                MessageItems = CopyOnWrite.Append(MessageItems, sent);
+            }
+
+            InvalidateThreadList();
+        });
+    }
+
     public bool TryResolvePost(string postId, out PostDto? post)
     {
         if (sharedPosts.TryGetValue(postId, out post))

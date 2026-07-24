@@ -143,7 +143,8 @@ internal sealed partial class AethergramApp : IPhoneApp
         personPicker = new PersonPicker(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, AethergramArt.StoryRing,
             AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
-                L.Aethergram.Saving), confirm, "Aethergram stories", StartStoryCompose);
+                L.Aethergram.Saving), confirm, "Aethergram stories", StartStoryCompose,
+            new StoryReplyHooks(L.Aethergram.ReplyToStory, dmStore.SendStoryReply, OpenThread));
         this.launcher = launcher;
         this.dmLauncher = dmLauncher;
         this.gameData = gameData;

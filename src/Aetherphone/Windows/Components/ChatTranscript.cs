@@ -127,6 +127,15 @@ internal interface IChatTranscriptPostCards
     IDalamudTextureWrap? Thumbnail(string url);
 }
 
+internal readonly record struct ChatStoryReplyContext(string ContextText, string? ThumbnailUrl, bool Unavailable);
+
+internal interface IChatTranscriptStoryReplies
+{
+    bool TryResolve(string messageId, out ChatStoryReplyContext context);
+
+    IDalamudTextureWrap? Thumbnail(string url);
+}
+
 internal interface IChatTranscriptMedia
 {
     IDalamudTextureWrap? Texture(string messageId);
@@ -178,6 +187,7 @@ internal readonly ref struct ChatTranscriptModel
     public IChatTranscriptVoice? Voice { get; init; }
     public IChatTranscriptPaging? Paging { get; init; }
     public IChatTranscriptPostCards? PostCards { get; init; }
+    public IChatTranscriptStoryReplies? StoryReplies { get; init; }
 }
 
 internal sealed class ChatTranscript
@@ -188,6 +198,7 @@ internal sealed class ChatTranscript
     private const int KindSystem = 2;
     private const int KindVoice = 3;
     private const int KindPost = 4;
+    private const int KindStoryReply = 5;
     private const float StampTextScale = 0.70f;
     private const float StampTickScale = 0.58f;
     private const float BubbleGap = 3f;
@@ -305,6 +316,10 @@ internal sealed class ChatTranscript
                 else if (message.Kind == KindPost)
                 {
                     DrawPostBubble(message, index, model);
+                }
+                else if (message.Kind == KindStoryReply)
+                {
+                    DrawStoryReplyBubble(message, index, model);
                 }
                 else
                 {
@@ -722,6 +737,84 @@ internal sealed class ChatTranscript
 
         var chipRow = DrawReactionChips(drawList, message, mine, bubbleMin, bubbleMax, fx.Alpha, model, scale);
         ImGui.SetCursorScreenPos(new Vector2(start.X, start.Y + bubbleHeight + chipRow + BubbleGap * scale));
+    }
+
+    private void DrawStoryReplyBubble(TranscriptMessage message, int index, in ChatTranscriptModel model)
+    {
+        if ((message.Flags & TranscriptFlags.Placeholder) != 0 || (message.Flags & TranscriptFlags.Deleted) != 0)
+        {
+            DrawTextBubble(message, index, model);
+            return;
+        }
+
+        if (model.StoryReplies is not { } replies || !replies.TryResolve(message.Id, out var context))
+        {
+            DrawTextBubble(message, index, model);
+            return;
+        }
+
+        DrawStoryReplyContext(message, context, replies, model);
+        DrawTextBubble(message, index, model);
+    }
+
+    private void DrawStoryReplyContext(in TranscriptMessage message, in ChatStoryReplyContext context,
+        IChatTranscriptStoryReplies replies, in ChatTranscriptModel model)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var mine = message.SenderId == model.MyUserId;
+        var drawList = ImGui.GetWindowDrawList();
+        var available = ScrollLayout.StableContentWidth();
+        var origin = ImGui.GetCursorScreenPos();
+        var labelSize = Typography.Measure(context.ContextText, 0.74f);
+        var labelX = mine ? origin.X + available - labelSize.X - 4f * scale : origin.X + 4f * scale;
+        Typography.Draw(new Vector2(labelX, origin.Y), context.ContextText,
+            Palette.WithAlpha(model.MutedInk, 0.95f), 0.74f);
+        var top = origin.Y + labelSize.Y + 5f * scale;
+        float bottom;
+        if (context.Unavailable || context.ThumbnailUrl is null)
+        {
+            var chipLabel = Loc.T(L.Aethergram.StoryUnavailable);
+            var chipTextSize = Typography.Measure(chipLabel, TextStyles.FootnoteEmphasized);
+            var chipHeight = chipTextSize.Y + 12f * scale;
+            var chipWidth = 12f * scale + 15f * scale + chipTextSize.X + 12f * scale;
+            var chipMin = new Vector2(mine ? origin.X + available - chipWidth : origin.X, top);
+            var chipMax = chipMin + new Vector2(chipWidth, chipHeight);
+            Squircle.Fill(drawList, chipMin, chipMax, chipHeight * 0.5f,
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f)));
+            AppSkin.Icon(drawList, new Vector2(chipMin.X + 12f * scale + 5f * scale, chipMin.Y + chipHeight * 0.5f),
+                FontAwesomeIcon.EyeSlash.ToIconString(), Palette.WithAlpha(model.MutedInk, 0.9f), 0.62f);
+            Typography.Draw(drawList, new Vector2(chipMin.X + 12f * scale + 15f * scale,
+                chipMin.Y + (chipHeight - chipTextSize.Y) * 0.5f), chipLabel,
+                Palette.WithAlpha(model.MutedInk, 0.95f), TextStyles.FootnoteEmphasized.Scale,
+                TextStyles.FootnoteEmphasized.Weight);
+            bottom = chipMax.Y;
+        }
+        else
+        {
+            var thumbWidth = 74f * scale;
+            var thumbHeight = 132f * scale;
+            var thumbMin = new Vector2(mine ? origin.X + available - thumbWidth : origin.X, top);
+            var thumbMax = thumbMin + new Vector2(thumbWidth, thumbHeight);
+            var rounding = 10f * scale;
+            var texture = replies.Thumbnail(context.ThumbnailUrl);
+            if (texture is null)
+            {
+                Squircle.Fill(drawList, thumbMin, thumbMax, rounding,
+                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.08f)));
+                AppSkin.Icon((thumbMin + thumbMax) * 0.5f, FontAwesomeIcon.Image.ToIconString(), model.MutedInk,
+                    1.1f);
+            }
+            else
+            {
+                var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, thumbWidth, thumbHeight);
+                drawList.AddImageRounded(texture.Handle, thumbMin, thumbMax, uv0, uv1, 0xFFFFFFFFu, rounding,
+                    ImDrawFlags.RoundCornersAll);
+            }
+
+            bottom = thumbMax.Y;
+        }
+
+        ImGui.SetCursorScreenPos(new Vector2(origin.X, bottom + 5f * scale));
     }
 
     private static Vector2 MeasureForwardLabel(in TranscriptMessage message, float scale)

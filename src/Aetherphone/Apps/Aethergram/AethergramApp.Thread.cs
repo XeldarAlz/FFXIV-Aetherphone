@@ -20,7 +20,8 @@ internal sealed partial class AethergramApp
 
     private readonly ThreadView threadView;
 
-    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>, IChatTranscriptPostCards
+    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>, IChatTranscriptPostCards,
+        IChatTranscriptStoryReplies
     {
         private readonly AethergramApp app;
 
@@ -74,6 +75,25 @@ internal sealed partial class AethergramApp
         public void Open(string postId) => app.OpenDetailFromLink(postId);
 
         public IDalamudTextureWrap? Thumbnail(string url) => app.images.Get(url);
+
+        protected override IChatTranscriptStoryReplies? StoryReplies => this;
+
+        public bool TryResolve(string messageId, out ChatStoryReplyContext context)
+        {
+            context = default;
+            var message = FindMessage(messageId);
+            if (message is null)
+            {
+                return false;
+            }
+
+            var contextText = Loc.T(message.SenderId == MyUserId
+                ? L.Aethergram.YouRepliedToStory
+                : L.Aethergram.RepliedToYourStory);
+            var unavailable = message.StoryExpired || string.IsNullOrEmpty(message.StoryMediaUrl);
+            context = new ChatStoryReplyContext(contextText, unavailable ? null : message.StoryMediaUrl, unavailable);
+            return true;
+        }
 
         protected override bool IsDeleted(GramMessageDto message) => message.Deleted;
 

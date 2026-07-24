@@ -129,6 +129,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     protected virtual IChatTranscriptPostCards? PostCards => null;
 
+    protected virtual IChatTranscriptStoryReplies? StoryReplies => null;
+
     protected abstract void DrawHeader(Rect area, string threadId);
 
     protected virtual void DrawAboveTranscript(ref Rect listRect, string threadId)
@@ -251,6 +253,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             Voice = this,
             Paging = this,
             PostCards = PostCards,
+            StoryReplies = StoryReplies,
         };
         transcript.Draw(listRect, model);
         composer.Draw(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), new ChatComposerModel

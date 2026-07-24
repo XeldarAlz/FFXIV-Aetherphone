@@ -7,6 +7,7 @@ internal static class ChatText
     private const int VoiceKind = 3;
     private const int ImageKind = 1;
     private const int PostKind = 4;
+    private const int StoryReplyKind = 5;
     private const int PreviewLength = 90;
 
     public static string QuotePreview(string? body, int kind)
@@ -20,6 +21,11 @@ internal static class ChatText
         if (kind == PostKind)
         {
             return Loc.T(L.DirectMessages.PostPreview);
+        }
+
+        if (kind == StoryReplyKind)
+        {
+            return Loc.T(L.DirectMessages.StoryReplyPreview);
         }
 
         if (kind == ImageKind && text.Length == 0)

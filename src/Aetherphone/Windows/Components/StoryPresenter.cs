@@ -14,6 +14,11 @@ namespace Aetherphone.Windows.Components;
 
 internal readonly record struct StoryConfirmLabels(LocString Confirm, LocString Cancel, LocString Busy);
 
+internal readonly record struct StoryReplyHooks(
+    LocString ReplyHint,
+    Action<string, string, string> Send,
+    Action<string> OpenThread);
+
 internal sealed class StoryPresenter : IDisposable
 {
     private readonly StoryStore stories;
@@ -25,12 +30,18 @@ internal sealed class StoryPresenter : IDisposable
     private readonly ConfirmService confirm;
     private readonly Action onCompose;
     private readonly Func<StoryDto, StoryViewers> viewersSource;
+    private readonly Func<bool> nextGroup;
+    private readonly Func<bool> previousGroup;
+    private readonly StoryReplyHooks? replyHooks;
+    private readonly StoryReplyPrompt? replyPrompt;
     private StoryRingDto? pendingRing;
+    private bool pendingOpenAtEnd;
+    private bool pendingFromViewer;
     private StoryDto[]? viewerItems;
 
     public StoryPresenter(AethernetSession session, GramClient client, MediaClient media, RemoteImageCache images,
         LodestoneService lodestone, StoryRingPainter painter, AppPalette palette, StoryConfirmLabels labels,
-        ConfirmService confirm, string logTag, Action onCompose)
+        ConfirmService confirm, string logTag, Action onCompose, StoryReplyHooks? reply = null)
     {
         stories = new StoryStore(session, client, media, logTag);
         tray = new StoryTrayRow(images, lodestone);
@@ -41,6 +52,13 @@ internal sealed class StoryPresenter : IDisposable
         this.confirm = confirm;
         this.onCompose = onCompose;
         viewersSource = ViewersFor;
+        nextGroup = TryAdvanceGroup;
+        previousGroup = TryRetreatGroup;
+        replyHooks = reply;
+        if (reply is { } hooks)
+        {
+            replyPrompt = new StoryReplyPrompt(hooks.ReplyHint, SendReply);
+        }
     }
 
     public bool Active => viewer.Active;
@@ -63,6 +81,8 @@ internal sealed class StoryPresenter : IDisposable
     public void OpenRing(StoryRingDto ring)
     {
         pendingRing = ring;
+        pendingOpenAtEnd = false;
+        pendingFromViewer = false;
         stories.OpenAuthor(ring.AuthorId);
     }
 
@@ -72,15 +92,20 @@ internal sealed class StoryPresenter : IDisposable
         stories.CloseAuthor();
         stories.ClearViewers();
         pendingRing = null;
+        pendingOpenAtEnd = false;
+        pendingFromViewer = false;
         viewerItems = null;
     }
 
     public void Advance()
     {
-        if (!viewer.Active && stories.OpenAuthorId is not null && pendingRing is null)
+        if (!viewer.Active && stories.OpenAuthorId is not null && (pendingRing is null || pendingFromViewer))
         {
             stories.CloseAuthor();
             viewerItems = null;
+            pendingRing = null;
+            pendingOpenAtEnd = false;
+            pendingFromViewer = false;
         }
 
         if (pendingRing is not { } ring)
@@ -95,18 +120,74 @@ internal sealed class StoryPresenter : IDisposable
             if (!stories.GroupLoading)
             {
                 pendingRing = null;
+                pendingOpenAtEnd = false;
+                pendingFromViewer = false;
+                viewer.CancelGroupWait();
             }
 
             return;
         }
 
         pendingRing = null;
+        var openAtEnd = pendingOpenAtEnd;
+        pendingOpenAtEnd = false;
+        pendingFromViewer = false;
         viewerItems = items;
         stories.ClearViewers();
         var label = ring.IsMe
             ? Loc.T(L.Story.YourStory)
             : SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
-        viewer.Open(items, label, ring.AuthorAvatarUrl, stories.MarkSeen, ring.IsMe, AskDelete, viewersSource);
+        viewer.Open(items, label, ring.AuthorAvatarUrl, stories.MarkSeen, ring.IsMe, AskDelete, viewersSource,
+            null, nextGroup, previousGroup, openAtEnd, ring.IsMe ? null : replyPrompt);
+    }
+
+    private bool TryAdvanceGroup() => TryOpenAdjacentRing(1);
+
+    private bool TryRetreatGroup() => TryOpenAdjacentRing(-1);
+
+    private bool TryOpenAdjacentRing(int direction)
+    {
+        var authorId = stories.OpenAuthorId;
+        if (authorId is null)
+        {
+            return false;
+        }
+
+        var snapshot = stories.Rings;
+        for (var ringIndex = 0; ringIndex < snapshot.Length; ringIndex++)
+        {
+            if (snapshot[ringIndex].AuthorId != authorId)
+            {
+                continue;
+            }
+
+            var target = ringIndex + direction;
+            if (target < 0 || target >= snapshot.Length)
+            {
+                return false;
+            }
+
+            pendingRing = snapshot[target];
+            pendingOpenAtEnd = direction < 0;
+            pendingFromViewer = true;
+            stories.OpenAuthor(snapshot[target].AuthorId);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void SendReply(StoryDto story, string text)
+    {
+        if (replyHooks is not { } hooks)
+        {
+            return;
+        }
+
+        var authorId = story.AuthorId;
+        hooks.Send(authorId, story.Id, text);
+        Close();
+        hooks.OpenThread(authorId);
     }
 
     private StoryViewers ViewersFor(StoryDto story)
