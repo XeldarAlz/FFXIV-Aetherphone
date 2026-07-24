@@ -37,6 +37,17 @@ internal sealed partial class VelvetShell
 
             stories.DrawTray(theme);
             var width = ScrollLayout.StableContentWidth();
+            Gap(4f);
+            var scopeRect = Reserve(34f);
+            var activeScope = (int)store.FeedScope;
+            var pickedScope = VSegmented.Draw("velvetFeedScope", scopeRect,
+                new[] { Loc.T(L.Velvet.FeedScopeAll), Loc.T(L.Velvet.FeedScopeConnections) }, activeScope, scale);
+            if (pickedScope >= 0 && pickedScope != activeScope)
+            {
+                store.SetFeedScope((VelvetFeedScope)pickedScope);
+                feedScrollTopPending = true;
+            }
+
             var feed = store.Feed;
             if (feed.Length == 0)
             {

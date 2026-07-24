@@ -344,6 +344,15 @@ internal sealed partial class VelvetShell
         var gridHeight = rows * cell + (rows - 1) * cellGap;
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, gridHeight));
+
+        if (!isMe && !connected && totalCount > owned.Count)
+        {
+            Gap(12f);
+            Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, ImGui.GetCursorScreenPos().Y),
+                Loc.Plural(L.Velvet.ConnectToUnlock, totalCount - owned.Count), VelvetTheme.RoseInk,
+                TextStyles.Callout, width - 40f * scale);
+            Gap(24f);
+        }
     }
 
     private void DrawLockedGallery(string name, float width, int totalCount)

@@ -263,7 +263,8 @@ internal sealed record VelvetPostDto(
     int CommentCount,
     string ScanStatus = "clean",
     string[]? MediaUrls = null,
-    MentionDto[]? Mentions = null) : IIdentified;
+    MentionDto[]? Mentions = null,
+    int Audience = 0) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
 
@@ -275,7 +276,8 @@ internal sealed record CreateVelvetPostRequest(
     int Height,
     string Caption,
     string[] Tags,
-    string[]? MediaKeys = null);
+    string[]? MediaKeys = null,
+    int Audience = 0);
 
 internal sealed record VelvetCommentDto(
     string Id,

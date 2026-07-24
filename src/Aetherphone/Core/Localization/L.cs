@@ -1816,6 +1816,10 @@ internal static class L
             new("velvet.filterHint", "Tap once to include, tap again to exclude.");
         public static readonly LocString FeedNone = new("velvet.feedNone", "Nothing shared yet");
         public static readonly LocString FeedNoneHint = new("velvet.feedNoneHint", "Be the first to post.");
+        public static readonly LocString FeedScopeAll = new("velvet.feedScopeAll", "Everyone");
+        public static readonly LocString FeedScopeConnections = new("velvet.feedScopeConnections", "Connections");
+        public static readonly LocString AudienceConnections = new("velvet.audienceConnections", "Connections only");
+        public static readonly LocString AudiencePublic = new("velvet.audiencePublic", "Everyone on Velvet");
         public static readonly LocString ImageUnavailable = new("velvet.imageUnavailable", "Image unavailable");
         public static readonly LocString GateTagline =
             new("velvet.gateTagline", "A private, adults only corner of the suite. Moonlit, unhurried, yours.");

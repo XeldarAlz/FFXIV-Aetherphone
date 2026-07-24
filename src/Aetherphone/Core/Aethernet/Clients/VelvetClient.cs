@@ -159,12 +159,12 @@ internal sealed class VelvetClient
         return net.GetAsync(path, AethernetJsonContext.Default.VelvetConnectionPage, token);
     }
 
-    public Task<VelvetFeedPage?> FeedAsync(string? cursor, CancellationToken token)
+    public Task<VelvetFeedPage?> FeedAsync(string scope, string? cursor, CancellationToken token)
     {
-        var path = "/velvet/feed";
+        var path = $"/velvet/feed?scope={Uri.EscapeDataString(scope)}";
         if (cursor is not null)
         {
-            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
         }
 
         return net.GetAsync(path, AethernetJsonContext.Default.VelvetFeedPage, token);
