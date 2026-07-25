@@ -1,0 +1,11 @@
+Component: melonDS DS libretro core
+Binary: melondsds_libretro.dll
+Upstream project: JesseTG/melonds-ds
+License: GPL-3.0-or-later
+Bundled license text: GPL-3.0.txt
+
+Release requirement:
+Record the exact upstream tag or commit used to build this DLL and make the
+corresponding source code available with every public binary release. A generic
+link to the newest upstream source is not a substitute for the exact source of
+the distributed binary.

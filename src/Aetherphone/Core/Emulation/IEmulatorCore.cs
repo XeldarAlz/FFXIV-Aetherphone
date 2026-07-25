@@ -6,6 +6,7 @@ internal interface IEmulatorCore : IDisposable
     double FramesPerSecond { get; }
     int VideoWidth { get; }
     int VideoHeight { get; }
+    float VideoAspectRatio { get; }
     ReadOnlyMemory<byte> VideoFrame { get; }
     bool HasNewFrame { get; }
     int AudioPlaybackSpeed { set; }

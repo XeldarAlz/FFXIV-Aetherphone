@@ -5,17 +5,35 @@ namespace Aetherphone.Core.Emulation.Libretro;
 
 internal sealed class LibretroAudioOutput : IDisposable
 {
+    private const int MaximumDirectSampleRate = 192000;
+    private const int ResampledOutputRate = 48000;
+    private const double ResampleEpsilon = 0.000000001;
+
     private readonly BufferedWaveProvider buffer;
     private readonly WaveOutEvent output;
+    private readonly bool resampleHighRateAudio;
+    private readonly double inputFramesPerOutputFrame;
     private short[] samples = Array.Empty<short>();
     private byte[] bytes = Array.Empty<byte>();
     private int playbackSpeed = 1;
     private int sourcePhase;
+    private double inputFramesUntilOutput;
+    private double accumulatedLeft;
+    private double accumulatedRight;
+    private double accumulatedWeight;
 
     public LibretroAudioOutput(double sampleRate)
     {
-        var rate = Math.Clamp((int)Math.Round(sampleRate), 8000, 192000);
-        buffer = new BufferedWaveProvider(new WaveFormat(rate, 16, 2))
+        var sourceRate = NormalizeSampleRate(sampleRate);
+        var outputRate = sourceRate > MaximumDirectSampleRate
+            ? ResampledOutputRate
+            : Math.Clamp((int)Math.Round(sourceRate), 8000, MaximumDirectSampleRate);
+
+        resampleHighRateAudio = sourceRate > MaximumDirectSampleRate;
+        inputFramesPerOutputFrame = resampleHighRateAudio ? sourceRate / outputRate : 1.0;
+        inputFramesUntilOutput = inputFramesPerOutputFrame;
+
+        buffer = new BufferedWaveProvider(new WaveFormat(outputRate, 16, 2))
         {
             BufferDuration = TimeSpan.FromMilliseconds(180),
             DiscardOnBufferOverflow = true,
@@ -37,7 +55,7 @@ internal sealed class LibretroAudioOutput : IDisposable
             }
 
             playbackSpeed = next;
-            sourcePhase = 0;
+            ResetProcessingState();
             buffer.ClearBuffer();
         }
     }
@@ -50,27 +68,22 @@ internal sealed class LibretroAudioOutput : IDisposable
         }
 
         var sampleCount = checked(frameCount * 2);
-        var byteCount = checked(sampleCount * sizeof(short));
         if (samples.Length < sampleCount)
         {
             samples = new short[sampleCount];
         }
 
-        if (bytes.Length < byteCount)
-        {
-            bytes = new byte[byteCount];
-        }
-
+        // The output can never contain more stereo frames than the input.
+        EnsureByteCapacity(checked(frameCount * 2 * sizeof(short)));
         Marshal.Copy(data, samples, 0, sampleCount);
-        if (playbackSpeed == 1)
+
+        var outputFrames = 0;
+        for (var frame = 0; frame < frameCount; frame++)
         {
-            Buffer.BlockCopy(samples, 0, bytes, 0, byteCount);
-            buffer.AddSamples(bytes, 0, byteCount);
-            return;
+            var sample = frame * 2;
+            outputFrames = ProcessInputFrame(samples[sample], samples[sample + 1], outputFrames);
         }
 
-        var outputFrames = AcceleratedAudioSampler.Copy(samples, frameCount, bytes, playbackSpeed,
-            ref sourcePhase);
         if (outputFrames > 0)
         {
             buffer.AddSamples(bytes, 0, outputFrames * 2 * sizeof(short));
@@ -79,27 +92,19 @@ internal sealed class LibretroAudioOutput : IDisposable
 
     public void Push(short left, short right)
     {
-        if (bytes.Length < 4)
+        EnsureByteCapacity(2 * sizeof(short));
+        var outputFrames = ProcessInputFrame(left, right, 0);
+        if (outputFrames > 0)
         {
-            bytes = new byte[4];
-        }
-
-        if (playbackSpeed == 1 || sourcePhase == 0)
-        {
-            bytes[0] = (byte)left;
-            bytes[1] = (byte)(left >> 8);
-            bytes[2] = (byte)right;
-            bytes[3] = (byte)(right >> 8);
-            buffer.AddSamples(bytes, 0, 4);
-        }
-
-        if (playbackSpeed > 1)
-        {
-            sourcePhase = (sourcePhase + 1) % playbackSpeed;
+            buffer.AddSamples(bytes, 0, outputFrames * 2 * sizeof(short));
         }
     }
 
-    public void Clear() => buffer.ClearBuffer();
+    public void Clear()
+    {
+        ResetProcessingState();
+        buffer.ClearBuffer();
+    }
 
     public void Dispose()
     {
@@ -112,5 +117,98 @@ internal sealed class LibretroAudioOutput : IDisposable
         }
 
         output.Dispose();
+    }
+
+    private int ProcessInputFrame(short left, short right, int outputFrames)
+    {
+        if (!resampleHighRateAudio)
+        {
+            return EmitFrame(left, right, outputFrames);
+        }
+
+        // SameBoy can expose its sample-accurate APU stream at roughly 2 MHz.
+        // Averaging every source-time interval performs the low-pass/downsample
+        // step that a libretro frontend is expected to provide.
+        var remainingInputFrame = 1.0;
+        while (remainingInputFrame > ResampleEpsilon)
+        {
+            var weight = Math.Min(remainingInputFrame, inputFramesUntilOutput);
+            accumulatedLeft += left * weight;
+            accumulatedRight += right * weight;
+            accumulatedWeight += weight;
+            remainingInputFrame -= weight;
+            inputFramesUntilOutput -= weight;
+
+            if (inputFramesUntilOutput > ResampleEpsilon)
+            {
+                continue;
+            }
+
+            var averagedLeft = ClampToInt16(accumulatedLeft / Math.Max(accumulatedWeight, ResampleEpsilon));
+            var averagedRight = ClampToInt16(accumulatedRight / Math.Max(accumulatedWeight, ResampleEpsilon));
+            outputFrames = EmitFrame(averagedLeft, averagedRight, outputFrames);
+
+            accumulatedLeft = 0;
+            accumulatedRight = 0;
+            accumulatedWeight = 0;
+            inputFramesUntilOutput = inputFramesPerOutputFrame;
+        }
+
+        return outputFrames;
+    }
+
+    private int EmitFrame(short left, short right, int outputFrames)
+    {
+        if (playbackSpeed == 1 || sourcePhase == 0)
+        {
+            var outputOffset = outputFrames * 2 * sizeof(short);
+            bytes[outputOffset] = (byte)left;
+            bytes[outputOffset + 1] = (byte)(left >> 8);
+            bytes[outputOffset + 2] = (byte)right;
+            bytes[outputOffset + 3] = (byte)(right >> 8);
+            outputFrames++;
+        }
+
+        if (playbackSpeed > 1)
+        {
+            sourcePhase = (sourcePhase + 1) % playbackSpeed;
+        }
+
+        return outputFrames;
+    }
+
+    private void ResetProcessingState()
+    {
+        sourcePhase = 0;
+        accumulatedLeft = 0;
+        accumulatedRight = 0;
+        accumulatedWeight = 0;
+        inputFramesUntilOutput = inputFramesPerOutputFrame;
+    }
+
+    private void EnsureByteCapacity(int required)
+    {
+        if (bytes.Length < required)
+        {
+            bytes = new byte[required];
+        }
+    }
+
+    private static double NormalizeSampleRate(double sampleRate)
+    {
+        if (!double.IsFinite(sampleRate) || sampleRate < 8000)
+        {
+            return ResampledOutputRate;
+        }
+
+        // Protect allocations and arithmetic from a broken core while still
+        // allowing the multi-megahertz rates used by sample-accurate cores.
+        return Math.Min(sampleRate, 8000000);
+    }
+
+    private static short ClampToInt16(double sample)
+    {
+        var rounded = (int)Math.Round(sample);
+        return (short)Math.Clamp(rounded, short.MinValue, short.MaxValue);
     }
 }

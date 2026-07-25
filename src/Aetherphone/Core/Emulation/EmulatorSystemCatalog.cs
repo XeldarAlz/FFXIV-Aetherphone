@@ -1,3 +1,5 @@
+using Aetherphone.Core.Localization;
+
 namespace Aetherphone.Core.Emulation;
 
 internal enum EmulatorInputProfile : byte
@@ -10,6 +12,8 @@ internal enum EmulatorInputProfile : byte
     WonderSwan,
     PlayStation,
     Nintendo64,
+    NintendoDs,
+    PlayStationPortable,
 }
 
 internal sealed record EmulatorCoreOptionDefinition(
@@ -18,9 +22,11 @@ internal sealed record EmulatorCoreOptionDefinition(
     IReadOnlyList<string> Values,
     IReadOnlyList<string>? DisplayValues = null,
     string Hint = "",
-    bool RestartRequired = true)
+    bool RestartRequired = true,
+    LocString? LocalizedLabel = null,
+    IReadOnlyList<LocString>? LocalizedDisplayValues = null)
 {
-    public string Display(string value)
+    public string Display(string value, Func<LocString, string>? localize = null)
     {
         var index = -1;
         for (var candidate = 0; candidate < Values.Count; candidate++)
@@ -31,6 +37,12 @@ internal sealed record EmulatorCoreOptionDefinition(
                 break;
             }
         }
+        if (localize is not null && LocalizedDisplayValues is not null &&
+            index >= 0 && index < LocalizedDisplayValues.Count)
+        {
+            return localize(LocalizedDisplayValues[index]);
+        }
+
         return DisplayValues is not null && index >= 0 && index < DisplayValues.Count
             ? DisplayValues[index]
             : value;
@@ -130,6 +142,22 @@ internal sealed record EmulatorSystemDefinition(
             EmulatorButtons.L2 => "Z",
             _ => DefaultButtonLabel(button),
         },
+        EmulatorInputProfile.NintendoDs => button switch
+        {
+            EmulatorButtons.L2 => "MIC",
+            EmulatorButtons.R2 => "⇄",
+            EmulatorButtons.L3 => "LID",
+            EmulatorButtons.R3 => "TOUCH",
+            _ => DefaultButtonLabel(button),
+        },
+        EmulatorInputProfile.PlayStationPortable => button switch
+        {
+            EmulatorButtons.B => "×",
+            EmulatorButtons.A => "○",
+            EmulatorButtons.Y => "□",
+            EmulatorButtons.X => "△",
+            _ => DefaultButtonLabel(button),
+        },
         _ => DefaultButtonLabel(button),
     };
 
@@ -160,6 +188,9 @@ internal static class EmulatorSystemCatalog
     private const EmulatorButtons Nintendo64Pad = Directions | EmulatorButtons.A | EmulatorButtons.B |
                                                    EmulatorButtons.L | EmulatorButtons.R | EmulatorButtons.L2 |
                                                    EmulatorButtons.Start;
+    private const EmulatorButtons NintendoDsPad = SixButtonPad | EmulatorButtons.L2 | EmulatorButtons.R2 |
+                                                  EmulatorButtons.L3 | EmulatorButtons.R3;
+    private const EmulatorButtons PspPad = SixButtonPad;
 
     public static readonly EmulatorSystemDefinition GameBoy = new(
         "gb", "Game Boy / Color", "GB/GBC", "sameboy_libretro.dll", TwoButtonPad, ".gb", ".gbc")
@@ -351,12 +382,12 @@ internal static class EmulatorSystemCatalog
         SaveDescription = "Cartridge save / Controller Pak + save states",
         DefaultCoreOptions = Options(
             ("mupen64plus-rdp-plugin", "angrylion"),
-            ("mupen64plus-rsp-plugin", "hle"),
+            ("mupen64plus-rsp-plugin", "parallel"),
             ("mupen64plus-pak1", "memory")),
         CoreOptions = new[]
         {
             Option("mupen64plus-rdp-plugin", "Video renderer", "angrylion"),
-            Option("mupen64plus-rsp-plugin", "RSP", "hle", "parallel"),
+            Option("mupen64plus-rsp-plugin", "RSP", "parallel", "hle"),
             Option("mupen64plus-pak1", "Player 1 Pak", "memory", "rumble", "none"),
             Option("mupen64plus-CountPerOp", "CPU timing", "0", "1", "2", "3"),
             Option("mupen64plus-angrylion-vioverlay", "VI filter", "Filtered", "AA+Blur", "AA+Dedither",
@@ -367,11 +398,99 @@ internal static class EmulatorSystemCatalog
         },
     };
 
+    public static readonly EmulatorSystemDefinition NintendoDs = new(
+        "nds", "Nintendo DS", "NDS", "melondsds_libretro.dll", NintendoDsPad, ".nds", ".ids")
+    {
+        InputProfile = EmulatorInputProfile.NintendoDs,
+        Description = "Nintendo DS using melonDS DS with software rendering and direct stylus input.",
+        SaveDescription = "Cartridge save + save states",
+        DefaultCoreOptions = Options(
+            ("melonds_console_mode", "ds"),
+            ("melonds_boot_mode", "direct"),
+            ("melonds_sysfile_mode", "builtin"),
+            ("melonds_render_mode", "software"),
+            ("melonds_threaded_renderer", "enabled"),
+            ("melonds_touch_mode", "auto"),
+            ("melonds_show_cursor", "touching"),
+            ("melonds_mic_input", "blow"),
+            ("melonds_mic_input_active", "hold"),
+            ("melonds_network_mode", "disabled"),
+            ("melonds_number_of_screen_layouts", "1"),
+            ("melonds_screen_layout1", "top-bottom"),
+            ("melonds_screen_layout2", "top-bottom")),
+        CoreOptions = new[]
+        {
+            LocalizedOptionWithDisplay("melonds_threaded_renderer", L.Games.DsThreadedRenderer,
+                new[] { "enabled", "disabled" }, new[] { L.Games.OptionEnabled, L.Games.OptionDisabled }),
+            LocalizedOptionWithDisplay("melonds_show_cursor", L.Games.DsStylusCursor,
+                new[] { "touching", "timeout", "disabled" },
+                new[] { L.Games.DsCursorTouching, L.Games.DsCursorTimeout, L.Games.DsCursorNever }),
+            LocalizedOptionWithDisplay("melonds_mic_input", L.Games.DsMicrophoneSource,
+                new[] { "blow", "silence" },
+                new[] { L.Games.DsMicrophoneBlow, L.Games.DsMicrophoneSilence }),
+            LocalizedOptionWithDisplay("melonds_network_mode", L.Games.DsWifiMode,
+                new[] { "disabled", "indirect" },
+                new[] { L.Games.OptionDisabled, L.Games.DsWifiIndirect }),
+        },
+        Firmware = new[]
+        {
+            new EmulatorFirmwareDefinition("bios7.bin", "Nintendo DS ARM7 BIOS", false),
+            new EmulatorFirmwareDefinition("bios9.bin", "Nintendo DS ARM9 BIOS", false),
+            new EmulatorFirmwareDefinition("firmware.bin", "Nintendo DS firmware", false),
+        },
+    };
+
+    public static readonly EmulatorSystemDefinition PlayStationPortable = new(
+        "psp", "PlayStation Portable", "PSP", "ppsspp_libretro.dll", PspPad,
+        ".iso", ".cso", ".chd", ".pbp", ".elf", ".prx")
+    {
+        InputProfile = EmulatorInputProfile.PlayStationPortable,
+        DiscBased = true,
+        Description = "PlayStation Portable using PPSSPP's software renderer inside the plugin.",
+        SaveDescription = "Memory Stick save + save states",
+        DefaultCoreOptions = Options(
+            ("ppsspp_backend", "none"),
+            ("ppsspp_software_rendering", "enabled"),
+            ("ppsspp_internal_resolution", "480x272"),
+            ("ppsspp_frameskip", "disabled"),
+            ("ppsspp_auto_frameskip", "disabled"),
+            ("ppsspp_memstick_inserted", "enabled"),
+            ("ppsspp_language", "Automatic"),
+            ("ppsspp_enable_wlan", "disabled"),
+            ("ppsspp_enable_builtin_pro_ad_hoc_server", "disabled"),
+            ("ppsspp_change_pro_ad_hoc_server_address", "socom.cc")),
+        CoreOptions = new[]
+        {
+            LocalizedOptionWithDisplay("ppsspp_frameskip", L.Games.PspFrameskip,
+                new[] { "disabled", "1", "2", "3" },
+                new[] { L.Games.OptionDisabled, L.Games.PspFrameskipOne, L.Games.PspFrameskipTwo,
+                    L.Games.PspFrameskipThree }),
+            LocalizedOptionWithDisplay("ppsspp_auto_frameskip", L.Games.PspAutoFrameskip,
+                new[] { "disabled", "enabled" }, new[] { L.Games.OptionDisabled, L.Games.OptionEnabled }),
+            LocalizedOptionWithDisplay("ppsspp_button_preference", L.Games.PspConfirmationButton,
+                new[] { "Cross", "Circle" }, new[] { L.Games.PspCross, L.Games.PspCircle }),
+            LocalizedOptionWithDisplay("ppsspp_enable_wlan", L.Games.PspWlan,
+                new[] { "disabled", "enabled" }, new[] { L.Games.OptionDisabled, L.Games.OptionEnabled }),
+            LocalizedOptionWithDisplay("ppsspp_enable_builtin_pro_ad_hoc_server", L.Games.PspBuiltInAdHocServer,
+                new[] { "disabled", "enabled" }, new[] { L.Games.OptionDisabled, L.Games.OptionEnabled }),
+            LocalizedOptionWithDisplay("ppsspp_change_pro_ad_hoc_server_address", L.Games.PspAdHocServer,
+                new[] { "socom.cc", "psp.gameplayer.club", "myneighborsushicat.com", "localhost" },
+                new[] { L.Games.PspServerSocom, L.Games.PspServerGameplayer, L.Games.PspServerSushi,
+                    L.Games.PspServerLocalhost }),
+        },
+        Firmware = new[]
+        {
+            new EmulatorFirmwareDefinition(Path.Combine("PPSSPP", "flash0"), "PPSSPP system assets", true),
+            new EmulatorFirmwareDefinition(Path.Combine("PPSSPP", "font_atlas.zim"), "PPSSPP font atlas", true),
+        },
+    };
+
     public static IReadOnlyList<EmulatorSystemDefinition> All { get; } =
         new[]
         {
             GameBoy, GameBoyAdvance, Nes, Snes, MegaDrive, SegaCd, Sega8Bit, Atari2600,
-            PcEngine, NeoGeo, NeoGeoPocket, WonderSwan,
+            PcEngine, NeoGeo, NeoGeoPocket, WonderSwan, PlayStation, Nintendo64, NintendoDs,
+            PlayStationPortable,
         };
 
     public static EmulatorSystemDefinition? ById(string id) =>
@@ -398,6 +517,10 @@ internal static class EmulatorSystemCatalog
 
     private static EmulatorCoreOptionDefinition OptionWithDisplay(string key, string label, string[] values,
         string[] displayValues) => new(key, label, values, displayValues);
+
+    private static EmulatorCoreOptionDefinition LocalizedOptionWithDisplay(string key, LocString label,
+        string[] values, LocString[] displayValues) =>
+        new(key, label.Source, values, null, LocalizedLabel: label, LocalizedDisplayValues: displayValues);
 
     private static IReadOnlyDictionary<string, string> Options(params (string Key, string Value)[] values) =>
         values.ToDictionary(static item => item.Key, static item => item.Value, StringComparer.Ordinal);

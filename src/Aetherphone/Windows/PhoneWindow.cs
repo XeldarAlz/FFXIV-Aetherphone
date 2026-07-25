@@ -80,12 +80,27 @@ internal sealed class PhoneWindow : Window
     {
         if (IsOpen)
         {
-            IsOpen = false;
+            CloseShell();
             return;
         }
 
         Maximize();
         IsOpen = true;
+    }
+
+    private void CloseShell()
+    {
+        // Release app-owned resources (including emulator input hooks)
+        // before the window disappears. OnClose may run afterward as well;
+        // PhoneShell.OnClosed is guarded against closing the app twice.
+        try
+        {
+            shell.OnClosed();
+        }
+        finally
+        {
+            IsOpen = false;
+        }
     }
 
     private void RequestPosition(Vector2? target)
@@ -197,7 +212,7 @@ internal sealed class PhoneWindow : Window
 
         if (shell.ConsumeCloseRequest())
         {
-            IsOpen = false;
+            CloseShell();
         }
     }
 

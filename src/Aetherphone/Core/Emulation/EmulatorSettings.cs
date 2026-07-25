@@ -36,6 +36,10 @@ internal enum EmulatorLayoutElement : byte
     Select,
     Start,
     FastForward,
+    LeftAnalog,
+    RightAnalog,
+    DsTopScreen,
+    DsBottomScreen,
 }
 
 [Serializable]
@@ -47,7 +51,7 @@ internal sealed class EmulatorElementLayout
 
     public float SafeX => Math.Clamp(X, 0f, 1f);
     public float SafeY => Math.Clamp(Y, 0f, 1f);
-    public float SafeScale => Math.Clamp(Scale, 0.5f, 1f);
+    public float SafeScale => Math.Clamp(Scale, 0.5f, 2f);
 }
 
 [Serializable]
@@ -73,6 +77,10 @@ internal sealed class EmulatorLayoutSettings
     public EmulatorElementLayout Select { get; set; } = new();
     public EmulatorElementLayout Start { get; set; } = new();
     public EmulatorElementLayout FastForward { get; set; } = new();
+    public EmulatorElementLayout LeftAnalog { get; set; } = new();
+    public EmulatorElementLayout RightAnalog { get; set; } = new();
+    public EmulatorElementLayout DsTopScreen { get; set; } = new();
+    public EmulatorElementLayout DsBottomScreen { get; set; } = new();
 
     public EmulatorLayoutSettings() => Reset();
 
@@ -98,12 +106,16 @@ internal sealed class EmulatorLayoutSettings
         EmulatorLayoutElement.Select => Select,
         EmulatorLayoutElement.Start => Start,
         EmulatorLayoutElement.FastForward => FastForward,
+        EmulatorLayoutElement.LeftAnalog => LeftAnalog,
+        EmulatorLayoutElement.RightAnalog => RightAnalog,
+        EmulatorLayoutElement.DsTopScreen => DsTopScreen,
+        EmulatorLayoutElement.DsBottomScreen => DsBottomScreen,
         _ => Screen,
     };
 
     public void Reset()
     {
-        Screen = At(0.5f, 0.23f, 1f);
+        Screen = At(0.5f, 0.30f, 1f);
         Dpad = At(0.21f, 0.69f, 1f);
         A = At(0.82f, 0.65f, 1f);
         B = At(0.68f, 0.72f, 1f);
@@ -123,6 +135,10 @@ internal sealed class EmulatorLayoutSettings
         Select = At(0.40f, 0.88f, 1f);
         Start = At(0.60f, 0.88f, 1f);
         FastForward = At(0.85f, 0.88f, 1f);
+        LeftAnalog = At(0.20f, 0.82f, 0.88f);
+        RightAnalog = At(0.80f, 0.82f, 0.88f);
+        DsTopScreen = At(0.50f, 0.21f, 1.35f);
+        DsBottomScreen = At(0.50f, 0.60f, 1.35f);
     }
 
     public void ResetLandscape()
@@ -147,6 +163,15 @@ internal sealed class EmulatorLayoutSettings
         Select = At(0.10f, 0.91f, 0.70f);
         Start = At(0.90f, 0.91f, 0.70f);
         FastForward = At(0.96f, 0.12f, 0.68f);
+        LeftAnalog = At(0.09f, 0.78f, 0.72f);
+        RightAnalog = At(0.91f, 0.78f, 0.72f);
+        DsTopScreen = At(0.35f, 0.50f, 1.00f);
+        DsBottomScreen = At(0.65f, 0.50f, 1.00f);
+    }
+
+    public void MigratePortraitScreenDown()
+    {
+        MoveIfUnchanged(Screen, 0.5f, 0.23f, 0.5f, 0.30f);
     }
 
     public void MigrateLandscapeControlsOutward()
@@ -234,6 +259,7 @@ internal sealed class EmulatorSettings
     public bool AutoSaveState { get; set; } = true;
     public bool AutoLoadState { get; set; } = true;
     public bool ProtectSaveMemoryOnStateLoad { get; set; } = true;
+    public bool HideOnScreenControls { get; set; }
     public int FastForwardSpeed { get; set; } = 2;
     public EmulatorShortcutSettings FastForwardShortcut { get; set; } = new();
     public EmulatorShortcutSettings SaveStateShortcut { get; set; } = new();
@@ -339,6 +365,7 @@ internal sealed class EmulatorSettings
         Layout ??= new EmulatorLayoutSettings();
         LandscapeLayout ??= EmulatorLayoutSettings.CreateLandscape();
         LandscapeLayout.MigrateLandscapeControlsOutward();
+        Layout.MigratePortraitScreenDown();
         RomFolders ??= new List<string>();
         ImportedFiles ??= new List<string>();
         FastForwardShortcut ??= new EmulatorShortcutSettings();
@@ -417,6 +444,7 @@ internal sealed class EmulatorSettings
             AutoSaveState = AutoSaveState,
             AutoLoadState = AutoLoadState,
             ProtectSaveMemoryOnStateLoad = ProtectSaveMemoryOnStateLoad,
+            HideOnScreenControls = HideOnScreenControls,
             FastForwardSpeed = FastForwardSpeed,
             FastForwardShortcut = CloneShortcut(FastForwardShortcut),
             SaveStateShortcut = CloneShortcut(SaveStateShortcut),

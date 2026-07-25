@@ -18,10 +18,12 @@ internal static class RetroEnvironmentCommand
     public const uint SetPixelFormat = 10;
     public const uint SetInputDescriptors = 11;
     public const uint SetDiskControlInterface = 13;
+    public const uint SetHwRender = 14;
     public const uint GetVariable = 15;
     public const uint SetVariables = 16;
     public const uint GetVariableUpdate = 17;
     public const uint SetSupportNoGame = 18;
+    public const uint GetLogInterface = 27;
     public const uint GetCoreAssetsDirectory = 30;
     public const uint GetSaveDirectory = 31;
     public const uint SetSystemAvInfo = 32;
@@ -38,8 +40,27 @@ internal static class RetroEnvironmentCommand
     public const uint GetInputMaxUsers = 61;
     public const uint SetCoreOptionsV2 = 67;
     public const uint SetCoreOptionsV2Intl = 68;
+    public const uint SetVariable = 70;
     public const uint SetDiskControlExtInterface = 57;
 }
+
+
+internal enum RetroLogLevel : uint
+{
+    Debug = 0,
+    Info = 1,
+    Warn = 2,
+    Error = 3,
+}
+
+[StructLayout(LayoutKind.Sequential)]
+internal struct RetroLogInterface
+{
+    public IntPtr Log;
+}
+
+[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+internal delegate void RetroLogCallback(uint level, IntPtr format);
 
 [StructLayout(LayoutKind.Sequential)]
 internal struct RetroSystemInfo

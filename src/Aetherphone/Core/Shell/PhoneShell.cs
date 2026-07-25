@@ -1,6 +1,7 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Emulation;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
@@ -51,6 +52,7 @@ internal sealed class PhoneShell : IDisposable
     private Vector2 indicatorPressPos;
     private CallState lastCallState;
     private DateTime lastVisibleDrawUtc = DateTime.MinValue;
+    private IPhoneApp? suspendedApp;
 
     public PhoneShell(PhoneServices services, AppBundle bundle)
     {
@@ -99,11 +101,45 @@ internal sealed class PhoneShell : IDisposable
             loading.BeginSession();
         }
 
+        if (suspendedApp is { } app)
+        {
+            suspendedApp = null;
+            if (ReferenceEquals(navigation.Current, app))
+            {
+                try
+                {
+                    app.OnOpened();
+                }
+                catch (Exception exception)
+                {
+                    AepLog.Error($"[shell] app-open {app.Id} threw: {exception.Message}");
+                }
+            }
+        }
+
+        EmulatorInputCaptureBridge.SetPhoneInteractive(minimize.Phase == MinimizePhase.None);
         director.OnPhoneOpened();
     }
 
     public void OnClosed()
     {
+        EmulatorInputCaptureBridge.SetPhoneInteractive(false);
+
+        // Closing the phone window must also close the active app lifecycle.
+        // Emulator apps release their keyboard hook from OnClosed/Close.
+        if (suspendedApp is null && navigation.Current is { } app)
+        {
+            suspendedApp = app;
+            try
+            {
+                app.OnClosed();
+            }
+            catch (Exception exception)
+            {
+                AepLog.Error($"[shell] app-close {app.Id} threw: {exception.Message}");
+            }
+        }
+
         loading.Cancel();
         director.Suspend();
     }
@@ -133,9 +169,17 @@ internal sealed class PhoneShell : IDisposable
 
     public bool WantsLandscape => navigation.Current?.WantsLandscape == true;
 
-    public void ForceMaximize() => minimize.SnapFull();
+    public void ForceMaximize()
+    {
+        EmulatorInputCaptureBridge.SetPhoneInteractive(true);
+        minimize.SnapFull();
+    }
 
-    public void ForceMinimized() => minimize.SnapMinimized();
+    public void ForceMinimized()
+    {
+        EmulatorInputCaptureBridge.SetPhoneInteractive(false);
+        minimize.SnapMinimized();
+    }
 
     private void OnBannerShown()
     {
@@ -159,6 +203,11 @@ internal sealed class PhoneShell : IDisposable
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         minimize.Advance(delta);
+
+        // Treat only the fully expanded phone as interactive. Reasserting this every frame
+        // makes input release deterministic throughout collapse/minimized states and avoids
+        // relying on a single side-button event.
+        EmulatorInputCaptureBridge.SetPhoneInteractive(minimize.Phase == MinimizePhase.None);
         if (minimize.Phase != MinimizePhase.None)
         {
             if (loading.IsActive)
@@ -197,6 +246,9 @@ internal sealed class PhoneShell : IDisposable
             switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta, isLandscape))
             {
                 case SideButtonAction.Minimize:
+                    // Release keyboard and gamepad to FFXIV immediately, before the
+                    // collapse animation begins. Expanding the phone recaptures them.
+                    EmulatorInputCaptureBridge.SetPhoneInteractive(false);
                     minimize.BeginCollapse();
                     break;
                 case SideButtonAction.Close:
@@ -220,13 +272,17 @@ internal sealed class PhoneShell : IDisposable
         }
 
         SyncCallNavigation();
-        var state = overlays.Assess(screen);
+        var topChromeEnabled = TopChromeEnabled();
+        var state = overlays.Assess(screen, topChromeEnabled);
         director.Advance(delta, state.Busy, navigation.AtHome, navigation.Current?.Id);
         UiAnchors.BeginFrame(director.WantsAnchors);
         UiAnchors.Report("chrome.lock", DeviceChrome.LockButtonRect(device));
         UiAnchors.Report("chrome.minimize", DeviceChrome.SideButtonRect(device));
-        UiAnchors.Report("chrome.controlcenter",
-            new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * ImGuiHelpers.GlobalScale)));
+        if (topChromeEnabled)
+        {
+            UiAnchors.Report("chrome.controlcenter",
+                new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * ImGuiHelpers.GlobalScale)));
+        }
         using (InputShield.Engage(state.ShieldBase || director.CapturesPointer))
         {
             DrawContent(screen, theme);
@@ -235,10 +291,10 @@ internal sealed class PhoneShell : IDisposable
                 DeviceChrome.MaskScreenCorners(screen, theme);
             }
 
-            DrawChrome(screen, theme);
+            DrawChrome(screen, theme, topChromeEnabled);
         }
 
-        overlays.DrawOverlays(screen, theme, delta, state);
+        overlays.DrawOverlays(screen, theme, delta, state, topChromeEnabled);
     }
 
     private Rect? TransparentBand(Rect screen)
@@ -283,12 +339,22 @@ internal sealed class PhoneShell : IDisposable
         painter.PaintCurrent(screen, theme, HomeMotion.Rest);
     }
 
-    private void DrawChrome(Rect screen, PhoneTheme theme)
+    private bool TopChromeEnabled()
+    {
+        var app = navigation.Current;
+        return app is null || !app.WantsImmersiveContent || app.WantsStatusBarInImmersiveContent;
+    }
+
+    private void DrawChrome(Rect screen, PhoneTheme theme, bool topChromeEnabled)
     {
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("chrome", screen.Size, false, ChromeFlags))
         {
-            StatusBar.Draw(screen, theme);
+            if (topChromeEnabled)
+            {
+                StatusBar.Draw(screen, theme);
+            }
+
             DrawHomeIndicator(screen, theme);
         }
     }

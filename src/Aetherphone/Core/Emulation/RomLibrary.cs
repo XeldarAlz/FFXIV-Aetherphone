@@ -94,10 +94,12 @@ internal sealed class RomLibrary
                                                 string.Join(", ", system.Extensions));
         }
 
-        // Descriptor/playlist files must remain beside their tracks. Keep those paths external instead of
-        // copying only the descriptor and silently breaking the game.
+        // Disc images can be several gigabytes, while descriptor/playlist files must remain beside their
+        // tracks. Keep all disc-based content at its original path and remember it in ImportedFiles instead
+        // of duplicating it inside the plugin configuration directory.
         var extension = Path.GetExtension(sourcePath);
-        if (extension.Equals(".cue", StringComparison.OrdinalIgnoreCase) ||
+        if (system.DiscBased ||
+            extension.Equals(".cue", StringComparison.OrdinalIgnoreCase) ||
             extension.Equals(".m3u", StringComparison.OrdinalIgnoreCase) ||
             extension.Equals(".toc", StringComparison.OrdinalIgnoreCase) ||
             extension.Equals(".ccd", StringComparison.OrdinalIgnoreCase))

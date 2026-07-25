@@ -1,0 +1,11 @@
+Component: PPSSPP libretro core
+Binary: ppsspp_libretro.dll
+Upstream project: hrydgard/ppsspp (libretro build)
+License: GPL-2.0-or-later, with additional third-party notices
+Bundled license texts: GPL-2.0.txt and SystemFiles/PPSSPP/LICENSE.TXT
+
+Release requirement:
+Record the exact upstream tag or commit used to build this DLL and make the
+corresponding source code and third-party notices available with every public
+binary release. A generic link to the newest upstream source is not a substitute
+for the exact source of the distributed binary.

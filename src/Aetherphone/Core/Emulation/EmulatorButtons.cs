@@ -27,4 +27,7 @@ internal readonly record struct EmulatorInputState(
     short LeftX = 0,
     short LeftY = 0,
     short RightX = 0,
-    short RightY = 0);
+    short RightY = 0,
+    short PointerX = 0,
+    short PointerY = 0,
+    bool PointerPressed = false);

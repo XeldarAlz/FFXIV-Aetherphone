@@ -52,7 +52,9 @@ internal sealed class ShellScreenPainter
             DeviceChrome.FillScreen(screen, theme, content.AppBackground);
         }
 
-        var contentRect = ContentRect(screen, theme);
+        var contentRect = app.WantsImmersiveContent
+            ? ImmersiveContentRect(screen)
+            : ContentRect(screen, theme);
         try
         {
             app.Draw(new PhoneContext(contentRect, content, navigation));
@@ -71,6 +73,12 @@ internal sealed class ShellScreenPainter
         var size = ImGui.CalcTextSize(text);
         var position = new Vector2(content.Center.X - size.X * 0.5f, content.Center.Y - size.Y * 0.5f);
         draw.AddText(position, ImGui.ColorConvertFloat4ToU32(theme.TextMuted), text);
+    }
+
+    public static Rect ImmersiveContentRect(Rect screen)
+    {
+        var inset = ImmersiveInset * ImGuiHelpers.GlobalScale;
+        return screen.Inset(inset);
     }
 
     public static Rect ContentRect(Rect screen, PhoneTheme theme)

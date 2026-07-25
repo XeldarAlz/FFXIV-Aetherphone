@@ -63,6 +63,7 @@ internal sealed class EmulatorSession : IDisposable
     public string CoreName => core.Name;
     public int VideoWidth => core.VideoWidth;
     public int VideoHeight => core.VideoHeight;
+    public float VideoAspectRatio => core.VideoAspectRatio;
     public ReadOnlyMemory<byte> VideoFrame => core.VideoFrame;
     public bool HasNewFrame => core.HasNewFrame;
     public EmulatorButtons Buttons { set => core.Buttons = value; }

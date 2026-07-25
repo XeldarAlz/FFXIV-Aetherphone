@@ -38,7 +38,7 @@ internal sealed class DirectoryBrowser
 
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
         {
-            path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            path = DefaultStartPath();
         }
 
         if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
@@ -48,6 +48,30 @@ internal sealed class DirectoryBrowser
         }
 
         Navigate(path);
+    }
+
+
+    private static string DefaultStartPath()
+    {
+        const string preferredDrive = @"C:\";
+        if (Directory.Exists(preferredDrive))
+        {
+            return preferredDrive;
+        }
+
+        var systemDirectory = Environment.GetFolderPath(Environment.SpecialFolder.System);
+        var systemRoot = string.IsNullOrWhiteSpace(systemDirectory)
+            ? string.Empty
+            : Path.GetPathRoot(systemDirectory);
+        if (!string.IsNullOrWhiteSpace(systemRoot) && Directory.Exists(systemRoot))
+        {
+            return systemRoot;
+        }
+
+        var currentRoot = Path.GetPathRoot(Environment.CurrentDirectory);
+        return !string.IsNullOrWhiteSpace(currentRoot) && Directory.Exists(currentRoot)
+            ? currentRoot
+            : string.Empty;
     }
 
     public void Navigate(string path)

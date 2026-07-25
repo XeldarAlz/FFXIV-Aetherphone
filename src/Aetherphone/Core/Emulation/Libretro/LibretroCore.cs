@@ -7,7 +7,18 @@ internal sealed class LibretroCore : IEmulatorCore
     private const uint SaveRamMemoryId = 0;
     private const uint JoypadDevice = 1;
     private const uint AnalogDevice = 5;
+    private const uint PointerDevice = 6;
+    private const uint PointerXId = 0;
+    private const uint PointerYId = 1;
+    private const uint PointerPressedId = 2;
+    private const uint PointerCountId = 3;
+    // PCSX-ReARMed expects a PlayStation-specific controller subclass when
+    // selecting the controller plugged into a port. RETRO_DEVICE_ANALOG (5)
+    // is only the base device used when the core polls analog axes.
+    // RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 1) = DualShock = 517.
+    private const uint PlayStationDualShockDevice = (2u << 8) | AnalogDevice;
     private const uint JoypadMaskId = 256;
+    private static readonly IntPtr HardwareFrameBuffer = new(-1);
     private readonly LibretroApi api;
     private readonly string systemDirectory;
     private readonly string saveDirectory;
@@ -18,6 +29,7 @@ internal sealed class LibretroCore : IEmulatorCore
     private readonly RetroAudioSampleBatchCallback audioBatchCallback;
     private readonly RetroInputPollCallback inputPollCallback;
     private readonly RetroInputStateCallback inputStateCallback;
+    private readonly RetroLogCallback logCallback;
     private readonly Dictionary<string, IntPtr> optionValues = new(StringComparer.Ordinal);
     private readonly Dictionary<string, IReadOnlyList<string>> supportedCoreOptions = new(StringComparer.Ordinal);
     private readonly IReadOnlyDictionary<string, string> requestedOptions;
@@ -37,6 +49,8 @@ internal sealed class LibretroCore : IEmulatorCore
     private EmulatorInputState input;
     private DiskControl? diskControl;
     private string contentDirectory = string.Empty;
+    private bool warnedHardwareFrame;
+    private bool variableUpdated;
 
     public LibretroCore(string corePath, string systemDirectory, string saveDirectory, bool enableAudio = true,
         IReadOnlyDictionary<string, string>? coreOptions = null, bool analogController = false,
@@ -45,7 +59,7 @@ internal sealed class LibretroCore : IEmulatorCore
         this.systemDirectory = systemDirectory;
         this.saveDirectory = saveDirectory;
         this.enableAudio = enableAudio;
-        controllerDevice = analogController ? AnalogDevice : JoypadDevice;
+        controllerDevice = analogController ? PlayStationDualShockDevice : JoypadDevice;
         this.preserveSaveRamOnStateLoad = preserveSaveRamOnStateLoad;
         requestedOptions = coreOptions ?? new Dictionary<string, string>();
         Directory.CreateDirectory(systemDirectory);
@@ -58,6 +72,7 @@ internal sealed class LibretroCore : IEmulatorCore
                 throw new InvalidOperationException("Unsupported libretro API version.");
             }
 
+            logCallback = OnCoreLog;
             environmentCallback = OnEnvironment;
             videoCallback = OnVideo;
             audioCallback = OnAudio;
@@ -97,6 +112,7 @@ internal sealed class LibretroCore : IEmulatorCore
     public double FramesPerSecond { get; private set; } = 59.7275;
     public int VideoWidth { get; private set; }
     public int VideoHeight { get; private set; }
+    public float VideoAspectRatio { get; private set; }
     public ReadOnlyMemory<byte> VideoFrame => frame;
     public bool HasNewFrame { get; private set; }
     public int AudioPlaybackSpeed
@@ -130,6 +146,7 @@ internal sealed class LibretroCore : IEmulatorCore
         this.savePath = savePath;
         contentDirectory = Path.GetDirectoryName(Path.GetFullPath(romPath)) ?? string.Empty;
         shutdownRequested = false;
+        warnedHardwareFrame = false;
         var pathPointer = KeepString(romPath);
         var game = new RetroGameInfo { Path = pathPointer, Meta = IntPtr.Zero, };
         if (!NeedFullPath)
@@ -150,8 +167,7 @@ internal sealed class LibretroCore : IEmulatorCore
         api.SetControllerPortDevice(0, controllerDevice);
         api.GetSystemAvInfo(out var avInfo);
         FramesPerSecond = avInfo.Timing.Fps > 1 ? avInfo.Timing.Fps : 59.7275;
-        VideoWidth = checked((int)avInfo.Geometry.BaseWidth);
-        VideoHeight = checked((int)avInfo.Geometry.BaseHeight);
+        ApplyGeometry(avInfo.Geometry);
         if (enableAudio)
         {
             try
@@ -359,6 +375,7 @@ internal sealed class LibretroCore : IEmulatorCore
         frame = Array.Empty<byte>();
         VideoWidth = 0;
         VideoHeight = 0;
+        VideoAspectRatio = 0f;
         ReleaseRom();
     }
 
@@ -383,6 +400,12 @@ internal sealed class LibretroCore : IEmulatorCore
             case RetroEnvironmentCommand.Shutdown:
                 shutdownRequested = true;
                 return true;
+            case RetroEnvironmentCommand.GetLogInterface:
+                return ProvideLogInterface(data);
+            case RetroEnvironmentCommand.SetHwRender:
+                AepLog.Error("[Emulator] The libretro core requested hardware rendering, but Aetherphone " +
+                             "currently supports software video frames only. For N64, select Angrylion RDP.");
+                return false;
             case RetroEnvironmentCommand.GetSystemDirectory:
                 WriteStringPointer(data, systemDirectory);
                 return true;
@@ -401,8 +424,11 @@ internal sealed class LibretroCore : IEmulatorCore
             case RetroEnvironmentCommand.GetVariable:
                 return GetVariable(data);
             case RetroEnvironmentCommand.GetVariableUpdate:
-                WriteBool(data, false);
+                WriteBool(data, variableUpdated);
+                variableUpdated = false;
                 return true;
+            case RetroEnvironmentCommand.SetVariable:
+                return SetVariable(data);
             case RetroEnvironmentCommand.GetCoreOptionsVersion:
                 Marshal.WriteInt32(data, 0);
                 return true;
@@ -413,8 +439,9 @@ internal sealed class LibretroCore : IEmulatorCore
                 Marshal.WriteInt32(data, 1);
                 return true;
             case RetroEnvironmentCommand.SetGeometry:
+                return CaptureGeometry(data);
             case RetroEnvironmentCommand.SetSystemAvInfo:
-                return true;
+                return CaptureSystemAvInfo(data);
             case RetroEnvironmentCommand.SetCoreOptions:
             case RetroEnvironmentCommand.SetCoreOptionsIntl:
             case RetroEnvironmentCommand.SetCoreOptionsDisplay:
@@ -424,6 +451,205 @@ internal sealed class LibretroCore : IEmulatorCore
             default:
                 return false;
         }
+    }
+
+    private bool CaptureGeometry(IntPtr data)
+    {
+        if (data == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            ApplyGeometry(Marshal.PtrToStructure<RetroGameGeometry>(data));
+            return true;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Emulator] rejected geometry update: {exception.Message}");
+            return false;
+        }
+    }
+
+    private bool CaptureSystemAvInfo(IntPtr data)
+    {
+        if (data == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            var info = Marshal.PtrToStructure<RetroSystemAvInfo>(data);
+            ApplyGeometry(info.Geometry);
+            if (info.Timing.Fps > 1)
+            {
+                FramesPerSecond = info.Timing.Fps;
+            }
+
+            return true;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Emulator] rejected AV-info update: {exception.Message}");
+            return false;
+        }
+    }
+
+    private void ApplyGeometry(RetroGameGeometry geometry)
+    {
+        var width = checked((int)geometry.BaseWidth);
+        var height = checked((int)geometry.BaseHeight);
+        if (width > 0)
+        {
+            VideoWidth = width;
+        }
+
+        if (height > 0)
+        {
+            VideoHeight = height;
+        }
+
+        var aspect = geometry.AspectRatio;
+        if (aspect <= 0.01f || float.IsNaN(aspect) || float.IsInfinity(aspect))
+        {
+            aspect = width > 0 && height > 0 ? width / (float)height : 0f;
+        }
+
+        if (aspect > 0.01f)
+        {
+            VideoAspectRatio = aspect;
+        }
+    }
+
+    private bool ProvideLogInterface(IntPtr data)
+    {
+        if (data == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var callback = new RetroLogInterface
+        {
+            Log = Marshal.GetFunctionPointerForDelegate(logCallback),
+        };
+        Marshal.StructureToPtr(callback, data, false);
+        return true;
+    }
+
+    // retro_log_printf_t is a printf-style variadic callback. Managed reverse P/Invoke
+    // cannot safely read the trailing C varargs, so only messages that are already fully
+    // formatted can be forwarded. Keeping a valid callback is still important because
+    // some cores assume the log function pointer is non-null.
+    private static void OnCoreLog(uint level, IntPtr format)
+    {
+        try
+        {
+            var message = Marshal.PtrToStringUTF8(format)?.TrimEnd('\r', '\n');
+            if (string.IsNullOrWhiteSpace(message) || ContainsPrintfConversion(message))
+            {
+                return;
+            }
+
+            var logLevel = (RetroLogLevel)Math.Min(level, (uint)RetroLogLevel.Error);
+            var prefix = logLevel switch
+            {
+                RetroLogLevel.Debug => "DEBUG",
+                RetroLogLevel.Info => "INFO",
+                RetroLogLevel.Warn => "WARN",
+                _ => "ERROR",
+            };
+            var text = $"[Libretro {prefix}] {message}";
+
+            switch (logLevel)
+            {
+                case RetroLogLevel.Debug:
+                    AepLog.Debug(text);
+                    break;
+                case RetroLogLevel.Info:
+                    AepLog.Info(text);
+                    break;
+                case RetroLogLevel.Warn:
+                    AepLog.Warning(text);
+                    break;
+                default:
+                    AepLog.Error(text);
+                    break;
+            }
+        }
+        catch
+        {
+            // Native callbacks must never propagate managed exceptions.
+        }
+    }
+
+    private static bool ContainsPrintfConversion(string format)
+    {
+        for (var index = 0; index < format.Length; index++)
+        {
+            if (format[index] != '%')
+            {
+                continue;
+            }
+
+            index++;
+            if (index >= format.Length)
+            {
+                return false;
+            }
+
+            // A doubled percent sign is literal text, not a conversion.
+            if (format[index] == '%')
+            {
+                continue;
+            }
+
+            while (index < format.Length && "-+ #0'".Contains(format[index]))
+            {
+                index++;
+            }
+
+            if (index < format.Length && format[index] == '*')
+            {
+                index++;
+            }
+            else
+            {
+                while (index < format.Length && char.IsDigit(format[index]))
+                {
+                    index++;
+                }
+            }
+
+            if (index < format.Length && format[index] == '.')
+            {
+                index++;
+                if (index < format.Length && format[index] == '*')
+                {
+                    index++;
+                }
+                else
+                {
+                    while (index < format.Length && char.IsDigit(format[index]))
+                    {
+                        index++;
+                    }
+                }
+            }
+
+            while (index < format.Length && "hljztLI".Contains(format[index]))
+            {
+                index++;
+            }
+
+            if (index < format.Length && "diuoxXfFeEgGaAcspn".Contains(format[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ReadLegacyVariables(IntPtr data)
@@ -469,6 +695,29 @@ internal sealed class LibretroCore : IEmulatorCore
         }
     }
 
+
+    private bool SetVariable(IntPtr data)
+    {
+        if (data == IntPtr.Zero)
+        {
+            return true;
+        }
+
+        var variable = Marshal.PtrToStructure<RetroVariable>(data);
+        var key = Marshal.PtrToStringUTF8(variable.Key);
+        var value = Marshal.PtrToStringUTF8(variable.Value);
+        if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value) ||
+            !supportedCoreOptions.TryGetValue(key, out var supported) ||
+            !supported.Contains(value, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        optionValues[key] = KeepString(value);
+        variableUpdated = true;
+        return true;
+    }
+
     private bool GetVariable(IntPtr data)
     {
         if (data == IntPtr.Zero)
@@ -490,8 +739,26 @@ internal sealed class LibretroCore : IEmulatorCore
             return;
         }
 
+        // RETRO_HW_FRAME_BUFFER_VALID is (void*)-1. Treating it as a CPU pixel
+        // buffer would make Marshal.Copy read address -1 and terminate the host process.
+        if (data == HardwareFrameBuffer)
+        {
+            if (!warnedHardwareFrame)
+            {
+                warnedHardwareFrame = true;
+                AepLog.Error("[Emulator] A hardware-rendered libretro frame was rejected. " +
+                             "Use the Angrylion software renderer for Nintendo 64.");
+            }
+
+            return;
+        }
+
         VideoWidth = checked((int)width);
         VideoHeight = checked((int)height);
+        if (VideoAspectRatio <= 0.01f)
+        {
+            VideoAspectRatio = VideoWidth / (float)VideoHeight;
+        }
         var required = checked(VideoWidth * VideoHeight * 4);
         if (frame.Length != required)
         {
@@ -585,6 +852,18 @@ internal sealed class LibretroCore : IEmulatorCore
         if (port != 0)
         {
             return 0;
+        }
+
+        if (device == PointerDevice && index == 0)
+        {
+            return id switch
+            {
+                PointerXId => input.PointerX,
+                PointerYId => input.PointerY,
+                PointerPressedId => input.PointerPressed ? (short)1 : (short)0,
+                PointerCountId => input.PointerPressed ? (short)1 : (short)0,
+                _ => 0,
+            };
         }
 
         if (device == AnalogDevice && id <= 1)

@@ -37,12 +37,12 @@ internal static class AppHeader
         }
     }
 
-    public static void DrawBackOnly(in PhoneContext context, Action? onBack = null)
+    public static void DrawBackOnly(in PhoneContext context, Action? onBack = null, float topInset = 20f)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
         var theme = context.Theme;
-        var center = new Vector2(content.Min.X + 20f * scale, content.Min.Y + 20f * scale);
+        var center = new Vector2(content.Min.X + 20f * scale, content.Min.Y + topInset * scale);
         var radius = 17f * scale;
         var hitMin = center - new Vector2(20f * scale);
         var hitMax = center + new Vector2(20f * scale);
