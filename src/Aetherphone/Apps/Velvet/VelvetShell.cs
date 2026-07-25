@@ -22,7 +22,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 
@@ -31,6 +30,7 @@ namespace Aetherphone.Apps.Velvet;
 internal sealed partial class VelvetShell : IPhoneApp
 {
     private const float HeartbeatSeconds = 45f;
+    private const long RaceProbeIntervalMilliseconds = 1000;
 
     private readonly VelvetStore store;
     private readonly StoryPresenter stories;
@@ -66,11 +66,13 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly RouterDraw<VelvetView> drawView;
     private readonly Action back;
 
+    private readonly RaceWatch race = new();
+    private readonly FrameworkTicker raceTicker;
+
     private PhoneTheme theme = PhoneTheme.Default;
     private INavigator navigation = null!;
     private VelvetPage activeTab = VelvetPage.Discover;
     private float sinceHeartbeat = HeartbeatSeconds;
-    private bool cachedLalafell;
 
     public VelvetShell(AethernetSession session, AethernetApi net, LodestoneService lodestone,
         Configuration configuration, PhotoLibrary library, HttpService http, RemoteImageCache images,
@@ -109,6 +111,8 @@ internal sealed partial class VelvetShell : IPhoneApp
         drawView = DrawView;
         back = () => router.Pop();
         threadView = new ThreadView(this);
+        raceTicker = new FrameworkTicker(Plugin.Framework, RaceProbeIntervalMilliseconds, ProbeRace,
+            installer.Gate(Id));
     }
 
     public string Id => "velvet";
@@ -206,7 +210,7 @@ internal sealed partial class VelvetShell : IPhoneApp
             return;
         }
 
-        if (IsLalafellCharacter() || store.AccessBlocked)
+        if (Unavailable)
         {
             TourHolds.Hold(Id);
             store.EnsureMe();
@@ -263,6 +267,7 @@ internal sealed partial class VelvetShell : IPhoneApp
 
     public void Dispose()
     {
+        raceTicker.Dispose();
         threadView.Dispose();
         stories.Dispose();
         store.Dispose();
@@ -272,34 +277,38 @@ internal sealed partial class VelvetShell : IPhoneApp
         configuration.VelvetAcknowledgedGate &&
         configuration.VelvetAcknowledgedGateVersion >= Configuration.VelvetGateVersion;
 
+    private bool Unavailable => race.IsLalafell is not false || store.AccessBlocked;
+
     private void TickHeartbeat()
     {
         sinceHeartbeat += ImGui.GetIO().DeltaTime;
-        if (sinceHeartbeat >= HeartbeatSeconds)
+        if (sinceHeartbeat < HeartbeatSeconds)
         {
-            sinceHeartbeat = 0f;
-            store.Heartbeat(SocialRegion.EffectiveCode(configuration, gameData), IsLalafellCharacter());
+            return;
         }
+
+        if (race.IsLalafell is not { } isLalafell)
+        {
+            return;
+        }
+
+        sinceHeartbeat = 0f;
+        store.Heartbeat(SocialRegion.EffectiveCode(configuration, gameData), isLalafell);
     }
 
-    private bool IsLalafellCharacter()
+    private void ProbeRace()
     {
-        const byte lalafellRaceId = 3;
-        if (!Plugin.Framework.IsInFrameworkUpdateThread)
+        if (!Plugin.ClientState.IsLoggedIn)
         {
-            return cachedLalafell;
+            race.Forget();
+            return;
         }
 
         var local = gameData.LocalPlayer;
-        if (local is null)
+        if (local is not null)
         {
-            return cachedLalafell;
+            race.Observe(local.Customize);
         }
-
-        var customize = local.Customize;
-        var raceIndex = (int)CustomizeIndex.Race;
-        cachedLalafell = customize.Length > raceIndex && customize[raceIndex] == lalafellRaceId;
-        return cachedLalafell;
     }
 
     private void DrawView(VelvetView view, Rect area, int depth)
