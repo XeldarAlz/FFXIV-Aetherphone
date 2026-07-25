@@ -17,6 +17,7 @@ internal sealed class HomeLayoutService
         "chirper", "aethergram", "velvet", "polls",
         "camera", "photos", "feedback", "music",
         "maps", "venues", "games", "market",
+        "appstore",
     };
 
     private static readonly string[] DefaultSecondPageApps =
@@ -24,25 +25,29 @@ internal sealed class HomeLayoutService
         "skywatcher", "collections", "inventory", "fishing",
         "clock", "notes", "calculator", "timers",
         "wallet", "dailies", "calendar", "news",
-        "character", "notifications",
+        "character", "notifications", "jobs",
     };
 
     private static readonly string[] DefaultTrailingApps = { "dev" };
+    private static readonly string[] MandatoryApps = { "appstore", "settings" };
 
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly WidgetRegistry widgets;
-    private readonly Configuration configuration;
+    private readonly IHomeConfiguration configuration;
     private readonly Dictionary<string, IPhoneApp> byId = new();
     private readonly List<List<HomeTile>> pages = new();
     private readonly List<HomeTile> dock = new();
     private readonly List<List<GridCell>> placements = new();
+    private readonly List<HomeTile> pending = new();
+    private readonly List<HomeTile> overflow = new();
     private readonly bool[] availability;
+    private readonly HashSet<string> installed = new();
     private int rows;
     private int folderCounter;
     private int widgetCounter;
     private bool placementsDirty = true;
 
-    public HomeLayoutService(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets, Configuration configuration)
+    public HomeLayoutService(IReadOnlyList<IPhoneApp> apps, WidgetRegistry widgets, IHomeConfiguration configuration)
     {
         this.apps = apps;
         this.widgets = widgets;
@@ -127,9 +132,9 @@ internal sealed class HomeLayoutService
 
     public bool CanDock(HomeTile tile) => tile.App is not null && dock.Count < DockCapacity && !dock.Contains(tile);
 
-    public void MoveTile(HomeTile tile, int targetPage, int insertIndex)
+    public void MoveTile(HomeTile tile, int targetPage, GridCell cell)
     {
-        if (targetPage < 0 || targetPage > pages.Count)
+        if (targetPage < 0 || targetPage >= pages.Count)
         {
             return;
         }
@@ -139,14 +144,40 @@ internal sealed class HomeLayoutService
             return;
         }
 
-        if (targetPage == pages.Count)
+        tile.Cell = cell;
+        pages[targetPage].Add(tile);
+        Commit();
+    }
+
+    public bool TryResolveDrop(int page, HomeTile tile, GridCell desired, out GridCell cell)
+    {
+        cell = HomeGridSolver.Unassigned;
+        if (page < 0 || page >= pages.Count)
         {
-            pages.Add(new List<HomeTile>());
+            return false;
         }
 
-        var page = pages[targetPage];
-        page.Insert(Math.Clamp(insertIndex, 0, page.Count), tile);
-        Commit();
+        Span<bool> occupied = stackalloc bool[HomeGridSolver.MaxCells];
+        occupied.Clear();
+        Occupy(occupied, pages[page], tile);
+        return HomeGridSolver.TryFindFree(occupied, Columns, rows, tile.ColumnSpan, tile.RowSpan, desired, out cell);
+    }
+
+    private void Occupy(Span<bool> occupied, List<HomeTile> tiles, HomeTile? skip)
+    {
+        for (var index = 0; index < tiles.Count; index++)
+        {
+            var tile = tiles[index];
+            if (ReferenceEquals(tile, skip) || !HomeGridSolver.IsAssigned(tile.Cell))
+            {
+                continue;
+            }
+
+            if (HomeGridSolver.RegionFree(occupied, Columns, rows, tile.Cell, tile.ColumnSpan, tile.RowSpan))
+            {
+                HomeGridSolver.Mark(occupied, Columns, tile.Cell, tile.ColumnSpan, tile.RowSpan);
+            }
+        }
     }
 
     public bool MoveToDock(HomeTile tile, int insertIndex)
@@ -161,6 +192,7 @@ internal sealed class HomeLayoutService
             return false;
         }
 
+        tile.Cell = HomeGridSolver.Unassigned;
         dock.Insert(Math.Clamp(insertIndex, 0, dock.Count), tile);
         Commit();
         return true;
@@ -188,6 +220,7 @@ internal sealed class HomeLayoutService
         {
             (targetPage, targetIndex) = Locate(target);
             var folder = HomeTile.ForFolder(NextFolderKey(), string.Empty, new[] { target.App! });
+            folder.Cell = target.Cell;
             AddApps(folder, dragged);
             pages[targetPage][targetIndex] = folder;
         }
@@ -195,7 +228,7 @@ internal sealed class HomeLayoutService
         Commit();
     }
 
-    public void RemoveFromFolder(HomeTile folder, IPhoneApp app, int targetPage, int insertIndex)
+    public void RemoveFromFolder(HomeTile folder, IPhoneApp app, int targetPage)
     {
         if (!folder.IsFolder || !folder.Apps.Remove(app))
         {
@@ -203,8 +236,7 @@ internal sealed class HomeLayoutService
         }
 
         targetPage = Math.Clamp(targetPage, 0, Math.Max(0, pages.Count - 1));
-        var page = pages[targetPage];
-        page.Insert(Math.Clamp(insertIndex, 0, page.Count), HomeTile.ForApp(app));
+        pages[targetPage].Add(HomeTile.ForApp(app));
         Commit();
     }
 
@@ -219,6 +251,91 @@ internal sealed class HomeLayoutService
         Save();
     }
 
+    public bool IsInstalled(string appId) => installed.Contains(appId);
+
+    public static bool CanUninstall(string appId)
+    {
+        for (var index = 0; index < MandatoryApps.Length; index++)
+        {
+            if (string.Equals(appId, MandatoryApps[index], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public bool Install(string appId)
+    {
+        if (!byId.TryGetValue(appId, out var app) || !app.IsAvailable || !installed.Add(appId))
+        {
+            return false;
+        }
+
+        Append(HomeTile.ForApp(app));
+        Commit();
+        return true;
+    }
+
+    public bool Uninstall(string appId)
+    {
+        if (!CanUninstall(appId) || !installed.Remove(appId))
+        {
+            return false;
+        }
+
+        DetachApp(appId);
+        Commit();
+        return true;
+    }
+
+    private void DetachApp(string appId)
+    {
+        for (var index = dock.Count - 1; index >= 0; index--)
+        {
+            if (string.Equals(dock[index].App?.Id, appId, StringComparison.Ordinal))
+            {
+                dock.RemoveAt(index);
+                return;
+            }
+        }
+
+        for (var page = 0; page < pages.Count; page++)
+        {
+            var tiles = pages[page];
+            for (var index = tiles.Count - 1; index >= 0; index--)
+            {
+                var tile = tiles[index];
+                if (string.Equals(tile.App?.Id, appId, StringComparison.Ordinal))
+                {
+                    tiles.RemoveAt(index);
+                    return;
+                }
+
+                for (var appIndex = tile.Apps.Count - 1; appIndex >= 0; appIndex--)
+                {
+                    if (string.Equals(tile.Apps[appIndex].Id, appId, StringComparison.Ordinal))
+                    {
+                        tile.Apps.RemoveAt(appIndex);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    public void SetFolderTint(HomeTile folder, string tint)
+    {
+        if (!folder.IsFolder)
+        {
+            return;
+        }
+
+        folder.FolderTint = tint;
+        Save();
+    }
+
     public bool AddWidget(IHomeWidget widget, WidgetSize size, int pageIndex)
     {
         if (!WidgetSizes.Contains(widget.Sizes, size))
@@ -227,7 +344,7 @@ internal sealed class HomeLayoutService
         }
 
         pageIndex = Math.Clamp(pageIndex, 0, Math.Max(0, pages.Count - 1));
-        pages[pageIndex].Insert(0, HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, size));
+        pages[pageIndex].Add(HomeTile.ForWidget(NextWidgetKey(widget.Id), widget, size));
         Commit();
         return true;
     }
@@ -267,7 +384,13 @@ internal sealed class HomeLayoutService
         pages[page].RemoveAt(index);
         for (var appIndex = 0; appIndex < folder.Apps.Count; appIndex++)
         {
-            pages[page].Insert(index + appIndex, HomeTile.ForApp(folder.Apps[appIndex]));
+            var tile = HomeTile.ForApp(folder.Apps[appIndex]);
+            if (appIndex == 0)
+            {
+                tile.Cell = folder.Cell;
+            }
+
+            pages[page].Add(tile);
         }
 
         Commit();
@@ -275,7 +398,7 @@ internal sealed class HomeLayoutService
 
     public void Commit()
     {
-        Normalize();
+        Arrange();
         Save();
         placementsDirty = true;
     }
@@ -330,19 +453,11 @@ internal sealed class HomeLayoutService
 
         if (saved is not null && saved.Pages.Count > 0)
         {
-            LoadPages(saved, placed);
+            LoadPages(saved.Pages, placed);
         }
         else if (saved is null)
         {
             SeedDefaultLayout(placed);
-        }
-
-        for (var index = 0; index < apps.Count; index++)
-        {
-            if (apps[index].IsAvailable && placed.Add(apps[index].Id))
-            {
-                Append(HomeTile.ForApp(apps[index]));
-            }
         }
 
         if (saved is null)
@@ -355,8 +470,70 @@ internal sealed class HomeLayoutService
             pages.Add(new List<HomeTile>());
         }
 
-        Normalize();
+        LoadInstalled(saved, placed);
+        Arrange();
         placementsDirty = true;
+    }
+
+    private void LoadInstalled(HomeLayout? saved, HashSet<string> placed)
+    {
+        installed.Clear();
+        if (saved?.Installed is { Count: > 0 } stored)
+        {
+            for (var index = 0; index < stored.Count; index++)
+            {
+                installed.Add(stored[index]);
+            }
+        }
+        else
+        {
+            SeedInstalled(saved);
+        }
+
+        for (var index = 0; index < MandatoryApps.Length; index++)
+        {
+            installed.Add(MandatoryApps[index]);
+        }
+
+        var queue = new List<IPhoneApp>();
+        for (var index = 0; index < apps.Count; index++)
+        {
+            var app = apps[index];
+            if (app.IsAvailable && installed.Contains(app.Id) && placed.Add(app.Id))
+            {
+                queue.Add(app);
+            }
+        }
+
+        queue.Sort((first, second) =>
+            string.Compare(first.DisplayName, second.DisplayName, StringComparison.OrdinalIgnoreCase));
+        for (var index = 0; index < queue.Count; index++)
+        {
+            Append(HomeTile.ForApp(queue[index]));
+        }
+    }
+
+    private void SeedInstalled(HomeLayout? saved)
+    {
+        if (saved is null)
+        {
+            for (var index = 0; index < apps.Count; index++)
+            {
+                if (apps[index].IsAvailable)
+                {
+                    installed.Add(apps[index].Id);
+                }
+            }
+
+            return;
+        }
+
+        var ids = new List<string>();
+        CollectSavedHomeIds(saved, ids);
+        for (var index = 0; index < ids.Count; index++)
+        {
+            installed.Add(ids[index]);
+        }
     }
 
     private List<string> ResolveDockIds(HomeLayout? saved)
@@ -375,12 +552,12 @@ internal sealed class HomeLayoutService
         return defaults;
     }
 
-    private void LoadPages(HomeLayout saved, HashSet<string> placed)
+    private void LoadPages(List<HomePage> source, HashSet<string> placed)
     {
-        for (var pageIndex = 0; pageIndex < saved.Pages.Count; pageIndex++)
+        for (var pageIndex = 0; pageIndex < source.Count; pageIndex++)
         {
             var page = new List<HomeTile>();
-            var items = saved.Pages[pageIndex].Items;
+            var items = source[pageIndex].Items;
             for (var itemIndex = 0; itemIndex < items.Count; itemIndex++)
             {
                 if (LoadItem(items[itemIndex], placed) is { } tile)
@@ -398,6 +575,17 @@ internal sealed class HomeLayoutService
 
     private HomeTile? LoadItem(HomeItem item, HashSet<string> placed)
     {
+        var tile = BuildItem(item, placed);
+        if (tile is not null)
+        {
+            tile.Cell = new GridCell(item.Column, item.Row);
+        }
+
+        return tile;
+    }
+
+    private HomeTile? BuildItem(HomeItem item, HashSet<string> placed)
+    {
         if (string.Equals(item.Kind, "folder", StringComparison.Ordinal))
         {
             var contents = ResolveApps(item.AppIds, placed);
@@ -408,7 +596,7 @@ internal sealed class HomeLayoutService
 
             return contents.Count == 1
                 ? HomeTile.ForApp(contents[0])
-                : HomeTile.ForFolder(NextFolderKey(), item.FolderName, contents);
+                : HomeTile.ForFolder(NextFolderKey(), item.FolderName, contents, item.FolderTint);
         }
 
         if (string.Equals(item.Kind, "widget", StringComparison.Ordinal))
@@ -494,26 +682,16 @@ internal sealed class HomeLayoutService
             pages.Add(new List<HomeTile>());
         }
 
-        var last = pages[^1];
-        last.Add(tile);
-        if (HomeGridSolver.Fits(last, Columns, rows))
-        {
-            return;
-        }
-
-        last.RemoveAt(last.Count - 1);
-        pages.Add(new List<HomeTile> { tile });
+        pages[^1].Add(tile);
     }
 
-    private void Normalize()
+    private void Arrange()
     {
         FoldDegenerateFolders();
-        var scratch = new List<GridCell>();
         for (var page = 0; page < pages.Count; page++)
         {
-            var tiles = pages[page];
-            var fitCount = HomeGridSolver.Solve(tiles, Columns, rows, scratch);
-            if (fitCount >= tiles.Count)
+            PlacePage(pages[page]);
+            if (overflow.Count == 0)
             {
                 continue;
             }
@@ -523,8 +701,6 @@ internal sealed class HomeLayoutService
                 pages.Add(new List<HomeTile>());
             }
 
-            var overflow = tiles.GetRange(fitCount, tiles.Count - fitCount);
-            tiles.RemoveRange(fitCount, tiles.Count - fitCount);
             pages[page + 1].InsertRange(0, overflow);
         }
 
@@ -534,6 +710,42 @@ internal sealed class HomeLayoutService
             {
                 pages.RemoveAt(page);
             }
+        }
+    }
+
+    private void PlacePage(List<HomeTile> tiles)
+    {
+        Span<bool> occupied = stackalloc bool[HomeGridSolver.MaxCells];
+        occupied.Clear();
+        pending.Clear();
+        overflow.Clear();
+        for (var index = 0; index < tiles.Count; index++)
+        {
+            var tile = tiles[index];
+            if (HomeGridSolver.IsAssigned(tile.Cell) &&
+                HomeGridSolver.RegionFree(occupied, Columns, rows, tile.Cell, tile.ColumnSpan, tile.RowSpan))
+            {
+                HomeGridSolver.Mark(occupied, Columns, tile.Cell, tile.ColumnSpan, tile.RowSpan);
+                continue;
+            }
+
+            pending.Add(tile);
+        }
+
+        for (var index = 0; index < pending.Count; index++)
+        {
+            var tile = pending[index];
+            if (!HomeGridSolver.TryFindFree(occupied, Columns, rows, tile.ColumnSpan, tile.RowSpan, tile.Cell,
+                    out var cell))
+            {
+                tile.Cell = HomeGridSolver.Unassigned;
+                overflow.Add(tile);
+                tiles.Remove(tile);
+                continue;
+            }
+
+            tile.Cell = cell;
+            HomeGridSolver.Mark(occupied, Columns, cell, tile.ColumnSpan, tile.RowSpan);
         }
     }
 
@@ -551,7 +763,9 @@ internal sealed class HomeLayoutService
 
                 if (tile.Apps.Count == 1)
                 {
-                    pages[page][index] = HomeTile.ForApp(tile.Apps[0]);
+                    var folded = HomeTile.ForApp(tile.Apps[0]);
+                    folded.Cell = tile.Cell;
+                    pages[page][index] = folded;
                 }
                 else
                 {
@@ -571,7 +785,13 @@ internal sealed class HomeLayoutService
         placements.RemoveRange(pages.Count, placements.Count - pages.Count);
         for (var page = 0; page < pages.Count; page++)
         {
-            HomeGridSolver.Solve(pages[page], Columns, rows, placements[page]);
+            var tiles = pages[page];
+            var cells = placements[page];
+            cells.Clear();
+            for (var index = 0; index < tiles.Count; index++)
+            {
+                cells.Add(tiles[index].Cell);
+            }
         }
 
         placementsDirty = false;
@@ -585,22 +805,73 @@ internal sealed class HomeLayoutService
             layout.Dock.Add(dock[index].App!.Id);
         }
 
-        for (var page = 0; page < pages.Count; page++)
-        {
-            var stored = new HomePage();
-            for (var index = 0; index < pages[page].Count; index++)
-            {
-                stored.Items.Add(SerializeTile(pages[page][index]));
-            }
-
-            layout.Pages.Add(stored);
-        }
+        SerializePages(layout.Pages);
+        layout.Installed = new List<string>(installed);
 
         configuration.Home = layout;
         configuration.Save();
     }
 
+    private static void CollectSavedHomeIds(HomeLayout? saved, List<string> target)
+    {
+        if (saved is null)
+        {
+            return;
+        }
+
+        for (var page = 0; page < saved.Pages.Count; page++)
+        {
+            var items = saved.Pages[page].Items;
+            for (var index = 0; index < items.Count; index++)
+            {
+                var item = items[index];
+                if (!string.IsNullOrEmpty(item.AppId))
+                {
+                    target.Add(item.AppId);
+                }
+
+                for (var appIndex = 0; appIndex < item.AppIds.Count; appIndex++)
+                {
+                    target.Add(item.AppIds[appIndex]);
+                }
+            }
+        }
+
+        if (saved.Dock is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < saved.Dock.Count; index++)
+        {
+            target.Add(saved.Dock[index]);
+        }
+    }
+
+    private void SerializePages(List<HomePage> target)
+    {
+        for (var page = 0; page < pages.Count; page++)
+        {
+            var stored = new HomePage();
+            var tiles = pages[page];
+            for (var index = 0; index < tiles.Count; index++)
+            {
+                stored.Items.Add(SerializeTile(tiles[index]));
+            }
+
+            target.Add(stored);
+        }
+    }
+
     private static HomeItem SerializeTile(HomeTile tile)
+    {
+        var item = BuildStoredItem(tile);
+        item.Column = tile.Cell.Column;
+        item.Row = tile.Cell.Row;
+        return item;
+    }
+
+    private static HomeItem BuildStoredItem(HomeTile tile)
     {
         if (tile.IsWidget)
         {
@@ -614,7 +885,7 @@ internal sealed class HomeLayoutService
 
         if (tile.IsFolder)
         {
-            var item = new HomeItem { Kind = "folder", FolderName = tile.FolderName };
+            var item = new HomeItem { Kind = "folder", FolderName = tile.FolderName, FolderTint = tile.FolderTint };
             for (var appIndex = 0; appIndex < tile.Apps.Count; appIndex++)
             {
                 item.AppIds.Add(tile.Apps[appIndex].Id);

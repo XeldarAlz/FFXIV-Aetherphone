@@ -37,6 +37,11 @@ internal sealed class ConversationKeyStore
         return "velvet:" + pairKey;
     }
 
+    public static string GramScope(string pairKey)
+    {
+        return "gram:" + pairKey;
+    }
+
     public static string Pair(string firstUserId, string secondUserId)
     {
         return string.CompareOrdinal(firstUserId, secondUserId) <= 0
@@ -228,6 +233,150 @@ internal sealed class ConversationKeyStore
             }
 
             await client.AddVelvetWrapsAsync(otherId, new AddWrapsRequest(generation, wraps), token).ConfigureAwait(false);
+        }
+    }
+
+    public async Task HydrateGramAsync(CancellationToken token)
+    {
+        if (vault.State != KeyVaultState.Unlocked)
+        {
+            return;
+        }
+
+        var bulk = await client.GramKeysAsync(token).ConfigureAwait(false);
+        if (bulk is null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < bulk.Items.Length; index++)
+        {
+            var item = bulk.Items[index];
+            CacheWraps(GramScope(item.ConversationId), item.CurrentGeneration, item.Wraps);
+        }
+    }
+
+    public async Task<ChatKeyStatus> EnsureGramKeysAsync(string otherId, string myUserId, CancellationToken token)
+    {
+        var scope = GramScope(Pair(myUserId, otherId));
+        if (vault.State != KeyVaultState.Unlocked)
+        {
+            return new ChatKeyStatus(false, false, CurrentGeneration(scope), Array.Empty<string>());
+        }
+
+        ConversationKeysDto? keys = null;
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            keys = await client.GramThreadKeysAsync(otherId, token).ConfigureAwait(false);
+            if (keys is null)
+            {
+                break;
+            }
+
+            CacheWraps(scope, keys.CurrentGeneration, keys.MyWraps);
+
+            if (keys.CurrentGeneration == 0)
+            {
+                if (keys.MembersWithoutKeys.Length > 0 || keys.MemberKeys.Length == 0)
+                {
+                    break;
+                }
+
+                if (await CreateGramGenerationAsync(otherId, scope, 1, keys.MemberKeys, token).ConfigureAwait(false))
+                {
+                    keys = keys with { CurrentGeneration = 1 };
+                    break;
+                }
+
+                continue;
+            }
+
+            await FixGramWrapsAsync(otherId, scope, keys, token).ConfigureAwait(false);
+            break;
+        }
+
+        if (keys is null)
+        {
+            return new ChatKeyStatus(true, false, CurrentGeneration(scope), Array.Empty<string>());
+        }
+
+        var canEncrypt = keys.MembersWithoutKeys.Length == 0 && TryGetCek(scope, keys.CurrentGeneration, out _);
+        return new ChatKeyStatus(true, canEncrypt, keys.CurrentGeneration, keys.MembersWithoutKeys);
+    }
+
+    private async Task<bool> CreateGramGenerationAsync(string otherId, string scope, int generation,
+        UserPublicKeyDto[] memberKeys, CancellationToken token)
+    {
+        var cek = CryptoBox.GenerateCek();
+        var wraps = BuildWraps(cek, memberKeys);
+        if (wraps is null)
+        {
+            return false;
+        }
+
+        var (ok, _) = await client.CreateGramGenerationAsync(
+            otherId, new CreateGenerationRequest(generation, wraps), token).ConfigureAwait(false);
+        if (!ok)
+        {
+            return false;
+        }
+
+        Store(scope, generation, cek);
+        return true;
+    }
+
+    private async Task FixGramWrapsAsync(string otherId, string scope, ConversationKeysDto keys, CancellationToken token)
+    {
+        if (keys.MissingWrapUserIds.Length == 0 && keys.StaleWrapUserIds.Length == 0)
+        {
+            return;
+        }
+
+        var memberKeys = new Dictionary<string, UserPublicKeyDto>(StringComparer.Ordinal);
+        for (var index = 0; index < keys.MemberKeys.Length; index++)
+        {
+            memberKeys[keys.MemberKeys[index].UserId] = keys.MemberKeys[index];
+        }
+
+        if (!keysByScope.TryGetValue(scope, out var generations))
+        {
+            return;
+        }
+
+        foreach (var (generation, cek) in generations)
+        {
+            var recipients = new List<UserPublicKeyDto>();
+            for (var index = 0; index < keys.StaleWrapUserIds.Length; index++)
+            {
+                if (memberKeys.TryGetValue(keys.StaleWrapUserIds[index], out var key))
+                {
+                    recipients.Add(key);
+                }
+            }
+
+            if (generation == keys.CurrentGeneration)
+            {
+                for (var index = 0; index < keys.MissingWrapUserIds.Length; index++)
+                {
+                    if (memberKeys.TryGetValue(keys.MissingWrapUserIds[index], out var key))
+                    {
+                        recipients.Add(key);
+                    }
+                }
+            }
+
+            if (recipients.Count == 0)
+            {
+                continue;
+            }
+
+            var wraps = BuildWraps(cek, recipients);
+            if (wraps is null)
+            {
+                continue;
+            }
+
+            await client.AddGramWrapsAsync(otherId, new AddWrapsRequest(generation, wraps), token).ConfigureAwait(false);
         }
     }
 

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -22,21 +23,23 @@ internal static class StatusBar
     private const float IslandTop = 9f;
     private static string cachedTime = string.Empty;
     private static int cachedTimeKey = -1;
+    private static int cachedFormatVersion = -1;
 
     private static string CurrentTime()
     {
         var now = DateTime.Now;
         var key = now.Hour * 60 + now.Minute;
-        if (key != cachedTimeKey)
+        if (key != cachedTimeKey || cachedFormatVersion != TimeText.FormatVersion)
         {
             cachedTimeKey = key;
-            cachedTime = now.ToString("HH:mm");
+            cachedFormatVersion = TimeText.FormatVersion;
+            cachedTime = TimeText.Clock(now);
         }
 
         return cachedTime;
     }
 
-    public static void Draw(Rect screen, PhoneTheme theme)
+    public static void Draw(Rect screen, PhoneTheme theme, bool landscape)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = screen.Min.Y + 22f * scale;
@@ -44,7 +47,10 @@ internal static class StatusBar
         var localTime = CurrentTime();
         var timeSize = Typography.Measure(localTime, TimeScale, TimeWeight);
         var island = BaseIsland(screen);
-        DeviceChrome.DrawIsland(island, theme);
+        if (!landscape)
+        {
+            DeviceChrome.DrawIsland(island, theme);
+        }
         var earGap = EarGap * scale;
         var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale,
             island.Min.X - earGap - timeSize.X - DndWidth(scale));

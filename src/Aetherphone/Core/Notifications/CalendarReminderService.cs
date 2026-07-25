@@ -39,7 +39,7 @@ internal sealed class CalendarReminderService : IDisposable
             calendarEvent.Notified = true;
             dirty = true;
             notifications.Notify(new PhoneNotification("calendar", calendarEvent.Title,
-                calendarEvent.When.ToString("t", Loc.Culture), DateTime.Now, Accent));
+                TimeText.Clock(calendarEvent.When), DateTime.Now, Accent));
         }
 
         if (dirty)

@@ -2,6 +2,9 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Maps;
+using Aetherphone.Core.Muster;
+using Aetherphone.Core.YellowPages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -68,9 +71,27 @@ internal sealed partial class MessageApp
         var paddingX = 11f * scale;
         var paddingY = 7f * scale;
         var wrap = width * 0.74f - paddingX * 2f;
-        var text = message.Kind == 1 && string.IsNullOrEmpty(message.Body)
-            ? Loc.T(L.DirectMessages.PhotoPreview)
-            : UiText.Truncate(message.Body ?? string.Empty, 220);
+        string text;
+        if (message.Kind == 1 && string.IsNullOrEmpty(message.Body))
+        {
+            text = Loc.T(L.DirectMessages.PhotoPreview);
+        }
+        else if (LocationShare.TryParse(message.Body, out var location))
+        {
+            text = LocationShare.Summary(location);
+        }
+        else if (MusterShare.IsToken(message.Body))
+        {
+            text = Loc.T(L.Muster.InvitePreview);
+        }
+        else if (AdShare.IsToken(message.Body))
+        {
+            text = Loc.T(L.YellowPages.AdPreview);
+        }
+        else
+        {
+            text = UiText.Truncate(message.Body ?? string.Empty, 220);
+        }
         var textSize = ImGui.CalcTextSize(text, false, wrap);
         var time = TimeText.Clock(message.CreatedAtUnix);
         var timeSize = Typography.Measure(time, 0.70f);

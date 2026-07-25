@@ -17,9 +17,11 @@ internal struct ChatComposerModel
     public bool Sending;
     public bool CanImage;
     public bool CanVoice;
+    public bool CanLocation;
     public bool CanHandleEscape;
     public Func<int> ResolveVoiceInput;
     public Action<string> OnPickImage;
+    public Action<string> OnShareLocation;
     public Action<string, string, string?> OnSendText;
     public Action<string, string, string> OnEditText;
     public Action<string, byte[], int> OnSendVoice;
@@ -178,9 +180,10 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var textRight = pillMax.X - 14f * scale;
+        var trailingIconX = pillMax.X - iconRadius - 5f * scale;
         if (model.CanImage)
         {
-            var pictureCenter = new Vector2(pillMax.X - iconRadius - 5f * scale, area.Center.Y);
+            var pictureCenter = new Vector2(trailingIconX, area.Center.Y);
             var pictureMin = pictureCenter - new Vector2(iconRadius, iconRadius);
             var pictureMax = pictureCenter + new Vector2(iconRadius, iconRadius);
             var pictureHovered = ImGui.IsMouseHoveringRect(pictureMin, pictureMax);
@@ -196,7 +199,30 @@ internal sealed class ChatComposer : IDisposable
                 }
             }
 
+            trailingIconX = pictureMin.X - iconRadius - 4f * scale;
             textRight = pictureMin.X - 6f * scale;
+        }
+
+        if (model.CanLocation)
+        {
+            var locationCenter = new Vector2(trailingIconX, area.Center.Y);
+            var locationMin = locationCenter - new Vector2(iconRadius, iconRadius);
+            var locationMax = locationCenter + new Vector2(iconRadius, iconRadius);
+            var locationHovered = ImGui.IsMouseHoveringRect(locationMin, locationMax);
+            AppSkin.Icon(locationCenter, FontAwesomeIcon.MapMarkerAlt.ToIconString(),
+                locationHovered ? theme.TextStrong : ui.MutedInk, 0.95f);
+            HoverTooltip.Show(new Rect(locationMin, locationMax), Loc.T(L.Message.ShareLocation),
+                HoverLabelSide.Above);
+            if (locationHovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                {
+                    model.OnShareLocation(model.ConversationId);
+                }
+            }
+
+            textRight = locationMin.X - 6f * scale;
         }
 
         var textLeft = emojiMax.X + 4f * scale;

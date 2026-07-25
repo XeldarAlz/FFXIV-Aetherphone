@@ -125,15 +125,13 @@ internal sealed class ImagePickCrop
             {
                 for (var index = 0; index < pickerPaths.Length; index++)
                 {
-                    using (ImRaii.PushId(index))
+                    ImGui.Dummy(new Vector2(cell, cell));
+                    var min = ImGui.GetItemRectMin();
+                    var max = ImGui.GetItemRectMax();
+                    DrawThumbnail(pickerPaths[index], min, max, theme, scale);
+                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                     {
-                        var clicked = ImGui.InvisibleButton("pick", new Vector2(cell, cell));
-                        DrawThumbnail(pickerPaths[index], ImGui.GetItemRectMin(), ImGui.GetItemRectMax(), theme,
-                            scale);
-                        if (clicked)
-                        {
-                            BeginCrop(pickerPaths[index]);
-                        }
+                        BeginCrop(pickerPaths[index]);
                     }
 
                     if (index % GridColumns != GridColumns - 1)
@@ -272,7 +270,7 @@ internal sealed class ImagePickCrop
 
     private void LaunchFileDialog(string title)
     {
-        NativeFileDialog.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
+        FilePicker.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 
     private static bool HeaderAction(Rect area, string label, bool enabled, Vector4 accent, PhoneTheme theme)

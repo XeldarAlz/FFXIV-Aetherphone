@@ -226,8 +226,9 @@ internal sealed class InventoryApp : IPhoneApp
         {
             var group = localScratch[index];
             var row = PanelRow(drawList, origin, width, rowHeight, index, scale, separatorLeft,
-                Palette.WithAlpha(ui.Accent, 0.10f), true, out var hovered);
-            if (DrawStorageRow(row, group.Kind, group.Title, string.Empty, group.Rows.Count, true, hovered))
+                Palette.WithAlpha(ui.Accent, 0.10f), true, out var hovered, out var hitMin, out var hitMax);
+            if (DrawStorageRow(row, group.Kind, group.Title, string.Empty, group.Rows.Count, true, hovered, hitMin,
+                    hitMax))
             {
                 Open(group.Kind, group.Title);
             }
@@ -263,8 +264,9 @@ internal sealed class InventoryApp : IPhoneApp
             var group = cachedScratch[index];
             var subtitle = Loc.T(L.Inventory.Updated, TimeText.Ago(group.CapturedUtc));
             var row = PanelRow(drawList, origin, width, rowHeight, rowIndex++, scale, separatorLeft, accentHover, true,
-                out var hovered);
-            if (DrawStorageRow(row, group.Kind, group.Title, subtitle, group.Rows.Count, true, hovered))
+                out var hovered, out var hitMin, out var hitMax);
+            if (DrawStorageRow(row, group.Kind, group.Title, subtitle, group.Rows.Count, true, hovered, hitMin,
+                    hitMax))
             {
                 Open(group.Kind, group.Title);
             }
@@ -273,17 +275,17 @@ internal sealed class InventoryApp : IPhoneApp
         if (showRetainer)
         {
             var row = PanelRow(drawList, origin, width, rowHeight, rowIndex++, scale, separatorLeft, accentHover, false,
-                out _);
+                out _, out var hitMin, out var hitMax);
             DrawStorageRow(row, InventorySourceKind.Retainer, Loc.T(L.Inventory.SourceRetainer),
-                Loc.T(L.Inventory.RetainerEmpty), -1, false, false);
+                Loc.T(L.Inventory.RetainerEmpty), -1, false, false, hitMin, hitMax);
         }
 
         if (showFreeCompany)
         {
             var row = PanelRow(drawList, origin, width, rowHeight, rowIndex, scale, separatorLeft, accentHover, false,
-                out _);
+                out _, out var hitMin, out var hitMax);
             DrawStorageRow(row, InventorySourceKind.FreeCompany, Loc.T(L.Inventory.SourceFreeCompany),
-                Loc.T(L.Inventory.FreeCompanyEmpty), -1, false, false);
+                Loc.T(L.Inventory.FreeCompanyEmpty), -1, false, false, hitMin, hitMax);
         }
 
         UiAnchors.Report("inventory.sources", new Rect(origin, panelMax));
@@ -295,12 +297,15 @@ internal sealed class InventoryApp : IPhoneApp
         origin.X + 16f * scale + 44f * scale + 14f * scale;
 
     private Rect PanelRow(ImDrawListPtr drawList, Vector2 origin, float width, float rowHeight, int index, float scale,
-        float separatorLeft, Vector4 hoverTint, bool interactive, out bool hovered)
+        float separatorLeft, Vector4 hoverTint, bool interactive, out bool hovered, out Vector2 hitMin,
+        out Vector2 hitMax)
     {
         var pad = 16f * scale;
         var rowTop = origin.Y + index * rowHeight;
         var rowMin = new Vector2(origin.X, rowTop);
         var rowMax = new Vector2(origin.X + width, rowTop + rowHeight);
+        hitMin = rowMin;
+        hitMax = rowMax;
         hovered = interactive && UiInteract.Hover(rowMin, rowMax);
         if (hovered)
         {
@@ -319,7 +324,7 @@ internal sealed class InventoryApp : IPhoneApp
     }
 
     private bool DrawStorageRow(Rect row, InventorySourceKind kind, string title, string subtitle, int count,
-        bool navigable, bool hovered)
+        bool navigable, bool hovered, Vector2 hitMin, Vector2 hitMax)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -359,13 +364,17 @@ internal sealed class InventoryApp : IPhoneApp
                 TextStyles.Headline);
         }
 
-        if (!navigable || !hovered)
+        if (!navigable)
         {
             return false;
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        return UiInteract.Click(hitMin, hitMax, hovered);
     }
 
     private void DrawFooterHint()
@@ -505,7 +514,7 @@ internal sealed class InventoryApp : IPhoneApp
         for (var index = 0; index < rows.Count; index++)
         {
             var row = PanelRow(drawList, origin, width, rowHeight, index, scale, separatorLeft, ui.HoverTint, true,
-                out var hovered);
+                out var hovered, out _, out _);
             DrawItemRow(row, rows[index], hovered);
         }
 

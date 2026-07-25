@@ -61,7 +61,8 @@ internal static class SceneCompositor
 
     public static void DrawLayer(Rect clip, in Layer layer)
     {
-        var shifted = new Rect(clip.Min + layer.Offset, clip.Max + layer.Offset);
+        var offset = new Vector2(MathF.Round(layer.Offset.X), MathF.Round(layer.Offset.Y));
+        var shifted = new Rect(clip.Min + offset, clip.Max + offset);
         ImGui.SetCursorScreenPos(clip.Min);
 
         using (ImRaii.PushId(layer.Id))

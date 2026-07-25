@@ -44,13 +44,27 @@ internal sealed record UserDto(
     bool SharePresence = true,
     int MentionPolicy = 0,
     int TagPolicy = 0,
-    bool RequireTagApproval = false) : IIdentified;
+    bool RequireTagApproval = false,
+    bool FollowsYou = false,
+    int FollowedByCount = 0,
+    string[]? FollowedByPreview = null,
+    bool CanMessage = false,
+    int MessagePolicy = 0,
+    bool IsPrivate = false,
+    bool FollowRequested = false,
+    int PendingFollowRequests = 0) : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
+
+internal sealed record UpdateMessagePrivacyRequest(int? MessagePolicy);
 
 internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffsetMinutes);
 
 internal sealed record UpdateChatPrivacyRequest(bool? ShareReadReceipts, bool? SharePresence);
+
+internal sealed record UpdateAccountPrivacyRequest(bool? IsPrivate);
+
+internal sealed record FollowResultDto(bool Following, bool Requested);
 
 internal sealed record CreatePostRequest(string Text, string? QuotedPostId = null);
 
@@ -107,7 +121,8 @@ internal sealed record PostDto(
     string? QuotedPostId = null,
     PostDto? ReferencedPost = null,
     int RepostCount = 0,
-    bool MyReposted = false) : IIdentified;
+    bool MyReposted = false,
+    bool Saved = false) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 
@@ -215,7 +230,10 @@ internal sealed record VelvetProfileDto(
     long GateAckAtUnix,
     bool ShareTimeZone = true,
     int? UtcOffsetMinutes = null,
-    int WhoCanMessage = 0);
+    int WhoCanMessage = 0,
+    int Sexuality = 0,
+    string[]? Kinks = null,
+    string Region = "");
 
 internal sealed record UpdateVelvetProfileRequest(
     string? Intro,
@@ -227,7 +245,9 @@ internal sealed record UpdateVelvetProfileRequest(
     int? RelationshipStatus,
     bool? Discoverable,
     int? WhoCanMessage = null,
-    int? Gender = null);
+    int? Gender = null,
+    int? Sexuality = null,
+    string[]? Kinks = null);
 
 internal sealed record GateAcceptRequest(int GateVersion);
 
@@ -251,9 +271,12 @@ internal sealed record VelvetPostDto(
     int CommentCount,
     string ScanStatus = "clean",
     string[]? MediaUrls = null,
-    MentionDto[]? Mentions = null) : IIdentified;
+    MentionDto[]? Mentions = null,
+    int Audience = 0) : IIdentified;
 
 internal sealed record VelvetFeedPage(VelvetPostDto[] Items, string? NextCursor);
+
+internal sealed record VelvetUserPostsPage(VelvetPostDto[] Items, int TotalCount, string? NextCursor);
 
 internal sealed record CreateVelvetPostRequest(
     string MediaKey,
@@ -261,7 +284,8 @@ internal sealed record CreateVelvetPostRequest(
     int Height,
     string Caption,
     string[] Tags,
-    string[]? MediaKeys = null);
+    string[]? MediaKeys = null,
+    int Audience = 0);
 
 internal sealed record VelvetCommentDto(
     string Id,
@@ -367,7 +391,7 @@ internal sealed record NotificationDto(
     long CreatedAtUnix,
     string? CommentId = null) : IIdentified;
 
-internal sealed record NotificationPage(NotificationDto[] Items);
+internal sealed record NotificationPage(NotificationDto[] Items, string? NextCursor = null);
 
 internal sealed record CreateFeedbackRequest(string Text, string[] ImageKeys);
 

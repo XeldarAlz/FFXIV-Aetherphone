@@ -36,7 +36,6 @@ internal enum SummaryState : byte
     Unknown,
     Loading,
     Ready,
-    Failed,
 }
 
 internal enum CollectionAccess : byte

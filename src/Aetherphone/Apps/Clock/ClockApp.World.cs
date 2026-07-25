@@ -38,7 +38,7 @@ internal sealed partial class ClockApp
 
             var utc = DateTime.UtcNow;
             var utcSeconds = utc.Second + utc.Millisecond / 1000f;
-            DrawWorldRow(RowAt(card, 1, WorldRowHeight, scale), Loc.T(L.Clock.Server), "UTC", utc.ToString("HH:mm"),
+            DrawWorldRow(RowAt(card, 1, WorldRowHeight, scale), Loc.T(L.Clock.Server), "UTC", TimeText.Clock(utc),
                 utc.Hour, utc.Minute, utcSeconds);
 
             for (var index = 0; index < cities.Count; index++)
@@ -69,7 +69,7 @@ internal sealed partial class ClockApp
         AnalogClock.Draw(clockCenter, clockRadius, local.Hour, local.Minute, localSeconds, theme);
 
         var textX = clockCenter.X + clockRadius + 22f * scale;
-        var digital = local.ToString("HH:mm");
+        var digital = TimeText.Clock(local);
         var date = local.ToString("ddd d MMM", Loc.Culture);
         var zone = $"{Loc.T(L.Clock.Local)} · {LocalOffsetLabel()}";
         var digitalSize = Typography.Measure(digital, TextStyles.LargeTitle);
@@ -111,7 +111,7 @@ internal sealed partial class ClockApp
 
         var cityNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);
         var citySeconds = cityNow.Second + cityNow.Millisecond / 1000f;
-        DrawWorldRow(row, entry.City, CityOffsetLabel(zone, cityNow), cityNow.ToString("HH:mm"), cityNow.Hour,
+        DrawWorldRow(row, entry.City, CityOffsetLabel(zone, cityNow), TimeText.Clock(cityNow), cityNow.Hour,
             cityNow.Minute, citySeconds);
     }
 

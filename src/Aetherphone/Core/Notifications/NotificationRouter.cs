@@ -1,5 +1,7 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Linkpearl;
+using Aetherphone.Core.Muster;
+using Aetherphone.Core.YellowPages;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -10,6 +12,8 @@ internal sealed class NotificationRouter
     private const string VelvetAppId = "velvet";
     private const string ChirperAppId = "chirper";
     private const string AethergramAppId = "aethergram";
+    private const string MusterAppId = "muster";
+    private const string YellowPagesAppId = "yellowpages";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -19,22 +23,33 @@ internal sealed class NotificationRouter
     private const int TypeMention = 7;
     private const int TypeCommentMention = 8;
     private const int TypePhotoTag = 9;
+    private const int TypeRepost = 12;
+    private const int TypeQuote = 13;
+    private const int TypeFollowRequest = 14;
+    private const int TypeFollowAccept = 15;
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
     private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
+    private readonly GramDmLauncher gramDmLauncher;
     private readonly SocialLauncher socialLauncher;
+    private readonly MusterLauncher musterLauncher;
+    private readonly YellowPagesLauncher yellowPagesLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher,
+        MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher)
     {
         this.navigation = navigation;
         this.notifications = notifications;
         this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
+        this.gramDmLauncher = gramDmLauncher;
         this.socialLauncher = socialLauncher;
+        this.musterLauncher = musterLauncher;
+        this.yellowPagesLauncher = yellowPagesLauncher;
     }
 
     public void Open(PhoneNotification notification)
@@ -66,6 +81,19 @@ internal sealed class NotificationRouter
         {
             velvetLauncher.Request(notification.GroupKey);
         }
+        else if (notification.AppId == AethergramAppId && notification.SocialType < 0
+                 && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            gramDmLauncher.Request(notification.GroupKey);
+        }
+        else if (notification.AppId == MusterAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            musterLauncher.RequestDetail(notification.GroupKey);
+        }
+        else if (notification.AppId == YellowPagesAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            yellowPagesLauncher.RequestDetail(notification.GroupKey);
+        }
         else if (SocialLinkFor(notification) is { } link)
         {
             socialLauncher.Request(notification.AppId, link);
@@ -84,10 +112,13 @@ internal sealed class NotificationRouter
         return notification.SocialType switch
         {
             TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention or TypePhotoTag
+                or TypeRepost or TypeQuote
                 when !string.IsNullOrEmpty(notification.PostId)
                 => new SocialDeepLink(SocialLinkKind.Post, notification.PostId!),
-            TypeFollow or TypeConnectRequest or TypeConnectAccept when !string.IsNullOrEmpty(notification.ActorId)
+            TypeFollow or TypeConnectRequest or TypeConnectAccept or TypeFollowAccept
+                when !string.IsNullOrEmpty(notification.ActorId)
                 => new SocialDeepLink(SocialLinkKind.Profile, notification.ActorId!),
+            TypeFollowRequest => new SocialDeepLink(SocialLinkKind.Requests, notification.ActorId ?? string.Empty),
             _ => null,
         };
     }

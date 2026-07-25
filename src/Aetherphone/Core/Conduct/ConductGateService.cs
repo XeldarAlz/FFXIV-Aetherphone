@@ -11,13 +11,10 @@ internal sealed class ConductGateService
 
     public ConductGate? Active { get; private set; }
 
+    public bool ActiveIsReview { get; private set; }
+
     public void NotifyAppOpened(string appId)
     {
-        if (Active is not null)
-        {
-            return;
-        }
-
         if (ConductRules.For(appId) is not { } gate)
         {
             return;
@@ -28,7 +25,28 @@ internal sealed class ConductGateService
             return;
         }
 
+        Open(gate, false);
+    }
+
+    public void ShowRules(string appId)
+    {
+        if (ConductRules.For(appId) is not { } gate)
+        {
+            return;
+        }
+
+        Open(gate, true);
+    }
+
+    private void Open(ConductGate gate, bool review)
+    {
+        if (Active is not null)
+        {
+            return;
+        }
+
         Active = gate;
+        ActiveIsReview = review;
     }
 
     public void Acknowledge()
@@ -39,6 +57,11 @@ internal sealed class ConductGateService
         }
 
         configuration.AcknowledgeConduct(gate.AppId, gate.Version);
+        Active = null;
+    }
+
+    public void Dismiss()
+    {
         Active = null;
     }
 }

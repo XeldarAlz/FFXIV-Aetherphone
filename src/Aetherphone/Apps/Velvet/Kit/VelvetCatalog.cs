@@ -16,8 +16,10 @@ internal static class VelvetIntent
     public const int Friends = 1 << 4;
     public const int Sharing = 1 << 5;
     public const int Wandering = 1 << 6;
+    public const int Irl = 1 << 7;
+    public const int NonIrl = 1 << 8;
 
-    public const int Mask = Erp | Gpose | Relationship | Collab | Friends | Sharing | Wandering;
+    public const int Mask = Erp | Gpose | Relationship | Collab | Friends | Sharing | Wandering | Irl | NonIrl;
 
     public static readonly VelvetIntentDef[] All =
     {
@@ -35,6 +37,10 @@ internal static class VelvetIntent
             FontAwesomeIcon.Image),
         new(Wandering, L.Velvet.IntentWandering, L.Velvet.IntentWanderingBlurb, new Vector4(0.549f, 0.627f, 0.878f, 1f),
             FontAwesomeIcon.Compass),
+        new(Irl, L.Velvet.IntentIrl, L.Velvet.IntentIrlBlurb, new Vector4(0.427f, 0.757f, 0.549f, 1f),
+            FontAwesomeIcon.Globe),
+        new(NonIrl, L.Velvet.IntentNonIrl, L.Velvet.IntentNonIrlBlurb, new Vector4(0.502f, 0.588f, 0.851f, 1f),
+            FontAwesomeIcon.Gamepad),
     };
 
     public static bool Has(int mask, int flag) => (mask & flag) != 0;
@@ -122,17 +128,16 @@ internal static class VelvetSuggestions
 {
     public static readonly string[] Limits =
     {
-        "no irl", "fade to black", "ask first", "no pain", "no gore", "sfw until trust", "no permadeath", "no non-con",
+        "pain", "permadeath", "drugs", "non-con", "irl", "fade to black", "sfw till trust", "gore", "vore",
+        "watersports", "feet",
     };
 
-    public static readonly VelvetTagCategory[] DynamicCategories =
+    public static readonly string[] Roles = { "dom", "sub", "switch", "soft dom", "hard dom" };
+
+    public static readonly string[] Kinks =
     {
-        new(L.Velvet.CatDominant, new Vector4(0.898f, 0.102f, 0.357f, 1f),
-            new[] { "dominant", "soft dom", "sadist", "primal", "caregiver", "owner", "brat tamer" }),
-        new(L.Velvet.CatSubmissive, new Vector4(0.647f, 0.482f, 0.839f, 1f),
-            new[] { "submissive", "brat", "masochist", "little", "pet", "service", "rope bunny" }),
-        new(L.Velvet.CatSwitch, new Vector4(0.420f, 0.780f, 0.753f, 1f),
-            new[] { "switch", "vanilla" }),
+        "sadist", "masochist", "predator", "prey", "little", "caregiver", "handler", "pet", "rigger", "rope bunny",
+        "brat", "brat tamer", "master", "slave", "watersports", "gangbang", "vanilla",
     };
 
     public static readonly VelvetTagCategory[] TagCategories =

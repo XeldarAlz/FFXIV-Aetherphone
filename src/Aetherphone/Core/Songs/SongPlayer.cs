@@ -252,21 +252,36 @@ internal sealed class SongPlayer : IDisposable
         CancellationToken token, int workerSession)
     {
         MemoryStream? audio = null;
-        MediaFoundationReader? reader = null;
+        ISongAudioReader? reader = null;
         IWavePlayer? output = null;
         try
         {
-            var bytes = cache.Get(videoId, CacheMaxAge);
+            var bytes = cache.Get(OpusCacheKey(videoId), CacheMaxAge);
+            var bytesAreOpus = bytes is not null;
+            if (bytes is null)
+            {
+                bytes = cache.Get(videoId, CacheMaxAge);
+            }
+
             if (bytes is null && !allowStreaming)
             {
-                bytes = Download(videoId, token);
+                var downloaded = Download(videoId, token);
+                bytes = downloaded?.Bytes;
+                bytesAreOpus = downloaded?.IsOpus ?? false;
             }
 
             if (bytes is not null && bytes.Length > 0)
             {
                 TrySetState(workerSession, SongPlaybackState.Buffering);
-                audio = new MemoryStream(bytes, false);
-                reader = new StreamMediaFoundationReader(audio);
+                if (bytesAreOpus)
+                {
+                    reader = new OpusWebmSampleProvider(() => new MemoryStream(bytes, false));
+                }
+                else
+                {
+                    audio = new MemoryStream(bytes, false);
+                    reader = new MediaFoundationSongReader(new StreamMediaFoundationReader(audio));
+                }
             }
             else if (allowStreaming)
             {
@@ -379,7 +394,7 @@ internal sealed class SongPlayer : IDisposable
         }, CancellationToken.None);
     }
 
-    private MediaFoundationReader? OpenStreamedReader(string videoId, CancellationToken token, int workerSession)
+    private ISongAudioReader? OpenStreamedReader(string videoId, CancellationToken token, int workerSession)
     {
         var manifest = youtube.Videos.Streams.GetManifestAsync(videoId, token).GetAwaiter().GetResult();
         var best = SelectAudioStream(manifest);
@@ -389,10 +404,18 @@ internal sealed class SongPlayer : IDisposable
         }
 
         TrySetState(workerSession, SongPlaybackState.Buffering);
-        return new MediaFoundationReader(best.Url);
+        if (IsOpus(best))
+        {
+            return new OpusWebmSampleProvider(() =>
+                new ForwardSeekableStream(youtube.Videos.Streams.GetAsync(best, token).GetAwaiter().GetResult()));
+        }
+
+        return new MediaFoundationSongReader(new MediaFoundationReader(best.Url));
     }
 
-    private byte[]? Download(string videoId, CancellationToken token)
+    private readonly record struct DownloadedAudio(byte[] Bytes, bool IsOpus);
+
+    private DownloadedAudio? Download(string videoId, CancellationToken token)
     {
         var manifest = youtube.Videos.Streams.GetManifestAsync(videoId, token).GetAwaiter().GetResult();
         var best = SelectAudioStream(manifest);
@@ -401,33 +424,45 @@ internal sealed class SongPlayer : IDisposable
             return null;
         }
 
+        var isOpus = IsOpus(best);
         using var source = youtube.Videos.Streams.GetAsync(best, token).GetAwaiter().GetResult();
         using var memory = new MemoryStream();
         source.CopyToAsync(memory, token).GetAwaiter().GetResult();
         var bytes = memory.ToArray();
-        cache.Set(videoId, bytes);
-        return bytes;
+        cache.Set(isOpus ? OpusCacheKey(videoId) : videoId, bytes);
+        return new DownloadedAudio(bytes, isOpus);
     }
+
+    private static string OpusCacheKey(string videoId) => videoId + ".opus";
+
+    private static bool IsOpus(AudioOnlyStreamInfo stream) =>
+        string.Equals(stream.AudioCodec, "opus", StringComparison.OrdinalIgnoreCase);
 
     private static AudioOnlyStreamInfo? SelectAudioStream(StreamManifest manifest)
     {
         var streams = manifest.GetAudioOnlyStreams().ToArray();
-        AudioOnlyStreamInfo? best = null;
+        AudioOnlyStreamInfo? bestOpus = null;
+        AudioOnlyStreamInfo? bestMp4 = null;
         for (var index = 0; index < streams.Length; index++)
         {
             var candidate = streams[index];
-            if (!string.Equals(candidate.Container.Name, "mp4", StringComparison.OrdinalIgnoreCase))
+            if (IsOpus(candidate))
             {
-                continue;
+                if (bestOpus is null || candidate.Bitrate.BitsPerSecond > bestOpus.Bitrate.BitsPerSecond)
+                {
+                    bestOpus = candidate;
+                }
             }
-
-            if (best is null || candidate.Bitrate.BitsPerSecond > best.Bitrate.BitsPerSecond)
+            else if (string.Equals(candidate.Container.Name, "mp4", StringComparison.OrdinalIgnoreCase))
             {
-                best = candidate;
+                if (bestMp4 is null || candidate.Bitrate.BitsPerSecond > bestMp4.Bitrate.BitsPerSecond)
+                {
+                    bestMp4 = candidate;
+                }
             }
         }
 
-        return best;
+        return bestOpus ?? bestMp4;
     }
 
     private void AdvanceAfterCompletion(int workerSession)

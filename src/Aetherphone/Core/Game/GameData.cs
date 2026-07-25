@@ -2,18 +2,22 @@ using System.Globalization;
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
+using Lumina.Excel;
 using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Game;
 
 internal sealed class GameData
 {
+    private const uint FramedJobIconBaseId = 62100;
+
     private readonly IDataManager data;
     private readonly IObjectTable objectTable;
     private uint[]? collectableMountIds;
     private uint[]? collectableMinionIds;
-    private byte[]? dailyBonusRouletteIndices;
+    private byte[]? dailyBonusRouletteRowIds;
     private byte[]? weeklyHuntBillIndices;
+    private Dictionary<uint, uint[]>? classJobIdsByCategory;
     private Dictionary<string, string>? worldRegionCodes;
 
     public GameData(IDataManager data, IObjectTable objectTable)
@@ -77,6 +81,51 @@ internal sealed class GameData
 
         return string.Empty;
     }
+
+    public bool TryGetClassJobDivision(uint rowId, out byte jobType, out byte role, out byte uiPriority,
+        out uint classJobCategoryId)
+    {
+        jobType = 0;
+        role = 0;
+        uiPriority = 0;
+        classJobCategoryId = 0;
+        if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
+        {
+            jobType = job.JobType;
+            role = job.Role;
+            uiPriority = job.UIPriority;
+            classJobCategoryId = job.ClassJobCategory.RowId;
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Every ClassJob row belonging to the given ClassJobCategory (e.g. Disciple of the Hand/Land).</summary>
+    public uint[] ClassJobIdsInCategory(uint classJobCategoryId)
+    {
+        classJobIdsByCategory ??= new Dictionary<uint, uint[]>();
+        if (classJobIdsByCategory.TryGetValue(classJobCategoryId, out var cached))
+        {
+            return cached;
+        }
+
+        var rowIds = new List<uint>(16);
+        foreach (var job in data.GetExcelSheet<ClassJob>())
+        {
+            if (job.RowId != 0 && job.ClassJobCategory.RowId == classJobCategoryId)
+            {
+                rowIds.Add(job.RowId);
+            }
+        }
+
+        cached = rowIds.Count > 0 ? rowIds.ToArray() : Array.Empty<uint>();
+        classJobIdsByCategory[classJobCategoryId] = cached;
+        return cached;
+    }
+
+    /// <summary>The framed class/job icon the Character window and gear set list draw, one row per ClassJob.</summary>
+    public static uint JobIconId(uint classJobId) => classJobId == 0 ? 0u : FramedJobIconBaseId + classJobId;
 
     public int JobExpArrayIndex(uint rowId)
     {
@@ -396,14 +445,14 @@ internal sealed class GameData
         return collectableMinionIds;
     }
 
-    public byte[] DailyBonusRouletteIndices()
+    public byte[] DailyBonusRouletteRowIds()
     {
-        if (dailyBonusRouletteIndices is not null)
+        if (dailyBonusRouletteRowIds is not null)
         {
-            return dailyBonusRouletteIndices;
+            return dailyBonusRouletteRowIds;
         }
 
-        var indices = new List<byte>(16);
+        var rowIds = new List<byte>(16);
         foreach (var row in data.GetExcelSheet<ContentRoulette>())
         {
             if (!row.IsInDutyFinder || row.IsGoldSaucer || row.CompletionArrayIndex < 0)
@@ -416,11 +465,11 @@ internal sealed class GameData
                 continue;
             }
 
-            indices.Add((byte)row.CompletionArrayIndex);
+            rowIds.Add((byte)row.RowId);
         }
 
-        dailyBonusRouletteIndices = indices.Count > 0 ? indices.ToArray() : Array.Empty<byte>();
-        return dailyBonusRouletteIndices;
+        dailyBonusRouletteRowIds = rowIds.Count > 0 ? rowIds.ToArray() : Array.Empty<byte>();
+        return dailyBonusRouletteRowIds;
     }
 
     public byte[] WeeklyHuntBillIndices()
@@ -443,4 +492,8 @@ internal sealed class GameData
         weeklyHuntBillIndices = indices.Count > 0 ? indices.ToArray() : Array.Empty<byte>();
         return weeklyHuntBillIndices;
     }
+
+    public ExcelSheet<MobHuntOrderType> HuntOrderTypeSheet() => data.GetExcelSheet<MobHuntOrderType>();
+
+    public SubrowExcelSheet<MobHuntOrder> HuntOrderSheet() => data.GetSubrowExcelSheet<MobHuntOrder>();
 }

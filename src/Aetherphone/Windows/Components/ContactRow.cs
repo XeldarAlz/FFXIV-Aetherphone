@@ -52,7 +52,7 @@ internal static class ContactRow
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     private static string Subtitle(FriendEntry friend)

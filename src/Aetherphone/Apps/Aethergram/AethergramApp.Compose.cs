@@ -56,7 +56,8 @@ internal sealed partial class AethergramApp
             if (!composeAvatarMode)
             {
                 caption = string.Empty;
-                profile.ForceRefreshSoon();
+                store.RefreshFeed(SocialFeedScope.ForYou);
+                store.RefreshFeed(SocialFeedScope.Following);
             }
 
             router.Pop();

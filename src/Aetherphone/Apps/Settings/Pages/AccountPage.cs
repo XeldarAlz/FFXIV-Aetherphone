@@ -187,22 +187,29 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, user.Name, user.World, user.AvatarUrl, images,
             lodestone, 2.0f, 64);
         var avatarExtent = new Vector2(radius, radius);
-        var avatarHovered = ImGui.IsMouseHoveringRect(avatarCenter - avatarExtent, avatarCenter + avatarExtent);
+        var avatarMin = avatarCenter - avatarExtent;
+        var avatarMax = avatarCenter + avatarExtent;
+        var avatarHovered = ImGui.IsMouseHoveringRect(avatarMin, avatarMax);
         var changeLabel = Loc.T(L.Account.ChangePhoto);
         var changeSize = Typography.Measure(changeLabel, TextStyles.Subheadline);
         var changeCenter = new Vector2(centerX, avatarCenter.Y + radius + 12f * scale + changeSize.Y * 0.5f);
         var changePadding = new Vector2(6f * scale, 4f * scale);
-        var changeHovered = ImGui.IsMouseHoveringRect(changeCenter - changeSize * 0.5f - changePadding,
-            changeCenter + changeSize * 0.5f + changePadding);
+        var changeMin = changeCenter - changeSize * 0.5f - changePadding;
+        var changeMax = changeCenter + changeSize * 0.5f + changePadding;
+        var changeHovered = ImGui.IsMouseHoveringRect(changeMin, changeMax);
         var changeInk = changeHovered ? Palette.Mix(theme.Accent, theme.TextStrong, 0.25f) : theme.Accent;
         Typography.DrawCentered(changeCenter, changeLabel, changeInk, TextStyles.Subheadline);
-        if (avatarHovered || changeHovered)
+        var photoHovered = avatarHovered || changeHovered;
+        if (photoHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                OpenPhotoPicker();
-            }
+        }
+
+        var photoMin = Vector2.Min(avatarMin, changeMin);
+        var photoMax = Vector2.Max(avatarMax, changeMax);
+        if (UiInteract.Click(photoMin, photoMax, photoHovered))
+        {
+            OpenPhotoPicker();
         }
 
         var nameY = changeCenter.Y + changeSize.Y * 0.5f + 18f * scale;
@@ -525,7 +532,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(start, max, hovered);
     }
 
     private static void DrawStepRow(string number, string text, PhoneTheme theme)

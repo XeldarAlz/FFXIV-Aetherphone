@@ -34,7 +34,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private readonly PrivacyPage privacyPage;
     private readonly TagsMentionsPage tagsMentionsPage;
 
-    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary, Action showAbout)
+    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary)
     {
         sound = services.Sound;
         configuration = services.Configuration;
@@ -89,7 +89,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         privacyPage = new PrivacyPage(configuration, aethernetSession, aethernet.Account, aethernet.Safety,
             confirm);
         tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernet.Account, this);
-        var about = new AboutPage(showAbout);
+        var about = new AboutPage();
         changelogPage = new ChangelogPage(configuration);
         var groups = new[]
         {

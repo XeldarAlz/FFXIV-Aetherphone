@@ -44,8 +44,9 @@ internal static class MarketRowViews
 
         var deleteSize = 22f * scale;
         var deleteCenter = new Vector2(row.Max.X - deleteSize * 0.5f, row.Center.Y);
-        var deleteHovered = ImGui.IsMouseHoveringRect(deleteCenter - new Vector2(deleteSize * 0.5f, deleteSize * 0.5f),
-            deleteCenter + new Vector2(deleteSize * 0.5f, deleteSize * 0.5f));
+        var deleteMin = deleteCenter - new Vector2(deleteSize * 0.5f, deleteSize * 0.5f);
+        var deleteMax = deleteCenter + new Vector2(deleteSize * 0.5f, deleteSize * 0.5f);
+        var deleteHovered = UiInteract.Hover(deleteMin, deleteMax);
         var crossColor = ImGui.GetColorU32(deleteHovered ? theme.Danger : theme.TextMuted);
         var arm = 5f * scale;
         drawList.AddLine(deleteCenter - new Vector2(arm, arm), deleteCenter + new Vector2(arm, arm), crossColor,
@@ -67,17 +68,23 @@ internal static class MarketRowViews
         if (deleteHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            return ImGui.IsMouseClicked(ImGuiMouseButton.Left) ? MarketRowAction.Delete : MarketRowAction.None;
         }
 
-        var rowHovered = ImGui.IsMouseHoveringRect(row.Min, new Vector2(dotCenter.X - 8f * scale, row.Max.Y));
+        if (UiInteract.Click(deleteMin, deleteMax, deleteHovered))
+        {
+            return MarketRowAction.Delete;
+        }
+
+        var rowHitMax = new Vector2(dotCenter.X - 8f * scale, row.Max.Y);
+        var rowHovered = UiInteract.Hover(row.Min, rowHitMax);
         if (rowHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-            {
-                return MarketRowAction.Open;
-            }
+        }
+
+        if (UiInteract.Click(row.Min, rowHitMax, rowHovered))
+        {
+            return MarketRowAction.Open;
         }
 
         return MarketRowAction.None;
@@ -86,7 +93,7 @@ internal static class MarketRowViews
     public static bool ItemRow(Rect row, MarketItemRef item, long minPrice, ITextureProvider textures, PhoneTheme theme)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         var drawList = ImGui.GetWindowDrawList();
         if (hovered)
         {
@@ -122,7 +129,7 @@ internal static class MarketRowViews
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(row.Min, row.Max, hovered);
     }
 
     public static void ListingRow(Rect row, in MarketListing listing, bool multiWorld, PhoneTheme theme)

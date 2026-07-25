@@ -4,12 +4,14 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Emulation;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
+using Aetherphone.Core.YellowPages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -46,6 +48,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly ShellTransitionRenderer transition;
     private readonly MinimizeMorphView morph;
     private readonly ShellOverlayCoordinator overlays;
+    private readonly HomeScreen home;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
     private bool closeRequested;
     private bool indicatorPressActive;
@@ -70,14 +73,18 @@ internal sealed class PhoneShell : IDisposable
         navigation.AppOpened += director.OnAppOpened;
         navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
-            services.VelvetLauncher, services.DmLauncher, services.SocialLauncher);
+            services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher,
+            services.MusterLauncher, services.YellowPagesLauncher);
+        MusterChatBridge.Bind(services.Musters, services.MusterLauncher, navigation);
+        AdChatBridge.Bind(services.YellowPages, services.YellowPagesLauncher, navigation);
         banner = new NotificationBanner(notifications, VisibleAppId, router);
         banner.Shown += OnBannerShown;
         var island = new DynamicIsland(services.Playback, calls);
         var controlCenter = new ControlCenter(configuration, themes, services.Playback, calls, navigation,
             notifications, router);
         minimizedView = new MinimizedPhone(notifications, configuration);
-        var home = new HomeScreen(apps, bundle.Widgets, configuration);
+        home = new HomeScreen(apps, bundle.Widgets, configuration);
+        services.Installer.Bind(home.Layout);
         navigation.ReturningHome += home.PrepareReveal;
         var incomingOverlay = new IncomingCallOverlay(calls);
         var banOverlay = new BanOverlay(services.AethernetSession);
@@ -162,6 +169,11 @@ internal sealed class PhoneShell : IDisposable
     }
 
     public bool MinimizedResting => minimize.MinimizedResting;
+
+    public bool HomeEditing => home.Editing && navigation.Current is null;
+
+    public bool LandscapeActive => configuration.CameraLandscape && minimize.Phase == MinimizePhase.None &&
+                                   !navigation.IsTransitioning && navigation.Current?.Id == "camera";
 
     public MinimizePhase MinimizePhase => minimize.Phase;
 
@@ -352,9 +364,8 @@ internal sealed class PhoneShell : IDisposable
         {
             if (topChromeEnabled)
             {
-                StatusBar.Draw(screen, theme);
+                StatusBar.Draw(screen, theme, LandscapeActive);
             }
-
             DrawHomeIndicator(screen, theme);
         }
     }
@@ -418,6 +429,8 @@ internal sealed class PhoneShell : IDisposable
 
     public void Dispose()
     {
+        MusterChatBridge.Clear();
+        AdChatBridge.Clear();
         banner.Shown -= OnBannerShown;
         banner.Dispose();
         minimizedView.Dispose();

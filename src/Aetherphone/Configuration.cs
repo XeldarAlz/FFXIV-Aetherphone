@@ -9,8 +9,10 @@ using Aetherphone.Core.Dailies;
 using Aetherphone.Core.Emulation;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Radio;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
@@ -21,7 +23,7 @@ using Dalamud.Configuration;
 namespace Aetherphone;
 
 [Serializable]
-internal sealed class Configuration : IPluginConfiguration
+internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
 {
     public int Version { get; set; } = 1;
     public bool OpenOnStartup { get; set; } = true;
@@ -41,7 +43,7 @@ internal sealed class Configuration : IPluginConfiguration
     public bool NotifyWeeklyReset { get; set; }
     public bool NotifyGrandCompanyReset { get; set; }
     public bool NotifyRetainerVentures { get; set; }
-    public bool NotifyDailiesReset { get; set; }
+    public bool ShowDailiesBadge { get; set; } = true;
     public List<DailyCheckRecord> DailyChecks { get; set; } = new();
     public float ActivityGoalLevels { get; set; } = 1f;
     public int ActivityGoalDuties { get; set; } = 3;
@@ -52,9 +54,13 @@ internal sealed class Configuration : IPluginConfiguration
     public List<string> FontGlyphLedger { get; set; } = new();
     public float ScreenBrightness { get; set; } = 1f;
     public float PhoneScale { get; set; } = 1.25f;
+    public bool CameraLandscape { get; set; }
     public string Language { get; set; } = string.Empty;
     public ThemeMode ThemeMode { get; set; } = ThemeMode.Dark;
     public string AccentName { get; set; } = "Violet";
+    public string JobsAccentName { get; set; } = "Blue";
+    public List<JobsCustomColor> JobsCustomColors { get; set; } = new();
+    public Dictionary<ulong, List<JobsCategory>> JobsCategoriesByCharacter { get; set; } = new();
     public string LightWallpaperId { get; set; } = "DuskLight";
     public string DarkWallpaperId { get; set; } = "DuskDark";
     public List<CustomWallpaper> CustomWallpapers { get; set; } = new();
@@ -72,6 +78,7 @@ internal sealed class Configuration : IPluginConfiguration
     public string AethernetToken { get; set; } = string.Empty;
     public string EncryptionKeyCache { get; set; } = string.Empty;
     public string EncryptionKeyCacheUserId { get; set; } = string.Empty;
+    public bool EncryptionRecoveryNudgeDismissed { get; set; }
     public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
     public Dictionary<ulong, CharacterSession> CharacterSessions { get; set; } = new();
     public string LegacyUnclaimedToken { get; set; } = string.Empty;
@@ -101,7 +108,13 @@ internal sealed class Configuration : IPluginConfiguration
     public bool VenueAllDataCenters { get; set; }
     public bool VenueNotifyNewEvents { get; set; } = true;
     public List<string> VenueFavorites { get; set; } = new();
+    public int MusterCategoryFilter { get; set; }
+    public int MusterScope { get; set; }
+    public int YellowPagesCategoryFilter { get; set; }
+    public int YellowPagesScope { get; set; }
+    public bool YellowPagesAfterDark { get; set; }
     public List<uint> MapFavorites { get; set; } = new();
+    public List<RadioStationRecord> RadioFavorites { get; set; } = new();
     public const int VelvetGateVersion = 1;
     public const int VelvetOnboardVersion = 2;
     public bool VelvetAcknowledgedGate { get; set; }
@@ -111,6 +124,7 @@ internal sealed class Configuration : IPluginConfiguration
 
     public bool IsVelvetOnboarded() => VelvetOnboarded && VelvetOnboardedVersion >= VelvetOnboardVersion;
     public bool VelvetBlurByDefault { get; set; } = true;
+    public bool VelvetShowLalafell { get; set; }
     public List<string> VelvetPinnedThreads { get; set; } = new();
     public List<string> MessagePinnedChats { get; set; } = new();
     public List<string> MessageArchivedChats { get; set; } = new();
@@ -130,6 +144,7 @@ internal sealed class Configuration : IPluginConfiguration
     public Dictionary<ulong, List<string>> MutedLinkshellsByCharacter { get; set; } = new();
     public bool LinkshellMutesPerCharacterMigrated { get; set; }
     public long DevChatLastSeenUnix { get; set; }
+    public bool? Use24HourClock { get; set; }
     public bool TimeZoneManual { get; set; }
     public int ManualUtcOffsetMinutes { get; set; }
     public bool RegionManual { get; set; }
@@ -467,7 +482,11 @@ internal sealed class Configuration : IPluginConfiguration
             return true;
         }
 
+#if DEBUG
+        return false;
+#else
         return parsed.IsLoopback;
+#endif
     }
 
     public void Save()
@@ -480,4 +499,6 @@ internal sealed class Configuration : IPluginConfiguration
 
         _ = Plugin.Framework.RunOnFrameworkThread(() => Plugin.PluginInterface.SavePluginConfig(this));
     }
+
+    public void SaveNow() => Plugin.PluginInterface.SavePluginConfig(this);
 }

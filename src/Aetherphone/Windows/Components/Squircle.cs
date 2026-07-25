@@ -129,6 +129,39 @@ internal static class Squircle
         drawList.PathFillConvex(color);
     }
 
+    public static void FillSideCap(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, uint color,
+        bool left)
+    {
+        var box = CornerBox(min, max, radius);
+        if (box <= 1.5f)
+        {
+            drawList.AddRectFilled(min, max, color, MathF.Max(0f, radius),
+                left ? ImDrawFlags.RoundCornersLeft : ImDrawFlags.RoundCornersRight);
+            return;
+        }
+
+        const float overlap = 1.5f;
+        if (left)
+        {
+            var bodyLeft = min.X + box;
+            if (max.X > bodyLeft)
+            {
+                drawList.AddRectFilled(new Vector2(bodyLeft, min.Y), max, color);
+            }
+        }
+        else
+        {
+            var bodyRight = max.X - box;
+            if (bodyRight > min.X)
+            {
+                drawList.AddRectFilled(min, new Vector2(bodyRight, max.Y), color);
+            }
+        }
+
+        TraceSideCapPath(drawList, min, max, box, left, overlap);
+        drawList.PathFillConvex(color);
+    }
+
     public static void FillVerticalGradient(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius,
         uint topColor, uint bottomColor)
     {
@@ -257,6 +290,50 @@ internal static class Squircle
         }
 
         drawList.PathLineTo(new Vector2(min.X, max.Y - box - overlap));
+    }
+
+    private static void TraceSideCapPath(ImDrawListPtr drawList, Vector2 min, Vector2 max, float box, bool left,
+        float overlap)
+    {
+        drawList.PathClear();
+        var corner = UnitCorner;
+        if (left)
+        {
+            var topLeft = new Vector2(min.X + box, min.Y + box);
+            var bottomLeft = new Vector2(min.X + box, max.Y - box);
+            drawList.PathLineTo(new Vector2(min.X + box + overlap, min.Y));
+            for (var index = corner.Length - 1; index >= 0; index--)
+            {
+                var point = corner[index];
+                drawList.PathLineTo(new Vector2(topLeft.X - point.X * box, topLeft.Y - point.Y * box));
+            }
+
+            for (var index = 0; index < corner.Length; index++)
+            {
+                var point = corner[index];
+                drawList.PathLineTo(new Vector2(bottomLeft.X - point.X * box, bottomLeft.Y + point.Y * box));
+            }
+
+            drawList.PathLineTo(new Vector2(min.X + box + overlap, max.Y));
+            return;
+        }
+
+        var topRight = new Vector2(max.X - box, min.Y + box);
+        var bottomRight = new Vector2(max.X - box, max.Y - box);
+        drawList.PathLineTo(new Vector2(max.X - box - overlap, max.Y));
+        for (var index = corner.Length - 1; index >= 0; index--)
+        {
+            var point = corner[index];
+            drawList.PathLineTo(new Vector2(bottomRight.X + point.X * box, bottomRight.Y + point.Y * box));
+        }
+
+        for (var index = 0; index < corner.Length; index++)
+        {
+            var point = corner[index];
+            drawList.PathLineTo(new Vector2(topRight.X + point.X * box, topRight.Y - point.Y * box));
+        }
+
+        drawList.PathLineTo(new Vector2(max.X - box - overlap, min.Y));
     }
 
     private static Vector2[] BuildUnitCorner()

@@ -86,7 +86,7 @@ internal static class MusicRenderer
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(center - hit, center + hit, hovered);
     }
 
     public static SliderState Slider(string id, Rect track, float fraction, Vector4 fillIdle, Vector4 fillActive,

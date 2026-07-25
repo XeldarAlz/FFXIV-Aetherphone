@@ -127,7 +127,7 @@ internal static class CalendarDayList
 
         if (dayEvent.IsCustom)
         {
-            return string.Concat(begin.ToString("MMM d", Loc.Culture), ", ", begin.ToString("t", Loc.Culture));
+            return string.Concat(begin.ToString("MMM d", Loc.Culture), ", ", TimeText.Clock(begin));
         }
 
         if (begin.Date == end.Date)

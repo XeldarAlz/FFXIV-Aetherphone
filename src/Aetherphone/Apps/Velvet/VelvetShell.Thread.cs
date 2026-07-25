@@ -63,6 +63,8 @@ internal sealed partial class VelvetShell
 
         protected override void PopScreen() => app.router.Pop();
 
+        protected override void OpenEncryptionInfo(string threadId) => app.router.Push(VelvetView.Encryption);
+
         protected override void BeginReply(string messageId)
         {
             var message = FindMessage(messageId);
@@ -112,7 +114,8 @@ internal sealed partial class VelvetShell
             var scale = ImGuiHelpers.GlobalScale;
             var drawList = ImGui.GetWindowDrawList();
             var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-            ChatHeaderControls.DrawLock(ui, area, rowCenterY, store.EncryptingCurrent, store.VaultState, () => { });
+            ChatHeaderControls.DrawLock(ui, area, rowCenterY, store.EncryptingCurrent, store.VaultState,
+                () => OpenEncryptionInfo(threadId));
             ChatHeaderControls.DrawSearchToggle(ui, area, rowCenterY, searchController.Open, searchController.Toggle);
             var name = app.ThreadTitle(threadId);
             var avatarHandle = app.ThreadAvatar(threadId, out var monogram, out var presence);
@@ -170,10 +173,12 @@ internal sealed partial class VelvetShell
 
                 var replySender = string.Empty;
                 var replyBody = string.Empty;
+                var replyKind = message.ReplyKind;
                 if (message.ReplyToId is not null)
                 {
                     replySender = message.ReplySenderId == myId ? Loc.T(L.Message.You) : otherName;
-                    replyBody = ChatText.QuotePreview(message.ReplyBody, message.ReplyKind);
+                    replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
+                    replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
                 }
 
                 TranscriptReaction[]? reactions = null;
@@ -190,7 +195,7 @@ internal sealed partial class VelvetShell
 
                 mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                     message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
-                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, message.ReplyKind,
+                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
                     message.DurationSecs, reactions);
             }
 

@@ -11,6 +11,7 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Net;
@@ -25,6 +26,8 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
 using Aetherphone.Core.Wallpapers;
+using Aetherphone.Core.YellowPages;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using YoutubeExplode;
 
@@ -32,6 +35,7 @@ namespace Aetherphone.Core;
 
 internal sealed class PhoneServices : IDisposable
 {
+    public Home.AppInstaller Installer { get; } = new();
     public required Configuration Configuration { get; init; }
     public required ThemeProvider Themes { get; init; }
     public required GameData GameData { get; init; }
@@ -39,6 +43,7 @@ internal sealed class PhoneServices : IDisposable
     public required MapData Maps { get; init; }
     public required ITextureProvider Textures { get; init; }
     public required WeatherService Weather { get; init; }
+    public required WeatherControl WeatherControl { get; init; }
     public required NotificationService Notifications { get; init; }
     public required SocialNotificationService SocialNotifications { get; init; }
     public required SoundService Sound { get; init; }
@@ -47,6 +52,7 @@ internal sealed class PhoneServices : IDisposable
     public required LinkpearlLauncher LinkpearlLauncher { get; init; }
     public required VelvetLauncher VelvetLauncher { get; init; }
     public required DmLauncher DmLauncher { get; init; }
+    public required GramDmLauncher GramDmLauncher { get; init; }
     public required SocialLauncher SocialLauncher { get; init; }
     public required LinkshellMuteStore LinkshellMutes { get; init; }
     public required LinkpearlNotificationGate LinkpearlNotificationGate { get; init; }
@@ -77,6 +83,10 @@ internal sealed class PhoneServices : IDisposable
     public required PlaybackHub Playback { get; init; }
     public required GameStatsStore GameStats { get; init; }
     public required VenuesService Venues { get; init; }
+    public required MusterStore Musters { get; init; }
+    public required MusterLauncher MusterLauncher { get; init; }
+    public required YellowPagesStore YellowPages { get; init; }
+    public required YellowPagesLauncher YellowPagesLauncher { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
     public required ActivityTracker Activity { get; init; }
@@ -93,7 +103,7 @@ internal sealed class PhoneServices : IDisposable
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
-        ITextureProvider textures, DirectoryInfo configDirectory)
+        ITextureProvider textures, DirectoryInfo configDirectory, IUnlockState unlockState, ICondition condition)
     {
         var builtInWallpaperDirectory = new DirectoryInfo(
             Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
@@ -104,6 +114,7 @@ internal sealed class PhoneServices : IDisposable
         var gameData = new GameData(dataManager, objectTable);
         var maps = new MapData(dataManager, clientState);
         var weather = new WeatherService(dataManager, clientState);
+        var weatherControl = new WeatherControl(weather, framework, clientState, condition);
         var soundBundledDirectory = new DirectoryInfo(
             Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Sounds"));
         var soundUserDirectory = new DirectoryInfo(Path.Combine(configDirectory.FullName, "Sounds"));
@@ -118,6 +129,7 @@ internal sealed class PhoneServices : IDisposable
         var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
+        var gramDmLauncher = new GramDmLauncher();
         var socialLauncher = new SocialLauncher();
         var linkshellMutes = new LinkshellMuteStore(configuration, characterWatch);
         var linkshells = new LinkshellStore(linkshellMutes, characterWatch);
@@ -158,7 +170,7 @@ internal sealed class PhoneServices : IDisposable
         var venues = new VenuesService(http, notifications, configuration, gameData);
         var collectionsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collections"));
         var collectionsDisk = new DiskCache(collectionsRoot, 32L * 1024 * 1024);
-        var collections = new CollectionsCatalogService(http, collectionsDisk);
+        var collections = new CollectionsCatalogService(http, collectionsDisk, dataManager, unlockState, framework);
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
         var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
@@ -171,6 +183,10 @@ internal sealed class PhoneServices : IDisposable
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
             gameData, configuration, confirm);
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm);
+        var musters = new MusterStore(aethernetSession, aethernet.Musters, notifications, configuration,
+            visibility, realtimeSignals);
+        var yellowPages = new YellowPagesStore(aethernetSession, aethernet.Ads, aethernet.Media, configuration,
+            visibility, realtimeSignals);
         return new PhoneServices
         {
             Configuration = configuration,
@@ -180,6 +196,7 @@ internal sealed class PhoneServices : IDisposable
             Maps = maps,
             Textures = textures,
             Weather = weather,
+            WeatherControl = weatherControl,
             Notifications = notifications,
             SocialNotifications = socialNotifications,
             Sound = sound,
@@ -188,6 +205,7 @@ internal sealed class PhoneServices : IDisposable
             LinkpearlLauncher = linkpearlLauncher,
             VelvetLauncher = velvetLauncher,
             DmLauncher = dmLauncher,
+            GramDmLauncher = gramDmLauncher,
             SocialLauncher = socialLauncher,
             LinkshellMutes = linkshellMutes,
             LinkpearlNotificationGate = linkpearlNotificationGate,
@@ -218,6 +236,10 @@ internal sealed class PhoneServices : IDisposable
             Playback = playback,
             GameStats = gameStats,
             Venues = venues,
+            Musters = musters,
+            MusterLauncher = new MusterLauncher(),
+            YellowPages = yellowPages,
+            YellowPagesLauncher = new YellowPagesLauncher(),
             Collections = collections,
             InventoryCapture = inventoryCapture,
             Activity = activity,
@@ -238,6 +260,7 @@ internal sealed class PhoneServices : IDisposable
     {
         CharacterSwitcher.Dispose();
         CharacterWatch.Dispose();
+        WeatherControl.Dispose();
         SocialNotifications.Dispose();
         KeyVault.Dispose();
         Calls.Dispose();
@@ -246,6 +269,8 @@ internal sealed class PhoneServices : IDisposable
         RingNotifier.Dispose();
         Activity.Dispose();
         Venues.Dispose();
+        Musters.Dispose();
+        YellowPages.Dispose();
         SongPlayer.Dispose();
         SongSearch.Dispose();
         RadioPlayer.Dispose();

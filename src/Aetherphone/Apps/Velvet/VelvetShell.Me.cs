@@ -1,6 +1,7 @@
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
@@ -57,6 +58,24 @@ internal sealed partial class VelvetShell
                 Gap(6f);
                 ui.HelpText(Loc.T(L.Velvet.DiscoverableHelp));
 
+                Gap(14f);
+                var showLalafell = configuration.VelvetShowLalafell;
+                ui.ToggleRow(Loc.T(L.Velvet.ShowLalafellLabel), ref showLalafell);
+                if (showLalafell != configuration.VelvetShowLalafell)
+                {
+                    if (showLalafell)
+                    {
+                        AskShowLalafell();
+                    }
+                    else
+                    {
+                        SetShowLalafell(false);
+                    }
+                }
+
+                Gap(6f);
+                ui.HelpText(Loc.T(L.Velvet.ShowLalafellHelp));
+
                 Gap(22f);
                 VSectionHeader.Overline(Loc.T(L.Velvet.WhoCanMessage));
                 Gap(10f);
@@ -100,6 +119,26 @@ internal sealed partial class VelvetShell
 
             Gap(40f);
         }
+    }
+
+    private void AskShowLalafell()
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Velvet.ShowLalafellConfirmTitle),
+            Message = Loc.T(L.Velvet.ShowLalafellConfirmMessage),
+            ConfirmLabel = Loc.T(L.Velvet.ShowLalafellConfirmAction),
+            CancelLabel = Loc.T(L.Velvet.DeleteCancel),
+            Danger = false,
+            Confirm = () => SetShowLalafell(true),
+        });
+    }
+
+    private void SetShowLalafell(bool value)
+    {
+        configuration.VelvetShowLalafell = value;
+        configuration.Save();
+        ApplyDiscoverFilters();
     }
 
     private void DrawBlocked(Rect area)

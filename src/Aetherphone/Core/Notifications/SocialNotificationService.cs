@@ -12,7 +12,7 @@ namespace Aetherphone.Core.Notifications;
 internal sealed class SocialNotificationService : IDisposable
 {
     private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(600);
+    private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(120);
     private readonly AethernetSession session;
     private readonly ConfirmService confirm;
     private readonly AccountClient client;
@@ -226,9 +226,10 @@ internal sealed class SocialNotificationService : IDisposable
         }
 
         var moderationTitle = ModerationTitle(item);
-        var title = moderationTitle ?? SocialActivity.ActorLabel(item);
+        var title = moderationTitle ?? AdTitle(item) ?? SocialActivity.ActorLabel(item);
+        var groupKey = item.App == SocialActivity.YellowPagesApp ? item.PostId : null;
         notifications.Notify(new PhoneNotification(item.App, title, body, DateTime.Now,
-            AccentFor(item.App))
+            AccentFor(item.App), groupKey)
         {
             ActorId = item.ActorId,
             PostId = item.PostId,
@@ -242,6 +243,17 @@ internal sealed class SocialNotificationService : IDisposable
                 : body;
             confirm.Alert(moderationTitle, alertBody, Loc.T(L.Moderation.RemovedDismiss));
         }
+    }
+
+    private static string? AdTitle(NotificationDto item)
+    {
+        return item.Type switch
+        {
+            SocialActivity.TypeAdExpiring => Loc.T(L.YellowPages.NotifExpiringTitle),
+            SocialActivity.TypeAdHidden => Loc.T(L.YellowPages.NotifHiddenTitle),
+            SocialActivity.TypeAdOpened => Loc.T(L.YellowPages.NotifOpenedTitle),
+            _ => null,
+        };
     }
 
     private static string? ModerationTitle(NotificationDto item)
@@ -263,6 +275,7 @@ internal sealed class SocialNotificationService : IDisposable
         {
             SocialActivity.AethergramApp => AppAccents.For(SocialActivity.AethergramApp),
             SocialActivity.VelvetApp => AppAccents.For(SocialActivity.VelvetApp),
+            SocialActivity.YellowPagesApp => AppAccents.For(SocialActivity.YellowPagesApp),
             _ => AppAccents.For(SocialActivity.ChirperApp),
         };
     }

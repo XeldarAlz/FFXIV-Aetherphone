@@ -6,6 +6,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
@@ -54,6 +55,7 @@ internal sealed partial class MessageApp : IPhoneApp
     private readonly ConfirmService confirm;
     private readonly ReportService report;
     private readonly WallpaperImageCache wallpaperImages;
+    private readonly MusterStore musters;
     private readonly AppSkin ui = new(AppPalettes.Message);
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<MessageRoute> router;
@@ -70,7 +72,7 @@ internal sealed partial class MessageApp : IPhoneApp
     public MessageApp(DirectMessagesStore store, ContactBook contacts, CallHub calls, AethernetSession session,
         RemoteImageCache images, LodestoneService lodestone, DmLauncher launcher, PhotoLibrary library,
         HttpService http, Configuration configuration, ConfirmService confirm, ReportService report,
-        WallpaperImageCache wallpaperImages)
+        WallpaperImageCache wallpaperImages, MusterStore musters)
     {
         this.store = store;
         this.contacts = contacts;
@@ -85,6 +87,7 @@ internal sealed partial class MessageApp : IPhoneApp
         this.confirm = confirm;
         this.report = report;
         this.wallpaperImages = wallpaperImages;
+        this.musters = musters;
         router = new ViewRouter<MessageRoute>(MessageRoute.Root);
         drawView = DrawView;
         back = () => router.Pop();

@@ -43,7 +43,7 @@ internal readonly struct RadioFacet
     }
 }
 
-internal readonly struct RadioStation
+internal readonly struct RadioStation : IEquatable<RadioStation>
 {
     public readonly string Name;
     public readonly string StreamUrl;
@@ -61,6 +61,13 @@ internal readonly struct RadioStation
         Country = country;
         Uuid = uuid;
     }
+
+    public bool Equals(RadioStation other) => other.StreamUrl == StreamUrl;
+
+    public override bool Equals(object? obj) => obj is RadioStation station && Equals(station);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(StreamUrl);
 }
 
 internal readonly struct RadioPage

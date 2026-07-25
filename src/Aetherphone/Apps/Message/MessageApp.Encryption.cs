@@ -44,6 +44,7 @@ internal sealed partial class MessageApp
             var encrypted = store.EncryptingCurrent;
             DrawEncryptionHero(encrypted, scale);
             DrawEncryptionSummary(encrypted, scale);
+            threadView.DrawEncryptionEmbedded();
             if (conversation.IsGroup)
             {
                 DrawEncryptionMembers(scale);
@@ -105,7 +106,9 @@ internal sealed partial class MessageApp
 
         if (store.VaultState == KeyVaultState.Locked)
         {
-            return Loc.T(L.Encryption.LockedSummary);
+            return store.Vault.RecoveryConfigured
+                ? Loc.T(L.Encryption.LockedRecoverBody)
+                : Loc.T(L.Encryption.LockedBody);
         }
 
         var waiting = store.CurrentKeyStatus.MembersWithoutKeys;

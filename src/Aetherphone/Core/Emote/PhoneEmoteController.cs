@@ -12,7 +12,7 @@ internal sealed class PhoneEmoteController : IDisposable
     private const ushort TomescrollEmoteId = 295;
     private const ushort TomestoneEmoteId = 191;
     private const long StillnessDelayMilliseconds = 400;
-    private const long RecastCooldownMilliseconds = 1000;
+    private const long RecastCooldownMilliseconds = 2500;
     private const float MovementThreshold = 0.0025f;
     private const float RotationThreshold = 0.02f;
 
@@ -71,6 +71,12 @@ internal sealed class PhoneEmoteController : IDisposable
         }
 
         var now = Environment.TickCount64;
+        if (IsBusy(player.Address))
+        {
+            lastCastMilliseconds = now;
+            return;
+        }
+
         if (HasMoved(player.Position, player.Rotation, now))
         {
             return;
@@ -82,11 +88,6 @@ internal sealed class PhoneEmoteController : IDisposable
         }
 
         if (now - lastCastMilliseconds < RecastCooldownMilliseconds)
-        {
-            return;
-        }
-
-        if (IsBusy(player.Address))
         {
             return;
         }

@@ -274,7 +274,7 @@ internal sealed class PollsApp : IPhoneApp
                 ImGui.GetColorU32(Palette.WithAlpha(fillColor, fillColor.W * inkAlpha)));
         }
 
-        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (UiInteract.Click(rowMin, rowMax, hovered))
         {
             store.Vote(poll, optionIndex);
         }

@@ -36,7 +36,11 @@ internal sealed class CallSignalRouter : IDisposable
         _ = connection.SendControlAsync(control);
     }
 
-    private void OnConnected(bool isConnected) => ConnectedChanged?.Invoke(isConnected);
+    private void OnConnected(bool isConnected)
+    {
+        signals.SetActive(isConnected);
+        ConnectedChanged?.Invoke(isConnected);
+    }
 
     private void OnControl(CallControl message)
     {
@@ -48,8 +52,14 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.VelvetPing:
                 signals.PublishVelvet();
                 return;
+            case SignalType.GramPing:
+                signals.PublishGram();
+                return;
             case SignalType.SocialPing:
                 signals.PublishSocial();
+                return;
+            case SignalType.MusterPing:
+                signals.PublishMuster();
                 return;
         }
 

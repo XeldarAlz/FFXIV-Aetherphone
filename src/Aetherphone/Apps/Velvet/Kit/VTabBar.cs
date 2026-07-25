@@ -58,10 +58,11 @@ internal static class VTabBar
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    clicked = index;
-                }
+            }
+
+            if (UiInteract.Click(cellMin, cellMax, hovered))
+            {
+                clicked = index;
             }
         }
 

@@ -255,7 +255,7 @@ internal sealed partial class VenuesApp
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
     private void DrawInfo(VenueEvent venue)

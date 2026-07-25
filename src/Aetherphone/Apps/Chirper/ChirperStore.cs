@@ -167,23 +167,6 @@ internal sealed class ChirperStore : SocialFeedStore
             () => avatarBusy = false);
     }
 
-    protected override void ApplyFollowEverywhere(string userId, bool follow)
-    {
-        base.ApplyFollowEverywhere(userId, follow);
-        forYouLane.Items = MapFollowByAuthor(forYouLane.Items, userId, follow);
-        followingLane.Items = MapFollowByAuthor(followingLane.Items, userId, follow);
-        profilePosts = MapFollowByAuthor(profilePosts, userId, follow);
-        if (detailPost is { } post && post.AuthorId == userId)
-        {
-            detailPost = post with { IsFollowing = follow };
-        }
-    }
-
-    private static PostDto[] MapFollowByAuthor(PostDto[] source, string userId, bool follow) =>
-        CopyOnWrite.Map(source,
-            post => post.AuthorId == userId && post.IsFollowing != follow,
-            post => post with { IsFollowing = follow });
-
     private static PostDto ApplyReaction(PostDto post, int newKind)
     {
         var (counts, total) = ReactionTally.Shift(post.ReactionCounts, post.MyReaction, newKind);

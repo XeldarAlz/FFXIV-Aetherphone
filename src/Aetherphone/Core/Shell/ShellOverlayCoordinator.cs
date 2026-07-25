@@ -142,12 +142,9 @@ internal sealed class ShellOverlayCoordinator
         if (topChromeEnabled)
         {
             controlCenter.Draw(screen, theme, delta,
-                !navigation.IsTransitioning && !director.CapturesPointer && !state.IslandCaptures,
+                !navigation.IsTransitioning && !director.CapturesPointer && !state.IslandCaptures &&
+                navigation.Current?.Id != "camera",
                 !director.CapturesPointer);
-        }
-        else
-        {
-            controlCenter.Suppress();
         }
         HoverTooltip.Flush();
         reportOverlay.Draw(screen, theme);

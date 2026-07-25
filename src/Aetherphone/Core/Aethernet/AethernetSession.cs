@@ -58,6 +58,7 @@ internal sealed class AethernetSession
             LegacyClaimPending = false;
             configuration.AethernetToken = token;
             CurrentUser = user;
+            AdoptLegacyEncryptionKey(user);
             StashActive();
             configuration.Save();
             Changed?.Invoke();
@@ -69,6 +70,7 @@ internal sealed class AethernetSession
         _ = framework.RunOnFrameworkThread(() =>
         {
             CurrentUser = user;
+            AdoptLegacyEncryptionKey(user);
             StashActive();
             configuration.Save();
             Changed?.Invoke();
@@ -84,12 +86,8 @@ internal sealed class AethernetSession
             banned = false;
             banReason = null;
             LegacyClaimPending = false;
-            if (activeContentId != 0)
-            {
-                configuration.CharacterSessions.Remove(activeContentId);
-            }
-
-            ClearFlat();
+            configuration.AethernetToken = string.Empty;
+            StashActive();
             CurrentUser = null;
             configuration.Save();
             Changed?.Invoke();
@@ -192,6 +190,21 @@ internal sealed class AethernetSession
         });
     }
 
+    private void AdoptLegacyEncryptionKey(UserDto user)
+    {
+        if (configuration.EncryptionKeyCache.Length > 0
+            || configuration.LegacyUnclaimedEncryptionKey.Length == 0
+            || !string.Equals(configuration.LegacyUnclaimedEncryptionUserId, user.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        configuration.EncryptionKeyCache = configuration.LegacyUnclaimedEncryptionKey;
+        configuration.EncryptionKeyCacheUserId = configuration.LegacyUnclaimedEncryptionUserId;
+        configuration.LegacyUnclaimedEncryptionKey = string.Empty;
+        configuration.LegacyUnclaimedEncryptionUserId = string.Empty;
+    }
+
     private void StashActive()
     {
         if (activeContentId == 0)
@@ -200,21 +213,25 @@ internal sealed class AethernetSession
         }
 
         var token = configuration.AethernetToken;
-        if (string.IsNullOrEmpty(token))
+        var hasSnapshot = configuration.CharacterSessions.TryGetValue(activeContentId, out var snapshot);
+        if (!hasSnapshot)
         {
-            configuration.CharacterSessions.Remove(activeContentId);
-            return;
-        }
+            if (string.IsNullOrEmpty(token) && configuration.EncryptionKeyCache.Length == 0)
+            {
+                return;
+            }
 
-        if (!configuration.CharacterSessions.TryGetValue(activeContentId, out var snapshot))
-        {
             snapshot = new CharacterSession();
             configuration.CharacterSessions[activeContentId] = snapshot;
         }
 
-        snapshot.Token = token;
-        snapshot.EncryptionKeyCache = configuration.EncryptionKeyCache;
-        snapshot.EncryptionKeyCacheUserId = configuration.EncryptionKeyCacheUserId;
+        snapshot!.Token = token;
+        if (configuration.EncryptionKeyCache.Length > 0)
+        {
+            snapshot.EncryptionKeyCache = configuration.EncryptionKeyCache;
+            snapshot.EncryptionKeyCacheUserId = configuration.EncryptionKeyCacheUserId;
+        }
+
         var user = CurrentUser;
         if (user is not null)
         {

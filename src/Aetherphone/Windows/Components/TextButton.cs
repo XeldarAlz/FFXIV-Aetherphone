@@ -14,16 +14,15 @@ internal static class TextButton
         var size = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
         var min = new Vector2(center.X - size.X * 0.5f - PadX * scale, center.Y - size.Y * 0.5f - PadY * scale);
         var max = new Vector2(center.X + size.X * 0.5f + PadX * scale, center.Y + size.Y * 0.5f + PadY * scale);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         Squircle.Fill(ImGui.GetWindowDrawList(), min, max, (max.Y - min.Y) * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(color, hovered ? 0.22f : 0.14f)));
         Typography.DrawCentered(center, label, color, 0.9f, FontWeight.SemiBold);
-        if (!hovered)
+        if (hovered)
         {
-            return false;
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        return UiInteract.Click(min, max, hovered);
     }
 }

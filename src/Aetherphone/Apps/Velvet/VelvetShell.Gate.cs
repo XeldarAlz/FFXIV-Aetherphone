@@ -15,7 +15,6 @@ internal sealed partial class VelvetShell
     {
         postMenu.Gate();
         threadMenu.Gate();
-        filterSheet.Gate();
         threadView.GateMenus();
     }
 
@@ -91,6 +90,13 @@ internal sealed partial class VelvetShell
         ImGui.SetCursorScreenPos(headerOrigin);
         ImGui.Dummy(new Vector2(width, 26f * scale));
 
+        DrawTagFlow(category.Tags, selected, category.Hue);
+    }
+
+    private void DrawTagFlow(string[] options, List<string> selected, Vector4 hue)
+    {
+        var scale = ImGuiHelpers.GlobalScale;
+        var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
         var height = 40f * scale;
         var rowGap = 8f * scale;
@@ -98,9 +104,9 @@ internal sealed partial class VelvetShell
         var x = origin.X;
         var y = origin.Y;
         var toggled = -1;
-        for (var index = 0; index < category.Tags.Length; index++)
+        for (var index = 0; index < options.Length; index++)
         {
-            var tag = category.Tags[index];
+            var tag = options[index];
             var chipWidth = Typography.Measure(tag, TextStyles.Callout).X + 32f * scale;
             if (x + chipWidth > origin.X + width && x > origin.X)
             {
@@ -108,7 +114,7 @@ internal sealed partial class VelvetShell
                 y += height + rowGap;
             }
 
-            if (DrawTagPill(new Vector2(x, y), new Vector2(chipWidth, height), tag, category.Hue,
+            if (DrawTagPill(new Vector2(x, y), new Vector2(chipWidth, height), tag, hue,
                     selected.Contains(tag), scale))
             {
                 toggled = index;
@@ -122,8 +128,8 @@ internal sealed partial class VelvetShell
 
         if (toggled >= 0)
         {
-            var tag = category.Tags[toggled];
-            if (!selected.Remove(tag) && selected.Count < 12)
+            var tag = options[toggled];
+            if (!selected.Remove(tag))
             {
                 selected.Add(tag);
             }
@@ -161,51 +167,5 @@ internal sealed partial class VelvetShell
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-    }
-
-    private void DrawTokenEditor(List<string> items, string[] suggestions, Vector4 tone)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        var width = ImGui.GetContentRegionAvail().X;
-        if (items.Count > 0)
-        {
-            var models = new VChipModel[items.Count];
-            for (var index = 0; index < items.Count; index++)
-            {
-                models[index] = new VChipModel(items[index], VChipStyle.Tint, tone, null, true);
-            }
-
-            var removed = VChipFlow.Draw(models, width, scale);
-            if (removed >= 0)
-            {
-                items.RemoveAt(removed);
-            }
-
-            ImGui.Dummy(new Vector2(0f, 6f * scale));
-        }
-
-        var pool = new List<VChipModel>(suggestions.Length);
-        var map = new List<int>(suggestions.Length);
-        for (var index = 0; index < suggestions.Length; index++)
-        {
-            if (items.Contains(suggestions[index]))
-            {
-                continue;
-            }
-
-            pool.Add(new VChipModel(suggestions[index], VChipStyle.Ghost, VelvetTheme.Moonlight));
-            map.Add(index);
-        }
-
-        if (pool.Count == 0)
-        {
-            return;
-        }
-
-        var added = VChipFlow.Draw(pool.ToArray(), width, scale);
-        if (added >= 0 && items.Count < 12)
-        {
-            items.Add(suggestions[map[added]]);
-        }
     }
 }

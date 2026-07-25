@@ -27,7 +27,15 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
         this.client = client;
         this.peers = peers;
         this.signals = signals;
-        signals.ChatPinged += InboxCadence.RequestImmediate;
+        signals.ChatPinged += OnChatPinged;
+    }
+
+    public override bool RealtimePushActive => signals.RealtimeActive;
+
+    private void OnChatPinged()
+    {
+        InboxCadence.RequestImmediate();
+        RefreshThread();
     }
 
     public ConversationDto[] Conversations => ThreadListItems;
@@ -54,6 +62,12 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     public void NoteConversationViewed(string id) => NoteThreadViewed(id);
 
     public void RefreshConversations() => RefreshThreadListCore();
+
+    protected override void OnAccountSwitched()
+    {
+        conversation = null;
+        members = Array.Empty<ConversationMemberDto>();
+    }
 
     public void OpenConversation(string id) => OpenThread(id);
 
@@ -192,7 +206,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     {
         if (item.LastMessagePreview.Length > 0)
         {
-            return item.LastMessagePreview;
+            return ChatText.ListPreview(item.LastMessagePreview);
         }
 
         return item.LastMessageKind switch
@@ -524,6 +538,6 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     protected override void DisposeCore()
     {
-        signals.ChatPinged -= InboxCadence.RequestImmediate;
+        signals.ChatPinged -= OnChatPinged;
     }
 }

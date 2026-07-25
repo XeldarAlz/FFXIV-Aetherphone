@@ -595,7 +595,7 @@ internal sealed class NotesApp : IPhoneApp
     private string DueLabel(DateTime due)
     {
         var dayLabel = RelativeDay(due.Date);
-        return $"{dayLabel}  {due.ToString("t", Loc.Culture)}";
+        return $"{dayLabel}  {TimeText.Clock(due)}";
     }
 
     private static string RelativeDay(DateTime day)

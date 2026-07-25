@@ -13,10 +13,15 @@ internal sealed class HttpService : IDisposable
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan UploadTimeout = TimeSpan.FromSeconds(60);
     private readonly HttpClient client;
+    private readonly EtagCache etagCache = new();
 
     public HttpService()
     {
-        client = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(10), })
+        client = new HttpClient(new SocketsHttpHandler
+        {
+            PooledConnectionLifetime = TimeSpan.FromMinutes(10),
+            AutomaticDecompression = DecompressionMethods.All,
+        })
         {
             Timeout = Timeout.InfiniteTimeSpan, MaxResponseContentBufferSize = MaxResponseBytes,
         };
@@ -103,10 +108,12 @@ internal sealed class HttpService : IDisposable
         return await SendForJsonAsync(request, responseInfo, bearer, onStatus, appScope, token).ConfigureAwait(false);
     }
 
-    public async Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token)
+    public async Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token,
+        string? bearer = null)
     {
         using var request = new HttpRequestMessage(HttpMethod.Put, uri) { Content = new ByteArrayContent(content), };
         request.Content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        ApplyHeaders(request, bearer, null);
         try
         {
             using var scope = TimeoutScope(token, UploadTimeout);
@@ -177,14 +184,41 @@ internal sealed class HttpService : IDisposable
         Action<int>? onStatus, string? appScope, CancellationToken token)
     {
         ApplyHeaders(request, bearer, appScope);
+        var cacheKey = request.Method == HttpMethod.Get
+            ? EtagCache.Key(bearer, appScope, request.RequestUri)
+            : null;
+        var hasCached = false;
+        var cachedBody = Array.Empty<byte>();
+        if (cacheKey is not null && etagCache.TryGet(cacheKey, out var cachedTag, out cachedBody))
+        {
+            hasCached = true;
+            request.Headers.TryAddWithoutValidation("If-None-Match", cachedTag);
+        }
+
         try
         {
             using var scope = TimeoutScope(token, RequestTimeout);
             using var response = await client.SendAsync(request, scope.Token).ConfigureAwait(false);
             onStatus?.Invoke((int)response.StatusCode);
+            if (response.StatusCode == HttpStatusCode.NotModified && hasCached)
+            {
+                return JsonSerializer.Deserialize(cachedBody, typeInfo);
+            }
+
             if (!response.IsSuccessStatusCode)
             {
                 return default;
+            }
+
+            if (cacheKey is not null)
+            {
+                var etag = response.Headers.ETag?.ToString();
+                if (!string.IsNullOrEmpty(etag))
+                {
+                    var body = await response.Content.ReadAsByteArrayAsync(scope.Token).ConfigureAwait(false);
+                    etagCache.Store(cacheKey, etag, body);
+                    return JsonSerializer.Deserialize(body, typeInfo);
+                }
             }
 
             await using var stream = await response.Content.ReadAsStreamAsync(scope.Token).ConfigureAwait(false);

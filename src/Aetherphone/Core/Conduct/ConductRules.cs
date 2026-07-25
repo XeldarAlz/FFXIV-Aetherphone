@@ -79,7 +79,35 @@ internal static class ConductRules
             new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null, L.Conduct.VelvetNotAllowed)),
     };
 
-    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet };
+    public static readonly ConductGate Muster = new()
+    {
+        AppId = "muster",
+        Version = 1,
+        CountdownSeconds = 30f,
+        Icon = FontAwesomeIcon.Bullhorn,
+        Title = L.Conduct.MusterTitle,
+        Intro = L.Conduct.MusterIntro,
+        Sections = WithPlatform(
+            new ConductSection(ConductTone.Encouraged, L.Conduct.SectionEncouraged, null, L.Conduct.MusterEncouraged),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null, L.Conduct.MusterNotAllowed)),
+    };
+
+    public static readonly ConductGate YellowPages = new()
+    {
+        AppId = "yellowpages",
+        Version = 1,
+        CountdownSeconds = 30f,
+        Icon = FontAwesomeIcon.AddressBook,
+        Title = L.Conduct.YellowPagesTitle,
+        Intro = L.Conduct.YellowPagesIntro,
+        Sections = WithPlatform(
+            new ConductSection(ConductTone.Encouraged, L.Conduct.SectionEncouraged, null,
+                L.Conduct.YellowPagesEncouraged),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null,
+                L.Conduct.YellowPagesNotAllowed)),
+    };
+
+    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet, Muster, YellowPages };
 
     public static ConductGate? For(string appId)
     {

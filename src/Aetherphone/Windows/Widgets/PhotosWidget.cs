@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Aetherphone.Core;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Media;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Photos;
@@ -147,7 +148,8 @@ internal sealed class PhotosWidget : IHomeWidget
         {
             var token = cancellation.Token;
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
-            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, path, token).ConfigureAwait(false);
+            var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes, path, token)
+                .ConfigureAwait(false);
             if (!ready.TryAdd(path, wrap))
             {
                 wrap.Dispose();

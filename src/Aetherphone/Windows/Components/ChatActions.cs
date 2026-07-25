@@ -1,3 +1,4 @@
+using Aetherphone.Core.Maps;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -18,7 +19,10 @@ internal static class ChatActions
                 return;
             }
 
-            ImGui.SetClipboardText(messages[index].Body ?? string.Empty);
+            var body = messages[index].Body ?? string.Empty;
+            ImGui.SetClipboardText(LocationShare.TryParse(body, out var location)
+                ? LocationShare.Summary(location)
+                : body);
             return;
         }
     }

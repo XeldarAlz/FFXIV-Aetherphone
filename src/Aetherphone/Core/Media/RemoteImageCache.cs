@@ -117,8 +117,8 @@ internal sealed class RemoteImageCache : IDisposable
                 return;
             }
 
-            var wrap = await Plugin.TextureProvider.CreateFromImageAsync(bytes, $"Aetherphone.Img.{key}", token)
-                .ConfigureAwait(false);
+            var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes,
+                $"Aetherphone.Img.{key}", token).ConfigureAwait(false);
             if (!ready.TryAdd(key, wrap))
             {
                 wrap.Dispose();

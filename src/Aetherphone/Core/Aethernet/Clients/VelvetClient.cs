@@ -31,32 +31,91 @@ internal sealed class VelvetClient
         return net.GetAsync($"/velvet/users/{Uri.EscapeDataString(userId)}", AethernetJsonContext.Default.VelvetProfileDto, token);
     }
 
-    public Task<VelvetDiscoverPage?> DiscoverAsync(int lookingFor, string tags, int gender, string region, string? cursor,
-        CancellationToken token)
+    public Task<VelvetDiscoverPage?> DiscoverAsync(VelvetDiscoverFilter filter, string tags, string region,
+        string? cursor, CancellationToken token)
     {
-        var path = $"/velvet/discover?lookingFor={lookingFor}";
-        if (tags.Length > 0)
+        var path = new System.Text.StringBuilder("/velvet/discover?lookingFor=").Append(filter.IntentInclude);
+        AppendMask(path, "lookingForExclude", filter.IntentExclude);
+        AppendMask(path, "gender", filter.GenderInclude);
+        AppendMask(path, "genderExclude", filter.GenderExclude);
+        AppendMask(path, "sexuality", filter.SexualityInclude);
+        AppendMask(path, "sexualityExclude", filter.SexualityExclude);
+        AppendCsv(path, "relationship", StatusCsv(filter.RelationshipInclude));
+        AppendCsv(path, "relationshipExclude", StatusCsv(filter.RelationshipExclude));
+        AppendCsv(path, "roles", TokenCsv(filter.RolesInclude));
+        AppendCsv(path, "rolesExclude", TokenCsv(filter.RolesExclude));
+        AppendCsv(path, "kinks", TokenCsv(filter.KinksInclude));
+        AppendCsv(path, "kinksExclude", TokenCsv(filter.KinksExclude));
+        AppendCsv(path, "limits", TokenCsv(filter.LimitsInclude));
+        AppendCsv(path, "limitsExclude", TokenCsv(filter.LimitsExclude));
+        AppendCsv(path, "profileTags", TokenCsv(filter.TagsInclude));
+        AppendCsv(path, "profileTagsExclude", TokenCsv(filter.TagsExclude));
+        if (filter.IncludeLalafell)
         {
-            path += $"&tags={Uri.EscapeDataString(tags)}";
+            path.Append("&includeLalafell=true");
         }
 
-        if (gender > 0)
+        if (tags.Length > 0)
         {
-            path += $"&gender={gender}";
+            path.Append("&tags=").Append(Uri.EscapeDataString(tags));
         }
 
         if (region.Length > 0)
         {
-            path += $"&region={Uri.EscapeDataString(region)}";
+            path.Append("&region=").Append(Uri.EscapeDataString(region));
         }
 
         if (cursor is not null)
         {
-            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+            path.Append("&cursor=").Append(Uri.EscapeDataString(cursor));
         }
 
-        return net.GetAsync(path, AethernetJsonContext.Default.VelvetDiscoverPage, token);
+        return net.GetAsync(path.ToString(), AethernetJsonContext.Default.VelvetDiscoverPage, token);
     }
+
+    private static void AppendMask(System.Text.StringBuilder path, string name, int mask)
+    {
+        if (mask > 0)
+        {
+            path.Append('&').Append(name).Append('=').Append(mask);
+        }
+    }
+
+    private static void AppendCsv(System.Text.StringBuilder path, string name, string csv)
+    {
+        if (csv.Length > 0)
+        {
+            path.Append('&').Append(name).Append('=').Append(Uri.EscapeDataString(csv));
+        }
+    }
+
+    private static string StatusCsv(int mask)
+    {
+        if (mask == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new System.Text.StringBuilder();
+        for (var status = 0; status < 32; status++)
+        {
+            if ((mask & (1 << status)) == 0)
+            {
+                continue;
+            }
+
+            if (builder.Length > 0)
+            {
+                builder.Append(',');
+            }
+
+            builder.Append(status);
+        }
+
+        return builder.ToString();
+    }
+
+    private static string TokenCsv(string[] tokens) => tokens.Length == 0 ? string.Empty : string.Join(',', tokens);
 
     public Task<bool> ConnectAsync(string userId, string intro, CancellationToken token)
     {
@@ -100,12 +159,12 @@ internal sealed class VelvetClient
         return net.GetAsync(path, AethernetJsonContext.Default.VelvetConnectionPage, token);
     }
 
-    public Task<VelvetFeedPage?> FeedAsync(string? cursor, CancellationToken token)
+    public Task<VelvetFeedPage?> FeedAsync(string scope, string? cursor, CancellationToken token)
     {
-        var path = "/velvet/feed";
+        var path = $"/velvet/feed?scope={Uri.EscapeDataString(scope)}";
         if (cursor is not null)
         {
-            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
         }
 
         return net.GetAsync(path, AethernetJsonContext.Default.VelvetFeedPage, token);
@@ -229,12 +288,23 @@ internal sealed class VelvetClient
         return net.GetAsync($"/velvet/threads/{Uri.EscapeDataString(userId)}/typing", AethernetJsonContext.Default.VelvetTypingDto, token);
     }
 
-    public Task<bool> HeartbeatAsync(int? utcOffsetMinutes, CancellationToken token)
+    public Task<bool> HeartbeatAsync(int? utcOffsetMinutes, string region, bool isLalafell, CancellationToken token)
     {
-        var path = utcOffsetMinutes is { } offset
-            ? $"/velvet/heartbeat?utcOffsetMinutes={offset}"
-            : "/velvet/heartbeat";
-        return net.SendAsync(HttpMethod.Post, path, token);
+        var path = new System.Text.StringBuilder("/velvet/heartbeat?");
+        if (utcOffsetMinutes is { } offset)
+        {
+            path.Append("utcOffsetMinutes=").Append(offset).Append('&');
+        }
+
+        path.Append("region=").Append(Uri.EscapeDataString(region));
+        path.Append("&lalafell=").Append(isLalafell ? "true" : "false");
+        return net.SendAsync(HttpMethod.Post, path.ToString(), token);
+    }
+
+    public Task<VelvetUserPostsPage?> UserPostsAsync(string userId, CancellationToken token)
+    {
+        return net.GetAsync($"/velvet/users/{Uri.EscapeDataString(userId)}/posts",
+            AethernetJsonContext.Default.VelvetUserPostsPage, token);
     }
 
     public Task<VelvetMediaUrlDto?> DmMediaUrlAsync(string messageId, CancellationToken token)

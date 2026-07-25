@@ -19,7 +19,6 @@ internal sealed class CommandsPage : ISettingsPage
         new(AepConstants.PrimaryCommand, L.Settings.CommandToggle),
         new(AepConstants.AliasCommand, L.Settings.CommandAlias),
         new($"{AepConstants.PrimaryCommand} market [item]", L.Settings.CommandMarket),
-        new($"{AepConstants.PrimaryCommand} about", L.Settings.CommandAbout),
         new($"{AepConstants.PrimaryCommand} reset", L.Settings.CommandReset),
         new($"{AepConstants.PrimaryCommand} test", L.Settings.CommandTest),
     };
