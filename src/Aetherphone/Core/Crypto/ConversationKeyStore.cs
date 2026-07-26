@@ -15,15 +15,17 @@ internal sealed record ChatKeyStatus(
 
 internal sealed class ConversationKeyStore
 {
-    private readonly KeysClient client;
-    private readonly KeyVault vault;
+    private readonly IKeysClient client;
+    private readonly IKeyVault vault;
+    private readonly IWrapRecipientGuard? guard;
     private readonly ConcurrentDictionary<string, ConcurrentDictionary<int, byte[]>> keysByScope = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, int> currentGenerations = new(StringComparer.Ordinal);
 
-    public ConversationKeyStore(KeysClient client, KeyVault vault)
+    public ConversationKeyStore(IKeysClient client, IKeyVault vault, IWrapRecipientGuard? guard = null)
     {
         this.client = client;
         this.vault = vault;
+        this.guard = guard;
         vault.Changed += OnVaultChanged;
     }
 
@@ -129,6 +131,7 @@ internal sealed class ConversationKeyStore
                 break;
             }
 
+            keys = RestrictToMembers(keys, myUserId, otherId);
             CacheWraps(scope, keys.CurrentGeneration, keys.MyWraps);
 
             if (keys.CurrentGeneration == 0)
@@ -273,6 +276,7 @@ internal sealed class ConversationKeyStore
                 break;
             }
 
+            keys = RestrictToMembers(keys, myUserId, otherId);
             CacheWraps(scope, keys.CurrentGeneration, keys.MyWraps);
 
             if (keys.CurrentGeneration == 0)
@@ -534,12 +538,66 @@ internal sealed class ConversationKeyStore
         }
     }
 
-    private static NewWrapDto[]? BuildWraps(byte[] cek, IReadOnlyList<UserPublicKeyDto> recipients)
+    private static ConversationKeysDto RestrictToMembers(ConversationKeysDto keys, string first, string second)
     {
-        var wraps = new NewWrapDto[recipients.Count];
+        return keys with
+        {
+            MemberKeys = FilterKeys(keys.MemberKeys, first, second),
+            MembersWithoutKeys = FilterIds(keys.MembersWithoutKeys, first, second),
+            StaleWrapUserIds = FilterIds(keys.StaleWrapUserIds, first, second),
+            MissingWrapUserIds = FilterIds(keys.MissingWrapUserIds, first, second),
+        };
+    }
+
+    private static UserPublicKeyDto[] FilterKeys(UserPublicKeyDto[] items, string first, string second)
+    {
+        var result = new List<UserPublicKeyDto>(items.Length);
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index].UserId == first || items[index].UserId == second)
+            {
+                result.Add(items[index]);
+            }
+        }
+
+        return result.ToArray();
+    }
+
+    private static string[] FilterIds(string[] items, string first, string second)
+    {
+        var result = new List<string>(items.Length);
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (items[index] == first || items[index] == second)
+            {
+                result.Add(items[index]);
+            }
+        }
+
+        return result.ToArray();
+    }
+
+    private NewWrapDto[]? BuildWraps(byte[] cek, IReadOnlyList<UserPublicKeyDto> recipients)
+    {
+        var authorized = new List<UserPublicKeyDto>(recipients.Count);
         for (var index = 0; index < recipients.Count; index++)
         {
             var recipient = recipients[index];
+            if (guard is null || guard.IsAuthorized(recipient))
+            {
+                authorized.Add(recipient);
+            }
+        }
+
+        if (authorized.Count == 0)
+        {
+            return null;
+        }
+
+        var wraps = new NewWrapDto[authorized.Count];
+        for (var index = 0; index < authorized.Count; index++)
+        {
+            var recipient = authorized[index];
             var wrapped = CryptoBox.WrapCek(cek, recipient.PublicKey);
             if (wrapped is null)
             {

@@ -150,7 +150,7 @@ internal sealed class PhoneServices : IDisposable
         var aethernet = new AethernetApi(http, aethernetSession);
         var keyVault = new KeyVault(configuration, aethernetSession, aethernet.Keys);
         var peerKeys = new PeerKeyDirectory(configuration, aethernet.Keys);
-        var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault);
+        var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault, new PinnedRecipientGuard());
         var marketIndex = new MarketItemIndex(dataManager);
         var market = new MarketboardService(http);
         var marketLauncher = new MarketLauncher();

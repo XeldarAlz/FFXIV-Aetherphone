@@ -2,7 +2,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Aethernet.Clients;
 
-internal sealed class KeysClient
+internal sealed class KeysClient : IKeysClient
 {
     private readonly AethernetTransport net;
 
