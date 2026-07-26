@@ -26,11 +26,11 @@ internal static class DeviceChrome
     {
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
-        
+
         var portraitTop = 0.250f;      // 25% da altura portrait
         var portraitHeight = 0.108f;   // 10.8% da altura portrait
         var portraitThickness = 2f * scale;
-        
+
         if (window.Width > window.Height)
         {
             var portraitDeviceHeight = device.Width;
@@ -42,7 +42,7 @@ internal static class DeviceChrome
 
         var top = device.Min.Y + device.Height * portraitTop;
         var height = device.Height * portraitHeight;
-        return new Rect(new Vector2(device.Max.X - portraitThickness, top), 
+        return new Rect(new Vector2(device.Max.X - portraitThickness, top),
             new Vector2(window.Max.X, top + height));
     }
 
@@ -50,11 +50,11 @@ internal static class DeviceChrome
     {
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
-        
+
         var portraitTop = 0.205f;      // 20.5% da altura portrait
         var portraitHeight = 0.082f;   // 8.2% da altura portrait
         var portraitThickness = 2f * scale;
-        
+
         if (window.Width > window.Height)
         {
             var portraitDeviceHeight = device.Width;
@@ -66,7 +66,7 @@ internal static class DeviceChrome
 
         var top = device.Min.Y + device.Height * portraitTop;
         var height = device.Height * portraitHeight;
-        return new Rect(new Vector2(window.Min.X, top), 
+        return new Rect(new Vector2(window.Min.X, top),
             new Vector2(device.Min.X + portraitThickness, top + height));
     }
 
@@ -74,11 +74,11 @@ internal static class DeviceChrome
     {
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
-        
+
         var portraitTop = 0.315f;      // 31.5% da altura portrait
         var portraitHeight = 0.082f;   // 8.2% da altura portrait
         var portraitThickness = 2f * scale;
-        
+
         if (window.Width > window.Height)
         {
             var portraitDeviceHeight = device.Width;
@@ -90,7 +90,7 @@ internal static class DeviceChrome
 
         var top = device.Min.Y + device.Height * portraitTop;
         var height = device.Height * portraitHeight;
-        return new Rect(new Vector2(window.Min.X, top), 
+        return new Rect(new Vector2(window.Min.X, top),
             new Vector2(device.Min.X + portraitThickness, top + height));
     }
 

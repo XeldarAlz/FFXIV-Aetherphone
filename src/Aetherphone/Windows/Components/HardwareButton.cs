@@ -36,7 +36,7 @@ internal static class HardwareButton
             var xShift = side == RailSide.Right ? -travel : travel;
             shift = new Vector2(xShift, 0f);
         }
-        
+
         var min = bounds.Min + shift;
         var max = bounds.Max + shift;
         var rounding = MathF.Min(max.X - min.X, max.Y - min.Y) * 0.5f;
@@ -66,7 +66,7 @@ internal static class HardwareButton
             min = new Vector2(bounds.Min.X, bounds.Min.Y - pad);
             max = new Vector2(bounds.Max.X, bounds.Max.Y + pad);
         }
-        
+
         var rounding = MathF.Min(max.X - min.X, max.Y - min.Y) * 0.5f;
         Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(Palette.Lighten(theme.BezelOuter, 0.06f)));
         Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)), 1f * scale);
@@ -76,7 +76,7 @@ internal static class HardwareButton
         Vector4 crown, Vector4 flank)
     {
         var isHorizontal = side == RailSide.Top || side == RailSide.Bottom;
-        
+
         if (isHorizontal)
         {
             var left = min.X + rounding;
@@ -89,7 +89,7 @@ internal static class HardwareButton
             var flankRight = ImGui.GetColorU32(Palette.Darken(flank, 0.10f));
             var faceMin = new Vector2(left, min.Y);
             var faceMax = new Vector2(right, max.Y);
-            
+
             if (side == RailSide.Bottom)
             {
                 drawList.AddRectFilledMultiColor(faceMin, faceMax, flankLeft, flankRight, flankRight, flankLeft);
@@ -111,7 +111,7 @@ internal static class HardwareButton
             var flankBottom = ImGui.GetColorU32(Palette.Darken(flank, 0.10f));
             var faceMin = new Vector2(min.X, top);
             var faceMax = new Vector2(max.X, bottom);
-            
+
             if (side == RailSide.Right)
             {
                 drawList.AddRectFilledMultiColor(faceMin, faceMax, flankTop, crownTop, crownBottom, flankBottom);
@@ -131,7 +131,7 @@ internal static class HardwareButton
 
         var color = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha));
         var isHorizontal = side == RailSide.Top || side == RailSide.Bottom;
-        
+
         if (isHorizontal)
         {
             var y = side == RailSide.Bottom ? max.Y - 1.6f * scale : min.Y + 1.6f * scale;
@@ -149,12 +149,12 @@ internal static class HardwareButton
     {
         var shadow = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.42f + press * 0.30f));
         var isHorizontal = side == RailSide.Top || side == RailSide.Bottom;
-        
+
         if (isHorizontal)
         {
             var innerY = side == RailSide.Bottom ? min.Y + 1f * scale : max.Y - 1f * scale;
             drawList.AddLine(new Vector2(min.X + rounding, innerY), new Vector2(max.X - rounding, innerY), shadow, 1.4f * scale);
-            
+
             if (active > 0.01f)
             {
                 var accent = ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, active));
@@ -166,7 +166,7 @@ internal static class HardwareButton
         {
             var innerX = side == RailSide.Right ? min.X + 1f * scale : max.X - 1f * scale;
             drawList.AddLine(new Vector2(innerX, min.Y + rounding), new Vector2(innerX, max.Y - rounding), shadow, 1.4f * scale);
-            
+
             if (active > 0.01f)
             {
                 var accent = ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, active));
