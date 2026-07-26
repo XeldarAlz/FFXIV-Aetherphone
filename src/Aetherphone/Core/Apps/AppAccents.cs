@@ -63,6 +63,13 @@ internal static class AppAccents
         ["tetris"] = new(0.52f, 0.78f, 0.98f, 1f),
         ["reversi"] = new(0.36f, 0.78f, 0.56f, 1f),
         ["minesweeper"] = new(0.40f, 0.68f, 0.98f, 1f),
+        ["sudoku"] = new(0.44f, 0.58f, 0.94f, 1f),
+        ["chess"] = new(0.82f, 0.66f, 0.42f, 1f),
+        ["stack"] = new(0.36f, 0.72f, 0.98f, 1f),
+        ["crystaldrop"] = new(0.66f, 0.50f, 0.98f, 1f),
+        ["beat"] = new(0.96f, 0.36f, 0.62f, 1f),
+        ["blade"] = new(0.86f, 0.42f, 0.30f, 1f),
+        ["trivia"] = new(0.30f, 0.72f, 0.86f, 1f),
     }.ToFrozenDictionary();
 
     public static Vector4 For(string id) => Accents.TryGetValue(id, out var accent) ? accent : Fallback;

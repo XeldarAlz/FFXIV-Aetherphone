@@ -3,6 +3,7 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
 
@@ -11,6 +12,7 @@ namespace Aetherphone.Apps.Games.BubbleShooter;
 internal sealed class BubbleShooterApp : IMiniGame
 {
     private const string GameId = "bubbles";
+    private const int ComboChipThreshold = 2;
     private readonly BubbleBoard board = new();
     private readonly BubbleRenderer renderer = new();
     private readonly ParticleSystem particles = new();
@@ -28,6 +30,7 @@ internal sealed class BubbleShooterApp : IMiniGame
     public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Bubbles);
     public string Genre => Loc.T(L.Games.GenreArcade);
+
     public void Open()
     {
         loadedBest = 0;
@@ -104,7 +107,7 @@ internal sealed class BubbleShooterApp : IMiniGame
             }
             else
             {
-                HandleInput(field, aim);
+                HandleInput(field, factor, scale, aim);
                 board.Update(fx.ScaleDelta(deltaSeconds));
                 ReactToEvents(field, factor, scale);
             }
@@ -132,8 +135,10 @@ internal sealed class BubbleShooterApp : IMiniGame
 
         var shake = fx.ShakeOffset(scale);
         var shakenField = new Rect(field.Min + shake, field.Max + shake);
-        GameScene.Arena(drawList, shakenField, 14f * scale, scale, Accent);
+        GameScene.Arena(drawList, shakenField, BubbleRenderer.ArenaRounding * scale, scale, Accent);
         renderer.Draw(board, shakenField, scale, finished ? Vector2.Zero : aim, theme);
+        DrawDangerRim(drawList, shakenField, scale);
+        DrawComboChip(drawList, board, shakenField, factor, scale, theme);
         fx.DrawFlash(drawList, field, 0f);
         particles.Draw(drawList, scale);
         fx.DrawRings(drawList, scale);
@@ -162,21 +167,44 @@ internal sealed class BubbleShooterApp : IMiniGame
         return Vector2.Normalize(direction);
     }
 
-    private void HandleInput(Rect field, Vector2 aim)
+    private void HandleInput(Rect field, float factor, float scale, Vector2 aim)
     {
         var mouse = ImGui.GetMousePos();
-        if (field.Contains(mouse))
+        if (!field.Contains(mouse))
         {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            return;
+        }
+
+        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+        {
+            if (board.Swap())
             {
-                board.Fire(aim);
+                var launcher = field.Min + board.LauncherPosition * factor;
+                fx.Shockwave(launcher, board.Radius * factor * 1.8f, new Vector4(1f, 1f, 1f, 0.7f), 0.24f, 2f);
             }
+
+            return;
+        }
+
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            board.Fire(aim);
         }
     }
 
     private void ReactToEvents(Rect field, float factor, float scale)
     {
+        if (board.BlastedThisShot)
+        {
+            var blast = field.Min + board.BlastPosition * factor;
+            fx.Shockwave(blast, board.Radius * factor * 6f, new Vector4(1f, 0.70f, 0.32f, 1f), 0.45f, 4f);
+            fx.Flash(new Vector4(1f, 0.72f, 0.36f, 0.42f), 0.55f);
+            fx.AddTrauma(0.55f);
+            fx.HitStop(0.07f);
+            particles.Sparkle(blast, 20, new Vector4(1f, 0.86f, 0.52f, 1f), 240f * scale, 3.2f, 0.65f);
+        }
+
         if (board.PopCount == 0)
         {
             return;
@@ -192,14 +220,57 @@ internal sealed class BubbleShooterApp : IMiniGame
             fx.Shockwave(center, 26f * scale, GamePalette.Lighten(color, 0.3f), 0.3f, 2f);
         }
 
+        var burstCenter = sum / board.PopCount;
         fx.AddTrauma(MathF.Min(0.35f, 0.04f * board.PopCount));
+        if (board.LastShotScore > 0)
+        {
+            fx.AddText($"+{GameNumber.Label(board.LastShotScore)}", burstCenter, Accent, 1.25f);
+        }
+
+        if (board.Combo >= ComboChipThreshold)
+        {
+            fx.AddText($"x{GameNumber.Label(board.Combo)}", burstCenter - new Vector2(0f, 22f * scale),
+                new Vector4(1f, 0.86f, 0.42f, 1f), 1.15f);
+        }
+
         if (board.PopCount >= 5)
         {
-            var burstCenter = sum / board.PopCount;
-            fx.AddText($"{board.PopCount}!", burstCenter, Accent, 1.4f);
             fx.HitStop(0.05f);
             particles.Sparkle(burstCenter, 10, new Vector4(1f, 0.95f, 0.7f, 1f), 160f * scale, 2.4f, 0.7f);
         }
+    }
+
+    private void DrawDangerRim(ImDrawListPtr drawList, Rect field, float scale)
+    {
+        if (board.DangerLevel <= 0.35f)
+        {
+            return;
+        }
+
+        var intensity = (board.DangerLevel - 0.35f) / 0.65f;
+        var pulse = 0.5f + 0.5f * MathF.Sin((float)ImGui.GetTime() * 4.5f);
+        var alpha = intensity * (0.25f + pulse * 0.35f);
+        Squircle.Stroke(drawList, field.Min, field.Max, BubbleRenderer.ArenaRounding * scale,
+            ImGui.GetColorU32(new Vector4(0.97f, 0.30f, 0.32f, alpha)), 2.2f * scale);
+    }
+
+    private void DrawComboChip(ImDrawListPtr drawList, BubbleBoard target, Rect field, float factor, float scale,
+        PhoneTheme theme)
+    {
+        if (target.Combo < ComboChipThreshold || finished)
+        {
+            return;
+        }
+
+        var launcher = field.Min + target.LauncherPosition * factor;
+        var center = new Vector2(launcher.X, launcher.Y - target.Radius * factor * 2.4f);
+        var label = $"x{GameNumber.Label(target.Combo)}";
+        var textSize = Typography.Measure(label, TextStyles.Caption1);
+        var half = new Vector2(textSize.X * 0.5f + 9f * scale, 10f * scale);
+        Material.Frosted(drawList, center - half, center + half, half.Y, scale);
+        Squircle.Stroke(drawList, center - half, center + half, half.Y,
+            ImGui.GetColorU32(new Vector4(1f, 0.86f, 0.42f, 0.75f)), 1.2f * scale);
+        Typography.DrawCentered(center, label, new Vector4(1f, 0.90f, 0.55f, 1f), TextStyles.Caption1);
     }
 
     private void DrawResult(PhoneTheme theme, Rect body)

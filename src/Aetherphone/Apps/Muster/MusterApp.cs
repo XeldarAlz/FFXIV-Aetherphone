@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -34,6 +35,7 @@ internal sealed partial class MusterApp : IPhoneApp
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
+    private readonly ConductGateService conduct;
     private readonly AppSkin ui = new(AppPalettes.Muster);
     private readonly ViewRouter<MusterRoute> router;
     private readonly RouterDraw<MusterRoute> drawView;
@@ -48,7 +50,7 @@ internal sealed partial class MusterApp : IPhoneApp
 
     public MusterApp(MusterStore store, MusterLauncher launcher, AethernetApi api, GameData gameData,
         RemoteImageCache images, LodestoneService lodestone, Configuration configuration, ConfirmService confirm,
-        ReportService report)
+        ReportService report, ConductGateService conduct)
     {
         this.store = store;
         this.launcher = launcher;
@@ -59,6 +61,7 @@ internal sealed partial class MusterApp : IPhoneApp
         this.configuration = configuration;
         this.confirm = confirm;
         this.report = report;
+        this.conduct = conduct;
         router = new ViewRouter<MusterRoute>(MusterRoute.Directory);
         drawView = DrawView;
         back = () => router.Pop();

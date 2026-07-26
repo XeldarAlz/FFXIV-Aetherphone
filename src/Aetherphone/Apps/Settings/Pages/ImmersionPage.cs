@@ -65,6 +65,20 @@ internal sealed class ImmersionPage : ISettingsPage
             SettingsSection.Hint(Loc.T(L.Settings.ShowInGposeHint), theme);
 
             ImGui.Dummy(new Vector2(0f, 12f * scale));
+            var screenshotCard = GroupCard.Begin(theme, 1);
+            var importScreenshots = SettingsRow.Bool(screenshotCard.NextRow(),
+                Loc.T(L.Settings.ImportScreenshots), configuration.ImportScreenshots, theme);
+            screenshotCard.End();
+            if (importScreenshots != configuration.ImportScreenshots)
+            {
+                configuration.ImportScreenshots = importScreenshots;
+                configuration.Save();
+            }
+
+            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            SettingsSection.Hint(Loc.T(L.Settings.ImportScreenshotsHint), theme);
+
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
             var startupCard = GroupCard.Begin(theme, 2);
             var openStartup = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenOnStartup),
                 configuration.OpenOnStartup, theme);

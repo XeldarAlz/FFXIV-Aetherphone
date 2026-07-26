@@ -319,6 +319,13 @@ internal sealed partial class YellowPagesApp
             return;
         }
 
+        if (!ad.AllowInquiries)
+        {
+            EmptyState.Draw(body, ui, FontAwesomeIcon.Lock, Loc.T(L.YellowPages.InquiriesClosed),
+                Loc.T(L.YellowPages.InquiriesClosedHint));
+            return;
+        }
+
         using (AppSurface.Begin(body))
         {
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
@@ -396,6 +403,11 @@ internal sealed partial class YellowPagesApp
                 OpenInquiryThread(threads[index].Id);
                 return;
             }
+        }
+
+        if (!ad.AllowInquiries)
+        {
+            return;
         }
 
         inquiryDraft = string.Empty;

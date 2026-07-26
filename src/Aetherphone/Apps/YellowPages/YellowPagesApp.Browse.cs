@@ -116,13 +116,22 @@ internal sealed partial class YellowPagesApp
             LoadingPulse.Spinner(actionCenter, 8f * scale, ui.Accent);
         }
         else if (ui.IconButton(actionCenter, 14f * scale, FontAwesomeIcon.Sync.ToIconString(),
-                     AppPalettes.YellowPages.MutedInk, AppSkin.Transparent, 0.82f))
+                     AppPalettes.YellowPages.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Common.Refresh),
+                     HoverLabelSide.Below))
         {
             store.SyncNow();
             RefreshBrowse();
         }
 
-        var pillRect = ScopePillRect(new Vector2(actionCenter.X - 22f * scale, rowCenterY), scale);
+        var rulesCenter = new Vector2(actionCenter.X - 26f * scale, rowCenterY);
+        if (ui.IconButton(rulesCenter, 14f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                AppPalettes.YellowPages.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Conduct.Eyebrow),
+                HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
+        }
+
+        var pillRect = ScopePillRect(new Vector2(rulesCenter.X - 22f * scale, rowCenterY), scale);
         DrawScopePillAt(pillRect, scale);
         DrawTabTitle(area, DisplayName, area.Max.X - pillRect.Min.X, scale);
     }

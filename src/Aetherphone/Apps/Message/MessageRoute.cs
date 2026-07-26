@@ -21,6 +21,7 @@ internal enum MessageScreen : byte
     Forward,
     Starred,
     Reactions,
+    SharePhoto,
 }
 
 internal readonly record struct MessageRoute(MessageScreen Screen, string? Id = null)
@@ -55,4 +56,6 @@ internal readonly record struct MessageRoute(MessageScreen Screen, string? Id = 
     public static readonly MessageRoute Starred = new(MessageScreen.Starred);
 
     public static MessageRoute Reactions(string messageId) => new(MessageScreen.Reactions, messageId);
+
+    public static MessageRoute SharePhoto(string photoPath) => new(MessageScreen.SharePhoto, photoPath);
 }

@@ -1,3 +1,6 @@
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Sharing;
+
 namespace Aetherphone.Core.Apps;
 
 internal interface IPhoneApp : IDisposable
@@ -15,6 +18,12 @@ internal interface IPhoneApp : IDisposable
     bool WantsSystemTheme => false;
     Rect? TransparentViewport(Rect screen, float scale) => null;
     bool IsAvailable => true;
+    ShareKindSet AcceptedShares => ShareKindSet.None;
+    LocString? ShareLabel(ShareKind kind) => null;
+    void OnShare(in ShareItem item)
+    {
+    }
+
     void OnOpened();
     void OnClosed();
     void Draw(in PhoneContext context);

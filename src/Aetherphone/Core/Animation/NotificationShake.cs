@@ -24,6 +24,12 @@ internal struct NotificationShake
 
     public float Advance(float delta)
     {
+        if (Motion.Reduced)
+        {
+            remaining = 0f;
+            return 0f;
+        }
+
         if (remaining <= 0f)
         {
             return 0f;

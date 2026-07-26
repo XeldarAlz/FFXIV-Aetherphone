@@ -35,6 +35,7 @@ internal sealed class ShellOverlayCoordinator
     private readonly BanOverlay banOverlay;
     private readonly ConfirmOverlay confirmOverlay;
     private readonly ReportOverlay reportOverlay;
+    private readonly ShareSheet shareSheet;
     private readonly ConductGateOverlay conductOverlay;
     private readonly OnboardingDirector director;
     private readonly SetupOverlay setup;
@@ -42,7 +43,8 @@ internal sealed class ShellOverlayCoordinator
     public ShellOverlayCoordinator(Configuration configuration, LoadingScreen loading, NavigationStack navigation,
         ControlCenter controlCenter, NotificationBanner banner, DynamicIsland island,
         IncomingCallOverlay incomingOverlay, BanOverlay banOverlay, ConfirmOverlay confirmOverlay,
-        ReportOverlay reportOverlay, ConductGateOverlay conductOverlay, OnboardingDirector director, SetupOverlay setup)
+        ReportOverlay reportOverlay, ShareSheet shareSheet, ConductGateOverlay conductOverlay,
+        OnboardingDirector director, SetupOverlay setup)
     {
         this.configuration = configuration;
         this.loading = loading;
@@ -54,6 +56,7 @@ internal sealed class ShellOverlayCoordinator
         this.banOverlay = banOverlay;
         this.confirmOverlay = confirmOverlay;
         this.reportOverlay = reportOverlay;
+        this.shareSheet = shareSheet;
         this.conductOverlay = conductOverlay;
         this.director = director;
         this.setup = setup;
@@ -69,7 +72,9 @@ internal sealed class ShellOverlayCoordinator
         var banned = !loading.IsActive && banOverlay.IsActive;
         var conductActive = !loading.IsActive && !banned && conductOverlay.Captures;
         var setupActive = !banned && setup.IsActive;
-        var confirming = !loading.IsActive && (confirmOverlay.CapturesPointer || reportOverlay.CapturesPointer);
+        var confirming = !loading.IsActive &&
+                         (confirmOverlay.CapturesPointer || reportOverlay.CapturesPointer ||
+                          shareSheet.CapturesPointer);
         var controlCenterCaptures = topChromeEnabled && !loading.IsActive && controlCenter.CapturesPointer;
         var overlaysCapture = controlCenterCaptures && !director.WantsControlCenter;
         var ringing = !loading.IsActive && incomingOverlay.IsRinging;
@@ -147,6 +152,7 @@ internal sealed class ShellOverlayCoordinator
                 !director.CapturesPointer);
         }
         HoverTooltip.Flush();
+        shareSheet.Draw(screen, theme);
         reportOverlay.Draw(screen, theme);
         confirmOverlay.Draw(screen, theme);
         director.Draw(screen, theme);

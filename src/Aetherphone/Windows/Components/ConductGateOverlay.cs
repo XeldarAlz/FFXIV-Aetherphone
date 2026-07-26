@@ -38,6 +38,8 @@ internal sealed class ConductGateOverlay
     private readonly ConductGateService service;
     private Spring reveal;
     private ConductGate? shown;
+    private bool wasActive;
+    private bool scrollTopPending;
     private float elapsed;
 
     public ConductGateOverlay(ConductGateService service)
@@ -50,11 +52,14 @@ internal sealed class ConductGateOverlay
     public void Draw(Rect screen, PhoneTheme theme)
     {
         var active = service.Active;
-        if (active is not null && !ReferenceEquals(shown, active))
+        if (active is not null && (!wasActive || !ReferenceEquals(shown, active)))
         {
             shown = active;
             elapsed = 0f;
+            scrollTopPending = true;
         }
+
+        wasActive = active is not null;
 
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         reveal.Step(active is not null ? 1f : 0f, RevealSmoothTime, delta);
@@ -188,7 +193,13 @@ internal sealed class ConductGateOverlay
         using (ImRaii.Child("##conductRules", listRect.Size, false,
                    DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
-            DragScrollHost.Begin(rulesKey);
+            var surface = DragScrollHost.Begin(rulesKey);
+            if (scrollTopPending)
+            {
+                surface.JumpToTop();
+                scrollTopPending = false;
+            }
+
             var width = ScrollLayout.StableContentWidth();
             for (var index = 0; index < gate.Sections.Length; index++)
             {
@@ -217,6 +228,7 @@ internal sealed class ConductGateOverlay
         {
             ConductTone.Encouraged => EncouragedColor,
             ConductTone.Prohibited => theme.Danger,
+            ConductTone.Restricted => theme.TextMuted,
             _ => accent,
         };
 
@@ -271,8 +283,14 @@ internal sealed class ConductGateOverlay
         var drawList = ImGui.GetWindowDrawList();
         var cardMax = origin + new Vector2(width, cardHeight);
         var rounding = Metrics.Radius.Card * scale;
+        var cardColor = section.Tone switch
+        {
+            ConductTone.Encouraged => Palette.Mix(theme.GroupedCard, EncouragedColor, 0.10f),
+            ConductTone.Prohibited => Palette.Mix(theme.GroupedCard, theme.Danger, 0.08f),
+            _ => theme.GroupedCard,
+        };
         Squircle.Fill(drawList, origin, cardMax, rounding,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.GroupedCard, theme.GroupedCard.W * opacity)));
+            ImGui.GetColorU32(Palette.WithAlpha(cardColor, theme.GroupedCard.W * opacity)));
         Material.EdgeSquircle(drawList, origin, cardMax, rounding, scale, opacity);
 
         var left = origin.X + pad;
@@ -281,12 +299,16 @@ internal sealed class ConductGateOverlay
         {
             var chipMin = new Vector2(left, cursorY + (headerHeight - chip) * 0.5f);
             var chipMax = chipMin + new Vector2(chip, chip);
+            var chipFill = section.Tone == ConductTone.Restricted
+                ? Palette.WithAlpha(theme.TextStrong, 0.10f * opacity)
+                : Palette.WithAlpha(toneColor, 0.16f * opacity);
             Squircle.Fill(drawList, chipMin, chipMax, chip * Metrics.Radius.TileFactor,
-                ImGui.GetColorU32(Palette.WithAlpha(toneColor, 0.16f * opacity)));
-            var chipIcon = section.Tone switch
+                ImGui.GetColorU32(chipFill));
+            var chipIcon = section.Icon ?? section.Tone switch
             {
                 ConductTone.Encouraged => FontAwesomeIcon.Check,
                 ConductTone.Prohibited => FontAwesomeIcon.Ban,
+                ConductTone.Restricted => FontAwesomeIcon.Ban,
                 _ => FontAwesomeIcon.InfoCircle,
             };
             AppSkin.Icon(drawList, (chipMin + chipMax) * 0.5f, chipIcon.ToIconString(),

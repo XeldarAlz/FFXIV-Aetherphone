@@ -4,7 +4,9 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -20,6 +22,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     public int BadgeCount => configuration.HasUnseenChangelog ? 1 : 0;
     public bool BadgeAsDot => true;
     public bool WantsSystemTheme => true;
+    public ShareKindSet AcceptedShares => ShareKindSet.Photo;
     private readonly Configuration configuration;
     private readonly ViewRouter<ISettingsPage> router;
     private readonly RouterDraw<ISettingsPage> drawPage;
@@ -34,12 +37,17 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private readonly ChangelogPage changelogPage;
     private readonly PrivacyPage privacyPage;
     private readonly TagsMentionsPage tagsMentionsPage;
+    private readonly ThemeProvider themes;
+    private readonly WallpaperLibrary wallpapers;
+    private readonly WallpaperImageCache wallpaperImages;
+    private readonly Action<string> assignWallpaper;
+    private string? pendingSharedWallpaper;
 
     public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary)
     {
         sound = services.Sound;
         configuration = services.Configuration;
-        var themes = services.Themes;
+        themes = services.Themes;
         var aethernetSession = services.AethernetSession;
         var aethernet = services.Aethernet;
         var keyVault = services.KeyVault;
@@ -48,8 +56,8 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var lodestone = services.Lodestone;
         var calls = services.Calls;
         var confirm = services.Confirm;
-        var wallpapers = services.Wallpapers;
-        var wallpaperImages = services.WallpaperImages;
+        wallpapers = services.Wallpapers;
+        wallpaperImages = services.WallpaperImages;
         profilePage = new ProfilePage(configuration, aethernetSession, aethernet.Account, gameData);
         encryptionPage = new EncryptionPage(aethernetSession, keyVault, confirm);
         namePage = new NamePage(aethernetSession, aethernet.Account, this);
@@ -104,6 +112,48 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
             new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage));
         drawPage = DrawPage;
         popBack = PopBack;
+        assignWallpaper = AssignWallpaper;
+    }
+
+    public LocString? ShareLabel(ShareKind kind) =>
+        kind == ShareKind.Photo ? L.Share.SetAsWallpaper : null;
+
+    public void OnShare(in ShareItem item)
+    {
+        if (item.Kind != ShareKind.Photo)
+        {
+            return;
+        }
+
+        pendingSharedWallpaper = item.LocalPath;
+    }
+
+    private void AssignWallpaper(string id)
+    {
+        if (wallpapers.ThemeDarkness >= 0.5f)
+        {
+            configuration.DarkWallpaperId = id;
+        }
+        else
+        {
+            configuration.LightWallpaperId = id;
+        }
+
+        themes.Apply(configuration);
+        configuration.Save();
+    }
+
+    private void ConsumeSharedWallpaper()
+    {
+        var path = pendingSharedWallpaper;
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        pendingSharedWallpaper = null;
+        router.Reset();
+        router.Push(new WallpaperCropPage(path, this, assignWallpaper, wallpapers, wallpaperImages));
     }
 
     public void Open(ISettingsPage page)
@@ -134,6 +184,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 
     public void Draw(in PhoneContext context)
     {
+        ConsumeSharedWallpaper();
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
         router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawPage);

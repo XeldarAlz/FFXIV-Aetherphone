@@ -22,6 +22,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
 using Aetherphone.Core.Radio;
 using Aetherphone.Core.Report;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
@@ -103,6 +104,7 @@ internal sealed class PhoneServices : IDisposable
     public required LoadingScreen Loading { get; init; }
     public required ConfirmService Confirm { get; init; }
     public required ReportService Report { get; init; }
+    public required ShareService Share { get; init; }
     public required ConductGateService Conduct { get; init; }
     public required WallpaperLibrary Wallpapers { get; init; }
     public required WallpaperImageCache WallpaperImages { get; init; }
@@ -269,6 +271,7 @@ internal sealed class PhoneServices : IDisposable
             Loading = new LoadingScreen(configuration),
             Confirm = confirm,
             Report = new ReportService(),
+            Share = new ShareService(installer),
             Conduct = new ConductGateService(configuration),
             Wallpapers = wallpapers,
             WallpaperImages = new WallpaperImageCache(),

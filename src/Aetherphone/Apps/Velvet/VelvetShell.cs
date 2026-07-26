@@ -16,6 +16,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
@@ -60,6 +61,7 @@ internal sealed partial class VelvetShell : IPhoneApp
     private readonly PullToRefresh pullToRefresh = new();
     private readonly AvatarComposer avatar;
     private readonly VelvetPostComposer post;
+    private string? pendingSharedPhoto;
     private readonly ViewRouter<VelvetView> router;
     private readonly RouterDraw<VelvetView> drawView;
     private readonly Action back;
@@ -118,6 +120,34 @@ internal sealed partial class VelvetShell : IPhoneApp
     public string Glyph => "Ve";
 
     public int BadgeCount => store.UnreadCount + store.RequestCount;
+
+    public ShareKindSet AcceptedShares =>
+        GateAccepted && store.IsSignedIn && configuration.IsVelvetOnboarded()
+            ? ShareKindSet.Photo
+            : ShareKindSet.None;
+
+    public void OnShare(in ShareItem item)
+    {
+        if (item.Kind != ShareKind.Photo)
+        {
+            return;
+        }
+
+        pendingSharedPhoto = item.LocalPath;
+    }
+
+    private void ConsumeSharedPhoto()
+    {
+        var path = pendingSharedPhoto;
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        pendingSharedPhoto = null;
+        post.OpenWith(path);
+        router.Push(VelvetView.Compose);
+    }
 
     public void OnOpened()
     {
@@ -206,6 +236,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         GateMenus();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
+        ConsumeSharedPhoto();
         stories.Advance();
         if (photoViewer.Active)
         {

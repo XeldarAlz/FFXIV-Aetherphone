@@ -30,8 +30,8 @@ internal sealed class AethergramStore : SocialFeedStore
     protected override Task<FeedPage?> FetchTaggedPostsAsync(string userId, CancellationToken token) =>
         grams.UserTaggedAsync(userId, token);
 
-    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, string caption, PhotoTagInput[]? photoTags,
-        Action<bool> onComplete)
+    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, PostAspect aspect, string caption,
+        PhotoTagInput[]? photoTags, Action<bool> onComplete)
     {
         if (posting || sourcePaths.Length == 0)
         {
@@ -42,9 +42,10 @@ internal sealed class AethergramStore : SocialFeedStore
         work.Run("create gram", async token =>
         {
             var keys = new string[sourcePaths.Length];
+            var (bakedWidth, bakedHeight) = PostAspects.Size(aspect, GramSize);
             for (var index = 0; index < sourcePaths.Length; index++)
             {
-                var baked = ImageProcessor.BakeSquareJpeg(sourcePaths[index], crops[index], GramSize);
+                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight);
                 var upload = await media.UploadUrlAsync("image/jpeg", "gram", token).ConfigureAwait(false);
                 if (upload is null)
                 {
@@ -61,7 +62,7 @@ internal sealed class AethergramStore : SocialFeedStore
                 keys[index] = upload.Key;
             }
 
-            var created = await grams.CreateAsync(caption.Trim(), keys, GramSize, GramSize, photoTags, token)
+            var created = await grams.CreateAsync(caption.Trim(), keys, bakedWidth, bakedHeight, photoTags, token)
                 .ConfigureAwait(false);
             if (created is null)
             {

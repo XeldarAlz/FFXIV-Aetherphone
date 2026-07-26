@@ -75,8 +75,9 @@ internal sealed partial class AethergramApp
             }
 
             ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + headerHeight));
+            var imageHeight = PostAspects.DisplayHeight(width, post.MediaWidth, post.MediaHeight);
             var imageRect = new Rect(new Vector2(origin.X, origin.Y + headerHeight),
-                new Vector2(origin.X + width, origin.Y + headerHeight + width));
+                new Vector2(origin.X + width, origin.Y + headerHeight + imageHeight));
             var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
             var page = DrawGramCarousel(imageRect, post, photos, 16f * scale);
             var liked = post.MyReaction >= 0;

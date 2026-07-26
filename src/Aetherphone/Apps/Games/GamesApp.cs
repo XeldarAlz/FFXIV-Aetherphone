@@ -1,5 +1,9 @@
+using Aetherphone.Apps.Games.Beat;
+using Aetherphone.Apps.Games.Blade;
 using Aetherphone.Apps.Games.Breakout;
 using Aetherphone.Apps.Games.BubbleShooter;
+using Aetherphone.Apps.Games.Chess;
+using Aetherphone.Apps.Games.CrystalDrop;
 using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
@@ -11,20 +15,25 @@ using Aetherphone.Apps.Games.Reversi;
 using Aetherphone.Apps.Games.Simon;
 using Aetherphone.Apps.Games.Snake;
 using Aetherphone.Apps.Games.Solitaire;
+using Aetherphone.Apps.Games.Stack;
+using Aetherphone.Apps.Games.Sudoku;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Tetris;
+using Aetherphone.Apps.Games.Trivia;
 using Aetherphone.Apps.Games.Twenty48;
 using Aetherphone.Apps.Games.WaterSort;
 using Aetherphone.Apps.Games.Whack;
 using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 
@@ -78,8 +87,9 @@ internal sealed class GamesApp : IPhoneApp
     public bool WantsStatusBarInImmersiveContent =>
         router.Current == GameRoute.Playing && currentGame?.WantsStatusBarInImmersiveContent == true;
 
-    public GamesApp(GameStatsStore stats, ITextureProvider textures, DirectoryInfo configDirectory,
-        IKeyState keyState, IGamepadState gamepadState, Configuration configuration)
+    public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
+        DirectoryInfo configDirectory, IKeyState keyState, IGamepadState gamepadState,
+        Configuration configuration)
     {
         this.stats = stats;
         games = new IMiniGame[]
@@ -87,6 +97,8 @@ internal sealed class GamesApp : IPhoneApp
             new SweeperApp(), new PairsApp(), new GemSwapApp(), new TetrisApp(), new Twenty48App(),
             new WaterSortApp(), new BreakoutApp(), new BubbleShooterApp(), new NonogramApp(), new FlowApp(),
             new SolitaireApp(), new SimonApp(), new FlapApp(), new ReversiApp(), new WhackApp(), new SnakeApp(),
+            new SudokuApp(), new ChessApp(), new StackApp(), new CrystalDropApp(), new BeatApp(), new BladeApp(),
+            new TriviaApp(gameData, textures),
             new GameBoyApp(configDirectory, textures, keyState, gamepadState, configuration),
         };
         tileOrder = new int[games.Length];
@@ -100,8 +112,8 @@ internal sealed class GamesApp : IPhoneApp
     {
         BuildDisplayOrder();
         BuildSections();
-        var day = (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay);
-        featuredIndex = day * FeaturedStep % games.Length;
+        featuredIndex = GameStatsStore.TodayIndex * FeaturedStep % games.Length;
+        stats.DailyGameId = games[featuredIndex].Id;
     }
 
     private void BuildDisplayOrder()
@@ -415,9 +427,11 @@ internal sealed class GamesApp : IPhoneApp
 
         var textX = min.X + height * 0.72f;
         var heroTextMaxWidth = MathF.Max(1f, max.X - textX - 12f * scale);
-        Typography.Draw(new Vector2(textX, center.Y - 34f * scale),
-            Loc.Culture.TextInfo.ToUpper(Loc.T(L.Games.Featured)),
-            GamePalette.Lighten(accent, 0.62f), TextStyles.Caption2);
+        var eyebrowMaxWidth = MathF.Max(1f, max.X - textX - 12f * scale);
+        var eyebrow = Typography.FitText(Loc.Culture.TextInfo.ToUpper(Loc.T(L.Games.Daily)), eyebrowMaxWidth,
+            TextStyles.Caption2);
+        Typography.Draw(new Vector2(textX, center.Y - 34f * scale), eyebrow, GamePalette.Lighten(accent, 0.62f),
+            TextStyles.Caption2);
         var heroTitleY = center.Y - 18f * scale;
         var heroTitleSize = Typography.Measure(game.Title, TextStyles.Title2);
         var heroTitleHovering = ImGui.IsMouseHoveringRect(new Vector2(textX, heroTitleY),
@@ -443,6 +457,8 @@ internal sealed class GamesApp : IPhoneApp
         {
             DrawBestChip(drawList, new Vector2(max.X - 11f * scale, min.Y + 11f * scale), best, scale);
         }
+
+        DrawStreakChip(drawList, new Vector2(min.X + 11f * scale, min.Y + 11f * scale), accent, scale);
 
         if (hovered)
         {
@@ -484,6 +500,37 @@ internal sealed class GamesApp : IPhoneApp
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, alpha)));
     }
 
+    private void DrawStreakChip(ImDrawListPtr drawList, Vector2 topLeft, Vector4 accent, float scale)
+    {
+        var streak = stats.DailyStreak;
+        if (streak <= 0)
+        {
+            return;
+        }
+
+        var done = stats.DailyDone;
+        var label = GameNumber.Label(streak);
+        var textSize = Typography.Measure(label, TextStyles.Caption1);
+        var iconSize = 10f * scale;
+        var chipHeight = 18f * scale;
+        var chipWidth = textSize.X + iconSize + 18f * scale;
+        var min = topLeft;
+        var max = new Vector2(topLeft.X + chipWidth, topLeft.Y + chipHeight);
+        Material.Frosted(drawList, min, max, chipHeight * 0.5f, scale);
+        var tint = done ? GamePalette.Lighten(accent, 0.5f) : new Vector4(0.98f, 0.72f, 0.34f, 1f);
+        if (done)
+        {
+            Squircle.Stroke(drawList, min, max, chipHeight * 0.5f, ImGui.GetColorU32(tint with { W = 0.6f }),
+                1f * scale);
+        }
+
+        var iconCenter = new Vector2(min.X + 9f * scale + iconSize * 0.5f, (min.Y + max.Y) * 0.5f);
+        ProgressRing.CenterIcon(drawList, iconCenter, done ? FontAwesomeIcon.Check : FontAwesomeIcon.Fire, tint,
+            iconSize);
+        Typography.DrawCentered(new Vector2(iconCenter.X + iconSize * 0.5f + 3f * scale + textSize.X * 0.5f,
+            (min.Y + max.Y) * 0.5f), label, new Vector4(0.97f, 0.97f, 0.99f, 1f), TextStyles.Caption1);
+    }
+
     private static void DrawBestChip(ImDrawListPtr drawList, Vector2 topRight, string text, float scale)
     {
         var textSize = Typography.Measure(text, TextStyles.Caption1);
@@ -508,6 +555,11 @@ internal sealed class GamesApp : IPhoneApp
             case "whack":
             case "snake":
             case "tetris":
+            case "stack":
+            case "crystaldrop":
+            case "beat":
+            case "blade":
+            case "trivia":
             {
                 var best = stats.Get(gameId).BestScore;
                 return best > 0 ? GameNumber.Label(best) : string.Empty;
@@ -538,9 +590,15 @@ internal sealed class GamesApp : IPhoneApp
                 var bestSeconds = stats.Get("nonogram.easy").BestTimeSeconds;
                 return bestSeconds > 0 ? TimeText.MinutesSeconds(bestSeconds) : string.Empty;
             }
-            case "reversi":
+            case "sudoku":
             {
-                var wins = stats.Get("reversi").Streak;
+                var bestSeconds = stats.Get("sudoku.easy").BestTimeSeconds;
+                return bestSeconds > 0 ? TimeText.MinutesSeconds(bestSeconds) : string.Empty;
+            }
+            case "reversi":
+            case "chess":
+            {
+                var wins = stats.Get(gameId).Streak;
                 return wins > 0 ? GameNumber.Label(wins) : string.Empty;
             }
             default:

@@ -13,7 +13,7 @@ internal struct Spring
 
     public float Step(float target, float smoothTime, float deltaSeconds)
     {
-        var clampedSmoothTime = MathF.Max(0.0001f, smoothTime);
+        var clampedSmoothTime = MathF.Max(0.0001f, Motion.SmoothTime(smoothTime));
         var omega = 2f / clampedSmoothTime;
         var x = omega * deltaSeconds;
         var decay = 1f / (1f + x + 0.48f * x * x + 0.235f * x * x * x);

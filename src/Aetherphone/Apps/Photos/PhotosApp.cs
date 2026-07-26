@@ -6,6 +6,7 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -33,6 +34,7 @@ internal sealed partial class PhotosApp : IPhoneApp
 
     private readonly PhotoLibrary library;
     private readonly ConfirmService confirm;
+    private readonly ShareService share;
     private readonly Configuration configuration;
     private readonly AppSkin ui = new(AppPalettes.Photos);
     private readonly TextureLedger thumbnails = new(ThumbnailBudgetBytes);
@@ -74,10 +76,11 @@ internal sealed partial class PhotosApp : IPhoneApp
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public PhotosApp(PhotoLibrary library, ConfirmService confirm, Configuration configuration)
+    public PhotosApp(PhotoLibrary library, ConfirmService confirm, ShareService share, Configuration configuration)
     {
         this.library = library;
         this.confirm = confirm;
+        this.share = share;
         this.configuration = configuration;
         router = new ViewRouter<PhotoView>(PhotoView.Grid());
         drawView = DrawView;

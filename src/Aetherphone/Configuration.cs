@@ -38,6 +38,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public Vector2? MinimizedPosition { get; set; }
     public bool DoNotDisturb { get; set; }
     public bool Vibration { get; set; } = true;
+    public bool ImportScreenshots { get; set; } = true;
     public Dictionary<string, AppNotificationSetting> NotificationSettings { get; set; } = new();
     public bool NotifyDailyReset { get; set; }
     public bool NotifyWeeklyReset { get; set; }
@@ -103,6 +104,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<PlaylistRecord> Playlists { get; set; } = new();
     public List<GameStatRecord> GameStats { get; set; } = new();
     public EmulatorSettings Emulator { get; set; } = new();
+    public int DailyChallengeStreak { get; set; }
+    public int DailyChallengeLastDay { get; set; }
     public HomeLayout? Home { get; set; }
     public int HomeGridRows { get; set; } = 6;
     public bool ShowAppNames { get; set; } = true;

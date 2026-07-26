@@ -32,7 +32,8 @@ internal sealed record CreateAdRequest(
     string? Requirements,
     bool AfterDark,
     string[]? MediaKeys,
-    string? LinkUrl = null);
+    string? LinkUrl = null,
+    bool AllowInquiries = true);
 
 internal sealed record AdDto(
     string Id,
@@ -71,7 +72,8 @@ internal sealed record AdDto(
     string Status,
     long CreatedAtUnix,
     long RenewedAtUnix,
-    long ExpiresAtUnix) : IIdentified;
+    long ExpiresAtUnix,
+    bool AllowInquiries = true) : IIdentified;
 
 internal sealed record AdPage(AdDto[] Items, string? NextCursor);
 

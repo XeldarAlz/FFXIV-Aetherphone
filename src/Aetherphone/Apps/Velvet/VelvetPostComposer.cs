@@ -32,6 +32,8 @@ internal sealed class VelvetPostComposer
     private readonly EmojiComposer captionEmoji = new();
     private readonly PhotoComposeSession session;
     private bool storyMode;
+    private PostAspect aspect = PostAspect.Square;
+    private readonly string[] aspectLabels = new string[PostAspects.All.Length];
     private volatile int outcome;
     private bool closeRequested;
     private string caption = string.Empty;
@@ -52,15 +54,27 @@ internal sealed class VelvetPostComposer
     private static PhotoComposeStyle Style => new(AppPalettes.Velvet.Accent, AppPalettes.Velvet.MutedInk,
         new Vector4(1f, 1f, 1f, 0.10f), AppPalettes.Velvet.Accent, AppPalettes.Velvet.MutedInk, false);
 
-    private float Aspect => storyMode ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight : 1f;
+    private const float AspectPickerReserve = 42f;
+
+    private float Aspect => storyMode
+        ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight
+        : PostAspects.Ratio(aspect);
 
     private string Title => storyMode ? Loc.T(L.Story.NewStory) : Loc.T(L.Velvet.NewPost);
 
     private bool Posting => storyMode ? stories.Posting : store.Posting;
 
+    public void OpenWith(string photoPath)
+    {
+        Open();
+        session.TakePicked(photoPath);
+        session.BeginCropSequence();
+    }
+
     public void Open(bool story = false)
     {
         storyMode = story;
+        aspect = PostAspect.Square;
         outcome = 0;
         closeRequested = false;
         caption = string.Empty;
@@ -169,7 +183,31 @@ internal sealed class VelvetPostComposer
             session.CropAdvance();
         }
 
-        session.DrawCropCanvas(area, scale, Aspect, Style, Loc.T(L.Velvet.GestureHint));
+        var reserve = storyMode ? 0f : AspectPickerReserve;
+        session.DrawCropCanvas(area, scale, Aspect, Style, Loc.T(L.Velvet.GestureHint), reserve);
+        if (!storyMode)
+        {
+            DrawAspectPicker(area, scale);
+        }
+    }
+
+    private void DrawAspectPicker(Rect area, float scale)
+    {
+        var width = MathF.Min(area.Width - 32f * scale, 260f * scale);
+        var rowTop = area.Max.Y - (96f + AspectPickerReserve - 8f) * scale;
+        var row = new Rect(new Vector2(area.Center.X - width * 0.5f, rowTop),
+            new Vector2(area.Center.X + width * 0.5f, rowTop + 28f * scale));
+        for (var index = 0; index < PostAspects.All.Length; index++)
+        {
+            aspectLabels[index] = Loc.T(AspectLabels.For(PostAspects.All[index]));
+        }
+
+        var picked = SegmentStrip.Draw("velvet.compose.aspect", row, aspectLabels,
+            Array.IndexOf(PostAspects.All, aspect), VelvetTheme.Palette);
+        if (picked >= 0 && picked < PostAspects.All.Length)
+        {
+            aspect = PostAspects.All[picked];
+        }
     }
 
     private void DrawCaption(Rect area, AppSkin ui, in PhoneContext context)
@@ -298,7 +336,7 @@ internal sealed class VelvetPostComposer
             return;
         }
 
-        store.CreatePost(session.SelectedArray(), session.CropsArray(), caption, Array.Empty<string>(),
+        store.CreatePost(session.SelectedArray(), session.CropsArray(), aspect, caption, Array.Empty<string>(),
             audience, ok => outcome = ok ? 1 : 2);
     }
 }

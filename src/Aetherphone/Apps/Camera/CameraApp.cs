@@ -9,6 +9,7 @@ using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace Aetherphone.Apps.Camera;
@@ -26,6 +27,16 @@ internal sealed class CameraApp : IPhoneApp
     private const int CaptureDelayFrames = 3;
     private const int CaptureWatchdogTicks = 30;
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
+
+    private static readonly UiFlags[] HudGroups =
+    {
+        UiFlags.Hud,
+        UiFlags.Shortcuts,
+        UiFlags.ActionBars,
+        UiFlags.TargetInfo,
+        UiFlags.Chat,
+    };
+
     public string Id => "camera";
     public string DisplayName => Loc.T(L.Apps.Camera);
     public string Glyph => "O";
@@ -61,6 +72,7 @@ internal sealed class CameraApp : IPhoneApp
     private int captureWatchdogTicks;
     private Rect pendingCaptureRect;
     private bool captureHooksAttached;
+    private UiFlags hiddenHudGroups;
 
     public CameraApp(PhotoCaptureService capture, PhotoLibrary library, Configuration configuration)
     {
@@ -233,6 +245,52 @@ internal sealed class CameraApp : IPhoneApp
         }
     }
 
+    private unsafe void HideHudGroups()
+    {
+        hiddenHudGroups = UiFlags.None;
+        var uiModule = UIModule.Instance();
+        var unitManager = RaptureAtkUnitManager.Instance();
+        if (uiModule == null || unitManager == null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < HudGroups.Length; index++)
+        {
+            var group = HudGroups[index];
+            if (!unitManager->IsUiFlagsSet(group))
+            {
+                continue;
+            }
+
+            uiModule->ToggleUi(group, false, true);
+            hiddenHudGroups |= group;
+        }
+    }
+
+    private unsafe void RestoreHudGroups()
+    {
+        if (hiddenHudGroups == UiFlags.None)
+        {
+            return;
+        }
+
+        var uiModule = UIModule.Instance();
+        if (uiModule != null)
+        {
+            for (var index = 0; index < HudGroups.Length; index++)
+            {
+                var group = HudGroups[index];
+                if ((hiddenHudGroups & group) != 0)
+                {
+                    uiModule->ToggleUi(group, true, true);
+                }
+            }
+        }
+
+        hiddenHudGroups = UiFlags.None;
+    }
+
     private static unsafe void SetNamePlatesVisible(bool visible)
     {
         var addon = (AtkUnitBase*)Plugin.GameGui.GetAddonByName("NamePlate").Address;
@@ -295,6 +353,7 @@ internal sealed class CameraApp : IPhoneApp
         Plugin.Framework.Update += ReleaseStalledCapture;
         captureHooksAttached = true;
         SetNamePlatesVisible(false);
+        HideHudGroups();
     }
 
     private void ReleaseStalledCapture(IFramework framework)
@@ -319,6 +378,7 @@ internal sealed class CameraApp : IPhoneApp
         Plugin.NamePlateGui.OnNamePlateUpdate -= StripNamePlates;
         Plugin.Framework.Update -= ReleaseStalledCapture;
         captureHooksAttached = false;
+        RestoreHudGroups();
         SetNamePlatesVisible(true);
         Plugin.NamePlateGui.RequestRedraw();
     }

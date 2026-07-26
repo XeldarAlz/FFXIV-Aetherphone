@@ -293,7 +293,12 @@ internal sealed partial class YellowPagesApp
             status = AdText.ExpiresLine(ad, nowUnix);
         }
 
-        return ad.Views > 0 ? $"{status} · {Loc.T(L.YellowPages.ViewCount, ad.Views)}" : status;
+        if (ad.Views > 0)
+        {
+            status = $"{status} · {Loc.T(L.YellowPages.ViewCount, ad.Views)}";
+        }
+
+        return ad.AllowInquiries ? status : $"{status} · {Loc.T(L.YellowPages.InquiriesClosed)}";
     }
 
     private void DrawSaved(Rect area)

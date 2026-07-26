@@ -144,6 +144,7 @@ internal sealed partial class MessageApp : IPhoneApp
 
         currentCall = calls.Snapshot();
         SyncCallRoute();
+        ConsumeSharedPhoto();
         ProcessPending();
         threadView.GateMenus();
         chatMenu.Gate();
@@ -290,6 +291,9 @@ internal sealed partial class MessageApp : IPhoneApp
                 break;
             case MessageScreen.Forward:
                 DrawForwardPicker(area, route.Id ?? string.Empty);
+                break;
+            case MessageScreen.SharePhoto:
+                DrawSharePhotoPicker(area, route.Id ?? string.Empty);
                 break;
             case MessageScreen.Starred:
                 DrawStarred(area);

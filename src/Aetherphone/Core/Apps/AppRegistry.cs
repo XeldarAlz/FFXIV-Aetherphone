@@ -63,11 +63,11 @@ internal static class AppRegistry
         apps.Add(new PollsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "polls").Polls, services.Installer));
         apps.Add(new AnnouncementsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "announcements").Announcements, services.Notifications, services.Configuration, services.AnnouncementsLauncher));
         apps.Add(new CameraApp(new PhotoCaptureService(), photoLibrary, services.Configuration));
-        apps.Add(new PhotosApp(photoLibrary, services.Confirm, services.Configuration));
+        apps.Add(new PhotosApp(photoLibrary, services.Confirm, services.Share, services.Configuration));
         apps.Add(new SkywatcherApp(services.Weather, services.WeatherControl));
         apps.Add(new VenuesApp(services.Venues, services.Media, services.Http, services.Textures, services.GameData, services.Configuration));
-        apps.Add(new MusterApp(services.Musters, services.MusterLauncher, services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone, services.Configuration, services.Confirm, services.Report));
-        apps.Add(new YellowPagesApp(services.YellowPages, services.AdInquiries, services.YellowPagesLauncher, services.SocialNotifications, services.GramDmLauncher, services.Musters, new AethernetApi(services.Http, services.AethernetSession, "yellowpages"), services.GameData, services.RemoteImages, services.Lodestone, photoLibrary, services.WallpaperImages, services.Configuration, services.Confirm, services.Report));
+        apps.Add(new MusterApp(services.Musters, services.MusterLauncher, services.Aethernet, services.GameData, services.RemoteImages, services.Lodestone, services.Configuration, services.Confirm, services.Report, services.Conduct));
+        apps.Add(new YellowPagesApp(services.YellowPages, services.AdInquiries, services.YellowPagesLauncher, services.SocialNotifications, services.GramDmLauncher, services.Musters, new AethernetApi(services.Http, services.AethernetSession, "yellowpages"), services.GameData, services.RemoteImages, services.Lodestone, photoLibrary, services.WallpaperImages, services.Configuration, services.Confirm, services.Report, services.Conduct));
         apps.Add(new MapsApp(services.Maps, services.Configuration));
         apps.Add(new NewsApp(services.News, services.Media, services.Http, services.GameData));
         apps.Add(new CollectionsApp(services.Collections, services.Lodestone, services.Media, services.Http, services.GameData));
@@ -82,7 +82,8 @@ internal static class AppRegistry
         apps.Add(new TimersApp(services.Configuration));
         apps.Add(new DailiesApp(services.Configuration, services.GameData));
         apps.Add(new FishingApp());
-        apps.Add(new GamesApp(services.GameStats, services.Textures, Plugin.PluginInterface.ConfigDirectory, Plugin.KeyState, Plugin.GamepadState, services.Configuration));
+        apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures,
+            Plugin.PluginInterface.ConfigDirectory, Plugin.KeyState, Plugin.GamepadState, services.Configuration));
         apps.Add(new NotificationsApp(services.Notifications, services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher, services.MusterLauncher, services.YellowPagesLauncher, services.AnnouncementsLauncher));
         apps.Add(new SettingsApp(services, photoLibrary));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);

@@ -3,6 +3,8 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
@@ -17,8 +19,15 @@ namespace Aetherphone.Apps.Aethergram;
 // main AethergramApp.cs stays focused on the feed and app orchestration.
 internal sealed partial class AethergramApp
 {
-    private float ComposeAspect =>
-        composeStoryMode ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight : 1f;
+    private const float AspectPickerReserve = 42f;
+
+    private float ComposeAspect => composeStoryMode
+        ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight
+        : composeAvatarMode
+            ? PostAspects.SquareRatio
+            : PostAspects.Ratio(composeAspect);
+
+    private bool ComposeAllowsAspectChoice => !composeStoryMode && !composeAvatarMode;
 
     private string ComposeTitle => composeAvatarMode ? Loc.T(L.Aethergram.NewAvatar)
         : composeStoryMode ? Loc.T(L.Story.NewStory)
@@ -32,6 +41,35 @@ internal sealed partial class AethergramApp
     private void StartStoryCompose()
     {
         StartCompose(false, true);
+    }
+
+    public void OnShare(in ShareItem item)
+    {
+        if (item.Kind != ShareKind.Photo)
+        {
+            return;
+        }
+
+        pendingSharedPhoto = item.LocalPath;
+    }
+
+    private void ConsumeSharedPhoto()
+    {
+        var path = pendingSharedPhoto;
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        pendingSharedPhoto = null;
+        if (!store.IsSignedIn)
+        {
+            return;
+        }
+
+        StartCompose(false);
+        composeSession.TakePicked(path);
+        composeSession.BeginCropSequence();
     }
 
     private void StartCompose(bool avatarMode, bool storyMode = false)
@@ -157,8 +195,34 @@ internal sealed partial class AethergramApp
             CropAdvance();
         }
 
+        var reserve = ComposeAllowsAspectChoice ? AspectPickerReserve : 0f;
         composeSession.DrawCropCanvas(area, ImGuiHelpers.GlobalScale, ComposeAspect, ComposeStyle,
-            Loc.T(L.Aethergram.GestureHint));
+            Loc.T(L.Aethergram.GestureHint), reserve);
+        if (ComposeAllowsAspectChoice)
+        {
+            DrawAspectPicker(area, scale);
+        }
+    }
+
+    private void DrawAspectPicker(Rect area, float scale)
+    {
+        var width = MathF.Min(area.Width - 32f * scale, 260f * scale);
+        var rowTop = area.Max.Y - (96f + AspectPickerReserve - 8f) * scale;
+        var row = new Rect(new Vector2(area.Center.X - width * 0.5f, rowTop),
+            new Vector2(area.Center.X + width * 0.5f, rowTop + 28f * scale));
+        for (var index = 0; index < PostAspects.All.Length; index++)
+        {
+            aspectLabels[index] = Loc.T(AspectLabels.For(PostAspects.All[index]));
+        }
+
+        var picked = SegmentStrip.Draw("aethergram.compose.aspect", row, aspectLabels,
+            Array.IndexOf(PostAspects.All, composeAspect), AppPalettes.Aethergram);
+        if (picked < 0 || picked >= PostAspects.All.Length || PostAspects.All[picked] == composeAspect)
+        {
+            return;
+        }
+
+        composeAspect = PostAspects.All[picked];
     }
 
     private void CropBack()
@@ -523,8 +587,8 @@ internal sealed partial class AethergramApp
         }
 
         composeStatus = string.Empty;
-        store.CreateGram(composeSession.SelectedArray(), composeSession.CropsArray(), caption, ComposeTagInputs(),
-            ok => composeOutcome = ok ? 1 : 2);
+        store.CreateGram(composeSession.SelectedArray(), composeSession.CropsArray(), composeAspect, caption,
+            ComposeTagInputs(), ok => composeOutcome = ok ? 1 : 2);
     }
 
     private void CommitStory()

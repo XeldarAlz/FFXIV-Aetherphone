@@ -34,6 +34,9 @@ internal static class L
 
     internal static class Social
     {
+        public static readonly LocString AspectSquare = new("social.aspectSquare", "Square");
+        public static readonly LocString AspectPortrait = new("social.aspectPortrait", "Portrait");
+        public static readonly LocString AspectLandscape = new("social.aspectLandscape", "Landscape");
         public static readonly LocString LikedChirp = new("social.likedChirp", "liked your chirp");
         public static readonly LocString LikedPhoto = new("social.likedPhoto", "liked your photo");
         public static readonly LocString LikedComment = new("social.likedComment", "liked your comment");
@@ -799,6 +802,8 @@ internal static class L
         public static readonly LocString ScrollWhileIdleHint = new("settings.scrollWhileIdleHint", "Your character scrolls through their phone (Tomescroll emote) while standing still and out of combat. Does nothing if you haven't unlocked the emote.");
         public static readonly LocString ShowInGpose = new("settings.showInGpose", "Show in Group Pose");
         public static readonly LocString ShowInGposeHint = new("settings.showInGposeHint", "Keep the phone available while you're in Group Pose, so you can open it during photo shoots. Turn it off to keep your screen clear for screenshots.");
+        public static readonly LocString ImportScreenshots = new("settings.importScreenshots", "Import screenshots");
+        public static readonly LocString ImportScreenshotsHint = new("settings.importScreenshotsHint", "Copy screenshots you take into the Photos gallery, including ones from ReShade and GShade. Only shots taken while the phone is running are copied, and the originals stay where they are.");
         public static readonly LocString OpenOnStartup = new("settings.openOnStartup", "Open at startup");
         public static readonly LocString OpenMinimized = new("settings.openMinimized", "Open minimized");
         public static readonly LocString StartupHint = new("settings.startupHint", "Open the phone automatically when you log in. Open minimized shows it as a small dock that you tap to expand.");
@@ -860,6 +865,8 @@ internal static class L
             new("changelog.r0990.6", "Rechirp notifications now quote the chirp that was rechirped instead of showing a bare line"),
             new("changelog.r0990.7", "Pressing Enter while tagging someone now picks the highlighted person instead of posting straight away"),
             new("changelog.r0990.8", "The tag suggestion list no longer opens on top of the home button when it has more than one result"),
+            new("changelog.r0990.9", "Games adds Sudoku, with three difficulties, pencil notes, hints, and a mistake counter"),
+            new("changelog.r0990.10", "Games adds Chess against the phone, with three difficulty levels, takebacks, and the full rules including castling, en passant, and promotion"),
         };
 
         public static readonly LocString[] Release0989 =
@@ -1588,6 +1595,14 @@ internal static class L
         public static readonly LocString Sending = new("report.sending", "Sending…");
         public static readonly LocString Sent = new("report.sent", "Report submitted. Thank you.");
         public static readonly LocString Failed = new("report.failed", "Couldn't submit the report");
+    }
+
+    internal static class Share
+    {
+        public static readonly LocString Action = new("share.action", "Share");
+        public static readonly LocString Title = new("share.title", "Share to");
+        public static readonly LocString SetAsWallpaper = new("share.setAsWallpaper", "Set as wallpaper");
+        public static readonly LocString NoTargets = new("share.noTargets", "No apps can open this yet");
     }
 
     internal static class Music
@@ -2535,6 +2550,7 @@ internal static class L
         public static readonly LocString Left = new("games.left", "Left");
         public static readonly LocString Flow = new("games.flow", "Flow");
         public static readonly LocString Flows = new("games.flows", "Flows");
+        public static readonly LocString Filled = new("games.filled", "Filled");
         public static readonly LocString Solitaire = new("games.solitaire", "Solitaire");
         public static readonly LocString GenreCards = new("games.genreCards", "Cards");
         public static readonly LocString Simon = new("games.simon", "Simon");
@@ -2691,6 +2707,35 @@ internal static class L
         public static readonly LocString ProtectMemoryCards = new("games.protectMemoryCards", "Protect cards when loading states");
         public static readonly LocString ProtectMemoryCardsHint = new("games.protectMemoryCardsHint", "Protection prevents an old save state from replacing newer memory-card data.");
         public static readonly LocString N64AccessoryHint = new("games.n64AccessoryHint", "Controller Pak and Rumble Pak are selected above. Transfer Pak and N64DD require libretro subsystems and are reserved for a later phase.");
+        public static readonly LocString Sudoku = new("games.sudoku", "Sudoku");
+        public static readonly LocString Chess = new("games.chess", "Chess");
+        public static readonly LocString Notes = new("games.notes", "Notes");
+        public static readonly LocString Erase = new("games.erase", "Erase");
+        public static readonly LocString Hint = new("games.hint", "Hint");
+        public static readonly LocString Mistakes = new("games.mistakes", "Mistakes");
+        public static readonly LocString Thinking = new("games.thinking", "Thinking…");
+        public static readonly LocString Check = new("games.check", "Check!");
+        public static readonly LocString Checkmate = new("games.checkmate", "Checkmate");
+        public static readonly LocString Stalemate = new("games.stalemate", "Stalemate");
+        public static readonly LocString Promote = new("games.promote", "Promote to");
+        public static readonly LocString Stack = new("games.stack", "Stack");
+        public static readonly LocString CrystalDrop = new("games.crystalDrop", "Crystal Drop");
+        public static readonly LocString Beat = new("games.beat", "Beat");
+        public static readonly LocString Combo = new("games.combo", "Combo");
+        public static readonly LocString Perfect = new("games.perfect", "Perfect!");
+        public static readonly LocString Good = new("games.good", "Good");
+        public static readonly LocString Miss = new("games.miss", "Miss");
+        public static readonly LocString Daily = new("games.daily", "Daily Challenge");
+        public static readonly LocString Blade = new("games.blade", "Blade Throw");
+        public static readonly LocString Trivia = new("games.trivia", "Trivia");
+        public static readonly LocString WhatIsThis = new("games.whatIsThis", "What is this?");
+        public static readonly LocString PickTheIcon = new("games.pickTheIcon", "Pick the right one");
+        public static readonly LocString ChooseCategory = new("games.chooseCategory", "Choose a category");
+        public static readonly LocString CategoryAll = new("games.categoryAll", "Everything");
+        public static readonly LocString CategoryMounts = new("games.categoryMounts", "Mounts");
+        public static readonly LocString CategoryMinions = new("games.categoryMinions", "Minions");
+        public static readonly LocString CategoryActions = new("games.categoryActions", "Actions");
+        public static readonly LocString CategoryEmotes = new("games.categoryEmotes", "Emotes");
     }
 
     internal static class Time
@@ -3225,6 +3270,8 @@ internal static class L
         public static readonly LocString RequirementsLabel = new("yellowpages.requirementsLabel", "Requirements");
         public static readonly LocString AfterDarkToggle = new("yellowpages.afterDarkToggle", "After Dark (18+)");
         public static readonly LocString AfterDarkHint = new("yellowpages.afterDarkHint", "Hidden from readers unless they opt in. Keep the ad itself non-explicit.");
+        public static readonly LocString AllowInquiriesToggle = new("yellowpages.allowInquiriesToggle", "Let readers message me");
+        public static readonly LocString AllowInquiriesHint = new("yellowpages.allowInquiriesHint", "Turn this off and nobody can open an inquiry about this ad. Conversations you already have stay open.");
         public static readonly LocString NeedTitle = new("yellowpages.needTitle", "Give your ad a title.");
         public static readonly LocString NeedBody = new("yellowpages.needBody", "Add a description.");
         public static readonly LocString NeedDataCenter = new("yellowpages.needDataCenter", "Log in to a world first.");
@@ -3262,6 +3309,8 @@ internal static class L
         public static readonly LocString SaveChanges = new("yellowpages.saveChanges", "Save changes");
         public static readonly LocString InquireAction = new("yellowpages.inquireAction", "Message the poster");
         public static readonly LocString InquireHint = new("yellowpages.inquireHint", "Opens an inquiry here in Yellow Pages, attached to this ad.");
+        public static readonly LocString InquiriesClosed = new("yellowpages.inquiriesClosed", "Messages are off");
+        public static readonly LocString InquiriesClosedHint = new("yellowpages.inquiriesClosedHint", "The poster turned off messages for this ad. Use the details above to reach them in game.");
         public static readonly LocString ViewCount = new("yellowpages.viewCount", "{0} views");
         public static readonly LocString AnnounceMuster = new("yellowpages.announceMuster", "Announce on Muster");
         public static readonly LocString AfterDarkConfirmTitle = new("yellowpages.afterDarkConfirmTitle", "After Dark");
@@ -3281,9 +3330,6 @@ internal static class L
         public static readonly LocString Acknowledge = new("conduct.acknowledge", "I have read and understood these rules. I accept that breaking them may get my account suspended or banned.");
         public static readonly LocString AgreeAction = new("conduct.agreeAction", "I understand and agree");
         public static readonly LocString WaitAction = new("conduct.waitAction", "Please read the rules… {0}");
-
-        public static readonly LocString SectionEncouraged = new("conduct.section.encouraged", "Encouraged Content");
-        public static readonly LocString SectionNotAllowed = new("conduct.section.notAllowed", "Not Allowed");
 
         public static readonly LocString ChirperTitle = new("conduct.chirper.title", "Chirper Community Rules");
         public static readonly LocString ChirperIntro = new("conduct.chirper.intro", "Before you start posting, please read the rules of the community.");
@@ -3494,88 +3540,138 @@ internal static class L
         public static readonly LocString VelvetModerationTitle = new("conduct.velvet.moderation.title", "Respect Moderation");
         public static readonly LocString VelvetModerationBody = new("conduct.velvet.moderation.body", "Do not evade bans, create alternate accounts to avoid enforcement, or harass moderators. Appeals are welcome if made respectfully.");
 
-        public static readonly LocString MusterTitle = new("conduct.muster.title", "Muster Ground Rules");
-        public static readonly LocString MusterIntro = new("conduct.muster.intro", "Musters are players meeting up with players: say what you are doing, where to find you, and when. A few rules keep the directory honest.");
+        public static readonly LocString MusterTitle = new("conduct.muster.title", "Muster Community Rules");
+        public static readonly LocString MusterIntro = new("conduct.muster.intro", "Before you host or join a meetup, please read the rules of the community.");
+        public static readonly LocString MusterAllowedTitle = new("conduct.muster.allowed.title", "What Is Allowed");
+        public static readonly LocString MusterAllowedLead = new("conduct.muster.allowed.lead", "Examples of acceptable musters include:");
+        public static readonly LocString[] MusterAllowedItems =
+        {
+            new("conduct.muster.allowed.1", "Spontaneous meetups and hangouts"),
+            new("conduct.muster.allowed.2", "Hunt trains, map parties, and duty groups"),
+            new("conduct.muster.allowed.3", "Roleplay scenes and social gatherings"),
+            new("conduct.muster.allowed.4", "Screenshot sessions, fishing trips, and Gold Saucer nights"),
+            new("conduct.muster.allowed.5", "Community events open to anyone who shows up"),
+        };
+        public static readonly LocString MusterHostingTitle = new("conduct.muster.hosting.title", "Host in Good Faith");
+        public static readonly LocString MusterHostingLead = new("conduct.muster.hosting.lead", "Your listing is a promise to everyone who shows up. Do not:");
+        public static readonly LocString[] MusterHostingItems =
+        {
+            new("conduct.muster.hosting.1", "Fake locations or misleading listings"),
+            new("conduct.muster.hosting.2", "List a muster you do not intend to host"),
+            new("conduct.muster.hosting.3", "Leave a finished muster live in the directory"),
+            new("conduct.muster.hosting.4", "Disappear on attendees instead of ending the muster"),
+        };
+        public static readonly LocString MusterAppropriateTitle = new("conduct.muster.appropriate.title", "Keep It Appropriate");
+        public static readonly LocString MusterAppropriateLead = new("conduct.muster.appropriate.lead", "The directory is public and safe for work. Do not post:");
+        public static readonly LocString[] MusterAppropriateItems =
+        {
+            new("conduct.muster.appropriate.1", "Explicit sexual content or nudity"),
+            new("conduct.muster.appropriate.2", "ERP meetups or sexual solicitation"),
+            new("conduct.muster.appropriate.3", "Fetish gatherings"),
+            new("conduct.muster.appropriate.4", "NSFW descriptions or meeting spots"),
+        };
+        public static readonly LocString MusterChildSafetyTitle = new("conduct.muster.childSafety.title", "Child Safety");
+        public static readonly LocString MusterChildSafetyBody = new("conduct.muster.childSafety.body", "Any content involving or sexualizing child-like characters or minors is strictly prohibited, regardless of lore or stated age.");
+        public static readonly LocString MusterInGameTitle = new("conduct.muster.inGame.title", "In-Game Meetups Only");
+        public static readonly LocString MusterInGameBody = new("conduct.muster.inGame.body", "Musters are for meeting inside the game. Do not use them to arrange real-life meetings or to collect personal contact details from attendees.");
+        public static readonly LocString MusterRespectTitle = new("conduct.muster.respect.title", "Be Respectful");
+        public static readonly LocString MusterRespectLead = new("conduct.muster.respect.lead", "Treat others with respect. Do not engage in:");
+        public static readonly LocString[] MusterRespectItems =
+        {
+            new("conduct.muster.respect.1", "Harassment or bullying"),
+            new("conduct.muster.respect.2", "Hate speech or slurs"),
+            new("conduct.muster.respect.3", "Threats or targeted abuse"),
+            new("conduct.muster.respect.4", "Musters aimed at singling out or harassing a player"),
+            new("conduct.muster.respect.5", "Impersonation of real people or misinformation intended to deceive"),
+        };
+        public static readonly LocString MusterSpamTitle = new("conduct.muster.spam.title", "No Spam or Advertising");
+        public static readonly LocString MusterSpamLead = new("conduct.muster.spam.lead", "Keep the directory worth browsing. Do not post:");
+        public static readonly LocString[] MusterSpamItems =
+        {
+            new("conduct.muster.spam.1", "Repeated or duplicate musters"),
+            new("conduct.muster.spam.2", "Venue, business, or service advertisements: use Yellow Pages instead"),
+            new("conduct.muster.spam.3", "Paid services of any kind, whether gil or real money"),
+            new("conduct.muster.spam.4", "Malicious links, scams, or phishing"),
+        };
+        public static readonly LocString MusterPrivacyTitle = new("conduct.muster.privacy.title", "Protect Privacy");
+        public static readonly LocString MusterPrivacyBody = new("conduct.muster.privacy.body", "Do not share another person's personal information, private conversations, or confidential content without their permission.");
+        public static readonly LocString MusterDiscretionTitle = new("conduct.muster.discretion.title", "Moderator Discretion");
+        public static readonly LocString MusterDiscretionBody = new("conduct.muster.discretion.body", "Musters that are misleading, disruptive, or otherwise inappropriate for a public directory may be removed at moderator discretion.");
 
-        public static readonly LocString[] MusterEncouraged =
+        public static readonly LocString YellowPagesTitle = new("conduct.yellowpages.title", "Yellow Pages Community Rules");
+        public static readonly LocString YellowPagesIntro = new("conduct.yellowpages.intro", "Before you post an ad, please read the rules of the community.");
+        public static readonly LocString YellowPagesAllowedTitle = new("conduct.yellowpages.allowed.title", "What Is Allowed");
+        public static readonly LocString YellowPagesAllowedLead = new("conduct.yellowpages.allowed.lead", "Examples of acceptable ads include:");
+        public static readonly LocString[] YellowPagesAllowedItems =
         {
-            new("conduct.muster.enc.1", "Spontaneous meetups and hangouts"),
-            new("conduct.muster.enc.2", "Hunt trains, map parties, and duty groups"),
-            new("conduct.muster.enc.3", "Roleplay scenes and social gatherings"),
-            new("conduct.muster.enc.4", "Showing up when you say you will"),
-            new("conduct.muster.enc.5", "Ending your muster once it is done"),
+            new("conduct.yellowpages.allowed.1", "Venue nights, game nights, and housing tours with honest schedules"),
+            new("conduct.yellowpages.allowed.2", "Crafting, gathering, portraits, glamour, and performance work for gil"),
+            new("conduct.yellowpages.allowed.3", "Recruiting for free companies, statics, and venue staff"),
+            new("conduct.yellowpages.allowed.4", "Clear prices and clear expectations"),
+            new("conduct.yellowpages.allowed.5", "Mod ads that show the work and link to the mod page"),
         };
-
-        public static readonly LocString[] MusterNotAllowed =
+        public static readonly LocString YellowPagesGilTitle = new("conduct.yellowpages.gil.title", "Gil Only");
+        public static readonly LocString YellowPagesGilLead = new("conduct.yellowpages.gil.lead", "Ads may only ask for gil. The following are never allowed:");
+        public static readonly LocString[] YellowPagesGilItems =
         {
-            new("conduct.muster.no.1", "Advertising venues, clubs, or anything with a business behind it"),
-            new("conduct.muster.no.2", "Paid services of any kind, whether gil or real money"),
-            new("conduct.muster.no.3", "NSFW descriptions or meeting spots"),
-            new("conduct.muster.no.4", "Musters aimed at singling out or harassing a player"),
-            new("conduct.muster.no.5", "Fake locations or misleading listings"),
+            new("conduct.yellowpages.gil.1", "Real money, gift cards, or payments taken outside the game"),
+            new("conduct.yellowpages.gil.2", "RMT, gil selling, account services, or third-party boosting shops"),
+            new("conduct.yellowpages.gil.3", "Selling mods or mod commissions: mod ads link out and carry no price"),
+            new("conduct.yellowpages.gil.4", "Trading account access or characters"),
         };
-
-        public static readonly LocString YellowPagesTitle = new("conduct.yellowpages.title", "Yellow Pages Ground Rules");
-        public static readonly LocString YellowPagesIntro = new("conduct.yellowpages.intro", "Yellow Pages is Eorzea's classifieds board. Posting an ad means other players may contact you about it. A few rules keep the board worth browsing.");
-
-        public static readonly LocString[] YellowPagesEncouraged =
+        public static readonly LocString YellowPagesHonestTitle = new("conduct.yellowpages.honest.title", "Honest Listings");
+        public static readonly LocString YellowPagesHonestLead = new("conduct.yellowpages.honest.lead", "An ad is a promise to whoever answers it. Do not post:");
+        public static readonly LocString[] YellowPagesHonestItems =
         {
-            new("conduct.yellowpages.enc.1", "Venue nights, game nights, and housing tours with honest schedules"),
-            new("conduct.yellowpages.enc.2", "Crafting, gathering, portraits, glamour, and performance work for gil"),
-            new("conduct.yellowpages.enc.3", "Recruiting for free companies, statics, and venue staff"),
-            new("conduct.yellowpages.enc.4", "Clear prices and clear expectations"),
-            new("conduct.yellowpages.enc.5", "Letting an ad expire once it is done"),
-            new("conduct.yellowpages.enc.6", "Mod ads that show the work and link to the mod page"),
+            new("conduct.yellowpages.honest.1", "Fake listings or services you cannot deliver"),
+            new("conduct.yellowpages.honest.2", "Prices, schedules, or turnaround times you cannot honor"),
+            new("conduct.yellowpages.honest.3", "Impersonating another venue, crafter, or free company"),
+            new("conduct.yellowpages.honest.4", "Reposting the same ad to dodge the expiry cycle"),
+            new("conduct.yellowpages.honest.5", "Ads left live once the work or event is over"),
         };
-
-        public static readonly LocString[] YellowPagesNotAllowed =
+        public static readonly LocString YellowPagesAppropriateTitle = new("conduct.yellowpages.appropriate.title", "Keep It Appropriate");
+        public static readonly LocString YellowPagesAppropriateLead = new("conduct.yellowpages.appropriate.lead", "The After Dark tag marks mature venues and late-night events. It is not permission to post:");
+        public static readonly LocString[] YellowPagesAppropriateItems =
         {
-            new("conduct.yellowpages.no.1", "Anything sold for real money: gil only, always"),
-            new("conduct.yellowpages.no.2", "RMT, gil selling, account services, or third-party boosting shops"),
-            new("conduct.yellowpages.no.3", "Explicit content, even behind the After Dark tag"),
-            new("conduct.yellowpages.no.4", "Scams, fake listings, or impersonating another venue or crafter"),
-            new("conduct.yellowpages.no.5", "Reposting the same ad to dodge the expiry cycle"),
-            new("conduct.yellowpages.no.6", "Selling mods or mod commissions: mod ads link out and carry no price"),
+            new("conduct.yellowpages.appropriate.1", "Nudity or explicit sexual content"),
+            new("conduct.yellowpages.appropriate.2", "ERP, escort, or sexual solicitation services"),
+            new("conduct.yellowpages.appropriate.3", "Fetish services"),
+            new("conduct.yellowpages.appropriate.4", "Explicit language in titles, photos, or ad text"),
         };
-
-        public static readonly LocString PlatformTitle = new("conduct.platform.title", "Platform-wide Standards");
-        public static readonly LocString PlatformLead = new("conduct.platform.lead", "These rules apply across all Aetherphone social applications.");
-        public static readonly LocString RespectTitle = new("conduct.platform.respect.title", "Respect Others");
-        public static readonly LocString RespectBody = new("conduct.platform.respect.body", "Treat fellow adventurers with courtesy. Personal attacks, harassment, discrimination, or repeated unwanted interactions are not permitted.");
-        public static readonly LocString PrivacyTitle = new("conduct.platform.privacy.title", "Keep Information Private");
-        public static readonly LocString PrivacyLead = new("conduct.platform.privacy.lead", "Do not share another person's:");
-        public static readonly LocString[] PrivacyItems =
+        public static readonly LocString YellowPagesChildSafetyTitle = new("conduct.yellowpages.childSafety.title", "Child Safety");
+        public static readonly LocString YellowPagesChildSafetyBody = new("conduct.yellowpages.childSafety.body", "Any content involving or sexualizing child-like characters or minors is strictly prohibited, regardless of lore or stated age.");
+        public static readonly LocString YellowPagesRespectTitle = new("conduct.yellowpages.respect.title", "Be Respectful");
+        public static readonly LocString YellowPagesRespectLead = new("conduct.yellowpages.respect.lead", "Treat others with respect. Do not engage in:");
+        public static readonly LocString[] YellowPagesRespectItems =
         {
-            new("conduct.platform.privacy.1", "Real name"),
-            new("conduct.platform.privacy.2", "Address"),
-            new("conduct.platform.privacy.3", "Phone number"),
-            new("conduct.platform.privacy.4", "Email"),
-            new("conduct.platform.privacy.5", "Personal photographs"),
-            new("conduct.platform.privacy.6", "Private conversations without permission"),
+            new("conduct.yellowpages.respect.1", "Harassment or bullying"),
+            new("conduct.yellowpages.respect.2", "Hate speech or slurs"),
+            new("conduct.yellowpages.respect.3", "Threats or targeted abuse"),
+            new("conduct.yellowpages.respect.4", "Pressuring or badgering someone through inquiries"),
+            new("conduct.yellowpages.respect.5", "Impersonation of real people or misinformation intended to deceive"),
         };
-        public static readonly LocString SpamTitle = new("conduct.platform.spam.title", "No Spam");
-        public static readonly LocString SpamLead = new("conduct.platform.spam.lead", "Do not:");
-        public static readonly LocString[] SpamItems =
+        public static readonly LocString YellowPagesSpamTitle = new("conduct.yellowpages.spam.title", "No Spam");
+        public static readonly LocString YellowPagesSpamLead = new("conduct.yellowpages.spam.lead", "Keep the board worth browsing. Do not post:");
+        public static readonly LocString[] YellowPagesSpamItems =
         {
-            new("conduct.platform.spam.1", "Flood feeds"),
-            new("conduct.platform.spam.2", "Post repetitive advertisements"),
-            new("conduct.platform.spam.3", "Manipulate engagement"),
-            new("conduct.platform.spam.4", "Use automated spam accounts"),
+            new("conduct.yellowpages.spam.1", "Repetitive or duplicate ads"),
+            new("conduct.yellowpages.spam.2", "Ads filed under unrelated categories or tags"),
+            new("conduct.yellowpages.spam.3", "Engagement manipulation or automated accounts"),
+            new("conduct.yellowpages.spam.4", "Malicious links, scams, or phishing"),
         };
-        public static readonly LocString IpTitle = new("conduct.platform.ip.title", "Intellectual Property");
-        public static readonly LocString IpBody = new("conduct.platform.ip.body", "Only upload content you own or have permission to share. Always provide attribution where appropriate.");
-        public static readonly LocString EnforcementTitle = new("conduct.platform.enforcement.title", "Reports and Enforcement");
-        public static readonly LocString EnforcementLead = new("conduct.platform.enforcement.lead", "Violations may result in:");
-        public static readonly LocString[] EnforcementItems =
+        public static readonly LocString YellowPagesPrivacyTitle = new("conduct.yellowpages.privacy.title", "Protect Privacy");
+        public static readonly LocString YellowPagesPrivacyBody = new("conduct.yellowpages.privacy.body", "Do not share another person's personal information, private conversations, or confidential content without their permission.");
+        public static readonly LocString YellowPagesCreatorsTitle = new("conduct.yellowpages.creators.title", "Respect Creators");
+        public static readonly LocString YellowPagesCreatorsLead = new("conduct.yellowpages.creators.lead", "Only upload content you have the right to share. Do not:");
+        public static readonly LocString[] YellowPagesCreatorsItems =
         {
-            new("conduct.platform.enforcement.1", "Content removal"),
-            new("conduct.platform.enforcement.2", "Temporary posting restrictions"),
-            new("conduct.platform.enforcement.3", "Temporary account suspension"),
-            new("conduct.platform.enforcement.4", "Permanent account termination"),
+            new("conduct.yellowpages.creators.1", "Post stolen or leaked content"),
+            new("conduct.yellowpages.creators.2", "Remove watermarks or repost commissioned work without permission"),
+            new("conduct.yellowpages.creators.3", "Claim someone else's creations as your own"),
+            new("conduct.yellowpages.creators.4", "Post AI-generated content"),
         };
-        public static readonly LocString EnforcementNote = new("conduct.platform.enforcement.note", "Severe violations may bypass warning stages.");
-        public static readonly LocString AppealsTitle = new("conduct.platform.appeals.title", "Appeals");
-        public static readonly LocString AppealsBody = new("conduct.platform.appeals.body", "If you believe moderation action was taken in error, you may submit an appeal through the Aetherphone Discord support system.");
+        public static readonly LocString YellowPagesDiscretionTitle = new("conduct.yellowpages.discretion.title", "Moderator Discretion");
+        public static readonly LocString YellowPagesDiscretionBody = new("conduct.yellowpages.discretion.body", "Ads that are misleading, off-topic, or otherwise inappropriate for a public board may be removed at moderator discretion.");
     }
 
     internal static class Health

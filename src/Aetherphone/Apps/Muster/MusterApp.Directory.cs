@@ -108,13 +108,20 @@ internal sealed partial class MusterApp
         if (store.Syncing || store.DirectoryLoading)
         {
             LoadingPulse.Spinner(actionCenter, 8f * scale, ui.Accent);
-            return;
         }
-
-        if (ui.IconButton(actionCenter, 14f * scale, FontAwesomeIcon.Sync.ToIconString(),
-                AppPalettes.Muster.BodyInk, AppSkin.Transparent, 0.9f))
+        else if (ui.IconButton(actionCenter, 14f * scale, FontAwesomeIcon.Sync.ToIconString(),
+                     AppPalettes.Muster.BodyInk, AppSkin.Transparent, 0.9f, Loc.T(L.Common.Refresh),
+                     HoverLabelSide.Below))
         {
             RefreshEverything();
+        }
+
+        var rulesCenter = new Vector2(actionCenter.X - 28f * scale, rowCenterY);
+        if (ui.IconButton(rulesCenter, 14f * scale, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                AppPalettes.Muster.MutedInk, AppSkin.Transparent, 0.9f, Loc.T(L.Conduct.Eyebrow),
+                HoverLabelSide.Below))
+        {
+            conduct.ShowRules(Id);
         }
     }
 

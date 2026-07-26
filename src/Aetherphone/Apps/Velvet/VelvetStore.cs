@@ -975,8 +975,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         });
     }
 
-    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, string caption, string[] tags,
-        int audience, Action<bool> onComplete)
+    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, PostAspect aspect, string caption,
+        string[] tags, int audience, Action<bool> onComplete)
     {
         if (posting || sourcePaths.Length == 0)
         {
@@ -987,9 +987,10 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         work.Run("create post", async token =>
         {
             var mediaKeys = new string[sourcePaths.Length];
+            var (bakedWidth, bakedHeight) = PostAspects.Size(aspect, PostSize);
             for (var index = 0; index < sourcePaths.Length; index++)
             {
-                var baked = ImageProcessor.BakeSquareJpeg(sourcePaths[index], crops[index], PostSize);
+                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight);
                 var upload = await media.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
                 if (upload is null)
                 {
@@ -1007,7 +1008,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
             }
 
             var request =
-                new CreateVelvetPostRequest(mediaKeys[0], PostSize, PostSize, caption, tags, mediaKeys, audience);
+                new CreateVelvetPostRequest(mediaKeys[0], bakedWidth, bakedHeight, caption, tags, mediaKeys, audience);
             var created = await client.CreatePostAsync(request, token).ConfigureAwait(false);
             if (created is null)
             {

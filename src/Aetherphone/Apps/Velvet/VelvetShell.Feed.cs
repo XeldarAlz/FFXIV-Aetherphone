@@ -124,10 +124,11 @@ internal sealed partial class VelvetShell
         var innerPad = Metrics.Space.Lg * scale;
         var headerHeight = 52f * scale;
         var imageSize = width - innerPad * 2f;
+        var imageHeight = PostAspects.DisplayHeight(imageSize, entry.MediaWidth, entry.MediaHeight);
         var actionsHeight = 44f * scale;
         var captionHeight = entry.Caption.Length > 0 ? 22f * scale : 0f;
         var tagsHeight = entry.Tags.Length > 0 ? 20f * scale : 0f;
-        var totalScaled = headerHeight + 8f * scale + imageSize + actionsHeight + captionHeight + tagsHeight +
+        var totalScaled = headerHeight + 8f * scale + imageHeight + actionsHeight + captionHeight + tagsHeight +
             12f * scale;
 
         var card = Reserve(totalScaled / scale);
@@ -176,7 +177,7 @@ internal sealed partial class VelvetShell
         }
 
         var imageMin = new Vector2(card.Min.X + innerPad, card.Min.Y + headerHeight + 8f * scale);
-        var imageMax = new Vector2(imageMin.X + imageSize, imageMin.Y + imageSize);
+        var imageMax = new Vector2(imageMin.X + imageSize, imageMin.Y + imageHeight);
         var photos = PostMedia.Photos(entry.MediaUrls, entry.MediaUrl);
         var result = DrawPostCarousel(drawList, new Rect(imageMin, imageMax), entry, photos,
             Metrics.Radius.Md * scale);
@@ -254,7 +255,7 @@ internal sealed partial class VelvetShell
         }
         else
         {
-            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+            var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, max.X - min.X, max.Y - min.Y);
             drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
                 ImDrawFlags.RoundCornersAll);
         }

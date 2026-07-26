@@ -1,6 +1,7 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
@@ -46,6 +47,7 @@ internal sealed partial class YellowPagesApp : IPhoneApp
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly ReportService report;
+    private readonly ConductGateService conduct;
     private readonly EncryptionInfoPane encryptionPane;
     private readonly PhotoViewerOverlay photoViewer = new();
     private readonly BottomTabBar bottomNav = new();
@@ -69,7 +71,7 @@ internal sealed partial class YellowPagesApp : IPhoneApp
         SocialNotificationService socialNotifications, GramDmLauncher gramDmLauncher, MusterStore musters,
         AethernetApi api, GameData gameData, RemoteImageCache images, LodestoneService lodestone,
         PhotoLibrary library, WallpaperImageCache wallpaperImages, Configuration configuration,
-        ConfirmService confirm, ReportService report)
+        ConfirmService confirm, ReportService report, ConductGateService conduct)
     {
         this.store = store;
         this.inquiries = inquiries;
@@ -86,6 +88,7 @@ internal sealed partial class YellowPagesApp : IPhoneApp
         this.configuration = configuration;
         this.confirm = confirm;
         this.report = report;
+        this.conduct = conduct;
         encryptionPane = new EncryptionInfoPane(inquiries.Vault, confirm);
         router = new ViewRouter<YellowPagesRoute>(YellowPagesRoute.Browse);
         drawView = DrawView;

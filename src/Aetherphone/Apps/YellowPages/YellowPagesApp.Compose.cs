@@ -58,6 +58,7 @@ internal sealed partial class YellowPagesApp
     private string composeSlotsLine = string.Empty;
     private string composeRequirements = string.Empty;
     private string composeLink = string.Empty;
+    private bool composeAllowInquiries = true;
     private bool composeAfterDark;
     private bool composeBusy;
     private bool composeSucceeded;
@@ -209,6 +210,9 @@ internal sealed partial class YellowPagesApp
         }
 
         DrawComposePhotos(scale);
+        ui.ToggleRow(Loc.T(L.YellowPages.AllowInquiriesToggle), ref composeAllowInquiries);
+        ui.HelpText(Loc.T(L.YellowPages.AllowInquiriesHint));
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
         ui.ToggleRow(Loc.T(L.YellowPages.AfterDarkToggle), ref composeAfterDark);
         ui.HelpText(Loc.T(L.YellowPages.AfterDarkHint));
         ImGui.Dummy(new Vector2(0f, Metrics.Space.Md * scale));
@@ -420,6 +424,7 @@ internal sealed partial class YellowPagesApp
         composeBody = ad.Body;
         composeTags = string.Join(", ", ad.Tags);
         composeAddressNote = ad.AddressNote;
+        composeAllowInquiries = ad.AllowInquiries;
         composeAfterDark = ad.AfterDark;
         composeKeptUrls.AddRange(ad.MediaUrls);
         if (ad.TerritoryId > 0 || ad.Ward > 0)
@@ -861,7 +866,8 @@ internal sealed partial class YellowPagesApp
             composeRequirements.Trim(),
             composeAfterDark,
             null,
-            composeLink.Trim());
+            composeLink.Trim(),
+            composeAllowInquiries);
         composeBusy = true;
         composeOutcome = null;
         var photos = composePhotos.ToArray();
@@ -910,6 +916,7 @@ internal sealed partial class YellowPagesApp
         composeSlotsLine = string.Empty;
         composeRequirements = string.Empty;
         composeLink = string.Empty;
+        composeAllowInquiries = true;
         composeAfterDark = false;
         composeBusy = false;
         composeOutcome = null;

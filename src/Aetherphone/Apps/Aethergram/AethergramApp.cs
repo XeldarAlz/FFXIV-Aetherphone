@@ -17,6 +17,7 @@ using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
@@ -51,6 +52,7 @@ internal sealed partial class AethergramApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Aethergram);
     public string Glyph => "Ag";
     public int BadgeCount => dmStore.UnreadCount;
+    public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
     private const string ScopeMenuId = "scope";
     private readonly Dictionary<SocialFeedScope, PullToRefresh> pullToRefresh = new()
     {
@@ -112,6 +114,9 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly PhotoComposeSession composeSession;
     private bool composeAvatarMode;
     private bool composeStoryMode;
+    private PostAspect composeAspect = PostAspect.Square;
+    private readonly string[] aspectLabels = new string[PostAspects.All.Length];
+    private string? pendingSharedPhoto;
     private static readonly LocString[] ProfileTabs = { L.PhotoTag.PostsTab, L.PhotoTag.TaggedTab };
     private readonly string[] profileTabLabels = new string[ProfileTabs.Length];
     private int profileTab;
@@ -272,6 +277,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         threadView.GateMenus();
         var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
         ui.Backdrop(screen);
+        ConsumeSharedPhoto();
         AdvancePendingPhotoView();
         stories.Advance();
         if (photoViewer.Active)
@@ -810,7 +816,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         var headerBlock = 40f * scale;
         var avatarRadius = 18f * scale;
         var imageTop = origin.Y + pad + headerBlock + 12f * scale;
-        var imageBottom = imageTop + innerWidth;
+        var imageBottom = imageTop + PostAspects.DisplayHeight(innerWidth, post.MediaWidth, post.MediaHeight);
         var actionsTop = imageBottom + 12f * scale;
         var actionsHeight = 24f * scale;
         var textTop = actionsTop + actionsHeight + 10f * scale;
@@ -1108,7 +1114,7 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
         else
         {
-            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+            var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height);
             drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
                 ImDrawFlags.RoundCornersAll);
         }

@@ -9,6 +9,12 @@ internal sealed class GameStatsStore
         this.configuration = configuration;
     }
 
+    public static int TodayIndex => (int)(DateTime.UtcNow.Ticks / TimeSpan.TicksPerDay);
+    public string DailyGameId { get; set; } = string.Empty;
+    public bool DailyDone => configuration.DailyChallengeLastDay == TodayIndex;
+    public int DailyStreak =>
+        configuration.DailyChallengeLastDay >= TodayIndex - 1 ? configuration.DailyChallengeStreak : 0;
+
     public GameStats Get(string gameId)
     {
         var record = Find(gameId);
@@ -22,6 +28,7 @@ internal sealed class GameStatsStore
 
     public bool SubmitScore(string gameId, int score)
     {
+        RecordDailyPlay(gameId);
         if (score <= 0)
         {
             return false;
@@ -40,6 +47,7 @@ internal sealed class GameStatsStore
 
     public bool SubmitTime(string gameId, int seconds)
     {
+        RecordDailyPlay(gameId);
         if (seconds <= 0)
         {
             return false;
@@ -58,6 +66,7 @@ internal sealed class GameStatsStore
 
     public int RecordWin(string gameId)
     {
+        RecordDailyPlay(gameId);
         var record = GetOrCreate(gameId);
         record.Streak += 1;
         configuration.Save();
@@ -66,6 +75,7 @@ internal sealed class GameStatsStore
 
     public void ResetStreak(string gameId)
     {
+        RecordDailyPlay(gameId);
         var record = Find(gameId);
         if (record is null || record.Streak == 0)
         {
@@ -74,6 +84,37 @@ internal sealed class GameStatsStore
 
         record.Streak = 0;
         configuration.Save();
+    }
+
+    private void RecordDailyPlay(string gameId)
+    {
+        var daily = DailyGameId;
+        if (daily.Length == 0 || !MatchesGame(gameId, daily))
+        {
+            return;
+        }
+
+        var today = TodayIndex;
+        if (configuration.DailyChallengeLastDay == today)
+        {
+            return;
+        }
+
+        configuration.DailyChallengeStreak =
+            configuration.DailyChallengeLastDay == today - 1 ? configuration.DailyChallengeStreak + 1 : 1;
+        configuration.DailyChallengeLastDay = today;
+        configuration.Save();
+    }
+
+    private static bool MatchesGame(string statId, string gameId)
+    {
+        if (string.Equals(statId, gameId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return statId.Length > gameId.Length && statId[gameId.Length] == '.' &&
+               statId.AsSpan(0, gameId.Length).SequenceEqual(gameId.AsSpan());
     }
 
     private GameStatRecord? Find(string gameId)

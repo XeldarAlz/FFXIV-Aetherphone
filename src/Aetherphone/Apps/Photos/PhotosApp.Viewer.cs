@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Utility;
@@ -59,6 +60,13 @@ internal sealed partial class PhotosApp
         if (PhotosChrome.Trash(new Vector2(safe.Max.X - 20f * scale, rowCenterY), frameTheme, scale))
         {
             AskDelete(path);
+            return;
+        }
+
+        if (share.CanShare(ShareKind.Photo, Id) &&
+            PhotosChrome.Share(new Vector2(safe.Max.X - 58f * scale, rowCenterY), White, scale))
+        {
+            share.Offer(new ShareItem(ShareKind.Photo, path, Id));
             return;
         }
 
