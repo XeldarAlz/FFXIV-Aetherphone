@@ -387,7 +387,7 @@ internal sealed partial class AethergramApp
                 var thread = threads[index];
                 monogram = Monogram(thread.OtherDisplayName, thread.OtherHandle);
                 presence = thread.Presence;
-                return lodestone.Remote(thread.OtherUserId, ToUri(thread.OtherAvatarUrl));
+                return images.Avatar(thread.OtherAvatarUrl);
             }
         }
 
@@ -395,7 +395,7 @@ internal sealed partial class AethergramApp
         {
             monogram = Monogram(user.DisplayName, user.Handle);
             presence = 0;
-            return lodestone.Remote(user.Id, ToUri(user.AvatarUrl));
+            return images.Avatar(user.AvatarUrl);
         }
 
         monogram = "?";
@@ -409,6 +409,4 @@ internal sealed partial class AethergramApp
         return source.Length > 0 ? source[..1].ToUpperInvariant() : "?";
     }
 
-    private static Uri? ToUri(string? url) =>
-        string.IsNullOrEmpty(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri) ? null : uri;
 }

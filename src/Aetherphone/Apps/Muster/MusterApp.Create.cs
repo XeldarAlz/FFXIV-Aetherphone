@@ -48,7 +48,7 @@ internal sealed partial class MusterApp
             createSucceeded = false;
             ResetCreateForm();
             router.Pop(false);
-            router.Push(MusterRoute.Manage, false);
+            OpenManage(false);
             return;
         }
 

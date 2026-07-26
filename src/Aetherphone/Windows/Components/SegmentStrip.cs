@@ -68,12 +68,18 @@ internal static class SegmentStrip
         var gloss = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.16f));
         drawList.AddLine(new Vector2(thumbMin.X + thumbRadius, thumbMin.Y + 1f * scale),
             new Vector2(thumbMax.X - thumbRadius, thumbMin.Y + 1f * scale), gloss, 1f * scale);
+        var labelMaxWidth = MathF.Max(1f, segmentWidth - 8f * scale);
         for (var index = 0; index < options.Count; index++)
         {
+            var segmentMin = new Vector2(trackMin.X + index * segmentWidth, trackMin.Y);
+            var segmentMax = new Vector2(trackMin.X + (index + 1) * segmentWidth, trackMax.Y);
             var center = new Vector2(trackMin.X + (index + 0.5f) * segmentWidth, row.Center.Y);
             var proximity = 1f - Math.Clamp(MathF.Abs(position - index), 0f, 1f);
             var color = Vector4.Lerp(mutedInk, activeInk, proximity);
-            Typography.DrawCentered(center, options[index], color, textScale, FontWeight.SemiBold);
+            var hovering = ImGui.IsMouseHoveringRect(segmentMin, segmentMax);
+            var labelHeight = Typography.Measure(options[index], textScale, FontWeight.SemiBold).Y;
+            Marquee.DrawCentered(id + "." + index, options[index], center.X, center.Y - labelHeight * 0.5f,
+                labelMaxWidth, new TextStyle(textScale, FontWeight.SemiBold), color, hovering);
         }
 
         return result;

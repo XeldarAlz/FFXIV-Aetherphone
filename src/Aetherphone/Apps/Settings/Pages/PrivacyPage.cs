@@ -5,6 +5,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -84,7 +85,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
         for (var index = 0; index < snapshot.Length; index++)
         {
             var user = snapshot[index];
-            var name = user.DisplayName.Length > 0 ? user.DisplayName : user.Name;
+            var name = SocialIdentity.Name(user.DisplayName, user.Handle);
             if (SettingsRow.Action(card.NextRow(), name, theme.TextStrong, theme))
             {
                 AskUnblock(user);
@@ -130,7 +131,7 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
 
     private void AskUnblock(UserDto user)
     {
-        var name = user.DisplayName.Length > 0 ? user.DisplayName : user.Name;
+        var name = SocialIdentity.Name(user.DisplayName, user.Handle);
         confirm.Ask(new ConfirmRequest
         {
             Message = Loc.T(L.Social.UnblockConfirm, name),

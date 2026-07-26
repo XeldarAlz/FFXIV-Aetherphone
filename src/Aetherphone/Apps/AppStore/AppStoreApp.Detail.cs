@@ -64,8 +64,11 @@ internal sealed partial class AppStoreApp
         DrawIcon(drawList, iconCenter, DetailIconSize * scale, app);
         var textLeft = origin.X + (DetailIconSize + 14f) * scale;
         var textWidth = origin.X + width - textLeft;
-        Typography.Draw(drawList, new Vector2(textLeft, top + 6f * scale),
-            Typography.FitText(app.DisplayName, textWidth, TextStyles.Title2), ui.TitleInk, TextStyles.Title2);
+        var nameY = top + 6f * scale;
+        var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, nameY),
+            new Vector2(textLeft + textWidth, nameY + Typography.Measure(app.DisplayName, TextStyles.Title2).Y));
+        Marquee.DrawLeft("appstore.detail.name." + app.Id, app.DisplayName, textLeft, nameY, textWidth,
+            TextStyles.Title2, ui.TitleInk, nameHovering);
         Typography.DrawWrappedLeft(new Vector2(textLeft, top + 32f * scale), Loc.T(entry.Subtitle), ui.MutedInk,
             TextStyles.Footnote, textWidth);
 

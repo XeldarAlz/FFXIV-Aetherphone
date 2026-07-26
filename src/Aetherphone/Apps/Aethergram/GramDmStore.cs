@@ -4,6 +4,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Message;
@@ -23,8 +24,9 @@ internal sealed class GramDmStore : ChatThreadStoreBase<GramMessageDto, GramThre
 
     public GramDmStore(AethernetSession session, GramDmClient client, SocialClient social, SafetyClient safety,
         MediaClient media, NotificationService notifications, KeyVault vault, ConversationKeyStore keys,
-        PhoneVisibility visibility, RealtimeSignalBus signals)
-        : base("AethergramDm", session, safety, media, notifications, vault, keys, visibility)
+        PhoneVisibility visibility, RealtimeSignalBus signals, AppInstaller installer)
+        : base("AethergramDm", session, safety, media, notifications, vault, keys, visibility,
+            installer.Gate("aethergram"))
     {
         this.client = client;
         this.social = social;

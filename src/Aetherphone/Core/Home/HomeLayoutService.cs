@@ -15,7 +15,7 @@ internal sealed class HomeLayoutService
     private static readonly string[] DefaultFirstPageApps =
     {
         "chirper", "aethergram", "velvet", "polls",
-        "camera", "photos", "feedback", "music",
+        "announcements", "camera", "photos", "feedback", "music",
         "maps", "venues", "games", "market",
         "appstore",
     };
@@ -26,10 +26,10 @@ internal sealed class HomeLayoutService
         "clock", "notes", "calculator", "timers",
         "wallet", "dailies", "calendar", "news",
         "character", "notifications", "jobs",
+        "health",
     };
 
-    private static readonly string[] DefaultTrailingApps = { "dev" };
-    private static readonly string[] MandatoryApps = { "appstore", "settings" };
+    private static readonly string[] MandatoryApps = { "appstore", "settings", "announcements" };
 
     private readonly IReadOnlyList<IPhoneApp> apps;
     private readonly WidgetRegistry widgets;
@@ -251,6 +251,8 @@ internal sealed class HomeLayoutService
         Save();
     }
 
+    public event Action<string>? InstalledChanged;
+
     public bool IsInstalled(string appId) => installed.Contains(appId);
 
     public static bool CanUninstall(string appId)
@@ -275,6 +277,7 @@ internal sealed class HomeLayoutService
 
         Append(HomeTile.ForApp(app));
         Commit();
+        InstalledChanged?.Invoke(appId);
         return true;
     }
 
@@ -286,8 +289,25 @@ internal sealed class HomeLayoutService
         }
 
         DetachApp(appId);
+        DropWidgetsOfUninstalledApps();
         Commit();
+        InstalledChanged?.Invoke(appId);
         return true;
+    }
+
+    private void DropWidgetsOfUninstalledApps()
+    {
+        for (var page = 0; page < pages.Count; page++)
+        {
+            var tiles = pages[page];
+            for (var index = tiles.Count - 1; index >= 0; index--)
+            {
+                if (tiles[index].Widget is { } widget && !installed.Contains(widget.AppId))
+                {
+                    tiles.RemoveAt(index);
+                }
+            }
+        }
     }
 
     private void DetachApp(string appId)
@@ -460,11 +480,6 @@ internal sealed class HomeLayoutService
             SeedDefaultLayout(placed);
         }
 
-        if (saved is null)
-        {
-            AppendTrailingDefaults();
-        }
-
         if (pages.Count == 0)
         {
             pages.Add(new List<HomeTile>());
@@ -511,6 +526,8 @@ internal sealed class HomeLayoutService
         {
             Append(HomeTile.ForApp(queue[index]));
         }
+
+        DropWidgetsOfUninstalledApps();
     }
 
     private void SeedInstalled(HomeLayout? saved)
@@ -633,10 +650,6 @@ internal sealed class HomeLayoutService
         AppendSeedApps(secondPage, DefaultSecondPageApps, placed);
         pages.Add(firstPage);
         pages.Add(secondPage);
-        for (var index = 0; index < DefaultTrailingApps.Length; index++)
-        {
-            placed.Add(DefaultTrailingApps[index]);
-        }
     }
 
     private void AppendSeedApps(List<HomeTile> page, string[] ids, HashSet<string> placed)
@@ -646,17 +659,6 @@ internal sealed class HomeLayoutService
             if (byId.TryGetValue(ids[index], out var app) && app.IsAvailable && placed.Add(app.Id))
             {
                 page.Add(HomeTile.ForApp(app));
-            }
-        }
-    }
-
-    private void AppendTrailingDefaults()
-    {
-        for (var index = 0; index < DefaultTrailingApps.Length; index++)
-        {
-            if (byId.TryGetValue(DefaultTrailingApps[index], out var app) && app.IsAvailable)
-            {
-                Append(HomeTile.ForApp(app));
             }
         }
     }

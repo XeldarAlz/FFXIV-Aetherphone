@@ -55,11 +55,15 @@ internal sealed class MentionPopup
 
         var left = Math.Clamp(anchor.Min.X, screen.Min.X + 8f * scale,
             MathF.Max(screen.Min.X + 8f * scale, screen.Max.X - 8f * scale - width));
-        var top = anchor.Min.Y - 6f * scale - height;
-        if (top < screen.Min.Y + 8f * scale)
-        {
-            top = anchor.Max.Y + 6f * scale;
-        }
+        var topLimit = screen.Min.Y + 8f * scale;
+        var bottomLimit = screen.Max.Y - Metrics.Size.HomeIndicatorInset * scale;
+        var above = anchor.Min.Y - 6f * scale - height;
+        var below = anchor.Max.Y + 6f * scale;
+        var insideTop = anchor.Min.Y + ImGui.GetTextLineHeightWithSpacing() + 6f * scale;
+        var top = above >= topLimit ? above : (below + height <= bottomLimit ? below : insideTop);
+        top = Math.Clamp(top, topLimit, MathF.Max(topLimit, bottomLimit - height));
+
+        top = MathF.Min(top, screen.Max.Y - 8f * scale - height);
 
         var min = new Vector2(left, top);
         var max = new Vector2(left + width, top + height);
@@ -106,12 +110,22 @@ internal sealed class MentionPopup
                 row.AvatarUrl, images, lodestone, 0.8f, 28);
 
             var textLeft = avatarCenter.X + avatarRadius + 9f * scale;
+            var textMaxWidth = rowMax.X - textLeft;
             var name = SocialIdentity.Name(row.DisplayName, row.Handle);
+            var nameY = rowMin.Y + 6f * scale;
             var nameSize = Typography.Measure(name, 0.92f, FontWeight.SemiBold);
-            Typography.Draw(drawList, new Vector2(textLeft, rowMin.Y + 6f * scale), name,
-                Palette.WithAlpha(theme.TextStrong, alpha), 0.92f, FontWeight.SemiBold);
-            Typography.Draw(drawList, new Vector2(textLeft, rowMin.Y + 6f * scale + nameSize.Y), "@" + row.Handle,
-                Palette.WithAlpha(theme.TextMuted, alpha), 0.82f);
+            var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, nameY),
+                new Vector2(textLeft + textMaxWidth, nameY + nameSize.Y));
+            Marquee.DrawLeft(drawList, "mentionpopup.name." + row.Handle, name, textLeft, nameY, textMaxWidth,
+                new TextStyle(0.92f, FontWeight.SemiBold), Palette.WithAlpha(theme.TextStrong, alpha), nameHovering);
+            var handleText = "@" + row.Handle;
+            var handleY = nameY + nameSize.Y;
+            var handleSize = Typography.Measure(handleText, 0.82f, FontWeight.Regular);
+            var handleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, handleY),
+                new Vector2(textLeft + textMaxWidth, handleY + handleSize.Y));
+            Marquee.DrawLeft(drawList, "mentionpopup.handle." + row.Handle, handleText,
+                textLeft, handleY, textMaxWidth, new TextStyle(0.82f, FontWeight.Regular),
+                Palette.WithAlpha(theme.TextMuted, alpha), handleHovering);
         }
 
         return clicked;

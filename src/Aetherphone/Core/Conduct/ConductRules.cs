@@ -40,43 +40,96 @@ internal static class ConductRules
     public static readonly ConductGate Chirper = new()
     {
         AppId = "chirper",
-        Version = 1,
+        Version = 2,
         CountdownSeconds = 45f,
         Icon = FontAwesomeIcon.Comments,
         Title = L.Conduct.ChirperTitle,
         Intro = L.Conduct.ChirperIntro,
-        Sections = WithPlatform(
-            new ConductSection(ConductTone.Encouraged, L.Conduct.SectionEncouraged, null, L.Conduct.ChirperEncouraged),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null, L.Conduct.ChirperNotAllowed)),
+        Sections = new[]
+        {
+            new ConductSection(ConductTone.Encouraged, L.Conduct.ChirperAllowedTitle, L.Conduct.ChirperAllowedLead,
+                L.Conduct.ChirperAllowedItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperAppropriateTitle,
+                L.Conduct.ChirperAppropriateLead, L.Conduct.ChirperAppropriateItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperRespectTitle, L.Conduct.ChirperRespectLead,
+                L.Conduct.ChirperRespectItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperSpamTitle, L.Conduct.ChirperSpamLead,
+                L.Conduct.ChirperSpamItems),
+            new ConductSection(ConductTone.Neutral, L.Conduct.ChirperPrivacyTitle, L.Conduct.ChirperPrivacyBody,
+                Array.Empty<LocString>()),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperCreatorsTitle, L.Conduct.ChirperCreatorsLead,
+                L.Conduct.ChirperCreatorsItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.ChirperChildSafetyTitle,
+                L.Conduct.ChirperChildSafetyBody, Array.Empty<LocString>()),
+            new ConductSection(ConductTone.Neutral, L.Conduct.ChirperDiscretionTitle, L.Conduct.ChirperDiscretionBody,
+                Array.Empty<LocString>()),
+        },
     };
 
     public static readonly ConductGate Aethergram = new()
     {
         AppId = "aethergram",
-        Version = 1,
+        Version = 2,
         CountdownSeconds = 45f,
         Icon = FontAwesomeIcon.Camera,
         Title = L.Conduct.AethergramTitle,
         Intro = L.Conduct.AethergramIntro,
-        Sections = WithPlatform(
-            new ConductSection(ConductTone.Encouraged, L.Conduct.SectionEncouraged, null,
-                L.Conduct.AethergramEncouraged),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null,
-                L.Conduct.AethergramNotAllowed)),
+        Sections = new[]
+        {
+            new ConductSection(ConductTone.Encouraged, L.Conduct.AethergramAllowedTitle,
+                L.Conduct.AethergramAllowedLead, L.Conduct.AethergramAllowedItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramSfwTitle, L.Conduct.AethergramSfwLead,
+                L.Conduct.AethergramSfwItems),
+            new ConductSection(ConductTone.Neutral, L.Conduct.AethergramContextTitle, L.Conduct.AethergramContextLead,
+                L.Conduct.AethergramContextItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramChildlikeTitle,
+                L.Conduct.AethergramChildlikeBody, Array.Empty<LocString>()),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramIrlTitle, L.Conduct.AethergramIrlBody,
+                Array.Empty<LocString>()),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramRespectTitle,
+                L.Conduct.AethergramRespectLead, L.Conduct.AethergramRespectItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramSpamTitle, L.Conduct.AethergramSpamLead,
+                L.Conduct.AethergramSpamItems),
+            new ConductSection(ConductTone.Neutral, L.Conduct.AethergramPrivacyTitle, L.Conduct.AethergramPrivacyBody,
+                Array.Empty<LocString>()),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.AethergramCreatorsTitle,
+                L.Conduct.AethergramCreatorsLead, L.Conduct.AethergramCreatorsItems),
+            new ConductSection(ConductTone.Neutral, L.Conduct.AethergramDiscretionTitle,
+                L.Conduct.AethergramDiscretionBody, Array.Empty<LocString>()),
+        },
     };
 
     public static readonly ConductGate Velvet = new()
     {
         AppId = "velvet",
-        Version = 1,
+        Version = 2,
         CountdownSeconds = 45f,
         Icon = FontAwesomeIcon.Heart,
         Title = L.Conduct.VelvetTitle,
         Intro = L.Conduct.VelvetIntro,
-        Sections = WithPlatform(
-            new ConductSection(ConductTone.Encouraged, L.Conduct.SectionPermittedMature, null,
-                L.Conduct.VelvetPermitted),
-            new ConductSection(ConductTone.Prohibited, L.Conduct.SectionNotAllowed, null, L.Conduct.VelvetNotAllowed)),
+        Sections = new[]
+        {
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetAdultsTitle, L.Conduct.VelvetAdultsBody,
+                Array.Empty<LocString>()),
+            new ConductSection(ConductTone.Encouraged, L.Conduct.VelvetAllowedTitle, L.Conduct.VelvetAllowedLead,
+                L.Conduct.VelvetAllowedItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetConsentTitle, L.Conduct.VelvetConsentLead,
+                L.Conduct.VelvetConsentItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetBoundariesTitle, L.Conduct.VelvetBoundariesLead,
+                L.Conduct.VelvetBoundariesItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetIllegalTitle, L.Conduct.VelvetIllegalLead,
+                L.Conduct.VelvetIllegalItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetPrivacyTitle, L.Conduct.VelvetPrivacyLead,
+                L.Conduct.VelvetPrivacyItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetCreatorsTitle, L.Conduct.VelvetCreatorsLead,
+                L.Conduct.VelvetCreatorsItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetSpamTitle, L.Conduct.VelvetSpamLead,
+                L.Conduct.VelvetSpamItems),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.VelvetRespectTitle, L.Conduct.VelvetRespectLead,
+                L.Conduct.VelvetRespectItems),
+            new ConductSection(ConductTone.Neutral, L.Conduct.VelvetModerationTitle, L.Conduct.VelvetModerationBody,
+                Array.Empty<LocString>()),
+        },
     };
 
     public static readonly ConductGate Muster = new()

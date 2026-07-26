@@ -1,5 +1,6 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Playback;
@@ -22,6 +23,7 @@ internal sealed class CallHub : IDisposable
     private readonly CallAudioController audio;
     private readonly CallLogStore log;
     private readonly ConfirmService confirm;
+    private readonly AppGate installed;
     private readonly object gate = new();
     private CallState state = CallState.Idle;
     private Guid callId;
@@ -34,13 +36,15 @@ internal sealed class CallHub : IDisposable
     private volatile bool callScreenRequested;
 
     public CallHub(Configuration configuration, AethernetSession session, NotificationService notifications,
-        SoundService sound, PlaybackHub playback, RealtimeSignalBus signals, ConfirmService confirm)
+        SoundService sound, PlaybackHub playback, RealtimeSignalBus signals, ConfirmService confirm,
+        AppGate installed)
     {
         this.configuration = configuration;
         this.session = session;
         this.notifications = notifications;
         this.sound = sound;
         this.confirm = confirm;
+        this.installed = installed;
         router = new CallSignalRouter(session, signals);
         audio = new CallAudioController(configuration, playback, router.Connection);
         log = new CallLogStore(configuration);
@@ -367,7 +371,7 @@ internal sealed class CallHub : IDisposable
             return;
         }
 
-        if (!configuration.CallsEnabled)
+        if (!configuration.CallsEnabled || !installed.Open)
         {
             router.Send(new CallControl { Type = SignalType.Decline, CallId = message.CallId, Reason = "unavailable" });
             return;

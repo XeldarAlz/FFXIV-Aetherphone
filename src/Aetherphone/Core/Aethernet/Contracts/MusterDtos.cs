@@ -47,7 +47,9 @@ internal sealed record MusterDto(
     bool Going,
     int HostNotice,
     long HostNoticeAtUnix,
-    long CreatedAtUnix) : IIdentified;
+    long CreatedAtUnix,
+    string HostDisplayName = "",
+    string HostHandle = "") : IIdentified;
 
 internal sealed record MusterPage(MusterDto[] Items, string? NextCursor);
 

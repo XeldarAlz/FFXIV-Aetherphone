@@ -1,4 +1,5 @@
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Notifications;
 using Dalamud.Game.Chat;
 using Dalamud.Game.Text;
@@ -14,15 +15,17 @@ internal sealed class ChatBridge : IDisposable
     private readonly MessageStore store;
     private readonly NotificationService notifications;
     private readonly LinkpearlNotificationGate gate;
+    private readonly AppGate installed;
     private readonly IChatGui chatGui;
     private readonly GameData gameData;
 
     public ChatBridge(MessageStore store, NotificationService notifications, LinkpearlNotificationGate gate,
-        IChatGui chatGui, GameData gameData)
+        IChatGui chatGui, GameData gameData, AppGate installed)
     {
         this.store = store;
         this.notifications = notifications;
         this.gate = gate;
+        this.installed = installed;
         this.chatGui = chatGui;
         this.gameData = gameData;
         chatGui.ChatMessage += OnChatMessage;
@@ -41,6 +44,11 @@ internal sealed class ChatBridge : IDisposable
 
     private void OnChatMessage(IHandleableChatMessage message)
     {
+        if (!installed.Open)
+        {
+            return;
+        }
+
         var kind = message.LogKind;
         if (kind != XivChatType.TellIncoming && kind != XivChatType.TellOutgoing)
         {

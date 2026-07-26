@@ -133,7 +133,7 @@ internal sealed partial class AethergramApp
         var avatarRadius = 19f * scale;
         var avatarCenter = new Vector2(origin.X + pad + avatarRadius, origin.Y + rowHeight * 0.5f);
         AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent, monogram, 0.95f,
-            lodestone.Remote(userId, ToUri(avatarUrl)), 32);
+            images.Avatar(avatarUrl), 32);
         var buttonWidth = 76f * scale;
         var buttonHeight = 30f * scale;
         var buttonRect = new Rect(

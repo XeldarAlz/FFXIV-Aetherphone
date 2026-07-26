@@ -1,3 +1,4 @@
+using Aetherphone.Core.Announcements;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Muster;
@@ -14,6 +15,7 @@ internal sealed class NotificationRouter
     private const string AethergramAppId = "aethergram";
     private const string MusterAppId = "muster";
     private const string YellowPagesAppId = "yellowpages";
+    private const string AnnouncementsAppId = "announcements";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -36,10 +38,12 @@ internal sealed class NotificationRouter
     private readonly SocialLauncher socialLauncher;
     private readonly MusterLauncher musterLauncher;
     private readonly YellowPagesLauncher yellowPagesLauncher;
+    private readonly AnnouncementsLauncher announcementsLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
         VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher,
-        MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher)
+        MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher,
+        AnnouncementsLauncher announcementsLauncher)
     {
         this.navigation = navigation;
         this.notifications = notifications;
@@ -50,6 +54,7 @@ internal sealed class NotificationRouter
         this.socialLauncher = socialLauncher;
         this.musterLauncher = musterLauncher;
         this.yellowPagesLauncher = yellowPagesLauncher;
+        this.announcementsLauncher = announcementsLauncher;
     }
 
     public void Open(PhoneNotification notification)
@@ -93,6 +98,10 @@ internal sealed class NotificationRouter
         else if (notification.AppId == YellowPagesAppId && !string.IsNullOrEmpty(notification.GroupKey))
         {
             yellowPagesLauncher.RequestDetail(notification.GroupKey);
+        }
+        else if (notification.AppId == AnnouncementsAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            announcementsLauncher.RequestDetail(notification.GroupKey);
         }
         else if (SocialLinkFor(notification) is { } link)
         {

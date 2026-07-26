@@ -43,6 +43,8 @@ internal static class WidgetChrome
         return width + EyebrowTracking * scale * Math.Max(0, upper.Length - 1);
     }
 
+    public static float EyebrowHeight() => Typography.Measure("A", EyebrowFontScale, FontWeight.SemiBold).Y;
+
     public static void Tracked(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float fontScale,
         FontWeight weight, float tracking)
     {

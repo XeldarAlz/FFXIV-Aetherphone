@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Net;
@@ -15,13 +16,13 @@ namespace Aetherphone.Apps.Velvet;
 
 internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, VelvetThreadDto>
 {
-    private const int AvatarSize = 512;
     private const int PostSize = 1080;
     private readonly VelvetClient client;
     private readonly AccountClient account;
     private readonly Configuration configuration;
     private readonly RealtimeSignalBus signals;
     private readonly RetryGate meGate = new RetryGate(TimeSpan.FromSeconds(30));
+    private readonly RetryGate userPostsGate = new RetryGate(TimeSpan.FromSeconds(15));
     private readonly FeedLane<VelvetPostDto>[] feedLanes =
     {
         new FeedLane<VelvetPostDto>(ByNewestFirst),
@@ -31,7 +32,9 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile int accountEpoch;
     private volatile VelvetProfileDto? me;
     private volatile bool loadingMe;
+    private volatile bool accessBlocked;
     private volatile bool avatarBusy;
+    private volatile AvatarUploadOutcome avatarFailure = AvatarUploadOutcome.Unreachable;
     private volatile bool introBusy;
     private volatile VelvetProfileDto[] discoverResults = Array.Empty<VelvetProfileDto>();
     private volatile bool loadingDiscover;
@@ -81,8 +84,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public VelvetStore(AethernetSession session, VelvetClient client, AccountClient account, SafetyClient safety,
         MediaClient media, NotificationService notifications, Configuration configuration, KeyVault vault,
-        ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals)
-        : base("Velvet", session, safety, media, notifications, vault, keys, visibility)
+        ConversationKeyStore keys, PhoneVisibility visibility, RealtimeSignalBus signals, AppInstaller installer)
+        : base("Velvet", session, safety, media, notifications, vault, keys, visibility, installer.Gate("velvet"))
     {
         this.client = client;
         this.account = account;
@@ -102,8 +105,11 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public MentionSuggestions NewMentionSuggestions() => new(account, work);
 
     public VelvetProfileDto? Me => me;
+    public bool AccessBlocked => accessBlocked;
     public bool HasProfile => me is not null;
     public bool AvatarBusy => avatarBusy;
+
+    public AvatarUploadOutcome AvatarFailure => avatarFailure;
     public bool IntroBusy => introBusy;
     public VelvetProfileDto[] DiscoverResults => discoverResults;
     public bool LoadingDiscover => loadingDiscover;
@@ -139,6 +145,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public bool FeedLoaded => FeedScope == VelvetFeedScope.All ? feedLoadedAll : feedLoadedConnections;
     public bool HasMoreFeed => ActiveFeedLane.HasMore;
     public bool LoadingMoreFeed => ActiveFeedLane.LoadingMore;
+    public ITrimmable FeedSource => ActiveFeedLane;
     private FeedLane<VelvetPostDto> ActiveFeedLane => feedLanes[feedScope];
     public bool Posting => posting;
     public VelvetPostDto? FetchedPost => fetchedPost;
@@ -176,6 +183,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         accountEpoch++;
         discoverEpoch++;
         me = null;
+        accessBlocked = false;
         meGate.Reset();
         discoverResults = Array.Empty<VelvetProfileDto>();
         discoverCursor = null;
@@ -423,10 +431,21 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         var epoch = accountEpoch;
         work.Run("profile load", async token =>
         {
-            var profile = await client.MeAsync(token).ConfigureAwait(false);
-            if (profile is not null && epoch == accountEpoch)
+            var status = 0;
+            var profile = await client.MeAsync(token, code => status = code).ConfigureAwait(false);
+            if (epoch != accountEpoch)
+            {
+                return;
+            }
+
+            if (profile is not null)
             {
                 me = profile;
+                accessBlocked = false;
+            }
+            else if (status == 403)
+            {
+                accessBlocked = true;
             }
         }, () => loadingMe = false);
     }
@@ -456,24 +475,9 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         avatarBusy = true;
         work.Run("avatar update", async token =>
         {
-            var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarSize);
-            var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
-            if (upload is null)
-            {
-                return false;
-            }
-
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-                .ConfigureAwait(false);
-            if (!uploaded)
-            {
-                return false;
-            }
-
-            var updated = await account
-                .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
-                .ConfigureAwait(false);
-            if (updated is null)
+            var result = await AvatarUpload.RunAsync(account, media, sourcePath, crop, token).ConfigureAwait(false);
+            avatarFailure = result.Outcome;
+            if (!result.Ok)
             {
                 return false;
             }
@@ -481,7 +485,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
             var current = me;
             if (current is not null)
             {
-                me = current with { AvatarUrl = upload.PublicUrl };
+                me = current with { AvatarUrl = result.PublicUrl };
             }
 
             return true;
@@ -657,6 +661,16 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         }
 
         if (userPostsUserId == userId && (userPostsLoaded || userPostsLoading))
+        {
+            return;
+        }
+
+        if (userPostsUserId != userId)
+        {
+            userPostsGate.Reset();
+        }
+
+        if (!userPostsGate.TryPass())
         {
             return;
         }

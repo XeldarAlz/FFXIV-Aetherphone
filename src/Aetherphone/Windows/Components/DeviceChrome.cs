@@ -109,9 +109,7 @@ internal static class DeviceChrome
         var screenBase = ImGui.GetColorU32(theme.ScreenBase);
         if (transparentBand is not { } band)
         {
-            Squircle.Fill(dl, device.Min, device.Max, deviceRounding, frame);
-            Squircle.Fill(dl, screen.Min, screen.Max, screenRounding, screenBase);
-            RailFinish(dl, device, screen, deviceRounding, screenRounding, scale);
+            DrawShell(dl, device, screen, deviceRounding, screenRounding, scale, theme.Case, theme.ScreenBase);
             return screen;
         }
 
@@ -124,8 +122,16 @@ internal static class DeviceChrome
             DrawViewportBody(dl, device, screen, band, deviceRounding, screenRounding, frame, screenBase);
         }
 
-        RailFinish(dl, device, screen, deviceRounding, screenRounding, scale);
+        RailFinish(dl, device, screen, deviceRounding, screenRounding, scale, theme.Case);
         return screen;
+    }
+
+    public static void DrawShell(ImDrawListPtr dl, Rect device, Rect screen, float deviceRounding,
+        float screenRounding, float scale, in CaseFinish finish, Vector4 screenBase)
+    {
+        Squircle.Fill(dl, device.Min, device.Max, deviceRounding, ImGui.GetColorU32(finish.Frame));
+        Squircle.Fill(dl, screen.Min, screen.Max, screenRounding, ImGui.GetColorU32(screenBase));
+        RailFinish(dl, device, screen, deviceRounding, screenRounding, scale, finish);
     }
 
     private static void DrawViewportBody(ImDrawListPtr dl, Rect device, Rect screen, Rect band, float deviceRounding,
@@ -155,22 +161,22 @@ internal static class DeviceChrome
     }
 
     internal static void RailFinish(ImDrawListPtr dl, Rect device, Rect screen, float deviceRounding,
-        float screenRounding, float scale)
+        float screenRounding, float scale, in CaseFinish finish)
     {
-        Chamfer(dl, device, deviceRounding, scale);
+        Chamfer(dl, device, deviceRounding, scale, finish);
         var recess = ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f));
         Squircle.Stroke(dl, screen.Min, screen.Max, screenRounding, recess, 1.4f * scale);
     }
 
-    private static void Chamfer(ImDrawListPtr dl, Rect device, float rounding, float scale)
+    private static void Chamfer(ImDrawListPtr dl, Rect device, float rounding, float scale, in CaseFinish finish)
     {
         var inset = 1.6f * scale;
         var min = new Vector2(device.Min.X + inset, device.Min.Y + inset);
         var max = new Vector2(device.Max.X - inset, device.Max.Y - inset);
         var radius = MathF.Min(rounding - inset, MathF.Min(max.X - min.X, max.Y - min.Y) * 0.5f);
-        Squircle.Stroke(dl, min, max, radius, ImGui.GetColorU32(new Vector4(0.52f, 0.52f, 0.60f, 0.55f)), 1.4f * scale);
-        var brightColor = new Vector4(0.86f, 0.86f, 0.92f, 0.85f);
-        var dimColor = new Vector4(0f, 0f, 0f, 0.35f);
+        Squircle.Stroke(dl, min, max, radius, ImGui.GetColorU32(finish.Rim), 1.4f * scale);
+        var brightColor = finish.EdgeBright;
+        var dimColor = finish.EdgeDim;
         var bright = ImGui.GetColorU32(brightColor);
         var dim = ImGui.GetColorU32(dimColor);
         if (max.X - min.X > 2f * radius)

@@ -224,7 +224,9 @@ internal sealed class ContactBook : IDisposable
     }
 
     public static string DisplayLabel(ContactDto contact) =>
-        contact.Alias.Length > 0 ? contact.Alias : contact.DisplayName;
+        contact.Alias.Length > 0 ? contact.Alias
+        : contact.DisplayName.Length > 0 ? contact.DisplayName
+        : contact.Handle;
 
     public static string Format(string number)
     {

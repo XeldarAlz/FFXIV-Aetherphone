@@ -46,7 +46,7 @@ internal sealed class ShellScreenPainter
 
     public void PaintApp(Rect screen, PhoneTheme theme, IPhoneApp app)
     {
-        var content = themes.Current;
+        var content = themes.ForApp(app.WantsSystemTheme);
         if (!app.WantsTransparentScreen)
         {
             DeviceChrome.FillScreen(screen, theme, content.AppBackground);

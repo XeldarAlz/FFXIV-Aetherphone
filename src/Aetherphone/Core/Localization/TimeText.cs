@@ -25,6 +25,27 @@ internal static class TimeText
 
     public static string Clock(DateTimeOffset moment) => moment.ToString(ClockPattern, Loc.Culture);
 
+    public static string HourLabel(int hourOfDay)
+    {
+        if (use24Hour)
+        {
+            return hourOfDay.ToString("D2", Loc.Culture);
+        }
+
+        var hour = hourOfDay % 12;
+        return (hour == 0 ? 12 : hour).ToString(Loc.Culture);
+    }
+
+    public static string MinuteLabel(int minuteOfHour) => minuteOfHour.ToString("D2", Loc.Culture);
+
+    public static string MeridiemLabel(bool afternoon)
+    {
+        var designator = afternoon
+            ? Loc.Culture.DateTimeFormat.PMDesignator
+            : Loc.Culture.DateTimeFormat.AMDesignator;
+        return designator.Length > 0 ? designator : afternoon ? "PM" : "AM";
+    }
+
     public static string Ago(DateTime utcMoment)
     {
         if (utcMoment == default)

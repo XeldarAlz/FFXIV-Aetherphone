@@ -12,6 +12,7 @@ internal interface IPhoneApp : IDisposable
     bool WantsImmersiveContent => false;
     bool WantsStatusBarInImmersiveContent => false;
     bool WantsTransparentScreen => false;
+    bool WantsSystemTheme => false;
     Rect? TransparentViewport(Rect screen, float scale) => null;
     bool IsAvailable => true;
     void OnOpened();

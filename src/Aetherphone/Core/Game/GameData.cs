@@ -215,7 +215,7 @@ internal sealed class GameData
 
     public string LocalRegionCode() => RegionCodeFromId(RegionId());
 
-    public string RegionCodeForWorld(string worldName)
+    public string RegionCodeForWorld(string? worldName)
     {
         if (string.IsNullOrEmpty(worldName))
         {

@@ -135,8 +135,12 @@ internal sealed class WidgetSizeMenu
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        Typography.Draw(drawList, new Vector2(row.Min.X + 12f * scale,
-            row.Center.Y - Typography.Measure(label, TextStyles.Body).Y * 0.5f), label, color, TextStyles.Body);
+        var labelLeft = row.Min.X + 12f * scale;
+        var labelMaxWidth = MathF.Max(1f, row.Max.X - 28f * scale - labelLeft);
+        var fittedLabel = Typography.FitText(label, labelMaxWidth, TextStyles.Body);
+        Typography.Draw(drawList, new Vector2(labelLeft,
+            row.Center.Y - Typography.Measure(fittedLabel, TextStyles.Body).Y * 0.5f), fittedLabel, color,
+            TextStyles.Body);
         if (selected)
         {
             var checkCenter = new Vector2(row.Max.X - 16f * scale, row.Center.Y);

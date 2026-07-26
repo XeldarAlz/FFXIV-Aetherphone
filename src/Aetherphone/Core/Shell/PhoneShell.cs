@@ -66,14 +66,14 @@ internal sealed class PhoneShell : IDisposable
         widgets = bundle.Widgets;
         calls = services.Calls;
         var notifications = services.Notifications;
-        navigation = new NavigationStack(apps);
+        navigation = new NavigationStack(apps, services.Installer);
         notifications.AppAvailability = navigation.IsAvailable;
         director = new OnboardingDirector(navigation);
         navigation.AppOpened += director.OnAppOpened;
         navigation.AppOpened += services.Conduct.NotifyAppOpened;
         var router = new NotificationRouter(navigation, notifications, services.LinkpearlLauncher,
             services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher,
-            services.MusterLauncher, services.YellowPagesLauncher);
+            services.MusterLauncher, services.YellowPagesLauncher, services.AnnouncementsLauncher);
         MusterChatBridge.Bind(services.Musters, services.MusterLauncher, navigation);
         AdChatBridge.Bind(services.YellowPages, services.YellowPagesLauncher, navigation);
         banner = new NotificationBanner(notifications, VisibleAppId, router);

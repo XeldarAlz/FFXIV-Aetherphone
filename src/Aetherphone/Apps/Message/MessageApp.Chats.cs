@@ -223,8 +223,12 @@ internal sealed partial class MessageApp
 
         var textLeft = avatarCenter.X + radius + 12f * scale;
         var textWidth = markerRight - 8f * scale - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale),
-            Typography.FitText(title, textWidth, 1f, FontWeight.SemiBold), theme.TextStrong, 1f, FontWeight.SemiBold);
+        var titleTop = origin.Y + 12f * scale;
+        var titleSize = Typography.Measure(title, 1f, FontWeight.SemiBold);
+        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleTop),
+            new Vector2(textLeft + textWidth, titleTop + titleSize.Y));
+        Marquee.DrawLeft("messageapp.chats.title." + item.Id, title, textLeft, titleTop, textWidth,
+            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, titleHovering);
         var previewColor = item.UnreadCount > 0 ? theme.TextStrong : ui.MutedInk;
         var previewRight = origin.X + width - (item.UnreadCount > 0 ? 40f * scale : pad);
         var draft = configuration.MessageDrafts.GetValueOrDefault(item.Id, string.Empty);

@@ -27,9 +27,15 @@ internal sealed class GramClient
         return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
-    public Task<FeedPage?> UserGramsAsync(string userId, CancellationToken token)
+    public Task<FeedPage?> UserGramsAsync(string userId, string? cursor, CancellationToken token)
     {
-        return net.GetAsync($"/users/{Uri.EscapeDataString(userId)}/posts?kind=1", AethernetJsonContext.Default.FeedPage, token);
+        var path = $"/users/{Uri.EscapeDataString(userId)}/posts?kind=1";
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
     public Task<FeedPage?> UserTaggedAsync(string userId, CancellationToken token)

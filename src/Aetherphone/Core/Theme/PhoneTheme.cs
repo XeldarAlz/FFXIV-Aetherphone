@@ -3,9 +3,10 @@ namespace Aetherphone.Core.Theme;
 internal sealed class PhoneTheme
 {
     public required Vector4 BezelOuter { get; init; }
-    public required Vector4 FrameMetal { get; init; }
-    public required Vector4 RailMetal { get; init; }
+    public required CaseFinish Case { get; init; }
     public required Vector4 ScreenBase { get; init; }
+    public Vector4 FrameMetal => Case.Frame;
+    public Vector4 RailMetal => Case.Rail;
     public required string LightWallpaperId { get; init; }
     public required string DarkWallpaperId { get; init; }
     public required Vector4 AppBackground { get; init; }
@@ -26,12 +27,11 @@ internal sealed class PhoneTheme
     public required float BottomZoneHeight { get; init; }
     public required float SidePadding { get; init; }
 
-    public static PhoneTheme Dark(Vector4 accent, string lightWallpaperId, string darkWallpaperId) =>
+    public static PhoneTheme Dark(Vector4 accent, Vector4 caseColor, string lightWallpaperId, string darkWallpaperId) =>
         new()
         {
             BezelOuter = new Vector4(0.03f, 0.03f, 0.04f, 1f),
-            FrameMetal = new Vector4(0.145f, 0.145f, 0.170f, 1f),
-            RailMetal = new Vector4(0.175f, 0.175f, 0.205f, 1f),
+            Case = new CaseFinish(caseColor),
             ScreenBase = new Vector4(0.06f, 0.06f, 0.10f, 1f),
             LightWallpaperId = lightWallpaperId,
             DarkWallpaperId = darkWallpaperId,
@@ -54,12 +54,11 @@ internal sealed class PhoneTheme
             SidePadding = 16f,
         };
 
-    public static PhoneTheme Light(Vector4 accent, string lightWallpaperId, string darkWallpaperId) =>
+    public static PhoneTheme Light(Vector4 accent, Vector4 caseColor, string lightWallpaperId, string darkWallpaperId) =>
         new()
         {
             BezelOuter = new Vector4(0.03f, 0.03f, 0.04f, 1f),
-            FrameMetal = new Vector4(0.145f, 0.145f, 0.170f, 1f),
-            RailMetal = new Vector4(0.175f, 0.175f, 0.205f, 1f),
+            Case = new CaseFinish(caseColor),
             ScreenBase = new Vector4(0.90f, 0.90f, 0.93f, 1f),
             LightWallpaperId = lightWallpaperId,
             DarkWallpaperId = darkWallpaperId,
@@ -82,5 +81,6 @@ internal sealed class PhoneTheme
             SidePadding = 16f,
         };
 
-    public static PhoneTheme Default { get; } = Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f), "DuskLight", "DuskDark");
+    public static PhoneTheme Default { get; } = Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f),
+        ThemeCatalog.ResolveCase(ThemeCatalog.DefaultCaseName), "DuskLight", "DuskDark");
 }

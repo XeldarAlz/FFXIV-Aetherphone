@@ -347,21 +347,27 @@ internal sealed class InventoryApp : IPhoneApp
         }
 
         var textLeft = tileCenter.X + tileSize * 0.5f + 14f * scale;
+        var textMaxWidth = MathF.Max(1f, textRight - textLeft);
         if (subtitle.Length > 0)
         {
-            var name = Fit(title, textRight - textLeft, TextStyles.Headline);
-            Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 15f * scale), name, ui.TitleInk,
-                TextStyles.Headline);
-            var sub = Fit(subtitle, textRight - textLeft, TextStyles.Footnote);
-            Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 38f * scale), sub, ui.MutedInk,
-                TextStyles.Footnote);
+            var titleY = row.Min.Y + 15f * scale;
+            var titleSize = Typography.Measure(title, TextStyles.Headline);
+            var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleY),
+                new Vector2(textLeft + textMaxWidth, titleY + titleSize.Y));
+            Marquee.DrawLeft("inventory.storage.title." + kind, title, textLeft, titleY,
+                textMaxWidth, TextStyles.Headline, ui.TitleInk, titleHovering);
+            var subtitleY = row.Min.Y + 38f * scale;
+            var subtitleSize = Typography.Measure(subtitle, TextStyles.Footnote);
+            var subtitleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, subtitleY),
+                new Vector2(textLeft + textMaxWidth, subtitleY + subtitleSize.Y));
+            Marquee.DrawLeft("inventory.storage.subtitle." + kind, subtitle, textLeft, subtitleY,
+                textMaxWidth, TextStyles.Footnote, ui.MutedInk, subtitleHovering);
         }
         else
         {
-            var name = Fit(title, textRight - textLeft, TextStyles.Headline);
-            var nameSize = Typography.Measure(name, TextStyles.Headline);
-            Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), name, ui.TitleInk,
-                TextStyles.Headline);
+            var nameSize = Typography.Measure(title, TextStyles.Headline);
+            Marquee.DrawLeft("inventory.storage.title." + kind, title, textLeft, row.Center.Y - nameSize.Y * 0.5f,
+                textMaxWidth, TextStyles.Headline, ui.TitleInk, hovered);
         }
 
         if (!navigable)
@@ -421,9 +427,14 @@ internal sealed class InventoryApp : IPhoneApp
     {
         DrawSourceTile(drawList, new Vector2(columnTop.X, columnTop.Y + 32f * scale), 40f * scale, tint, icon, scale,
             true);
-        var display = Typography.FitText(value, columnWidth - 20f * scale, TextStyles.Title2);
-        Typography.DrawCentered(drawList, new Vector2(columnTop.X, columnTop.Y + 68f * scale), display, ui.TitleInk,
-            TextStyles.Title2);
+        var valueMaxWidth = columnWidth - 20f * scale;
+        var valueY = columnTop.Y + 68f * scale;
+        var valueSize = Typography.Measure(value, TextStyles.Title2);
+        var valueHovering = ImGui.IsMouseHoveringRect(
+            new Vector2(columnTop.X - valueMaxWidth * 0.5f, valueY - valueSize.Y * 0.5f),
+            new Vector2(columnTop.X + valueMaxWidth * 0.5f, valueY + valueSize.Y * 0.5f));
+        Marquee.DrawCentered("inventory.herostat." + label, value, columnTop.X, valueY - valueSize.Y * 0.5f,
+            valueMaxWidth, TextStyles.Title2, ui.TitleInk, valueHovering);
         Typography.DrawCentered(drawList, new Vector2(columnTop.X, columnTop.Y + 94f * scale),
             Loc.Culture.TextInfo.ToUpper(label), ui.MutedInk, TextStyles.Caption1);
     }
@@ -486,16 +497,20 @@ internal sealed class InventoryApp : IPhoneApp
         var tileCenter = new Vector2(origin.X + tileSize * 0.5f, origin.Y + tileSize * 0.5f);
         DrawSourceTile(drawList, tileCenter, tileSize, AccentFor(group.Kind), IconFor(group.Kind), scale, true);
         var textLeft = tileCenter.X + tileSize * 0.5f + 10f * scale;
-        Typography.Draw(drawList,
-            new Vector2(textLeft, tileCenter.Y - Typography.Measure(group.Title, TextStyles.Headline).Y * 0.5f),
-            group.Title, ui.TitleInk, TextStyles.Headline);
+        var textRight = origin.X + width;
         if (group.IsCached)
         {
             var label = Loc.T(L.Inventory.Updated, TimeText.Ago(group.CapturedUtc));
             var labelSize = Typography.Measure(label, TextStyles.Caption1);
             Typography.Draw(drawList, new Vector2(origin.X + width - labelSize.X, tileCenter.Y - labelSize.Y * 0.5f),
                 label, ui.MutedInk, TextStyles.Caption1);
+            textRight -= labelSize.X + 10f * scale;
         }
+
+        var title = Fit(group.Title, textRight - textLeft, TextStyles.Headline);
+        Typography.Draw(drawList,
+            new Vector2(textLeft, tileCenter.Y - Typography.Measure(title, TextStyles.Headline).Y * 0.5f),
+            title, ui.TitleInk, TextStyles.Headline);
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, tileSize + 8f * scale));
@@ -515,14 +530,14 @@ internal sealed class InventoryApp : IPhoneApp
         {
             var row = PanelRow(drawList, origin, width, rowHeight, index, scale, separatorLeft, ui.HoverTint, true,
                 out var hovered, out _, out _);
-            DrawItemRow(row, rows[index], hovered);
+            DrawItemRow(row, rows[index], index, hovered);
         }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rows.Count * rowHeight));
     }
 
-    private void DrawItemRow(Rect row, InventoryResultRow item, bool hovered)
+    private void DrawItemRow(Rect row, InventoryResultRow item, int index, bool hovered)
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
@@ -552,10 +567,9 @@ internal sealed class InventoryApp : IPhoneApp
             DrawHqBadge(new Vector2(textRight + 8f * scale, row.Center.Y), scale);
         }
 
-        var name = Fit(item.Name, textRight - textLeft, TextStyles.Body);
-        var nameSize = Typography.Measure(name, TextStyles.Body);
-        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), name,
-            hovered ? ui.TitleInk : ui.BodyInk, TextStyles.Body);
+        var nameSize = Typography.Measure(item.Name, TextStyles.Body);
+        Marquee.DrawLeft("inventory.item." + index, item.Name, textLeft, row.Center.Y - nameSize.Y * 0.5f,
+            MathF.Max(1f, textRight - textLeft), TextStyles.Body, hovered ? ui.TitleInk : ui.BodyInk, hovered);
     }
 
     private void DrawSourceTile(ImDrawListPtr drawList, Vector2 center, float size, Vector4 color,

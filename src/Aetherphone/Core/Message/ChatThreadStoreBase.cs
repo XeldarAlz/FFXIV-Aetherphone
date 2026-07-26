@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Notifications;
 using Dalamud.Plugin.Services;
@@ -23,6 +24,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private static readonly TimeSpan ViewingGrace = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan VaultRetryInterval = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan KeyStatusRetryInterval = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan ThreadReopenCooldown = TimeSpan.FromSeconds(3);
 
     protected readonly AethernetSession session;
     protected readonly SafetyClient safety;
@@ -33,6 +35,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     protected readonly MessageCipher cipher;
     private readonly string logTag;
     private readonly NotificationService notifications;
+    private readonly AppGate gate;
     private readonly PollCadence inboxCadence;
     private readonly object messagesLock = new();
     private readonly Dictionary<string, long> inboxLastAt = new();
@@ -51,6 +54,9 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private volatile bool loadingThread;
     private volatile bool refreshingThread;
     private volatile bool refreshingTyping;
+    private volatile string? pendingOpenThreadId;
+    private volatile string? lastOpenedThreadId;
+    private DateTime lastThreadOpenUtc = DateTime.MinValue;
     private int pollFailureStreak;
     private DateTime pollBackoffUntilUtc = DateTime.MinValue;
     private volatile bool sending;
@@ -69,7 +75,8 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private string? lastAccountId;
 
     protected ChatThreadStoreBase(string logTag, AethernetSession session, SafetyClient safety, MediaClient media,
-        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility)
+        NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PhoneVisibility visibility,
+        AppGate gate)
     {
         this.session = session;
         this.safety = safety;
@@ -78,6 +85,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         this.vault = vault;
         this.keys = keys;
         this.logTag = logTag;
+        this.gate = gate;
         work = new StoreWork(logTag);
         cipher = new MessageCipher(vault, keys);
         messageOrder = CompareByCreatedAt;
@@ -99,6 +107,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         threadList = Array.Empty<TThread>();
         threadListLoaded = false;
         currentThreadId = null;
+        pendingOpenThreadId = null;
         messages = Array.Empty<TMessage>();
         olderCursor = null;
         hasMoreOlder = false;
@@ -180,7 +189,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
 
     protected abstract PhoneNotification BuildInboxNotification(TThread thread);
 
-    protected virtual bool TickActive => session.IsSignedIn;
+    protected virtual bool TickActive => session.IsSignedIn && gate.Open;
 
     public virtual bool RealtimePushActive => false;
 
@@ -287,6 +296,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         {
             inboxPrimed = false;
             vaultRefreshRequested = false;
+            pendingOpenThreadId = null;
             if (threadList.Length > 0 || messages.Length > 0 || currentThreadId is not null)
             {
                 threadList = Array.Empty<TThread>();
@@ -301,6 +311,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         EnsureVaultRefreshed();
         var now = DateTime.UtcNow;
         EnsureCurrentThreadKeysFresh(now);
+        ResumePendingThreadOpen(now);
         if (!inboxCadence.Due(now))
         {
             return;
@@ -461,6 +472,12 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             return;
         }
 
+        if (IsRedundantReopen(id))
+        {
+            currentThreadId = id;
+            return;
+        }
+
         currentThreadId = id;
         OnThreadOpening(id);
         messages = Array.Empty<TMessage>();
@@ -468,9 +485,30 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         hasMoreOlder = false;
         loadingOlder = false;
         otherTyping = false;
-        loadingThread = true;
         currentKeyStatus = ChatKeyStatus.None;
         lastKeyStatusUtc = DateTime.UtcNow;
+        BeginThreadOpen(id);
+    }
+
+    private bool IsRedundantReopen(string id)
+    {
+        return currentThreadId is null
+            && id == lastOpenedThreadId
+            && DateTime.UtcNow - lastThreadOpenUtc < ThreadReopenCooldown;
+    }
+
+    private void BeginThreadOpen(string id)
+    {
+        if (DateTime.UtcNow < pollBackoffUntilUtc)
+        {
+            pendingOpenThreadId = id;
+            return;
+        }
+
+        pendingOpenThreadId = null;
+        lastOpenedThreadId = id;
+        lastThreadOpenUtc = DateTime.UtcNow;
+        loadingThread = true;
         work.Run("thread open", async token =>
         {
             await PrefetchThreadAsync(id, token).ConfigureAwait(false);
@@ -481,6 +519,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
 
             var page = await FetchMessagesPageAsync(id, null, token).ConfigureAwait(false);
+            NotePollResult(page is not null);
             if (currentThreadId == id && page is not null)
             {
                 messages = DecorateMessages(id, page.Value.Items);
@@ -494,6 +533,22 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
                 loadingThread = false;
             }
         });
+    }
+
+    private void ResumePendingThreadOpen(DateTime now)
+    {
+        if (pendingOpenThreadId is not { } pending || loadingThread || now < pollBackoffUntilUtc)
+        {
+            return;
+        }
+
+        if (currentThreadId != pending)
+        {
+            pendingOpenThreadId = null;
+            return;
+        }
+
+        BeginThreadOpen(pending);
     }
 
     public void RefreshThread()

@@ -109,13 +109,20 @@ internal sealed class VelvetPostComposer
 
     private void DrawPick(Rect area, AppSkin ui, in PhoneContext context)
     {
-        AppHeader.Draw(context, Title, () => closeRequested = true);
-        if (!storyMode && ui.HeaderAction(area, Loc.T(L.Common.Next), session.HasSelection))
+        var scale = ImGuiHelpers.GlobalScale;
+        var showNext = !storyMode;
+        var nextLabel = Loc.T(L.Common.Next);
+        var nextReserve = showNext
+            ? Typography.Measure(nextLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale + 20f * scale
+            : 0f;
+        AppHeader.Draw(context, string.Empty, () => closeRequested = true);
+        AppHeader.DrawTitleWithReserve(area, "velvet.compose.pick.title", Title, nextReserve, context.Theme.TextStrong,
+            scale);
+        if (showNext && ui.HeaderAction(area, nextLabel, session.HasSelection))
         {
             session.BeginCropSequence();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var importHeight = 46f * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
@@ -148,29 +155,37 @@ internal sealed class VelvetPostComposer
 
     private void DrawCrop(Rect area, AppSkin ui, in PhoneContext context)
     {
+        var scale = ImGuiHelpers.GlobalScale;
         var title = session.SelectedCount > 1
             ? Loc.T(L.Common.PhotoStep, session.CropIndex + 1, session.SelectedCount)
             : Loc.T(L.Velvet.MoveAndScale);
-        AppHeader.Draw(context, title, session.CropBack);
-        if (ui.HeaderAction(area, Loc.T(L.Common.Next), true))
+        var nextLabel = Loc.T(L.Common.Next);
+        var nextReserve = Typography.Measure(nextLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale + 20f * scale;
+        AppHeader.Draw(context, string.Empty, session.CropBack);
+        AppHeader.DrawTitleWithReserve(area, "velvet.compose.crop.title", title, nextReserve, context.Theme.TextStrong,
+            scale);
+        if (ui.HeaderAction(area, nextLabel, true))
         {
             session.CropAdvance();
         }
 
-        session.DrawCropCanvas(area, ImGuiHelpers.GlobalScale, Aspect, Style, Loc.T(L.Velvet.GestureHint));
+        session.DrawCropCanvas(area, scale, Aspect, Style, Loc.T(L.Velvet.GestureHint));
     }
 
     private void DrawCaption(Rect area, AppSkin ui, in PhoneContext context)
     {
-        AppHeader.Draw(context, Title, () => session.LoadCropStage(session.SelectedCount - 1));
-
+        var scale = ImGuiHelpers.GlobalScale;
         var busy = Posting;
-        if (ui.HeaderAction(area, busy ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Share), !busy))
+        var actionLabel = busy ? Loc.T(L.Velvet.Saving) : Loc.T(L.Velvet.Share);
+        var actionReserve = Typography.Measure(actionLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale + 20f * scale;
+        AppHeader.Draw(context, string.Empty, () => session.LoadCropStage(session.SelectedCount - 1));
+        AppHeader.DrawTitleWithReserve(area, "velvet.compose.caption.title", Title, actionReserve,
+            context.Theme.TextStrong, scale);
+        if (ui.HeaderAction(area, actionLabel, !busy))
         {
             Commit();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var top = area.Min.Y + AppHeader.Height * scale;
         var captionHeight = 34f * scale;

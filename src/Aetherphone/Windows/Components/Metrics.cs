@@ -38,6 +38,7 @@ internal static class Metrics
         public const float ToggleHeight = 28f;
         public const float IconTile = 28f;
         public const float HeroRing = 56f;
+        public const float HomeIndicatorInset = 34f;
     }
 
     internal static class Stroke

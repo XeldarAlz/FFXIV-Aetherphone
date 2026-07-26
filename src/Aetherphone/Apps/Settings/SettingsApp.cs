@@ -19,6 +19,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     public string Glyph => "S";
     public int BadgeCount => configuration.HasUnseenChangelog ? 1 : 0;
     public bool BadgeAsDot => true;
+    public bool WantsSystemTheme => true;
     private readonly Configuration configuration;
     private readonly ViewRouter<ISettingsPage> router;
     private readonly RouterDraw<ISettingsPage> drawPage;
@@ -52,9 +53,9 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         profilePage = new ProfilePage(configuration, aethernetSession, aethernet.Account, gameData);
         encryptionPage = new EncryptionPage(aethernetSession, keyVault, confirm);
         namePage = new NamePage(aethernetSession, aethernet.Account, this);
-        accountPage = new AccountPage(aethernetSession, aethernet.Auth, aethernet.Account, aethernet.Media, gameData,
-            remoteImages, lodestone, this, namePage, profilePage, encryptionPage, photoLibrary, confirm,
-            wallpaperImages);
+        accountPage = new AccountPage(configuration, aethernetSession, aethernet.Auth, aethernet.Account,
+            aethernet.Media, gameData, remoteImages, lodestone, this, namePage, profilePage, encryptionPage,
+            photoLibrary, confirm, wallpaperImages);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary, confirm, wallpapers,
             wallpaperImages);
         var language = new LanguagePage(configuration);
@@ -73,7 +74,8 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.NotificationVolume = volume;
                 configuration.Save();
             });
-        var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage);
+        var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage,
+            services.Installer);
         var ringtonePage = new SoundSettingsPage(sound, L.Settings.Ringtone, FontAwesomeIcon.Music,
             new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
             () => configuration.RingtoneSound, token =>

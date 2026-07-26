@@ -138,7 +138,9 @@ internal sealed partial class SetupOverlay
         var drawList = ImGui.GetWindowDrawList();
         var scale = ImGuiHelpers.GlobalScale;
         var user = session.CurrentUser;
-        var displayName = user?.DisplayName ?? user?.Name ?? gameData.LocalPlayer?.Name.TextValue ?? string.Empty;
+        var displayName = user is not null && user.DisplayName.Length > 0
+            ? user.DisplayName
+            : user?.Name ?? gameData.LocalPlayer?.Name.TextValue ?? string.Empty;
         var body = Loc.T(L.Setup.SignedInBody, displayName);
         var avatarRadius = 38f * scale;
         var contentHeight = HeaderHeight(screen, body, TextStyles.Body) + 24f * scale + avatarRadius * 2f;
@@ -356,10 +358,11 @@ internal sealed partial class SetupOverlay
         if (result == ImagePickCropEvent.Committed && !avatarBusy && picker.SourcePath.Length > 0)
         {
             avatarBusy = true;
-            AvatarUploader.Upload(account, media, session, picker.SourcePath, picker.Crop, cancellation.Token, uploaded =>
+            AvatarUploader.Upload(account, media, session, picker.SourcePath, picker.Crop, cancellation.Token, outcome =>
             {
                 avatarBusy = false;
-                avatarOutcome = uploaded ? 1 : 2;
+                avatarFailure = outcome;
+                avatarOutcome = outcome == AvatarUploadOutcome.Uploaded ? 1 : 2;
             });
         }
     }
@@ -502,7 +505,9 @@ internal sealed partial class SetupOverlay
         var left = rect.Min.X + 16f * scale;
         Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 10f * scale), Loc.T(L.Account.SigningInAs),
             Fade(InkMuted, alpha), TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 30f * scale), $"{name}@{world}",
+        var identityMaxWidth = rect.Max.X - 16f * scale - left;
+        Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 30f * scale),
+            Typography.FitText($"{name}@{world}", identityMaxWidth, TextStyles.Headline),
             Fade(InkStrong, alpha), TextStyles.Headline);
     }
 
@@ -587,8 +592,10 @@ internal sealed partial class SetupOverlay
         float alpha, bool live, string? prefix = null)
     {
         var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, rect.Min.Y - 20f * scale), label,
-            Fade(InkMuted, alpha), TextStyles.Footnote);
+        var labelMaxWidth = rect.Max.X - rect.Min.X - 2f * scale;
+        Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, rect.Min.Y - 20f * scale),
+            Typography.FitText(label, labelMaxWidth, TextStyles.Footnote), Fade(InkMuted, alpha),
+            TextStyles.Footnote);
         Squircle.Fill(drawList, rect.Min, rect.Max, 12f * scale, ImGui.GetColorU32(Fade(CardFill, alpha)));
         Squircle.Stroke(drawList, rect.Min, rect.Max, 12f * scale, ImGui.GetColorU32(Fade(CardStroke, alpha)), 1f);
         var textLeft = rect.Min.X + 14f * scale;
@@ -605,8 +612,10 @@ internal sealed partial class SetupOverlay
             if (value.Length > 0)
             {
                 var valueSize = Typography.Measure(value, TextStyles.Body);
-                Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - valueSize.Y * 0.5f), value,
-                    Fade(InkStrong, alpha), TextStyles.Body);
+                var valueMaxWidth = rect.Max.X - 14f * scale - textLeft;
+                Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - valueSize.Y * 0.5f),
+                    Typography.FitText(value, valueMaxWidth, TextStyles.Body), Fade(InkStrong, alpha),
+                    TextStyles.Body);
             }
 
             return;

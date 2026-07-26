@@ -27,6 +27,7 @@ internal sealed class CalendarApp : IPhoneApp
     public string DisplayName => Loc.T(L.Calendar.Title);
     public string Glyph => "C";
     public int BadgeCount => 0;
+    public bool WantsSystemTheme => true;
 
     private readonly CalendarEvents events;
     private readonly Configuration configuration;

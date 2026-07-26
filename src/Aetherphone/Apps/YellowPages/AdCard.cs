@@ -22,6 +22,8 @@ internal static class AdCard
     private const float IdentityRowHeight = 40f;
     private const float MetaRowHeight = 22f;
     private const float DescriptionGap = 6f;
+    private const float HeroAspect = 0.56f;
+    private const float HeroMaxHeight = 190f;
     private const int MaxDescriptionLines = 2;
 
     public static readonly Vector4 OpenGreen = new(0.24f, 0.82f, 0.44f, 1f);
@@ -31,8 +33,14 @@ internal static class AdCard
     {
         var lines = DescriptionLines(ad, width, scale, out var lineHeight);
         var descriptionHeight = lines > 0 ? lines * lineHeight + DescriptionGap * scale : 0f;
-        return (Pad * 2f + IdentityRowHeight + MetaRowHeight) * scale + descriptionHeight;
+        return HeroHeight(ad, width, scale) + (Pad * 2f + IdentityRowHeight + MetaRowHeight) * scale
+            + descriptionHeight;
     }
+
+    private static float HeroHeight(AdDto ad, float width, float scale) =>
+        HasHero(ad) ? MathF.Min(width * HeroAspect, HeroMaxHeight * scale) : 0f;
+
+    private static bool HasHero(AdDto ad) => !string.IsNullOrEmpty(ad.MediaUrl);
 
     public static bool Draw(Rect card, AdDto ad, RemoteImageCache images, LodestoneService lodestone,
         PhoneTheme theme, AppSkin ui, long nowUnix)
@@ -45,27 +53,26 @@ internal static class AdCard
         var pad = Pad * scale;
         var left = card.Min.X + pad;
         var right = card.Max.X - pad;
-        var tileSide = TileSide * scale;
-        var tileCenter = new Vector2(left + tileSide * 0.5f, card.Min.Y + pad + tileSide * 0.5f);
-        var thumb = string.IsNullOrEmpty(ad.MediaUrl) ? null : images.Get(ad.MediaUrl);
-        if (thumb is not null)
+        var heroHeight = HeroHeight(ad, card.Width, scale);
+        var body = new Rect(new Vector2(card.Min.X, card.Min.Y + heroHeight), card.Max);
+        if (heroHeight > 0f)
         {
-            var half = new Vector2(tileSide * 0.5f, tileSide * 0.5f);
-            var (uv0, uv1) = ImageFit.CoverSquare(thumb.Size);
-            drawList.AddImageRounded(thumb.Handle, tileCenter - half, tileCenter + half, uv0, uv1, 0xFFFFFFFFu,
-                9f * scale, ImDrawFlags.RoundCornersAll);
-        }
-        else
-        {
-            IconTile.Draw(tileCenter, tileSide, IconTile.Surface(palette.Accent), AdCategories.Icon(ad.Category));
+            DrawHero(drawList, ad, card, heroHeight, rounding, images, palette, scale);
         }
 
-        var textLeft = tileCenter.X + tileSide * 0.5f + 10f * scale;
+        var tileSide = TileSide * scale;
+        var tileCenter = new Vector2(left + tileSide * 0.5f, body.Min.Y + pad + tileSide * 0.5f);
+        var textLeft = left;
+        if (heroHeight <= 0f)
+        {
+            IconTile.Draw(tileCenter, tileSide, IconTile.Surface(palette.Accent), AdCategories.Icon(ad.Category));
+            textLeft = tileCenter.X + tileSide * 0.5f + 10f * scale;
+        }
 
         var status = StatusText(ad, nowUnix, out var statusColor, out var live);
         var statusSize = Typography.Measure(status, TextStyles.FootnoteEmphasized);
         var statusLeft = right - statusSize.X;
-        var statusTop = card.Min.Y + pad + 2f * scale;
+        var statusTop = body.Min.Y + pad + 2f * scale;
         if (status.Length > 0)
         {
             Typography.Draw(drawList, new Vector2(statusLeft, statusTop), status, statusColor,
@@ -77,14 +84,12 @@ internal static class AdCard
         }
 
         var titleWidth = (status.Length > 0 ? statusLeft - (live ? 20f : 8f) * scale : right) - textLeft;
-        var title = Typography.FitText(ad.Title, titleWidth, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + pad), title, palette.TitleInk,
-            TextStyles.Headline);
-        var identity = Typography.FitText(AdText.Identity(ad), right - textLeft, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + pad + 21f * scale), identity,
-            palette.MutedInk, TextStyles.Footnote);
+        Marquee.DrawLeftAuto(drawList, "yellowpages.card.title." + ad.Id, ad.Title, textLeft, body.Min.Y + pad,
+            titleWidth, TextStyles.Headline, palette.TitleInk);
+        Marquee.DrawLeftAuto(drawList, "yellowpages.card.identity." + ad.Id, AdText.Identity(ad), textLeft,
+            body.Min.Y + pad + 21f * scale, right - textLeft, TextStyles.Footnote, palette.MutedInk);
 
-        var descriptionTop = card.Min.Y + (Pad + IdentityRowHeight) * scale;
+        var descriptionTop = body.Min.Y + (Pad + IdentityRowHeight) * scale;
         DrawDescription(drawList, ad, left, descriptionTop, card.Width, scale, palette.BodyInk);
         DrawMetaRow(drawList, ad, left, right, card.Max.Y - pad - MetaRowHeight * scale + 4f * scale, palette,
             scale);
@@ -97,6 +102,30 @@ internal static class AdCard
         }
 
         return UiInteract.Click(card.Min, card.Max, hovered);
+    }
+
+    private static void DrawHero(ImDrawListPtr drawList, AdDto ad, Rect card, float height, float rounding,
+        RemoteImageCache images, in AppPalette palette, float scale)
+    {
+        var max = new Vector2(card.Max.X, card.Min.Y + height);
+        var texture = images.Get(ad.MediaUrl!);
+        if (texture is null)
+        {
+            Squircle.FillVerticalGradient(drawList, card.Min, max, rounding,
+                ImGui.GetColorU32(Palette.WithAlpha(palette.Accent, 0.22f)),
+                ImGui.GetColorU32(Palette.WithAlpha(palette.Accent, 0.08f)));
+            AppSkin.Icon(drawList, (card.Min + max) * 0.5f, AdCategories.Icon(ad.Category).ToIconString(),
+                Palette.WithAlpha(palette.Accent, 0.75f), 1.4f);
+            return;
+        }
+
+        var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, max.X - card.Min.X, height);
+        drawList.AddImageRounded(texture.Handle, card.Min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
+            ImDrawFlags.RoundCornersTop);
+        if (PostMedia.Photos(ad.MediaUrls, ad.MediaUrl).Length > 1)
+        {
+            MultiPhotoBadge.Draw(drawList, new Vector2(max.X - 12f * scale, card.Min.Y + 12f * scale), scale);
+        }
     }
 
     private static string StatusText(AdDto ad, long nowUnix, out Vector4 color, out bool live)
@@ -126,7 +155,9 @@ internal static class AdCard
         if (ad.Archetype == AdArchetypes.Service)
         {
             color = new Vector4(0.98f, 0.72f, 0.30f, 1f);
-            return AdText.PriceLine(ad);
+            return AdCategories.IsLinkOnly(ad.Category)
+                ? Loc.T(L.YellowPages.ModBadge)
+                : AdText.PriceLine(ad);
         }
 
         color = new Vector4(0.98f, 0.72f, 0.30f, 1f);
@@ -200,8 +231,8 @@ internal static class AdCard
         var category = Loc.T(AdCategories.Label(ad.Category));
         var world = ad.WorldId > 0 ? LocationShare.WorldName((uint)ad.WorldId) : string.Empty;
         var meta = world.Length > 0 ? $"{category} · {world}" : category;
-        var fitted = Typography.FitText(meta, metaRight - left - 8f * scale, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(left, top), fitted, palette.MutedInk, TextStyles.Footnote);
+        Marquee.DrawLeftAuto(drawList, "yellowpages.card.meta." + ad.Id, meta, left, top,
+            MathF.Max(1f, metaRight - left - 8f * scale), TextStyles.Footnote, palette.MutedInk);
     }
 
     private static int DescriptionLines(AdDto ad, float width, float scale, out float lineHeight)

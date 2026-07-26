@@ -72,6 +72,35 @@ internal sealed class KeysClient
         return net.SendJsonForStatusAsync(HttpMethod.Post, $"/velvet/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request, AethernetJsonContext.Default.AddWrapsRequest, token);
     }
 
+    public Task<MyConversationKeysDto?> AdKeysAsync(CancellationToken token)
+    {
+        return net.GetAsync("/ads/keys", AethernetJsonContext.Default.MyConversationKeysDto, token);
+    }
+
+    public Task<ConversationKeysDto?> AdThreadKeysAsync(string otherId, CancellationToken token)
+    {
+        return net.GetAsync($"/ads/threads/{Uri.EscapeDataString(otherId)}/keys",
+            AethernetJsonContext.Default.ConversationKeysDto, token);
+    }
+
+    public async Task<(bool Ok, int Status)> CreateAdGenerationAsync(string otherId, CreateGenerationRequest request,
+        CancellationToken token)
+    {
+        var status = 0;
+        var ok = await net.SendJsonForStatusAsync(HttpMethod.Post,
+            $"/ads/threads/{Uri.EscapeDataString(otherId)}/keys", request,
+            AethernetJsonContext.Default.CreateGenerationRequest, token, statusCode => status = statusCode)
+            .ConfigureAwait(false);
+        return (ok, status);
+    }
+
+    public Task<bool> AddAdWrapsAsync(string otherId, AddWrapsRequest request, CancellationToken token)
+    {
+        return net.SendJsonForStatusAsync(HttpMethod.Post,
+            $"/ads/threads/{Uri.EscapeDataString(otherId)}/keys/wraps", request,
+            AethernetJsonContext.Default.AddWrapsRequest, token);
+    }
+
     public Task<MyConversationKeysDto?> GramKeysAsync(CancellationToken token)
     {
         return net.GetAsync("/gram/keys", AethernetJsonContext.Default.MyConversationKeysDto, token);

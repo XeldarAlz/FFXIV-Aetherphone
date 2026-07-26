@@ -23,6 +23,22 @@ internal static class CatalogLabels
             _ => identifier,
         };
 
+    public static string PhoneCase(string identifier) =>
+        identifier switch
+        {
+            "Titanium" => Loc.T(L.Catalogs.CaseTitanium),
+            "Graphite" => Loc.T(L.Catalogs.CaseGraphite),
+            "Silver" => Loc.T(L.Catalogs.CaseSilver),
+            "Gold" => Loc.T(L.Catalogs.CaseGold),
+            "Rose" => Loc.T(L.Catalogs.CaseRose),
+            "Midnight" => Loc.T(L.Catalogs.CaseMidnight),
+            "Jade" => Loc.T(L.Catalogs.CaseJade),
+            "Coral" => Loc.T(L.Catalogs.CaseCoral),
+            "Lavender" => Loc.T(L.Catalogs.CaseLavender),
+            "Porcelain" => Loc.T(L.Catalogs.CasePorcelain),
+            _ => identifier,
+        };
+
     public static string Ringtone(uint soundId) =>
         soundId switch
         {

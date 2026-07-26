@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -42,6 +43,8 @@ internal sealed partial class VenuesApp : IPhoneApp
     private readonly string[] timeLabels = new string[4];
     private string search = string.Empty;
     private bool favoritesOnly;
+    private readonly KineticScroller chipsScroller = new();
+    private bool chipsPressed;
     private bool lifestreamAvailable;
     private float detailScrollY;
     private PhoneTheme theme = PhoneTheme.Default;
@@ -178,10 +181,24 @@ internal sealed partial class VenuesApp : IPhoneApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var gap = Metrics.Space.Sm * scale;
-        var cursor = bar.Min.X;
-        var centerY = bar.Center.Y;
         var dataCenter = CurrentDataCenter();
         var dcLabel = dataCenter.Length > 0 ? dataCenter : Loc.T(L.Venues.AllDataCenters);
+        var sourceLabel = SourceFilterLabel(configuration.VenueSourceFilter);
+        var tagsLabel = selectedTags.Count > 0
+            ? $"{Loc.T(L.Venues.Tags)} · {selectedTags.Count}"
+            : Loc.T(L.Venues.Tags);
+        var favoritesLabel = Loc.T(L.Venues.Favorites);
+
+        var content = ChipWidth(dcLabel, scale) + gap + ChipWidth(sourceLabel, scale) + gap +
+            ChipWidth(tagsLabel, scale) + gap + ChipWidth(favoritesLabel, scale) + gap;
+        chipsScroller.Scale = scale;
+        chipsScroller.SetBounds(MathF.Max(0f, content - bar.Width));
+        HandleChipsDrag(bar);
+
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.PushClipRect(bar.Min, bar.Max, true);
+        var cursor = bar.Min.X - chipsScroller.Offset;
+        var centerY = bar.Center.Y;
         if (ui.FlowChip(ref cursor, centerY, gap, dcLabel,
                 !configuration.VenueAllDataCenters && dataCenter.Length > 0))
         {
@@ -189,24 +206,72 @@ internal sealed partial class VenuesApp : IPhoneApp
             configuration.Save();
         }
 
-        if (ui.FlowChip(ref cursor, centerY, gap, SourceFilterLabel(configuration.VenueSourceFilter),
+        if (ui.FlowChip(ref cursor, centerY, gap, sourceLabel,
                 configuration.VenueSourceFilter != VenueFilter.SourceAll))
         {
             configuration.VenueSourceFilter = (configuration.VenueSourceFilter + 1) % 3;
             configuration.Save();
         }
 
-        var tagsLabel = selectedTags.Count > 0
-            ? $"{Loc.T(L.Venues.Tags)} · {selectedTags.Count}"
-            : Loc.T(L.Venues.Tags);
         if (ui.FlowChip(ref cursor, centerY, gap, tagsLabel, selectedTags.Count > 0))
         {
             router.Push(VenueRoute.Tags);
         }
 
-        if (ui.FlowChip(ref cursor, centerY, gap, Loc.T(L.Venues.Favorites), favoritesOnly))
+        if (ui.FlowChip(ref cursor, centerY, gap, favoritesLabel, favoritesOnly))
         {
             favoritesOnly = !favoritesOnly;
+        }
+
+        drawList.PopClipRect();
+    }
+
+    private static float ChipWidth(string label, float scale) =>
+        Typography.Measure(label, 0.85f, FontWeight.Medium).X + 26f * scale;
+
+    private void HandleChipsDrag(Rect bar)
+    {
+        var io = ImGui.GetIO();
+        var deltaSeconds = io.DeltaTime;
+        var mouseX = io.MousePos.X;
+        var down = ImGui.IsMouseDown(ImGuiMouseButton.Left);
+        var hovering = ImGui.IsMouseHoveringRect(bar.Min, bar.Max);
+        var shouldBlock = false;
+
+        if (chipsPressed)
+        {
+            if (down)
+            {
+                var wasDragging = chipsScroller.IsDragging;
+                chipsScroller.Move(mouseX, deltaSeconds);
+                if (!wasDragging && chipsScroller.IsDragging)
+                {
+                    UiInteract.CancelPendingTap();
+                }
+
+                shouldBlock = chipsScroller.IsDragging;
+            }
+            else
+            {
+                shouldBlock = chipsScroller.IsDragging;
+                chipsScroller.Release();
+                chipsPressed = false;
+                chipsScroller.Tick(deltaSeconds);
+            }
+        }
+        else if (down && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && hovering && !UiInteract.InputBlocked)
+        {
+            chipsScroller.Press(mouseX);
+            chipsPressed = true;
+        }
+        else
+        {
+            chipsScroller.Tick(deltaSeconds);
+        }
+
+        if (shouldBlock)
+        {
+            UiInteract.BlockThisFrame();
         }
     }
 
@@ -269,7 +334,9 @@ internal sealed partial class VenuesApp : IPhoneApp
         var summary =
             $"{dcLabel}  ·  {TimeFilterLabel(configuration.VenueTimeFilter)}  ·  {Loc.T(L.Venues.EventsCount, filtered.Count)}";
         var origin = ImGui.GetCursorScreenPos();
-        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y + 8f * scale), summary,
+        var summaryMaxWidth = MathF.Max(1f, ImGui.GetContentRegionAvail().X - 8f * scale);
+        var summaryFitted = Typography.FitText(summary, summaryMaxWidth, TextStyles.Footnote);
+        Typography.Draw(new Vector2(origin.X + 4f * scale, origin.Y + 8f * scale), summaryFitted,
             AppPalettes.Venues.MutedInk, TextStyles.Footnote);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, 30f * scale));
@@ -315,14 +382,21 @@ internal sealed partial class VenuesApp : IPhoneApp
 
     private void DrawTagPicker(Rect area)
     {
+        var scale = ImGuiHelpers.GlobalScale;
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Venues.Tags), back);
-        if (selectedTags.Count > 0 && ui.HeaderAction(area, Loc.T(L.Venues.ClearTags), true))
+        var showClear = selectedTags.Count > 0;
+        var clearLabel = Loc.T(L.Venues.ClearTags);
+        var clearReserve = showClear
+            ? Typography.Measure(clearLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale + 20f * scale
+            : 0f;
+        AppHeader.Draw(context, string.Empty, back);
+        AppHeader.DrawTitleWithReserve(area, "venues.tagpicker.title", Loc.T(L.Venues.Tags), clearReserve,
+            theme.TextStrong, scale);
+        if (showClear && ui.HeaderAction(area, clearLabel, true))
         {
             selectedTags.Clear();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         using (AppSurface.Begin(body))

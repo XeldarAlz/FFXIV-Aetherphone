@@ -14,6 +14,7 @@ internal static class ChatHeaderControls
     private const float LockOffset = 24f;
     private const float SearchOffset = 52f;
     private const float BannerHeight = 26f;
+    public const float ReservedRightWidth = SearchOffset + IconRadius;
 
     public static void DrawLock(AppSkin ui, Rect area, float rowCenterY, bool encrypted, KeyVaultState vault,
         Action onOpen)

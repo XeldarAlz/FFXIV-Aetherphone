@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Notifications;
@@ -21,8 +22,8 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public DirectMessagesStore(AethernetSession session, ChatClient client, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
-        PhoneVisibility visibility, RealtimeSignalBus signals)
-        : base("Messages", session, safety, media, notifications, vault, keys, visibility)
+        PhoneVisibility visibility, RealtimeSignalBus signals, AppInstaller installer)
+        : base("Messages", session, safety, media, notifications, vault, keys, visibility, installer.Gate("message"))
     {
         this.client = client;
         this.peers = peers;

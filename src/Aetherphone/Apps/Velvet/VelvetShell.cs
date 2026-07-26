@@ -7,6 +7,7 @@ using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
@@ -74,10 +75,10 @@ internal sealed partial class VelvetShell : IPhoneApp
         NotificationService notifications, VelvetLauncher launcher, SocialLauncher socialLauncher, GameData gameData,
         SocialNotificationService social, KeyVault keyVault, ConversationKeyStore conversationKeys,
         PhoneVisibility visibility, RealtimeSignalBus realtimeSignals, WallpaperImageCache wallpaperImages,
-        ConfirmService confirm, ReportService report, ConductGateService conduct)
+        ConfirmService confirm, ReportService report, ConductGateService conduct, AppInstaller installer)
     {
         store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
-            keyVault, conversationKeys, visibility, realtimeSignals);
+            keyVault, conversationKeys, visibility, realtimeSignals, installer);
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, VelvetArt.StoryRing, VelvetTheme.Palette,
             new StoryConfirmLabels(L.Velvet.DeleteConfirm, L.Velvet.DeleteCancel, L.Velvet.Saving), confirm,
@@ -100,7 +101,7 @@ internal sealed partial class VelvetShell : IPhoneApp
         avatar = new AvatarComposer(() => store.AvatarBusy, store.UpdateAvatar,
             new AvatarComposerLabels(L.Velvet.ChangePhoto, L.Velvet.ImportFromPc, L.Velvet.NoPhotos,
                 L.Velvet.MoveAndScale, L.Velvet.Use, L.Velvet.Saving, L.Velvet.GestureHint), library,
-            wallpaperImages);
+            wallpaperImages, confirm, () => store.AvatarFailure);
         post = new VelvetPostComposer(store, stories, library, images, lodestone, wallpaperImages);
         router = new ViewRouter<VelvetView>(VelvetView.Root);
         drawView = DrawView;
@@ -172,6 +173,16 @@ internal sealed partial class VelvetShell : IPhoneApp
             TourHolds.Hold(Id);
             EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Moon, Loc.T(L.Velvet.SignedOutTitle),
                 Loc.T(L.Velvet.SignedOutHint));
+            return;
+        }
+
+        if (IsLalafellCharacter() || store.AccessBlocked)
+        {
+            TourHolds.Hold(Id);
+            store.EnsureMe();
+            TickHeartbeat();
+            EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Ban, Loc.T(L.Velvet.UnavailableTitle),
+                Loc.T(L.Velvet.UnavailableBody));
             return;
         }
 

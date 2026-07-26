@@ -15,17 +15,19 @@ namespace Aetherphone.Apps.Muster;
 
 internal sealed partial class MusterApp
 {
-    private const float StatusCardHeight = 92f;
-    private const float AttendeeRowHeight = 44f;
-    private const float ManageActionHeight = 46f;
+    private const float StatusCardHeight = 96f;
+    private const float AttendeeRowHeight = 52f;
+    private const float ManageActionHeight = 48f;
 
     private static readonly Vector4 StatusAmber = new(0.98f, 0.72f, 0.30f, 1f);
+    private static readonly Vector4 StatusEnRoute = new(0.42f, 0.72f, 0.98f, 1f);
 
     private static readonly int[] NoticeCodes =
     {
         MusterNotices.StartingNow, MusterNotices.MovedSpots, MusterNotices.WrappingUp,
     };
 
+    private readonly PullToRefresh manageRefresh = new();
     private MusterAttendeeDto[] lastAttendees = Array.Empty<MusterAttendeeDto>();
     private string[] attendeeIdentities = Array.Empty<string>();
     private bool noticeBusy;
@@ -39,6 +41,13 @@ internal sealed partial class MusterApp
         invitedUserId = string.Empty;
     }
 
+    private void OpenManage(bool animate = true)
+    {
+        ResetManageState();
+        store.SyncNow();
+        router.Push(MusterRoute.Manage, animate);
+    }
+
     private void DrawManage(Rect area)
     {
         var context = new PhoneContext(area, theme, navigation);
@@ -50,19 +59,38 @@ internal sealed partial class MusterApp
         }
 
         var scale = ImGuiHelpers.GlobalScale;
+        DrawManageHeaderAction(area, scale);
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         var nowUnix = NowUnix();
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
+            manageRefresh.Draw(body, surface.Pull, surface.Dragging, store.Syncing, AppPalettes.Muster.MutedInk,
+                store.SyncNow);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
             DrawManageStatus(mine, nowUnix, scale);
             DrawWrappedDescription(mine.Description, scale);
-            DrawLocationBlock(mine, "manage", scale, includeTravel: false);
+            DrawLocationBlock(mine, scale, includeTravel: false);
             DrawAttendees(scale);
             DrawNotices(mine, scale);
             DrawManageActions(mine, scale);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
+        }
+    }
+
+    private void DrawManageHeaderAction(Rect area, float scale)
+    {
+        var center = new Vector2(area.Max.X - 22f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
+        if (store.Syncing)
+        {
+            LoadingPulse.Spinner(center, 8f * scale, ui.Accent);
+            return;
+        }
+
+        if (ui.IconButton(center, 14f * scale, FontAwesomeIcon.Sync.ToIconString(), AppPalettes.Muster.BodyInk,
+                AppSkin.Transparent, 0.9f))
+        {
+            store.SyncNow();
         }
     }
 
@@ -72,29 +100,44 @@ internal sealed partial class MusterApp
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var height = StatusCardHeight * scale;
-        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + height), Metrics.Radius.Card * scale,
-            elevated: true);
-        var tileSide = 40f * scale;
-        var tileCenter = new Vector2(origin.X + 14f * scale + tileSide * 0.5f, origin.Y + 14f * scale
+        var max = new Vector2(origin.X + width, origin.Y + height);
+        var rounding = Metrics.Radius.Card * scale * 1.2f;
+        Elevation.Floating(drawList, origin, max, rounding, scale, 0.8f);
+        Squircle.FillVerticalGradient(drawList, origin, max, rounding,
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.26f)),
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.06f)));
+        Squircle.Stroke(drawList, origin, max, rounding,
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.38f)), 1f * scale);
+        var tileSide = 42f * scale;
+        var tileCenter = new Vector2(origin.X + 16f * scale + tileSide * 0.5f, origin.Y + 17f * scale
             + tileSide * 0.5f);
         IconTile.Draw(tileCenter, tileSide, IconTile.Surface(ui.Accent), MusterCategories.Icon(mine.Category));
-        var textLeft = tileCenter.X + tileSide * 0.5f + 12f * scale;
-        Typography.Draw(drawList, new Vector2(textLeft, origin.Y + 14f * scale),
-            Loc.T(MusterCategories.Label(mine.Category)), AppPalettes.Muster.TitleInk, TextStyles.Headline);
+        var textLeft = tileCenter.X + tileSide * 0.5f + 13f * scale;
+        Typography.Draw(drawList, new Vector2(textLeft, origin.Y + 16f * scale),
+            Loc.T(MusterCategories.Label(mine.Category)), AppPalettes.Muster.TitleInk, TextStyles.Title3);
         var live = mine.StartsAtUnix <= nowUnix;
         var status = live
             ? $"{Loc.T(L.Common.Live)} · {Loc.T(L.Muster.EndsIn, MusterText.Span(mine.EndsAtUnix - nowUnix))}"
             : $"{Loc.T(L.Muster.StartsAt, TimeText.Clock(mine.StartsAtUnix))} · {Loc.T(L.Muster.RunsFor, MusterText.Span(mine.EndsAtUnix - mine.StartsAtUnix))}";
-        Typography.Draw(drawList, new Vector2(textLeft, origin.Y + 37f * scale), status,
-            live ? MusterCard.LiveGreen : ui.Accent, TextStyles.FootnoteEmphasized);
+        var statusLeft = textLeft;
+        if (live)
+        {
+            MusterCard.DrawLiveDot(drawList, new Vector2(textLeft + 4f * scale, origin.Y + 47f * scale), scale);
+            statusLeft += 14f * scale;
+        }
+
+        var fittedStatus = Typography.FitText(status, max.X - 16f * scale - statusLeft,
+            TextStyles.SubheadlineEmphasized);
+        Typography.Draw(drawList, new Vector2(statusLeft, origin.Y + 40f * scale), fittedStatus,
+            live ? MusterCard.LiveGreen : AppPalettes.Muster.BodyInk, TextStyles.SubheadlineEmphasized);
         var capacity = mine.MaxAttendees > 0
             ? Loc.T(L.Muster.CapacityLine, mine.RsvpCount, mine.MaxAttendees)
             : Loc.T(L.Muster.GoingCount, mine.RsvpCount);
         var listed = mine.IsPublic ? Loc.T(L.Muster.ListedPublicly) : Loc.T(L.Muster.ListedPrivately);
         var meta = $"{capacity} · {listed}";
-        var fitted = Typography.FitText(meta, width - (textLeft - origin.X) - 14f * scale, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(textLeft, origin.Y + 60f * scale), fitted,
-            AppPalettes.Muster.MutedInk, TextStyles.Footnote);
+        var fitted = Typography.FitText(meta, max.X - 16f * scale - textLeft, TextStyles.Subheadline);
+        Typography.Draw(drawList, new Vector2(textLeft, origin.Y + 64f * scale), fitted,
+            AppPalettes.Muster.MutedInk, TextStyles.Subheadline);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height + Metrics.Space.Md * scale));
     }
@@ -126,37 +169,46 @@ internal sealed partial class MusterApp
         ui.SectionHeading(Loc.T(L.Muster.AttendeesSection));
         var attendees = store.MineAttendees;
         EnsureAttendeeIdentities(attendees);
+        var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
+        var rounding = Metrics.Radius.Card * scale;
         if (attendees.Length == 0)
         {
-            Typography.Draw(new Vector2(origin.X, origin.Y), Loc.T(L.Muster.NoAttendees),
-                AppPalettes.Muster.MutedInk, TextStyles.Subheadline);
+            var emptyHeight = 56f * scale;
+            ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + emptyHeight), rounding,
+                elevated: true);
+            Typography.DrawCentered(drawList, new Vector2(origin.X + width * 0.5f, origin.Y + emptyHeight * 0.5f),
+                Loc.T(L.Muster.NoAttendees), AppPalettes.Muster.MutedInk, TextStyles.Callout);
             ImGui.SetCursorScreenPos(origin);
-            ImGui.Dummy(new Vector2(width, 26f * scale + Metrics.Space.Md * scale));
+            ImGui.Dummy(new Vector2(width, emptyHeight + Metrics.Space.Md * scale));
             return;
         }
 
-        var drawList = ImGui.GetWindowDrawList();
         var rowHeight = AttendeeRowHeight * scale;
+        var pad = Metrics.Space.Sm * scale;
+        var cardHeight = attendees.Length * rowHeight + pad * 2f;
+        ui.Card(drawList, origin, new Vector2(origin.X + width, origin.Y + cardHeight), rounding, elevated: true);
+        var rowInset = Metrics.Space.Md * scale;
         for (var index = 0; index < attendees.Length; index++)
         {
-            DrawAttendeeRow(drawList, attendees[index], attendeeIdentities[index], origin,
-                origin.Y + index * rowHeight, width, rowHeight, scale);
+            var rowTop = origin.Y + pad + index * rowHeight;
+            DrawAttendeeRow(drawList, attendees[index], attendeeIdentities[index],
+                new Vector2(origin.X + rowInset, origin.Y), rowTop, width - rowInset * 2f, rowHeight, scale);
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, attendees.Length * rowHeight + Metrics.Space.Md * scale));
+        ImGui.Dummy(new Vector2(width, cardHeight + Metrics.Space.Md * scale));
     }
 
     private void DrawAttendeeRow(ImDrawListPtr drawList, MusterAttendeeDto attendee, string identity,
         Vector2 origin, float rowTop, float width, float rowHeight, float scale)
     {
         var centerY = rowTop + rowHeight * 0.5f;
-        var avatarRadius = 15f * scale;
+        var avatarRadius = 16f * scale;
         var avatarCenter = new Vector2(origin.X + avatarRadius, centerY);
         AvatarView.DrawRemote(drawList, avatarCenter, avatarRadius, theme, attendee.CharacterName, attendee.World,
-            null, images, lodestone, 0.85f, 32);
+            null, images, lodestone, 0.9f, 32);
         var rowRight = origin.X + width;
         var cursorRight = rowRight;
         var inviteRadius = 14f * scale;
@@ -194,44 +246,48 @@ internal sealed partial class MusterApp
             cursorRight -= inviteRadius * 2f + 8f * scale;
         }
 
-        if (attendee.Status > MusterStatuses.OnMyWay)
+        if (attendee.Status >= MusterStatuses.OnMyWay)
         {
-            string chipLabel;
-            Vector4 chipColor;
-            switch (attendee.Status)
-            {
-                case MusterStatuses.RunningLate:
-                    chipLabel = Loc.T(L.Muster.StatusRunningLate);
-                    chipColor = StatusAmber;
-                    break;
-                case MusterStatuses.Here:
-                    chipLabel = Loc.T(L.Muster.StatusHere);
-                    chipColor = MusterCard.LiveGreen;
-                    break;
-                default:
-                    chipLabel = Loc.T(L.Muster.StatusWhereExactly);
-                    chipColor = ui.Accent;
-                    break;
-            }
-
-            var chipTextSize = Typography.Measure(chipLabel, TextStyles.Caption1);
-            var chipHeight = 20f * scale;
-            var chipWidth = chipTextSize.X + 14f * scale;
+            var chipLabel = StatusLabel(attendee.Status);
+            var chipColor = StatusColor(attendee.Status);
+            var chipTextSize = Typography.Measure(chipLabel, TextStyles.FootnoteEmphasized);
+            var chipHeight = 22f * scale;
+            var chipWidth = chipTextSize.X + 18f * scale;
             var chipMin = new Vector2(cursorRight - chipWidth, centerY - chipHeight * 0.5f);
             var chipMax = new Vector2(cursorRight, centerY + chipHeight * 0.5f);
             Squircle.Fill(drawList, chipMin, chipMax, chipHeight * 0.5f,
-                ImGui.GetColorU32(Palette.WithAlpha(chipColor, 0.18f)));
-            Typography.Draw(drawList, new Vector2(chipMin.X + 7f * scale, centerY - chipTextSize.Y * 0.5f),
-                chipLabel, chipColor, TextStyles.Caption1);
+                ImGui.GetColorU32(Palette.WithAlpha(chipColor, 0.20f)));
+            Squircle.Stroke(drawList, chipMin, chipMax, chipHeight * 0.5f,
+                ImGui.GetColorU32(Palette.WithAlpha(chipColor, 0.38f)), 1f * scale);
+            Typography.Draw(drawList, new Vector2(chipMin.X + 9f * scale, centerY - chipTextSize.Y * 0.5f),
+                chipLabel, chipColor, TextStyles.FootnoteEmphasized);
             cursorRight = chipMin.X - 8f * scale;
         }
 
-        var nameLeft = avatarCenter.X + avatarRadius + 10f * scale;
+        var nameLeft = avatarCenter.X + avatarRadius + 11f * scale;
         var fitted = Typography.FitText(identity, cursorRight - 4f * scale - nameLeft, TextStyles.BodyEmphasized);
         var nameSize = Typography.Measure(fitted, TextStyles.BodyEmphasized);
         Typography.Draw(drawList, new Vector2(nameLeft, centerY - nameSize.Y * 0.5f), fitted,
             AppPalettes.Muster.TitleInk, TextStyles.BodyEmphasized);
     }
+
+    private static string StatusLabel(int status) =>
+        status switch
+        {
+            MusterStatuses.RunningLate => Loc.T(L.Muster.StatusRunningLate),
+            MusterStatuses.Here => Loc.T(L.Muster.StatusHere),
+            MusterStatuses.WhereExactly => Loc.T(L.Muster.StatusWhereExactly),
+            _ => Loc.T(L.Muster.OnMyWay),
+        };
+
+    private Vector4 StatusColor(int status) =>
+        status switch
+        {
+            MusterStatuses.RunningLate => StatusAmber,
+            MusterStatuses.Here => MusterCard.LiveGreen,
+            MusterStatuses.WhereExactly => ui.Accent,
+            _ => StatusEnRoute,
+        };
 
     private void DrawNotices(MusterDto mine, float scale)
     {

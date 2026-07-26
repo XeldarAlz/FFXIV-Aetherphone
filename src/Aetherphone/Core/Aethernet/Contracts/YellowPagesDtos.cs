@@ -31,7 +31,8 @@ internal sealed record CreateAdRequest(
     string? SlotsLine,
     string? Requirements,
     bool AfterDark,
-    string[]? MediaKeys);
+    string[]? MediaKeys,
+    string? LinkUrl = null);
 
 internal sealed record AdDto(
     string Id,
@@ -61,6 +62,7 @@ internal sealed record AdDto(
     string Turnaround,
     string SlotsLine,
     string Requirements,
+    string LinkUrl,
     bool AfterDark,
     string? MediaUrl,
     string[] MediaUrls,
@@ -72,6 +74,41 @@ internal sealed record AdDto(
     long ExpiresAtUnix) : IIdentified;
 
 internal sealed record AdPage(AdDto[] Items, string? NextCursor);
+
+internal sealed record AdInquiryDto(
+    string Id,
+    string AdId,
+    string AdTitle,
+    string? AdMediaUrl,
+    int AdCategory,
+    bool Mine,
+    string OtherUserId,
+    string OtherName,
+    string OtherHandle,
+    string OtherAvatarUrl,
+    string LastBody,
+    string LastSenderId,
+    long LastMessageAtUnix,
+    int UnreadCount,
+    int LastEncVersion = 0,
+    string? LastCommitmentTag = null,
+    string? LastMessageId = null) : IIdentified;
+
+internal sealed record AdInquiryPage(AdInquiryDto[] Items, string? NextCursor);
+
+internal sealed record AdInquiryMessageDto(
+    string Id,
+    string InquiryId,
+    string SenderId,
+    string Body,
+    long CreatedAtUnix,
+    long ReadAtUnix,
+    int EncVersion = 0,
+    string? CommitmentTag = null) : IIdentified;
+
+internal sealed record AdInquiryMessagePage(AdInquiryMessageDto[] Items, string? NextCursor);
+
+internal sealed record SendAdInquiryRequest(string Body, int EncVersion = 0, string? CommitmentTag = null);
 
 internal sealed record SetAdSavedRequest(bool Saved);
 

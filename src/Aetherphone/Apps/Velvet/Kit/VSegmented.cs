@@ -32,8 +32,10 @@ internal static class VSegmented
             var max = new Vector2(rect.Min.X + (index + 1) * segmentWidth, rect.Max.Y);
             var hovered = UiInteract.Hover(min, max);
             var ink = index == current ? VelvetTheme.TitleInk : VelvetTheme.MutedInk;
-            Typography.DrawCentered(new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f), labels[index], ink,
-                TextStyles.FootnoteEmphasized);
+            var labelMaxWidth = MathF.Max(1f, segmentWidth - 12f * scale);
+            var labelHeight = Typography.Measure(labels[index], TextStyles.FootnoteEmphasized).Y;
+            Marquee.DrawCenteredAuto(id + "." + index, labels[index], (min.X + max.X) * 0.5f,
+                (min.Y + max.Y) * 0.5f - labelHeight * 0.5f, labelMaxWidth, TextStyles.FootnoteEmphasized, ink);
             if (hovered)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

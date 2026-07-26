@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Dalamud.Plugin.Services;
@@ -13,8 +14,18 @@ internal sealed class SocialNotificationService : IDisposable
 {
     private static readonly TimeSpan ForegroundPollInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan BackgroundPollInterval = TimeSpan.FromSeconds(120);
+
+    private static readonly string[] ServedApps =
+    {
+        SocialActivity.ChirperApp,
+        SocialActivity.AethergramApp,
+        SocialActivity.VelvetApp,
+        SocialActivity.YellowPagesApp,
+    };
+
     private readonly AethernetSession session;
     private readonly ConfirmService confirm;
+    private readonly AppInstaller installer;
     private readonly AccountClient client;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
@@ -30,10 +41,11 @@ internal sealed class SocialNotificationService : IDisposable
 
     public SocialNotificationService(AethernetSession session, AccountClient client, NotificationService notifications,
         Configuration configuration, IFramework framework, PhoneVisibility visibility, RealtimeSignalBus signals,
-        ConfirmService confirm)
+        ConfirmService confirm, AppInstaller installer)
     {
         this.session = session;
         this.confirm = confirm;
+        this.installer = installer;
         this.client = client;
         this.notifications = notifications;
         this.configuration = configuration;
@@ -115,18 +127,32 @@ internal sealed class SocialNotificationService : IDisposable
 
     public void RefreshNow()
     {
-        if (session.IsSignedIn)
+        if (session.IsSignedIn && AnyServedAppInstalled())
         {
             cadence.Mark(DateTime.UtcNow);
             Poll();
         }
     }
 
+    private bool AnyServedAppInstalled()
+    {
+        for (var index = 0; index < ServedApps.Length; index++)
+        {
+            if (installer.IsInstalled(ServedApps[index]))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void OnFrameworkTick(IFramework _)
     {
-        if (!session.IsSignedIn)
+        if (!session.IsSignedIn || !AnyServedAppInstalled())
         {
             primed = false;
+            latest = Array.Empty<NotificationDto>();
             return;
         }
 
@@ -186,6 +212,11 @@ internal sealed class SocialNotificationService : IDisposable
                 newestModeration = item.CreatedAtUnix;
             }
 
+            if (!isModeration && !installer.IsInstalled(item.App))
+            {
+                continue;
+            }
+
             var freshModeration = isModeration && moderationSeeded && item.CreatedAtUnix > moderationMarker;
             var freshSession = wasPrimed && !seenIds.Contains(item.Id);
             if (freshModeration || freshSession)
@@ -206,8 +237,37 @@ internal sealed class SocialNotificationService : IDisposable
             configuration.Save();
         }
 
-        latest = items;
+        latest = KeepInstalled(items);
         primed = true;
+    }
+
+    private NotificationDto[] KeepInstalled(NotificationDto[] items)
+    {
+        var installedCount = 0;
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (installer.IsInstalled(items[index].App))
+            {
+                installedCount++;
+            }
+        }
+
+        if (installedCount == items.Length)
+        {
+            return items;
+        }
+
+        var kept = new NotificationDto[installedCount];
+        var next = 0;
+        for (var index = 0; index < items.Length; index++)
+        {
+            if (installer.IsInstalled(items[index].App))
+            {
+                kept[next++] = items[index];
+            }
+        }
+
+        return kept;
     }
 
     private static bool IsModerationNotice(int type)
@@ -252,6 +312,7 @@ internal sealed class SocialNotificationService : IDisposable
             SocialActivity.TypeAdExpiring => Loc.T(L.YellowPages.NotifExpiringTitle),
             SocialActivity.TypeAdHidden => Loc.T(L.YellowPages.NotifHiddenTitle),
             SocialActivity.TypeAdOpened => Loc.T(L.YellowPages.NotifOpenedTitle),
+            SocialActivity.TypeAdInquiry => Loc.T(L.YellowPages.NotifInquiryTitle),
             _ => null,
         };
     }

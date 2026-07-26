@@ -27,9 +27,15 @@ internal sealed class SocialClient
         return net.PostAsync("/posts", new CreatePostRequest(text), AethernetJsonContext.Default.CreatePostRequest, AethernetJsonContext.Default.PostDto, token);
     }
 
-    public Task<FeedPage?> UserPostsAsync(string userId, CancellationToken token)
+    public Task<FeedPage?> UserPostsAsync(string userId, string? cursor, CancellationToken token)
     {
-        return net.GetAsync($"/users/{userId}/posts", AethernetJsonContext.Default.FeedPage, token);
+        var path = $"/users/{userId}/posts";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
     public Task<PostDto?> PostAsync(string postId, CancellationToken token)

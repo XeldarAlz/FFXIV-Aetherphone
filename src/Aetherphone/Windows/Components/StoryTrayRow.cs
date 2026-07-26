@@ -78,6 +78,7 @@ internal sealed class StoryTrayRow
         }
 
         drawList.PopClipRect();
+        ImGui.SetCursorScreenPos(new Vector2(row.Min.X, row.Max.Y));
     }
 
     // Only the height is taken from the layout. The band itself spans the scroll container edge to edge

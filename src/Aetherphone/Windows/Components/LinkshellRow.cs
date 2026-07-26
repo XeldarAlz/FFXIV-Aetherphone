@@ -65,12 +65,15 @@ internal static class LinkshellRow
                 hasUnread && !muted ? theme.Accent : theme.TextMuted, TextStyles.Caption1);
         }
 
+        var titleSize = Typography.Measure(label, TextStyles.Headline);
         var titleY = last is null
-            ? min.Y + Height * scale * 0.5f - Typography.Measure(label, TextStyles.Headline).Y * 0.5f
+            ? min.Y + Height * scale * 0.5f - titleSize.Y * 0.5f
             : min.Y + 11f * scale;
-        dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - 4f * scale, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, titleY), label, theme.TextStrong, TextStyles.Headline);
-        dl.PopClipRect();
+        var titleMaxWidth = textRight - 4f * scale - textLeft;
+        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleY),
+            new Vector2(textLeft + titleMaxWidth, titleY + titleSize.Y));
+        Marquee.DrawLeft("linkshellrow.title." + channel.Key, label, textLeft, titleY,
+            titleMaxWidth, TextStyles.Headline, theme.TextStrong, titleHovering);
 
         var previewRight = textRight;
         if (hasUnread)
@@ -100,10 +103,13 @@ internal static class LinkshellRow
         if (last is not null)
         {
             var preview = Preview(last);
-            dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(previewRight, max.Y), true);
-            Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), preview, theme.TextMuted,
-                TextStyles.Subheadline);
-            dl.PopClipRect();
+            var previewY = min.Y + 34f * scale;
+            var previewMaxWidth = previewRight - textLeft;
+            var previewSize = Typography.Measure(preview, TextStyles.Subheadline);
+            var previewHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, previewY),
+                new Vector2(textLeft + previewMaxWidth, previewY + previewSize.Y));
+            Marquee.DrawLeft("linkshellrow.preview." + channel.Key, preview, textLeft, previewY,
+                previewMaxWidth, TextStyles.Subheadline, theme.TextMuted, previewHovering);
         }
 
         var bellTint = muted ? theme.Accent : NeutralTint;

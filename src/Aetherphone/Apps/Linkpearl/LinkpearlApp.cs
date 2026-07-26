@@ -31,6 +31,7 @@ internal sealed partial class LinkpearlApp : IPhoneApp
     public string Glyph => "Lp";
     public Vector4 Accent => AppAccents.For(Id);
     public int BadgeCount => store.TotalUnread() + linkshells.TotalUnread();
+    public bool WantsSystemTheme => true;
     private readonly MessageStore store;
     private readonly LinkshellStore linkshells;
     private readonly LinkshellMuteStore mutes;

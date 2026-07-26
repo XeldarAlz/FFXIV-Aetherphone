@@ -1,3 +1,4 @@
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Dalamud.Plugin.Services;
 
@@ -11,11 +12,12 @@ internal sealed class ReminderService : IDisposable
     private readonly FrameworkTicker ticker;
     private readonly NotificationService notifications;
 
-    public ReminderService(Configuration configuration, IFramework framework, NotificationService notifications)
+    public ReminderService(Configuration configuration, IFramework framework, NotificationService notifications,
+        AppGate gate)
     {
         this.configuration = configuration;
         this.notifications = notifications;
-        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
+        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick, gate);
     }
 
     public void Dispose()

@@ -22,7 +22,6 @@ internal enum FollowState
 
 internal abstract class SocialFeedStore : IDisposable
 {
-    protected const int AvatarSize = 512;
     protected readonly AethernetSession session;
     protected readonly AccountClient account;
     protected readonly SocialClient client;
@@ -31,13 +30,14 @@ internal abstract class SocialFeedStore : IDisposable
     protected readonly StoreWork work;
     private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
     private volatile UserDto? me;
+    private volatile AvatarUploadOutcome avatarFailure = AvatarUploadOutcome.Unreachable;
     protected readonly FeedLane<PostDto> forYouLane = new(ByNewestFirst);
     protected readonly FeedLane<PostDto> followingLane = new(ByNewestFirst);
     private readonly FeedLane<PostDto> savedLane = new(ByNewestFirst);
     private volatile UserDto[] followRequests = Array.Empty<UserDto>();
     private volatile bool followRequestsLoading;
     private volatile bool followRequestsLoaded;
-    protected volatile PostDto[] profilePosts = Array.Empty<PostDto>();
+    protected readonly FeedLane<PostDto> profileLane = new(ByNewestFirst);
     protected volatile PostDto? detailPost;
     protected volatile bool posting;
     private volatile string? profileUserId;
@@ -93,7 +93,7 @@ internal abstract class SocialFeedStore : IDisposable
         meGate.Reset();
         forYouLane.Clear();
         followingLane.Clear();
-        profilePosts = Array.Empty<PostDto>();
+        profileLane.Clear();
         detailPost = null;
         profileUserId = null;
         profileUser = null;
@@ -122,6 +122,8 @@ internal abstract class SocialFeedStore : IDisposable
 
     public bool LoadingMore(SocialFeedScope scope) => Lane(scope).LoadingMore;
 
+    public ITrimmable FeedSource(SocialFeedScope scope) => Lane(scope);
+
     private FeedLane<PostDto> Lane(SocialFeedScope scope) =>
         scope == SocialFeedScope.ForYou ? forYouLane : followingLane;
 
@@ -130,8 +132,10 @@ internal abstract class SocialFeedStore : IDisposable
 
     public string? ProfileUserId => profileUserId;
     public UserDto? ProfileUser => profileUser;
-    public PostDto[] ProfilePosts => profilePosts;
+    public PostDto[] ProfilePosts => profileLane.Items;
     public bool ProfileLoading => profileLoading;
+    public bool ProfileLoadingMore => profileLane.LoadingMore;
+    public bool HasMoreProfilePosts => profileLane.HasMore;
     public bool ProfileFailed => profileFailed;
     public PostDto? DetailPost => detailPost;
     public CommentDto[] DetailComments => detailComments;
@@ -140,6 +144,8 @@ internal abstract class SocialFeedStore : IDisposable
     public UserDto[] DiscoverResults => discoverResults;
     public bool Searching => searching;
     public bool Posting => posting;
+
+    public AvatarUploadOutcome AvatarFailure => avatarFailure;
     public UserDto[] UserListResults => userListResults;
     public bool UserListLoading => userListLoading;
     public bool UserListFailed => userListFailed;
@@ -161,7 +167,7 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected abstract Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, CancellationToken token);
 
-    protected abstract Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token);
+    protected abstract Task<FeedPage?> FetchProfilePostsAsync(string userId, string? cursor, CancellationToken token);
 
     protected virtual Task<FeedPage?> FetchTaggedPostsAsync(string userId, CancellationToken token) =>
         Task.FromResult<FeedPage?>(null);
@@ -581,7 +587,7 @@ internal abstract class SocialFeedStore : IDisposable
     {
         forYouLane.Items = MapSaved(forYouLane.Items, postId, saved);
         followingLane.Items = MapSaved(followingLane.Items, postId, saved);
-        profilePosts = MapSaved(profilePosts, postId, saved);
+        profileLane.Items = MapSaved(profileLane.Items, postId, saved);
         taggedPosts = MapSaved(taggedPosts, postId, saved);
         savedLane.Items = saved
             ? MapSaved(savedLane.Items, postId, true)
@@ -627,7 +633,7 @@ internal abstract class SocialFeedStore : IDisposable
     {
         forYouLane.Items = CopyOnWrite.RemoveWhere(forYouLane.Items, post => post.AuthorId == userId);
         followingLane.Items = CopyOnWrite.RemoveWhere(followingLane.Items, post => post.AuthorId == userId);
-        profilePosts = CopyOnWrite.RemoveWhere(profilePosts, post => post.AuthorId == userId);
+        profileLane.Items = CopyOnWrite.RemoveWhere(profileLane.Items, post => post.AuthorId == userId);
         taggedPosts = CopyOnWrite.RemoveWhere(taggedPosts, post => post.AuthorId == userId);
         detailComments = CopyOnWrite.RemoveWhere(detailComments, comment => comment.AuthorId == userId);
         discoverResults = CopyOnWrite.RemoveWhere(discoverResults, user => user.Id == userId);
@@ -653,14 +659,14 @@ internal abstract class SocialFeedStore : IDisposable
 
         profileUserId = userId;
         profileUser = null;
-        profilePosts = Array.Empty<PostDto>();
+        profileLane.Clear();
         profileFailed = false;
         profileLoading = true;
         ClearTagged();
         work.Run("profile open", async token =>
         {
             var user = await account.UserAsync(userId, token).ConfigureAwait(false);
-            var posts = await FetchProfilePostsAsync(userId, token).ConfigureAwait(false);
+            var posts = await FetchProfilePostsAsync(userId, null, token).ConfigureAwait(false);
             if (profileUserId != userId)
             {
                 return;
@@ -673,7 +679,11 @@ internal abstract class SocialFeedStore : IDisposable
             else
             {
                 profileUser = user;
-                profilePosts = posts?.Items ?? Array.Empty<PostDto>();
+                if (posts is not null)
+                {
+                    profileLane.ApplyRefresh(posts.Items, posts.NextCursor);
+                }
+
                 profileFetchedAt = DateTime.UtcNow;
             }
         }, () =>
@@ -691,7 +701,7 @@ internal abstract class SocialFeedStore : IDisposable
         work.Run("profile revalidate", async token =>
         {
             var user = await account.UserAsync(userId, token).ConfigureAwait(false);
-            var posts = await FetchProfilePostsAsync(userId, token).ConfigureAwait(false);
+            var posts = await FetchProfilePostsAsync(userId, null, token).ConfigureAwait(false);
             if (profileUserId != userId)
             {
                 return;
@@ -705,9 +715,29 @@ internal abstract class SocialFeedStore : IDisposable
 
             if (posts is not null)
             {
-                profilePosts = posts.Items;
+                profileLane.ApplyRefresh(posts.Items, posts.NextCursor);
             }
         }, () => profileRevalidating = false);
+    }
+
+    public void LoadMoreProfilePosts()
+    {
+        var userId = profileUserId;
+        var cursor = profileLane.Cursor;
+        if (!session.IsSignedIn || userId is null || cursor is null || profileLane.LoadingMore || profileLoading)
+        {
+            return;
+        }
+
+        profileLane.LoadingMore = true;
+        work.Run("profile more", async token =>
+        {
+            var page = await FetchProfilePostsAsync(userId, cursor, token).ConfigureAwait(false);
+            if (page is not null && profileUserId == userId)
+            {
+                profileLane.ApplyMore(page.Items, page.NextCursor);
+            }
+        }, () => profileLane.LoadingMore = false);
     }
 
     public void ReloadProfile()
@@ -805,24 +835,9 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected async Task<bool> UploadAvatarAsync(string sourcePath, WallpaperCrop crop, CancellationToken token)
     {
-        var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, AvatarSize);
-        var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
-        if (upload is null)
-        {
-            return false;
-        }
-
-        var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
-            .ConfigureAwait(false);
-        if (!uploaded)
-        {
-            return false;
-        }
-
-        var updated = await account
-            .UpdateProfileAsync(new UpdateProfileRequest(null, null, null, upload.PublicUrl), token)
-            .ConfigureAwait(false);
-        if (updated is null)
+        var result = await AvatarUpload.RunAsync(account, media, sourcePath, crop, token).ConfigureAwait(false);
+        avatarFailure = result.Outcome;
+        if (result.User is not { } updated)
         {
             return false;
         }
@@ -846,7 +861,7 @@ internal abstract class SocialFeedStore : IDisposable
         followingLane.Items = CopyOnWrite.Prepend(followingLane.Items, created);
         if (profileUserId is not null && profileUserId == created.AuthorId)
         {
-            profilePosts = CopyOnWrite.Prepend(profilePosts, created);
+            profileLane.Items = CopyOnWrite.Prepend(profileLane.Items, created);
         }
     }
 
@@ -854,7 +869,7 @@ internal abstract class SocialFeedStore : IDisposable
     {
         forYouLane.Items = CopyOnWrite.Replace(forYouLane.Items, updated);
         followingLane.Items = CopyOnWrite.Replace(followingLane.Items, updated);
-        profilePosts = CopyOnWrite.Replace(profilePosts, updated);
+        profileLane.Items = CopyOnWrite.Replace(profileLane.Items, updated);
         if (detailPost is { } current && current.Id == updated.Id)
         {
             detailPost = updated;
@@ -865,7 +880,7 @@ internal abstract class SocialFeedStore : IDisposable
     {
         forYouLane.Items = CopyOnWrite.RemoveById(forYouLane.Items, postId);
         followingLane.Items = CopyOnWrite.RemoveById(followingLane.Items, postId);
-        profilePosts = CopyOnWrite.RemoveById(profilePosts, postId);
+        profileLane.Items = CopyOnWrite.RemoveById(profileLane.Items, postId);
         if (detailPost is { } current && current.Id == postId)
         {
             detailPost = null;
@@ -877,7 +892,7 @@ internal abstract class SocialFeedStore : IDisposable
     {
         forYouLane.Items = MapCommentCount(forYouLane.Items, postId, delta);
         followingLane.Items = MapCommentCount(followingLane.Items, postId, delta);
-        profilePosts = MapCommentCount(profilePosts, postId, delta);
+        profileLane.Items = MapCommentCount(profileLane.Items, postId, delta);
         if (detailPost is { } current && current.Id == postId)
         {
             detailPost = current with { CommentCount = Math.Max(0, current.CommentCount + delta) };
@@ -891,7 +906,7 @@ internal abstract class SocialFeedStore : IDisposable
         followRequests = MapFollow(followRequests, userId, following, requested);
         forYouLane.Items = MapFollowByAuthor(forYouLane.Items, userId, following);
         followingLane.Items = MapFollowByAuthor(followingLane.Items, userId, following);
-        profilePosts = MapFollowByAuthor(profilePosts, userId, following);
+        profileLane.Items = MapFollowByAuthor(profileLane.Items, userId, following);
         taggedPosts = MapFollowByAuthor(taggedPosts, userId, following);
         savedLane.Items = MapFollowByAuthor(savedLane.Items, userId, following);
         if (detailPost is { } post && post.AuthorId == userId && post.IsFollowing != following)

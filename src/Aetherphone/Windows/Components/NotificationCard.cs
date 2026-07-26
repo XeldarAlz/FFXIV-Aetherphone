@@ -50,15 +50,14 @@ internal static class NotificationCard
         var timeSize = Typography.Measure(time, TextStyles.Caption1);
         Typography.Draw(drawList, new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
             Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Caption1.Scale, TextStyles.Caption1.Weight);
-        drawList.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - timeSize.X - 8f * scale, max.Y),
-            true);
-        Typography.Draw(drawList, new Vector2(textLeft, min.Y + 12f * scale), notification.Title,
-            Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.Headline.Scale, TextStyles.Headline.Weight);
-        drawList.PopClipRect();
-        drawList.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight, max.Y), true);
-        Typography.Draw(drawList, new Vector2(textLeft, min.Y + 35f * scale), notification.Body,
-            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight);
-        drawList.PopClipRect();
+        var titleMaxWidth = textRight - timeSize.X - 8f * scale - textLeft;
+        var titleY = min.Y + 12f * scale;
+        Marquee.DrawLeftAuto(drawList, "notificationcard.title." + notification.Id, notification.Title, textLeft,
+            titleY, titleMaxWidth, TextStyles.Headline, Palette.WithAlpha(theme.TextStrong, opacity));
+        var bodyMaxWidth = textRight - textLeft;
+        var bodyY = min.Y + 35f * scale;
+        Marquee.DrawLeftAuto(drawList, "notificationcard.body." + notification.Id, notification.Body, textLeft,
+            bodyY, bodyMaxWidth, TextStyles.Subheadline, Palette.WithAlpha(theme.TextMuted, opacity));
     }
 
     public static Vector2 BadgeAnchor(Rect rect, float scale)

@@ -12,6 +12,7 @@ internal static class MentionField
         public int MaxLength;
         public int Cursor;
         public bool TabRequested;
+        public bool RefocusRequested;
         public readonly ImGui.ImGuiInputTextCallbackPtrDelegate Callback;
 
         public Editor(int maxLength)
@@ -108,40 +109,40 @@ internal static class MentionField
             editor.PendingHandle = handle;
         }
 
-        if (editor.PendingHandle is not null)
+        if (editor.PendingHandle is not null || editor.RefocusRequested)
         {
             ImGui.SetKeyboardFocusHere();
+            editor.RefocusRequested = false;
         }
 
         const ImGuiInputTextFlags flags = ImGuiInputTextFlags.EnterReturnsTrue
             | ImGuiInputTextFlags.CallbackAlways
             | ImGuiInputTextFlags.CallbackCompletion
             | ImGuiInputTextFlags.CallbackHistory;
+        var wasOpen = mentions.IsOpen;
         var submitted = ImGui.InputTextWithHint(id, hint, ref value, maxLength, flags, editor.Callback);
+        var committed = submitted && mentions.RequestCommit();
+        var heldForMention = submitted && wasOpen && !committed;
 
         if (ImGui.IsItemActive())
         {
             mentions.Anchor = new Rect(ImGui.GetItemRectMin(), ImGui.GetItemRectMax());
             mentions.Track(value, editor.Cursor, ImGui.GetIO().DeltaTime);
         }
-        else if (!mentions.PointerOver)
+        else if (!committed && !heldForMention && !mentions.PointerOver)
         {
             mentions.Close();
         }
+
+        editor.RefocusRequested = heldForMention;
 
         if (editor.TabRequested && mentions.RequestCommit())
         {
             return false;
         }
 
-        if (escaped || navigated)
+        if (escaped || navigated || committed || heldForMention)
         {
-            return false;
-        }
-
-        if (submitted && mentions.IsOpen)
-        {
-            mentions.RequestCommit();
             return false;
         }
 

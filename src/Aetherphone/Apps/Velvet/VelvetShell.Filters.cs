@@ -49,8 +49,7 @@ internal sealed partial class VelvetShell
             filterRolesInclude.ToArray(), filterRolesExclude.ToArray(),
             filterKinksInclude.ToArray(), filterKinksExclude.ToArray(),
             filterLimitsInclude.ToArray(), filterLimitsExclude.ToArray(),
-            filterTagsInclude.ToArray(), filterTagsExclude.ToArray(),
-            configuration.VelvetShowLalafell);
+            filterTagsInclude.ToArray(), filterTagsExclude.ToArray());
 
     private void ApplyDiscoverFilters() =>
         store.RefreshDiscover(BuildDiscoverFilter(), discoverApplied.Trim(), discoverRegion);

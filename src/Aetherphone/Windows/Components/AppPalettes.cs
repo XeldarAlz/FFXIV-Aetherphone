@@ -10,6 +10,29 @@ internal static class AppPalettes
     private static readonly Vector4 GlassField = new(1f, 1f, 1f, 0.10f);
     private static readonly Vector4 DefaultHover = new(1f, 1f, 1f, 0.06f);
 
+    public static readonly AppPalette Health = new()
+    {
+        Accent = AppAccents.For("health"),
+        TitleInk = new(0.97f, 0.99f, 0.95f, 1f),
+        BodyInk = new(0.90f, 0.95f, 0.85f, 0.96f),
+        MutedInk = new(0.74f, 0.82f, 0.66f, 0.85f),
+        HeaderInk = new(0.78f, 0.95f, 0.58f, 0.95f),
+        HeadingInk = new(0.96f, 0.99f, 0.93f, 1f),
+        BackdropTop = new(0.09f, 0.17f, 0.05f, 1f),
+        BackdropBottom = new(0.03f, 0.04f, 0.02f, 1f),
+        BloomTop = new(0.48f, 0.80f, 0.24f, 0.22f),
+        BloomBottom = new(0.22f, 0.40f, 0.10f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    // Supporting row tints for the Health cards, kept beside the palette they belong to.
+    public static readonly Vector4 HealthWater = new(0.28f, 0.68f, 0.92f, 1f);
+    public static readonly Vector4 HealthEnergy = new(0.96f, 0.62f, 0.24f, 1f);
+    public static readonly Vector4 HealthTeleport = new(0.62f, 0.52f, 0.96f, 1f);
+
     public static readonly AppPalette Chirper = new()
     {
         Accent = AppAccents.For("chirper"),
@@ -226,24 +249,6 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
-    public static readonly AppPalette Dev = new()
-    {
-        Accent = AppAccents.For("dev"),
-        TitleInk = new(0.96f, 0.97f, 1f, 1f),
-        BodyInk = new(0.87f, 0.89f, 0.98f, 0.96f),
-        MutedInk = new(0.66f, 0.69f, 0.84f, 0.85f),
-        HeaderInk = new(0.74f, 0.78f, 1f, 0.95f),
-        HeadingInk = new(0.95f, 0.96f, 1f, 1f),
-        BackdropTop = new(0.10f, 0.11f, 0.26f, 1f),
-        BackdropBottom = new(0.03f, 0.03f, 0.08f, 1f),
-        BloomTop = new(0.42f, 0.46f, 0.98f, 0.22f),
-        BloomBottom = new(0.20f, 0.22f, 0.55f, 0f),
-        CardFill = GlassFill,
-        CardStroke = GlassStroke,
-        FieldSurface = GlassField,
-        HoverTint = DefaultHover,
-    };
-
     public static readonly AppPalette Polls = new()
     {
         Accent = AppAccents.For("polls"),
@@ -256,6 +261,24 @@ internal static class AppPalettes
         BackdropBottom = new(0.03f, 0.02f, 0.09f, 1f),
         BloomTop = new(0.56f, 0.44f, 0.96f, 0.22f),
         BloomBottom = new(0.28f, 0.18f, 0.55f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Announcements = new()
+    {
+        Accent = AppAccents.For("announcements"),
+        TitleInk = new(1f, 0.97f, 0.95f, 1f),
+        BodyInk = new(0.95f, 0.89f, 0.85f, 0.96f),
+        MutedInk = new(0.82f, 0.71f, 0.65f, 0.85f),
+        HeaderInk = new(0.99f, 0.78f, 0.66f, 0.95f),
+        HeadingInk = new(1f, 0.95f, 0.92f, 1f),
+        BackdropTop = new(0.22f, 0.11f, 0.07f, 1f),
+        BackdropBottom = new(0.07f, 0.03f, 0.02f, 1f),
+        BloomTop = new(0.98f, 0.48f, 0.32f, 0.20f),
+        BloomBottom = new(0.55f, 0.22f, 0.12f, 0f),
         CardFill = GlassFill,
         CardStroke = GlassStroke,
         FieldSurface = GlassField,

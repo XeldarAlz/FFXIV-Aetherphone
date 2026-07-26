@@ -38,7 +38,7 @@ internal static class AdCategories
 {
     public const int VenueNight = 0;
     public const int EventShow = 1;
-    public const int MarketFair = 2;
+    public const int Casino = 2;
     public const int Crafting = 3;
     public const int Gathering = 4;
     public const int Glamour = 5;
@@ -50,13 +50,19 @@ internal static class AdCategories
     public const int RaidStatic = 11;
     public const int VenueStaff = 12;
     public const int Community = 13;
-    public const int Count = 14;
+    public const int HousingTour = 14;
+    public const int Mods = 15;
+    public const int HousingDesign = 16;
+    public const int Weddings = 17;
+    public const int Writing = 18;
+    public const int Count = 19;
 
-    public static readonly int[] GoCategories = { VenueNight, EventShow, MarketFair };
+    public static readonly int[] GoCategories = { VenueNight, EventShow, Casino, HousingTour };
 
     public static readonly int[] HireCategories =
     {
-        Crafting, Gathering, Glamour, Portraits, Performance, Coaching, OddJobs,
+        Crafting, Gathering, Glamour, Portraits, Performance, Coaching, HousingDesign, Weddings, Writing, Mods,
+        OddJobs,
     };
 
     public static readonly int[] JoinCategories = { FreeCompany, RaidStatic, VenueStaff, Community };
@@ -80,10 +86,12 @@ internal static class AdCategories
     public static int ArchetypeFor(int category) =>
         category switch
         {
-            VenueNight or EventShow or MarketFair => AdArchetypes.Place,
+            VenueNight or EventShow or Casino or HousingTour => AdArchetypes.Place,
             FreeCompany or RaidStatic or VenueStaff or Community => AdArchetypes.Call,
             _ => AdArchetypes.Service,
         };
+
+    public static bool IsLinkOnly(int category) => category == Mods;
 
     public static int MaskFor(int[] categories)
     {
@@ -101,7 +109,12 @@ internal static class AdCategories
         {
             VenueNight => FontAwesomeIcon.Cocktail,
             EventShow => FontAwesomeIcon.TheaterMasks,
-            MarketFair => FontAwesomeIcon.Store,
+            Casino => FontAwesomeIcon.Dice,
+            HousingTour => FontAwesomeIcon.DoorOpen,
+            Mods => FontAwesomeIcon.PuzzlePiece,
+            HousingDesign => FontAwesomeIcon.Couch,
+            Weddings => FontAwesomeIcon.Ring,
+            Writing => FontAwesomeIcon.PenNib,
             Crafting => FontAwesomeIcon.Hammer,
             Gathering => FontAwesomeIcon.Leaf,
             Glamour => FontAwesomeIcon.Tshirt,
@@ -121,7 +134,12 @@ internal static class AdCategories
         {
             VenueNight => L.YellowPages.CategoryVenueNight,
             EventShow => L.YellowPages.CategoryEventShow,
-            MarketFair => L.YellowPages.CategoryMarketFair,
+            Casino => L.YellowPages.CategoryCasino,
+            HousingTour => L.YellowPages.CategoryHousingTour,
+            Mods => L.YellowPages.CategoryMods,
+            HousingDesign => L.YellowPages.CategoryHousingDesign,
+            Weddings => L.YellowPages.CategoryWeddings,
+            Writing => L.YellowPages.CategoryWriting,
             Crafting => L.YellowPages.CategoryCrafting,
             Gathering => L.YellowPages.CategoryGathering,
             Glamour => L.YellowPages.CategoryGlamour,

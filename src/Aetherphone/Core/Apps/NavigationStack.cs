@@ -1,4 +1,5 @@
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Home;
 
 namespace Aetherphone.Core.Apps;
 
@@ -12,6 +13,7 @@ internal enum ShellMotion
 internal sealed class NavigationStack : INavigator
 {
     private readonly IReadOnlyList<IPhoneApp> apps;
+    private readonly AppInstaller installer;
     private readonly Stack<IPhoneApp> history = new();
     private Spring cover;
     private float coverTarget;
@@ -23,9 +25,10 @@ internal sealed class NavigationStack : INavigator
     private Rect? pendingOrigin;
     private Rect? motionOrigin;
 
-    public NavigationStack(IReadOnlyList<IPhoneApp> apps)
+    public NavigationStack(IReadOnlyList<IPhoneApp> apps, AppInstaller installer)
     {
         this.apps = apps;
+        this.installer = installer;
     }
 
     public event Action<string>? AppOpened;
@@ -104,6 +107,11 @@ internal sealed class NavigationStack : INavigator
     public void Open(string appId)
     {
         if (current?.Id == appId && motion == ShellMotion.None)
+        {
+            return;
+        }
+
+        if (!installer.IsInstalled(appId))
         {
             return;
         }

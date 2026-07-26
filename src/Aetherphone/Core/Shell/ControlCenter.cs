@@ -119,7 +119,9 @@ internal sealed class ControlCenter
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.32f * opacity)), 2.5f * scale);
 
         var titleY = panelTop + 30f * scale;
-        Typography.Draw(dl, new Vector2(left, titleY), Loc.T(L.ControlCenter.Title),
+        var titleMaxWidth = MathF.Max(1f, HeaderButtonsLeft(right, scale) - 10f * scale - left);
+        Typography.Draw(dl, new Vector2(left, titleY),
+            Typography.FitText(Loc.T(L.ControlCenter.Title), titleMaxWidth, 1.15f, FontWeight.Bold),
             Palette.WithAlpha(theme.TextStrong, opacity), 1.15f, FontWeight.Bold);
         DrawHeaderButtons(dl, theme, right, titleY + 8f * scale, scale, delta, opacity, interactive);
 
@@ -155,6 +157,18 @@ internal sealed class ControlCenter
         var galleryRegion = new Rect(new Vector2(screen.Min.X, screen.Min.Y),
             new Vector2(screen.Max.X, screen.Max.Y - DismissBandHeight * scale));
         gallery.Draw(galleryRegion, theme, delta, scale, opacity);
+    }
+
+    private float HeaderButtonsLeft(float right, float scale)
+    {
+        var radius = 15f * scale;
+        if (!editing)
+        {
+            return right - 2f * radius;
+        }
+
+        var doneWidth = Typography.Measure(Loc.T(L.ControlCenter.Done), 0.82f).X + 2f * 14f * scale;
+        return right - doneWidth - 12f * scale - 2f * radius;
     }
 
     private void DrawHeaderButtons(ImDrawListPtr dl, PhoneTheme theme, float right, float centerY, float scale,

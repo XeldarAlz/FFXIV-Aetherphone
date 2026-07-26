@@ -37,7 +37,7 @@ internal static class AdText
 
     public static string PriceLine(AdDto ad)
     {
-        if (ad.Archetype != AdArchetypes.Service)
+        if (ad.Archetype != AdArchetypes.Service || AdCategories.IsLinkOnly(ad.Category))
         {
             return string.Empty;
         }

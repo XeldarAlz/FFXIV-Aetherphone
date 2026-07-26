@@ -242,7 +242,8 @@ internal sealed partial class CollectionsApp
             var type = source.Type ?? string.Empty;
             var text = source.Text ?? string.Empty;
             var typeLabel = type.Length > 0 ? type : Loc.T(L.Collections.Source);
-            Typography.Draw(new Vector2(origin.X + 14f * scale, top + 11f * scale), typeLabel, ui.TitleInk,
+            var typeFitted = Typography.FitText(typeLabel, width - 28f * scale, TextStyles.SubheadlineEmphasized);
+            Typography.Draw(new Vector2(origin.X + 14f * scale, top + 11f * scale), typeFitted, ui.TitleInk,
                 TextStyles.SubheadlineEmphasized);
             if (text.Length > 0)
             {

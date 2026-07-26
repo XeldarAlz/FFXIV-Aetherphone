@@ -1,5 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Windows.Components;
@@ -20,15 +21,17 @@ internal sealed class NotificationsPage : ISettingsPage
     private readonly AppNotificationPage appPage;
     private readonly SoundService sound;
     private readonly ISettingsPage soundPage;
+    private readonly AppInstaller installer;
 
     public NotificationsPage(Configuration configuration, ISettingsNavigator navigator, AppNotificationPage appPage,
-        SoundService sound, ISettingsPage soundPage)
+        SoundService sound, ISettingsPage soundPage, AppInstaller installer)
     {
         this.configuration = configuration;
         this.navigator = navigator;
         this.appPage = appPage;
         this.sound = sound;
         this.soundPage = soundPage;
+        this.installer = installer;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -69,10 +72,15 @@ internal sealed class NotificationsPage : ISettingsPage
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
             SettingsSection.Header(Loc.T(L.Settings.NotificationApps), theme);
             var channels = NotificationChannels.All;
-            var apps = GroupCard.Begin(theme, channels.Count);
+            var apps = GroupCard.Begin(theme, CountInstalled(channels));
             for (var index = 0; index < channels.Count; index++)
             {
                 var channel = channels[index];
+                if (!installer.IsInstalled(channel.AppId))
+                {
+                    continue;
+                }
+
                 if (SettingsRow.AppLink(apps.NextRow(), channel.AppId, channel.Accent, Loc.T(channel.Name),
                         Summarize(channel.AppId), theme))
                 {
@@ -83,6 +91,20 @@ internal sealed class NotificationsPage : ISettingsPage
 
             apps.End();
         }
+    }
+
+    private int CountInstalled(IReadOnlyList<NotificationChannel> channels)
+    {
+        var count = 0;
+        for (var index = 0; index < channels.Count; index++)
+        {
+            if (installer.IsInstalled(channels[index].AppId))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private string Summarize(string appId)

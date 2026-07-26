@@ -172,19 +172,29 @@ internal static class Squircle
             return;
         }
 
+        const float overlap = 1.5f;
         var capTop = min.Y + box;
         var capBottom = max.Y - box;
-        if (capBottom > capTop)
-        {
-            drawList.AddRectFilledMultiColor(new Vector2(min.X, capTop), new Vector2(max.X, capBottom), topColor,
-                topColor, bottomColor, bottomColor);
-        }
+        var left = min.X - overlap;
+        var right = max.X + overlap;
 
-        const float overlap = 1.5f;
+        drawList.PushClipRect(new Vector2(left, min.Y - overlap), new Vector2(right, capTop), true);
         TraceCapPath(drawList, min, max, box, true, overlap);
         drawList.PathFillConvex(topColor);
+        drawList.PopClipRect();
+
+        if (capBottom > capTop)
+        {
+            drawList.PushClipRect(new Vector2(left, capTop), new Vector2(right, capBottom), true);
+            drawList.AddRectFilledMultiColor(new Vector2(min.X, capTop - overlap),
+                new Vector2(max.X, capBottom + overlap), topColor, topColor, bottomColor, bottomColor);
+            drawList.PopClipRect();
+        }
+
+        drawList.PushClipRect(new Vector2(left, capBottom), new Vector2(right, max.Y + overlap), true);
         TraceCapPath(drawList, min, max, box, false, overlap);
         drawList.PathFillConvex(bottomColor);
+        drawList.PopClipRect();
     }
 
     private static float CornerBox(Vector2 min, Vector2 max, float radius)

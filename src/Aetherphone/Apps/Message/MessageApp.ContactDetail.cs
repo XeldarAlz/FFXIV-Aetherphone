@@ -263,12 +263,15 @@ internal sealed partial class MessageApp
 
     private void DrawInfoRow(float left, float right, float top, float rowHeight, string label, string value)
     {
+        var scale = ImGuiHelpers.GlobalScale;
         var centerY = top + rowHeight * 0.5f;
-        Typography.Draw(new Vector2(left, centerY - 8f * ImGuiHelpers.GlobalScale), label, ui.MutedInk,
-            TextStyles.Footnote);
-        var valueSize = Typography.Measure(value, TextStyles.Subheadline);
-        Typography.Draw(new Vector2(right - valueSize.X, centerY - valueSize.Y * 0.5f), value, ui.BodyInk,
-            TextStyles.Subheadline);
+        var labelSize = Typography.Measure(label, TextStyles.Footnote);
+        Typography.Draw(new Vector2(left, centerY - 8f * scale), label, ui.MutedInk, TextStyles.Footnote);
+        var valueMaxWidth = MathF.Max(1f, right - left - labelSize.X - 10f * scale);
+        var valueHovering = ImGui.IsMouseHoveringRect(new Vector2(right - valueMaxWidth, top),
+            new Vector2(right, top + rowHeight));
+        Marquee.DrawRight(label + ":value", value, right, centerY - Typography.Measure(value, TextStyles.Subheadline).Y * 0.5f,
+            valueMaxWidth, TextStyles.Subheadline, ui.BodyInk, valueHovering);
     }
 
     private string ContactLocalTime(string userId)

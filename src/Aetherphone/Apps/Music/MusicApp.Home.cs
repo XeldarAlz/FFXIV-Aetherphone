@@ -147,11 +147,18 @@ internal sealed partial class MusicApp
             var textLeft = artMax.X + 10f * scale;
             var trailing = current ? 26f * scale : 10f * scale;
             var textWidth = max.X - trailing - textLeft;
-            var title = Typography.FitText(song.Title, textWidth, TextStyles.FootnoteEmphasized);
-            Typography.Draw(new Vector2(textLeft, min.Y + 9f * scale), title, current ? ui.Accent : ui.TitleInk,
-                TextStyles.FootnoteEmphasized);
-            var author = Typography.FitText(song.Author, textWidth, TextStyles.Caption1);
-            Typography.Draw(new Vector2(textLeft, min.Y + 28f * scale), author, ui.MutedInk, TextStyles.Caption1);
+            var chipTitleY = min.Y + 9f * scale;
+            var chipTitleSize = Typography.Measure(song.Title, TextStyles.FootnoteEmphasized);
+            var chipTitleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, chipTitleY),
+                new Vector2(textLeft + textWidth, chipTitleY + chipTitleSize.Y));
+            Marquee.DrawLeft("music.recentChip.title." + song.VideoId, song.Title, textLeft, chipTitleY,
+                textWidth, TextStyles.FootnoteEmphasized, current ? ui.Accent : ui.TitleInk, chipTitleHovering);
+            var chipAuthorY = min.Y + 28f * scale;
+            var chipAuthorSize = Typography.Measure(song.Author, TextStyles.Caption1);
+            var chipAuthorHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, chipAuthorY),
+                new Vector2(textLeft + textWidth, chipAuthorY + chipAuthorSize.Y));
+            Marquee.DrawLeft("music.recentChip.author." + song.VideoId, song.Author, textLeft, chipAuthorY,
+                textWidth, TextStyles.Caption1, ui.MutedInk, chipAuthorHovering);
             if (current)
             {
                 Equalizer.Draw(drawList, new Vector2(max.X - 15f * scale, (min.Y + max.Y) * 0.5f), scale,
@@ -225,11 +232,18 @@ internal sealed partial class MusicApp
             }
 
             var textWidth = cardWidth - 2f * scale;
-            var title = Typography.FitText(song.Title, textWidth, TextStyles.FootnoteEmphasized);
-            Typography.Draw(new Vector2(artMin.X, artMax.Y + 6f * scale), title, current ? ui.Accent : ui.TitleInk,
-                TextStyles.FootnoteEmphasized);
-            var author = Typography.FitText(song.Author, textWidth, TextStyles.Caption1);
-            Typography.Draw(new Vector2(artMin.X, artMax.Y + 24f * scale), author, ui.MutedInk, TextStyles.Caption1);
+            var featTitleY = artMax.Y + 6f * scale;
+            var featTitleSize = Typography.Measure(song.Title, TextStyles.FootnoteEmphasized);
+            var featTitleHovering = ImGui.IsMouseHoveringRect(new Vector2(artMin.X, featTitleY),
+                new Vector2(artMin.X + textWidth, featTitleY + featTitleSize.Y));
+            Marquee.DrawLeft("music.featured.title." + song.VideoId, song.Title, artMin.X, featTitleY,
+                textWidth, TextStyles.FootnoteEmphasized, current ? ui.Accent : ui.TitleInk, featTitleHovering);
+            var featAuthorY = artMax.Y + 24f * scale;
+            var featAuthorSize = Typography.Measure(song.Author, TextStyles.Caption1);
+            var featAuthorHovering = ImGui.IsMouseHoveringRect(new Vector2(artMin.X, featAuthorY),
+                new Vector2(artMin.X + textWidth, featAuthorY + featAuthorSize.Y));
+            Marquee.DrawLeft("music.featured.author." + song.VideoId, song.Author, artMin.X, featAuthorY,
+                textWidth, TextStyles.Caption1, ui.MutedInk, featAuthorHovering);
             if (badgeClicked || UiInteract.Click(min, cardMax, hovered))
             {
                 if (current)
@@ -310,10 +324,10 @@ internal sealed partial class MusicApp
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             }
 
-            var label = Typography.FitText(CatalogLabels.RadioCategory(categories[index].Display),
-                tileWidth - 24f * scale, TextStyles.SubheadlineEmphasized);
-            Typography.Draw(new Vector2(min.X + 12f * scale, min.Y + 10f * scale), label,
-                new Vector4(1f, 1f, 1f, 1f), TextStyles.SubheadlineEmphasized);
+            var label = CatalogLabels.RadioCategory(categories[index].Display);
+            Marquee.DrawLeft("music.categoryTile." + categories[index].Tag, label, min.X + 12f * scale,
+                min.Y + 10f * scale, tileWidth - 24f * scale, TextStyles.SubheadlineEmphasized,
+                new Vector4(1f, 1f, 1f, 1f), hovered);
             if (UiInteract.Click(min, max, hovered))
             {
                 OpenCategory(index);
@@ -420,11 +434,19 @@ internal sealed partial class MusicApp
         var trailing = current ? 50f * scale : 33f * scale;
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - trailing - textLeft;
-        var name = Typography.FitText(station.Name, textWidth, TextStyles.BodyEmphasized);
-        Typography.Draw(new Vector2(textLeft, min.Y + 10f * scale), name, current ? ui.Accent : ui.TitleInk,
-            TextStyles.BodyEmphasized);
-        var subtitle = Typography.FitText(StationSubtitle(station), textWidth, TextStyles.Caption1);
-        Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), subtitle, ui.MutedInk, TextStyles.Caption1);
+        var stationNameY = min.Y + 10f * scale;
+        var stationNameSize = Typography.Measure(station.Name, TextStyles.BodyEmphasized);
+        var stationNameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, stationNameY),
+            new Vector2(textLeft + textWidth, stationNameY + stationNameSize.Y));
+        Marquee.DrawLeft("music.stationRow.name." + station.StreamUrl, station.Name, textLeft, stationNameY,
+            textWidth, TextStyles.BodyEmphasized, current ? ui.Accent : ui.TitleInk, stationNameHovering);
+        var stationSub = StationSubtitle(station);
+        var stationSubY = min.Y + 34f * scale;
+        var stationSubSize = Typography.Measure(stationSub, TextStyles.Caption1);
+        var stationSubHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, stationSubY),
+            new Vector2(textLeft + textWidth, stationSubY + stationSubSize.Y));
+        Marquee.DrawLeft("music.stationRow.subtitle." + station.StreamUrl, stationSub, textLeft,
+            stationSubY, textWidth, TextStyles.Caption1, ui.MutedInk, stationSubHovering);
         if (current)
         {
             Equalizer.Draw(drawList, new Vector2(max.X - 18f * scale, min.Y + rowHeight * 0.5f), scale, 17f * scale,

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Home;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Graphics.Environment;
@@ -15,15 +16,18 @@ internal sealed class WeatherControl : IDisposable
     private readonly IFramework framework;
     private readonly IClientState clientState;
     private readonly ICondition condition;
+    private readonly AppGate installed;
     private byte weatherOverride = NoWeather;
     private int timeOverride = NoTime;
 
-    public WeatherControl(WeatherService weather, IFramework framework, IClientState clientState, ICondition condition)
+    public WeatherControl(WeatherService weather, IFramework framework, IClientState clientState, ICondition condition,
+        AppGate installed)
     {
         this.weather = weather;
         this.framework = framework;
         this.clientState = clientState;
         this.condition = condition;
+        this.installed = installed;
         framework.Update += OnUpdate;
         clientState.TerritoryChanged += OnTerritoryChanged;
     }
@@ -90,6 +94,12 @@ internal sealed class WeatherControl : IDisposable
     {
         if (weatherOverride == NoWeather && timeOverride == NoTime)
         {
+            return;
+        }
+
+        if (!installed.Open)
+        {
+            ClearAll();
             return;
         }
 

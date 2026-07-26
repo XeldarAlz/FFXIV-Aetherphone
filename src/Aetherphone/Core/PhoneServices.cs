@@ -1,11 +1,13 @@
 using Aetherphone.Core.Activity;
 using Aetherphone.Core.Aethernet;
+using Aetherphone.Core.Announcements;
 using Aetherphone.Core.Collections;
 using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Games;
+using Aetherphone.Core.Health;
 using Aetherphone.Core.Inventory;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Maps;
@@ -35,7 +37,7 @@ namespace Aetherphone.Core;
 
 internal sealed class PhoneServices : IDisposable
 {
-    public Home.AppInstaller Installer { get; } = new();
+    public required Home.AppInstaller Installer { get; init; }
     public required Configuration Configuration { get; init; }
     public required ThemeProvider Themes { get; init; }
     public required GameData GameData { get; init; }
@@ -86,11 +88,15 @@ internal sealed class PhoneServices : IDisposable
     public required MusterStore Musters { get; init; }
     public required MusterLauncher MusterLauncher { get; init; }
     public required YellowPagesStore YellowPages { get; init; }
+
+    public required AdInquiryStore AdInquiries { get; init; }
     public required YellowPagesLauncher YellowPagesLauncher { get; init; }
+    public required AnnouncementsLauncher AnnouncementsLauncher { get; init; }
     public required CollectionsCatalogService Collections { get; init; }
     public required InventoryCaptureService InventoryCapture { get; init; }
     public required ActivityTracker Activity { get; init; }
     public required ActivityRingNotifier RingNotifier { get; init; }
+    public required HealthTracker Health { get; init; }
     public required CallHub Calls { get; init; }
     public required PhoneVisibility Visibility { get; init; }
     public required RealtimeSignalBus RealtimeSignals { get; init; }
@@ -105,6 +111,7 @@ internal sealed class PhoneServices : IDisposable
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
         ITextureProvider textures, DirectoryInfo configDirectory, IUnlockState unlockState, ICondition condition)
     {
+        var installer = new Home.AppInstaller();
         var builtInWallpaperDirectory = new DirectoryInfo(
             Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Wallpapers"));
         var customWallpaperDirectory = new DirectoryInfo(Path.Combine(configDirectory.FullName, "Wallpapers"));
@@ -114,18 +121,21 @@ internal sealed class PhoneServices : IDisposable
         var gameData = new GameData(dataManager, objectTable);
         var maps = new MapData(dataManager, clientState);
         var weather = new WeatherService(dataManager, clientState);
-        var weatherControl = new WeatherControl(weather, framework, clientState, condition);
+        var weatherControl = new WeatherControl(weather, framework, clientState, condition,
+            installer.Gate("skywatcher"));
         var soundBundledDirectory = new DirectoryInfo(
             Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Sounds"));
         var soundUserDirectory = new DirectoryInfo(Path.Combine(configDirectory.FullName, "Sounds"));
         var soundLibrary = new SoundLibrary(soundBundledDirectory, soundUserDirectory);
         var sound = new SoundService(configuration, soundLibrary, new SoundEffectPlayer(), framework);
-        var notifications = new NotificationService(sound, configuration, framework);
+        var notifications = new NotificationService(sound, configuration, installer, framework);
         var characterWatch = new CharacterWatch(framework);
         var messageArchive = new MessageArchive(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Messages")));
         var messages = new MessageStore(messageArchive, configuration, characterWatch);
         var linkpearlNotificationGate = new LinkpearlNotificationGate(configuration);
-        var chatBridge = new ChatBridge(messages, notifications, linkpearlNotificationGate, chatGui, gameData);
+        var linkpearlGate = installer.Gate("messages");
+        var chatBridge = new ChatBridge(messages, notifications, linkpearlNotificationGate, chatGui, gameData,
+            linkpearlGate);
         var linkpearlLauncher = new LinkpearlLauncher();
         var velvetLauncher = new VelvetLauncher();
         var dmLauncher = new DmLauncher();
@@ -134,7 +144,7 @@ internal sealed class PhoneServices : IDisposable
         var linkshellMutes = new LinkshellMuteStore(configuration, characterWatch);
         var linkshells = new LinkshellStore(linkshellMutes, characterWatch);
         var linkshellBridge = new LinkshellBridge(linkshells, linkshellMutes, notifications, linkpearlNotificationGate,
-            chatGui, gameData);
+            chatGui, gameData, linkpearlGate);
         var cacheRoot = new DirectoryInfo(Path.Combine(configDirectory.FullName, "cache"));
         cacheRoot.Create();
         var mediaRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "media"));
@@ -154,7 +164,7 @@ internal sealed class PhoneServices : IDisposable
         var marketIndex = new MarketItemIndex(dataManager);
         var market = new MarketboardService(http);
         var marketLauncher = new MarketLauncher();
-        var marketAlerts = new MarketAlertService(market, notifications, configuration);
+        var marketAlerts = new MarketAlertService(market, notifications, configuration, installer.Gate("market"));
         var news = new NewsService(http);
         var radio = new RadioService(http);
         var radioPlayer = new RadioPlayer();
@@ -173,22 +183,28 @@ internal sealed class PhoneServices : IDisposable
         var collections = new CollectionsCatalogService(http, collectionsDisk, dataManager, unlockState, framework);
         var inventoryRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "inventory"));
         var inventoryStore = new InventoryStore(inventoryRoot);
-        var inventoryCapture = new InventoryCaptureService(framework, inventoryStore);
-        var activity = new ActivityTracker(framework, clientState, dutyState, gameData, configDirectory);
-        var ringNotifier = new ActivityRingNotifier(framework, activity, configuration, notifications);
+        var inventoryCapture = new InventoryCaptureService(framework, inventoryStore, installer.Gate("inventory"));
+        var characterGate = installer.Gate("character");
+        var activity = new ActivityTracker(framework, clientState, dutyState, gameData, configDirectory, characterGate);
+        var ringNotifier = new ActivityRingNotifier(framework, activity, configuration, notifications, characterGate);
+        var health = new HealthTracker(framework, characterWatch, notifications, configDirectory);
         var realtimeSignals = new RealtimeSignalBus();
         var visibility = new PhoneVisibility();
         var confirm = new ConfirmService();
-        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals, confirm);
+        var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals,
+            confirm, installer.Gate("message"));
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
             gameData, configuration, confirm);
-        var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm);
+        var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, confirm, installer);
         var musters = new MusterStore(aethernetSession, aethernet.Musters, notifications, configuration,
-            visibility, realtimeSignals);
+            visibility, realtimeSignals, installer.Gate(MusterStore.AppId));
         var yellowPages = new YellowPagesStore(aethernetSession, aethernet.Ads, aethernet.Media, configuration,
-            visibility, realtimeSignals);
+            visibility, realtimeSignals, installer.Gate(YellowPagesStore.AppId));
+        var adInquiries = new AdInquiryStore(aethernetSession, aethernet.Ads, keyVault, conversationKeys,
+            visibility, realtimeSignals, installer.Gate(YellowPagesStore.AppId));
         return new PhoneServices
         {
+            Installer = installer,
             Configuration = configuration,
             Themes = themes,
             GameData = gameData,
@@ -239,11 +255,14 @@ internal sealed class PhoneServices : IDisposable
             Musters = musters,
             MusterLauncher = new MusterLauncher(),
             YellowPages = yellowPages,
+            AdInquiries = adInquiries,
             YellowPagesLauncher = new YellowPagesLauncher(),
+            AnnouncementsLauncher = new AnnouncementsLauncher(),
             Collections = collections,
             InventoryCapture = inventoryCapture,
             Activity = activity,
             RingNotifier = ringNotifier,
+            Health = health,
             Calls = calls,
             Visibility = visibility,
             RealtimeSignals = realtimeSignals,
@@ -267,10 +286,12 @@ internal sealed class PhoneServices : IDisposable
         Collections.Dispose();
         InventoryCapture.Dispose();
         RingNotifier.Dispose();
+        Health.Dispose();
         Activity.Dispose();
         Venues.Dispose();
         Musters.Dispose();
         YellowPages.Dispose();
+        AdInquiries.Dispose();
         SongPlayer.Dispose();
         SongSearch.Dispose();
         RadioPlayer.Dispose();

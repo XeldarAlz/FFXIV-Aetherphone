@@ -85,7 +85,6 @@ internal sealed partial class MusterApp : IPhoneApp
         router.Reset();
         ResetDetailState();
         ResetManageState();
-        filterSheetOpen = false;
         copiedTimer = 0f;
     }
 
@@ -134,6 +133,9 @@ internal sealed partial class MusterApp : IPhoneApp
                 break;
             case MusterScreen.Manage:
                 DrawManage(area);
+                break;
+            case MusterScreen.DataCenter:
+                DrawDataCenters(area);
                 break;
             default:
                 DrawDirectory(area);

@@ -35,15 +35,19 @@ internal sealed partial class ChirperApp
             composeStatus = Loc.T(L.Account.CannotReach);
         }
 
+        var scale = ImGuiHelpers.GlobalScale;
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(quoteTarget is not null ? L.Chirper.QuoteTitle : L.Chirper.NewChirp), back);
+        var title = Loc.T(quoteTarget is not null ? L.Chirper.QuoteTitle : L.Chirper.NewChirp);
+        var actionLabel = store.Posting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Post);
+        var actionReserve = Typography.Measure(actionLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale + 20f * scale;
+        AppHeader.Draw(context, string.Empty, back);
+        AppHeader.DrawTitleWithReserve(area, "chirper.compose.title", title, actionReserve, theme.TextStrong, scale);
         var canPost = !string.IsNullOrWhiteSpace(draft) && !store.Posting;
-        if (ui.HeaderAction(area, store.Posting ? Loc.T(L.Chirper.Saving) : Loc.T(L.Chirper.Post), canPost))
+        if (ui.HeaderAction(area, actionLabel, canPost))
         {
             Submit();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         using (AppSurface.Begin(body))
@@ -69,6 +73,10 @@ internal sealed partial class ChirperApp
 
             var inputLeft = pad + radius * 2f + 12f * scale;
             var inputX = cardMin.X + inputLeft;
+            var nameMaxWidth = MathF.Max(1f, width - inputLeft - pad);
+            displayName = displayName.Length > 0
+                ? Typography.FitText(displayName, nameMaxWidth, 1.05f, FontWeight.SemiBold)
+                : displayName;
             var nameSize = displayName.Length > 0
                 ? Typography.Measure(displayName, 1.05f, FontWeight.SemiBold)
                 : Vector2.Zero;
@@ -120,7 +128,7 @@ internal sealed partial class ChirperApp
             {
                 var quoteMin = new Vector2(inputX, inputTop + inputHeight + 8f * scale);
                 DrawQuotedCard(drawList, quoteMin, inputWidth, QuotedCardHeight(quoteTarget, inputWidth), quoteTarget,
-                    false);
+                    false, "compose.quote");
             }
 
             if (composeEmoji.Open)
@@ -135,14 +143,6 @@ internal sealed partial class ChirperApp
             var emojiCenter = new Vector2(origin.X + 4f * scale + emojiRadius, footerY);
             composeEmoji.DrawToggle(ui, emojiCenter, emojiRadius, Accent, AppPalettes.Chirper.MutedInk,
                 Loc.T(L.Common.Emoji));
-            if (composeStatus.Length > 0)
-            {
-                Typography.Draw(
-                    new Vector2(emojiCenter.X + emojiRadius + 10f * scale,
-                        footerY - Typography.Measure(composeStatus, 0.85f).Y * 0.5f),
-                    composeStatus, theme.Danger, 0.85f);
-            }
-
             var remaining = MaxPostLength - draft.Length;
             var counterColor = remaining < 40
                 ? (remaining < 0 ? theme.Danger : new Vector4(0.95f, 0.65f, 0.20f, 1f))
@@ -151,6 +151,15 @@ internal sealed partial class ChirperApp
             var counterSize = Typography.Measure(counter, 0.9f, FontWeight.Medium);
             Typography.Draw(new Vector2(area.Max.X - 4f * scale - counterSize.X, footerY - counterSize.Y * 0.5f),
                 counter, counterColor, 0.9f, FontWeight.Medium);
+            if (composeStatus.Length > 0)
+            {
+                var statusLeft = emojiCenter.X + emojiRadius + 10f * scale;
+                var statusMaxWidth = MathF.Max(1f, area.Max.X - 8f * scale - counterSize.X - statusLeft);
+                var clippedStatus = Typography.FitText(composeStatus, statusMaxWidth, 0.85f, FontWeight.Regular);
+                Typography.Draw(
+                    new Vector2(statusLeft, footerY - Typography.Measure(clippedStatus, 0.85f).Y * 0.5f),
+                    clippedStatus, theme.Danger, 0.85f);
+            }
         }
     }
 

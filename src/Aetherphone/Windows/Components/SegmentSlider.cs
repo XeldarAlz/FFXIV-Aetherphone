@@ -42,6 +42,9 @@ internal static class SegmentSlider
     private static void DrawSegmentLabel(Rect rect, string label, bool active, Vector4 mutedInk)
     {
         var ink = active ? new Vector4(1f, 1f, 1f, 1f) : mutedInk;
-        Typography.DrawCentered(rect.Center, label, ink, 0.9f, active ? FontWeight.SemiBold : FontWeight.Medium);
+        var weight = active ? FontWeight.SemiBold : FontWeight.Medium;
+        var maxWidth = MathF.Max(1f, rect.Width - 12f * ImGuiHelpers.GlobalScale);
+        var fitted = Typography.FitText(label, maxWidth, 0.9f, weight);
+        Typography.DrawCentered(rect.Center, fitted, ink, 0.9f, weight);
     }
 }

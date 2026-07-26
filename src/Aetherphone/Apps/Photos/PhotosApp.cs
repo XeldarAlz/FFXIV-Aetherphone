@@ -21,6 +21,9 @@ internal sealed partial class PhotosApp : IPhoneApp
     private const long ThumbnailBudgetBytes = 48L * 1024 * 1024;
     private const long FullImageBudgetBytes = 96L * 1024 * 1024;
     private const float SegmentHeight = 34f;
+    // Negative keys avoid any collision with MonthAlbum keys (year*100+month, always positive).
+    // Starting at -2 rather than -1 additionally keeps clear of PhotoView.RecentsKey (-1).
+    private const int FirstCustomAlbumId = 2;
 
     public string Id => "photos";
     public Vector4 Accent => AppAccents.For(Id);
@@ -30,6 +33,7 @@ internal sealed partial class PhotosApp : IPhoneApp
 
     private readonly PhotoLibrary library;
     private readonly ConfirmService confirm;
+    private readonly Configuration configuration;
     private readonly AppSkin ui = new(AppPalettes.Photos);
     private readonly TextureLedger thumbnails = new(ThumbnailBudgetBytes);
     private readonly TextureLedger fullImages = new(FullImageBudgetBytes);
@@ -43,6 +47,24 @@ internal sealed partial class PhotosApp : IPhoneApp
     private readonly List<MonthAlbum> albums = new();
     private readonly List<GridBand> bands = new();
     private readonly string[] segmentLabels = new string[2];
+    private readonly List<CustomAlbum> customAlbums = new();
+    private readonly List<string> customAlbumOrder = new();
+    private readonly Dictionary<string, List<string>> customAlbumPhotos = new(StringComparer.OrdinalIgnoreCase);
+    private readonly DropdownMenu albumMenu = new();
+    private readonly Dictionary<string, int> customAlbumIds = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<int, string[]> cachedCustomAlbumPaths = new();
+    private int nextCustomAlbumId = FirstCustomAlbumId;
+    private string newAlbumDraft = string.Empty;
+    private string renameAlbumDraft = string.Empty;
+    private readonly List<string> pickerSelection = new();
+    private DropdownMenu.Item[]? customAlbumMenuItemsCache;
+    private string? customAlbumMenuItemsLocale;
+    private int? pickerMembershipAlbumKey;
+    private HashSet<string> pickerMembership = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> pickerSelectionOrder = new(StringComparer.OrdinalIgnoreCase);
+    private DropdownMenu.Item[]? photoMenuItemsCache;
+    private string? photoMenuItemsLocale;
+    private string? photoMenuKey;
 
     private PhotoEntry[] entries = Array.Empty<PhotoEntry>();
     private string[] viewerPaths = Array.Empty<string>();
@@ -52,13 +74,15 @@ internal sealed partial class PhotosApp : IPhoneApp
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
 
-    public PhotosApp(PhotoLibrary library, ConfirmService confirm)
+    public PhotosApp(PhotoLibrary library, ConfirmService confirm, Configuration configuration)
     {
         this.library = library;
         this.confirm = confirm;
+        this.configuration = configuration;
         router = new ViewRouter<PhotoView>(PhotoView.Grid());
         drawView = DrawView;
         back = () => router.Pop();
+        LoadCustomAlbums();
     }
 
     public void OnOpened()
@@ -68,6 +92,7 @@ internal sealed partial class PhotosApp : IPhoneApp
         viewerPaths = Array.Empty<string>();
         viewerIndex = 0;
         resetScroll = true;
+        LoadCustomAlbums();
         Refresh();
     }
 
@@ -86,6 +111,8 @@ internal sealed partial class PhotosApp : IPhoneApp
             router.Pop(false);
         }
 
+        albumMenu.Gate();
+
         var scale = ImGuiHelpers.GlobalScale;
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
@@ -102,6 +129,24 @@ internal sealed partial class PhotosApp : IPhoneApp
 
         var content = ContentWithin(area);
         ui.Body(content);
+        if (view.Route == PhotoRoute.CreateAlbum)
+        {
+            DrawCreateAlbumPage(content);
+            return;
+        }
+
+        if (view.Route == PhotoRoute.RenameAlbum)
+        {
+            DrawRenameAlbumPage(content, view.AlbumKey);
+            return;
+        }
+
+        if (view.Route == PhotoRoute.AlbumPicker)
+        {
+            DrawAlbumPicker(content, view.AlbumKey);
+            return;
+        }
+
         if (view.Route == PhotoRoute.Album)
         {
             DrawAlbum(content, view.AlbumKey);
@@ -145,6 +190,7 @@ internal sealed partial class PhotosApp : IPhoneApp
     private void Refresh()
     {
         var paths = library.List();
+        var pathSet = new HashSet<string>(paths, StringComparer.OrdinalIgnoreCase);
         var built = new PhotoEntry[paths.Length];
         for (var index = 0; index < paths.Length; index++)
         {
@@ -154,6 +200,54 @@ internal sealed partial class PhotosApp : IPhoneApp
         Array.Sort(built, static (left, right) => right.Taken.CompareTo(left.Taken));
         entries = built;
         BuildAlbums();
+        var pruned = PruneCustomAlbumPaths(pathSet);
+        BuildCustomAlbums();
+        if (pruned)
+        {
+            SaveCustomAlbums();
+        }
+    }
+    
+    private bool PruneCustomAlbumPaths(HashSet<string> validPaths)
+    {
+        var removedAny = false;
+        foreach (var name in customAlbumOrder)
+        {
+            if (!customAlbumPhotos.TryGetValue(name, out var photos))
+            {
+                continue;
+            }
+            for (var index = photos.Count - 1; index >= 0; index--)
+            {
+                if (validPaths.Contains(photos[index]))
+                {
+                    continue;
+                }
+                photos.RemoveAt(index);
+                removedAny = true;
+            }
+        }
+
+        return removedAny;
+    }
+
+    private void LoadCustomAlbums()
+    {
+        customAlbumOrder.Clear();
+        customAlbumOrder.AddRange(configuration.CustomAlbumOrder);
+        customAlbumPhotos.Clear();
+        foreach (var entry in configuration.CustomAlbumPhotos)
+            customAlbumPhotos[entry.Key] = new List<string>(entry.Value);
+        customAlbumIds.Clear();
+        nextCustomAlbumId = FirstCustomAlbumId;
+    }
+
+    private void SaveCustomAlbums()
+    {
+        configuration.CustomAlbumOrder = new List<string>(customAlbumOrder);
+        configuration.CustomAlbumPhotos = new Dictionary<string, List<string>>(customAlbumPhotos,
+            StringComparer.OrdinalIgnoreCase);
+        configuration.SaveNow();
     }
 
     private void BuildAlbums()
@@ -176,7 +270,219 @@ internal sealed partial class PhotosApp : IPhoneApp
                 index++;
             }
 
-            albums.Add(new MonthAlbum(key, new DateTime(taken.Year, taken.Month, 1), start, index - start));
+            albums.Add(new MonthAlbum(key, start, index - start, new DateTime(taken.Year, taken.Month, 1)));
+        }
+    }
+    
+    private void BuildCustomAlbums()
+    {
+        customAlbums.Clear();
+        foreach (var name in customAlbumOrder)
+        {
+            if (!customAlbumPhotos.TryGetValue(name, out var photos))
+            {
+                continue;
+            }
+            var key = -GetOrAssignCustomAlbumId(name);
+            customAlbums.Add(new CustomAlbum(key, 0, photos.Count, name));
+            var paths = SortedCustomAlbumPaths(key);
+            cachedCustomAlbumPaths[key] = paths;
+        }
+    }
+    
+    private bool TryFindCustomAlbum(int key, out CustomAlbum result)
+    {
+        for (var index = 0; index < customAlbums.Count; index++)
+        {
+            if (customAlbums[index].Key == key)
+            {
+                result = customAlbums[index];
+                return true;
+            }
+        }
+        result = default;
+        return false;
+    }
+    
+    private void CreateCustomAlbumInternal(string name)
+    {
+        name = name.Trim();
+        if (name.Length == 0)
+        {
+            return;
+        }
+        if (ContainsOrdinalIgnoreCase(customAlbumOrder, name))
+        {
+            return;
+        }
+        customAlbumOrder.Add(name);
+        customAlbumPhotos[name] = new List<string>();
+        BuildCustomAlbums();
+        SaveCustomAlbums();
+    }
+
+    private void DeleteCustomAlbumInternal(int key)
+    {
+        
+        if (!TryFindCustomAlbum(key, out var found))
+        {
+            return;
+        }
+        customAlbumOrder.Remove(found.Name);
+        customAlbumPhotos.Remove(found.Name);
+        customAlbumIds.Remove(found.Name);
+        BuildCustomAlbums();
+        SaveCustomAlbums();
+    }
+    
+    private void RenameCustomAlbumInternal(int key, string newName)
+    {
+        newName = newName.Trim();
+        if (newName.Length == 0)
+        {
+            return;
+        }
+        if (!TryFindCustomAlbum(key, out var found))
+        {
+            return;
+        }
+        if (string.Equals(found.Name, newName, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        if (ContainsOrdinalIgnoreCase(customAlbumOrder, newName))
+        {
+            return;
+        }
+        if (!customAlbumPhotos.TryGetValue(found.Name, out var photos))
+        {
+            return;
+        }
+        if (customAlbumIds.TryGetValue(found.Name, out var id))
+        {
+            customAlbumIds.Remove(found.Name);
+            customAlbumIds[newName] = id;
+        }
+        customAlbumOrder[customAlbumOrder.IndexOf(found.Name)] = newName;
+        customAlbumPhotos.Remove(found.Name);
+        customAlbumPhotos[newName] = photos;
+        BuildCustomAlbums();
+        SaveCustomAlbums();
+    }
+
+    private void AddPhotosToCustomAlbum(int key, string[] paths)
+    {
+        if (!TryFindCustomAlbum(key, out var found))
+        {
+            return;
+        }
+        if (!customAlbumPhotos.TryGetValue(found.Name, out var photos))
+        {
+            return;
+        }
+        foreach (var path in paths)
+        {
+            if (!ContainsOrdinalIgnoreCase(photos, path))
+            {
+                photos.Add(path);
+            }
+        }
+        BuildCustomAlbums();
+        SaveCustomAlbums();
+        InvalidatePickerMembership();
+    }
+    
+    private void RemovePhotoFromCustomAlbum(int key, string path)
+    {
+        if (!TryFindCustomAlbum(key, out var found))
+        {
+            return;
+        }
+        if (!customAlbumPhotos.TryGetValue(found.Name, out var photos))
+        {
+            return;
+        }
+        photos.Remove(path);
+        BuildCustomAlbums();
+        SaveCustomAlbums();
+        InvalidatePickerMembership();
+    }
+
+    private string[] SortedCustomAlbumPaths(int key)
+    {
+        if (!TryFindCustomAlbum(key, out var album))
+        {
+            return Array.Empty<string>();
+        }
+        if (!customAlbumPhotos.TryGetValue(album.Name, out var unordered))
+        {
+            return Array.Empty<string>();
+        }
+        var sorted = unordered.ToArray();
+        Array.Sort(sorted, static (left, right) =>
+        {
+            var takenLeft = ResolveTaken(left);
+            var takenRight = ResolveTaken(right);
+            return takenRight.CompareTo(takenLeft);
+        });
+        return sorted;
+    }
+    
+    private void EnsurePickerMembership(int albumKey)
+    {
+        if (pickerMembershipAlbumKey == albumKey)
+        {
+            return;
+        }
+
+        pickerMembership.Clear();
+
+        if (pickerMembershipAlbumKey == albumKey)
+        {
+            return;
+        }
+
+        if (TryFindCustomAlbum(albumKey, out var album) && customAlbumPhotos.TryGetValue(album.Name, out var existing))
+        {
+            pickerMembership.UnionWith(existing);
+        }
+
+        pickerMembershipAlbumKey = albumKey;
+    }
+    
+    private void InvalidatePickerMembership()
+    {
+        pickerMembershipAlbumKey = null;
+    }
+    
+    private void AddToPickerSelection(string path)
+    {
+        pickerSelection.Add(path);
+        pickerSelectionOrder[path] = pickerSelection.Count;
+    }
+    
+    private int GetOrAssignCustomAlbumId(string name)
+    {
+        if (customAlbumIds.TryGetValue(name, out var id))
+            return id;
+
+        id = nextCustomAlbumId++;
+        customAlbumIds[name] = id;
+        return id;
+    }
+    
+    private void RemoveFromPickerSelection(string path)
+    {
+        if (!pickerSelection.Remove(path))
+        {
+            return;
+        }
+
+        pickerSelectionOrder.Remove(path);
+        // Renumber remaining badges so gaps left by the removed item close up (1, 2, 3, ...).
+        for (var index = 0; index < pickerSelection.Count; index++)
+        {
+            pickerSelectionOrder[pickerSelection[index]] = index + 1;
         }
     }
 
@@ -195,6 +501,14 @@ internal sealed partial class PhotosApp : IPhoneApp
     {
         viewerPaths = SlicePaths(sliceStart, sliceCount);
         viewerIndex = Math.Clamp(absoluteIndex - sliceStart, 0, viewerPaths.Length - 1);
+        zoomView.Reset();
+        router.Push(PhotoView.Viewer());
+    }
+    
+    private void OpenViewerFromPaths(string[] paths, int index)
+    {
+        viewerPaths = paths;
+        viewerIndex = Math.Clamp(index, 0, paths.Length - 1);
         zoomView.Reset();
         router.Push(PhotoView.Viewer());
     }
@@ -413,16 +727,32 @@ internal sealed partial class PhotosApp : IPhoneApp
     private readonly struct MonthAlbum
     {
         public readonly int Key;
-        public readonly DateTime Month;
         public readonly int Start;
         public readonly int Count;
+        public readonly DateTime Month;
 
-        public MonthAlbum(int key, DateTime month, int start, int count)
+        public MonthAlbum(int key, int start, int count, DateTime month)
         {
             Key = key;
-            Month = month;
             Start = start;
             Count = count;
+            Month = month;
+        }
+    }
+
+    private readonly struct CustomAlbum
+    {
+        public readonly int Key;
+        public readonly int Start;
+        public readonly int Count;
+        public readonly string Name;
+
+        public CustomAlbum(int key, int start, int count, string name)
+        {
+            Key = key;
+            Start = start;
+            Count = count;
+            Name = name;
         }
     }
 

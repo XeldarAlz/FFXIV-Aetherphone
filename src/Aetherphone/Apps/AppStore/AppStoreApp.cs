@@ -43,7 +43,6 @@ internal sealed partial class AppStoreApp : IPhoneApp
     private const float SearchHeight = 50f;
     private const float InstallSeconds = 0.9f;
     private const int CategoryArtCount = 3;
-    private const string DevAppId = "dev";
     private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 0.96f);
     private static readonly Vector4 TabBarFill = new(0.02f, 0.03f, 0.06f, 0.72f);
 
@@ -259,9 +258,7 @@ internal sealed partial class AppStoreApp : IPhoneApp
         }
     }
 
-    private static bool Listable(IPhoneApp app) =>
-        app.IsAvailable && AppInstaller.CanUninstall(app.Id) &&
-        !string.Equals(app.Id, DevAppId, StringComparison.Ordinal);
+    private static bool Listable(IPhoneApp app) => app.IsAvailable && AppInstaller.CanUninstall(app.Id);
 
     private List<IPhoneApp> Collect(Func<IPhoneApp, bool> predicate)
     {

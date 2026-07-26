@@ -31,13 +31,21 @@ internal static class ContactRow
             lodestone.Avatar(friend.Name, friend.WorldName), 32);
         var textLeft = avatarCenter.X + avatarRadius + Metrics.Space.Md * scale;
         var nameColor = friend.Online ? theme.TextStrong : Palette.WithAlpha(theme.TextStrong, 0.5f);
-        Typography.Draw(new Vector2(textLeft, row.Min.Y + 9f * scale), friend.Name, nameColor, TextStyles.Headline);
         var subtitle = Subtitle(friend);
         var subtitleRight = row.Max.X - (friend.Online ? 24f * scale : 8f * scale);
-        dl.PushClipRect(new Vector2(textLeft, row.Min.Y), new Vector2(subtitleRight, row.Max.Y), true);
-        Typography.Draw(new Vector2(textLeft, row.Min.Y + 30f * scale), subtitle, theme.TextMuted,
-            TextStyles.Subheadline);
-        dl.PopClipRect();
+        var textMaxWidth = subtitleRight - textLeft;
+        var nameY = row.Min.Y + 9f * scale;
+        var nameSize = Typography.Measure(friend.Name, TextStyles.Headline);
+        var nameHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, nameY),
+            new Vector2(textLeft + textMaxWidth, nameY + nameSize.Y));
+        Marquee.DrawLeft("contactrow.name." + friend.Name, friend.Name, textLeft, nameY,
+            textMaxWidth, TextStyles.Headline, nameColor, nameHovering);
+        var subtitleY = row.Min.Y + 30f * scale;
+        var subtitleSize = Typography.Measure(subtitle, TextStyles.Subheadline);
+        var subtitleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, subtitleY),
+            new Vector2(textLeft + textMaxWidth, subtitleY + subtitleSize.Y));
+        Marquee.DrawLeft("contactrow.subtitle." + friend.Name, subtitle, textLeft, subtitleY,
+            textMaxWidth, TextStyles.Subheadline, theme.TextMuted, subtitleHovering);
         if (friend.Online)
         {
             var dotCenter = new Vector2(row.Max.X - 7f * scale, row.Center.Y);

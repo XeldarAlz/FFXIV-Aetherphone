@@ -74,12 +74,17 @@ internal sealed partial class AppStoreApp
         Material.EdgeSquircle(drawList, card.Min, card.Max, rounding, scale, 0.75f);
         DrawCategoryArt(drawList, card, categoryIndex, category, scale);
         var pad = CategoryPad * scale;
-        var label = Typography.FitText(Loc.T(AppStoreCatalog.Name(category)), card.Width - pad * 2f,
-            TextStyles.Headline);
+        var label = Loc.T(AppStoreCatalog.Name(category));
+        var maxLabelWidth = card.Width - pad * 2f;
+        var labelLeft = card.Min.X + pad;
         var labelTop = card.Max.Y - 28f * scale;
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop + 1f * scale), label, CardInkShadow,
-            TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop), label, CardInk, TextStyles.Headline);
+        var labelSize = Typography.Measure(label, TextStyles.Headline);
+        var labelHovering = ImGui.IsMouseHoveringRect(new Vector2(labelLeft, labelTop),
+            new Vector2(labelLeft + MathF.Min(labelSize.X, maxLabelWidth), labelTop + labelSize.Y));
+        Marquee.DrawLeft("appstore.category.label.shadow." + category, label, labelLeft, labelTop + 1f * scale,
+            maxLabelWidth, TextStyles.Headline, CardInkShadow, labelHovering);
+        Marquee.DrawLeft("appstore.category.label." + category, label, labelLeft, labelTop, maxLabelWidth,
+            TextStyles.Headline, CardInk, labelHovering);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

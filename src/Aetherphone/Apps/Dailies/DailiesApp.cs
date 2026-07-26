@@ -313,25 +313,26 @@ internal sealed class DailiesApp : IPhoneApp
 
         var textLeft = innerLeft + tile + 12f * scale;
         var textRight = MathF.Max(textLeft, controlLeft - 12f * scale);
+        var textMaxWidth = MathF.Max(1f, textRight - textLeft);
         var name = Loc.T(item.Label);
         var sublabel = BuildSublabel(item, utcNow);
         var nameColor = complete && tappable ? AppPalettes.Dailies.MutedInk : AppPalettes.Dailies.TitleInk;
+        var textHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, band.Min.Y), new Vector2(textRight, band.Max.Y));
 
-        ImGui.PushClipRect(new Vector2(textLeft, band.Min.Y), new Vector2(textRight, band.Max.Y), true);
         if (sublabel.Length > 0)
         {
-            Typography.Draw(new Vector2(textLeft, band.Center.Y - 17f * scale), name, nameColor, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, band.Center.Y + 4f * scale), sublabel, AppPalettes.Dailies.MutedInk,
+            Marquee.DrawLeft("dailies.row." + item.Id, name, textLeft, band.Center.Y - 17f * scale, textMaxWidth,
+                TextStyles.Headline, nameColor, textHovering);
+            var sublabelText = Typography.FitText(sublabel, textMaxWidth, TextStyles.Subheadline);
+            Typography.Draw(new Vector2(textLeft, band.Center.Y + 4f * scale), sublabelText, AppPalettes.Dailies.MutedInk,
                 TextStyles.Subheadline);
         }
         else
         {
             var nameSize = Typography.Measure(name, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, band.Center.Y - nameSize.Y * 0.5f), name, nameColor,
-                TextStyles.Headline);
+            Marquee.DrawLeft("dailies.row." + item.Id, name, textLeft, band.Center.Y - nameSize.Y * 0.5f, textMaxWidth,
+                TextStyles.Headline, nameColor, textHovering);
         }
-
-        ImGui.PopClipRect();
 
         if (tappable && UiInteract.Click(band.Min, band.Max, hovered))
         {

@@ -6,6 +6,7 @@ internal enum MusterScreen : byte
     Detail,
     Create,
     Manage,
+    DataCenter,
 }
 
 internal readonly record struct MusterRoute(MusterScreen Screen, string? MusterId = null)
@@ -13,6 +14,7 @@ internal readonly record struct MusterRoute(MusterScreen Screen, string? MusterI
     public static readonly MusterRoute Directory = new(MusterScreen.Directory);
     public static readonly MusterRoute Create = new(MusterScreen.Create);
     public static readonly MusterRoute Manage = new(MusterScreen.Manage);
+    public static readonly MusterRoute DataCenter = new(MusterScreen.DataCenter);
 
     public static MusterRoute Detail(string musterId) => new(MusterScreen.Detail, musterId);
 }

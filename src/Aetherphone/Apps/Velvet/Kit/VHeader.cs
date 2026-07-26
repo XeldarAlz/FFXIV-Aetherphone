@@ -17,9 +17,10 @@ internal static class VHeader
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
         var midY = area.Min.Y + Height * scale * 0.5f;
-        var titleSize = Typography.Measure(title, TextStyles.Title3);
-        Typography.Draw(new Vector2(area.Min.X + 4f * scale, midY - titleSize.Y * 0.5f), title, VelvetTheme.TitleInk,
-            TextStyles.Title3);
+        var fittedTitle = Typography.FitText(title, area.Width - 44f * scale, TextStyles.Title3);
+        var titleSize = Typography.Measure(fittedTitle, TextStyles.Title3);
+        Typography.Draw(new Vector2(area.Min.X + 4f * scale, midY - titleSize.Y * 0.5f), fittedTitle,
+            VelvetTheme.TitleInk, TextStyles.Title3);
         var bellCenter = new Vector2(area.Max.X - 20f * scale, midY);
         var clicked = AppSkin.IconButton(bellCenter, 16f * scale, FontAwesomeIcon.Bell.ToIconString(),
             VelvetTheme.TitleInk, AppSkin.Transparent, 0.9f, theme, Loc.T(L.Velvet.Activity), HoverLabelSide.Below);
@@ -41,8 +42,9 @@ internal static class VHeader
         var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
         var back = BackButton.Draw("velvet.back", center, 15f * scale, VelvetTheme.TitleInk, hovered, scale,
             shadow: true);
-        var titleSize = Typography.Measure(title, TextStyles.Title3);
-        Typography.Draw(new Vector2(area.Center.X - titleSize.X * 0.5f, midY - titleSize.Y * 0.5f), title,
+        var fittedTitle = Typography.FitText(title, area.Width - 92f * scale, TextStyles.Title3);
+        var titleSize = Typography.Measure(fittedTitle, TextStyles.Title3);
+        Typography.Draw(new Vector2(area.Center.X - titleSize.X * 0.5f, midY - titleSize.Y * 0.5f), fittedTitle,
             VelvetTheme.TitleInk, TextStyles.Title3);
         if (hovered)
         {

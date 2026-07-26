@@ -52,13 +52,16 @@ internal sealed record UserDto(
     int MessagePolicy = 0,
     bool IsPrivate = false,
     bool FollowRequested = false,
-    int PendingFollowRequests = 0) : IIdentified;
+    int PendingFollowRequests = 0,
+    string Region = "") : IIdentified;
 
 internal sealed record UpdateProfileRequest(string? DisplayName, string? Handle, string? Bio, string? AvatarUrl = null);
 
 internal sealed record UpdateMessagePrivacyRequest(int? MessagePolicy);
 
 internal sealed record UpdateTimeZoneRequest(bool? ShareTimeZone, int? UtcOffsetMinutes);
+
+internal sealed record UpdateRegionRequest(string? Region);
 
 internal sealed record UpdateChatPrivacyRequest(bool? ShareReadReceipts, bool? SharePresence);
 
@@ -412,6 +415,17 @@ internal sealed record PollPage(PollDto[] Items);
 
 internal sealed record PollVoteRequest(int Option);
 
+internal sealed record AnnouncementTranslationDto(string Lang, string Title, string Body);
+
+internal sealed record AnnouncementDto(
+    string Id,
+    string Title,
+    string Body,
+    AnnouncementTranslationDto[] Translations,
+    long CreatedAtUnix) : IIdentified;
+
+internal sealed record AnnouncementPage(AnnouncementDto[] Items);
+
 internal sealed record FeedbackDto(
     string Id,
     string AuthorId,
@@ -422,45 +436,6 @@ internal sealed record FeedbackDto(
     string? AuthorAvatarUrl,
     string Text,
     long CreatedAtUnix) : IIdentified;
-
-internal sealed record DevBoardCardDto(
-    string Id,
-    string Title,
-    string Body,
-    int Status,
-    int SortOrder,
-    string CreatedById,
-    string CreatedByDisplayName,
-    string CreatedByHandle,
-    string? CreatedByAvatarUrl,
-    long CreatedAtUnix,
-    long UpdatedAtUnix) : IIdentified;
-
-internal sealed record DevBoardCards(DevBoardCardDto[] Items);
-
-internal sealed record CreateDevCardRequest(string Title, string Body);
-
-internal sealed record UpdateDevCardRequest(string? Title, string? Body);
-
-internal sealed record MoveDevCardRequest(int Status, string? BeforeId);
-
-internal sealed record DevChatMessageDto(
-    string Id,
-    string SenderId,
-    string SenderDisplayName,
-    string SenderHandle,
-    string? SenderAvatarUrl,
-    string Body,
-    int Kind,
-    int MediaWidth,
-    int MediaHeight,
-    long CreatedAtUnix) : IIdentified;
-
-internal sealed record DevChatPage(DevChatMessageDto[] Items, string? NextCursor);
-
-internal sealed record SendDevChatMessageRequest(string Body, string? MediaKey = null, int MediaWidth = 0, int MediaHeight = 0);
-
-internal sealed record DevMediaUrlDto(string Url, long ExpiresAtUnix);
 
 internal sealed record ContactDto(
     string UserId,

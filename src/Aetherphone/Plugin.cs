@@ -95,10 +95,12 @@ public sealed class Plugin : IDalamudPlugin
             services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false });
             phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
                 () => services.Visibility.IsVisible);
-            timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
-            calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
-            clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
-            reminders = new ReminderService(Cfg, Framework, services.Notifications);
+            timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications, services.Installer.Gate("timers"));
+            calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications,
+                services.Installer.Gate("calendar"));
+            clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications,
+                services.Installer.Gate("clock"));
+            reminders = new ReminderService(Cfg, Framework, services.Notifications, services.Installer.Gate("notes"));
             services.CharacterSwitcher.Start();
             services.CharacterWatch.Start();
             services.Calls.IncomingCallPresented += OnIncomingCall;

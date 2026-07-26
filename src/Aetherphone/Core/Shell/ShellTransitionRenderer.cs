@@ -124,7 +124,7 @@ internal sealed class ShellTransitionRenderer
             if (veilAlpha > 0.001f)
             {
                 var surface = IconTile.Surface(over.Accent);
-                var background = themes.Current.AppBackground;
+                var background = themes.ForApp(over.WantsSystemTheme).AppBackground;
                 var settle = Easing.SmootherStep(Easing.Segment(raw, 0f, 0.4f));
                 var veil = Vector4.Lerp(surface, background, settle);
                 Squircle.Fill(cardDrawList, card.Min, card.Max, rounding,

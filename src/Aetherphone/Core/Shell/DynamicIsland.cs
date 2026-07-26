@@ -222,7 +222,8 @@ internal sealed class DynamicIsland
         var dotCenter = new Vector2(bounds.Min.X + 13f * scale, bounds.Center.Y);
         drawList.AddCircleFilled(dotCenter, (3.4f + 1.2f * pulse) * scale,
             ImGui.GetColorU32(Palette.WithAlpha(CallAccent, alpha)), 16);
-        var label = CallLabel(view);
+        var maxWidth = MathF.Max(1f, bounds.Max.X - 11f * scale - (dotCenter.X + 8f * scale));
+        var label = Typography.FitText(CallLabel(view), maxWidth, 0.82f, FontWeight.Regular);
         var size = Typography.Measure(label, 0.82f);
         Typography.Draw(drawList, new Vector2(bounds.Max.X - size.X - 11f * scale, bounds.Center.Y - size.Y * 0.5f),
             label, Palette.WithAlpha(Ink, alpha), 0.82f);
@@ -242,11 +243,15 @@ internal sealed class DynamicIsland
         var discCenter = new Vector2(left + 18f * scale + discRadius, top + 30f * scale);
         ArtGradient.DrawDisc(drawList, discCenter, discRadius, ArtGradient.FromName(playback.Title), alpha);
         var textLeft = discCenter.X + discRadius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, top + 18f * scale),
-            Typography.FitText(playback.Title, bounds.Max.X - 16f * scale - textLeft, 1.0f, FontWeight.SemiBold),
-            Palette.WithAlpha(theme.TextStrong, alpha), 1.0f, FontWeight.SemiBold);
+        var textMaxWidth = bounds.Max.X - 16f * scale - textLeft;
+        var titleTop = top + 18f * scale;
+        var titleSize = Typography.Measure(playback.Title, 1.0f, FontWeight.SemiBold);
+        var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleTop),
+            new Vector2(textLeft + textMaxWidth, titleTop + titleSize.Y));
+        Marquee.DrawLeft("dynamicisland.music.title", playback.Title, textLeft, titleTop, textMaxWidth,
+            new TextStyle(1.0f, FontWeight.SemiBold), Palette.WithAlpha(theme.TextStrong, alpha), titleHovering);
         Typography.Draw(new Vector2(textLeft, top + 40f * scale),
-            Typography.FitText(playback.Subtitle, bounds.Max.X - 16f * scale - textLeft, 0.8f, FontWeight.Regular),
+            Typography.FitText(playback.Subtitle, textMaxWidth, 0.8f, FontWeight.Regular),
             Palette.WithAlpha(MusicAccent, 0.9f * alpha), 0.8f);
         var active = alpha > ControlThreshold;
         var controlY = top + 66f * scale;

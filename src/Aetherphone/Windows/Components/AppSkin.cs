@@ -85,8 +85,8 @@ internal sealed class AppSkin
         Squircle.Stroke(drawList, min, max, rounding, ImGui.GetColorU32(Palette.CardStroke), 1f);
     }
 
-    public bool PillButton(Rect rect, string label, bool filled) =>
-        PillButtonCore(rect, label, filled, Palette.Accent, Palette.FieldSurface, Palette.TitleInk, Theme);
+    public bool PillButton(Rect rect, string label, bool filled, string? id = null) =>
+        PillButtonCore(rect, label, filled, Palette.Accent, Palette.FieldSurface, Palette.TitleInk, Theme, id);
 
     public static bool PillButton(Rect rect, string label, bool filled, PhoneTheme theme) =>
         PillButtonCore(rect, label, filled, theme.Accent, theme.SurfaceMuted, theme.TextStrong, theme);
@@ -101,8 +101,10 @@ internal sealed class AppSkin
         var drawList = ImGui.GetWindowDrawList();
         var fill = Core.Theme.Palette.WithAlpha(filled ? theme.Accent : theme.GroupedCard, 0.45f);
         Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, theme.TextMuted, 0.9f, FontWeight.SemiBold);
+        var maxLabelWidth = MathF.Max(1f, rect.Width - rect.Height);
+        var fittedLabel = Typography.FitText(label, maxLabelWidth, 0.9f, FontWeight.SemiBold);
+        var textSize = Typography.Measure(fittedLabel, 0.9f, FontWeight.SemiBold);
+        Typography.Draw(rect.Center - textSize * 0.5f, fittedLabel, theme.TextMuted, 0.9f, FontWeight.SemiBold);
         return false;
     }
 
@@ -158,7 +160,7 @@ internal sealed class AppSkin
     }
 
     private static bool PillButtonCore(Rect rect, string label, bool filled, Vector4 accent, Vector4 surface,
-        Vector4 titleInk, PhoneTheme theme)
+        Vector4 titleInk, PhoneTheme theme, string? id = null)
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
@@ -168,8 +170,21 @@ internal sealed class AppSkin
             : (hovered ? HoverFill : surface);
         var ink = filled ? White : titleInk;
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, ink, 0.9f, FontWeight.SemiBold);
+        var maxLabelWidth = MathF.Max(1f, rect.Width - rect.Height);
+        if (id is not null)
+        {
+            var labelStyle = new TextStyle(0.9f, FontWeight.SemiBold);
+            var labelHeight = Typography.Measure(label, labelStyle).Y;
+            Marquee.DrawCenteredAuto(id, label, rect.Center.X, rect.Center.Y - labelHeight * 0.5f, maxLabelWidth,
+                labelStyle, ink);
+        }
+        else
+        {
+            var fittedLabel = Typography.FitText(label, maxLabelWidth, 0.9f, FontWeight.SemiBold);
+            var textSize = Typography.Measure(fittedLabel, 0.9f, FontWeight.SemiBold);
+            Typography.Draw(rect.Center - textSize * 0.5f, fittedLabel, ink, 0.9f, FontWeight.SemiBold);
+        }
+
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -310,8 +325,10 @@ internal sealed class AppSkin
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var height = 34f * scale;
-        Typography.Draw(new Vector2(origin.X, origin.Y + height * 0.5f - 8f * scale), label, Theme.TextStrong, 0.95f);
         var trackWidth = 44f * scale;
+        var labelMaxWidth = width - trackWidth - 12f * scale;
+        Typography.Draw(new Vector2(origin.X, origin.Y + height * 0.5f - 8f * scale),
+            Typography.FitText(label, labelMaxWidth, 0.95f, FontWeight.Regular), Theme.TextStrong, 0.95f);
         var trackHeight = 24f * scale;
         var trackMin = new Vector2(origin.X + width - trackWidth, origin.Y + height * 0.5f - trackHeight * 0.5f);
         var trackMax = new Vector2(trackMin.X + trackWidth, trackMin.Y + trackHeight);
@@ -373,7 +390,7 @@ internal sealed class AppSkin
     {
         var scale = ImGuiHelpers.GlobalScale;
         var height = 28f * scale;
-        var width = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 26f * scale;
+        var width = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + height + 6f * scale;
         var max = new Vector2(area.Max.X - 12f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f + height * 0.5f);
         var min = new Vector2(max.X - width, max.Y - height);
         var rect = new Rect(min, max);
@@ -426,7 +443,9 @@ internal sealed class AppSkin
         Squircle.Fill(drawList, new Vector2(origin.X, origin.Y + topPad + 2f * scale),
             new Vector2(origin.X + barWidth, origin.Y + topPad + 2f * scale + barHeight), barWidth * 0.5f,
             ImGui.GetColorU32(Palette.Accent));
-        Typography.Draw(new Vector2(origin.X + barWidth + 9f * scale, origin.Y + topPad), label, Palette.HeadingInk,
+        var labelMaxWidth = ImGui.GetContentRegionAvail().X - barWidth - 9f * scale;
+        Typography.Draw(new Vector2(origin.X + barWidth + 9f * scale, origin.Y + topPad),
+            Typography.FitText(label, labelMaxWidth, 0.95f, FontWeight.SemiBold), Palette.HeadingInk,
             0.95f, FontWeight.SemiBold);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, topPad + barHeight + (topPad > 0f ? 8f : 10f) * scale));

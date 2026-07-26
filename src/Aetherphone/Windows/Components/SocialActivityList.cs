@@ -69,9 +69,9 @@ internal static class SocialActivityList
         var timeSize = Typography.Measure(timeText, 0.78f);
         var textRight = origin.X + width - pad - timeSize.X - 8f * scale;
         var textWidth = textRight - textLeft;
-        var actor = SocialActivity.ActorLabel(item);
+        var actorLabel = SocialActivity.ActorLabel(item);
         var body = SocialActivity.Body(item);
-        var actorSize = Typography.Measure(actor, 0.95f, FontWeight.SemiBold);
+        var actorSize = Typography.Measure(actorLabel, 0.95f, FontWeight.SemiBold);
         var bodyHeight = body.Length > 0 ? Typography.MeasureWrapped(body, textWidth, 0.88f) : 0f;
         var contentHeight = actorSize.Y + 4f * scale + bodyHeight;
         var rowHeight = MathF.Max(radius * 2f + pad * 2f, contentHeight + pad * 2f);
@@ -85,7 +85,9 @@ internal static class SocialActivityList
         DrawTypeBadge(drawList, avatarCenter + new Vector2(radius - 4f * scale, radius - 4f * scale), item.Type,
             theme, scale);
         var textTop = origin.Y + (rowHeight - contentHeight) * 0.5f;
-        Typography.Draw(new Vector2(textLeft, textTop), actor, theme.TextStrong, 0.95f, FontWeight.SemiBold);
+        var rowHovering = ImGui.IsMouseHoveringRect(origin, rowMax);
+        Marquee.DrawLeft("socialactivity.actor." + item.Id, actorLabel, textLeft, textTop, textWidth,
+            new TextStyle(0.95f, FontWeight.SemiBold), theme.TextStrong, rowHovering);
         Typography.Draw(new Vector2(origin.X + width - pad - timeSize.X, textTop + 2f * scale), timeText,
             palette.MutedInk, 0.78f);
         if (body.Length > 0)

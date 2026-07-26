@@ -2,9 +2,12 @@ namespace Aetherphone.Core.Social;
 
 internal static class ReactionTally
 {
+    public static int At(int[] counts, int kind) => kind >= 0 && kind < counts.Length ? counts[kind] : 0;
+
     public static (int[] Counts, int Total) Shift(int[] source, int previousKind, int nextKind)
     {
-        var counts = (int[])source.Clone();
+        var counts = new int[Math.Max(source.Length, nextKind + 1)];
+        Array.Copy(source, counts, source.Length);
         if (previousKind >= 0 && previousKind < counts.Length && counts[previousKind] > 0)
         {
             counts[previousKind]--;

@@ -92,9 +92,16 @@ internal sealed partial class AethergramApp
     {
         var scale = ImGuiHelpers.GlobalScale;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        var logoSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
-        var logoPos = new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f);
-        Typography.Draw(logoPos, DisplayName, AppPalettes.Aethergram.TitleInk, 1.3f, FontWeight.Bold);
+        var logoLeft = area.Min.X + 16f * scale;
+        var chevronReserve = store.IsSignedIn ? 32f * scale : 0f;
+        var trailingReserve = (store.IsSignedIn ? 148f * scale : 16f * scale) + chevronReserve;
+        var maxLogoWidth = MathF.Max(1f, area.Max.X - trailingReserve - logoLeft);
+        var logoStyle = new TextStyle(1.3f, FontWeight.Bold);
+        var logoHeight = Typography.Measure(DisplayName, logoStyle).Y;
+        var logoPos = new Vector2(logoLeft, rowCenterY - logoHeight * 0.5f);
+        var logoWidth = Marquee.DrawLeftAuto("aethergram.home.logo", DisplayName, logoPos.X, logoPos.Y, maxLogoWidth,
+            logoStyle, AppPalettes.Aethergram.TitleInk);
+        var logoSize = new Vector2(logoWidth, logoHeight);
         if (!store.IsSignedIn)
         {
             return;

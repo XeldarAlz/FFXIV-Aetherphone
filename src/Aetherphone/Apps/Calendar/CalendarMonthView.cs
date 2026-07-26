@@ -148,10 +148,14 @@ internal static class CalendarMonthView
             selectedDate = new DateTime(referenceDate.Year, referenceDate.Month, 1).AddMonths(-1);
         }
 
-        var monthSize = Typography.Measure(monthName, TextStyles.Title3);
+        var isCurrentMonth = referenceDate.Year == today.Year && referenceDate.Month == today.Month;
+        var todayPillReserve = isCurrentMonth ? 0f : TodayButtonWidth(scale) + 4f * scale;
+        var monthMaxWidth = MathF.Max(1f, gridWidth - 76f * scale - todayPillReserve);
+        var monthFitted = Typography.FitText(monthName, monthMaxWidth, TextStyles.Title3);
+        var monthSize = Typography.Measure(monthFitted, TextStyles.Title3);
         Typography.Draw(new Vector2(origin.X + gridWidth * 0.5f - monthSize.X * 0.5f,
                 navY + NavHeight * scale * 0.5f - monthSize.Y * 0.5f),
-            monthName, ui.TitleInk, TextStyles.Title3);
+            monthFitted, ui.TitleInk, TextStyles.Title3);
 
         var rightChevronOrigin = new Vector2(origin.X + gridWidth - 30f * scale, navY);
         if (DrawNavChevron(ui, drawList, rightChevronOrigin, ">", scale))
@@ -160,7 +164,6 @@ internal static class CalendarMonthView
             selectedDate = new DateTime(referenceDate.Year, referenceDate.Month, 1).AddMonths(1);
         }
 
-        var isCurrentMonth = referenceDate.Year == today.Year && referenceDate.Month == today.Month;
         if (!isCurrentMonth)
         {
             var rightChevronMinX = rightChevronOrigin.X + 4f * scale;
@@ -168,6 +171,14 @@ internal static class CalendarMonthView
         }
 
         return NavHeight * scale;
+    }
+
+    private static float TodayButtonWidth(float scale)
+    {
+        var todayText = Loc.T(L.Calendar.Today);
+        var textSize = Typography.Measure(todayText, TextStyles.FootnoteEmphasized.Scale,
+            TextStyles.FootnoteEmphasized.Weight);
+        return textSize.X + 8f * scale * 2f + 6f * scale;
     }
 
     private static void DrawTodayButton(AppSkin ui, ImDrawListPtr drawList, float rightLimitX, float navY,

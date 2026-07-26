@@ -159,7 +159,8 @@ internal sealed partial class MarketApp
         var card = GroupCard.Begin(frameTheme, alertBuffer.Count, MarketRowViews.DataRowHeight);
         for (var alertIndex = 0; alertIndex < alertBuffer.Count; alertIndex++)
         {
-            var action = MarketRowViews.AlertRow(card.NextRow(), alertBuffer[alertIndex], textures, frameTheme);
+            var action = MarketRowViews.AlertRow(card.NextRow(), alertBuffer[alertIndex], alertIndex, textures,
+                frameTheme);
             if (action == MarketRowAction.Open)
             {
                 if (index.TryGet(alertBuffer[alertIndex].ItemId, out var item))

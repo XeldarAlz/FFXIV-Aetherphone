@@ -1,6 +1,5 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Theme;
@@ -8,59 +7,48 @@ using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Muster;
 
 internal sealed partial class MusterApp
 {
-    private const float PinnedCardHeight = 58f;
+    private const float PinnedCardHeight = 68f;
     private const float ControlRowHeight = 42f;
-    private const float GoingRowHeight = 48f;
+    private const float GoingRowHeight = 54f;
     private const float ChipHeight = 32f;
-    private const float SheetRevealSeconds = 0.18f;
     private const int SectionFallbackRebuildSeconds = 30;
-
-    private static readonly Vector4 SheetWhite = new(1f, 1f, 1f, 1f);
-    private static readonly Vector4 SheetHoverFill = new(1f, 1f, 1f, 0.16f);
-    private static readonly Vector4 SheetGhostStroke = new(1f, 1f, 1f, 0.28f);
 
     private readonly List<MusterDto> goingSection = new();
     private readonly List<MusterDto> friendSection = new();
     private readonly List<MusterDto> liveSection = new();
     private readonly List<MusterDto> soonSection = new();
-    private readonly string[] chipLabels = new string[12];
-    private readonly bool[] chipActive = new bool[12];
+    private readonly string[] chipLabels = new string[16];
+    private readonly bool[] chipActive = new bool[16];
     private readonly string[] scopeLabels = new string[3];
+    private readonly ChipRail categoryRail = new();
+    private readonly PullToRefresh directoryRefresh = new();
     private MusterDto[] lastContacts = Array.Empty<MusterDto>();
     private MusterDto[] lastDirectory = Array.Empty<MusterDto>();
     private MusterDto[] lastGoing = Array.Empty<MusterDto>();
     private MusterDto? lastMine;
     private long nextSectionRebuildUnix;
-    private bool filterSheetOpen;
-    private double filterSheetOpenedAt;
-    private int filterSheetOpenedFrame;
-    private int lastFilterMask = -1;
-    private string filterCountText = string.Empty;
 
     private void DrawDirectory(Rect area)
     {
-        if (filterSheetOpen)
-        {
-            UiInteract.BlockThisFrame();
-        }
-
         var scale = ImGuiHelpers.GlobalScale;
         var nowUnix = NowUnix();
-        var currentDataCenterId = MusterWorlds.CurrentDataCenterId();
+        var currentDataCenterId = store.CurrentDataCenterId;
         DrawDirectoryHeader(area, scale);
         var controlsTop = area.Min.Y + AppHeader.Height * scale;
         DrawScopeRow(area, controlsTop, scale);
         var body = new Rect(new Vector2(area.Min.X, controlsTop + ControlRowHeight * scale), area.Max);
         EnsureSections(nowUnix);
-        using (AppSurface.Begin(body))
+        using (var surface = AppSurface.Begin(body))
         {
+            directoryRefresh.Draw(body, surface.Pull, surface.Dragging, store.Syncing || store.DirectoryLoading,
+                AppPalettes.Muster.MutedInk, RefreshEverything);
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Xs * scale));
+            DrawCategoryRail(scale);
             if (store.Mine is { } mine)
             {
                 DrawMinePinned(mine, nowUnix, scale);
@@ -109,8 +97,6 @@ internal sealed partial class MusterApp
         {
             router.Push(MusterRoute.Create);
         }
-
-        DrawFilterSheet(area, scale);
     }
 
     private void DrawDirectoryHeader(Rect area, float scale)
@@ -128,9 +114,14 @@ internal sealed partial class MusterApp
         if (ui.IconButton(actionCenter, 14f * scale, FontAwesomeIcon.Sync.ToIconString(),
                 AppPalettes.Muster.BodyInk, AppSkin.Transparent, 0.9f))
         {
-            store.SyncNow();
-            store.RefreshDirectory();
+            RefreshEverything();
         }
+    }
+
+    private void RefreshEverything()
+    {
+        store.SyncNow();
+        store.RefreshDirectory();
     }
 
     private void DrawScopeRow(Rect area, float top, float scale)
@@ -140,7 +131,10 @@ internal sealed partial class MusterApp
             new Vector2(area.Max.X - inset, top + ControlRowHeight * scale));
         var pillSide = 32f * scale;
         var gap = Metrics.Space.Sm * scale;
-        scopeLabels[0] = Loc.T(L.Muster.ScopeMyDc);
+        var pinned = configuration.MusterDataCenterId != 0
+            ? MusterDataCenters.Name(configuration.MusterDataCenterId)
+            : string.Empty;
+        scopeLabels[0] = pinned.Length > 0 ? pinned : Loc.T(L.Muster.ScopeMyDc);
         scopeLabels[1] = Loc.T(L.Muster.ScopeRegion);
         scopeLabels[2] = Loc.T(L.Muster.ScopeEverywhere);
         var stripRect = new Rect(row.Min, new Vector2(row.Max.X - pillSide - gap, row.Max.Y));
@@ -153,227 +147,56 @@ internal sealed partial class MusterApp
             store.RefreshDirectory();
         }
 
-        DrawFiltersPill(new Vector2(row.Max.X - pillSide * 0.5f, row.Center.Y), pillSide * 0.5f, scale);
+        DrawDataCenterPill(new Vector2(row.Max.X - pillSide * 0.5f, row.Center.Y), pillSide * 0.5f, pinned.Length > 0);
     }
 
-    private void DrawFiltersPill(Vector2 center, float radius, float scale)
+    private void DrawDataCenterPill(Vector2 center, float radius, bool pinned)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var mask = configuration.MusterCategoryFilter;
-        if (mask != lastFilterMask)
-        {
-            lastFilterMask = mask;
-            filterCountText = BitOperations.PopCount((uint)mask).ToString(Loc.Culture);
-        }
-
-        var active = mask != 0;
         var corner = new Vector2(radius, radius);
         var hovered = UiInteract.Hover(center - corner, center + corner);
-        var fill = active
+        var fill = pinned
             ? Palette.WithAlpha(ui.Accent, hovered ? 0.36f : 0.26f)
-            : hovered ? SheetHoverFill : AppPalettes.Muster.FieldSurface;
+            : hovered ? ui.HoverTint : AppPalettes.Muster.FieldSurface;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 32);
-        AppSkin.Icon(drawList, center, FontAwesomeIcon.Filter.ToIconString(),
-            active ? ui.Accent : AppPalettes.Muster.BodyInk, 0.68f);
-        if (active)
-        {
-            var badgeCenter = center + new Vector2(radius * 0.72f, -radius * 0.72f);
-            drawList.AddCircleFilled(badgeCenter, 7f * scale, ImGui.GetColorU32(ui.Accent), 20);
-            Typography.DrawCentered(drawList, badgeCenter, filterCountText, SheetWhite, 0.62f, FontWeight.SemiBold);
-        }
-
+        AppSkin.Icon(drawList, center, FontAwesomeIcon.GlobeAmericas.ToIconString(),
+            pinned ? ui.Accent : AppPalettes.Muster.BodyInk, 0.68f);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        HoverTooltip.Show(new Rect(center - corner, center + corner), Loc.T(L.Muster.Filters),
+        HoverTooltip.Show(new Rect(center - corner, center + corner), Loc.T(L.Muster.DataCenterSection),
             HoverLabelSide.Above);
         if (UiInteract.Click(center - corner, center + corner, hovered))
         {
-            filterSheetOpen = true;
-            filterSheetOpenedAt = ImGui.GetTime();
-            filterSheetOpenedFrame = ImGui.GetFrameCount();
+            router.Push(MusterRoute.DataCenter);
         }
     }
 
-    private void DrawFilterSheet(Rect area, float scale)
+    private void DrawCategoryRail(float scale)
     {
-        if (!filterSheetOpen)
+        var categories = MusterCategories.All;
+        var mask = configuration.MusterCategoryFilter;
+        chipLabels[0] = Loc.T(L.Muster.FilterAll);
+        chipActive[0] = mask == 0;
+        for (var index = 0; index < categories.Length; index++)
+        {
+            chipLabels[index + 1] = Loc.T(MusterCategories.Label(categories[index]));
+            chipActive[index + 1] = (mask & (1 << categories[index])) != 0;
+        }
+
+        var count = categories.Length + 1;
+        var tapped = categoryRail.Draw(ui, chipLabels.AsSpan(0, count), chipActive.AsSpan(0, count));
+        ImGui.Dummy(new Vector2(0f, Metrics.Space.Sm * scale));
+        if (tapped < 0)
         {
             return;
         }
 
-        var screen = SceneChrome.ScreenFrom(area, theme, scale);
-        ImGui.SetCursorScreenPos(area.Min);
-        using var overlay = ImRaii.Child("##musterFilterSheet", area.Size, false,
-            ImGuiWindowFlags.NoBackground | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse);
-        var drawList = ImGui.GetWindowDrawList();
-        var reveal = Easing.EaseOutQuint(Math.Clamp(
-            (float)((ImGui.GetTime() - filterSheetOpenedAt) / SheetRevealSeconds), 0f, 1f));
-        drawList.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.45f * reveal)),
-            theme.ScreenRounding * scale);
-        var categories = MusterCategories.All;
-        for (var index = 0; index < categories.Length; index++)
-        {
-            chipLabels[index] = Loc.T(MusterCategories.Label(categories[index]));
-            chipActive[index] = (configuration.MusterCategoryFilter & (1 << categories[index])) != 0;
-        }
-
-        var margin = 10f * scale;
-        var pad = Metrics.Space.Lg * scale;
-        var contentWidth = area.Width - margin * 2f - pad * 2f;
-        var chipsHeight = MeasureSheetChips(categories.Length, contentWidth, scale);
-        var titleHeight = 30f * scale;
-        var doneHeight = 44f * scale;
-        var sheetHeight = pad + titleHeight + Metrics.Space.Sm * scale + chipsHeight + Metrics.Space.Md * scale
-            + doneHeight + pad;
-        var slide = (1f - reveal) * (sheetHeight + margin);
-        var sheetMin = new Vector2(area.Min.X + margin, area.Max.Y - margin - sheetHeight + slide);
-        var sheetMax = new Vector2(area.Max.X - margin, area.Max.Y - margin + slide);
-        ui.PaintGradient(drawList, new Rect(sheetMin, sheetMax), screen, Metrics.Radius.Lg * scale);
-        ui.Card(drawList, sheetMin, sheetMax, Metrics.Radius.Lg * scale, elevated: true);
-        var titleTop = sheetMin.Y + pad;
-        Typography.Draw(drawList, new Vector2(sheetMin.X + pad, titleTop), Loc.T(L.Muster.Filters),
-            AppPalettes.Muster.TitleInk, TextStyles.Headline);
-        var clearLabel = Loc.T(L.Muster.ClearFilters);
-        var clearWidth = Typography.Measure(clearLabel, 0.85f, FontWeight.SemiBold).X + 22f * scale;
-        var clearRect = new Rect(new Vector2(sheetMax.X - pad - clearWidth, titleTop - 3f * scale),
-            new Vector2(sheetMax.X - pad, titleTop + 23f * scale));
-        if (SheetGhostButton(drawList, clearRect, clearLabel) && configuration.MusterCategoryFilter != 0)
-        {
-            configuration.MusterCategoryFilter = 0;
-            configuration.Save();
-            store.RefreshDirectory();
-        }
-
-        var chipsTop = titleTop + titleHeight + Metrics.Space.Sm * scale;
-        var tapped = DrawSheetChips(drawList, new Vector2(sheetMin.X + pad, chipsTop), categories.Length,
-            contentWidth, scale);
-        if (tapped >= 0)
-        {
-            configuration.MusterCategoryFilter ^= 1 << categories[tapped];
-            configuration.Save();
-            store.RefreshDirectory();
-        }
-
-        var doneTop = chipsTop + chipsHeight + Metrics.Space.Md * scale;
-        var doneRect = new Rect(new Vector2(sheetMin.X + pad, doneTop), new Vector2(sheetMax.X - pad,
-            doneTop + doneHeight));
-        if (SheetPillButton(drawList, doneRect, Loc.T(L.Muster.Done)))
-        {
-            filterSheetOpen = false;
-        }
-
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(sheetMin, sheetMax, false)
-            && ImGui.GetFrameCount() != filterSheetOpenedFrame)
-        {
-            filterSheetOpen = false;
-        }
-    }
-
-    private float MeasureSheetChips(int count, float width, float scale)
-    {
-        var gap = Metrics.Space.Sm * scale;
-        var chipHeight = ChipHeight * scale;
-        var cursorX = 0f;
-        var lineTop = 0f;
-        for (var index = 0; index < count; index++)
-        {
-            var chipWidth = Typography.Measure(chipLabels[index], 0.85f, FontWeight.Medium).X + 26f * scale;
-            if (cursorX + chipWidth > width && cursorX > 0f)
-            {
-                cursorX = 0f;
-                lineTop += chipHeight + gap;
-            }
-
-            cursorX += chipWidth + gap;
-        }
-
-        return lineTop + chipHeight;
-    }
-
-    private int DrawSheetChips(ImDrawListPtr drawList, Vector2 origin, int count, float width, float scale)
-    {
-        var gap = Metrics.Space.Sm * scale;
-        var chipHeight = ChipHeight * scale;
-        var right = origin.X + width;
-        var cursorX = origin.X;
-        var lineTop = origin.Y;
-        var tapped = -1;
-        for (var index = 0; index < count; index++)
-        {
-            var label = chipLabels[index];
-            var textSize = Typography.Measure(label, 0.85f, FontWeight.Medium);
-            var chipWidth = textSize.X + 26f * scale;
-            if (cursorX + chipWidth > right && cursorX > origin.X)
-            {
-                cursorX = origin.X;
-                lineTop += chipHeight + gap;
-            }
-
-            var min = new Vector2(cursorX, lineTop);
-            var max = new Vector2(cursorX + chipWidth, lineTop + chipHeight);
-            var hovered = ImGui.IsMouseHoveringRect(min, max, false);
-            var fill = chipActive[index]
-                ? (hovered ? Palette.Mix(ui.Accent, SheetWhite, 0.10f) : ui.Accent)
-                : hovered ? SheetHoverFill : AppPalettes.Muster.FieldSurface;
-            Squircle.Fill(drawList, min, max, chipHeight * 0.5f, ImGui.GetColorU32(fill));
-            var ink = chipActive[index] ? SheetWhite : hovered ? AppPalettes.Muster.TitleInk
-                : AppPalettes.Muster.BodyInk;
-            Typography.Draw(drawList, new Vector2(min.X + (chipWidth - textSize.X) * 0.5f,
-                lineTop + (chipHeight - textSize.Y) * 0.5f), label, ink, 0.85f, FontWeight.Medium);
-            if (hovered)
-            {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    tapped = index;
-                }
-            }
-
-            cursorX = max.X + gap;
-        }
-
-        return tapped;
-    }
-
-    private bool SheetPillButton(ImDrawListPtr drawList, Rect rect, string label)
-    {
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max, false);
-        var fill = hovered ? Palette.Mix(ui.Accent, SheetWhite, 0.12f) : ui.Accent;
-        Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));
-        var textSize = Typography.Measure(label, 0.9f, FontWeight.SemiBold);
-        Typography.Draw(drawList, rect.Center - textSize * 0.5f, label, SheetWhite, 0.9f, FontWeight.SemiBold);
-        if (!hovered)
-        {
-            return false;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
-    }
-
-    private bool SheetGhostButton(ImDrawListPtr drawList, Rect rect, string label)
-    {
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max, false);
-        var radius = rect.Height * 0.5f;
-        if (hovered)
-        {
-            Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(SheetHoverFill));
-        }
-
-        Squircle.Stroke(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(SheetGhostStroke), 1f);
-        var textSize = Typography.Measure(label, 0.85f, FontWeight.SemiBold);
-        Typography.Draw(drawList, rect.Center - textSize * 0.5f, label, AppPalettes.Muster.TitleInk, 0.85f,
-            FontWeight.SemiBold);
-        if (!hovered)
-        {
-            return false;
-        }
-
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        configuration.MusterCategoryFilter = tapped == 0 ? 0 : mask ^ (1 << categories[tapped - 1]);
+        configuration.Save();
+        store.RefreshDirectory();
     }
 
     private void DrawMinePinned(MusterDto mine, long nowUnix, float scale)
@@ -383,23 +206,36 @@ internal sealed partial class MusterApp
         var width = ImGui.GetContentRegionAvail().X;
         var height = PinnedCardHeight * scale;
         var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-        var rounding = Metrics.Radius.Lg * scale;
-        ui.Card(drawList, card.Min, card.Max, rounding, elevated: true);
-        var tileSide = 32f * scale;
-        var tileCenter = new Vector2(card.Min.X + 14f * scale + tileSide * 0.5f, card.Center.Y);
+        var rounding = Metrics.Radius.Card * scale * 1.15f;
+        var hovered = UiInteract.Hover(card.Min, card.Max);
+        Elevation.Card(drawList, card.Min, card.Max, rounding, scale, hovered ? 1f : 0.7f);
+        Squircle.FillVerticalGradient(drawList, card.Min, card.Max, rounding,
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, hovered ? 0.30f : 0.24f)),
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.07f)));
+        Squircle.Stroke(drawList, card.Min, card.Max, rounding,
+            ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, 0.40f)), 1f * scale);
+        var tileSide = 38f * scale;
+        var tileCenter = new Vector2(card.Min.X + 15f * scale + tileSide * 0.5f, card.Center.Y);
         IconTile.Draw(tileCenter, tileSide, IconTile.Surface(ui.Accent), MusterCategories.Icon(mine.Category));
-        var textLeft = tileCenter.X + tileSide * 0.5f + 12f * scale;
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 10f * scale), Loc.T(L.Muster.YourMuster),
-            AppPalettes.Muster.TitleInk, TextStyles.Headline);
+        var textLeft = tileCenter.X + tileSide * 0.5f + 13f * scale;
+        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 13f * scale), Loc.T(L.Muster.YourMuster),
+            AppPalettes.Muster.TitleInk, TextStyles.Title3);
         var live = mine.StartsAtUnix <= nowUnix;
         var status = live
             ? Loc.T(L.Common.Live)
             : Loc.T(L.Muster.StartsIn, MusterText.Span(mine.StartsAtUnix - nowUnix));
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 31f * scale), status,
-            live ? MusterCard.LiveGreen : ui.Accent, TextStyles.FootnoteEmphasized);
+        var statusLeft = textLeft;
+        if (live)
+        {
+            MusterCard.DrawLiveDot(drawList, new Vector2(textLeft + 4f * scale, card.Min.Y + 45f * scale), scale);
+            statusLeft += 14f * scale;
+        }
+
+        var statusText = $"{status} · {Loc.T(L.Muster.GoingCount, mine.RsvpCount)}";
+        Typography.Draw(drawList, new Vector2(statusLeft, card.Min.Y + 38f * scale), statusText,
+            live ? MusterCard.LiveGreen : AppPalettes.Muster.BodyInk, TextStyles.SubheadlineEmphasized);
         AppSkin.Icon(drawList, new Vector2(card.Max.X - 20f * scale, card.Center.Y),
             FontAwesomeIcon.ChevronRight.ToIconString(), AppPalettes.Muster.MutedInk, 0.7f);
-        var hovered = UiInteract.Hover(card.Min, card.Max);
         if (hovered)
         {
             UiInteract.HoverHighlight(drawList, card.Min, card.Max, rounding);
@@ -408,7 +244,7 @@ internal sealed partial class MusterApp
 
         if (UiInteract.Click(card.Min, card.Max, hovered))
         {
-            router.Push(MusterRoute.Manage);
+            OpenManage();
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -430,29 +266,36 @@ internal sealed partial class MusterApp
         var width = ImGui.GetContentRegionAvail().X;
         var height = GoingRowHeight * scale;
         var card = new Rect(origin, new Vector2(origin.X + width, origin.Y + height));
-        var rounding = Metrics.Radius.Md * scale;
-        ui.Card(drawList, card.Min, card.Max, rounding);
-        var pad = 12f * scale;
-        var avatarRadius = 14f * scale;
+        var rounding = Metrics.Radius.Card * scale;
+        var hovered = UiInteract.Hover(card.Min, card.Max);
+        ui.Card(drawList, card.Min, card.Max, rounding, elevated: true);
+        var pad = 13f * scale;
+        var avatarRadius = 16f * scale;
         var avatarCenter = new Vector2(card.Min.X + pad + avatarRadius, card.Center.Y);
-        AvatarView.DrawRemote(drawList, avatarCenter, avatarRadius, theme, muster.HostCharacter, muster.HostWorld,
-            null, images, lodestone, 0.8f, 32);
+        AvatarView.DrawRemote(drawList, avatarCenter, avatarRadius, theme, MusterText.HostLabel(muster), muster.HostWorld,
+            null, images, lodestone, 0.9f, 32);
         var live = muster.StartsAtUnix <= nowUnix;
         var status = live
             ? Loc.T(L.Common.Live)
             : Loc.T(L.Muster.StartsIn, MusterText.Span(muster.StartsAtUnix - nowUnix));
         var statusSize = Typography.Measure(status, TextStyles.FootnoteEmphasized);
-        Typography.Draw(drawList, new Vector2(card.Max.X - pad - statusSize.X, card.Center.Y - statusSize.Y * 0.5f),
-            status, live ? MusterCard.LiveGreen : ui.Accent, TextStyles.FootnoteEmphasized);
-        var textLeft = avatarCenter.X + avatarRadius + 10f * scale;
-        var textWidth = card.Max.X - pad - statusSize.X - 8f * scale - textLeft;
-        var identity = Typography.FitText(MusterText.Identity(muster), textWidth, TextStyles.SubheadlineEmphasized);
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 8f * scale), identity,
-            AppPalettes.Muster.TitleInk, TextStyles.SubheadlineEmphasized);
-        var place = Typography.FitText(MusterText.Place(muster), textWidth, TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 26f * scale), place,
-            AppPalettes.Muster.MutedInk, TextStyles.Footnote);
-        var hovered = UiInteract.Hover(card.Min, card.Max);
+        var statusLeft = card.Max.X - pad - statusSize.X;
+        Typography.Draw(drawList, new Vector2(statusLeft, card.Center.Y - statusSize.Y * 0.5f), status,
+            live ? MusterCard.LiveGreen : ui.Accent, TextStyles.FootnoteEmphasized);
+        if (live)
+        {
+            MusterCard.DrawLiveDot(drawList, new Vector2(statusLeft - 11f * scale, card.Center.Y), scale);
+            statusLeft -= 16f * scale;
+        }
+
+        var textLeft = avatarCenter.X + avatarRadius + 11f * scale;
+        var textWidth = statusLeft - 8f * scale - textLeft;
+        var identity = Typography.FitText(MusterText.Identity(muster), textWidth, TextStyles.Headline);
+        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 9f * scale), identity,
+            AppPalettes.Muster.TitleInk, TextStyles.Headline);
+        var place = Typography.FitText(MusterText.Place(muster), textWidth, TextStyles.Subheadline);
+        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 29f * scale), place,
+            AppPalettes.Muster.MutedInk, TextStyles.Subheadline);
         if (hovered)
         {
             UiInteract.HoverHighlight(drawList, card.Min, card.Max, rounding);

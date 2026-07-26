@@ -9,6 +9,9 @@ internal sealed class LodestoneService : IDisposable
 {
     internal static readonly TimeSpan NetStoneTimeout = TimeSpan.FromSeconds(20);
     private static readonly TimeSpan InitRetryFor = TimeSpan.FromMinutes(1);
+    private static readonly TimeSpan UnresolvedRetryAfter = TimeSpan.FromMinutes(10);
+    private const int IdIndexVersion = 2;
+    private const string ImageKeyVersion = "v2";
     private readonly Configuration configuration;
     private readonly HttpService http;
     private readonly MediaCache media;
@@ -16,7 +19,7 @@ internal sealed class LodestoneService : IDisposable
     private readonly string idIndexPath;
     private readonly object idSync = new();
     private readonly Dictionary<string, string> resolvedIds = new(StringComparer.OrdinalIgnoreCase);
-    private readonly HashSet<string> unresolved = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, DateTime> unresolvedAt = new(StringComparer.OrdinalIgnoreCase);
     private bool idsLoaded;
     private readonly SemaphoreSlim clientGate = new(1, 1);
     private LodestoneClient? client;
@@ -29,11 +32,35 @@ internal sealed class LodestoneService : IDisposable
         this.media = media;
         throttle = new RequestThrottle(1, TimeSpan.FromMilliseconds(1200));
         idIndexPath = Path.Combine(cacheRoot.FullName, "lodestone-ids.tsv");
+        PurgeStaleIdIndex();
     }
 
-    public string? TryGetCachedId(string name, string world)
+    private void PurgeStaleIdIndex()
     {
-        if (name.Length == 0 || world.Length == 0)
+        if (configuration.LodestoneIdIndexVersion >= IdIndexVersion)
+        {
+            return;
+        }
+
+        try
+        {
+            if (File.Exists(idIndexPath))
+            {
+                File.Delete(idIndexPath);
+            }
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"Lodestone id index purge failed: {exception.Message}");
+        }
+
+        configuration.LodestoneIdIndexVersion = IdIndexVersion;
+        configuration.Save();
+    }
+
+    public string? TryGetCachedId(string? name, string? world)
+    {
+        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(world))
         {
             return null;
         }
@@ -46,13 +73,13 @@ internal sealed class LodestoneService : IDisposable
         }
     }
 
-    public AvatarHandle Avatar(string name, string world) => Image(name, world, false);
-    public AvatarHandle Portrait(string name, string world) => Image(name, world, true);
+    public AvatarHandle Avatar(string? name, string? world) => Image(name, world, false);
+    public AvatarHandle Portrait(string? name, string? world) => Image(name, world, true);
 
-    public bool TryGetCachedId(string name, string world, out string id)
+    public bool TryGetCachedId(string? name, string? world, out string id)
     {
         id = string.Empty;
-        if (name.Length == 0 || world.Length == 0)
+        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(world))
         {
             return false;
         }
@@ -89,14 +116,14 @@ internal sealed class LodestoneService : IDisposable
 
     public Task<LodestoneClient?> ClientAsync(CancellationToken token) => EnsureClientAsync(token);
 
-    private AvatarHandle Image(string name, string world, bool fullBody)
+    private AvatarHandle Image(string? name, string? world, bool fullBody)
     {
-        if (!configuration.ShowLodestonePortraits || name.Length == 0 || world.Length == 0)
+        if (!configuration.ShowLodestonePortraits || string.IsNullOrEmpty(name) || string.IsNullOrEmpty(world))
         {
             return AvatarHandle.Disabled;
         }
 
-        var key = $"lodestone:{(fullBody ? "portrait" : "avatar")}:{name}@{world}".ToLowerInvariant();
+        var key = $"lodestone:{ImageKeyVersion}:{(fullBody ? "portrait" : "avatar")}:{name}@{world}".ToLowerInvariant();
         var result = media.GetOrRequest(key, token => FetchAsync(name, world, fullBody, token));
         var state = result.Texture is not null ? AvatarLoadState.Ready :
             result.Loading ? AvatarLoadState.Loading : AvatarLoadState.Failed;
@@ -141,7 +168,7 @@ internal sealed class LodestoneService : IDisposable
                 return cached;
             }
 
-            if (unresolved.Contains(key))
+            if (unresolvedAt.TryGetValue(key, out var missedAt) && DateTime.UtcNow - missedAt < UnresolvedRetryAfter)
             {
                 return null;
             }
@@ -160,11 +187,12 @@ internal sealed class LodestoneService : IDisposable
         {
             if (id is null)
             {
-                unresolved.Add(key);
+                unresolvedAt[key] = DateTime.UtcNow;
             }
             else
             {
                 resolvedIds[key] = id;
+                unresolvedAt.Remove(key);
             }
         }
 
@@ -183,17 +211,13 @@ internal sealed class LodestoneService : IDisposable
             return null;
         }
 
-        string? firstId = null;
+        var candidates = new List<LodestoneCandidate>();
         foreach (var entry in page.Results)
         {
-            firstId ??= entry.Id;
-            if (string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase))
-            {
-                return entry.Id;
-            }
+            candidates.Add(new LodestoneCandidate(entry.Name ?? string.Empty, entry.Id ?? string.Empty));
         }
 
-        return firstId;
+        return LodestoneMatch.ExactId(candidates, name);
     }
 
     private async Task<LodestoneClient?> EnsureClientAsync(CancellationToken token)

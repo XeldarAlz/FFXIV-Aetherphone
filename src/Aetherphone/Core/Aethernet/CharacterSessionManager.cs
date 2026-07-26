@@ -54,7 +54,8 @@ internal sealed class CharacterSessionManager : IDisposable
         {
             lastContentId = contentId;
             pendingPromptContentId = 0;
-            session.SwitchTo(contentId);
+            session.ReportPlayingCharacter(contentId);
+            session.SwitchTo(session.ResolveTarget(contentId));
             if (contentId != 0)
             {
                 if (session.IsSignedIn)

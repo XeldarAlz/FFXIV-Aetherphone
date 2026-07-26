@@ -3,7 +3,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Social;
 
-internal sealed class FeedLane<TPost> where TPost : class, IIdentified
+internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentified
 {
     private readonly object gate = new();
     private readonly Comparison<TPost> order;
@@ -57,6 +57,27 @@ internal sealed class FeedLane<TPost> where TPost : class, IIdentified
         {
             items = IdentifiedMerge.MergeById(items, incoming, order);
             cursor = nextCursor;
+        }
+    }
+
+    public void Trim(int max)
+    {
+        if (max <= 0)
+        {
+            return;
+        }
+
+        lock (gate)
+        {
+            var snapshot = items;
+            if (snapshot.Length <= max)
+            {
+                return;
+            }
+
+            var trimmed = new TPost[max];
+            Array.Copy(snapshot, trimmed, max);
+            items = trimmed;
         }
     }
 

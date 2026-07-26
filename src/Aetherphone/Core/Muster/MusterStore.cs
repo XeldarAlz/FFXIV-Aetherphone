@@ -2,6 +2,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Dalamud.Plugin.Services;
@@ -23,6 +24,7 @@ internal sealed class MusterStore : IDisposable
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
     private readonly RealtimeSignalBus signals;
+    private readonly AppGate gate;
     private readonly PollCadence cadence;
     private readonly StoreWork work = new("Muster");
 
@@ -36,6 +38,9 @@ internal sealed class MusterStore : IDisposable
     private volatile Dictionary<string, MusterDto> knownMusters = new(StringComparer.Ordinal);
     private volatile bool primed;
     private volatile bool syncing;
+    private volatile int currentWorldId;
+    private volatile int currentDataCenterId;
+    private volatile int currentRegionBit;
 
     private readonly object chatLock = new();
     private readonly HashSet<string> chatRequested = new(StringComparer.Ordinal);
@@ -53,13 +58,14 @@ internal sealed class MusterStore : IDisposable
     private int directoryGeneration;
 
     public MusterStore(AethernetSession session, MusterClient client, NotificationService notifications,
-        Configuration configuration, PhoneVisibility visibility, RealtimeSignalBus signals)
+        Configuration configuration, PhoneVisibility visibility, RealtimeSignalBus signals, AppGate gate)
     {
         this.session = session;
         this.client = client;
         this.notifications = notifications;
         this.configuration = configuration;
         this.signals = signals;
+        this.gate = gate;
         cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
         session.Changed += OnSessionChanged;
         signals.MusterPinged += OnMusterPinged;
@@ -90,6 +96,22 @@ internal sealed class MusterStore : IDisposable
     public bool DirectoryHasMore => directoryHasMore;
 
     public bool DirectoryLoadedOnce => directoryLoadedOnce;
+
+    public int CurrentWorldId => currentWorldId;
+
+    public int CurrentDataCenterId => currentDataCenterId;
+
+    public int CurrentRegionBit => currentRegionBit;
+
+    public uint CurrentTerritoryId => Plugin.ClientState.TerritoryType;
+
+    public int ScopedDataCenterId =>
+        configuration.MusterDataCenterId != 0 ? configuration.MusterDataCenterId : currentDataCenterId;
+
+    public int ScopedRegionBit =>
+        configuration.MusterDataCenterId != 0
+            ? MusterDataCenters.RegionBitFor(configuration.MusterDataCenterId)
+            : currentRegionBit;
 
     public bool IsGoing(string musterId)
     {
@@ -136,11 +158,8 @@ internal sealed class MusterStore : IDisposable
         }, () => syncing = false);
     }
 
-    /// <summary>Resolves the persisted scope against the player's current world. Framework thread only,
-    /// so the world read happens here and the captured values carry through paging continuations.</summary>
     private void CaptureScopeFilters()
     {
-        var worldId = MusterWorlds.CurrentWorldId();
         switch (configuration.MusterScope)
         {
             case MusterScopes.Everywhere:
@@ -149,10 +168,10 @@ internal sealed class MusterStore : IDisposable
                 break;
             case MusterScopes.Region:
                 directoryDataCenterId = 0;
-                directoryRegions = MusterCategories.RegionBitForWorld(worldId);
+                directoryRegions = ScopedRegionBit;
                 break;
             default:
-                directoryDataCenterId = MusterWorlds.DataCenterIdForWorld(worldId);
+                directoryDataCenterId = ScopedDataCenterId;
                 directoryRegions = 0;
                 break;
         }
@@ -421,7 +440,8 @@ internal sealed class MusterStore : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        if (!session.IsSignedIn)
+        TrackCurrentWorld();
+        if (!session.IsSignedIn || !gate.Open)
         {
             primed = false;
             return;
@@ -433,6 +453,19 @@ internal sealed class MusterStore : IDisposable
         }
 
         SyncNow();
+    }
+
+    private void TrackCurrentWorld()
+    {
+        var worldId = (int)MusterWorlds.CurrentWorldId();
+        if (worldId == currentWorldId)
+        {
+            return;
+        }
+
+        currentWorldId = worldId;
+        currentDataCenterId = MusterWorlds.DataCenterIdForWorld((uint)worldId);
+        currentRegionBit = MusterCategories.RegionBitForWorld((uint)worldId);
     }
 
     private void OnSessionChanged()
@@ -545,9 +578,9 @@ internal sealed class MusterStore : IDisposable
 
             var body = muster.HostNotice switch
             {
-                MusterNotices.StartingNow => Loc.T(L.Muster.NotifNoticeStarting, muster.HostCharacter),
-                MusterNotices.MovedSpots => Loc.T(L.Muster.NotifNoticeMoved, muster.HostCharacter),
-                _ => Loc.T(L.Muster.NotifNoticeWrapping, muster.HostCharacter),
+                MusterNotices.StartingNow => Loc.T(L.Muster.NotifNoticeStarting, MusterText.HostLabel(muster)),
+                MusterNotices.MovedSpots => Loc.T(L.Muster.NotifNoticeMoved, MusterText.HostLabel(muster)),
+                _ => Loc.T(L.Muster.NotifNoticeWrapping, MusterText.HostLabel(muster)),
             };
             notifications.Notify(new PhoneNotification(AppId, Loc.T(L.Muster.NotifNoticeTitle), body,
                 DateTime.Now, AppAccents.For(AppId), muster.Id));
@@ -572,7 +605,7 @@ internal sealed class MusterStore : IDisposable
             if (!seen)
             {
                 notifications.Notify(new PhoneNotification(AppId, Loc.T(L.Muster.NotifStartedTitle),
-                    Loc.T(L.Muster.NotifStartedBody, muster.HostCharacter), DateTime.Now,
+                    Loc.T(L.Muster.NotifStartedBody, MusterText.HostLabel(muster)), DateTime.Now,
                     AppAccents.For(AppId), muster.Id));
             }
         }

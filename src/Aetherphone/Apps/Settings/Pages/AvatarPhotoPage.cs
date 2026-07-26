@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
@@ -18,13 +19,14 @@ internal sealed class AvatarPhotoPage : ISettingsPage
     public bool OwnsChrome => true;
     private readonly ISettingsNavigator navigator;
     private readonly Func<bool> busy;
-    private readonly Action<string, WallpaperCrop, Action<bool>> upload;
+    private readonly Action<string, WallpaperCrop, Action<AvatarUploadOutcome>> upload;
     private readonly ConfirmService confirm;
     private readonly ImagePickCrop picker;
     private volatile int outcome;
+    private volatile AvatarUploadOutcome failure;
 
     public AvatarPhotoPage(PhotoLibrary library, WallpaperImageCache images, ISettingsNavigator navigator,
-        Func<bool> busy, Action<string, WallpaperCrop, Action<bool>> upload, ConfirmService confirm)
+        Func<bool> busy, Action<string, WallpaperCrop, Action<AvatarUploadOutcome>> upload, ConfirmService confirm)
     {
         this.navigator = navigator;
         this.busy = busy;
@@ -46,7 +48,7 @@ internal sealed class AvatarPhotoPage : ISettingsPage
         if (outcome == 2)
         {
             outcome = 0;
-            confirm.Alert(null, Loc.T(L.Account.CannotReach), Loc.T(L.Account.FailDismiss));
+            confirm.Alert(null, Loc.T(AvatarUpload.Message(failure)), Loc.T(L.Account.FailDismiss));
         }
 
         var labels = new ImagePickCropLabels(Loc.T(L.Account.ChangePhoto), Loc.T(L.Account.ImportFromPc),
@@ -61,7 +63,11 @@ internal sealed class AvatarPhotoPage : ISettingsPage
 
         if (result == ImagePickCropEvent.Committed && !busy() && picker.SourcePath.Length > 0)
         {
-            upload(picker.SourcePath, picker.Crop, ok => outcome = ok ? 1 : 2);
+            upload(picker.SourcePath, picker.Crop, result =>
+            {
+                failure = result;
+                outcome = result == AvatarUploadOutcome.Uploaded ? 1 : 2;
+            });
         }
     }
 }

@@ -71,8 +71,8 @@ internal sealed partial class VelvetShell
             var radius = 56f * scale;
             var avatarCenter = new Vector2(centerX, heroTop.Y + 14f * scale + radius);
             Vector4? ring = isMe ? VelvetTheme.Rose : connected ? VelvetTheme.Moonlight : null;
-            VAvatar.Draw(drawList, avatarCenter, radius, theme, name, user.World, user.AvatarUrl, images, lodestone, -1,
-                ring);
+            VAvatar.Draw(drawList, avatarCenter, radius, theme, name, isMe ? user.World : string.Empty, user.AvatarUrl,
+                images, lodestone, -1, ring);
             avatarLightbox.TryOpen(avatarCenter, radius, user.AvatarUrl, images);
 
             var textWidth = width - HeroTextInset * 2f * scale;

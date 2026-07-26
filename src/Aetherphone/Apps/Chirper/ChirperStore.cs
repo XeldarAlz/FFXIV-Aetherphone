@@ -21,8 +21,8 @@ internal sealed class ChirperStore : SocialFeedStore
     protected override Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, CancellationToken token) =>
         client.FeedAsync(feedKey, cursor, token);
 
-    protected override Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token) =>
-        client.UserPostsAsync(userId, token);
+    protected override Task<FeedPage?> FetchProfilePostsAsync(string userId, string? cursor, CancellationToken token) =>
+        client.UserPostsAsync(userId, cursor, token);
 
     public void Compose(string text, Action<bool> onComplete)
     {
@@ -129,7 +129,7 @@ internal sealed class ChirperStore : SocialFeedStore
             post => post.RepostOfId == originalId && post.AuthorId == me.Id);
         followingLane.Items = CopyOnWrite.RemoveWhere(followingLane.Items,
             post => post.RepostOfId == originalId && post.AuthorId == me.Id);
-        profilePosts = CopyOnWrite.RemoveWhere(profilePosts,
+        profileLane.Items = CopyOnWrite.RemoveWhere(profileLane.Items,
             post => post.RepostOfId == originalId && post.AuthorId == me.Id);
     }
 

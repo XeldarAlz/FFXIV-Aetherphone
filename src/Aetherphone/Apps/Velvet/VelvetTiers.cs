@@ -117,10 +117,11 @@ internal static class VelvetSexuality
     public const int Pan = 1 << 3;
     public const int Asexual = 1 << 4;
     public const int Demisexual = 1 << 5;
+    public const int Lesbian = 1 << 6;
 
-    public const int Mask = Straight | Gay | Bi | Pan | Asexual | Demisexual;
+    public const int Mask = Straight | Gay | Lesbian | Bi | Pan | Asexual | Demisexual;
 
-    public static readonly int[] All = { Straight, Gay, Bi, Pan, Asexual, Demisexual };
+    public static readonly int[] All = { Straight, Gay, Lesbian, Bi, Pan, Asexual, Demisexual };
 
     public static bool Has(int mask, int flag) => (mask & flag) != 0;
 
@@ -153,6 +154,7 @@ internal static class VelvetSexuality
         {
             Straight => Loc.T(L.Velvet.SexualityStraight),
             Gay => Loc.T(L.Velvet.SexualityGay),
+            Lesbian => Loc.T(L.Velvet.SexualityLesbian),
             Bi => Loc.T(L.Velvet.SexualityBi),
             Pan => Loc.T(L.Velvet.SexualityPan),
             Asexual => Loc.T(L.Velvet.SexualityAsexual),

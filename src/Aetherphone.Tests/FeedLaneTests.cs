@@ -82,6 +82,79 @@ public sealed class FeedLaneTests
     }
 
     [Fact]
+    public void TrimKeepsNewestItemsAndDropsTheTail()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(Posts(10), "page-2");
+
+        lane.Trim(4);
+
+        Assert.Equal(4, lane.Items.Length);
+        Assert.Equal("post-0", lane.Items[0].Id);
+        Assert.Equal("post-3", lane.Items[3].Id);
+    }
+
+    [Fact]
+    public void TrimLeavesLaneAloneWhenUnderCap()
+    {
+        var lane = NewLane();
+        var incoming = Posts(3);
+        lane.ApplyRefresh(incoming, null);
+
+        lane.Trim(400);
+
+        Assert.Same(incoming, lane.Items);
+    }
+
+    [Fact]
+    public void TrimIgnoresNonPositiveCaps()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(Posts(3), null);
+
+        lane.Trim(0);
+
+        Assert.Equal(3, lane.Items.Length);
+    }
+
+    [Fact]
+    public void TrimKeepsPagingAliveSoInfiniteScrollStillFetches()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(Posts(6), "page-2");
+
+        lane.Trim(2);
+
+        Assert.Equal("page-2", lane.Cursor);
+        Assert.True(lane.HasMore);
+    }
+
+    [Fact]
+    public void TrimmedLaneRegrowsFromRefreshWithoutDuplicates()
+    {
+        var lane = NewLane();
+        lane.ApplyRefresh(Posts(6), "page-2");
+        lane.Trim(2);
+
+        lane.ApplyRefresh(new[] { new FakePost("post-0", 100), new FakePost("post-1", 99) }, "page-2");
+
+        Assert.Equal(2, lane.Items.Length);
+        Assert.Equal("post-0", lane.Items[0].Id);
+        Assert.Equal("post-1", lane.Items[1].Id);
+    }
+
+    private static FakePost[] Posts(int count)
+    {
+        var posts = new FakePost[count];
+        for (var index = 0; index < count; index++)
+        {
+            posts[index] = new FakePost($"post-{index}", 100 - index);
+        }
+
+        return posts;
+    }
+
+    [Fact]
     public void RefreshKeepsOlderPagesWhenNewestPageBackfills()
     {
         var lane = NewLane();

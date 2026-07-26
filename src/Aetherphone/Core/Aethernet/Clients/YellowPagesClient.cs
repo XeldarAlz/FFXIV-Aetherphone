@@ -1,4 +1,5 @@
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Crypto;
 
 namespace Aetherphone.Core.Aethernet.Clients;
 
@@ -84,5 +85,50 @@ internal sealed class YellowPagesClient
     public Task<AdDto?> GetAsync(string adId, CancellationToken token)
     {
         return net.GetAsync($"/ads/{Uri.EscapeDataString(adId)}", AethernetJsonContext.Default.AdDto, token);
+    }
+
+    public Task<AdInquiryDto?> OpenInquiryAsync(string adId, string envelope, string commitmentTag,
+        CancellationToken token, Action<int>? statusSink = null)
+    {
+        return net.PostAsync($"/ads/{Uri.EscapeDataString(adId)}/inquiries",
+            new SendAdInquiryRequest(envelope, EnvelopeCodec.VersionEnvelope, commitmentTag),
+            AethernetJsonContext.Default.SendAdInquiryRequest, AethernetJsonContext.Default.AdInquiryDto, token,
+            statusSink);
+    }
+
+    public Task<AdInquiryPage?> InquiriesAsync(string? cursor, CancellationToken token)
+    {
+        var path = "/ads/inquiries";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.AdInquiryPage, token);
+    }
+
+    public Task<AdInquiryMessagePage?> InquiryMessagesAsync(string inquiryId, string? cursor, CancellationToken token)
+    {
+        var path = $"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/messages";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.AdInquiryMessagePage, token);
+    }
+
+    public Task<AdInquiryMessageDto?> SendInquiryAsync(string inquiryId, string envelope, string commitmentTag,
+        CancellationToken token)
+    {
+        return net.PostAsync($"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/messages",
+            new SendAdInquiryRequest(envelope, EnvelopeCodec.VersionEnvelope, commitmentTag),
+            AethernetJsonContext.Default.SendAdInquiryRequest,
+            AethernetJsonContext.Default.AdInquiryMessageDto, token);
+    }
+
+    public Task<bool> MarkInquiryReadAsync(string inquiryId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Post, $"/ads/inquiries/{Uri.EscapeDataString(inquiryId)}/read", token);
     }
 }

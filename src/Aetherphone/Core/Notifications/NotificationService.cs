@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Aetherphone.Core.Home;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Notifications;
@@ -10,6 +11,7 @@ internal sealed class NotificationService : IDisposable
     private const int SoundHistoryPruneSize = 64;
     private readonly SoundService sound;
     private readonly Configuration configuration;
+    private readonly AppInstaller installer;
     private readonly IFramework framework;
     private readonly ConcurrentQueue<PhoneNotification> pending = new();
     private readonly List<PhoneNotification> recent = new();
@@ -21,12 +23,43 @@ internal sealed class NotificationService : IDisposable
     public event Action? Changed;
     public event Action<PhoneNotification>? Presented;
 
-    public NotificationService(SoundService sound, Configuration configuration, IFramework framework)
+    public NotificationService(SoundService sound, Configuration configuration, AppInstaller installer,
+        IFramework framework)
     {
         this.sound = sound;
         this.configuration = configuration;
+        this.installer = installer;
         this.framework = framework;
+        installer.Changed += OnInstalledChanged;
         framework.Update += OnFrameworkUpdate;
+    }
+
+    private void OnInstalledChanged(string appId)
+    {
+        if (installer.IsInstalled(appId))
+        {
+            return;
+        }
+
+        var removed = false;
+        for (var index = recent.Count - 1; index >= 0; index--)
+        {
+            if (!string.Equals(recent[index].AppId, appId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            recent.RemoveAt(index);
+            removed = true;
+        }
+
+        if (!removed)
+        {
+            return;
+        }
+
+        ClampUnread();
+        Changed?.Invoke();
     }
 
     public void Notify(PhoneNotification notification)
@@ -44,6 +77,11 @@ internal sealed class NotificationService : IDisposable
 
     private void Present(PhoneNotification notification)
     {
+        if (!installer.IsInstalled(notification.AppId))
+        {
+            return;
+        }
+
         if (!configuration.IsAppNotificationEnabled(notification.AppId))
         {
             return;
@@ -180,6 +218,7 @@ internal sealed class NotificationService : IDisposable
 
     public void Dispose()
     {
+        installer.Changed -= OnInstalledChanged;
         framework.Update -= OnFrameworkUpdate;
     }
 }

@@ -22,21 +22,7 @@ internal static class Typography
         new(-0.7071f, -0.7071f),
     };
 
-    private readonly struct FitEntry
-    {
-        public readonly float Width;
-        public readonly float FontSize;
-        public readonly string Text;
-
-        public FitEntry(float width, float fontSize, string text)
-        {
-            Width = width;
-            FontSize = fontSize;
-            Text = text;
-        }
-    }
-
-    private static readonly Dictionary<string, FitEntry> FitCache = new();
+    private static readonly Dictionary<(string Text, float Width, float FontSize), string> FitCache = new();
 
     private readonly struct WrapEntry
     {
@@ -67,6 +53,7 @@ internal static class Typography
         cacheGeneration = current;
         FitCache.Clear();
         WrapCache.Clear();
+        FitScaleCache.Clear();
     }
 
     public static void Plain(string text)
@@ -100,6 +87,14 @@ internal static class Typography
         {
             Plugin.Fonts.NoticeText(text);
             return ImGui.CalcTextSize(text, false, wrapWidth).Y;
+        }
+    }
+
+    public static float LineHeight(in TextStyle style)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            return ImGui.GetTextLineHeightWithSpacing();
         }
     }
 
@@ -161,6 +156,42 @@ internal static class Typography
 
     public static string FitText(string text, float maxWidth, in TextStyle style) =>
         FitText(text, maxWidth, style.Scale, style.Weight);
+
+    private static readonly Dictionary<(string Text, float MaxWidth, float MaxScale, float MinScale, FontWeight Weight,
+        float FontSize), float> FitScaleCache = new();
+
+    public static float FitScale(string text, float maxWidth, float maxScale, float minScale, FontWeight weight)
+    {
+        if (maxWidth <= 0f)
+        {
+            return minScale;
+        }
+
+        InvalidateCachesOnFontChange();
+        var fontSize = ImGui.GetFontSize();
+        var key = (text, maxWidth, maxScale, minScale, weight, fontSize);
+        if (FitScaleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var result = minScale;
+        for (var scale = maxScale; scale > minScale; scale -= 0.05f)
+        {
+            using (Plugin.Fonts.Push(scale, weight))
+            {
+                Plugin.Fonts.NoticeText(text);
+                if (ImGui.CalcTextSize(text).X <= maxWidth)
+                {
+                    result = scale;
+                    break;
+                }
+            }
+        }
+
+        FitScaleCache[key] = result;
+        return result;
+    }
 
     public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float scale,
         FontWeight weight)
@@ -395,7 +426,12 @@ internal static class Typography
 
     private static string[] Wrap(string text, float maxWidth)
     {
-        if (maxWidth <= 0f || ImGui.CalcTextSize(text).X <= maxWidth)
+        if (maxWidth <= 0f)
+        {
+            return new[] { text };
+        }
+
+        if (text.IndexOf('\n') < 0 && ImGui.CalcTextSize(text).X <= maxWidth)
         {
             return new[] { text };
         }
@@ -449,6 +485,12 @@ internal static class Typography
                 var start = index;
                 while (index < length && segment[index] != ' ' && !IsCjk(segment[index]))
                 {
+                    if (segment[index] == '-')
+                    {
+                        index++;
+                        break;
+                    }
+
                     index++;
                 }
 
@@ -457,7 +499,7 @@ internal static class Typography
 
             if (builder.Length == 0)
             {
-                builder.Append(token);
+                AppendToken(token, maxWidth, lines, builder);
                 pendingSpace = false;
                 continue;
             }
@@ -475,7 +517,7 @@ internal static class Typography
                 builder.Length -= token.Length + separatorLength;
                 lines.Add(builder.ToString());
                 builder.Clear();
-                builder.Append(token);
+                AppendToken(token, maxWidth, lines, builder);
             }
         }
 
@@ -483,6 +525,57 @@ internal static class Typography
         {
             lines.Add(builder.ToString());
         }
+    }
+
+    private static void AppendToken(string token, float maxWidth, List<string> lines, StringBuilder builder)
+    {
+        if (ImGui.CalcTextSize(token).X <= maxWidth)
+        {
+            builder.Append(token);
+            return;
+        }
+
+        var start = 0;
+        while (start < token.Length)
+        {
+            var count = CharactersThatFit(token, start, maxWidth);
+            if (start + count >= token.Length)
+            {
+                builder.Append(token, start, token.Length - start);
+                return;
+            }
+
+            lines.Add(token.Substring(start, count));
+            start += count;
+        }
+    }
+
+    private static int CharactersThatFit(string token, int start, float maxWidth)
+    {
+        var count = NextBoundary(token, start, 0);
+        while (start + count < token.Length)
+        {
+            var next = NextBoundary(token, start, count);
+            if (ImGui.CalcTextSize(token.Substring(start, next)).X > maxWidth)
+            {
+                break;
+            }
+
+            count = next;
+        }
+
+        return count;
+    }
+
+    private static int NextBoundary(string token, int start, int count)
+    {
+        var advance = count + 1;
+        if (start + advance < token.Length && char.IsHighSurrogate(token[start + count]))
+        {
+            advance++;
+        }
+
+        return advance;
     }
 
     private static string Fit(string text, float maxWidth)
@@ -494,13 +587,14 @@ internal static class Typography
 
         InvalidateCachesOnFontChange();
         var fontSize = ImGui.GetFontSize();
-        if (FitCache.TryGetValue(text, out var cached) && cached.Width == maxWidth && cached.FontSize == fontSize)
+        var key = (text, maxWidth, fontSize);
+        if (FitCache.TryGetValue(key, out var cached))
         {
-            return cached.Text;
+            return cached;
         }
 
         var result = Shorten(text, maxWidth);
-        FitCache[text] = new FitEntry(maxWidth, fontSize, result);
+        FitCache[key] = result;
         return result;
     }
 

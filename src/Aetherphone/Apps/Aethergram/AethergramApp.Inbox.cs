@@ -151,7 +151,7 @@ internal sealed partial class AethergramApp
         var avatarCenter = new Vector2(origin.X + pad + avatarRadius, origin.Y + rowHeight * 0.5f);
         AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent,
             Monogram(thread.OtherDisplayName, thread.OtherHandle), 0.95f,
-            lodestone.Remote(thread.OtherUserId, ToUri(thread.OtherAvatarUrl)), 32);
+            images.Avatar(thread.OtherAvatarUrl), 32);
         PresenceDot(drawList, new Vector2(avatarCenter.X + avatarRadius - 4f * scale,
             avatarCenter.Y + avatarRadius - 4f * scale), thread.Presence);
         var textLeft = avatarCenter.X + avatarRadius + 12f * scale;

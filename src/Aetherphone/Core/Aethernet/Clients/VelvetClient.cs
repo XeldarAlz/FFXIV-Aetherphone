@@ -11,9 +11,9 @@ internal sealed class VelvetClient
         this.net = net;
     }
 
-    public Task<VelvetProfileDto?> MeAsync(CancellationToken token)
+    public Task<VelvetProfileDto?> MeAsync(CancellationToken token, Action<int>? onStatus = null)
     {
-        return net.GetAsync("/velvet/me", AethernetJsonContext.Default.VelvetProfileDto, token);
+        return net.GetAsync("/velvet/me", AethernetJsonContext.Default.VelvetProfileDto, token, onStatus);
     }
 
     public Task<VelvetProfileDto?> UpdateProfileAsync(UpdateVelvetProfileRequest request, CancellationToken token)
@@ -50,11 +50,6 @@ internal sealed class VelvetClient
         AppendCsv(path, "limitsExclude", TokenCsv(filter.LimitsExclude));
         AppendCsv(path, "profileTags", TokenCsv(filter.TagsInclude));
         AppendCsv(path, "profileTagsExclude", TokenCsv(filter.TagsExclude));
-        if (filter.IncludeLalafell)
-        {
-            path.Append("&includeLalafell=true");
-        }
-
         if (tags.Length > 0)
         {
             path.Append("&tags=").Append(Uri.EscapeDataString(tags));

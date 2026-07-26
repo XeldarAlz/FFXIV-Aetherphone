@@ -65,7 +65,10 @@ internal sealed partial class ClockApp
             subtitle = subtitle.Length > 0 ? $"{alarm.Label} · {subtitle}" : alarm.Label;
         }
 
-        Typography.Draw(new Vector2(row.Min.X + timeSize.X + 12f * scale, row.Center.Y - 8f * scale), subtitle,
+        var subtitleLeft = row.Min.X + timeSize.X + 12f * scale;
+        var subtitleMaxWidth = MathF.Max(1f, row.Max.X - Metrics.Size.ToggleWidth * scale - 8f * scale - subtitleLeft);
+        var subtitleFitted = Typography.FitText(subtitle, subtitleMaxWidth, TextStyles.Footnote);
+        Typography.Draw(new Vector2(subtitleLeft, row.Center.Y - 8f * scale), subtitleFitted,
             ui.MutedInk, TextStyles.Footnote);
 
         var width = Metrics.Size.ToggleWidth * scale;

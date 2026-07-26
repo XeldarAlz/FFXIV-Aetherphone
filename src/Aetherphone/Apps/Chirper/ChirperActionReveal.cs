@@ -1,5 +1,21 @@
 namespace Aetherphone.Apps.Chirper;
 
+internal readonly struct ReactionPickerLayout
+{
+    public readonly int Columns;
+    public readonly int Rows;
+    public readonly float Step;
+    public readonly float IconRadius;
+
+    public ReactionPickerLayout(int columns, int rows, float step, float iconRadius)
+    {
+        Columns = columns;
+        Rows = rows;
+        Step = step;
+        IconRadius = iconRadius;
+    }
+}
+
 internal sealed class ChirperActionReveal
 {
     internal enum Panel

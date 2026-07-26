@@ -109,6 +109,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
         {
             configuration.RegionManual = false;
             configuration.Save();
+            PushRegion();
         }
 
         for (var index = 0; index < SocialRegion.Codes.Length; index++)
@@ -121,6 +122,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
                 configuration.RegionManual = true;
                 configuration.ManualRegion = code;
                 configuration.Save();
+                PushRegion();
             }
         }
 
@@ -131,12 +133,13 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
     {
         var scale = ImGuiHelpers.GlobalScale;
         var drawList = ImGui.GetWindowDrawList();
-        var labelSize = Typography.Measure(Loc.T(L.Profile.UtcOffsetLabel));
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), Loc.T(L.Profile.UtcOffsetLabel),
-            theme.TextStrong);
         var buttonSize = 26f * scale;
         var plusMin = new Vector2(row.Max.X - buttonSize, row.Center.Y - buttonSize * 0.5f);
         var minusMin = new Vector2(plusMin.X - 96f * scale, row.Center.Y - buttonSize * 0.5f);
+        var label = Typography.FitText(Loc.T(L.Profile.UtcOffsetLabel), minusMin.X - 12f * scale - row.Min.X, 1f,
+            FontWeight.Regular);
+        var labelSize = Typography.Measure(label);
+        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), label, theme.TextStrong);
         if (StepperButton(drawList, minusMin, buttonSize, "-", theme))
         {
             AdjustOffset(-SocialTimeZone.StepMinutes);
@@ -183,6 +186,9 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
         configuration.Save();
         PushTimeZone(null);
     }
+
+    private void PushRegion() =>
+        RegionSync.Push(session, client, configuration, gameData, cancellation.Token);
 
     private void PushTimeZone(bool? share)
     {

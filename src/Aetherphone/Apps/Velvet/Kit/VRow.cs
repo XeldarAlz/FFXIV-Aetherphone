@@ -163,19 +163,24 @@ internal static class VRow
         var innerWidth = MathF.Max(10f * scale, textRight - textLeft);
         if (subtitleText.Length == 0)
         {
-            var title = Typography.FitText(titleText, innerWidth, TextStyles.Headline);
-            var titleSize = Typography.Measure(title, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, centerY - titleSize.Y * 0.5f), title, VelvetTheme.TitleInk,
-                TextStyles.Headline);
+            var titleSize = Typography.Measure(titleText, TextStyles.Headline);
+            Marquee.DrawLeft("vrow.title." + titleText, titleText, textLeft, centerY - titleSize.Y * 0.5f,
+                innerWidth, TextStyles.Headline, VelvetTheme.TitleInk, hovered);
         }
         else
         {
-            var title = Typography.FitText(titleText, innerWidth, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, centerY - 15f * scale), title, VelvetTheme.TitleInk,
-                TextStyles.Headline);
-            var subtitle = Typography.FitText(subtitleText, innerWidth, TextStyles.Subheadline);
-            Typography.Draw(new Vector2(textLeft, centerY + 3f * scale), subtitle, VelvetTheme.MutedInk,
-                TextStyles.Subheadline);
+            var titleY = centerY - 15f * scale;
+            var titleSize = Typography.Measure(titleText, TextStyles.Headline);
+            var titleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, titleY),
+                new Vector2(textLeft + innerWidth, titleY + titleSize.Y));
+            Marquee.DrawLeft("vrow.title." + titleText, titleText, textLeft, titleY, innerWidth,
+                TextStyles.Headline, VelvetTheme.TitleInk, titleHovering);
+            var subtitleY = centerY + 3f * scale;
+            var subtitleSize = Typography.Measure(subtitleText, TextStyles.Subheadline);
+            var subtitleHovering = ImGui.IsMouseHoveringRect(new Vector2(textLeft, subtitleY),
+                new Vector2(textLeft + innerWidth, subtitleY + subtitleSize.Y));
+            Marquee.DrawLeft("vrow.subtitle." + subtitleText, subtitleText, textLeft, subtitleY,
+                innerWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, subtitleHovering);
         }
 
         if (hit == VRowHit.None && !overControl && UiInteract.Click(min, max, hovered))

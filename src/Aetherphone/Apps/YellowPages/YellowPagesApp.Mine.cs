@@ -22,9 +22,8 @@ internal sealed partial class YellowPagesApp
 
     private void DrawMine(Rect area)
     {
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.YellowPages.YourAds), back);
         var scale = ImGuiHelpers.GlobalScale;
+        DrawTabTitle(area, Loc.T(L.YellowPages.YourAds), 0f, scale);
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         var mine = store.Mine;
@@ -49,13 +48,6 @@ internal sealed partial class YellowPagesApp
 
             ImGui.Dummy(new Vector2(0f, Metrics.Space.Lg * scale));
         }
-
-        if (store.LiveMineCount < 3 && ComposeFab.Draw(body, "##yellowPagesMineFab", ui.Accent,
-                FontAwesomeIcon.Plus.ToIconString(), Loc.T(L.YellowPages.PostAd)))
-        {
-            ResetComposeForm();
-            router.Push(YellowPagesRoute.Compose);
-        }
     }
 
     private void DrawMineRow(AdDto ad, long nowUnix, float scale)
@@ -74,12 +66,36 @@ internal sealed partial class YellowPagesApp
         var tileCenter = new Vector2(card.Min.X + pad + tileSide * 0.5f, card.Min.Y + pad + tileSide * 0.5f);
         IconTile.Draw(tileCenter, tileSide, IconTile.Surface(ui.Accent), AdCategories.Icon(ad.Category));
         var textLeft = tileCenter.X + tileSide * 0.5f + 10f * scale;
-        var title = Typography.FitText(ad.Title, card.Max.X - pad - textLeft, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 10f * scale), title,
-            AppPalettes.YellowPages.TitleInk, TextStyles.Headline);
+        var titleWidth = card.Max.X - pad - textLeft;
+        Marquee.DrawLeftAuto(drawList, "yellowpages.mine.title." + ad.Id, ad.Title, textLeft,
+            card.Min.Y + 10f * scale, titleWidth, TextStyles.Headline, AppPalettes.YellowPages.TitleInk);
         var status = MineStatusText(ad, nowUnix, out var statusColor);
-        Typography.Draw(drawList, new Vector2(textLeft, card.Min.Y + 31f * scale), status, statusColor,
-            TextStyles.FootnoteEmphasized);
+        Marquee.DrawLeftAuto(drawList, "yellowpages.mine.status." + ad.Id, status, textLeft,
+            card.Min.Y + 31f * scale, titleWidth, TextStyles.FootnoteEmphasized, statusColor);
+
+        var inquiryCount = inquiries.CountForAd(ad.Id);
+        if (inquiryCount > 0)
+        {
+            var label = Loc.T(L.YellowPages.InquiryCount, inquiryCount);
+            var labelSize = Typography.Measure(label, TextStyles.Caption1);
+            var pillMin = new Vector2(card.Max.X - pad - labelSize.X - 18f * scale, card.Min.Y + 12f * scale);
+            var pillWidth = DrawPill(drawList, pillMin, label, Palette.WithAlpha(ui.Accent, 0.18f), ui.Accent,
+                TextStyles.Caption1, scale);
+            var pillMax = new Vector2(pillMin.X + pillWidth, pillMin.Y + 24f * scale);
+            var unread = inquiries.UnreadForAd(ad.Id);
+            ActivityBadge.Draw(new Vector2(pillMax.X - 2f * scale, pillMin.Y + 2f * scale), unread, theme, scale);
+            var pillHovered = UiInteract.Hover(pillMin, pillMax);
+            if (pillHovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(pillMin, pillMax, pillHovered))
+            {
+                OpenInquiriesFor(ad.Id);
+                return;
+            }
+        }
 
         var headerRect = new Rect(card.Min, new Vector2(card.Max.X, card.Min.Y + headerHeight));
         var headerHovered = UiInteract.Hover(headerRect.Min, headerRect.Max);
@@ -282,9 +298,8 @@ internal sealed partial class YellowPagesApp
 
     private void DrawSaved(Rect area)
     {
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.YellowPages.SavedTitle), back);
         var scale = ImGuiHelpers.GlobalScale;
+        DrawTabTitle(area, Loc.T(L.YellowPages.SavedTitle), 0f, scale);
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         var saved = store.Saved;

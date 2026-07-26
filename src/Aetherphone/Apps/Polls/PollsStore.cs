@@ -1,6 +1,7 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Home;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Polls;
@@ -11,6 +12,7 @@ internal sealed class PollsStore : IDisposable
 
     private readonly AethernetSession session;
     private readonly PollsClient client;
+    private readonly AppGate gate;
     private readonly StoreWork work = new StoreWork("Polls");
 
     private volatile PollDto[] polls = Array.Empty<PollDto>();
@@ -18,10 +20,11 @@ internal sealed class PollsStore : IDisposable
     private volatile bool loadedOnce;
     private DateTime lastBackgroundRefreshUtc = DateTime.MinValue;
 
-    public PollsStore(AethernetSession session, PollsClient client)
+    public PollsStore(AethernetSession session, PollsClient client, AppGate gate)
     {
         this.session = session;
         this.client = client;
+        this.gate = gate;
         Plugin.Framework.Update += OnFrameworkUpdate;
     }
 
@@ -98,7 +101,7 @@ internal sealed class PollsStore : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        if (!session.IsSignedIn)
+        if (!session.IsSignedIn || !gate.Open)
         {
             return;
         }

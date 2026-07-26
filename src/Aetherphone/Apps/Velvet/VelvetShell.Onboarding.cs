@@ -279,7 +279,7 @@ internal sealed partial class VelvetShell
         var textLeft = tileMax.X + 14f * scale;
         var textWidth = rect.Max.X - 46f * scale - textLeft;
         var blurb = Typography.FitText(Loc.T(def.Blurb), textWidth, TextStyles.Subheadline);
-        var label = Loc.T(def.Label);
+        var label = Typography.FitText(Loc.T(def.Label), textWidth, TextStyles.Headline);
         var labelSize = Typography.Measure(label, TextStyles.Headline);
         var blurbSize = Typography.Measure(blurb, TextStyles.Subheadline);
         var textTop = rect.Center.Y - (labelSize.Y + 3f * scale + blurbSize.Y) * 0.5f;

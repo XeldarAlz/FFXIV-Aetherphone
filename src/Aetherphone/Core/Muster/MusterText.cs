@@ -15,6 +15,16 @@ internal static class MusterText
     private static readonly Dictionary<string, string> CoordinatesById = new(StringComparer.Ordinal);
     private static string cachedLanguageCode = string.Empty;
 
+    public static string HostLabel(MusterDto muster)
+    {
+        if (muster.HostCharacter.Length > 0)
+        {
+            return muster.HostCharacter;
+        }
+
+        return muster.HostDisplayName.Length > 0 ? muster.HostDisplayName : muster.HostHandle;
+    }
+
     public static SharedLocation Location(MusterDto muster) =>
         new((uint)muster.TerritoryId, (uint)muster.MapId, muster.MapX, muster.MapY, (uint)muster.WorldId,
             (short)muster.Ward, (short)muster.Plot, (short)muster.Room);

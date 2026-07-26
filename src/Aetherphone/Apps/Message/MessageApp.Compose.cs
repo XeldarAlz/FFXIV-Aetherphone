@@ -144,8 +144,11 @@ internal sealed partial class MessageApp
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
         var labelWidth = origin.X + width - 44f * scale - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale),
-            Typography.FitText(label, labelWidth, 1f, FontWeight.SemiBold), theme.TextStrong, 1f, FontWeight.SemiBold);
+        var labelY = origin.Y + rowHeight * 0.5f - 9f * scale;
+        var labelHover = ImGui.IsMouseHoveringRect(new Vector2(textLeft, labelY),
+            new Vector2(origin.X + width - 44f * scale, labelY + Typography.Measure(label, 1f, FontWeight.SemiBold).Y));
+        Marquee.DrawLeft("compose.pick." + contact.UserId, label, textLeft, labelY, labelWidth,
+            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, labelHover);
         var checkCenter = new Vector2(origin.X + width - 22f * scale, origin.Y + rowHeight * 0.5f);
         if (selected)
         {

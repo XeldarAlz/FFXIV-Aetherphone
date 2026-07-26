@@ -6,8 +6,11 @@ namespace Aetherphone.Windows.Components;
 internal static class EmojiRender
 {
     private const float SideScale = 1.2f;
+    private const float GapScale = 0.12f;
 
-    public static float Advance(float fontSize) => fontSize * SideScale;
+    public static float Advance(float fontSize) => fontSize * (SideScale + GapScale);
+
+    public static float LineHeight(float fontSize) => fontSize * SideScale;
 
     public static void Draw(ImDrawListPtr drawList, string file, Vector2 topLeft, float fontSize, float alpha)
     {

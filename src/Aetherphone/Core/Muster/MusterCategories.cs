@@ -82,7 +82,11 @@ internal static class MusterCategories
             return 0;
         }
 
-        return world.DataCenter.Value.Region.RowId switch
+        return RegionBitForRegionId(world.DataCenter.Value.Region.RowId);
+    }
+
+    public static int RegionBitForRegionId(uint regionId) =>
+        regionId switch
         {
             1 => RegionJapan,
             2 => RegionNorthAmerica,
@@ -90,5 +94,4 @@ internal static class MusterCategories
             4 => RegionOceania,
             _ => 0,
         };
-    }
 }

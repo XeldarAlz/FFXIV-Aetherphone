@@ -24,6 +24,7 @@ internal static class SocialActivity
     public const int TypeAdExpiring = 16;
     public const int TypeAdHidden = 17;
     public const int TypeAdOpened = 18;
+    public const int TypeAdInquiry = 19;
     public const string ChirperApp = "chirper";
     public const string AethergramApp = "aethergram";
     public const string VelvetApp = "velvet";
@@ -68,7 +69,8 @@ internal static class SocialActivity
             case TypePhotoTag:
                 return Loc.T(L.Social.TaggedPhoto);
             case TypeRepost:
-                return Loc.T(isPhoto ? L.Social.RepostedPhoto : L.Social.RepostedChirp);
+                var repostAction = Loc.T(isPhoto ? L.Social.RepostedPhoto : L.Social.RepostedChirp);
+                return string.IsNullOrEmpty(item.Preview) ? repostAction : $"{repostAction}: “{item.Preview}”";
             case TypeQuote:
                 var quoteAction = Loc.T(isPhoto ? L.Social.QuotedPhoto : L.Social.QuotedChirp);
                 return string.IsNullOrEmpty(item.Preview) ? quoteAction : $"{quoteAction}: “{item.Preview}”";
@@ -102,6 +104,10 @@ internal static class SocialActivity
                 return string.IsNullOrEmpty(item.Preview)
                     ? Loc.T(L.YellowPages.NotifOpenedGeneric)
                     : Loc.T(L.YellowPages.NotifOpenedBody, item.Preview);
+            case TypeAdInquiry:
+                return string.IsNullOrEmpty(item.Preview)
+                    ? Loc.T(L.YellowPages.NotifInquiryGeneric)
+                    : Loc.T(L.YellowPages.NotifInquiryBody, item.Preview);
             default:
                 return string.Empty;
         }

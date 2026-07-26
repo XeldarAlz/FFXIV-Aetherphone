@@ -1,6 +1,7 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Muster;
 using Dalamud.Plugin.Services;
@@ -14,7 +15,7 @@ internal sealed class YellowPagesStore : IDisposable
 {
     public const string AppId = "yellowpages";
 
-    public const int MaxPhotos = 4;
+    public const int MaxPhotos = 8;
 
     private const int MaxImageDimension = 1600;
 
@@ -26,6 +27,7 @@ internal sealed class YellowPagesStore : IDisposable
     private readonly MediaClient media;
     private readonly Configuration configuration;
     private readonly RealtimeSignalBus signals;
+    private readonly AppGate gate;
     private readonly PollCadence cadence;
     private readonly StoreWork work = new("YellowPages");
 
@@ -60,13 +62,14 @@ internal sealed class YellowPagesStore : IDisposable
     private volatile bool savedLoadedOnce;
 
     public YellowPagesStore(AethernetSession session, YellowPagesClient client, MediaClient media,
-        Configuration configuration, PhoneVisibility visibility, RealtimeSignalBus signals)
+        Configuration configuration, PhoneVisibility visibility, RealtimeSignalBus signals, AppGate gate)
     {
         this.session = session;
         this.client = client;
         this.media = media;
         this.configuration = configuration;
         this.signals = signals;
+        this.gate = gate;
         cadence = new PollCadence(visibility, ForegroundPollInterval, BackgroundPollInterval);
         session.Changed += OnSessionChanged;
         signals.ConnectedChanged += OnRealtimeConnected;
@@ -84,6 +87,8 @@ internal sealed class YellowPagesStore : IDisposable
     public AdDto[] Directory => directory;
 
     public bool DirectoryLoading => directoryLoading;
+
+    public int DirectoryCategories => directoryCategories;
 
     public bool DirectoryLoadingMore => directoryLoadingMore;
 
@@ -540,7 +545,7 @@ internal sealed class YellowPagesStore : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        if (!session.IsSignedIn)
+        if (!session.IsSignedIn || !gate.Open)
         {
             primed = false;
             return;
