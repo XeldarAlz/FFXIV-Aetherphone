@@ -1,4 +1,4 @@
-﻿using Aetherphone.Core;
+using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
@@ -111,8 +111,6 @@ internal sealed class PhoneWindow : Window
 
     private void CloseShell()
     {
-        // Libera recursos pertencentes ao app, incluindo hooks de input
-        // do emulador, antes de esconder a janela.
         try
         {
             shell.OnClosed();
@@ -156,9 +154,6 @@ internal sealed class PhoneWindow : Window
 
         var size = SnapLogicalSize(requestedSize);
 
-        // WantsLandscape é o pedido atual do aplicativo ativo.
-        // Usar LandscapeActive aqui criava uma dependência circular e
-        // impedia a janela de começar a rotação.
         landscape = !minimized && shell.WantsLandscape;
 
         Size = size;
@@ -237,9 +232,6 @@ internal sealed class PhoneWindow : Window
         var landscapeSize =
             PhoneSizeCatalog.LandscapeSizeFor(configuration.PhoneScale);
 
-        // WantsLandscape inicia a transição imediatamente quando o app
-        // solicita landscape. LandscapeActive só deve refletir o estado
-        // resultante no shell, não controlar o começo da rotação.
         var target = shell.WantsLandscape
             ? 1f
             : 0f;
@@ -345,7 +337,6 @@ internal sealed class PhoneWindow : Window
 
         if (phase == MinimizePhase.None)
         {
-            // Salva a posição maximizada apenas no modo retrato.
             if (!landscape)
             {
                 maximizedPosition =

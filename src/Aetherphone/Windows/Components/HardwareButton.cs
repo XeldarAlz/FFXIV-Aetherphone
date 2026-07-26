@@ -28,13 +28,11 @@ internal static class HardwareButton
         Vector2 shift;
         if (isHorizontal)
         {
-            // Botão horizontal (landscape): empurra no eixo Y
             var yShift = side == RailSide.Bottom ? -travel : travel;
             shift = new Vector2(0f, yShift);
         }
         else
         {
-            // Botão vertical (portrait): empurra no eixo X
             var xShift = side == RailSide.Right ? -travel : travel;
             shift = new Vector2(xShift, 0f);
         }
@@ -60,13 +58,11 @@ internal static class HardwareButton
         Vector2 min, max;
         if (isHorizontal)
         {
-            // Botão horizontal: padding nas laterais
             min = new Vector2(bounds.Min.X - pad, bounds.Min.Y);
             max = new Vector2(bounds.Max.X + pad, bounds.Max.Y);
         }
         else
         {
-            // Botão vertical: padding em cima/baixo
             min = new Vector2(bounds.Min.X, bounds.Min.Y - pad);
             max = new Vector2(bounds.Max.X, bounds.Max.Y + pad);
         }
@@ -83,7 +79,6 @@ internal static class HardwareButton
         
         if (isHorizontal)
         {
-            // Botão horizontal: gradient da esquerda para direita
             var left = min.X + rounding;
             var right = max.X - rounding;
             if (right <= left) return;
@@ -106,7 +101,6 @@ internal static class HardwareButton
         }
         else
         {
-            // Botão vertical: gradient de cima para baixo (código original)
             var top = min.Y + rounding;
             var bottom = max.Y - rounding;
             if (bottom <= top) return;
@@ -140,13 +134,11 @@ internal static class HardwareButton
         
         if (isHorizontal)
         {
-            // Botão horizontal: linha vertical no meio superior/inferior
             var y = side == RailSide.Bottom ? max.Y - 1.6f * scale : min.Y + 1.6f * scale;
             drawList.AddLine(new Vector2(min.X + rounding, y), new Vector2(max.X - rounding, y), color, 1.3f * scale);
         }
         else
         {
-            // Botão vertical: linha horizontal no meio esquerdo/direito
             var x = side == RailSide.Right ? max.X - 1.6f * scale : min.X + 1.6f * scale;
             drawList.AddLine(new Vector2(x, min.Y + rounding), new Vector2(x, max.Y - rounding), color, 1.3f * scale);
         }
@@ -160,7 +152,6 @@ internal static class HardwareButton
         
         if (isHorizontal)
         {
-            // Botão horizontal: linha vertical interna
             var innerY = side == RailSide.Bottom ? min.Y + 1f * scale : max.Y - 1f * scale;
             drawList.AddLine(new Vector2(min.X + rounding, innerY), new Vector2(max.X - rounding, innerY), shadow, 1.4f * scale);
             
@@ -173,7 +164,6 @@ internal static class HardwareButton
         }
         else
         {
-            // Botão vertical: linha horizontal interna
             var innerX = side == RailSide.Right ? min.X + 1f * scale : max.X - 1f * scale;
             drawList.AddLine(new Vector2(innerX, min.Y + rounding), new Vector2(innerX, max.Y - rounding), shadow, 1.4f * scale);
             

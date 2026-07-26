@@ -10,6 +10,7 @@ internal interface IEmulatorCore : IDisposable
     ReadOnlyMemory<byte> VideoFrame { get; }
     bool HasNewFrame { get; }
     int AudioPlaybackSpeed { set; }
+    float AudioGain { set; }
     EmulatorButtons Buttons { set; }
     EmulatorInputState Input { set; }
     int DiskCount { get; }

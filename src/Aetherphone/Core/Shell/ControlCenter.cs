@@ -48,7 +48,7 @@ internal sealed class ControlCenter
     private readonly ControlRegistry registry;
     private readonly ControlLayoutService layout;
     private readonly ControlGallery gallery;
-    private DragTracker drag = new();
+    private readonly DragTracker drag = new();
     private readonly Dictionary<string, SlotPose> poses = new();
     private Spring offset;
     private Spring lift;
@@ -582,7 +582,7 @@ internal sealed class ControlCenter
         draggingSlot = null;
         pressSlot = null;
         gallery.Close();
-        drag = new DragTracker();
+        drag.Reset();
     }
 
     private void HandleGesture(Rect screen, float delta, bool gesturesEnabled, bool allowDismiss)

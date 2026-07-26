@@ -99,7 +99,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration
     public List<PlaylistRecord> Playlists { get; set; } = new();
     public List<GameStatRecord> GameStats { get; set; } = new();
     public EmulatorSettings Emulator { get; set; } = new();
-    public HomeLayout? Home { get; set; } = null;
+    public HomeLayout? Home { get; set; }
     public int HomeGridRows { get; set; } = 6;
     public ControlLayout? ControlPanel { get; set; }
     public bool ControlPanelRepacked { get; set; }

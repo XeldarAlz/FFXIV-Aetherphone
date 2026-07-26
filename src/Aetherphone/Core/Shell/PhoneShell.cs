@@ -55,7 +55,6 @@ internal sealed class PhoneShell : IDisposable
     private Vector2 indicatorPressPos;
     private CallState lastCallState;
     private DateTime lastVisibleDrawUtc = DateTime.MinValue;
-    private IPhoneApp? suspendedApp;
 
     public PhoneShell(PhoneServices services, AppBundle bundle)
     {
@@ -108,22 +107,6 @@ internal sealed class PhoneShell : IDisposable
             loading.BeginSession();
         }
 
-        if (suspendedApp is { } app)
-        {
-            suspendedApp = null;
-            if (ReferenceEquals(navigation.Current, app))
-            {
-                try
-                {
-                    app.OnOpened();
-                }
-                catch (Exception exception)
-                {
-                    AepLog.Error($"[shell] app-open {app.Id} threw: {exception.Message}");
-                }
-            }
-        }
-
         EmulatorInputCaptureBridge.SetPhoneInteractive(minimize.Phase == MinimizePhase.None);
         director.OnPhoneOpened();
     }
@@ -131,21 +114,6 @@ internal sealed class PhoneShell : IDisposable
     public void OnClosed()
     {
         EmulatorInputCaptureBridge.SetPhoneInteractive(false);
-
-        // Closing the phone window must also close the active app lifecycle.
-        // Emulator apps release their keyboard hook from OnClosed/Close.
-        if (suspendedApp is null && navigation.Current is { } app)
-        {
-            suspendedApp = app;
-            try
-            {
-                app.OnClosed();
-            }
-            catch (Exception exception)
-            {
-                AepLog.Error($"[shell] app-close {app.Id} threw: {exception.Message}");
-            }
-        }
 
         loading.Cancel();
         director.Suspend();
@@ -216,9 +184,6 @@ internal sealed class PhoneShell : IDisposable
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         minimize.Advance(delta);
 
-        // Treat only the fully expanded phone as interactive. Reasserting this every frame
-        // makes input release deterministic throughout collapse/minimized states and avoids
-        // relying on a single side-button event.
         EmulatorInputCaptureBridge.SetPhoneInteractive(minimize.Phase == MinimizePhase.None);
         if (minimize.Phase != MinimizePhase.None)
         {
@@ -258,8 +223,6 @@ internal sealed class PhoneShell : IDisposable
             switch (sideButton.Update(DeviceChrome.SideButtonRect(device), theme, delta, isLandscape))
             {
                 case SideButtonAction.Minimize:
-                    // Release keyboard and gamepad to FFXIV immediately, before the
-                    // collapse animation begins. Expanding the phone recaptures them.
                     EmulatorInputCaptureBridge.SetPhoneInteractive(false);
                     minimize.BeginCollapse();
                     break;

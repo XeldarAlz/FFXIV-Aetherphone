@@ -30,13 +30,11 @@ internal enum EmulatorBrowserPurpose : byte
     ScanFolder,
 }
 
-internal sealed class GameBoyApp : IMiniGame
+internal sealed partial class GameBoyApp : IMiniGame
 {
     private const string GameId = "gameboy";
     private const float SettingsRowHeight = 74f;
     private const float ScreenPadding = 4f;
-    // Leaves room for the lowered gameplay back button in portrait mode.
-    // This safe area is used only for emulated video screens, not menus or virtual controls.
     private const float PortraitGameplayScreenTopInset = 72f;
     private static readonly Vector4 N64CButtonColor = new(0.88f, 0.68f, 0.16f, 1f);
     private static readonly EmulatorButtons[] BindingOrder =
@@ -77,11 +75,15 @@ internal sealed class GameBoyApp : IMiniGame
     private readonly KeyboardInputCapture keyboardCapture;
     private readonly IKeyState keyState;
     private readonly IGamepadState gamepadState;
-    private readonly PropertyInfo? gamepadNavigationProperty;
+    private readonly Action<object, bool>? gamepadNavigationSetter;
+    private readonly Func<object, bool>? gamepadNavigationGetter;
     private readonly IDisposable inputCaptureRegistration;
     private readonly Configuration configuration;
     private readonly DirectoryBrowser directoryBrowser = new();
     private readonly bool[] bindingKeyStates = new bool[256];
+    private readonly EmulatorButtons[] visibleBindings = new EmulatorButtons[BindingOrder.Length];
+    private readonly EmulatorRecentGame?[] recentGames = new EmulatorRecentGame?[6];
+    private readonly string[] systemFilterLabels = new string[EmulatorSystemCatalog.All.Count + 1];
     private readonly HashSet<int> shortcutCaptureKeys = new();
     private readonly Dictionary<string, int> knownGameCounts = new(StringComparer.OrdinalIgnoreCase);
     private IReadOnlyList<RomEntry> roms = Array.Empty<RomEntry>();
@@ -94,6 +96,7 @@ internal sealed class GameBoyApp : IMiniGame
     private bool gamepadBlockWasEnabled;
     private bool gamepadUsesImGuiFallback;
     private bool gamepadReflectionWarningLogged;
+    private bool systemFilesInstalled;
     private bool phoneInteractive = true;
     private bool gameVisible;
     private bool editingLayout;
@@ -122,14 +125,15 @@ internal sealed class GameBoyApp : IMiniGame
     {
         emulatorRoot = Path.Combine(configDirectory.FullName, "Emulator");
         coreDirectory = Path.Combine(Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Cores");
-        BundledSystemFiles.Install(coreDirectory, emulatorRoot);
         library = new RomLibrary(emulatorRoot);
         video = new EmulatorVideoTexture(textures);
         keyboardCapture = new KeyboardInputCapture();
         this.keyState = keyState;
         this.gamepadState = gamepadState;
-        gamepadNavigationProperty = gamepadState.GetType().GetProperty("NavEnableGamepad",
+        var navigationProperty = gamepadState.GetType().GetProperty("NavEnableGamepad",
             BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+        gamepadNavigationSetter = CreateSetter(navigationProperty);
+        gamepadNavigationGetter = CreateGetter(navigationProperty);
         inputCaptureRegistration = EmulatorInputCaptureBridge.Register(SetPhoneInteractive);
         this.configuration = configuration;
         configuration.Emulator ??= new EmulatorSettings();
@@ -139,7 +143,6 @@ internal sealed class GameBoyApp : IMiniGame
             _ = configuration.Emulator.ForCore(system);
         }
 
-        configuration.Save();
     }
 
     private EmulatorSystemDefinition CurrentSystem =>
@@ -162,6 +165,12 @@ internal sealed class GameBoyApp : IMiniGame
 
     public void Open()
     {
+        if (!systemFilesInstalled)
+        {
+            BundledSystemFiles.Install(coreDirectory, emulatorRoot);
+            systemFilesInstalled = true;
+        }
+
         error = string.Empty;
         gameVisible = false;
         editingLayout = false;
@@ -254,7 +263,8 @@ internal sealed class GameBoyApp : IMiniGame
         Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 25f * scale),
             CurrentSystem.Name, theme.TextStrong, TextStyles.Title2);
         Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 49f * scale),
-            Typography.FitText(CurrentSystem.Description, body.Width - 36f * scale, TextStyles.Footnote),
+            Typography.FitText(Loc.T(CurrentSystem.LocalizedDescription), body.Width - 36f * scale,
+                TextStyles.Footnote),
             theme.TextMuted, TextStyles.Footnote);
 
         var tabRow = new Rect(new Vector2(body.Min.X + 16f * scale, body.Min.Y + 64f * scale),
@@ -320,10 +330,18 @@ internal sealed class GameBoyApp : IMiniGame
 
     private void DrawRecentGames(PhoneTheme theme, float scale)
     {
-        var recent = configuration.Emulator.RecentGames
-            .Where(entry => File.Exists(entry.Path) && EmulatorSystemCatalog.ById(entry.SystemId) is not null)
-            .Take(6).ToArray();
-        if (recent.Length == 0)
+        var recentCount = 0;
+        for (var index = 0; index < configuration.Emulator.RecentGames.Count &&
+                            recentCount < recentGames.Length; index++)
+        {
+            var candidate = configuration.Emulator.RecentGames[index];
+            if (File.Exists(candidate.Path) && EmulatorSystemCatalog.ById(candidate.SystemId) is not null)
+            {
+                recentGames[recentCount++] = candidate;
+            }
+        }
+
+        if (recentCount == 0)
         {
             return;
         }
@@ -332,9 +350,9 @@ internal sealed class GameBoyApp : IMiniGame
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var rowHeight = 58f * scale;
-        for (var index = 0; index < recent.Length; index++)
+        for (var index = 0; index < recentCount; index++)
         {
-            var item = recent[index];
+            var item = recentGames[index]!;
             var system = EmulatorSystemCatalog.ById(item.SystemId)!;
             var row = new Rect(new Vector2(origin.X, origin.Y + index * rowHeight),
                 new Vector2(origin.X + width, origin.Y + (index + 1) * rowHeight - 6f * scale));
@@ -350,7 +368,7 @@ internal sealed class GameBoyApp : IMiniGame
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, recent.Length * rowHeight));
+        ImGui.Dummy(new Vector2(width, recentCount * rowHeight));
     }
 
     private void DrawSystemTiles(PhoneTheme theme, float scale)
@@ -593,17 +611,21 @@ internal sealed class GameBoyApp : IMiniGame
     {
         SettingsSection.Header(Loc.T(L.Games.EmulatorSystems), theme);
         var systems = EmulatorSystemCatalog.All;
-        var labels = new[] { Loc.T(L.Games.AllSystems) }
-            .Concat(systems.Select(static system => system.ShortName)).ToArray();
+        systemFilterLabels[0] = Loc.T(L.Games.AllSystems);
+        for (var index = 0; index < systems.Count; index++)
+        {
+            systemFilterLabels[index + 1] = systems[index].ShortName;
+        }
+
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         const int columns = 4;
         var gap = 6f * scale;
         var cellWidth = (width - gap * (columns - 1)) / columns;
         var cellHeight = 30f * scale;
-        var rows = (int)Math.Ceiling(labels.Length / (float)columns);
+        var rows = (int)Math.Ceiling(systemFilterLabels.Length / (float)columns);
         var drawList = ImGui.GetWindowDrawList();
-        for (var index = 0; index < labels.Length; index++)
+        for (var index = 0; index < systemFilterLabels.Length; index++)
         {
             var column = index % columns;
             var row = index / columns;
@@ -617,7 +639,8 @@ internal sealed class GameBoyApp : IMiniGame
                     theme.GroupedCard with { W = hovered ? 0.82f : 0.58f }));
             Squircle.Stroke(drawList, rect.Min, rect.Max, 10f * scale,
                 ImGui.GetColorU32(selected ? GamePalette.Lighten(Accent, 0.25f) : theme.Separator), scale);
-            var label = Typography.FitText(labels[index], cellWidth - 8f * scale, TextStyles.Caption1);
+            var label = Typography.FitText(systemFilterLabels[index], cellWidth - 8f * scale,
+                TextStyles.Caption1);
             Typography.DrawCentered(rect.Center, label, theme.TextStrong, TextStyles.Caption1);
             if (hovered)
             {
@@ -630,1003 +653,6 @@ internal sealed class GameBoyApp : IMiniGame
         }
 
         ImGui.Dummy(new Vector2(width, rows * cellHeight + Math.Max(0, rows - 1) * gap + 6f * scale));
-    }
-
-    private void DrawEmulatorSettings(PhoneTheme theme, float scale)
-    {
-        var settings = Settings;
-        var changed = false;
-        changed |= DrawCoreSpecificSettings(CurrentSystem, settings, theme);
-
-        SettingsSection.Header(Loc.T(L.Games.Video), theme);
-        var videoCard = GroupCard.Begin(theme, 2, SettingsRowHeight);
-        var filter = DrawLabeledSegments("gameboy.filter", videoCard.NextRow(), Loc.T(L.Games.VideoFilter),
-            new[]
-            {
-                Loc.T(L.Games.FilterPixel), Loc.T(L.Games.FilterBalanced), Loc.T(L.Games.FilterSharp),
-                Loc.T(L.Games.FilterSmooth),
-            },
-            VideoFilterIndex(settings.VideoFilter), theme);
-        var nextFilter = filter switch
-        {
-            0 => EmulatorVideoFilter.Pixel,
-            1 => EmulatorVideoFilter.Balanced,
-            2 => EmulatorVideoFilter.Sharp,
-            _ => EmulatorVideoFilter.Smooth,
-        };
-        if (nextFilter != settings.VideoFilter)
-        {
-            settings.VideoFilter = nextFilter;
-            changed = true;
-        }
-
-        var orientation = DrawLabeledSegments("gameboy.orientation", videoCard.NextRow(),
-            Loc.T(L.Games.Orientation), new[] { Loc.T(L.Games.Portrait), Loc.T(L.Games.Landscape) },
-            settings.GameplayOrientation == EmulatorGameplayOrientation.Landscape ? 1 : 0, theme);
-        var nextOrientation = orientation == 1
-            ? EmulatorGameplayOrientation.Landscape
-            : EmulatorGameplayOrientation.Portrait;
-        if (nextOrientation != settings.GameplayOrientation)
-        {
-            settings.GameplayOrientation = nextOrientation;
-            changed = true;
-        }
-
-        videoCard.End();
-        SettingsSection.Hint(Loc.T(L.Games.PixelFilterHint), theme);
-
-        SettingsSection.Header(Loc.T(L.Games.FastForward), theme);
-        var fastForwardCard = GroupCard.Begin(theme, 1, SettingsRowHeight);
-        var fastForwardSpeed = DrawLabeledSegments("gameboy.fastForwardSpeed", fastForwardCard.NextRow(),
-            Loc.T(L.Games.FastForwardSpeed), new[] { "2x", "3x", "4x" },
-            Math.Clamp(settings.FastForwardSpeed, 2, 4) - 2, theme) + 2;
-        if (fastForwardSpeed != settings.FastForwardSpeed)
-        {
-            settings.FastForwardSpeed = fastForwardSpeed;
-            changed = true;
-        }
-
-        fastForwardCard.End();
-        SettingsSection.Hint(Loc.T(L.Games.FastForwardHint), theme);
-
-        SettingsSection.Header(Loc.T(L.Games.SaveStates), theme);
-        var autoStateCard = GroupCard.Begin(theme, 2);
-        var autoSave = SettingsRow.Bool(autoStateCard.NextRow(), Loc.T(L.Games.AutoSaveState),
-            settings.AutoSaveState, theme);
-        var autoLoad = SettingsRow.Bool(autoStateCard.NextRow(), Loc.T(L.Games.AutoLoadState),
-            settings.AutoLoadState, theme);
-        autoStateCard.End();
-        if (autoSave != settings.AutoSaveState)
-        {
-            settings.AutoSaveState = autoSave;
-            changed = true;
-        }
-
-        if (autoLoad != settings.AutoLoadState)
-        {
-            settings.AutoLoadState = autoLoad;
-            changed = true;
-        }
-
-        SettingsSection.Hint(Loc.T(L.Games.AutoStateHint), theme);
-
-        SettingsSection.Header(Loc.T(L.Games.EmulatorShortcuts), theme);
-        var shortcutCard = GroupCard.Begin(theme, 4);
-        if (SettingsRow.Disclosure(shortcutCard.NextRow(), Loc.T(L.Games.FastForward),
-                ShortcutValue(EmulatorShortcutAction.FastForward), theme))
-        {
-            BeginShortcutBinding(EmulatorShortcutAction.FastForward);
-        }
-
-        if (SettingsRow.Disclosure(shortcutCard.NextRow(), Loc.T(L.Games.SaveState),
-                ShortcutValue(EmulatorShortcutAction.SaveState), theme))
-        {
-            BeginShortcutBinding(EmulatorShortcutAction.SaveState);
-        }
-
-        if (SettingsRow.Disclosure(shortcutCard.NextRow(), Loc.T(L.Games.LoadState),
-                ShortcutValue(EmulatorShortcutAction.LoadState), theme))
-        {
-            BeginShortcutBinding(EmulatorShortcutAction.LoadState);
-        }
-
-        if (SettingsRow.Action(shortcutCard.NextRow(), Loc.T(L.Games.ClearShortcuts), theme.TextMuted, theme))
-        {
-            CancelAllBindings();
-            settings.FastForwardShortcut.Clear();
-            settings.SaveStateShortcut.Clear();
-            settings.LoadStateShortcut.Clear();
-            changed = true;
-        }
-
-        shortcutCard.End();
-        SettingsSection.Hint(Loc.T(L.Games.ShortcutsHint), theme);
-
-        SettingsSection.Header(Loc.T(L.Games.InterfaceLayout), theme);
-        var layoutCard = GroupCard.Begin(theme, 2);
-        if (SettingsRow.Disclosure(layoutCard.NextRow(), Loc.T(L.Games.EditInterface), string.Empty, theme))
-        {
-            CancelAllBindings();
-            editingLayout = true;
-            selectedLayoutElement = IsNintendoDs
-                ? EmulatorLayoutElement.DsTopScreen
-                : EmulatorLayoutElement.Screen;
-        }
-
-        var hideOnScreenControls = SettingsRow.Bool(layoutCard.NextRow(),
-            Loc.T(L.Games.HideOnScreenControls), settings.HideOnScreenControls, theme);
-        layoutCard.End();
-        if (hideOnScreenControls != settings.HideOnScreenControls)
-        {
-            settings.HideOnScreenControls = hideOnScreenControls;
-            activeTouchAnalog = null;
-            changed = true;
-        }
-        SettingsSection.Hint(Loc.T(L.Games.InterfaceLayoutHint), theme);
-
-        SettingsSection.Header(Loc.T(L.Games.KeyboardControls), theme);
-        var visibleBindings = BindingOrder.Where(button => (CurrentSystem.Controls & button) != 0).ToArray();
-        var auxiliaryBindings = CurrentSystem.InputProfile == EmulatorInputProfile.Nintendo64 ? 4 : 0;
-        var controlsCard = GroupCard.Begin(theme, visibleBindings.Length + auxiliaryBindings + 1);
-        for (var index = 0; index < visibleBindings.Length; index++)
-        {
-            var button = visibleBindings[index];
-            var value = bindingTarget == button
-                ? Loc.T(L.Games.PressKey)
-                : EmulatorKeyCatalog.Name(settings.KeyFor(button));
-            if (SettingsRow.Disclosure(controlsCard.NextRow(), ControlLabel(button), value, theme))
-            {
-                BeginKeyBinding(button);
-            }
-        }
-
-        if (CurrentSystem.InputProfile == EmulatorInputProfile.Nintendo64)
-        {
-            DrawAuxiliaryBindingRow(controlsCard.NextRow(), EmulatorLayoutElement.CUp, "C Up", settings.KeyCUp,
-                theme);
-            DrawAuxiliaryBindingRow(controlsCard.NextRow(), EmulatorLayoutElement.CDown, "C Down", settings.KeyCDown,
-                theme);
-            DrawAuxiliaryBindingRow(controlsCard.NextRow(), EmulatorLayoutElement.CLeft, "C Left", settings.KeyCLeft,
-                theme);
-            DrawAuxiliaryBindingRow(controlsCard.NextRow(), EmulatorLayoutElement.CRight, "C Right", settings.KeyCRight,
-                theme);
-        }
-
-        if (SettingsRow.Action(controlsCard.NextRow(), Loc.T(L.Games.ResetControls), theme.Accent, theme))
-        {
-            CancelKeyBinding();
-            settings.ResetKeys();
-            changed = true;
-        }
-
-        controlsCard.End();
-        SettingsSection.Hint(Loc.T(L.Games.ControlsHint), theme);
-
-        SettingsSection.Header(Loc.T(L.Games.RomFolders), theme);
-        var folderCard = GroupCard.Begin(theme, settings.RomFolders.Count + 1);
-        var removeFolder = -1;
-        for (var index = 0; index < settings.RomFolders.Count; index++)
-        {
-            var path = settings.RomFolders[index];
-            var label = Path.GetFileName(Path.TrimEndingDirectorySeparator(path));
-            if (string.IsNullOrEmpty(label))
-            {
-                label = path;
-            }
-
-            if (SettingsRow.Disclosure(folderCard.NextRow(), label, Loc.T(L.Games.RemoveFolder), theme))
-            {
-                removeFolder = index;
-            }
-        }
-
-        if (SettingsRow.Action(folderCard.NextRow(), Loc.T(L.Games.ScanFolder), Accent, theme))
-        {
-            OpenFolderBrowser();
-        }
-
-        folderCard.End();
-        if (removeFolder >= 0)
-        {
-            settings.RomFolders.RemoveAt(removeFolder);
-            RefreshLibrary();
-            changed = true;
-        }
-
-        SettingsSection.Hint(Loc.T(L.Games.RomFolderHint), theme);
-        ImGui.Dummy(new Vector2(0f, 16f * scale));
-        if (changed)
-        {
-            configuration.Save();
-        }
-    }
-
-    private bool DrawCoreSpecificSettings(EmulatorSystemDefinition system, EmulatorSettings settings,
-        PhoneTheme theme)
-    {
-        var changed = false;
-        SettingsSection.Header("Core", theme);
-        var infoCard = GroupCard.Begin(theme, 2);
-        SettingsRow.Info(infoCard.NextRow(), "Libretro core", system.CoreFileName, theme);
-        SettingsRow.Info(infoCard.NextRow(), "Persistent storage", system.SaveDescription, theme);
-        infoCard.End();
-
-        if (system.CoreOptions.Count > 0)
-        {
-            SettingsSection.Header("Core options", theme);
-            var optionsCard = GroupCard.Begin(theme, system.CoreOptions.Count);
-            for (var index = 0; index < system.CoreOptions.Count; index++)
-            {
-                var option = system.CoreOptions[index];
-                var current = settings.CoreOptions.TryGetValue(option.Key, out var configured) &&
-                              option.Values.Contains(configured, StringComparer.OrdinalIgnoreCase)
-                    ? configured
-                    : system.DefaultCoreOptions.TryGetValue(option.Key, out var defaultValue) &&
-                      option.Values.Contains(defaultValue, StringComparer.OrdinalIgnoreCase)
-                        ? defaultValue
-                        : option.Values[0];
-                var optionLabel = option.LocalizedLabel is { } localizedLabel
-                    ? Loc.T(localizedLabel)
-                    : option.Label;
-                if (!SettingsRow.Disclosure(optionsCard.NextRow(), optionLabel, option.Display(current, Loc.T), theme))
-                {
-                    continue;
-                }
-
-                var currentIndex = 0;
-                for (var valueIndex = 0; valueIndex < option.Values.Count; valueIndex++)
-                {
-                    if (string.Equals(option.Values[valueIndex], current, StringComparison.OrdinalIgnoreCase))
-                    {
-                        currentIndex = valueIndex;
-                        break;
-                    }
-                }
-
-                settings.CoreOptions[option.Key] = option.Values[(currentIndex + 1) % option.Values.Count];
-                changed = true;
-            }
-
-            optionsCard.End();
-            SettingsSection.Hint("Core options are applied the next time a game starts.", theme);
-        }
-
-        if (system.Firmware.Count > 0)
-        {
-            SettingsSection.Header("BIOS / firmware", theme);
-            var firmwareCard = GroupCard.Begin(theme, system.Firmware.Count);
-            var systemDirectory = Path.Combine(emulatorRoot, "system");
-            for (var index = 0; index < system.Firmware.Count; index++)
-            {
-                var firmware = system.Firmware[index];
-                var firmwarePath = Path.Combine(systemDirectory, firmware.FileName);
-                var present = File.Exists(firmwarePath) || Directory.Exists(firmwarePath);
-                var state = present ? "Installed" : firmware.Required ? "Required" : "Optional";
-                SettingsRow.Info(firmwareCard.NextRow(), firmware.FileName, state, theme);
-            }
-
-            firmwareCard.End();
-            SettingsSection.Hint($"Place legally obtained firmware files in {systemDirectory}", theme);
-        }
-
-        if (system.InputProfile == EmulatorInputProfile.PlayStation)
-        {
-            SettingsSection.Header("Memory cards", theme);
-            var memoryCard = GroupCard.Begin(theme, 2);
-            SettingsRow.Info(memoryCard.NextRow(), "Storage", @"saves\ps1", theme);
-            var protect = SettingsRow.Bool(memoryCard.NextRow(), "Protect cards when loading states",
-                settings.ProtectSaveMemoryOnStateLoad, theme);
-            memoryCard.End();
-            if (protect != settings.ProtectSaveMemoryOnStateLoad)
-            {
-                settings.ProtectSaveMemoryOnStateLoad = protect;
-                changed = true;
-            }
-
-            SettingsSection.Hint("Protection prevents an old save state from replacing newer memory-card data.",
-                theme);
-        }
-
-        if (system.InputProfile == EmulatorInputProfile.Nintendo64)
-        {
-            SettingsSection.Hint(
-                "Controller Pak and Rumble Pak are selected above. Transfer Pak and N64DD require libretro " +
-                "subsystems and are reserved for a later phase.", theme);
-        }
-
-        if (system.InputProfile == EmulatorInputProfile.NintendoDs)
-        {
-            SettingsSection.Hint(Loc.T(L.Games.DsTouchHint), theme);
-        }
-
-        if (system.InputProfile == EmulatorInputProfile.PlayStationPortable)
-        {
-            SettingsSection.Hint(Loc.T(L.Games.PspSoftwareRendererHint), theme);
-        }
-
-        return changed;
-    }
-
-    private void DrawAuxiliaryBindingRow(Rect row, EmulatorLayoutElement control, string label, int key,
-        PhoneTheme theme)
-    {
-        var value = auxiliaryBindingTarget == control
-            ? Loc.T(L.Games.PressKey)
-            : EmulatorKeyCatalog.Name(key);
-        if (SettingsRow.Disclosure(row, label, value, theme))
-        {
-            BeginAuxiliaryKeyBinding(control);
-        }
-    }
-
-    private static int DrawLabeledSegments(string id, Rect row, string label, IReadOnlyList<string> options,
-        int selected, PhoneTheme theme)
-    {
-        var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 7f * scale), label, theme.TextStrong,
-            TextStyles.FootnoteEmphasized);
-        var segments = new Rect(new Vector2(row.Min.X, row.Min.Y + 29f * scale),
-            new Vector2(row.Max.X, row.Max.Y - 7f * scale));
-        return SegmentStrip.Draw(id, segments, options, selected, theme);
-    }
-
-    private static int VideoFilterIndex(EmulatorVideoFilter filter) => filter switch
-    {
-        EmulatorVideoFilter.Pixel => 0,
-        EmulatorVideoFilter.Balanced => 1,
-        EmulatorVideoFilter.Sharp => 2,
-        _ => 3,
-    };
-
-    private string ControlLabel(EmulatorButtons button)
-    {
-        if (CurrentSystem.InputProfile == EmulatorInputProfile.NintendoDs)
-        {
-            return button switch
-            {
-                EmulatorButtons.L2 => Loc.T(L.Games.DsControlMicrophone),
-                EmulatorButtons.R2 => Loc.T(L.Games.DsControlNextLayout),
-                EmulatorButtons.L3 => Loc.T(L.Games.DsControlCloseLid),
-                EmulatorButtons.R3 => Loc.T(L.Games.DsControlTouchJoystick),
-                _ => DefaultControlLabel(button),
-            };
-        }
-
-        return DefaultControlLabel(button);
-    }
-
-    private string DefaultControlLabel(EmulatorButtons button) => button switch
-    {
-        EmulatorButtons.Up => Loc.T(L.Games.ControlUp),
-        EmulatorButtons.Down => Loc.T(L.Games.ControlDown),
-        EmulatorButtons.Left => Loc.T(L.Games.ControlLeft),
-        EmulatorButtons.Right => Loc.T(L.Games.ControlRight),
-        _ => CurrentSystem.ButtonLabel(button),
-    };
-
-    private void BeginKeyBinding(EmulatorButtons button)
-    {
-        CancelShortcutBinding();
-        auxiliaryBindingTarget = null;
-        bindingTarget = button;
-        keyboardCapture.SetCaptured(true);
-        Array.Clear(bindingKeyStates);
-        var keys = EmulatorKeyCatalog.SupportedKeys;
-        for (var index = 0; index < keys.Count; index++)
-        {
-            var key = keys[index];
-            bindingKeyStates[key] = keyboardCapture.IsKeyDown(key);
-        }
-    }
-
-    private void ProcessKeyBinding()
-    {
-        if (bindingTarget == EmulatorButtons.None && auxiliaryBindingTarget is null)
-        {
-            return;
-        }
-
-        var keys = EmulatorKeyCatalog.SupportedKeys;
-        for (var index = 0; index < keys.Count; index++)
-        {
-            var key = keys[index];
-            var down = keyboardCapture.IsKeyDown(key);
-            if (down && !bindingKeyStates[key])
-            {
-                if (key != 0x1B)
-                {
-                    if (bindingTarget != EmulatorButtons.None)
-                    {
-                        Settings.SetKey(bindingTarget, key);
-                    }
-                    else if (auxiliaryBindingTarget is { } auxiliary)
-                    {
-                        SetAuxiliaryKey(auxiliary, key);
-                    }
-                    configuration.Save();
-                }
-
-                CancelKeyBinding();
-                return;
-            }
-
-            bindingKeyStates[key] = down;
-        }
-    }
-
-    private void CancelKeyBinding()
-    {
-        if (bindingTarget == EmulatorButtons.None && auxiliaryBindingTarget is null)
-        {
-            return;
-        }
-
-        bindingTarget = EmulatorButtons.None;
-        auxiliaryBindingTarget = null;
-        Array.Clear(bindingKeyStates);
-        keyboardCapture.SetCaptured(inputCaptured || shortcutTarget != EmulatorShortcutAction.None);
-    }
-
-    private void BeginAuxiliaryKeyBinding(EmulatorLayoutElement control)
-    {
-        CancelShortcutBinding();
-        bindingTarget = EmulatorButtons.None;
-        auxiliaryBindingTarget = control;
-        keyboardCapture.SetCaptured(true);
-        Array.Clear(bindingKeyStates);
-        var keys = EmulatorKeyCatalog.SupportedKeys;
-        for (var index = 0; index < keys.Count; index++)
-        {
-            var key = keys[index];
-            bindingKeyStates[key] = keyboardCapture.IsKeyDown(key);
-        }
-    }
-
-    private void SetAuxiliaryKey(EmulatorLayoutElement control, int key)
-    {
-        switch (control)
-        {
-            case EmulatorLayoutElement.CUp: Settings.KeyCUp = key; break;
-            case EmulatorLayoutElement.CDown: Settings.KeyCDown = key; break;
-            case EmulatorLayoutElement.CLeft: Settings.KeyCLeft = key; break;
-            case EmulatorLayoutElement.CRight: Settings.KeyCRight = key; break;
-        }
-    }
-
-    private void BeginShortcutBinding(EmulatorShortcutAction action)
-    {
-        CancelKeyBinding();
-        shortcutTarget = action;
-        shortcutCaptureKeys.Clear();
-        shortcutCaptureButtons = 0;
-        shortcutWaitingForRelease = true;
-        shortcutHasInput = false;
-        keyboardCapture.SetCaptured(true);
-    }
-
-    private void ProcessShortcutBinding()
-    {
-        if (shortcutTarget == EmulatorShortcutAction.None)
-        {
-            return;
-        }
-
-        var keys = EmulatorKeyCatalog.SupportedKeys;
-        var anyKeyDown = false;
-        var escapeDown = false;
-        for (var index = 0; index < keys.Count; index++)
-        {
-            var key = keys[index];
-            if (!keyboardCapture.IsKeyDown(key))
-            {
-                continue;
-            }
-
-            anyKeyDown = true;
-            escapeDown |= key == 0x1B;
-        }
-
-        var currentButtons = CurrentShortcutGamepadButtons();
-        var anyDown = anyKeyDown || currentButtons != 0;
-        if (shortcutWaitingForRelease)
-        {
-            if (!anyDown)
-            {
-                shortcutWaitingForRelease = false;
-            }
-
-            return;
-        }
-
-        if (escapeDown)
-        {
-            CancelShortcutBinding();
-            return;
-        }
-
-        if (anyDown)
-        {
-            for (var index = 0; index < keys.Count; index++)
-            {
-                var key = keys[index];
-                if (key != 0x1B && keyboardCapture.IsKeyDown(key))
-                {
-                    shortcutCaptureKeys.Add(key);
-                }
-            }
-
-            shortcutCaptureButtons |= currentButtons;
-            shortcutHasInput = shortcutCaptureKeys.Count > 0 || shortcutCaptureButtons != 0;
-            return;
-        }
-
-        if (!shortcutHasInput)
-        {
-            return;
-        }
-
-        ShortcutFor(shortcutTarget).Set(shortcutCaptureKeys, shortcutCaptureButtons);
-        configuration.Save();
-        CancelShortcutBinding();
-    }
-
-    private void CancelShortcutBinding()
-    {
-        if (shortcutTarget == EmulatorShortcutAction.None)
-        {
-            return;
-        }
-
-        shortcutTarget = EmulatorShortcutAction.None;
-        shortcutCaptureKeys.Clear();
-        shortcutCaptureButtons = 0;
-        shortcutWaitingForRelease = false;
-        shortcutHasInput = false;
-        keyboardCapture.SetCaptured(inputCaptured || bindingTarget != EmulatorButtons.None);
-    }
-
-    private void CancelAllBindings()
-    {
-        CancelKeyBinding();
-        CancelShortcutBinding();
-    }
-
-    private ushort CurrentShortcutGamepadButtons()
-    {
-        ushort result = 0;
-        for (var index = 0; index < ShortcutGamepadButtons.Length; index++)
-        {
-            var button = ShortcutGamepadButtons[index];
-            if (gamepadState.Raw(button) > 0.5f)
-            {
-                result |= (ushort)button;
-            }
-        }
-
-        return result;
-    }
-
-    private bool ShortcutIsDown(EmulatorShortcutSettings shortcut)
-    {
-        if (shortcut.IsEmpty)
-        {
-            return false;
-        }
-
-        for (var index = 0; index < shortcut.Keys.Count; index++)
-        {
-            if (!keyboardCapture.IsKeyDown(shortcut.Keys[index]))
-            {
-                return false;
-            }
-        }
-
-        for (var index = 0; index < ShortcutGamepadButtons.Length; index++)
-        {
-            var button = ShortcutGamepadButtons[index];
-            if ((shortcut.GamepadButtons & (ushort)button) != 0 && gamepadState.Raw(button) <= 0.5f)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private string ShortcutValue(EmulatorShortcutAction action)
-    {
-        if (shortcutTarget == action)
-        {
-            return Loc.T(L.Games.PressCombination);
-        }
-
-        var shortcut = ShortcutFor(action);
-        if (shortcut.IsEmpty)
-        {
-            return Loc.T(L.Games.Unassigned);
-        }
-
-        var parts = new List<string>(shortcut.Keys.Count + ShortcutGamepadButtons.Length);
-        for (var index = 0; index < shortcut.Keys.Count; index++)
-        {
-            parts.Add(EmulatorKeyCatalog.Name(shortcut.Keys[index]));
-        }
-
-        for (var index = 0; index < ShortcutGamepadButtons.Length; index++)
-        {
-            var button = ShortcutGamepadButtons[index];
-            if ((shortcut.GamepadButtons & (ushort)button) != 0)
-            {
-                parts.Add(GamepadButtonName(button));
-            }
-        }
-
-        return string.Join(" + ", parts);
-    }
-
-    private EmulatorShortcutSettings ShortcutFor(EmulatorShortcutAction action) => action switch
-    {
-        EmulatorShortcutAction.FastForward => Settings.FastForwardShortcut,
-        EmulatorShortcutAction.SaveState => Settings.SaveStateShortcut,
-        EmulatorShortcutAction.LoadState => Settings.LoadStateShortcut,
-        _ => throw new ArgumentOutOfRangeException(nameof(action)),
-    };
-
-    private static string GamepadButtonName(GamepadButtons button) => button switch
-    {
-        GamepadButtons.DpadUp => "D-pad Up",
-        GamepadButtons.DpadDown => "D-pad Down",
-        GamepadButtons.DpadLeft => "D-pad Left",
-        GamepadButtons.DpadRight => "D-pad Right",
-        GamepadButtons.North => "Pad North",
-        GamepadButtons.South => "Pad South",
-        GamepadButtons.West => "Pad West",
-        GamepadButtons.East => "Pad East",
-        _ => button.ToString(),
-    };
-
-    private void DrawLayoutEditor(in GameContext context)
-    {
-        var body = context.Body;
-        var theme = context.Theme;
-        var scale = ImGuiHelpers.GlobalScale;
-        GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
-        Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 25f * scale),
-            Loc.T(L.Games.LayoutEditor), theme.TextStrong, TextStyles.Title2);
-        var hint = Typography.FitText(Loc.T(L.Games.LayoutEditorHint), body.Width - 32f * scale,
-            TextStyles.Footnote);
-        Typography.DrawCentered(new Vector2(body.Center.X, body.Min.Y + 51f * scale), hint, theme.TextMuted,
-            TextStyles.Footnote);
-
-        var previewBounds = new Rect(new Vector2(body.Min.X + 14f * scale, body.Min.Y + 70f * scale),
-            new Vector2(body.Max.X - 14f * scale, body.Max.Y - 116f * scale));
-        var gameplayBodySize = TargetGameplayBodySize(theme);
-        var previewAspect = gameplayBodySize.X / MathF.Max(1f, gameplayBodySize.Y);
-        var preview = FitEditorPreview(previewBounds, previewAspect);
-        var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, preview.Min, preview.Max, 18f * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.Surface, 0.92f)));
-        Squircle.Stroke(drawList, preview.Min, preview.Max, 18f * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(theme.TextMuted, 0.35f)), 1f * scale);
-
-        var previewScale = scale * preview.Width / MathF.Max(1f, gameplayBodySize.X);
-        var videoWidth = session is { VideoWidth: > 0 } ? session.VideoWidth : 240;
-        var videoHeight = session is { VideoHeight: > 0 } ? session.VideoHeight : 160;
-        var videoAspect = session?.VideoAspectRatio ?? videoWidth / (float)Math.Max(1, videoHeight);
-        DrawLayoutPreview(preview, videoWidth, videoHeight, videoAspect, theme, previewScale);
-        HandleLayoutDrag(preview, videoWidth, videoHeight, videoAspect, previewScale);
-
-        var selectedScale = $"{MathF.Round(CurrentLayout.For(selectedLayoutElement).SafeScale * 100f):0}%";
-        var selectedLabel = $"{LayoutElementLabel(selectedLayoutElement)}  ·  {selectedScale}";
-        Typography.DrawCentered(new Vector2(body.Center.X, preview.Max.Y + 16f * scale), selectedLabel,
-            theme.TextStrong, TextStyles.FootnoteEmphasized);
-        var scaler = new Rect(new Vector2(body.Min.X + 34f * scale, preview.Max.Y + 31f * scale),
-            new Vector2(body.Max.X - 34f * scale, preview.Max.Y + 61f * scale));
-        DrawLayoutScaleStepper(scaler, theme, scale);
-
-        var buttonY = body.Max.Y - 25f * scale;
-        if (GameHud.Button(new Vector2(body.Center.X - 72f * scale, buttonY), new Vector2(126f * scale, 32f * scale),
-                Loc.T(L.Games.ResetInterface), theme.TextMuted, theme))
-        {
-            if (LandscapeMode)
-            {
-                CurrentLayout.ResetLandscape();
-            }
-            else
-            {
-                CurrentLayout.Reset();
-            }
-            selectedLayoutElement = IsNintendoDs
-                ? EmulatorLayoutElement.DsTopScreen
-                : EmulatorLayoutElement.Screen;
-            layoutDirty = true;
-            SaveLayoutIfDirty();
-        }
-
-        if (GameHud.Button(new Vector2(body.Center.X + 72f * scale, buttonY), new Vector2(126f * scale, 32f * scale),
-                Loc.T(L.Games.FinishEditing), Accent, theme))
-        {
-            FinishLayoutEditing();
-        }
-
-        if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
-        {
-            draggedLayoutElement = null;
-            SaveLayoutIfDirty();
-        }
-    }
-
-    private static Rect FitEditorPreview(Rect bounds, float aspect)
-    {
-        var width = MathF.Max(1f, bounds.Width);
-        var height = width / MathF.Max(0.1f, aspect);
-        if (height > bounds.Height)
-        {
-            height = MathF.Max(1f, bounds.Height);
-            width = height * aspect;
-        }
-
-        return CenteredRect(bounds.Center, new Vector2(width, height));
-    }
-
-    private Vector2 TargetGameplayBodySize(PhoneTheme theme)
-    {
-        var window = LandscapeMode
-            ? PhoneSizeCatalog.LandscapeSizeFor(configuration.PhoneScale)
-            : PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
-        var width = window.X;
-        var height = window.Y;
-        if (LandscapeMode)
-        {
-            height -= DeviceChrome.RailWidth * 2f;
-        }
-        else
-        {
-            width -= DeviceChrome.RailWidth * 2f;
-        }
-
-        width -= theme.BezelThickness * 2f + ShellScreenPainter.ImmersiveInset * 2f;
-        height -= theme.BezelThickness * 2f + ShellScreenPainter.ImmersiveInset * 2f;
-        return new Vector2(MathF.Max(1f, width), MathF.Max(1f, height));
-    }
-
-    private void DrawLayoutPreview(Rect preview, int videoWidth, int videoHeight, float videoAspect,
-        PhoneTheme theme, float scale)
-    {
-        var drawList = ImGui.GetWindowDrawList();
-        if (IsNintendoDs)
-        {
-            DrawDsLayoutPreviewScreen(preview, EmulatorLayoutElement.DsTopScreen, Vector2.Zero,
-                new Vector2(1f, 0.5f), Loc.T(L.Games.DsTopScreen), theme, scale);
-            DrawDsLayoutPreviewScreen(preview, EmulatorLayoutElement.DsBottomScreen, new Vector2(0f, 0.5f),
-                Vector2.One, Loc.T(L.Games.DsTouchScreen), theme, scale);
-        }
-        else
-        {
-            var screenArea = GameplayScreenArea(preview, scale);
-            var screen = CalculateScreenOuter(screenArea, videoWidth, videoHeight, videoAspect, scale, false);
-            Squircle.Fill(drawList, screen.Min, screen.Max, 6f * scale,
-                ImGui.GetColorU32(new Vector4(0.025f, 0.03f, 0.04f, 1f)));
-            Squircle.Stroke(drawList, screen.Min, screen.Max, 6f * scale,
-                ImGui.GetColorU32(Accent with { W = 0.22f }), 1f * scale);
-            var wrap = video.Wrap;
-            if (wrap is not null && session is { VideoWidth: > 0, VideoHeight: > 0 })
-            {
-                var image = CalculateImageRect(screen, videoWidth, videoHeight, videoAspect, scale,
-                    EmulatorVideoFilter.Smooth);
-                drawList.AddImage(wrap.Handle, image.Min, image.Max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu);
-            }
-            else
-            {
-                Typography.DrawCentered(screen.Center, Loc.T(L.Games.LayoutScreen),
-                    new Vector4(1f, 1f, 1f, 0.56f), TextStyles.Caption1);
-            }
-        }
-
-        _ = DrawControls(preview, theme, scale, CurrentSystem.Controls);
-        _ = DrawAnalogControls(preview, theme, scale, false);
-        if (CurrentSystem.InputProfile == EmulatorInputProfile.Nintendo64)
-        {
-            _ = DrawCButtons(preview, theme, scale);
-        }
-        DrawFastForwardControl(preview, theme, scale, false);
-
-        var selected = LayoutElementRect(selectedLayoutElement, preview, videoWidth, videoHeight, scale,
-            videoAspect);
-        var expand = new Vector2(4f * scale);
-        Squircle.Stroke(drawList, selected.Min - expand, selected.Max + expand, 10f * scale,
-            ImGui.GetColorU32(GamePalette.Lighten(Accent, 0.28f)), 2f * scale);
-    }
-
-    private void DrawDsLayoutPreviewScreen(Rect preview, EmulatorLayoutElement element, Vector2 uvMin,
-        Vector2 uvMax, string placeholder, PhoneTheme theme, float scale)
-    {
-        var screenArea = GameplayScreenArea(preview, scale);
-        var outer = CalculateDsScreenOuter(element, screenArea, scale, false);
-        var image = CalculateDsImageRect(outer, scale, EmulatorVideoFilter.Smooth);
-        var drawList = ImGui.GetWindowDrawList();
-        Squircle.Fill(drawList, outer.Min, outer.Max, 6f * scale,
-            ImGui.GetColorU32(new Vector4(0.025f, 0.03f, 0.04f, 1f)));
-        Squircle.Stroke(drawList, outer.Min, outer.Max, 6f * scale,
-            ImGui.GetColorU32(Accent with { W = 0.22f }), 1f * scale);
-
-        var wrap = video.Wrap;
-        if (wrap is not null && session is { VideoWidth: > 0, VideoHeight: > 0 })
-        {
-            drawList.AddImage(wrap.Handle, image.Min, image.Max, uvMin, uvMax, 0xFFFFFFFFu);
-        }
-        else
-        {
-            Typography.DrawCentered(outer.Center, placeholder,
-                new Vector4(1f, 1f, 1f, 0.56f), TextStyles.Caption1);
-        }
-    }
-
-    private void HandleLayoutDrag(Rect preview, int videoWidth, int videoHeight, float videoAspect, float scale)
-    {
-        var mouse = ImGui.GetMousePos();
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
-            ImGui.IsMouseHoveringRect(preview.Min, preview.Max, false))
-        {
-            for (var index = 0; index < EditorHitOrder.Length; index++)
-            {
-                var candidate = EditorHitOrder[index];
-                if (!IsLayoutElementVisible(candidate))
-                {
-                    continue;
-                }
-
-                var rect = LayoutElementRect(candidate, preview, videoWidth, videoHeight, scale, videoAspect);
-                if (!ImGui.IsMouseHoveringRect(rect.Min, rect.Max, false))
-                {
-                    continue;
-                }
-
-                selectedLayoutElement = candidate;
-                draggedLayoutElement = candidate;
-                layoutDragOffset = mouse - rect.Center;
-                break;
-            }
-        }
-
-        if (draggedLayoutElement is not { } dragged || !ImGui.IsMouseDown(ImGuiMouseButton.Left))
-        {
-            return;
-        }
-
-        var currentRect = LayoutElementRect(dragged, preview, videoWidth, videoHeight, scale, videoAspect);
-        var dragArea = IsScreenLayoutElement(dragged) ? GameplayScreenArea(preview, scale) : preview;
-        var center = ClampCenter(mouse - layoutDragOffset, currentRect.Size * 0.5f, dragArea);
-        var element = CurrentLayout.For(dragged);
-        element.X = Math.Clamp((center.X - dragArea.Min.X) / MathF.Max(1f, dragArea.Width), 0f, 1f);
-        element.Y = Math.Clamp((center.Y - dragArea.Min.Y) / MathF.Max(1f, dragArea.Height), 0f, 1f);
-        layoutDirty = true;
-    }
-
-    private void DrawLayoutScaleStepper(Rect row, PhoneTheme theme, float scale)
-    {
-        var element = CurrentLayout.For(selectedLayoutElement);
-        var buttonSize = new Vector2(48f, 30f) * scale;
-        var minus = CenteredRect(new Vector2(row.Center.X - 72f * scale, row.Center.Y), buttonSize);
-        var plus = CenteredRect(new Vector2(row.Center.X + 72f * scale, row.Center.Y), buttonSize);
-        if (DrawScaleStepButton("layoutScaleMinus", minus, "-", theme, scale))
-        {
-            ChangeLayoutScale(element, -5);
-        }
-
-        if (DrawScaleStepButton("layoutScalePlus", plus, "+", theme, scale))
-        {
-            ChangeLayoutScale(element, 5);
-        }
-
-        Typography.DrawCentered(row.Center, $"{MathF.Round(element.SafeScale * 100f):0}%", theme.TextStrong,
-            TextStyles.Headline);
-    }
-
-    private bool DrawScaleStepButton(string id, Rect rect, string label, PhoneTheme theme, float scale)
-    {
-        ImGui.SetCursorScreenPos(rect.Min);
-        var clicked = ImGui.InvisibleButton($"##{id}", rect.Size);
-        var hovered = ImGui.IsItemHovered();
-        var pressed = ImGui.IsItemActive();
-        var fill = pressed ? Accent with { W = 0.82f } :
-            hovered ? Accent with { W = 0.58f } : theme.GroupedCard with { W = 0.72f };
-        Squircle.Fill(ImGui.GetWindowDrawList(), rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));
-        Squircle.Stroke(ImGui.GetWindowDrawList(), rect.Min, rect.Max, rect.Height * 0.5f,
-            ImGui.GetColorU32(hovered ? Accent : theme.Separator), 1f * scale);
-        Typography.DrawCentered(rect.Center, label, theme.TextStrong, TextStyles.Title3);
-        if (hovered)
-        {
-            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        }
-
-        return clicked;
-    }
-
-    private void ChangeLayoutScale(EmulatorElementLayout element, int deltaPercent)
-    {
-        var current = (int)MathF.Round(element.SafeScale * 100f / 5f) * 5;
-        var next = Math.Clamp(current + deltaPercent, 50, 200);
-        if (next == current)
-        {
-            return;
-        }
-
-        element.Scale = next / 100f;
-        layoutDirty = true;
-        SaveLayoutIfDirty();
-    }
-
-    private static string LayoutElementLabel(EmulatorLayoutElement element) => element switch
-    {
-        EmulatorLayoutElement.Screen => Loc.T(L.Games.LayoutScreen),
-        EmulatorLayoutElement.Dpad => "D-pad",
-        EmulatorLayoutElement.A => "A",
-        EmulatorLayoutElement.B => "B",
-        EmulatorLayoutElement.X => "X",
-        EmulatorLayoutElement.Y => "Y",
-        EmulatorLayoutElement.L => "L",
-        EmulatorLayoutElement.R => "R",
-        EmulatorLayoutElement.L2 => "L2 / Z",
-        EmulatorLayoutElement.R2 => "R2",
-        EmulatorLayoutElement.L3 => "L3",
-        EmulatorLayoutElement.R3 => "R3",
-        EmulatorLayoutElement.Dpad2 => "Y cursor",
-        EmulatorLayoutElement.CUp => "C Up",
-        EmulatorLayoutElement.CDown => "C Down",
-        EmulatorLayoutElement.CLeft => "C Left",
-        EmulatorLayoutElement.CRight => "C Right",
-        EmulatorLayoutElement.Select => "Select",
-        EmulatorLayoutElement.Start => "Start",
-        EmulatorLayoutElement.FastForward => "FF",
-        EmulatorLayoutElement.LeftAnalog => Loc.T(L.Games.LeftAnalog),
-        EmulatorLayoutElement.RightAnalog => Loc.T(L.Games.RightAnalog),
-        EmulatorLayoutElement.DsTopScreen => Loc.T(L.Games.DsTopScreen),
-        EmulatorLayoutElement.DsBottomScreen => Loc.T(L.Games.DsTouchScreen),
-        _ => string.Empty,
-    };
-
-    private bool IsLayoutElementVisible(EmulatorLayoutElement element) => element switch
-    {
-        EmulatorLayoutElement.Screen => !IsNintendoDs,
-        EmulatorLayoutElement.DsTopScreen or EmulatorLayoutElement.DsBottomScreen => IsNintendoDs,
-        EmulatorLayoutElement.Dpad or EmulatorLayoutElement.FastForward => true,
-        EmulatorLayoutElement.LeftAnalog => HasLeftAnalog,
-        EmulatorLayoutElement.RightAnalog => HasRightAnalog,
-        EmulatorLayoutElement.Dpad2 => CurrentSystem.InputProfile == EmulatorInputProfile.WonderSwan,
-        EmulatorLayoutElement.CUp or EmulatorLayoutElement.CDown or EmulatorLayoutElement.CLeft or
-            EmulatorLayoutElement.CRight => CurrentSystem.InputProfile == EmulatorInputProfile.Nintendo64,
-        EmulatorLayoutElement.A => (CurrentSystem.Controls & EmulatorButtons.A) != 0,
-        EmulatorLayoutElement.B => (CurrentSystem.Controls & EmulatorButtons.B) != 0,
-        EmulatorLayoutElement.X => (CurrentSystem.Controls & EmulatorButtons.X) != 0,
-        EmulatorLayoutElement.Y => (CurrentSystem.Controls & EmulatorButtons.Y) != 0,
-        EmulatorLayoutElement.L => (CurrentSystem.Controls & EmulatorButtons.L) != 0,
-        EmulatorLayoutElement.R => (CurrentSystem.Controls & EmulatorButtons.R) != 0,
-        EmulatorLayoutElement.L2 => (CurrentSystem.Controls & EmulatorButtons.L2) != 0,
-        EmulatorLayoutElement.R2 => (CurrentSystem.Controls & EmulatorButtons.R2) != 0,
-        EmulatorLayoutElement.L3 => (CurrentSystem.Controls & EmulatorButtons.L3) != 0,
-        EmulatorLayoutElement.R3 => (CurrentSystem.Controls & EmulatorButtons.R3) != 0,
-        EmulatorLayoutElement.Select => (CurrentSystem.Controls & EmulatorButtons.Select) != 0,
-        EmulatorLayoutElement.Start => (CurrentSystem.Controls & EmulatorButtons.Start) != 0,
-        _ => false,
-    };
-
-    private void FinishLayoutEditing()
-    {
-        editingLayout = false;
-        draggedLayoutElement = null;
-        SaveLayoutIfDirty();
-    }
-
-    private void SaveLayoutIfDirty()
-    {
-        if (!layoutDirty)
-        {
-            return;
-        }
-
-        layoutDirty = false;
-        configuration.Save();
     }
 
     private void DrawGame(in GameContext context)
@@ -1664,7 +690,9 @@ internal sealed class GameBoyApp : IMiniGame
         saveStateShortcutWasDown = saveStateShortcut;
         loadStateShortcutWasDown = loadStateShortcut;
         var fastForward = fastForwardLatched || ShortcutIsDown(Settings.FastForwardShortcut);
-        active.Advance(context.DeltaSeconds, fastForward ? Math.Clamp(Settings.FastForwardSpeed, 2, 4) : 1f);
+        active.Advance(context.DeltaSeconds,
+            fastForward ? Math.Clamp(Settings.FastForwardSpeed, 2, 4) : 1f,
+            configuration.DoNotDisturb ? 0f : configuration.MusicVolume);
 
         var screenArea = GameplayScreenArea(body, scale);
         Rect pointerRect;
@@ -1674,14 +702,11 @@ internal sealed class GameBoyApp : IMiniGame
             var bottomOuter = CalculateDsScreenOuter(EmulatorLayoutElement.DsBottomScreen, screenArea, scale);
             var topImage = CalculateDsImageRect(topOuter, scale, Settings.VideoFilter);
             var bottomImage = CalculateDsImageRect(bottomOuter, scale, Settings.VideoFilter);
-            if (active.HasNewFrame)
-            {
-                var screenWidth = Math.Max(topImage.Width, bottomImage.Width);
-                var screenHeight = Math.Max(topImage.Height, bottomImage.Height);
-                video.Upload(active.VideoFrame, active.VideoWidth, active.VideoHeight, Settings.VideoFilter,
-                    Math.Max(1, (int)MathF.Round(screenWidth)),
-                    Math.Max(2, (int)MathF.Round(screenHeight * 2f)));
-            }
+            var screenWidth = Math.Max(topImage.Width, bottomImage.Width);
+            var screenHeight = Math.Max(topImage.Height, bottomImage.Height);
+            active.UploadVideoFrame(video, Settings.VideoFilter,
+                Math.Max(1, (int)MathF.Round(screenWidth)),
+                Math.Max(2, (int)MathF.Round(screenHeight * 2f)));
 
             DrawDsScreen(topOuter, topImage, active, theme, scale, Vector2.Zero, new Vector2(1f, 0.5f),
                 Loc.T(L.Games.DsTopScreen));
@@ -1695,12 +720,9 @@ internal sealed class GameBoyApp : IMiniGame
             var screen = CalculateScreenOuter(screenArea, active.VideoWidth, active.VideoHeight, displayAspect, scale);
             var imageRect = CalculateImageRect(screen, active.VideoWidth, active.VideoHeight, displayAspect, scale,
                 Settings.VideoFilter);
-            if (active.HasNewFrame)
-            {
-                video.Upload(active.VideoFrame, active.VideoWidth, active.VideoHeight, Settings.VideoFilter,
-                    Math.Max(1, (int)MathF.Round(imageRect.Width)),
-                    Math.Max(1, (int)MathF.Round(imageRect.Height)));
-            }
+            active.UploadVideoFrame(video, Settings.VideoFilter,
+                Math.Max(1, (int)MathF.Round(imageRect.Width)),
+                Math.Max(1, (int)MathF.Round(imageRect.Height)));
 
             DrawScreen(screen, imageRect, active, theme, scale);
             pointerRect = imageRect;
@@ -2086,7 +1108,6 @@ internal sealed class GameBoyApp : IMiniGame
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        // Screen coordinates grow downward; emulator/gamepad coordinates use positive Y upward.
         return new Vector2(screenValue.X, -screenValue.Y);
     }
 
@@ -2243,328 +1264,6 @@ internal sealed class GameBoyApp : IMiniGame
         return held;
     }
 
-    private EmulatorButtons KeyboardInput()
-    {
-        var settings = Settings;
-        var result = EmulatorButtons.None;
-        for (var index = 0; index < BindingOrder.Length; index++)
-        {
-            var button = BindingOrder[index];
-            if (keyboardCapture.IsKeyDown(settings.KeyFor(button)))
-            {
-                result |= button;
-            }
-        }
-
-        return result;
-    }
-
-    private EmulatorButtons GamepadInput()
-    {
-        var result = EmulatorButtons.None;
-        var leftStick = gamepadState.LeftStick;
-        var stickAsDirections = CurrentSystem.InputProfile is not EmulatorInputProfile.Nintendo64 and
-            not EmulatorInputProfile.PlayStation and not EmulatorInputProfile.PlayStationPortable;
-        if (gamepadState.Raw(GamepadButtons.DpadUp) > 0.5f || stickAsDirections && leftStick.Y > 0.5f)
-            result |= EmulatorButtons.Up;
-        if (gamepadState.Raw(GamepadButtons.DpadDown) > 0.5f || stickAsDirections && leftStick.Y < -0.5f)
-            result |= EmulatorButtons.Down;
-        if (gamepadState.Raw(GamepadButtons.DpadLeft) > 0.5f || stickAsDirections && leftStick.X < -0.5f)
-            result |= EmulatorButtons.Left;
-        if (gamepadState.Raw(GamepadButtons.DpadRight) > 0.5f || stickAsDirections && leftStick.X > 0.5f)
-            result |= EmulatorButtons.Right;
-        if (gamepadState.Raw(GamepadButtons.East) > 0.5f) result |= EmulatorButtons.A;
-        if (gamepadState.Raw(GamepadButtons.South) > 0.5f) result |= EmulatorButtons.B;
-        if (gamepadState.Raw(GamepadButtons.North) > 0.5f) result |= EmulatorButtons.X;
-        if (gamepadState.Raw(GamepadButtons.West) > 0.5f) result |= EmulatorButtons.Y;
-        if (gamepadState.Raw(GamepadButtons.L1) > 0.5f) result |= EmulatorButtons.L;
-        if (gamepadState.Raw(GamepadButtons.R1) > 0.5f) result |= EmulatorButtons.R;
-        if (gamepadState.Raw(GamepadButtons.L2) > 0.5f) result |= EmulatorButtons.L2;
-        if (gamepadState.Raw(GamepadButtons.R2) > 0.5f) result |= EmulatorButtons.R2;
-        if (gamepadState.Raw(GamepadButtons.L3) > 0.5f) result |= EmulatorButtons.L3;
-        if (gamepadState.Raw(GamepadButtons.R3) > 0.5f) result |= EmulatorButtons.R3;
-        if (gamepadState.Raw(GamepadButtons.Start) > 0.5f) result |= EmulatorButtons.Start;
-        if (gamepadState.Raw(GamepadButtons.Select) > 0.5f) result |= EmulatorButtons.Select;
-        return result;
-    }
-
-    private EmulatorInputState BuildInputState(EmulatorButtons buttons, Vector2 touchCButtons,
-        Vector2 touchLeftAnalog, Vector2 touchRightAnalog, Rect imageRect)
-    {
-        var profile = CurrentSystem.InputProfile;
-        if (profile == EmulatorInputProfile.NintendoDs)
-        {
-            var pointer = ReadPointerInput(imageRect);
-            var touchJoystick = gamepadState.RightStick;
-            return new EmulatorInputState(buttons,
-                RightX: ToAnalog(touchJoystick.X), RightY: ToAnalog(-touchJoystick.Y),
-                PointerX: pointer.X, PointerY: pointer.Y, PointerPressed: pointer.Pressed);
-        }
-
-        if (profile is not EmulatorInputProfile.Nintendo64 and not EmulatorInputProfile.PlayStation and
-            not EmulatorInputProfile.PlayStationPortable)
-        {
-            return new EmulatorInputState(buttons);
-        }
-
-        var left = gamepadState.LeftStick;
-        if (AnalogIsIdle(left) && !AnalogIsIdle(touchLeftAnalog))
-        {
-            left = touchLeftAnalog;
-        }
-
-        if (profile == EmulatorInputProfile.Nintendo64)
-        {
-            // Mupen maps RetroPad B/Y to the physical N64 A/B buttons. Keep the
-            // Aetherphone-facing controls labelled A/B and translate only at the core boundary.
-            var logicalButtons = buttons;
-            buttons &= ~(EmulatorButtons.A | EmulatorButtons.B);
-            if ((logicalButtons & EmulatorButtons.A) != 0) buttons |= EmulatorButtons.B;
-            if ((logicalButtons & EmulatorButtons.B) != 0) buttons |= EmulatorButtons.Y;
-
-            if (MathF.Abs(left.X) < 0.2f)
-            {
-                left.X = (buttons & EmulatorButtons.Left) != 0 ? -1f :
-                    (buttons & EmulatorButtons.Right) != 0 ? 1f : 0f;
-            }
-
-            if (MathF.Abs(left.Y) < 0.2f)
-            {
-                left.Y = (buttons & EmulatorButtons.Up) != 0 ? 1f :
-                    (buttons & EmulatorButtons.Down) != 0 ? -1f : 0f;
-            }
-
-            buttons &= ~(EmulatorButtons.Up | EmulatorButtons.Down | EmulatorButtons.Left | EmulatorButtons.Right);
-        }
-
-        var right = gamepadState.RightStick;
-        if (profile == EmulatorInputProfile.PlayStation && AnalogIsIdle(right) &&
-            !AnalogIsIdle(touchRightAnalog))
-        {
-            right = touchRightAnalog;
-        }
-
-        if (profile == EmulatorInputProfile.Nintendo64)
-        {
-            var keyboardC = KeyboardCButtons();
-            if (MathF.Abs(right.X) < 0.2f)
-            {
-                right.X = Math.Clamp(keyboardC.X + touchCButtons.X, -1f, 1f);
-            }
-
-            if (MathF.Abs(right.Y) < 0.2f)
-            {
-                // Dalamud uses positive Y for up; the touch/keyboard helper uses negative Y for up.
-                right.Y = -Math.Clamp(keyboardC.Y + touchCButtons.Y, -1f, 1f);
-            }
-        }
-
-        return new EmulatorInputState(buttons, ToAnalog(left.X), ToAnalog(-left.Y),
-            ToAnalog(right.X), ToAnalog(-right.Y));
-    }
-
-    private (short X, short Y, bool Pressed) ReadPointerInput(Rect imageRect)
-    {
-        if (CurrentSystem.InputProfile != EmulatorInputProfile.NintendoDs || imageRect.Width <= 1f ||
-            imageRect.Height <= 1f)
-        {
-            return default;
-        }
-
-        var mouse = ImGui.GetMousePos();
-        var inside = ImGui.IsMouseHoveringRect(imageRect.Min, imageRect.Max, false);
-        var pressed = inside && ImGui.IsMouseDown(ImGuiMouseButton.Left);
-        var normalizedX = Math.Clamp((mouse.X - imageRect.Min.X) / imageRect.Width, 0f, 1f);
-        var localY = Math.Clamp((mouse.Y - imageRect.Min.Y) / imageRect.Height, 0f, 1f);
-        // melonDS is forced to the top/bottom framebuffer layout. The touch screen occupies
-        // the lower half of that framebuffer even though the frontend draws it independently.
-        var normalizedY = 0.5f + localY * 0.5f;
-        return (ToPointer(normalizedX), ToPointer(normalizedY), pressed);
-    }
-
-    private static short ToPointer(float normalized) =>
-        (short)MathF.Round(Math.Clamp(normalized, 0f, 1f) * 65534f - 32767f);
-
-    private Vector2 KeyboardCButtons()
-    {
-        var result = Vector2.Zero;
-        if (keyboardCapture.IsKeyDown(Settings.KeyCUp)) result.Y -= 1f;
-        if (keyboardCapture.IsKeyDown(Settings.KeyCDown)) result.Y += 1f;
-        if (keyboardCapture.IsKeyDown(Settings.KeyCLeft)) result.X -= 1f;
-        if (keyboardCapture.IsKeyDown(Settings.KeyCRight)) result.X += 1f;
-        return result;
-    }
-
-    private static bool AnalogIsIdle(Vector2 value) => value.LengthSquared() < 0.04f;
-
-    private static short ToAnalog(float value) =>
-        (short)MathF.Round(Math.Clamp(value, -1f, 1f) * short.MaxValue);
-
-    private void SuppressGameInput()
-    {
-        if (!phoneInteractive)
-        {
-            return;
-        }
-
-        var io = ImGui.GetIO();
-        io.WantCaptureKeyboard = true;
-        ImGui.SetNextFrameWantCaptureKeyboard(true);
-        keyState.ClearAll();
-
-        // Block FFXIV through Dalamud's internal PadDevice capture switch without enabling
-        // global ImGui gamepad navigation. Enabling NavEnableGamepad globally makes ABXY
-        // operate Dalamud's overlay/window selector while the emulator is running.
-        if (gamepadNavigationProperty is not null)
-        {
-            SetDalamudGamepadCapture(true);
-        }
-        else
-        {
-            // Compatibility fallback for a future/older Dalamud build where the internal
-            // switch cannot be reached. This may enable ImGui gamepad navigation.
-            io.ConfigFlags |= ImGuiConfigFlags.NavEnableGamepad;
-        }
-    }
-
-    private void SetInputCaptured(bool captured)
-    {
-        if (captured && !phoneInteractive)
-        {
-            return;
-        }
-
-        if (inputCaptured == captured)
-        {
-            // Keep the native gamepad block synchronized even if another component changed it.
-            if (captured && gamepadNavigationProperty is not null)
-            {
-                SetDalamudGamepadCapture(true);
-            }
-
-            return;
-        }
-
-        inputCaptured = captured;
-        keyboardCapture.SetCaptured(captured);
-        if (captured)
-        {
-            var io = ImGui.GetIO();
-            gamepadCaptureActive = true;
-            gamepadUsesImGuiFallback = gamepadNavigationProperty is null;
-            if (gamepadUsesImGuiFallback)
-            {
-                gamepadNavigationWasEnabled =
-                    (io.ConfigFlags & ImGuiConfigFlags.NavEnableGamepad) != 0;
-                io.ConfigFlags |= ImGuiConfigFlags.NavEnableGamepad;
-            }
-            else
-            {
-                gamepadBlockWasEnabled = ReadDalamudGamepadCapture();
-                SetDalamudGamepadCapture(true);
-            }
-
-            keyState.ClearAll();
-            return;
-        }
-
-        RestoreGamepadNavigation();
-    }
-
-    private void RestoreGamepadNavigation()
-    {
-        if (!gamepadCaptureActive)
-        {
-            return;
-        }
-
-        if (gamepadUsesImGuiFallback)
-        {
-            if (!gamepadNavigationWasEnabled)
-            {
-                var io = ImGui.GetIO();
-                io.ConfigFlags &= ~ImGuiConfigFlags.NavEnableGamepad;
-            }
-        }
-        else
-        {
-            SetDalamudGamepadCapture(gamepadBlockWasEnabled);
-        }
-
-        gamepadCaptureActive = false;
-        gamepadNavigationWasEnabled = false;
-        gamepadBlockWasEnabled = false;
-        gamepadUsesImGuiFallback = false;
-    }
-
-    private bool ReadDalamudGamepadCapture()
-    {
-        if (gamepadNavigationProperty is null)
-        {
-            return false;
-        }
-
-        try
-        {
-            return gamepadNavigationProperty.GetValue(gamepadState) is true;
-        }
-        catch (Exception exception)
-        {
-            LogGamepadReflectionFailure(exception);
-            return false;
-        }
-    }
-
-    private void SetDalamudGamepadCapture(bool captured)
-    {
-        if (gamepadNavigationProperty is null)
-        {
-            if (!gamepadReflectionWarningLogged)
-            {
-                gamepadReflectionWarningLogged = true;
-                AepLog.Warning("[Emulator] Dalamud gamepad capture property was not found; " +
-                               "falling back to ImGuiConfigFlags.NavEnableGamepad.");
-            }
-
-            return;
-        }
-
-        try
-        {
-            gamepadNavigationProperty.SetValue(gamepadState, captured);
-        }
-        catch (Exception exception)
-        {
-            LogGamepadReflectionFailure(exception);
-        }
-    }
-
-    private void LogGamepadReflectionFailure(Exception exception)
-    {
-        if (gamepadReflectionWarningLogged)
-        {
-            return;
-        }
-
-        gamepadReflectionWarningLogged = true;
-        AepLog.Warning($"[Emulator] Could not synchronize Dalamud gamepad capture: {exception.Message}");
-    }
-
-    private void SetPhoneInteractive(bool interactive)
-    {
-        phoneInteractive = interactive;
-        if (!interactive)
-        {
-            SetInputCaptured(false);
-            return;
-        }
-
-        if (session is not null && gameVisible)
-        {
-            SetInputCaptured(true);
-        }
-    }
-
     private void DrawFolderBrowser(in GameContext context)
     {
         var body = context.Body;
@@ -2659,7 +1358,6 @@ internal sealed class GameBoyApp : IMiniGame
     private void OpenFolderBrowser()
     {
         CancelAllBindings();
-        // Start at the local system drive instead of the last selected folder.
         directoryBrowser.Open();
         browserPurpose = EmulatorBrowserPurpose.ScanFolder;
     }
@@ -2667,7 +1365,6 @@ internal sealed class GameBoyApp : IMiniGame
     private void OpenRomBrowser()
     {
         CancelAllBindings();
-        // Start at the local system drive instead of the last imported ROM/folder.
         directoryBrowser.OpenFiles(null, CurrentSystem.Extensions);
         browserPurpose = EmulatorBrowserPurpose.ImportRom;
     }
@@ -2680,8 +1377,18 @@ internal sealed class GameBoyApp : IMiniGame
         }
 
         var path = Path.GetFullPath(directoryBrowser.CurrentPath);
-        if (!Settings.RomFolders.Any(configured => string.Equals(Path.GetFullPath(configured), path,
-                StringComparison.OrdinalIgnoreCase)))
+        var alreadyConfigured = false;
+        for (var index = 0; index < Settings.RomFolders.Count; index++)
+        {
+            if (string.Equals(Path.GetFullPath(Settings.RomFolders[index]), path,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                alreadyConfigured = true;
+                break;
+            }
+        }
+
+        if (!alreadyConfigured)
         {
             Settings.RomFolders.Add(path);
             configuration.Save();
@@ -2803,7 +1510,6 @@ internal sealed class GameBoyApp : IMiniGame
             var settings = configuration.Emulator.ForCore(entry.System);
             if (entry.System.InputProfile == EmulatorInputProfile.NintendoDs)
             {
-                // The frontend separates the two DS screens and crops them from a stable top/bottom framebuffer.
                 settings.CoreOptions["melonds_number_of_screen_layouts"] = "1";
                 settings.CoreOptions["melonds_screen_layout1"] = "top-bottom";
                 settings.CoreOptions["melonds_screen_layout2"] = "top-bottom";

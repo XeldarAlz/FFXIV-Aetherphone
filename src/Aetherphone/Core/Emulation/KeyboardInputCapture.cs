@@ -3,10 +3,6 @@ using System.Runtime.InteropServices;
 
 namespace Aetherphone.Core.Emulation;
 
-/// <summary>
-/// Captures keyboard input for the emulator before the FFXIV window can turn it into game or chat input.
-/// The hook is limited to the game's UI thread; it never affects other applications.
-/// </summary>
 internal sealed class KeyboardInputCapture : IDisposable
 {
     private const int WhGetMessage = 3;
@@ -107,6 +103,12 @@ internal sealed class KeyboardInputCapture : IDisposable
     {
         if (code >= 0 && messagePointer != 0 && Volatile.Read(ref captured))
         {
+            if (windowHandle == 0 || GetForegroundWindow() != windowHandle)
+            {
+                Volatile.Write(ref captured, false);
+                return CallNextHookEx(hookHandle, code, parameter, messagePointer);
+            }
+
             var message = (NativeMessage*)messagePointer;
             if (IsKeyboardMessage(message->Message))
             {

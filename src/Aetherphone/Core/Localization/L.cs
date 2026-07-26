@@ -2614,6 +2614,21 @@ internal static class L
         public static readonly LocString Unassigned = new("games.unassigned", "Not set");
         public static readonly LocString ClearShortcuts = new("games.clearShortcuts", "Clear shortcuts");
         public static readonly LocString ShortcutsHint = new("games.shortcutsHint", "Select an action, hold keyboard and/or controller buttons together, then release. Save/load use the selected slot. Escape cancels.");
+        public static readonly LocString EmulatorCore = new("games.emulatorCore", "Core");
+        public static readonly LocString LibretroCore = new("games.libretroCore", "Libretro core");
+        public static readonly LocString PersistentStorage = new("games.persistentStorage", "Persistent storage");
+        public static readonly LocString CoreOptions = new("games.coreOptions", "Core options");
+        public static readonly LocString CoreOptionsRestartHint = new("games.coreOptionsRestartHint", "Core options are applied the next time a game starts.");
+        public static readonly LocString BiosFirmware = new("games.biosFirmware", "BIOS / firmware");
+        public static readonly LocString FirmwareInstalled = new("games.firmwareInstalled", "Installed");
+        public static readonly LocString FirmwareRequired = new("games.firmwareRequired", "Required");
+        public static readonly LocString FirmwareOptional = new("games.firmwareOptional", "Optional");
+        public static readonly LocString FirmwarePathHint = new("games.firmwarePathHint", "Place legally obtained firmware files in {0}");
+        public static readonly LocString MemoryCards = new("games.memoryCards", "Memory cards");
+        public static readonly LocString Storage = new("games.storage", "Storage");
+        public static readonly LocString ProtectMemoryCards = new("games.protectMemoryCards", "Protect cards when loading states");
+        public static readonly LocString ProtectMemoryCardsHint = new("games.protectMemoryCardsHint", "Protection prevents an old save state from replacing newer memory-card data.");
+        public static readonly LocString N64AccessoryHint = new("games.n64AccessoryHint", "Controller Pak and Rumble Pak are selected above. Transfer Pak and N64DD require libretro subsystems and are reserved for a later phase.");
     }
 
     internal static class Time

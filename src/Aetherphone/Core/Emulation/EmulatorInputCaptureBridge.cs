@@ -1,9 +1,5 @@
 namespace Aetherphone.Core.Emulation;
 
-/// <summary>
-/// Bridges shell visibility changes to emulator input capture without coupling the
-/// phone shell to a particular mini-game implementation.
-/// </summary>
 internal static class EmulatorInputCaptureBridge
 {
     private static readonly object Gate = new();

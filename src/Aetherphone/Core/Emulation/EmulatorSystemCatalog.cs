@@ -49,7 +49,10 @@ internal sealed record EmulatorCoreOptionDefinition(
     }
 }
 
-internal sealed record EmulatorFirmwareDefinition(string FileName, string Description, bool Required);
+internal sealed record EmulatorFirmwareDefinition(string FileName, string Description, bool Required)
+{
+    public LocString LocalizedDescription => CatalogLocalization.Firmware(FileName, Description);
+}
 
 internal sealed record EmulatorSystemDefinition(
     string Id,
@@ -63,6 +66,8 @@ internal sealed record EmulatorSystemDefinition(
     public bool DiscBased { get; init; }
     public string Description { get; init; } = string.Empty;
     public string SaveDescription { get; init; } = "Battery save + save states";
+    public LocString LocalizedDescription => CatalogLocalization.System(Id, "description", Description);
+    public LocString LocalizedSaveDescription => CatalogLocalization.System(Id, "save", SaveDescription);
     public IReadOnlyList<EmulatorCoreOptionDefinition> CoreOptions { get; init; } =
         Array.Empty<EmulatorCoreOptionDefinition>();
     public IReadOnlyList<EmulatorFirmwareDefinition> Firmware { get; init; } =
@@ -513,10 +518,13 @@ internal static class EmulatorSystemCatalog
             .Append(".bin").Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase));
 
     private static EmulatorCoreOptionDefinition Option(string key, string label, params string[] values) =>
-        new(key, label, values);
+        new(key, label, values, LocalizedLabel: CatalogLocalization.Option(key, "label", label),
+            LocalizedDisplayValues: CatalogLocalization.OptionValues(key, values));
 
     private static EmulatorCoreOptionDefinition OptionWithDisplay(string key, string label, string[] values,
-        string[] displayValues) => new(key, label, values, displayValues);
+        string[] displayValues) => new(key, label, values, displayValues,
+            LocalizedLabel: CatalogLocalization.Option(key, "label", label),
+            LocalizedDisplayValues: CatalogLocalization.OptionValues(key, displayValues));
 
     private static EmulatorCoreOptionDefinition LocalizedOptionWithDisplay(string key, LocString label,
         string[] values, LocString[] displayValues) =>
@@ -575,5 +583,41 @@ internal static class EmulatorSystemCatalog
         }
 
         return true;
+    }
+}
+
+internal static class CatalogLocalization
+{
+    public static LocString System(string systemId, string field, string fallback) =>
+        new($"games.catalog.system.{Normalize(systemId)}.{field}", fallback);
+
+    public static LocString Firmware(string fileName, string fallback) =>
+        new($"games.catalog.firmware.{Normalize(fileName)}", fallback);
+
+    public static LocString Option(string key, string field, string fallback) =>
+        new($"games.catalog.option.{Normalize(key)}.{field}", fallback);
+
+    public static IReadOnlyList<LocString> OptionValues(string key, IReadOnlyList<string> values)
+    {
+        var result = new LocString[values.Count];
+        for (var index = 0; index < values.Count; index++)
+        {
+            result[index] = Option(key, $"value{index}", values[index]);
+        }
+
+        return result;
+    }
+
+    private static string Normalize(string value)
+    {
+        var result = new char[value.Length];
+        var length = 0;
+        for (var index = 0; index < value.Length; index++)
+        {
+            var character = char.ToLowerInvariant(value[index]);
+            result[length++] = char.IsLetterOrDigit(character) ? character : '_';
+        }
+
+        return new string(result, 0, length);
     }
 }

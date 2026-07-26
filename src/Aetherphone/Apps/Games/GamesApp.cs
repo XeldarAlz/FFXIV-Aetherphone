@@ -238,8 +238,6 @@ internal sealed class GamesApp : IPhoneApp
 
         if (game.UsesCompactHeader)
         {
-            // Keep the regular compact-header position in the emulator hub/settings.
-            // Only lower the button while an actual portrait game is using immersive content.
             var portraitGameplay = game.WantsImmersiveContent && !game.WantsLandscape;
             AppHeader.DrawBackOnly(context, back, portraitGameplay ? 50f : 20f);
         }

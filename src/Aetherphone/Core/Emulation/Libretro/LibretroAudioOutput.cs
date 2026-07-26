@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace Aetherphone.Core.Emulation.Libretro;
 
@@ -10,6 +11,7 @@ internal sealed class LibretroAudioOutput : IDisposable
     private const double ResampleEpsilon = 0.000000001;
 
     private readonly BufferedWaveProvider buffer;
+    private readonly VolumeSampleProvider volume;
     private readonly WaveOutEvent output;
     private readonly bool resampleHighRateAudio;
     private readonly double inputFramesPerOutputFrame;
@@ -38,9 +40,16 @@ internal sealed class LibretroAudioOutput : IDisposable
             BufferDuration = TimeSpan.FromMilliseconds(180),
             DiscardOnBufferOverflow = true,
         };
+        volume = new VolumeSampleProvider(buffer.ToSampleProvider());
         output = new WaveOutEvent { DesiredLatency = 90, NumberOfBuffers = 3, };
-        output.Init(buffer);
+        output.Init(volume);
         output.Play();
+    }
+
+    public float Volume
+    {
+        get => volume.Volume;
+        set => volume.Volume = Math.Clamp(value, 0f, 1f);
     }
 
     public int PlaybackSpeed
@@ -73,7 +82,6 @@ internal sealed class LibretroAudioOutput : IDisposable
             samples = new short[sampleCount];
         }
 
-        // The output can never contain more stereo frames than the input.
         EnsureByteCapacity(checked(frameCount * 2 * sizeof(short)));
         Marshal.Copy(data, samples, 0, sampleCount);
 
@@ -126,9 +134,6 @@ internal sealed class LibretroAudioOutput : IDisposable
             return EmitFrame(left, right, outputFrames);
         }
 
-        // SameBoy can expose its sample-accurate APU stream at roughly 2 MHz.
-        // Averaging every source-time interval performs the low-pass/downsample
-        // step that a libretro frontend is expected to provide.
         var remainingInputFrame = 1.0;
         while (remainingInputFrame > ResampleEpsilon)
         {
@@ -201,8 +206,6 @@ internal sealed class LibretroAudioOutput : IDisposable
             return ResampledOutputRate;
         }
 
-        // Protect allocations and arithmetic from a broken core while still
-        // allowing the multi-megahertz rates used by sample-accurate cores.
         return Math.Min(sampleRate, 8000000);
     }
 

@@ -36,11 +36,12 @@
     <Content Include="Sounds\*.mp3;Sounds\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Cores\*_libretro.dll;Cores\*-LICENSE.txt;Cores\*-SOURCE.txt;Cores\GPL-*.txt">
+    <Content Include="Cores\*_libretro.dll;Cores\*-LICENSE.txt;Cores\*-SOURCE.txt;Cores\CORE-SOURCES.txt;Cores\GPL-*.txt">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>
-    <Content Include="Cores\SystemFiles\**\*">
+    <Content Include="Cores\SystemFiles\**\*"
+             Exclude="Cores\SystemFiles\PPSSPP\debugger\**\*;Cores\SystemFiles\PPSSPP\lang\**\*;Cores\SystemFiles\PPSSPP\mime\**\*;Cores\SystemFiles\PPSSPP\shaders\**\*;Cores\SystemFiles\PPSSPP\themes\**\*;Cores\SystemFiles\PPSSPP\ui_images\**\*;Cores\SystemFiles\PPSSPP\upload\**\*;Cores\SystemFiles\PPSSPP\Inconsolata-Regular.ttf;Cores\SystemFiles\PPSSPP\Roboto_Condensed-*.ttf;Cores\SystemFiles\PPSSPP\gamecontrollerdb.txt;Cores\SystemFiles\PPSSPP\sfx_*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
     </Content>

@@ -20,10 +20,10 @@ public sealed class EmulatorSettingsTests
         Assert.Equal(0x43, settings.KeyFor(EmulatorButtons.X));
         Assert.Equal(0x56, settings.KeyFor(EmulatorButtons.Y));
         Assert.Equal(0x0D, settings.KeyFor(EmulatorButtons.Start));
-        Assert.Equal(EmulatorVideoFilter.Pixel, settings.VideoFilter);
+        Assert.Equal(EmulatorVideoFilter.Smooth, settings.VideoFilter);
         Assert.Equal(EmulatorGameplayOrientation.Landscape, settings.GameplayOrientation);
         Assert.Equal(0.5f, settings.Layout.Screen.X);
-        Assert.Equal(0.23f, settings.Layout.Screen.Y);
+        Assert.Equal(0.30f, settings.Layout.Screen.Y);
         Assert.Equal(0.82f, settings.Layout.A.X);
         Assert.Equal(0.75f, settings.Layout.X.X);
         Assert.True(settings.AutoSaveState);
@@ -123,7 +123,7 @@ public sealed class EmulatorSettingsTests
     [Theory]
     [InlineData(0.1f, 0.5f)]
     [InlineData(1.0f, 1.0f)]
-    [InlineData(3.0f, 1.0f)]
+    [InlineData(3.0f, 2.0f)]
     public void ElementScalesAreClamped(float configured, float expected)
     {
         var element = new EmulatorElementLayout { Scale = configured };
@@ -144,7 +144,7 @@ public sealed class EmulatorSettingsTests
         gba.RomFolders.Add(@"C:\Games\GBA");
         n64.CoreOptions["mupen64plus-pak1"] = "rumble";
 
-        Assert.Equal(EmulatorVideoFilter.Pixel, n64.VideoFilter);
+        Assert.Equal(EmulatorVideoFilter.Smooth, n64.VideoFilter);
         Assert.Equal(EmulatorGameplayOrientation.Landscape, n64.GameplayOrientation);
         Assert.Empty(n64.RomFolders);
         Assert.Empty(gba.CoreOptions);

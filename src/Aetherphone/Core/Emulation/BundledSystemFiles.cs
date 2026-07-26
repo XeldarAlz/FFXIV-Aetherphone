@@ -1,10 +1,5 @@
 namespace Aetherphone.Core.Emulation;
 
-/// <summary>
-/// Installs redistributable system assets shipped beside libretro cores into the
-/// per-user emulator system directory. Files are refreshed only when the bundled
-/// copy differs, so normal startup does not rewrite the entire asset tree.
-/// </summary>
 internal static class BundledSystemFiles
 {
     public static void Install(string coresDirectory, string emulatorRoot)
@@ -55,14 +50,22 @@ internal static class BundledSystemFiles
             {
                 var sourceInfo = new FileInfo(source);
                 var destinationInfo = new FileInfo(destination);
+                if (sourceInfo.Length == destinationInfo.Length &&
+                    sourceInfo.LastWriteTimeUtc == destinationInfo.LastWriteTimeUtc)
+                {
+                    return;
+                }
+
                 if (sourceInfo.Length == destinationInfo.Length && FilesEqual(source, destination))
                 {
+                    File.SetLastWriteTimeUtc(destination, sourceInfo.LastWriteTimeUtc);
                     return;
                 }
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(destination) ?? string.Empty);
             File.Copy(source, destination, true);
+            File.SetLastWriteTimeUtc(destination, File.GetLastWriteTimeUtc(source));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

@@ -12,16 +12,11 @@ internal sealed class LibretroCore : IEmulatorCore
     private const uint PointerYId = 1;
     private const uint PointerPressedId = 2;
     private const uint PointerCountId = 3;
-    // PCSX-ReARMed expects a PlayStation-specific controller subclass when
-    // selecting the controller plugged into a port. RETRO_DEVICE_ANALOG (5)
-    // is only the base device used when the core polls analog axes.
-    // RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_ANALOG, 1) = DualShock = 517.
     private const uint PlayStationDualShockDevice = (2u << 8) | AnalogDevice;
     private const uint JoypadMaskId = 256;
+    private const string PrintfConversions = "diuoxXfFeEgGaAcspn";
     private static readonly IntPtr HardwareFrameBuffer = new(-1);
     private readonly LibretroApi api;
-    private readonly string systemDirectory;
-    private readonly string saveDirectory;
     private readonly bool enableAudio;
     private readonly RetroEnvironmentCallback environmentCallback;
     private readonly RetroVideoRefreshCallback videoCallback;
@@ -35,10 +30,14 @@ internal sealed class LibretroCore : IEmulatorCore
     private readonly IReadOnlyDictionary<string, string> requestedOptions;
     private readonly uint controllerDevice;
     private readonly bool preserveSaveRamOnStateLoad;
-    private readonly List<IntPtr> nativeStrings = new();
+    private IntPtr systemDirectoryPointer;
+    private IntPtr coreAssetsDirectoryPointer;
+    private IntPtr saveDirectoryPointer;
+    private IntPtr contentPathPointer;
     private GCHandle romHandle;
     private byte[]? romBytes;
     private byte[] frame = Array.Empty<byte>();
+    private byte[] source16 = Array.Empty<byte>();
     private LibretroAudioOutput? audio;
     private RetroPixelFormat pixelFormat = RetroPixelFormat.Xrgb1555;
     private string savePath = string.Empty;
@@ -46,9 +45,9 @@ internal sealed class LibretroCore : IEmulatorCore
     private bool loaded;
     private bool shutdownRequested;
     private int audioPlaybackSpeed = 1;
+    private float audioGain = 1f;
     private EmulatorInputState input;
     private DiskControl? diskControl;
-    private string contentDirectory = string.Empty;
     private bool warnedHardwareFrame;
     private bool variableUpdated;
 
@@ -56,8 +55,6 @@ internal sealed class LibretroCore : IEmulatorCore
         IReadOnlyDictionary<string, string>? coreOptions = null, bool analogController = false,
         bool preserveSaveRamOnStateLoad = false)
     {
-        this.systemDirectory = systemDirectory;
-        this.saveDirectory = saveDirectory;
         this.enableAudio = enableAudio;
         controllerDevice = analogController ? PlayStationDualShockDevice : JoypadDevice;
         this.preserveSaveRamOnStateLoad = preserveSaveRamOnStateLoad;
@@ -67,6 +64,9 @@ internal sealed class LibretroCore : IEmulatorCore
         api = new LibretroApi(corePath);
         try
         {
+            systemDirectoryPointer = Marshal.StringToCoTaskMemUTF8(systemDirectory);
+            coreAssetsDirectoryPointer = Marshal.StringToCoTaskMemUTF8(systemDirectory);
+            saveDirectoryPointer = Marshal.StringToCoTaskMemUTF8(saveDirectory);
             if (api.ApiVersion() != 1)
             {
                 throw new InvalidOperationException("Unsupported libretro API version.");
@@ -101,6 +101,9 @@ internal sealed class LibretroCore : IEmulatorCore
             }
 
             api.Dispose();
+            FreePointer(ref systemDirectoryPointer);
+            FreePointer(ref coreAssetsDirectoryPointer);
+            FreePointer(ref saveDirectoryPointer);
             throw;
         }
     }
@@ -126,6 +129,17 @@ internal sealed class LibretroCore : IEmulatorCore
             }
         }
     }
+    public float AudioGain
+    {
+        set
+        {
+            audioGain = Math.Clamp(value, 0f, 1f);
+            if (audio is not null)
+            {
+                audio.Volume = audioGain;
+            }
+        }
+    }
     public EmulatorButtons Buttons { set => input = input with { Buttons = value }; }
     public EmulatorInputState Input { set => input = value; }
     public int DiskCount => diskControl?.Count ?? 0;
@@ -144,11 +158,11 @@ internal sealed class LibretroCore : IEmulatorCore
         }
 
         this.savePath = savePath;
-        contentDirectory = Path.GetDirectoryName(Path.GetFullPath(romPath)) ?? string.Empty;
         shutdownRequested = false;
         warnedHardwareFrame = false;
-        var pathPointer = KeepString(romPath);
-        var game = new RetroGameInfo { Path = pathPointer, Meta = IntPtr.Zero, };
+        FreePointer(ref contentPathPointer);
+        contentPathPointer = Marshal.StringToCoTaskMemUTF8(romPath);
+        var game = new RetroGameInfo { Path = contentPathPointer, Meta = IntPtr.Zero, };
         if (!NeedFullPath)
         {
             romBytes = File.ReadAllBytes(romPath);
@@ -175,6 +189,7 @@ internal sealed class LibretroCore : IEmulatorCore
                 audio = new LibretroAudioOutput(avInfo.Timing.SampleRate)
                 {
                     PlaybackSpeed = audioPlaybackSpeed,
+                    Volume = audioGain,
                 };
             }
             catch (Exception exception)
@@ -381,6 +396,19 @@ internal sealed class LibretroCore : IEmulatorCore
 
     private bool OnEnvironment(uint command, IntPtr data)
     {
+        try
+        {
+            return HandleEnvironment(command, data);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Emulator] environment callback failed: {exception.Message}");
+            return false;
+        }
+    }
+
+    private bool HandleEnvironment(uint command, IntPtr data)
+    {
         switch (command)
         {
             case RetroEnvironmentCommand.GetCanDupe:
@@ -407,13 +435,13 @@ internal sealed class LibretroCore : IEmulatorCore
                              "currently supports software video frames only. For N64, select Angrylion RDP.");
                 return false;
             case RetroEnvironmentCommand.GetSystemDirectory:
-                WriteStringPointer(data, systemDirectory);
+                WriteStringPointer(data, systemDirectoryPointer);
                 return true;
             case RetroEnvironmentCommand.GetCoreAssetsDirectory:
-                WriteStringPointer(data, systemDirectory);
+                WriteStringPointer(data, coreAssetsDirectoryPointer);
                 return true;
             case RetroEnvironmentCommand.GetSaveDirectory:
-                WriteStringPointer(data, saveDirectory);
+                WriteStringPointer(data, saveDirectoryPointer);
                 return true;
             case RetroEnvironmentCommand.SetPixelFormat:
                 pixelFormat = (RetroPixelFormat)Marshal.ReadInt32(data);
@@ -538,10 +566,6 @@ internal sealed class LibretroCore : IEmulatorCore
         return true;
     }
 
-    // retro_log_printf_t is a printf-style variadic callback. Managed reverse P/Invoke
-    // cannot safely read the trailing C varargs, so only messages that are already fully
-    // formatted can be forwarded. Keeping a valid callback is still important because
-    // some cores assume the log function pointer is non-null.
     private static void OnCoreLog(uint level, IntPtr format)
     {
         try
@@ -580,7 +604,6 @@ internal sealed class LibretroCore : IEmulatorCore
         }
         catch
         {
-            // Native callbacks must never propagate managed exceptions.
         }
     }
 
@@ -599,7 +622,6 @@ internal sealed class LibretroCore : IEmulatorCore
                 return false;
             }
 
-            // A doubled percent sign is literal text, not a conversion.
             if (format[index] == '%')
             {
                 continue;
@@ -643,7 +665,7 @@ internal sealed class LibretroCore : IEmulatorCore
                 index++;
             }
 
-            if (index < format.Length && "diuoxXfFeEgGaAcspn".Contains(format[index]))
+            if (index < format.Length && PrintfConversions.Contains(format[index]))
             {
                 return true;
             }
@@ -677,7 +699,6 @@ internal sealed class LibretroCore : IEmulatorCore
 
             var separator = definition.IndexOf(';');
             var choices = separator >= 0 ? definition[(separator + 1)..].Trim() : definition;
-            var pipe = choices.IndexOf('|');
             var values = choices.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
             supportedCoreOptions[key] = values;
             var value = values.FirstOrDefault() ?? string.Empty;
@@ -691,7 +712,7 @@ internal sealed class LibretroCore : IEmulatorCore
                 continue;
             }
 
-            optionValues[key] = KeepString(value);
+            ReplaceOptionString(key, value);
         }
     }
 
@@ -713,7 +734,7 @@ internal sealed class LibretroCore : IEmulatorCore
             return false;
         }
 
-        optionValues[key] = KeepString(value);
+        ReplaceOptionString(key, value);
         variableUpdated = true;
         return true;
     }
@@ -734,13 +755,23 @@ internal sealed class LibretroCore : IEmulatorCore
 
     private void OnVideo(IntPtr data, uint width, uint height, nuint pitch)
     {
+        try
+        {
+            CopyVideo(data, width, height, pitch);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Emulator] video callback failed: {exception.Message}");
+        }
+    }
+
+    private void CopyVideo(IntPtr data, uint width, uint height, nuint pitch)
+    {
         if (data == IntPtr.Zero || width == 0 || height == 0)
         {
             return;
         }
 
-        // RETRO_HW_FRAME_BUFFER_VALID is (void*)-1. Treating it as a CPU pixel
-        // buffer would make Marshal.Copy read address -1 and terminate the host process.
         if (data == HardwareFrameBuffer)
         {
             if (!warnedHardwareFrame)
@@ -797,14 +828,19 @@ internal sealed class LibretroCore : IEmulatorCore
 
     private void Copy16Bit(IntPtr data, int pitch, bool xrgb1555)
     {
-        var source = new byte[VideoWidth * 2];
+        var rowBytes = checked(VideoWidth * 2);
+        if (source16.Length < rowBytes)
+        {
+            source16 = new byte[rowBytes];
+        }
+
         for (var row = 0; row < VideoHeight; row++)
         {
-            Marshal.Copy(data + row * pitch, source, 0, source.Length);
+            Marshal.Copy(data + row * pitch, source16, 0, rowBytes);
             var destination = row * VideoWidth * 4;
             for (var column = 0; column < VideoWidth; column++)
             {
-                var value = (ushort)(source[column * 2] | source[column * 2 + 1] << 8);
+                var value = (ushort)(source16[column * 2] | source16[column * 2 + 1] << 8);
                 int red;
                 int green;
                 int blue;
@@ -833,21 +869,55 @@ internal sealed class LibretroCore : IEmulatorCore
 
     private void OnAudio(short left, short right)
     {
-        audio?.Push(left, right);
+        try
+        {
+            audio?.Push(left, right);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Emulator] audio callback failed: {exception.Message}");
+        }
     }
 
     private nuint OnAudioBatch(IntPtr data, nuint frames)
     {
-        var count = checked((int)frames);
-        audio?.Push(data, count);
-        return frames;
+        try
+        {
+            var count = checked((int)frames);
+            audio?.Push(data, count);
+            return frames;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Emulator] audio batch callback failed: {exception.Message}");
+            return 0;
+        }
     }
 
     private static void OnInputPoll()
     {
+        try
+        {
+        }
+        catch
+        {
+        }
     }
 
     private short OnInputState(uint port, uint device, uint index, uint id)
+    {
+        try
+        {
+            return ReadInputState(port, device, index, id);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[Emulator] input callback failed: {exception.Message}");
+            return 0;
+        }
+    }
+
+    private short ReadInputState(uint port, uint device, uint index, uint id)
     {
         if (port != 0)
         {
@@ -909,14 +979,23 @@ internal sealed class LibretroCore : IEmulatorCore
         return true;
     }
 
-    private IntPtr KeepString(string value)
+    private void ReplaceOptionString(string key, string value)
     {
-        var pointer = Marshal.StringToCoTaskMemUTF8(value);
-        nativeStrings.Add(pointer);
-        return pointer;
+        if (optionValues.Remove(key, out var previous))
+        {
+            Marshal.FreeCoTaskMem(previous);
+        }
+
+        optionValues[key] = Marshal.StringToCoTaskMemUTF8(value);
     }
 
-    private void WriteStringPointer(IntPtr target, string value) => Marshal.WriteIntPtr(target, KeepString(value));
+    private static void WriteStringPointer(IntPtr target, IntPtr value)
+    {
+        if (target != IntPtr.Zero)
+        {
+            Marshal.WriteIntPtr(target, value);
+        }
+    }
 
     private static void WriteBool(IntPtr target, bool value)
     {
@@ -941,6 +1020,18 @@ internal sealed class LibretroCore : IEmulatorCore
         }
 
         romBytes = null;
+        FreePointer(ref contentPathPointer);
+    }
+
+    private static void FreePointer(ref IntPtr pointer)
+    {
+        if (pointer == IntPtr.Zero)
+        {
+            return;
+        }
+
+        Marshal.FreeCoTaskMem(pointer);
+        pointer = IntPtr.Zero;
     }
 
     public void Dispose()
@@ -952,13 +1043,16 @@ internal sealed class LibretroCore : IEmulatorCore
             initialized = false;
         }
 
-        for (var index = 0; index < nativeStrings.Count; index++)
+        foreach (var pointer in optionValues.Values)
         {
-            Marshal.FreeCoTaskMem(nativeStrings[index]);
+            Marshal.FreeCoTaskMem(pointer);
         }
 
-        nativeStrings.Clear();
         optionValues.Clear();
+        FreePointer(ref systemDirectoryPointer);
+        FreePointer(ref coreAssetsDirectoryPointer);
+        FreePointer(ref saveDirectoryPointer);
+        FreePointer(ref contentPathPointer);
         supportedCoreOptions.Clear();
         diskControl = null;
         api.Dispose();

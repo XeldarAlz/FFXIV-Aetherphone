@@ -1,11 +1,8 @@
 Component: PPSSPP libretro core
 Binary: ppsspp_libretro.dll
 Upstream project: hrydgard/ppsspp (libretro build)
+Source revision: a6e4d691efeaf577ca2c557c92eb6737ab2c12be
+Source URL: https://github.com/hrydgard/ppsspp/commit/a6e4d691efeaf577ca2c557c92eb6737ab2c12be
+Binary SHA-256: 339CD481265025F2D19BF505D21F14E511CF38363A594C3236D18C69DA1C48FE
 License: GPL-2.0-or-later, with additional third-party notices
 Bundled license texts: GPL-2.0.txt and SystemFiles/PPSSPP/LICENSE.TXT
-
-Release requirement:
-Record the exact upstream tag or commit used to build this DLL and make the
-corresponding source code and third-party notices available with every public
-binary release. A generic link to the newest upstream source is not a substitute
-for the exact source of the distributed binary.

@@ -27,15 +27,12 @@ internal static class DeviceChrome
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
         
-        // Portrait: botão na lateral direita do telefone
-        // Define no sistema de coordenadas portrait
         var portraitTop = 0.250f;      // 25% da altura portrait
         var portraitHeight = 0.108f;   // 10.8% da altura portrait
         var portraitThickness = 2f * scale;
         
         if (window.Width > window.Height)
         {
-            // Landscape: botão direito do portrait → topo do landscape
             var portraitDeviceHeight = device.Width;
             var left = device.Min.X + portraitDeviceHeight * portraitTop;
             var width = portraitDeviceHeight * portraitHeight;
@@ -43,7 +40,6 @@ internal static class DeviceChrome
                 new Vector2(left + width, device.Min.Y + portraitThickness));
         }
 
-        // Portrait original
         var top = device.Min.Y + device.Height * portraitTop;
         var height = device.Height * portraitHeight;
         return new Rect(new Vector2(device.Max.X - portraitThickness, top), 
@@ -55,14 +51,12 @@ internal static class DeviceChrome
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
         
-        // Portrait: botão pequeno na lateral esquerda (topo)
         var portraitTop = 0.205f;      // 20.5% da altura portrait
         var portraitHeight = 0.082f;   // 8.2% da altura portrait
         var portraitThickness = 2f * scale;
         
         if (window.Width > window.Height)
         {
-            // Landscape: botões esquerdos do portrait → base do landscape (à esquerda)
             var portraitDeviceHeight = device.Width;
             var left = device.Min.X + portraitDeviceHeight * portraitTop;
             var width = portraitDeviceHeight * portraitHeight;
@@ -70,7 +64,6 @@ internal static class DeviceChrome
                 new Vector2(left + width, window.Max.Y));
         }
 
-        // Portrait original
         var top = device.Min.Y + device.Height * portraitTop;
         var height = device.Height * portraitHeight;
         return new Rect(new Vector2(window.Min.X, top), 
@@ -82,14 +75,12 @@ internal static class DeviceChrome
         var scale = ImGuiHelpers.GlobalScale;
         var device = BodyRect(window);
         
-        // Portrait: botão de volume na lateral esquerda (meio)
         var portraitTop = 0.315f;      // 31.5% da altura portrait
         var portraitHeight = 0.082f;   // 8.2% da altura portrait
         var portraitThickness = 2f * scale;
         
         if (window.Width > window.Height)
         {
-            // Landscape: botões esquerdos do portrait → base do landscape (mais ao centro)
             var portraitDeviceHeight = device.Width;
             var left = device.Min.X + portraitDeviceHeight * portraitTop;
             var width = portraitDeviceHeight * portraitHeight;
@@ -97,7 +88,6 @@ internal static class DeviceChrome
                 new Vector2(left + width, window.Max.Y));
         }
 
-        // Portrait original
         var top = device.Min.Y + device.Height * portraitTop;
         var height = device.Height * portraitHeight;
         return new Rect(new Vector2(window.Min.X, top), 
