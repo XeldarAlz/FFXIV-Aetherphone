@@ -62,18 +62,23 @@ internal sealed class ShellOverlayCoordinator
         this.setup = setup;
     }
 
-    public ShellOverlayState Assess(Rect screen)
+    public ShellOverlayState Assess(Rect screen, bool topChromeEnabled)
     {
+        if (!topChromeEnabled)
+        {
+            controlCenter.Suppress();
+        }
+
         var banned = !loading.IsActive && banOverlay.IsActive;
         var conductActive = !loading.IsActive && !banned && conductOverlay.Captures;
         var setupActive = !banned && setup.IsActive;
         var confirming = !loading.IsActive &&
                          (confirmOverlay.CapturesPointer || reportOverlay.CapturesPointer ||
                           shareSheet.CapturesPointer);
-        var controlCenterCaptures = !loading.IsActive && controlCenter.CapturesPointer;
+        var controlCenterCaptures = topChromeEnabled && !loading.IsActive && controlCenter.CapturesPointer;
         var overlaysCapture = controlCenterCaptures && !director.WantsControlCenter;
         var ringing = !loading.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !loading.IsActive && !controlCenterCaptures && !ringing && !confirming &&
+        var islandCaptures = topChromeEnabled && !loading.IsActive && !controlCenterCaptures && !ringing && !confirming &&
                              !setupActive && !conductActive &&
                              (island.CapturesPointer(screen) ||
                               (!director.CapturesPointer && banner.CapturesPointer(screen)));
@@ -84,7 +89,8 @@ internal sealed class ShellOverlayCoordinator
         return new ShellOverlayState(setupActive, confirming, islandCaptures, busy, shieldBase);
     }
 
-    public void DrawOverlays(Rect screen, PhoneTheme theme, float delta, in ShellOverlayState state)
+    public void DrawOverlays(Rect screen, PhoneTheme theme, float delta, in ShellOverlayState state,
+        bool topChromeEnabled)
     {
         if (state.SetupActive)
         {
@@ -115,16 +121,20 @@ internal sealed class ShellOverlayCoordinator
 
         if (!director.CapturesPointer)
         {
-            banner.Draw(screen, theme);
-            if (!controlCenter.IsActive)
+            if (topChromeEnabled)
             {
-                island.Draw(screen, theme, navigation, navigation.Current?.Id);
+                banner.Draw(screen, theme);
+                if (!controlCenter.IsActive)
+                {
+                    island.Draw(screen, theme, navigation, navigation.Current?.Id);
+                }
             }
 
             incomingOverlay.Draw(screen, theme);
         }
 
-        if (GuideIntents.Consume(TourRegistry.ControlCenterOpenIntent))
+        var controlCenterOpenIntent = GuideIntents.Consume(TourRegistry.ControlCenterOpenIntent);
+        if (topChromeEnabled && controlCenterOpenIntent)
         {
             controlCenter.Open();
         }
@@ -134,10 +144,13 @@ internal sealed class ShellOverlayCoordinator
             controlCenter.Dismiss();
         }
 
-        controlCenter.Draw(screen, theme, delta,
-            !navigation.IsTransitioning && !director.CapturesPointer && !state.IslandCaptures &&
-            navigation.Current?.Id != "camera",
-            !director.CapturesPointer);
+        if (topChromeEnabled)
+        {
+            controlCenter.Draw(screen, theme, delta,
+                !navigation.IsTransitioning && !director.CapturesPointer && !state.IslandCaptures &&
+                navigation.Current?.Id != "camera",
+                !director.CapturesPointer);
+        }
         HoverTooltip.Flush();
         shareSheet.Draw(screen, theme);
         reportOverlay.Draw(screen, theme);

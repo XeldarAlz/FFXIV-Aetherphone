@@ -1,0 +1,8 @@
+Component: melonDS DS libretro core
+Binary: melondsds_libretro.dll
+Upstream project: JesseTG/melonds-ds
+Source revision: e695b47856a26780d393bf8613bc9d336b30f660
+Source URL: https://github.com/JesseTG/melonds-ds/commit/e695b47856a26780d393bf8613bc9d336b30f660
+Binary SHA-256: A27B2143A251A2BE5FB09EB27AB7269044F53CD04B4D4E7AE2F801C0FBD2103C
+License: GPL-3.0-or-later
+Bundled license text: GPL-3.0.txt

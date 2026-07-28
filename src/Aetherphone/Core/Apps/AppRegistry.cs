@@ -82,7 +82,8 @@ internal static class AppRegistry
         apps.Add(new TimersApp(services.Configuration));
         apps.Add(new DailiesApp(services.Configuration, services.GameData));
         apps.Add(new FishingApp());
-        apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures));
+        apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures,
+            Plugin.PluginInterface.ConfigDirectory, Plugin.KeyState, Plugin.GamepadState, services.Configuration));
         apps.Add(new NotificationsApp(services.Notifications, services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher, services.MusterLauncher, services.YellowPagesLauncher, services.AnnouncementsLauncher));
         apps.Add(new SettingsApp(services, photoLibrary));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);

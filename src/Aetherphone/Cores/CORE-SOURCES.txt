@@ -1,0 +1,107 @@
+Aetherphone libretro core manifest
+=================================
+
+The files below are unmodified libretro modules loaded at runtime through the
+public libretro ABI. They remain separate works under their own licenses; they
+are not relicensed as part of Aetherphone's AGPL-3.0 code. The plugin and the
+modules are distributed together as an aggregate.
+
+The source revision and SHA-256 recorded for each binary identify the exact
+source snapshot and artifact included in this distribution. Corresponding
+source is available from each permanent commit URL.
+
+blastem_libretro.dll
+  Project: BlastEm libretro
+  License: GPL-3.0
+  Source: https://github.com/libretro/blastem/commit/277e4a62668597d4f59cadda1cbafb844f981d45
+  SHA-256: 4B0F48A5A95CFD10DE8F686A1780E662235DE1A754FD7B60FA939AA7B0CCE568
+
+bsnes_libretro.dll
+  Project: bsnes libretro
+  License: GPL-3.0
+  Source: https://github.com/libretro/bsnes/commit/591b7e13b6914beffaa01084e4c0b7a5d9cc0673
+  SHA-256: 5145788BEF17E2A389B56A682E1BE412768A16C330859207D74A95EF579F7D89
+
+clownmdemu_libretro.dll
+  Project: ClownMDEmu libretro
+  License: AGPL-3.0
+  Source: https://github.com/Clownacy/clownmdemu-libretro/commit/935d6fc060eb82172dac29e880fe9b877fbdb640
+  SHA-256: 1DEC049C4CE8B287B7B9E3A5FF73C596DC7C9B35D65BA2C427BCAD1BA9DCE627
+
+geargrafx_libretro.dll
+  Project: Geargrafx
+  License: GPL-3.0
+  Source: https://github.com/drhelius/Geargrafx/commit/2fb5d8df1ae419d788bbec53b1f51a12c60d8e7f
+  SHA-256: A591EAC6FB9EA6EFB44338FDA729832B30EB8A111D7CF0F3AF5F317013B4EFDA
+
+geolith_libretro.dll
+  Project: Geolith libretro
+  License: BSD-3-Clause
+  Source: https://github.com/libretro/geolith-libretro/commit/c5b57a6b31b7abef4a8a9b521cae58d653e28154
+  SHA-256: 4EC0ED5F1F8003B5973BB9A0059BE31657520C533ED769ECDBD10DB2EC48986D
+
+gpsp_libretro.dll
+  Project: gpSP libretro
+  License: GPL-2.0-only
+  Source: https://github.com/libretro/gpsp/commit/5b6e751f4abf368509146cd143c949c1946ac1ae
+  SHA-256: FE1E63DA7496C8CA157E9AE02D5334F713873FAE2CBAC706365916AE9AC30974
+
+mednafen_ngp_libretro.dll
+  Project: Beetle NeoPop libretro
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/beetle-ngp-libretro/commit/a50d5ac288a81f2104ddf43195a4efdd15c72227
+  SHA-256: 480A6A80964CC8F171B3553085434C763B5B0FAE430B89CD7F8A1954A8A4D314
+
+mednafen_wswan_libretro.dll
+  Project: Beetle Cygne libretro
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/beetle-wswan-libretro/commit/da6d0d9acb8d4e9bd6725ab44225a275325d8352
+  SHA-256: 60E76B9E645EE0986271B903089576D78ABDCE8E3C23E6DC9F1C472FD3ECCF84
+
+melondsds_libretro.dll
+  Project: melonDS DS libretro
+  License: GPL-3.0-or-later
+  Source: https://github.com/JesseTG/melonds-ds/commit/e695b47856a26780d393bf8613bc9d336b30f660
+  SHA-256: A27B2143A251A2BE5FB09EB27AB7269044F53CD04B4D4E7AE2F801C0FBD2103C
+
+mupen64plus_next_libretro.dll
+  Project: Mupen64Plus-Next
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/mupen64plus-libretro-nx/commit/98c1b0d877542b01314b3b04272282ba223b65b3
+  SHA-256: E76E88A7945B3AA09F5B1025EE4EA47D751AC18D80FB13A706E9ADE293DE81A0
+
+nestopia_libretro.dll
+  Project: Nestopia UE libretro
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/nestopia/commit/b0fd87dd07e3c52903435d302b04e5e97796f127
+  SHA-256: 8CADE2D799F43807E819F6F602460B7BA7B0F34970274FC521E21990D60DFE77
+
+pcsx_rearmed_libretro.dll
+  Project: PCSX-ReARMed
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/pcsx_rearmed/commit/050981b6eeb715f142854f57c68086f62921f027
+  SHA-256: 3E6F8585B61AD3EF953047E1E84CC0D7DE4A48115A006B9602B035F1914229F5
+
+ppsspp_libretro.dll
+  Project: PPSSPP libretro
+  License: GPL-2.0-or-later with third-party notices
+  Source: https://github.com/hrydgard/ppsspp/commit/a6e4d691efeaf577ca2c557c92eb6737ab2c12be
+  SHA-256: 339CD481265025F2D19BF505D21F14E511CF38363A594C3236D18C69DA1C48FE
+
+sameboy_libretro.dll
+  Project: SameBoy libretro
+  License: MIT
+  Source: https://github.com/libretro/SameBoy/commit/06c184f0b186f161bcdfec50ebd604fe789ed04a
+  SHA-256: 0F033843F21EF11CE95A663A6A7AB6F619F908A9E53501A6BCC419F604862B96
+
+smsplus_libretro.dll
+  Project: SMS Plus GX
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/smsplus-gx/commit/8a63f82d3c3bbf7215a31f86a4aaa13fb68a579f
+  SHA-256: 399191497772F19B50191C2DC2F002084F95371681E4A5E126B0A8E931747447
+
+stella_libretro.dll
+  Project: Stella libretro
+  License: GPL-2.0
+  Source: https://github.com/libretro/stella/commit/878a9c8d5f03ef0b7cd190b5713d6bf31c48df38
+  SHA-256: 3B01234221A9B370B68209D8577C58616F65640F37A7C0EFFA26372594F62166

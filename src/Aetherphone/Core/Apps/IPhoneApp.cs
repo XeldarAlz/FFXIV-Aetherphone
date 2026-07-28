@@ -12,6 +12,9 @@ internal interface IPhoneApp : IDisposable
     Vector4 Accent => AppAccents.For(Id);
     int BadgeCount { get; }
     bool BadgeAsDot => false;
+    bool WantsLandscape => false;
+    bool WantsImmersiveContent => false;
+    bool WantsStatusBarInImmersiveContent => false;
     bool WantsTransparentScreen => false;
     bool WantsSystemTheme => false;
     Rect? TransparentViewport(Rect screen, float scale) => null;

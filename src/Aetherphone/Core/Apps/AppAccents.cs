@@ -46,6 +46,7 @@ internal static class AppAccents
         ["muster"] = new(0.94f, 0.55f, 0.20f, 1f),
         ["yellowpages"] = new(0.91f, 0.68f, 0.15f, 1f),
         ["games"] = new(0.32f, 0.78f, 0.50f, 1f),
+        ["gameboy"] = new(0.35f, 0.78f, 0.85f, 1f),
         ["memory"] = new(0.92f, 0.74f, 0.34f, 1f),
         ["bubbles"] = new(0.30f, 0.82f, 0.74f, 1f),
         ["whack"] = new(0.46f, 0.78f, 0.46f, 1f),

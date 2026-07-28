@@ -7,6 +7,7 @@ using Aetherphone.Apps.Games.CrystalDrop;
 using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.GameBoy;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Pairs;
@@ -80,8 +81,15 @@ internal sealed class GamesApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Games);
     public string Glyph => ">";
     public int BadgeCount => 0;
+    public bool WantsLandscape => router.Current == GameRoute.Playing && currentGame?.WantsLandscape == true;
+    public bool WantsImmersiveContent =>
+        router.Current == GameRoute.Playing && currentGame?.WantsImmersiveContent == true;
+    public bool WantsStatusBarInImmersiveContent =>
+        router.Current == GameRoute.Playing && currentGame?.WantsStatusBarInImmersiveContent == true;
 
-    public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures)
+    public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
+        DirectoryInfo configDirectory, IKeyState keyState, IGamepadState gamepadState,
+        Configuration configuration)
     {
         this.stats = stats;
         games = new IMiniGame[]
@@ -91,12 +99,13 @@ internal sealed class GamesApp : IPhoneApp
             new SolitaireApp(), new SimonApp(), new FlapApp(), new ReversiApp(), new WhackApp(), new SnakeApp(),
             new SudokuApp(), new ChessApp(), new StackApp(), new CrystalDropApp(), new BeatApp(), new BladeApp(),
             new TriviaApp(gameData, textures),
+            new GameBoyApp(configDirectory, textures, keyState, gamepadState, configuration),
         };
         tileOrder = new int[games.Length];
         RebuildLayout();
         router = new ViewRouter<GameRoute>(GameRoute.Launcher);
         drawView = DrawView;
-        back = () => router.Pop();
+        back = NavigateBack;
     }
 
     private void RebuildLayout()
@@ -223,14 +232,26 @@ internal sealed class GamesApp : IPhoneApp
     private void DrawActiveGame(in PhoneContext context)
     {
         var game = currentGame!;
-        AppHeader.Draw(context, game.Title, back);
         var scale = ImGuiHelpers.GlobalScale;
         var content = context.Content;
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
+        var body = game.UsesCompactHeader
+            ? content
+            : new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
+        if (!game.UsesCompactHeader)
+        {
+            AppHeader.Draw(context, game.Title, back);
+        }
+
         using (AppSurface.Begin(body))
         {
             var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
             game.Draw(new GameContext(body, context.Theme, stats, deltaSeconds));
+        }
+
+        if (game.UsesCompactHeader)
+        {
+            var portraitGameplay = game.WantsImmersiveContent && !game.WantsLandscape;
+            AppHeader.DrawBackOnly(context, back, portraitGameplay ? 50f : 20f);
         }
     }
 
@@ -590,6 +611,16 @@ internal sealed class GamesApp : IPhoneApp
         currentGame = game;
         game.Open();
         router.Push(GameRoute.Playing);
+    }
+
+    private void NavigateBack()
+    {
+        if (currentGame?.HandleBack() == true)
+        {
+            return;
+        }
+
+        router.Pop();
     }
 
     private void CloseCurrentGame()

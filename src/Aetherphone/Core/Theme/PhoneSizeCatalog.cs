@@ -13,6 +13,12 @@ internal static class PhoneSizeCatalog
     public const float DefaultScale = 1.0f;
     public static Vector2 SizeFor(float scale) => Sizes[IndexOf(scale)];
 
+    public static Vector2 LandscapeSizeFor(float scale)
+    {
+        var portrait = SizeFor(scale);
+        return new Vector2(portrait.Y, portrait.X);
+    }
+
     public static int IndexOf(float scale)
     {
         var best = 0;

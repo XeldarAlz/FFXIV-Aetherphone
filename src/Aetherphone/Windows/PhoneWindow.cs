@@ -10,30 +10,43 @@ namespace Aetherphone.Windows;
 
 internal sealed class PhoneWindow : Window
 {
-    private const ImGuiWindowFlags BaseFlags = ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoScrollbar |
-                                               ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.NoCollapse |
-                                               ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoBackground;
+    private const ImGuiWindowFlags BaseFlags =
+        ImGuiWindowFlags.NoTitleBar |
+        ImGuiWindowFlags.NoScrollbar |
+        ImGuiWindowFlags.NoScrollWithMouse |
+        ImGuiWindowFlags.NoCollapse |
+        ImGuiWindowFlags.NoResize |
+        ImGuiWindowFlags.NoBackground;
 
     private const int RecenterFrameCount = 3;
     private const float RotateSeconds = 0.26f;
+
     private readonly PhoneShell shell;
     private readonly Configuration configuration;
+
     private int recenterFrames;
     private int pendingFrames;
     private float landscapeBlend;
     private int rotatePinFrames;
+
     private Vector2? pendingPosition;
     private Vector2? maximizedPosition;
     private Vector2? minimizedPosition;
 
-    public PhoneWindow(PhoneShell shell, Configuration configuration)
+    private bool landscape;
+
+    public PhoneWindow(
+        PhoneShell shell,
+        Configuration configuration)
         : base(AepConstants.Name, BaseFlags)
     {
         this.shell = shell;
         this.configuration = configuration;
+
         Size = PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
         SizeCondition = ImGuiCond.Always;
         RespectCloseHotkey = false;
+
         maximizedPosition = configuration.MaximizedPosition;
         minimizedPosition = configuration.MinimizedPosition;
     }
@@ -44,7 +57,10 @@ internal sealed class PhoneWindow : Window
 
     public Vector2 LastSize { get; private set; }
 
-    public bool ShowsChrome => IsOpen && shell.MinimizePhase == MinimizePhase.None && LastSize.Y > 0f;
+    public bool ShowsChrome =>
+        IsOpen &&
+        shell.MinimizePhase == MinimizePhase.None &&
+        LastSize.Y > 0f;
 
     public void Maximize()
     {
@@ -60,7 +76,8 @@ internal sealed class PhoneWindow : Window
 
     public void PersistPositions()
     {
-        if (configuration.MaximizedPosition == maximizedPosition && configuration.MinimizedPosition == minimizedPosition)
+        if (configuration.MaximizedPosition == maximizedPosition &&
+            configuration.MinimizedPosition == minimizedPosition)
         {
             return;
         }
@@ -73,6 +90,7 @@ internal sealed class PhoneWindow : Window
     public void Recenter()
     {
         shell.ForceMaximize();
+
         recenterFrames = RecenterFrameCount;
         pendingFrames = 0;
         minimizedPosition = null;
@@ -83,12 +101,24 @@ internal sealed class PhoneWindow : Window
     {
         if (IsOpen)
         {
-            IsOpen = false;
+            CloseShell();
             return;
         }
 
         Maximize();
         IsOpen = true;
+    }
+
+    private void CloseShell()
+    {
+        try
+        {
+            shell.OnClosed();
+        }
+        finally
+        {
+            IsOpen = false;
+        }
     }
 
     private void RequestPosition(Vector2? target)
@@ -117,38 +147,64 @@ internal sealed class PhoneWindow : Window
     {
         var phase = shell.MinimizePhase;
         var minimized = phase == MinimizePhase.Minimized;
-        var size = minimized ? MinimizeTransition.MinimizedSize : OrientedSize();
+
+        var requestedSize = minimized
+            ? MinimizeTransition.MinimizedSize
+            : OrientedSize();
+
+        var size = SnapLogicalSize(requestedSize);
+
+        landscape = !minimized && shell.WantsLandscape;
+
         Size = size;
         SizeCondition = ImGuiCond.Always;
-        var locked = !minimized && configuration.LockPosition;
+
+        var locked =
+            !minimized &&
+            configuration.LockPosition;
+
         Flags = locked || (!minimized && shell.HomeEditing)
             ? BaseFlags | ImGuiWindowFlags.NoMove
             : BaseFlags;
+
         Components.DragScrollHost.Enabled = locked;
 
         if (recenterFrames > 0)
         {
             var viewport = ImGui.GetMainViewport();
             var scaledSize = size * ImGuiHelpers.GlobalScale;
-            Position = viewport.Pos + (viewport.Size - scaledSize) * 0.5f;
+
+            Position =
+                viewport.Pos +
+                (viewport.Size - scaledSize) * 0.5f;
+
             PositionCondition = ImGuiCond.Always;
             recenterFrames--;
         }
-        else if (pendingFrames > 0 && pendingPosition is { } pendingTarget)
+        else if (pendingFrames > 0 &&
+                 pendingPosition is { } pendingTarget)
         {
             Position = pendingTarget;
             PositionCondition = ImGuiCond.Always;
             pendingFrames--;
         }
         else if (phase is MinimizePhase.Collapsing or MinimizePhase.Expanding &&
-                 maximizedPosition is { } homePosition && minimizedPosition is { } dockPosition)
+                 maximizedPosition is { } homePosition &&
+                 minimizedPosition is { } dockPosition)
         {
-            Position = Vector2.Lerp(homePosition, dockPosition, shell.MinimizeEased);
+            Position = Vector2.Lerp(
+                homePosition,
+                dockPosition,
+                shell.MinimizeEased);
+
             PositionCondition = ImGuiCond.Always;
         }
-        else if (!minimized && rotatePinFrames > 0 && LastSize.Y > 0f)
+        else if (!minimized &&
+                 rotatePinFrames > 0 &&
+                 LastSize.Y > 0f)
         {
             rotatePinFrames--;
+
             Position = CenterPinnedPosition(size);
             PositionCondition = ImGuiCond.Always;
         }
@@ -158,43 +214,97 @@ internal sealed class PhoneWindow : Window
             pendingFrames = 0;
         }
 
-        ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, Vector2.Zero);
+        ImGui.PushStyleVar(
+            ImGuiStyleVar.WindowPadding,
+            Vector2.Zero);
     }
 
-    public override void PostDraw() => ImGui.PopStyleVar();
+    public override void PostDraw()
+    {
+        ImGui.PopStyleVar();
+    }
 
     private Vector2 OrientedSize()
     {
-        var portrait = PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
-        var target = shell.LandscapeActive ? 1f : 0f;
+        var portraitSize =
+            PhoneSizeCatalog.SizeFor(configuration.PhoneScale);
+
+        var landscapeSize =
+            PhoneSizeCatalog.LandscapeSizeFor(configuration.PhoneScale);
+
+        var target = shell.WantsLandscape
+            ? 1f
+            : 0f;
+
         if (landscapeBlend != target)
         {
-            var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
+            var delta = MathF.Min(
+                ImGui.GetIO().DeltaTime,
+                TransitionTiming.MaxFrameSeconds);
+
             var step = delta / RotateSeconds;
+
             landscapeBlend = target > landscapeBlend
-                ? MathF.Min(target, landscapeBlend + step)
-                : MathF.Max(target, landscapeBlend - step);
+                ? MathF.Min(
+                    target,
+                    landscapeBlend + step)
+                : MathF.Max(
+                    target,
+                    landscapeBlend - step);
+
             rotatePinFrames = RecenterFrameCount;
         }
 
         if (landscapeBlend <= 0f)
         {
-            return portrait;
+            return portraitSize;
         }
 
-        var landscape = new Vector2(portrait.Y, portrait.X);
-        return Vector2.Lerp(portrait, landscape, Easing.SmootherStep(landscapeBlend));
+        if (landscapeBlend >= 1f)
+        {
+            return landscapeSize;
+        }
+
+        return Vector2.Lerp(
+            portraitSize,
+            landscapeSize,
+            Easing.SmootherStep(landscapeBlend));
     }
 
     private Vector2 CenterPinnedPosition(Vector2 size)
     {
-        var scaledSize = size * ImGuiHelpers.GlobalScale;
-        var center = LastPosition + LastSize * 0.5f;
+        var scaledSize =
+            size * ImGuiHelpers.GlobalScale;
+
+        var center =
+            LastPosition +
+            LastSize * 0.5f;
+
         var viewport = ImGui.GetMainViewport();
-        var position = center - scaledSize * 0.5f;
-        var maxPosition = viewport.Pos + viewport.Size - scaledSize;
-        position.X = Math.Clamp(position.X, viewport.Pos.X, MathF.Max(viewport.Pos.X, maxPosition.X));
-        position.Y = Math.Clamp(position.Y, viewport.Pos.Y, MathF.Max(viewport.Pos.Y, maxPosition.Y));
+
+        var position =
+            center -
+            scaledSize * 0.5f;
+
+        var maxPosition =
+            viewport.Pos +
+            viewport.Size -
+            scaledSize;
+
+        position.X = Math.Clamp(
+            position.X,
+            viewport.Pos.X,
+            MathF.Max(
+                viewport.Pos.X,
+                maxPosition.X));
+
+        position.Y = Math.Clamp(
+            position.Y,
+            viewport.Pos.Y,
+            MathF.Max(
+                viewport.Pos.Y,
+                maxPosition.Y));
+
         return position;
     }
 
@@ -202,29 +312,64 @@ internal sealed class PhoneWindow : Window
     {
         LastPosition = ImGui.GetWindowPos();
         LastSize = ImGui.GetWindowSize();
+
         Plugin.Updates.Poll();
+
         using (Plugin.Fonts.Push(1f))
         {
-            var origin = ImGui.GetCursorScreenPos();
-            var available = ImGui.GetContentRegionAvail();
+            var origin =
+                ImGui.GetCursorScreenPos();
+
+            var available =
+                ImGui.GetContentRegionAvail();
+
             ImGui.Dummy(available);
-            var device = new Rect(origin, origin + available);
+
+            var device =
+                new Rect(
+                    origin,
+                    origin + available);
+
             shell.Draw(device);
         }
 
         var phase = shell.MinimizePhase;
+
         if (phase == MinimizePhase.None)
         {
-            maximizedPosition = ImGui.GetWindowPos();
+            if (!landscape)
+            {
+                maximizedPosition =
+                    ImGui.GetWindowPos();
+            }
         }
         else if (phase == MinimizePhase.Minimized)
         {
-            minimizedPosition = ImGui.GetWindowPos();
+            minimizedPosition =
+                ImGui.GetWindowPos();
         }
 
         if (shell.ConsumeCloseRequest())
         {
-            IsOpen = false;
+            CloseShell();
         }
+    }
+
+    private static Vector2 SnapLogicalSize(Vector2 logicalSize)
+    {
+        var scale =
+            MathF.Max(
+                0.01f,
+                ImGuiHelpers.GlobalScale);
+
+        var physical =
+            logicalSize * scale;
+
+        var snapped =
+            new Vector2(
+                MathF.Round(physical.X),
+                MathF.Round(physical.Y));
+
+        return snapped / scale;
     }
 }
