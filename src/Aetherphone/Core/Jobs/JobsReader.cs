@@ -53,7 +53,7 @@ internal static unsafe class JobsReader
         for (var categoryIndex = 0; categoryIndex < customBuckets.Length; categoryIndex++)
         {
             sections.Add(new JobSection(categoryIndex, categories[categoryIndex].Name,
-                SortedEntries(customBuckets[categoryIndex])));
+                CustomOrderedEntries(customBuckets[categoryIndex], categories[categoryIndex].GearsetIds)));
         }
 
         for (var bucketIndex = 0; bucketIndex < buckets.Length; bucketIndex++)
@@ -68,6 +68,32 @@ internal static unsafe class JobsReader
         }
 
         return sections.ToArray();
+    }
+
+    // Custom categories are user-curated, so their display order follows GearsetIds' own list
+    // order (whatever JobsApp's drag-to-reorder last left it in) instead of UiPriority - unlike
+    // the built-in role sections below, which still fall back to SortedEntries. A gearset id with
+    // no live entry this cycle (deleted, or the bucket simply hasn't caught up yet) is skipped
+    // rather than left as a gap.
+    private static JobEntry[] CustomOrderedEntries(List<(JobEntry Entry, byte UiPriority)> bucket,
+        List<int> gearsetIds)
+    {
+        var byGearsetId = new Dictionary<int, JobEntry>(bucket.Count);
+        for (var index = 0; index < bucket.Count; index++)
+        {
+            byGearsetId[bucket[index].Entry.GearsetId] = bucket[index].Entry;
+        }
+
+        var ordered = new List<JobEntry>(bucket.Count);
+        for (var index = 0; index < gearsetIds.Count; index++)
+        {
+            if (byGearsetId.TryGetValue(gearsetIds[index], out var entry))
+            {
+                ordered.Add(entry);
+            }
+        }
+
+        return ordered.ToArray();
     }
 
     private static JobEntry[] SortedEntries(List<(JobEntry Entry, byte UiPriority)> bucket)

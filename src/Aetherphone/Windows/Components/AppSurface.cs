@@ -37,6 +37,10 @@ internal static class AppSurface
 
         public readonly void JumpToTop() => surface.JumpToTop();
 
+        /// <summary>Hands an in-progress gesture to a widget inside this surface (see SkywatcherApp's
+        /// scrubber), leaving the scroll offset alone instead of letting it also become a scroll.</summary>
+        public readonly void CancelDrag() => surface.CancelDrag();
+
         public void Dispose()
         {
             child.Dispose();

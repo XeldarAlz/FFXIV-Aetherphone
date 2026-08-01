@@ -170,7 +170,7 @@ internal sealed partial class JobsApp : IPhoneApp
                 Rebuild();
             }
 
-            using (AppSurface.Begin(body))
+            using (var surface = AppSurface.Begin(body))
             {
                 if (sections.Length == 0)
                 {
@@ -178,19 +178,43 @@ internal sealed partial class JobsApp : IPhoneApp
                 }
                 else
                 {
+                    categoryHeaderRects.Clear();
                     for (var index = 0; index < sections.Length; index++)
                     {
                         var section = sections[index];
                         var title = section.IsCustom ? section.CustomTitle : Loc.T(section.RoleTitle);
+                        var headerTop = ImGui.GetCursorScreenPos();
+                        var headerWidth = ImGui.GetContentRegionAvail().X;
                         ui.SectionHeading(title, index == 0 ? 8f : 4f);
+                        if (section.IsCustom)
+                        {
+                            var headerRect = new Rect(headerTop,
+                                new Vector2(headerTop.X + headerWidth, ImGui.GetCursorScreenPos().Y));
+                            DrawCategoryDragHandle(headerRect, section.CategoryIndex, scale);
+                        }
+
                         DrawSectionCard(section, scale);
                         ImGui.Dummy(new Vector2(0f, SectionGap * scale));
                     }
 
                     ImGui.Dummy(new Vector2(0f, 8f * scale));
                 }
+
+                // Fixes the phone appearing to move during a category/row drag: it was never the
+                // window's own position, it was DragScrollHost's kinetic scroll racing the drag
+                // handle for the exact same press. DragScrollHost.Begin runs before any row/handle
+                // this frame, so on the press's first frame it sees "no widget active yet" and
+                // happily starts its own scroll gesture on the same touch. Handing it back once a
+                // Jobs drag has been picked up (same pattern as SkywatcherApp's scrubber) stops
+                // that race outright.
+                if (categoryDragIndex >= 0 || jobDragIndex >= 0)
+                {
+                    surface.CancelDrag();
+                }
             }
         }
+
+        UpdateCategoryDrag(scale);
 
         DrawColorMenu(content, theme);
         DrawCategoriesMenu(content, theme);
@@ -325,19 +349,30 @@ internal sealed partial class JobsApp : IPhoneApp
                 Loc.T(L.Jobs.EmptyCategory), ui.MutedInk, TextStyles.Footnote, width - padding * 2f);
         }
 
+        if (section.IsCustom)
+        {
+            UpdateJobDrag(section.CategoryIndex, section.Entries, rowHeight, scale);
+        }
+
         var separator = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f));
         for (var index = 0; index < section.Entries.Length; index++)
         {
             var rowTop = min.Y + index * rowHeight;
-            var rowRect = new Rect(new Vector2(min.X, rowTop), new Vector2(max.X, rowTop + rowHeight));
-            var contentRect = new Rect(new Vector2(min.X + padding, rowTop), new Vector2(max.X - padding, rowTop + rowHeight));
+            var dragOffset = section.IsCustom && jobDragActive && jobDragCategoryIndex == section.CategoryIndex &&
+                jobDragIndex == index
+                ? jobDragY
+                : 0f;
+            var rowRect = new Rect(new Vector2(min.X, rowTop + dragOffset), new Vector2(max.X, rowTop + rowHeight + dragOffset));
+            var contentRect = new Rect(new Vector2(min.X + padding, rowTop + dragOffset),
+                new Vector2(max.X - padding, rowTop + rowHeight + dragOffset));
             if (!rowAnchorTaken)
             {
                 rowAnchorTaken = true;
                 UiAnchors.Report("jobs.row", rowRect);
             }
 
-            DrawJobRow(drawList, rowRect, contentRect, section.Entries[index], scale);
+            DrawJobRow(drawList, rowRect, contentRect, section.Entries[index], scale, section.IsCustom,
+                section.CategoryIndex, index);
             if (index > 0)
             {
                 drawList.AddLine(new Vector2(min.X + padding, rowTop), new Vector2(max.X - padding, rowTop), separator,
@@ -349,15 +384,25 @@ internal sealed partial class JobsApp : IPhoneApp
         ImGui.Dummy(new Vector2(width, rowCount * rowHeight));
     }
 
-    private void DrawJobRow(ImDrawListPtr drawList, Rect rowRect, Rect contentRect, JobEntry job, float scale)
+    private void DrawJobRow(ImDrawListPtr drawList, Rect rowRect, Rect contentRect, JobEntry job, float scale,
+        bool draggable, int categoryIndex, int rowIndex)
     {
         var hasMenu = job.Kind == JobEntryKind.Gearset;
         var menuRadius = 13f * scale;
         var menuCenter = new Vector2(contentRect.Max.X - menuRadius, contentRect.Center.Y);
         var menuHalf = new Vector2(menuRadius, menuRadius);
         var overMenu = hasMenu && UiInteract.Hover(menuCenter - menuHalf, menuCenter + menuHalf);
+
+        var handleRadius = 12f * scale;
+        var handleCenter = new Vector2(menuCenter.X - menuRadius - 20f * scale, contentRect.Center.Y);
+        var overHandle = false;
+        if (draggable)
+        {
+            overHandle = DrawJobDragHandle(drawList, handleCenter, handleRadius, categoryIndex, rowIndex, scale);
+        }
+
         var equippable = job.Kind == JobEntryKind.Gearset && !job.IsActive;
-        var hovered = equippable && !overMenu && UiInteract.Hover(rowRect.Min, rowRect.Max);
+        var hovered = equippable && !overMenu && !overHandle && UiInteract.Hover(rowRect.Min, rowRect.Max);
         if (hovered)
         {
             var alpha = ImGui.IsMouseDown(ImGuiMouseButton.Left) ? 0.14f : 0.07f;
@@ -381,6 +426,10 @@ internal sealed partial class JobsApp : IPhoneApp
             : string.Empty;
         var textLeft = iconMax.X + 14f * scale;
         var noteRight = hasMenu ? menuCenter.X - menuRadius - 8f * scale : contentRect.Max.X;
+        if (draggable)
+        {
+            noteRight -= handleRadius * 2f + 8f * scale;
+        }
         var textRight = noteRight -
                         (note.Length == 0 ? 0f : Typography.Measure(note, TextStyles.Caption2).X + 28f * scale);
         var maxTextWidth = MathF.Max(1f, textRight - textLeft);
