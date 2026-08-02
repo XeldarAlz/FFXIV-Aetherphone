@@ -13,6 +13,7 @@ internal static class NativeFileDialog
     private const int OfnExplorer = 0x00080000;
     private const string ImageExtensions = "*.png;*.jpg;*.jpeg;*.bmp";
     private const string AudioExtensions = "*.mp3;*.wav";
+    private const string VideoExtensions = "*.mp4;*.mkv;*.webm;*.mov;*.avi;*.flv;*.m4v";
 
     private static readonly string[] OverlayMarkers = { "reshade", "gshade", };
     private static readonly string[] GraphicsModules =
@@ -34,9 +35,14 @@ internal static class NativeFileDialog
     private static string Filter(LocString kind, string extensions) =>
         $"{Loc.T(kind)}\0{extensions}\0{Loc.T(L.Common.FileKindAll)}\0*.*\0";
 
+    public static Task<string?> OpenVideoAsync(string title) =>
+        OpenAsync(title, Filter(L.Common.FileKindVideo, VideoExtensions), "[Video]");
+
     public static void PickImage(string title, Action<string> onPicked) => Complete(OpenImageAsync(title), onPicked);
 
     public static void PickAudio(string title, Action<string> onPicked) => Complete(OpenAudioAsync(title), onPicked);
+
+    public static void PickVideo(string title, Action<string> onPicked) => Complete(OpenVideoAsync(title), onPicked);
 
     private static void Complete(Task<string?> dialog, Action<string> onPicked)
     {

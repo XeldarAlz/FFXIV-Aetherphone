@@ -49,6 +49,7 @@ Gizlilik ve güvenlik her şeyden önce gelir: metin mesajları, ekler ve sesli 
 
 - **Sosyal**: Chirper mikroblogu, Aethergram fotoğraf akışı, sesli notlar ve grup aramalarıyla özel mesajlaşma için ChocoChat ve isteğe bağlı bir 18+ yardımcı uygulama olan Velvet.
 - **Araçlar**: bir pazar takipçisi, mekan ve etkinlik rehberi, oyun içi müzik, hava durumu, bir cüzdan, zamanlayıcılar ve sıfırlamalar, bir fotoğraf kitaplığı ve kamera ve bir cep mini oyun salonu; 30'dan fazla uygulama arasında.
+- **Birlikte izleyin**: AetherStream, YouTube dahil videoları oyun içindeki bir ekrana yansıtır ve seninle birlikte izleyen herkes için oynatmayı eşitler.
 - **Kendine göre yap**: vurgu paletleri, duvar kağıtları, Lodestone karakter portreleri, özel zil sesleri ve yazı boyutu için bir erişilebilirlik yakınlaştırması.
 
 Tüm özellik turu, ekran görüntüleri ve ayrıntılar web sitesinde:

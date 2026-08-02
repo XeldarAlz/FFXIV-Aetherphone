@@ -42,6 +42,8 @@ internal static class AppAccents
         ["settings"] = new(0.56f, 0.57f, 0.63f, 1f),
         ["appstore"] = new(0.05f, 0.48f, 0.99f, 1f),
         ["feedback"] = new(0.08f, 0.66f, 0.55f, 1f),
+        ["dev"] = new(0.42f, 0.46f, 0.98f, 1f),
+        ["aetherstream"] = new(0.29f, 0.20f, 0.72f, 1f),
         ["polls"] = new(0.56f, 0.44f, 0.96f, 1f),
         ["announcements"] = new(0.98f, 0.48f, 0.32f, 1f),
         ["muster"] = new(0.94f, 0.55f, 0.20f, 1f),

@@ -6,6 +6,7 @@ namespace Aetherphone.Core.Telephony.Contracts;
     PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(CallControl))]
 [JsonSerializable(typeof(ParticipantInfo))]
+[JsonSerializable(typeof(NearbyStreamInfo))]
 internal sealed partial class TelephonyJsonContext : JsonSerializerContext
 {
 }

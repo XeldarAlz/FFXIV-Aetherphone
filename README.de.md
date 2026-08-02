@@ -49,6 +49,7 @@ Privatsphäre und Sicherheit stehen an erster Stelle: Textnachrichten, Anhänge 
 
 - **Soziales**: der Chirper-Microblog, der Aethergram-Foto-Feed, ChocoChat für private Nachrichten mit Sprachnotizen und Gruppenanrufen sowie Velvet, eine optionale Companion-App ab 18.
 - **Werkzeuge**: ein Marktbrett-Tracker, ein Verzeichnis für Locations und Events, In-Game-Musik, Wetter, eine Geldbörse, Timer und Resets, eine Fotobibliothek und Kamera sowie eine Taschenspielhalle voller Minispiele, unter mehr als 30 Apps.
+- **Gemeinsam schauen**: AetherStream überträgt Videos, auch von YouTube, auf einen Bildschirm im Spiel und hält die Wiedergabe für alle synchron, die zuschauen.
 - **Mach es zu deinem**: Akzentpaletten, Hintergründe, Lodestone-Charakterporträts, eigene Klingeltöne und ein Barrierefreiheits-Zoom für die Textgröße.
 
 Die vollständige Feature-Tour, Screenshots und Details findest du auf der Website:

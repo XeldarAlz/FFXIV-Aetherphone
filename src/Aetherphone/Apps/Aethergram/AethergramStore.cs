@@ -31,7 +31,13 @@ internal sealed class AethergramStore : SocialFeedStore
     protected override Task<FeedPage?> FetchTaggedPostsAsync(string userId, string? cursor, CancellationToken token) =>
         grams.UserTaggedAsync(userId, cursor, token);
 
-    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, PostAspect aspect, string caption,
+    // aspects is one choice per photo (Instagram lets a multi-photo post mix Square/Portrait/
+    // Landscape). Each photo is baked at its own chosen size; the post's shared MediaWidth/
+    // MediaHeight (what the feed/detail carousel frames every photo in that post at) comes from
+    // the first photo, matching PhotoComposeSession.ContainerAspect. A later photo whose own
+    // baked size differs from the container just gets contain-fit there too - see
+    // AethergramApp.Detail.cs.
+    public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, PostAspect[] aspects, string caption,
         PhotoTagInput[]? photoTags, Action<bool> onComplete)
     {
         if (posting || sourcePaths.Length == 0)
@@ -43,10 +49,18 @@ internal sealed class AethergramStore : SocialFeedStore
         work.Run("create gram", async token =>
         {
             var keys = new string[sourcePaths.Length];
-            var (bakedWidth, bakedHeight) = PostAspects.Size(aspect, GramSize);
+            var (containerWidth, containerHeight) = PostAspects.Size(aspects[0], GramSize);
             for (var index = 0; index < sourcePaths.Length; index++)
             {
-                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight);
+                var (bakedWidth, bakedHeight) = PostAspects.Size(aspects[index], GramSize);
+                // Reveal-fit only applies to Portrait - Square and Landscape stay a plain cover
+                // crop, matching how they baked before this existed.
+                var minZoom = aspects[index] == PostAspect.Portrait
+                    ? WallpaperCrop.MinZoomToReveal(ImageProcessor.ReadSize(sourcePaths[index]),
+                        (float)bakedWidth / bakedHeight)
+                    : WallpaperCrop.MinZoom;
+                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight,
+                    minZoom);
                 var upload = await media.UploadUrlAsync("image/jpeg", "gram", token).ConfigureAwait(false);
                 if (upload is null)
                 {
@@ -63,8 +77,8 @@ internal sealed class AethergramStore : SocialFeedStore
                 keys[index] = upload.Key;
             }
 
-            var created = await grams.CreateAsync(caption.Trim(), keys, bakedWidth, bakedHeight, photoTags, token)
-                .ConfigureAwait(false);
+            var created = await grams.CreateAsync(caption.Trim(), keys, containerWidth, containerHeight, photoTags,
+                token).ConfigureAwait(false);
             if (created is null)
             {
                 return false;

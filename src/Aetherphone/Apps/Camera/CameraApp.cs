@@ -234,15 +234,7 @@ internal sealed class CameraApp : IPhoneApp
     {
         for (var index = 0; index < handlers.Count; index++)
         {
-            var handler = handlers[index];
-            handler.RemoveName();
-            handler.RemoveTitle();
-            handler.RemoveFreeCompanyTag();
-            handler.RemoveLevelPrefix();
-            handler.RemoveStatusPrefix();
-            handler.RemoveTargetSuffix();
-            handler.MarkerIconId = 0;
-            handler.NameIconId = -1;
+            NamePlateStripper.Strip(handlers[index]);
         }
     }
 

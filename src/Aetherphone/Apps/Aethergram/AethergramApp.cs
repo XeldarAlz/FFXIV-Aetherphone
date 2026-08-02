@@ -114,7 +114,6 @@ internal sealed partial class AethergramApp : IPhoneApp
     private readonly PhotoComposeSession composeSession;
     private bool composeAvatarMode;
     private bool composeStoryMode;
-    private PostAspect composeAspect = PostAspect.Square;
     private readonly string[] aspectLabels = new string[PostAspects.All.Length];
     private string? pendingSharedPhoto;
     private static readonly LocString[] ProfileTabs = { L.PhotoTag.PostsTab, L.PhotoTag.TaggedTab };
@@ -1115,9 +1114,13 @@ internal sealed partial class AethergramApp : IPhoneApp
         }
         else
         {
-            var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height);
-            drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
-                ImDrawFlags.RoundCornersAll);
+            // Contain-fit, not cover: the photo was already baked to its own chosen aspect at
+            // compose time (see AethergramStore.CreateGram), which can differ from this post's
+            // shared carousel container when photos in the same post used different aspects -
+            // covering here would crop it a second time. When the aspects do match (the common
+            // case, including every pre-existing post), the drawn image fills rect exactly and
+            // the backdrop is fully covered, so this is a no-op visually.
+            ImageFit.DrawLetterboxed(drawList, texture, rect, Vector2.Zero, Vector2.One, rounding);
         }
 
         ModerationOverlay.Draw(drawList, rect.Min, rect.Max, rounding, scanStatus);

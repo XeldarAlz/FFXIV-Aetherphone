@@ -1,4 +1,5 @@
 using Aetherphone.Apps.Aethergram;
+using Aetherphone.Apps.AetherStream;
 using Aetherphone.Apps.Announcements;
 using Aetherphone.Apps.Calendar;
 using Aetherphone.Apps.Camera;
@@ -37,13 +38,16 @@ using Aetherphone.Apps.YellowPages;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Telephony;
+using Aetherphone.Core.Video;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Widgets;
 
 namespace Aetherphone.Core.Apps;
 
 internal static class AppRegistry
 {
-    public static AppBundle BuildDefault(PhoneServices services)
+    public static AppBundle BuildDefault(PhoneServices services, VideoPlayer video, ScreenController screen,
+        AetherStreamQueue videoQueue, WatchAlongSession watchAlong, AetherStreamScreenWindow screenWindow)
     {
         var contactBook = new ContactBook(services.Aethernet.Contacts, services.AethernetSession);
         var apps = new List<IPhoneApp>
@@ -80,6 +84,9 @@ internal static class AppRegistry
         apps.Add(new ClockApp(services.Configuration, services.Confirm));
         apps.Add(new NotesApp(services.Configuration, services.Confirm));
         apps.Add(new CalculatorApp());
+        apps.Add(new AetherStreamApp(video, screen, videoQueue, services.Configuration, services.Confirm,
+            services.RemoteImages, services.Http, services.AethernetSession, services.Lodestone, watchAlong,
+            screenWindow));
         apps.Add(new ShortcutsApp(services.Shortcuts, services.ShortcutRunner, services.Confirm));
         apps.Add(new TimersApp(services.Configuration));
         apps.Add(new DailiesApp(services.Configuration, services.GameData));

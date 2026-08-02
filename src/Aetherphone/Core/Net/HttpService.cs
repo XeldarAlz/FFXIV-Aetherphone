@@ -225,6 +225,24 @@ internal sealed class HttpService : IDisposable
         }
     }
 
+    // Best-effort only - a diagnostic aid, never allowed to throw or replace the real status-code
+    // handling above. Capped well short of MaxResponseBytes since this is going straight into a
+    // log line, not parsed, and error bodies are typically a short JSON message, not a payload.
+    private const int MaxErrorBodyChars = 500;
+
+    private static async Task<string> ReadErrorBodyAsync(HttpResponseMessage response, CancellationToken token)
+    {
+        try
+        {
+            var body = await response.Content.ReadAsStringAsync(token).ConfigureAwait(false);
+            return body.Length > MaxErrorBodyChars ? body[..MaxErrorBodyChars] + "..." : body;
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
     private async Task<T?> SendForJsonAsync<T>(HttpRequestMessage request, JsonTypeInfo<T> typeInfo, string? bearer,
         Action<int>? onStatus, string? appScope, CancellationToken token)
     {
@@ -264,7 +282,16 @@ internal sealed class HttpService : IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                AepLog.Warning($"HTTP {request.Method} {request.RequestUri} returned {(int)response.StatusCode}");
+                // Unlike the catch block below, a non-2xx status isn't an exception - it was
+                // silently swallowed here before, indistinguishable from "request succeeded with
+                // a genuinely empty/default body" at every call site (e.g. AccountClient.SearchAsync
+                // returning null looked identical to a zero-match search in the Join screen's UI).
+                // The body is included (truncated) because a gate like 426/503 almost always
+                // explains itself there (e.g. "minimum client version X.Y.Z") - the status code
+                // alone doesn't say why, just that something rejected the request.
+                var errorBody = await ReadErrorBodyAsync(response, scope.Token).ConfigureAwait(false);
+                AepLog.Warning($"HTTP {request.Method} {request.RequestUri} returned {(int)response.StatusCode} " +
+                    $"{response.StatusCode}{(errorBody.Length > 0 ? $": {errorBody}" : string.Empty)}");
                 return default;
             }
 

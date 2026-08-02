@@ -111,6 +111,7 @@ internal sealed class PhoneServices : IDisposable
     public required ActivityRingNotifier RingNotifier { get; init; }
     public required HealthTracker Health { get; init; }
     public required CallHub Calls { get; init; }
+    public required StreamSignalRouter StreamSignals { get; init; }
     public required PhoneVisibility Visibility { get; init; }
     public required RealtimeSignalBus RealtimeSignals { get; init; }
     public required LoadingScreen Loading { get; init; }
@@ -212,6 +213,7 @@ internal sealed class PhoneServices : IDisposable
         var confirm = new ConfirmService();
         var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals,
             confirm, installer.Gate("message"));
+        var streamSignals = new StreamSignalRouter(calls.Router);
         var characterSwitcher = new CharacterSessionManager(framework, aethernetSession, aethernet.Account,
             gameData, configuration, confirm);
         var socialNotifications = new SocialNotificationService(aethernetSession, aethernet.Account, notifications, configuration, framework, visibility, realtimeSignals, installer);
@@ -299,6 +301,7 @@ internal sealed class PhoneServices : IDisposable
             RingNotifier = ringNotifier,
             Health = health,
             Calls = calls,
+            StreamSignals = streamSignals,
             Visibility = visibility,
             RealtimeSignals = realtimeSignals,
             Loading = new LoadingScreen(configuration),
@@ -321,6 +324,7 @@ internal sealed class PhoneServices : IDisposable
         ModerationNotices.Dispose();
         AccountState.Dispose();
         KeyVault.Dispose();
+        StreamSignals.Dispose();
         Calls.Dispose();
         Collections.Dispose();
         InventoryCapture.Dispose();

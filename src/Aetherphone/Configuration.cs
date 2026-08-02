@@ -18,10 +18,40 @@ using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
+using Aetherphone.Core.Video;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Configuration;
 
 namespace Aetherphone;
+
+// Ported from AlphaChannel's Configuration (Voudi, GPL-3.0, tag v1.1.20260725.1088) - a saved world
+// position/scale for the AetherStream screen (VideoEngine.ScreenPosition/ScreenYaw/ScreenScale), so the
+// user can jump back to a spot without re-placing it by hand every time. Yaw is an Aetherphone addition
+// on top of the upstream preset shape (which only carried X/Y/Z/Scale) - rotation is user-adjustable here.
+[Serializable]
+internal sealed class ScreenPositionPreset
+{
+    public string Name { get; set; } = "";
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Z { get; set; }
+    public float Yaw { get; set; }
+    public float Scale { get; set; } = 1.0f;
+}
+
+// A saved AetherStreamQueue.VideoQueueEntry (Url/Title/Source/Duration/ThumbnailUrl) - kept as its
+// own DTO rather than serializing VideoQueueEntry directly so Configuration doesn't couple to
+// AetherStreamQueue's internals (it also carries a Guid Id and mutable fields that don't belong
+// in a saved record).
+[Serializable]
+internal sealed class VideoQueueRecord
+{
+    public string Url { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Source { get; set; } = "";
+    public double? DurationSeconds { get; set; }
+    public string? ThumbnailUrl { get; set; }
+}
 
 [Serializable]
 internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, IControlConfiguration
@@ -75,6 +105,31 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public float NotificationVolume { get; set; } = 0.8f;
     public float MusicVolume { get; set; } = 0.6f;
     public int MusicRepeat { get; set; }
+    public bool SoundSettingsMigrated { get; set; }
+    public float VideoVolume { get; set; } = 0.6f;
+    public int VideoMaxQualityHeight { get; set; } = 720;
+    public bool VideoHideNameplates { get; set; } = true;
+    // On by default, matching ShowLodestonePortraits - visible unless the user opts out.
+    public bool VideoShareWatchPresence { get; set; } = true;
+    // Off by default - not measured, mpv has no GPU render path under this project's Wine/RADV
+    // setup, only decode may benefit. See docs/video-pipeline.md in the AlphaChannel repo.
+    public bool VideoHardwareDecoding { get; set; }
+    // Off by default and unsafe by design - only affects direct (non-YouTube) HTTPS URLs under
+    // Wine, where mpv's bundled curl fails TLS verification (likely a Schannel/Wine cert-store
+    // gap, not fixable via a CA bundle file - see Stage 7 investigation notes). Never touches
+    // real Windows.
+    public bool VideoAllowInsecureDirectUrls { get; set; }
+    // Off by default (Open mode) - see WatchAlongSession.PendingRequests / stream.joinRequest.
+    public bool VideoStreamApprovalRequired { get; set; }
+    public List<ScreenPositionPreset> ScreenPresets { get; set; } = new();
+    // The upcoming queue (AetherStreamQueue.Entries), so a relog or plugin reload mid watch-party
+    // doesn't lose what was lined up. What was actively Current isn't included here - see
+    // AetherStreamQueue's constructor doc comment.
+    public List<VideoQueueRecord> VideoQueue { get; set; } = new();
+    // SNES9x (AlphaChannel port) emulator input mapping and recent-ROM list - ported from
+    // AlphaChannel's own Configuration, which used to be its own separate IPluginConfiguration.
+    public Dictionary<Snes9xInput, string> SnesKeyMappings { get; set; } = new();
+    public List<string> SnesRecentRomPaths { get; set; } = new();
     public bool GameSoundsCleared { get; set; }
     public const string DefaultAethernetBaseUrl = "https://api.aetherphone.net";
     private const string LegacyAethernetHost = "ffxiv-aethernet-production.up.railway.app";

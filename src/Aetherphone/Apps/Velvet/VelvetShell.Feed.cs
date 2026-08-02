@@ -313,11 +313,16 @@ internal sealed partial class VelvetShell
     {
         var scanStatus = entry.ScanStatus;
         return carousel.Draw(drawList, rect, entry.Id, photos, rounding,
-            (list, min, max, radius, url) => DrawMedia(list, min, max, url ?? string.Empty, radius, scanStatus));
+            (list, min, max, radius, url) => DrawMedia(list, min, max, url ?? string.Empty, radius, scanStatus,
+                contain: true));
     }
 
+    // contain scopes the "show the whole baked photo, letterboxed if its own aspect differs from
+    // the frame" treatment to the post carousel - the profile grid (VelvetShell.Profile.cs) wants
+    // its usual forced square cover-crop regardless of a post's own aspect, same as Instagram's
+    // own profile grid, so it leaves this false.
     private void DrawMedia(ImDrawListPtr drawList, Vector2 min, Vector2 max, string url, float rounding,
-        string? scanStatus = null)
+        string? scanStatus = null, bool contain = false)
     {
         var texture = images.Get(url);
         if (texture is null)
@@ -326,6 +331,10 @@ internal sealed partial class VelvetShell
             Typography.DrawCentered(new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f),
                 images.Failed(url) ? Loc.T(L.Velvet.ImageUnavailable) : Loc.T(L.Common.Loading), VelvetTheme.MutedInk,
                 TextStyles.Footnote);
+        }
+        else if (contain)
+        {
+            ImageFit.DrawLetterboxed(drawList, texture, new Rect(min, max), Vector2.Zero, Vector2.One, rounding);
         }
         else
         {

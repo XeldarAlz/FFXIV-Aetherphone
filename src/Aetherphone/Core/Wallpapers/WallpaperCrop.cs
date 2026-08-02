@@ -18,6 +18,23 @@ internal readonly struct WallpaperCrop
     public static WallpaperCrop Cover => new(1f, 0.5f, 0.5f);
     public WallpaperCrop With(float zoom, float centerX, float centerY) => new(zoom, centerX, centerY);
 
+    // The zoom level at which the whole image becomes visible (both axes reach a visible
+    // fraction of 1) instead of the usual cover crop. Always <= MinZoom, equal to it only when
+    // the image's own aspect already matches targetAspect (nothing to reveal). Callers that want
+    // "show the full image by default, crop in only if the user zooms" (the compose flow) pass
+    // this as minZoom below; callers that always want a full cover (wallpaper cropping) don't
+    // pass it and keep today's MinZoom=1 floor.
+    public static float MinZoomToReveal(Vector2 imageSize, float targetAspect)
+    {
+        if (imageSize.X <= 0f || imageSize.Y <= 0f || targetAspect <= 0f)
+        {
+            return MinZoom;
+        }
+
+        var imageAspect = imageSize.X / imageSize.Y;
+        return Math.Min(MinZoom, Math.Min(imageAspect / targetAspect, targetAspect / imageAspect));
+    }
+
     public (Vector2 Uv0, Vector2 Uv1) ComputeUv(Vector2 imageSize, float targetAspect)
     {
         var (visibleWidth, visibleHeight) = VisibleSize(imageSize, targetAspect, Zoom);
@@ -26,9 +43,9 @@ internal readonly struct WallpaperCrop
         return (center - half, center + half);
     }
 
-    public WallpaperCrop Clamped(Vector2 imageSize, float targetAspect)
+    public WallpaperCrop Clamped(Vector2 imageSize, float targetAspect, float minZoom = MinZoom)
     {
-        var zoom = Math.Clamp(Zoom, MinZoom, MaxZoom);
+        var zoom = Math.Clamp(Zoom, minZoom, MaxZoom);
         var (visibleWidth, visibleHeight) = VisibleSize(imageSize, targetAspect, zoom);
         return new WallpaperCrop(zoom, ClampCenter(CenterX, visibleWidth), ClampCenter(CenterY, visibleHeight));
     }
@@ -54,9 +71,12 @@ internal readonly struct WallpaperCrop
             visibleHeightPixels = imageSize.X / targetAspect;
         }
 
-        var clampedZoom = MathF.Max(MinZoom, zoom);
-        var width = MathF.Min(1f, visibleWidthPixels / imageSize.X / clampedZoom);
-        var height = MathF.Min(1f, visibleHeightPixels / imageSize.Y / clampedZoom);
+        // Trusts the caller (Clamped()) to have already bounded zoom appropriately - unlike the
+        // rest of this struct, callers that want to reveal a whole image below the usual cover
+        // crop (see MinZoomToReveal) need zoom to actually go below the MinZoom=1 constant here.
+        var boundedZoom = MathF.Max(0.01f, zoom);
+        var width = MathF.Min(1f, visibleWidthPixels / imageSize.X / boundedZoom);
+        var height = MathF.Min(1f, visibleHeightPixels / imageSize.Y / boundedZoom);
         return (width, height);
     }
 

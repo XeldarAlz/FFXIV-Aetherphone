@@ -554,6 +554,29 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
+    // AetherStream is fork-only (the ported AlphaChannel video engine + watch-along), so it never
+    // got an upstream-authored palette the way every other app here has - this fills that gap
+    // rather than routing through the old generic "Dev" placeholder, which upstream removed
+    // entirely once every real app had its own tuned palette. Styling follows Dev's old shape
+    // (see git history) recolored to AetherStream's own violet accent.
+    public static readonly AppPalette AetherStream = new()
+    {
+        Accent = AppAccents.For("aetherstream"),
+        TitleInk = new(0.96f, 0.95f, 1f, 1f),
+        BodyInk = new(0.88f, 0.86f, 0.97f, 0.96f),
+        MutedInk = new(0.68f, 0.64f, 0.82f, 0.85f),
+        HeaderInk = new(0.78f, 0.72f, 0.96f, 0.95f),
+        HeadingInk = new(0.96f, 0.94f, 1f, 1f),
+        BackdropTop = new(0.14f, 0.09f, 0.28f, 1f),
+        BackdropBottom = new(0.04f, 0.03f, 0.09f, 1f),
+        BloomTop = new(0.29f, 0.20f, 0.72f, 0.22f),
+        BloomBottom = new(0.15f, 0.10f, 0.36f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
     public static AppPalette Notes(PhoneTheme theme) => new()
     {
         Accent = AppAccents.For("notes"),

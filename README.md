@@ -49,6 +49,7 @@ Privacy and safety come first: text messages, attachments, and voice notes are e
 
 - **Social**: Chirper microblog, Aethergram photo feed, ChocoChat private messaging with voice notes and group calls, and Velvet, an optional 18+ companion app.
 - **Utilities**: a market board tracker, venue and event directory, in-game music, weather, a wallet, timers and resets, a photo library and camera, and a pocket arcade of mini-games, among 30+ apps.
+- **Watch together**: AetherStream casts video, including YouTube, onto an in-world screen and keeps playback synced for anyone watching along.
 - **Make it yours**: accent palettes, wallpapers, Lodestone character portraits, custom ringtones, and an accessibility text-size zoom.
 
 Full feature tour, screenshots, and details live on the website:

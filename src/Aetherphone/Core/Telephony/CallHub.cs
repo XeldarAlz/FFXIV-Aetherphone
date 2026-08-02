@@ -64,6 +64,11 @@ internal sealed class CallHub : IDisposable
     public bool Enabled => configuration.CallsEnabled;
     public bool SignedIn => session.IsSignedIn;
     public bool Connected => router.Connected;
+
+    // Lets sibling features (AetherStream's StreamSignalRouter) ride the same wss /rt socket
+    // instead of opening a second connection - mirrors how CallAudioController already reuses
+    // router.Connection for media frames.
+    public CallSignalRouter Router => router;
     public string LocalUserId => session.CurrentUser?.Id ?? string.Empty;
     public CallLogEntry[] CallLog => log.Entries;
     public int UnseenMissed => log.UnseenMissed;

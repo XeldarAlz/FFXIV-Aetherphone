@@ -1124,7 +1124,9 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         });
     }
 
-    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, PostAspect aspect, string caption,
+    // aspects is one choice per photo - see AethergramStore.CreateGram's doc comment for the
+    // full reasoning, identical here.
+    public void CreatePost(string[] sourcePaths, WallpaperCrop[] crops, PostAspect[] aspects, string caption,
         string[] tags, int audience, Action<bool> onComplete)
     {
         if (posting || sourcePaths.Length == 0)
@@ -1136,10 +1138,18 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         work.Run("create post", async token =>
         {
             var mediaKeys = new string[sourcePaths.Length];
-            var (bakedWidth, bakedHeight) = PostAspects.Size(aspect, PostSize);
+            var (containerWidth, containerHeight) = PostAspects.Size(aspects[0], PostSize);
             for (var index = 0; index < sourcePaths.Length; index++)
             {
-                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight);
+                var (bakedWidth, bakedHeight) = PostAspects.Size(aspects[index], PostSize);
+                // Reveal-fit only applies to Portrait - Square and Landscape stay a plain cover
+                // crop, matching how they baked before this existed.
+                var minZoom = aspects[index] == PostAspect.Portrait
+                    ? WallpaperCrop.MinZoomToReveal(ImageProcessor.ReadSize(sourcePaths[index]),
+                        (float)bakedWidth / bakedHeight)
+                    : WallpaperCrop.MinZoom;
+                var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth, bakedHeight,
+                    minZoom);
                 var upload = await media.UploadUrlAsync("image/jpeg", "velvet", token).ConfigureAwait(false);
                 if (upload is null)
                 {
@@ -1156,8 +1166,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 mediaKeys[index] = upload.Key;
             }
 
-            var request =
-                new CreateVelvetPostRequest(mediaKeys[0], bakedWidth, bakedHeight, caption, tags, mediaKeys, audience);
+            var request = new CreateVelvetPostRequest(mediaKeys[0], containerWidth, containerHeight, caption, tags,
+                mediaKeys, audience);
             var created = await client.CreatePostAsync(request, token).ConfigureAwait(false);
             if (created is null)
             {
