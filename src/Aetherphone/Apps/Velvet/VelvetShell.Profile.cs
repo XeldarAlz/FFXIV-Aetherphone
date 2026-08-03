@@ -139,7 +139,7 @@ internal sealed partial class VelvetShell
 
             if (user.Intro.Length > 0)
             {
-                Gap(18f);
+                Gap(20f);
                 VSectionHeader.Bar(Loc.T(L.Velvet.CardAbout));
                 Gap(4f);
                 WrapText(user.Intro, VelvetTheme.BodyInk, TextStyles.Body);
@@ -148,7 +148,7 @@ internal sealed partial class VelvetShell
             var genderLabels = VelvetGender.Labels(user.Gender);
             if (genderLabels.Length > 0)
             {
-                Gap(20f);
+                Gap(18f);
                 VSectionHeader.Bar(Loc.T(L.Velvet.CardGender));
                 Gap(4f);
                 DrawDisplayTokens(genderLabels, VChipStyle.Tint, VelvetTheme.Rose);
