@@ -137,9 +137,9 @@ internal sealed partial class VelvetShell
                 }
             }
 
-             if (user.Intro.Length > 0)
+            if (user.Intro.Length > 0)
             {
-                Gap(20f);
+                Gap(18f);
                 VSectionHeader.Bar(Loc.T(L.Velvet.CardAbout));
                 Gap(4f);
                 WrapText(user.Intro, VelvetTheme.BodyInk, TextStyles.Body);
