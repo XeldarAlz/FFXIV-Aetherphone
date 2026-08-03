@@ -117,6 +117,15 @@ internal static class ImageProcessor
         {
             using var stream = new MemoryStream(bytes);
             return DecodeRgba32(stream, maxPixels);
+    public static async Task<IDalamudTextureWrap> DecodeToTextureAsync(ITextureProvider textures, byte[] bytes,
+        string tag, CancellationToken token)
+    {
+        var (pixels, width, height) = await Task.Run(() =>
+        {
+            using var image = Image.Load<Rgba32>(bytes);
+            var buffer = new byte[image.Width * image.Height * 4];
+            image.CopyPixelDataTo(buffer);
+            return (buffer, image.Width, image.Height);
         }, token).ConfigureAwait(false);
 
         return await textures.CreateFromRawAsync(RawImageSpecification.Rgba32(width, height), pixels, tag, token)
