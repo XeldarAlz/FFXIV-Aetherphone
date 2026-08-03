@@ -145,7 +145,7 @@ internal sealed partial class VelvetShell
                 WrapText(user.Intro, VelvetTheme.BodyInk, TextStyles.Body);
             }
 
-                        var genderLabels = VelvetGender.Labels(user.Gender);
+            var genderLabels = VelvetGender.Labels(user.Gender);
             if (genderLabels.Length > 0)
             {
                 Gap(20f);
