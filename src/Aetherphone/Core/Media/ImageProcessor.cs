@@ -1,4 +1,3 @@
-using System.Buffers;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -97,40 +96,30 @@ internal static class ImageProcessor
         return new BakedImage(stream.ToArray(), width, height);
     }
 
-    private static (byte[] Pixels, int Length, int Width, int Height) DecodeRgba32Pooled(Stream stream, long maxPixels)
+    private static (byte[] Pixels, int Width, int Height) DecodeRgba32(Stream stream, long maxPixels)
     {
         using var image = LoadRgba32(stream, maxPixels, out var length);
-        var buffer = ArrayPool<byte>.Shared.Rent(length);
-        image.CopyPixelDataTo(buffer.AsSpan(0, length));
-        return (buffer, length, image.Width, image.Height);
-    }
-
-    public static (byte[] Pixels, int Width, int Height) DecodeRgba32(byte[] bytes)
-    {
-        using var stream = new MemoryStream(bytes);
-        using var image = LoadRgba32(stream, MaxDecodePixels, out var length);
         var pixels = new byte[length];
         image.CopyPixelDataTo(pixels);
         return (pixels, image.Width, image.Height);
     }
 
+    public static (byte[] Pixels, int Width, int Height) DecodeRgba32(byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes);
+        return DecodeRgba32(stream, MaxDecodePixels);
+    }
+
     public static async Task<IDalamudTextureWrap> DecodeToTextureAsync(ITextureProvider textures, byte[] bytes,
         string tag, long maxPixels, CancellationToken token)
     {
-        var (pixels, length, width, height) = await Task.Run(() =>
+        var (pixels, width, height) = await Task.Run(() =>
         {
             using var stream = new MemoryStream(bytes);
-            return DecodeRgba32Pooled(stream, maxPixels);
+            return DecodeRgba32(stream, maxPixels);
         }, token).ConfigureAwait(false);
 
-        try
-        {
-            return await textures.CreateFromRawAsync(RawImageSpecification.Rgba32(width, height),
-                pixels.AsMemory(0, length), tag, token).ConfigureAwait(false);
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(pixels);
-        }
+        return await textures.CreateFromRawAsync(RawImageSpecification.Rgba32(width, height), pixels, tag, token)
+            .ConfigureAwait(false);
     }
 }
