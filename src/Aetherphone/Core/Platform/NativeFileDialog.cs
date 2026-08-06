@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Aetherphone.Core.Platform;
@@ -65,7 +66,10 @@ internal static class NativeFileDialog
             var dialog = new OpenFileName
             {
                 lStructSize = Marshal.SizeOf<OpenFileName>(),
-                hwndOwner = IntPtr.Zero,
+                // An unowned dialog on a fullscreen exclusive game can force a display mode or
+                // focus transition, destabilizing the DirectX device for any texture work
+                // happening on Dalamud's own queue around the same time.
+                hwndOwner = Process.GetCurrentProcess().MainWindowHandle,
                 lpstrFilter = filterBuffer,
                 nFilterIndex = 1,
                 lpstrFile = fileBuffer,
