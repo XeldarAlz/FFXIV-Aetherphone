@@ -131,12 +131,14 @@ internal sealed class TagsMentionsPage : ISettingsPage, IDisposable
                     mentionPolicy = me.MentionPolicy;
                     tagPolicy = me.TagPolicy;
                     requireTagApproval = me.RequireTagApproval;
-                    loaded = true;
                 }
+
+                loaded = true;
             }
             catch (Exception exception)
             {
                 AepLog.Warning($"Tag privacy load failed: {exception.Message}");
+                loaded = true;
             }
             finally
             {

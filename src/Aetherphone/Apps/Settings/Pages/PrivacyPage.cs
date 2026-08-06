@@ -226,12 +226,15 @@ internal sealed class PrivacyPage : ISettingsPage, IDisposable
                 {
                     shareReadReceipts = me.ShareReadReceipts;
                     sharePresence = me.SharePresence;
-                    chatPrivacyLoaded = true;
                 }
+
+                // Latch loaded even on null/failure so a dead endpoint cannot refetch every frame.
+                chatPrivacyLoaded = true;
             }
             catch (Exception exception)
             {
                 AepLog.Warning($"Chat privacy load failed: {exception.Message}");
+                chatPrivacyLoaded = true;
             }
             finally
             {

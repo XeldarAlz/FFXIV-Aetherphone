@@ -116,7 +116,8 @@ internal sealed class RootSettingsPage : ISettingsPage
         var size = Typography.Measure(label, 0.78f);
         var origin = ImGui.GetCursorScreenPos();
         var avail = ImGui.GetContentRegionAvail().X;
-        Typography.Draw(new Vector2(origin.X + (avail - size.X) * 0.5f, origin.Y), label, theme.TextMuted, 0.78f);
+        Typography.Draw(ImGui.GetWindowDrawList(), new Vector2(origin.X + (avail - size.X) * 0.5f, origin.Y), label,
+            theme.TextMuted, 0.78f);
         ImGui.Dummy(new Vector2(avail, size.Y));
     }
 }

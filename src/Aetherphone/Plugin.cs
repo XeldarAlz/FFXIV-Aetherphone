@@ -169,8 +169,24 @@ public sealed class Plugin : IDalamudPlugin
         ClientState.Login -= OnLogin;
         Framework.Update -= OnAutoOpenTick;
         ContextMenu.OnMenuOpened -= OnMenuOpened;
-        CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
-        CommandManager.RemoveHandler(AepConstants.AliasCommand);
+        try
+        {
+            CommandManager.RemoveHandler(AepConstants.PrimaryCommand);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"Primary command remove failed during partial teardown: {exception.Message}");
+        }
+
+        try
+        {
+            CommandManager.RemoveHandler(AepConstants.AliasCommand);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"Alias command remove failed during partial teardown: {exception.Message}");
+        }
+
         if (services is not null)
         {
             services.Notifications.Changed -= UpdateDtrBadge;
@@ -384,8 +400,11 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnIncomingCall()
     {
-        phoneWindow.Maximize();
-        phoneWindow.IsOpen = true;
+        _ = Framework.RunOnFrameworkThread(() =>
+        {
+            phoneWindow.Maximize();
+            phoneWindow.IsOpen = true;
+        });
     }
 
     private void OnMenuOpened(IMenuOpenedArgs args)

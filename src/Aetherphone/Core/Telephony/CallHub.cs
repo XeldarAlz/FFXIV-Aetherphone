@@ -468,7 +468,25 @@ internal sealed class CallHub : IDisposable
                 return;
             }
 
-            var pending = 0;
+            var fromId = message.From?.UserId;
+            if (fromId is not null)
+            {
+                if (dialingTo?.UserId == fromId)
+                {
+                    dialingTo = null;
+                }
+
+                for (var index = 0; index < roster.Length; index++)
+                {
+                    if (roster[index].UserId == fromId)
+                    {
+                        var participant = roster[index];
+                        roster[index] = participant with { State = ParticipantState.Left };
+                    }
+                }
+            }
+
+            var pending = dialingTo is not null ? 1 : 0;
             for (var index = 0; index < roster.Length; index++)
             {
                 var participant = roster[index];

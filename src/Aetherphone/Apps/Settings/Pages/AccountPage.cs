@@ -544,7 +544,9 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                 AddAccount();
             }
 
-            if (SettingsRow.Bool(actions.NextRow(), Loc.T(L.Account.FollowCharacter), session.FollowsCharacter, theme))
+            var followCharacter = SettingsRow.Bool(actions.NextRow(), Loc.T(L.Account.FollowCharacter),
+                session.FollowsCharacter, theme);
+            if (followCharacter != session.FollowsCharacter)
             {
                 ToggleFollowCharacter();
             }

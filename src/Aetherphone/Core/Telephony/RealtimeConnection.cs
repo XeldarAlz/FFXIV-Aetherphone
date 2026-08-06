@@ -11,12 +11,16 @@ internal sealed class RealtimeConnection : IDisposable
     private const int MaxMessageBytes = 1024 * 1024;
     private static readonly TimeSpan HealthyConnectionThreshold = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan SendTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan StopJoinTimeout = TimeSpan.FromSeconds(2);
     private readonly AethernetSession session;
     private readonly object gate = new();
     private readonly SemaphoreSlim sendLock = new(1, 1);
     private CancellationTokenSource? lifetime;
     private ClientWebSocket? socket;
+    private Task? runTask;
+    private int generation;
     private volatile bool connected;
+    private volatile bool disposed;
 
     public RealtimeConnection(AethernetSession session)
     {
@@ -32,14 +36,15 @@ internal sealed class RealtimeConnection : IDisposable
     {
         lock (gate)
         {
-            if (lifetime is not null)
+            if (disposed || lifetime is not null)
             {
                 return;
             }
 
             lifetime = new CancellationTokenSource();
             var token = lifetime.Token;
-            _ = Task.Run(() => RunAsync(token));
+            var runGeneration = ++generation;
+            runTask = Task.Run(() => RunAsync(token, runGeneration));
         }
     }
 
@@ -47,12 +52,14 @@ internal sealed class RealtimeConnection : IDisposable
     {
         CancellationTokenSource? toCancel;
         ClientWebSocket? toAbort;
+        Task? toWait;
         lock (gate)
         {
             toCancel = lifetime;
             lifetime = null;
             toAbort = socket;
-            socket = null;
+            toWait = runTask;
+            runTask = null;
         }
 
         toCancel?.Cancel();
@@ -65,20 +72,33 @@ internal sealed class RealtimeConnection : IDisposable
             AepLog.Warning($"Realtime abort failed: {exception.Message}");
         }
 
-        toAbort?.Dispose();
+        // The receive loop owns the socket via `using` - only Abort here so its Dispose runs once.
+        if (toWait is not null)
+        {
+            try
+            {
+                toWait.Wait(StopJoinTimeout);
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Realtime stop join failed: {exception.Message}");
+            }
+        }
+
         toCancel?.Dispose();
         SetConnected(false);
     }
 
-    private async Task RunAsync(CancellationToken token)
+    private async Task RunAsync(CancellationToken token, int runGeneration)
     {
         var attempt = 0;
         while (!token.IsCancellationRequested)
         {
             var connectedAtUtc = DateTime.MinValue;
+            ClientWebSocket? ws = null;
             try
             {
-                using var ws = new ClientWebSocket();
+                ws = new ClientWebSocket();
                 ws.Options.KeepAliveInterval = TimeSpan.FromSeconds(15);
                 ws.Options.KeepAliveTimeout = TimeSpan.FromSeconds(20);
                 var bearer = session.Token;
@@ -90,6 +110,11 @@ internal sealed class RealtimeConnection : IDisposable
                 await ws.ConnectAsync(BuildUri(session.BaseUrl), token).ConfigureAwait(false);
                 lock (gate)
                 {
+                    if (runGeneration != generation)
+                    {
+                        return;
+                    }
+
                     socket = ws;
                 }
 
@@ -109,13 +134,21 @@ internal sealed class RealtimeConnection : IDisposable
             {
                 lock (gate)
                 {
-                    socket = null;
+                    if (ReferenceEquals(socket, ws))
+                    {
+                        socket = null;
+                    }
                 }
 
-                SetConnected(false);
+                if (runGeneration == generation)
+                {
+                    SetConnected(false);
+                }
+
+                ws?.Dispose();
             }
 
-            if (token.IsCancellationRequested)
+            if (token.IsCancellationRequested || runGeneration != generation)
             {
                 break;
             }
@@ -202,6 +235,11 @@ internal sealed class RealtimeConnection : IDisposable
 
     private async Task SendAsync(byte[] payload, WebSocketMessageType type)
     {
+        if (disposed)
+        {
+            return;
+        }
+
         ClientWebSocket? ws;
         lock (gate)
         {
@@ -218,7 +256,15 @@ internal sealed class RealtimeConnection : IDisposable
             return;
         }
 
-        await sendLock.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            await sendLock.WaitAsync().ConfigureAwait(false);
+        }
+        catch (ObjectDisposedException)
+        {
+            return;
+        }
+
         try
         {
             using var timeout = new CancellationTokenSource(SendTimeout);
@@ -227,7 +273,16 @@ internal sealed class RealtimeConnection : IDisposable
         catch (OperationCanceledException)
         {
             AepLog.Warning("Realtime send timed out; dropping the connection.");
-            ws.Abort();
+            try
+            {
+                ws.Abort();
+            }
+            catch (Exception)
+            {
+            }
+        }
+        catch (ObjectDisposedException)
+        {
         }
         catch (Exception exception)
         {
@@ -235,7 +290,13 @@ internal sealed class RealtimeConnection : IDisposable
         }
         finally
         {
-            sendLock.Release();
+            try
+            {
+                sendLock.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
     }
 
@@ -267,6 +328,7 @@ internal sealed class RealtimeConnection : IDisposable
 
     public void Dispose()
     {
+        disposed = true;
         Stop();
         sendLock.Dispose();
     }

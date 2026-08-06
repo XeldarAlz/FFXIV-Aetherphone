@@ -44,13 +44,15 @@ internal sealed class CallAudioController
             return false;
         }
 
+        if (localSlot < 0)
+        {
+            return false;
+        }
+
         var input = AudioDevices.ResolveInput(configuration.CallInputDevice);
         var output = AudioDevices.ResolveOutput(configuration.CallOutputDevice);
         var created = new CallSession(callId, connection, input, output, volume) { Muted = muted, };
-        if (localSlot >= 0)
-        {
-            created.SetLocalSlot(localSlot);
-        }
+        created.SetLocalSlot(localSlot);
 
         session = created;
         remoteSlots.Clear();

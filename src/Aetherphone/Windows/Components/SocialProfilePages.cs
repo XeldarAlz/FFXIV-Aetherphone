@@ -81,7 +81,7 @@ internal sealed class SocialProfilePages
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
     private string editBio = string.Empty;
-    private string editStatus = string.Empty;
+    private LocString? editStatusKey;
     private string? editLoadedFor;
     private volatile bool editBusy;
     private volatile int editOutcome;
@@ -466,7 +466,7 @@ internal sealed class SocialProfilePages
         if (editOutcome == 2)
         {
             editOutcome = 0;
-            editStatus = Loc.T(style.HandleTaken);
+            editStatusKey = style.HandleTaken;
         }
 
         if (editLoadedFor != me.Id)
@@ -475,7 +475,7 @@ internal sealed class SocialProfilePages
             editDisplay = me.DisplayName;
             editHandle = me.Handle;
             editBio = me.Bio;
-            editStatus = string.Empty;
+            editStatusKey = null;
         }
 
         var handleValid = IsHandleValid(editHandle);
@@ -509,12 +509,12 @@ internal sealed class SocialProfilePages
             DrawHandleField(theme);
             ImGui.Dummy(new Vector2(0f, 10f * scale));
             ui.Field(Loc.T(style.BioLabel), "##editBio", ref editBio, BioMax, true);
-            if (editStatus.Length > 0)
+            if (editStatusKey is { } statusKey)
             {
                 ImGui.Dummy(new Vector2(0f, 10f * scale));
                 using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
                 {
-                    Typography.Wrapped(editStatus);
+                    Typography.Wrapped(Loc.T(statusKey));
                 }
             }
         }
@@ -566,12 +566,12 @@ internal sealed class SocialProfilePages
 
         if (!IsHandleValid(editHandle) || editDisplay.Trim().Length == 0)
         {
-            editStatus = Loc.T(style.HandleRules);
+            editStatusKey = style.HandleRules;
             return;
         }
 
         editBusy = true;
-        editStatus = string.Empty;
+        editStatusKey = null;
         store.UpdateProfile(editDisplay.Trim(), editHandle.Trim(), editBio.Trim(), (ok, _) =>
         {
             editBusy = false;

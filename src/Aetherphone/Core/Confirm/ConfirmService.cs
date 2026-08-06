@@ -25,6 +25,12 @@ internal sealed class ConfirmService
 
     public void Ask(ConfirmRequest request)
     {
+        if (!Plugin.Framework.IsInFrameworkUpdateThread)
+        {
+            _ = Plugin.Framework.RunOnFrameworkThread(() => Ask(request));
+            return;
+        }
+
         if (Active is not null)
         {
             queued.Enqueue(request);
@@ -64,15 +70,26 @@ internal sealed class ConfirmService
             Status = null;
             handler(ok =>
             {
-                Busy = false;
-                if (ok)
+                void Finish()
                 {
-                    Advance();
+                    Busy = false;
+                    if (ok)
+                    {
+                        Advance();
+                    }
+                    else
+                    {
+                        Status = request.FailedMessage;
+                    }
                 }
-                else
+
+                if (!Plugin.Framework.IsInFrameworkUpdateThread)
                 {
-                    Status = request.FailedMessage;
+                    _ = Plugin.Framework.RunOnFrameworkThread(Finish);
+                    return;
                 }
+
+                Finish();
             });
             return;
         }
