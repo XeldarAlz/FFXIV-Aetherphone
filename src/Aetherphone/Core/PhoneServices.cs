@@ -189,7 +189,7 @@ internal sealed class PhoneServices : IDisposable
         Windows.Components.UserName.Configure(badgeCatalog, remoteImages);
         Moderation.ModerationNoticeText.Configure(badgeCatalog);
         var peerKeys = new PeerKeyDirectory(configuration, aethernet.Keys);
-        var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault);
+        var conversationKeys = new ConversationKeyStore(aethernet.Keys, keyVault, new PinnedRecipientGuard());
         var marketIndex = new MarketItemIndex(dataManager);
         var market = new MarketboardService(http);
         var marketLauncher = new MarketLauncher();

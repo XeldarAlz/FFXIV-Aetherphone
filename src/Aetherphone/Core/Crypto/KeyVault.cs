@@ -6,16 +6,7 @@ using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Crypto;
 
-internal enum KeyVaultState
-{
-    Unavailable = 0,
-    Provisioning = 1,
-    Unlocked = 2,
-    Unsupported = 3,
-    Locked = 4,
-}
-
-internal sealed class KeyVault : IDisposable
+internal sealed class KeyVault : IDisposable, IKeyVault
 {
     private readonly Configuration configuration;
     private readonly AethernetSession session;
