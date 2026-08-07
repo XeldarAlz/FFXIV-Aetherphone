@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Aetherphone.Core.Localization;
+using KernelDevice = FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Device;
 
 namespace Aetherphone.Core.Platform;
 
@@ -51,12 +52,13 @@ internal static class NativeFileDialog
 
     private static Task<string?> OpenAsync(string title, string filter, string logTag)
     {
+        var owner = GameWindow();
         var completion = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         var thread = new Thread(() =>
         {
             try
             {
-                completion.SetResult(ShowDialog(title, filter));
+                completion.SetResult(ShowDialog(title, filter, owner));
             }
             catch (Exception exception)
             {
@@ -69,7 +71,13 @@ internal static class NativeFileDialog
         return completion.Task;
     }
 
-    private static string? ShowDialog(string title, string filter)
+    private static unsafe IntPtr GameWindow()
+    {
+        var device = KernelDevice.Instance();
+        return device == null ? IntPtr.Zero : (IntPtr)device->hWnd;
+    }
+
+    private static string? ShowDialog(string title, string filter, IntPtr owner)
     {
         var fileBuffer = Marshal.AllocHGlobal(MaxPath * sizeof(char));
         var filterBuffer = Marshal.StringToHGlobalUni(filter);
@@ -83,10 +91,8 @@ internal static class NativeFileDialog
             var dialog = new OpenFileName
             {
                 lStructSize = Marshal.SizeOf<OpenFileName>(),
-                // An unowned dialog on a fullscreen exclusive game can force a display mode or
-                // focus transition, destabilizing the DirectX device for any texture work
-                // happening on Dalamud's own queue around the same time.
-                hwndOwner = Process.GetCurrentProcess().MainWindowHandle,
+                // An unowned picker can open behind the game window and read as a freeze.
+                hwndOwner = owner,
                 lpstrFilter = filterBuffer,
                 nFilterIndex = 1,
                 lpstrFile = fileBuffer,
