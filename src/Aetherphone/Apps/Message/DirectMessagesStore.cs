@@ -3,6 +3,7 @@ using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Crypto;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Message;
 using Aetherphone.Core.Notifications;
@@ -21,13 +22,22 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public DirectMessagesStore(AethernetSession session, ChatClient client, SafetyClient safety, MediaClient media,
         NotificationService notifications, KeyVault vault, ConversationKeyStore keys, PeerKeyDirectory peers,
-        PhoneVisibility visibility, RealtimeSignalBus signals)
-        : base("Messages", session, safety, media, notifications, vault, keys, visibility)
+        PhoneVisibility visibility, RealtimeSignalBus signals, AppInstaller installer)
+        : base("Messages", session, safety, media, notifications, vault, keys, visibility, installer.Gate("message"))
     {
         this.client = client;
         this.peers = peers;
         this.signals = signals;
         signals.ChatPinged += OnChatPinged;
+        signals.ConnectedChanged += OnRealtimeConnected;
+    }
+
+    private void OnRealtimeConnected(bool active)
+    {
+        if (active)
+        {
+            InboxCadence.RequestImmediate();
+        }
     }
 
     public override bool RealtimePushActive => signals.RealtimeActive;
@@ -35,7 +45,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     private void OnChatPinged()
     {
         InboxCadence.RequestImmediate();
-        RefreshThread();
+        RefreshThreadIfVisible();
     }
 
     public ConversationDto[] Conversations => ThreadListItems;
@@ -63,6 +73,12 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
 
     public void RefreshConversations() => RefreshThreadListCore();
 
+    protected override void OnAccountSwitched()
+    {
+        conversation = null;
+        members = Array.Empty<ConversationMemberDto>();
+    }
+
     public void OpenConversation(string id) => OpenThread(id);
 
     protected override string ImageUploadScope => "chat-dm";
@@ -76,10 +92,10 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override Task<ChatKeyStatus> EnsureThreadKeysAsync(string threadId, CancellationToken token) =>
         keys.EnsureChatKeysAsync(threadId, token);
 
-    protected override async Task<ConversationDto[]?> FetchThreadListAsync(CancellationToken token)
+    protected override async Task<ThreadListPage?> FetchThreadListAsync(string? cursor, CancellationToken token)
     {
-        var page = await client.ConversationsAsync(token).ConfigureAwait(false);
-        return page?.Items;
+        var page = await client.ConversationsAsync(cursor, token).ConfigureAwait(false);
+        return page is null ? null : new ThreadListPage(page.Items, page.NextCursor);
     }
 
     protected override async Task<MessagePage?> FetchMessagesPageAsync(string threadId, string? cursor,
@@ -132,6 +148,10 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override int MessageEncVersionOf(ChatMessageDto message) => message.EncVersion;
 
     protected override string MessageBodyOf(ChatMessageDto message) => message.Body;
+
+    protected override int MessageKindOf(ChatMessageDto message) => message.Kind;
+
+    protected override string MessageSenderIdOf(ChatMessageDto message) => message.SenderId;
 
     protected override ReactionSummaryDto[]? ReactionsOf(ChatMessageDto message) => message.Reactions;
 
@@ -200,7 +220,7 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     {
         if (item.LastMessagePreview.Length > 0)
         {
-            return item.LastMessagePreview;
+            return ChatText.ListPreview(item.LastMessagePreview);
         }
 
         return item.LastMessageKind switch
@@ -533,5 +553,6 @@ internal sealed class DirectMessagesStore : ChatThreadStoreBase<ChatMessageDto, 
     protected override void DisposeCore()
     {
         signals.ChatPinged -= OnChatPinged;
+        signals.ConnectedChanged -= OnRealtimeConnected;
     }
 }

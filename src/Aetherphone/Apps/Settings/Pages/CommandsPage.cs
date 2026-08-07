@@ -3,7 +3,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Settings.Pages;
@@ -19,7 +18,6 @@ internal sealed class CommandsPage : ISettingsPage
         new(AepConstants.PrimaryCommand, L.Settings.CommandToggle),
         new(AepConstants.AliasCommand, L.Settings.CommandAlias),
         new($"{AepConstants.PrimaryCommand} market [item]", L.Settings.CommandMarket),
-        new($"{AepConstants.PrimaryCommand} about", L.Settings.CommandAbout),
         new($"{AepConstants.PrimaryCommand} reset", L.Settings.CommandReset),
         new($"{AepConstants.PrimaryCommand} test", L.Settings.CommandTest),
     };
@@ -31,7 +29,7 @@ internal sealed class CommandsPage : ISettingsPage
 
     public void Draw(in PhoneContext context, Rect body)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         using (AppSurface.Begin(body))
         {
@@ -50,10 +48,11 @@ internal sealed class CommandsPage : ISettingsPage
 
     private static void DrawRow(Rect row, CommandEntry entry, Core.Theme.PhoneTheme theme, float scale)
     {
-        var syntaxHeight = Typography.Measure(entry.Syntax, 0.92f, FontWeight.SemiBold).Y;
-        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale), entry.Syntax, theme.Accent, 0.92f,
+        var syntax = Typography.FitText(entry.Syntax, row.Width, 0.92f, FontWeight.SemiBold);
+        var syntaxHeight = Typography.Measure(syntax, 0.92f, FontWeight.SemiBold).Y;
+        Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale), syntax, theme.Accent, 0.92f,
             FontWeight.SemiBold);
-        var description = Loc.T(entry.Description);
+        var description = Typography.FitText(Loc.T(entry.Description), row.Width, 0.8f, FontWeight.Regular);
         Typography.Draw(new Vector2(row.Min.X, row.Min.Y + 10f * scale + syntaxHeight + 4f * scale), description,
             theme.TextMuted, 0.8f);
     }

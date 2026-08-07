@@ -4,7 +4,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -20,7 +19,7 @@ internal sealed partial class AppStoreApp
 
     private void DrawCatalogTab(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         DrawLargeTitle(area, Loc.T(L.Store.Apps), null);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + (HeaderHeight - 18f) * scale), area.Max);
         using (var surface = AppSurface.Begin(body))
@@ -74,12 +73,17 @@ internal sealed partial class AppStoreApp
         Material.EdgeSquircle(drawList, card.Min, card.Max, rounding, scale, 0.75f);
         DrawCategoryArt(drawList, card, categoryIndex, category, scale);
         var pad = CategoryPad * scale;
-        var label = Typography.FitText(Loc.T(AppStoreCatalog.Name(category)), card.Width - pad * 2f,
-            TextStyles.Headline);
+        var label = Loc.T(AppStoreCatalog.Name(category));
+        var maxLabelWidth = card.Width - pad * 2f;
+        var labelLeft = card.Min.X + pad;
         var labelTop = card.Max.Y - 28f * scale;
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop + 1f * scale), label, CardInkShadow,
-            TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, labelTop), label, CardInk, TextStyles.Headline);
+        var labelSize = Typography.Measure(label, TextStyles.Headline);
+        var labelHovering = UiInteract.Hover(new Vector2(labelLeft, labelTop),
+            new Vector2(labelLeft + MathF.Min(labelSize.X, maxLabelWidth), labelTop + labelSize.Y));
+        Marquee.DrawLeft("appstore.category.label.shadow." + category, label, labelLeft, labelTop + 1f * scale,
+            maxLabelWidth, TextStyles.Headline, CardInkShadow, labelHovering);
+        Marquee.DrawLeft("appstore.category.label." + category, label, labelLeft, labelTop, maxLabelWidth,
+            TextStyles.Headline, CardInk, labelHovering);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -122,7 +126,7 @@ internal sealed partial class AppStoreApp
 
     private void DrawCategoryView(Rect area, StoreCategory category)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         DrawNavBar(area, Loc.T(AppStoreCatalog.Name(category)), scale);
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
@@ -142,7 +146,7 @@ internal sealed partial class AppStoreApp
 
     private void DrawSearchTab(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         DrawLargeTitle(area, Loc.T(L.Store.Search), null);
         var barTop = area.Min.Y + (HeaderHeight - 12f) * scale;
         var bar = new Rect(new Vector2(area.Min.X + Metrics.Space.Lg * scale, barTop),

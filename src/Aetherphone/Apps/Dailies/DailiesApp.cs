@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Dailies;
 
@@ -113,7 +112,8 @@ internal sealed class DailiesApp : IPhoneApp
 
     private static bool IsValueTracking(DailyTracking tracking) =>
         tracking is DailyTracking.BeastTribeAllowances or DailyTracking.CustomDeliveries
-            or DailyTracking.WondrousTails or DailyTracking.Levequests or DailyTracking.HuntBills;
+            or DailyTracking.WondrousTails or DailyTracking.Levequests or DailyTracking.HuntBills
+            or DailyTracking.DomanEnclave;
 
     private bool IsOutstanding(in DailyItem item, in DailyAutoStatus status, DateTime utcNow)
     {
@@ -143,7 +143,7 @@ internal sealed class DailiesApp : IPhoneApp
             cadenceIndex = 1;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         var utcNow = DateTime.UtcNow;
 
@@ -313,25 +313,24 @@ internal sealed class DailiesApp : IPhoneApp
 
         var textLeft = innerLeft + tile + 12f * scale;
         var textRight = MathF.Max(textLeft, controlLeft - 12f * scale);
+        var textMaxWidth = MathF.Max(1f, textRight - textLeft);
         var name = Loc.T(item.Label);
         var sublabel = BuildSublabel(item, utcNow);
         var nameColor = complete && tappable ? AppPalettes.Dailies.MutedInk : AppPalettes.Dailies.TitleInk;
 
-        ImGui.PushClipRect(new Vector2(textLeft, band.Min.Y), new Vector2(textRight, band.Max.Y), true);
         if (sublabel.Length > 0)
         {
-            Typography.Draw(new Vector2(textLeft, band.Center.Y - 17f * scale), name, nameColor, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, band.Center.Y + 4f * scale), sublabel, AppPalettes.Dailies.MutedInk,
-                TextStyles.Subheadline);
+            Marquee.DrawLeftAuto("dailies.row." + item.Id, name, textLeft, band.Center.Y - 17f * scale, textMaxWidth,
+                TextStyles.Headline, nameColor);
+            Marquee.DrawLeftAuto("dailies.row.sub." + item.Id, sublabel, textLeft, band.Center.Y + 4f * scale, textMaxWidth,
+                TextStyles.Subheadline, AppPalettes.Dailies.MutedInk);
         }
         else
         {
             var nameSize = Typography.Measure(name, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, band.Center.Y - nameSize.Y * 0.5f), name, nameColor,
-                TextStyles.Headline);
+            Marquee.DrawLeftAuto("dailies.row." + item.Id, name, textLeft, band.Center.Y - nameSize.Y * 0.5f, textMaxWidth,
+                TextStyles.Headline, nameColor);
         }
-
-        ImGui.PopClipRect();
 
         if (tappable && UiInteract.Click(band.Min, band.Max, hovered))
         {
@@ -385,7 +384,7 @@ internal sealed class DailiesApp : IPhoneApp
     private static void DrawCheck(Vector2 center, float radius, bool complete, bool readOnly, Vector4 accent)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
 
         if (complete)
         {

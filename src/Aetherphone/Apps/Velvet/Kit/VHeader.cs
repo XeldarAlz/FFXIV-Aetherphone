@@ -4,7 +4,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet.Kit;
 
@@ -14,12 +13,12 @@ internal static class VHeader
 
     public static bool Root(Rect area, string title, PhoneTheme theme, int bellBadge)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var midY = area.Min.Y + Height * scale * 0.5f;
-        var titleSize = Typography.Measure(title, TextStyles.Title3);
-        Typography.Draw(new Vector2(area.Min.X + 4f * scale, midY - titleSize.Y * 0.5f), title, VelvetTheme.TitleInk,
-            TextStyles.Title3);
+        Marquee.DrawLeftAuto("vheader.root." + title, title, area.Min.X + 4f * scale,
+            midY - Typography.Measure(title, TextStyles.Title3).Y * 0.5f, area.Width - 44f * scale, TextStyles.Title3,
+            VelvetTheme.TitleInk);
         var bellCenter = new Vector2(area.Max.X - 20f * scale, midY);
         var clicked = AppSkin.IconButton(bellCenter, 16f * scale, FontAwesomeIcon.Bell.ToIconString(),
             VelvetTheme.TitleInk, AppSkin.Transparent, 0.9f, theme, Loc.T(L.Velvet.Activity), HoverLabelSide.Below);
@@ -33,17 +32,17 @@ internal static class VHeader
 
     public static bool Push(Rect area, string title, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var midY = area.Min.Y + Height * scale * 0.5f;
         var center = new Vector2(area.Min.X + 16f * scale, midY);
         var hitMin = new Vector2(area.Min.X, area.Min.Y);
         var hitMax = new Vector2(area.Min.X + 46f * scale, area.Min.Y + Height * scale);
-        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
         var back = BackButton.Draw("velvet.back", center, 15f * scale, VelvetTheme.TitleInk, hovered, scale,
             shadow: true);
-        var titleSize = Typography.Measure(title, TextStyles.Title3);
-        Typography.Draw(new Vector2(area.Center.X - titleSize.X * 0.5f, midY - titleSize.Y * 0.5f), title,
-            VelvetTheme.TitleInk, TextStyles.Title3);
+        Marquee.DrawCenteredAuto("vheader.push." + title, title, area.Center.X,
+            midY - Typography.Measure(title, TextStyles.Title3).Y * 0.5f, area.Width - 92f * scale, TextStyles.Title3,
+            VelvetTheme.TitleInk);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

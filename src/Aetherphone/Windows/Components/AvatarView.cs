@@ -19,24 +19,27 @@ internal static class AvatarView
         string world, string? avatarUrl, RemoteImageCache images, LodestoneService lodestone, float monogramScale,
         int segments, float alpha = 1f)
     {
-        if (!string.IsNullOrEmpty(avatarUrl))
+        if (string.IsNullOrEmpty(avatarUrl))
         {
-            var texture = images.Get(avatarUrl);
-            if (texture is not null)
-            {
-                var backdrop = theme.SurfaceMuted with { W = theme.SurfaceMuted.W * alpha };
-                drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(backdrop), segments);
-                var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
-                var corner = new Vector2(radius, radius);
-                var tint = ((uint)(alpha * 255f) << 24) | 0x00FFFFFFu;
-                drawList.AddImageRounded(texture.Handle, center - corner, center + corner, uv0, uv1, tint,
-                    radius, ImDrawFlags.RoundCornersAll);
-                return;
-            }
+            Draw(drawList, center, radius, theme.Accent, Initials.Of(name), monogramScale,
+                lodestone.Avatar(name, world), segments, alpha);
+            return;
         }
 
-        Draw(drawList, center, radius, theme.Accent, Initials.Of(name), monogramScale, lodestone.Avatar(name, world),
-            segments, alpha);
+        var handle = images.Avatar(avatarUrl);
+        if (handle.Texture is { } texture)
+        {
+            var backdrop = theme.SurfaceMuted with { W = theme.SurfaceMuted.W * alpha };
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(backdrop), segments);
+            var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
+            var corner = new Vector2(radius, radius);
+            var tint = ((uint)(alpha * 255f) << 24) | 0x00FFFFFFu;
+            drawList.AddImageRounded(texture.Handle, center - corner, center + corner, uv0, uv1, tint,
+                radius, ImDrawFlags.RoundCornersAll);
+            return;
+        }
+
+        Draw(drawList, center, radius, theme.Accent, Initials.Of(name), monogramScale, handle, segments, alpha);
     }
 
     public static void Draw(ImDrawListPtr drawList, Vector2 center, float radius, Vector4 baseColor, string monogram,
@@ -48,7 +51,7 @@ internal static class AvatarView
         var fade = handle.Texture is not null && handle.Key.Length > 0 ? Advance(handle.Key) : 0f;
         if (fade < 1f)
         {
-            Typography.DrawCentered(center, monogram, White with { W = (1f - fade) * alpha }, monogramScale);
+            Typography.DrawCentered(drawList, center, monogram, White with { W = (1f - fade) * alpha }, monogramScale);
         }
 
         if (handle.Texture is { } texture && fade > 0f)

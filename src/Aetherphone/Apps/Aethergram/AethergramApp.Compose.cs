@@ -1,23 +1,30 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
-// The compose / avatar creation flow (pick, crop, caption, share). Kept in its own partial so the
-// main AethergramApp.cs stays focused on the feed and app orchestration.
 internal sealed partial class AethergramApp
 {
-    private float ComposeAspect =>
-        composeStoryMode ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight : 1f;
+    private const float AspectPickerReserve = 42f;
+
+    private float ComposeAspect => composeStoryMode
+        ? (float)StoryStore.StoryWidth / StoryStore.StoryHeight
+        : composeAvatarMode
+            ? PostAspects.SquareRatio
+            : PostAspects.Ratio(composeAspect);
+
+    private bool ComposeAllowsAspectChoice => !composeStoryMode && !composeAvatarMode;
 
     private string ComposeTitle => composeAvatarMode ? Loc.T(L.Aethergram.NewAvatar)
         : composeStoryMode ? Loc.T(L.Story.NewStory)
@@ -31,6 +38,35 @@ internal sealed partial class AethergramApp
     private void StartStoryCompose()
     {
         StartCompose(false, true);
+    }
+
+    public void OnShare(in ShareItem item)
+    {
+        if (item.Kind != ShareKind.Photo)
+        {
+            return;
+        }
+
+        pendingSharedPhoto = item.LocalPath;
+    }
+
+    private void ConsumeSharedPhoto()
+    {
+        var path = pendingSharedPhoto;
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        pendingSharedPhoto = null;
+        if (!store.IsSignedIn)
+        {
+            return;
+        }
+
+        StartCompose(false);
+        composeSession.TakePicked(path);
+        composeSession.BeginCropSequence();
     }
 
     private void StartCompose(bool avatarMode, bool storyMode = false)
@@ -67,7 +103,9 @@ internal sealed partial class AethergramApp
         if (composeOutcome == 2)
         {
             composeOutcome = 0;
-            composeStatus = Loc.T(L.Account.CannotReach);
+            composeStatus = composeAvatarMode
+                ? Loc.T(AvatarUpload.Message(store.AvatarFailure))
+                : Loc.T(L.Account.CannotReach);
         }
 
         composeSession.ConsumePendingImport();
@@ -87,15 +125,21 @@ internal sealed partial class AethergramApp
 
     private void DrawComposePick(Rect area)
     {
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, ComposeTitle, back);
-        if (!composeAvatarMode && !composeStoryMode &&
-            ui.HeaderAction(area, Loc.T(L.Common.Next), composeSession.HasSelection))
+        var showNext = !composeAvatarMode && !composeStoryMode;
+        var nextLabel = Loc.T(L.Common.Next);
+        var nextReserve = showNext
+            ? Typography.Measure(nextLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale + 20f * scale
+            : 0f;
+        AppHeader.Draw(context, string.Empty, back);
+        AppHeader.DrawTitleWithReserve(area, "aethergram.compose.pick.title", ComposeTitle, nextReserve,
+            theme.TextStrong, scale);
+        if (showNext && ui.HeaderAction(area, nextLabel, composeSession.HasSelection))
         {
             composeSession.BeginCropSequence();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var importHeight = 46f * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
@@ -129,23 +173,53 @@ internal sealed partial class AethergramApp
 
     private void DrawComposeCrop(Rect area)
     {
+        var scale = UiScale.Current;
         var multi = !composeAvatarMode && composeSession.SelectedCount > 1;
         var title = multi
             ? Loc.T(L.Common.PhotoStep, composeSession.CropIndex + 1, composeSession.SelectedCount)
             : Loc.T(L.Aethergram.MoveAndScale);
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, title, CropBack);
         var canAdvance = !store.Posting;
         var actionLabel = composeAvatarMode
             ? (store.Posting ? Loc.T(L.Aethergram.Saving) : Loc.T(L.Aethergram.Use))
             : Loc.T(L.Aethergram.Next);
+        var actionReserve = Typography.Measure(actionLabel, 0.9f, FontWeight.SemiBold).X + 34f * scale + 20f * scale;
+        var context = new PhoneContext(area, theme, navigation);
+        AppHeader.Draw(context, string.Empty, CropBack);
+        AppHeader.DrawTitleWithReserve(area, "aethergram.compose.crop.title", title, actionReserve,
+            theme.TextStrong, scale);
         if (ui.HeaderAction(area, actionLabel, canAdvance))
         {
             CropAdvance();
         }
 
-        composeSession.DrawCropCanvas(area, ImGuiHelpers.GlobalScale, ComposeAspect, ComposeStyle,
-            Loc.T(L.Aethergram.GestureHint));
+        var reserve = ComposeAllowsAspectChoice ? AspectPickerReserve : 0f;
+        composeSession.DrawCropCanvas(area, UiScale.Current, ComposeAspect, ComposeStyle,
+            Loc.T(L.Aethergram.GestureHint), reserve);
+        if (ComposeAllowsAspectChoice)
+        {
+            DrawAspectPicker(area, scale);
+        }
+    }
+
+    private void DrawAspectPicker(Rect area, float scale)
+    {
+        var width = MathF.Min(area.Width - 32f * scale, 260f * scale);
+        var rowTop = area.Max.Y - (96f + AspectPickerReserve - 8f) * scale;
+        var row = new Rect(new Vector2(area.Center.X - width * 0.5f, rowTop),
+            new Vector2(area.Center.X + width * 0.5f, rowTop + 28f * scale));
+        for (var index = 0; index < PostAspects.All.Length; index++)
+        {
+            aspectLabels[index] = Loc.T(AspectLabels.For(PostAspects.All[index]));
+        }
+
+        var picked = SegmentStrip.Draw("aethergram.compose.aspect", row, aspectLabels,
+            Array.IndexOf(PostAspects.All, composeAspect), AppPalettes.Aethergram);
+        if (picked < 0 || picked >= PostAspects.All.Length || PostAspects.All[picked] == composeAspect)
+        {
+            return;
+        }
+
+        composeAspect = PostAspects.All[picked];
     }
 
     private void CropBack()
@@ -175,9 +249,10 @@ internal sealed partial class AethergramApp
 
     private void DrawComposeCaption(Rect area)
     {
+        personPicker.Gate();
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, ComposeTitle, () => composeSession.LoadCropStage(composeSession.SelectedCount - 1));
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var margin = 16f * scale;
         var top = area.Min.Y + AppHeader.Height * scale;
         var shareHeight = 46f * scale;
@@ -222,8 +297,6 @@ internal sealed partial class AethergramApp
             PlaceComposeTag(pickedPerson);
         }
 
-        personPicker.Gate();
-
         var busy = ComposePosting;
         if (DrawShareBar(shareRect, busy ? Loc.T(L.Aethergram.Sharing) : Loc.T(L.Aethergram.Share), !busy))
         {
@@ -247,9 +320,11 @@ internal sealed partial class AethergramApp
         }
 
         var pillPadding = 28f * scale;
-        var pillLabel = Typography.FitText(Loc.T(L.PhotoTag.TagPeople), bar.Width * 0.5f - pillPadding,
-            TextStyles.FootnoteEmphasized);
-        var pillWidth = Typography.Measure(pillLabel, TextStyles.FootnoteEmphasized).X + pillPadding;
+        var maxPillLabelWidth = MathF.Max(1f, bar.Width * 0.5f - pillPadding);
+        var pillLabelFull = Loc.T(L.PhotoTag.TagPeople);
+        var pillLabelWidth = MathF.Min(maxPillLabelWidth,
+            Typography.Measure(pillLabelFull, TextStyles.FootnoteEmphasized).X);
+        var pillWidth = pillLabelWidth + pillPadding;
         var pillMin = new Vector2(bar.Max.X - pillWidth, bar.Min.Y);
         var pillMax = new Vector2(bar.Max.X, bar.Max.Y);
         var drawList = ImGui.GetWindowDrawList();
@@ -258,18 +333,21 @@ internal sealed partial class AethergramApp
         var fill = active ? Accent : AppPalettes.Aethergram.FieldSurface;
         Squircle.Fill(drawList, pillMin, pillMax, bar.Height * 0.5f,
             ImGui.GetColorU32(hovered ? Palette.Mix(fill, theme.TextStrong, 0.12f) : fill));
-        Typography.DrawCentered(drawList, new Vector2((pillMin.X + pillMax.X) * 0.5f, bar.Center.Y), pillLabel,
-            active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Aethergram.MutedInk, TextStyles.FootnoteEmphasized);
+        var pillLabelHeight = Typography.Measure(pillLabelFull, TextStyles.FootnoteEmphasized).Y;
+        Marquee.DrawCenteredAuto("aethergram.compose.tagpill", pillLabelFull, (pillMin.X + pillMax.X) * 0.5f,
+            bar.Center.Y - pillLabelHeight * 0.5f, maxPillLabelWidth, TextStyles.FootnoteEmphasized,
+            active ? new Vector4(1f, 1f, 1f, 1f) : AppPalettes.Aethergram.MutedInk);
         if (UiInteract.HoverClick(pillMin, pillMax))
         {
             composeTagMode = !composeTagMode;
         }
 
         var hintRight = pillMin.X - 12f * scale;
-        var hint = Typography.FitText(composeTagMode ? Loc.T(L.PhotoTag.TapToTag) : Loc.T(L.Aethergram.TapToAdjust),
-            hintRight - bar.Min.X, TextStyles.Footnote);
-        Typography.DrawCentered(drawList, new Vector2((bar.Min.X + hintRight) * 0.5f, bar.Center.Y), hint,
-            AppPalettes.Aethergram.MutedInk, TextStyles.Footnote);
+        var hintFull = composeTagMode ? Loc.T(L.PhotoTag.TapToTag) : Loc.T(L.Aethergram.TapToAdjust);
+        var hintMaxWidth = MathF.Max(1f, hintRight - bar.Min.X);
+        var hintHeight = Typography.Measure(hintFull, TextStyles.Footnote).Y;
+        Marquee.DrawCenteredAuto("aethergram.compose.taghint", hintFull, (bar.Min.X + hintRight) * 0.5f,
+            bar.Center.Y - hintHeight * 0.5f, hintMaxWidth, TextStyles.Footnote, AppPalettes.Aethergram.MutedInk);
     }
 
     private void PlaceComposeTag(MentionSuggestDto person)
@@ -404,8 +482,15 @@ internal sealed partial class AethergramApp
             var avatarCenter = new Vector2(card.Min.X + padding + radius, card.Min.Y + padding + radius);
             DrawAvatar(avatarCenter, radius, me.Name, me.World, me.AvatarUrl, 0.7f, 24);
             var displayName = SocialIdentity.Name(me.DisplayName, me.Handle);
-            Typography.Draw(new Vector2(avatarCenter.X + radius + 8f * scale, avatarCenter.Y - 8f * scale), displayName,
-                theme.TextStrong, 0.88f, FontWeight.SemiBold);
+            var nameStyle = new TextStyle(0.88f, FontWeight.SemiBold);
+            var nameLeft = avatarCenter.X + radius + 8f * scale;
+            var nameTop = avatarCenter.Y - 8f * scale;
+            var nameMaxWidth = MathF.Max(1f, card.Max.X - padding - nameLeft);
+            var nameHeight = Typography.Measure(displayName, nameStyle).Y;
+            var nameHovering = UiInteract.Hover(new Vector2(nameLeft, nameTop),
+                new Vector2(nameLeft + nameMaxWidth, nameTop + nameHeight));
+            Marquee.DrawLeft("aethergram.compose.author." + me.Handle, displayName, nameLeft, nameTop, nameMaxWidth,
+                nameStyle, theme.TextStrong, nameHovering);
             inputTop = avatarCenter.Y + radius + 6f * scale;
         }
 
@@ -440,7 +525,9 @@ internal sealed partial class AethergramApp
 
         if (caption.Length == 0)
         {
-            Typography.Draw(inputPos + ImGui.GetStyle().FramePadding, Loc.T(L.Aethergram.CaptionHint),
+            var hint = Typography.FitText(Loc.T(L.Aethergram.CaptionHint),
+                inputSize.X - ImGui.GetStyle().FramePadding.X * 2f, 1f, FontWeight.Regular);
+            Typography.Draw(inputPos + ImGui.GetStyle().FramePadding, hint,
                 AppPalettes.Aethergram.MutedInk, 1f);
         }
 
@@ -461,9 +548,9 @@ internal sealed partial class AethergramApp
 
     private bool DrawShareBar(Rect rect, string label, bool enabled)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = enabled && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = enabled && UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         var fill = enabled
             ? (hovered ? Palette.Mix(Accent, theme.TextStrong, 0.12f) : Accent)
@@ -496,8 +583,8 @@ internal sealed partial class AethergramApp
         }
 
         composeStatus = string.Empty;
-        store.CreateGram(composeSession.SelectedArray(), composeSession.CropsArray(), caption, ComposeTagInputs(),
-            ok => composeOutcome = ok ? 1 : 2);
+        store.CreateGram(composeSession.SelectedArray(), composeSession.CropsArray(), composeAspect, caption,
+            ComposeTagInputs(), ok => composeOutcome = ok ? 1 : 2);
     }
 
     private void CommitStory()

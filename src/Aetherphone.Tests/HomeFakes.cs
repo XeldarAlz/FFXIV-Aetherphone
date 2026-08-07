@@ -1,7 +1,26 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Shortcuts;
 
 namespace Aetherphone.Tests;
+
+internal sealed class FakeShortcutSource : IShortcutSource
+{
+    public List<ShortcutEntry> Entries { get; } = new();
+
+    public ShortcutEntry? Find(Guid id)
+    {
+        for (var index = 0; index < Entries.Count; index++)
+        {
+            if (Entries[index].Id == id)
+            {
+                return Entries[index];
+            }
+        }
+
+        return null;
+    }
+}
 
 internal sealed class FakeApp : IPhoneApp
 {

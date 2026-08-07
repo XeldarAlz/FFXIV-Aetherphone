@@ -52,8 +52,25 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.VelvetPing:
                 signals.PublishVelvet();
                 return;
+            case SignalType.GramPing:
+                signals.PublishGram();
+                return;
             case SignalType.SocialPing:
                 signals.PublishSocial();
+                return;
+            case SignalType.MusterPing:
+                signals.PublishMuster();
+                return;
+            case SignalType.AnnouncePing:
+                signals.PublishAnnouncements();
+                return;
+            case SignalType.ContentRemoved:
+                if (message.ContentId is { Length: > 0 } removedContentId)
+                {
+                    signals.PublishContentRemoved(
+                        new ContentRemovalSignal(message.App, message.ContentKind, removedContentId, message.ParentId));
+                }
+
                 return;
         }
 

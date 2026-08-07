@@ -1,10 +1,14 @@
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
+using Aetherphone.Core.Shortcuts;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Core.Shell.Home;
 
@@ -14,18 +18,24 @@ internal sealed class HomeGridRenderer
     private readonly Pager pager;
     private readonly TilePoseCache poses;
     private readonly HomeInteractionController interaction;
+    private readonly ShortcutStore shortcuts;
+    private readonly Func<ShortcutEntry, IDalamudTextureWrap?> shortcutIcon;
+    private readonly ConfirmService confirm;
     private bool widgetAnchorReported;
 
     public HomeGridRenderer(HomeLayoutService layout, Pager pager, TilePoseCache poses,
-        HomeInteractionController interaction)
+        HomeInteractionController interaction, ShortcutStore shortcuts, ConfirmService confirm)
     {
         this.layout = layout;
         this.pager = pager;
         this.poses = poses;
         this.interaction = interaction;
+        this.shortcuts = shortcuts;
+        shortcutIcon = shortcuts.Icon;
+        this.confirm = confirm;
     }
 
-    public void DrawPages(in HomeMetrics metrics, PhoneTheme theme, float delta, float labelAlpha,
+    public void DrawPages(in HomeMetrics metrics, PhoneTheme theme, float delta, float labelAlpha, bool showLabels,
         in HomeMotion motion)
     {
         widgetAnchorReported = false;
@@ -33,22 +43,27 @@ internal sealed class HomeGridRenderer
         drawList.PushClipRect(metrics.Content.Min, new Vector2(metrics.Content.Max.X, metrics.DockBar.Min.Y), true);
         var scroll = pager.Value;
         var first = Math.Max(0, (int)MathF.Floor(scroll) - 1);
-        var last = Math.Min(layout.PageCount - 1, (int)MathF.Ceiling(scroll) + 1);
+        var last = Math.Min(interaction.DisplayPageCount() - 1, (int)MathF.Ceiling(scroll) + 1);
         for (var page = first; page <= last; page++)
         {
-            DrawPage(metrics, theme, page, delta, labelAlpha, motion);
+            DrawPage(metrics, theme, page, delta, labelAlpha, showLabels, motion);
         }
 
         drawList.PopClipRect();
     }
 
     private void DrawPage(in HomeMetrics metrics, PhoneTheme theme, int page, float delta, float labelAlpha,
-        in HomeMotion motion)
+        bool showLabels, in HomeMotion motion)
     {
+        DrawDropTarget(metrics, theme, page, labelAlpha);
+        if (page >= layout.PageCount)
+        {
+            return;
+        }
+
         var tiles = layout.Page(page);
         var cells = layout.Placements(page);
         var pageOffset = new Vector2(metrics.PageOffsetX(page, pager.Value), 0f);
-        DrawDropTarget(metrics, theme, page, labelAlpha);
         for (var index = 0; index < tiles.Count && index < cells.Count; index++)
         {
             var tile = tiles[index];
@@ -60,7 +75,7 @@ internal sealed class HomeGridRenderer
             var target = metrics.TileRect(page, page, cells[index], tile);
             var local = new Rect(target.Min - metrics.Grid.Min, target.Max - metrics.Grid.Min);
             var rect = poses.Resolve(tile.Key, page, local, metrics.Grid.Min + pageOffset, delta, motion.Interactive);
-            DrawTile(metrics, theme, tile, rect, labelAlpha, delta, motion,
+            DrawTile(metrics, theme, tile, rect, labelAlpha, showLabels, delta, motion,
                 ReferenceEquals(tile, interaction.FolderTarget));
         }
     }
@@ -87,7 +102,7 @@ internal sealed class HomeGridRenderer
 
 
     private void DrawTile(in HomeMetrics metrics, PhoneTheme theme, HomeTile tile, Rect rect, float labelAlpha,
-        float delta, in HomeMotion motion, bool highlight)
+        bool showLabels, float delta, in HomeMotion motion, bool highlight)
     {
         var scale = metrics.Scale;
         var zoom = motion.Zoom;
@@ -118,11 +133,26 @@ internal sealed class HomeGridRenderer
             return;
         }
 
+        if (tile.IsShortcut)
+        {
+            HomeTileView.DrawShortcut(center, rect.Width, tile.Shortcut!, shortcuts.Icon(tile.Shortcut!), theme,
+                interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
+                labelAlpha, showLabels, metrics.CellWidth, zoom);
+            if (interaction.RemoveBadgesLive(motion) &&
+                HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
+            {
+                layout.RemoveTile(tile);
+                interaction.ConsumeEditGesture();
+            }
+
+            return;
+        }
+
         if (tile.IsFolder)
         {
             HomeTileView.DrawFolder(center, rect.Width, tile, theme,
                 interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
-                labelAlpha, Loc.T(L.Home.NewFolder), metrics.CellWidth, zoom);
+                labelAlpha, showLabels, Loc.T(L.Home.NewFolder), metrics.CellWidth, shortcutIcon, zoom);
             if (interaction.RemoveBadgesLive(motion) &&
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
             {
@@ -136,15 +166,27 @@ internal sealed class HomeGridRenderer
 
         HomeTileView.DrawApp(center, rect.Width, tile.App!, theme,
             interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
-            labelAlpha, metrics.CellWidth, zoom);
+            labelAlpha, showLabels, metrics.CellWidth, zoom);
         if (interaction.RemoveBadgesLive(motion) && HomeLayoutService.CanUninstall(tile.App!.Id) &&
             HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
         {
-            layout.Uninstall(tile.App!.Id);
+            AskUninstall(tile.App!);
             interaction.ConsumeEditGesture();
         }
 
         ReportIconAnchor(tile, center, rect.Width, motion);
+    }
+
+    private void AskUninstall(IPhoneApp app)
+    {
+        var appId = app.Id;
+        confirm.Ask(new ConfirmRequest
+        {
+            Message = Loc.T(L.Home.RemoveConfirm, app.DisplayName),
+            ConfirmLabel = Loc.T(L.Home.Remove),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Confirm = () => layout.Uninstall(appId),
+        });
     }
 
     private static Rect ScaleRect(Rect rect, float factor)
@@ -202,7 +244,14 @@ internal sealed class HomeGridRenderer
 
             var jiggle = interaction.Jiggle(tile, metrics.Scale);
             HomeTileView.DrawApp(rect.Center + jiggle, rect.Width, tile.App!, theme,
-                interaction.TapScale(tile) * interaction.Magnify(rect.Center, metrics.CellWidth), 0f, 0f, motion.Zoom);
+                interaction.TapScale(tile) * interaction.Magnify(rect.Center, metrics.CellWidth), 0f, true, 0f,
+                motion.Zoom);
+            if (!interaction.Editing && dragTile is null)
+            {
+                HoverTooltip.Show(string.Concat("dock:", tile.Key), rect, tile.App!.DisplayName,
+                    HoverLabelSide.Above);
+            }
+
             ReportIconAnchor(tile, rect.Center, rect.Width, motion);
         }
     }
@@ -253,14 +302,21 @@ internal sealed class HomeGridRenderer
         var iconHalf = metrics.IconSize * 0.5f * scale;
         Elevation.Icon(drawList, position - new Vector2(iconHalf), position + new Vector2(iconHalf),
             metrics.IconSize * scale * 0.26f, metrics.IconSize * scale * 0.5f);
-        if (tile.IsFolder)
+        if (tile.IsShortcut)
         {
-            HomeTileView.DrawFolder(position, metrics.IconSize, tile, theme, scale, 0f, Loc.T(L.Home.NewFolder),
-                metrics.CellWidth);
+            HomeTileView.DrawShortcut(position, metrics.IconSize, tile.Shortcut!, shortcuts.Icon(tile.Shortcut!), theme,
+                scale, 0f, true, metrics.CellWidth);
             return;
         }
 
-        HomeTileView.DrawApp(position, metrics.IconSize, tile.App!, theme, scale, 0f, metrics.CellWidth);
+        if (tile.IsFolder)
+        {
+            HomeTileView.DrawFolder(position, metrics.IconSize, tile, theme, scale, 0f, true, Loc.T(L.Home.NewFolder),
+                metrics.CellWidth, shortcutIcon);
+            return;
+        }
+
+        HomeTileView.DrawApp(position, metrics.IconSize, tile.App!, theme, scale, 0f, true, metrics.CellWidth);
     }
 
     private static float WidgetChromeRadius(float scale) => 22f * scale;

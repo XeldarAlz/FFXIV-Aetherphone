@@ -2,10 +2,13 @@ namespace Aetherphone.Core.Theme;
 
 internal sealed class PhoneTheme
 {
-    public required Vector4 BezelOuter { get; init; }
-    public required Vector4 FrameMetal { get; init; }
-    public required Vector4 RailMetal { get; init; }
+    public required CaseFinish Case { get; init; }
+    public required PhoneCaseKind CaseKind { get; init; }
+    public required string CaseTextureId { get; init; }
     public required Vector4 ScreenBase { get; init; }
+    public Vector4 FrameMetal => Case.Frame;
+    public Vector4 RailMetal => Case.Rail;
+    public Vector4 Glass => Case.Glass;
     public required string LightWallpaperId { get; init; }
     public required string DarkWallpaperId { get; init; }
     public required Vector4 AppBackground { get; init; }
@@ -19,19 +22,23 @@ internal sealed class PhoneTheme
     public required Vector4 TextMuted { get; init; }
     public required Vector4 Accent { get; init; }
     public required Vector4 Danger { get; init; }
+    public required float RailWidth { get; init; }
+    public required float MetalWidth { get; init; }
+    public required float GlassWidth { get; init; }
     public required float DeviceRounding { get; init; }
-    public required float BezelThickness { get; init; }
-    public required float ScreenRounding { get; init; }
     public required float TopZoneHeight { get; init; }
     public required float BottomZoneHeight { get; init; }
     public required float SidePadding { get; init; }
+    public float BezelThickness => MetalWidth + GlassWidth;
+    public float ScreenRounding => MathF.Max(DeviceRounding - MetalWidth - GlassWidth, 0f);
 
-    public static PhoneTheme Dark(Vector4 accent, string lightWallpaperId, string darkWallpaperId) =>
+    public static PhoneTheme Dark(Vector4 accent, PhoneCase phoneCase, in ChassisMetrics chassis,
+        string lightWallpaperId, string darkWallpaperId) =>
         new()
         {
-            BezelOuter = new Vector4(0.03f, 0.03f, 0.04f, 1f),
-            FrameMetal = new Vector4(0.145f, 0.145f, 0.170f, 1f),
-            RailMetal = new Vector4(0.175f, 0.175f, 0.205f, 1f),
+            Case = new CaseFinish(phoneCase.Tint),
+            CaseKind = phoneCase.Kind,
+            CaseTextureId = phoneCase.TextureId,
             ScreenBase = new Vector4(0.06f, 0.06f, 0.10f, 1f),
             LightWallpaperId = lightWallpaperId,
             DarkWallpaperId = darkWallpaperId,
@@ -46,20 +53,22 @@ internal sealed class PhoneTheme
             TextMuted = new Vector4(0.56f, 0.56f, 0.60f, 1f),
             Accent = accent,
             Danger = new Vector4(0.92f, 0.30f, 0.34f, 1f),
-            DeviceRounding = 46f,
-            BezelThickness = 9f,
-            ScreenRounding = 38f,
+            RailWidth = chassis.RailWidth,
+            MetalWidth = chassis.MetalWidth,
+            GlassWidth = chassis.GlassWidth,
+            DeviceRounding = chassis.DeviceRounding,
             TopZoneHeight = 48f,
             BottomZoneHeight = 30f,
             SidePadding = 16f,
         };
 
-    public static PhoneTheme Light(Vector4 accent, string lightWallpaperId, string darkWallpaperId) =>
+    public static PhoneTheme Light(Vector4 accent, PhoneCase phoneCase, in ChassisMetrics chassis,
+        string lightWallpaperId, string darkWallpaperId) =>
         new()
         {
-            BezelOuter = new Vector4(0.03f, 0.03f, 0.04f, 1f),
-            FrameMetal = new Vector4(0.145f, 0.145f, 0.170f, 1f),
-            RailMetal = new Vector4(0.175f, 0.175f, 0.205f, 1f),
+            Case = new CaseFinish(phoneCase.Tint),
+            CaseKind = phoneCase.Kind,
+            CaseTextureId = phoneCase.TextureId,
             ScreenBase = new Vector4(0.90f, 0.90f, 0.93f, 1f),
             LightWallpaperId = lightWallpaperId,
             DarkWallpaperId = darkWallpaperId,
@@ -74,13 +83,17 @@ internal sealed class PhoneTheme
             TextMuted = new Vector4(0.32f, 0.32f, 0.36f, 1f),
             Accent = accent,
             Danger = new Vector4(0.90f, 0.18f, 0.18f, 1f),
-            DeviceRounding = 46f,
-            BezelThickness = 9f,
-            ScreenRounding = 38f,
+            RailWidth = chassis.RailWidth,
+            MetalWidth = chassis.MetalWidth,
+            GlassWidth = chassis.GlassWidth,
+            DeviceRounding = chassis.DeviceRounding,
             TopZoneHeight = 48f,
             BottomZoneHeight = 30f,
             SidePadding = 16f,
         };
 
-    public static PhoneTheme Default { get; } = Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f), "DuskLight", "DuskDark");
+    public static PhoneTheme Default { get; } = Dark(new Vector4(0.55f, 0.45f, 0.95f, 1f),
+        ThemeCatalog.ResolveCase(ThemeCatalog.DefaultCaseName), ChassisMetrics.Default, "DuskLight", "DuskDark");
+
+    public bool WantsCaseArt => CaseKind == PhoneCaseKind.Art && CaseTextureId.Length > 0;
 }

@@ -21,6 +21,9 @@
     <Content Include="Icons\*.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="Cases\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Emoji\*.png;Emoji\catalog.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -33,7 +36,7 @@
     <Content Include="Wallpapers\*.png;Wallpapers\*.jpg;Wallpapers\*.jpeg;Wallpapers\*.bmp">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Sounds\*.mp3;Sounds\*.wav">
+    <Content Include="Sounds\**\*.mp3;Sounds\**\*.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -52,8 +55,10 @@
 
   <ItemGroup>
     <PackageReference Include="Concentus" Version="2.2.2" />
+    <PackageReference Include="BouncyCastle.Cryptography" Version="2.6.2" />
     <PackageReference Include="NEbml" Version="0.11.0" />
     <PackageReference Include="NAudio.WinMM" Version="2.3.0" />
+    <PackageReference Include="NLayer.NAudioSupport" Version="2.0.1" />
     <PackageReference Include="NAudio.Wasapi" Version="2.3.0" />
     <PackageReference Include="NetStone" Version="1.4.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4">

@@ -27,7 +27,8 @@ internal sealed class AuthClient
                 return VerifyResult.Success(new AuthResponse(response.Token, response.User));
             }
 
-            return VerifyResult.Failure(response.Reason ?? VerifyFailure.CodeNotFound, response.BanReason);
+            return VerifyResult.Failure(response.Reason ?? VerifyFailure.CodeNotFound, response.BanReason,
+                response.Suspension);
         }
 
         return VerifyResult.Failure(status == 429 ? VerifyFailure.RateLimited : VerifyFailure.Network);
@@ -49,7 +50,8 @@ internal sealed class AuthClient
                 return VerifyResult.Success(new AuthResponse(response.Token, response.User));
             }
 
-            return VerifyResult.Failure(response.Reason ?? VerifyFailure.Pending, response.BanReason);
+            return VerifyResult.Failure(response.Reason ?? VerifyFailure.Pending, response.BanReason,
+                response.Suspension);
         }
 
         return VerifyResult.Failure(status == 429 ? VerifyFailure.RateLimited : VerifyFailure.Network);

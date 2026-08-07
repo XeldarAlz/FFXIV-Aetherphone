@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -15,7 +14,7 @@ internal static class Toggle
 
     public static bool Draw(string id, Rect bounds, bool value, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var result = value;
         var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
         if (hovered)

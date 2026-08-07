@@ -1,24 +1,30 @@
+using Aetherphone.Core.Social;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
 internal sealed class FeedVirtualizer
 {
+    public const int DefaultRowCap = 400;
+
+    private const float ParkedAtTop = 1f;
+
     private readonly Dictionary<string, (float Height, int Revision)> rows = new();
     private readonly float cullMargin;
+    private readonly int rowCap;
     private float rowWidth;
     private int fontGeneration;
     private float windowTop;
     private float windowBottom;
     private float rowStartY;
 
-    public FeedVirtualizer(float cullMargin)
+    public FeedVirtualizer(float cullMargin, int rowCap = DefaultRowCap)
     {
         this.cullMargin = cullMargin;
+        this.rowCap = rowCap;
     }
 
-    public void BeginFrame()
+    public void BeginFrame(ITrimmable? source = null)
     {
         var width = ImGui.GetContentRegionAvail().X;
         if (rowWidth != width || fontGeneration != Plugin.Fonts.Generation)
@@ -26,6 +32,11 @@ internal sealed class FeedVirtualizer
             rows.Clear();
             rowWidth = width;
             fontGeneration = Plugin.Fonts.Generation;
+        }
+
+        if (source is not null && ImGui.GetScrollY() < ParkedAtTop)
+        {
+            source.Trim(rowCap);
         }
 
         windowTop = ImGui.GetWindowPos().Y;
@@ -36,7 +47,7 @@ internal sealed class FeedVirtualizer
     {
         var cursor = ImGui.GetCursorScreenPos();
         rowStartY = cursor.Y;
-        var margin = cullMargin * ImGuiHelpers.GlobalScale;
+        var margin = cullMargin * UiScale.Current;
         if (rows.TryGetValue(rowId, out var row) && row.Revision == revision
             && (cursor.Y > windowBottom + margin || cursor.Y + row.Height < windowTop - margin))
         {

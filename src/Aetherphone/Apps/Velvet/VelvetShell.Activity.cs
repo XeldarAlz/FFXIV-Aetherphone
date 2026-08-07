@@ -3,7 +3,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -14,7 +13,7 @@ internal sealed partial class VelvetShell
 
     private void DrawActivity(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (VHeader.Push(area, Loc.T(L.Velvet.Activity), theme))
         {
             router.Pop();
@@ -31,7 +30,9 @@ internal sealed partial class VelvetShell
             }
         };
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
-        SocialActivityList.Draw(body, ui, VelvetTheme.Palette, theme, social.Latest, Id, images, lodestone,
-            activityActor, activityPost);
+        social.MarkSeen(Id);
+        activityFeed.EnsureFresh(social.Latest);
+        SocialActivityList.Draw(body, ui, VelvetTheme.Palette, theme, activityFeed.Items, Id, images, lodestone,
+            activityActor, activityPost, loadOlderActivity);
     }
 }

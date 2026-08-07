@@ -3,7 +3,6 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -44,7 +43,7 @@ internal static class NavigationBar
     public static bool Draw(in PhoneContext context, string title, float scrollY,
         in NavigationBarPalette palette, bool showBack = true, float trailingReserve = 0f)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         var drawList = ImGui.GetWindowDrawList();
         var barBottom = content.Min.Y + InlineHeight * scale;
@@ -113,7 +112,7 @@ internal static class NavigationBar
     {
         var hitMin = new Vector2(content.Min.X, content.Min.Y);
         var hitMax = new Vector2(content.Min.X + 44f * scale, barBottom);
-        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
         var center = new Vector2(content.Min.X + 13f * scale, (content.Min.Y + barBottom) * 0.5f);
         if (!BackButton.Draw("navbar.back", center, 15f * scale, palette.Chevron, hovered, scale))
         {

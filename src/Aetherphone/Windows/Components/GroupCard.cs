@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -32,7 +31,7 @@ internal struct GroupCard
 
     public static GroupCard Begin(PhoneTheme theme, int rowCount, float rowHeight = DefaultRowHeight)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var right = origin.X + ImGui.GetContentRegionAvail().X;
         var height = rowCount * rowHeight * scale;
@@ -43,7 +42,7 @@ internal struct GroupCard
         return new GroupCard(theme, scale, rowHeight, origin.X, right, origin.Y, rowCount);
     }
 
-    public Rect NextRow()
+    public Rect NextRow(int rowSpan = 1)
     {
         var rowTop = startY + rowIndex * rowHeight * scale;
         if (rowIndex > 0)
@@ -53,9 +52,10 @@ internal struct GroupCard
                 ImGui.GetColorU32(theme.Separator), Metrics.Stroke.Hairline);
         }
 
-        rowIndex++;
+        rowIndex += rowSpan;
         var padding = Metrics.Space.Lg * scale;
-        return new Rect(new Vector2(left + padding, rowTop), new Vector2(right - padding, rowTop + rowHeight * scale));
+        return new Rect(new Vector2(left + padding, rowTop),
+            new Vector2(right - padding, rowTop + rowSpan * rowHeight * scale));
     }
 
     public void End()

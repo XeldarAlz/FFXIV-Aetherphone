@@ -4,15 +4,9 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Music;
 
-/// <summary>
-/// Pure drawing for the Music surface: cover art with a name-derived gradient fallback, the round
-/// play/pause button, the seek/volume slider and the pull-down chevron. State stays in
-/// <see cref="MusicApp"/>.
-/// </summary>
 internal static class MusicRenderer
 {
     private const float PressSmoothTime = 0.09f;
@@ -67,7 +61,7 @@ internal static class MusicRenderer
             MathF.Min(ImGui.GetIO().DeltaTime, 0.1f));
         Springs[id] = spring;
         var drawnRadius = radius * grow;
-        drawList.AddCircleFilled(center + new Vector2(0f, 1.5f * ImGuiHelpers.GlobalScale), drawnRadius,
+        drawList.AddCircleFilled(center + new Vector2(0f, 1.5f * UiScale.Current), drawnRadius,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f * alpha)), 48);
         drawList.AddCircleFilled(center, drawnRadius, ImGui.GetColorU32(Palette.WithAlpha(fill, alpha)), 48);
         var glyphInk = ImGui.GetColorU32(Palette.WithAlpha(ink, alpha));
@@ -92,7 +86,7 @@ internal static class MusicRenderer
     public static SliderState Slider(string id, Rect track, float fraction, Vector4 fillIdle, Vector4 fillActive,
         Vector4 rail)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var midY = track.Center.Y;
         var left = track.Min.X;

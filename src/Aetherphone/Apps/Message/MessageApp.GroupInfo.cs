@@ -7,7 +7,6 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Message;
 
@@ -18,7 +17,7 @@ internal sealed partial class MessageApp
 
     private void DrawGroupInfo(Rect area, string conversationId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.DirectMessages.Details), back);
         var conversation = store.Conversation;
@@ -117,16 +116,23 @@ internal sealed partial class MessageApp
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, member.AvatarUrl, images,
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale), label, theme.TextStrong, 1f,
-            FontWeight.SemiBold);
-        if (member.Role == 1)
+        var isOwner = member.Role == 1;
+        var canRemove = !isOwner && viewerIsOwner && member.UserId != store.MyUserId;
+        var ownerLabel = isOwner ? Loc.T(L.DirectMessages.Owner) : string.Empty;
+        var rightReserve = isOwner ? Typography.Measure(ownerLabel, TextStyles.Footnote).X + pad
+            : canRemove ? 28f * scale : 0f;
+        var labelMaxWidth = MathF.Max(1f, origin.X + width - pad - rightReserve - textLeft);
+        var rowHovering = UiInteract.Hover(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
+        Marquee.DrawLeft("messageapp.groupinfo.member." + member.UserId, label, textLeft,
+            origin.Y + rowHeight * 0.5f - 9f * scale, labelMaxWidth, new TextStyle(1f, FontWeight.SemiBold),
+            theme.TextStrong, rowHovering);
+        if (isOwner)
         {
-            var ownerLabel = Loc.T(L.DirectMessages.Owner);
             Typography.Draw(new Vector2(origin.X + width - pad - Typography.Measure(ownerLabel,
                 TextStyles.Footnote).X, origin.Y + rowHeight * 0.5f - 7f * scale), ownerLabel,
                 ui.MutedInk, TextStyles.Footnote);
         }
-        else if (viewerIsOwner && member.UserId != store.MyUserId)
+        else if (canRemove)
         {
             var removeCenter = new Vector2(origin.X + width - pad - 6f * scale, origin.Y + rowHeight * 0.5f);
             if (ui.IconButton(removeCenter, 14f * scale, FontAwesomeIcon.Times.ToIconString(),
@@ -148,7 +154,7 @@ internal sealed partial class MessageApp
 
     private void DrawAddMembers(Rect area, string conversationId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.DirectMessages.AddPeople), back);
         var top = area.Min.Y + AppHeader.Height * scale;

@@ -11,4 +11,5 @@ internal sealed class CharacterSession
     public string DisplayName { get; set; } = string.Empty;
     public string CharacterName { get; set; } = string.Empty;
     public string World { get; set; } = string.Empty;
+    public string AvatarUrl { get; set; } = string.Empty;
 }

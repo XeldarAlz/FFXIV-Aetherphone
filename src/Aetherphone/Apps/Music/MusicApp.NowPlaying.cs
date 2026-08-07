@@ -19,6 +19,22 @@ internal sealed partial class MusicApp
     private static readonly Vector4 PlayInk = new(0.05f, 0.06f, 0.05f, 1f);
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
 
+    /// A community station has a cover its owner uploaded; everything else falls back to the
+    /// gradient generated from the station name, which is all a directory station ever has.
+    private void DrawStationCover(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding)
+    {
+        var station = playback.Radio.CurrentStationInfo;
+        if (station.ArtworkUrl.Length > 0 && Thumb(station.ArtworkUrl).Texture is { } cover)
+        {
+            drawList.AddImageRounded(cover.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, rounding,
+                ImDrawFlags.RoundCornersAll);
+            return;
+        }
+
+        drawList.AddImageRounded(artwork.HandleForName(playback.Title), min, max, Vector2.Zero, Vector2.One,
+            0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
+    }
+
     private void DrawMiniPlayer(Rect content, float scale)
     {
         var presence = Math.Clamp(miniPresence.Value, 0f, 1f);
@@ -54,8 +70,7 @@ internal sealed partial class MusicApp
             }
             else
             {
-                drawList.AddImageRounded(artwork.HandleForName(playback.Title), artMin, artMax, Vector2.Zero,
-                    Vector2.One, 0xFFFFFFFFu, 6f * scale, ImDrawFlags.RoundCornersAll);
+                DrawStationCover(drawList, artMin, artMax, 6f * scale);
             }
 
             var toggleCenter = new Vector2(max.X - 28f * scale, centerY);
@@ -167,17 +182,35 @@ internal sealed partial class MusicApp
             CloseNowPlaying();
         }
 
+        var leftBound = frame.Min.X + 26f * scale + 13f * scale + 10f * scale;
+        var rightBound = playback.SongActive ? frame.Max.X - 100f * scale - 15f * scale - 10f * scale
+            : playback.RadioActive ? frame.Max.X - 58f * scale - 14f * scale - 10f * scale
+            : frame.Max.X - 26f * scale - 14f * scale - 10f * scale;
+        var textCenterX = (leftBound + rightBound) * 0.5f;
+        var textMaxWidth = MathF.Max(1f, rightBound - leftBound);
         var caption = Loc.Culture.TextInfo.ToUpper(Loc.T(L.Music.PlayingFrom));
-        Typography.DrawCentered(drawList, new Vector2(frame.Center.X, barCenterY - 8f * scale), caption,
-            ui.HeaderInk, TextStyles.Caption2);
+        var captionY = barCenterY - 8f * scale;
+        var captionSize = Typography.Measure(caption, TextStyles.Caption2);
+        var captionHovering = UiInteract.Hover(new Vector2(textCenterX - textMaxWidth * 0.5f, captionY),
+            new Vector2(textCenterX + textMaxWidth * 0.5f, captionY + captionSize.Y));
+        Marquee.DrawCentered("music.sheetTopBar.caption", caption, textCenterX, captionY, textMaxWidth,
+            TextStyles.Caption2, ui.HeaderInk, captionHovering);
         var source = playSource.Length > 0 ? playSource : DisplayName;
-        var fitted = Typography.FitText(source, frame.Width - 160f * scale, TextStyles.FootnoteEmphasized);
-        Typography.DrawCentered(drawList, new Vector2(frame.Center.X, barCenterY + 8f * scale), fitted, ui.TitleInk,
-            TextStyles.FootnoteEmphasized);
-        if (playback.SongActive && ui.IconButton(new Vector2(frame.Max.X - 58f * scale, barCenterY), 14f * scale,
-                FontAwesomeIcon.Plus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Music.AddToPlaylist)))
+        var sourceY = barCenterY + 8f * scale;
+        var sourceSize = Typography.Measure(source, TextStyles.FootnoteEmphasized);
+        var sourceHovering = UiInteract.Hover(new Vector2(textCenterX - textMaxWidth * 0.5f, sourceY),
+            new Vector2(textCenterX + textMaxWidth * 0.5f, sourceY + sourceSize.Y));
+        Marquee.DrawCentered("music.sheetTopBar.source", source, textCenterX, sourceY, textMaxWidth,
+            TextStyles.FootnoteEmphasized, ui.TitleInk, sourceHovering);
+        if (playback.SongActive)
         {
-            OpenPicker(CurrentSong());
+            DrawRepeatButton(drawList, new Vector2(frame.Max.X - 100f * scale, barCenterY), scale);
+            if (ui.IconButton(new Vector2(frame.Max.X - 58f * scale, barCenterY), 14f * scale,
+                    FontAwesomeIcon.Plus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f,
+                    Loc.T(L.Music.AddToPlaylist)))
+            {
+                OpenPicker(CurrentSong());
+            }
         }
 
         if (playback.RadioActive)
@@ -237,8 +270,7 @@ internal sealed partial class MusicApp
         }
         else
         {
-            drawList.AddImageRounded(artwork.HandleForName(playback.Title), artMin, artMax, Vector2.Zero, Vector2.One,
-                0xFFFFFFFFu, artRounding, ImDrawFlags.RoundCornersAll);
+            DrawStationCover(drawList, artMin, artMax, artRounding);
             Equalizer.Draw(drawList, new Vector2(artMax.X - 22f * scale, artMax.Y - 18f * scale), scale, 16f * scale,
                 clock, White, 1f, playback.IsPlaying);
         }
@@ -280,11 +312,6 @@ internal sealed partial class MusicApp
                 PlayInk, playback.IsPlaying))
         {
             playback.TogglePlayPause();
-        }
-
-        if (songActive)
-        {
-            DrawRepeatButton(drawList, new Vector2(frame.Max.X - pad - 4f * scale, transportY), scale);
         }
 
         DrawVolumeRow(frame, volumeY, pad, scale);

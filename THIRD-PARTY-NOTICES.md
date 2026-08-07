@@ -79,6 +79,30 @@ redistributed in binary form.
   License covers under the terms of the Apache License, Version 2.0
   (https://www.apache.org/licenses/LICENSE-2.0).
 
+## Bouncy Castle
+
+`BouncyCastle.Cryptography.dll` (version 2.6.2, by The Legion of the
+Bouncy Castle Inc.) is redistributed in binary form.
+
+- Source: https://github.com/bcgit/bc-csharp
+- License:
+
+```
+Copyright (c) 2000-2025 The Legion of the Bouncy Castle Inc. (https://www.bouncycastle.org).
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sub license, and/or sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions: The above copyright notice and this
+permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
 ## MIT-licensed libraries
 
 The following components are redistributed under the MIT License, reproduced
@@ -98,6 +122,7 @@ once at the end of this section:
 | HtmlAgilityPack | 1.11.74 | ZZZ Projects and contributors (https://github.com/zzzprojects/html-agility-pack) |
 | System.Security.Cryptography.ProtectedData | 10.0.0 | Microsoft Corporation (https://github.com/dotnet/runtime) |
 | NEbml | 0.11.0 | Oleg Zee (https://github.com/Oleg-Zee/NEbml) |
+| NLayer / NLayer.NAudioSupport | 2.0.1 | Mark Heath, Andrew Ward (https://github.com/naudio/NLayer) |
 
 ```
 MIT License

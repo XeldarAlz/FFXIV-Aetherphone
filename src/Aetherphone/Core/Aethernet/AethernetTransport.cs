@@ -22,6 +22,11 @@ internal sealed class AethernetTransport
     public Task<T?> GetAsync<T>(string path, JsonTypeInfo<T> responseInfo, CancellationToken token,
         Action<int>? onStatus = null)
     {
+        if (!Session.IsSignedIn)
+        {
+            return Task.FromResult<T?>(default);
+        }
+
         return http.GetJsonAsync(Url(path), responseInfo, Session.Token, token, Sink(onStatus), appScope);
     }
 
@@ -29,6 +34,11 @@ internal sealed class AethernetTransport
         JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, CancellationToken token,
         Action<int>? onStatus = null)
     {
+        if (!Session.IsSignedIn)
+        {
+            return Task.FromResult<TResponse?>(default);
+        }
+
         return http.PostJsonAsync(Url(path), body, requestInfo, responseInfo, Session.Token, token, Sink(onStatus),
             appScope);
     }
@@ -37,6 +47,11 @@ internal sealed class AethernetTransport
         JsonTypeInfo<TRequest> requestInfo, JsonTypeInfo<TResponse> responseInfo, CancellationToken token,
         Action<int>? onStatus = null)
     {
+        if (!Session.IsSignedIn)
+        {
+            return Task.FromResult<TResponse?>(default);
+        }
+
         return http.SendJsonAsync(method, Url(path), body, requestInfo, responseInfo, Session.Token, token,
             Sink(onStatus), appScope);
     }
@@ -44,11 +59,21 @@ internal sealed class AethernetTransport
     public Task<TResponse?> RequestAsync<TResponse>(HttpMethod method, string path,
         JsonTypeInfo<TResponse> responseInfo, CancellationToken token, Action<int>? onStatus = null)
     {
+        if (!Session.IsSignedIn)
+        {
+            return Task.FromResult<TResponse?>(default);
+        }
+
         return http.RequestJsonAsync(method, Url(path), responseInfo, Session.Token, token, Sink(onStatus), appScope);
     }
 
     public Task<bool> SendAsync(HttpMethod method, string path, CancellationToken token, Action<int>? onStatus = null)
     {
+        if (!Session.IsSignedIn)
+        {
+            return Task.FromResult(false);
+        }
+
         return http.SendAsync(method, Url(path), Session.Token, token, Sink(onStatus), appScope);
     }
 
@@ -60,6 +85,11 @@ internal sealed class AethernetTransport
     public Task<bool> SendJsonForStatusAsync<TRequest>(HttpMethod method, string path, TRequest body,
         JsonTypeInfo<TRequest> requestInfo, CancellationToken token, Action<int>? onStatus = null)
     {
+        if (!Session.IsSignedIn)
+        {
+            return Task.FromResult(false);
+        }
+
         return http.SendJsonForStatusAsync(method, Url(path), body, requestInfo, Session.Token, token, Sink(onStatus),
             appScope);
     }
@@ -79,7 +109,24 @@ internal sealed class AethernetTransport
 
     public Task<bool> PutBytesAsync(Uri uri, byte[] content, string contentType, CancellationToken token)
     {
-        return http.PutBytesAsync(uri, content, contentType, token);
+        return http.PutBytesAsync(uri, content, contentType, token, UploadBearerFor(uri));
+    }
+
+    public Task<byte[]?> GetBytesAsync(Uri uri, CancellationToken token)
+    {
+        return http.GetBytesAsync(uri, token);
+    }
+
+    private string? UploadBearerFor(Uri uri)
+    {
+        if (!Uri.TryCreate(Session.BaseUrl, UriKind.Absolute, out var baseUri))
+        {
+            return null;
+        }
+
+        var sameHost = string.Equals(uri.Host, baseUri.Host, StringComparison.OrdinalIgnoreCase)
+            && uri.Port == baseUri.Port;
+        return sameHost ? Session.Token : null;
     }
 
     private Action<int> Sink(Action<int>? onStatus)

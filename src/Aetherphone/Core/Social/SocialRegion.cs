@@ -23,4 +23,14 @@ internal static class SocialRegion
 
         return AutoCode(gameData);
     }
+
+    public static string Resolve(string? region, string? world, GameData gameData)
+    {
+        if (!string.IsNullOrEmpty(region))
+        {
+            return region;
+        }
+
+        return gameData.RegionCodeForWorld(world);
+    }
 }

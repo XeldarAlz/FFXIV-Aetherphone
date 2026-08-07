@@ -2,6 +2,7 @@ namespace Aetherphone.Core.Photos;
 
 internal sealed class PhotoLibrary
 {
+    private static readonly string[] Extensions = { ".png", ".jpg", ".jpeg" };
     private readonly string directory;
 
     public PhotoLibrary(DirectoryInfo configDirectory)
@@ -9,6 +10,8 @@ internal sealed class PhotoLibrary
         directory = Path.Combine(configDirectory.FullName, "Photos");
         Directory.CreateDirectory(directory);
     }
+
+    public string DirectoryPath => directory;
 
     public void Save(byte[] pixels, int width, int height)
     {
@@ -24,9 +27,66 @@ internal sealed class PhotoLibrary
             return Array.Empty<string>();
         }
 
-        var files = Directory.GetFiles(directory, "*.png");
-        Array.Sort(files, static (left, right) => string.CompareOrdinal(right, left));
-        return files;
+        var files = new List<string>();
+        for (var index = 0; index < Extensions.Length; index++)
+        {
+            files.AddRange(Directory.GetFiles(directory, "*" + Extensions[index]));
+        }
+
+        var result = files.ToArray();
+        Array.Sort(result, static (left, right) => string.CompareOrdinal(right, left));
+        return result;
+    }
+
+    public static bool IsSupported(string path)
+    {
+        var extension = Path.GetExtension(path);
+        for (var index = 0; index < Extensions.Length; index++)
+        {
+            if (string.Equals(extension, Extensions[index], StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public string? Import(string sourcePath, DateTime takenLocal)
+    {
+        if (!IsSupported(sourcePath))
+        {
+            return null;
+        }
+
+        var extension = Path.GetExtension(sourcePath).ToLowerInvariant();
+        for (var attempt = 0; attempt < 100; attempt++)
+        {
+            var stamp = takenLocal.AddMilliseconds(attempt);
+            var target = Path.Combine(directory, $"AEP_{stamp:yyyyMMdd_HHmmss_fff}{extension}");
+            if (File.Exists(target))
+            {
+                continue;
+            }
+
+            try
+            {
+                File.Copy(sourcePath, target);
+                return target;
+            }
+            catch (IOException) when (File.Exists(target))
+            {
+                continue;
+            }
+            catch (Exception exception)
+            {
+                Plugin.Log.Error(exception, "[Photos] failed to import a capture");
+                return null;
+            }
+        }
+
+        AepLog.Warning($"[Photos] could not find a free name to import '{Path.GetFileName(sourcePath)}'");
+        return null;
     }
 
     public string ThumbnailPathFor(string path)

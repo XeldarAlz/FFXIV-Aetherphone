@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -9,7 +8,7 @@ internal static class Scrubber
 {
     public static float Draw(Rect track, float value, Vector4 accent, Vector4 rail, float alpha)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var midY = track.Center.Y;
         var left = track.Min.X;
@@ -38,10 +37,10 @@ internal static class Scrubber
 
     public static bool IsHovered(Rect track)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var midY = track.Center.Y;
         var hitMin = new Vector2(track.Min.X - 6f * scale, midY - 14f * scale);
         var hitMax = new Vector2(track.Max.X + 6f * scale, midY + 14f * scale);
-        return ImGui.IsMouseHoveringRect(hitMin, hitMax);
+        return UiInteract.Hover(hitMin, hitMax);
     }
 }

@@ -46,17 +46,11 @@ public sealed class WebmOpusDemuxerTests
         Assert.Null(demuxer.ReadNextPacket());
     }
 
-    /// <summary>
-    /// Hand-encodes just enough EBML to exercise WebmOpusDemuxer: a Segment containing Info
-    /// (TimestampScale + Duration), Tracks (one Opus TrackEntry), and a Cluster with one
-    /// SimpleBlock for the Opus track. Optionally injects a second SimpleBlock for a different
-    /// track number first, to verify it's skipped.
-    /// </summary>
     private static byte[] BuildMinimalWebm(
         ulong trackNumber, double durationSeconds, byte[] payload,
         ulong? extraBlockTrackNumber = null, byte[]? extraBlockPayload = null)
     {
-        const ulong timestampScale = 1_000_000; // 1ms per tick, matches Matroska default.
+        const ulong timestampScale = 1_000_000;
         var durationTicks = durationSeconds * 1_000_000_000.0 / timestampScale;
 
         var info = Element(0x1549A966,
@@ -81,8 +75,6 @@ public sealed class WebmOpusDemuxerTests
 
         var segment = Element(0x18538067, Concat(info, tracks, cluster));
 
-        // Real WebM files always lead with an EBML header element before Segment; content is
-        // irrelevant to this demuxer since it only skips past it, so an empty one is fine here.
         var ebmlHeader = Element(0x1A45DFA3, Array.Empty<byte>());
         return Concat(ebmlHeader, segment);
     }
@@ -91,13 +83,10 @@ public sealed class WebmOpusDemuxerTests
     {
         var header = Concat(
             MatroskaVint(trackNumber),
-            new byte[] { 0, 0 }, // timecode (int16), irrelevant for these tests
-            new byte[] { 0x00 }); // flags: no lacing
+            new byte[] { 0, 0 },
+            new byte[] { 0x00 });
         return Element(0xA3, Concat(header, payload));
     }
-
-    // --- tiny hand-rolled EBML encoders, deliberately independent of NEbml's own writer so the
-    // test exercises WebmOpusDemuxer against an implementation it didn't help author. ---
 
     private static byte[] Element(ulong id, byte[] content)
     {
@@ -106,8 +95,6 @@ public sealed class WebmOpusDemuxerTests
 
     private static byte[] EbmlId(ulong id)
     {
-        // All the IDs used above are already in their canonical encoded form (marker bits
-        // included), 1-4 bytes depending on magnitude.
         var length = id switch
         {
             <= 0xFF => 1,
@@ -127,7 +114,6 @@ public sealed class WebmOpusDemuxerTests
 
     private static byte[] EbmlSize(ulong size)
     {
-        // 1-byte size encoding (marker bit 0x80), sufficient for these small test payloads.
         if (size > 0x7E)
         {
             throw new InvalidOperationException("Test helper only supports sizes < 0x7F.");
@@ -138,8 +124,6 @@ public sealed class WebmOpusDemuxerTests
 
     private static byte[] MatroskaVint(ulong value)
     {
-        // Same 1-byte form as EbmlSize, but this is the encoding WebmOpusDemuxer's
-        // ReadMatroskaVint expects for the SimpleBlock track-number field.
         if (value > 0x7E)
         {
             throw new InvalidOperationException("Test helper only supports track numbers < 0x7F.");

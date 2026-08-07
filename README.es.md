@@ -80,6 +80,12 @@ Marca **Enabled**, haz clic en **+** y luego en **Save and Close**. Abre `/xlplu
 
 → [Únete a nuestro Discord](https://discord.gg/3HbJCscMyS)
 
+## Contribuir
+
+Aetherphone es de código abierto y las contribuciones son bienvenidas. Empieza por la documentación para desarrolladores (en inglés) y luego lee la guía de contribución.
+
+→ [Documentación para desarrolladores](docs/README.md) · [Guía de contribución](CONTRIBUTING.md)
+
 ## Más cosas mías
 
 Si te ha gustado este plugin, echa un vistazo a mis otros trabajos para Dalamud. Puede que encuentres algo más para ti.

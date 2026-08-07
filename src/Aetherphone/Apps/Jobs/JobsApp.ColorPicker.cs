@@ -192,8 +192,7 @@ internal sealed partial class JobsApp
             return;
         }
 
-        var clickedOutside = pickedPreset < 0 && PickerClicked() &&
-                             !new Rect(min, max).Contains(ImGui.GetMousePos());
+        var clickedOutside = pickedPreset < 0 && UiInteract.ClickedOutside(min, max, false);
         if (ImGui.IsKeyPressed(ImGuiKey.Escape) || ImGui.IsKeyPressed(ImGuiKey.Enter) || clickedOutside)
         {
             CloseColorPicker();
@@ -243,7 +242,7 @@ internal sealed partial class JobsApp
         {
             var center = new Vector2(area.Min.X + cellWidth * (index % PresetColumns + 0.5f),
                 area.Min.Y + rowHeight * (index / PresetColumns + 0.5f));
-            var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius), center + new Vector2(radius));
+            var hovered = UiInteract.HoverWindowOnly(center - new Vector2(radius), center + new Vector2(radius));
             var selected = string.Equals(Presets[index].Digits, pickerDigits, StringComparison.Ordinal);
             drawList.AddCircleFilled(center, hovered ? radius + scale : radius,
                 ImGui.GetColorU32(Presets[index].Color), 32);
@@ -272,7 +271,7 @@ internal sealed partial class JobsApp
         float scale)
     {
         var editing = pickerSavedIndex >= 0 && pickerSavedIndex < configuration.JobsCustomColors.Count;
-        var hovered = enabled && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = enabled && UiInteract.HoverWindowOnly(rect.Min, rect.Max);
         var fill = !enabled
             ? Palette.WithAlpha(theme.TextMuted, 0.2f)
             : hovered

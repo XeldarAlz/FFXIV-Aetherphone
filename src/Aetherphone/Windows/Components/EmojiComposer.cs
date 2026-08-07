@@ -5,8 +5,6 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Windows.Components;
 
-// Shared emoji-drawer state for any composer: a smile toggle button plus the picker panel it opens.
-// Callers own an instance, place the toggle where their layout allows, and hand it a panel rect.
 internal sealed class EmojiComposer
 {
     private const float PanelHeightUnits = 244f;
@@ -31,7 +29,7 @@ internal sealed class EmojiComposer
     {
         var min = center - new Vector2(radius, radius);
         var max = center + new Vector2(radius, radius);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var color = open ? activeColor : hovered ? ui.Theme.TextStrong : idleColor;
         AppSkin.Icon(center, FontAwesomeIcon.Smile.ToIconString(), color, 0.95f);
         HoverTooltip.Show(new Rect(min, max), tooltip, side);

@@ -40,20 +40,26 @@ internal sealed class AccentModule : IControlModule
             return;
         }
 
+        var customHex = configuration.AccentCustomHex;
+        var hasCustom = HexColor.TryParse(customHex, out var customColor);
+        var slots = accents.Count + (hasCustom ? 1 : 0);
         var inset = MathF.Min(22f * scale, rect.Width * 0.10f);
         var innerLeft = rect.Min.X + inset;
         var innerRight = rect.Max.X - inset;
-        var cell = (innerRight - innerLeft) / accents.Count;
+        var cell = (innerRight - innerLeft) / slots;
         var swatchRadius = MathF.Min(MathF.Min(rect.Height * 0.28f, 11f * scale), cell * 0.32f);
         var centerY = rect.Center.Y;
-        for (var index = 0; index < accents.Count; index++)
+        for (var index = 0; index < slots; index++)
         {
             var center = new Vector2(innerLeft + cell * (index + 0.5f), centerY);
-            var selected = accents[index].Name == configuration.AccentName;
-            if (ControlTile.Swatch(dl, center, swatchRadius, accents[index].Color, selected, opacity,
-                    context.Interactive) && !selected)
+            var isCustom = index == accents.Count;
+            var name = isCustom ? customHex : accents[index].Name;
+            var color = isCustom ? customColor : accents[index].Color;
+            var selected = name == configuration.AccentName;
+            if (ControlTile.Swatch(dl, center, swatchRadius, color, selected, opacity, context.Interactive) &&
+                !selected)
             {
-                configuration.AccentName = accents[index].Name;
+                configuration.AccentName = name;
                 themes.Apply(configuration);
                 configuration.Save();
             }

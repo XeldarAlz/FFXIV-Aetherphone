@@ -22,6 +22,7 @@ internal sealed class BreakoutBoard
 {
     public const int Columns = 7;
     public const int MaxRows = 8;
+    public const int StartingLives = 3;
     public const int MaxBalls = 10;
     public const int MaxPowerUps = 8;
     public const float MarginX = 0.05f;
@@ -79,7 +80,7 @@ internal sealed class BreakoutBoard
     {
         FieldHeight = fieldHeight;
         Score = 0;
-        Lives = 3;
+        Lives = StartingLives;
         Level = 1;
         ballSpeed = BaseSpeed;
         PaddleHalfWidth = defaultPaddleHalf;

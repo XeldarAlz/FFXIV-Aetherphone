@@ -15,12 +15,16 @@ internal sealed class AethernetApi
         Chats = new ChatClient(net);
         Social = new SocialClient(net);
         Grams = new GramClient(net);
+        GramDm = new GramDmClient(net);
         Velvet = new VelvetClient(net);
         Media = new MediaClient(net);
         Safety = new SafetyClient(net);
         Feedback = new FeedbackClient(net);
-        Dev = new DevClient(net);
         Polls = new PollsClient(net);
+        Announcements = new AnnouncementsClient(net);
+        Musters = new MusterClient(net);
+        Ads = new YellowPagesClient(net);
+        Radio = new RadioClient(net);
     }
 
     public AuthClient Auth { get; }
@@ -30,10 +34,14 @@ internal sealed class AethernetApi
     public ChatClient Chats { get; }
     public SocialClient Social { get; }
     public GramClient Grams { get; }
+    public GramDmClient GramDm { get; }
     public VelvetClient Velvet { get; }
     public MediaClient Media { get; }
     public SafetyClient Safety { get; }
     public FeedbackClient Feedback { get; }
-    public DevClient Dev { get; }
     public PollsClient Polls { get; }
+    public AnnouncementsClient Announcements { get; }
+    public MusterClient Musters { get; }
+    public YellowPagesClient Ads { get; }
+    public RadioClient Radio { get; }
 }

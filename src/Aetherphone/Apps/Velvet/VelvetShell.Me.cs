@@ -1,11 +1,11 @@
 using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -29,7 +29,7 @@ internal sealed partial class VelvetShell
 
     private void DrawSettings(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (VHeader.Push(area, Loc.T(L.Velvet.Settings), theme))
         {
             router.Pop();
@@ -104,7 +104,7 @@ internal sealed partial class VelvetShell
 
     private void DrawBlocked(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (VHeader.Push(area, Loc.T(L.Velvet.Blocked), theme))
         {
             router.Pop();
@@ -134,13 +134,16 @@ internal sealed partial class VelvetShell
                 var model = new VRowModel
                 {
                     Title = DisplayNameOf(user.DisplayName, user.Handle),
-                    Subtitle = SocialIdentity.ProfileMeta(user.Handle, RegionOf(user.World)),
+                    Subtitle = SocialIdentity.ProfileMeta(user.Handle, RegionCodeOf(user)),
                     Height = 60f,
                     Leading = VRowLeading.Avatar,
                     AvatarRadius = 20f,
                     Name = DisplayNameOf(user.DisplayName, user.Handle),
-                    World = user.World,
+                    World = string.Empty,
                     AvatarUrl = user.AvatarUrl,
+                    RoleBadges = user.Badges,
+                    RoleBadgeIds = user.ProfileBadges,
+                    UserId = user.Id,
                     Pill = Loc.T(L.Velvet.Unblock),
                     PillFilled = false,
                     PillEnabled = true,

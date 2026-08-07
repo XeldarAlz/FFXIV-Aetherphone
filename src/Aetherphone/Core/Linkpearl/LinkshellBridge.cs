@@ -1,4 +1,6 @@
+using System.Text;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Notifications;
 using Dalamud.Game.Chat;
 using Dalamud.Game.Text.SeStringHandling;
@@ -14,35 +16,40 @@ internal sealed class LinkshellBridge : IDisposable
     private readonly LinkshellMuteStore mutes;
     private readonly NotificationService notifications;
     private readonly LinkpearlNotificationGate gate;
+    private readonly AppGate installed;
     private readonly IChatGui chatGui;
     private readonly GameData gameData;
 
     public LinkshellBridge(LinkshellStore store, LinkshellMuteStore mutes, NotificationService notifications,
-        LinkpearlNotificationGate gate, IChatGui chatGui, GameData gameData)
+        LinkpearlNotificationGate gate, IChatGui chatGui, GameData gameData, AppGate installed)
     {
         this.store = store;
         this.mutes = mutes;
         this.notifications = notifications;
         this.gate = gate;
+        this.installed = installed;
         this.chatGui = chatGui;
         this.gameData = gameData;
         chatGui.ChatMessage += OnChatMessage;
     }
 
-    public void Send(LinkshellThread thread, string text)
+    public static int ComposerBudget(LinkshellThread thread) =>
+        Math.Max(0, ChatSender.MaxBytes - Encoding.UTF8.GetByteCount(thread.Channel.Command) - 1);
+
+    public bool Send(LinkshellThread thread, string text)
     {
         var trimmed = text.Trim();
         if (trimmed.Length == 0)
         {
-            return;
+            return false;
         }
 
-        ChatSender.TrySend($"{thread.Channel.Command} {trimmed}");
+        return ChatSender.TrySend($"{thread.Channel.Command} {trimmed}");
     }
 
     private void OnChatMessage(IHandleableChatMessage message)
     {
-        if (!LinkshellChannels.TryResolve(message.LogKind, out var channel))
+        if (!installed.Open || !LinkshellChannels.TryResolve(message.LogKind, out var channel))
         {
             return;
         }

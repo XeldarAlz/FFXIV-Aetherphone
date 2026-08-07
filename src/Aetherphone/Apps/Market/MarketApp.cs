@@ -6,7 +6,6 @@ using Aetherphone.Core.Market;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Market;
@@ -41,6 +40,8 @@ internal sealed partial class MarketApp : IPhoneApp
     private readonly string[] alertDirLabels = new string[2];
     private int scopeIndex = -1;
     private bool showHq;
+    private bool autoHq;
+    private uint autoHqItemId;
     private string search = string.Empty;
     private string lastSearch = " ";
     private bool lastIndexReady;
@@ -132,7 +133,7 @@ internal sealed partial class MarketApp : IPhoneApp
             pendingOpenId = 0;
         }
 
-        var screen = SceneChrome.ScreenFrom(context.Content, frameTheme, ImGuiHelpers.GlobalScale);
+        var screen = SceneChrome.ScreenFrom(context.Content, frameTheme, UiScale.Current);
         ui.Backdrop(screen);
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
     }

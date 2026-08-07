@@ -4,10 +4,6 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Maps;
 
-/// <summary>
-/// Pure map-surface drawing: location pin, favourite star, disclosure/chevron glyphs and row
-/// highlights. State and input stay in <see cref="MapsApp"/>.
-/// </summary>
 internal static class MapGlyphs
 {
     private const float HighlightBleed = 8f;

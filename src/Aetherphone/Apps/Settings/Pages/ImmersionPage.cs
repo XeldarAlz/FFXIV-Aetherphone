@@ -3,7 +3,6 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Settings.Pages;
@@ -23,26 +22,18 @@ internal sealed class ImmersionPage : ISettingsPage
 
     public void Draw(in PhoneContext context, Rect body)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         using (AppSurface.Begin(body))
         {
             SettingsSection.Header(Loc.T(L.Settings.Immersion), theme);
-            var behaviorCard = GroupCard.Begin(theme, 2);
-            var scroll = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.Settings.ScrollWhileIdle),
+            var scrollCard = GroupCard.Begin(theme, 1);
+            var scroll = SettingsRow.Bool(scrollCard.NextRow(), Loc.T(L.Settings.ScrollWhileIdle),
                 configuration.ScrollWhileIdle, theme);
-            var lockPosition = SettingsRow.Bool(behaviorCard.NextRow(), Loc.T(L.ControlCenter.LockPosition),
-                configuration.LockPosition, theme);
-            behaviorCard.End();
+            scrollCard.End();
             if (scroll != configuration.ScrollWhileIdle)
             {
                 configuration.ScrollWhileIdle = scroll;
-                configuration.Save();
-            }
-
-            if (lockPosition != configuration.LockPosition)
-            {
-                configuration.LockPosition = lockPosition;
                 configuration.Save();
             }
 
@@ -63,28 +54,6 @@ internal sealed class ImmersionPage : ISettingsPage
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
             SettingsSection.Hint(Loc.T(L.Settings.ShowInGposeHint), theme);
-
-            ImGui.Dummy(new Vector2(0f, 12f * scale));
-            var startupCard = GroupCard.Begin(theme, 2);
-            var openStartup = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenOnStartup),
-                configuration.OpenOnStartup, theme);
-            var openMinimized = SettingsRow.Bool(startupCard.NextRow(), Loc.T(L.Settings.OpenMinimized),
-                configuration.OpenMinimizedOnStartup, theme);
-            startupCard.End();
-            if (openStartup != configuration.OpenOnStartup)
-            {
-                configuration.OpenOnStartup = openStartup;
-                configuration.Save();
-            }
-
-            if (openMinimized != configuration.OpenMinimizedOnStartup)
-            {
-                configuration.OpenMinimizedOnStartup = openMinimized;
-                configuration.Save();
-            }
-
-            ImGui.Dummy(new Vector2(0f, 8f * scale));
-            SettingsSection.Hint(Loc.T(L.Settings.StartupHint), theme);
         }
     }
 }

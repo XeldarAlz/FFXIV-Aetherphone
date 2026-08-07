@@ -6,7 +6,9 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Net;
+using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Report;
@@ -16,7 +18,6 @@ using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Message;
 
@@ -54,6 +55,9 @@ internal sealed partial class MessageApp : IPhoneApp
     private readonly ConfirmService confirm;
     private readonly ReportService report;
     private readonly WallpaperImageCache wallpaperImages;
+    private readonly MusterStore musters;
+    private readonly MusterLauncher musterLauncher;
+    private readonly SocialNotificationService socialNotifications;
     private readonly AppSkin ui = new(AppPalettes.Message);
     private readonly AvatarLightbox avatarLightbox = new();
     private readonly ViewRouter<MessageRoute> router;
@@ -70,8 +74,11 @@ internal sealed partial class MessageApp : IPhoneApp
     public MessageApp(DirectMessagesStore store, ContactBook contacts, CallHub calls, AethernetSession session,
         RemoteImageCache images, LodestoneService lodestone, DmLauncher launcher, PhotoLibrary library,
         HttpService http, Configuration configuration, ConfirmService confirm, ReportService report,
-        WallpaperImageCache wallpaperImages)
+        WallpaperImageCache wallpaperImages, MusterStore musters, MusterLauncher musterLauncher,
+        SocialNotificationService socialNotifications)
     {
+        this.socialNotifications = socialNotifications;
+        this.musterLauncher = musterLauncher;
         this.store = store;
         this.contacts = contacts;
         this.calls = calls;
@@ -85,6 +92,7 @@ internal sealed partial class MessageApp : IPhoneApp
         this.confirm = confirm;
         this.report = report;
         this.wallpaperImages = wallpaperImages;
+        this.musters = musters;
         router = new ViewRouter<MessageRoute>(MessageRoute.Root);
         drawView = DrawView;
         back = () => router.Pop();
@@ -100,7 +108,11 @@ internal sealed partial class MessageApp : IPhoneApp
         addError = string.Empty;
         contacts.Refresh(force: true);
         store.RefreshConversations();
-        if (launcher.TryConsumeConversation(out var conversationId))
+        if (launcher.TryConsumeCalls())
+        {
+            activeTab = MessageTab.Calls;
+        }
+        else if (launcher.TryConsumeConversation(out var conversationId))
         {
             router.Push(MessageRoute.Thread(conversationId), false);
         }
@@ -141,10 +153,11 @@ internal sealed partial class MessageApp : IPhoneApp
 
         currentCall = calls.Snapshot();
         SyncCallRoute();
+        ConsumeSharedPhoto();
         ProcessPending();
         threadView.GateMenus();
         chatMenu.Gate();
-        var screen = SceneChrome.ScreenFrom(context.Content, theme, ImGuiHelpers.GlobalScale);
+        var screen = SceneChrome.ScreenFrom(context.Content, theme, UiScale.Current);
         ui.Backdrop(screen);
         using (InputShield.Engage(avatarLightbox.Expanded))
         {
@@ -288,6 +301,9 @@ internal sealed partial class MessageApp : IPhoneApp
             case MessageScreen.Forward:
                 DrawForwardPicker(area, route.Id ?? string.Empty);
                 break;
+            case MessageScreen.SharePhoto:
+                DrawSharePhotoPicker(area, route.Id ?? string.Empty);
+                break;
             case MessageScreen.Starred:
                 DrawStarred(area);
                 break;
@@ -312,7 +328,7 @@ internal sealed partial class MessageApp : IPhoneApp
             SelectTab(MessageTab.Contacts);
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var headerRect = new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + AppHeader.Height * scale));
         var navHeight = 60f * scale;
         var navRect = new Rect(new Vector2(area.Min.X, area.Max.Y - navHeight), area.Max);
@@ -344,7 +360,7 @@ internal sealed partial class MessageApp : IPhoneApp
 
     private void DrawRootHeader(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var title = activeTab switch
         {
             MessageTab.Calls => Loc.T(L.Phone.Calls),
@@ -392,7 +408,7 @@ internal sealed partial class MessageApp : IPhoneApp
 
     private void DrawBottomNav(Rect nav)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddLine(nav.Min, new Vector2(nav.Max.X, nav.Min.Y), ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.10f)),
             1f);
@@ -412,7 +428,7 @@ internal sealed partial class MessageApp : IPhoneApp
 
     private void DrawNavItem(Rect rect, FontAwesomeIcon icon, string label, MessageTab tab, int badge)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var active = activeTab == tab;
         var color = active ? ui.Accent : ui.MutedInk;
         var iconCenter = new Vector2(rect.Center.X, rect.Min.Y + 20f * scale);

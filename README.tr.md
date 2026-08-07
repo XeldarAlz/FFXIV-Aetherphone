@@ -80,6 +80,12 @@ Sorular, fikirler ya da sadece diğer oyuncularla takılmak mı istiyorsun? Disc
 
 → [Discord'umuza katıl](https://discord.gg/3HbJCscMyS)
 
+## Katkıda bulunma
+
+Aetherphone açık kaynaklıdır ve katkılara açıktır. Önce geliştirici belgeleriyle (İngilizce) başlayın, ardından katkı rehberini okuyun.
+
+→ [Geliştirici belgeleri](docs/README.md) · [Katkı rehberi](CONTRIBUTING.md)
+
 ## Benden dahası
 
 Bu eklentiyi beğendiyseniz, diğer Dalamud çalışmalarıma bir göz atın. Orada size uygun başka bir şey bulabilirsiniz.

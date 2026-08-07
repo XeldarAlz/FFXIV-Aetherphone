@@ -1,31 +1,16 @@
-using System.Globalization;
-
 namespace Aetherphone.Core.Notifications;
 
 internal static class SoundTokens
 {
-    public const string GamePrefix = "game:";
     public const string FilePrefix = "file:";
-    public const uint DefaultGameSoundId = 7;
-    public static readonly string DefaultGame = Game(DefaultGameSoundId);
-    public static readonly string Silent = Game(0);
-
-    public static string Game(uint soundId) =>
-        string.Concat(GamePrefix, soundId.ToString(CultureInfo.InvariantCulture));
+    public const string Silent = "silent";
+    public const string Default = "";
+    private const string LegacyGamePrefix = "game:";
+    private const string LegacySilent = "game:0";
 
     public static string File(string fileName) => string.Concat(FilePrefix, fileName);
 
-    public static bool TryGame(string token, out uint soundId)
-    {
-        soundId = 0;
-        if (string.IsNullOrEmpty(token) || !token.StartsWith(GamePrefix, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        return uint.TryParse(token.AsSpan(GamePrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture,
-            out soundId);
-    }
+    public static bool IsSilent(string token) => string.Equals(token, Silent, StringComparison.Ordinal);
 
     public static bool TryFile(string token, out string fileName)
     {
@@ -37,5 +22,17 @@ internal static class SoundTokens
 
         fileName = string.Empty;
         return false;
+    }
+
+    public static bool TryUpgradeLegacy(string? token, out string upgraded)
+    {
+        if (string.IsNullOrEmpty(token) || !token.StartsWith(LegacyGamePrefix, StringComparison.Ordinal))
+        {
+            upgraded = string.Empty;
+            return false;
+        }
+
+        upgraded = string.Equals(token, LegacySilent, StringComparison.Ordinal) ? Silent : Default;
+        return true;
     }
 }

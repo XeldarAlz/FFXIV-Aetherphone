@@ -4,7 +4,6 @@ using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -15,7 +14,7 @@ internal sealed partial class VelvetShell
 
     private void DrawMessages(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var pad = Metrics.Space.Lg * scale;
         var segRect = new Rect(new Vector2(area.Min.X + pad, area.Min.Y + 8f * scale),
             new Vector2(area.Max.X - pad, area.Min.Y + 8f * scale + 32f * scale));
@@ -47,10 +46,15 @@ internal sealed partial class VelvetShell
 
     private void DrawChatsList(Rect listRect)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (!store.ThreadsLoaded && !store.LoadingThreads)
         {
             store.RefreshThreads();
+        }
+
+        if (!store.ConnectionsLoaded && !store.LoadingConnections)
+        {
+            store.RefreshConnections();
         }
 
         var threads = store.Threads;
@@ -69,7 +73,7 @@ internal sealed partial class VelvetShell
             var thread = threads[index];
             var preview = string.IsNullOrEmpty(thread.LastMessagePreview)
                 ? Loc.T(L.Velvet.ThreadEmpty)
-                : thread.LastMessagePreview;
+                : ChatText.ListPreview(thread.LastMessagePreview);
             var model = new VRowModel
             {
                 Title = DisplayNameOf(thread.OtherDisplayName, thread.OtherHandle),
@@ -90,12 +94,21 @@ internal sealed partial class VelvetShell
             }
         }
 
+        if (store.LoadingMoreThreads)
+        {
+            InfiniteScroll.DrawLoadingRow(listRect.Center.X, VelvetTheme.MutedInk);
+        }
+        else if (store.HasMoreThreads && InfiniteScroll.ReachedBottom())
+        {
+            store.LoadMoreThreads();
+        }
+
         Gap(40f);
     }
 
     private void DrawRequestsList(Rect listRect)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (!store.RequestsLoaded && !store.LoadingRequests)
         {
             store.RefreshRequests();
@@ -236,7 +249,7 @@ internal sealed partial class VelvetShell
                     continue;
                 }
 
-                return message.Body;
+                return ChatText.ListPreview(message.Body);
             }
         }
 
@@ -265,7 +278,7 @@ internal sealed partial class VelvetShell
         }
 
         var introText = ResolveRequestIntro(req);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -345,7 +358,7 @@ internal sealed partial class VelvetShell
 
     private void DrawIntro(Rect area, string userId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (VHeader.Push(area, Loc.T(L.Velvet.IntroTitle), theme))
         {
             router.Pop();

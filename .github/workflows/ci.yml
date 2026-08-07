@@ -40,6 +40,17 @@ jobs:
             exit 1
           fi
 
+      - name: Verify UI scale seam
+        shell: bash
+        run: |
+          offenders=$(grep -rn 'ImGuiHelpers\.GlobalScale' src --include=*.cs \
+            | grep -v 'src/Aetherphone/UiScale.cs' || true)
+          if [ -n "$offenders" ]; then
+            echo "$offenders"
+            echo "::error::Draw code must scale through UiScale.Current, not ImGuiHelpers.GlobalScale directly. Only src/Aetherphone/UiScale.cs may read the Dalamud scale."
+            exit 1
+          fi
+
   # Full build. Needs Dalamud present at the standard plugin path so
   # Dalamud.NET.Sdk can resolve $(DalamudLibPath).
   build:

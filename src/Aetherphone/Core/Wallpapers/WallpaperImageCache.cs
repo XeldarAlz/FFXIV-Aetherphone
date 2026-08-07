@@ -43,8 +43,8 @@ internal sealed class WallpaperImageCache : IDisposable
         {
             var token = cancellation.Token;
             var bytes = await File.ReadAllBytesAsync(path, token).ConfigureAwait(false);
-            var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes, path, token)
-                .ConfigureAwait(false);
+            var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes, path,
+                ImageProcessor.MaxLocalDecodePixels, token).ConfigureAwait(false);
             if (!ready.TryAdd(path, wrap))
             {
                 wrap.Dispose();

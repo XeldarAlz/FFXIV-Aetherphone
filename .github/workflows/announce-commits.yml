@@ -1,0 +1,58 @@
+name: Announce commits on Discord
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Post commits to Discord
+        env:
+          WEBHOOK_URL: ${{ secrets.COMMITS_WEBHOOK_URL }}
+          ICON: https://raw.githubusercontent.com/XeldarAlz/FFXIV-Aetherphone/master/src/Aetherphone/Images/Icon.png
+        run: |
+          set -euo pipefail
+          if [ -z "${WEBHOOK_URL:-}" ]; then
+            echo 'COMMITS_WEBHOOK_URL not set; skipping the announcement.'
+            exit 0
+          fi
+
+          count=$(jq '.commits | length' "$GITHUB_EVENT_PATH")
+          if [ "$count" -eq 0 ]; then
+            echo 'No new commits in this push (branch delete or force push); skipping.'
+            exit 0
+          fi
+
+          jq -n --arg icon "$ICON" --slurpfile e "$GITHUB_EVENT_PATH" '
+            $e[0] as $ev
+            | ($ev.ref | sub("^refs/heads/"; "")) as $branch
+            | ($ev.commits | length) as $total
+            | ($ev.commits[:10] | map(
+                "[`" + .id[:7] + "`](" + .url + ") "
+                + (.message | split("\n")[0] | gsub("—"; "-") | gsub("–"; "-") | .[:120])
+                + " - " + .author.name
+              )) as $lines
+            | (if $total > 10
+                 then $lines + ["... and " + (($total - 10) | tostring) + " more"]
+                 else $lines
+               end) as $lines
+            | {
+                username: "Aetherphone",
+                avatar_url: $icon,
+                embeds: [{
+                  author: { name: "Aetherphone", url: $ev.repository.html_url, icon_url: $icon },
+                  title: ((if $total == 1 then "1 new commit" else (($total | tostring) + " new commits") end) + " on " + $branch),
+                  url: (if $total == 1 then $ev.head_commit.url else $ev.compare end),
+                  description: ($lines | join("\n")),
+                  color: 5814783,
+                  footer: { text: "Aetherphone", icon_url: $icon },
+                  timestamp: $ev.head_commit.timestamp
+                }]
+              }
+          ' > payload.json
+
+          curl -fsS -H 'Content-Type: application/json; charset=utf-8' -d @payload.json "$WEBHOOK_URL" > /dev/null
+          echo "Announced $count commit(s) to Discord."

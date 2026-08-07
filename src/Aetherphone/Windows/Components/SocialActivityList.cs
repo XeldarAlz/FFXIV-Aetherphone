@@ -7,7 +7,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -16,13 +15,13 @@ internal static class SocialActivityList
 {
     public static void Draw(Rect area, AppSkin ui, AppPalette palette, PhoneTheme theme, NotificationDto[] items,
         string app, RemoteImageCache images, LodestoneService lodestone, Action<NotificationDto> openActor,
-        Action<NotificationDto> openPost)
+        Action<NotificationDto> openPost, Action? loadOlder = null)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var count = 0;
         for (var index = 0; index < items.Length; index++)
         {
-            if (items[index].App == app)
+            if (Shows(items[index], app))
             {
                 count++;
             }
@@ -40,21 +39,30 @@ internal static class SocialActivityList
             ImGui.Dummy(new Vector2(0f, 6f * scale));
             for (var index = 0; index < items.Length; index++)
             {
-                if (items[index].App == app)
+                if (Shows(items[index], app))
                 {
                     DrawRow(items[index], ui, palette, theme, images, lodestone, openActor, openPost);
                 }
             }
 
             ImGui.Dummy(new Vector2(0f, 16f * scale));
+            if (loadOlder is not null && ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 300f * scale)
+            {
+                loadOlder();
+            }
         }
+    }
+
+    private static bool Shows(NotificationDto item, string app)
+    {
+        return item.App == app && !SocialActivity.IsModerationNotice(item.Type);
     }
 
     private static void DrawRow(NotificationDto item, AppSkin ui, AppPalette palette, PhoneTheme theme,
         RemoteImageCache images, LodestoneService lodestone, Action<NotificationDto> openActor,
         Action<NotificationDto> openPost)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -65,9 +73,9 @@ internal static class SocialActivityList
         var timeSize = Typography.Measure(timeText, 0.78f);
         var textRight = origin.X + width - pad - timeSize.X - 8f * scale;
         var textWidth = textRight - textLeft;
-        var actor = SocialActivity.ActorLabel(item);
+        var actorLabel = SocialActivity.ActorLabel(item);
         var body = SocialActivity.Body(item);
-        var actorSize = Typography.Measure(actor, 0.95f, FontWeight.SemiBold);
+        var actorSize = Typography.Measure(actorLabel, 0.95f, FontWeight.SemiBold);
         var bodyHeight = body.Length > 0 ? Typography.MeasureWrapped(body, textWidth, 0.88f) : 0f;
         var contentHeight = actorSize.Y + 4f * scale + bodyHeight;
         var rowHeight = MathF.Max(radius * 2f + pad * 2f, contentHeight + pad * 2f);
@@ -81,20 +89,20 @@ internal static class SocialActivityList
         DrawTypeBadge(drawList, avatarCenter + new Vector2(radius - 4f * scale, radius - 4f * scale), item.Type,
             theme, scale);
         var textTop = origin.Y + (rowHeight - contentHeight) * 0.5f;
-        Typography.Draw(new Vector2(textLeft, textTop), actor, theme.TextStrong, 0.95f, FontWeight.SemiBold);
+        var rowHovering = UiInteract.Hover(origin, rowMax);
+        UserName.Draw(drawList, "socialactivity.actor." + item.Id, actorLabel, item.ActorBadges, item.ActorBadgeIds, textLeft, textTop,
+            textWidth, new TextStyle(0.95f, FontWeight.SemiBold), theme.TextStrong, rowHovering, theme);
         Typography.Draw(new Vector2(origin.X + width - pad - timeSize.X, textTop + 2f * scale), timeText,
             palette.MutedInk, 0.78f);
         if (body.Length > 0)
         {
             ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop + actorSize.Y + 4f * scale));
-            ImGui.PushTextWrapPos(textRight - ImGui.GetWindowPos().X);
+            using (Typography.WrapAt(textRight))
             using (Plugin.Fonts.Push(0.88f))
             using (ImRaii.PushColor(ImGuiCol.Text, palette.BodyInk))
             {
                 Typography.Wrapped(body);
             }
-
-            ImGui.PopTextWrapPos();
         }
 
         if (UiInteract.HoverClick(origin, rowMax))
@@ -119,9 +127,19 @@ internal static class SocialActivityList
         {
             SocialActivity.TypeLike => (FontAwesomeIcon.Heart.ToIconString(), theme.Danger),
             SocialActivity.TypeComment => (FontAwesomeIcon.Comment.ToIconString(), theme.Accent),
+            SocialActivity.TypeFollow => (FontAwesomeIcon.UserPlus.ToIconString(), theme.Accent),
             SocialActivity.TypeConnectRequest => (FontAwesomeIcon.UserPlus.ToIconString(), theme.Accent),
             SocialActivity.TypeConnectAccept => (FontAwesomeIcon.UserCheck.ToIconString(), theme.Accent),
-            _ => (FontAwesomeIcon.UserPlus.ToIconString(), theme.Accent),
+            SocialActivity.TypeCommentLike => (FontAwesomeIcon.Heart.ToIconString(), theme.Danger),
+            SocialActivity.TypeMention => (FontAwesomeIcon.At.ToIconString(), theme.Accent),
+            SocialActivity.TypeCommentMention => (FontAwesomeIcon.At.ToIconString(), theme.Accent),
+            SocialActivity.TypePhotoTag => (FontAwesomeIcon.UserTag.ToIconString(), theme.Accent),
+            SocialActivity.TypeRepost => (FontAwesomeIcon.Retweet.ToIconString(), theme.Accent),
+            SocialActivity.TypeQuote => (FontAwesomeIcon.QuoteRight.ToIconString(), theme.Accent),
+            SocialActivity.TypeFollowRequest => (FontAwesomeIcon.UserClock.ToIconString(), theme.Accent),
+            SocialActivity.TypeFollowAccept => (FontAwesomeIcon.UserCheck.ToIconString(), theme.Accent),
+            SocialActivity.TypeRadioLive => (FontAwesomeIcon.BroadcastTower.ToIconString(), theme.Accent),
+            _ => (FontAwesomeIcon.Bell.ToIconString(), theme.Accent),
         };
         var badgeRadius = 8f * scale;
         drawList.AddCircleFilled(center, badgeRadius + 2f * scale, ImGui.GetColorU32(theme.AppBackground), 20);

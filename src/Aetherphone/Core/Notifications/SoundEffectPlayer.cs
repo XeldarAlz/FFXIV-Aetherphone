@@ -1,5 +1,6 @@
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
+using NLayer.NAudioSupport;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -8,7 +9,7 @@ internal sealed class SoundEffectPlayer : IDisposable
     private readonly object gate = new();
     private readonly List<IWavePlayer> oneShots = new();
     private IWavePlayer? loopOutput;
-    private MediaFoundationReader? loopReader;
+    private WaveStream? loopReader;
     private bool disposed;
 
     public void PlayOnce(string path, float volume)
@@ -50,11 +51,11 @@ internal sealed class SoundEffectPlayer : IDisposable
     public void PlayLoop(string path, float volume)
     {
         StopLoop();
-        MediaFoundationReader reader;
+        WaveStream reader;
         IWavePlayer output;
         try
         {
-            reader = new MediaFoundationReader(path);
+            reader = OpenReader(path);
             var loop = new LoopStream(reader);
             var volumeProvider = new VolumeSampleProvider(loop.ToSampleProvider())
             {
@@ -88,7 +89,7 @@ internal sealed class SoundEffectPlayer : IDisposable
     public void StopLoop()
     {
         IWavePlayer? output;
-        MediaFoundationReader? reader;
+        WaveStream? reader;
         lock (gate)
         {
             output = loopOutput;
@@ -116,11 +117,11 @@ internal sealed class SoundEffectPlayer : IDisposable
 
     private void RunOnce(string path, float volume)
     {
-        MediaFoundationReader? reader = null;
+        WaveStream? reader = null;
         IWavePlayer? output = null;
         try
         {
-            reader = new MediaFoundationReader(path);
+            reader = OpenReader(path);
             var volumeProvider = new VolumeSampleProvider(reader.ToSampleProvider()) { Volume = volume };
             output = AudioOutputFactory.Create();
             output.Init(volumeProvider, true);
@@ -158,6 +159,73 @@ internal sealed class SoundEffectPlayer : IDisposable
 
             reader?.Dispose();
         }
+    }
+
+    internal static WaveStream OpenReader(string path)
+    {
+        return Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".wav" => OpenWaveReader(path),
+            ".mp3" => OpenMp3Reader(path),
+            _ => new MediaFoundationReader(path),
+        };
+    }
+
+    private static readonly Guid PcmSubFormat = new("00000001-0000-0010-8000-00aa00389b71");
+    private static readonly Guid IeeeFloatSubFormat = new("00000003-0000-0010-8000-00aa00389b71");
+
+    private static WaveStream OpenMp3Reader(string path)
+    {
+        try
+        {
+            return new Mp3FileReaderBase(path, waveFormat => new Mp3FrameDecompressor(waveFormat));
+        }
+        catch (Exception)
+        {
+            return new MediaFoundationReader(path);
+        }
+    }
+
+    private static WaveStream OpenWaveReader(string path)
+    {
+        WaveFileReader reader;
+        try
+        {
+            reader = new WaveFileReader(path);
+        }
+        catch (Exception)
+        {
+            return new MediaFoundationReader(path);
+        }
+
+        if (IsSupportedPcmFormat(reader.WaveFormat))
+        {
+            return reader;
+        }
+
+        reader.Dispose();
+        return new MediaFoundationReader(path);
+    }
+
+    private static bool IsSupportedPcmFormat(WaveFormat format)
+    {
+        if (format.Encoding is WaveFormatEncoding.Pcm or WaveFormatEncoding.IeeeFloat)
+        {
+            return true;
+        }
+
+        if (format.Encoding is not WaveFormatEncoding.Extensible)
+        {
+            return false;
+        }
+
+        if (format is not WaveFormatExtraData extraData || extraData.ExtraData.Length < 22)
+        {
+            return false;
+        }
+
+        var subFormat = new Guid(extraData.ExtraData[6..22]);
+        return subFormat == PcmSubFormat || subFormat == IeeeFloatSubFormat;
     }
 
     public void Dispose()

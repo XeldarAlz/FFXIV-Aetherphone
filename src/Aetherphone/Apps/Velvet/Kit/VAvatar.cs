@@ -3,7 +3,6 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet.Kit;
 
@@ -13,7 +12,7 @@ internal static class VAvatar
         string world, string? avatarUrl, RemoteImageCache images, LodestoneService lodestone, int presence = -1,
         Vector4? ring = null)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         AvatarView.DrawRemote(drawList, center, radius, theme, name, world, avatarUrl, images, lodestone, 0.9f, 44, 1f);
         if (ring.HasValue)
         {

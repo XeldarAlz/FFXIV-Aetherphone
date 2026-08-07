@@ -103,6 +103,74 @@ internal static class CopyOnWrite
         return result;
     }
 
+    public static T[] PrependOlderPage<T>(T[] source, T[] newestFirstPage) where T : class, IIdentified
+    {
+        if (newestFirstPage.Length == 0)
+        {
+            return source;
+        }
+
+        var existing = new HashSet<string>(source.Length, StringComparer.Ordinal);
+        for (var index = 0; index < source.Length; index++)
+        {
+            existing.Add(source[index].Id);
+        }
+
+        var fresh = new List<T>(newestFirstPage.Length);
+        for (var index = newestFirstPage.Length - 1; index >= 0; index--)
+        {
+            var item = newestFirstPage[index];
+            if (!existing.Contains(item.Id))
+            {
+                fresh.Add(item);
+            }
+        }
+
+        if (fresh.Count == 0)
+        {
+            return source;
+        }
+
+        var result = new T[fresh.Count + source.Length];
+        fresh.CopyTo(result, 0);
+        Array.Copy(source, 0, result, fresh.Count, source.Length);
+        return result;
+    }
+
+    public static T[] AppendPageById<T>(T[] source, T[] incoming) where T : class, IIdentified
+    {
+        if (incoming.Length == 0)
+        {
+            return source;
+        }
+
+        var existing = new HashSet<string>(source.Length, StringComparer.Ordinal);
+        for (var index = 0; index < source.Length; index++)
+        {
+            existing.Add(source[index].Id);
+        }
+
+        var fresh = new List<T>(incoming.Length);
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            var item = incoming[index];
+            if (!existing.Contains(item.Id))
+            {
+                fresh.Add(item);
+            }
+        }
+
+        if (fresh.Count == 0)
+        {
+            return source;
+        }
+
+        var result = new T[source.Length + fresh.Count];
+        Array.Copy(source, result, source.Length);
+        fresh.CopyTo(result, source.Length);
+        return result;
+    }
+
     public static T[] Reversed<T>(T[] source)
     {
         var result = new T[source.Length];

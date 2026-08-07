@@ -1,7 +1,6 @@
 using System.Text;
 using Aetherphone.Core;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -22,21 +21,7 @@ internal static class Typography
         new(-0.7071f, -0.7071f),
     };
 
-    private readonly struct FitEntry
-    {
-        public readonly float Width;
-        public readonly float FontSize;
-        public readonly string Text;
-
-        public FitEntry(float width, float fontSize, string text)
-        {
-            Width = width;
-            FontSize = fontSize;
-            Text = text;
-        }
-    }
-
-    private static readonly Dictionary<string, FitEntry> FitCache = new();
+    private static readonly Dictionary<(string Text, float Width, float FontSize), string> FitCache = new();
 
     private readonly struct WrapEntry
     {
@@ -67,6 +52,7 @@ internal static class Typography
         cacheGeneration = current;
         FitCache.Clear();
         WrapCache.Clear();
+        FitScaleCache.Clear();
     }
 
     public static void Plain(string text)
@@ -79,6 +65,21 @@ internal static class Typography
     {
         Plugin.Fonts.NoticeText(text);
         ImGui.TextWrapped(text);
+    }
+
+    public static WrapScope WrapAt(float screenRight) => new(screenRight);
+
+    public readonly struct WrapScope : IDisposable
+    {
+        public WrapScope(float screenRight)
+        {
+            ImGui.PushTextWrapPos(screenRight - ImGui.GetWindowPos().X);
+        }
+
+        public void Dispose()
+        {
+            ImGui.PopTextWrapPos();
+        }
     }
 
     public static Vector2 Measure(string text, float scale = 1f) => Measure(text, scale, FontWeight.Regular);
@@ -100,6 +101,14 @@ internal static class Typography
         {
             Plugin.Fonts.NoticeText(text);
             return ImGui.CalcTextSize(text, false, wrapWidth).Y;
+        }
+    }
+
+    public static float LineHeight(in TextStyle style)
+    {
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            return ImGui.GetTextLineHeightWithSpacing();
         }
     }
 
@@ -162,6 +171,42 @@ internal static class Typography
     public static string FitText(string text, float maxWidth, in TextStyle style) =>
         FitText(text, maxWidth, style.Scale, style.Weight);
 
+    private static readonly Dictionary<(string Text, float MaxWidth, float MaxScale, float MinScale, FontWeight Weight,
+        float FontSize), float> FitScaleCache = new();
+
+    public static float FitScale(string text, float maxWidth, float maxScale, float minScale, FontWeight weight)
+    {
+        if (maxWidth <= 0f)
+        {
+            return minScale;
+        }
+
+        InvalidateCachesOnFontChange();
+        var fontSize = ImGui.GetFontSize();
+        var key = (text, maxWidth, maxScale, minScale, weight, fontSize);
+        if (FitScaleCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var result = minScale;
+        for (var scale = maxScale; scale > minScale; scale -= 0.05f)
+        {
+            using (Plugin.Fonts.Push(scale, weight))
+            {
+                Plugin.Fonts.NoticeText(text);
+                if (ImGui.CalcTextSize(text).X <= maxWidth)
+                {
+                    result = scale;
+                    break;
+                }
+            }
+        }
+
+        FitScaleCache[key] = result;
+        return result;
+    }
+
     public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float scale,
         FontWeight weight)
     {
@@ -170,6 +215,125 @@ internal static class Typography
             Plugin.Fonts.NoticeText(text);
             drawList.AddText(ImGui.GetFont(), ImGui.GetFontSize(), position, ImGui.GetColorU32(color), text);
         }
+    }
+
+    private const float SweepBandFraction = 0.34f;
+    private const float GlintBandFraction = 0.16f;
+    private const float GlintActiveFraction = 0.30f;
+    private const float RippleCrests = 2.5f;
+    private const float WaveSpan = 1.0f;
+    private const int GradientSlices = 12;
+
+    private readonly record struct SweepTier(float WidthScale, float AlphaScale);
+
+    private static readonly SweepTier[] SweepTiers =
+    {
+        new(1.00f, 0.28f),
+        new(0.58f, 0.58f),
+        new(0.26f, 1.00f),
+    };
+
+    public static void Draw(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, in TextStyle style,
+        in TextEffect effect)
+    {
+        if (effect.Kind == NameEffectKind.None)
+        {
+            Draw(drawList, position, text, color, style.Scale, style.Weight);
+            return;
+        }
+
+        using (Plugin.Fonts.Push(style.Scale, style.Weight))
+        {
+            Plugin.Fonts.NoticeText(text);
+            var font = ImGui.GetFont();
+            var fontSize = ImGui.GetFontSize();
+            var size = ImGui.CalcTextSize(text);
+            if (effect.Kind == NameEffectKind.Breath)
+            {
+                var lit = Vector4.Lerp(color, effect.Crest, Wave(effect.Phase));
+                drawList.AddText(font, fontSize, position, ImGui.GetColorU32(lit), text);
+                return;
+            }
+
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(color), text);
+            var top = position.Y - size.Y * 0.5f;
+            var bottom = position.Y + size.Y * 1.5f;
+            if (effect.Kind == NameEffectKind.Sweep || effect.Kind == NameEffectKind.Glint)
+            {
+                DrawCrest(drawList, font, fontSize, position, text, size.X, effect, top, bottom);
+                return;
+            }
+
+            DrawSlices(drawList, font, fontSize, position, text, size.X, color, effect, top, bottom);
+        }
+    }
+
+    private static void DrawCrest(ImDrawListPtr drawList, ImFontPtr font, float fontSize, Vector2 position,
+        string text, float width, in TextEffect effect, float top, float bottom)
+    {
+        var glint = effect.Kind == NameEffectKind.Glint;
+        var travel = effect.Phase;
+        if (glint)
+        {
+            if (effect.Phase >= GlintActiveFraction)
+            {
+                return;
+            }
+
+            travel = effect.Phase / GlintActiveFraction;
+        }
+
+        var band = MathF.Max(1f, width * (glint ? GlintBandFraction : SweepBandFraction));
+        var center = position.X - band * 0.5f + (width + band) * travel;
+        for (var tierIndex = 0; tierIndex < SweepTiers.Length; tierIndex++)
+        {
+            var tier = SweepTiers[tierIndex];
+            var halfWidth = band * tier.WidthScale * 0.5f;
+            var crest = new Vector4(effect.Crest.X, effect.Crest.Y, effect.Crest.Z,
+                effect.Crest.W * tier.AlphaScale);
+            drawList.PushClipRect(new Vector2(center - halfWidth, top), new Vector2(center + halfWidth, bottom), true);
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(crest), text);
+            drawList.PopClipRect();
+        }
+    }
+
+    private static void DrawSlices(ImDrawListPtr drawList, ImFontPtr font, float fontSize, Vector2 position,
+        string text, float width, Vector4 color, in TextEffect effect, float top, float bottom)
+    {
+        for (var sliceIndex = 0; sliceIndex < GradientSlices; sliceIndex++)
+        {
+            var left = position.X + width * sliceIndex / GradientSlices;
+            var right = position.X + width * (sliceIndex + 1) / GradientSlices;
+            var center = (sliceIndex + 0.5f) / GradientSlices;
+            Vector4 tint;
+            if (effect.Kind == NameEffectKind.Wave)
+            {
+                tint = effect.Ramp.Sample(center * WaveSpan - effect.Phase);
+            }
+            else
+            {
+                var factor = effect.Kind switch
+                {
+                    NameEffectKind.Flow => Triangle(center + effect.Phase),
+                    NameEffectKind.Ripple => Wave(center * RippleCrests + effect.Phase),
+                    _ => center,
+                };
+
+                tint = Vector4.Lerp(color, effect.Crest, factor);
+            }
+
+            drawList.PushClipRect(new Vector2(left, top), new Vector2(right, bottom), true);
+            drawList.AddText(font, fontSize, position, ImGui.GetColorU32(tint), text);
+            drawList.PopClipRect();
+        }
+    }
+
+    private static float Wave(float phase) => (MathF.Sin(phase * MathF.Tau) + 1f) * 0.5f;
+
+    private static float Triangle(float phase)
+    {
+        var wrapped = phase - MathF.Floor(phase);
+        return 1f - MathF.Abs(wrapped * 2f - 1f);
     }
 
     public static void DrawCentered(Vector2 center, string text, Vector4 color, float scale = 1f) =>
@@ -201,7 +365,7 @@ internal static class Typography
     private static float AutoWrapWidth(float centerX)
     {
         var windowLeft = ImGui.GetWindowPos().X;
-        var margin = 8f * ImGuiHelpers.GlobalScale;
+        var margin = 8f * UiScale.Current;
         var left = windowLeft + ImGui.GetWindowContentRegionMin().X + margin;
         var right = windowLeft + ImGui.GetWindowContentRegionMax().X - margin;
         var half = MathF.Min(centerX - left, right - centerX);
@@ -395,7 +559,12 @@ internal static class Typography
 
     private static string[] Wrap(string text, float maxWidth)
     {
-        if (maxWidth <= 0f || ImGui.CalcTextSize(text).X <= maxWidth)
+        if (maxWidth <= 0f)
+        {
+            return new[] { text };
+        }
+
+        if (text.IndexOf('\n') < 0 && ImGui.CalcTextSize(text).X <= maxWidth)
         {
             return new[] { text };
         }
@@ -449,6 +618,12 @@ internal static class Typography
                 var start = index;
                 while (index < length && segment[index] != ' ' && !IsCjk(segment[index]))
                 {
+                    if (segment[index] == '-')
+                    {
+                        index++;
+                        break;
+                    }
+
                     index++;
                 }
 
@@ -457,7 +632,7 @@ internal static class Typography
 
             if (builder.Length == 0)
             {
-                builder.Append(token);
+                AppendToken(token, maxWidth, lines, builder);
                 pendingSpace = false;
                 continue;
             }
@@ -475,7 +650,7 @@ internal static class Typography
                 builder.Length -= token.Length + separatorLength;
                 lines.Add(builder.ToString());
                 builder.Clear();
-                builder.Append(token);
+                AppendToken(token, maxWidth, lines, builder);
             }
         }
 
@@ -483,6 +658,57 @@ internal static class Typography
         {
             lines.Add(builder.ToString());
         }
+    }
+
+    private static void AppendToken(string token, float maxWidth, List<string> lines, StringBuilder builder)
+    {
+        if (ImGui.CalcTextSize(token).X <= maxWidth)
+        {
+            builder.Append(token);
+            return;
+        }
+
+        var start = 0;
+        while (start < token.Length)
+        {
+            var count = CharactersThatFit(token, start, maxWidth);
+            if (start + count >= token.Length)
+            {
+                builder.Append(token, start, token.Length - start);
+                return;
+            }
+
+            lines.Add(token.Substring(start, count));
+            start += count;
+        }
+    }
+
+    private static int CharactersThatFit(string token, int start, float maxWidth)
+    {
+        var count = NextBoundary(token, start, 0);
+        while (start + count < token.Length)
+        {
+            var next = NextBoundary(token, start, count);
+            if (ImGui.CalcTextSize(token.Substring(start, next)).X > maxWidth)
+            {
+                break;
+            }
+
+            count = next;
+        }
+
+        return count;
+    }
+
+    private static int NextBoundary(string token, int start, int count)
+    {
+        var advance = count + 1;
+        if (start + advance < token.Length && char.IsHighSurrogate(token[start + count]))
+        {
+            advance++;
+        }
+
+        return advance;
     }
 
     private static string Fit(string text, float maxWidth)
@@ -494,13 +720,14 @@ internal static class Typography
 
         InvalidateCachesOnFontChange();
         var fontSize = ImGui.GetFontSize();
-        if (FitCache.TryGetValue(text, out var cached) && cached.Width == maxWidth && cached.FontSize == fontSize)
+        var key = (text, maxWidth, fontSize);
+        if (FitCache.TryGetValue(key, out var cached))
         {
-            return cached.Text;
+            return cached;
         }
 
         var result = Shorten(text, maxWidth);
-        FitCache[text] = new FitEntry(maxWidth, fontSize, result);
+        FitCache[key] = result;
         return result;
     }
 

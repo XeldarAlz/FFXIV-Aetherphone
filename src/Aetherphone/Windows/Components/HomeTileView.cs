@@ -1,8 +1,9 @@
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Shortcuts;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
+using Dalamud.Interface.Textures.TextureWraps;
 
 namespace Aetherphone.Windows.Components;
 
@@ -11,9 +12,9 @@ internal static class HomeTileView
     private static readonly Vector4 GlyphInk = new(1f, 1f, 1f, 1f);
 
     public static void DrawApp(Vector2 center, float size, IPhoneApp app, PhoneTheme theme, float drawScale,
-        float labelAlpha, float labelWidth, float zoom = 1f)
+        float labelAlpha, bool showLabels, float labelWidth, float zoom = 1f)
     {
-        var scale = ImGuiHelpers.GlobalScale * zoom;
+        var scale = UiScale.Current * zoom;
         var dl = ImGui.GetWindowDrawList();
         var drawHalf = size * 0.5f * drawScale;
         var drawMin = new Vector2(center.X - drawHalf, center.Y - drawHalf);
@@ -30,17 +31,26 @@ internal static class HomeTileView
             Typography.DrawCentered(center, app.Glyph, GlyphInk, glyphScale);
         }
 
-        DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, labelWidth, zoom);
+        DrawLabel(center, size, app.DisplayName, theme, scale, labelAlpha, showLabels, labelWidth, zoom);
         if (app.BadgeCount > 0)
         {
             DrawBadge(center, size, app.BadgeCount, app.BadgeAsDot, theme, scale);
         }
     }
 
-    public static void DrawFolder(Vector2 center, float size, HomeTile folder, PhoneTheme theme, float drawScale,
-        float labelAlpha, string fallbackName, float labelWidth, float zoom = 1f)
+    public static void DrawShortcut(Vector2 center, float size, ShortcutEntry shortcut, IDalamudTextureWrap? icon,
+        PhoneTheme theme, float drawScale, float labelAlpha, bool showLabels, float labelWidth, float zoom = 1f)
     {
-        var scale = ImGuiHelpers.GlobalScale * zoom;
+        var scale = UiScale.Current * zoom;
+        ShortcutArt.DrawSurface(ImGui.GetWindowDrawList(), center, size * drawScale, shortcut, icon, scale);
+        DrawLabel(center, size, shortcut.Name, theme, scale, labelAlpha, showLabels, labelWidth, zoom);
+    }
+
+    public static void DrawFolder(Vector2 center, float size, HomeTile folder, PhoneTheme theme, float drawScale,
+        float labelAlpha, bool showLabels, string fallbackName, float labelWidth,
+        Func<ShortcutEntry, IDalamudTextureWrap?> shortcutIcon, float zoom = 1f)
+    {
+        var scale = UiScale.Current * zoom;
         var dl = ImGui.GetWindowDrawList();
         var drawHalf = size * 0.5f * drawScale;
         var min = new Vector2(center.X - drawHalf, center.Y - drawHalf);
@@ -53,7 +63,7 @@ internal static class HomeTileView
         var inner = drawHalf * 2f - pad * 2f;
         var cell = inner / 3f;
         var mini = cell * 0.78f;
-        var count = Math.Min(9, folder.Apps.Count);
+        var count = Math.Min(9, folder.Members.Count);
         for (var index = 0; index < count; index++)
         {
             var col = index % 3;
@@ -61,20 +71,27 @@ internal static class HomeTileView
             var cellCenter = new Vector2(min.X + pad + (col + 0.5f) * cell, min.Y + pad + (row + 0.5f) * cell);
             var miniMin = new Vector2(cellCenter.X - mini * 0.5f, cellCenter.Y - mini * 0.5f);
             var miniMax = new Vector2(cellCenter.X + mini * 0.5f, cellCenter.Y + mini * 0.5f);
-            var appItem = folder.Apps[index];
+            var member = folder.Members[index];
+            if (member.IsShortcut)
+            {
+                ShortcutArt.DrawSurface(dl, cellCenter, mini, member.Shortcut!, shortcutIcon(member.Shortcut!), scale);
+                continue;
+            }
+
+            var appItem = member.App!;
             var surface = IconTile.Surface(appItem.Accent);
             Squircle.Fill(dl, miniMin, miniMax, mini * 0.3f, ImGui.GetColorU32(surface));
             AppIconArt.TryDraw(appItem.Id, cellCenter, mini, GlyphInk, Palette.Darken(surface, 0.25f));
         }
 
         var name = string.IsNullOrEmpty(folder.FolderName) ? fallbackName : folder.FolderName;
-        DrawLabel(center, size, name, theme, scale, labelAlpha, labelWidth, zoom);
+        DrawLabel(center, size, name, theme, scale, labelAlpha, showLabels, labelWidth, zoom);
         var badgeTotal = 0;
         var badgeHasDot = false;
-        for (var appIndex = 0; appIndex < folder.Apps.Count; appIndex++)
+        for (var memberIndex = 0; memberIndex < folder.Members.Count; memberIndex++)
         {
-            var folderApp = folder.Apps[appIndex];
-            if (folderApp.BadgeCount <= 0)
+            var folderApp = folder.Members[memberIndex].App;
+            if (folderApp is null || folderApp.BadgeCount <= 0)
             {
                 continue;
             }
@@ -120,8 +137,7 @@ internal static class HomeTileView
     {
         var radius = 9f * scale;
         var dl = ImGui.GetWindowDrawList();
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered = UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, hovered ? 1f : 0.88f)),
             24);
         var arm = radius * 0.4f;
@@ -136,9 +152,9 @@ internal static class HomeTileView
     }
 
     private static void DrawLabel(Vector2 center, float size, string label, PhoneTheme theme, float scale,
-        float labelAlpha, float labelWidth, float zoom)
+        float labelAlpha, bool showLabels, float labelWidth, float zoom)
     {
-        if (labelAlpha <= 0.01f)
+        if (!showLabels || labelAlpha <= 0.01f)
         {
             return;
         }

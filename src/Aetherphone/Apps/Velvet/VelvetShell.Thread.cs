@@ -7,7 +7,6 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -30,6 +29,7 @@ internal sealed partial class VelvetShell
         }
 
         protected override PhoneTheme Theme => app.theme;
+        protected override IPhoneApp Owner => app;
         protected override INavigator Navigation => app.navigation;
         protected override Action BackAction => app.back;
         protected override string MyUserId => app.store.Me?.UserId ?? string.Empty;
@@ -62,6 +62,8 @@ internal sealed partial class VelvetShell
         protected override void PushImagePickerScreen(string threadId) => app.router.Push(VelvetView.ChatImage(threadId));
 
         protected override void PopScreen() => app.router.Pop();
+
+        protected override void OpenEncryptionInfo(string threadId) => app.router.Push(VelvetView.Encryption);
 
         protected override void BeginReply(string messageId)
         {
@@ -109,18 +111,24 @@ internal sealed partial class VelvetShell
         {
             var context = new PhoneContext(area, Theme, Navigation);
             AppHeader.Draw(context, string.Empty, BackAction);
-            var scale = ImGuiHelpers.GlobalScale;
+            var scale = UiScale.Current;
             var drawList = ImGui.GetWindowDrawList();
             var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-            ChatHeaderControls.DrawLock(ui, area, rowCenterY, store.EncryptingCurrent, store.VaultState, () => { });
+            ChatHeaderControls.DrawLock(ui, area, rowCenterY, store.EncryptingCurrent, store.VaultState,
+                () => OpenEncryptionInfo(threadId));
             ChatHeaderControls.DrawSearchToggle(ui, area, rowCenterY, searchController.Open, searchController.Toggle);
             var name = app.ThreadTitle(threadId);
             var avatarHandle = app.ThreadAvatar(threadId, out var monogram, out var presence);
             var avatarRadius = 18f * scale;
-            var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
+            var leftLimit = area.Min.X + 48f * scale;
+            var rightLimit = area.Max.X - ChatHeaderControls.ReservedRightWidth * scale;
             var gap = 9f * scale;
+            var nameCap = MathF.Max(40f * scale,
+                MathF.Min(area.Width * 0.42f, rightLimit - leftLimit - avatarRadius * 2f - gap));
+            var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
+            nameSize.X = MathF.Min(nameSize.X, nameCap);
             var groupWidth = avatarRadius * 2f + gap + nameSize.X;
-            var startX = MathF.Max(area.Center.X - groupWidth * 0.5f, area.Min.X + 48f * scale);
+            var startX = MathF.Min(MathF.Max(area.Center.X - groupWidth * 0.5f, leftLimit), rightLimit - groupWidth);
             var avatarCenter = new Vector2(startX + avatarRadius, rowCenterY);
             AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent, monogram, 0.95f, avatarHandle, 32);
             app.PresenceDot(drawList, new Vector2(avatarCenter.X + avatarRadius - 3f * scale,
@@ -132,17 +140,27 @@ internal sealed partial class VelvetShell
             {
                 var timeText = Aetherphone.Core.Social.SocialTimeZone.Describe(minutes);
                 var subSize = Typography.Measure(timeText, 0.72f, FontWeight.Regular);
+                subSize.X = MathF.Min(subSize.X, nameCap);
                 var gapY = 1f * scale;
                 var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
-                Typography.Draw(new Vector2(nameLeft, stackTop), name, Theme.TextStrong, 1f, FontWeight.SemiBold);
-                Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), timeText, VelvetTheme.MutedInk,
-                    0.72f);
+                var titleHovering = UiInteract.Hover(new Vector2(nameLeft, stackTop),
+                    new Vector2(nameLeft + nameCap, stackTop + nameSize.Y));
+                Marquee.DrawLeft("velvet.thread.title." + threadId, name, nameLeft, stackTop, nameCap,
+                    new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
+                var subTop = stackTop + nameSize.Y + gapY;
+                var subHovering = UiInteract.Hover(new Vector2(nameLeft, subTop),
+                    new Vector2(nameLeft + nameCap, subTop + subSize.Y));
+                Marquee.DrawLeft("velvet.thread.subtitle." + threadId, timeText, nameLeft, subTop, nameCap,
+                    new TextStyle(0.72f, FontWeight.Regular), VelvetTheme.MutedInk, subHovering);
                 textWidth = MathF.Max(nameSize.X, subSize.X);
             }
             else
             {
-                Typography.Draw(new Vector2(nameLeft, rowCenterY - nameSize.Y * 0.5f), name, Theme.TextStrong, 1f,
-                    FontWeight.SemiBold);
+                var soloTop = rowCenterY - nameSize.Y * 0.5f;
+                var titleHovering = UiInteract.Hover(new Vector2(nameLeft, soloTop),
+                    new Vector2(nameLeft + nameCap, soloTop + nameSize.Y));
+                Marquee.DrawLeft("velvet.thread.title." + threadId, name, nameLeft, soloTop,
+                    nameCap, new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
             }
 
             var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
@@ -170,10 +188,12 @@ internal sealed partial class VelvetShell
 
                 var replySender = string.Empty;
                 var replyBody = string.Empty;
+                var replyKind = message.ReplyKind;
                 if (message.ReplyToId is not null)
                 {
                     replySender = message.ReplySenderId == myId ? Loc.T(L.Message.You) : otherName;
-                    replyBody = ChatText.QuotePreview(message.ReplyBody, message.ReplyKind);
+                    replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
+                    replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
                 }
 
                 TranscriptReaction[]? reactions = null;
@@ -190,7 +210,7 @@ internal sealed partial class VelvetShell
 
                 mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                     message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
-                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, message.ReplyKind,
+                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
                     message.DurationSecs, reactions);
             }
 
@@ -278,7 +298,7 @@ internal sealed partial class VelvetShell
                 var thread = threads[index];
                 monogram = Monogram(thread.OtherDisplayName, thread.OtherHandle);
                 presence = thread.Presence;
-                return lodestone.Remote(thread.OtherUserId, ToUri(thread.OtherAvatarUrl));
+                return images.Avatar(thread.OtherAvatarUrl);
             }
         }
 
@@ -286,7 +306,7 @@ internal sealed partial class VelvetShell
         {
             monogram = Monogram(connection.DisplayName, connection.Handle);
             presence = connection.Presence;
-            return lodestone.Remote(connection.UserId, ToUri(connection.AvatarUrl));
+            return images.Avatar(connection.AvatarUrl);
         }
 
         monogram = "?";
@@ -332,6 +352,4 @@ internal sealed partial class VelvetShell
         return source.Length > 0 ? source[..1].ToUpperInvariant() : "?";
     }
 
-    private static Uri? ToUri(string? url) =>
-        string.IsNullOrEmpty(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri) ? null : uri;
 }

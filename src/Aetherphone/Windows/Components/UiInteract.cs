@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -15,19 +16,56 @@ internal static class UiInteract
     private static Vector2 pendingTapMax;
     private static Vector2 pendingTapWindowPos;
     private static bool hasPendingTap;
+    private static bool windowHovered = true;
+    private static int windowHoveredFrame = -1;
+    private static bool windowFocused = true;
+    private static int windowFocusedFrame = -1;
+    private static int gestureSurfaceFrame = -1;
 
-    public static void BlockThisFrame() => blockedFrame = ImGui.GetFrameCount();
+    public static void BlockThisFrame()
+    {
+        if (InputShield.Active)
+        {
+            return;
+        }
+
+        blockedFrame = ImGui.GetFrameCount();
+    }
 
     public static bool InputBlocked => blockedFrame == ImGui.GetFrameCount();
 
-    /// <summary>Discards the in-flight tap without activating it (called when a drag starts).</summary>
+    public static void SetWindowHovered(bool hovered)
+    {
+        windowHovered = hovered;
+        windowHoveredFrame = ImGui.GetFrameCount();
+    }
+
+    private static bool WindowHovered => windowHoveredFrame != ImGui.GetFrameCount() || windowHovered;
+
+    public static void SetWindowFocused(bool focused)
+    {
+        windowFocused = focused;
+        windowFocusedFrame = ImGui.GetFrameCount();
+    }
+
+    public static bool WindowFocused => windowFocusedFrame != ImGui.GetFrameCount() || windowFocused;
+
     public static void CancelPendingTap() => hasPendingTap = false;
+
+    public static void ReportGestureSurface() => gestureSurfaceFrame = ImGui.GetFrameCount();
+
+    public static bool PointerOverGestureSurface => ImGui.GetFrameCount() - gestureSurfaceFrame <= 1;
 
     public static bool HoverOverlay(Rect rect)
     {
+        if (InputShield.Active)
+        {
+            return false;
+        }
+
         overlayRect = rect;
         overlayFrame = ImGui.GetFrameCount();
-        return !InputBlocked && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        return !InputBlocked && WindowHovered && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
     }
 
     private static bool MouseOverOverlay =>
@@ -35,22 +73,25 @@ internal static class UiInteract
         ImGui.IsMouseHoveringRect(overlayRect.Min, overlayRect.Max, false);
 
     public static bool Hover(Vector2 min, Vector2 max) =>
-        !InputBlocked && !MouseOverOverlay && ImGui.IsMouseHoveringRect(min, max);
+        !InputBlocked && !MouseOverOverlay && WindowHovered && ImGui.IsMouseHoveringRect(min, max);
 
-    /// <summary>
-    /// Release-triggered activation for a rect the caller has already hover-tested, so a drag can
-    /// cancel the pending tap before it fires. Pass the same rect <paramref name="hovered"/> was
-    /// computed from.
-    /// </summary>
-    /// <remarks>
-    /// The press is claimed by the rect itself, held in the window's content space so that scrolling
-    /// or a fling between press and release cannot hand the tap to whichever rect drifted under the
-    /// pointer. When rects overlap, the last one to claim on the press frame owns it, matching the
-    /// draw order that put it on top. Content space follows the window, so the claim is dropped when
-    /// the window itself moves: dragging an unlocked phone by one of its controls is a move, not a tap.
-    /// </remarks>
+    public static bool HoverWindowOnly(Vector2 min, Vector2 max) => WindowHovered && ImGui.IsMouseHoveringRect(min, max);
+
+    public static bool HoverWindowOnly(Vector2 min, Vector2 max, bool clip) =>
+        WindowHovered && ImGui.IsMouseHoveringRect(min, max, clip);
+
+    public static bool ClickedOutside(Vector2 min, Vector2 max) =>
+        WindowHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max);
+
+    public static bool ClickedOutside(Vector2 min, Vector2 max, bool clip) =>
+        WindowHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max, clip);
+
+    public static bool Hover(Vector2 min, Vector2 max, bool clip) =>
+        !InputBlocked && !MouseOverOverlay && WindowHovered && ImGui.IsMouseHoveringRect(min, max, clip);
+
     public static bool Click(Vector2 min, Vector2 max, bool hovered)
     {
+        hovered = hovered && WindowHovered;
         if (!ImGui.IsMouseDown(ImGuiMouseButton.Left) && !ImGui.IsMouseReleased(ImGuiMouseButton.Left))
         {
             hasPendingTap = false;
@@ -88,14 +129,8 @@ internal static class UiInteract
     private static bool Claimed(Vector2 corner, Vector2 claim) =>
         MathF.Abs(corner.X - claim.X) <= RectMatchEpsilon && MathF.Abs(corner.Y - claim.Y) <= RectMatchEpsilon;
 
-    /// <summary>
-    /// <see cref="Click(Vector2, Vector2, bool)"/> gated by the standard <see cref="Hover"/> test.
-    /// </summary>
     public static bool Click(Vector2 min, Vector2 max) => Click(min, max, Hover(min, max));
 
-    /// <summary>
-    /// <see cref="Click(Vector2, Vector2, bool)"/> plus the hand cursor while hovered.
-    /// </summary>
     public static bool HoverClick(Vector2 min, Vector2 max)
     {
         var hovering = Hover(min, max);

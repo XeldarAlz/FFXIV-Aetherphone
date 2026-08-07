@@ -43,6 +43,39 @@ internal static class WidgetChrome
         return width + EyebrowTracking * scale * Math.Max(0, upper.Length - 1);
     }
 
+    public static float EyebrowHeight() => Typography.Measure("A", EyebrowFontScale, FontWeight.SemiBold).Y;
+
+    public static void EyebrowMarquee(ImDrawListPtr drawList, string id, string text, Vector2 position,
+        float maxWidth, Vector4 color, float scale, float opacity)
+    {
+        var upper = Loc.Culture.TextInfo.ToUpper(text);
+        var tinted = color with { W = color.W * opacity };
+        var tracking = EyebrowTracking * scale;
+        var fullWidth = EyebrowWidth(text, scale);
+        var height = EyebrowHeight();
+        var hovering = UiInteract.Hover(position, position + new Vector2(MathF.Min(fullWidth, maxWidth), height));
+        if (fullWidth <= maxWidth)
+        {
+            Tracked(drawList, position, upper, tinted, EyebrowFontScale, FontWeight.SemiBold, tracking);
+            return;
+        }
+
+        if (!hovering)
+        {
+            var trackingBudget = MathF.Max(1f, maxWidth - tracking * MathF.Max(0, upper.Length - 1));
+            var clipped = Typography.FitText(upper, trackingBudget, EyebrowFontScale, FontWeight.SemiBold);
+            Tracked(drawList, position, clipped, tinted, EyebrowFontScale, FontWeight.SemiBold, tracking);
+            return;
+        }
+
+        var offset = Marquee.Offset(id, fullWidth - maxWidth);
+        var slack = 4f * scale;
+        drawList.PushClipRect(new Vector2(position.X, position.Y - slack), new Vector2(position.X + maxWidth, position.Y + height + slack),
+            true);
+        Tracked(drawList, position with { X = position.X - offset }, upper, tinted, EyebrowFontScale, FontWeight.SemiBold, tracking);
+        drawList.PopClipRect();
+    }
+
     public static void Tracked(ImDrawListPtr drawList, Vector2 position, string text, Vector4 color, float fontScale,
         FontWeight weight, float tracking)
     {

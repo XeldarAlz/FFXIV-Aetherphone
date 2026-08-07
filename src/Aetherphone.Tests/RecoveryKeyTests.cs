@@ -28,7 +28,6 @@ public sealed class RecoveryKeyTests
     {
         var identity = CryptoBox.TryGenerateIdentity();
         Assert.NotNull(identity);
-        using var owned = identity;
         var pkcs8 = CryptoBox.TryExportPrivateKey(identity);
         Assert.NotNull(pkcs8);
         var code = RecoveryKey.GenerateCode();
@@ -40,7 +39,7 @@ public sealed class RecoveryKeyTests
         Assert.NotNull(recovered);
         Assert.Equal(pkcs8, recovered);
 
-        using var imported = CryptoBox.ImportPrivateKey(recovered);
+        var imported = CryptoBox.ImportPrivateKey(recovered);
         Assert.NotNull(imported);
         Assert.Equal(CryptoBox.ExportPublicKey(identity), CryptoBox.ExportPublicKey(imported));
     }

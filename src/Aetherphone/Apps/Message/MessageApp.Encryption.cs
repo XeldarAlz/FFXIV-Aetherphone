@@ -10,7 +10,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Message;
 
@@ -22,7 +21,7 @@ internal sealed partial class MessageApp
 
     private void DrawEncryptionInfo(Rect area, string conversationId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Encryption.InfoTitle), back);
         var conversation = store.Conversation;
@@ -44,6 +43,7 @@ internal sealed partial class MessageApp
             var encrypted = store.EncryptingCurrent;
             DrawEncryptionHero(encrypted, scale);
             DrawEncryptionSummary(encrypted, scale);
+            threadView.DrawEncryptionEmbedded();
             if (conversation.IsGroup)
             {
                 DrawEncryptionMembers(scale);
@@ -105,7 +105,9 @@ internal sealed partial class MessageApp
 
         if (store.VaultState == KeyVaultState.Locked)
         {
-            return Loc.T(L.Encryption.LockedSummary);
+            return store.Vault.RecoveryConfigured
+                ? Loc.T(L.Encryption.LockedRecoverBody)
+                : Loc.T(L.Encryption.LockedBody);
         }
 
         var waiting = store.CurrentKeyStatus.MembersWithoutKeys;
@@ -292,8 +294,11 @@ internal sealed partial class MessageApp
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, member.AvatarUrl, images,
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 10f * scale), label, theme.TextStrong, 1f,
-            FontWeight.SemiBold);
+        var textMaxWidth = MathF.Max(1f, origin.X + width - pad - 28f * scale - textLeft);
+        var rowHovering = UiInteract.Hover(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
+        UserName.Draw(drawList, "messageapp.encryption.member." + member.UserId, label, member.Badges, member.BadgeIds, textLeft,
+            origin.Y + 10f * scale, textMaxWidth, new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong,
+            rowHovering, theme);
         Typography.Draw(new Vector2(textLeft, origin.Y + 31f * scale),
             Loc.T(hasKey ? L.Encryption.MemberReady : L.Encryption.MemberNoKey), ui.MutedInk, TextStyles.Footnote);
         AppSkin.Icon(new Vector2(origin.X + width - pad - 8f * scale, origin.Y + rowHeight * 0.5f),

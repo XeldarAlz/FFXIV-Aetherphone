@@ -3,7 +3,6 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -21,6 +20,7 @@ internal sealed class DropdownMenu
 
     private const float RevealSeconds = 0.14f;
     private const float RowHeight = 36f;
+    private const float HeaderHeight = 26f;
     private const float MinWidth = 168f;
     private const float ActionSlotWidth = 24f;
     private const float ActionIconRadius = 11f;
@@ -65,6 +65,8 @@ internal sealed class DropdownMenu
 
     public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items) => Draw(screen, theme, items, out _);
 
+    public string Header { get; set; } = string.Empty;
+
     public int Draw(Rect screen, PhoneTheme theme, ReadOnlySpan<Item> items, out RowAction action)
     {
         action = RowAction.Select;
@@ -73,7 +75,7 @@ internal sealed class DropdownMenu
             return -1;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetForegroundDrawList();
         var reveal = Easing.EaseOutQuint(Math.Clamp((float)((ImGui.GetTime() - openedAt) / RevealSeconds), 0f, 1f));
         var alpha = Easing.SmoothStep(Math.Clamp(reveal / 0.7f, 0f, 1f));
@@ -111,7 +113,14 @@ internal sealed class DropdownMenu
             width += actionSlot;
         }
 
-        var height = items.Length * rowHeight + padY * 2f;
+        var headerHeight = 0f;
+        if (Header.Length > 0)
+        {
+            headerHeight = HeaderHeight * scale;
+            width = MathF.Max(width, Typography.Measure(Header, TextStyles.Footnote).X + padX * 2f);
+        }
+
+        var height = items.Length * rowHeight + padY * 2f + headerHeight;
         var left = anchor.Min.X;
         if (left + width > screen.Max.X - 8f * scale)
         {
@@ -132,16 +141,25 @@ internal sealed class DropdownMenu
         PopoverSurface.Draw(drawList, min, max, 14f * scale, theme, scale, alpha);
         var clicked = -1;
         var clickedAction = RowAction.Select;
+        var headerOffset = headerHeight * revealScale;
+        if (Header.Length > 0)
+        {
+            var headerCenter = new Vector2((min.X + max.X) * 0.5f, min.Y + padY * revealScale + headerOffset * 0.5f);
+            Typography.DrawCentered(drawList, headerCenter, Typography.FitText(Header, max.X - min.X - padX, TextStyles.Footnote),
+                Palette.WithAlpha(theme.TextMuted, alpha), TextStyles.Footnote);
+            var ruleY = min.Y + padY * revealScale + headerOffset - 1f * scale;
+            drawList.AddLine(new Vector2(min.X + padY, ruleY), new Vector2(max.X - padY, ruleY),
+                ImGui.GetColorU32(Palette.WithAlpha(theme.Separator, alpha)), 1f);
+        }
+
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
-            var rowMin = new Vector2(min.X + padY, min.Y + padY * revealScale + index * rowHeight * revealScale);
+            var rowMin = new Vector2(min.X + padY,
+                min.Y + padY * revealScale + headerOffset + index * rowHeight * revealScale);
             var rowMax = new Vector2(max.X - padY, rowMin.Y + rowHeight * revealScale);
             var centerY = (rowMin.Y + rowMax.Y) * 0.5f;
 
-            // Reserved slots are laid out right-to-left so every row's icons line up regardless of that
-            // row's own capabilities: checkmark, then edit. Delete has no icon of its own: it is a right-click
-            // anywhere on the row (confirmed by the caller before anything is actually removed).
             var cursorRight = rowMax.X - 10f * scale;
             if (anySelected)
             {
@@ -156,8 +174,8 @@ internal sealed class DropdownMenu
                 cursorRight -= actionSlot;
             }
 
-            var rowHovered = ImGui.IsMouseHoveringRect(rowMin, rowMax);
-            var editHovered = item.CanEdit && editRect is { } er && ImGui.IsMouseHoveringRect(er.Min, er.Max);
+            var rowHovered = UiInteract.HoverWindowOnly(rowMin, rowMax);
+            var editHovered = item.CanEdit && editRect is { } er && UiInteract.HoverWindowOnly(er.Min, er.Max);
             if (rowHovered)
             {
                 Squircle.Fill(drawList, rowMin, rowMax, 9f * scale,
@@ -210,7 +228,7 @@ internal sealed class DropdownMenu
             return clicked;
         }
 
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max, false) &&
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !UiInteract.HoverWindowOnly(min, max, false) &&
             ImGui.GetFrameCount() != openedFrame)
         {
             Close();

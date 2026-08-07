@@ -3,6 +3,7 @@ namespace Aetherphone.Core.Telephony;
 internal sealed class CallLogStore
 {
     private const int MaxEntries = 50;
+    private const long ServerMissedDedupSeconds = 180;
 
     private readonly Configuration configuration;
     private readonly object gate = new();
@@ -44,6 +45,23 @@ internal sealed class CallLogStore
 
         configuration.CallLogSeenUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         configuration.Save();
+    }
+
+    public void NoteServerMissed(string userId, string displayName)
+    {
+        if (string.IsNullOrEmpty(userId))
+        {
+            return;
+        }
+
+        var current = entries;
+        if (current.Length > 0 && current[0].UserId == userId && current[0].Direction == CallDirection.Missed
+            && DateTimeOffset.UtcNow.ToUnixTimeSeconds() - current[0].TimestampUnix < ServerMissedDedupSeconds)
+        {
+            return;
+        }
+
+        Add(new CallContact(userId, string.Empty, string.Empty, displayName), CallDirection.Missed);
     }
 
     public void Add(CallContact contact, CallDirection direction)

@@ -104,23 +104,37 @@ internal sealed class CalendarWidget : IHomeWidget
         var theme = context.Theme;
         var pad = 13f * scale;
         var now = DateTime.Now;
+        var dayNumberTop = bounds.Min.Y + pad + 13f * scale;
         WidgetChrome.Eyebrow(drawList, new Vector2(bounds.Min.X + pad, bounds.Min.Y + pad), now.ToString("dddd"),
             theme.Accent, scale, opacity);
-        Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, bounds.Min.Y + pad + 13f * scale),
-            now.Day.ToString(), Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.LargeTitle);
+        var dayText = now.Day.ToString();
+        var dayNumberSize = Typography.Measure(dayText, TextStyles.LargeTitle);
+        Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, dayNumberTop),
+            dayText, Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.LargeTitle);
+        var dayNumberBottom = dayNumberTop + dayNumberSize.Y * 0.72f;
+
+        var whenSize = Typography.Measure("0", TextStyles.Caption1);
+        var fixedEventTop = bounds.Max.Y - pad - 32f * scale;
+        var eventTop = MathF.Max(fixedEventTop, dayNumberBottom + 6f * scale);
+        var whenTop = MathF.Max(bounds.Max.Y - pad - 15f * scale, eventTop + 17f * scale);
+        if (whenTop + whenSize.Y > bounds.Max.Y + 4f * scale)
+        {
+            return;
+        }
+
         if (upcoming.Count == 0)
         {
-            Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, bounds.Max.Y - pad - 15f * scale),
+            Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, whenTop),
                 Typography.FitText(Loc.T(L.Home.NoEvents), bounds.Width - pad * 2f, TextStyles.Caption1),
                 Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Caption1);
             return;
         }
 
         var first = upcoming[0];
-        Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, bounds.Max.Y - pad - 32f * scale),
-            Typography.FitText(first.Name, bounds.Width - pad * 2f, TextStyles.FootnoteEmphasized),
-            Palette.WithAlpha(theme.TextStrong, opacity), TextStyles.FootnoteEmphasized);
-        Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, bounds.Max.Y - pad - 15f * scale),
+        var firstNameMaxWidth = bounds.Width - pad * 2f;
+        Marquee.DrawLeftAuto("calendarwidget.small.name", first.Name, bounds.Min.X + pad, eventTop, firstNameMaxWidth,
+            TextStyles.FootnoteEmphasized, Palette.WithAlpha(theme.TextStrong, opacity));
+        Typography.Draw(drawList, new Vector2(bounds.Min.X + pad, whenTop),
             WhenLabel(first.Begin), Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Caption1);
     }
 
@@ -154,21 +168,27 @@ internal sealed class CalendarWidget : IHomeWidget
         }
 
         var rows = Math.Min(MaxRows, upcoming.Count);
-        var rowHeight = (bounds.Height - pad * 2f) / MaxRows;
+        var listPad = 6f * scale;
+        var rowHeight = (bounds.Height - listPad * 2f) / MaxRows;
         for (var index = 0; index < rows; index++)
         {
             var entry = upcoming[index];
-            var rowTop = bounds.Min.Y + pad + index * rowHeight;
+            var rowTop = bounds.Min.Y + listPad + index * rowHeight;
             var barRect = new Rect(new Vector2(listLeft, rowTop + 3f * scale),
                 new Vector2(listLeft + 3f * scale, rowTop + rowHeight - 5f * scale));
             drawList.AddRectFilled(barRect.Min, barRect.Max,
                 ImGui.GetColorU32(Palette.WithAlpha(entry.Color, opacity)), 1.5f * scale);
             var textLeft = listLeft + 10f * scale;
             var maxWidth = bounds.Max.X - pad - textLeft;
-            Typography.Draw(drawList, new Vector2(textLeft, rowTop + 2f * scale),
-                Typography.FitText(entry.Name, maxWidth, TextStyles.FootnoteEmphasized),
-                Palette.WithAlpha(context.Theme.TextStrong, opacity), TextStyles.FootnoteEmphasized);
-            Typography.Draw(drawList, new Vector2(textLeft, rowTop + rowHeight * 0.5f + 1f * scale),
+            var nameGlyphHeight = Typography.Measure(entry.Name, TextStyles.FootnoteEmphasized).Y * 0.72f;
+            var whenGlyphHeight = Typography.Measure("0", TextStyles.Caption1).Y * 0.72f;
+            var rowGap = MathF.Max(0f,
+                MathF.Min(3f * scale, rowHeight - nameGlyphHeight - whenGlyphHeight));
+            var blockTop = rowTop + rowHeight * 0.5f - (nameGlyphHeight + rowGap + whenGlyphHeight) * 0.5f;
+            var nameTop = blockTop;
+            Marquee.DrawLeftAuto("calendarwidget.medium.name." + index, entry.Name, textLeft, nameTop, maxWidth,
+                TextStyles.FootnoteEmphasized, Palette.WithAlpha(context.Theme.TextStrong, opacity));
+            Typography.Draw(drawList, new Vector2(textLeft, nameTop + nameGlyphHeight + rowGap),
                 WhenLabel(entry.Begin), Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.Caption1);
         }
     }

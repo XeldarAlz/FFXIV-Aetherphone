@@ -6,12 +6,15 @@ using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.Playback;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Photos;
 using Aetherphone.Core.Radio;
+using Aetherphone.Core.Report;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Core.Songs;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Music;
@@ -26,6 +29,10 @@ internal sealed partial class MusicApp : IPhoneApp
         CountryFilter,
         LanguageFilter,
         PlaylistDetail,
+        Community,
+        Station,
+        MyStation,
+        StationArtwork,
     }
 
     private const float TopBarHeight = 46f;
@@ -54,7 +61,6 @@ internal sealed partial class MusicApp : IPhoneApp
     };
 
     public string Id => "music";
-    public bool IsAvailable => flags.MusicEnabled;
     public Vector4 Accent => AppAccents.For(Id);
     public string DisplayName => Loc.T(L.Apps.Music);
     public string Glyph => "M";
@@ -66,7 +72,12 @@ internal sealed partial class MusicApp : IPhoneApp
     private readonly PlaylistStore playlists;
     private readonly MediaCache media;
     private readonly HttpService http;
-    private readonly FeatureFlags flags;
+    private readonly AethernetApi aethernet;
+    private readonly RadioLauncher launcher;
+    private readonly CommunityRadioService community;
+    private readonly ReportService report;
+    private readonly PhotoLibrary photoLibrary;
+    private readonly WallpaperImageCache wallpaperImages;
     private readonly ConfirmService confirm;
     private readonly Configuration configuration;
     private readonly ArtworkCache artwork;
@@ -119,9 +130,17 @@ internal sealed partial class MusicApp : IPhoneApp
     private float clock;
 
     public MusicApp(RadioService radio, SongSearchService songSearch, PlaybackHub playback, SongHistory history,
-        PlaylistStore playlists, MediaCache media, HttpService http, ITextureProvider textures, FeatureFlags flags,
-        ConfirmService confirm, Configuration configuration)
+        PlaylistStore playlists, MediaCache media, HttpService http, ITextureProvider textures,
+        AethernetApi aethernet, ReportService report, PhotoLibrary photoLibrary,
+        WallpaperImageCache wallpaperImages, ConfirmService confirm, Configuration configuration,
+        RadioLauncher launcher)
     {
+        this.aethernet = aethernet;
+        this.launcher = launcher;
+        this.report = report;
+        this.photoLibrary = photoLibrary;
+        this.wallpaperImages = wallpaperImages;
+        community = new CommunityRadioService(aethernet);
         this.radio = radio;
         this.songSearch = songSearch;
         this.playback = playback;
@@ -129,7 +148,6 @@ internal sealed partial class MusicApp : IPhoneApp
         this.playlists = playlists;
         this.media = media;
         this.http = http;
-        this.flags = flags;
         this.confirm = confirm;
         this.configuration = configuration;
         artwork = new ArtworkCache(textures);
@@ -151,6 +169,15 @@ internal sealed partial class MusicApp : IPhoneApp
         featured = Array.Empty<Song>();
         featuredFetch?.Cancel();
         LoadFavoriteRadioStations();
+        if (launcher.TryConsumeStation(out var stationId))
+        {
+            viewedStationId = stationId;
+            community.EnsureFresh(true);
+            router.Push(View.Station, false);
+            return;
+        }
+
+        community.EnsureFresh(false);
     }
 
     public void OnClosed()
@@ -177,7 +204,7 @@ internal sealed partial class MusicApp : IPhoneApp
             sheetPresence.SnapTo(0f);
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         miniPresence.Step(playback.IsActive && !nowPlayingOpen ? 1f : 0f, MiniSmoothTime, delta);
         sheetPresence.Step(nowPlayingOpen ? 1f : 0f, SheetSmoothTime, delta);
@@ -222,6 +249,18 @@ internal sealed partial class MusicApp : IPhoneApp
             case View.PlaylistDetail:
                 DrawPlaylistDetail(context);
                 break;
+            case View.Community:
+                DrawCommunity(context);
+                break;
+            case View.Station:
+                DrawStationPage(context);
+                break;
+            case View.MyStation:
+                DrawMyStation(context);
+                break;
+            case View.StationArtwork:
+                DrawStationArtwork(context);
+                break;
             default:
                 DrawHome(context);
                 break;
@@ -230,7 +269,7 @@ internal sealed partial class MusicApp : IPhoneApp
 
     private void DrawTopBar(in PhoneContext context, string title, Action? onBack)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         var rowCenterY = content.Min.Y + TopBarHeight * scale * 0.5f;
         var textLeft = content.Min.X + (onBack is null ? 16f * scale : 38f * scale);
@@ -767,7 +806,7 @@ internal sealed partial class MusicApp : IPhoneApp
         featuredFetch?.Dispose();
         facetFetch?.Cancel();
         facetFetch?.Dispose();
+        community.Dispose();
         artwork.Dispose();
-        flags.Dispose();
     }
 }

@@ -19,7 +19,7 @@ internal static class TransportButton
     {
         var drawList = drawListOverride ?? ImGui.GetWindowDrawList();
         var hovered = active &&
-                      ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius),
+                      UiInteract.Hover(center - new Vector2(radius, radius),
                           center + new Vector2(radius, radius));
         if (hovered)
         {

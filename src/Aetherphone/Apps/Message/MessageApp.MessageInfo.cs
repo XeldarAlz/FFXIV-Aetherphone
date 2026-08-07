@@ -2,10 +2,12 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Maps;
+using Aetherphone.Core.Muster;
+using Aetherphone.Core.YellowPages;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Message;
 
@@ -17,7 +19,7 @@ internal sealed partial class MessageApp
 
     private void DrawMessageInfo(Rect area, string messageId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Message.InfoTitle), back);
         var message = store.FindMessage(messageId);
@@ -68,9 +70,27 @@ internal sealed partial class MessageApp
         var paddingX = 11f * scale;
         var paddingY = 7f * scale;
         var wrap = width * 0.74f - paddingX * 2f;
-        var text = message.Kind == 1 && string.IsNullOrEmpty(message.Body)
-            ? Loc.T(L.DirectMessages.PhotoPreview)
-            : UiText.Truncate(message.Body ?? string.Empty, 220);
+        string text;
+        if (message.Kind == 1 && string.IsNullOrEmpty(message.Body))
+        {
+            text = Loc.T(L.DirectMessages.PhotoPreview);
+        }
+        else if (LocationShare.TryParse(message.Body, out var location))
+        {
+            text = LocationShare.Summary(location);
+        }
+        else if (MusterShare.IsToken(message.Body))
+        {
+            text = Loc.T(L.Muster.InvitePreview);
+        }
+        else if (AdShare.IsToken(message.Body))
+        {
+            text = Loc.T(L.YellowPages.AdPreview);
+        }
+        else
+        {
+            text = UiText.Truncate(message.Body ?? string.Empty, 220);
+        }
         var textSize = ImGui.CalcTextSize(text, false, wrap);
         var time = TimeText.Clock(message.CreatedAtUnix);
         var timeSize = Typography.Measure(time, 0.70f);
@@ -180,9 +200,12 @@ internal sealed partial class MessageApp
         var pad = 14f * scale;
         AppSkin.Icon(new Vector2(origin.X + pad + 8f * scale, origin.Y + rowHeight * 0.5f), icon.ToIconString(),
             iconColor, 0.95f);
-        Typography.Draw(new Vector2(origin.X + pad + 28f * scale, origin.Y + rowHeight * 0.5f - 9f * scale), label,
-            theme.TextStrong, 1f, FontWeight.SemiBold);
         var valueSize = Typography.Measure(value, 0.85f);
+        var labelLeft = origin.X + pad + 28f * scale;
+        var labelMaxWidth = MathF.Max(1f, origin.X + width - pad - valueSize.X - 10f * scale - labelLeft);
+        var clippedLabel = Typography.FitText(label, labelMaxWidth, 1f, FontWeight.SemiBold);
+        Typography.Draw(new Vector2(labelLeft, origin.Y + rowHeight * 0.5f - 9f * scale), clippedLabel,
+            theme.TextStrong, 1f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(origin.X + width - pad - valueSize.X, origin.Y + rowHeight * 0.5f
             - valueSize.Y * 0.5f), value, ui.MutedInk, 0.85f);
         ImGui.SetCursorScreenPos(origin);
@@ -204,8 +227,12 @@ internal sealed partial class MessageApp
         AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, label, string.Empty, member.AvatarUrl, images,
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale), label, theme.TextStrong, 1f,
-            FontWeight.SemiBold);
+        var stampWidth = stamp.Length > 0 ? Typography.Measure(stamp, 0.80f).X + 10f * scale : 0f;
+        var labelMaxWidth = MathF.Max(1f, origin.X + width - pad - 26f * scale - stampWidth - textLeft);
+        var rowHovering = UiInteract.Hover(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
+        Marquee.DrawLeft("messageapp.messageinfo.member." + member.UserId, label, textLeft,
+            origin.Y + rowHeight * 0.5f - 9f * scale, labelMaxWidth, new TextStyle(1f, FontWeight.SemiBold),
+            theme.TextStrong, rowHovering);
         var right = origin.X + width - pad;
         if (stamp.Length > 0)
         {

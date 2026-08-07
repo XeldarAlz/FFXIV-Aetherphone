@@ -2,6 +2,7 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Shortcuts;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
@@ -14,16 +15,21 @@ internal sealed class FolderOverlay
     private static readonly Vector4 NoTintSwatch = new(0.55f, 0.56f, 0.60f, 1f);
 
     private readonly HomeLayoutService layout;
+    private readonly ShortcutStore shortcuts;
+    private readonly ShortcutRunner runner;
     private HomeTile? folder;
     private bool closing;
     private Spring anim;
     private Rect origin;
     private string nameBuffer = string.Empty;
     private float scrollY;
+    private int openedFrame;
 
-    public FolderOverlay(HomeLayoutService layout)
+    public FolderOverlay(HomeLayoutService layout, ShortcutStore shortcuts, ShortcutRunner runner)
     {
         this.layout = layout;
+        this.shortcuts = shortcuts;
+        this.runner = runner;
     }
 
     public bool Active => folder is not null;
@@ -37,6 +43,7 @@ internal sealed class FolderOverlay
         origin = originRect;
         nameBuffer = tile.FolderName;
         scrollY = 0f;
+        openedFrame = ImGui.GetFrameCount();
     }
 
     public void RequestClose()
@@ -73,8 +80,8 @@ internal sealed class FolderOverlay
         var drawList = ImGui.GetWindowDrawList();
         drawList.PushClipRect(content.Min, content.Max, true);
         Material.Veil(drawList, content.Min, content.Max, 0.5f * eased);
-        var columns = current.Apps.Count <= 9 ? 3 : 4;
-        var rows = (current.Apps.Count + columns - 1) / columns;
+        var columns = current.Members.Count <= 9 ? 3 : 4;
+        var rows = (current.Members.Count + columns - 1) / columns;
         var panelWidth = content.Width * 0.84f;
         var pad = 18f * scale;
         var cellWidth = (panelWidth - pad * 2f) / columns;
@@ -92,7 +99,7 @@ internal sealed class FolderOverlay
         {
             DrawContents(panel, metrics, theme, navigation, current, editing, currentPage, columns, pad, iconSize,
                 cellWidth, cellHeight, headerHeight);
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !panel.Contains(ImGui.GetMousePos()))
+            if (ImGui.GetFrameCount() != openedFrame && UiInteract.ClickedOutside(panel.Min, panel.Max, false))
             {
                 RequestClose();
             }
@@ -120,16 +127,16 @@ internal sealed class FolderOverlay
         var gridView = new Rect(new Vector2(panel.Min.X, gridTop), panel.Max);
         var drawList = ImGui.GetWindowDrawList();
         drawList.PushClipRect(gridView.Min, gridView.Max, true);
-        if (ImGui.IsMouseHoveringRect(gridView.Min, gridView.Max))
+        if (UiInteract.Hover(gridView.Min, gridView.Max))
         {
             scrollY -= ImGui.GetIO().MouseWheel * 40f * scale;
         }
 
-        var rows = (current.Apps.Count + columns - 1) / columns;
+        var rows = (current.Members.Count + columns - 1) / columns;
         var contentHeight = rows * cellHeight;
         scrollY = Math.Clamp(scrollY, 0f, MathF.Max(0f, contentHeight - gridView.Height));
 
-        for (var index = 0; index < current.Apps.Count; index++)
+        for (var index = 0; index < current.Members.Count; index++)
         {
             var column = index % columns;
             var row = index / columns;
@@ -140,8 +147,17 @@ internal sealed class FolderOverlay
                 continue;
             }
 
-            var app = current.Apps[index];
-            HomeTileView.DrawApp(center, iconSize, app, theme, 1f, 1f, cellWidth);
+            var member = current.Members[index];
+            if (member.IsShortcut)
+            {
+                HomeTileView.DrawShortcut(center, iconSize, member.Shortcut!, shortcuts.Icon(member.Shortcut!), theme,
+                    1f, 1f, true, cellWidth);
+            }
+            else
+            {
+                HomeTileView.DrawApp(center, iconSize, member.App!, theme, 1f, 1f, true, cellWidth);
+            }
+
             var half = iconSize * 0.5f;
             var iconRect = new Rect(new Vector2(center.X - half, center.Y - half),
                 new Vector2(center.X + half, center.Y + half));
@@ -150,8 +166,8 @@ internal sealed class FolderOverlay
                 if (HomeTileView.RemoveBadge(new Vector2(center.X - half + 2f * scale, center.Y - half + 2f * scale),
                         scale, theme))
                 {
-                    layout.RemoveFromFolder(current, app, currentPage);
-                    if (current.Apps.Count <= 1)
+                    layout.RemoveFromFolder(current, member, currentPage);
+                    if (current.Members.Count <= 1)
                     {
                         RequestClose();
                     }
@@ -160,13 +176,21 @@ internal sealed class FolderOverlay
                     return;
                 }
             }
-            else if (ImGui.IsMouseHoveringRect(iconRect.Min, iconRect.Max))
+            else if (UiInteract.Hover(iconRect.Min, iconRect.Max))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
                     RequestClose();
-                    navigation.OpenAppFrom(app, iconRect);
+                    if (member.IsShortcut)
+                    {
+                        runner.Run(member.Shortcut!);
+                    }
+                    else
+                    {
+                        navigation.OpenAppFrom(member.App!, iconRect);
+                    }
+
                     drawList.PopClipRect();
                     return;
                 }

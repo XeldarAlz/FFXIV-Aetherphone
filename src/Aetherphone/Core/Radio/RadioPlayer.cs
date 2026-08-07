@@ -10,6 +10,7 @@ internal enum RadioPlaybackState : byte
     Playing,
     Paused,
     Failed,
+    Reconnecting,
 }
 
 internal sealed class RadioPlayer : IDisposable
@@ -18,6 +19,8 @@ internal sealed class RadioPlayer : IDisposable
     private static readonly TimeSpan PrebufferThreshold = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan BackpressureThreshold = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(20);
+    private static readonly int[] ReconnectDelaysMilliseconds = { 1000, 2000, 5000, 10000, 20000, 20000 };
+    private const long StableSessionMilliseconds = 30000;
     private readonly HttpClient client;
     private readonly object gate = new();
     private CancellationTokenSource? cancellation;
@@ -26,6 +29,7 @@ internal sealed class RadioPlayer : IDisposable
     private int session;
     private volatile RadioPlaybackState state = RadioPlaybackState.Stopped;
     private volatile string currentStation = string.Empty;
+    private volatile string nowPlaying = string.Empty;
     private RadioStation currentStationInfo;
     private float volume = 0.6f;
     private RadioStation[] queue = Array.Empty<RadioStation>();
@@ -40,6 +44,10 @@ internal sealed class RadioPlayer : IDisposable
 
     public RadioPlaybackState State => state;
     public string CurrentStation => currentStation;
+
+    /// The track the station says it is playing, from the metadata spliced into the stream. Empty
+    /// when the station sends none, which plenty do.
+    public string NowPlaying => nowPlaying;
 
     public RadioStation CurrentStationInfo
     {
@@ -104,12 +112,12 @@ internal sealed class RadioPlayer : IDisposable
         {
             currentStation = station.Name;
             currentStationInfo = station;
+            nowPlaying = string.Empty;
             state = RadioPlaybackState.Buffering;
             cancellation = new CancellationTokenSource();
             var token = cancellation.Token;
-            var url = station.StreamUrl;
             var workerSession = session;
-            worker = new Thread(() => Stream(url, token, workerSession))
+            worker = new Thread(() => Stream(station, token, workerSession))
             {
                 IsBackground = true, Name = "Aetherphone.Radio",
             };
@@ -122,6 +130,7 @@ internal sealed class RadioPlayer : IDisposable
         Suspend();
         state = RadioPlaybackState.Stopped;
         currentStation = string.Empty;
+        nowPlaying = string.Empty;
         lock (gate)
         {
             currentStationInfo = default;
@@ -130,7 +139,8 @@ internal sealed class RadioPlayer : IDisposable
 
     public void Pause()
     {
-        if (state is not (RadioPlaybackState.Buffering or RadioPlaybackState.Playing))
+        if (state is not (RadioPlaybackState.Buffering or RadioPlaybackState.Playing
+            or RadioPlaybackState.Reconnecting))
         {
             return;
         }
@@ -206,17 +216,79 @@ internal sealed class RadioPlayer : IDisposable
         }
     }
 
-    private void Stream(string url, CancellationToken token, int workerSession)
+    // A community DJ's connection blips far more often than a professional station's, and every
+    // blip ends the stream for every listener, so community mounts get retried while the station
+    // is still meant to be on air. Directory stations keep the original one shot behaviour.
+    private void Stream(RadioStation station, CancellationToken token, int workerSession)
+    {
+        var attempt = 0;
+        while (!token.IsCancellationRequested)
+        {
+            var stable = StreamOnce(station.StreamUrl, station.Codec, token, workerSession);
+            if (token.IsCancellationRequested || !station.IsCommunity)
+            {
+                return;
+            }
+
+            if (stable)
+            {
+                attempt = 0;
+            }
+
+            if (attempt >= ReconnectDelaysMilliseconds.Length)
+            {
+                TrySetState(workerSession, RadioPlaybackState.Failed);
+                return;
+            }
+
+            TrySetState(workerSession, RadioPlaybackState.Reconnecting);
+            if (token.WaitHandle.WaitOne(ReconnectDelaysMilliseconds[attempt]))
+            {
+                return;
+            }
+
+            attempt++;
+        }
+    }
+
+    private Stream WrapMetadata(Stream network, HttpResponseMessage response, int workerSession)
+    {
+        if (!response.Headers.TryGetValues(IcyMetadataStream.IntervalHeader, out var values))
+        {
+            return network;
+        }
+
+        var interval = IcyMetadataStream.ParseInterval(values.FirstOrDefault());
+        if (interval <= 0)
+        {
+            return network;
+        }
+
+        return new IcyMetadataStream(network, interval, title =>
+        {
+            lock (gate)
+            {
+                if (workerSession == session)
+                {
+                    nowPlaying = title;
+                }
+            }
+        });
+    }
+
+    private bool StreamOnce(string url, string declaredCodec, CancellationToken token, int workerSession)
     {
         IWavePlayer? output = null;
         VolumeSampleProvider? volumeProvider = null;
-        IMp3FrameDecompressor? decompressor = null;
+        IStreamDecoder? decoder = null;
         BufferedWaveProvider? buffer = null;
         HttpResponseMessage? response = null;
-        var decoded = new byte[16384 * 4];
+        var decoded = new byte[Mp3StreamDecoder.MaxDecodedBytes];
+        var playingSinceTick = 0L;
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.TryAddWithoutValidation(IcyMetadataStream.RequestHeader, "1");
             using (var connectTimeout = CancellationTokenSource.CreateLinkedTokenSource(token))
             {
                 connectTimeout.CancelAfter(ConnectTimeout);
@@ -224,12 +296,13 @@ internal sealed class RadioPlayer : IDisposable
             }
             if (!TryPublishResponse(response, workerSession))
             {
-                return;
+                return false;
             }
 
             response.EnsureSuccessStatusCode();
             using var network = response.Content.ReadAsStream(token);
-            var source = new ReadFullyStream(network);
+            var audio = WrapMetadata(network, response, workerSession);
+            decoder = StreamDecoders.Create(response.Content.Headers.ContentType?.MediaType, declaredCodec, audio);
             while (!token.IsCancellationRequested)
             {
                 if (buffer is not null && buffer.BufferedDuration > BackpressureThreshold)
@@ -243,38 +316,24 @@ internal sealed class RadioPlayer : IDisposable
                     continue;
                 }
 
-                Mp3Frame? frame;
-                try
-                {
-                    frame = Mp3Frame.LoadFromStream(source);
-                }
-                catch (EndOfStreamException)
+                var count = decoder.Read(decoded);
+                if (count <= 0)
                 {
                     break;
                 }
 
-                if (frame is null)
+                buffer ??= new BufferedWaveProvider(decoder.WaveFormat)
                 {
-                    break;
-                }
-
-                if (decompressor is null)
-                {
-                    decompressor = CreateDecompressor(frame);
-                    buffer = new BufferedWaveProvider(decompressor.OutputFormat)
-                    {
-                        BufferDuration = BufferDuration, DiscardOnBufferOverflow = true,
-                    };
-                }
-
-                var count = decompressor.DecompressFrame(frame, decoded, 0);
-                buffer!.AddSamples(decoded, 0, count);
+                    BufferDuration = BufferDuration, DiscardOnBufferOverflow = true,
+                };
+                buffer.AddSamples(decoded, 0, count);
                 if (output is null && buffer.BufferedDuration >= PrebufferThreshold)
                 {
                     volumeProvider = new VolumeSampleProvider(buffer.ToSampleProvider()) { Volume = volume };
                     output = AudioOutputFactory.Create();
                     output.Init(volumeProvider, true);
                     output.Play();
+                    playingSinceTick = Environment.TickCount64;
                     TrySetState(workerSession, RadioPlaybackState.Playing);
                 }
 
@@ -301,7 +360,7 @@ internal sealed class RadioPlayer : IDisposable
         {
             output?.Stop();
             output?.Dispose();
-            decompressor?.Dispose();
+            decoder?.Dispose();
             lock (gate)
             {
                 if (ReferenceEquals(activeResponse, response))
@@ -312,13 +371,8 @@ internal sealed class RadioPlayer : IDisposable
 
             response?.Dispose();
         }
-    }
 
-    private static IMp3FrameDecompressor CreateDecompressor(Mp3Frame frame)
-    {
-        var format = new Mp3WaveFormat(frame.SampleRate, frame.ChannelMode == ChannelMode.Mono ? 1 : 2,
-            frame.FrameLength, frame.BitRate);
-        return new AcmMp3FrameDecompressor(format);
+        return playingSinceTick != 0L && Environment.TickCount64 - playingSinceTick >= StableSessionMilliseconds;
     }
 
     public void Dispose()
@@ -326,47 +380,4 @@ internal sealed class RadioPlayer : IDisposable
         Stop();
         client.Dispose();
     }
-}
-
-internal sealed class ReadFullyStream : Stream
-{
-    private readonly Stream source;
-
-    public ReadFullyStream(Stream source)
-    {
-        this.source = source;
-    }
-
-    public override bool CanRead => true;
-    public override bool CanSeek => false;
-    public override bool CanWrite => false;
-    public override long Length => throw new NotSupportedException();
-
-    public override long Position
-    {
-        get => 0;
-        set => throw new NotSupportedException();
-    }
-
-    public override int Read(byte[] buffer, int offset, int count)
-    {
-        var total = 0;
-        while (total < count)
-        {
-            var read = source.Read(buffer, offset + total, count - total);
-            if (read == 0)
-            {
-                break;
-            }
-
-            total += read;
-        }
-
-        return total;
-    }
-
-    public override void Flush() => throw new NotSupportedException();
-    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-    public override void SetLength(long value) => throw new NotSupportedException();
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 }

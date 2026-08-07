@@ -27,9 +27,15 @@ internal sealed class SocialClient
         return net.PostAsync("/posts", new CreatePostRequest(text), AethernetJsonContext.Default.CreatePostRequest, AethernetJsonContext.Default.PostDto, token);
     }
 
-    public Task<FeedPage?> UserPostsAsync(string userId, CancellationToken token)
+    public Task<FeedPage?> UserPostsAsync(string userId, string? cursor, CancellationToken token)
     {
-        return net.GetAsync($"/users/{userId}/posts", AethernetJsonContext.Default.FeedPage, token);
+        var path = $"/users/{userId}/posts";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
     public Task<PostDto?> PostAsync(string postId, CancellationToken token)
@@ -57,6 +63,11 @@ internal sealed class SocialClient
         return UserListAsync($"/posts/{Uri.EscapeDataString(postId)}/likers", cursor, token);
     }
 
+    public Task<UserListPage?> MutualFollowersAsync(string userId, string? cursor, CancellationToken token)
+    {
+        return UserListAsync($"/users/{Uri.EscapeDataString(userId)}/mutual-followers", cursor, token);
+    }
+
     private Task<UserListPage?> UserListAsync(string path, string? cursor, CancellationToken token)
     {
         if (cursor is not null)
@@ -67,14 +78,50 @@ internal sealed class SocialClient
         return net.GetAsync(path, AethernetJsonContext.Default.UserListPage, token);
     }
 
-    public Task<bool> FollowAsync(string userId, CancellationToken token)
+    public Task<FollowResultDto?> FollowAsync(string userId, CancellationToken token)
     {
-        return net.SendAsync(HttpMethod.Post, $"/follows/{userId}", token);
+        return net.RequestAsync(HttpMethod.Post, $"/follows/{userId}", AethernetJsonContext.Default.FollowResultDto, token);
     }
 
     public Task<bool> UnfollowAsync(string userId, CancellationToken token)
     {
         return net.SendAsync(HttpMethod.Delete, $"/follows/{userId}", token);
+    }
+
+    public Task<UserListPage?> RequestsAsync(string? cursor, CancellationToken token)
+    {
+        return UserListAsync("/follows/requests", cursor, token);
+    }
+
+    public Task<bool> AcceptFollowRequestAsync(string requesterId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Post, $"/follows/requests/{Uri.EscapeDataString(requesterId)}/accept", token);
+    }
+
+    public Task<bool> DeclineFollowRequestAsync(string requesterId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Delete, $"/follows/requests/{Uri.EscapeDataString(requesterId)}", token);
+    }
+
+    public Task<bool> SavePostAsync(string postId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Put, $"/posts/{Uri.EscapeDataString(postId)}/save", token);
+    }
+
+    public Task<bool> UnsavePostAsync(string postId, CancellationToken token)
+    {
+        return net.SendAsync(HttpMethod.Delete, $"/posts/{Uri.EscapeDataString(postId)}/save", token);
+    }
+
+    public Task<FeedPage?> SavedAsync(string? cursor, CancellationToken token)
+    {
+        var path = "/me/saved";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
     public Task<PostDto?> ReactAsync(string postId, int kind, CancellationToken token)

@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Net;
 using Dalamud.Interface.Textures.TextureWraps;
 
@@ -105,6 +106,19 @@ internal sealed class RemoteImageCache : IDisposable
 
     public bool Failed(string? url) => url is not null && failed.ContainsKey(LegacyMediaHosts.Normalize(url));
 
+    public AvatarHandle Avatar(string? url)
+    {
+        if (string.IsNullOrEmpty(url))
+        {
+            return AvatarHandle.Disabled;
+        }
+
+        var texture = Get(url);
+        var state = texture is not null ? AvatarLoadState.Ready :
+            Failed(url) ? AvatarLoadState.Failed : AvatarLoadState.Loading;
+        return new AvatarHandle(texture, state, LegacyMediaHosts.Normalize(url));
+    }
+
     private async Task LoadAsync(string key, Func<CancellationToken, Task<byte[]?>> fetch)
     {
         try
@@ -118,7 +132,7 @@ internal sealed class RemoteImageCache : IDisposable
             }
 
             var wrap = await ImageProcessor.DecodeToTextureAsync(Plugin.TextureProvider, bytes,
-                $"Aetherphone.Img.{key}", token).ConfigureAwait(false);
+                $"Aetherphone.Img.{key}", ImageProcessor.MaxDecodePixels, token).ConfigureAwait(false);
             if (!ready.TryAdd(key, wrap))
             {
                 wrap.Dispose();

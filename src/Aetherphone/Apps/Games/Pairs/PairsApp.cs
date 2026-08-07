@@ -4,8 +4,8 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Pairs;
 
@@ -92,7 +92,7 @@ internal sealed class PairsApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         if (!statsLoaded)
@@ -175,7 +175,7 @@ internal sealed class PairsApp : IMiniGame
                 var half = fullCell.Size * 0.5f * pop;
                 var cell = new Rect(fullCell.Center - half, fullCell.Center + half);
                 var hovered = phase == Phase.Selecting && board.CanReveal(index) && flipProgress[index] < 0.02f &&
-                              ImGui.IsMouseHoveringRect(cell.Min, cell.Max);
+                              UiInteract.Hover(cell.Min, cell.Max);
                 var shakeX = shakePhase[index] > 0f
                     ? MathF.Sin(shakePhase[index] * MathF.PI * 8f) * 5f * scale * shakePhase[index]
                     : 0f;
@@ -327,7 +327,7 @@ internal sealed class PairsApp : IMiniGame
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var center = grid.CellCenter(index % PairsBoard.Columns, index / PairsBoard.Columns);
         var color = PairsRenderer.ColorFor(board.Symbol(index));
         particles.Burst(center, 14, color, 170f * scale, 3.2f, 0.6f, 240f);

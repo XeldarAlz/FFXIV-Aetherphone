@@ -2,23 +2,24 @@ namespace Aetherphone.Core.Theme;
 
 internal static class TextZoomCatalog
 {
-    public static readonly IReadOnlyList<float> Scales = new[] { 1.0f, 1.15f, 1.3f, 1.5f };
-    public static readonly IReadOnlyList<string> Labels = new[] { "100%", "115%", "130%", "150%" };
+    public const float MinimumZoom = 0.7f;
+    public const float MaximumZoom = 1.5f;
+    public const float SnapTolerance = 0.02f;
 
-    public static int IndexOf(float scale)
+    public static readonly IReadOnlyList<float> PresetZooms = new[] { 0.8f, 0.9f, 1.0f, 1.15f, 1.3f, 1.5f };
+
+    public static float Clamp(float zoom) => Math.Clamp(zoom, MinimumZoom, MaximumZoom);
+
+    public static float Snap(float zoom)
     {
-        var best = 0;
-        var bestDelta = float.MaxValue;
-        for (var index = 0; index < Scales.Count; index++)
+        for (var index = 0; index < PresetZooms.Count; index++)
         {
-            var delta = MathF.Abs(Scales[index] - scale);
-            if (delta < bestDelta)
+            if (MathF.Abs(PresetZooms[index] - zoom) <= SnapTolerance)
             {
-                bestDelta = delta;
-                best = index;
+                return PresetZooms[index];
             }
         }
 
-        return best;
+        return MathF.Round(zoom * 100f) / 100f;
     }
 }

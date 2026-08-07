@@ -4,7 +4,6 @@ using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Core.Shell;
@@ -22,33 +21,33 @@ internal sealed class ShellScreenPainter
         this.home = home;
     }
 
-    public void PaintCurrent(Rect screen, PhoneTheme theme, in HomeMotion motion)
+    public void PaintCurrent(Rect screen, float screenRadius, PhoneTheme theme, in HomeMotion motion)
     {
         if (navigation.AtHome)
         {
-            PaintHome(screen, theme, motion);
+            PaintHome(screen, screenRadius, theme, motion);
             return;
         }
 
         using (ImRaii.PushId(navigation.Current!.Id))
         {
-            PaintApp(screen, theme, navigation.Current!);
+            PaintApp(screen, screenRadius, theme, navigation.Current!);
         }
     }
 
-    public void PaintHome(Rect screen, PhoneTheme theme, in HomeMotion motion)
+    public void PaintHome(Rect screen, float screenRadius, PhoneTheme theme, in HomeMotion motion)
     {
-        DeviceChrome.DrawWallpaper(screen, theme, motion);
-        DeviceChrome.DrawHomeScrim(screen, theme);
+        DeviceChrome.DrawWallpaper(screen, screenRadius, theme, motion);
+        DeviceChrome.DrawHomeScrim(screen, screenRadius, theme);
         home.Draw(screen, ContentRect(screen, theme), theme, navigation, motion);
     }
 
-    public void PaintApp(Rect screen, PhoneTheme theme, IPhoneApp app)
+    public void PaintApp(Rect screen, float screenRadius, PhoneTheme theme, IPhoneApp app)
     {
-        var content = themes.Current;
+        var content = themes.ForApp(app.WantsSystemTheme);
         if (!app.WantsTransparentScreen)
         {
-            DeviceChrome.FillScreen(screen, theme, content.AppBackground);
+            DeviceChrome.FillScreen(screen, screenRadius, content.AppBackground);
         }
 
         var contentRect = ContentRect(screen, theme);
@@ -74,7 +73,7 @@ internal sealed class ShellScreenPainter
 
     public static Rect ContentRect(Rect screen, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var min = new Vector2(screen.Min.X + theme.SidePadding * scale, screen.Min.Y + theme.TopZoneHeight * scale);
         var max = new Vector2(screen.Max.X - theme.SidePadding * scale, screen.Max.Y - theme.BottomZoneHeight * scale);
         return new Rect(min, max);

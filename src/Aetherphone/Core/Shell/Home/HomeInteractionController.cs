@@ -1,6 +1,8 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Home;
+using Aetherphone.Core.Shortcuts;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Core.Shell.Home;
@@ -32,6 +34,7 @@ internal sealed class HomeInteractionController
     private readonly WidgetSizeMenu sizeMenu;
     private readonly WidgetGallery gallery;
     private readonly TilePoseCache poses;
+    private readonly ShortcutRunner runner;
 
     private bool pressActive;
     private Vector2 pressPos;
@@ -70,7 +73,8 @@ internal sealed class HomeInteractionController
     private Spring settleY;
 
     public HomeInteractionController(HomeLayoutService layout, WidgetRegistry widgets, Pager pager,
-        FolderOverlay folder, WidgetSizeMenu sizeMenu, WidgetGallery gallery, TilePoseCache poses)
+        FolderOverlay folder, WidgetSizeMenu sizeMenu, WidgetGallery gallery, TilePoseCache poses,
+        ShortcutRunner runner)
     {
         this.layout = layout;
         this.widgets = widgets;
@@ -79,6 +83,7 @@ internal sealed class HomeInteractionController
         this.sizeMenu = sizeMenu;
         this.gallery = gallery;
         this.poses = poses;
+        this.runner = runner;
     }
 
     public bool Editing => editing;
@@ -96,7 +101,7 @@ internal sealed class HomeInteractionController
 
     public void Advance(float delta) => editClock += delta;
 
-    public int DisplayPageCount() => layout.PageCount;
+    public int DisplayPageCount() => dragTile is null ? layout.PageCount : layout.PageCount + 1;
 
     public void Suspend()
     {
@@ -146,7 +151,7 @@ internal sealed class HomeInteractionController
     private void HandlePress(Rect content, in HomeMetrics metrics, INavigator navigation, float delta)
     {
         var mouse = ImGui.GetMousePos();
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && content.Contains(mouse))
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(content.Min, content.Max))
         {
             if (editing && HandleEditChromeClick(content, metrics, mouse))
             {
@@ -256,6 +261,16 @@ internal sealed class HomeInteractionController
             else if (widgets.AppFor(pressTile.Widget!) is { } app)
             {
                 navigation.OpenAppFrom(app, rect);
+            }
+
+            return;
+        }
+
+        if (pressTile.IsShortcut)
+        {
+            if (!editing)
+            {
+                runner.Run(pressTile.Shortcut!);
             }
 
             return;
@@ -397,7 +412,7 @@ internal sealed class HomeInteractionController
                 edgeDwell = 0f;
             }
         }
-        else if (mouse.X > content.Max.X - edge && dragPage < layout.PageCount - 1)
+        else if (mouse.X > content.Max.X - edge && dragPage < DisplayPageCount() - 1)
         {
             edgeDwell += delta;
             if (edgeDwell > EdgeFlipSeconds)
@@ -415,7 +430,7 @@ internal sealed class HomeInteractionController
         folderTarget = null;
         if (dragPage >= layout.PageCount)
         {
-            dropValid = false;
+            dropValid = layout.TryResolveDrop(dragPage, dragTile!, HoveredCell(metrics), out dropCell);
             return;
         }
 
@@ -427,8 +442,8 @@ internal sealed class HomeInteractionController
             for (var index = 0; index < tiles.Count && index < cells.Count; index++)
             {
                 var candidate = tiles[index];
-                if (ReferenceEquals(candidate, dragTile) || candidate.IsWidget ||
-                    candidate.IsFolder && dragTile.IsFolder)
+                if (ReferenceEquals(candidate, dragTile) || candidate.IsWidget
+                    || candidate.IsFolder && dragTile.IsFolder)
                 {
                     continue;
                 }
@@ -568,7 +583,7 @@ internal sealed class HomeInteractionController
         hoverPos = ImGui.GetMousePos();
         var active = motion.Interactive && !editing && dragTile is null && settleTile is null &&
                      !folder.Active && !gallery.Active && !sizeMenu.Active && !pager.Dragging &&
-                     content.Contains(hoverPos);
+                     UiInteract.Hover(content.Min, content.Max);
         magnifyGate.Step(active ? 1f : 0f, MagnifyFadeTime, delta);
     }
 

@@ -1,4 +1,5 @@
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Dalamud.Plugin.Services;
@@ -22,12 +23,12 @@ internal sealed class ActivityRingNotifier : IDisposable
     private readonly FrameworkTicker ticker;
 
     public ActivityRingNotifier(IFramework framework, ActivityTracker tracker, Configuration configuration,
-        NotificationService notifications)
+        NotificationService notifications, AppGate gate)
     {
         this.tracker = tracker;
         this.configuration = configuration;
         this.notifications = notifications;
-        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
+        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick, gate);
     }
 
     public void Dispose()

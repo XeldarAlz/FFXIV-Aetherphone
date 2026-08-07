@@ -1,7 +1,6 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -36,7 +35,7 @@ internal static class ConfirmDialog
     {
         canceled = false;
         confirmed = false;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var s = scale * cardScale;
         var drawList = ImGui.GetWindowDrawList();
         var pad = CardPadding * s;
@@ -48,7 +47,8 @@ internal static class ConfirmDialog
         var titleScale = TitleScale * cardScale;
         var messageScale = MessageScale * cardScale;
 
-        var titleHeight = hasTitle ? Typography.Measure(title!, titleScale, FontWeight.Bold).Y : 0f;
+        var titleStyle = new TextStyle(titleScale, FontWeight.Bold);
+        var titleHeight = hasTitle ? Typography.MeasureWrappedBlock(title!, titleStyle, wrapWidth).Y : 0f;
         var lineHeight = WrapMessage(message, wrapWidth, messageScale, FontWeight.Medium);
         var lineStep = lineHeight + LineLeading * s;
         var lineCount = LineBuffer.Count;
@@ -76,8 +76,7 @@ internal static class ConfirmDialog
         if (hasTitle)
         {
             var titleColor = new Vector4(theme.TextStrong.X, theme.TextStrong.Y, theme.TextStrong.Z, opacity);
-            Typography.DrawCentered(drawList, new Vector2(centerX, cursorY + titleHeight * 0.5f), title!, titleColor,
-                titleScale, FontWeight.Bold);
+            Typography.DrawWrappedCentered(new Vector2(centerX, cursorY), title!, titleColor, titleStyle, wrapWidth);
             cursorY += titleHeight + TitleGap * s;
         }
 
@@ -89,16 +88,18 @@ internal static class ConfirmDialog
         {
             cursorY += StatusGap * s;
             var mutedColor = new Vector4(theme.TextMuted.X, theme.TextMuted.Y, theme.TextMuted.Z, opacity);
-            Typography.DrawCentered(drawList, new Vector2(centerX, cursorY + statusHeight * 0.5f), status!, mutedColor,
+            Typography.DrawCentered(drawList, new Vector2(centerX, cursorY + statusHeight * 0.5f),
+                Typography.FitText(status!, wrapWidth, 0.78f * cardScale, FontWeight.Regular), mutedColor,
                 0.78f * cardScale);
         }
 
         var buttonY = cardMax.Y - pad - buttonHeight;
-        if (acknowledge)
+        if (acknowledge || string.IsNullOrEmpty(cancelLabel))
         {
             var acknowledgeRect = new Rect(new Vector2(cardMin.X + pad, buttonY),
                 new Vector2(cardMax.X - pad, buttonY + buttonHeight));
-            if (DrawPillButton(acknowledgeRect, confirmLabel, true, theme, cardScale, opacity, ConfirmButtonTone.Primary))
+            if (DrawPillButton(acknowledgeRect, confirmLabel, true, theme, cardScale, opacity,
+                    ConfirmButtonTone.Primary, "confirmdialog.acknowledge"))
             {
                 confirmed = true;
             }
@@ -112,14 +113,16 @@ internal static class ConfirmDialog
             new Vector2(cardMin.X + pad + buttonWidth, buttonY + buttonHeight));
         var confirmRect = new Rect(new Vector2(cancelRect.Max.X + buttonGap, buttonY),
             new Vector2(cardMax.X - pad, buttonY + buttonHeight));
-        if (DrawPillButton(cancelRect, cancelLabel, !busy, theme, cardScale, opacity))
+        if (DrawPillButton(cancelRect, cancelLabel, !busy, theme, cardScale, opacity, ConfirmButtonTone.Neutral,
+                "confirmdialog.cancel"))
         {
             canceled = true;
         }
 
         var confirmLabelEffective = busy ? busyLabel : confirmLabel;
         var confirmTone = danger ? ConfirmButtonTone.Danger : ConfirmButtonTone.Neutral;
-        if (DrawPillButton(confirmRect, confirmLabelEffective, !busy, theme, cardScale, opacity, confirmTone))
+        if (DrawPillButton(confirmRect, confirmLabelEffective, !busy, theme, cardScale, opacity, confirmTone,
+                "confirmdialog.confirm"))
         {
             confirmed = true;
         }
@@ -216,10 +219,10 @@ internal static class ConfirmDialog
     }
 
     public static bool DrawPillButton(Rect rect, string label, bool enabled, PhoneTheme theme, float cardScale,
-        float opacity, ConfirmButtonTone tone = ConfirmButtonTone.Neutral)
+        float opacity, ConfirmButtonTone tone = ConfirmButtonTone.Neutral, string? id = null)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = enabled && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = enabled && UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         Vector4 fill;
         Vector4 textColor;
@@ -257,8 +260,20 @@ internal static class ConfirmDialog
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         Squircle.Stroke(drawList, rect.Min, rect.Max, radius,
             ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.12f * opacity)), 1f);
-        var textSize = Typography.Measure(label, ButtonScale * cardScale, FontWeight.SemiBold);
-        Typography.Draw(rect.Center - textSize * 0.5f, label, textColor, ButtonScale * cardScale, FontWeight.SemiBold);
+        var style = new TextStyle(ButtonScale * cardScale, FontWeight.SemiBold);
+        var maxLabelWidth = MathF.Max(1f, rect.Width - rect.Height);
+        if (id is not null)
+        {
+            var labelHeight = Typography.Measure(label, style).Y;
+            Marquee.DrawCenteredAuto(id, label, rect.Center.X, rect.Center.Y - labelHeight * 0.5f, maxLabelWidth,
+                style, textColor);
+        }
+        else
+        {
+            var fitted = Typography.FitText(label, maxLabelWidth, style);
+            var textSize = Typography.Measure(fitted, style);
+            Typography.Draw(rect.Center - textSize * 0.5f, fitted, textColor, style.Scale, style.Weight);
+        }
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);

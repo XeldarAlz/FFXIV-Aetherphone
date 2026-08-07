@@ -22,7 +22,7 @@ internal static class SceneChrome
         var hitMin = new Vector2(content.Min.X, content.Min.Y);
         var hitMax = new Vector2(content.Min.X + 46f * scale, content.Min.Y + 40f * scale);
         UiAnchors.Report("chrome.back", new Rect(hitMin, hitMax));
-        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
+        var hovered = UiInteract.Hover(hitMin, hitMax);
         var center = new Vector2(content.Min.X + 15f * scale, rowCenterY);
         if (BackButton.Draw("chrome.back", center, 15f * scale, ink, hovered, scale, shadow: true))
         {

@@ -5,7 +5,6 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -55,7 +54,7 @@ internal sealed class IncomingCallOverlay
 
     private void DrawContent(Rect screen, PhoneTheme theme, CallView view, float reveal, bool live)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var alpha = Math.Clamp(reveal * 1.4f, 0f, 1f);
         var rise = (1f - reveal) * 26f * scale;
@@ -96,9 +95,9 @@ internal sealed class IncomingCallOverlay
         PhoneTheme theme, float alpha, bool live)
     {
         var dl = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var hovered = live &&
-                      ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius),
+                      UiInteract.Hover(center - new Vector2(radius, radius),
                           center + new Vector2(radius, radius));
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha)), 40);

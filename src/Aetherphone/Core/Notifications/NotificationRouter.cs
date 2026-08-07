@@ -1,5 +1,10 @@
+using Aetherphone.Core.Announcements;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Linkpearl;
+using Aetherphone.Core.Moderation;
+using Aetherphone.Core.Muster;
+using Aetherphone.Core.Radio;
+using Aetherphone.Core.YellowPages;
 
 namespace Aetherphone.Core.Notifications;
 
@@ -10,6 +15,11 @@ internal sealed class NotificationRouter
     private const string VelvetAppId = "velvet";
     private const string ChirperAppId = "chirper";
     private const string AethergramAppId = "aethergram";
+    private const string MusterAppId = "muster";
+    private const string YellowPagesAppId = "yellowpages";
+    private const string AnnouncementsAppId = "announcements";
+    private const string SettingsAppId = "settings";
+    private const string MusicAppId = "music";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -19,26 +29,68 @@ internal sealed class NotificationRouter
     private const int TypeMention = 7;
     private const int TypeCommentMention = 8;
     private const int TypePhotoTag = 9;
+    private const int TypeRepost = 12;
+    private const int TypeQuote = 13;
+    private const int TypeFollowRequest = 14;
+    private const int TypeFollowAccept = 15;
+    private const int TypeAdInquiry = 19;
+    private const int TypeMissedCall = 20;
+    private const int TypeRadioLive = 21;
+    private const string CallGroupPrefix = "call:";
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
+    private readonly SocialNotificationService socialNotifications;
     private readonly LinkpearlLauncher linkpearlLauncher;
     private readonly VelvetLauncher velvetLauncher;
     private readonly DmLauncher dmLauncher;
+    private readonly GramDmLauncher gramDmLauncher;
     private readonly SocialLauncher socialLauncher;
+    private readonly MusterLauncher musterLauncher;
+    private readonly YellowPagesLauncher yellowPagesLauncher;
+    private readonly AnnouncementsLauncher announcementsLauncher;
+    private readonly SafetyLauncher safetyLauncher;
+    private readonly RadioLauncher radioLauncher;
 
-    public NotificationRouter(INavigator navigation, NotificationService notifications, LinkpearlLauncher linkpearlLauncher,
-        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, SocialLauncher socialLauncher)
+    public NotificationRouter(INavigator navigation, NotificationService notifications,
+        SocialNotificationService socialNotifications, LinkpearlLauncher linkpearlLauncher,
+        VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher,
+        MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher,
+        AnnouncementsLauncher announcementsLauncher, SafetyLauncher safetyLauncher, RadioLauncher radioLauncher)
     {
+        this.radioLauncher = radioLauncher;
         this.navigation = navigation;
         this.notifications = notifications;
+        this.socialNotifications = socialNotifications;
         this.linkpearlLauncher = linkpearlLauncher;
         this.velvetLauncher = velvetLauncher;
         this.dmLauncher = dmLauncher;
+        this.gramDmLauncher = gramDmLauncher;
         this.socialLauncher = socialLauncher;
+        this.musterLauncher = musterLauncher;
+        this.yellowPagesLauncher = yellowPagesLauncher;
+        this.announcementsLauncher = announcementsLauncher;
+        this.safetyLauncher = safetyLauncher;
+    }
+
+    public void AcknowledgeAll() => socialNotifications.AcknowledgeAll();
+
+    public void Acknowledge(PhoneNotification notification)
+    {
+        if (notification.SocialType < 0)
+        {
+            return;
+        }
+
+        socialNotifications.AcknowledgeUpTo(notification.AppId, notification.CreatedAtUnix);
     }
 
     public void Open(PhoneNotification notification)
     {
+        if (notification.SocialType >= 0)
+        {
+            socialNotifications.AcknowledgeUpTo(notification.AppId, notification.CreatedAtUnix);
+        }
+
         if (!navigation.IsAvailable(notification.AppId))
         {
             notifications.RemoveGroup(notification.StackKey);
@@ -58,13 +110,51 @@ internal sealed class NotificationRouter
                 linkpearlLauncher.Request(notification.Title, notification.GroupKey);
             }
         }
-        else if (notification.AppId == DmAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        else if (notification.AppId == DmAppId && notification.GroupKey is { } dmKey
+                 && dmKey.StartsWith(CallGroupPrefix, StringComparison.Ordinal))
+        {
+            dmLauncher.RequestCalls();
+        }
+        else if (notification.AppId == DmAppId && notification.SocialType < 0
+                 && !string.IsNullOrEmpty(notification.GroupKey))
         {
             dmLauncher.RequestConversation(notification.GroupKey);
         }
-        else if (notification.AppId == VelvetAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        else if (notification.AppId == VelvetAppId && notification.SocialType < 0
+                 && !string.IsNullOrEmpty(notification.GroupKey))
         {
             velvetLauncher.Request(notification.GroupKey);
+        }
+        else if (notification.AppId == AethergramAppId && notification.SocialType < 0
+                 && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            gramDmLauncher.Request(notification.GroupKey);
+        }
+        else if (notification.AppId == MusterAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            musterLauncher.RequestDetail(notification.GroupKey);
+        }
+        else if (notification.AppId == YellowPagesAppId && notification.SocialType == TypeAdInquiry
+                 && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            yellowPagesLauncher.RequestInquiry(notification.GroupKey);
+        }
+        else if (notification.AppId == YellowPagesAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            yellowPagesLauncher.RequestDetail(notification.GroupKey);
+        }
+        else if (notification.AppId == AnnouncementsAppId && !string.IsNullOrEmpty(notification.GroupKey))
+        {
+            announcementsLauncher.RequestDetail(notification.GroupKey);
+        }
+        else if (notification.AppId == MusicAppId && notification.SocialType == TypeRadioLive
+                 && !string.IsNullOrEmpty(notification.PostId))
+        {
+            radioLauncher.RequestStation(notification.PostId!);
+        }
+        else if (notification.AppId == SettingsAppId)
+        {
+            safetyLauncher.Request();
         }
         else if (SocialLinkFor(notification) is { } link)
         {
@@ -84,10 +174,13 @@ internal sealed class NotificationRouter
         return notification.SocialType switch
         {
             TypeLike or TypeComment or TypeCommentLike or TypeMention or TypeCommentMention or TypePhotoTag
+                or TypeRepost or TypeQuote
                 when !string.IsNullOrEmpty(notification.PostId)
                 => new SocialDeepLink(SocialLinkKind.Post, notification.PostId!),
-            TypeFollow or TypeConnectRequest or TypeConnectAccept when !string.IsNullOrEmpty(notification.ActorId)
+            TypeFollow or TypeConnectRequest or TypeConnectAccept or TypeFollowAccept
+                when !string.IsNullOrEmpty(notification.ActorId)
                 => new SocialDeepLink(SocialLinkKind.Profile, notification.ActorId!),
+            TypeFollowRequest => new SocialDeepLink(SocialLinkKind.Requests, notification.ActorId ?? string.Empty),
             _ => null,
         };
     }

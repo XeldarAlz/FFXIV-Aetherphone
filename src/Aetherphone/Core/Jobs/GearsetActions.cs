@@ -4,10 +4,6 @@ namespace Aetherphone.Core.Jobs;
 
 internal static unsafe class GearsetActions
 {
-    /// <summary>
-    /// Equipping a gearset is the only way the client changes class, crafters and gatherers included: they own
-    /// gearsets just like combat jobs do.
-    /// </summary>
     public static bool Equip(int gearsetId)
     {
         var module = RaptureGearsetModule.Instance();

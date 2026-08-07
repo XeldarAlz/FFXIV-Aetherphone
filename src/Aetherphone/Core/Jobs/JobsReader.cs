@@ -8,18 +8,17 @@ namespace Aetherphone.Core.Jobs;
 
 internal static unsafe class JobsReader
 {
-    // ClassJobCategory sheet rows for the divisions the Character window groups by.
-    private const uint WarCategoryId = 30; // "Disciple of War"
-    private const uint LandCategoryId = 32; // "Disciple of the Land"
-    private const uint HandCategoryId = 33; // "Disciple of the Hand"
+    private const uint WarCategoryId = 30;
+    private const uint LandCategoryId = 32;
+    private const uint HandCategoryId = 33;
     private const int RoleCount = 7;
 
-    public static JobRoleSection[] Build(GameData gameData)
+    public static JobSection[] Build(GameData gameData, IReadOnlyList<JobsCategory> categories)
     {
         var playerState = PlayerState.Instance();
         if (playerState is null)
         {
-            return Array.Empty<JobRoleSection>();
+            return Array.Empty<JobSection>();
         }
 
         var buckets = new List<(JobEntry Entry, byte UiPriority)>[RoleCount];
@@ -28,13 +27,35 @@ internal static unsafe class JobsReader
             buckets[index] = new List<(JobEntry, byte)>();
         }
 
+        var customBuckets = new List<(JobEntry Entry, byte UiPriority)>[categories.Count];
+        for (var index = 0; index < customBuckets.Length; index++)
+        {
+            customBuckets[index] = new List<(JobEntry, byte)>();
+        }
+
+        var categoryByGearsetId = new Dictionary<int, int>();
+        for (var categoryIndex = 0; categoryIndex < categories.Count; categoryIndex++)
+        {
+            var gearsetIds = categories[categoryIndex].GearsetIds;
+            for (var idIndex = 0; idIndex < gearsetIds.Count; idIndex++)
+            {
+                categoryByGearsetId.TryAdd(gearsetIds[idIndex], categoryIndex);
+            }
+        }
+
         var levels = playerState->ClassJobLevels;
         var gearsetJobIds = new HashSet<uint>();
-        BuildGearsetEntries(gameData, levels, buckets, gearsetJobIds);
+        BuildGearsetEntries(gameData, levels, buckets, customBuckets, categoryByGearsetId, gearsetJobIds);
         BuildClassEntries(gameData, levels, buckets, gearsetJobIds, HandCategoryId, (int)JobRole.Hand);
         BuildClassEntries(gameData, levels, buckets, gearsetJobIds, LandCategoryId, (int)JobRole.Land);
 
-        var sections = new List<JobRoleSection>(RoleCount);
+        var sections = new List<JobSection>(customBuckets.Length + RoleCount);
+        for (var categoryIndex = 0; categoryIndex < customBuckets.Length; categoryIndex++)
+        {
+            sections.Add(new JobSection(categoryIndex, categories[categoryIndex].Name,
+                SortedEntries(customBuckets[categoryIndex])));
+        }
+
         for (var bucketIndex = 0; bucketIndex < buckets.Length; bucketIndex++)
         {
             var bucket = buckets[bucketIndex];
@@ -43,24 +64,29 @@ internal static unsafe class JobsReader
                 continue;
             }
 
-            bucket.Sort((a, b) => a.UiPriority != b.UiPriority
-                ? a.UiPriority.CompareTo(b.UiPriority)
-                : string.CompareOrdinal(a.Entry.Abbreviation, b.Entry.Abbreviation));
-            var role = (JobRole)bucketIndex;
-            var jobEntries = new JobEntry[bucket.Count];
-            for (var entryIndex = 0; entryIndex < bucket.Count; entryIndex++)
-            {
-                jobEntries[entryIndex] = bucket[entryIndex].Entry;
-            }
-
-            sections.Add(new JobRoleSection(role, TitleFor(role), jobEntries));
+            sections.Add(new JobSection(TitleFor((JobRole)bucketIndex), SortedEntries(bucket)));
         }
 
         return sections.ToArray();
     }
 
+    private static JobEntry[] SortedEntries(List<(JobEntry Entry, byte UiPriority)> bucket)
+    {
+        bucket.Sort((a, b) => a.UiPriority != b.UiPriority
+            ? a.UiPriority.CompareTo(b.UiPriority)
+            : string.CompareOrdinal(a.Entry.Abbreviation, b.Entry.Abbreviation));
+        var jobEntries = new JobEntry[bucket.Count];
+        for (var entryIndex = 0; entryIndex < bucket.Count; entryIndex++)
+        {
+            jobEntries[entryIndex] = bucket[entryIndex].Entry;
+        }
+
+        return jobEntries;
+    }
+
     private static void BuildGearsetEntries(GameData gameData, Span<short> levels,
-        List<(JobEntry Entry, byte UiPriority)>[] buckets, HashSet<uint> gearsetJobIds)
+        List<(JobEntry Entry, byte UiPriority)>[] buckets, List<(JobEntry Entry, byte UiPriority)>[] customBuckets,
+        Dictionary<int, int> categoryByGearsetId, HashSet<uint> gearsetJobIds)
     {
         var module = RaptureGearsetModule.Instance();
         if (module is null)
@@ -92,17 +118,27 @@ internal static unsafe class JobsReader
 
             var level = LevelFor(gameData, levels, classJobId);
             var isActive = module->CurrentGearsetIndex == entry.Id;
+            var gearsetName = entry.NameString;
+            if (gearsetName.Length == 0)
+            {
+                gearsetName = gameData.JobName(classJobId);
+            }
+
             var jobEntry = new JobEntry(JobEntryKind.Gearset, entry.Id, classJobId, gameData.JobAbbreviation(classJobId),
-                gameData.JobName(classJobId), level, entry.ItemLevel, GameData.JobIconId(classJobId), isActive);
-            buckets[bucketIndex].Add((jobEntry, uiPriority));
+                gearsetName, level, entry.ItemLevel, GameData.JobIconId(classJobId), isActive);
+            if (categoryByGearsetId.TryGetValue(entry.Id, out var categoryIndex))
+            {
+                customBuckets[categoryIndex].Add((jobEntry, uiPriority));
+            }
+            else
+            {
+                buckets[bucketIndex].Add((jobEntry, uiPriority));
+            }
+
             gearsetJobIds.Add(classJobId);
         }
     }
 
-    /// <summary>
-    /// Hand/Land classes the player has levelled but never saved a gearset for. They are listed for completeness,
-    /// but the game only switches classes by equipping a gearset, so there is nothing to click.
-    /// </summary>
     private static void BuildClassEntries(GameData gameData, Span<short> levels,
         List<(JobEntry Entry, byte UiPriority)>[] buckets, HashSet<uint> gearsetJobIds, uint classJobCategoryId,
         int bucketIndex)
@@ -159,10 +195,6 @@ internal static unsafe class JobsReader
         return true;
     }
 
-    // JobType splits the combat roles the way the in-game job guide does, but it reads 0 for the base classes
-    // (Gladiator, Archer, Arcanist and friends), which would drop their gearsets entirely. Those fall back to
-    // Role, which cannot tell physical from magical ranged: the Disciple of War/Magic category settles that.
-    // Hand and Land read 0 for both, so their category has to be matched before either check.
     private static int BucketFor(byte jobType, byte role, uint classJobCategoryId)
     {
         if (classJobCategoryId == HandCategoryId)

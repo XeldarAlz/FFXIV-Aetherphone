@@ -5,8 +5,11 @@ namespace Aetherphone.Core.Animation;
 internal readonly ref struct InputShield
 {
     private static readonly Vector2 OffScreen = new(-100000f, -100000f);
+    private static int engagedDepth;
     private readonly Vector2 saved;
     private readonly bool active;
+
+    public static bool Active => engagedDepth > 0;
 
     private InputShield(Vector2 saved, bool active)
     {
@@ -23,6 +26,7 @@ internal readonly ref struct InputShield
 
         var io = ImGui.GetIO();
         var shield = new InputShield(io.MousePos, true);
+        engagedDepth++;
         io.MousePos = OffScreen;
         return shield;
     }
@@ -31,6 +35,7 @@ internal readonly ref struct InputShield
     {
         if (active)
         {
+            engagedDepth--;
             ImGui.GetIO().MousePos = saved;
         }
     }

@@ -75,6 +75,7 @@ internal sealed class UniversalisAggregatedValue
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(UniversalisCurrentData))]
 [JsonSerializable(typeof(UniversalisAggregatedResponse))]
+[JsonSerializable(typeof(Dictionary<string, int>))]
 internal sealed partial class UniversalisJsonContext : JsonSerializerContext
 {
 }

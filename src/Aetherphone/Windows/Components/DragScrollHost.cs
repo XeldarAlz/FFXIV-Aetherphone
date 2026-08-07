@@ -1,10 +1,8 @@
 using Aetherphone.Core.Animation;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
-/// <summary>Adds phone-style drag-to-scroll and momentum to an ImGui scroll child.</summary>
 internal static class DragScrollHost
 {
     internal sealed class Region
@@ -26,7 +24,6 @@ internal static class DragScrollHost
         }
     }
 
-    /// <summary>A scroll region begun this frame: its gesture state and top-snap control.</summary>
     public readonly struct Surface
     {
         private readonly Region? region;
@@ -38,20 +35,16 @@ internal static class DragScrollHost
             Dragging = dragging;
         }
 
-        /// <summary>How far the region is pulled past its top edge, in pixels.</summary>
         public float Pull { get; }
 
-        /// <summary>Whether the pointer is dragging this region right now.</summary>
         public bool Dragging { get; }
 
-        /// <summary>Snaps the region back to the top, dropping any drag, momentum, or pull.</summary>
         public void JumpToTop()
         {
             ImGui.SetScrollY(0f);
             region?.Reset();
         }
 
-        /// <summary>Hands the gesture to a widget inside the region, leaving the scroll offset alone.</summary>
         public void CancelDrag() => region?.CancelGesture();
     }
 
@@ -60,10 +53,8 @@ internal static class DragScrollHost
     private static readonly Dictionary<uint, Region> Regions = new();
     private static readonly List<uint> stale = new();
 
-    /// <summary>Whether drag-to-scroll is live; set per-frame to the phone's lock state.</summary>
     public static bool Enabled { get; set; } = true;
 
-    /// <summary>Whether any live region is mid-drag; readable before this frame's regions have begun.</summary>
     public static bool AnyDragging
     {
         get
@@ -81,7 +72,6 @@ internal static class DragScrollHost
         }
     }
 
-    /// <summary>Hides the ImGui scrollbar on a scroll child while drag-to-scroll is live; keeps it when unlocked.</summary>
     public static ImGuiWindowFlags ScrollFlags(ImGuiWindowFlags baseFlags) =>
         Enabled ? baseFlags | ImGuiWindowFlags.NoScrollbar : baseFlags;
 
@@ -99,7 +89,7 @@ internal static class DragScrollHost
         region.LastFrame = frame;
 
         var scroller = region.Scroller;
-        scroller.Scale = ImGuiHelpers.GlobalScale;
+        scroller.Scale = UiScale.Current;
         scroller.SetBounds(ImGui.GetScrollMaxY());
         if (gapped)
         {

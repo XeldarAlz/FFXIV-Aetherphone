@@ -1,6 +1,5 @@
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -18,7 +17,7 @@ internal static class AnalogClock
     public static void Draw(Vector2 center, float radius, float hours, float minutes, float seconds, float dayFraction,
         PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var face = Vector4.Lerp(NightFace, DayFace, dayFraction);
         var ink = Palette.Luminance(face) > 0.5f ? DayInk : NightInk;

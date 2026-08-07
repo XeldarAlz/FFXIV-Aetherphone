@@ -1,11 +1,11 @@
 using Aetherphone.Apps.Games.Framework;
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Animation;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.WaterSort;
 
@@ -66,7 +66,7 @@ internal sealed class WaterSortApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         if (!statsLoaded)
@@ -96,17 +96,40 @@ internal sealed class WaterSortApp : IMiniGame
         }
 
         var rowY = body.Min.Y + 30f * scale;
-        GameHud.Pill(new Vector2(body.Center.X - 48f * scale, rowY), Loc.T(L.Games.Level),
-            GameNumber.Label(currentLevel), Accent, theme);
-        GameHud.Pill(new Vector2(body.Center.X + 48f * scale, rowY), Loc.T(L.Games.Moves),
-            GameNumber.Label(board.Moves), Accent, theme);
-        if (GameHud.Button(new Vector2(body.Min.X + 36f * scale, rowY), new Vector2(58f * scale, 28f * scale),
+        var levelLabel = Loc.T(L.Games.Level);
+        var levelText = GameNumber.Label(currentLevel);
+        var movesLabel = Loc.T(L.Games.Moves);
+        var movesText = GameNumber.Label(board.Moves);
+        var levelWidth = GameHud.PillWidth(levelLabel, levelText);
+        var movesWidth = GameHud.PillWidth(movesLabel, movesText);
+
+        var undoWidth = 58f * scale;
+        var edgeMargin = 6f * scale;
+        var undoCenterX = body.Min.X + edgeMargin + undoWidth * 0.5f;
+        var restartRadius = 16f * scale;
+        var restartCenterX = body.Max.X - edgeMargin - restartRadius;
+
+        var pillGap = 12f * scale;
+        var slotMargin = 10f * scale;
+        var middleLeft = undoCenterX + undoWidth * 0.5f + slotMargin;
+        var middleRight = restartCenterX - restartRadius - slotMargin;
+        var groupWidth = levelWidth + pillGap + movesWidth;
+        var clampMin = middleLeft + groupWidth * 0.5f;
+        var clampMax = middleRight - groupWidth * 0.5f;
+        var groupCenter = clampMin <= clampMax
+            ? Math.Clamp(body.Center.X, clampMin, clampMax)
+            : (middleLeft + middleRight) * 0.5f;
+        var levelX = groupCenter - groupWidth * 0.5f + levelWidth * 0.5f;
+        var movesX = groupCenter + groupWidth * 0.5f - movesWidth * 0.5f;
+        GameHud.Pill(new Vector2(levelX, rowY), levelLabel, levelText, Accent, theme);
+        GameHud.Pill(new Vector2(movesX, rowY), movesLabel, movesText, Accent, theme);
+        if (GameHud.Button(new Vector2(undoCenterX, rowY), new Vector2(undoWidth, 28f * scale),
                 Loc.T(L.Games.Undo), theme.SurfaceMuted, theme))
         {
             board.Undo();
         }
 
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
+        if (GameHud.RestartButton(new Vector2(restartCenterX, rowY), restartRadius, theme))
         {
             StartLevel(currentLevel);
             return;
@@ -137,11 +160,11 @@ internal sealed class WaterSortApp : IMiniGame
 
     private void HandleClick(Rect area, float scale)
     {
-        var mouse = ImGui.GetMousePos();
         var hoveredTube = -1;
         for (var tube = 0; tube < board.TubeCount; tube++)
         {
-            if (WaterSortRenderer.TubeRect(area, tube, board.TubeCount, scale).Contains(mouse))
+            var tubeRect = WaterSortRenderer.TubeRect(area, tube, board.TubeCount, scale);
+            if (UiInteract.Hover(tubeRect.Min, tubeRect.Max))
             {
                 hoveredTube = tube;
                 break;

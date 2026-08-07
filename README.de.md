@@ -80,6 +80,12 @@ Fragen, Ideen oder einfach Lust, mit anderen Spielern abzuhängen? Komm auf Disc
 
 → [Tritt unserem Discord bei](https://discord.gg/3HbJCscMyS)
 
+## Mitwirken
+
+Aetherphone ist Open Source, und Beiträge sind willkommen. Beginne mit der Entwicklerdokumentation (auf Englisch) und lies dann den Leitfaden für Beiträge.
+
+→ [Entwicklerdokumentation](docs/README.md) · [Leitfaden für Beiträge](CONTRIBUTING.md)
+
 ## Mehr von mir
 
 Wenn dir dieses Plugin gefallen hat, wirf einen Blick auf meine anderen Dalamud-Projekte. Vielleicht ist dort noch etwas für dich dabei.

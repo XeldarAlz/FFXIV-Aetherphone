@@ -85,7 +85,8 @@ internal static class VChip
         }
 
         var textSize = Typography.Measure(chip.Label, TextStyles.Footnote);
-        Typography.Draw(new Vector2(cursorX, centerY - textSize.Y * 0.5f), chip.Label, ink, TextStyles.Footnote);
+        Typography.Draw(drawList, new Vector2(cursorX, centerY - textSize.Y * 0.5f), chip.Label, ink,
+            TextStyles.Footnote);
 
         if (chip.Removable)
         {

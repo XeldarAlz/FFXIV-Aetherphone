@@ -2,15 +2,9 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
-/// <summary>
-/// The shared "hero" progress ring used at the top of summary apps (Dailies, Timers): a glowing
-/// accent ring with a value-or-icon centre and a title + subtitle beneath it, reserving a fixed
-/// block of vertical space. Callers supply the fraction, palette inks and labels.
-/// </summary>
 internal static class HeroRing
 {
     private const float CenterOffsetY = 86f;
@@ -39,7 +33,7 @@ internal static class HeroRing
 
     private static (Vector2 Center, float Radius) Frame(float fraction, Vector4 accent, Vector4 titleInk)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var ringCenter = new Vector2(origin.X + width * 0.5f, origin.Y + CenterOffsetY * scale);
@@ -55,7 +49,7 @@ internal static class HeroRing
     private static void Labels(Vector2 ringCenter, float radius, Vector4 titleInk, Vector4 mutedInk, string title,
         string subtitle)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         Typography.DrawCentered(new Vector2(ringCenter.X, ringCenter.Y + radius + TitleGap * scale), title, titleInk,

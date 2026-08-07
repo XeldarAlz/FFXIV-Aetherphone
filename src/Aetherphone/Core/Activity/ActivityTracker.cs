@@ -1,5 +1,6 @@
 using System.Globalization;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Dalamud.Game.DutyState;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -21,6 +22,7 @@ internal sealed unsafe class ActivityTracker : IDisposable
     private readonly GameData gameData;
     private readonly ActivityStore store;
     private readonly FrameworkTicker ticker;
+    private readonly AppGate gate;
     private readonly ActivityDay session = new();
     private ActivityLedger ledger = new();
     private ActivityDay today = new();
@@ -39,13 +41,14 @@ internal sealed unsafe class ActivityTracker : IDisposable
     private int baselineMinions = -1;
 
     public ActivityTracker(IFramework framework, IClientState clientState, IDutyState dutyState, GameData gameData,
-        DirectoryInfo configDirectory)
+        DirectoryInfo configDirectory, AppGate gate)
     {
         this.clientState = clientState;
         this.dutyState = dutyState;
         this.gameData = gameData;
+        this.gate = gate;
         store = new ActivityStore(new DirectoryInfo(Path.Combine(configDirectory.FullName, "Activity")));
-        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
+        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick, gate);
         dutyState.DutyCompleted += OnDutyCompleted;
         clientState.Logout += OnLogout;
         SessionStartedUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -72,7 +75,7 @@ internal sealed unsafe class ActivityTracker : IDisposable
 
     private void OnDutyCompleted(IDutyStateEventArgs args)
     {
-        if (contentId == 0)
+        if (contentId == 0 || !gate.Open)
         {
             return;
         }

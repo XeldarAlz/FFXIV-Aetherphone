@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 using Dalamud.Interface;
@@ -52,7 +51,7 @@ internal sealed class WallpaperPage : ISettingsPage
         this.wallpapers = wallpapers;
         this.wallpaperImages = wallpaperImages;
         assign = Assign;
-        editingDark = wallpapers.Darkness >= 0.5f;
+        editingDark = wallpapers.ThemeDarkness >= 0.5f;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -68,7 +67,7 @@ internal sealed class WallpaperPage : ISettingsPage
         var theme = context.Theme;
         var overlayAtFrameStart = overlay;
         var interactive = overlay == Overlay.None;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var previewHeight = 198f * scale;
         var previewRegion = new Rect(body.Min, new Vector2(body.Max.X, body.Min.Y + previewHeight));
         var gridRegion = new Rect(new Vector2(body.Min.X, body.Min.Y + previewHeight), body.Max);
@@ -97,7 +96,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void DrawAppearancePreviews(Rect region, PhoneTheme theme, bool interactive)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var aspect = TileAspect();
         var cardHeight = 148f * scale;
         var cardWidth = cardHeight * aspect;
@@ -116,7 +115,7 @@ internal sealed class WallpaperPage : ISettingsPage
     private void DrawAppearanceCard(Rect rect, bool isDark, string selectedId, string label, PhoneTheme theme,
         bool interactive)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var rounding = 22f * scale;
         var active = editingDark == isDark;
@@ -137,7 +136,7 @@ internal sealed class WallpaperPage : ISettingsPage
             return;
         }
 
-        if (ImGui.IsMouseHoveringRect(rect.Min, new Vector2(rect.Max.X, rect.Max.Y + 24f * scale)))
+        if (UiInteract.Hover(rect.Min, new Vector2(rect.Max.X, rect.Max.Y + 24f * scale)))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -149,7 +148,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void DrawGrid(Rect region, PhoneTheme theme, bool interactive)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var aspect = TileAspect();
         var entries = wallpapers.Entries;
         var gap = 10f * scale;
@@ -188,7 +187,7 @@ internal sealed class WallpaperPage : ISettingsPage
     private void DrawWallpaperTile(WallpaperEntry entry, Vector2 min, Vector2 max, PhoneTheme theme, bool interactive,
         bool clicked)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var rounding = 16f * scale;
         var rect = new Rect(min, max);
@@ -196,7 +195,8 @@ internal sealed class WallpaperPage : ISettingsPage
         WallpaperRenderer.DrawSingle(dl, rect, rounding, entry, TileAspect(), 1f, theme.SurfaceMuted);
         dl.AddRect(min, max, ImGui.GetColorU32(selected ? theme.Accent : theme.Separator), rounding,
             ImDrawFlags.RoundCornersAll, selected ? 2.5f * scale : 1f);
-        if (entry.Kind == WallpaperKind.Custom && interactive &&
+        var overTile = UiInteract.Hover(min, max);
+        if (entry.Kind == WallpaperKind.Custom && interactive && overTile &&
             DrawDeleteBadge(new Vector2(max.X - 14f * scale, min.Y + 14f * scale), theme))
         {
             RemoveCustom(entry.Id);
@@ -211,7 +211,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void DrawAddTile(Vector2 min, Vector2 max, PhoneTheme theme, bool clicked)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var rounding = 16f * scale;
         var hovered = ImGui.IsItemHovered();
@@ -236,13 +236,13 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private static bool DrawDeleteBadge(Vector2 center, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var radius = 11f * scale;
         var extent = new Vector2(radius, radius);
         var min = center - extent;
         var max = center + extent;
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.72f : 0.55f)), 24);
         var arm = 4f * scale;
         var ink = ImGui.GetColorU32(hovered ? theme.Danger : new Vector4(1f, 1f, 1f, 0.9f));
@@ -260,7 +260,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void DrawSheet(Rect body, PhoneTheme theme, bool canDismiss)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         dl.AddRectFilled(body.Min, body.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f)), 0f);
         var rowHeight = 52f * scale;
@@ -273,8 +273,8 @@ internal sealed class WallpaperPage : ISettingsPage
         var optionsTop = optionsBottom - rowHeight * 2f;
         var cardMin = new Vector2(left, optionsTop);
         var cardMax = new Vector2(right, cancelTop + rowHeight);
-        var overCard = ImGui.IsMouseHoveringRect(cardMin, cardMax);
-        if (canDismiss && !overCard && ImGui.IsMouseHoveringRect(body.Min, body.Max) &&
+        var overCard = UiInteract.Hover(cardMin, cardMax);
+        if (canDismiss && !overCard && UiInteract.Hover(body.Min, body.Max) &&
             ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             overlay = Overlay.None;
@@ -313,11 +313,11 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private static bool DrawSheetRow(Rect rect, string label, Vector4 color)
     {
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         if (hovered)
         {
             ImGui.GetWindowDrawList().AddRectFilled(rect.Min, rect.Max,
-                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), 16f * ImGuiHelpers.GlobalScale);
+                ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.06f)), 16f * UiScale.Current);
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
@@ -327,7 +327,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void DrawPhotoPicker(Rect body, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         dl.AddRectFilled(body.Min, body.Max, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.5f)), 0f);
         var pad = 10f * scale;
@@ -354,7 +354,6 @@ internal sealed class WallpaperPage : ISettingsPage
         var photosKey = ImGui.GetID("##wallpaperPhotos");
         ImGui.SetCursorScreenPos(grid.Min);
         var gap = 6f * scale;
-        using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
         using (var child = ImRaii.Child("##wallpaperPhotos", grid.Size, false,
                    DragScrollHost.ScrollFlags(ImGuiWindowFlags.NoBackground)))
         {
@@ -365,36 +364,46 @@ internal sealed class WallpaperPage : ISettingsPage
 
             DragScrollHost.Begin(photosKey);
 
-            var cell = (ScrollLayout.StableContentWidth() - gap * (PhotoColumns - 1)) / PhotoColumns;
+            var avail = ScrollLayout.StableContentWidth();
+            var cell = (avail - gap * (PhotoColumns - 1)) / PhotoColumns;
+            var origin = ImGui.GetCursorScreenPos();
+            var scrollY = ImGui.GetScrollY();
+            var viewHeight = ImGui.GetWindowSize().Y;
+            var margin = cell + 60f * scale;
             for (var index = 0; index < photoPaths.Length; index++)
             {
-                using (ImRaii.PushId(index))
+                var column = index % PhotoColumns;
+                var rowIndex = index / PhotoColumns;
+                var top = rowIndex * (cell + gap);
+                if (top + cell < scrollY - margin || top > scrollY + viewHeight + margin)
                 {
-                    ImGui.Dummy(new Vector2(cell, cell));
-                    var min = ImGui.GetItemRectMin();
-                    var max = ImGui.GetItemRectMax();
-                    DrawPhotoThumb(photoPaths[index], min, max, theme);
-                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
-                    {
-                        overlay = Overlay.None;
-                        navigator.Open(new WallpaperCropPage(photoPaths[index], navigator, assign, wallpapers,
-                            wallpaperImages));
-                        return;
-                    }
+                    continue;
                 }
 
-                if (index % PhotoColumns != PhotoColumns - 1)
+                var min = new Vector2(origin.X + column * (cell + gap), origin.Y + top);
+                var max = new Vector2(min.X + cell, min.Y + cell);
+                var hovered = UiInteract.Hover(min, max);
+                DrawPhotoThumb(photoPaths[index], min, max, theme, hovered);
+                if (UiInteract.Click(min, max, hovered))
                 {
-                    ImGui.SameLine();
+                    overlay = Overlay.None;
+                    navigator.Open(new WallpaperCropPage(photoPaths[index], navigator, assign, wallpapers,
+                        wallpaperImages));
+                    return;
                 }
             }
+
+            var rows = (photoPaths.Length + PhotoColumns - 1) / PhotoColumns;
+            var totalHeight = rows * (cell + gap);
+            ImGui.SetCursorScreenPos(origin);
+            ImGui.Dummy(new Vector2(avail, totalHeight));
         }
     }
 
-    private void DrawPhotoThumb(string path, Vector2 min, Vector2 max, PhoneTheme theme)
+    private void DrawPhotoThumb(string path, Vector2 min, Vector2 max, PhoneTheme theme, bool hovered)
     {
         var dl = ImGui.GetWindowDrawList();
-        var rounding = 10f * ImGuiHelpers.GlobalScale;
+        var rounding = 10f * UiScale.Current;
         var texture = wallpaperImages.Get(path);
         if (texture is null)
         {
@@ -404,7 +413,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
         var (uv0, uv1) = CenterCrop(texture.Size);
         dl.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding, ImDrawFlags.RoundCornersAll);
-        if (ImGui.IsItemHovered())
+        if (hovered)
         {
             dl.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)), rounding);
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -413,11 +422,11 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private static bool DrawCloseBadge(Vector2 center, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var radius = 12f * scale;
         var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+            UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         var arm = 5f * scale;
         var ink = ImGui.GetColorU32(hovered ? theme.TextStrong : theme.TextMuted);
         dl.AddLine(new Vector2(center.X - arm, center.Y - arm), new Vector2(center.X + arm, center.Y + arm), ink,
@@ -434,7 +443,7 @@ internal sealed class WallpaperPage : ISettingsPage
 
     private void LaunchFileDialog()
     {
-        NativeFileDialog.PickImage(Loc.T(L.Wallpaper.Add), path => Interlocked.Exchange(ref pendingFilePath, path));
+        FilePicker.PickImage(Loc.T(L.Wallpaper.Add), path => Interlocked.Exchange(ref pendingFilePath, path));
     }
 
     private string ActiveSelectedId() => editingDark ? configuration.DarkWallpaperId : configuration.LightWallpaperId;

@@ -4,7 +4,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Collections;
 
@@ -13,7 +12,7 @@ internal sealed partial class CollectionsApp
     private void DrawDetail(Rect area, CollectionCategory category, CollectionItem item)
     {
         DrawNavBar(area, item.Name, back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -28,7 +27,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawDetailHero(CollectionItem item, CollectionCategory category)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -106,7 +105,7 @@ internal sealed partial class CollectionsApp
         }
 
         DrawSectionHeader(Loc.T(L.Collections.About));
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var padX = 14f * scale;
@@ -155,7 +154,7 @@ internal sealed partial class CollectionsApp
         }
 
         DrawSectionHeader(Loc.T(L.Collections.Details));
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowHeight = 44f * scale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -221,7 +220,7 @@ internal sealed partial class CollectionsApp
         }
 
         DrawSectionHeader(Loc.T(L.Collections.HowToObtain));
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowHeight = 54f * scale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -242,7 +241,8 @@ internal sealed partial class CollectionsApp
             var type = source.Type ?? string.Empty;
             var text = source.Text ?? string.Empty;
             var typeLabel = type.Length > 0 ? type : Loc.T(L.Collections.Source);
-            Typography.Draw(new Vector2(origin.X + 14f * scale, top + 11f * scale), typeLabel, ui.TitleInk,
+            var typeFitted = Typography.FitText(typeLabel, width - 28f * scale, TextStyles.SubheadlineEmphasized);
+            Typography.Draw(new Vector2(origin.X + 14f * scale, top + 11f * scale), typeFitted, ui.TitleInk,
                 TextStyles.SubheadlineEmphasized);
             if (text.Length > 0)
             {
@@ -258,7 +258,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawSectionHeader(string title)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         var origin = ImGui.GetCursorScreenPos();
         Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y), Loc.Culture.TextInfo.ToUpper(title), ui.HeaderInk,

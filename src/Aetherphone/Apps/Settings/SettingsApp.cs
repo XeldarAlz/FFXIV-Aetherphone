@@ -2,13 +2,15 @@ using Aetherphone.Apps.Settings.Pages;
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Moderation;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Theme;
+using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Settings;
 
@@ -19,6 +21,8 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     public string Glyph => "S";
     public int BadgeCount => configuration.HasUnseenChangelog ? 1 : 0;
     public bool BadgeAsDot => true;
+    public bool WantsSystemTheme => true;
+    public ShareKindSet AcceptedShares => ShareKindSet.Photo;
     private readonly Configuration configuration;
     private readonly ViewRouter<ISettingsPage> router;
     private readonly RouterDraw<ISettingsPage> drawPage;
@@ -27,18 +31,25 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
     private PhoneTheme frameTheme = PhoneTheme.Default;
     private INavigator frameNavigation = null!;
     private readonly AccountPage accountPage;
+    private readonly SafetyPage safetyPage;
+    private readonly SafetyLauncher safetyLauncher;
     private readonly NamePage namePage;
     private readonly ProfilePage profilePage;
     private readonly EncryptionPage encryptionPage;
     private readonly ChangelogPage changelogPage;
     private readonly PrivacyPage privacyPage;
     private readonly TagsMentionsPage tagsMentionsPage;
+    private readonly ThemeProvider themes;
+    private readonly WallpaperLibrary wallpapers;
+    private readonly WallpaperImageCache wallpaperImages;
+    private readonly Action<string> assignWallpaper;
+    private string? pendingSharedWallpaper;
 
-    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary, Action showAbout)
+    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary)
     {
         sound = services.Sound;
         configuration = services.Configuration;
-        var themes = services.Themes;
+        themes = services.Themes;
         var aethernetSession = services.AethernetSession;
         var aethernet = services.Aethernet;
         var keyVault = services.KeyVault;
@@ -47,22 +58,23 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
         var lodestone = services.Lodestone;
         var calls = services.Calls;
         var confirm = services.Confirm;
-        var wallpapers = services.Wallpapers;
-        var wallpaperImages = services.WallpaperImages;
+        wallpapers = services.Wallpapers;
+        wallpaperImages = services.WallpaperImages;
         profilePage = new ProfilePage(configuration, aethernetSession, aethernet.Account, gameData);
         encryptionPage = new EncryptionPage(aethernetSession, keyVault, confirm);
         namePage = new NamePage(aethernetSession, aethernet.Account, this);
-        accountPage = new AccountPage(aethernetSession, aethernet.Auth, aethernet.Account, aethernet.Media, gameData,
-            remoteImages, lodestone, this, namePage, profilePage, encryptionPage, photoLibrary, confirm,
-            wallpaperImages);
+        accountPage = new AccountPage(configuration, aethernetSession, aethernet.Auth, aethernet.Account,
+            services.AccountState, aethernet.Media, gameData, remoteImages, lodestone, this, namePage, profilePage,
+            encryptionPage, photoLibrary, confirm, wallpaperImages);
         var appearance = new AppearancePage(configuration, themes, this, photoLibrary, confirm, wallpapers,
             wallpaperImages);
         var language = new LanguagePage(configuration);
         var immersion = new ImmersionPage(configuration);
+        var behavior = new BehaviorPage(configuration);
         var tutorials = new TutorialsPage(configuration);
         var callsPage = new CallsPage(calls, configuration);
         var appNotifications = new AppNotificationPage(configuration, sound);
-        var notificationSoundPage = new SoundSettingsPage(sound, L.Settings.NotificationSound,
+        var notificationSoundPage = new SoundSettingsPage(sound, SoundKind.Notification, L.Settings.NotificationSound,
             FontAwesomeIcon.Bell, new Vector4(0.98f, 0.27f, 0.25f, 1f), "settings.notificationVolume",
             () => configuration.NotificationSound, token =>
             {
@@ -73,8 +85,9 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.NotificationVolume = volume;
                 configuration.Save();
             });
-        var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage);
-        var ringtonePage = new SoundSettingsPage(sound, L.Settings.Ringtone, FontAwesomeIcon.Music,
+        var notifications = new NotificationsPage(configuration, this, appNotifications, sound, notificationSoundPage,
+            services.Installer);
+        var ringtonePage = new SoundSettingsPage(sound, SoundKind.Ringtone, L.Settings.Ringtone, FontAwesomeIcon.Music,
             new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
             () => configuration.RingtoneSound, token =>
             {
@@ -85,23 +98,67 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
                 configuration.RingtoneVolume = volume;
                 configuration.Save();
             });
+        safetyPage = new SafetyPage(aethernetSession, services.ModerationArchive, this);
+        safetyLauncher = services.SafetyLauncher;
         var commands = new CommandsPage();
         privacyPage = new PrivacyPage(configuration, aethernetSession, aethernet.Account, aethernet.Safety,
             confirm);
         tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernet.Account, this);
-        var about = new AboutPage(showAbout);
+        var about = new AboutPage(configuration);
         changelogPage = new ChangelogPage(configuration);
         var groups = new[]
         {
-            new SettingsGroup(new ISettingsPage[] { appearance, language, immersion, tutorials },
+            new SettingsGroup(new ISettingsPage[] { appearance, language, immersion, behavior, tutorials },
                 L.Settings.GeneralFooter),
             new SettingsGroup(new ISettingsPage[] { callsPage, notifications, ringtonePage }, L.Settings.AlertsFooter),
-            new SettingsGroup(new ISettingsPage[] { commands, privacyPage, tagsMentionsPage, changelogPage, about }),
+            new SettingsGroup(new ISettingsPage[] { commands, privacyPage, tagsMentionsPage, safetyPage, changelogPage, about }),
         };
         router = new ViewRouter<ISettingsPage>(
             new RootSettingsPage(this, groups, aethernetSession, remoteImages, lodestone, accountPage));
         drawPage = DrawPage;
         popBack = PopBack;
+        assignWallpaper = AssignWallpaper;
+    }
+
+    public LocString? ShareLabel(ShareKind kind) =>
+        kind == ShareKind.Photo ? L.Share.SetAsWallpaper : null;
+
+    public void OnShare(in ShareItem item)
+    {
+        if (item.Kind != ShareKind.Photo)
+        {
+            return;
+        }
+
+        pendingSharedWallpaper = item.LocalPath;
+    }
+
+    private void AssignWallpaper(string id)
+    {
+        if (wallpapers.ThemeDarkness >= 0.5f)
+        {
+            configuration.DarkWallpaperId = id;
+        }
+        else
+        {
+            configuration.LightWallpaperId = id;
+        }
+
+        themes.Apply(configuration);
+        configuration.Save();
+    }
+
+    private void ConsumeSharedWallpaper()
+    {
+        var path = pendingSharedWallpaper;
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        pendingSharedWallpaper = null;
+        router.Reset();
+        router.Push(new WallpaperCropPage(path, this, assignWallpaper, wallpapers, wallpaperImages));
     }
 
     public void Open(ISettingsPage page)
@@ -132,6 +189,13 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 
     public void Draw(in PhoneContext context)
     {
+        ConsumeSharedWallpaper();
+        if (safetyLauncher.TryConsume())
+        {
+            router.Reset();
+            router.Push(safetyPage);
+        }
+
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
         router.Draw(context.Content, context.Theme.AppBackground, ImGui.GetIO().DeltaTime, drawPage);
@@ -148,7 +212,7 @@ internal sealed class SettingsApp : IPhoneApp, ISettingsNavigator
 
         var onBack = depth > 1 ? popBack : null;
         AppHeader.Draw(context, page.Title, onBack);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         page.Draw(context, body);
     }

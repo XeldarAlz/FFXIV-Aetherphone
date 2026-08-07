@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -24,7 +23,7 @@ internal static class SearchField
     public static bool DrawSubmit(Rect bar, string imguiId, string hint, ref string text, Vector4 fieldSurface,
         Vector4 mutedInk, Vector4 titleInk, int maxLength, float sideInset)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var pillMin = new Vector2(bar.Min.X + sideInset * scale, bar.Min.Y + 9f * scale);
         var pillMax = new Vector2(bar.Max.X - sideInset * scale, bar.Max.Y - 9f * scale);
@@ -44,9 +43,9 @@ internal static class SearchField
     }
 
     public static void Draw(Rect bar, string imguiId, string hint, ref string text, PhoneTheme theme,
-        int maxLength = 100) =>
+        int maxLength = 100, bool focus = false) =>
         Draw(bar, imguiId, hint, ref text, theme.GroupedCard, theme.TextMuted, theme.TextStrong, theme.SurfaceMuted,
-            theme.AppBackground, maxLength);
+            theme.AppBackground, maxLength, focus);
 
     public static void Draw(Rect bar, string imguiId, string hint, ref string text, in AppPalette palette,
         int maxLength = 100) =>
@@ -54,9 +53,10 @@ internal static class SearchField
             new Vector4(1f, 1f, 1f, 0.14f), palette.BackdropBottom, maxLength);
 
     public static void Draw(Rect bar, string imguiId, string hint, ref string text, Vector4 fieldSurface,
-        Vector4 mutedInk, Vector4 titleInk, Vector4 clearFill, Vector4 clearCross, int maxLength)
+        Vector4 mutedInk, Vector4 titleInk, Vector4 clearFill, Vector4 clearCross, int maxLength,
+        bool focus = false)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var pillMin = new Vector2(bar.Min.X, bar.Center.Y - PillHalfHeight * scale);
         var pillMax = new Vector2(bar.Max.X, bar.Center.Y + PillHalfHeight * scale);
@@ -83,6 +83,11 @@ internal static class SearchField
         ImGui.SetNextItemWidth(inputRight - inputLeft);
         Plugin.Fonts.NoticeText(hint);
         Plugin.Fonts.NoticeText(text);
+        if (focus)
+        {
+            ImGui.SetKeyboardFocusHere();
+        }
+
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, titleInk))
         {
@@ -94,7 +99,7 @@ internal static class SearchField
             return;
         }
 
-        var hovered = ImGui.IsMouseHoveringRect(clearCenter - new Vector2(clearRadius, clearRadius),
+        var hovered = UiInteract.Hover(clearCenter - new Vector2(clearRadius, clearRadius),
             clearCenter + new Vector2(clearRadius, clearRadius));
         drawList.AddCircleFilled(clearCenter, clearRadius,
             ImGui.GetColorU32(hovered ? mutedInk : clearFill), 16);

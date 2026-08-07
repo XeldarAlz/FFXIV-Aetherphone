@@ -2,10 +2,14 @@ namespace Aetherphone.Core.Notifications;
 
 internal sealed class SoundLibrary
 {
+    public const string BundledRingtoneToken = SoundTokens.FilePrefix + "Ringtone_1.mp3";
+    public const string BundledNotificationToken = SoundTokens.FilePrefix + "Notification_1.mp3";
+
     private static readonly string[] FilePatterns = { "*.mp3", "*.wav" };
     private readonly DirectoryInfo bundledDirectory;
     private readonly DirectoryInfo userDirectory;
-    private IReadOnlyList<SoundOption> options = Array.Empty<SoundOption>();
+    private IReadOnlyList<string> options = Array.Empty<string>();
+    private string defaultToken = SoundTokens.Silent;
 
     public SoundLibrary(DirectoryInfo bundledDirectory, DirectoryInfo userDirectory)
     {
@@ -15,28 +19,37 @@ internal sealed class SoundLibrary
         Refresh();
     }
 
-    public IReadOnlyList<SoundOption> Options => options;
+    public IReadOnlyList<string> Options => options;
+
+    public string DefaultToken => defaultToken;
 
     public void Refresh()
     {
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var built = new List<SoundOption>();
-        var games = RingtoneCatalog.Options;
-        for (var index = 0; index < games.Count; index++)
-        {
-            var game = games[index];
-            if (game.SoundId == 0)
-            {
-                continue;
-            }
+        var built = new List<string>();
+        AddFiles(bundledDirectory, seen, built);
+        var bundledCount = built.Count;
+        AddFiles(userDirectory, seen, built);
+        defaultToken = bundledCount > 0 ? built[0] : SoundTokens.Silent;
+        built.Add(SoundTokens.Silent);
+        options = built;
+    }
 
-            built.Add(new SoundOption(SoundTokens.Game(game.SoundId), SoundSource.Game));
+    public string Resolve(string? token)
+    {
+        if (string.IsNullOrEmpty(token))
+        {
+            return defaultToken;
         }
 
-        AddFiles(bundledDirectory, SoundSource.Bundled, seen, built);
-        AddFiles(userDirectory, SoundSource.User, seen, built);
-        built.Add(new SoundOption(SoundTokens.Silent, SoundSource.Game));
-        options = built;
+        if (SoundTokens.IsSilent(token))
+        {
+            return token;
+        }
+
+        return SoundTokens.TryFile(token, out var fileName) && TryResolvePath(fileName, out _)
+            ? token
+            : defaultToken;
     }
 
     public bool TryResolvePath(string fileName, out string path)
@@ -78,8 +91,7 @@ internal sealed class SoundLibrary
         return string.IsNullOrEmpty(stem) ? fileName : stem.Replace('_', ' ').Replace('-', ' ').Trim();
     }
 
-    private static void AddFiles(DirectoryInfo directory, SoundSource source, HashSet<string> seen,
-        List<SoundOption> built)
+    private static void AddFiles(DirectoryInfo directory, HashSet<string> seen, List<string> built)
     {
         if (!directory.Exists)
         {
@@ -96,12 +108,10 @@ internal sealed class SoundLibrary
         for (var index = 0; index < files.Count; index++)
         {
             var fileName = Path.GetFileName(files[index]);
-            if (!seen.Add(fileName))
+            if (seen.Add(fileName))
             {
-                continue;
+                built.Add(SoundTokens.File(fileName));
             }
-
-            built.Add(new SoundOption(SoundTokens.File(fileName), source));
         }
     }
 }

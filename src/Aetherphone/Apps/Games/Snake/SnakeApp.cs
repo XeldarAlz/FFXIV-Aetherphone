@@ -6,7 +6,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Snake;
 
@@ -31,6 +30,8 @@ internal sealed class SnakeApp : IMiniGame
     public string Id => GameId;
     public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Snake);
+    public bool RunsOnAClock => true;
+
     public string Genre => Loc.T(L.Games.GenreArcade);
     public void Open()
     {
@@ -61,7 +62,7 @@ internal sealed class SnakeApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         var area = new Rect(new Vector2(body.Min.X + 6f * scale, body.Min.Y + 56f * scale),
@@ -95,7 +96,8 @@ internal sealed class SnakeApp : IMiniGame
         particles.Update(deltaSeconds);
         fx.Update(deltaSeconds);
         eatPulse = MathF.Max(0f, eatPulse - deltaSeconds * 3.4f);
-        if (board.State == SnakeState.Ready && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (board.State == SnakeState.Ready && ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
+            UiInteract.Hover(area.Min, area.Max))
         {
             board.Begin(mouse);
         }

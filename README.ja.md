@@ -80,6 +80,12 @@ https://raw.githubusercontent.com/XeldarAlz/DalamudPlugins/main/repo.json
 
 → [Discordに参加](https://discord.gg/3HbJCscMyS)
 
+## コントリビュート
+
+Aetherphone はオープンソースで、コントリビュートを歓迎します。まず開発者向けドキュメント（英語）を読み、次にコントリビュートガイドをご覧ください。
+
+→ [開発者向けドキュメント](docs/README.md) · [コントリビュートガイド](CONTRIBUTING.md)
+
 ## 私の他の作品
 
 このプラグインを気に入っていただけたなら、私の他の Dalamud 作品もぜひご覧ください。あなたにぴったりの別のものが見つかるかもしれません。

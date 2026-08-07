@@ -19,6 +19,7 @@ internal sealed class WidgetGallery
     private bool open;
     private float scrollY;
     private int targetPage;
+    private int openedFrame;
 
     public WidgetGallery(HomeLayoutService layout, WidgetRegistry widgets)
     {
@@ -33,6 +34,7 @@ internal sealed class WidgetGallery
         open = true;
         targetPage = pageIndex;
         scrollY = 0f;
+        openedFrame = ImGui.GetFrameCount();
     }
 
     public void Close() => open = false;
@@ -65,7 +67,8 @@ internal sealed class WidgetGallery
         DrawHeader(drawList, sheet, theme, scale, interactive);
         DrawItems(drawList, sheet, theme, scale, delta, interactive);
         drawList.PopClipRect();
-        if (interactive && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !sheet.Contains(ImGui.GetMousePos()))
+        if (interactive && ImGui.GetFrameCount() != openedFrame &&
+            UiInteract.ClickedOutside(sheet.Min, sheet.Max, false))
         {
             Close();
         }
@@ -83,7 +86,7 @@ internal sealed class WidgetGallery
         var closeCenter = new Vector2(sheet.Max.X - 26f * scale, sheet.Min.Y + 33f * scale);
         var closeRadius = 12f * scale;
         var hovered = interactive &&
-                      ImGui.IsMouseHoveringRect(closeCenter - new Vector2(closeRadius), closeCenter + new Vector2(closeRadius));
+                      UiInteract.Hover(closeCenter - new Vector2(closeRadius), closeCenter + new Vector2(closeRadius));
         drawList.AddCircleFilled(closeCenter, closeRadius,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, hovered ? 0.22f : 0.13f)), 24);
         var arm = closeRadius * 0.42f;
@@ -106,7 +109,7 @@ internal sealed class WidgetGallery
         var contentTop = sheet.Min.Y + HeaderUnits * scale;
         var view = new Rect(new Vector2(sheet.Min.X, contentTop), sheet.Max);
         drawList.PushClipRect(view.Min, view.Max, true);
-        if (interactive && view.Contains(ImGui.GetMousePos()))
+        if (interactive && UiInteract.HoverWindowOnly(view.Min, view.Max, false))
         {
             scrollY -= ImGui.GetIO().MouseWheel * 46f * scale;
         }
@@ -192,7 +195,7 @@ internal sealed class WidgetGallery
         {
             var chip = new Rect(new Vector2(left, cursorY), new Vector2(left + widths[index], cursorY + chipHeight));
             var isSelected = options[index] == selected;
-            var hovered = interactive && ImGui.IsMouseHoveringRect(chip.Min, chip.Max);
+            var hovered = interactive && UiInteract.Hover(chip.Min, chip.Max);
             var fill = isSelected
                 ? theme.Accent
                 : new Vector4(1f, 1f, 1f, hovered ? 0.16f : 0.10f);
@@ -222,7 +225,7 @@ internal sealed class WidgetGallery
         var height = 32f * scale;
         var button = new Rect(new Vector2(view.Center.X - width * 0.5f, cursorY),
             new Vector2(view.Center.X + width * 0.5f, cursorY + height));
-        var hovered = interactive && ImGui.IsMouseHoveringRect(button.Min, button.Max);
+        var hovered = interactive && UiInteract.Hover(button.Min, button.Max);
         Squircle.Fill(drawList, button.Min, button.Max, height * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, hovered ? 1f : 0.9f)));
         Typography.DrawCentered(drawList, button.Center, label, new Vector4(1f, 1f, 1f, 1f),

@@ -9,7 +9,6 @@ using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Textures;
-using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Inventory;
@@ -77,7 +76,7 @@ internal sealed class InventoryApp : IPhoneApp
         frameTheme = context.Theme;
         frameNavigation = context.Navigation;
         ui.Theme = context.Theme;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
         if (gameData.LocalPlayer is null)
@@ -108,7 +107,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void DrawNavBar(Rect area, string title, Action? onBack)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var fitted = Typography.FitText(title, area.Width - 96f * scale, TextStyles.Title3);
         Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), fitted, ui.TitleInk, TextStyles.Title3);
@@ -130,7 +129,7 @@ internal sealed class InventoryApp : IPhoneApp
     private void DrawRoot(Rect area)
     {
         DrawNavBar(area, DisplayName, null);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var pad = 16f * scale;
         var searchTop = area.Min.Y + AppHeader.Height * scale;
         var searchBar = new Rect(new Vector2(area.Min.X + pad, searchTop),
@@ -155,7 +154,7 @@ internal sealed class InventoryApp : IPhoneApp
     private void DrawSource(Rect area, InventorySourceKind kind, string title)
     {
         DrawNavBar(area, title, back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var group = FindGroup(kind, title);
         using (AppSurface.Begin(body))
@@ -214,7 +213,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void DrawLocalPanel()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -249,7 +248,7 @@ internal sealed class InventoryApp : IPhoneApp
         }
 
         SectionLabel(Loc.T(L.Inventory.CachedSources));
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -326,7 +325,7 @@ internal sealed class InventoryApp : IPhoneApp
     private bool DrawStorageRow(Rect row, InventorySourceKind kind, string title, string subtitle, int count,
         bool navigable, bool hovered, Vector2 hitMin, Vector2 hitMax)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var tileSize = 44f * scale;
         var tileCenter = new Vector2(row.Min.X + tileSize * 0.5f, row.Center.Y);
@@ -347,21 +346,27 @@ internal sealed class InventoryApp : IPhoneApp
         }
 
         var textLeft = tileCenter.X + tileSize * 0.5f + 14f * scale;
+        var textMaxWidth = MathF.Max(1f, textRight - textLeft);
         if (subtitle.Length > 0)
         {
-            var name = Fit(title, textRight - textLeft, TextStyles.Headline);
-            Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 15f * scale), name, ui.TitleInk,
-                TextStyles.Headline);
-            var sub = Fit(subtitle, textRight - textLeft, TextStyles.Footnote);
-            Typography.Draw(drawList, new Vector2(textLeft, row.Min.Y + 38f * scale), sub, ui.MutedInk,
-                TextStyles.Footnote);
+            var titleY = row.Min.Y + 15f * scale;
+            var titleSize = Typography.Measure(title, TextStyles.Headline);
+            var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleY),
+                new Vector2(textLeft + textMaxWidth, titleY + titleSize.Y));
+            Marquee.DrawLeft("inventory.storage.title." + kind, title, textLeft, titleY,
+                textMaxWidth, TextStyles.Headline, ui.TitleInk, titleHovering);
+            var subtitleY = row.Min.Y + 38f * scale;
+            var subtitleSize = Typography.Measure(subtitle, TextStyles.Footnote);
+            var subtitleHovering = UiInteract.Hover(new Vector2(textLeft, subtitleY),
+                new Vector2(textLeft + textMaxWidth, subtitleY + subtitleSize.Y));
+            Marquee.DrawLeft("inventory.storage.subtitle." + kind, subtitle, textLeft, subtitleY,
+                textMaxWidth, TextStyles.Footnote, ui.MutedInk, subtitleHovering);
         }
         else
         {
-            var name = Fit(title, textRight - textLeft, TextStyles.Headline);
-            var nameSize = Typography.Measure(name, TextStyles.Headline);
-            Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), name, ui.TitleInk,
-                TextStyles.Headline);
+            var nameSize = Typography.Measure(title, TextStyles.Headline);
+            Marquee.DrawLeft("inventory.storage.title." + kind, title, textLeft, row.Center.Y - nameSize.Y * 0.5f,
+                textMaxWidth, TextStyles.Headline, ui.TitleInk, hovered);
         }
 
         if (!navigable)
@@ -379,7 +384,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void DrawFooterHint()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 18f * scale));
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
@@ -391,7 +396,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void DrawSummaryCard()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
         var drawList = ImGui.GetWindowDrawList();
@@ -421,16 +426,21 @@ internal sealed class InventoryApp : IPhoneApp
     {
         DrawSourceTile(drawList, new Vector2(columnTop.X, columnTop.Y + 32f * scale), 40f * scale, tint, icon, scale,
             true);
-        var display = Typography.FitText(value, columnWidth - 20f * scale, TextStyles.Title2);
-        Typography.DrawCentered(drawList, new Vector2(columnTop.X, columnTop.Y + 68f * scale), display, ui.TitleInk,
-            TextStyles.Title2);
+        var valueMaxWidth = columnWidth - 20f * scale;
+        var valueY = columnTop.Y + 68f * scale;
+        var valueSize = Typography.Measure(value, TextStyles.Title2);
+        var valueHovering = UiInteract.Hover(
+            new Vector2(columnTop.X - valueMaxWidth * 0.5f, valueY - valueSize.Y * 0.5f),
+            new Vector2(columnTop.X + valueMaxWidth * 0.5f, valueY + valueSize.Y * 0.5f));
+        Marquee.DrawCentered("inventory.herostat." + label, value, columnTop.X, valueY - valueSize.Y * 0.5f,
+            valueMaxWidth, TextStyles.Title2, ui.TitleInk, valueHovering);
         Typography.DrawCentered(drawList, new Vector2(columnTop.X, columnTop.Y + 94f * scale),
             Loc.Culture.TextInfo.ToUpper(label), ui.MutedInk, TextStyles.Caption1);
     }
 
     private void DrawSourceSummary(InventoryResultGroup group)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 10f * scale));
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
@@ -477,7 +487,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void DrawGroupHeader(InventoryResultGroup group)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 10f * scale));
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
@@ -486,16 +496,20 @@ internal sealed class InventoryApp : IPhoneApp
         var tileCenter = new Vector2(origin.X + tileSize * 0.5f, origin.Y + tileSize * 0.5f);
         DrawSourceTile(drawList, tileCenter, tileSize, AccentFor(group.Kind), IconFor(group.Kind), scale, true);
         var textLeft = tileCenter.X + tileSize * 0.5f + 10f * scale;
-        Typography.Draw(drawList,
-            new Vector2(textLeft, tileCenter.Y - Typography.Measure(group.Title, TextStyles.Headline).Y * 0.5f),
-            group.Title, ui.TitleInk, TextStyles.Headline);
+        var textRight = origin.X + width;
         if (group.IsCached)
         {
             var label = Loc.T(L.Inventory.Updated, TimeText.Ago(group.CapturedUtc));
             var labelSize = Typography.Measure(label, TextStyles.Caption1);
             Typography.Draw(drawList, new Vector2(origin.X + width - labelSize.X, tileCenter.Y - labelSize.Y * 0.5f),
                 label, ui.MutedInk, TextStyles.Caption1);
+            textRight -= labelSize.X + 10f * scale;
         }
+
+        var title = Fit(group.Title, textRight - textLeft, TextStyles.Headline);
+        Typography.Draw(drawList,
+            new Vector2(textLeft, tileCenter.Y - Typography.Measure(title, TextStyles.Headline).Y * 0.5f),
+            title, ui.TitleInk, TextStyles.Headline);
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, tileSize + 8f * scale));
@@ -503,7 +517,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void DrawItemPanel(List<InventoryResultRow> rows)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -515,16 +529,16 @@ internal sealed class InventoryApp : IPhoneApp
         {
             var row = PanelRow(drawList, origin, width, rowHeight, index, scale, separatorLeft, ui.HoverTint, true,
                 out var hovered, out _, out _);
-            DrawItemRow(row, rows[index], hovered);
+            DrawItemRow(row, rows[index], index, hovered);
         }
 
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rows.Count * rowHeight));
     }
 
-    private void DrawItemRow(Rect row, InventoryResultRow item, bool hovered)
+    private void DrawItemRow(Rect row, InventoryResultRow item, int index, bool hovered)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var iconSize = 38f * scale;
         var iconMin = new Vector2(row.Min.X, row.Center.Y - iconSize * 0.5f);
@@ -552,10 +566,9 @@ internal sealed class InventoryApp : IPhoneApp
             DrawHqBadge(new Vector2(textRight + 8f * scale, row.Center.Y), scale);
         }
 
-        var name = Fit(item.Name, textRight - textLeft, TextStyles.Body);
-        var nameSize = Typography.Measure(name, TextStyles.Body);
-        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), name,
-            hovered ? ui.TitleInk : ui.BodyInk, TextStyles.Body);
+        var nameSize = Typography.Measure(item.Name, TextStyles.Body);
+        Marquee.DrawLeft("inventory.item." + index, item.Name, textLeft, row.Center.Y - nameSize.Y * 0.5f,
+            MathF.Max(1f, textRight - textLeft), TextStyles.Body, hovered ? ui.TitleInk : ui.BodyInk, hovered);
     }
 
     private void DrawSourceTile(ImDrawListPtr drawList, Vector2 center, float size, Vector4 color,
@@ -584,8 +597,8 @@ internal sealed class InventoryApp : IPhoneApp
     {
         var text = FormatCount(count);
         var textSize = Typography.Measure(text, TextStyles.SubheadlineEmphasized);
-        var padX = 9f * ImGuiHelpers.GlobalScale;
-        var padY = 4f * ImGuiHelpers.GlobalScale;
+        var padX = 9f * UiScale.Current;
+        var padY = 4f * UiScale.Current;
         var width = textSize.X + padX * 2f;
         var height = textSize.Y + padY * 2f;
         var max = new Vector2(rightCenter.X, rightCenter.Y + height * 0.5f);
@@ -610,7 +623,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void DrawHint(string message)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 24f * scale));
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
@@ -623,7 +636,7 @@ internal sealed class InventoryApp : IPhoneApp
 
     private void SectionLabel(string label)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         ui.SectionLabel(label);
     }

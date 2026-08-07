@@ -11,7 +11,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -45,6 +44,9 @@ internal sealed class SocialProfileStyle
     public required LocString DeleteFailed { get; init; }
     public required LocString DeleteCommentConfirmMessage { get; init; }
     public required LocString DeleteCommentFailed { get; init; }
+    public LocString? MessageLabel { get; init; }
+    public LocString? SettingsLabel { get; init; }
+    public LocString? SavedLabel { get; init; }
 }
 
 internal sealed class SocialProfilePages
@@ -52,6 +54,9 @@ internal sealed class SocialProfilePages
     public const int DisplayNameMax = 40;
     public const int HandleMax = 15;
     public const int BioMax = 200;
+
+    private const float ProfileAvatarRadius = 40f;
+    private const float ActionRowHeight = 34f;
 
     private readonly SocialFeedStore store;
     private readonly AppSkin ui;
@@ -69,6 +74,9 @@ internal sealed class SocialProfilePages
     private readonly Action<string, UserListKind> openUserList;
     private readonly Action back;
     private readonly Action? openConductRules;
+    private readonly Action<string>? openMessage;
+    private readonly Action? openSettings;
+    private readonly Action? openSaved;
 
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
@@ -82,7 +90,8 @@ internal sealed class SocialProfilePages
         LodestoneService lodestone, AvatarLightbox avatarLightbox, Configuration configuration, GameData gameData,
         ConfirmService confirm, ReportService report, Action openEditProfile, Action openAvatarComposer,
         Action<string> openProfile, Action<string, UserListKind> openUserList, Action back,
-        Action? openConductRules)
+        Action? openConductRules, Action<string>? openMessage = null, Action? openSettings = null,
+        Action? openSaved = null)
     {
         this.store = store;
         this.ui = ui;
@@ -100,6 +109,9 @@ internal sealed class SocialProfilePages
         this.openUserList = openUserList;
         this.back = back;
         this.openConductRules = openConductRules;
+        this.openMessage = openMessage;
+        this.openSettings = openSettings;
+        this.openSaved = openSaved;
     }
 
     public string SearchDraft = string.Empty;
@@ -150,109 +162,212 @@ internal sealed class SocialProfilePages
 
     public void DrawProfileHeader(UserDto user, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var pad = 16f * scale;
+        var pad = Metrics.Space.Lg * scale;
         var innerLeft = origin.X + pad;
-        var innerWidth = width - pad * 2f;
+        var innerRight = origin.X + width - pad;
+        var innerWidth = MathF.Max(1f, innerRight - innerLeft);
         var displayName = SocialIdentity.Name(user.DisplayName, user.Handle);
-        var avatarRadius = 40f * scale;
-        var regionCode = user.IsMe ? SocialRegion.EffectiveCode(configuration, gameData) : gameData.RegionCodeForWorld(user.World);
+        var avatarRadius = ProfileAvatarRadius * scale;
+        var regionCode = user.IsMe
+            ? SocialRegion.EffectiveCode(configuration, gameData)
+            : SocialRegion.Resolve(user.Region, user.World, gameData);
         var metaLine = SocialIdentity.ProfileMeta(user.Handle, regionCode);
         var timeLine = user.UtcOffsetMinutes is { } offsetMinutes ? SocialTimeZone.Describe(offsetMinutes) : string.Empty;
         var lineGap = 3f * scale;
-        var timeGap = 2f * scale;
-        var nameH = Typography.Measure(displayName, 1.4f, FontWeight.Bold).Y;
-        var metaH = metaLine.Length > 0 ? Typography.Measure(metaLine, 0.95f).Y : 0f;
-        var timeTextH = timeLine.Length > 0 ? Typography.Measure(timeLine, 0.85f).Y : 0f;
-        var timeH = timeLine.Length > 0 ? timeGap + timeTextH : 0f;
-        var bioH = user.Bio.Length > 0 ? 8f * scale + Typography.MeasureWrapped(user.Bio, innerWidth, 1f) : 0f;
-        var textTop = origin.Y + pad + avatarRadius * 2f + 14f * scale;
-        var cardBottom = textTop + nameH + lineGap + metaH + timeH + bioH + pad;
+        var nameHeight = Typography.Measure(displayName, TextStyles.Title2).Y;
+        var metaHeight = metaLine.Length > 0 ? Typography.Measure(metaLine, TextStyles.Callout).Y : 0f;
+        var timeHeight = timeLine.Length > 0 ? Typography.Measure(timeLine, TextStyles.Footnote).Y : 0f;
+        var identityHeight = nameHeight
+            + (metaHeight > 0f ? lineGap + metaHeight : 0f)
+            + (timeHeight > 0f ? lineGap + timeHeight : 0f);
+        var identityLeft = innerLeft + avatarRadius * 2f + Metrics.Space.Md * scale;
+        var identityWidth = MathF.Max(1f, innerRight - identityLeft);
+        var headTop = origin.Y + pad;
+        var headHeight = MathF.Max(avatarRadius * 2f, identityHeight);
+        var bioHeight = user.Bio.Length > 0
+            ? Typography.MeasureWrappedBlock(user.Bio, TextStyles.Body, innerWidth).Y
+            : 0f;
+        var followedByLine = FollowedByLine(user);
+        var followedByHeight = followedByLine.Length > 0
+            ? Typography.MeasureWrappedBlock(followedByLine, TextStyles.Subheadline, innerWidth).Y
+            : 0f;
+        var contentBottom = headTop + headHeight;
+        var bioTop = contentBottom + Metrics.Space.Md * scale;
+        if (bioHeight > 0f)
+        {
+            contentBottom = bioTop + bioHeight;
+        }
+
+        var followedByTop = contentBottom + (bioHeight > 0f ? Metrics.Space.Xs : Metrics.Space.Md) * scale;
+        if (followedByHeight > 0f)
+        {
+            contentBottom = followedByTop + followedByHeight;
+        }
+
+        var actionHeight = ActionRowHeight * scale;
+        var actionTop = contentBottom + Metrics.Space.Lg * scale;
+        var cardBottom = actionTop + actionHeight + pad;
         ui.Card(drawList, origin, new Vector2(origin.X + width, cardBottom), 20f * scale);
-        var avatarCenter = new Vector2(innerLeft + avatarRadius, origin.Y + pad + avatarRadius);
+        var avatarCenter = new Vector2(innerLeft + avatarRadius, headTop + headHeight * 0.5f);
         drawList.AddCircleFilled(avatarCenter, avatarRadius + 2.5f * scale,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.14f)), 64);
-        DrawAvatar(drawList, avatarCenter, avatarRadius, theme, user.Name, user.World, user.AvatarUrl, 1.5f, 64);
+        var portraitName = user.IsMe ? user.Name : displayName;
+        var portraitWorld = user.IsMe ? user.World : string.Empty;
+        DrawAvatar(drawList, avatarCenter, avatarRadius, theme, portraitName, portraitWorld, user.AvatarUrl, 1.5f, 64);
         avatarLightbox.TryOpen(avatarCenter, avatarRadius, user.AvatarUrl, images);
-        var buttonHeight = 34f * scale;
-        var buttonWidth = 122f * scale;
-        var buttonMax = new Vector2(origin.X + width - pad, avatarCenter.Y + buttonHeight * 0.5f);
-        var buttonRect = new Rect(new Vector2(buttonMax.X - buttonWidth, buttonMax.Y - buttonHeight), buttonMax);
-        if (user.IsMe)
+        var textY = headTop + (headHeight - identityHeight) * 0.5f;
+        UserName.DrawAuto(drawList, "socialprofile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
+            identityLeft, textY, identityWidth, TextStyles.Title2, theme.TextStrong, theme, 2);
+        textY += nameHeight;
+        if (metaHeight > 0f)
         {
-            if (openConductRules is not null)
+            textY += lineGap;
+            var showFollowsYouChip = !user.IsMe && user.FollowsYou;
+            var chipReserve = showFollowsYouChip ? FollowsYouChipWidth(scale) + Metrics.Space.Sm * scale : 0f;
+            var metaWidth = Marquee.DrawLeftAuto("socialprofile.meta." + user.Id, metaLine, identityLeft, textY,
+                MathF.Max(1f, identityWidth - chipReserve), TextStyles.Callout, style.Palette.MutedInk);
+            if (showFollowsYouChip)
             {
-                var rulesCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-                if (ui.IconButton(rulesCenter, buttonHeight * 0.5f, FontAwesomeIcon.QuestionCircle.ToIconString(),
-                        style.Palette.MutedInk, Palette.WithAlpha(style.Palette.MutedInk, 0.14f), 0.9f,
-                        Loc.T(L.Conduct.Eyebrow)))
-                {
-                    openConductRules();
-                }
+                var chipAnchor = new Vector2(identityLeft + metaWidth + Metrics.Space.Sm * scale, textY);
+                DrawFollowsYouChip(drawList, chipAnchor, metaHeight, scale);
             }
 
-            if (ui.PillButton(buttonRect, Loc.T(style.EditProfile), false))
+            textY += metaHeight;
+        }
+
+        if (timeHeight > 0f)
+        {
+            textY += lineGap;
+            Marquee.DrawLeftAuto("socialprofile.time." + user.Id, timeLine, identityLeft, textY, identityWidth,
+                TextStyles.Footnote, style.Palette.MutedInk);
+        }
+
+        if (bioHeight > 0f)
+        {
+            Typography.DrawWrappedLeft(new Vector2(innerLeft, bioTop), user.Bio, style.Palette.BodyInk,
+                TextStyles.Body, innerWidth);
+        }
+
+        if (followedByHeight > 0f)
+        {
+            var lineTop = new Vector2(innerLeft, followedByTop);
+            Typography.DrawWrappedLeft(lineTop, followedByLine, style.Palette.MutedInk, TextStyles.Subheadline,
+                innerWidth);
+            if (UiInteract.HoverClick(lineTop, new Vector2(innerRight, lineTop.Y + followedByHeight)))
             {
-                editLoadedFor = null;
-                openEditProfile();
+                openUserList(user.Id, UserListKind.Mutuals);
             }
         }
-        else
-        {
-            var reportCenter = new Vector2(buttonRect.Min.X - buttonHeight * 0.5f - 10f * scale, avatarCenter.Y);
-            if (ui.IconButton(reportCenter, buttonHeight * 0.5f, FontAwesomeIcon.Flag.ToIconString(), theme.Danger,
-                    Palette.WithAlpha(theme.Danger, 0.16f), 0.9f, Loc.T(L.Report.Action)))
-            {
-                OpenReport("user", user.Id, Loc.T(L.Report.UserTitle));
-            }
 
-            if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow),
-                    !user.IsFollowing))
-            {
-                store.SetFollow(user.Id, !user.IsFollowing);
-            }
-        }
-
-        Typography.Draw(new Vector2(innerLeft, textTop), displayName, theme.TextStrong, 1.4f, FontWeight.Bold);
-        var textY = textTop + nameH + lineGap;
-        if (metaLine.Length > 0)
-        {
-            Typography.Draw(new Vector2(innerLeft, textY), metaLine, style.Palette.MutedInk, 0.95f);
-            textY += metaH;
-        }
-
-        if (timeLine.Length > 0)
-        {
-            textY += timeGap;
-            Typography.Draw(new Vector2(innerLeft, textY), timeLine, style.Palette.MutedInk, 0.85f);
-            textY += timeTextH;
-        }
-
-        if (user.Bio.Length > 0)
-        {
-            ImGui.SetCursorScreenPos(new Vector2(innerLeft, textY + 8f * scale));
-            var bioWrapPos = (innerLeft + innerWidth) - ImGui.GetWindowPos().X;
-            ImGui.PushTextWrapPos(bioWrapPos);
-            using (ImRaii.PushColor(ImGuiCol.Text, style.Palette.BodyInk))
-            {
-                Typography.Wrapped(user.Bio);
-            }
-
-            ImGui.PopTextWrapPos();
-        }
-
+        DrawProfileActions(user, theme, innerLeft, innerRight, actionTop, actionHeight);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardBottom - origin.Y + 10f * scale));
         DrawProfileStats(user, theme);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
     }
 
+    private void DrawProfileActions(UserDto user, PhoneTheme theme, float left, float right, float top, float height)
+    {
+        var scale = UiScale.Current;
+        var gap = Metrics.Space.Sm * scale;
+        var centerY = top + height * 0.5f;
+        var trailing = right;
+        var secondaryLabel = string.Empty;
+        if (user.IsMe)
+        {
+            if (openConductRules is not null)
+            {
+                trailing = DrawTrailingIcon(trailing, centerY, height, FontAwesomeIcon.QuestionCircle.ToIconString(),
+                    style.Palette.MutedInk, Loc.T(L.Conduct.Eyebrow), openConductRules);
+            }
+
+            if (openSettings is not null && style.SettingsLabel is { } settingsLabel)
+            {
+                trailing = DrawTrailingIcon(trailing, centerY, height, FontAwesomeIcon.Cog.ToIconString(),
+                    style.Palette.MutedInk, Loc.T(settingsLabel), openSettings);
+            }
+
+            if (openSaved is not null && style.SavedLabel is { } savedLabel)
+            {
+                trailing = DrawTrailingIcon(trailing, centerY, height, FontAwesomeIcon.Bookmark.ToIconString(),
+                    style.Palette.MutedInk, Loc.T(savedLabel), openSaved);
+            }
+        }
+        else
+        {
+            trailing = DrawTrailingIcon(trailing, centerY, height, FontAwesomeIcon.Flag.ToIconString(), theme.Danger,
+                Loc.T(L.Report.Action), () => OpenReport("user", user.Id, Loc.T(L.Report.UserTitle)));
+            if (openMessage is not null && style.MessageLabel is { } messageLabel && user.CanMessage)
+            {
+                secondaryLabel = Loc.T(messageLabel);
+            }
+        }
+
+        var primaryRight = trailing;
+        if (secondaryLabel.Length > 0)
+        {
+            var natural = Typography.Measure(secondaryLabel, 0.9f, FontWeight.SemiBold).X + height;
+            var secondaryWidth = MathF.Min(natural, MathF.Max(1f, (trailing - left - gap) * 0.5f));
+            primaryRight = trailing - secondaryWidth - gap;
+            var secondaryRect = new Rect(new Vector2(trailing - secondaryWidth, top),
+                new Vector2(trailing, top + height));
+            if (ui.PillButton(secondaryRect, secondaryLabel, false, "socialprofile.pill.message." + user.Id))
+            {
+                openMessage!(user.Id);
+            }
+        }
+
+        var primaryRect = new Rect(new Vector2(left, top), new Vector2(MathF.Max(left + height, primaryRight),
+            top + height));
+        if (!user.IsMe)
+        {
+            if (ui.PillButton(primaryRect, FollowPillLabel(user), FollowPillFilled(user),
+                    "socialprofile.pill.follow." + user.Id))
+            {
+                store.ToggleFollow(user);
+            }
+
+            return;
+        }
+
+        if (ui.PillButton(primaryRect, Loc.T(style.EditProfile), false, "socialprofile.pill.editprofile." + user.Id))
+        {
+            editLoadedFor = null;
+            openEditProfile();
+        }
+    }
+
+    private float DrawTrailingIcon(float rightEdge, float centerY, float diameter, string glyph, Vector4 ink,
+        string tooltip, Action activate)
+    {
+        var radius = diameter * 0.5f;
+        if (ui.IconButton(new Vector2(rightEdge - radius, centerY), radius, glyph, ink,
+                Palette.WithAlpha(ink, 0.16f), 0.9f, tooltip))
+        {
+            activate();
+        }
+
+        return rightEdge - diameter - Metrics.Space.Sm * UiScale.Current;
+    }
+
+    private string FollowPillLabel(UserDto user) => SocialFeedStore.FollowStateOf(user) switch
+    {
+        FollowState.Following => Loc.T(style.Following),
+        FollowState.Requested => Loc.T(L.Social.Requested),
+        _ => Loc.T(style.Follow),
+    };
+
+    private static bool FollowPillFilled(UserDto user) => SocialFeedStore.FollowStateOf(user) == FollowState.None;
+
+    private static bool CanViewFollowLists(UserDto user) => user.IsMe || user.IsFollowing || !user.IsPrivate;
+
     private void DrawProfileStats(UserDto user, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -261,11 +376,15 @@ internal sealed class SocialProfilePages
         var third = width / 3f;
         var centerY = origin.Y + height * 0.5f;
         var postsColumn = style.StatsPostsFirst ? 0 : 2;
-        for (var column = 0; column < 3; column++)
+        var listsOpen = CanViewFollowLists(user);
+        if (listsOpen)
         {
-            if (column != postsColumn)
+            for (var column = 0; column < 3; column++)
             {
-                DrawStatHover(drawList, origin, third * column, third, height, scale);
+                if (column != postsColumn)
+                {
+                    DrawStatHover(drawList, origin, third * column, third, height, scale);
+                }
             }
         }
 
@@ -285,13 +404,13 @@ internal sealed class SocialProfilePages
             FollowersLabel(user.Followers));
         DrawStatColumn(origin.X + third * followingColumn, third, centerY, theme,
             user.Following.ToString(Loc.Culture), Loc.T(style.Following));
-        if (UiInteract.HoverClick(new Vector2(origin.X + third * followingColumn, origin.Y),
+        if (listsOpen && UiInteract.HoverClick(new Vector2(origin.X + third * followingColumn, origin.Y),
                 new Vector2(origin.X + third * (followingColumn + 1), origin.Y + height)))
         {
             openUserList(user.Id, UserListKind.Following);
         }
 
-        if (UiInteract.HoverClick(new Vector2(origin.X + third, origin.Y),
+        if (listsOpen && UiInteract.HoverClick(new Vector2(origin.X + third, origin.Y),
                 new Vector2(origin.X + third * 2f, origin.Y + height)))
         {
             openUserList(user.Id, UserListKind.Followers);
@@ -304,7 +423,7 @@ internal sealed class SocialProfilePages
     private void DrawStatColumn(float left, float columnWidth, float centerY, PhoneTheme theme, string value,
         string label)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var center = left + columnWidth * 0.5f;
         Typography.DrawCentered(new Vector2(center, centerY - 10f * scale), value, theme.TextStrong, 1.25f,
             FontWeight.Bold);
@@ -326,7 +445,7 @@ internal sealed class SocialProfilePages
         var me = store.Me ?? (store.ProfileUser is { IsMe: true } self ? self : null);
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(style.EditProfile), back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         if (me is null)
@@ -379,7 +498,7 @@ internal sealed class SocialProfilePages
             var changeTop = ImGui.GetCursorScreenPos().Y;
             var changeRect = new Rect(new Vector2(avatarCenter.X - changeWidth * 0.5f, changeTop),
                 new Vector2(avatarCenter.X + changeWidth * 0.5f, changeTop + 30f * scale));
-            if (ui.PillButton(changeRect, Loc.T(style.ChangePhoto), false))
+            if (ui.PillButton(changeRect, Loc.T(style.ChangePhoto), false, "socialprofile.pill.changephoto"))
             {
                 openAvatarComposer();
             }
@@ -403,7 +522,7 @@ internal sealed class SocialProfilePages
 
     private void DrawHandleField(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         using (ImRaii.PushColor(ImGuiCol.Text, style.Palette.MutedInk))
         {
             Typography.Plain(Loc.T(style.HandleLabel));
@@ -433,7 +552,8 @@ internal sealed class SocialProfilePages
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
         Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale),
-            Loc.T(style.HandleRules), style.Palette.MutedInk, 0.78f);
+            Typography.FitText(Loc.T(style.HandleRules), width - 4f * scale, 0.78f, FontWeight.Regular),
+            style.Palette.MutedInk, 0.78f);
         ImGui.Dummy(new Vector2(width, 16f * scale));
     }
 
@@ -464,7 +584,7 @@ internal sealed class SocialProfilePages
         store.OpenUserList(sourceId, kind);
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, UserListTitle(kind), back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var listRect = new Rect(new Vector2(area.Min.X, top), area.Max);
         var snapshot = store.UserListResults;
@@ -486,6 +606,15 @@ internal sealed class SocialProfilePages
                     DrawUserRow(snapshot[index], theme);
                 }
 
+                if (store.UserListLoadingMore)
+                {
+                    InfiniteScroll.DrawLoadingRow(listRect.Center.X, style.Palette.MutedInk);
+                }
+                else if (store.HasMoreUserList && InfiniteScroll.ReachedBottom())
+                {
+                    store.LoadMoreUserList();
+                }
+
                 ImGui.Dummy(new Vector2(0f, 12f * scale));
             }
         }
@@ -495,12 +624,62 @@ internal sealed class SocialProfilePages
     {
         UserListKind.Followers => Loc.T(L.Social.FollowersTitle),
         UserListKind.Following => Loc.T(L.Social.FollowingTitle),
+        UserListKind.Mutuals => Loc.T(L.Social.MutualsTitle),
         _ => Loc.T(L.Social.LikedByTitle),
     };
 
+    private static float FollowsYouChipWidth(float scale)
+    {
+        var label = Loc.T(L.Social.FollowsYou);
+        var size = Typography.Measure(label, TextStyles.Footnote.Scale, TextStyles.Footnote.Weight);
+        return size.X + 7f * scale * 2f;
+    }
+
+    private void DrawFollowsYouChip(ImDrawListPtr drawList, Vector2 anchor, float lineHeight, float scale)
+    {
+        var label = Loc.T(L.Social.FollowsYou);
+        var size = Typography.Measure(label, TextStyles.Footnote.Scale, TextStyles.Footnote.Weight);
+        var padX = 7f * scale;
+        var padY = 2.5f * scale;
+        var centerY = anchor.Y + lineHeight * 0.5f;
+        var min = new Vector2(anchor.X, centerY - size.Y * 0.5f - padY);
+        var max = new Vector2(anchor.X + size.X + padX * 2f, centerY + size.Y * 0.5f + padY);
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(Palette.WithAlpha(style.Palette.MutedInk, 0.14f)),
+            (max.Y - min.Y) * 0.5f);
+        Typography.Draw(drawList, new Vector2(min.X + padX, centerY - size.Y * 0.5f), label, style.Palette.MutedInk,
+            TextStyles.Footnote);
+    }
+
+    private static string FollowedByLine(UserDto user)
+    {
+        if (user.IsMe || user.FollowedByCount <= 0 || user.FollowedByPreview is not { Length: > 0 } preview)
+        {
+            return string.Empty;
+        }
+
+        var others = user.FollowedByCount - preview.Length;
+        if (others <= 0)
+        {
+            return preview.Length == 1
+                ? string.Format(Loc.Culture, Loc.T(L.Social.FollowedByOne), preview[0])
+                : string.Format(Loc.Culture, Loc.T(L.Social.FollowedByTwo), preview[0], preview[1]);
+        }
+
+        if (preview.Length == 1)
+        {
+            return others == 1
+                ? string.Format(Loc.Culture, Loc.T(L.Social.FollowedByOneMoreOne), preview[0])
+                : string.Format(Loc.Culture, Loc.T(L.Social.FollowedByOneMoreMany), preview[0], others);
+        }
+
+        return others == 1
+            ? string.Format(Loc.Culture, Loc.T(L.Social.FollowedByTwoMoreOne), preview[0], preview[1])
+            : string.Format(Loc.Culture, Loc.T(L.Social.FollowedByTwoMoreMany), preview[0], preview[1], others);
+    }
+
     public void DrawUserRow(UserDto user, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowHeight = 58f * scale;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -513,26 +692,39 @@ internal sealed class SocialProfilePages
 
         var radius = 20f * scale;
         var avatarCenter = new Vector2(origin.X + pad + radius, origin.Y + rowHeight * 0.5f);
-        DrawAvatar(drawList, avatarCenter, radius, theme, user.Name, user.World, user.AvatarUrl, 0.95f, 32);
-        var textLeft = avatarCenter.X + radius + 12f * scale;
         var displayName = SocialIdentity.Name(user.DisplayName, user.Handle);
+        var portraitName = user.IsMe ? user.Name : displayName;
+        var portraitWorld = user.IsMe ? user.World : string.Empty;
+        DrawAvatar(drawList, avatarCenter, radius, theme, portraitName, portraitWorld, user.AvatarUrl, 0.95f, 32);
+        var textLeft = avatarCenter.X + radius + 12f * scale;
         var nameTop = style.CardUserRows ? 12f : 9f;
         var subTop = style.CardUserRows ? 33f : 31f;
-        Typography.Draw(new Vector2(textLeft, origin.Y + nameTop * scale), displayName, theme.TextStrong, 1f,
-            FontWeight.SemiBold);
-        var regionCode = user.IsMe ? SocialRegion.EffectiveCode(configuration, gameData) : gameData.RegionCodeForWorld(user.World);
-        var sub = SocialIdentity.ProfileMeta(user.Handle, regionCode);
-        Typography.Draw(new Vector2(textLeft, origin.Y + subTop * scale), sub, style.Palette.MutedInk, 0.85f);
         var buttonWidth = 96f * scale;
         var buttonHeight = 30f * scale;
+        var textMaxWidth = origin.X + width - pad - buttonWidth - 10f * scale - textLeft;
+        var nameY = origin.Y + nameTop * scale;
+        var nameSize = Typography.Measure(displayName, 1f, FontWeight.SemiBold);
+        var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
+            new Vector2(textLeft + textMaxWidth, nameY + nameSize.Y));
+        UserName.Draw(drawList, "socialprofile.row.name." + user.Id, displayName, user.Badges, user.ProfileBadges, textLeft, nameY,
+            textMaxWidth, new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, nameHovering, theme);
+        var regionCode = user.IsMe
+            ? SocialRegion.EffectiveCode(configuration, gameData)
+            : SocialRegion.Resolve(user.Region, user.World, gameData);
+        var sub = SocialIdentity.ProfileMeta(user.Handle, regionCode);
+        var subY = origin.Y + subTop * scale;
+        var subSize = Typography.Measure(sub, 0.85f);
+        var subHovering = UiInteract.Hover(new Vector2(textLeft, subY),
+            new Vector2(textLeft + textMaxWidth, subY + subSize.Y));
+        Marquee.DrawLeft("socialprofile.row.sub." + user.Id, sub, textLeft, subY,
+            textMaxWidth, new TextStyle(0.85f, FontWeight.Regular), style.Palette.MutedInk, subHovering);
         var buttonRect =
             new Rect(
                 new Vector2(origin.X + width - pad - buttonWidth, origin.Y + rowHeight * 0.5f - buttonHeight * 0.5f),
                 new Vector2(origin.X + width - pad, origin.Y + rowHeight * 0.5f + buttonHeight * 0.5f));
-        if (ui.PillButton(buttonRect, user.IsFollowing ? Loc.T(style.Following) : Loc.T(style.Follow),
-                !user.IsFollowing))
+        if (ui.PillButton(buttonRect, FollowPillLabel(user), FollowPillFilled(user), "socialprofile.row.follow." + user.Id))
         {
-            store.SetFollow(user.Id, !user.IsFollowing);
+            store.ToggleFollow(user);
         }
 
         var rowMax = new Vector2(origin.X + width - buttonWidth - pad - 6f * scale, origin.Y + rowHeight);
@@ -557,7 +749,7 @@ internal sealed class SocialProfilePages
 
     public void DrawSearchResults(Rect listRect, PhoneTheme theme, bool topPadding)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var snapshot = store.DiscoverResults;
         using (AppSurface.Begin(listRect))
         {

@@ -4,7 +4,6 @@ using Aetherphone.Core.Shell.Home;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Core.Shell;
 
@@ -40,29 +39,29 @@ internal sealed class MinimizeMorphView
     private void DrawMorph(Rect device)
     {
         minimizedView.IsShowing = false;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = themes.Chrome;
-        var startBody = DeviceChrome.BodyRect(device);
-        var endBody = MinimizedRect(device, scale).Inset(scale);
+        var puckScale = UiScale.Global;
+        var startBody = DeviceChrome.BodyRect(device, theme);
+        var endBody = MinimizedRect(device, puckScale).Inset(puckScale);
         var eased = minimize.EasedProgress;
         var body = new Rect(Vector2.Lerp(startBody.Min, endBody.Min, eased),
             Vector2.Lerp(startBody.Max, endBody.Max, eased));
-        var bezel = Easing.Lerp(theme.BezelThickness * scale, endBody.Width * 0.09f, eased);
-        var rounding = Easing.Lerp(theme.DeviceRounding * scale, endBody.Width * 0.30f, eased);
-        var geometry = MinimizedPhone.Geometry.Lerp(body, bezel, rounding);
+        var geometry = ChassisGeometry.Morph(body, theme, scale, eased);
 
         var shell = ImGui.GetWindowDrawList();
-        Elevation.Floating(shell, geometry.Body.Min, geometry.Body.Max, geometry.Rounding, scale, eased);
-        MinimizedPhone.DrawShell(shell, geometry, theme);
-        RevealMorphContent(device, theme, geometry, eased);
+        Elevation.Squircle(shell, geometry.Body.Min, geometry.Body.Max, geometry.BodyRadius, scale, eased);
+        DeviceChrome.DrawShell(shell, geometry, scale, theme, 1f);
+        RevealMorphContent(DeviceChrome.Chassis(device, theme), theme, geometry, eased);
 
         var raw = Math.Clamp((eased - 0.5f) / 0.4f, 0f, 1f);
         var glyphAlpha = raw * raw * (3f - 2f * raw);
-        MinimizedPhone.DrawFace(ImGui.GetForegroundDrawList(), geometry, theme, scale, glyphAlpha,
+        MinimizedPhone.DrawFace(ImGui.GetForegroundDrawList(), geometry, theme, puckScale, glyphAlpha,
             notifications.UnreadCount);
     }
 
-    private void RevealMorphContent(Rect device, PhoneTheme theme, in MinimizedPhone.Geometry geometry, float eased)
+    private void RevealMorphContent(in ChassisGeometry device, PhoneTheme theme, in ChassisGeometry geometry,
+        float eased)
     {
         var screen = geometry.Screen;
         if (screen.Height <= 0.5f)
@@ -70,15 +69,17 @@ internal sealed class MinimizeMorphView
             return;
         }
 
-        var fullScreen = DeviceChrome.ScreenRect(device, theme);
-        var rounding = geometry.ScreenRounding;
+        var fullScreen = device.Screen;
+        var fullRadius = device.ScreenRadius;
+        var rounding = geometry.ScreenRadius;
         var veil = ImGui.GetColorU32(Palette.WithAlpha(theme.ScreenBase, eased));
         var shrink = ShrinkMotion(fullScreen, screen);
         SceneCompositor.DrawClipped(screen, fullScreen, 0f, target =>
         {
-            painter.PaintCurrent(target, theme, shrink);
+            painter.PaintCurrent(target, fullRadius, theme, shrink);
             Squircle.Fill(ImGui.GetWindowDrawList(), screen.Min, screen.Max, rounding, veil);
         });
+        DeviceChrome.MaskScreenCorners(ImGui.GetWindowDrawList(), geometry, theme, UiScale.Current);
     }
 
     private static HomeMotion ShrinkMotion(Rect fullScreen, Rect target)
@@ -96,7 +97,7 @@ internal sealed class MinimizeMorphView
     private bool DrawFace(Rect device, float delta)
     {
         minimizedView.IsShowing = true;
-        var mini = MinimizedRect(device, ImGuiHelpers.GlobalScale);
+        var mini = MinimizedRect(device, UiScale.Global);
         switch (minimizedView.Draw(mini, themes.Chrome, delta))
         {
             case MinimizedAction.Expand:

@@ -8,7 +8,7 @@ using Dalamud.Interface;
 
 namespace Aetherphone.Core.ControlCenter;
 
-internal sealed class ControlRegistry
+internal sealed class ControlRegistry : IControlRegistry
 {
     private readonly List<IControlModule> modules = new();
     private readonly Dictionary<string, IControlModule> byId = new();

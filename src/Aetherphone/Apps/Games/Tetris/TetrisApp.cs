@@ -3,8 +3,8 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Tetris;
 
@@ -34,6 +34,8 @@ internal sealed class TetrisApp : IMiniGame
     public string Id => GameId;
     public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Tetris);
+    public bool RunsOnAClock => true;
+
     public string Genre => Loc.T(L.Games.GenrePuzzle);
     public void Open()
     {
@@ -66,7 +68,7 @@ internal sealed class TetrisApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         if (!statsLoaded)
@@ -106,12 +108,13 @@ internal sealed class TetrisApp : IMiniGame
 
         GameScene.Ambient(ImGui.GetWindowDrawList(), body, Accent);
         var slotSize = 76f * scale;
+        var outerMargin = 12f * scale;
         var slotTop = body.Min.Y + 14f * scale;
-        var holdRect = new Rect(new Vector2(body.Min.X + 12f * scale, slotTop),
-            new Vector2(body.Min.X + 12f * scale + slotSize, slotTop + slotSize));
-        var nextRect = new Rect(new Vector2(body.Max.X - 12f * scale - slotSize, slotTop),
-            new Vector2(body.Max.X - 12f * scale, slotTop + slotSize));
-        var holdHovered = ImGui.IsMouseHoveringRect(holdRect.Min, holdRect.Max);
+        var holdRect = new Rect(new Vector2(body.Min.X + outerMargin, slotTop),
+            new Vector2(body.Min.X + outerMargin + slotSize, slotTop + slotSize));
+        var nextRect = new Rect(new Vector2(body.Max.X - outerMargin - slotSize, slotTop),
+            new Vector2(body.Max.X - outerMargin, slotTop + slotSize));
+        var holdHovered = UiInteract.Hover(holdRect.Min, holdRect.Max);
         renderer.DrawHoldSlot(board, holdRect, theme, Accent, holdHovered, scale);
         if (holdHovered)
         {
@@ -123,26 +126,62 @@ internal sealed class TetrisApp : IMiniGame
         }
 
         renderer.DrawNextSlot(board, nextRect, theme, Accent, scale);
-        var beatingBest = board.Score > 0 && board.Score > bestScore;
-        GameHud.ScorePill(new Vector2(body.Center.X - 44f * scale, body.Min.Y + 32f * scale), Loc.T(L.Games.Score),
-            ref scoreRoll, board.Score, Accent, theme, deltaSeconds, beatingBest);
-        var bestShown = board.Score > bestScore ? board.Score : bestScore;
-        GameHud.Pill(new Vector2(body.Center.X + 44f * scale, body.Min.Y + 32f * scale), Loc.T(L.Games.Best),
-            GameNumber.Label(bestShown), Accent, theme, bestScore > 0 && board.Score < bestScore);
-        GameHud.Pill(new Vector2(body.Center.X - 30f * scale, body.Min.Y + 82f * scale), Loc.T(L.Games.Level),
-            GameNumber.Label(board.Level), Accent, theme);
-        if (GameHud.RestartButton(new Vector2(body.Center.X + 52f * scale, body.Min.Y + 82f * scale), 15f * scale,
-                theme))
+
+        var restartDiameter = 30f * scale;
+        var restartRadius = MathF.Max(10f * scale,
+            MathF.Min(restartDiameter * 0.5f, (nextRect.Min.X - holdRect.Max.X) * 0.5f - 6f * scale));
+        var restartCenter = new Vector2((holdRect.Max.X + nextRect.Min.X) * 0.5f, slotTop + slotSize - restartRadius);
+        if (GameHud.RestartButton(restartCenter, restartRadius, theme))
         {
             StartGame();
             return;
         }
 
+        var beatingBest = board.Score > 0 && board.Score > bestScore;
+        var bestShown = board.Score > bestScore ? board.Score : bestScore;
+        var scoreLabel = Loc.T(L.Games.Score);
+        var scoreText = GameNumber.Label(board.Score);
+        var bestLabel = Loc.T(L.Games.Best);
+        var bestText = GameNumber.Label(bestShown);
+        var levelLabel = Loc.T(L.Games.Level);
+        var levelText = GameNumber.Label(board.Level);
+        var itemGap = 10f * scale;
+        var rowAvailableWidth = MathF.Max(1f, body.Width - 2f * outerMargin);
+        var pillScale = 1f;
+        var naturalWidth = GameHud.PillWidth(levelLabel, levelText) + GameHud.PillWidth(scoreLabel, scoreText)
+            + GameHud.PillWidth(bestLabel, bestText) + itemGap * 2f;
+        if (naturalWidth > rowAvailableWidth)
+        {
+            pillScale = Math.Clamp(rowAvailableWidth / naturalWidth, 0.6f, 1f);
+        }
+
+        var levelWidth = GameHud.PillWidth(levelLabel, levelText, pillScale);
+        var scoreWidth = GameHud.PillWidth(scoreLabel, scoreText, pillScale);
+        var bestWidth = GameHud.PillWidth(bestLabel, bestText, pillScale);
+        var rowWidth = levelWidth + scoreWidth + bestWidth + itemGap * 2f;
+        var rowY = slotTop + slotSize + 26f * scale;
+        var cursorX = body.Center.X - rowWidth * 0.5f;
+        var levelX = cursorX + levelWidth * 0.5f;
+        cursorX += levelWidth + itemGap;
+        var scoreX = cursorX + scoreWidth * 0.5f;
+        cursorX += scoreWidth + itemGap;
+        var bestX = cursorX + bestWidth * 0.5f;
+
+        GameHud.Pill(new Vector2(levelX, rowY), levelLabel, levelText, Accent, theme, sizeScale: pillScale);
+        GameHud.ScorePill(new Vector2(scoreX, rowY), scoreLabel, ref scoreRoll, board.Score, Accent, theme,
+            deltaSeconds, beatingBest, pillScale);
+        GameHud.Pill(new Vector2(bestX, rowY), bestLabel, bestText, Accent, theme,
+            bestScore > 0 && board.Score < bestScore, pillScale);
+
+        var hudBottom = rowY + GameHud.PillHeight * scale * pillScale * 0.5f;
+
         var drawList = ImGui.GetWindowDrawList();
         var iconColor = ImGui.GetColorU32(GamePalette.InkOn(Accent));
         var controlY = body.Max.Y - 26f * scale;
-        var controlSpacing = 8f * scale;
-        var controlWidth = 46f * scale;
+        var controlMargin = 12f * scale;
+        var controlAvailableWidth = body.Width - controlMargin * 2f;
+        var controlSpacing = MathF.Min(8f * scale, controlAvailableWidth * 0.02f);
+        var controlWidth = MathF.Min(46f * scale, MathF.Max(28f * scale, (controlAvailableWidth - controlSpacing * 4f) / 5f));
         var controlSize = new Vector2(controlWidth, 32f * scale);
         var centerX = body.Center.X;
         var holdCenter = new Vector2(centerX - (controlWidth + controlSpacing) * 2f, controlY);
@@ -185,7 +224,7 @@ internal sealed class TetrisApp : IMiniGame
             HandleKeyboard();
         }
 
-        var field = new Rect(new Vector2(body.Min.X + 12f * scale, body.Min.Y + 114f * scale),
+        var field = new Rect(new Vector2(body.Min.X + 12f * scale, hudBottom + 24f * scale),
             new Vector2(body.Max.X - 12f * scale, body.Max.Y - 52f * scale));
         if (board.ClearedLinesThisFrame > 0)
         {
@@ -233,7 +272,7 @@ internal sealed class TetrisApp : IMiniGame
 
     private void HandleKeyboard()
     {
-        if (!ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows))
+        if (!GameFocus.Active)
         {
             return;
         }

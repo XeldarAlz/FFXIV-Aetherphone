@@ -4,6 +4,7 @@ namespace Aetherphone.Core.ControlCenter;
 internal sealed class ControlLayout
 {
     public List<ControlItem> Items { get; set; } = new();
+    public List<string> Enabled { get; set; } = new();
 }
 
 [Serializable]

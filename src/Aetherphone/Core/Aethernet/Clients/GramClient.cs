@@ -27,14 +27,26 @@ internal sealed class GramClient
         return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
-    public Task<FeedPage?> UserGramsAsync(string userId, CancellationToken token)
+    public Task<FeedPage?> UserGramsAsync(string userId, string? cursor, CancellationToken token)
     {
-        return net.GetAsync($"/users/{Uri.EscapeDataString(userId)}/posts?kind=1", AethernetJsonContext.Default.FeedPage, token);
+        var path = $"/users/{Uri.EscapeDataString(userId)}/posts?kind=1";
+        if (cursor is not null)
+        {
+            path += $"&cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
-    public Task<FeedPage?> UserTaggedAsync(string userId, CancellationToken token)
+    public Task<FeedPage?> UserTaggedAsync(string userId, string? cursor, CancellationToken token)
     {
-        return net.GetAsync($"/users/{Uri.EscapeDataString(userId)}/tagged", AethernetJsonContext.Default.FeedPage, token);
+        var path = $"/users/{Uri.EscapeDataString(userId)}/tagged";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.FeedPage, token);
     }
 
     public Task<StoryDto?> CreateStoryAsync(string caption, string mediaKey, int width, int height, CancellationToken token)
@@ -52,9 +64,15 @@ internal sealed class GramClient
         return net.GetAsync($"/stories/{Uri.EscapeDataString(userId)}", AethernetJsonContext.Default.StoryGroup, token);
     }
 
-    public Task<StoryViewersPage?> StoryViewersAsync(string storyId, CancellationToken token)
+    public Task<StoryViewersPage?> StoryViewersAsync(string storyId, string? cursor, CancellationToken token)
     {
-        return net.GetAsync($"/stories/{Uri.EscapeDataString(storyId)}/views", AethernetJsonContext.Default.StoryViewersPage, token);
+        var path = $"/stories/{Uri.EscapeDataString(storyId)}/views";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.StoryViewersPage, token);
     }
 
     public Task<bool> MarkStoryViewedAsync(string storyId, CancellationToken token)

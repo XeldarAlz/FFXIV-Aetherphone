@@ -6,7 +6,7 @@ namespace Aetherphone.Core.Songs;
 
 internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
 {
-    private const int MaxOpusFrameSamples = 5760; // 120ms at 48kHz, the largest possible Opus frame.
+    private const int MaxOpusFrameSamples = 5760;
 
     private readonly Func<Stream> openSource;
     private readonly int channels;
@@ -106,7 +106,7 @@ internal sealed class OpusWebmSampleProvider : ISampleProvider, ISongAudioReader
                 break;
             }
 
-            pendingOffset = pendingCount; // Discard this frame's audio; only position matters here.
+            pendingOffset = pendingCount;
         }
     }
 

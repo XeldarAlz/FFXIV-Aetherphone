@@ -7,23 +7,11 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
 internal delegate void StoryRingPainter(ImDrawListPtr drawList, Vector2 center, float radius, float scale, bool unseen);
 
-/// <summary>
-/// The horizontal row of story rings that opens a feed. Like Instagram, the row is the first item
-/// inside the feed's scroll container rather than a band pinned above it, so it scrolls away with the
-/// posts instead of having them slide under it. ImGui has no horizontal scroll container in use
-/// anywhere in this app, so the row hand rolls drag scrolling inside a clip rect: the offset is
-/// carried per instance and a drag past a small threshold suppresses the click that would open a ring.
-/// The wheel is deliberately left alone so it scrolls the feed underneath, which is what the same
-/// gesture does on Instagram.
-/// The row paints no background of its own. The app backdrop behind it is a vertical gradient plus a
-/// bloom, so any edge treatment painted from a single palette colour reads as a seam.
-/// </summary>
 internal sealed class StoryTrayRow
 {
     private const float Height = 92f;
@@ -48,7 +36,7 @@ internal sealed class StoryTrayRow
     public void Draw(PhoneTheme theme, AppPalette palette, StoryRingDto[] rings, bool hasOwnStory,
         StoryRingPainter painter, Action onAddStory, Action<StoryRingDto> onOpenRing)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var tile = TileWidth * scale;
         var slots = rings.Length + (hasOwnStory ? 0 : 1);
         if (slots == 0)
@@ -78,10 +66,9 @@ internal sealed class StoryTrayRow
         }
 
         drawList.PopClipRect();
+        ImGui.SetCursorScreenPos(new Vector2(row.Min.X, row.Max.Y));
     }
 
-    // Only the height is taken from the layout. The band itself spans the scroll container edge to edge
-    // so rings pan past the window padding the posts are inset by, the way they do on Instagram.
     private static Rect ReserveRow(float scale)
     {
         var origin = ImGui.GetCursorScreenPos();
@@ -94,7 +81,7 @@ internal sealed class StoryTrayRow
 
     private void HandleDrag(Rect row)
     {
-        var hovering = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovering = UiInteract.Hover(row.Min, row.Max);
         if (hovering && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             dragging = true;

@@ -21,7 +21,7 @@ internal sealed class KeyVault : IDisposable
     private readonly AethernetSession session;
     private readonly KeysClient client;
     private readonly SemaphoreSlim gate = new(1, 1);
-    private ECDiffieHellman? privateKey;
+    private EcPrivateKey? privateKey;
     private MyKeysDto? serverBundle;
     private volatile bool refreshing;
 
@@ -225,7 +225,6 @@ internal sealed class KeyVault : IDisposable
 
             if (!string.Equals(CryptoBox.ExportPublicKey(imported), bundle.PublicKey, StringComparison.Ordinal))
             {
-                imported.Dispose();
                 CryptographicOperations.ZeroMemory(pkcs8);
                 return false;
             }
@@ -269,7 +268,6 @@ internal sealed class KeyVault : IDisposable
         var publicKey = identity is null ? null : CryptoBox.TryExportPublicKey(identity);
         if (identity is null || publicKey is null)
         {
-            identity?.Dispose();
             AepLog.Warning("[Encryption] identity unsupported: this system cannot create an encryption key.");
             SetState(KeyVaultState.Unsupported);
             return false;
@@ -278,7 +276,6 @@ internal sealed class KeyVault : IDisposable
         var stored = await client.PutMyKeysAsync(new PutMyKeysRequest(publicKey), token).ConfigureAwait(false);
         if (stored is null)
         {
-            identity.Dispose();
             return false;
         }
 
@@ -321,7 +318,6 @@ internal sealed class KeyVault : IDisposable
 
         if (!string.Equals(CryptoBox.ExportPublicKey(imported), bundle.PublicKey, StringComparison.Ordinal))
         {
-            imported.Dispose();
             CryptographicOperations.ZeroMemory(pkcs8);
             return false;
         }
@@ -388,7 +384,6 @@ internal sealed class KeyVault : IDisposable
 
     private void ClearKey()
     {
-        privateKey?.Dispose();
         privateKey = null;
     }
 

@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -14,7 +13,7 @@ internal static class SubmitField
     public static bool Draw(Rect bar, string imguiId, string hint, ref string text, PhoneTheme theme,
         int maxLength = 64)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var pillMin = new Vector2(bar.Min.X, bar.Center.Y - PillHalfHeight * scale);
         var pillMax = new Vector2(bar.Max.X, bar.Center.Y + PillHalfHeight * scale);
@@ -54,7 +53,7 @@ internal static class SubmitField
             return submitted;
         }
 
-        var hovered = ImGui.IsMouseHoveringRect(clearCenter - new Vector2(clearRadius, clearRadius),
+        var hovered = UiInteract.Hover(clearCenter - new Vector2(clearRadius, clearRadius),
             clearCenter + new Vector2(clearRadius, clearRadius));
         drawList.AddCircleFilled(clearCenter, clearRadius,
             ImGui.GetColorU32(hovered ? theme.TextMuted : theme.SurfaceMuted), 16);

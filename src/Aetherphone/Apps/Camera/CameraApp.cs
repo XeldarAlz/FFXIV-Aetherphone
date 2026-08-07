@@ -3,12 +3,13 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
-using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
+using FFXIVClientStructs.FFXIV.Client.UI;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace Aetherphone.Apps.Camera;
@@ -17,6 +18,8 @@ internal sealed class CameraApp : IPhoneApp
 {
     private const float TopBarHeight = 88f;
     private const float TrayHeight = 172f;
+    private const float SideBarWidth = 88f;
+    private const float SideTrayWidth = 172f;
     private const float FlashDuration = 0.42f;
     private const float ReticleDuration = 1.1f;
     private const float PressDuration = 0.18f;
@@ -24,21 +27,42 @@ internal sealed class CameraApp : IPhoneApp
     private const int CaptureDelayFrames = 3;
     private const int CaptureWatchdogTicks = 30;
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
+
+    private static readonly UiFlags[] HudGroups =
+    {
+        UiFlags.Hud,
+        UiFlags.Shortcuts,
+        UiFlags.ActionBars,
+        UiFlags.TargetInfo,
+        UiFlags.Chat,
+    };
+
     public string Id => "camera";
     public string DisplayName => Loc.T(L.Apps.Camera);
     public string Glyph => "O";
     public int BadgeCount => 0;
     public bool WantsTransparentScreen => true;
 
-    public Rect? TransparentViewport(Rect screen, float scale) =>
-        new(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
+    public Rect? TransparentViewport(Rect screen, float scale) => ViewfinderRect(screen, scale);
+
+    private static Rect ViewfinderRect(Rect screen, float scale)
+    {
+        if (screen.IsLandscape())
+        {
+            return new Rect(new Vector2(screen.Min.X + SideBarWidth * scale, screen.Min.Y),
+                new Vector2(screen.Max.X - SideTrayWidth * scale, screen.Max.Y));
+        }
+
+        return new Rect(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
             new Vector2(screen.Max.X, screen.Max.Y - TrayHeight * scale));
+    }
 
     private readonly PhotoCaptureService capture;
     private readonly PhotoLibrary library;
+    private readonly Configuration configuration;
     private int modeIndex = 1;
-    private bool gridEnabled;
-    private bool flashEnabled = true;
+
+
     private float shutterPress;
     private float flashAge = FlashDuration + 1f;
     private float reticleAge = ReticleDuration + 1f;
@@ -48,11 +72,13 @@ internal sealed class CameraApp : IPhoneApp
     private int captureWatchdogTicks;
     private Rect pendingCaptureRect;
     private bool captureHooksAttached;
+    private UiFlags hiddenHudGroups;
 
-    public CameraApp(PhotoCaptureService capture, PhotoLibrary library)
+    public CameraApp(PhotoCaptureService capture, PhotoLibrary library, Configuration configuration)
     {
         this.capture = capture;
         this.library = library;
+        this.configuration = configuration;
     }
 
     public void OnOpened()
@@ -70,25 +96,45 @@ internal sealed class CameraApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var rounding = theme.ScreenRounding * scale;
         AdvanceTimers(ImGui.GetIO().DeltaTime);
         var screen = ScreenFrom(context.Content, theme, scale);
-        var viewfinder = new Rect(new Vector2(screen.Min.X, screen.Min.Y + TopBarHeight * scale),
-            new Vector2(screen.Max.X, screen.Max.Y - TrayHeight * scale));
+        var landscape = screen.IsLandscape();
+        var viewfinder = ViewfinderRect(screen, scale);
         var captureRect = CaptureRect(viewfinder);
 
-        var consumed = CameraChrome.TopBar(screen, TopBarHeight, flashEnabled, scale, rounding);
-        if (consumed)
-        {
-            flashEnabled = !flashEnabled;
-        }
+        var barAction = landscape
+            ? CameraChrome.SideBar(screen, SideBarWidth, configuration.CameraFlash, configuration.CameraLandscape, scale, rounding)
+            : CameraChrome.TopBar(screen, TopBarHeight, configuration.CameraFlash, configuration.CameraLandscape, scale, rounding);
+        var consumed = barAction != CameraBarAction.None;
+        ApplyBarAction(barAction);
 
-        CameraChrome.Viewfinder(viewfinder, captureRect, gridEnabled, reticleAge, ReticleDuration, reticlePos, scale);
-        consumed |= DrawTray(screen, captureRect, context.Navigation, scale, rounding);
+        CameraChrome.Viewfinder(viewfinder, captureRect, configuration.CameraGrid, reticleAge, ReticleDuration, reticlePos, scale);
+        consumed |= landscape
+            ? DrawSideTray(screen, captureRect, context.Navigation, scale, rounding)
+            : DrawTray(screen, captureRect, context.Navigation, scale, rounding);
         HandleFocusTap(viewfinder, consumed);
         CameraChrome.Flash(screen, flashAge, FlashDuration, rounding);
+    }
+
+    private void ApplyBarAction(CameraBarAction action)
+    {
+        if (action == CameraBarAction.ToggleFlash)
+        {
+            configuration.CameraFlash = !configuration.CameraFlash;
+            configuration.Save();
+            return;
+        }
+
+        if (action != CameraBarAction.ToggleLandscape)
+        {
+            return;
+        }
+
+        configuration.CameraLandscape = !configuration.CameraLandscape;
+        configuration.Save();
     }
 
     private void AdvanceTimers(float delta)
@@ -140,9 +186,46 @@ internal sealed class CameraApp : IPhoneApp
             consumed = true;
         }
 
-        if (CameraChrome.GridToggle(new Vector2(screen.Max.X - 44f * scale, shutterCenter.Y), gridEnabled, scale))
+        if (CameraChrome.GridToggle(new Vector2(screen.Max.X - 44f * scale, shutterCenter.Y), configuration.CameraGrid, scale))
         {
-            gridEnabled = !gridEnabled;
+            configuration.CameraGrid = !configuration.CameraGrid;
+            configuration.Save();
+            consumed = true;
+        }
+
+        return consumed;
+    }
+
+    private bool DrawSideTray(Rect screen, Rect captureRect, INavigator navigation, float scale, float rounding)
+    {
+        var trayLeft = screen.Max.X - SideTrayWidth * scale;
+        CameraChrome.SideTrayBackground(screen, trayLeft, rounding);
+
+        var trayCenterX = trayLeft + SideTrayWidth * 0.5f * scale;
+        var shutterCenter = new Vector2(trayCenterX, screen.Center.Y);
+        var shutterRadius = CameraChrome.ShutterRadius * scale;
+        var newMode = CameraChrome.ModeColumn(trayCenterX, screen.Min.Y + 44f * scale,
+            shutterCenter.Y - shutterRadius - 10f * scale, Modes, modeIndex, scale);
+        var consumed = newMode != modeIndex;
+        modeIndex = newMode;
+
+        if (CameraChrome.Shutter(shutterCenter, shutterPress, scale))
+        {
+            Shoot(captureRect);
+            consumed = true;
+        }
+
+        var wellCenterY = (shutterCenter.Y + shutterRadius + screen.Max.Y - 30f * scale) * 0.5f;
+        if (CameraChrome.ThumbnailWell(new Vector2(trayLeft + 52f * scale, wellCenterY), lastShot, scale))
+        {
+            navigation.Open("photos");
+            consumed = true;
+        }
+
+        if (CameraChrome.GridToggle(new Vector2(screen.Max.X - 52f * scale, wellCenterY), configuration.CameraGrid, scale))
+        {
+            configuration.CameraGrid = !configuration.CameraGrid;
+            configuration.Save();
             consumed = true;
         }
 
@@ -165,6 +248,52 @@ internal sealed class CameraApp : IPhoneApp
         }
     }
 
+    private unsafe void HideHudGroups()
+    {
+        hiddenHudGroups = UiFlags.None;
+        var uiModule = UIModule.Instance();
+        var unitManager = RaptureAtkUnitManager.Instance();
+        if (uiModule == null || unitManager == null)
+        {
+            return;
+        }
+
+        for (var index = 0; index < HudGroups.Length; index++)
+        {
+            var group = HudGroups[index];
+            if (!unitManager->IsUiFlagsSet(group))
+            {
+                continue;
+            }
+
+            uiModule->ToggleUi(group, false, true);
+            hiddenHudGroups |= group;
+        }
+    }
+
+    private unsafe void RestoreHudGroups()
+    {
+        if (hiddenHudGroups == UiFlags.None)
+        {
+            return;
+        }
+
+        var uiModule = UIModule.Instance();
+        if (uiModule != null)
+        {
+            for (var index = 0; index < HudGroups.Length; index++)
+            {
+                var group = HudGroups[index];
+                if ((hiddenHudGroups & group) != 0)
+                {
+                    uiModule->ToggleUi(group, true, true);
+                }
+            }
+        }
+
+        hiddenHudGroups = UiFlags.None;
+    }
+
     private static unsafe void SetNamePlatesVisible(bool visible)
     {
         var addon = (AtkUnitBase*)Plugin.GameGui.GetAddonByName("NamePlate").Address;
@@ -184,7 +313,7 @@ internal sealed class CameraApp : IPhoneApp
         }
 
         shutterPress = 1f;
-        if (flashEnabled)
+        if (configuration.CameraFlash)
         {
             flashAge = 0f;
         }
@@ -227,6 +356,7 @@ internal sealed class CameraApp : IPhoneApp
         Plugin.Framework.Update += ReleaseStalledCapture;
         captureHooksAttached = true;
         SetNamePlatesVisible(false);
+        HideHudGroups();
     }
 
     private void ReleaseStalledCapture(IFramework framework)
@@ -251,6 +381,7 @@ internal sealed class CameraApp : IPhoneApp
         Plugin.NamePlateGui.OnNamePlateUpdate -= StripNamePlates;
         Plugin.Framework.Update -= ReleaseStalledCapture;
         captureHooksAttached = false;
+        RestoreHudGroups();
         SetNamePlatesVisible(true);
         Plugin.NamePlateGui.RequestRedraw();
     }
@@ -263,7 +394,7 @@ internal sealed class CameraApp : IPhoneApp
         }
 
         var mouse = ImGui.GetMousePos();
-        if (!viewfinder.Contains(mouse))
+        if (!UiInteract.Hover(viewfinder.Min, viewfinder.Max))
         {
             return;
         }

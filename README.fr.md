@@ -80,6 +80,12 @@ Des questions, des idées, ou juste envie de discuter avec d'autres joueurs ? Pa
 
 → [Rejoignez notre Discord](https://discord.gg/3HbJCscMyS)
 
+## Contribuer
+
+Aetherphone est open source et les contributions sont les bienvenues. Commencez par la documentation développeur (en anglais), puis lisez le guide de contribution.
+
+→ [Documentation développeur](docs/README.md) · [Guide de contribution](CONTRIBUTING.md)
+
 ## Plus de ma part
 
 Si ce plugin vous a plu, jetez un œil à mes autres travaux Dalamud. Vous y trouverez peut-être autre chose pour vous.

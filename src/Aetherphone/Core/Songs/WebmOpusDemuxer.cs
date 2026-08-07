@@ -2,15 +2,8 @@ using NEbml.Core;
 
 namespace Aetherphone.Core.Songs;
 
-/// <summary>
-/// Minimal WebM (Matroska subset) demuxer: walks the EBML tree far enough to pull raw Opus
-/// packets out of Cluster/SimpleBlock elements for a single-audio-track stream. Not a general
-/// Matroska parser - deliberately only reads what a YouTube audio-only webm/opus DASH stream
-/// contains (one audio track, no video, no chapters/attachments).
-/// </summary>
 internal sealed class WebmOpusDemuxer
 {
-    // Matroska element IDs (top bit(s) kept, as read by NEbml's VInt).
     private const ulong EbmlHeaderId = 0x1A45DFA3;
     private const ulong SegmentId = 0x18538067;
     private const ulong InfoId = 0x1549A966;
@@ -26,15 +19,11 @@ internal sealed class WebmOpusDemuxer
     private const ulong BlockId = 0xA1;
 
     private readonly EbmlReader reader;
-    private ulong timestampScale = 1_000_000; // Matroska default: 1ms per tick, in nanoseconds.
+    private ulong timestampScale = 1_000_000;
     private ulong? opusTrackNumber;
     private bool hasPendingFirstCluster;
     private bool insideCluster;
 
-    // Reused across packets so a busy decode loop (and a deep seek's catch-up burst) doesn't
-    // allocate two byte[] per Opus frame on the game's shared CLR. Grows monotonically to the
-    // largest block seen. Slices handed out by ReadNextPacket alias this and are only valid
-    // until the next ReadNextPacket call.
     private byte[] blockBuffer = new byte[4096];
 
     public double? DurationSeconds { get; private set; }
@@ -44,11 +33,6 @@ internal sealed class WebmOpusDemuxer
         reader = new EbmlReader(source);
     }
 
-    /// <summary>
-    /// Advances through the container until either a Tracks element has identified the Opus
-    /// audio track, or a Cluster is reached (whichever comes first is fine - Tracks always
-    /// precedes Cluster in a valid WebM stream).
-    /// </summary>
     public void ReadHeader()
     {
         if (!reader.ReadNext())
@@ -58,9 +42,6 @@ internal sealed class WebmOpusDemuxer
 
         if (reader.ElementId.EncodedValue == EbmlHeaderId)
         {
-            // Every real WebM/Matroska file leads with an EBML header element (version/doctype
-            // info we don't need) before Segment. ReadNext() auto-skips its unread content when
-            // advancing past it.
             if (!reader.ReadNext())
             {
                 throw new InvalidDataException("Stream ended after EBML header.");
@@ -87,8 +68,6 @@ internal sealed class WebmOpusDemuxer
             }
             else if (id == ClusterId)
             {
-                // Header is done; the reader is left sitting on this Cluster's element header,
-                // un-entered, ready for ReadNextPacket() to pick up.
                 hasPendingFirstCluster = true;
                 return;
             }
@@ -152,12 +131,6 @@ internal sealed class WebmOpusDemuxer
         reader.LeaveContainer();
     }
 
-    /// <summary>
-    /// Reads the next raw Opus packet belonging to the audio track, skipping SimpleBlocks/Blocks
-    /// for any other track (there shouldn't be any in an audio-only stream, but don't assume).
-    /// The returned memory aliases an internal buffer and stays valid only until the next call.
-    /// Returns null once the container is exhausted.
-    /// </summary>
     public ReadOnlyMemory<byte>? ReadNextPacket()
     {
         if (opusTrackNumber is null)
@@ -169,24 +142,18 @@ internal sealed class WebmOpusDemuxer
         {
             if (insideCluster)
             {
-                // Resume scanning the SAME already-entered Cluster from where the last call left
-                // off - ReadPacketsWithinCluster() calls reader.ReadNext() on the current container
-                // each time, so this must not re-enter or re-find the Cluster element itself.
                 var packet = ReadPacketsWithinCluster();
                 if (packet is not null)
                 {
                     return packet;
                 }
 
-                // Cluster's children exhausted; ReadPacketsWithinCluster() already left the
-                // container. Fall through to look for the next top-level Cluster.
                 insideCluster = false;
                 continue;
             }
 
             if (hasPendingFirstCluster)
             {
-                // Already sitting on the first Cluster's element header from ReadHeader().
                 hasPendingFirstCluster = false;
             }
             else if (!reader.ReadNext())
@@ -240,12 +207,6 @@ internal sealed class WebmOpusDemuxer
         return null;
     }
 
-    /// <summary>
-    /// Parses a SimpleBlock/Block's binary payload: track number (Matroska vint), signed
-    /// 16-bit timecode, flags byte, then frame data. Only "no lacing" is implemented - YouTube's
-    /// audio-only Opus DASH streams do not lace frames. Laced blocks throw rather than silently
-    /// producing corrupt audio, so this gap is visible if it turns out to matter in practice.
-    /// </summary>
     private ReadOnlyMemory<byte>? ReadBlockPayload()
     {
         var size = (int)reader.ElementSize;
@@ -268,7 +229,7 @@ internal sealed class WebmOpusDemuxer
 
         var offset = 0;
         var trackNumber = ReadMatroskaVint(blockBuffer, ref offset);
-        offset += 2; // signed 16-bit timecode, relative to the cluster - not needed for playback order.
+        offset += 2;
         var flags = blockBuffer[offset];
         offset += 1;
 
@@ -287,11 +248,6 @@ internal sealed class WebmOpusDemuxer
         return blockBuffer.AsMemory(offset, size - offset);
     }
 
-    /// <summary>
-    /// Matroska's own vint encoding for track numbers/lace sizes: same leading-1-bit-marks-length
-    /// scheme as EBML element IDs/sizes, but the marker bits are stripped from the value (unlike
-    /// element IDs, which keep them).
-    /// </summary>
     private static ulong ReadMatroskaVint(byte[] buffer, ref int offset)
     {
         var first = buffer[offset];

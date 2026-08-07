@@ -4,7 +4,6 @@ using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -24,7 +23,7 @@ internal static class LinkshellRow
     public static LinkshellRowAction Draw(LinkshellChannel channel, string label, LinkshellThread? thread, bool muted,
         PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var min = origin;
@@ -35,7 +34,7 @@ internal static class LinkshellRow
         var bellCenter = new Vector2(max.X - 22f * scale, min.Y + Height * scale * 0.5f);
         var bellMin = bellCenter - new Vector2(bellRadius, bellRadius);
         var bellMax = bellCenter + new Vector2(bellRadius, bellRadius);
-        var bellHovered = ImGui.IsMouseHoveringRect(bellMin, bellMax);
+        var bellHovered = UiInteract.Hover(bellMin, bellMax);
 
         var hovered = UiInteract.Hover(min, max);
         var rowActive = hovered && !bellHovered;
@@ -57,20 +56,25 @@ internal static class LinkshellRow
         var last = thread?.Last;
         var unread = thread?.Unread ?? 0;
         var hasUnread = unread > 0;
+        var timeReserve = 0f;
         if (last is not null)
         {
             var time = TimeText.Short(thread!.LastActivity);
             var timeSize = Typography.Measure(time, TextStyles.Caption1);
+            timeReserve = timeSize.X + 8f * scale;
             Typography.Draw(new Vector2(textRight - timeSize.X, min.Y + 13f * scale), time,
                 hasUnread && !muted ? theme.Accent : theme.TextMuted, TextStyles.Caption1);
         }
 
+        var titleSize = Typography.Measure(label, TextStyles.Headline);
         var titleY = last is null
-            ? min.Y + Height * scale * 0.5f - Typography.Measure(label, TextStyles.Headline).Y * 0.5f
+            ? min.Y + Height * scale * 0.5f - titleSize.Y * 0.5f
             : min.Y + 11f * scale;
-        dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(textRight - 4f * scale, max.Y), true);
-        Typography.Draw(new Vector2(textLeft, titleY), label, theme.TextStrong, TextStyles.Headline);
-        dl.PopClipRect();
+        var titleMaxWidth = textRight - 4f * scale - textLeft - timeReserve;
+        var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleY),
+            new Vector2(textLeft + titleMaxWidth, titleY + titleSize.Y));
+        Marquee.DrawLeft("linkshellrow.title." + channel.Key, label, textLeft, titleY,
+            titleMaxWidth, TextStyles.Headline, theme.TextStrong, titleHovering);
 
         var previewRight = textRight;
         if (hasUnread)
@@ -100,10 +104,13 @@ internal static class LinkshellRow
         if (last is not null)
         {
             var preview = Preview(last);
-            dl.PushClipRect(new Vector2(textLeft, min.Y), new Vector2(previewRight, max.Y), true);
-            Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), preview, theme.TextMuted,
-                TextStyles.Subheadline);
-            dl.PopClipRect();
+            var previewY = min.Y + 34f * scale;
+            var previewMaxWidth = previewRight - textLeft;
+            var previewSize = Typography.Measure(preview, TextStyles.Subheadline);
+            var previewHovering = UiInteract.Hover(new Vector2(textLeft, previewY),
+                new Vector2(textLeft + previewMaxWidth, previewY + previewSize.Y));
+            Marquee.DrawLeft("linkshellrow.preview." + channel.Key, preview, textLeft, previewY,
+                previewMaxWidth, TextStyles.Subheadline, theme.TextMuted, previewHovering);
         }
 
         var bellTint = muted ? theme.Accent : NeutralTint;

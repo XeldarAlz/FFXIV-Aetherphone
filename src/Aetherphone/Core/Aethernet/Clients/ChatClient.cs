@@ -11,9 +11,15 @@ internal sealed class ChatClient
         this.net = net;
     }
 
-    public Task<ConversationPage?> ConversationsAsync(CancellationToken token)
+    public Task<ConversationPage?> ConversationsAsync(string? cursor, CancellationToken token)
     {
-        return net.GetAsync("/chats/", AethernetJsonContext.Default.ConversationPage, token);
+        var path = "/chats/";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.ConversationPage, token);
     }
 
     public Task<ConversationDetailDto?> ConversationAsync(string conversationId, CancellationToken token)

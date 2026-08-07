@@ -1,20 +1,23 @@
+using System.Globalization;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Contracts;
 
 namespace Aetherphone.Core.Social;
 
-internal sealed class FeedLane<TPost> where TPost : class, IIdentified
+internal sealed class FeedLane<TPost> : ITrimmable where TPost : class, IIdentified
 {
     private readonly object gate = new();
     private readonly Comparison<TPost> order;
+    private readonly Func<TPost, long>? createdAtUnix;
     private volatile TPost[] items = Array.Empty<TPost>();
     private volatile string? cursor;
     private volatile bool loading;
     private volatile bool loadingMore;
 
-    public FeedLane(Comparison<TPost> order)
+    public FeedLane(Comparison<TPost> order, Func<TPost, long>? createdAtUnix = null)
     {
         this.order = order;
+        this.createdAtUnix = createdAtUnix;
     }
 
     public TPost[] Items
@@ -59,6 +62,35 @@ internal sealed class FeedLane<TPost> where TPost : class, IIdentified
             cursor = nextCursor;
         }
     }
+
+    public void Trim(int max)
+    {
+        if (max <= 0)
+        {
+            return;
+        }
+
+        lock (gate)
+        {
+            var snapshot = items;
+            if (snapshot.Length <= max)
+            {
+                return;
+            }
+
+            var trimmed = new TPost[max];
+            Array.Copy(snapshot, trimmed, max);
+            items = trimmed;
+            if (createdAtUnix is not null)
+            {
+                cursor = ContinuationCursor(createdAtUnix(trimmed[max - 1]));
+            }
+        }
+    }
+
+    private static string ContinuationCursor(long unixSeconds) =>
+        DateTimeOffset.FromUnixTimeSeconds(unixSeconds + 1).UtcDateTime
+            .ToString("o", CultureInfo.InvariantCulture);
 
     public void Clear()
     {

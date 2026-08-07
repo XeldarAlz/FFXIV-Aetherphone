@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Settings.Pages;
@@ -89,7 +88,7 @@ internal sealed class NamePage : ISettingsPage, IDisposable
 
         using (AppSurface.Begin(body))
         {
-            var scale = ImGuiHelpers.GlobalScale;
+            var scale = UiScale.Current;
             ImGui.Dummy(new Vector2(0f, 6f * scale));
             DrawField(theme, Loc.T(L.Account.DisplayNameLabel), "##accountDisplayName", ref editDisplay,
                 SocialProfilePages.DisplayNameMax);
@@ -118,7 +117,7 @@ internal sealed class NamePage : ISettingsPage, IDisposable
 
     private void DrawField(PhoneTheme theme, string label, string id, ref string value, int maxLength)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Plain(label);
@@ -144,7 +143,7 @@ internal sealed class NamePage : ISettingsPage, IDisposable
 
     private void DrawHandleField(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Plain(Loc.T(L.Account.HandleLabel));
@@ -175,7 +174,8 @@ internal sealed class NamePage : ISettingsPage, IDisposable
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
         Typography.Draw(new Vector2(origin.X + 2f * scale, origin.Y + height + 3f * scale),
-            Loc.T(L.Account.HandleRules), theme.TextMuted, 0.78f);
+            Typography.FitText(Loc.T(L.Account.HandleRules), width - 4f * scale, 0.78f, FontWeight.Regular),
+            theme.TextMuted, 0.78f);
         ImGui.Dummy(new Vector2(width, 16f * scale));
     }
 
@@ -232,7 +232,7 @@ internal sealed class NamePage : ISettingsPage, IDisposable
                    .Push(ImGuiCol.ButtonActive, accent)
                    .Push(ImGuiCol.Text, new Vector4(1f, 1f, 1f, enabled ? 1f : 0.72f)))
         {
-            var clicked = ImGui.Button(label, new Vector2(-1f, 38f * ImGuiHelpers.GlobalScale));
+            var clicked = ImGui.Button(label, new Vector2(-1f, 38f * UiScale.Current));
             return clicked && enabled;
         }
     }

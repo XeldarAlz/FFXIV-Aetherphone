@@ -42,7 +42,7 @@ internal static class VelvetArt
     {
         var textSize = Typography.Measure("Velvet", TextStyles.Title2);
         var min = new Vector2(center.X - textSize.X * 0.5f, center.Y - textSize.Y * 0.5f);
-        Typography.Draw(min, "Velvet", VelvetTheme.TitleInk, TextStyles.Title2);
+        Typography.Draw(drawList, min, "Velvet", VelvetTheme.TitleInk, TextStyles.Title2);
         Moon(drawList, new Vector2(min.X + textSize.X + 8f * scale, min.Y + 4f * scale), 4f * scale,
             VelvetTheme.Moonlight, VelvetTheme.GroundTop);
         var underY = min.Y + textSize.Y + 2f * scale;

@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -63,7 +62,7 @@ internal sealed class ChatSearchController
     {
         var ui = model.Ui;
         var theme = ui.Theme;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddLine(new Vector2(area.Min.X, area.Max.Y), area.Max, ImGui.GetColorU32(theme.Separator), 1f);
         var fieldHeight = FieldHeight * scale;
@@ -81,10 +80,17 @@ internal sealed class ChatSearchController
             focus = false;
         }
 
+        bool submitted;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            ImGui.InputTextWithHint("##threadSearch", Loc.T(L.Common.Search), ref query, QueryMaxLength);
+            submitted = ImGui.InputTextWithHint("##threadSearch", Loc.T(L.Common.Search), ref query, QueryMaxLength,
+                ImGuiInputTextFlags.EnterReturnsTrue);
+        }
+
+        if (submitted)
+        {
+            focus = true;
         }
 
         Sync(model.Messages, model.ScrollTo);
@@ -99,8 +105,8 @@ internal sealed class ChatSearchController
         Typography.Draw(new Vector2(upCenter.X - buttonRadius - 4f * scale - countSize.X,
             area.Center.Y - countSize.Y * 0.5f), countText, ui.MutedInk, TextStyles.Footnote);
         var hasMatches = matches.Count > 0;
-        if (ui.IconButton(upCenter, buttonRadius, FontAwesomeIcon.ChevronUp.ToIconString(),
-                hasMatches ? ui.BodyInk : ui.MutedInk, AppSkin.Transparent, 0.85f) && hasMatches)
+        if ((ui.IconButton(upCenter, buttonRadius, FontAwesomeIcon.ChevronUp.ToIconString(),
+                hasMatches ? ui.BodyInk : ui.MutedInk, AppSkin.Transparent, 0.85f) || submitted) && hasMatches)
         {
             index = (index - 1 + matches.Count) % matches.Count;
             model.ScrollTo(matches[index]);

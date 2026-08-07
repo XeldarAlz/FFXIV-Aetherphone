@@ -6,7 +6,6 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
@@ -22,7 +21,7 @@ internal sealed partial class MessageApp
 
     private void DrawNewChat(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.DirectMessages.NewMessage), back);
         var top = area.Min.Y + AppHeader.Height * scale;
@@ -144,8 +143,11 @@ internal sealed partial class MessageApp
             lodestone, 0.85f, 32);
         var textLeft = avatarCenter.X + radius + 12f * scale;
         var labelWidth = origin.X + width - 44f * scale - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale),
-            Typography.FitText(label, labelWidth, 1f, FontWeight.SemiBold), theme.TextStrong, 1f, FontWeight.SemiBold);
+        var labelY = origin.Y + rowHeight * 0.5f - 9f * scale;
+        var labelHover = UiInteract.Hover(new Vector2(textLeft, labelY),
+            new Vector2(origin.X + width - 44f * scale, labelY + Typography.Measure(label, 1f, FontWeight.SemiBold).Y));
+        Marquee.DrawLeft("compose.pick." + contact.UserId, label, textLeft, labelY, labelWidth,
+            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, labelHover);
         var checkCenter = new Vector2(origin.X + width - 22f * scale, origin.Y + rowHeight * 0.5f);
         if (selected)
         {
@@ -237,7 +239,7 @@ internal sealed partial class MessageApp
 
     private bool PillField(Rect rect, string imguiId, string hint, ref string value, int maxLength)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, rect.Min, rect.Max, (rect.Max.Y - rect.Min.Y) * 0.5f,
             ImGui.GetColorU32(ui.FieldSurface));

@@ -106,6 +106,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           WEBHOOK_URL: ${{ secrets.RELEASE_WEBHOOK_URL }}
+          PING_ROLE_ID: ${{ vars.RELEASE_PING_ROLE_ID }}
           TAG: ${{ steps.tag.outputs.target }}
           DOWNLOADS: ${{ steps.count.outputs.total }}
         run: |
@@ -128,6 +129,10 @@ jobs:
 
           $isPre   = [bool]$rel.isPrerelease
           $content = if ($isPre) { '🧪 **New preview build just dropped!**' } else { '🚀 **New version dropped!**' }
+          $pingRole = $env:PING_ROLE_ID
+          if (-not [string]::IsNullOrWhiteSpace($pingRole)) {
+            $content = "<@&$pingRole> $content"
+          }
           $color   = if ($isPre) { 10197915 } else { 9132790 }
           $channel = if ($isPre) { 'Preview' } else { 'Stable' }
 
@@ -156,6 +161,10 @@ jobs:
                 timestamp   = $rel.publishedAt
               }
             )
+          }
+
+          if (-not [string]::IsNullOrWhiteSpace($pingRole)) {
+            $payload['allowed_mentions'] = [ordered]@{ roles = @($pingRole) }
           }
 
           $json = $payload | ConvertTo-Json -Depth 10

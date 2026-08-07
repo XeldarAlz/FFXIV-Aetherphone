@@ -2,11 +2,11 @@ using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Muster;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Message;
 
@@ -34,9 +34,9 @@ internal sealed partial class MessageApp
             store.RefreshConversations();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var searchHeight = 52f * scale;
-        SearchField.DrawSubmit(new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + searchHeight)),
+        SearchField.Draw(new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + searchHeight)),
             "##messageFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Message);
         var chipsHeight = 38f * scale;
         DrawChatFilterChips(new Rect(new Vector2(area.Min.X, area.Min.Y + searchHeight),
@@ -51,10 +51,13 @@ internal sealed partial class MessageApp
             {
                 EmptyState.Draw(listRect, ui, FontAwesomeIcon.Search, Loc.T(L.Phone.NoOneFound), string.Empty);
             }
-            else
+            else if (EmptyState.Draw(listRect, ui, FontAwesomeIcon.Comments, Loc.T(L.DirectMessages.Empty),
+                         Loc.T(L.DirectMessages.EmptyHint), Loc.T(L.DirectMessages.NewMessage)))
             {
-                EmptyState.Draw(listRect, ui, FontAwesomeIcon.Comments, Loc.T(L.DirectMessages.Empty),
-                    Loc.T(L.DirectMessages.EmptyHint));
+                selectedContacts.Clear();
+                groupTitleDraft = string.Empty;
+                filter = string.Empty;
+                router.Push(MessageRoute.NewChat);
             }
         }
         else
@@ -70,6 +73,15 @@ internal sealed partial class MessageApp
                 for (var index = 0; index < regular.Count; index++)
                 {
                     DrawConversationRow(regular[index], scale, pinned: false);
+                }
+
+                if (store.LoadingMoreThreads)
+                {
+                    InfiniteScroll.DrawLoadingRow(listRect.Center.X, AppPalettes.Message.MutedInk);
+                }
+                else if (store.HasMoreThreads && InfiniteScroll.ReachedBottom())
+                {
+                    store.LoadMoreThreads();
                 }
 
                 ImGui.Dummy(new Vector2(0f, 72f * scale));
@@ -109,7 +121,7 @@ internal sealed partial class MessageApp
 
     private void DrawArchived(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Message.Archived), back);
         var top = area.Min.Y + AppHeader.Height * scale;
@@ -213,10 +225,33 @@ internal sealed partial class MessageApp
             markerRight -= 20f * scale;
         }
 
+        var overMuster = false;
+        if (!item.IsGroup && musters.ContactMusterFor(item.OtherUserId) is { } hosted)
+        {
+            var musterCenter = new Vector2(markerRight - 12f * scale, origin.Y + 18f * scale);
+            var musterExtent = new Vector2(12f * scale, 12f * scale);
+            var musterRect = new Rect(musterCenter - musterExtent, musterCenter + musterExtent);
+            overMuster = UiInteract.Hover(musterRect.Min, musterRect.Max);
+            AppSkin.Icon(musterCenter, FontAwesomeIcon.Bullhorn.ToIconString(), AppAccents.For(MusterStore.AppId),
+                0.6f);
+            HoverTooltip.Show(musterRect, Loc.T(L.Message.HostingMuster), HoverLabelSide.Above);
+            if (UiInteract.Click(musterRect.Min, musterRect.Max, overMuster))
+            {
+                musterLauncher.RequestDetail(hosted.Id);
+                navigation.Open(MusterStore.AppId);
+            }
+
+            markerRight -= 20f * scale;
+        }
+
         var textLeft = avatarCenter.X + radius + 12f * scale;
         var textWidth = markerRight - 8f * scale - textLeft;
-        Typography.Draw(new Vector2(textLeft, origin.Y + 12f * scale),
-            Typography.FitText(title, textWidth, 1f, FontWeight.SemiBold), theme.TextStrong, 1f, FontWeight.SemiBold);
+        var titleTop = origin.Y + 12f * scale;
+        var titleSize = Typography.Measure(title, 1f, FontWeight.SemiBold);
+        var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleTop),
+            new Vector2(textLeft + textWidth, titleTop + titleSize.Y));
+        Marquee.DrawLeft("messageapp.chats.title." + item.Id, title, textLeft, titleTop, textWidth,
+            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, titleHovering);
         var previewColor = item.UnreadCount > 0 ? theme.TextStrong : ui.MutedInk;
         var previewRight = origin.X + width - (item.UnreadCount > 0 ? 40f * scale : pad);
         var draft = configuration.MessageDrafts.GetValueOrDefault(item.Id, string.Empty);
@@ -233,7 +268,7 @@ internal sealed partial class MessageApp
         else
         {
             var preview = item.LastMessagePreview.Length > 0
-                ? item.LastMessagePreview
+                ? ChatText.ListPreview(item.LastMessagePreview)
                 : item.LastMessageKind switch
                 {
                     1 => Loc.T(L.DirectMessages.PhotoPreview),
@@ -256,7 +291,7 @@ internal sealed partial class MessageApp
         {
             OpenChatMenu(item.Id);
         }
-        else if (UiInteract.HoverClick(origin, rowMax))
+        else if (!overMuster && UiInteract.HoverClick(origin, rowMax))
         {
             router.Push(MessageRoute.Thread(item.Id));
         }
@@ -279,9 +314,11 @@ internal sealed partial class MessageApp
             return;
         }
 
+        var conversation = FindConversationDto(id);
         var isPinned = configuration.MessagePinnedChats.Contains(id);
         var isArchived = configuration.MessageArchivedChats.Contains(id);
-        var isMuted = FindConversationDto(id)?.Muted ?? false;
+        var isMuted = conversation?.Muted ?? false;
+        chatMenu.Header = conversation is null ? string.Empty : DirectMessagesStore.DisplayTitle(conversation);
         chatMenuItems[0] = new DropdownMenu.Item(Loc.T(isPinned ? L.Common.Unpin : L.Common.Pin),
             FontAwesomeIcon.Thumbtack.ToIconString());
         chatMenuItems[1] = new DropdownMenu.Item(Loc.T(isArchived ? L.Message.Unarchive : L.Message.Archive),

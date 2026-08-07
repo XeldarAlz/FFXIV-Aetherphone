@@ -3,10 +3,6 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Aethergram;
 
-/// <summary>
-/// Aethergram's signature bespoke artwork: the multi-stop "story" gradient ring drawn around
-/// avatars that have a live story. Pure drawing; state and layout live in <see cref="AethergramApp"/>.
-/// </summary>
 internal static class AethergramArt
 {
     private static readonly Vector4[] RingStops =

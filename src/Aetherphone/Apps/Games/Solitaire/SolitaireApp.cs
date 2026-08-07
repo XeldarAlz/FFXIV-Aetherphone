@@ -3,8 +3,8 @@ using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Solitaire;
 
@@ -68,7 +68,7 @@ internal sealed class SolitaireApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         if (loadedBestTime < 0)
@@ -97,7 +97,7 @@ internal sealed class SolitaireApp : IMiniGame
         var dropTarget = SolitaireHit.None;
         if (!finished)
         {
-            dropTarget = HandleInput(layout, scale);
+            dropTarget = HandleInput(layout, area, scale);
         }
 
         renderer.Draw(board, layout, theme, Accent, scale, grabSource, dropTarget);
@@ -136,10 +136,10 @@ internal sealed class SolitaireApp : IMiniGame
         }
     }
 
-    private SolitaireHit HandleInput(in SolitaireLayout layout, float scale)
+    private SolitaireHit HandleInput(in SolitaireLayout layout, Rect area, float scale)
     {
         var mouse = ImGui.GetMousePos();
-        if (grabCount == 0 && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (grabCount == 0 && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(area.Min, area.Max))
         {
             var hit = layout.Hit(mouse);
             if (hit.Kind == SolitairePileKind.Stock)
@@ -341,7 +341,7 @@ internal sealed class SolitaireApp : IMiniGame
         var suit = SolitaireBoard.Suit(card);
         if (board.FoundationTop(suit) == card)
         {
-            var scale = ImGuiHelpers.GlobalScale;
+            var scale = UiScale.Current;
             var center = layout.FoundationRect(suit).Center;
             particles.Burst(center, 12, Accent, 150f * scale, 3f, 0.5f, 220f);
             particles.Sparkle(center, 5, new Vector4(1f, 0.95f, 0.65f, 1f), 110f * scale, 2f, 0.6f);
@@ -356,7 +356,7 @@ internal sealed class SolitaireApp : IMiniGame
             if (top >= 0)
             {
                 var center = layout.TableauCardRect(pile, top).Center;
-                particles.Burst(center, 8, Core.Theme.Accent.Amber, 120f * ImGuiHelpers.GlobalScale, 2.6f, 0.45f, 220f);
+                particles.Burst(center, 8, Core.Theme.Accent.Amber, 120f * UiScale.Current, 2.6f, 0.45f, 220f);
             }
         }
 
@@ -377,9 +377,9 @@ internal sealed class SolitaireApp : IMiniGame
         fx.Flash(Accent, 0.4f);
         ReadOnlySpan<Vector4> palette = new[] { Accent, Core.Theme.Accent.Amber, Core.Theme.Accent.Rose, Core.Theme.Accent.Blue, };
         var top = new Vector2(layout.OriginX + layout.ColumnPitch * 3f, layout.TopRowY);
-        particles.Confetti(top, 90, palette, 280f * ImGuiHelpers.GlobalScale, 4.4f, 1.5f);
-        particles.Sparkle(top + new Vector2(0f, 60f * ImGuiHelpers.GlobalScale), 18, new Vector4(1f, 0.95f, 0.7f, 1f),
-            210f * ImGuiHelpers.GlobalScale, 2.8f, 1f);
+        particles.Confetti(top, 90, palette, 280f * UiScale.Current, 4.4f, 1.5f);
+        particles.Sparkle(top + new Vector2(0f, 60f * UiScale.Current), 18, new Vector4(1f, 0.95f, 0.7f, 1f),
+            210f * UiScale.Current, 2.8f, 1f);
     }
 
     private void DrawResult(PhoneTheme theme, Rect body, float deltaSeconds)

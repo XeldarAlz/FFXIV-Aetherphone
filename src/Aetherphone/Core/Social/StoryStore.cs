@@ -6,12 +6,6 @@ using Aetherphone.Core.Wallpapers;
 
 namespace Aetherphone.Core.Social;
 
-/// <summary>
-/// Owns the story tray and the currently opened author's stories.
-/// Marking a story seen is fire and forget, so the ring state is also tracked locally: an author is
-/// held as seen only up to the story timestamp that was actually watched, which lets a newly posted
-/// story light the ring again before the next tray fetch lands.
-/// </summary>
 internal sealed class StoryStore : IDisposable
 {
     public const int StoryWidth = 1080;
@@ -20,6 +14,7 @@ internal sealed class StoryStore : IDisposable
     private readonly AethernetSession session;
     private readonly GramClient client;
     private readonly MediaClient media;
+    private readonly RealtimeSignalBus signals;
     private readonly StoreWork work;
     private readonly object seenLock = new();
     private readonly HashSet<string> seenStoryIds = new(StringComparer.Ordinal);
@@ -30,17 +25,54 @@ internal sealed class StoryStore : IDisposable
     private volatile StoryViewerDto[] viewers = Array.Empty<StoryViewerDto>();
     private volatile string? viewersStoryId;
     private volatile int viewersTotal;
+    private volatile string? viewersCursor;
+    private volatile bool viewersLoadingMore;
     private volatile bool trayLoading;
     private volatile bool groupLoading;
     private volatile bool viewersLoading;
     private volatile bool posting;
+    private string? lastAccountId;
 
-    public StoryStore(AethernetSession session, GramClient client, MediaClient media, string logTag)
+    public StoryStore(AethernetSession session, GramClient client, MediaClient media, RealtimeSignalBus signals,
+        string logTag)
     {
         this.session = session;
         this.client = client;
         this.media = media;
+        this.signals = signals;
         work = new StoreWork(logTag);
+        session.Changed += OnSessionChanged;
+        signals.ContentRemoved += OnContentRemoved;
+    }
+
+    private void OnContentRemoved(ContentRemovalSignal removal)
+    {
+        if (!string.Equals(removal.Kind, ContentRemovalKinds.Story, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        RemoveOpenStory(removal.ContentId);
+        RefreshTray();
+    }
+
+    private void OnSessionChanged()
+    {
+        var accountId = session.CurrentUser?.Id;
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        lastAccountId = accountId;
+        rings = Array.Empty<StoryRingDto>();
+        CloseAuthor();
+        ClearViewers();
+        lock (seenLock)
+        {
+            seenStoryIds.Clear();
+            seenAuthorsThrough.Clear();
+        }
     }
 
     public bool IsSignedIn => session.IsSignedIn;
@@ -52,11 +84,9 @@ internal sealed class StoryStore : IDisposable
     public StoryViewerDto[] Viewers => viewers;
     public int ViewersTotal => viewersTotal;
     public bool ViewersLoading => viewersLoading;
+    public bool ViewersLoadingMore => viewersLoadingMore;
+    public bool HasMoreViewers => viewersCursor is not null;
 
-    /// <summary>
-    /// Loads who watched one of your own stories. Keyed by story id so stepping to the next story
-    /// clears the previous list rather than showing the wrong viewers under a new photo.
-    /// </summary>
     public void LoadViewers(string storyId)
     {
         if (viewersStoryId == storyId)
@@ -67,16 +97,75 @@ internal sealed class StoryStore : IDisposable
         viewersStoryId = storyId;
         viewers = Array.Empty<StoryViewerDto>();
         viewersTotal = 0;
+        viewersCursor = null;
         viewersLoading = true;
         work.Run("story viewers", async token =>
         {
-            var page = await client.StoryViewersAsync(storyId, token).ConfigureAwait(false);
+            var page = await client.StoryViewersAsync(storyId, null, token).ConfigureAwait(false);
             if (page is not null && viewersStoryId == storyId)
             {
                 viewers = page.Items;
                 viewersTotal = page.Total;
+                viewersCursor = page.NextCursor;
             }
         }, () => viewersLoading = false);
+    }
+
+    public void LoadMoreViewers()
+    {
+        var storyId = viewersStoryId;
+        var cursor = viewersCursor;
+        if (storyId is null || cursor is null || viewersLoadingMore || viewersLoading)
+        {
+            return;
+        }
+
+        viewersLoadingMore = true;
+        work.Run("story viewers more", async token =>
+        {
+            var page = await client.StoryViewersAsync(storyId, cursor, token).ConfigureAwait(false);
+            if (page is null || viewersStoryId != storyId)
+            {
+                return;
+            }
+
+            viewers = AppendViewers(viewers, page.Items);
+            viewersTotal = page.Total;
+            viewersCursor = page.NextCursor;
+        }, () => viewersLoadingMore = false);
+    }
+
+    private static StoryViewerDto[] AppendViewers(StoryViewerDto[] source, StoryViewerDto[] incoming)
+    {
+        if (incoming.Length == 0)
+        {
+            return source;
+        }
+
+        var existing = new HashSet<string>(source.Length, StringComparer.Ordinal);
+        for (var index = 0; index < source.Length; index++)
+        {
+            existing.Add(source[index].UserId);
+        }
+
+        var fresh = new List<StoryViewerDto>(incoming.Length);
+        for (var index = 0; index < incoming.Length; index++)
+        {
+            if (!existing.Contains(incoming[index].UserId))
+            {
+                fresh.Add(incoming[index]);
+            }
+        }
+
+        if (fresh.Count == 0)
+        {
+            return source;
+        }
+
+        var result = new StoryViewerDto[source.Length + fresh.Count];
+        Array.Copy(source, result, source.Length);
+        fresh.CopyTo(result, source.Length);
+        return result;
     }
 
     public void ClearViewers()
@@ -84,6 +173,7 @@ internal sealed class StoryStore : IDisposable
         viewersStoryId = null;
         viewers = Array.Empty<StoryViewerDto>();
         viewersTotal = 0;
+        viewersCursor = null;
     }
 
     public bool HasOwnRing
@@ -295,6 +385,8 @@ internal sealed class StoryStore : IDisposable
 
     public void Dispose()
     {
+        session.Changed -= OnSessionChanged;
+        signals.ContentRemoved -= OnContentRemoved;
         work.Dispose();
     }
 }

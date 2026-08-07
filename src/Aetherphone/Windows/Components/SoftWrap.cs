@@ -3,10 +3,6 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
 
-// Soft word wrapping for ImGui multi-line inputs, which do not wrap on their own. The engine keeps a
-// "logical" string (what the user meant, no line breaks) and a "display" string (logical text with
-// soft newlines inserted at word boundaries so it stays inside the field). Newlines are never part of
-// the logical value: hard breaks are filtered out and soft breaks are stripped back out on read.
 internal static class SoftWrap
 {
     public static int ApplyEdit(ImGuiInputTextCallbackDataPtr data, float wrapWidth, int maxLength)

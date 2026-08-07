@@ -28,7 +28,9 @@ internal sealed class MentionAutocomplete
 
     public Rect Anchor { get; set; }
 
-    public bool PointerOver { get; set; }
+    public Rect PopupArea { get; set; }
+
+    public bool PointerOverPopup => IsOpen && ImGui.IsMouseHoveringRect(PopupArea.Min, PopupArea.Max, false);
 
     public MentionSuggestDto[] Rows
     {
@@ -176,7 +178,7 @@ internal sealed class MentionAutocomplete
         applied = string.Empty;
         debounce = 0f;
         SelectedIndex = 0;
-        PointerOver = false;
+        PopupArea = default;
         visible = Array.Empty<MentionSuggestDto>();
         suggestions.Clear();
     }

@@ -3,7 +3,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -25,7 +24,7 @@ internal static class LoadingPulse
             return;
         }
 
-        var caret = center.Y + radius + 20f * ImGuiHelpers.GlobalScale;
+        var caret = center.Y + radius + 20f * UiScale.Current;
         Caption(new Vector2(center.X, caret), textColor, accent, label, alpha, captionFontScale, drawList: drawList);
     }
 
@@ -38,7 +37,7 @@ internal static class LoadingPulse
         }
 
         var dl = drawList ?? ImGui.GetWindowDrawList();
-        var thickness = MathF.Max(2f * ImGuiHelpers.GlobalScale, radius * 0.10f);
+        var thickness = MathF.Max(2f * UiScale.Current, radius * 0.10f);
         dl.AddCircleFilled(center, radius * 1.9f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.06f * alpha)), 48);
         dl.AddCircleFilled(center, radius * 1.25f, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.10f * alpha)), 48);
         dl.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(accent, 0.18f * alpha)), 72, thickness);
@@ -52,7 +51,7 @@ internal static class LoadingPulse
         float fontScale, FontWeight weight = FontWeight.Medium, ImDrawListPtr? drawList = null)
     {
         var dl = drawList ?? ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         label = label.TrimEnd('…', '.', ' ');
         using (Plugin.Fonts.Push(fontScale, weight))
         {

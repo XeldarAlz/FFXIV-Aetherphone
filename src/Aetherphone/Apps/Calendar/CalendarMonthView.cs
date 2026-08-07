@@ -5,7 +5,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Calendar;
 
@@ -18,16 +17,23 @@ internal static class CalendarMonthView
     private const float NumberCenterFraction = 0.34f;
     private const float DotRowFraction = 0.72f;
 
+    private static readonly LocString[] WeekdayInitials =
+    {
+        L.Calendar.WeekSun, L.Calendar.WeekMon, L.Calendar.WeekTue, L.Calendar.WeekWed,
+        L.Calendar.WeekThu, L.Calendar.WeekFri, L.Calendar.WeekSat,
+    };
+
     public static float Draw(AppSkin ui, Rect area, float targetHeight, ref int monthOffset,
         ref DateTime selectedDate, FrozenDictionary<long, ParsedEvent[]> events)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var referenceDate = DateTime.Today.AddMonths(monthOffset);
         var firstOfMonth = new DateTime(referenceDate.Year, referenceDate.Month, 1);
         var daysInMonth = DateTime.DaysInMonth(referenceDate.Year, referenceDate.Month);
-        var firstDayOfWeek = (int)firstOfMonth.DayOfWeek;
-        var totalCells = firstDayOfWeek + daysInMonth;
+        var weekStart = (int)Loc.Culture.DateTimeFormat.FirstDayOfWeek;
+        var leadingBlanks = ((int)firstOfMonth.DayOfWeek - weekStart + 7) % 7;
+        var totalCells = leadingBlanks + daysInMonth;
         var totalRows = (int)MathF.Ceiling(totalCells / 7f);
         var today = DateTime.Today;
 
@@ -43,7 +49,7 @@ internal static class CalendarMonthView
             ref monthOffset, ref selectedDate, today);
 
         var dayHeaderY = origin.Y;
-        DrawDayHeaders(ui, drawList, origin, cellWidth, dayHeaderY, scale);
+        DrawDayHeaders(ui, drawList, origin, cellWidth, dayHeaderY, scale, weekStart);
 
         var gridTop = dayHeaderY + DayHeaderHeight * scale;
         UiAnchors.Report("calendar.grid",
@@ -63,7 +69,7 @@ internal static class CalendarMonthView
             for (var column = 0; column < 7; column++)
             {
                 var dayIndex = row * 7 + column;
-                var cellDay = dayIndex - firstDayOfWeek + 1;
+                var cellDay = dayIndex - leadingBlanks + 1;
                 var isCurrentMonth = cellDay >= 1 && cellDay <= daysInMonth;
                 var cellX = origin.X + column * cellWidth;
                 var cellY = rowTop;
@@ -148,10 +154,14 @@ internal static class CalendarMonthView
             selectedDate = new DateTime(referenceDate.Year, referenceDate.Month, 1).AddMonths(-1);
         }
 
-        var monthSize = Typography.Measure(monthName, TextStyles.Title3);
+        var isCurrentMonth = referenceDate.Year == today.Year && referenceDate.Month == today.Month;
+        var todayPillReserve = isCurrentMonth ? 0f : TodayButtonWidth(scale) + 4f * scale;
+        var monthMaxWidth = MathF.Max(1f, gridWidth - 76f * scale - todayPillReserve);
+        var monthFitted = Typography.FitText(monthName, monthMaxWidth, TextStyles.Title3);
+        var monthSize = Typography.Measure(monthFitted, TextStyles.Title3);
         Typography.Draw(new Vector2(origin.X + gridWidth * 0.5f - monthSize.X * 0.5f,
                 navY + NavHeight * scale * 0.5f - monthSize.Y * 0.5f),
-            monthName, ui.TitleInk, TextStyles.Title3);
+            monthFitted, ui.TitleInk, TextStyles.Title3);
 
         var rightChevronOrigin = new Vector2(origin.X + gridWidth - 30f * scale, navY);
         if (DrawNavChevron(ui, drawList, rightChevronOrigin, ">", scale))
@@ -160,7 +170,6 @@ internal static class CalendarMonthView
             selectedDate = new DateTime(referenceDate.Year, referenceDate.Month, 1).AddMonths(1);
         }
 
-        var isCurrentMonth = referenceDate.Year == today.Year && referenceDate.Month == today.Month;
         if (!isCurrentMonth)
         {
             var rightChevronMinX = rightChevronOrigin.X + 4f * scale;
@@ -168,6 +177,14 @@ internal static class CalendarMonthView
         }
 
         return NavHeight * scale;
+    }
+
+    private static float TodayButtonWidth(float scale)
+    {
+        var todayText = Loc.T(L.Calendar.Today);
+        var textSize = Typography.Measure(todayText, TextStyles.FootnoteEmphasized.Scale,
+            TextStyles.FootnoteEmphasized.Weight);
+        return textSize.X + 8f * scale * 2f + 6f * scale;
     }
 
     private static void DrawTodayButton(AppSkin ui, ImDrawListPtr drawList, float rightLimitX, float navY,
@@ -182,7 +199,7 @@ internal static class CalendarMonthView
         var height = NavHeight * scale * 0.68f;
         var max = new Vector2(rightLimitX - gapX, navY + NavHeight * scale * 0.5f + height * 0.5f);
         var min = new Vector2(max.X - textSize.X - padX * 2f, max.Y - height);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         Squircle.Fill(drawList, min, max, height * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(ui.Accent, hovered ? 0.24f : 0.14f)));
         Typography.DrawCentered(drawList, (min + max) * 0.5f, todayText, ui.Accent, feScale, feWeight);
@@ -201,7 +218,7 @@ internal static class CalendarMonthView
         var min = new Vector2(origin.X + 4f * scale, origin.Y);
         var max = new Vector2(min.X + 30f * scale, min.Y + NavHeight * scale);
         var mid = (min + max) * 0.5f;
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         if (hovered)
         {
             Squircle.Fill(drawList, min, max, (max.Y - min.Y) * 0.5f, ImGui.GetColorU32(ui.HoverTint));
@@ -215,25 +232,19 @@ internal static class CalendarMonthView
     }
 
     private static void DrawDayHeaders(AppSkin ui, ImDrawListPtr drawList, Vector2 origin, float cellWidth,
-        float topY, float scale)
+        float topY, float scale, int weekStart)
     {
-        var headers = new[]
-        {
-            Loc.T(L.Calendar.WeekSun), Loc.T(L.Calendar.WeekMon), Loc.T(L.Calendar.WeekTue),
-            Loc.T(L.Calendar.WeekWed), Loc.T(L.Calendar.WeekThu), Loc.T(L.Calendar.WeekFri),
-            Loc.T(L.Calendar.WeekSat),
-        };
-
         var c2Scale = TextStyles.FootnoteEmphasized.Scale;
         var c2Weight = TextStyles.FootnoteEmphasized.Weight;
 
-        for (var column = 0; column < headers.Length; column++)
+        for (var column = 0; column < WeekdayInitials.Length; column++)
         {
+            var weekday = (column + weekStart) % WeekdayInitials.Length;
             var cellX = origin.X + column * cellWidth;
-            var headerColor = column == 0 ? ui.Accent : ui.MutedInk;
+            var headerColor = weekday == (int)DayOfWeek.Sunday ? ui.Accent : ui.MutedInk;
             Typography.DrawCentered(drawList,
                 new Vector2(cellX + cellWidth * 0.5f, topY + DayHeaderHeight * scale * 0.5f),
-                headers[column], headerColor, c2Scale, c2Weight);
+                Loc.T(WeekdayInitials[weekday]), headerColor, c2Scale, c2Weight);
         }
     }
 

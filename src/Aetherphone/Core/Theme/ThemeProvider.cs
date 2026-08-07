@@ -20,11 +20,17 @@ internal sealed class ThemeProvider
     public PhoneTheme Chrome => dark;
     public void Apply(Configuration configuration) => Rebuild();
 
+    public PhoneTheme ForApp(bool wantsSystemTheme) => wantsSystemTheme ? Select() : dark;
+
     private void Rebuild()
     {
         var accent = ThemeCatalog.ResolveAccent(configuration.AccentName);
-        light = PhoneTheme.Light(accent, configuration.LightWallpaperId, configuration.DarkWallpaperId);
-        dark = PhoneTheme.Dark(accent, configuration.LightWallpaperId, configuration.DarkWallpaperId);
+        var phoneCase = ThemeCatalog.ResolveCase(configuration.PhoneCaseName);
+        var chassis = ChassisMetrics.For(phoneCase.Kind, PhoneSizeCatalog.DesignWidth);
+        light = PhoneTheme.Light(accent, phoneCase, chassis, configuration.LightWallpaperId,
+            configuration.DarkWallpaperId);
+        dark = PhoneTheme.Dark(accent, phoneCase, chassis, configuration.LightWallpaperId,
+            configuration.DarkWallpaperId);
     }
 
     private PhoneTheme Select() =>

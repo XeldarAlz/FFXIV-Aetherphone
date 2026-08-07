@@ -55,7 +55,7 @@ internal sealed class VoiceMixer : ISampleProvider, IDisposable
         volume = Math.Clamp(startVolume, 0f, 1f);
         try
         {
-            _ = deviceNumber; // WASAPI plays on the system default output; winmm device indices no longer apply.
+            _ = deviceNumber;
             var provider = new VolumeSampleProvider(this) { Volume = volume };
             var device = AudioOutputFactory.Create(140);
             device.Init(provider.ToWaveProvider16());

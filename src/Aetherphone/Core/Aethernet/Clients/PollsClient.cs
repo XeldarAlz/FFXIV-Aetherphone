@@ -11,9 +11,15 @@ internal sealed class PollsClient
         this.net = net;
     }
 
-    public Task<PollPage?> ListAsync(CancellationToken token)
+    public Task<PollPage?> ListAsync(string? cursor, CancellationToken token)
     {
-        return net.GetAsync("/polls", AethernetJsonContext.Default.PollPage, token);
+        var path = "/polls";
+        if (cursor is not null)
+        {
+            path += $"?cursor={Uri.EscapeDataString(cursor)}";
+        }
+
+        return net.GetAsync(path, AethernetJsonContext.Default.PollPage, token);
     }
 
     public Task<PollDto?> VoteAsync(string pollId, int option, CancellationToken token)

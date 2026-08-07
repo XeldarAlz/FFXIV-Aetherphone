@@ -4,11 +4,30 @@ internal sealed class DmLauncher
 {
     private string? pendingUserId;
     private string? pendingConversationId;
+    private bool pendingCalls;
 
     public void RequestUser(string userId)
     {
         pendingUserId = userId;
         pendingConversationId = null;
+    }
+
+    public void RequestCalls()
+    {
+        pendingCalls = true;
+        pendingUserId = null;
+        pendingConversationId = null;
+    }
+
+    public bool TryConsumeCalls()
+    {
+        if (!pendingCalls)
+        {
+            return false;
+        }
+
+        pendingCalls = false;
+        return true;
     }
 
     public void RequestConversation(string conversationId)

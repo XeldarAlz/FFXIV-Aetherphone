@@ -6,7 +6,6 @@ using Aetherphone.Core.Games;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.GemSwap;
 
@@ -92,7 +91,7 @@ internal sealed class GemSwapApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         statsRef = context.Stats;
@@ -238,7 +237,7 @@ internal sealed class GemSwapApp : IMiniGame
     {
         phase = GemPhase.Clearing;
         clearTimer = 0f;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var cleared = board.LastClearCount;
         fx.AddTrauma(MathF.Min(0.55f, 0.05f + cleared * 0.03f));
         for (var index = 0; index < GemSwapBoard.CellCount; index++)
@@ -273,7 +272,7 @@ internal sealed class GemSwapApp : IMiniGame
     private void HandleInput(GameGrid grid, float deltaSeconds)
     {
         var mouse = ImGui.GetMousePos();
-        if (!grid.Bounds.Contains(mouse) || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max) || !ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
             UpdateHoverCursor(grid, mouse);
             return;
@@ -288,7 +287,8 @@ internal sealed class GemSwapApp : IMiniGame
         }
 
         var index = row * GemSwapBoard.Columns + column;
-        if (!grid.Cell(column, row).Contains(mouse))
+        var cell = grid.Cell(column, row);
+        if (!UiInteract.Hover(cell.Min, cell.Max))
         {
             return;
         }
@@ -323,7 +323,7 @@ internal sealed class GemSwapApp : IMiniGame
 
     private void UpdateHoverCursor(GameGrid grid, Vector2 mouse)
     {
-        if (grid.Bounds.Contains(mouse))
+        if (UiInteract.Hover(grid.Bounds.Min, grid.Bounds.Max))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }

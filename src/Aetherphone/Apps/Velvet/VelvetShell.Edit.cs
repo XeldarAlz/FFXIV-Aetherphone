@@ -2,11 +2,11 @@ using Aetherphone.Apps.Velvet.Kit;
 using Aetherphone.Core;
 using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -17,12 +17,16 @@ internal sealed partial class VelvetShell
     private string editIntro = string.Empty;
     private string editPronouns = string.Empty;
     private int editGender;
+    private int editSexuality;
     private int editIntent;
     private int editRelationship;
     private readonly List<string> editRole = new();
+    private readonly List<string> editKinks = new();
     private readonly List<string> editTags = new();
     private readonly List<string> editLimits = new();
     private volatile bool editBusy;
+    private volatile bool editSaveSucceeded;
+    private volatile bool editSaveFailed;
     private bool avatarEditing;
 
     private void BeginEditProfile()
@@ -38,20 +42,25 @@ internal sealed partial class VelvetShell
         editIntro = me.Intro;
         editPronouns = me.Pronouns;
         editGender = VelvetGender.Sanitize(me.Gender);
+        editSexuality = VelvetSexuality.Sanitize(me.Sexuality);
         editIntent = VelvetIntent.Sanitize(me.LookingFor);
         editRelationship = me.RelationshipStatus;
         editRole.Clear();
         editRole.AddRange(VelvetTags.Parse(me.Dynamic));
+        editKinks.Clear();
+        editKinks.AddRange(me.Kinks ?? Array.Empty<string>());
         editTags.Clear();
         editTags.AddRange(me.Tags);
         editLimits.Clear();
         editLimits.AddRange(me.Limits);
+        editSaveSucceeded = false;
+        editSaveFailed = false;
         avatarEditing = false;
     }
 
     private void DrawEditProfile(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (avatarEditing)
         {
             var context = new PhoneContext(area, theme, navigation);
@@ -63,9 +72,28 @@ internal sealed partial class VelvetShell
             return;
         }
 
+        if (editSaveSucceeded)
+        {
+            editSaveSucceeded = false;
+            router.Pop(false);
+            return;
+        }
+
         if (VHeader.Push(area, Loc.T(L.Velvet.EditProfile), theme))
         {
-            router.Pop();
+            if (!HasUnsavedEdits())
+            {
+                router.Pop();
+                return;
+            }
+
+            confirm.Ask(new ConfirmRequest
+            {
+                Message = Loc.T(L.Velvet.DiscardEdits),
+                ConfirmLabel = Loc.T(L.Velvet.DiscardEditsConfirm),
+                CancelLabel = Loc.T(L.Velvet.KeepEditing),
+                Confirm = () => router.Pop(),
+            });
             return;
         }
 
@@ -77,6 +105,13 @@ internal sealed partial class VelvetShell
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + VHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
+            if (editSaveFailed)
+            {
+                Gap(10f);
+                WrapText(Loc.T(L.Velvet.SaveFailed), VelvetTheme.Danger, TextStyles.Callout);
+                Gap(4f);
+            }
+
             Gap(8f);
             DrawEditAvatar();
             Gap(14f);
@@ -98,6 +133,11 @@ internal sealed partial class VelvetShell
             DrawGenderPicker(ref editGender);
             Gap(16f);
 
+            VSectionHeader.Card(FontAwesomeIcon.Rainbow, Loc.T(L.Velvet.CardSexuality));
+            Gap(6f);
+            DrawSexualityPicker(ref editSexuality);
+            Gap(16f);
+
             VSectionHeader.Card(FontAwesomeIcon.Compass, Loc.T(L.Velvet.CardIntent));
             Gap(6f);
             DrawIntentEditor();
@@ -105,7 +145,17 @@ internal sealed partial class VelvetShell
 
             VSectionHeader.Card(FontAwesomeIcon.Heart, Loc.T(L.Velvet.CardRole));
             Gap(6f);
-            DrawCategoryPicker(VelvetSuggestions.DynamicCategories, editRole);
+            DrawTagFlow(VelvetSuggestions.Roles, editRole, VelvetTheme.Rose, true);
+            Gap(16f);
+
+            VSectionHeader.Card(FontAwesomeIcon.Fire, Loc.T(L.Velvet.CardKinks));
+            Gap(6f);
+            DrawTagFlow(VelvetSuggestions.Kinks, editKinks, new Vector4(0.647f, 0.482f, 0.839f, 1f), true);
+            Gap(16f);
+
+            VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, Loc.T(L.Velvet.CardLimits));
+            Gap(6f);
+            DrawTagFlow(VelvetSuggestions.Limits, editLimits, VelvetTheme.Gold, true);
             Gap(16f);
 
             VSectionHeader.Card(FontAwesomeIcon.HandHoldingHeart, Loc.T(L.Velvet.CardRelationship));
@@ -118,18 +168,13 @@ internal sealed partial class VelvetShell
             DrawCategoryPicker(VelvetSuggestions.TagCategories, editTags);
             Gap(16f);
 
-            VSectionHeader.Card(FontAwesomeIcon.ShieldAlt, Loc.T(L.Velvet.CardLimits));
-            Gap(6f);
-            DrawTokenEditor(editLimits, VelvetSuggestions.Limits, VelvetTheme.Gold);
-            Gap(16f);
-
             Gap(40f);
         }
     }
 
     private void DrawEditAvatar()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var block = Reserve(160f);
         var drawList = ImGui.GetWindowDrawList();
         var radius = 46f * scale;
@@ -165,7 +210,7 @@ internal sealed partial class VelvetShell
 
     private void DrawIntentEditor()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = ImGui.GetContentRegionAvail().X;
         var models = new VChipModel[VelvetIntent.All.Length];
         for (var index = 0; index < models.Length; index++)
@@ -185,14 +230,14 @@ internal sealed partial class VelvetShell
 
     private void DrawGenderPicker(ref int gender)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = ImGui.GetContentRegionAvail().X;
         var options = VelvetGender.All;
         var models = new VChipModel[options.Length];
         for (var index = 0; index < options.Length; index++)
         {
             var value = options[index];
-            var selected = gender == value;
+            var selected = VelvetGender.Has(gender, value);
             models[index] = new VChipModel(VelvetGender.Label(value), selected ? VChipStyle.Solid : VChipStyle.Ghost,
                 selected ? VelvetTheme.Rose : VelvetTheme.Moonlight);
         }
@@ -200,14 +245,34 @@ internal sealed partial class VelvetShell
         var clicked = VChipFlow.Draw(models, width, scale);
         if (clicked >= 0)
         {
-            var value = options[clicked];
-            gender = gender == value ? VelvetGender.None : value;
+            gender = VelvetGender.Toggle(gender, options[clicked]);
+        }
+    }
+
+    private void DrawSexualityPicker(ref int sexuality)
+    {
+        var scale = UiScale.Current;
+        var width = ImGui.GetContentRegionAvail().X;
+        var options = VelvetSexuality.All;
+        var models = new VChipModel[options.Length];
+        for (var index = 0; index < options.Length; index++)
+        {
+            var value = options[index];
+            var selected = VelvetSexuality.Has(sexuality, value);
+            models[index] = new VChipModel(VelvetSexuality.Label(value), selected ? VChipStyle.Solid : VChipStyle.Ghost,
+                selected ? VelvetTheme.Rose : VelvetTheme.Moonlight);
+        }
+
+        var clicked = VChipFlow.Draw(models, width, scale);
+        if (clicked >= 0)
+        {
+            sexuality = VelvetSexuality.Toggle(sexuality, options[clicked]);
         }
     }
 
     private void DrawRelationshipEditor()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = ImGui.GetContentRegionAvail().X;
         var options = VelvetRelationship.All;
         var models = new VChipModel[options.Length];
@@ -226,6 +291,46 @@ internal sealed partial class VelvetShell
         }
     }
 
+    private bool HasUnsavedEdits()
+    {
+        if (store.Me is not { } me)
+        {
+            return false;
+        }
+
+        return !string.Equals(editDisplayName, me.DisplayName, StringComparison.Ordinal)
+               || !string.Equals(editHandle, me.Handle, StringComparison.Ordinal)
+               || !string.Equals(editIntro, me.Intro, StringComparison.Ordinal)
+               || !string.Equals(editPronouns, me.Pronouns, StringComparison.Ordinal)
+               || editGender != VelvetGender.Sanitize(me.Gender)
+               || editSexuality != VelvetSexuality.Sanitize(me.Sexuality)
+               || editIntent != VelvetIntent.Sanitize(me.LookingFor)
+               || editRelationship != me.RelationshipStatus
+               || Differs(editRole, VelvetTags.Parse(me.Dynamic))
+               || Differs(editKinks, me.Kinks)
+               || Differs(editTags, me.Tags)
+               || Differs(editLimits, me.Limits);
+    }
+
+    private static bool Differs(List<string> edited, IReadOnlyList<string>? saved)
+    {
+        var count = saved?.Count ?? 0;
+        if (edited.Count != count)
+        {
+            return true;
+        }
+
+        for (var index = 0; index < edited.Count; index++)
+        {
+            if (!string.Equals(edited[index], saved![index], StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void SaveProfile()
     {
         if (editBusy)
@@ -234,21 +339,38 @@ internal sealed partial class VelvetShell
         }
 
         editBusy = true;
+        editSaveFailed = false;
         var me = store.Me;
         var identityChanged = me is not null &&
             (editDisplayName.Trim() != me.DisplayName || editHandle.Trim() != me.Handle);
         var dynamic = VelvetTags.Join(editRole.ToArray());
         var request = new UpdateVelvetProfileRequest(editIntro.Trim(), editPronouns.Trim(), dynamic, editTags.ToArray(),
             editLimits.ToArray(), VelvetIntent.Sanitize(editIntent), editRelationship, null,
-            Gender: VelvetGender.Sanitize(editGender));
+            Gender: VelvetGender.Sanitize(editGender), Sexuality: VelvetSexuality.Sanitize(editSexuality),
+            Kinks: editKinks.ToArray());
         if (identityChanged)
         {
             store.UpdateIdentity(editDisplayName.Trim(), editHandle.Trim(),
-                _ => store.UpdateProfile(request, _ => editBusy = false));
+                identitySaved => store.UpdateProfile(request,
+                    profileSaved => CompleteSave(identitySaved && profileSaved)));
         }
         else
         {
-            store.UpdateProfile(request, _ => editBusy = false);
+            store.UpdateProfile(request, CompleteSave);
         }
+    }
+
+    private void CompleteSave(bool succeeded)
+    {
+        if (succeeded)
+        {
+            editSaveSucceeded = true;
+        }
+        else
+        {
+            editSaveFailed = true;
+        }
+
+        editBusy = false;
     }
 }

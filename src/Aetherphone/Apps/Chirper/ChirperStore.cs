@@ -1,3 +1,4 @@
+using Aetherphone.Core;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
@@ -11,8 +12,8 @@ internal sealed class ChirperStore : SocialFeedStore
     private volatile bool avatarBusy;
 
     public ChirperStore(AethernetSession session, AccountClient account, SocialClient client, SafetyClient safety,
-        MediaClient media)
-        : base(session, account, client, safety, media, "Chirper")
+        MediaClient media, RealtimeSignalBus signals)
+        : base(session, account, client, safety, media, signals, "Chirper")
     {
     }
 
@@ -21,8 +22,8 @@ internal sealed class ChirperStore : SocialFeedStore
     protected override Task<FeedPage?> FetchFeedAsync(string feedKey, string? cursor, CancellationToken token) =>
         client.FeedAsync(feedKey, cursor, token);
 
-    protected override Task<FeedPage?> FetchProfilePostsAsync(string userId, CancellationToken token) =>
-        client.UserPostsAsync(userId, token);
+    protected override Task<FeedPage?> FetchProfilePostsAsync(string userId, string? cursor, CancellationToken token) =>
+        client.UserPostsAsync(userId, cursor, token);
 
     public void Compose(string text, Action<bool> onComplete)
     {
@@ -129,7 +130,7 @@ internal sealed class ChirperStore : SocialFeedStore
             post => post.RepostOfId == originalId && post.AuthorId == me.Id);
         followingLane.Items = CopyOnWrite.RemoveWhere(followingLane.Items,
             post => post.RepostOfId == originalId && post.AuthorId == me.Id);
-        profilePosts = CopyOnWrite.RemoveWhere(profilePosts,
+        profileLane.Items = CopyOnWrite.RemoveWhere(profileLane.Items,
             post => post.RepostOfId == originalId && post.AuthorId == me.Id);
     }
 
@@ -166,23 +167,6 @@ internal sealed class ChirperStore : SocialFeedStore
         work.Run("avatar update", token => UploadAvatarAsync(sourcePath, crop, token), onComplete,
             () => avatarBusy = false);
     }
-
-    protected override void ApplyFollowEverywhere(string userId, bool follow)
-    {
-        base.ApplyFollowEverywhere(userId, follow);
-        forYouLane.Items = MapFollowByAuthor(forYouLane.Items, userId, follow);
-        followingLane.Items = MapFollowByAuthor(followingLane.Items, userId, follow);
-        profilePosts = MapFollowByAuthor(profilePosts, userId, follow);
-        if (detailPost is { } post && post.AuthorId == userId)
-        {
-            detailPost = post with { IsFollowing = follow };
-        }
-    }
-
-    private static PostDto[] MapFollowByAuthor(PostDto[] source, string userId, bool follow) =>
-        CopyOnWrite.Map(source,
-            post => post.AuthorId == userId && post.IsFollowing != follow,
-            post => post with { IsFollowing = follow });
 
     private static PostDto ApplyReaction(PostDto post, int newKind)
     {

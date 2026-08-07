@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Settings.Pages;
@@ -31,19 +30,15 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private readonly AethernetSession session;
     private readonly KeyVault vault;
-    private readonly ConfirmService confirm;
+    private readonly EncryptionVaultActions actions;
     private readonly CancellationTokenSource cancellation = new();
-    private volatile string status = string.Empty;
-    private volatile bool busy;
     private volatile bool refreshRequested;
-    private volatile string generatedCode = string.Empty;
-    private string codeEntry = string.Empty;
 
     public EncryptionPage(AethernetSession session, KeyVault vault, ConfirmService confirm)
     {
         this.session = session;
         this.vault = vault;
-        this.confirm = confirm;
+        actions = new EncryptionVaultActions(vault, confirm);
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -52,7 +47,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         using (AppSurface.Begin(body))
         {
             EnsureRefreshed();
-            if (generatedCode.Length > 0)
+            if (actions.GeneratedCode.Length > 0)
             {
                 DrawGeneratedCode(theme);
             }
@@ -114,7 +109,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private void DrawUnavailable(PhoneTheme theme)
     {
-        ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+        ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Wrapped(Loc.T(L.Encryption.NotSignedIn));
@@ -123,7 +118,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private void DrawUnsupported(PhoneTheme theme)
     {
-        ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+        ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Wrapped(Loc.T(L.Encryption.UnsupportedBody));
@@ -132,7 +127,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private void DrawProvisioning(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -150,7 +145,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -158,15 +153,15 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         }
 
         ImGui.Dummy(new Vector2(0f, 12f * scale));
-        if (Button(Loc.T(L.Encryption.NewKeyButton), theme) && !busy)
+        if (Button(Loc.T(L.Encryption.NewKeyButton), theme) && !actions.Busy)
         {
-            AskReset();
+            actions.AskReset();
         }
     }
 
     private void DrawLockedRecover(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -177,21 +172,21 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         DrawCodeInput(theme);
         ImGui.Dummy(new Vector2(0f, 10f * scale));
         if (Button(Loc.T(L.Encryption.RecoveryUnlockButton), theme)
-            && !busy && RecoveryKey.Canonicalize(codeEntry).Length > 0)
+            && !actions.Busy && RecoveryKey.Canonicalize(actions.CodeEntry).Length > 0)
         {
-            BeginRecover();
+            actions.BeginRecover();
         }
 
         ImGui.Dummy(new Vector2(0f, 6f * scale));
-        if (Button(Loc.T(L.Encryption.NewKeyButton), theme) && !busy)
+        if (Button(Loc.T(L.Encryption.NewKeyButton), theme) && !actions.Busy)
         {
-            AskReset();
+            actions.AskReset();
         }
     }
 
     private void DrawCodeInput(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Plain(Loc.T(L.Encryption.RecoveryCodeLabel));
@@ -208,7 +203,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.SetNextItemWidth(width - 24f * scale);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)).Push(ImGuiCol.Text, theme.TextStrong))
         {
-            ImGui.InputText("##recoveryCode", ref codeEntry, 64);
+            ImGui.InputText("##recoveryCode", ref actions.CodeEntry, 64);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -217,7 +212,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
 
     private void DrawGeneratedCode(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
@@ -231,7 +226,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, origin, new Vector2(origin.X + width, origin.Y + height), 10f * scale,
             ImGui.GetColorU32(theme.GroupedCard));
-        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + height * 0.5f), generatedCode,
+        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + height * 0.5f), actions.GeneratedCode,
             theme.TextStrong, 1.15f, FontWeight.SemiBold);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
@@ -239,8 +234,8 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 8f * scale));
         if (Button(Loc.T(L.Encryption.RecoveryCopy), theme))
         {
-            ImGui.SetClipboardText(generatedCode);
-            status = Loc.T(L.Friends.Copied);
+            ImGui.SetClipboardText(actions.GeneratedCode);
+            actions.Status = Loc.T(L.Friends.Copied);
         }
 
         ImGui.Dummy(new Vector2(0f, 8f * scale));
@@ -252,14 +247,13 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         ImGui.Dummy(new Vector2(0f, 12f * scale));
         if (Button(Loc.T(L.Encryption.RecoverySavedButton), theme))
         {
-            generatedCode = string.Empty;
-            status = string.Empty;
+            actions.AcknowledgeGeneratedCode();
         }
     }
 
     private void DrawRecoverySection(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 14f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
@@ -278,15 +272,15 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         var label = vault.RecoveryConfigured
             ? Loc.T(L.Encryption.RecoveryRegenerateButton)
             : Loc.T(L.Encryption.RecoverySetupButton);
-        if (Button(label, theme) && !busy)
+        if (Button(label, theme) && !actions.Busy)
         {
-            BeginCreateRecoveryCode();
+            actions.BeginCreateRecoveryCode();
         }
     }
 
     private void DrawActive(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -311,132 +305,21 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
         DrawRecoverySection(theme);
 
         ImGui.Dummy(new Vector2(0f, 14f * scale));
-        if (Button(Loc.T(L.Encryption.ResetButton), theme) && !busy)
+        if (Button(Loc.T(L.Encryption.ResetButton), theme) && !actions.Busy)
         {
-            AskReset();
+            actions.AskReset();
         }
-    }
-
-    private void AskReset()
-    {
-        confirm.Ask(new ConfirmRequest
-        {
-            Message = Loc.T(L.Encryption.ForgotBody),
-            ConfirmLabel = Loc.T(L.Encryption.ForgotConfirm),
-            CancelLabel = Loc.T(L.Common.Cancel),
-            Danger = true,
-            ConfirmAsync = done =>
-            {
-                Reset();
-                done(true);
-            },
-        });
-    }
-
-    private void Reset()
-    {
-        busy = true;
-        status = Loc.T(L.Encryption.Working);
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var succeeded = await vault.ResetAsync(cancellation.Token).ConfigureAwait(false);
-                status = succeeded ? string.Empty : Loc.T(L.Encryption.Failed);
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"Encryption reset failed: {exception.Message}");
-                status = Loc.T(L.Encryption.Failed);
-            }
-            finally
-            {
-                busy = false;
-            }
-        });
-    }
-
-    private void BeginCreateRecoveryCode()
-    {
-        busy = true;
-        status = Loc.T(L.Encryption.Working);
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var code = await vault.CreateRecoveryCodeAsync(cancellation.Token).ConfigureAwait(false);
-                if (code is not null)
-                {
-                    generatedCode = code;
-                    status = string.Empty;
-                }
-                else
-                {
-                    status = Loc.T(L.Encryption.Failed);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"Recovery code setup failed: {exception.Message}");
-                status = Loc.T(L.Encryption.Failed);
-            }
-            finally
-            {
-                busy = false;
-            }
-        });
-    }
-
-    private void BeginRecover()
-    {
-        var code = codeEntry;
-        busy = true;
-        status = Loc.T(L.Encryption.Working);
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var recovered = await vault.RecoverWithCodeAsync(code, cancellation.Token).ConfigureAwait(false);
-                if (recovered)
-                {
-                    codeEntry = string.Empty;
-                    status = string.Empty;
-                }
-                else
-                {
-                    status = Loc.T(L.Encryption.RecoveryWrongCode);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-            catch (Exception exception)
-            {
-                AepLog.Warning($"Recovery failed: {exception.Message}");
-                status = Loc.T(L.Encryption.Failed);
-            }
-            finally
-            {
-                busy = false;
-            }
-        });
     }
 
     private void DrawStatus(PhoneTheme theme)
     {
-        var message = status;
+        var message = actions.Status;
         if (message.Length == 0)
         {
             return;
         }
 
-        ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+        ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Wrapped(message);
@@ -449,7 +332,7 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
                    .Push(ImGuiCol.ButtonHovered, Palette.Mix(theme.GroupedCard, theme.Accent, 0.35f))
                    .Push(ImGuiCol.ButtonActive, theme.Accent).Push(ImGuiCol.Text, theme.TextStrong))
         {
-            return ImGui.Button(label, new Vector2(-1f, 34f * ImGuiHelpers.GlobalScale));
+            return ImGui.Button(label, new Vector2(-1f, 34f * UiScale.Current));
         }
     }
 
@@ -457,5 +340,6 @@ internal sealed class EncryptionPage : ISettingsPage, IDisposable
     {
         cancellation.Cancel();
         cancellation.Dispose();
+        actions.Dispose();
     }
 }

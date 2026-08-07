@@ -1,6 +1,5 @@
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -11,14 +10,14 @@ internal static class InfiniteScroll
 
     public static bool ReachedBottom()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var max = ImGui.GetScrollMaxY();
         return max > 0f && ImGui.GetScrollY() >= max - BottomTriggerDistance * scale;
     }
 
     public static void DrawLoadingRow(float centerX, Vector4 ink)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var rowHeight = LoadingRowHeight * scale;
         var centerY = origin.Y + rowHeight * 0.5f;

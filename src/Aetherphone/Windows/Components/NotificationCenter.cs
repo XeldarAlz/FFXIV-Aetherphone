@@ -6,7 +6,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -25,7 +24,8 @@ internal sealed class NotificationCenter
     private const float SwipeMaxReveal = 96f;
     private const float SwipeRightClamp = 10f;
     private const float SwipeCommitFraction = 0.42f;
-    private const float TapSlop = 6f;
+    private const float TapSlop = 10f;
+    private const float FailedSwipeTapFraction = 0.15f;
     private const float DragAxisThreshold = 6f;
     private const float ExpandSmoothTime = 0.26f;
     private const float SwipeSmoothTime = 0.18f;
@@ -55,6 +55,7 @@ internal sealed class NotificationCenter
     private long animId;
     private string animKey = string.Empty;
     private bool animGroup;
+    private PhoneNotification? animNotification;
     private Spring animOffset;
     private float animTarget;
 
@@ -75,6 +76,7 @@ internal sealed class NotificationCenter
         scrollGesture = false;
         axisLocked = false;
         animActive = false;
+        animNotification = null;
         states.Clear();
         groups.Clear();
         groupLookup.Clear();
@@ -83,13 +85,13 @@ internal sealed class NotificationCenter
 
     public void Draw(in PhoneContext context, Rect body)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         DrawCore(ImGui.GetWindowDrawList(), body, context.Theme, scale, 16f * scale, 1f, true);
     }
 
     public void DrawOverlay(ImDrawListPtr dl, Rect area, PhoneTheme theme, float opacity, bool interactive)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         DrawCore(dl, area, theme, scale, 0f, opacity, interactive);
     }
 
@@ -231,6 +233,12 @@ internal sealed class NotificationCenter
 
     private void PerformRemoval()
     {
+        if (animNotification is { } dismissed)
+        {
+            router.Acknowledge(dismissed);
+            animNotification = null;
+        }
+
         if (animGroup)
         {
             notifications.RemoveGroup(animKey);
@@ -250,7 +258,7 @@ internal sealed class NotificationCenter
         var pillHeight = 26f * scale;
         var pillMax = new Vector2(bar.Max.X, bar.Center.Y + pillHeight * 0.5f);
         var pillMin = new Vector2(pillMax.X - textSize.X - padX * 2f, bar.Center.Y - pillHeight * 0.5f);
-        var hovered = interactive && ImGui.IsMouseHoveringRect(pillMin, pillMax);
+        var hovered = interactive && UiInteract.Hover(pillMin, pillMax);
         var fill = hovered ? theme.Surface : theme.GroupedCard;
         Squircle.Fill(dl, pillMin, pillMax, pillHeight * 0.5f,
             ImGui.GetColorU32(fill with { W = fill.W * opacity }));
@@ -266,6 +274,7 @@ internal sealed class NotificationCenter
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
+            router.AcknowledgeAll();
             notifications.Clear();
             Reset();
         }
@@ -302,7 +311,7 @@ internal sealed class NotificationCenter
                 MathF.Abs(delta.Y) >= DragAxisThreshold * scale))
             {
                 axisLocked = true;
-                scrollGesture = DragScrollHost.Enabled && MathF.Abs(delta.Y) > MathF.Abs(delta.X);
+                scrollGesture = MathF.Abs(delta.Y) > MathF.Abs(delta.X);
             }
 
             if (scrollGesture)
@@ -318,7 +327,7 @@ internal sealed class NotificationCenter
         else
         {
             scroller.Tick(deltaSeconds);
-            if (interactive && listArea.Contains(ImGui.GetMousePos()))
+            if (interactive && UiInteract.HoverWindowOnly(listArea.Min, listArea.Max, false))
             {
                 var wheel = ImGui.GetIO().MouseWheel;
                 if (wheel != 0f)
@@ -343,6 +352,11 @@ internal sealed class NotificationCenter
 
         scrollY = Math.Clamp(scrollY, 0f, maxScroll);
         interactionBounds = listArea;
+        if (interactive && (drag.Active || UiInteract.HoverWindowOnly(listArea.Min, listArea.Max, false)))
+        {
+            UiInteract.ReportGestureSurface();
+        }
+
         candidates.Clear();
         dl.PushClipRect(listArea.Min, listArea.Max, true);
         var y = listArea.Min.Y - scrollY;
@@ -418,7 +432,7 @@ internal sealed class NotificationCenter
                 new Vector2(blockOrigin.X + width, blockOrigin.Y + HeaderHeight * scale));
             DrawHeader(dl, headerRect, group.Items[0].Title, theme, scale, progress * opacity);
             if (interactive && state.Expanded && progress > 0.5f &&
-                ImGui.IsMouseHoveringRect(headerRect.Min, headerRect.Max))
+                UiInteract.Hover(headerRect.Min, headerRect.Max))
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -431,13 +445,15 @@ internal sealed class NotificationCenter
 
     private void DrawHeader(ImDrawListPtr dl, Rect rect, string title, PhoneTheme theme, float scale, float opacity)
     {
-        var titleSize = Typography.Measure(title, TextStyles.FootnoteEmphasized);
-        Typography.Draw(dl, new Vector2(rect.Min.X + 6f * scale, rect.Center.Y - titleSize.Y * 0.5f), title,
-            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.FootnoteEmphasized.Scale,
-            TextStyles.FootnoteEmphasized.Weight);
         var label = Loc.T(L.Notifications.ShowLess);
         var labelSize = Typography.Measure(label, TextStyles.Footnote);
         var labelPos = new Vector2(rect.Max.X - 6f * scale - labelSize.X, rect.Center.Y - labelSize.Y * 0.5f);
+        var titleMaxWidth = MathF.Max(1f, labelPos.X - 14f * scale - (rect.Min.X + 6f * scale));
+        var clippedTitle = Typography.FitText(title, titleMaxWidth, TextStyles.FootnoteEmphasized);
+        var titleSize = Typography.Measure(clippedTitle, TextStyles.FootnoteEmphasized);
+        Typography.Draw(dl, new Vector2(rect.Min.X + 6f * scale, rect.Center.Y - titleSize.Y * 0.5f), clippedTitle,
+            Palette.WithAlpha(theme.TextMuted, opacity), TextStyles.FootnoteEmphasized.Scale,
+            TextStyles.FootnoteEmphasized.Weight);
         Typography.Draw(dl, labelPos, label, Palette.WithAlpha(theme.Accent, opacity), TextStyles.Footnote.Scale,
             TextStyles.Footnote.Weight);
         var chevronTip = new Vector2(labelPos.X - 10f * scale, rect.Center.Y - 1f * scale);
@@ -479,17 +495,23 @@ internal sealed class NotificationCenter
         if (!drag.Active && interactive)
         {
             var mouse = ImGui.GetMousePos();
-            if (interactionBounds.Contains(mouse))
+            if (UiInteract.Hover(interactionBounds.Min, interactionBounds.Max))
             {
                 for (var index = 0; index < candidates.Count; index++)
                 {
                     var candidate = candidates[index];
-                    if (!candidate.Rect.Contains(mouse))
+                    if (!UiInteract.Hover(candidate.Rect.Min, candidate.Rect.Max))
                     {
                         continue;
                     }
 
                     ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                    if (ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+                    {
+                        SlideOut(candidate, UiScale.Current);
+                        break;
+                    }
+
                     if (drag.Begin(candidate.Rect))
                     {
                         BeginDrag(candidate);
@@ -516,8 +538,23 @@ internal sealed class NotificationCenter
         }
     }
 
+    private void SlideOut(in Candidate candidate, float scale)
+    {
+        animGroup = candidate.IsGroup;
+        animKey = candidate.Key;
+        animId = candidate.Id;
+        animNotification = candidate.Notification;
+        animRemoving = true;
+        animTarget = -(candidate.Width + 40f * scale);
+        animOffset.SnapTo(0f);
+        animActive = true;
+        swipeOffset = 0f;
+        dragNotification = null;
+    }
+
     private void BeginDrag(in Candidate candidate)
     {
+        UiInteract.CancelPendingTap();
         if (animActive && animGroup == candidate.IsGroup &&
             (candidate.IsGroup ? animKey == candidate.Key : animId == candidate.Id))
         {
@@ -538,17 +575,21 @@ internal sealed class NotificationCenter
     private void ResolveGesture(Vector2 totalDelta, float scale)
     {
         var slop = TapSlop * scale;
-        if (MathF.Abs(totalDelta.X) < slop && MathF.Abs(totalDelta.Y) < slop)
+        var commit = totalDelta.X <= -dragWidth * SwipeCommitFraction;
+        var tapped = !commit && MathF.Abs(totalDelta.Y) < slop &&
+                     MathF.Abs(totalDelta.X) < dragWidth * FailedSwipeTapFraction;
+        if (tapped)
         {
+            swipeOffset = 0f;
             HandleTap();
             dragNotification = null;
             return;
         }
 
-        var commit = totalDelta.X <= -dragWidth * SwipeCommitFraction;
         animGroup = dragGroup;
         animKey = dragKey;
         animId = dragId;
+        animNotification = commit ? dragNotification : null;
         animRemoving = commit;
         animTarget = commit ? -(dragWidth + 40f * scale) : 0f;
         animOffset.SnapTo(swipeOffset);

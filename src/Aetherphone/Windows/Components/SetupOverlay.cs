@@ -14,7 +14,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -80,6 +79,7 @@ internal sealed partial class SetupOverlay : IDisposable
     private bool pickingPhoto;
     private volatile bool avatarBusy;
     private volatile int avatarOutcome;
+    private volatile AvatarUploadOutcome avatarFailure;
 
     public SetupOverlay(AethernetSession session, AethernetApi aethernet, GameData gameData,
         RemoteImageCache images, LodestoneService lodestone, PhotoLibrary photoLibrary,
@@ -95,7 +95,8 @@ internal sealed partial class SetupOverlay : IDisposable
         this.navigation = navigation;
         this.configuration = configuration;
         this.confirm = confirm;
-        flow = new SignInFlow(session, aethernet.Auth);
+        flow = new SignInFlow(session, aethernet.Auth,
+            () => RegionSync.Push(session, aethernet.Account, configuration, gameData, cancellation.Token));
         picker = new ImagePickCrop(photoLibrary, wallpaperImages);
     }
 
@@ -128,7 +129,7 @@ internal sealed partial class SetupOverlay : IDisposable
             }
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rounding = theme.ScreenRounding * scale;
         var backdropAlpha = 1f - Easing.EaseOutCubic(exitProgress);
         var contentAlpha = 1f - Easing.Clamp01(exitProgress * 1.8f);
@@ -205,7 +206,7 @@ internal sealed partial class SetupOverlay : IDisposable
             }
             else
             {
-                confirm.Alert(null, Loc.T(L.Account.CannotReach), Loc.T(L.Account.FailDismiss));
+                confirm.Alert(null, Loc.T(AvatarUpload.Message(avatarFailure)), Loc.T(L.Account.FailDismiss));
             }
         }
     }
@@ -275,10 +276,10 @@ internal sealed partial class SetupOverlay : IDisposable
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var center = new Vector2(screen.Min.X + 26f * scale, screen.Min.Y + 30f * scale);
         var half = 16f * scale;
-        var hovered = live && ImGui.IsMouseHoveringRect(center - new Vector2(half, half),
+        var hovered = live && UiInteract.Hover(center - new Vector2(half, half),
             center + new Vector2(half, half));
         var ink = hovered ? InkStrong : InkMuted;
         AppSkin.Icon(drawList, center, FontAwesomeIcon.ChevronLeft.ToIconString(), ink with { W = ink.W * alpha },

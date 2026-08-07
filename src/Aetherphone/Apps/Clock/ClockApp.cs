@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Clock;
 
@@ -67,7 +66,7 @@ internal sealed partial class ClockApp : IPhoneApp
         theme = context.Theme;
         navigation = context.Navigation;
         ui.Theme = context.Theme;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
@@ -75,7 +74,7 @@ internal sealed partial class ClockApp : IPhoneApp
 
     private void DrawView(ClockScreen screen, Rect area, int depth)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ui.Body(area);
         switch (screen)
         {
@@ -161,7 +160,7 @@ internal sealed partial class ClockApp : IPhoneApp
     private bool DrawPillButton(Rect rect, string label, Vector4 fill, Vector4 ink)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var shown = hovered ? Palette.Mix(fill, new Vector4(1f, 1f, 1f, 1f), 0.12f) : fill;
         Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(shown));
         Typography.DrawCentered(drawList, rect.Center, label, ink, TextStyles.Headline.Scale, TextStyles.Headline.Weight);

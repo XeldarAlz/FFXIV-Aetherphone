@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Collections;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
@@ -6,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Collections;
 
@@ -15,7 +15,7 @@ internal sealed partial class CollectionsApp
     private void DrawRoot(Rect area)
     {
         DrawNavBar(area, DisplayName, null);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
         {
@@ -31,7 +31,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawLinkHint()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var drawList = ImGui.GetWindowDrawList();
@@ -56,7 +56,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawCategoryTiles()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var available = ImGui.GetContentRegionAvail().Y;
@@ -114,11 +114,18 @@ internal sealed partial class CollectionsApp
 
         var progress = summary is { State: SummaryState.Ready } ? summary.For(category) : null;
         var total = progress is { Total: > 0 } ? progress.Total : catalog.RequestCatalog(category).Total;
-        DrawTileRing(rect, summary, progress, pad, scale);
+        var nameTop = rect.Max.Y - pad - 36f * scale;
+        var rawVerticalRingRadius = (nameTop - 6f * scale - rect.Min.Y - pad) * 0.5f;
+        var iconRight = rect.Min.X + pad + tileSize;
+        var horizontalGap = 8f * scale;
+        var rawHorizontalRingRadius = (rect.Max.X - pad - iconRight - horizontalGap) * 0.5f;
+        var maxRingRadius = MathF.Max(8f * scale, MathF.Min(rawVerticalRingRadius, rawHorizontalRingRadius));
+        DrawTileRing(rect, summary, progress, pad, scale, maxRingRadius);
 
-        var name = Typography.FitText(CategoryLabel(category), rect.Width - pad * 2f, TextStyles.Headline);
-        Typography.Draw(new Vector2(rect.Min.X + pad, rect.Max.Y - pad - 36f * scale), name, ui.TitleInk,
-            TextStyles.Headline);
+        var categoryLabel = CategoryLabel(category);
+        var nameMaxWidth = rect.Width - pad * 2f;
+        Marquee.DrawLeft("collections.tile." + category, categoryLabel, rect.Min.X + pad, nameTop, nameMaxWidth,
+            TextStyles.Headline, ui.TitleInk, hovered);
         var countLabel = total > 0 ? total.ToString(Loc.Culture) : "-";
         Typography.Draw(new Vector2(rect.Min.X + pad, rect.Max.Y - pad - 15f * scale), countLabel, ui.MutedInk,
             TextStyles.Footnote);
@@ -130,15 +137,16 @@ internal sealed partial class CollectionsApp
         return UiInteract.Click(rect.Min, rect.Max, hovered);
     }
 
-    private void DrawTileRing(Rect rect, SummaryEntry? summary, CategoryProgress? progress, float pad, float scale)
+    private void DrawTileRing(Rect rect, SummaryEntry? summary, CategoryProgress? progress, float pad, float scale,
+        float maxRadius)
     {
         if (summary is null)
         {
             return;
         }
 
-        var radius = 23f * scale;
-        var thickness = 4.2f * scale;
+        var radius = MathF.Min(25f * scale, maxRadius);
+        var thickness = 4.4f * scale;
         var center = new Vector2(rect.Max.X - pad - radius, rect.Min.Y + pad + radius);
         var track = Palette.WithAlpha(ui.TitleInk, 0.14f);
         if (progress is null)
@@ -185,7 +193,7 @@ internal sealed partial class CollectionsApp
     private void DrawCategory(Rect area, CollectionCategory category)
     {
         DrawNavBar(area, CategoryLabel(category), back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var pad = 16f * scale;
         var top = area.Min.Y + AppHeader.Height * scale;
         contentBottom = area.Max.Y;
@@ -283,7 +291,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawSummary(CatalogEntry entry, OwnedEntry? owned)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var drawList = ImGui.GetWindowDrawList();
@@ -349,7 +357,7 @@ internal sealed partial class CollectionsApp
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var maxWidth = width - 8f * scale;
@@ -373,7 +381,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawList(CollectionCategory category, OwnedEntry? owned, int start, int end)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowHeight = RowHeight * scale;
         var count = end - start;
         var origin = ImGui.GetCursorScreenPos();
@@ -431,20 +439,29 @@ internal sealed partial class CollectionsApp
         var textRight = row.Max.X - (hasOwned ? 30f * scale : 4f * scale);
         var textWidth = MathF.Max(24f * scale, textRight - textLeft);
         var subtitle = SubtitleOf(item);
-        var name = Typography.FitText(item.Name, textWidth, TextStyles.BodyEmphasized);
         if (subtitle.Length > 0)
         {
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - 16f * scale), name, ui.TitleInk,
-                TextStyles.BodyEmphasized);
-            var fittedSub = Typography.FitText(subtitle, textWidth, TextStyles.Footnote);
-            Typography.Draw(new Vector2(textLeft, row.Center.Y + 4f * scale), fittedSub, ui.MutedInk,
-                TextStyles.Footnote);
+            var nameY = row.Center.Y - 16f * scale;
+            var nameSize = Typography.Measure(item.Name, TextStyles.BodyEmphasized);
+            var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
+                new Vector2(textLeft + textWidth, nameY + nameSize.Y));
+            Marquee.DrawLeft("collections.item." + item.Id, item.Name, textLeft, nameY,
+                textWidth, TextStyles.BodyEmphasized, ui.TitleInk, nameHovering);
+            var subY = row.Center.Y + 4f * scale;
+            var subSize = Typography.Measure(subtitle, TextStyles.Footnote);
+            var subHovering = UiInteract.Hover(new Vector2(textLeft, subY),
+                new Vector2(textLeft + textWidth, subY + subSize.Y));
+            Marquee.DrawLeft("collections.item.sub." + item.Id, subtitle, textLeft, subY, textWidth,
+                TextStyles.Footnote, ui.MutedInk, subHovering);
         }
         else
         {
-            var nameSize = Typography.Measure(name, TextStyles.BodyEmphasized);
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), name, ui.TitleInk,
-                TextStyles.BodyEmphasized);
+            var nameSize = Typography.Measure(item.Name, TextStyles.BodyEmphasized);
+            var nameY = row.Center.Y - nameSize.Y * 0.5f;
+            var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
+                new Vector2(textLeft + textWidth, nameY + nameSize.Y));
+            Marquee.DrawLeft("collections.item." + item.Id, item.Name, textLeft, nameY,
+                textWidth, TextStyles.BodyEmphasized, ui.TitleInk, nameHovering);
         }
 
         if (hasOwned)
@@ -469,7 +486,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawPager(int totalPages)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var height = PagerHeight * scale;
@@ -550,7 +567,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawSourceDropdownButton(Rect bar)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var height = DropdownHeight * scale;
         var min = new Vector2(bar.Min.X, bar.Center.Y - height * 0.5f);
@@ -598,7 +615,7 @@ internal sealed partial class CollectionsApp
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var pad = 6f * scale;
         var rowHeight = MenuRowHeight * scale;
@@ -610,7 +627,10 @@ internal sealed partial class CollectionsApp
         var height = visible * rowHeight + pad * 2f;
         var min = new Vector2(sourceMenuAnchor.Min.X, menuTop);
         var max = new Vector2(sourceMenuAnchor.Max.X, menuTop + height);
-        UiInteract.HoverOverlay(new Rect(min, max));
+        if (!InputShield.Active)
+        {
+            UiInteract.HoverOverlay(new Rect(min, max));
+        }
         Elevation.Floating(drawList, min, max, 14f * scale, scale);
         Material.Frosted(drawList, min, max, 14f * scale, scale);
         var clicked = -1;
@@ -621,7 +641,7 @@ internal sealed partial class CollectionsApp
             var centerY = (rowMin.Y + rowMax.Y) * 0.5f;
             var label = index == 0 ? Loc.T(L.Collections.AllSources) : sourceList[index - 1];
             var selected = index == sourceIndex;
-            var hovered = ImGui.IsMouseHoveringRect(rowMin, rowMax);
+            var hovered = UiInteract.HoverWindowOnly(rowMin, rowMax);
             if (hovered)
             {
                 Squircle.Fill(drawList, rowMin, rowMax, 9f * scale, ImGui.GetColorU32(ui.HoverTint));
@@ -653,8 +673,8 @@ internal sealed partial class CollectionsApp
             return;
         }
 
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !ImGui.IsMouseHoveringRect(min, max, false) &&
-            !ImGui.IsMouseHoveringRect(sourceMenuAnchor.Min, sourceMenuAnchor.Max, false))
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && !UiInteract.HoverWindowOnly(min, max, false) &&
+            !UiInteract.HoverWindowOnly(sourceMenuAnchor.Min, sourceMenuAnchor.Max, false))
         {
             sourceMenuOpen = false;
         }
@@ -683,7 +703,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawFailed(Rect body, CollectionCategory category)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         EmptyState.Draw(body, ui, FontAwesomeIcon.CloudDownloadAlt, Loc.T(L.Collections.Failed), string.Empty);
         var label = Loc.T(L.Collections.TryAgain);
         var width = Typography.Measure(label, TextStyles.BodyEmphasized).X + 44f * scale;
@@ -698,7 +718,7 @@ internal sealed partial class CollectionsApp
 
     private void DrawSpinnerState(Rect body)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var center = body.Center;
         LoadingPulse.Draw(new Vector2(center.X, center.Y - 14f * scale), 13f * scale, ui.Accent, ui.MutedInk,
             Loc.T(L.Common.Loading));

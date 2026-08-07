@@ -6,7 +6,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Flap;
 
@@ -33,6 +32,8 @@ internal sealed class FlapApp : IMiniGame
     public string Id => GameId;
     public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Flap);
+    public bool RunsOnAClock => true;
+
     public string Genre => Loc.T(L.Games.GenreArcade);
     public void Open()
     {
@@ -65,7 +66,7 @@ internal sealed class FlapApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 2f * scale),
@@ -145,7 +146,7 @@ internal sealed class FlapApp : IMiniGame
             return;
         }
 
-        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) || !UiInteract.Hover(area.Min, area.Max))
         {
             return;
         }
@@ -244,8 +245,8 @@ internal sealed class FlapApp : IMiniGame
             GameNumber.Label(finalScore), secondary, newBest);
         if (GameOverlay.Draw(body, theme, Accent, resultAppear, result))
         {
-            var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 2f * ImGuiHelpers.GlobalScale),
-                new Vector2(body.Max.X, body.Max.Y - 2f * ImGuiHelpers.GlobalScale));
+            var area = new Rect(new Vector2(body.Min.X, body.Min.Y + 2f * UiScale.Current),
+                new Vector2(body.Max.X, body.Max.Y - 2f * UiScale.Current));
             Restart(area);
         }
     }

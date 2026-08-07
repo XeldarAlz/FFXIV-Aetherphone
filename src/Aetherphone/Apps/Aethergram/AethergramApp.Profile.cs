@@ -6,18 +6,19 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
 internal sealed partial class AethergramApp
 {
-    private void DrawProfileGrid() => DrawProfileGrid(store.ProfilePosts, L.Aethergram.Empty);
+    private void DrawProfileGrid() => DrawProfileGrid(store.ProfilePosts, L.Aethergram.Empty,
+        store.HasMoreProfilePosts, store.ProfileLoadingMore, store.LoadMoreProfilePosts);
 
-    private void DrawProfileGrid(PostDto[] posts, LocString emptyMessage)
+    private void DrawProfileGrid(PostDto[] posts, LocString emptyMessage, bool hasMore, bool loadingMore,
+        Action loadMore)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (posts.Length == 0)
         {
             Typography.DrawCentered(
@@ -26,6 +27,7 @@ internal sealed partial class AethergramApp
             return;
         }
 
+        var gridCenterX = ImGui.GetCursorScreenPos().X + ScrollLayout.StableContentWidth() * 0.5f;
         var gap = 3f * scale;
         var cell = (ScrollLayout.StableContentWidth() - gap * (GridColumns - 1)) / GridColumns;
         using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
@@ -48,12 +50,22 @@ internal sealed partial class AethergramApp
             }
         }
 
+        ImGui.NewLine();
+        if (loadingMore)
+        {
+            InfiniteScroll.DrawLoadingRow(gridCenterX, AppPalettes.Aethergram.MutedInk);
+        }
+        else if (hasMore && InfiniteScroll.ReachedBottom())
+        {
+            loadMore();
+        }
+
         ImGui.Dummy(new Vector2(0f, 24f * scale));
     }
 
     private void DrawGridThumbnail(PostDto post, Vector2 min, Vector2 max)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 8f * scale;
         var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
@@ -81,7 +93,7 @@ internal sealed partial class AethergramApp
 
     private void DrawSearchTab(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var searchHeight = 52f * scale;
         profile.DrawSearchBar(new Rect(area.Min, new Vector2(area.Max.X, area.Min.Y + searchHeight)));
         profile.DrawSearchResults(new Rect(new Vector2(area.Min.X, area.Min.Y + searchHeight), area.Max), theme,
@@ -90,11 +102,18 @@ internal sealed partial class AethergramApp
 
     private void DrawHomeTopBar(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        var logoSize = Typography.Measure(DisplayName, 1.3f, FontWeight.Bold);
-        var logoPos = new Vector2(area.Min.X + 16f * scale, rowCenterY - logoSize.Y * 0.5f);
-        Typography.Draw(logoPos, DisplayName, AppPalettes.Aethergram.TitleInk, 1.3f, FontWeight.Bold);
+        var logoLeft = area.Min.X + 16f * scale;
+        var chevronReserve = store.IsSignedIn ? 32f * scale : 0f;
+        var trailingReserve = (store.IsSignedIn ? 148f * scale : 16f * scale) + chevronReserve;
+        var maxLogoWidth = MathF.Max(1f, area.Max.X - trailingReserve - logoLeft);
+        var logoStyle = new TextStyle(1.3f, FontWeight.Bold);
+        var logoHeight = Typography.Measure(DisplayName, logoStyle).Y;
+        var logoPos = new Vector2(logoLeft, rowCenterY - logoHeight * 0.5f);
+        var logoWidth = Marquee.DrawLeftAuto("aethergram.home.logo", DisplayName, logoPos.X, logoPos.Y, maxLogoWidth,
+            logoStyle, AppPalettes.Aethergram.TitleInk);
+        var logoSize = new Vector2(logoWidth, logoHeight);
         if (!store.IsSignedIn)
         {
             return;

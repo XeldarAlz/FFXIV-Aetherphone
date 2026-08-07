@@ -3,36 +3,43 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Framework;
 
 internal static class GameHud
 {
     public static void Pill(Vector2 center, string label, string value, Vector4 accent, PhoneTheme theme,
-        bool highlight = false)
+        bool highlight = false, float sizeScale = 1f)
     {
-        DrawPill(center, label, value, accent, theme, highlight, 1f);
+        DrawPill(center, label, value, accent, theme, highlight, 1f, sizeScale);
     }
 
     public static void ScorePill(Vector2 center, string label, ref RollingValue value, int target, Vector4 accent,
-        PhoneTheme theme, float deltaSeconds, bool highlight = false)
+        PhoneTheme theme, float deltaSeconds, bool highlight = false, float sizeScale = 1f)
     {
         value.Update(target, deltaSeconds);
         var display = value.Display;
         var text = display == target ? GameNumber.Label(target) : GameNumber.Label(display);
-        DrawPill(center, label, text, accent, theme, highlight, value.PopScale);
+        DrawPill(center, label, text, accent, theme, highlight, value.PopScale, sizeScale);
+    }
+
+    public const float PillHeight = 46f;
+
+    public static float PillWidth(string label, string value, float sizeScale = 1f)
+    {
+        var scale = UiScale.Current * sizeScale;
+        var valueSize = Typography.Measure(value, TextStyles.Title3.Scale * sizeScale, TextStyles.Title3.Weight);
+        var labelSize = Typography.Measure(label, TextStyles.Caption2.Scale * sizeScale, TextStyles.Caption2.Weight);
+        return MathF.Max(valueSize.X, labelSize.X) + 26f * scale;
     }
 
     private static void DrawPill(Vector2 center, string label, string value, Vector4 accent, PhoneTheme theme,
-        bool highlight, float valuePop)
+        bool highlight, float valuePop, float sizeScale)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var valueSize = Typography.Measure(value, TextStyles.Title3);
-        var labelSize = Typography.Measure(label, TextStyles.Caption2);
-        var pillWidth = MathF.Max(valueSize.X, labelSize.X) + 26f * scale;
-        var pillHeight = 46f * scale;
+        var pillWidth = PillWidth(label, value, sizeScale);
+        var pillHeight = PillHeight * scale * sizeScale;
         var half = new Vector2(pillWidth * 0.5f, pillHeight * 0.5f);
         var min = center - half;
         var max = center + half;
@@ -48,19 +55,21 @@ internal static class GameHud
             Squircle.Stroke(drawList, min, max, radius, ImGui.GetColorU32(accent with { W = 0.85f }), 1.5f * scale);
         }
 
-        Typography.DrawCentered(new Vector2(center.X, center.Y - 7f * scale), value,
-            highlight ? accent : theme.TextStrong, TextStyles.Title3.Scale * valuePop, TextStyles.Title3.Weight);
-        Typography.DrawCentered(new Vector2(center.X, center.Y + 12f * scale), Loc.Culture.TextInfo.ToUpper(label),
-            theme.TextMuted, TextStyles.Caption2);
+        Typography.DrawCentered(new Vector2(center.X, center.Y - 7f * scale * sizeScale), value,
+            highlight ? accent : theme.TextStrong, TextStyles.Title3.Scale * sizeScale * valuePop,
+            TextStyles.Title3.Weight);
+        Typography.DrawCentered(new Vector2(center.X, center.Y + 12f * scale * sizeScale),
+            Loc.Culture.TextInfo.ToUpper(label), theme.TextMuted, TextStyles.Caption2.Scale * sizeScale,
+            TextStyles.Caption2.Weight);
     }
 
     public static bool RestartButton(Vector2 center, float radius, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var min = center - new Vector2(radius, radius);
         var max = center + new Vector2(radius, radius);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         Material.Frosted(drawList, min, max, radius, scale, hovered ? 1f : 0.92f);
         if (hovered)
         {
@@ -75,10 +84,10 @@ internal static class GameHud
 
     public static bool Button(Vector2 center, Vector2 size, string label, Vector4 accent, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var hoverHalf = size * 0.5f;
-        var hovered = ImGui.IsMouseHoveringRect(center - hoverHalf, center + hoverHalf);
+        var hovered = UiInteract.Hover(center - hoverHalf, center + hoverHalf);
         var pressed = hovered && ImGui.IsMouseDown(ImGuiMouseButton.Left);
         var visualScale = pressed ? 0.955f : 1f;
         var half = hoverHalf * visualScale;

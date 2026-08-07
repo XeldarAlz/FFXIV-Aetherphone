@@ -9,19 +9,26 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Photos;
+using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
 internal sealed class AccountPage : ISettingsPage, IDisposable
 {
+    private enum AccountRowAction
+    {
+        None,
+        Switch,
+        Remove,
+    }
+
     private const string LodestoneProfileUrl = "https://na.finalfantasyxiv.com/lodestone/my/setting/profile/";
     public string Title => Loc.T(L.Account.Title);
 
@@ -32,9 +39,12 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     public FontAwesomeIcon Icon => FontAwesomeIcon.User;
     public Vector4 Tint => new(0.36f, 0.72f, 0.62f, 1f);
+    private const float AccountRowHeight = 58f;
+    private readonly Configuration configuration;
     private readonly AethernetSession session;
     private readonly AuthClient auth;
     private readonly AccountClient account;
+    private readonly AccountStateService accountState;
     private readonly MediaClient media;
     private readonly GameData gameData;
     private readonly RemoteImageCache images;
@@ -47,18 +57,28 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     private readonly ConfirmService confirm;
     private readonly WallpaperImageCache wallpaperImages;
     private readonly SignInFlow flow;
+    private readonly PatreonLinkFlow patreonFlow;
     private readonly CancellationTokenSource cancellation = new();
+    private readonly List<ulong> accountIds = new();
+    private int accountIdsStamp = -1;
     private volatile bool avatarBusy;
+    private volatile BadgeStyle[]? communityBadges;
+    private bool communityBadgesRequested;
+    private UserDto? communityBadgesUser;
     private bool meRequested;
+    private int lastDrawnFrame = -2;
 
-    public AccountPage(AethernetSession session, AuthClient auth, AccountClient account, MediaClient media,
-        GameData gameData, RemoteImageCache images, LodestoneService lodestone, ISettingsNavigator navigator,
-        NamePage namePage, ISettingsPage profilePage, ISettingsPage encryptionPage, PhotoLibrary photoLibrary,
-        ConfirmService confirm, WallpaperImageCache wallpaperImages)
+    public AccountPage(Configuration configuration, AethernetSession session, AuthClient auth, AccountClient account,
+        AccountStateService accountState, MediaClient media, GameData gameData, RemoteImageCache images,
+        LodestoneService lodestone, ISettingsNavigator navigator, NamePage namePage, ISettingsPage profilePage,
+        ISettingsPage encryptionPage, PhotoLibrary photoLibrary, ConfirmService confirm,
+        WallpaperImageCache wallpaperImages)
     {
+        this.configuration = configuration;
         this.session = session;
         this.auth = auth;
         this.account = account;
+        this.accountState = accountState;
         this.media = media;
         this.gameData = gameData;
         this.images = images;
@@ -70,11 +90,27 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         this.photoLibrary = photoLibrary;
         this.confirm = confirm;
         this.wallpaperImages = wallpaperImages;
-        flow = new SignInFlow(session, auth);
+        flow = new SignInFlow(session, auth,
+            () => RegionSync.Push(session, account, configuration, gameData, cancellation.Token));
+        patreonFlow = new PatreonLinkFlow(account, accountState.RefreshNow);
     }
 
     public void Draw(in PhoneContext context, Rect body)
     {
+        var frame = ImGui.GetFrameCount();
+        if (frame - lastDrawnFrame > 1)
+        {
+            accountState.RefreshNow();
+            communityBadgesRequested = false;
+        }
+
+        if (!ReferenceEquals(communityBadgesUser, session.CurrentUser))
+        {
+            communityBadgesUser = session.CurrentUser;
+            communityBadgesRequested = false;
+        }
+
+        lastDrawnFrame = frame;
         var theme = context.Theme;
         using (AppSurface.Begin(body))
         {
@@ -91,7 +127,26 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             {
                 ShowFailureAlert(failureReason);
             }
+
+            if (patreonFlow.ConsumeLinked())
+            {
+                confirm.Alert(Loc.T(L.Account.PatreonLinkedTitle), Loc.T(L.Account.PatreonLinkedBody),
+                    Loc.T(L.Account.FailDismiss));
+            }
+
+            if (patreonFlow.ConsumeFailure() is { } patreonFailure)
+            {
+                ShowPatreonFailureAlert(patreonFailure);
+            }
         }
+    }
+
+    private void ShowPatreonFailureAlert(string failureReason)
+    {
+        var body = failureReason == PatreonLinkFlow.FailureNetwork
+            ? Loc.T(L.Account.FailNetworkBody)
+            : Loc.T(L.Account.PatreonFailedBody);
+        confirm.Alert(Loc.T(L.Account.PatreonFailedTitle), body, Loc.T(L.Account.FailDismiss));
     }
 
     private void ShowFailureAlert(string failureReason)
@@ -108,7 +163,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             StartMe();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var user = session.CurrentUser;
         if (user is null)
         {
@@ -127,12 +182,15 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         DrawIdentityHeader(user, theme, scale);
+        DrawCharacterMismatch(user, theme, scale);
         ImGui.Dummy(new Vector2(0f, 20f * scale));
         var details = GroupCard.Begin(theme, 2);
         SettingsRow.Info(details.NextRow(), Loc.T(L.Account.CharacterLabel), user.Name, theme);
         SettingsRow.Info(details.NextRow(), Loc.T(L.Account.HomeWorldLabel), user.World, theme);
         details.End();
 
+        DrawCommunityBadgesSection(theme, scale);
+        DrawPatreonSection(theme, scale);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
         var links = GroupCard.Begin(theme, 3);
         if (SettingsRow.Link(links.NextRow(), namePage.Icon, namePage.Tint, namePage.Title, namePage.Summary, theme))
@@ -155,6 +213,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
         links.End();
 
+        DrawAccountsSection(theme, scale, true);
         ImGui.Dummy(new Vector2(0f, 14f * scale));
         var signOut = GroupCard.Begin(theme, 1);
         if (SettingsRow.Action(signOut.NextRow(), Loc.T(L.Account.SignOut), theme.Danger, theme))
@@ -189,14 +248,14 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         var avatarExtent = new Vector2(radius, radius);
         var avatarMin = avatarCenter - avatarExtent;
         var avatarMax = avatarCenter + avatarExtent;
-        var avatarHovered = ImGui.IsMouseHoveringRect(avatarMin, avatarMax);
+        var avatarHovered = UiInteract.Hover(avatarMin, avatarMax);
         var changeLabel = Loc.T(L.Account.ChangePhoto);
         var changeSize = Typography.Measure(changeLabel, TextStyles.Subheadline);
         var changeCenter = new Vector2(centerX, avatarCenter.Y + radius + 12f * scale + changeSize.Y * 0.5f);
         var changePadding = new Vector2(6f * scale, 4f * scale);
         var changeMin = changeCenter - changeSize * 0.5f - changePadding;
         var changeMax = changeCenter + changeSize * 0.5f + changePadding;
-        var changeHovered = ImGui.IsMouseHoveringRect(changeMin, changeMax);
+        var changeHovered = UiInteract.Hover(changeMin, changeMax);
         var changeInk = changeHovered ? Palette.Mix(theme.Accent, theme.TextStrong, 0.25f) : theme.Accent;
         Typography.DrawCentered(changeCenter, changeLabel, changeInk, TextStyles.Subheadline);
         var photoHovered = avatarHovered || changeHovered;
@@ -213,12 +272,492 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         var nameY = changeCenter.Y + changeSize.Y * 0.5f + 18f * scale;
-        var title = Typography.FitText(user.DisplayName, width - 24f * scale, TextStyles.Title2);
-        Typography.DrawCentered(new Vector2(centerX, nameY), title, theme.TextStrong, TextStyles.Title2);
+        var nameStyle = TextStyles.Title2;
+        var badgeCount = Math.Max(RoleBadges.Count(user.Badges), user.ProfileBadges?.Length ?? 0);
+        var reserve = UserName.Reserve(user.Badges, user.ProfileBadges, nameStyle, badgeCount);
+        var nameSize = Typography.Measure(user.DisplayName, nameStyle);
+        var nameWidth = MathF.Min(nameSize.X, MathF.Max(1f, width - 24f * scale - reserve));
+        UserName.DrawAuto(drawList, "account.header.name", user.DisplayName, user.Badges, user.ProfileBadges,
+            centerX - (nameWidth + reserve) * 0.5f, nameY - nameSize.Y * 0.5f, nameWidth + reserve, nameStyle,
+            theme.TextStrong, theme, badgeCount);
         Typography.DrawCentered(new Vector2(centerX, nameY + 24f * scale), $"{user.Name}@{user.World}",
             theme.TextMuted, TextStyles.Subheadline);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, nameY + 34f * scale - origin.Y));
+    }
+
+    private void DrawCommunityBadgesSection(PhoneTheme theme, float scale)
+    {
+        RequestCommunityBadges();
+        var badges = communityBadges;
+        if (badges is null || badges.Length == 0)
+        {
+            return;
+        }
+
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+        SettingsSection.Header(Loc.T(L.Account.BadgesSection), theme);
+        var card = GroupCard.Begin(theme, badges.Length);
+        var light = RoleInk.IsLight(theme);
+        var toggledIndex = -1;
+        for (var index = 0; index < badges.Length; index++)
+        {
+            if (DrawCommunityBadgeRow(card.NextRow(), badges[index], index, light, theme, scale))
+            {
+                toggledIndex = index;
+            }
+        }
+
+        card.End();
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        SettingsSection.Hint(Loc.T(L.Account.BadgesHint), theme);
+        if (toggledIndex >= 0)
+        {
+            ToggleCommunityBadge(toggledIndex);
+        }
+    }
+
+    private bool DrawCommunityBadgeRow(Rect row, BadgeStyle badge, int index, bool light, PhoneTheme theme, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var glyphSize = 16f * scale;
+        BadgeStrip.DrawOne(drawList, new Vector2(row.Min.X + glyphSize * 0.5f, row.Center.Y), badge, images, light,
+            glyphSize);
+        var rowId = "account.communitybadge." + index;
+        var toggleWidth = Metrics.Size.ToggleWidth * scale;
+        var toggleHeight = Metrics.Size.ToggleHeight * scale;
+        var toggleMin = new Vector2(row.Max.X - toggleWidth, row.Center.Y - toggleHeight * 0.5f);
+        var labelLeft = row.Min.X + glyphSize + 10f * scale;
+        var labelMaxWidth = MathF.Max(1f, toggleMin.X - 10f * scale - labelLeft);
+        var labelSize = Typography.Measure(badge.Name, TextStyles.BodyEmphasized);
+        Marquee.DrawLeftAuto(rowId, badge.Name, labelLeft, row.Center.Y - labelSize.Y * 0.5f, labelMaxWidth,
+            TextStyles.BodyEmphasized, theme.TextStrong);
+        var shown = !badge.Hidden;
+        var next = Toggle.Draw(rowId + ".toggle",
+            new Rect(toggleMin, toggleMin + new Vector2(toggleWidth, toggleHeight)), shown, theme);
+        return next != shown;
+    }
+
+    private void RequestCommunityBadges()
+    {
+        if (communityBadgesRequested || !session.IsSignedIn)
+        {
+            return;
+        }
+
+        communityBadgesRequested = true;
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var awarded = await account.AwardedBadgesAsync(token).ConfigureAwait(false);
+                if (awarded is null)
+                {
+                    communityBadgesRequested = false;
+                    return;
+                }
+
+                var parsed = new BadgeStyle[awarded.Badges.Length];
+                for (var index = 0; index < awarded.Badges.Length; index++)
+                {
+                    parsed[index] = BadgeStyle.From(awarded.Badges[index]);
+                }
+
+                communityBadges = parsed;
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Community badges load failed: {exception.Message}");
+                communityBadgesRequested = false;
+            }
+        });
+    }
+
+    private void ToggleCommunityBadge(int index)
+    {
+        var badges = communityBadges;
+        if (badges is null || index >= badges.Length)
+        {
+            return;
+        }
+
+        var badge = badges[index];
+        var hidden = !badge.Hidden;
+        badges[index] = badge with { Hidden = hidden };
+        var token = cancellation.Token;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var fresh = await account.SetBadgeVisibilityAsync(badge.Id, hidden, token).ConfigureAwait(false);
+                if (fresh is null)
+                {
+                    badges[index] = badge;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception exception)
+            {
+                AepLog.Warning($"Badge visibility update failed: {exception.Message}");
+                badges[index] = badge;
+            }
+        });
+    }
+
+    private void DrawPatreonSection(PhoneTheme theme, float scale)
+    {
+        patreonFlow.EnsureStatus();
+        var status = patreonFlow.Status;
+        if (status is null || !status.Available)
+        {
+            return;
+        }
+
+        ImGui.Dummy(new Vector2(0f, 14f * scale));
+        SettingsSection.Header(Loc.T(L.Account.PatreonSection), theme);
+        if (patreonFlow.Waiting)
+        {
+            using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
+            {
+                Typography.Wrapped(Loc.T(L.Account.PatreonWaitingBody));
+            }
+
+            ImGui.Dummy(new Vector2(0f, 10f * scale));
+            var spacing = 8f * scale;
+            var half = (ImGui.GetContentRegionAvail().X - spacing) * 0.5f;
+            if (Button(Loc.T(L.Account.PatreonOpen), theme, half))
+            {
+                patreonFlow.OpenAgain();
+            }
+
+            ImGui.SameLine(0f, spacing);
+            if (Button(Loc.T(L.Common.Cancel), theme, half))
+            {
+                patreonFlow.Cancel();
+            }
+
+            return;
+        }
+
+        if (status.Linked)
+        {
+            var card = GroupCard.Begin(theme, 2);
+            SettingsRow.Info(card.NextRow(), Loc.T(L.Account.PatreonStatusLabel),
+                Loc.T(status.Entitled ? L.Account.PatreonLinkedActive : L.Account.PatreonLinkedInactive), theme);
+            if (SettingsRow.Action(card.NextRow(), Loc.T(L.Account.PatreonUnlink), theme.Danger, theme))
+            {
+                AskUnlinkPatreon();
+            }
+
+            card.End();
+            if (!status.Entitled)
+            {
+                ImGui.Dummy(new Vector2(0f, 8f * scale));
+                SettingsSection.Hint(Loc.T(L.Account.PatreonInactiveHint), theme);
+            }
+
+            return;
+        }
+
+        var linkCard = GroupCard.Begin(theme, 1);
+        var tint = RoleInk.For(RoleKind.Patreon, RoleInk.IsLight(theme));
+        if (SettingsRow.Link(linkCard.NextRow(), FontAwesomeIcon.Star, tint, Loc.T(L.Account.PatreonLink),
+                string.Empty, theme) && !patreonFlow.Busy)
+        {
+            patreonFlow.Start();
+        }
+
+        linkCard.End();
+        ImGui.Dummy(new Vector2(0f, 8f * scale));
+        SettingsSection.Hint(Loc.T(L.Account.PatreonHint), theme);
+    }
+
+    private void AskUnlinkPatreon()
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Account.PatreonUnlinkTitle),
+            Message = Loc.T(L.Account.PatreonUnlinkBody),
+            ConfirmLabel = Loc.T(L.Account.PatreonUnlink),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Confirm = patreonFlow.Unlink,
+        });
+    }
+
+    private void DrawCharacterMismatch(UserDto user, PhoneTheme theme, float scale)
+    {
+        if (session.MatchesPlayedCharacter || gameData.LocalPlayer is not { } player)
+        {
+            return;
+        }
+
+        var notice = Loc.T(L.Account.PlayingAs, player.Name.TextValue, $"@{user.Handle}");
+        var width = ImGui.GetContentRegionAvail().X;
+        var origin = ImGui.GetCursorScreenPos();
+        var text = Typography.FitText(notice, width - 24f * scale, TextStyles.Footnote);
+        var size = Typography.Measure(text, TextStyles.Footnote);
+        Typography.DrawCentered(new Vector2(origin.X + width * 0.5f, origin.Y + size.Y * 0.5f), text, theme.Accent,
+            TextStyles.Footnote);
+        ImGui.Dummy(new Vector2(width, size.Y + 4f * scale));
+    }
+
+    private void DrawAccountsSection(PhoneTheme theme, float scale, bool signedIn)
+    {
+        RefreshAccountIds();
+        var rowCount = CountStoredAccounts();
+        if (rowCount == 0)
+        {
+            return;
+        }
+
+        SettingsSection.Header(Loc.T(L.Account.AccountsSection), theme);
+        var switchTo = 0ul;
+        var forget = 0ul;
+        var card = GroupCard.Begin(theme, rowCount, AccountRowHeight);
+        for (var index = 0; index < accountIds.Count; index++)
+        {
+            var contentId = accountIds[index];
+            if (!configuration.CharacterSessions.TryGetValue(contentId, out var entry) || entry.Token.Length == 0)
+            {
+                continue;
+            }
+
+            var active = session.IsSignedIn && contentId == session.ActiveContentId;
+            switch (DrawAccountRow(card.NextRow(), entry, active, theme, scale))
+            {
+                case AccountRowAction.Switch:
+                    switchTo = contentId;
+                    break;
+                case AccountRowAction.Remove:
+                    forget = contentId;
+                    break;
+            }
+        }
+
+        card.End();
+        if (signedIn)
+        {
+            var canAdd = session.PlayingContentId != 0;
+            ImGui.Dummy(new Vector2(0f, 10f * scale));
+            var actions = GroupCard.Begin(theme, canAdd ? 2 : 1);
+            if (canAdd && SettingsRow.Link(actions.NextRow(), FontAwesomeIcon.Plus, Tint, Loc.T(L.Account.AddAccount),
+                    string.Empty, theme))
+            {
+                AddAccount();
+            }
+
+            if (SettingsRow.Bool(actions.NextRow(), Loc.T(L.Account.FollowCharacter), session.FollowsCharacter, theme))
+            {
+                ToggleFollowCharacter();
+            }
+
+            actions.End();
+            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            SettingsSection.Hint(Loc.T(L.Account.FollowCharacterHint), theme);
+        }
+        else
+        {
+            ImGui.Dummy(new Vector2(0f, 8f * scale));
+            SettingsSection.Hint(Loc.T(L.Account.SwitchHint), theme);
+        }
+
+        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        if (switchTo != 0)
+        {
+            SwitchAccount(switchTo);
+        }
+        else if (forget != 0)
+        {
+            AskForgetAccount(forget);
+        }
+    }
+
+    private AccountRowAction DrawAccountRow(Rect row, CharacterSession entry, bool active, PhoneTheme theme,
+        float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = 17f * scale;
+        var avatarCenter = new Vector2(row.Min.X + radius, row.Center.Y);
+        var removeExtent = new Vector2(13f * scale, 13f * scale);
+        var removeCenter = new Vector2(row.Max.X - removeExtent.X, row.Center.Y);
+        var removable = !active;
+        var overRemove = removable && UiInteract.Hover(removeCenter - removeExtent, removeCenter + removeExtent);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
+        if (hovered && !active)
+        {
+            var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
+            Squircle.Fill(drawList, new Vector2(row.Min.X - 10f * scale, row.Min.Y + 3f * scale),
+                new Vector2(row.Max.X + 10f * scale, row.Max.Y - 3f * scale), 8f * scale,
+                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, pressed ? 0.10f : 0.05f)));
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        AvatarView.DrawRemote(drawList, avatarCenter, radius, theme, entry.CharacterName, entry.World,
+            entry.AvatarUrl.Length == 0 ? null : entry.AvatarUrl, images, lodestone, 1.1f, 40);
+        var textLeft = avatarCenter.X + radius + 12f * scale;
+        var textRight = removable ? removeCenter.X - removeExtent.X - 4f * scale : row.Max.X - 24f * scale;
+        var textWidth = MathF.Max(24f * scale, textRight - textLeft);
+        var title = Typography.FitText(TitleOf(entry), textWidth, TextStyles.BodyEmphasized);
+        var subtitle = Typography.FitText(SubtitleOf(entry), textWidth, TextStyles.Footnote);
+        var titleSize = Typography.Measure(title, TextStyles.BodyEmphasized);
+        var subtitleSize = Typography.Measure(subtitle, TextStyles.Footnote);
+        var gap = 2f * scale;
+        var top = row.Center.Y - (titleSize.Y + gap + subtitleSize.Y) * 0.5f;
+        Typography.Draw(new Vector2(textLeft, top), title, theme.TextStrong, TextStyles.BodyEmphasized);
+        Typography.Draw(new Vector2(textLeft, top + titleSize.Y + gap), subtitle, theme.TextMuted, TextStyles.Footnote);
+        if (active)
+        {
+            var tip = new Vector2(row.Max.X - 12f * scale, row.Center.Y + 5f * scale);
+            var ink = ImGui.GetColorU32(theme.Accent);
+            drawList.AddLine(tip - new Vector2(5f * scale, 5f * scale), tip, ink, 2f * scale);
+            drawList.AddLine(tip, new Vector2(tip.X + 9f * scale, tip.Y - 11f * scale), ink, 2f * scale);
+        }
+        else
+        {
+            ProgressRing.CenterIcon(drawList, removeCenter, FontAwesomeIcon.Times,
+                overRemove ? theme.Danger : theme.TextMuted, 12f * scale);
+        }
+
+        if (removable && UiInteract.Click(removeCenter - removeExtent, removeCenter + removeExtent, overRemove))
+        {
+            return AccountRowAction.Remove;
+        }
+
+        if (!active && UiInteract.Click(row.Min, row.Max, hovered && !overRemove))
+        {
+            return AccountRowAction.Switch;
+        }
+
+        return AccountRowAction.None;
+    }
+
+    private void RefreshAccountIds()
+    {
+        if (configuration.CharacterSessions.Count == accountIdsStamp)
+        {
+            return;
+        }
+
+        accountIdsStamp = configuration.CharacterSessions.Count;
+        accountIds.Clear();
+        foreach (var pair in configuration.CharacterSessions)
+        {
+            accountIds.Add(pair.Key);
+        }
+
+        accountIds.Sort();
+    }
+
+    private int CountStoredAccounts()
+    {
+        var count = 0;
+        for (var index = 0; index < accountIds.Count; index++)
+        {
+            if (configuration.CharacterSessions.TryGetValue(accountIds[index], out var entry)
+                && entry.Token.Length > 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static string TitleOf(CharacterSession entry)
+    {
+        if (entry.DisplayName.Length > 0)
+        {
+            return entry.DisplayName;
+        }
+
+        return entry.CharacterName.Length > 0 ? entry.CharacterName : Loc.T(L.Account.SignedIn);
+    }
+
+    private static string SubtitleOf(CharacterSession entry)
+    {
+        var character = entry.CharacterName.Length > 0 && entry.World.Length > 0
+            ? $"{entry.CharacterName}@{entry.World}"
+            : string.Empty;
+        if (entry.Handle.Length == 0)
+        {
+            return character;
+        }
+
+        return character.Length == 0 ? $"@{entry.Handle}" : $"@{entry.Handle} · {character}";
+    }
+
+    private void SwitchAccount(ulong contentId)
+    {
+        if (contentId == session.PlayingContentId)
+        {
+            session.UseCharacterAccount();
+        }
+        else
+        {
+            session.PinAccount(contentId);
+        }
+
+        account.EnsureCurrentUser();
+        ResetFlow();
+    }
+
+    private void ToggleFollowCharacter()
+    {
+        if (session.FollowsCharacter)
+        {
+            session.PinAccount(session.ActiveContentId);
+            return;
+        }
+
+        session.UseCharacterAccount();
+        account.EnsureCurrentUser();
+        ResetFlow();
+    }
+
+    private void AddAccount()
+    {
+        var playing = session.PlayingContentId;
+        if (playing != 0 && configuration.CharacterSessions.TryGetValue(playing, out var stored)
+                         && stored.Token.Length > 0)
+        {
+            var who = stored.CharacterName.Length > 0 ? stored.CharacterName : TitleOf(stored);
+            confirm.Alert(Loc.T(L.Account.AddAccountTakenTitle), Loc.T(L.Account.AddAccountTakenBody, who),
+                Loc.T(L.Account.FailDismiss));
+            return;
+        }
+
+        session.UseCharacterAccount();
+        ResetFlow();
+    }
+
+    private void AskForgetAccount(ulong contentId)
+    {
+        if (!configuration.CharacterSessions.TryGetValue(contentId, out var entry))
+        {
+            return;
+        }
+
+        var bearer = entry.Token;
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Account.RemoveAccountTitle, TitleOf(entry)),
+            Message = Loc.T(L.Account.RemoveAccountBody),
+            ConfirmLabel = Loc.T(L.Account.RemoveAccount),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            Confirm = () =>
+            {
+                RevokeToken(bearer);
+                session.ForgetAccount(contentId);
+                accountIdsStamp = -1;
+            },
+        });
     }
 
     private void OpenPhotoPicker()
@@ -227,7 +766,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             confirm));
     }
 
-    private void UploadAvatar(string sourcePath, WallpaperCrop crop, Action<bool> onComplete)
+    private void UploadAvatar(string sourcePath, WallpaperCrop crop, Action<AvatarUploadOutcome> onComplete)
     {
         if (avatarBusy)
         {
@@ -235,10 +774,10 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         }
 
         avatarBusy = true;
-        AvatarUploader.Upload(account, media, session, sourcePath, crop, cancellation.Token, uploaded =>
+        AvatarUploader.Upload(account, media, session, sourcePath, crop, cancellation.Token, outcome =>
         {
             avatarBusy = false;
-            onComplete(uploaded);
+            onComplete(outcome);
         });
     }
 
@@ -261,8 +800,15 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void RevokeCurrentToken()
     {
-        var bearer = session.Token;
-        if (bearer is null)
+        if (session.Token is { } bearer)
+        {
+            RevokeToken(bearer);
+        }
+    }
+
+    private void RevokeToken(string bearer)
+    {
+        if (bearer.Length == 0)
         {
             return;
         }
@@ -329,7 +875,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
         {
             Typography.DrawCentered(
                 new Vector2(ImGui.GetContentRegionAvail().X * 0.5f + ImGui.GetCursorScreenPos().X,
-                    ImGui.GetCursorScreenPos().Y + 80f * ImGuiHelpers.GlobalScale), Loc.T(L.Account.LogInFirst),
+                    ImGui.GetCursorScreenPos().Y + 80f * UiScale.Current), Loc.T(L.Account.LogInFirst),
                 theme.TextMuted);
             return;
         }
@@ -346,10 +892,11 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var name = player.Name.TextValue;
         var world = gameData.WorldName(gameData.LocalHomeWorldId);
         var ready = !flow.Busy && name.Length > 0 && world.Length > 0;
+        DrawAccountsSection(theme, scale, false);
         ImGui.Dummy(new Vector2(0f, 6f * scale));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
@@ -381,7 +928,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void DrawXivAuthStep(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 4f * scale));
         using (Plugin.Fonts.Push(1.3f, FontWeight.SemiBold))
         {
@@ -430,7 +977,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private void DrawVerifyStep(PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ImGui.Dummy(new Vector2(0f, 4f * scale));
         using (Plugin.Fonts.Push(1.3f, FontWeight.SemiBold))
         {
@@ -489,13 +1036,13 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private static void DrawIdentityCard(string name, string world, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var width = ImGui.GetContentRegionAvail().X;
         var padding = 12f * scale;
         var start = ImGui.GetCursorScreenPos();
         var label = Loc.T(L.Account.SigningInAs);
-        var identity = $"{name}@{world}";
+        var identity = Typography.FitText($"{name}@{world}", width - padding * 2f, 1.05f, FontWeight.SemiBold);
         var labelSize = Typography.Measure(label, 0.82f);
         var identitySize = Typography.Measure(identity, 1.05f, FontWeight.SemiBold);
         var height = padding * 2f + labelSize.Y + 4f * scale + identitySize.Y;
@@ -510,13 +1057,13 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private static bool DrawCodeCard(PhoneTheme theme, string value)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var width = ImGui.GetContentRegionAvail().X;
         var height = 52f * scale;
         var start = ImGui.GetCursorScreenPos();
         var max = new Vector2(start.X + width, start.Y + height);
-        var hovered = ImGui.IsMouseHoveringRect(start, max);
+        var hovered = UiInteract.Hover(start, max);
         var radius = 14f * scale;
         var background = hovered ? Palette.Mix(theme.GroupedCard, theme.Accent, 0.14f) : theme.GroupedCard;
         Squircle.Fill(drawList, start, max, radius, ImGui.GetColorU32(background));
@@ -537,7 +1084,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
 
     private static void DrawStepRow(string number, string text, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var lineHeight = ImGui.GetTextLineHeight();
         var lineStep = lineHeight + 3f * scale;
@@ -577,7 +1124,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
             return;
         }
 
-        ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+        ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextMuted))
         {
             Typography.Wrapped(message);
@@ -619,7 +1166,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                    .Push(ImGuiCol.ButtonHovered, Palette.Mix(theme.GroupedCard, theme.Accent, 0.35f))
                    .Push(ImGuiCol.ButtonActive, theme.Accent).Push(ImGuiCol.Text, theme.TextStrong))
         {
-            return ImGui.Button(label, new Vector2(width, 34f * ImGuiHelpers.GlobalScale));
+            return ImGui.Button(label, new Vector2(width, 34f * UiScale.Current));
         }
     }
 
@@ -630,7 +1177,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                    .Push(ImGuiCol.ButtonActive, Palette.Mix(theme.Accent, new Vector4(0f, 0f, 0f, 1f), 0.18f))
                    .Push(ImGuiCol.Text, new Vector4(1f, 1f, 1f, 1f)))
         {
-            return ImGui.Button(label, new Vector2(-1f, 38f * ImGuiHelpers.GlobalScale));
+            return ImGui.Button(label, new Vector2(-1f, 38f * UiScale.Current));
         }
     }
 
@@ -641,7 +1188,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
                    .Push(ImGuiCol.ButtonActive, Palette.WithAlpha(theme.TextStrong, 0.14f))
                    .Push(ImGuiCol.Text, theme.TextMuted))
         {
-            return ImGui.Button(label, new Vector2(-1f, 32f * ImGuiHelpers.GlobalScale));
+            return ImGui.Button(label, new Vector2(-1f, 32f * UiScale.Current));
         }
     }
 
@@ -649,6 +1196,7 @@ internal sealed class AccountPage : ISettingsPage, IDisposable
     {
         cancellation.Cancel();
         flow.Dispose();
+        patreonFlow.Dispose();
         cancellation.Dispose();
     }
 }

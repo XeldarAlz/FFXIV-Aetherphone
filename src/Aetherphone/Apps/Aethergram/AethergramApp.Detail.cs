@@ -4,16 +4,14 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Aethergram;
 
-// The post detail view: comments, comment composer, the profile view, and moderation actions
-// (report / delete). Split from the main feed for readability.
 internal sealed partial class AethergramApp
 {
     private void DrawDetail(Rect area, string postId)
@@ -21,7 +19,7 @@ internal sealed partial class AethergramApp
         var post = store.DetailPost;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Aethergram.PostTitle), back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         if (post is null || post.Id != postId)
         {
@@ -45,19 +43,28 @@ internal sealed partial class AethergramApp
                     authorRing.HasUnseen);
             }
 
-            DrawAvatar(avatarCenter, avatarRadius - 1f * scale, post.AuthorName, post.AuthorWorld, post.AuthorAvatarUrl,
+            DrawAvatar(avatarCenter, avatarRadius - 1f * scale,
+                SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle), string.Empty, post.AuthorAvatarUrl,
                 0.85f, 32);
             var nameLeft = avatarCenter.X + avatarRadius + 12f * scale;
             var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
             var headerMeta = SocialIdentity.FeedMeta(post.AuthorHandle, TimeText.Short(post.CreatedAtUnix));
-            var headerNameSize = Typography.Measure(displayName, 0.95f, FontWeight.SemiBold);
+            var headerTextMaxWidth = MathF.Max(1f, origin.X + width - nameLeft);
+            var headerNameStyle = new TextStyle(0.95f, FontWeight.SemiBold);
+            var headerNameSize = Typography.Measure(displayName, headerNameStyle);
             var headerMetaSize = Typography.Measure(headerMeta, 0.78f);
             var headerTextGap = 3f * scale;
             var headerNameY = avatarCenter.Y - (headerNameSize.Y + headerTextGap + headerMetaSize.Y) * 0.5f;
-            Typography.Draw(new Vector2(nameLeft, headerNameY), displayName, theme.TextStrong, 0.95f,
-                FontWeight.SemiBold);
-            Typography.Draw(new Vector2(nameLeft, headerNameY + headerNameSize.Y + headerTextGap), headerMeta,
-                AppPalettes.Aethergram.MutedInk, 0.78f);
+            var headerNameHovering = UiInteract.Hover(new Vector2(nameLeft, headerNameY),
+                new Vector2(nameLeft + headerTextMaxWidth, headerNameY + headerNameSize.Y));
+            UserName.Draw("aethergram.detail.header." + post.Id, displayName, post.AuthorBadges, post.AuthorBadgeIds, nameLeft,
+                headerNameY, headerTextMaxWidth, headerNameStyle, theme.TextStrong, headerNameHovering, theme);
+            var headerMetaTop = headerNameY + headerNameSize.Y + headerTextGap;
+            var headerMetaHovering = UiInteract.Hover(new Vector2(nameLeft, headerMetaTop),
+                new Vector2(nameLeft + headerTextMaxWidth, headerMetaTop + headerMetaSize.Y));
+            Marquee.DrawLeft("aethergram.detail.headermeta." + post.Id, headerMeta, nameLeft, headerMetaTop,
+                headerTextMaxWidth, new TextStyle(0.78f, FontWeight.Regular), AppPalettes.Aethergram.MutedInk,
+                headerMetaHovering);
             if (UiInteract.HoverClick(new Vector2(origin.X, origin.Y),
                     new Vector2(origin.X + width * 0.7f, origin.Y + headerHeight)))
             {
@@ -65,8 +72,9 @@ internal sealed partial class AethergramApp
             }
 
             ImGui.SetCursorScreenPos(new Vector2(origin.X, origin.Y + headerHeight));
+            var imageHeight = PostAspects.DisplayHeight(width, post.MediaWidth, post.MediaHeight);
             var imageRect = new Rect(new Vector2(origin.X, origin.Y + headerHeight),
-                new Vector2(origin.X + width, origin.Y + headerHeight + width));
+                new Vector2(origin.X + width, origin.Y + headerHeight + imageHeight));
             var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
             var page = DrawGramCarousel(imageRect, post, photos, 16f * scale);
             var liked = post.MyReaction >= 0;
@@ -120,12 +128,30 @@ internal sealed partial class AethergramApp
                 actionsRight += Typography.Measure(commentText, 0.9f, FontWeight.Medium).X;
             }
 
+            var shareCenter = new Vector2(actionsRight + (post.CommentCount > 0 ? 14f : 6f) * scale + 13f * scale,
+                actionsY);
+            if (ui.IconButton(shareCenter, 15f * scale, FontAwesomeIcon.PaperPlane.ToIconString(),
+                    AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.15f, Loc.T(L.Aethergram.SendTo)))
+            {
+                OpenShare(post.Id);
+            }
+
+            actionsRight = shareCenter.X + 20f * scale;
             var moreCenter = new Vector2(origin.X + width - 14f * scale, actionsY);
+            var bookmarkCenter = new Vector2(moreCenter.X - 32f * scale, actionsY);
+            if (ui.IconButton(bookmarkCenter, 15f * scale, FontAwesomeIcon.Bookmark.ToIconString(),
+                    post.Saved ? ui.Accent : AppPalettes.Aethergram.BodyInk, AppSkin.Transparent, 1.15f,
+                    Loc.T(L.Aethergram.SavedTitle)))
+            {
+                store.SetSaved(post.Id, !post.Saved);
+            }
+
             if (photos.Length > 1)
             {
-                var dotsCenter = new Vector2(origin.X + width * 0.5f, actionsY);
-                var available = MathF.Min((moreCenter.X - 16f * scale - dotsCenter.X) * 2f,
-                    (dotsCenter.X - actionsRight - 10f * scale) * 2f);
+                var dotsLeft = actionsRight + 10f * scale;
+                var dotsRight = bookmarkCenter.X - 16f * scale;
+                var dotsCenter = new Vector2((dotsLeft + dotsRight) * 0.5f, actionsY);
+                var available = MathF.Max(0f, dotsRight - dotsLeft);
                 PhotoCarousel.DrawDots(ImGui.GetWindowDrawList(), dotsCenter, photos.Length, page, available,
                     AppPalettes.Aethergram.BodyInk);
             }
@@ -143,8 +169,13 @@ internal sealed partial class AethergramApp
             if (post.Text.Length > 0)
             {
                 var captionPos = ImGui.GetCursorScreenPos();
-                Typography.Draw(captionPos, displayName, theme.TextStrong, 0.9f, FontWeight.SemiBold);
-                var nameWidth = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).X;
+                var captionNameMaxWidth = width * 0.5f;
+                var captionNameSize = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold);
+                var captionNameHovering = UiInteract.Hover(captionPos,
+                    new Vector2(captionPos.X + captionNameMaxWidth, captionPos.Y + captionNameSize.Y));
+                var nameWidth = UserName.Draw("aethergram.detail.captionname." + post.Id, displayName,
+                    post.AuthorBadges, post.AuthorBadgeIds, captionPos.X, captionPos.Y, captionNameMaxWidth,
+                    new TextStyle(0.9f, FontWeight.SemiBold), theme.TextStrong, captionNameHovering, theme);
                 var captionLeft = captionPos.X + nameWidth + 6f * scale;
                 ImGui.SetCursorScreenPos(new Vector2(captionLeft, captionPos.Y));
                 RichTextLayout? captionLayout;
@@ -156,14 +187,12 @@ internal sealed partial class AethergramApp
 
                 if (captionLayout is null)
                 {
-                    ImGui.PushTextWrapPos(origin.X + width - ImGui.GetWindowPos().X);
+                    using (Typography.WrapAt(origin.X + width))
                     using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
                     using (Plugin.Fonts.Push(0.9f))
                     {
                         Typography.Wrapped(post.Text);
                     }
-
-                    ImGui.PopTextWrapPos();
                 }
                 else
                 {
@@ -186,8 +215,9 @@ internal sealed partial class AethergramApp
                 ImGui.GetColorU32(theme.Separator), 1f);
             ImGui.Dummy(new Vector2(0f, 14f * scale));
             var comments = store.DetailComments;
-            ui.SectionHeading(comments.Length > 0
-                ? $"{Loc.T(L.Aethergram.CommentsTitle)} · {comments.Length}"
+            var commentTotal = store.HasMoreComments ? Math.Max(post.CommentCount, comments.Length) : comments.Length;
+            ui.SectionHeading(commentTotal > 0
+                ? $"{Loc.T(L.Aethergram.CommentsTitle)} · {commentTotal}"
                 : Loc.T(L.Aethergram.CommentsTitle));
             if (comments.Length == 0 && !store.DetailLoading)
             {
@@ -196,6 +226,7 @@ internal sealed partial class AethergramApp
             }
             else
             {
+                DrawEarlierCommentsRow();
                 for (var index = 0; index < comments.Length; index++)
                 {
                     DrawComment(comments[index]);
@@ -209,9 +240,46 @@ internal sealed partial class AethergramApp
         DrawPostMenu(area, false);
     }
 
+    private void DrawEarlierCommentsRow()
+    {
+        var scale = UiScale.Current;
+        if (store.CommentsLoadingMore)
+        {
+            InfiniteScroll.DrawLoadingRow(
+                ImGui.GetCursorScreenPos().X + ScrollLayout.StableContentWidth() * 0.5f,
+                AppPalettes.Aethergram.MutedInk);
+            return;
+        }
+
+        if (!store.HasMoreComments)
+        {
+            return;
+        }
+
+        var label = Loc.T(L.Aethergram.EarlierComments);
+        var origin = ImGui.GetCursorScreenPos();
+        var pos = new Vector2(origin.X + 5f * scale, origin.Y);
+        var size = Typography.Measure(label, 0.85f, FontWeight.Medium);
+        var hovered = UiInteract.Hover(pos, pos + size);
+        Typography.Draw(pos, label, hovered ? theme.Accent : AppPalettes.Aethergram.MutedInk, 0.85f,
+            FontWeight.Medium);
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(pos, pos + size, hovered))
+        {
+            store.LoadMoreComments();
+        }
+
+        ImGui.SetCursorScreenPos(origin);
+        ImGui.Dummy(new Vector2(size.X, size.Y + 12f * scale));
+    }
+
     private void DrawComment(CommentDto comment)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ScrollLayout.StableContentWidth();
@@ -227,7 +295,8 @@ internal sealed partial class AethergramApp
         var textLeft = bubbleLeft + padX;
         var textRight = bubbleRight - padX - 22f * scale;
         var displayName = SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle);
-        var nameHeight = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).Y;
+        var commentNameStyle = new TextStyle(0.9f, FontWeight.SemiBold);
+        var nameHeight = Typography.Measure(displayName, commentNameStyle).Y;
         RichTextLayout? commentLayout;
         using (Plugin.Fonts.Push(0.9f))
         {
@@ -249,12 +318,14 @@ internal sealed partial class AethergramApp
             1f);
 
         var avatarCenter = new Vector2(avatarCenterX, bubbleTop + avatarRadius + 2f * scale);
-        DrawAvatar(avatarCenter, avatarRadius, comment.AuthorName, string.Empty, comment.AuthorAvatarUrl,
-            0.8f, 28);
+        DrawAvatar(avatarCenter, avatarRadius, SocialIdentity.Name(comment.AuthorDisplayName, comment.AuthorHandle),
+            string.Empty, comment.AuthorAvatarUrl, 0.8f, 28);
 
         var nameTop = bubbleTop + padTop;
-        Typography.Draw(new Vector2(textLeft, nameTop), displayName, theme.TextStrong, 0.9f, FontWeight.SemiBold);
-        var nameWidth = Typography.Measure(displayName, 0.9f, FontWeight.SemiBold).X;
+        var commentNameHovering = UiInteract.Hover(new Vector2(textLeft, nameTop),
+            new Vector2(textRight, nameTop + nameHeight));
+        var nameWidth = UserName.Draw("aethergram.comment." + comment.Id, displayName, comment.AuthorBadges, comment.AuthorBadgeIds, textLeft,
+            nameTop, textRight - textLeft, commentNameStyle, theme.TextStrong, commentNameHovering, theme);
         var meta = TimeText.Short(comment.CreatedAtUnix);
         var metaSize = Typography.Measure(meta, 0.8f);
         var metaLeft = textLeft + nameWidth + 8f * scale;
@@ -272,14 +343,12 @@ internal sealed partial class AethergramApp
         ImGui.SetCursorScreenPos(new Vector2(textLeft, textTop));
         if (commentLayout is null)
         {
-            ImGui.PushTextWrapPos(textRight - ImGui.GetWindowPos().X);
+            using (Typography.WrapAt(textRight))
             using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Aethergram.BodyInk))
             using (Plugin.Fonts.Push(0.9f))
             {
                 Typography.Wrapped(comment.Text);
             }
-
-            ImGui.PopTextWrapPos();
         }
         else
         {
@@ -347,7 +416,7 @@ internal sealed partial class AethergramApp
             : SocialIdentity.Name(user.DisplayName, user.Handle);
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, title, back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         DrawProfileBody(new Rect(new Vector2(area.Min.X, top), area.Max), userId);
     }
@@ -375,7 +444,13 @@ internal sealed partial class AethergramApp
         using (AppSurface.Begin(body))
         {
             profile.DrawProfileHeader(user, theme);
-            var scale = ImGuiHelpers.GlobalScale;
+            if (user.IsPrivate && !user.IsFollowing && !user.IsMe)
+            {
+                DrawPrivateProfileNotice();
+                return;
+            }
+
+            var scale = UiScale.Current;
             var tabRow = new Rect(
                 new Vector2(ImGui.GetCursorScreenPos().X + 14f * scale, ImGui.GetCursorScreenPos().Y + 4f * scale),
                 new Vector2(ImGui.GetCursorScreenPos().X + ImGui.GetContentRegionAvail().X - 14f * scale,
@@ -395,9 +470,32 @@ internal sealed partial class AethergramApp
             else
             {
                 store.EnsureTaggedPosts(userId);
-                DrawProfileGrid(store.TaggedPosts, L.PhotoTag.NoTagged);
+                DrawProfileGrid(store.TaggedPosts, L.PhotoTag.NoTagged,
+                    store.HasMoreTagged, store.TaggedLoadingMore, store.LoadMoreTaggedPosts);
             }
         }
     }
 
+    private void DrawPrivateProfileNotice()
+    {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var origin = ImGui.GetCursorScreenPos();
+        var width = ImGui.GetContentRegionAvail().X;
+        var centerX = origin.X + width * 0.5f;
+        var lockCenter = new Vector2(centerX, origin.Y + 52f * scale);
+        drawList.AddCircle(lockCenter, 26f * scale,
+            ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.Aethergram.MutedInk, 0.5f)), 48, 1.6f * scale);
+        AppSkin.Icon(drawList, lockCenter, FontAwesomeIcon.Lock.ToIconString(), AppPalettes.Aethergram.TitleInk,
+            1.3f);
+        var titleTop = lockCenter.Y + 40f * scale;
+        var titleHeight = Typography.DrawWrappedCentered(new Vector2(centerX, titleTop),
+            Loc.T(L.Aethergram.PrivateTitle), AppPalettes.Aethergram.TitleInk, TextStyles.BodyEmphasized,
+            width - 48f * scale);
+        var subtitleTop = titleTop + titleHeight + 6f * scale;
+        var subtitleHeight = Typography.DrawWrappedCentered(new Vector2(centerX, subtitleTop),
+            Loc.T(L.Aethergram.PrivateSubtitle), AppPalettes.Aethergram.MutedInk, TextStyles.Subheadline,
+            width - 48f * scale);
+        ImGui.Dummy(new Vector2(width, subtitleTop + subtitleHeight + 24f * scale - origin.Y));
+    }
 }

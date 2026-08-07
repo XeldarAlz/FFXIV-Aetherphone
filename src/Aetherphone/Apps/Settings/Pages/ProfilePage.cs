@@ -10,7 +10,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Interface;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Settings.Pages;
 
@@ -37,7 +36,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
 
     public void Draw(in PhoneContext context, Rect body)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         using (AppSurface.Begin(body))
         {
@@ -109,6 +108,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
         {
             configuration.RegionManual = false;
             configuration.Save();
+            PushRegion();
         }
 
         for (var index = 0; index < SocialRegion.Codes.Length; index++)
@@ -121,6 +121,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
                 configuration.RegionManual = true;
                 configuration.ManualRegion = code;
                 configuration.Save();
+                PushRegion();
             }
         }
 
@@ -129,14 +130,15 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
 
     private void DrawOffsetStepper(Rect row, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
-        var labelSize = Typography.Measure(Loc.T(L.Profile.UtcOffsetLabel));
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), Loc.T(L.Profile.UtcOffsetLabel),
-            theme.TextStrong);
         var buttonSize = 26f * scale;
         var plusMin = new Vector2(row.Max.X - buttonSize, row.Center.Y - buttonSize * 0.5f);
         var minusMin = new Vector2(plusMin.X - 96f * scale, row.Center.Y - buttonSize * 0.5f);
+        var label = Typography.FitText(Loc.T(L.Profile.UtcOffsetLabel), minusMin.X - 12f * scale - row.Min.X, 1f,
+            FontWeight.Regular);
+        var labelSize = Typography.Measure(label);
+        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), label, theme.TextStrong);
         if (StepperButton(drawList, minusMin, buttonSize, "-", theme))
         {
             AdjustOffset(-SocialTimeZone.StepMinutes);
@@ -155,7 +157,7 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
     private static bool StepperButton(ImDrawListPtr drawList, Vector2 min, float size, string glyph, PhoneTheme theme)
     {
         var max = min + new Vector2(size, size);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var fill = hovered
             ? Palette.Mix(theme.GroupedCard, theme.Accent, 0.35f)
             : Palette.WithAlpha(theme.TextStrong, 0.10f);
@@ -183,6 +185,9 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
         configuration.Save();
         PushTimeZone(null);
     }
+
+    private void PushRegion() =>
+        RegionSync.Push(session, client, configuration, gameData, cancellation.Token);
 
     private void PushTimeZone(bool? share)
     {

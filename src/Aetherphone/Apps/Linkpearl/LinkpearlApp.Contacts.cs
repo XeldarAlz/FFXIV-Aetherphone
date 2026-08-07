@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Linkpearl;
@@ -75,7 +74,7 @@ internal sealed partial class LinkpearlApp
 
     private void DrawContactsTab(Rect content)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (friends.Count == 0)
         {
             Typography.DrawCentered(content.Center, Loc.T(L.Contacts.Empty), frameTheme.TextMuted);
@@ -137,7 +136,7 @@ internal sealed partial class LinkpearlApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.Contacts.Detail), backToList);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         using (AppSurface.Begin(body))
@@ -158,7 +157,7 @@ internal sealed partial class LinkpearlApp
 
     private static void DrawFriendHero(FriendEntry friend, PhoneTheme theme, LodestoneService lodestone)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -203,7 +202,7 @@ internal sealed partial class LinkpearlApp
 
     private void DrawFriendActions(FriendEntry friend, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
         var canInvite = friend.Online;
@@ -259,12 +258,12 @@ internal sealed partial class LinkpearlApp
 
     private bool DrawRefreshButton(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         var center = new Vector2(content.Max.X - 14f * scale, content.Min.Y + AppHeader.Height * scale * 0.5f);
         UiAnchors.Report("contacts.refresh", new Rect(center - new Vector2(16f * scale, 16f * scale),
             center + new Vector2(16f * scale, 16f * scale)));
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(16f * scale, 16f * scale),
+        var hovered = UiInteract.Hover(center - new Vector2(16f * scale, 16f * scale),
             center + new Vector2(16f * scale, 16f * scale));
         var glyph = FontAwesomeIcon.Sync.ToIconString();
         using (ImRaii.PushFont(UiBuilder.IconFont))

@@ -1,4 +1,5 @@
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Dalamud.Plugin.Services;
 
@@ -14,18 +15,19 @@ internal sealed class TimerNotifier : IDisposable
     private readonly List<RetainerVenture> retainers = new();
     private readonly Dictionary<ulong, long> seenPendingComplete = new();
     private readonly Dictionary<ulong, long> notifiedComplete = new();
+    private readonly AppGate gate;
     private DateTime nextDaily;
     private DateTime nextWeekly;
     private DateTime nextGrandCompany;
+    private bool gateWasOpen = true;
 
-    public TimerNotifier(Configuration configuration, IFramework framework, NotificationService notifications)
+    public TimerNotifier(Configuration configuration, IFramework framework, NotificationService notifications,
+        AppGate gate)
     {
         this.configuration = configuration;
         this.notifications = notifications;
-        var utcNow = DateTime.UtcNow;
-        nextDaily = GameSchedule.NextDailyReset(utcNow);
-        nextWeekly = GameSchedule.NextWeeklyReset(utcNow);
-        nextGrandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
+        this.gate = gate;
+        Rebaseline(DateTime.UtcNow);
         ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
     }
 
@@ -36,9 +38,31 @@ internal sealed class TimerNotifier : IDisposable
 
     private void OnTick()
     {
+        if (!gate.Open)
+        {
+            gateWasOpen = false;
+            return;
+        }
+
         var utcNow = DateTime.UtcNow;
+        if (!gateWasOpen)
+        {
+            gateWasOpen = true;
+            Rebaseline(utcNow);
+            return;
+        }
+
         CheckResets(utcNow);
         CheckRetainers(utcNow);
+    }
+
+    private void Rebaseline(DateTime utcNow)
+    {
+        nextDaily = GameSchedule.NextDailyReset(utcNow);
+        nextWeekly = GameSchedule.NextWeeklyReset(utcNow);
+        nextGrandCompany = GameSchedule.NextGrandCompanyReset(utcNow);
+        seenPendingComplete.Clear();
+        notifiedComplete.Clear();
     }
 
     private void CheckResets(DateTime utcNow)

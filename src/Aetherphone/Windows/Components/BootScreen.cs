@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -23,7 +22,7 @@ internal static class BootScreen
 
     public static void Draw(Rect screen, PhoneTheme theme, BootSequence boot)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rounding = theme.ScreenRounding * scale;
         var dl = ImGui.GetForegroundDrawList();
         if (boot.BackdropAlpha > 0f)
@@ -50,7 +49,7 @@ internal static class BootScreen
     public static void DrawBackdrop(ImDrawListPtr dl, Rect screen, PhoneTheme theme, float alpha, float rounding)
     {
         var baseColor = new Vector4(0.015f, 0.019f, 0.038f, alpha);
-        dl.AddRectFilled(screen.Min, screen.Max, ImGui.GetColorU32(baseColor), rounding);
+        Squircle.Fill(dl, screen.Min, screen.Max, rounding, ImGui.GetColorU32(baseColor));
         var breath = 0.8f + 0.2f * Pulse.Wave(5200);
         dl.PushClipRect(screen.Min, screen.Max, true);
         for (var ring = 3; ring >= 1; ring--)

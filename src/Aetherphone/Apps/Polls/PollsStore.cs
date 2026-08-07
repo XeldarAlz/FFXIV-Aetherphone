@@ -1,6 +1,7 @@
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Aethernet.Clients;
 using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Home;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Polls;
@@ -11,17 +12,22 @@ internal sealed class PollsStore : IDisposable
 
     private readonly AethernetSession session;
     private readonly PollsClient client;
+    private readonly AppGate gate;
     private readonly StoreWork work = new StoreWork("Polls");
 
     private volatile PollDto[] polls = Array.Empty<PollDto>();
+    private volatile string? pollsCursor;
+    private volatile bool loadingMore;
+    private volatile bool pagedDeeper;
     private volatile bool loading;
     private volatile bool loadedOnce;
     private DateTime lastBackgroundRefreshUtc = DateTime.MinValue;
 
-    public PollsStore(AethernetSession session, PollsClient client)
+    public PollsStore(AethernetSession session, PollsClient client, AppGate gate)
     {
         this.session = session;
         this.client = client;
+        this.gate = gate;
         Plugin.Framework.Update += OnFrameworkUpdate;
     }
 
@@ -30,6 +36,10 @@ internal sealed class PollsStore : IDisposable
     public PollDto[] Polls => polls;
 
     public bool Loading => loading;
+
+    public bool LoadingMore => loadingMore;
+
+    public bool HasMore => pollsCursor is not null;
 
     public bool LoadedOnce => loadedOnce;
 
@@ -66,13 +76,51 @@ internal sealed class PollsStore : IDisposable
         loading = true;
         work.Run("polls refresh", async token =>
         {
-            var page = await client.ListAsync(token).ConfigureAwait(false);
+            var page = await client.ListAsync(null, token).ConfigureAwait(false);
             if (page is not null)
             {
-                polls = page.Items;
+                if (pagedDeeper)
+                {
+                    polls = IdentifiedMerge.MergeById(polls, page.Items, ByNewestFirst);
+                }
+                else
+                {
+                    polls = page.Items;
+                    pollsCursor = page.NextCursor;
+                }
+
                 loadedOnce = true;
             }
         }, () => loading = false);
+    }
+
+    public void LoadMore()
+    {
+        var cursor = pollsCursor;
+        if (!session.IsSignedIn || cursor is null || loadingMore || loading)
+        {
+            return;
+        }
+
+        loadingMore = true;
+        pagedDeeper = true;
+        work.Run("polls more", async token =>
+        {
+            var page = await client.ListAsync(cursor, token).ConfigureAwait(false);
+            if (page is null)
+            {
+                return;
+            }
+
+            polls = IdentifiedMerge.MergeById(polls, page.Items, ByNewestFirst);
+            pollsCursor = page.NextCursor;
+        }, () => loadingMore = false);
+    }
+
+    private static int ByNewestFirst(PollDto left, PollDto right)
+    {
+        var byTime = right.CreatedAtUnix.CompareTo(left.CreatedAtUnix);
+        return byTime != 0 ? byTime : string.CompareOrdinal(right.Id, left.Id);
     }
 
     public void Vote(PollDto poll, int optionIndex)
@@ -98,7 +146,7 @@ internal sealed class PollsStore : IDisposable
 
     private void OnFrameworkUpdate(IFramework framework)
     {
-        if (!session.IsSignedIn)
+        if (!session.IsSignedIn || !gate.Open)
         {
             return;
         }

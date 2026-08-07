@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Calendar;
@@ -27,6 +26,7 @@ internal sealed class CalendarApp : IPhoneApp
     public string DisplayName => Loc.T(L.Calendar.Title);
     public string Glyph => "C";
     public int BadgeCount => 0;
+    public bool WantsSystemTheme => true;
 
     private readonly CalendarEvents events;
     private readonly Configuration configuration;
@@ -70,7 +70,7 @@ internal sealed class CalendarApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         theme = context.Theme;
         navigation = context.Navigation;
@@ -84,7 +84,7 @@ internal sealed class CalendarApp : IPhoneApp
 
     private void DrawView(CalendarScreen screen, Rect area, int depth)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ui.Body(area);
         if (screen == CalendarScreen.AddEvent)
         {
@@ -151,7 +151,7 @@ internal sealed class CalendarApp : IPhoneApp
     {
         var drawList = ImGui.GetWindowDrawList();
         var iconColor = ui.Theme.TextStrong;
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered = UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(iconColor, hovered ? 0.20f : 0.12f)), 32);
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
@@ -250,7 +250,7 @@ internal sealed class CalendarApp : IPhoneApp
     private bool DrawSaveButton(Rect rect, float scale, bool enabled)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = enabled && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = enabled && UiInteract.Hover(rect.Min, rect.Max);
         var fill = !enabled ? Palette.WithAlpha(ui.Accent, 0.35f) :
             hovered ? Palette.Mix(ui.Accent, new Vector4(0f, 0f, 0f, 1f), 0.12f) : ui.Accent;
         Squircle.Fill(drawList, rect.Min, rect.Max, rect.Height * 0.5f, ImGui.GetColorU32(fill));

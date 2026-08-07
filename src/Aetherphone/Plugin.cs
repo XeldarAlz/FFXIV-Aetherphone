@@ -5,12 +5,16 @@ using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Emote;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
+using Aetherphone.Core.Photos;
+using Aetherphone.Core.Platform;
 using Aetherphone.Core.Shell;
+using Aetherphone.Core.Theme;
 using Aetherphone.Core.Updates;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Windows;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
+using Dalamud.Game.Config;
 using Dalamud.Game.Gui.ContextMenu;
 using Dalamud.Game.Gui.Dtr;
 using Dalamud.IoC;
@@ -38,24 +42,27 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static INamePlateGui NamePlateGui { get; private set; } = null!;
     [PluginService] internal static IContextMenu ContextMenu { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
+    [PluginService] internal static IGameConfig GameConfig { get; private set; } = null!;
     [PluginService] internal static IUnlockState UnlockState { get; private set; } = null!;
+    [PluginService] internal static IAetheryteList AetheryteList { get; private set; } = null!;
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
     internal static WallpaperLibrary Wallpapers { get; private set; } = null!;
     internal static DeviceStatus Device { get; private set; } = null!;
     internal static UpdateCheckService Updates { get; private set; } = null!;
+    internal static PhotoWindow PhotoWindow { get; private set; } = null!;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
     private readonly PhoneShell shell;
     private readonly PhoneWindow phoneWindow;
-    private readonly AboutWindow aboutWindow;
     private readonly UpdateChipWindow updateChipWindow;
     private readonly PhoneEmoteController phoneEmote;
     private readonly TimerNotifier timerNotifier;
     private readonly CalendarReminderService calendarReminders;
     private readonly ClockAlarmService clockAlarms;
     private readonly ReminderService reminders;
+    private readonly ScreenshotImportService screenshotImport;
     private readonly IDtrBarEntry dtrEntry;
     private static CommandInfo? primaryCommand;
     private static CommandInfo? aliasCommand;
@@ -75,30 +82,39 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateMessage();
             Cfg.MigrateMessagesMerge();
             Cfg.MigrateSetupCompleted();
+            Cfg.MigratePhoneWidth();
             Cfg.MigrateControlPanelRepack();
             Cfg.MigrateCharacterSessions();
+            Cfg.MigrateHousingRefreshFloor();
             InitializeLocalization();
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
                 TextureProvider, PluginInterface.ConfigDirectory, UnlockState, Condition);
-            Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom);
+            FilePicker.ProblemReporter = message =>
+                services.Confirm.Alert(null, message, Loc.T(L.Common.Close));
+            Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom,
+                PhoneSizeCatalog.ZoomFor(Cfg.PhoneWidth));
             EmojiCatalog.Load();
             Wallpapers = services.Wallpapers;
-            aboutWindow = new AboutWindow();
-            shell = new PhoneShell(services, AppRegistry.BuildDefault(services, ShowAbout));
+            var bundle = AppRegistry.BuildDefault(services);
+            shell = new PhoneShell(services, bundle);
+            screenshotImport = new ScreenshotImportService(bundle.Photos, Cfg);
             phoneWindow = new PhoneWindow(shell, Cfg);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
+            PhotoWindow = new PhotoWindow(services.Themes);
             windowSystem.AddWindow(phoneWindow);
             windowSystem.AddWindow(updateChipWindow);
-            windowSystem.AddWindow(aboutWindow);
+            windowSystem.AddWindow(PhotoWindow);
             services.Visibility.Bind(() => phoneWindow is { IsOpen: true, IsMinimized: false });
             phoneEmote = new PhoneEmoteController(Cfg, Framework, ObjectTable, Condition, DataManager,
                 () => services.Visibility.IsVisible);
-            timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications);
-            calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications);
-            clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications);
-            reminders = new ReminderService(Cfg, Framework, services.Notifications);
+            timerNotifier = new TimerNotifier(Cfg, Framework, services.Notifications, services.Installer.Gate("timers"));
+            calendarReminders = new CalendarReminderService(Cfg, Framework, services.Notifications,
+                services.Installer.Gate("calendar"));
+            clockAlarms = new ClockAlarmService(Cfg, Framework, services.Notifications,
+                services.Installer.Gate("clock"));
+            reminders = new ReminderService(Cfg, Framework, services.Notifications, services.Installer.Gate("notes"));
             services.CharacterSwitcher.Start();
             services.CharacterWatch.Start();
             services.Calls.IncomingCallPresented += OnIncomingCall;
@@ -114,7 +130,9 @@ public sealed class Plugin : IDalamudPlugin
             CommandManager.AddHandler(AepConstants.PrimaryCommand, primaryCommand);
             CommandManager.AddHandler(AepConstants.AliasCommand, aliasCommand);
             PluginInterface.UiBuilder.Draw += windowSystem.Draw;
+            PluginInterface.UiBuilder.Draw += FilePicker.Draw;
             PluginInterface.UiBuilder.OpenMainUi += phoneWindow.ToggleShell;
+            PluginInterface.UiBuilder.OpenConfigUi += phoneWindow.OpenSettings;
             PluginInterface.UiBuilder.DisableGposeUiHide = Cfg.ShowInGpose;
             ClientState.Login += OnLogin;
 
@@ -141,9 +159,11 @@ public sealed class Plugin : IDalamudPlugin
     private void TearDownPartialConstruction()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        PluginInterface.UiBuilder.Draw -= FilePicker.Draw;
         if (phoneWindow is not null)
         {
             PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
+            PluginInterface.UiBuilder.OpenConfigUi -= phoneWindow.OpenSettings;
         }
 
         ClientState.Login -= OnLogin;
@@ -229,7 +249,9 @@ public sealed class Plugin : IDalamudPlugin
     public void Dispose()
     {
         PluginInterface.UiBuilder.Draw -= windowSystem.Draw;
+        PluginInterface.UiBuilder.Draw -= FilePicker.Draw;
         PluginInterface.UiBuilder.OpenMainUi -= phoneWindow.ToggleShell;
+        PluginInterface.UiBuilder.OpenConfigUi -= phoneWindow.OpenSettings;
         ClientState.Login -= OnLogin;
         Framework.Update -= OnAutoOpenTick;
         services.Notifications.Changed -= UpdateDtrBadge;
@@ -243,6 +265,7 @@ public sealed class Plugin : IDalamudPlugin
         calendarReminders.Dispose();
         clockAlarms.Dispose();
         reminders.Dispose();
+        screenshotImport.Dispose();
         Updates.Dispose();
         shell.Dispose();
         services.Dispose();
@@ -318,12 +341,6 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
-        if (argument.Equals("about", StringComparison.OrdinalIgnoreCase))
-        {
-            ShowAbout();
-            return;
-        }
-
         if (argument.Equals("reset", StringComparison.OrdinalIgnoreCase))
         {
             phoneWindow.Recenter();
@@ -337,10 +354,33 @@ public sealed class Plugin : IDalamudPlugin
             return;
         }
 
+        if (argument.Equals("run", StringComparison.OrdinalIgnoreCase) ||
+            argument.StartsWith("run ", StringComparison.OrdinalIgnoreCase))
+        {
+            RunShortcut(argument.Length > 4 ? argument.Substring(4).Trim() : string.Empty);
+            return;
+        }
+
         phoneWindow.ToggleShell();
     }
 
-    private void ShowAbout() => aboutWindow.IsOpen = true;
+    private void RunShortcut(string name)
+    {
+        if (name.Length == 0)
+        {
+            ChatGui.Print(Loc.T(L.Plugin.RunUsage));
+            return;
+        }
+
+        var shortcut = services.Shortcuts.FindByName(name);
+        if (shortcut is null)
+        {
+            ChatGui.Print(Loc.T(L.Plugin.ShortcutNotFound, name));
+            return;
+        }
+
+        services.ShortcutRunner.Run(shortcut);
+    }
 
     private void OnIncomingCall()
     {

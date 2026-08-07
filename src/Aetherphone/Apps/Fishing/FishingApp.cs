@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Fishing;
@@ -55,7 +54,7 @@ internal sealed class FishingApp : IPhoneApp
             Refresh();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         var utcNow = DateTime.UtcNow;
 
@@ -120,9 +119,11 @@ internal sealed class FishingApp : IPhoneApp
         ProgressRing.Glow(tileCenter, tile * 0.62f, tint, 0.30f + 0.16f * Pulse.Wave(Pulse.Breath));
         IconTile.Draw(tileCenter, tile, tint, TimeOfDayIcon(plan.TimeOfDay));
 
-        ImGui.PushClipRect(new Vector2(innerLeft, min.Y), new Vector2(innerRight - tile - 10f * scale, max.Y), true);
-        Typography.Draw(new Vector2(innerLeft, min.Y + 34f * scale), plan.RouteName, ui.TitleInk, TextStyles.Title2);
-        ImGui.PopClipRect();
+        var titleMaxWidth = innerRight - tile - 10f * scale - innerLeft;
+        var titleHovering = UiInteract.Hover(new Vector2(innerLeft, min.Y + 30f * scale),
+            new Vector2(innerLeft + titleMaxWidth, min.Y + 58f * scale));
+        Marquee.DrawLeft("fishing.hero." + plan.RouteName, plan.RouteName, innerLeft, min.Y + 34f * scale,
+            titleMaxWidth, TextStyles.Title2, ui.TitleInk, titleHovering);
 
         DrawHeroTimeLine(current, plan.TimeOfDay, tint, new Vector2(innerLeft, min.Y + 64f * scale), utcNow);
 
@@ -186,8 +187,6 @@ internal sealed class FishingApp : IPhoneApp
             return;
         }
 
-        ImGui.PushClipRect(new Vector2(innerLeft, top), new Vector2(innerRight, top + plan.BlueFish.Length * HeroFishRowHeight * scale),
-            true);
         for (var index = 0; index < plan.BlueFish.Length; index++)
         {
             var fish = plan.BlueFish[index];
@@ -195,14 +194,14 @@ internal sealed class FishingApp : IPhoneApp
             ProgressRing.CenterIcon(new Vector2(innerLeft + 7f * scale, rowCenterY), FontAwesomeIcon.Fish,
                 Accent.BlueSoft, 12f * scale);
             var nameLeft = innerLeft + 22f * scale;
-            Typography.Draw(new Vector2(nameLeft, rowCenterY - 8f * scale), fish.Name, ui.BodyInk,
-                TextStyles.SubheadlineEmphasized);
-            var nameWidth = Typography.Measure(fish.Name, TextStyles.SubheadlineEmphasized).X;
-            Typography.Draw(new Vector2(nameLeft + nameWidth + 8f * scale, rowCenterY - 6f * scale), fish.Bait,
-                ui.MutedInk, TextStyles.Footnote);
+            var rowAvailableWidth = MathF.Max(1f, innerRight - nameLeft);
+            var nameMaxWidth = rowAvailableWidth * 0.55f;
+            var nameWidth = Marquee.DrawLeftAuto("fishing.hero.bluefish." + index + ".name", fish.Name, nameLeft,
+                rowCenterY - 8f * scale, nameMaxWidth, TextStyles.SubheadlineEmphasized, ui.BodyInk);
+            var baitMaxWidth = MathF.Max(1f, innerRight - (nameLeft + nameWidth + 8f * scale));
+            Marquee.DrawLeftAuto("fishing.hero.bluefish." + index + ".bait", fish.Bait, nameLeft + nameWidth + 8f * scale,
+                rowCenterY - 6f * scale, baitMaxWidth, TextStyles.Footnote, ui.MutedInk);
         }
-
-        ImGui.PopClipRect();
     }
 
     private void DrawHeroProgress(in OceanVoyageSlot current, DateTime utcNow, Rect bar)
@@ -280,24 +279,37 @@ internal sealed class FishingApp : IPhoneApp
 
         var textLeft = row.Min.X + tile + 12f * scale;
         var textRight = row.Max.X - timeSize.X - 12f * scale;
-        ImGui.PushClipRect(new Vector2(textLeft, row.Min.Y), new Vector2(textRight, row.Max.Y), true);
+        var rowMaxWidth = textRight - textLeft;
+        var rowId = "fishing.row." + plan.RouteName + "." + voyage.BoardingUtc.Ticks;
         if (plan.BlueFish.Length == 0)
         {
             var nameSize = Typography.Measure(plan.RouteName, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - nameSize.Y * 0.5f), plan.RouteName, ui.TitleInk,
-                TextStyles.Headline);
+            var nameY = row.Center.Y - nameSize.Y * 0.5f;
+            var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
+                new Vector2(textLeft + rowMaxWidth, nameY + nameSize.Y));
+            Marquee.DrawLeft(rowId, plan.RouteName,
+                textLeft, nameY, rowMaxWidth, TextStyles.Headline, ui.TitleInk, nameHovering);
         }
         else
         {
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - 18f * scale), plan.RouteName, ui.TitleInk,
-                TextStyles.Headline);
+            var nameY = row.Center.Y - 18f * scale;
+            var nameSize = Typography.Measure(plan.RouteName, TextStyles.Headline);
+            var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
+                new Vector2(textLeft + rowMaxWidth, nameY + nameSize.Y));
+            Marquee.DrawLeft(rowId, plan.RouteName, textLeft, nameY,
+                rowMaxWidth, TextStyles.Headline, ui.TitleInk, nameHovering);
             ProgressRing.CenterIcon(new Vector2(textLeft + 5f * scale, row.Center.Y + 9f * scale),
                 FontAwesomeIcon.Fish, Accent.BlueSoft, 10f * scale);
-            Typography.Draw(new Vector2(textLeft + 14f * scale, row.Center.Y + 2f * scale), BlueFishNames(plan),
-                ui.MutedInk, TextStyles.Footnote);
+            var blueFishLeft = textLeft + 14f * scale;
+            var blueFishY = row.Center.Y + 2f * scale;
+            var blueFishMaxWidth = MathF.Max(1f, textRight - blueFishLeft);
+            var blueFishNames = BlueFishNames(plan);
+            var blueFishSize = Typography.Measure(blueFishNames, TextStyles.Footnote);
+            var blueFishHovering = UiInteract.Hover(new Vector2(blueFishLeft, blueFishY),
+                new Vector2(blueFishLeft + blueFishMaxWidth, blueFishY + blueFishSize.Y));
+            Marquee.DrawLeft(rowId + ".sub", blueFishNames, blueFishLeft, blueFishY, blueFishMaxWidth,
+                TextStyles.Footnote, ui.MutedInk, blueFishHovering);
         }
-
-        ImGui.PopClipRect();
     }
 
     private void DrawNote(float scale)

@@ -2,7 +2,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -15,7 +14,7 @@ internal static class ModerationOverlay
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.55f)));
         var center = new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f);
         AppSkin.Icon(drawList, new Vector2(center.X, center.Y - 26f * scale), FontAwesomeIcon.Hourglass.ToIconString(),

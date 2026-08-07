@@ -1,5 +1,7 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
+using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Photos;
 using Aetherphone.Core.Wallpapers;
@@ -20,15 +22,20 @@ internal sealed class AvatarComposer
     private readonly Func<bool> busy;
     private readonly Action<string, WallpaperCrop, Action<bool>> update;
     private readonly AvatarComposerLabels labels;
+    private readonly ConfirmService confirm;
+    private readonly Func<AvatarUploadOutcome> failure;
     private readonly ImagePickCrop picker;
     private volatile int outcome;
 
     public AvatarComposer(Func<bool> busy, Action<string, WallpaperCrop, Action<bool>> update,
-        AvatarComposerLabels labels, PhotoLibrary library, WallpaperImageCache images)
+        AvatarComposerLabels labels, PhotoLibrary library, WallpaperImageCache images, ConfirmService confirm,
+        Func<AvatarUploadOutcome> failure)
     {
         this.busy = busy;
         this.update = update;
         this.labels = labels;
+        this.confirm = confirm;
+        this.failure = failure;
         picker = new ImagePickCrop(library, images);
     }
 
@@ -49,6 +56,7 @@ internal sealed class AvatarComposer
         if (outcome == 2)
         {
             outcome = 0;
+            confirm.Alert(null, Loc.T(AvatarUpload.Message(failure())), Loc.T(L.Account.FailDismiss));
         }
 
         var pickLabels = new ImagePickCropLabels(Loc.T(labels.ChangePhoto), Loc.T(labels.ImportFromPc),

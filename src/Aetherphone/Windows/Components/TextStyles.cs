@@ -1,8 +1,23 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Theme;
 
 namespace Aetherphone.Windows.Components;
 
 internal readonly record struct TextStyle(float Scale, FontWeight Weight);
+
+internal enum NameEffectKind
+{
+    None = 0,
+    Gradient,
+    Breath,
+    Ripple,
+    Flow,
+    Glint,
+    Sweep,
+    Wave,
+}
+
+internal readonly record struct TextEffect(NameEffectKind Kind, Vector4 Crest, float Phase, WaveRamp Ramp = default);
 
 internal static class TextStyles
 {

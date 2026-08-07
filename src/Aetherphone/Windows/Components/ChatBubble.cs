@@ -3,7 +3,6 @@ using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -31,7 +30,7 @@ internal static class ChatBubble
     public static bool Draw(ChatLine line, PhoneTheme theme, float entrance = 1f, GroupBubble group = default)
     {
         var contextRequested = false;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var available = ImGui.GetContentRegionAvail().X;
         var padding = 10f * scale;
         var outgoing = line.Direction == MessageDirection.Outgoing;
@@ -54,8 +53,12 @@ internal static class ChatBubble
         {
             var senderName = group.SenderName ?? string.Empty;
             var dl = ImGui.GetWindowDrawList();
-            Typography.Draw(dl, new Vector2(screenOrigin.X + gutter + padding, screenOrigin.Y), senderName,
-                group.SenderColor, TextStyles.Caption1.Scale, TextStyles.Caption1.Weight);
+            var headerLeft = screenOrigin.X + gutter + padding;
+            var headerMaxWidth = screenOrigin.X + available - padding - headerLeft;
+            var headerHovering = UiInteract.Hover(new Vector2(headerLeft, screenOrigin.Y),
+                new Vector2(headerLeft + headerMaxWidth, screenOrigin.Y + headerHeight));
+            Marquee.DrawLeft("chatbubble.sender." + senderName, senderName, headerLeft, screenOrigin.Y,
+                headerMaxWidth, TextStyles.Caption1, group.SenderColor, headerHovering);
             var avatarCenter = new Vector2(screenOrigin.X + avatarRadius,
                 screenOrigin.Y + headerHeight + bubbleHeight - avatarRadius);
             AvatarView.Draw(dl, avatarCenter, avatarRadius, group.SenderColor, Initials.Of(senderName), 0.7f,
@@ -73,8 +76,7 @@ internal static class ChatBubble
             ImGui.SetCursorPos(new Vector2(start.X + offsetX, bubbleTop));
             var bubbleScreen = ImGui.GetCursorScreenPos();
             var bubbleEnd = bubbleScreen + new Vector2(bubbleWidth, bubbleHeight);
-            contextRequested = !UiInteract.InputBlocked && ImGui.IsMouseHoveringRect(bubbleScreen, bubbleEnd)
-                && ImGui.IsMouseClicked(ImGuiMouseButton.Right);
+            contextRequested = UiInteract.Hover(bubbleScreen, bubbleEnd) && ImGui.IsMouseClicked(ImGuiMouseButton.Right);
             Squircle.Fill(ImGui.GetWindowDrawList(), bubbleScreen,
                 bubbleScreen + new Vector2(bubbleWidth, bubbleHeight), 13f * scale, ImGui.GetColorU32(fillColor));
             if (linkLayout is null)

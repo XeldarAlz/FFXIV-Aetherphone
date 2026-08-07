@@ -10,6 +10,28 @@ internal static class AppPalettes
     private static readonly Vector4 GlassField = new(1f, 1f, 1f, 0.10f);
     private static readonly Vector4 DefaultHover = new(1f, 1f, 1f, 0.06f);
 
+    public static readonly AppPalette Health = new()
+    {
+        Accent = AppAccents.For("health"),
+        TitleInk = new(0.97f, 0.99f, 0.95f, 1f),
+        BodyInk = new(0.90f, 0.95f, 0.85f, 0.96f),
+        MutedInk = new(0.74f, 0.82f, 0.66f, 0.85f),
+        HeaderInk = new(0.78f, 0.95f, 0.58f, 0.95f),
+        HeadingInk = new(0.96f, 0.99f, 0.93f, 1f),
+        BackdropTop = new(0.09f, 0.17f, 0.05f, 1f),
+        BackdropBottom = new(0.03f, 0.04f, 0.02f, 1f),
+        BloomTop = new(0.48f, 0.80f, 0.24f, 0.22f),
+        BloomBottom = new(0.22f, 0.40f, 0.10f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly Vector4 HealthWater = new(0.28f, 0.68f, 0.92f, 1f);
+    public static readonly Vector4 HealthEnergy = new(0.96f, 0.62f, 0.24f, 1f);
+    public static readonly Vector4 HealthTeleport = new(0.62f, 0.52f, 0.96f, 1f);
+
     public static readonly AppPalette Chirper = new()
     {
         Accent = AppAccents.For("chirper"),
@@ -162,10 +184,68 @@ internal static class AppPalettes
         MutedInk = new(0.83f, 0.76f, 0.87f, 0.94f),
         HeaderInk = new(0.99f, 0.74f, 0.86f, 0.97f),
         HeadingInk = new(0.99f, 0.95f, 0.98f, 1f),
-        BackdropTop = new(0.17f, 0.06f, 0.24f, 1f),
-        BackdropBottom = new(0.05f, 0.02f, 0.09f, 1f),
-        BloomTop = new(0.90f, 0.24f, 0.52f, 0.24f),
-        BloomBottom = new(0.36f, 0.14f, 0.52f, 0f),
+        BackdropTop = new(0.33f, 0.09f, 0.02f, 1f),
+        BackdropBottom = new(0.10f, 0.03f, 0.01f, 1f),
+        BloomTop = new(0.92f, 0.34f, 0.16f, 0.24f),
+        BloomBottom = new(0.48f, 0.14f, 0.06f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Housing = new()
+    {
+        Accent = AppAccents.For("housing"),
+        TitleInk = new(0.97f, 0.97f, 0.94f, 1f),
+        BodyInk = new(0.90f, 0.92f, 0.87f, 0.96f),
+        MutedInk = new(0.70f, 0.75f, 0.70f, 0.88f),
+        HeaderInk = new(0.72f, 0.88f, 0.76f, 0.95f),
+        HeadingInk = new(0.95f, 0.97f, 0.93f, 1f),
+        BackdropTop = new(0.07f, 0.13f, 0.11f, 1f),
+        BackdropBottom = new(0.03f, 0.05f, 0.05f, 1f),
+        BloomTop = new(0.28f, 0.62f, 0.44f, 0.20f),
+        BloomBottom = new(0.16f, 0.30f, 0.24f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+    public static readonly Vector4 HousingParchment = new(0.86f, 0.80f, 0.66f, 1f);
+    public static readonly Vector4 HousingBrass = new(0.84f, 0.68f, 0.34f, 1f);
+    public static readonly Vector4 HousingResults = new(0.94f, 0.68f, 0.26f, 1f);
+    public static readonly Vector4 HousingClosed = new(0.55f, 0.58f, 0.60f, 1f);
+
+    public static readonly AppPalette Muster = new()
+    {
+        Accent = AppAccents.For("muster"),
+        TitleInk = new(0.99f, 0.97f, 0.94f, 1f),
+        BodyInk = new(0.95f, 0.90f, 0.84f, 0.96f),
+        MutedInk = new(0.80f, 0.72f, 0.62f, 0.85f),
+        HeaderInk = new(0.99f, 0.80f, 0.55f, 0.95f),
+        HeadingInk = new(0.99f, 0.94f, 0.87f, 1f),
+        BackdropTop = new(0.16f, 0.10f, 0.05f, 1f),
+        BackdropBottom = new(0.05f, 0.03f, 0.02f, 1f),
+        BloomTop = new(0.94f, 0.55f, 0.20f, 0.22f),
+        BloomBottom = new(0.50f, 0.26f, 0.08f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette YellowPages = new()
+    {
+        Accent = AppAccents.For("yellowpages"),
+        TitleInk = new(0.99f, 0.97f, 0.92f, 1f),
+        BodyInk = new(0.96f, 0.92f, 0.82f, 0.96f),
+        MutedInk = new(0.82f, 0.75f, 0.60f, 0.85f),
+        HeaderInk = new(0.99f, 0.86f, 0.48f, 0.95f),
+        HeadingInk = new(0.99f, 0.95f, 0.85f, 1f),
+        BackdropTop = new(0.15f, 0.11f, 0.03f, 1f),
+        BackdropBottom = new(0.05f, 0.04f, 0.01f, 1f),
+        BloomTop = new(0.91f, 0.68f, 0.15f, 0.22f),
+        BloomBottom = new(0.48f, 0.32f, 0.05f, 0f),
         CardFill = GlassFill,
         CardStroke = GlassStroke,
         FieldSurface = GlassField,
@@ -190,24 +270,6 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
-    public static readonly AppPalette Dev = new()
-    {
-        Accent = AppAccents.For("dev"),
-        TitleInk = new(0.96f, 0.97f, 1f, 1f),
-        BodyInk = new(0.87f, 0.89f, 0.98f, 0.96f),
-        MutedInk = new(0.66f, 0.69f, 0.84f, 0.85f),
-        HeaderInk = new(0.74f, 0.78f, 1f, 0.95f),
-        HeadingInk = new(0.95f, 0.96f, 1f, 1f),
-        BackdropTop = new(0.10f, 0.11f, 0.26f, 1f),
-        BackdropBottom = new(0.03f, 0.03f, 0.08f, 1f),
-        BloomTop = new(0.42f, 0.46f, 0.98f, 0.22f),
-        BloomBottom = new(0.20f, 0.22f, 0.55f, 0f),
-        CardFill = GlassFill,
-        CardStroke = GlassStroke,
-        FieldSurface = GlassField,
-        HoverTint = DefaultHover,
-    };
-
     public static readonly AppPalette Polls = new()
     {
         Accent = AppAccents.For("polls"),
@@ -220,6 +282,24 @@ internal static class AppPalettes
         BackdropBottom = new(0.03f, 0.02f, 0.09f, 1f),
         BloomTop = new(0.56f, 0.44f, 0.96f, 0.22f),
         BloomBottom = new(0.28f, 0.18f, 0.55f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Announcements = new()
+    {
+        Accent = AppAccents.For("announcements"),
+        TitleInk = new(1f, 0.97f, 0.95f, 1f),
+        BodyInk = new(0.95f, 0.89f, 0.85f, 0.96f),
+        MutedInk = new(0.82f, 0.71f, 0.65f, 0.85f),
+        HeaderInk = new(0.99f, 0.78f, 0.66f, 0.95f),
+        HeadingInk = new(1f, 0.95f, 0.92f, 1f),
+        BackdropTop = new(0.22f, 0.11f, 0.07f, 1f),
+        BackdropBottom = new(0.07f, 0.03f, 0.02f, 1f),
+        BloomTop = new(0.98f, 0.48f, 0.32f, 0.20f),
+        BloomBottom = new(0.55f, 0.22f, 0.12f, 0f),
         CardFill = GlassFill,
         CardStroke = GlassStroke,
         FieldSurface = GlassField,
@@ -370,7 +450,6 @@ internal static class AppPalettes
         HoverTint = DefaultHover,
     };
 
-    /// <summary>The Jobs app lets the user pick its accent, so its palette is derived rather than fixed.</summary>
     public static AppPalette JobsFor(Vector4 accent) => new()
     {
         Accent = accent,
@@ -403,6 +482,24 @@ internal static class AppPalettes
         BloomBottom = new(0.48f, 0.27f, 0.09f, 0f),
         CardFill = new(1f, 1f, 1f, 0.05f),
         CardStroke = new(1f, 1f, 1f, 0.07f),
+        FieldSurface = GlassField,
+        HoverTint = DefaultHover,
+    };
+
+    public static readonly AppPalette Shortcuts = new()
+    {
+        Accent = AppAccents.For("shortcuts"),
+        TitleInk = new(0.97f, 0.96f, 1f, 1f),
+        BodyInk = new(0.89f, 0.87f, 0.97f, 0.96f),
+        MutedInk = new(0.70f, 0.68f, 0.84f, 0.85f),
+        HeaderInk = new(0.78f, 0.72f, 0.99f, 0.95f),
+        HeadingInk = new(0.97f, 0.96f, 1f, 1f),
+        BackdropTop = new(0.11f, 0.08f, 0.20f, 1f),
+        BackdropBottom = new(0.03f, 0.02f, 0.05f, 1f),
+        BloomTop = new(0.55f, 0.38f, 0.96f, 0.22f),
+        BloomBottom = new(0.26f, 0.18f, 0.52f, 0f),
+        CardFill = GlassFill,
+        CardStroke = GlassStroke,
         FieldSurface = GlassField,
         HoverTint = DefaultHover,
     };

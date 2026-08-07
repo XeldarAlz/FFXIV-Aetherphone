@@ -20,4 +20,9 @@ internal sealed class MediaClient
     {
         return net.PutBytesAsync(new Uri(uploadUrl), bytes, contentType, token);
     }
+
+    public Task<byte[]?> DownloadAsync(Uri uri, CancellationToken token)
+    {
+        return net.GetBytesAsync(uri, token);
+    }
 }

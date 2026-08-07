@@ -17,12 +17,20 @@ internal sealed class ConfirmRequest
 
 internal sealed class ConfirmService
 {
+    private readonly Queue<ConfirmRequest> queued = new();
+
     public ConfirmRequest? Active { get; private set; }
     public volatile bool Busy;
     public string? Status { get; private set; }
 
     public void Ask(ConfirmRequest request)
     {
+        if (Active is not null)
+        {
+            queued.Enqueue(request);
+            return;
+        }
+
         Active = request;
         Busy = false;
         Status = null;
@@ -59,7 +67,7 @@ internal sealed class ConfirmService
                 Busy = false;
                 if (ok)
                 {
-                    Active = null;
+                    Advance();
                 }
                 else
                 {
@@ -70,7 +78,7 @@ internal sealed class ConfirmService
         }
 
         request.Confirm?.Invoke();
-        Active = null;
+        Advance();
     }
 
     public void CancelActive()
@@ -81,6 +89,13 @@ internal sealed class ConfirmService
         }
 
         request.Cancel?.Invoke();
-        Active = null;
+        Advance();
+    }
+
+    private void Advance()
+    {
+        Busy = false;
+        Status = null;
+        Active = queued.Count > 0 ? queued.Dequeue() : null;
     }
 }

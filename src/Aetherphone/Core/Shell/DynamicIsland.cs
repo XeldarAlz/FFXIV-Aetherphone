@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Core.Shell;
@@ -64,12 +63,12 @@ internal sealed class DynamicIsland
             return false;
         }
 
-        if (ImGui.IsMouseHoveringRect(lastBounds.Min, lastBounds.Max))
+        if (UiInteract.Hover(lastBounds.Min, lastBounds.Max))
         {
             return true;
         }
 
-        return lastBubbleVisible && ImGui.IsMouseHoveringRect(lastBubble.Min, lastBubble.Max);
+        return lastBubbleVisible && UiInteract.Hover(lastBubble.Min, lastBubble.Max);
     }
 
     public void Draw(Rect screen, PhoneTheme theme, INavigator navigation, string? foregroundAppId)
@@ -106,13 +105,13 @@ internal sealed class DynamicIsland
     private void DrawContent(Rect screen, PhoneTheme theme, INavigator navigation, CallView view, float presenceValue,
         float delta, string? foregroundAppId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rest = StatusBar.BaseIsland(screen);
         var compact = Expand(rest, CompactPadX * scale, CompactPadY * scale);
         var expanded = ExpandedBounds(screen, rest, scale);
         var morphed = LerpRect(rest, compact, presenceValue);
         var hoverBounds = LerpRect(morphed, expanded, Easing.SmoothStep(Math.Clamp(expand.Value, 0f, 1f)));
-        var hovered = ImGui.IsMouseHoveringRect(hoverBounds.Min, hoverBounds.Max);
+        var hovered = UiInteract.Hover(hoverBounds.Min, hoverBounds.Max);
         var suppressExpand = shownKind == ActivityKind.Music &&
                              string.Equals(foregroundAppId, "music", StringComparison.Ordinal);
         expand.Step(hovered && presenceValue > 0.6f && !suppressExpand ? 1f : 0f, ExpandSmoothTime, delta);
@@ -130,7 +129,7 @@ internal sealed class DynamicIsland
                 0.24f * expandEased);
         }
 
-        drawList.AddRectFilled(bounds.Min, bounds.Max, ImGui.GetColorU32(theme.BezelOuter), rounding);
+        drawList.AddRectFilled(bounds.Min, bounds.Max, ImGui.GetColorU32(theme.Glass), rounding);
         drawList.AddRect(bounds.Min, bounds.Max,
             ImGui.GetColorU32(Palette.WithAlpha(accent, (0.16f + 0.44f * expandEased) * presenceValue)), rounding,
             ImDrawFlags.RoundCornersAll, 1.5f * scale);
@@ -179,12 +178,12 @@ internal sealed class DynamicIsland
         var centerX = float.Lerp(bounds.Max.X - radius, bounds.Max.X + BubbleGap * scale + radius, splitValue);
         var center = new Vector2(centerX, bounds.Center.Y);
         lastBubble = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
-        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.BezelOuter, alpha)), 32);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(theme.Glass, alpha)), 32);
         drawList.AddCircle(center, radius, ImGui.GetColorU32(Palette.WithAlpha(MusicAccent, 0.30f * alpha)), 32,
             1.4f * scale);
         Equalizer.Draw(drawList, new Vector2(center.X + 5f * scale, center.Y), scale, radius * 0.66f, clock,
             MusicAccent, alpha, playback.IsPlaying);
-        var hovered = ImGui.IsMouseHoveringRect(lastBubble.Min, lastBubble.Max);
+        var hovered = UiInteract.Hover(lastBubble.Min, lastBubble.Max);
         if (!hovered)
         {
             return;
@@ -222,7 +221,8 @@ internal sealed class DynamicIsland
         var dotCenter = new Vector2(bounds.Min.X + 13f * scale, bounds.Center.Y);
         drawList.AddCircleFilled(dotCenter, (3.4f + 1.2f * pulse) * scale,
             ImGui.GetColorU32(Palette.WithAlpha(CallAccent, alpha)), 16);
-        var label = CallLabel(view);
+        var maxWidth = MathF.Max(1f, bounds.Max.X - 11f * scale - (dotCenter.X + 8f * scale));
+        var label = Typography.FitText(CallLabel(view), maxWidth, 0.82f, FontWeight.Regular);
         var size = Typography.Measure(label, 0.82f);
         Typography.Draw(drawList, new Vector2(bounds.Max.X - size.X - 11f * scale, bounds.Center.Y - size.Y * 0.5f),
             label, Palette.WithAlpha(Ink, alpha), 0.82f);
@@ -242,11 +242,15 @@ internal sealed class DynamicIsland
         var discCenter = new Vector2(left + 18f * scale + discRadius, top + 30f * scale);
         ArtGradient.DrawDisc(drawList, discCenter, discRadius, ArtGradient.FromName(playback.Title), alpha);
         var textLeft = discCenter.X + discRadius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, top + 18f * scale),
-            Typography.FitText(playback.Title, bounds.Max.X - 16f * scale - textLeft, 1.0f, FontWeight.SemiBold),
-            Palette.WithAlpha(theme.TextStrong, alpha), 1.0f, FontWeight.SemiBold);
+        var textMaxWidth = bounds.Max.X - 16f * scale - textLeft;
+        var titleTop = top + 18f * scale;
+        var titleSize = Typography.Measure(playback.Title, 1.0f, FontWeight.SemiBold);
+        var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleTop),
+            new Vector2(textLeft + textMaxWidth, titleTop + titleSize.Y));
+        Marquee.DrawLeft("dynamicisland.music.title", playback.Title, textLeft, titleTop, textMaxWidth,
+            new TextStyle(1.0f, FontWeight.SemiBold), Palette.WithAlpha(theme.TextStrong, alpha), titleHovering);
         Typography.Draw(new Vector2(textLeft, top + 40f * scale),
-            Typography.FitText(playback.Subtitle, bounds.Max.X - 16f * scale - textLeft, 0.8f, FontWeight.Regular),
+            Typography.FitText(playback.Subtitle, textMaxWidth, 0.8f, FontWeight.Regular),
             Palette.WithAlpha(MusicAccent, 0.9f * alpha), 0.8f);
         var active = alpha > ControlThreshold;
         var controlY = top + 66f * scale;
@@ -333,7 +337,7 @@ internal sealed class DynamicIsland
     {
         var drawList = ImGui.GetWindowDrawList();
         var hovered = active &&
-                      ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius),
+                      UiInteract.Hover(center - new Vector2(radius, radius),
                           center + new Vector2(radius, radius));
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha * color.W)), 28);

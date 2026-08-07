@@ -83,7 +83,8 @@ internal sealed class MediaCache : IDisposable
                 return;
             }
 
-            var wrap = await ImageProcessor.DecodeToTextureAsync(textures, bytes, key, token).ConfigureAwait(false);
+            var wrap = await ImageProcessor.DecodeToTextureAsync(textures, bytes, key, ImageProcessor.MaxDecodePixels,
+                token).ConfigureAwait(false);
             if (!ready.TryAdd(key, wrap))
             {
                 wrap.Dispose();

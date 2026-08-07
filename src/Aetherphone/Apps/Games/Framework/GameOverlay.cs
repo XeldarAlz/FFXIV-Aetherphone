@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Framework;
 
@@ -50,7 +49,7 @@ internal static class GameOverlay
 
     public static bool Draw(Rect area, PhoneTheme theme, Vector4 accent, float progress, in GameResult result)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var now = ImGui.GetTime();

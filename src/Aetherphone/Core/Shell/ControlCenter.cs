@@ -11,7 +11,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Core.Shell;
 
@@ -44,6 +43,7 @@ internal sealed class ControlCenter
     private readonly PlaybackHub playback;
     private readonly INavigator navigation;
     private readonly NotificationService notifications;
+    private readonly NotificationRouter router;
     private readonly NotificationCenter notificationCenter;
     private readonly ControlRegistry registry;
     private readonly ControlLayoutService layout;
@@ -70,6 +70,7 @@ internal sealed class ControlCenter
         this.playback = playback;
         this.navigation = navigation;
         this.notifications = notifications;
+        this.router = router;
         notificationCenter = new NotificationCenter(notifications, router, Dismiss);
         registry = new ControlRegistry(configuration, themes, playback, calls, navigation, Dismiss);
         layout = new ControlLayoutService(registry, configuration);
@@ -91,7 +92,12 @@ internal sealed class ControlCenter
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        if (UiInteract.HoverWindowOnly(screen.Min, screen.Max, false))
+        {
+            UiInteract.ReportGestureSurface();
+        }
+
+        var scale = UiScale.Current;
         var dl = ImGui.GetForegroundDrawList();
         var height = screen.Height;
         var rounding = theme.ScreenRounding * scale;
@@ -119,7 +125,9 @@ internal sealed class ControlCenter
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.32f * opacity)), 2.5f * scale);
 
         var titleY = panelTop + 30f * scale;
-        Typography.Draw(dl, new Vector2(left, titleY), Loc.T(L.ControlCenter.Title),
+        var titleMaxWidth = MathF.Max(1f, HeaderButtonsLeft(right, scale) - 10f * scale - left);
+        Typography.Draw(dl, new Vector2(left, titleY),
+            Typography.FitText(Loc.T(L.ControlCenter.Title), titleMaxWidth, 1.15f, FontWeight.Bold),
             Palette.WithAlpha(theme.TextStrong, opacity), 1.15f, FontWeight.Bold);
         DrawHeaderButtons(dl, theme, right, titleY + 8f * scale, scale, delta, opacity, interactive);
 
@@ -131,7 +139,7 @@ internal sealed class ControlCenter
         StepPoses(slots, placements, delta);
         if (interactive)
         {
-            UpdateEditInput(delta);
+            UpdateEditInput(screen, delta);
         }
 
         if (editing)
@@ -155,6 +163,18 @@ internal sealed class ControlCenter
         var galleryRegion = new Rect(new Vector2(screen.Min.X, screen.Min.Y),
             new Vector2(screen.Max.X, screen.Max.Y - DismissBandHeight * scale));
         gallery.Draw(galleryRegion, theme, delta, scale, opacity);
+    }
+
+    private float HeaderButtonsLeft(float right, float scale)
+    {
+        var radius = 15f * scale;
+        if (!editing)
+        {
+            return right - 2f * radius;
+        }
+
+        var doneWidth = Typography.Measure(Loc.T(L.ControlCenter.Done), 0.82f).X + 2f * 14f * scale;
+        return right - doneWidth - 12f * scale - 2f * radius;
     }
 
     private void DrawHeaderButtons(ImDrawListPtr dl, PhoneTheme theme, float right, float centerY, float scale,
@@ -338,7 +358,7 @@ internal sealed class ControlCenter
         ProgressRing.CenterIcon(dl, handle, FontAwesomeIcon.ExpandAlt, new Vector4(1f, 1f, 1f, opacity), 9f * scale);
     }
 
-    private void UpdateEditInput(float delta)
+    private void UpdateEditInput(Rect screen, float delta)
     {
         var mouse = ImGui.GetMousePos();
         if (draggingSlot is not null)
@@ -355,7 +375,7 @@ internal sealed class ControlCenter
         var slots = layout.Slots;
         if (editing)
         {
-            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(screen.Min, screen.Max))
             {
                 for (var index = 0; index < slots.Count; index++)
                 {
@@ -377,11 +397,11 @@ internal sealed class ControlCenter
                 }
             }
 
-            BeginPress(mouse, slots, true);
+            BeginPress(mouse, slots, true, screen);
             return;
         }
 
-        BeginPress(mouse, slots, false);
+        BeginPress(mouse, slots, false, screen);
         if (pressSlot is not null && ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
             pressTime += delta;
@@ -394,9 +414,9 @@ internal sealed class ControlCenter
         }
     }
 
-    private void BeginPress(Vector2 mouse, IReadOnlyList<ControlSlot> slots, bool armDrag)
+    private void BeginPress(Vector2 mouse, IReadOnlyList<ControlSlot> slots, bool armDrag, Rect screen)
     {
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(screen.Min, screen.Max))
         {
             pressSlot = SlotAt(mouse, slots);
             pressOrigin = mouse;
@@ -520,7 +540,7 @@ internal sealed class ControlCenter
     private static bool TextPill(ImDrawListPtr dl, Rect rect, string text, Vector4 accent, float opacity,
         bool interactive)
     {
-        var hovered = interactive && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = interactive && UiInteract.Hover(rect.Min, rect.Max);
         Squircle.Fill(dl, rect.Min, rect.Max, rect.Height * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(accent, (hovered ? 1f : 0.9f) * opacity)));
         Typography.DrawCentered(dl, rect.Center, text, new Vector4(1f, 1f, 1f, opacity), 0.82f, FontWeight.SemiBold);
@@ -559,6 +579,7 @@ internal sealed class ControlCenter
     {
         open = true;
         target = 1f;
+        router.AcknowledgeAll();
         notifications.MarkAllRead();
         notificationCenter.Reset();
     }
@@ -575,7 +596,7 @@ internal sealed class ControlCenter
 
     private void HandleGesture(Rect screen, float delta, bool gesturesEnabled, bool allowDismiss)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var height = screen.Height;
         var openDistance = height * OpenFraction;
         var fling = FlingVelocity * scale;
@@ -585,18 +606,31 @@ internal sealed class ControlCenter
             if (gesturesEnabled)
             {
                 var topBand = new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + TopBandHeight * scale));
-                if (!drag.Active && topBand.Contains(ImGui.GetMousePos()))
+                if (!drag.Active && UiInteract.Hover(topBand.Min, topBand.Max))
                 {
                     ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 }
 
                 drag.Begin(topBand);
+                if (drag.Active)
+                {
+                    var fraction = Math.Clamp(drag.Delta.Y / openDistance, 0f, 1f);
+                    offset.SnapTo(fraction);
+                    target = fraction;
+                }
             }
 
-            if (drag.Released(out var totalDelta, out _) && MathF.Abs(totalDelta.X) < TapSlop * scale &&
-                MathF.Abs(totalDelta.Y) < TapSlop * scale)
+            if (drag.Released(out var totalDelta, out var velocity))
             {
-                Open();
+                var tapped = MathF.Abs(totalDelta.X) < TapSlop * scale && MathF.Abs(totalDelta.Y) < TapSlop * scale;
+                if (tapped || totalDelta.Y / openDistance > CommitFraction || velocity > fling)
+                {
+                    Open();
+                }
+                else
+                {
+                    target = 0f;
+                }
             }
         }
         else if (allowDismiss)

@@ -5,7 +5,6 @@ using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Clock;
 
@@ -63,12 +62,16 @@ internal sealed partial class ClockApp
         ui.Card(drawList, heroMin, heroMax, rounding, elevated: true);
 
         var pad = 20f * scale;
-        var clockRadius = (heroHeight - pad * 2f) * 0.5f;
+        var minTextColumn = 100f * scale;
+        var radiusFromHeight = (heroHeight - pad * 2f) * 0.5f;
+        var radiusFromWidth = MathF.Max(30f * scale, (width - pad * 2f - 22f * scale - minTextColumn) * 0.5f);
+        var clockRadius = MathF.Min(radiusFromHeight, radiusFromWidth);
         var clockCenter = new Vector2(heroMin.X + pad + clockRadius, heroMin.Y + heroHeight * 0.5f);
         ProgressRing.Glow(clockCenter, clockRadius * 0.92f, theme.Accent, 0.45f);
         AnalogClock.Draw(clockCenter, clockRadius, local.Hour, local.Minute, localSeconds, theme);
 
         var textX = clockCenter.X + clockRadius + 22f * scale;
+        var textMaxWidth = MathF.Max(1f, heroMax.X - pad - textX);
         var digital = TimeText.Clock(local);
         var date = local.ToString("ddd d MMM", Loc.Culture);
         var zone = $"{Loc.T(L.Clock.Local)} · {LocalOffsetLabel()}";
@@ -77,11 +80,12 @@ internal sealed partial class ClockApp
         var zoneSize = Typography.Measure(zone, TextStyles.FootnoteEmphasized);
         var stackHeight = digitalSize.Y + 6f * scale + dateSize.Y + 4f * scale + zoneSize.Y;
         var startY = clockCenter.Y - stackHeight * 0.5f;
-        Typography.Draw(new Vector2(textX, startY), digital, ui.TitleInk, TextStyles.LargeTitle);
-        Typography.Draw(new Vector2(textX, startY + digitalSize.Y + 6f * scale), date, ui.MutedInk,
-            TextStyles.Subheadline);
-        Typography.Draw(new Vector2(textX, startY + digitalSize.Y + dateSize.Y + 10f * scale), zone, ui.Accent,
-            TextStyles.FootnoteEmphasized);
+        Marquee.DrawLeftAuto("clock.hero.digital", digital, textX, startY, textMaxWidth, TextStyles.LargeTitle,
+            ui.TitleInk);
+        Marquee.DrawLeftAuto("clock.hero.date", date, textX, startY + digitalSize.Y + 6f * scale, textMaxWidth,
+            TextStyles.Subheadline, ui.MutedInk);
+        Marquee.DrawLeftAuto("clock.hero.zone", zone, textX, startY + digitalSize.Y + dateSize.Y + 10f * scale,
+            textMaxWidth, TextStyles.FootnoteEmphasized, ui.Accent);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, heroHeight));
     }
@@ -89,16 +93,22 @@ internal sealed partial class ClockApp
     private void DrawWorldRow(Rect row, string name, string sublabel, string digital, float hours, float minutes,
         float seconds)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dialRadius = (row.Height - 22f * scale) * 0.5f;
         var dialCenter = new Vector2(row.Min.X + dialRadius, row.Center.Y);
         AnalogClock.Draw(dialCenter, dialRadius, hours, minutes, seconds, theme);
         var textLeft = dialCenter.X + dialRadius + 16f * scale;
-        Typography.Draw(new Vector2(textLeft, row.Center.Y - 17f * scale), name, ui.TitleInk, TextStyles.Headline);
-        Typography.Draw(new Vector2(textLeft, row.Center.Y + 4f * scale), sublabel, ui.MutedInk, TextStyles.Footnote);
-        var digitalSize = Typography.Measure(digital, TextStyles.Title1);
-        Typography.Draw(new Vector2(row.Max.X - digitalSize.X, row.Center.Y - digitalSize.Y * 0.5f), digital,
-            ui.TitleInk, TextStyles.Title1);
+        var availableWidth = MathF.Max(1f, row.Max.X - 10f * scale - textLeft);
+        var minTextWidth = availableWidth * 0.35f;
+        var digitalNaturalSize = Typography.Measure(digital, TextStyles.Title1);
+        var digitalMaxWidth = MathF.Max(1f, MathF.Min(digitalNaturalSize.X, availableWidth - minTextWidth - 8f * scale));
+        Marquee.DrawRightAuto("clock.worldrow.digital." + name, digital, row.Max.X,
+            row.Center.Y - digitalNaturalSize.Y * 0.5f, digitalMaxWidth, TextStyles.Title1, ui.TitleInk);
+        var textMaxWidth = MathF.Max(1f, availableWidth - digitalMaxWidth - 8f * scale);
+        Marquee.DrawLeftAuto("clock.worldrow.name." + name, name, textLeft, row.Center.Y - 17f * scale, textMaxWidth,
+            TextStyles.Headline, ui.TitleInk);
+        Marquee.DrawLeftAuto("clock.worldrow.sub." + name, sublabel, textLeft, row.Center.Y + 4f * scale, textMaxWidth,
+            TextStyles.Footnote, ui.MutedInk);
     }
 
     private void DrawCityRow(Rect row, WorldClockEntry entry)
@@ -135,14 +145,18 @@ internal sealed partial class ClockApp
 
     private void DrawCityOption(Rect row, WorldCity city)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var added = configuration.WorldClocks.Exists(entry => entry.TimeZoneId == city.TimeZoneId &&
                                                               entry.City == city.City);
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - 16f * scale), city.City, ui.TitleInk, TextStyles.Headline);
+        var hovering = UiInteract.Hover(row.Min, row.Max);
+        var textMaxWidth = MathF.Max(1f, row.Max.X - 34f * scale - row.Min.X);
+        Marquee.DrawLeft("clock.cityPicker.name." + city.City, city.City, row.Min.X, row.Center.Y - 16f * scale,
+            textMaxWidth, TextStyles.Headline, ui.TitleInk, hovering);
         if (WorldClockCatalog.TryResolve(city.TimeZoneId, out var zone))
         {
             var cityNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);
-            Typography.Draw(new Vector2(row.Min.X, row.Center.Y + 4f * scale), CityOffsetLabel(zone, cityNow),
+            var offsetLabel = Typography.FitText(CityOffsetLabel(zone, cityNow), textMaxWidth, TextStyles.Footnote);
+            Typography.Draw(new Vector2(row.Min.X, row.Center.Y + 4f * scale), offsetLabel,
                 ui.MutedInk, TextStyles.Footnote);
         }
 

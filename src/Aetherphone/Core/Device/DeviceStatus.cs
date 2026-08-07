@@ -95,7 +95,6 @@ internal sealed class DeviceStatus : IDisposable
             }
             catch
             {
-                // Transient probe failure; keep the loop alive for the next sample.
             }
         }
     }
@@ -116,7 +115,6 @@ internal sealed class DeviceStatus : IDisposable
         }
         catch
         {
-            // GetSystemPowerStatus unavailable; fall through to the desktop default.
         }
 
         batteryPresent = false;

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Home;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Core.Inventory;
@@ -22,10 +23,10 @@ internal sealed class InventoryCaptureService : IDisposable
     private ulong activeCharacterId;
     private bool hasLocal;
 
-    public InventoryCaptureService(IFramework framework, InventoryStore store)
+    public InventoryCaptureService(IFramework framework, InventoryStore store, AppGate gate)
     {
         this.store = store;
-        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick);
+        ticker = new FrameworkTicker(framework, TickIntervalMilliseconds, OnTick, gate);
     }
 
     public void Dispose()

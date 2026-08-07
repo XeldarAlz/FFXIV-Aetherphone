@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Message;
 
@@ -27,6 +26,7 @@ internal sealed partial class MessageApp
         }
 
         protected override PhoneTheme Theme => app.theme;
+        protected override IPhoneApp Owner => app;
         protected override INavigator Navigation => app.navigation;
         protected override Action BackAction => app.back;
         protected override string MyUserId => store.MyUserId;
@@ -61,6 +61,15 @@ internal sealed partial class MessageApp
 
         protected override void PopScreen() => app.router.Pop();
 
+        protected override void OpenEncryptionInfo(string threadId)
+        {
+            var conversation = app.store.Conversation;
+            if (conversation is not null)
+            {
+                app.router.Push(MessageRoute.Encryption(conversation.Id));
+            }
+        }
+
         protected override void OnThreadSwitchingFrom(string previousThreadId)
         {
             if (!composer.IsEditing)
@@ -75,16 +84,6 @@ internal sealed partial class MessageApp
         }
 
         protected override void OnDraftConsumed(string threadId) => ClearDraft(threadId);
-
-        public override void OnAppClosed()
-        {
-            if (!composer.IsEditing && store.CurrentThreadId is { } openConversation)
-            {
-                SaveDraft(openConversation);
-            }
-
-            base.OnAppClosed();
-        }
 
         private void SaveDraft(string conversationId)
         {
@@ -183,7 +182,7 @@ internal sealed partial class MessageApp
             var isGroup = conversation?.IsGroup ?? false;
             var context = new PhoneContext(area, Theme, Navigation);
             AppHeader.Draw(context, string.Empty, BackAction);
-            var scale = ImGuiHelpers.GlobalScale;
+            var scale = UiScale.Current;
             var drawList = ImGui.GetWindowDrawList();
             var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
             ChatHeaderControls.DrawLock(ui, area, rowCenterY, store.EncryptingCurrent, store.VaultState,
@@ -197,7 +196,9 @@ internal sealed partial class MessageApp
             ChatHeaderControls.DrawSearchToggle(ui, area, rowCenterY, searchController.Open, searchController.Toggle);
             var name = conversation is null ? app.DisplayName : DirectMessagesStore.DisplayTitle(conversation);
             var avatarRadius = 18f * scale;
+            var nameCap = MathF.Max(40f * scale, area.Width * 0.42f);
             var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
+            nameSize.X = MathF.Min(nameSize.X, nameCap);
             var gap = 9f * scale;
             var groupWidth = avatarRadius * 2f + gap + nameSize.X;
             var startX = MathF.Max(area.Center.X - groupWidth * 0.5f, area.Min.X + 48f * scale);
@@ -215,15 +216,25 @@ internal sealed partial class MessageApp
             }
 
             var nameLeft = avatarCenter.X + avatarRadius + gap;
+            var maxNameRight = area.Max.X - ChatHeaderControls.ReservedRightWidth * scale;
+            nameCap = MathF.Max(1f, MathF.Min(nameCap, maxNameRight - nameLeft));
+            var titleId = "messageapp.thread.title." + (conversation?.Id ?? "self");
             if (isGroup && conversation is not null)
             {
                 var sub = Loc.T(L.DirectMessages.MembersCount, conversation.MemberCount);
                 var subSize = Typography.Measure(sub, 0.72f, FontWeight.Regular);
+                subSize.X = MathF.Min(subSize.X, nameCap);
                 var gapY = 1f * scale;
                 var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
-                Typography.Draw(new Vector2(nameLeft, stackTop), name, Theme.TextStrong, 1f, FontWeight.SemiBold);
-                Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), sub,
-                    AppPalettes.Message.MutedInk, 0.72f);
+                var titleHovering = UiInteract.Hover(new Vector2(nameLeft, stackTop),
+                    new Vector2(nameLeft + nameCap, stackTop + nameSize.Y));
+                Marquee.DrawLeft(titleId, name, nameLeft, stackTop, nameCap, new TextStyle(1f, FontWeight.SemiBold),
+                    Theme.TextStrong, titleHovering);
+                var subTop = stackTop + nameSize.Y + gapY;
+                var subHovering = UiInteract.Hover(new Vector2(nameLeft, subTop),
+                    new Vector2(nameLeft + nameCap, subTop + subSize.Y));
+                Marquee.DrawLeft(titleId + ".sub", sub, nameLeft, subTop, nameCap,
+                    new TextStyle(0.72f, FontWeight.Regular), AppPalettes.Message.MutedInk, subHovering);
                 var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
                 var hitMax = new Vector2(nameLeft + MathF.Max(nameSize.X, subSize.X),
                     area.Min.Y + AppHeader.Height * scale);
@@ -238,16 +249,27 @@ internal sealed partial class MessageApp
                 if (presence.Length > 0)
                 {
                     var subSize = Typography.Measure(presence, 0.72f, FontWeight.Regular);
+                    subSize.X = MathF.Min(subSize.X, nameCap);
                     var gapY = 1f * scale;
                     var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
-                    Typography.Draw(new Vector2(nameLeft, stackTop), name, Theme.TextStrong, 1f, FontWeight.SemiBold);
-                    Typography.Draw(new Vector2(nameLeft, stackTop + nameSize.Y + gapY), presence,
-                        conversation!.Presence == 1 ? ui.Accent : AppPalettes.Message.MutedInk, 0.72f);
+                    var titleHovering = UiInteract.Hover(new Vector2(nameLeft, stackTop),
+                        new Vector2(nameLeft + nameCap, stackTop + nameSize.Y));
+                    Marquee.DrawLeft(titleId, name, nameLeft, stackTop, nameCap,
+                        new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
+                    var subTop = stackTop + nameSize.Y + gapY;
+                    var subHovering = UiInteract.Hover(new Vector2(nameLeft, subTop),
+                        new Vector2(nameLeft + nameCap, subTop + subSize.Y));
+                    Marquee.DrawLeft(titleId + ".sub", presence, nameLeft, subTop, nameCap,
+                        new TextStyle(0.72f, FontWeight.Regular),
+                        conversation!.Presence == 1 ? ui.Accent : AppPalettes.Message.MutedInk, subHovering);
                 }
                 else
                 {
-                    Typography.Draw(new Vector2(nameLeft, rowCenterY - nameSize.Y * 0.5f), name, Theme.TextStrong, 1f,
-                        FontWeight.SemiBold);
+                    var soloTop = rowCenterY - nameSize.Y * 0.5f;
+                    var titleHovering = UiInteract.Hover(new Vector2(nameLeft, soloTop),
+                        new Vector2(nameLeft + nameCap, soloTop + nameSize.Y));
+                    Marquee.DrawLeft(titleId, name, nameLeft, soloTop, nameCap,
+                        new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
                 }
 
                 if (conversation is not null && app.contacts.Find(conversation.OtherUserId) is not null)
@@ -288,12 +310,14 @@ internal sealed partial class MessageApp
 
                 var replySender = string.Empty;
                 var replyBody = string.Empty;
+                var replyKind = message.ReplyKind;
                 if (message.ReplyToId is not null)
                 {
                     replySender = message.ReplySenderId == MyUserId
                         ? Loc.T(L.Message.You)
                         : message.ReplySenderName ?? Loc.T(L.Message.OriginalUnavailable);
-                    replyBody = ChatText.QuotePreview(message.ReplyBody, message.ReplyKind);
+                    replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
+                    replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
                 }
 
                 TranscriptReaction[]? reactions = null;
@@ -310,8 +334,8 @@ internal sealed partial class MessageApp
 
                 mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
                     message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, senderName,
-                    tint, MessageFlags(message), message.ReplyToId, replySender, replyBody, message.ReplyKind,
-                    message.DurationSecs, reactions);
+                    tint, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
+                    message.DurationSecs, reactions, message.SenderBadges, message.SenderBadgeIds);
             }
 
             return mapped;
@@ -410,7 +434,7 @@ internal sealed partial class MessageApp
             ConversationTitle = DirectMessagesStore.DisplayTitle(conversation),
             SenderName = message.SenderId == store.MyUserId ? Loc.T(L.Message.You) : message.SenderDisplayName,
             Preview = ChatText.QuotePreview(message.Body, message.Kind),
-            Kind = message.Kind,
+            Kind = ChatText.EffectiveKind(message.Body, message.Kind),
             CreatedAtUnix = message.CreatedAtUnix,
             StarredAtUnix = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
         });

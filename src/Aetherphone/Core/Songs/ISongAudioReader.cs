@@ -2,11 +2,6 @@ using NAudio.Wave;
 
 namespace Aetherphone.Core.Songs;
 
-/// <summary>
-/// Common surface over the two song decode backends (Media Foundation for mp4/AAC,
-/// OpusWebmSampleProvider for webm/Opus) so SongPlayer.PlayOnce doesn't need to branch
-/// on which one it's holding.
-/// </summary>
 internal interface ISongAudioReader : IDisposable
 {
     ISampleProvider ToSampleProvider();

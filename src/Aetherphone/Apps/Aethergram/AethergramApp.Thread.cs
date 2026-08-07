@@ -1,0 +1,427 @@
+using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
+using Aetherphone.Core.Apps;
+using Aetherphone.Core.Localization;
+using Aetherphone.Core.Lodestone;
+using Aetherphone.Core.Media;
+using Aetherphone.Core.Social;
+using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
+using Dalamud.Bindings.ImGui;
+using Dalamud.Interface.Textures.TextureWraps;
+
+namespace Aetherphone.Apps.Aethergram;
+
+internal sealed partial class AethergramApp
+{
+    private const float ThreadPollSeconds = 2.5f;
+    private const float TypingSendSeconds = 3f;
+
+    private readonly ThreadView threadView;
+
+    private sealed class ThreadView : ChatThreadView<GramMessageDto, GramThreadDto>, IChatTranscriptPostCards,
+        IChatTranscriptStoryReplies
+    {
+        private readonly AethergramApp app;
+
+        public ThreadView(AethergramApp app)
+            : base(app.dmStore, app.ui, app.images, app.lodestone, app.http, app.library, app.configuration,
+                app.confirm, app.report, app.wallpaperImages, ThreadPollSeconds, TypingSendSeconds)
+        {
+            this.app = app;
+        }
+
+        protected override PhoneTheme Theme => app.theme;
+        protected override IPhoneApp Owner => app;
+        protected override INavigator Navigation => app.navigation;
+        protected override Action BackAction => app.back;
+        protected override string MyUserId => app.dmStore.MyUserId;
+        protected override Vector4 Accent => app.Accent;
+        protected override string EmptyText => Loc.T(L.Aethergram.ThreadEmpty);
+        protected override string LogTag => "Aethergram";
+        protected override string PickerTitle => Loc.T(L.Common.SendPhoto);
+        protected override string ImportLabel => Loc.T(L.Aethergram.ImportFromPc);
+        protected override string NoPhotosLabel => Loc.T(L.Common.NoPhotos);
+        protected override string SaveLabel => Loc.T(L.Common.SaveToGallery);
+        protected override string SavedLabel => Loc.T(L.Common.SavedToGallery);
+
+        protected override IChatTranscriptPostCards? PostCards => this;
+
+        public bool TryResolve(string messageId, string body, out ChatPostCard card)
+        {
+            card = default;
+            if (body.Length == 0)
+            {
+                return false;
+            }
+
+            if (!app.dmStore.TryResolvePost(body, out var post))
+            {
+                return false;
+            }
+
+            if (post is null)
+            {
+                card = new ChatPostCard(body, string.Empty, string.Empty, null, false);
+                return true;
+            }
+
+            var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+            card = new ChatPostCard(post.Id, SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle),
+                post.Text, photos.Length > 0 ? photos[0] : null, true);
+            return true;
+        }
+
+        public void Open(string postId) => app.OpenDetailFromLink(postId);
+
+        public IDalamudTextureWrap? Thumbnail(string url) => app.images.Get(url);
+
+        protected override IChatTranscriptStoryReplies? StoryReplies => this;
+
+        public bool TryResolve(string messageId, out ChatStoryReplyContext context)
+        {
+            context = default;
+            var message = FindMessage(messageId);
+            if (message is null)
+            {
+                return false;
+            }
+
+            var contextText = Loc.T(message.SenderId == MyUserId
+                ? L.Aethergram.YouRepliedToStory
+                : L.Aethergram.RepliedToYourStory);
+            var unavailable = message.StoryExpired || string.IsNullOrEmpty(message.StoryMediaUrl);
+            context = new ChatStoryReplyContext(contextText, unavailable ? null : message.StoryMediaUrl, unavailable);
+            return true;
+        }
+
+        protected override bool IsDeleted(GramMessageDto message) => message.Deleted;
+
+        protected override string SenderIdOf(GramMessageDto message) => message.SenderId;
+
+        protected override int KindOf(GramMessageDto message) => message.Kind;
+
+        protected override string? BodyOf(GramMessageDto message) => message.Body;
+
+        protected override int EncVersionOf(GramMessageDto message) => message.EncVersion;
+
+        protected override byte[]? DecryptSealed(GramMessageDto message, string? threadId, byte[] sealedBytes) =>
+            threadId is null ? null : app.dmStore.DecryptMedia(message, sealedBytes, threadId);
+
+        protected override void OpenImageView(string messageId) =>
+            app.router.Push(AethergramRoute.ImageView(messageId));
+
+        protected override void OpenReactions(string messageId) =>
+            app.router.Push(AethergramRoute.Reactions(messageId));
+
+        protected override void PushImagePickerScreen(string threadId) =>
+            app.router.Push(AethergramRoute.ChatImage(threadId));
+
+        protected override void PopScreen() => app.router.Pop();
+
+        protected override void OpenEncryptionInfo(string threadId) => app.router.Push(AethergramRoute.Encryption);
+
+        protected override void BeginReply(string messageId)
+        {
+            var message = FindMessage(messageId);
+            if (message is null || message.Deleted)
+            {
+                return;
+            }
+
+            var senderName = message.SenderId == MyUserId
+                ? Loc.T(L.Message.You)
+                : app.ThreadTitle(store.CurrentThreadId ?? messageId);
+            composer.BeginReply(messageId, senderName, ChatText.QuotePreview(message.Body, message.Kind));
+        }
+
+        protected override ChatMenuModel BuildMenuModel()
+        {
+            return new ChatMenuModel
+            {
+                Ui = ui,
+                ShowReactions = true,
+                CanReply = true,
+                CanForward = false,
+                CanCopy = true,
+                CanStar = false,
+                CanEdit = true,
+                CanInfo = false,
+                CanDelete = true,
+                CanReport = true,
+                IsStarred = _ => false,
+                MyReactionTo = store.MyReactionTo,
+                OnReply = BeginReply,
+                OnForward = _ => { },
+                OnCopy = CopyMessage,
+                OnStar = _ => { },
+                OnEdit = BeginEdit,
+                OnInfo = _ => { },
+                OnDelete = AskDeleteMessage,
+                OnReport = OpenReportMessage,
+                OnReact = store.SetReaction,
+            };
+        }
+
+        protected override void DrawAboveTranscript(ref Rect listRect, string threadId)
+        {
+            if (!app.dmStore.IsThreadPending(threadId))
+            {
+                return;
+            }
+
+            var scale = UiScale.Current;
+            var drawList = ImGui.GetWindowDrawList();
+            var margin = 12f * scale;
+            var pad = 14f * scale;
+            var cardMin = new Vector2(listRect.Min.X + margin, listRect.Min.Y + margin);
+            var cardMaxX = listRect.Max.X - margin;
+            var innerWidth = cardMaxX - cardMin.X - pad * 2f;
+            var text = Loc.T(L.Aethergram.RequestBanner, app.ThreadTitle(threadId));
+            var textHeight = Typography.MeasureWrappedBlock(text, TextStyles.Subheadline, innerWidth).Y;
+            var buttonHeight = 34f * scale;
+            var cardHeight = pad + textHeight + 12f * scale + buttonHeight + pad;
+            var cardMax = new Vector2(cardMaxX, cardMin.Y + cardHeight);
+            ui.Card(drawList, cardMin, cardMax, 16f * scale);
+            Typography.DrawWrappedLeft(new Vector2(cardMin.X + pad, cardMin.Y + pad), text,
+                AppPalettes.Aethergram.BodyInk, TextStyles.Subheadline, innerWidth);
+            var buttonsTop = cardMin.Y + pad + textHeight + 12f * scale;
+            var buttonWidth = (innerWidth - 10f * scale) * 0.5f;
+            var acceptRect = new Rect(new Vector2(cardMin.X + pad, buttonsTop),
+                new Vector2(cardMin.X + pad + buttonWidth, buttonsTop + buttonHeight));
+            var deleteRect = new Rect(new Vector2(acceptRect.Max.X + 10f * scale, buttonsTop),
+                new Vector2(cardMin.X + pad + innerWidth, buttonsTop + buttonHeight));
+            if (ui.PillButton(acceptRect, Loc.T(L.Aethergram.AcceptRequest), true))
+            {
+                app.dmStore.AcceptThread(threadId);
+            }
+
+            if (ui.DangerGhostButton(deleteRect, Loc.T(L.Aethergram.DeleteConfirm)))
+            {
+                app.AskDeleteConversation(threadId);
+            }
+
+            listRect = new Rect(new Vector2(listRect.Min.X, cardMax.Y + margin), listRect.Max);
+        }
+
+        protected override void DrawHeader(Rect area, string threadId)
+        {
+            var context = new PhoneContext(area, Theme, Navigation);
+            AppHeader.Draw(context, string.Empty, BackAction);
+            var scale = UiScale.Current;
+            var drawList = ImGui.GetWindowDrawList();
+            var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
+            ChatHeaderControls.DrawLock(ui, area, rowCenterY, store.EncryptingCurrent, store.VaultState,
+                () => OpenEncryptionInfo(threadId));
+            ChatHeaderControls.DrawSearchToggle(ui, area, rowCenterY, searchController.Open, searchController.Toggle);
+            var name = app.ThreadTitle(threadId);
+            var avatarHandle = app.ThreadAvatar(threadId, out var monogram, out var presence);
+            var avatarRadius = 18f * scale;
+            var nameCap = MathF.Max(40f * scale, area.Width * 0.42f);
+            var nameSize = Typography.Measure(name, 1f, FontWeight.SemiBold);
+            nameSize.X = MathF.Min(nameSize.X, nameCap);
+            var gap = 9f * scale;
+            var groupWidth = avatarRadius * 2f + gap + nameSize.X;
+            var startX = MathF.Max(area.Center.X - groupWidth * 0.5f, area.Min.X + 48f * scale);
+            var avatarCenter = new Vector2(startX + avatarRadius, rowCenterY);
+            AvatarView.Draw(drawList, avatarCenter, avatarRadius, Accent, monogram, 0.95f, avatarHandle, 32);
+            app.PresenceDot(drawList, new Vector2(avatarCenter.X + avatarRadius - 3f * scale,
+                avatarCenter.Y + avatarRadius - 3f * scale), presence);
+            var nameLeft = avatarCenter.X + avatarRadius + gap;
+            var maxNameRight = area.Max.X - ChatHeaderControls.ReservedRightWidth * scale;
+            nameCap = MathF.Max(1f, MathF.Min(nameCap, maxNameRight - nameLeft));
+            var titleId = "aethergramapp.thread.title." + threadId;
+            var offset = app.ThreadOffset(threadId);
+            var textWidth = nameSize.X;
+            if (offset is { } minutes)
+            {
+                var timeText = SocialTimeZone.Describe(minutes);
+                var subSize = Typography.Measure(timeText, 0.72f, FontWeight.Regular);
+                subSize.X = MathF.Min(subSize.X, nameCap);
+                var gapY = 1f * scale;
+                var stackTop = rowCenterY - (nameSize.Y + gapY + subSize.Y) * 0.5f;
+                var titleHovering = UiInteract.Hover(new Vector2(nameLeft, stackTop),
+                    new Vector2(nameLeft + nameCap, stackTop + nameSize.Y));
+                Marquee.DrawLeft(titleId, name, nameLeft, stackTop, nameCap, new TextStyle(1f, FontWeight.SemiBold),
+                    Theme.TextStrong, titleHovering);
+                var subTop = stackTop + nameSize.Y + gapY;
+                var subHovering = UiInteract.Hover(new Vector2(nameLeft, subTop),
+                    new Vector2(nameLeft + nameCap, subTop + subSize.Y));
+                Marquee.DrawLeft(titleId + ".sub", timeText, nameLeft, subTop, nameCap,
+                    new TextStyle(0.72f, FontWeight.Regular), AppPalettes.Aethergram.MutedInk, subHovering);
+                textWidth = MathF.Max(nameSize.X, subSize.X);
+            }
+            else
+            {
+                var soloTop = rowCenterY - nameSize.Y * 0.5f;
+                var titleHovering = UiInteract.Hover(new Vector2(nameLeft, soloTop),
+                    new Vector2(nameLeft + nameCap, soloTop + nameSize.Y));
+                Marquee.DrawLeft(titleId, name, nameLeft, soloTop, nameCap,
+                    new TextStyle(1f, FontWeight.SemiBold), Theme.TextStrong, titleHovering);
+            }
+
+            var hitMin = new Vector2(avatarCenter.X - avatarRadius, area.Min.Y);
+            var hitMax = new Vector2(nameLeft + textWidth, area.Min.Y + AppHeader.Height * scale);
+            if (UiInteract.HoverClick(hitMin, hitMax))
+            {
+                app.OpenProfile(threadId);
+            }
+        }
+
+        protected override TranscriptMessage[] MapTranscript(GramMessageDto[] source)
+        {
+            var myId = MyUserId;
+            var otherName = store.CurrentThreadId is { } threadId ? app.ThreadTitle(threadId) : string.Empty;
+            var mapped = new TranscriptMessage[source.Length];
+            for (var index = 0; index < source.Length; index++)
+            {
+                var message = source[index];
+                if (message.Deleted)
+                {
+                    mapped[index] = new TranscriptMessage(message.Id, message.SenderId, Loc.T(L.Message.DeletedBody),
+                        0, message.CreatedAtUnix, 0, 0, null, string.Empty, default, TranscriptFlags.Deleted);
+                    continue;
+                }
+
+                var replySender = string.Empty;
+                var replyBody = string.Empty;
+                var replyKind = message.ReplyKind;
+                if (message.ReplyToId is not null)
+                {
+                    replySender = message.ReplySenderId == myId ? Loc.T(L.Message.You) : otherName;
+                    replyKind = ChatText.EffectiveKind(message.ReplyBody, replyKind);
+                    replyBody = ChatText.QuotePreview(message.ReplyBody, replyKind);
+                }
+
+                TranscriptReaction[]? reactions = null;
+                var summaries = message.Reactions;
+                if (summaries is { Length: > 0 })
+                {
+                    reactions = new TranscriptReaction[summaries.Length];
+                    for (var summaryIndex = 0; summaryIndex < summaries.Length; summaryIndex++)
+                    {
+                        reactions[summaryIndex] = new TranscriptReaction(summaries[summaryIndex].Token,
+                            summaries[summaryIndex].Count, summaries[summaryIndex].Mine);
+                    }
+                }
+
+                mapped[index] = new TranscriptMessage(message.Id, message.SenderId, message.Body, message.Kind,
+                    message.CreatedAtUnix, message.MediaWidth, message.MediaHeight, message.ReadAtUnix, string.Empty,
+                    default, MessageFlags(message), message.ReplyToId, replySender, replyBody, replyKind,
+                    message.DurationSecs, reactions);
+            }
+
+            return mapped;
+        }
+
+        private byte MessageFlags(GramMessageDto message)
+        {
+            byte flags = 0;
+            if (message.EditedAtUnix is not null)
+            {
+                flags |= TranscriptFlags.Edited;
+            }
+
+            if (message.EncVersion == 0)
+            {
+                return flags;
+            }
+
+            var state = store.DecryptionState(message.Id);
+            flags |= TranscriptFlags.Encrypted;
+            if (state.IsPlaceholder)
+            {
+                flags |= TranscriptFlags.Placeholder;
+            }
+            else if (state.State == Aetherphone.Core.Crypto.DmBodyState.Decrypted && !state.Verified)
+            {
+                flags |= TranscriptFlags.Unverified;
+            }
+
+            return flags;
+        }
+    }
+
+    private void PresenceDot(ImDrawListPtr drawList, Vector2 center, int presence)
+    {
+        if (presence != 1)
+        {
+            return;
+        }
+
+        var scale = UiScale.Current;
+        drawList.AddCircleFilled(center, 5f * scale, ImGui.GetColorU32(AppPalettes.Aethergram.BackdropBottom), 16);
+        drawList.AddCircleFilled(center, 3.5f * scale, ImGui.GetColorU32(ui.Accent), 16);
+    }
+
+    private int? ThreadOffset(string threadId)
+    {
+        var threads = dmStore.Threads;
+        for (var index = 0; index < threads.Length; index++)
+        {
+            if (threads[index].OtherUserId == threadId)
+            {
+                return threads[index].UtcOffsetMinutes;
+            }
+        }
+
+        if (store.ProfileUser is { } user && user.Id == threadId)
+        {
+            return user.UtcOffsetMinutes;
+        }
+
+        return null;
+    }
+
+    private string ThreadTitle(string threadId)
+    {
+        var threads = dmStore.Threads;
+        for (var index = 0; index < threads.Length; index++)
+        {
+            if (threads[index].OtherUserId == threadId)
+            {
+                return SocialIdentity.Name(threads[index].OtherDisplayName, threads[index].OtherHandle);
+            }
+        }
+
+        if (store.ProfileUser is { } user && user.Id == threadId)
+        {
+            return SocialIdentity.Name(user.DisplayName, user.Handle);
+        }
+
+        return string.Empty;
+    }
+
+    private AvatarHandle ThreadAvatar(string threadId, out string monogram, out int presence)
+    {
+        var threads = dmStore.Threads;
+        for (var index = 0; index < threads.Length; index++)
+        {
+            if (threads[index].OtherUserId == threadId)
+            {
+                var thread = threads[index];
+                monogram = Monogram(thread.OtherDisplayName, thread.OtherHandle);
+                presence = thread.Presence;
+                return images.Avatar(thread.OtherAvatarUrl);
+            }
+        }
+
+        if (store.ProfileUser is { } user && user.Id == threadId)
+        {
+            monogram = Monogram(user.DisplayName, user.Handle);
+            presence = 0;
+            return images.Avatar(user.AvatarUrl);
+        }
+
+        monogram = "?";
+        presence = 0;
+        return AvatarHandle.Disabled;
+    }
+
+    private static string Monogram(string displayName, string handle)
+    {
+        var source = string.IsNullOrEmpty(displayName) ? handle : displayName;
+        return source.Length > 0 ? source[..1].ToUpperInvariant() : "?";
+    }
+
+}

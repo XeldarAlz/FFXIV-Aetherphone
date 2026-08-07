@@ -8,11 +8,12 @@ internal static class TourRegistry
     public const string ControlCenterOpenIntent = "chrome.controlcenter.open";
     public const string ControlCenterCloseIntent = "chrome.controlcenter.close";
 
-    private static readonly GuideSequence Welcome = new(WelcomeId, 6, null,
+    private static readonly GuideSequence Welcome = new(WelcomeId, 7, null,
         new[]
         {
             GuideStep.Page(L.Onboarding.HomeTourTitle, L.Onboarding.HomeTourBody, L.Onboarding.Continue),
             GuideStep.Point(L.Onboarding.AppsTourTitle, L.Onboarding.AppsTourBody, "home.app.message"),
+            GuideStep.Point(L.Onboarding.StoreTourTitle, L.Onboarding.StoreTourBody, "home.app.appstore"),
             GuideStep.Point(L.Onboarding.WidgetTourTitle, L.Onboarding.WidgetTourBody, "home.widget"),
             GuideStep.Note(L.Onboarding.CustomizeTitle, L.Onboarding.CustomizeBody),
             GuideStep.Tap(L.Onboarding.ControlCenterTitle, L.Onboarding.ControlCenterTapBody, "chrome.controlcenter",
@@ -304,6 +305,67 @@ internal static class TourRegistry
                 GuideStep.Note(L.Apps.Polls, L.Onboarding.PollsBody),
                 GuideStep.Point(L.Onboarding.PollsVoteTitle, L.Onboarding.PollsVoteBody, "polls.card"),
                 GuideStep.Point(L.Onboarding.PollsResultsTitle, L.Onboarding.PollsResultsBody, "polls.card"),
+            });
+        Add(tours, "appstore", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.AppStore, L.Onboarding.AppStoreBody),
+                GuideStep.Point(L.Onboarding.AppStoreGetTitle, L.Onboarding.AppStoreGetBody, "appstore.row"),
+                GuideStep.Tap(L.Onboarding.AppStoreBrowseTitle, L.Onboarding.AppStoreBrowseBody, "appstore.tab.apps",
+                    "appstore.tab.apps"),
+                GuideStep.Point(L.Onboarding.AppStoreSearchTitle, L.Onboarding.AppStoreSearchBody,
+                    "appstore.tab.search"),
+                GuideStep.Note(L.Onboarding.AppStoreRemoveTitle, L.Onboarding.AppStoreRemoveBody),
+            });
+        Add(tours, "jobs", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.Jobs, L.Onboarding.JobsBody),
+                GuideStep.Point(L.Onboarding.JobsSwitchTitle, L.Onboarding.JobsSwitchBody, "jobs.row"),
+                GuideStep.Point(L.Onboarding.JobsCategoriesTitle, L.Onboarding.JobsCategoriesBody, "jobs.categories"),
+                GuideStep.Point(L.Onboarding.JobsColorTitle, L.Onboarding.JobsColorBody, "jobs.color"),
+            });
+        Add(tours, "muster", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.Muster, L.Onboarding.MusterBody),
+                GuideStep.Point(L.Onboarding.MusterScopeTitle, L.Onboarding.MusterScopeBody, "muster.scope"),
+                GuideStep.Point(L.Onboarding.MusterCategoriesTitle, L.Onboarding.MusterCategoriesBody,
+                    "muster.categories"),
+                GuideStep.Point(L.Onboarding.MusterStartTitle, L.Onboarding.MusterStartBody, "muster.start"),
+                GuideStep.Note(L.Onboarding.MusterSafetyTitle, L.Onboarding.MusterSafetyBody),
+            });
+        Add(tours, "yellowpages", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.YellowPages, L.Onboarding.YellowPagesBody),
+                GuideStep.Point(L.Onboarding.YellowPagesScopeTitle, L.Onboarding.YellowPagesScopeBody,
+                    "yellowpages.scope"),
+                GuideStep.Point(L.Onboarding.YellowPagesSearchTitle, L.Onboarding.YellowPagesSearchBody,
+                    "yellowpages.search"),
+                GuideStep.Point(L.Onboarding.YellowPagesPostTitle, L.Onboarding.YellowPagesPostBody,
+                    "yellowpages.tab.post"),
+                GuideStep.Point(L.Onboarding.YellowPagesInquiriesTitle, L.Onboarding.YellowPagesInquiriesBody,
+                    "yellowpages.tab.inquiries"),
+                GuideStep.Note(L.Onboarding.YellowPagesSafetyTitle, L.Onboarding.YellowPagesSafetyBody),
+            });
+        Add(tours, "announcements", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.Announcements, L.Onboarding.AnnouncementsBody),
+                GuideStep.Point(L.Onboarding.AnnouncementsCardTitle, L.Onboarding.AnnouncementsCardBody,
+                    "announcements.card"),
+                GuideStep.Note(L.Onboarding.AnnouncementsQuietTitle, L.Onboarding.AnnouncementsQuietBody),
+            });
+        Add(tours, "health", 1,
+            new[]
+            {
+                GuideStep.Note(L.Health.Title, L.Onboarding.HealthBody),
+                GuideStep.Point(L.Onboarding.HealthTodayTitle, L.Onboarding.HealthTodayBody, "health.today"),
+                GuideStep.Tap(L.Onboarding.HealthTabsTitle, L.Onboarding.HealthTabsBody, "health.tabs",
+                    "health.tab.goals"),
+                GuideStep.Note(L.Onboarding.HealthGoalsTitle, L.Onboarding.HealthGoalsBody),
+                GuideStep.Note(L.Onboarding.HealthPrivacyTitle, L.Onboarding.HealthPrivacyBody),
             });
         return tours;
     }

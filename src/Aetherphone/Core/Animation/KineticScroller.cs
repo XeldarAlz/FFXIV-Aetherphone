@@ -1,6 +1,5 @@
 namespace Aetherphone.Core.Animation;
 
-/// <summary>Pointer-driven kinetic scroll model: drag offset, tap-vs-drag latch, momentum, and top pull. Pure, no ImGui.</summary>
 internal sealed class KineticScroller
 {
     private const float DragThreshold = 6f;
@@ -170,7 +169,6 @@ internal sealed class KineticScroller
         pullDistance = 0f;
     }
 
-    /// <summary>Abandons the in-flight gesture without moving the surface, for a widget that claims the drag.</summary>
     public void CancelGesture()
     {
         pressed = false;

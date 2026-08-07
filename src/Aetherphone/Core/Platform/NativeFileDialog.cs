@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Aetherphone.Core.Localization;
 
 namespace Aetherphone.Core.Platform;
 
@@ -10,12 +11,28 @@ internal static class NativeFileDialog
     private const int OfnPathMustExist = 0x00000800;
     private const int OfnNoChangeDir = 0x00000008;
     private const int OfnExplorer = 0x00080000;
-    private const string ImageFilter = "Images\0*.png;*.jpg;*.jpeg;*.bmp\0All Files\0*.*\0";
-    private const string AudioFilter = "Audio\0*.mp3;*.wav\0All Files\0*.*\0";
+    private const string ImageExtensions = "*.png;*.jpg;*.jpeg;*.bmp";
+    private const string AudioExtensions = "*.mp3;*.wav";
 
-    public static Task<string?> OpenImageAsync(string title) => OpenAsync(title, ImageFilter, "[Wallpaper]");
+    private static readonly string[] OverlayMarkers = { "reshade", "gshade", };
+    private static readonly string[] GraphicsModules =
+    {
+        "dxgi.dll", "d3d11.dll", "d3d12.dll", "d3d9.dll", "opengl32.dll",
+    };
 
-    public static Task<string?> OpenAudioAsync(string title) => OpenAsync(title, AudioFilter, "[Sound]");
+    public static readonly bool RunsUnderWine = DetectWine();
+    public static readonly bool HasShaderOverlay = DetectShaderOverlay();
+
+    public static bool IsSupported => !RunsUnderWine && !HasShaderOverlay;
+
+    public static Task<string?> OpenImageAsync(string title) =>
+        OpenAsync(title, Filter(L.Common.FileKindImages, ImageExtensions), "[Wallpaper]");
+
+    public static Task<string?> OpenAudioAsync(string title) =>
+        OpenAsync(title, Filter(L.Common.FileKindAudio, AudioExtensions), "[Sound]");
+
+    private static string Filter(LocString kind, string extensions) =>
+        $"{Loc.T(kind)}\0{extensions}\0{Loc.T(L.Common.FileKindAll)}\0*.*\0";
 
     public static void PickImage(string title, Action<string> onPicked) => Complete(OpenImageAsync(title), onPicked);
 
@@ -92,8 +109,105 @@ internal static class NativeFileDialog
         }
     }
 
+    private static bool DetectWine()
+    {
+        try
+        {
+            var ntdll = GetModuleHandleA("ntdll.dll");
+            return ntdll != IntPtr.Zero && GetProcAddress(ntdll, "wine_get_version") != IntPtr.Zero;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[FilePicker] Wine probe failed: {exception.Message}");
+            return false;
+        }
+    }
+
+    private static bool DetectShaderOverlay()
+    {
+        try
+        {
+            using var process = Process.GetCurrentProcess();
+            var modules = process.Modules;
+            for (var moduleIndex = 0; moduleIndex < modules.Count; moduleIndex++)
+            {
+                if (IsOverlayModule(modules[moduleIndex]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning($"[FilePicker] Overlay probe failed: {exception.Message}");
+            return true;
+        }
+    }
+
+    private static bool IsOverlayModule(ProcessModule module)
+    {
+        var name = module.ModuleName;
+        if (string.IsNullOrEmpty(name))
+        {
+            return false;
+        }
+
+        if (MentionsOverlay(name))
+        {
+            return true;
+        }
+
+        if (!IsGraphicsModule(name))
+        {
+            return false;
+        }
+
+        var info = module.FileVersionInfo;
+        return MentionsOverlay(info.ProductName) || MentionsOverlay(info.FileDescription) ||
+               MentionsOverlay(info.CompanyName);
+    }
+
+    private static bool IsGraphicsModule(string name)
+    {
+        for (var moduleIndex = 0; moduleIndex < GraphicsModules.Length; moduleIndex++)
+        {
+            if (string.Equals(name, GraphicsModules[moduleIndex], StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool MentionsOverlay(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return false;
+        }
+
+        for (var markerIndex = 0; markerIndex < OverlayMarkers.Length; markerIndex++)
+        {
+            if (value.Contains(OverlayMarkers[markerIndex], StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     [DllImport("comdlg32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern bool GetOpenFileNameW(ref OpenFileName dialog);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
+    private static extern IntPtr GetModuleHandleA(string name);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
+    private static extern IntPtr GetProcAddress(IntPtr module, string name);
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
     private struct OpenFileName

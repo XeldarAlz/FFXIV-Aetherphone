@@ -4,7 +4,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -65,7 +64,7 @@ internal sealed class PhotoCarousel
         }
 
         var pager = PagerFor(postId);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var delta = ImGui.GetIO().DeltaTime;
         pager.Step(delta, count);
 
@@ -99,7 +98,7 @@ internal sealed class PhotoCarousel
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var spacing = DotSpacing * scale;
         var span = spacing * (count - 1);
         if (maxWidth > 0f && span > maxWidth)
@@ -177,7 +176,7 @@ internal sealed class PhotoCarousel
 
         pressActive = false;
         var move = ImGui.GetMousePos() - pressPos;
-        return move.Length() < TapSlop * ImGuiHelpers.GlobalScale;
+        return move.Length() < TapSlop * UiScale.Current;
     }
 
     private static void DrawCounter(ImDrawListPtr drawList, Rect rect, int active, int count, float scale)

@@ -1,8 +1,8 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -12,7 +12,7 @@ internal static class ComposeFab
     public static bool Draw(Rect area, string childId, Vector4 accent, string glyph, string tooltip,
         string? anchorKey = null)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var radius = 26f * scale;
         var margin = 18f * scale;
         var boxSize = radius * 2f + margin;
@@ -28,7 +28,7 @@ internal static class ComposeFab
         }
 
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = UiInteract.HoverOverlay(fabRect);
+        var hovered = !InputShield.Active && UiInteract.HoverOverlay(fabRect);
         drawList.AddCircleFilled(center + new Vector2(0f, 2f * scale), radius,
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.30f)), 32);
         drawList.AddCircleFilled(center, radius,

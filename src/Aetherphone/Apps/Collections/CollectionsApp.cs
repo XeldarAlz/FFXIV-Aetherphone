@@ -10,7 +10,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Collections;
 
@@ -121,7 +120,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
             OpenCategory(CollectionCategory.Mounts);
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var screen = SceneChrome.ScreenFrom(context.Content, context.Theme, scale);
         ui.Backdrop(screen);
         router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
@@ -146,7 +145,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
 
     private void DrawNavBar(Rect area, string title, Action? onBack)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var fitted = Typography.FitText(title, area.Width - 96f * scale, TextStyles.Title3);
         Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), fitted, ui.TitleInk, TextStyles.Title3);
@@ -189,7 +188,7 @@ internal sealed partial class CollectionsApp : IPhoneApp
 
     private void DrawIcon(ImDrawListPtr drawList, CollectionItem item, Vector2 min, Vector2 max, float rounding)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         Squircle.Fill(drawList, min, max, rounding, ImGui.GetColorU32(ui.FieldSurface));
         if (item.IconUrl.Length == 0)
         {

@@ -1,11 +1,11 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -13,7 +13,7 @@ internal sealed partial class AppStoreApp
 {
     private void DrawIcon(ImDrawListPtr drawList, Vector2 center, float size, IPhoneApp app)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var half = size * 0.5f;
         var min = new Vector2(center.X - half, center.Y - half);
         var max = new Vector2(center.X + half, center.Y + half);
@@ -51,11 +51,17 @@ internal sealed partial class AppStoreApp
         var textLeft = row.Min.X + (RowIconSize + 12f) * scale;
         var textWidth = pill.Min.X - textLeft - 10f * scale;
         var entry = AppStoreCatalog.For(app.Id);
-        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y - 18f * scale),
-            Typography.FitText(app.DisplayName, textWidth, TextStyles.Headline), ui.TitleInk, TextStyles.Headline);
-        Typography.Draw(drawList, new Vector2(textLeft, row.Center.Y + 2f * scale),
-            Typography.FitText(Loc.T(entry.Subtitle), textWidth, TextStyles.Footnote), ui.MutedInk,
-            TextStyles.Footnote);
+        var nameY = row.Center.Y - 18f * scale;
+        var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
+            new Vector2(textLeft + textWidth, nameY + Typography.Measure(app.DisplayName, TextStyles.Headline).Y));
+        Marquee.DrawLeft("appstore.row.name." + app.Id, app.DisplayName, textLeft, nameY, textWidth,
+            TextStyles.Headline, ui.TitleInk, nameHovering);
+        var subtitle = Loc.T(entry.Subtitle);
+        var subtitleY = row.Center.Y + 2f * scale;
+        var subtitleHovering = UiInteract.Hover(new Vector2(textLeft, subtitleY),
+            new Vector2(textLeft + textWidth, subtitleY + Typography.Measure(subtitle, TextStyles.Footnote).Y));
+        Marquee.DrawLeft("appstore.row.subtitle." + app.Id, subtitle, textLeft, subtitleY, textWidth,
+            TextStyles.Footnote, ui.MutedInk, subtitleHovering);
         DrawStatePill(pill, app, overPill, scale);
         return UiInteract.Click(row.Min, row.Max, hovered);
     }
@@ -137,6 +143,12 @@ internal sealed partial class AppStoreApp
 
             var row = new Rect(new Vector2(cardMin.X + 14f * scale, rowTop),
                 new Vector2(cardMax.X - 14f * scale, rowTop + RowHeight * scale));
+            if (!rowAnchorTaken)
+            {
+                rowAnchorTaken = true;
+                UiAnchors.Report("appstore.row", row);
+            }
+
             if (DrawAppRow(row, entries[index], scale))
             {
                 router.Push(StoreView.ForApp(entries[index].Id));

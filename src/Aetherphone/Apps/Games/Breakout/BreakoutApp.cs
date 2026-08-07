@@ -1,11 +1,11 @@
 using Aetherphone.Apps.Games.Framework;
-using Aetherphone.Core.Animation;
 using Aetherphone.Core;
+using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Games.Breakout;
 
@@ -36,6 +36,8 @@ internal sealed class BreakoutApp : IMiniGame
     public string Id => GameId;
     public Vector4 Accent => AppAccents.For(Id);
     public string Title => Loc.T(L.Games.Breakout);
+    public bool RunsOnAClock => true;
+
     public string Genre => Loc.T(L.Games.GenreArcade);
     public void Open()
     {
@@ -68,7 +70,7 @@ internal sealed class BreakoutApp : IMiniGame
     public void Draw(in GameContext context)
     {
         var deltaSeconds = context.DeltaSeconds;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var body = context.Body;
         if (loadedBest == 0)
@@ -130,11 +132,19 @@ internal sealed class BreakoutApp : IMiniGame
         var shake = fx.ShakeOffset(scale);
         var shakenField = new Rect(field.Min + shake, field.Max + shake);
         var beatingBest = board.Score > 0 && board.Score > loadedBest;
-        GameHud.ScorePill(new Vector2(body.Center.X - 62f * scale, rowY), Loc.T(L.Games.Score), ref scoreRoll,
-            board.Score, Accent, theme, deltaSeconds, beatingBest);
-        GameHud.Pill(new Vector2(body.Center.X + 26f * scale, rowY), Loc.T(L.Games.Best), GameNumber.Label(displayBest),
-            Accent, theme, displayBest > loadedBest);
-        if (GameHud.RestartButton(new Vector2(body.Max.X - 20f * scale, rowY), 16f * scale, theme))
+        var scoreLabel = Loc.T(L.Games.Score);
+        var scoreText = GameNumber.Label(board.Score);
+        var bestLabel = Loc.T(L.Games.Best);
+        var bestText = GameNumber.Label(displayBest);
+        var scoreWidth = GameHud.PillWidth(scoreLabel, scoreText);
+        var bestWidth = GameHud.PillWidth(bestLabel, bestText);
+        var pillGap = 12f * scale;
+        var scoreX = body.Center.X - pillGap * 0.5f - scoreWidth * 0.5f;
+        var bestX = body.Center.X + pillGap * 0.5f + bestWidth * 0.5f;
+        GameHud.ScorePill(new Vector2(scoreX, rowY), scoreLabel, ref scoreRoll, board.Score, Accent, theme,
+            deltaSeconds, beatingBest);
+        GameHud.Pill(new Vector2(bestX, rowY), bestLabel, bestText, Accent, theme, displayBest > loadedBest);
+        if (GameHud.RestartButton(new Vector2(body.Max.X - 22f * scale, rowY), 16f * scale, theme))
         {
             StartNewGame(fieldHeight);
             return;
@@ -155,9 +165,8 @@ internal sealed class BreakoutApp : IMiniGame
 
     private void HandleInput(Rect field, float factor)
     {
-        var mouse = ImGui.GetMousePos();
-        board.SetPaddle((mouse.X - field.Min.X) / factor);
-        if (board.Attached && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && field.Contains(mouse))
+        board.SetPaddle((ImGui.GetMousePos().X - field.Min.X) / factor);
+        if (board.Attached && ImGui.IsMouseClicked(ImGuiMouseButton.Left) && UiInteract.Hover(field.Min, field.Max))
         {
             board.Launch();
         }
@@ -240,13 +249,22 @@ internal sealed class BreakoutApp : IMiniGame
     {
         var drawList = ImGui.GetWindowDrawList();
         var lastLife = board.Lives == 1;
-        for (var index = 0; index < board.Lives; index++)
+        var radius = 4f * scale;
+        var origin = new Vector2(body.Min.X + 22f * scale, rowY);
+        for (var life = 0; life < BreakoutBoard.StartingLives; life++)
         {
-            var center = new Vector2(body.Min.X + (12f + index * 15f) * scale, rowY);
+            var center = new Vector2(origin.X, origin.Y + (life - 1) * radius * 3.2f);
+            if (life >= board.Lives)
+            {
+                drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.25f)), 0,
+                    MathF.Max(1f, scale));
+                continue;
+            }
+
             var color = lastLife
                 ? new Vector4(0.95f, 0.35f, 0.35f, 0.6f + 0.4f * Pulse.Wave(Pulse.Fast))
                 : Accent;
-            drawList.AddCircleFilled(center, 4.5f * scale, ImGui.GetColorU32(color));
+            drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(color));
         }
     }
 

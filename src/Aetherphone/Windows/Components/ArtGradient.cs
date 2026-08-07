@@ -61,22 +61,6 @@ internal static class ArtGradient
         drawList.AddCircleFilled(center - new Vector2(radius * 0.32f, radius * 0.40f), radius * 0.40f, glow, 32);
     }
 
-    public static Vector4 FromHsv(float hue, float saturation, float value)
-    {
-        var sector = (hue - MathF.Floor(hue)) * 6f;
-        var index = (int)sector;
-        var fraction = sector - index;
-        var p = value * (1f - saturation);
-        var q = value * (1f - saturation * fraction);
-        var t = value * (1f - saturation * (1f - fraction));
-        return index switch
-        {
-            0 => new Vector4(value, t, p, 1f),
-            1 => new Vector4(q, value, p, 1f),
-            2 => new Vector4(p, value, t, 1f),
-            3 => new Vector4(p, q, value, 1f),
-            4 => new Vector4(t, p, value, 1f),
-            _ => new Vector4(value, p, q, 1f),
-        };
-    }
+    public static Vector4 FromHsv(float hue, float saturation, float value) =>
+        new HsvColor(hue, saturation, value).ToRgb();
 }

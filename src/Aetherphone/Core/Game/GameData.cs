@@ -4,6 +4,8 @@ using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Plugin.Services;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
+using ActionSheet = Lumina.Excel.Sheets.Action;
+using EmoteSheet = Lumina.Excel.Sheets.Emote;
 
 namespace Aetherphone.Core.Game;
 
@@ -15,6 +17,8 @@ internal sealed class GameData
     private readonly IObjectTable objectTable;
     private uint[]? collectableMountIds;
     private uint[]? collectableMinionIds;
+    private uint[]? triviaActionIds;
+    private uint[]? triviaEmoteIds;
     private byte[]? dailyBonusRouletteRowIds;
     private byte[]? weeklyHuntBillIndices;
     private Dictionary<uint, uint[]>? classJobIdsByCategory;
@@ -101,7 +105,6 @@ internal sealed class GameData
         return false;
     }
 
-    /// <summary>Every ClassJob row belonging to the given ClassJobCategory (e.g. Disciple of the Hand/Land).</summary>
     public uint[] ClassJobIdsInCategory(uint classJobCategoryId)
     {
         classJobIdsByCategory ??= new Dictionary<uint, uint[]>();
@@ -124,7 +127,6 @@ internal sealed class GameData
         return cached;
     }
 
-    /// <summary>The framed class/job icon the Character window and gear set list draw, one row per ClassJob.</summary>
     public static uint JobIconId(uint classJobId) => classJobId == 0 ? 0u : FramedJobIconBaseId + classJobId;
 
     public int JobExpArrayIndex(uint rowId)
@@ -215,7 +217,7 @@ internal sealed class GameData
 
     public string LocalRegionCode() => RegionCodeFromId(RegionId());
 
-    public string RegionCodeForWorld(string worldName)
+    public string RegionCodeForWorld(string? worldName)
     {
         if (string.IsNullOrEmpty(worldName))
         {
@@ -443,6 +445,105 @@ internal sealed class GameData
 
         collectableMinionIds = ids.ToArray();
         return collectableMinionIds;
+    }
+
+    public uint[] TriviaActionIds()
+    {
+        if (triviaActionIds is not null)
+        {
+            return triviaActionIds;
+        }
+
+        var ids = new List<uint>(1024);
+        foreach (var row in data.GetExcelSheet<ActionSheet>())
+        {
+            if (row.RowId == 0 || !row.IsPlayerAction || row.Icon == 0 || row.ClassJob.RowId == 0)
+            {
+                continue;
+            }
+
+            if (row.Name.ExtractText().Length == 0)
+            {
+                continue;
+            }
+
+            ids.Add(row.RowId);
+        }
+
+        triviaActionIds = ids.ToArray();
+        return triviaActionIds;
+    }
+
+    public uint[] TriviaEmoteIds()
+    {
+        if (triviaEmoteIds is not null)
+        {
+            return triviaEmoteIds;
+        }
+
+        var ids = new List<uint>(256);
+        foreach (var row in data.GetExcelSheet<EmoteSheet>())
+        {
+            if (row.RowId == 0 || row.Icon == 0 || row.Name.ExtractText().Length == 0)
+            {
+                continue;
+            }
+
+            ids.Add(row.RowId);
+        }
+
+        triviaEmoteIds = ids.ToArray();
+        return triviaEmoteIds;
+    }
+
+    public NamedIcon ActionEntry(uint rowId)
+    {
+        if (!data.GetExcelSheet<ActionSheet>().TryGetRow(rowId, out var row))
+        {
+            return default;
+        }
+
+        return new NamedIcon(TitleCase(row.Name.ExtractText()), row.Icon);
+    }
+
+    public NamedIcon EmoteEntry(uint rowId)
+    {
+        if (!data.GetExcelSheet<EmoteSheet>().TryGetRow(rowId, out var row))
+        {
+            return default;
+        }
+
+        return new NamedIcon(TitleCase(row.Name.ExtractText()), row.Icon);
+    }
+
+    public NamedIcon MountEntry(uint rowId)
+    {
+        if (!data.GetExcelSheet<Mount>().TryGetRow(rowId, out var row))
+        {
+            return default;
+        }
+
+        return new NamedIcon(TitleCase(row.Singular.ExtractText()), (uint)row.Icon);
+    }
+
+    public NamedIcon MinionEntry(uint rowId)
+    {
+        if (!data.GetExcelSheet<Companion>().TryGetRow(rowId, out var row))
+        {
+            return default;
+        }
+
+        return new NamedIcon(TitleCase(row.Singular.ExtractText()), row.Icon);
+    }
+
+    private static string TitleCase(string text)
+    {
+        if (text.Length == 0)
+        {
+            return text;
+        }
+
+        return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(text);
     }
 
     public byte[] DailyBonusRouletteRowIds()

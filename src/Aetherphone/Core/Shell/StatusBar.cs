@@ -3,7 +3,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Core.Shell;
 
@@ -39,15 +38,18 @@ internal static class StatusBar
         return cachedTime;
     }
 
-    public static void Draw(Rect screen, PhoneTheme theme)
+    public static void Draw(Rect screen, PhoneTheme theme, bool landscape)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowCenterY = screen.Min.Y + 22f * scale;
         Plugin.Device.SyncTarget();
         var localTime = CurrentTime();
         var timeSize = Typography.Measure(localTime, TimeScale, TimeWeight);
         var island = BaseIsland(screen);
-        DeviceChrome.DrawIsland(island, theme);
+        if (!landscape)
+        {
+            DeviceChrome.DrawIsland(island, theme);
+        }
         var earGap = EarGap * scale;
         var timeLeft = MathF.Min(screen.Min.X + TimePadding * scale,
             island.Min.X - earGap - timeSize.X - DndWidth(scale));
@@ -73,7 +75,7 @@ internal static class StatusBar
 
     internal static Rect BaseIsland(Rect screen)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var timeWidth = Typography.Measure(CurrentTime(), TimeScale, TimeWeight).X + DndWidth(scale);
         var clusterWidth = StatusIcons.MeasureWidth(scale, Plugin.Device.BatteryPercent);
         return ComputeIsland(screen, scale, timeWidth, clusterWidth);

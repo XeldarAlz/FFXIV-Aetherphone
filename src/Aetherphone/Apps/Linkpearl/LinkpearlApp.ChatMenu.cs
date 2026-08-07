@@ -63,9 +63,11 @@ internal sealed partial class LinkpearlApp
         {
             case ChatMenuCopyText:
                 ImGui.SetClipboardText(chatMenuText);
+                CopyToast.Show();
                 break;
             case ChatMenuCopyName when chatMenuName is { } name:
                 ImGui.SetClipboardText(name);
+                CopyToast.Show();
                 break;
         }
     }

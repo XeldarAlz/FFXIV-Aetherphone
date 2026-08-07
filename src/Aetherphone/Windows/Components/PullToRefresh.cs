@@ -1,11 +1,9 @@
 using Aetherphone.Core;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
-/// <summary>Pull-to-refresh gesture for a list inside an <see cref="AppSurface"/>; one instance per list.</summary>
 internal sealed class PullToRefresh
 {
     private const float ArmThreshold = 64f;
@@ -19,7 +17,7 @@ internal sealed class PullToRefresh
 
     public void Draw(Rect area, float pull, bool dragging, bool loading, Vector4 ink, Action onRefresh)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var deltaSeconds = ImGui.GetIO().DeltaTime;
 
         if (refreshing)

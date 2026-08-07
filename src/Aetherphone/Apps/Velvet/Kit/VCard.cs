@@ -1,6 +1,5 @@
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet.Kit;
 
@@ -16,7 +15,7 @@ internal static class VCard
     public static void Draw(ImDrawListPtr drawList, Vector2 min, Vector2 max, float radius, VCardStyle style,
         float hover = 0f)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (style == VCardStyle.Inset)
         {
             Squircle.Fill(drawList, min, max, radius, VelvetTheme.Sunken.Packed());

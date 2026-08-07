@@ -23,7 +23,7 @@ internal static class VenueMapper
         var teleport = BuildFfxivTeleport(location, world);
         var tags = CollectFfxivTags(dto);
         var description = dto.Description is { Length: > 0 } ? string.Join("\n\n", dto.Description) : string.Empty;
-        var website = !string.IsNullOrEmpty(dto.Website) ? dto.Website : $"https://ffxivvenues.com/{dto.Id}";
+        var website = !string.IsNullOrEmpty(dto.Website) ? dto.Website : $"https://ffxivvenues.com/venue/{dto.Id}";
         return new VenueEvent
         {
             Id = $"ffxiv:{dto.Id}",
@@ -238,6 +238,7 @@ internal static class VenueMapper
     private static IReadOnlyList<string> CollectFfxivTags(FfxivVenueDto dto)
     {
         var tags = new List<string>();
+        AddTag(tags, dto.Sfw ? "SFW" : "18+");
         if (dto.Tags is { } source)
         {
             for (var index = 0; index < source.Length; index++)
@@ -246,24 +247,23 @@ internal static class VenueMapper
             }
         }
 
-        AddTag(tags, dto.Sfw ? "SFW" : "18+");
         return tags;
     }
 
     private static IReadOnlyList<string> CollectPartakeTags(PartakeEventDto dto)
     {
         var tags = new List<string>();
+        if (IsAdult(dto.AgeRating))
+        {
+            AddTag(tags, "18+");
+        }
+
         if (dto.Tags is { } source)
         {
             for (var index = 0; index < source.Length; index++)
             {
                 AddTag(tags, source[index]);
             }
-        }
-
-        if (IsAdult(dto.AgeRating))
-        {
-            AddTag(tags, "18+");
         }
 
         return tags;

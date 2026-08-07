@@ -8,10 +8,11 @@ internal sealed class AethernetSession
     private readonly Configuration configuration;
     private readonly IFramework framework;
     private volatile bool tokenRejected;
-    private volatile bool hasDevAccess;
     private volatile bool banned;
     private volatile string? banReason;
+    private volatile SuspensionDto? suspension;
     private ulong activeContentId;
+    private ulong playingContentId;
 
     public AethernetSession(Configuration configuration, IFramework framework)
     {
@@ -27,37 +28,32 @@ internal sealed class AethernetSession
     public string? Token => string.IsNullOrEmpty(configuration.AethernetToken) ? null : configuration.AethernetToken;
     public bool IsSignedIn => Token is not null && !tokenRejected;
     public bool TokenRejected => tokenRejected;
-    public bool HasDevAccess => hasDevAccess && IsSignedIn;
     public bool IsBanned => banned;
     public string? BanReason => banReason;
+    public SuspensionDto? Suspension => suspension;
     public UserDto? CurrentUser { get; private set; }
 
     public ulong ActiveContentId => activeContentId;
+    public ulong PlayingContentId => playingContentId;
+    public bool FollowsCharacter => configuration.FollowCharacterAccount;
+    public bool MatchesPlayedCharacter => playingContentId == 0 || playingContentId == activeContentId;
     public bool LegacyClaimPending { get; private set; }
 
     public event Action? Changed;
-
-    public void SetDevAccess(bool granted)
-    {
-        if (hasDevAccess == granted)
-        {
-            return;
-        }
-
-        hasDevAccess = granted;
-        _ = framework.RunOnFrameworkThread(() => Changed?.Invoke());
-    }
 
     public void SignIn(string token, UserDto user)
     {
         _ = framework.RunOnFrameworkThread(() =>
         {
+            UseCharacterSlot();
             tokenRejected = false;
             banned = false;
             banReason = null;
+        suspension = null;
             LegacyClaimPending = false;
             configuration.AethernetToken = token;
             CurrentUser = user;
+            AdoptLegacyEncryptionKey(user);
             StashActive();
             configuration.Save();
             Changed?.Invoke();
@@ -69,6 +65,7 @@ internal sealed class AethernetSession
         _ = framework.RunOnFrameworkThread(() =>
         {
             CurrentUser = user;
+            AdoptLegacyEncryptionKey(user);
             StashActive();
             configuration.Save();
             Changed?.Invoke();
@@ -80,19 +77,22 @@ internal sealed class AethernetSession
         _ = framework.RunOnFrameworkThread(() =>
         {
             tokenRejected = false;
-            hasDevAccess = false;
             banned = false;
             banReason = null;
+        suspension = null;
             LegacyClaimPending = false;
-            if (activeContentId != 0)
-            {
-                configuration.CharacterSessions.Remove(activeContentId);
-            }
-
-            ClearFlat();
+            configuration.AethernetToken = string.Empty;
+            StashActive();
             CurrentUser = null;
+            var wasPinned = !configuration.FollowCharacterAccount;
+            configuration.FollowCharacterAccount = true;
+            configuration.PinnedAccountContentId = 0;
             configuration.Save();
             Changed?.Invoke();
+            if (wasPinned && playingContentId != activeContentId)
+            {
+                SwitchTo(playingContentId);
+            }
         });
     }
 
@@ -104,7 +104,6 @@ internal sealed class AethernetSession
         }
 
         tokenRejected = true;
-        hasDevAccess = false;
         AepLog.Warning("Aethernet token was rejected; sign in again to reconnect.");
         _ = framework.RunOnFrameworkThread(() =>
         {
@@ -113,12 +112,12 @@ internal sealed class AethernetSession
         });
     }
 
-    public void ReportBanned(string? reason)
+    public void ReportBanned(string? reason, SuspensionDto? details = null)
     {
         banned = true;
         banReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+        suspension = details;
         tokenRejected = true;
-        hasDevAccess = false;
         _ = framework.RunOnFrameworkThread(() =>
         {
             CurrentUser = null;
@@ -136,9 +135,9 @@ internal sealed class AethernetSession
         StashActive();
         activeContentId = contentId;
         tokenRejected = false;
-        hasDevAccess = false;
         banned = false;
         banReason = null;
+        suspension = null;
         CurrentUser = null;
         LegacyClaimPending = false;
         if (contentId != 0 && configuration.CharacterSessions.TryGetValue(contentId, out var stored))
@@ -153,6 +152,67 @@ internal sealed class AethernetSession
 
         configuration.Save();
         Changed?.Invoke();
+    }
+
+    public void ReportPlayingCharacter(ulong contentId)
+    {
+        playingContentId = contentId;
+    }
+
+    public ulong ResolveTarget(ulong playing) =>
+        AccountSelection.Target(configuration.CharacterSessions, configuration.FollowCharacterAccount,
+            configuration.PinnedAccountContentId, playing);
+
+    public void PinAccount(ulong contentId)
+    {
+        if (contentId == 0)
+        {
+            return;
+        }
+
+        configuration.FollowCharacterAccount = false;
+        configuration.PinnedAccountContentId = contentId;
+        if (contentId == activeContentId)
+        {
+            configuration.Save();
+            return;
+        }
+
+        SwitchTo(contentId);
+    }
+
+    public void UseCharacterAccount()
+    {
+        configuration.FollowCharacterAccount = true;
+        configuration.PinnedAccountContentId = 0;
+        if (playingContentId == activeContentId)
+        {
+            configuration.Save();
+            return;
+        }
+
+        SwitchTo(playingContentId);
+    }
+
+    public void ForgetAccount(ulong contentId)
+    {
+        if (contentId == 0 || contentId == activeContentId)
+        {
+            return;
+        }
+
+        if (configuration.CharacterSessions.TryGetValue(contentId, out var stored))
+        {
+            stored.Token = string.Empty;
+        }
+
+        if (configuration.PinnedAccountContentId == contentId)
+        {
+            configuration.PinnedAccountContentId = 0;
+            configuration.FollowCharacterAccount = true;
+        }
+
+        configuration.Save();
     }
 
     public void AdoptLegacy(ulong contentId, UserDto user)
@@ -172,6 +232,7 @@ internal sealed class AethernetSession
         tokenRejected = false;
         banned = false;
         banReason = null;
+        suspension = null;
         CurrentUser = user;
         StashActive();
         configuration.Save();
@@ -192,6 +253,42 @@ internal sealed class AethernetSession
         });
     }
 
+    private void AdoptLegacyEncryptionKey(UserDto user)
+    {
+        if (configuration.EncryptionKeyCache.Length > 0
+            || configuration.LegacyUnclaimedEncryptionKey.Length == 0
+            || !string.Equals(configuration.LegacyUnclaimedEncryptionUserId, user.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        configuration.EncryptionKeyCache = configuration.LegacyUnclaimedEncryptionKey;
+        configuration.EncryptionKeyCacheUserId = configuration.LegacyUnclaimedEncryptionUserId;
+        configuration.LegacyUnclaimedEncryptionKey = string.Empty;
+        configuration.LegacyUnclaimedEncryptionUserId = string.Empty;
+    }
+
+    private void UseCharacterSlot()
+    {
+        configuration.FollowCharacterAccount = true;
+        configuration.PinnedAccountContentId = 0;
+        if (playingContentId == 0 || playingContentId == activeContentId)
+        {
+            return;
+        }
+
+        StashActive();
+        activeContentId = playingContentId;
+        if (configuration.CharacterSessions.TryGetValue(playingContentId, out var stored))
+        {
+            LoadFlat(stored);
+        }
+        else
+        {
+            ClearFlat();
+        }
+    }
+
     private void StashActive()
     {
         if (activeContentId == 0)
@@ -200,21 +297,25 @@ internal sealed class AethernetSession
         }
 
         var token = configuration.AethernetToken;
-        if (string.IsNullOrEmpty(token))
+        var hasSnapshot = configuration.CharacterSessions.TryGetValue(activeContentId, out var snapshot);
+        if (!hasSnapshot)
         {
-            configuration.CharacterSessions.Remove(activeContentId);
-            return;
-        }
+            if (string.IsNullOrEmpty(token) && configuration.EncryptionKeyCache.Length == 0)
+            {
+                return;
+            }
 
-        if (!configuration.CharacterSessions.TryGetValue(activeContentId, out var snapshot))
-        {
             snapshot = new CharacterSession();
             configuration.CharacterSessions[activeContentId] = snapshot;
         }
 
-        snapshot.Token = token;
-        snapshot.EncryptionKeyCache = configuration.EncryptionKeyCache;
-        snapshot.EncryptionKeyCacheUserId = configuration.EncryptionKeyCacheUserId;
+        snapshot!.Token = token;
+        if (configuration.EncryptionKeyCache.Length > 0)
+        {
+            snapshot.EncryptionKeyCache = configuration.EncryptionKeyCache;
+            snapshot.EncryptionKeyCacheUserId = configuration.EncryptionKeyCacheUserId;
+        }
+
         var user = CurrentUser;
         if (user is not null)
         {
@@ -223,6 +324,7 @@ internal sealed class AethernetSession
             snapshot.DisplayName = user.DisplayName;
             snapshot.CharacterName = user.Name;
             snapshot.World = user.World;
+            snapshot.AvatarUrl = user.AvatarUrl ?? string.Empty;
         }
     }
 

@@ -48,8 +48,8 @@ Privacy and safety come first: text messages, attachments, and voice notes are e
 ## Highlights
 
 - **Social**: Chirper microblog, Aethergram photo feed, ChocoChat private messaging with voice notes and group calls, and Velvet, an optional 18+ companion app.
-- **Utilities**: a market board tracker, venue and event directory, in-game music, weather, a wallet, timers and resets, a photo library and camera, and a pocket arcade of mini-games, among 30+ apps.
-- **Make it yours**: accent palettes, wallpapers, Lodestone character portraits, custom ringtones, and an accessibility text-size zoom.
+- **Utilities**: a market board tracker, a housing browser that maps open plots and tracks lottery phases, venue and event directory, in-game music, weather, a wallet, timers and resets, a photo library and camera, Shortcuts that run command macros and open your other plugins in one tap, and a pocket arcade of mini-games, among 30+ apps.
+- **Make it yours**: any accent color you like from a full picker, wallpapers, Lodestone character portraits, custom ringtones, an accessibility text-size zoom, and a phone you can drag to any size you like.
 
 Full feature tour, screenshots, and details live on the website:
 
@@ -71,14 +71,22 @@ Tick **Enabled**, click **+**, then **Save and Close**. Open `/xlplugins` → **
 |---|---|
 | `/phone` | Toggle the phone |
 | `/aetherphone` | Alias for `/phone` |
-| `/phone about` | Open credits / links |
+| `/phone run <name>` | Run a shortcut by name, so it can sit on a hotbar macro |
+| `/phone market [item]` | Open the market board, searching for an item if you name one |
 | `/phone reset` | Recenter the phone on screen |
+| `/phone test` | Send a sample notification |
 
 ## Community
 
 Questions, ideas, or just want to hang out with other players? Come say hi on Discord.
 
 → [Join our Discord](https://discord.gg/3HbJCscMyS)
+
+## Contributing
+
+Aetherphone is open source and contributions are welcome. Start with the developer documentation, then read the contribution guide.
+
+→ [Developer documentation](docs/README.md) · [Contributing guide](CONTRIBUTING.md)
 
 ## More from me
 

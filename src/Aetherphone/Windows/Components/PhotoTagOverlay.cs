@@ -5,7 +5,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -36,7 +35,7 @@ internal sealed class PhotoTagOverlay
             return new PhotoTagOverlayResult(false, null);
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var isRevealed = revealed.Contains(postId);
         reveals.TryGetValue(postId, out var reveal);
         var target = isRevealed ? 1f : 0f;

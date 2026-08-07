@@ -6,7 +6,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Wallet;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Wallet;
@@ -79,7 +78,7 @@ internal sealed class WalletApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var content = context.Content;
         ui.Theme = theme;

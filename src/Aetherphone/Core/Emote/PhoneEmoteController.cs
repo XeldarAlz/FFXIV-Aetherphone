@@ -12,7 +12,7 @@ internal sealed class PhoneEmoteController : IDisposable
     private const ushort TomescrollEmoteId = 295;
     private const ushort TomestoneEmoteId = 191;
     private const long StillnessDelayMilliseconds = 400;
-    private const long RecastCooldownMilliseconds = 1000;
+    private const long RecastCooldownMilliseconds = 2500;
     private const float MovementThreshold = 0.0025f;
     private const float RotationThreshold = 0.02f;
 
@@ -20,7 +20,16 @@ internal sealed class PhoneEmoteController : IDisposable
     {
         ConditionFlag.InCombat, ConditionFlag.BetweenAreas, ConditionFlag.BetweenAreas51,
         ConditionFlag.OccupiedInCutSceneEvent, ConditionFlag.WatchingCutscene, ConditionFlag.WatchingCutscene78,
-        ConditionFlag.OccupiedInQuestEvent, ConditionFlag.Casting,
+        ConditionFlag.OccupiedInQuestEvent, ConditionFlag.Casting, ConditionFlag.OccupiedInEvent,
+        ConditionFlag.Gathering, ConditionFlag.Crafting, ConditionFlag.TradeOpen, ConditionFlag.ExecutingCraftingAction,
+        ConditionFlag.Unconscious, ConditionFlag.MeldingMateria, ConditionFlag.OperatingSiegeMachine,
+        ConditionFlag.CarryingItem, ConditionFlag.CarryingObject, ConditionFlag.EditingPortrait,
+        ConditionFlag.ParticipatingInCustomMatch, ConditionFlag.PlayingLordOfVerminion, ConditionFlag.ChocoboRacing,
+        ConditionFlag.PlayingMiniGame, ConditionFlag.Performing, ConditionFlag.Transformed,
+        ConditionFlag.UsingHousingFunctions, ConditionFlag.Occupied, ConditionFlag.Occupied30, ConditionFlag.Occupied33,
+        ConditionFlag.Occupied38, ConditionFlag.Occupied39, ConditionFlag.OccupiedSummoningBell,
+        ConditionFlag.ExecutingGatheringAction, ConditionFlag.PreparingToCraft, ConditionFlag.BeingMoved,
+        ConditionFlag.LoggingOut, ConditionFlag.Fishing,
     };
 
     private readonly Configuration configuration;
@@ -63,14 +72,21 @@ internal sealed class PhoneEmoteController : IDisposable
             return;
         }
 
+        var now = Environment.TickCount64;
         var player = objectTable.LocalPlayer;
         if (player is null || IsBlocked())
         {
             hasSample = false;
+            lastCastMilliseconds = now;
             return;
         }
 
-        var now = Environment.TickCount64;
+        if (IsBusy(player.Address))
+        {
+            lastCastMilliseconds = now;
+            return;
+        }
+
         if (HasMoved(player.Position, player.Rotation, now))
         {
             return;
@@ -82,11 +98,6 @@ internal sealed class PhoneEmoteController : IDisposable
         }
 
         if (now - lastCastMilliseconds < RecastCooldownMilliseconds)
-        {
-            return;
-        }
-
-        if (IsBusy(player.Address))
         {
             return;
         }

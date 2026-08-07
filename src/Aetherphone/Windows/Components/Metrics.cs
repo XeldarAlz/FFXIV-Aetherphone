@@ -1,10 +1,5 @@
 namespace Aetherphone.Windows.Components;
 
-/// <summary>
-/// Central sizing tokens for the UI toolkit. Values are unscaled pixels; multiply by
-/// <c>ImGuiHelpers.GlobalScale</c> at the call site. Change a value here to retune every app that
-/// consumes it. Roles (padding, card rounding, field height) are named by intent, not by number.
-/// </summary>
 internal static class Metrics
 {
     internal static class Space
@@ -36,8 +31,11 @@ internal static class Metrics
         public const float FieldMultiline = 88f;
         public const float ToggleWidth = 46f;
         public const float ToggleHeight = 28f;
+        public const float HintIconHeight = 22f;
+        public const float HintIconGap = 16f;
         public const float IconTile = 28f;
         public const float HeroRing = 56f;
+        public const float HomeIndicatorInset = 34f;
     }
 
     internal static class Stroke

@@ -6,7 +6,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Message;
 
@@ -18,22 +17,38 @@ internal sealed partial class MessageApp
 
     private void DrawForwardPicker(Rect area, string messageId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Message.ForwardTitle), back);
         var message = store.FindMessage(messageId);
         if (message is null || message.Deleted)
+        {
+            var context = new PhoneContext(area, theme, navigation);
+            AppHeader.Draw(context, Loc.T(L.Message.ForwardTitle), back);
+            return;
+        }
+
+        if (DrawConversationPicker(area, Loc.T(L.Message.ForwardTitle), ref forwardFilter) is not { } target ||
+            forwardBusy)
         {
             return;
         }
 
+        forwardBusy = true;
+        store.ForwardMessage(message, target.Id, _ => forwardBusy = false);
+        forwardOpenPending = target.Id;
+    }
+
+    private ConversationDto? DrawConversationPicker(Rect area, string title, ref string filter)
+    {
+        var scale = UiScale.Current;
+        var context = new PhoneContext(area, theme, navigation);
+        AppHeader.Draw(context, title, back);
         var top = area.Min.Y + AppHeader.Height * scale;
         var searchHeight = 52f * scale;
         SearchField.DrawSubmit(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)),
-            "##forwardFilter", Loc.T(L.Phone.FilterHint), ref forwardFilter, AppPalettes.Message);
+            "##conversationPickerFilter", Loc.T(L.Phone.FilterHint), ref filter, AppPalettes.Message);
         var listRect = new Rect(new Vector2(area.Min.X, top + searchHeight), area.Max);
         var snapshot = store.Conversations;
-        var query = forwardFilter.Trim();
+        var query = filter.Trim();
+        ConversationDto? picked = null;
         using (AppSurface.Begin(listRect))
         {
             ImGui.Dummy(new Vector2(0f, 4f * scale));
@@ -47,7 +62,11 @@ internal sealed partial class MessageApp
                     continue;
                 }
 
-                DrawForwardRow(item, message, scale);
+                if (DrawPickerRow(item, scale))
+                {
+                    picked = item;
+                }
+
                 shown++;
             }
 
@@ -59,9 +78,11 @@ internal sealed partial class MessageApp
 
             ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
+
+        return picked;
     }
 
-    private void DrawForwardRow(ConversationDto item, ChatMessageDto message, float scale)
+    private bool DrawPickerRow(ConversationDto item, float scale)
     {
         var rowHeight = 56f * scale;
         var origin = ImGui.GetCursorScreenPos();
@@ -84,19 +105,19 @@ internal sealed partial class MessageApp
         }
 
         var textLeft = avatarCenter.X + radius + 12f * scale;
-        Typography.Draw(new Vector2(textLeft, origin.Y + rowHeight * 0.5f - 9f * scale),
-            Typography.FitText(title, origin.X + width - pad - textLeft, 1f, FontWeight.SemiBold),
-            theme.TextStrong, 1f, FontWeight.SemiBold);
-        AppSkin.Icon(new Vector2(origin.X + width - pad - 8f * scale, origin.Y + rowHeight * 0.5f),
+        var iconCenterX = origin.X + width - pad - 8f * scale;
+        var textMaxWidth = MathF.Max(1f, iconCenterX - 12f * scale - textLeft);
+        var titleTop = origin.Y + rowHeight * 0.5f - 9f * scale;
+        var titleSize = Typography.Measure(title, 1f, FontWeight.SemiBold);
+        var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleTop),
+            new Vector2(textLeft + textMaxWidth, titleTop + titleSize.Y));
+        Marquee.DrawLeft("picker.row." + item.Id, title, textLeft, titleTop, textMaxWidth,
+            new TextStyle(1f, FontWeight.SemiBold), theme.TextStrong, titleHovering);
+        AppSkin.Icon(new Vector2(iconCenterX, origin.Y + rowHeight * 0.5f),
             FontAwesomeIcon.Share.ToIconString(), ui.MutedInk, 0.85f);
-        if (UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight)) && !forwardBusy)
-        {
-            forwardBusy = true;
-            store.ForwardMessage(message, item.Id, _ => forwardBusy = false);
-            forwardOpenPending = item.Id;
-        }
-
+        var clicked = UiInteract.HoverClick(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, rowHeight + 8f * scale));
+        return clicked;
     }
 }

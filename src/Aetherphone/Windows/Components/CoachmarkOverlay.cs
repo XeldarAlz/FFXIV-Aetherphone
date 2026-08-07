@@ -4,7 +4,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -47,7 +46,7 @@ internal sealed class CoachmarkOverlay
     public CoachmarkAction Draw(Rect screen, PhoneTheme theme, in GuideStep step, Rect? anchor, float presence,
         float textProgress, int index, int count, bool interactive)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         var dl = ImGui.GetForegroundDrawList();
         var rounding = theme.ScreenRounding * scale;
@@ -321,7 +320,7 @@ internal sealed class CoachmarkOverlay
         }
 
         dl.PopClipRect();
-        if (isTap && live && hole is { } tapHole && ImGui.IsMouseHoveringRect(tapHole.Min, tapHole.Max))
+        if (isTap && live && hole is { } tapHole && UiInteract.Hover(tapHole.Min, tapHole.Max))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -485,7 +484,7 @@ internal sealed class CoachmarkOverlay
         var min = center - half;
         var max = center + half;
         var radius = size.Y * 0.5f;
-        var hovered = live && ImGui.IsMouseHoveringRect(min, max);
+        var hovered = live && UiInteract.Hover(min, max);
         var fill = hovered ? Palette.Mix(accent, Vector4.One, 0.14f) : accent;
         Squircle.Fill(dl, min, max, radius, ImGui.GetColorU32(fill with { W = fill.W * alpha }));
         Typography.DrawCentered(dl, center, label, Ink with { W = contentAlpha }, TextStyles.Headline);

@@ -5,7 +5,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet.Kit;
 
@@ -42,6 +41,9 @@ internal struct VRowModel
     public bool PillFilled;
     public bool PillEnabled;
     public int Badge;
+    public int RoleBadges;
+    public string[]? RoleBadgeIds;
+    public string? UserId;
     public string Time;
     public bool Chevron;
     public bool Decline;
@@ -52,7 +54,7 @@ internal static class VRow
     public static VRowHit Draw(in VRowModel model, AppSkin ui, PhoneTheme theme, RemoteImageCache images,
         LodestoneService lodestone)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -108,9 +110,14 @@ internal static class VRow
             rightEdge -= 22f * scale;
         }
 
+        var overControl = false;
         if (model.Decline)
         {
-            if (ui.IconButton(new Vector2(rightEdge - 10f * scale, centerY), 13f * scale,
+            var declineCenter = new Vector2(rightEdge - 10f * scale, centerY);
+            var declineRadius = 13f * scale;
+            var declineHit = new Vector2(declineRadius, declineRadius);
+            overControl |= UiInteract.Hover(declineCenter - declineHit, declineCenter + declineHit);
+            if (ui.IconButton(declineCenter, declineRadius,
                     FontAwesomeIcon.Times.ToIconString(), VelvetTheme.MutedInk, AppSkin.Transparent, 0.9f))
             {
                 hit = VRowHit.Decline;
@@ -127,6 +134,7 @@ internal static class VRow
                 new Vector2(rightEdge, centerY + pillHeight * 0.5f));
             if (model.PillEnabled)
             {
+                overControl |= UiInteract.Hover(pillRect.Min, pillRect.Max);
                 if (ui.PillButton(pillRect, model.Pill, model.PillFilled))
                 {
                     hit = VRowHit.Pill;
@@ -135,7 +143,8 @@ internal static class VRow
             else
             {
                 Squircle.Fill(drawList, pillRect.Min, pillRect.Max, pillHeight * 0.5f, VelvetTheme.PlumWell.Packed());
-                Typography.DrawCentered(pillRect.Center, model.Pill, VelvetTheme.MutedInk, 0.9f, FontWeight.SemiBold);
+                Typography.DrawCentered(drawList, pillRect.Center, model.Pill, VelvetTheme.MutedInk, 0.9f,
+                    FontWeight.SemiBold);
             }
 
             rightEdge -= pillWidth + Metrics.Space.Sm * scale;
@@ -144,8 +153,8 @@ internal static class VRow
         if (timeText.Length > 0)
         {
             var timeSize = Typography.Measure(timeText, TextStyles.Caption1);
-            Typography.Draw(new Vector2(rightEdge - timeSize.X, min.Y + 12f * scale), timeText, VelvetTheme.MutedInk,
-                TextStyles.Caption1);
+            Typography.Draw(drawList, new Vector2(rightEdge - timeSize.X, min.Y + 12f * scale), timeText,
+                VelvetTheme.MutedInk, TextStyles.Caption1);
         }
 
         if (model.Badge > 0)
@@ -155,24 +164,30 @@ internal static class VRow
 
         var textRight = rightEdge - Metrics.Space.Sm * scale;
         var innerWidth = MathF.Max(10f * scale, textRight - textLeft);
+        var titleKey = "vrow.title." + (model.UserId ?? titleText);
         if (subtitleText.Length == 0)
         {
-            var title = Typography.FitText(titleText, innerWidth, TextStyles.Headline);
-            var titleSize = Typography.Measure(title, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, centerY - titleSize.Y * 0.5f), title, VelvetTheme.TitleInk,
-                TextStyles.Headline);
+            var titleSize = Typography.Measure(titleText, TextStyles.Headline);
+            UserName.Draw(drawList, titleKey, titleText, model.RoleBadges, model.RoleBadgeIds, textLeft,
+                centerY - titleSize.Y * 0.5f, innerWidth, TextStyles.Headline, VelvetTheme.TitleInk, hovered, false);
         }
         else
         {
-            var title = Typography.FitText(titleText, innerWidth, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, centerY - 15f * scale), title, VelvetTheme.TitleInk,
-                TextStyles.Headline);
-            var subtitle = Typography.FitText(subtitleText, innerWidth, TextStyles.Subheadline);
-            Typography.Draw(new Vector2(textLeft, centerY + 3f * scale), subtitle, VelvetTheme.MutedInk,
-                TextStyles.Subheadline);
+            var titleY = centerY - 15f * scale;
+            var titleSize = Typography.Measure(titleText, TextStyles.Headline);
+            var titleHovering = UiInteract.Hover(new Vector2(textLeft, titleY),
+                new Vector2(textLeft + innerWidth, titleY + titleSize.Y));
+            UserName.Draw(drawList, titleKey, titleText, model.RoleBadges, model.RoleBadgeIds, textLeft, titleY,
+                innerWidth, TextStyles.Headline, VelvetTheme.TitleInk, titleHovering, false);
+            var subtitleY = centerY + 3f * scale;
+            var subtitleSize = Typography.Measure(subtitleText, TextStyles.Subheadline);
+            var subtitleHovering = UiInteract.Hover(new Vector2(textLeft, subtitleY),
+                new Vector2(textLeft + innerWidth, subtitleY + subtitleSize.Y));
+            Marquee.DrawLeft("vrow.subtitle." + subtitleText, subtitleText, textLeft, subtitleY,
+                innerWidth, TextStyles.Subheadline, VelvetTheme.MutedInk, subtitleHovering);
         }
 
-        if (hit == VRowHit.None && UiInteract.Click(min, max, hovered))
+        if (hit == VRowHit.None && !overControl && UiInteract.Click(min, max, hovered))
         {
             hit = VRowHit.Body;
         }

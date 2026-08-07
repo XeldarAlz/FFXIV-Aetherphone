@@ -7,8 +7,6 @@ using Aetherphone.Core.Platform;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
-using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -99,7 +97,7 @@ internal sealed class ImagePickCrop
         var theme = context.Theme;
         var cancelled = false;
         AppHeader.Draw(context, labels.PickTitle, () => cancelled = true);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var importHeight = 46f * scale;
         var importRect = new Rect(new Vector2(area.Min.X + 16f * scale, top + 8f * scale),
@@ -120,32 +118,42 @@ internal sealed class ImagePickCrop
             }
 
             var gap = 6f * scale;
-            var cell = (ScrollLayout.StableContentWidth() - gap * (GridColumns - 1)) / GridColumns;
-            using (ImRaii.PushStyle(ImGuiStyleVar.ItemSpacing, new Vector2(gap, gap)))
+            var avail = ScrollLayout.StableContentWidth();
+            var cell = (avail - gap * (GridColumns - 1)) / GridColumns;
+            var origin = ImGui.GetCursorScreenPos();
+            var scrollY = ImGui.GetScrollY();
+            var viewHeight = ImGui.GetWindowSize().Y;
+            var margin = cell + 60f * scale;
+            for (var index = 0; index < pickerPaths.Length; index++)
             {
-                for (var index = 0; index < pickerPaths.Length; index++)
+                var column = index % GridColumns;
+                var rowIndex = index / GridColumns;
+                var rowTop = rowIndex * (cell + gap);
+                if (rowTop + cell < scrollY - margin || rowTop > scrollY + viewHeight + margin)
                 {
-                    ImGui.Dummy(new Vector2(cell, cell));
-                    var min = ImGui.GetItemRectMin();
-                    var max = ImGui.GetItemRectMax();
-                    DrawThumbnail(pickerPaths[index], min, max, theme, scale);
-                    if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
-                    {
-                        BeginCrop(pickerPaths[index]);
-                    }
+                    continue;
+                }
 
-                    if (index % GridColumns != GridColumns - 1)
-                    {
-                        ImGui.SameLine();
-                    }
+                var min = new Vector2(origin.X + column * (cell + gap), origin.Y + rowTop);
+                var max = new Vector2(min.X + cell, min.Y + cell);
+                var hovered = UiInteract.Hover(min, max);
+                DrawThumbnail(pickerPaths[index], min, max, theme, scale, hovered);
+                if (UiInteract.Click(min, max, hovered))
+                {
+                    BeginCrop(pickerPaths[index]);
                 }
             }
+
+            var rows = (pickerPaths.Length + GridColumns - 1) / GridColumns;
+            var totalHeight = rows * (cell + gap);
+            ImGui.SetCursorScreenPos(origin);
+            ImGui.Dummy(new Vector2(avail, totalHeight));
         }
 
         return cancelled ? ImagePickCropEvent.Cancelled : ImagePickCropEvent.None;
     }
 
-    private void DrawThumbnail(string path, Vector2 min, Vector2 max, PhoneTheme theme, float scale)
+    private void DrawThumbnail(string path, Vector2 min, Vector2 max, PhoneTheme theme, float scale, bool hovered)
     {
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 10f * scale;
@@ -159,7 +167,7 @@ internal sealed class ImagePickCrop
         var (uv0, uv1) = ImageFit.CoverSquare(texture.Size);
         drawList.AddImageRounded(texture.Handle, min, max, uv0, uv1, 0xFFFFFFFFu, rounding,
             ImDrawFlags.RoundCornersAll);
-        if (ImGui.IsItemHovered())
+        if (hovered)
         {
             drawList.AddRectFilled(min, max, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.1f)), rounding);
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -185,7 +193,7 @@ internal sealed class ImagePickCrop
         var theme = context.Theme;
         AppHeader.Draw(context, labels.CropTitle, () => cropStage = false);
         var committed = HeaderAction(area, busy ? labels.BusyLabel : labels.UseLabel, !busy, accent, theme);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var deltaSeconds = MathF.Min(ImGui.GetIO().DeltaTime, 0.1f);
         var drawList = ImGui.GetWindowDrawList();
         var top = area.Min.Y + AppHeader.Height * scale;
@@ -225,7 +233,7 @@ internal sealed class ImagePickCrop
 
     private void HandleGestures(Rect preview, Vector2 size, Vector2 visible)
     {
-        var hovering = ImGui.IsMouseHoveringRect(preview.Min, preview.Max);
+        var hovering = UiInteract.Hover(preview.Min, preview.Max);
         if (hovering)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -270,12 +278,12 @@ internal sealed class ImagePickCrop
 
     private void LaunchFileDialog(string title)
     {
-        NativeFileDialog.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
+        FilePicker.PickImage(title, path => Interlocked.Exchange(ref pendingPickedPath, path));
     }
 
     private static bool HeaderAction(Rect area, string label, bool enabled, Vector4 accent, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var height = 28f * scale;
         var width = Typography.Measure(label, 0.9f, FontWeight.SemiBold).X + 26f * scale;
         var max = new Vector2(area.Max.X - 12f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f + height * 0.5f);
@@ -286,7 +294,7 @@ internal sealed class ImagePickCrop
     private static bool Pill(Rect rect, string label, bool filled, Vector4 accent, PhoneTheme theme)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
         var fill = filled
             ? (hovered ? Palette.Mix(accent, theme.TextStrong, 0.12f) : accent)

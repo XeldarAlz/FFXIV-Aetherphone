@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Activity;
 
@@ -57,7 +56,7 @@ internal sealed partial class ActivityApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var content = context.Content;
         ui.Theme = theme;
@@ -167,27 +166,30 @@ internal sealed partial class ActivityApp : IPhoneApp
         var third = width / 3f;
         var height = 48f * scale;
         var today = tracker.Today;
-        DrawLegendItem(new Vector2(origin.X + third * 0.5f, origin.Y), ActivityRings.RingOneTint,
+        DrawLegendItem(new Vector2(origin.X + third * 0.5f, origin.Y), third, ActivityRings.RingOneTint,
             Loc.T(L.Character.RingProgress), Percent(ProgressFraction));
-        DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), ActivityRings.RingTwoTint,
+        DrawLegendItem(new Vector2(origin.X + third * 1.5f, origin.Y), third, ActivityRings.RingTwoTint,
             Loc.T(L.Character.RingAdventure), $"{today.DutiesCompleted} / {configuration.ActivityGoalDuties}");
-        DrawLegendItem(new Vector2(origin.X + third * 2.5f, origin.Y), ActivityRings.RingThreeTint,
+        DrawLegendItem(new Vector2(origin.X + third * 2.5f, origin.Y), third, ActivityRings.RingThreeTint,
             Loc.T(L.Character.RingFortune), $"{Compact(today.GilEarned)} / {Compact(configuration.ActivityGoalGil)}");
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
     }
 
-    private static void DrawLegendItem(Vector2 top, Vector4 tint, string label, string value)
+    private static void DrawLegendItem(Vector2 top, float columnWidth, Vector4 tint, string label, string value)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dot = 6f * scale;
-        var labelSize = Typography.Measure(label, TextStyles.Callout);
+        var labelMaxWidth = MathF.Max(1f, columnWidth - dot - 10f * scale);
+        var label2 = Typography.FitText(label, labelMaxWidth, TextStyles.Callout);
+        var labelSize = Typography.Measure(label2, TextStyles.Callout);
         var dotCenter = new Vector2(top.X - labelSize.X * 0.5f - dot - 5f * scale, top.Y + labelSize.Y * 0.5f);
         ImGui.GetWindowDrawList().AddCircleFilled(dotCenter, dot, ImGui.GetColorU32(tint));
-        Typography.Draw(new Vector2(top.X - labelSize.X * 0.5f, top.Y), label, AppPalettes.Activity.MutedInk,
+        Typography.Draw(new Vector2(top.X - labelSize.X * 0.5f, top.Y), label2, AppPalettes.Activity.MutedInk,
             TextStyles.Callout);
-        var valueSize = Typography.Measure(value, TextStyles.Title3);
-        Typography.Draw(new Vector2(top.X - valueSize.X * 0.5f, top.Y + labelSize.Y + 5f * scale), value,
+        var value2 = Typography.FitText(value, columnWidth - 10f * scale, TextStyles.Title3);
+        var valueSize = Typography.Measure(value2, TextStyles.Title3);
+        Typography.Draw(new Vector2(top.X - valueSize.X * 0.5f, top.Y + labelSize.Y + 5f * scale), value2,
             AppPalettes.Activity.TitleInk, TextStyles.Title3);
     }
 
@@ -355,21 +357,23 @@ internal sealed partial class ActivityApp : IPhoneApp
         var tileCenter = new Vector2(row.Min.X + tile * 0.5f, row.Center.Y);
         IconTile.Draw(tileCenter, tile, tint, icon);
         var textLeft = row.Min.X + tile + 12f * scale;
+        var valueSize = Typography.Measure(value, 1.02f, FontWeight.SemiBold);
+        var textMaxWidth = MathF.Max(1f, row.Max.X - 10f * scale - valueSize.X - textLeft);
+        var rowId = "activity.statrow." + label;
         if (detail is { Length: > 0 })
         {
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - 16f * scale), label, AppPalettes.Activity.TitleInk,
-                TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, row.Center.Y + 5f * scale), detail, AppPalettes.Activity.MutedInk,
-                TextStyles.Footnote);
+            Marquee.DrawLeftAuto(rowId, label, textLeft, row.Center.Y - 16f * scale, textMaxWidth,
+                TextStyles.Headline, AppPalettes.Activity.TitleInk);
+            Marquee.DrawLeftAuto(rowId + ".detail", detail, textLeft, row.Center.Y + 5f * scale, textMaxWidth,
+                TextStyles.Footnote, AppPalettes.Activity.MutedInk);
         }
         else
         {
             var labelSize = Typography.Measure(label, TextStyles.Headline);
-            Typography.Draw(new Vector2(textLeft, row.Center.Y - labelSize.Y * 0.5f), label,
-                AppPalettes.Activity.TitleInk, TextStyles.Headline);
+            Marquee.DrawLeftAuto(rowId, label, textLeft, row.Center.Y - labelSize.Y * 0.5f, textMaxWidth,
+                TextStyles.Headline, AppPalettes.Activity.TitleInk);
         }
 
-        var valueSize = Typography.Measure(value, 1.02f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(row.Max.X - valueSize.X, row.Center.Y - valueSize.Y * 0.5f), value, valueInk,
             1.02f, FontWeight.SemiBold);
     }
@@ -384,10 +388,14 @@ internal sealed partial class ActivityApp : IPhoneApp
         var topY = row.Min.Y + 8f * scale;
         var valueSize = Typography.Measure(value, 1.0f, FontWeight.SemiBold);
         Typography.Draw(new Vector2(row.Max.X - valueSize.X, topY), value, tint, 1.0f, FontWeight.SemiBold);
-        Typography.Draw(new Vector2(textLeft, topY), label, AppPalettes.Activity.TitleInk, TextStyles.Headline);
+        var labelMaxWidth = MathF.Max(1f, row.Max.X - 10f * scale - valueSize.X - textLeft);
+        var clippedLabel = Typography.FitText(label, labelMaxWidth, TextStyles.Headline);
+        Typography.Draw(new Vector2(textLeft, topY), clippedLabel, AppPalettes.Activity.TitleInk,
+            TextStyles.Headline);
         if (detail is { Length: > 0 })
         {
-            Typography.Draw(new Vector2(textLeft, topY + 19f * scale), detail, AppPalettes.Activity.MutedInk,
+            var clippedDetail = Typography.FitText(detail, labelMaxWidth, TextStyles.Caption1);
+            Typography.Draw(new Vector2(textLeft, topY + 19f * scale), clippedDetail, AppPalettes.Activity.MutedInk,
                 TextStyles.Caption1);
         }
 
@@ -407,12 +415,15 @@ internal sealed partial class ActivityApp : IPhoneApp
 
     private int GoalRow(Rect row, string label, string value, float scale)
     {
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - 8f * scale), label, AppPalettes.Activity.BodyInk,
-            TextStyles.Subheadline);
         var radius = StepperRadius * scale;
         var plusCenter = new Vector2(row.Max.X - radius, row.Center.Y);
         var minusCenter = new Vector2(row.Max.X - radius - 106f * scale, row.Center.Y);
         var valueCenter = new Vector2((plusCenter.X + minusCenter.X) * 0.5f, row.Center.Y);
+        var labelMaxWidth = MathF.Max(1f, minusCenter.X - radius - 12f * scale - row.Min.X);
+        var labelHovering = UiInteract.Hover(new Vector2(row.Min.X, row.Min.Y),
+            new Vector2(row.Min.X + labelMaxWidth, row.Max.Y));
+        Marquee.DrawLeft("activity.goalrow." + label, label, row.Min.X, row.Center.Y - 8f * scale, labelMaxWidth,
+            TextStyles.Subheadline, AppPalettes.Activity.BodyInk, labelHovering);
         Typography.DrawCentered(valueCenter, value, AppPalettes.Activity.TitleInk, 0.95f, FontWeight.SemiBold);
         var delta = 0;
         if (ui.IconButton(minusCenter, radius, FontAwesomeIcon.Minus.ToIconString(), AppPalettes.Activity.TitleInk,

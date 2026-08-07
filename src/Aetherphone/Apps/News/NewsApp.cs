@@ -10,7 +10,6 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.News;
@@ -56,6 +55,7 @@ internal sealed class NewsApp : IPhoneApp
     private int categoryIndex;
     private bool forceRefresh;
     private bool resetScroll;
+    private int visibleItems = MaxItems;
 
     public NewsApp(NewsService news, MediaCache media, HttpService http, GameData gameData)
     {
@@ -79,7 +79,7 @@ internal sealed class NewsApp : IPhoneApp
         theme = context.Theme;
         ui.Theme = theme;
         var area = context.Content;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var screen = SceneChrome.ScreenFrom(area, theme, scale);
         ui.Backdrop(screen);
         AppHeader.Draw(context, DisplayName);
@@ -96,6 +96,7 @@ internal sealed class NewsApp : IPhoneApp
             categoryIndex = selected;
             resetScroll = true;
             forceRefresh = false;
+            visibleItems = MaxItems;
         }
 
         var category = NewsCategories.All[categoryIndex];
@@ -122,7 +123,12 @@ internal sealed class NewsApp : IPhoneApp
                 resetScroll = false;
             }
 
-            DrawFeed(entry.Items, Math.Min(entry.Items.Length, MaxItems), category, scale);
+            var count = Math.Min(entry.Items.Length, visibleItems);
+            DrawFeed(entry.Items, count, category, scale);
+            if (entry.Items.Length > count && InfiniteScroll.ReachedBottom())
+            {
+                visibleItems += MaxItems;
+            }
         }
     }
 
@@ -179,7 +185,7 @@ internal sealed class NewsApp : IPhoneApp
         for (var index = 0; index < count; index++)
         {
             var row = card.NextRow();
-            var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+            var hovered = UiInteract.Hover(row.Min, row.Max);
             if (category == NewsCategory.Maintenance)
             {
                 DrawMaintenanceRow(row, items[index], scale, hovered);
@@ -315,9 +321,8 @@ internal sealed class NewsApp : IPhoneApp
     {
         var titleY = row.Min.Y + 10f * scale;
         var maxTitleWidth = row.Width - 24f * scale;
-        var clippedTitle = PixelEllipsize(item.Title, maxTitleWidth, RowTitleScale, FontWeight.Medium);
-        Typography.Draw(new Vector2(row.Min.X, titleY), clippedTitle, theme.TextStrong, RowTitleScale,
-            FontWeight.Medium);
+        Marquee.DrawLeft("news.simpleRow." + item.Url, item.Title, row.Min.X, titleY, maxTitleWidth,
+            new TextStyle(RowTitleScale, FontWeight.Medium), theme.TextStrong, hovered);
         Typography.Draw(new Vector2(row.Min.X, titleY + 23f * scale), TimeText.Ago(item.Time), theme.TextMuted,
             MetaScale, FontWeight.Regular);
         DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale,
@@ -335,9 +340,8 @@ internal sealed class NewsApp : IPhoneApp
         var rightPadding = 8f * scale;
         var pillReserved = pillInfo.hasPill ? pillInfo.width + 12f * scale + rightPadding : rightPadding + 4f * scale;
         var maxTitleWidth = row.Width - pillReserved;
-        var clippedTitle = PixelEllipsize(item.Title, maxTitleWidth, RowTitleScale, FontWeight.Medium);
-        Typography.Draw(new Vector2(row.Min.X, titleY), clippedTitle, theme.TextStrong, RowTitleScale,
-            FontWeight.Medium);
+        Marquee.DrawLeft("news.maintenanceRow." + item.Url, item.Title, row.Min.X, titleY, maxTitleWidth,
+            new TextStyle(RowTitleScale, FontWeight.Medium), theme.TextStrong, hovered);
         var sub = item.Start is { } start && item.End is { } end
             ? NewsFormat.Window(start, end)
             : TimeText.Ago(item.Time);
@@ -403,7 +407,7 @@ internal sealed class NewsApp : IPhoneApp
 
         var box = 14f * scale;
         UiAnchors.Report("news.refresh", new Rect(center - new Vector2(box, box), center + new Vector2(box, box)));
-        var hovered = ImGui.IsMouseHoveringRect(center - new Vector2(box, box), center + new Vector2(box, box));
+        var hovered = UiInteract.Hover(center - new Vector2(box, box), center + new Vector2(box, box));
         var glyph = FontAwesomeIcon.Sync.ToIconString();
         using (ImRaii.PushFont(UiBuilder.IconFont))
         {
@@ -437,7 +441,7 @@ internal sealed class NewsApp : IPhoneApp
 
     private void InteractCard(Rect rect, float rounding, string url, ImDrawListPtr drawList)
     {
-        var hovered = ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var hovered = UiInteract.Hover(rect.Min, rect.Max);
         if (hovered)
         {
             var pressed = ImGui.IsMouseDown(ImGuiMouseButton.Left);
@@ -453,7 +457,7 @@ internal sealed class NewsApp : IPhoneApp
     }
 
     private static void DrawSpinner(Vector2 center, float radius, Vector4 color) =>
-        ProgressRing.Sweep(center, radius, 2.4f * ImGuiHelpers.GlobalScale, color, 900.0, 1.8f, 0.95f);
+        ProgressRing.Sweep(center, radius, 2.4f * UiScale.Current, color, 900.0, 1.8f, 0.95f);
 
     private static void DrawChevronRight(Vector2 tip, float size, float thickness, Vector4 color)
     {

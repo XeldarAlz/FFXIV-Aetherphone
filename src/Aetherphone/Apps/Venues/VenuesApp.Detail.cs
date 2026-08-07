@@ -7,7 +7,6 @@ using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Venues;
@@ -28,7 +27,7 @@ internal sealed partial class VenuesApp
 
     private void DrawDetail(Rect area, VenueEvent venue)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         using (AppSurface.Begin(body))
@@ -80,7 +79,7 @@ internal sealed partial class VenuesApp
 
     private void DrawHero(Rect body, VenueEvent venue)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var cursor = ImGui.GetCursorScreenPos();
         var topPad = Metrics.Space.Sm * scale;
@@ -104,16 +103,18 @@ internal sealed partial class VenuesApp
         var meta = BuildHeroMeta(venue);
         if (meta.Length > 0)
         {
-            meta = VenueText.Fit(meta, textWidth, TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight);
             var metaSize = Typography.Measure(meta, TextStyles.Subheadline);
-            Typography.Draw(drawList, new Vector2(textLeft, baseY - metaSize.Y), meta, HeroMutedInk,
-                TextStyles.Subheadline);
+            var metaY = baseY - metaSize.Y;
+            Marquee.DrawLeftAuto("venue.detail.meta." + venue.Id, meta, textLeft, metaY, textWidth,
+                TextStyles.Subheadline, HeroMutedInk);
             baseY -= metaSize.Y + 6f * scale;
         }
 
-        var title = VenueText.Fit(venue.Title, textWidth, TextStyles.Title1.Scale, TextStyles.Title1.Weight);
-        var titleSize = Typography.Measure(title, TextStyles.Title1);
-        Typography.Draw(drawList, new Vector2(textLeft, baseY - titleSize.Y), title, HeroInk, TextStyles.Title1);
+        var titleFull = venue.Title;
+        var titleSize = Typography.Measure(titleFull, TextStyles.Title1);
+        var titleY = baseY - titleSize.Y;
+        Marquee.DrawLeftAuto("venue.detail.title." + venue.Id, titleFull, textLeft, titleY, textWidth,
+            TextStyles.Title1, HeroInk);
         ImGui.SetCursorScreenPos(cursor);
         ImGui.Dummy(new Vector2(ImGui.GetContentRegionAvail().X, height - topPad + Metrics.Space.Lg * scale));
     }
@@ -179,7 +180,7 @@ internal sealed partial class VenuesApp
 
     private void DrawActions(VenueEvent venue)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
         var height = ActionHeight * scale;
@@ -200,7 +201,8 @@ internal sealed partial class VenuesApp
                 }
                 else
                 {
-                    ImGui.SetClipboardText($"/li {venue.TeleportCode}");
+                    ImGui.SetClipboardText(LifestreamBridge.TravelCommand(venue.TeleportCode!));
+                    CopyToast.Show();
                 }
             }
 
@@ -235,7 +237,7 @@ internal sealed partial class VenuesApp
 
     private bool ActionPill(Rect rect, FontAwesomeIcon icon, string label, bool filled)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var hovered = UiInteract.Hover(rect.Min, rect.Max);
         var radius = rect.Height * 0.5f;
@@ -244,12 +246,15 @@ internal sealed partial class VenuesApp
             : (hovered ? new Vector4(1f, 1f, 1f, 0.16f) : ui.FieldSurface);
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
         var ink = filled ? new Vector4(1f, 1f, 1f, 1f) : ui.TitleInk;
-        var textSize = Typography.Measure(label, 0.95f, FontWeight.SemiBold);
         var iconAdvance = 22f * scale;
-        var left = rect.Center.X - (iconAdvance + textSize.X) * 0.5f;
+        var textMaxWidth = MathF.Max(1f, rect.Width - iconAdvance - 12f * scale);
+        var fullTextSize = Typography.Measure(label, 0.95f, FontWeight.SemiBold);
+        var displayWidth = MathF.Min(fullTextSize.X, textMaxWidth);
+        var left = rect.Center.X - (iconAdvance + displayWidth) * 0.5f;
         AppSkin.Icon(drawList, new Vector2(left + 8f * scale, rect.Center.Y), icon.ToIconString(), ink, 0.85f);
-        Typography.Draw(drawList, new Vector2(left + iconAdvance, rect.Center.Y - textSize.Y * 0.5f), label, ink,
-            0.95f, FontWeight.SemiBold);
+        Marquee.DrawLeft("venue.detail.action." + label, label, left + iconAdvance,
+            rect.Center.Y - fullTextSize.Y * 0.5f, textMaxWidth, new TextStyle(0.95f, FontWeight.SemiBold), ink,
+            hovered);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -260,7 +265,7 @@ internal sealed partial class VenuesApp
 
     private void DrawInfo(VenueEvent venue)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ui.SectionHeading(Loc.T(L.Venues.Details));
         var rows = 1;
         if (venue.World.Length > 0 || venue.DataCenter.Length > 0)
@@ -325,7 +330,7 @@ internal sealed partial class VenuesApp
     private void InfoRow(ImDrawListPtr drawList, Vector2 cardOrigin, float cardWidth, int rowIndex, int rowCount,
         FontAwesomeIcon icon, Vector4 tint, string label, string value)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowHeight = InfoRowHeight * scale;
         var rowTop = cardOrigin.Y + rowIndex * rowHeight;
         var centerY = rowTop + rowHeight * 0.5f;
@@ -338,11 +343,11 @@ internal sealed partial class VenuesApp
         Typography.Draw(drawList, new Vector2(labelLeft, centerY - labelSize.Y * 0.5f), label,
             AppPalettes.Venues.MutedInk, TextStyles.Subheadline);
         var valueRight = cardOrigin.X + cardWidth - inset;
-        var valueWidth = valueRight - labelLeft - labelSize.X - 12f * scale;
-        var fitted = VenueText.Fit(value, valueWidth, TextStyles.BodyEmphasized.Scale, TextStyles.BodyEmphasized.Weight);
-        var valueSize = Typography.Measure(fitted, TextStyles.BodyEmphasized);
-        Typography.Draw(drawList, new Vector2(valueRight - valueSize.X, centerY - valueSize.Y * 0.5f), fitted,
-            AppPalettes.Venues.TitleInk, TextStyles.BodyEmphasized);
+        var valueWidth = MathF.Max(1f, valueRight - labelLeft - labelSize.X - 12f * scale);
+        var valueFullSize = Typography.Measure(value, TextStyles.BodyEmphasized);
+        var valueY = centerY - valueFullSize.Y * 0.5f;
+        Marquee.DrawRightAuto("venue.detail.row." + label, value, valueRight, valueY, valueWidth,
+            TextStyles.BodyEmphasized, AppPalettes.Venues.TitleInk);
         if (rowIndex >= rowCount - 1)
         {
             return;
@@ -360,7 +365,7 @@ internal sealed partial class VenuesApp
         }
 
         ui.SectionHeading(Loc.T(L.Venues.Tags));
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var drawList = ImGui.GetWindowDrawList();
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
@@ -396,7 +401,7 @@ internal sealed partial class VenuesApp
         }
 
         ui.SectionHeading(Loc.T(L.Venues.About));
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         using (Plugin.Fonts.Push(1f))
         using (ImRaii.PushColor(ImGuiCol.Text, AppPalettes.Venues.BodyInk))
         {

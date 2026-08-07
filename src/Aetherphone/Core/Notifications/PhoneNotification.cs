@@ -16,5 +16,13 @@ internal sealed record PhoneNotification(
 
     public int SocialType { get; init; } = -1;
 
+    public long CreatedAtUnix { get; init; }
+
+    public string? ChannelId { get; init; }
+
+    public bool Read { get; set; }
+
     public string StackKey => string.IsNullOrEmpty(GroupKey) ? AppId : GroupKey;
+
+    public string SettingsKey => string.IsNullOrEmpty(ChannelId) ? AppId : ChannelId;
 }

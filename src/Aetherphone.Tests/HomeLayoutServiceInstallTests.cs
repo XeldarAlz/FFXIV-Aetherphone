@@ -98,9 +98,42 @@ public sealed class HomeLayoutServiceInstallTests
             "An installed app that was hidden for a while must come back to Home, not be treated as uninstalled");
     }
 
+    [Fact]
+    public void AppLaunchedByTheServer_ArrivesOnHomeByItself()
+    {
+        var apps = MakeApps();
+        var launched = (FakeApp)apps[2];
+        launched.IsAvailable = false;
+        var configuration = SavedWith("a", "b");
+
+        var layout = BuildLayout(apps, configuration);
+        launched.IsAvailable = true;
+        layout.EnsureCurrent();
+
+        Assert.True(layout.IsInstalled("c"), "An app nobody has seen before should install itself when it launches");
+        Assert.True(PageIndexOf(layout, "c") >= 0);
+    }
+
+    [Fact]
+    public void AppTheUserRemoved_StaysOffHomeWhenTheServerRelaunchesIt()
+    {
+        var apps = MakeApps();
+        var launched = (FakeApp)apps[2];
+        var configuration = SavedWith("a", "b", "c");
+
+        BuildLayout(apps, configuration).Uninstall("c");
+        launched.IsAvailable = false;
+        var layout = BuildLayout(apps, configuration);
+        launched.IsAvailable = true;
+        layout.EnsureCurrent();
+
+        Assert.False(layout.IsInstalled("c"), "An app the user removed must not be resurrected by a server flag");
+    }
+
     [Theory]
     [InlineData("appstore")]
     [InlineData("settings")]
+    [InlineData("announcements")]
     public void MandatoryApp_IsAlwaysInstalledAndCannotBeUninstalled(string appId)
     {
         var apps = new List<IPhoneApp> { new FakeApp("a"), new FakeApp(appId) };
@@ -148,8 +181,82 @@ public sealed class HomeLayoutServiceInstallTests
         Assert.True(PageIndexOf(reloaded, "c") >= 0, "The other folder member should survive as a plain icon");
     }
 
-    private static HomeLayoutService BuildLayout(List<IPhoneApp> apps, FakeHomeConfiguration configuration) =>
-        new(apps, new WidgetRegistry(Array.Empty<IHomeWidget>(), apps), configuration);
+    [Fact]
+    public void Uninstall_TakesTheAppsWidgetsWithIt()
+    {
+        var apps = MakeApps();
+        var widget = new FakeWidget("c.widget", "c");
+        var configuration = SavedWith("a", "b", "c");
+        configuration.Home!.Pages[0].Items.Add(new HomeItem
+        {
+            Kind = "widget",
+            WidgetId = widget.Id,
+            WidgetSize = WidgetSizes.Serialize(WidgetSize.Medium),
+        });
+
+        var layout = BuildLayout(apps, configuration, widget);
+        Assert.True(WidgetIsOnHome(layout, widget.Id));
+        Assert.True(layout.Uninstall("c"));
+
+        Assert.False(WidgetIsOnHome(layout, widget.Id));
+        Assert.False(WidgetIsOnHome(BuildLayout(apps, configuration, widget), widget.Id));
+    }
+
+    [Fact]
+    public void InstallAndUninstall_RaiseInstalledChanged()
+    {
+        var apps = MakeApps();
+        var layout = BuildLayout(apps, SavedWith("a", "b"));
+        var changed = new List<string>();
+        layout.InstalledChanged += changed.Add;
+
+        layout.Install("c");
+        layout.Uninstall("c");
+
+        Assert.Equal(new[] { "c", "c" }, changed);
+    }
+
+    [Fact]
+    public void Gate_ClosesWhenTheAppIsUninstalledAndReopensOnInstall()
+    {
+        var apps = MakeApps();
+        var installer = new AppInstaller();
+        installer.Bind(BuildLayout(apps, SavedWith("a", "b", "c")));
+        var gate = installer.Gate("c");
+
+        Assert.True(gate.Open);
+        installer.Uninstall("c");
+        Assert.False(gate.Open);
+        installer.Install("c");
+        Assert.True(gate.Open);
+    }
+
+    [Fact]
+    public void UnboundGate_IsOpen()
+    {
+        Assert.True(default(AppGate).Open);
+    }
+
+    private static bool WidgetIsOnHome(HomeLayoutService layout, string widgetId)
+    {
+        for (var page = 0; page < layout.PageCount; page++)
+        {
+            var tiles = layout.Page(page);
+            for (var index = 0; index < tiles.Count; index++)
+            {
+                if (tiles[index].Widget?.Id == widgetId)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static HomeLayoutService BuildLayout(List<IPhoneApp> apps, FakeHomeConfiguration configuration,
+        params IHomeWidget[] widgets) =>
+        new(apps, new WidgetRegistry(widgets, apps), new FakeShortcutSource(), configuration);
 
     private static FakeHomeConfiguration SavedWith(params string[] appIds)
     {
@@ -183,9 +290,9 @@ public sealed class HomeLayoutServiceInstallTests
                     return page;
                 }
 
-                for (var appIndex = 0; appIndex < tile.Apps.Count; appIndex++)
+                for (var memberIndex = 0; memberIndex < tile.Members.Count; memberIndex++)
                 {
-                    if (tile.Apps[appIndex].Id == appId)
+                    if (tile.Members[memberIndex].App?.Id == appId)
                     {
                         return page;
                     }
@@ -215,6 +322,22 @@ public sealed class HomeLayoutServiceInstallTests
         public void OnOpened() { }
         public void OnClosed() { }
         public void Draw(in PhoneContext context) { }
+        public void Dispose() { }
+    }
+
+    private sealed class FakeWidget : IHomeWidget
+    {
+        public FakeWidget(string id, string appId)
+        {
+            Id = id;
+            AppId = appId;
+        }
+
+        public string Id { get; }
+        public string DisplayName => Id;
+        public string AppId { get; }
+        public WidgetSizeSet Sizes => WidgetSizeSet.Medium;
+        public void Draw(in WidgetContext context) { }
         public void Dispose() { }
     }
 

@@ -8,13 +8,15 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Linkpearl;
 
 internal sealed partial class LinkpearlApp
 {
+    private const long SendFailedNoticeMilliseconds = 4000;
+    private const float NoticeTextScale = 0.78f;
+
     private readonly ChatEntranceTracker entrance = new();
     private readonly string[] chatSegmentLabels = new string[2];
     private readonly List<LinkshellEntry> roster = new();
@@ -24,6 +26,7 @@ internal sealed partial class LinkpearlApp
     private bool followBottom;
     private bool snapToBottom;
     private bool composerFocus;
+    private long sendFailedAtMilliseconds;
 
     private void DrawChatsTab(Rect content)
     {
@@ -38,7 +41,7 @@ internal sealed partial class LinkpearlApp
         }
 
         trackedThread = null;
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var segRowHeight = 40f * scale;
         var segRow = new Rect(new Vector2(content.Min.X + 14f * scale, content.Min.Y),
             new Vector2(content.Max.X - 14f * scale, content.Min.Y + segRowHeight));
@@ -153,14 +156,14 @@ internal sealed partial class LinkpearlApp
 
     private bool DrawNotificationPauseButton(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         var center = new Vector2(content.Max.X - 22f * scale, content.Min.Y + AppHeader.Height * scale * 0.5f);
         var radius = 16f * scale;
         var min = center - new Vector2(radius, radius);
         var max = center + new Vector2(radius, radius);
         var paused = notificationGate.Paused;
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var color = paused ? context.Theme.Accent : hovered ? context.Theme.TextStrong : context.Theme.TextMuted;
         ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), center,
             paused ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell, color, 15f * scale);
@@ -192,7 +195,7 @@ internal sealed partial class LinkpearlApp
         using (AppSurface.Begin(bubbles))
         {
             SyncFollow(conversation);
-            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+            ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
             var lines = conversation.Lines;
             for (var index = 0; index < lines.Count; index++)
             {
@@ -202,25 +205,26 @@ internal sealed partial class LinkpearlApp
                 }
             }
 
-            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+            ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
             if (followBottom)
             {
                 ImGui.SetScrollHereY(1f);
             }
         }
 
-        DrawComposer(composerBar, frameTheme, text => bridge.Send(conversation, text));
+        DrawComposer(composerBar, frameTheme, text => bridge.Send(conversation, text),
+            ChatBridge.ComposerBudget(conversation));
         DrawChatMenu(area);
     }
 
     private bool DrawDeleteHistoryButton(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var center = new Vector2(area.Max.X - 22f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
         var radius = 16f * scale;
         var min = center - new Vector2(radius, radius);
         var max = center + new Vector2(radius, radius);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), center, FontAwesomeIcon.TrashAlt,
             hovered ? frameTheme.Danger : frameTheme.TextMuted, 15f * scale);
         if (hovered)
@@ -266,7 +270,7 @@ internal sealed partial class LinkpearlApp
         using (AppSurface.Begin(bubbles))
         {
             SyncFollow(thread);
-            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+            ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
             var lines = thread.Lines;
             for (var index = 0; index < lines.Count; index++)
             {
@@ -276,26 +280,27 @@ internal sealed partial class LinkpearlApp
                 }
             }
 
-            ImGui.Dummy(new Vector2(0f, 8f * ImGuiHelpers.GlobalScale));
+            ImGui.Dummy(new Vector2(0f, 8f * UiScale.Current));
             if (followBottom)
             {
                 ImGui.SetScrollHereY(1f);
             }
         }
 
-        DrawComposer(composerBar, frameTheme, text => linkshellBridge.Send(thread, text));
+        DrawComposer(composerBar, frameTheme, text => linkshellBridge.Send(thread, text),
+            LinkshellBridge.ComposerBudget(thread));
         DrawChatMenu(area);
     }
 
     private bool DrawMuteButton(Rect area, LinkshellChannel channel)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var center = new Vector2(area.Max.X - 22f * scale, area.Min.Y + AppHeader.Height * scale * 0.5f);
         var radius = 16f * scale;
         var min = center - new Vector2(radius, radius);
         var max = center + new Vector2(radius, radius);
         var muted = mutes.IsMuted(channel);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var color = muted ? frameTheme.Accent : hovered ? frameTheme.TextStrong : frameTheme.TextMuted;
         ProgressRing.CenterIcon(ImGui.GetWindowDrawList(), center,
             muted ? FontAwesomeIcon.BellSlash : FontAwesomeIcon.Bell, color, 15f * scale);
@@ -334,7 +339,7 @@ internal sealed partial class LinkpearlApp
 
     private Rect BubbleArea(Rect area, out Rect composerBar)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var composerHeight = 52f * scale;
         composerBar = new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max);
@@ -343,7 +348,7 @@ internal sealed partial class LinkpearlApp
 
     private void SyncFollow(object thread)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         if (ReferenceEquals(trackedThread, thread))
         {
             followBottom = ImGui.GetScrollY() >= ImGui.GetScrollMaxY() - 4f * scale;
@@ -361,10 +366,11 @@ internal sealed partial class LinkpearlApp
         }
     }
 
-    private void DrawComposer(Rect bar, PhoneTheme theme, Action<string> send)
+    private void DrawComposer(Rect bar, PhoneTheme theme, Func<string, bool> send, int budget)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
+        DrawSendFailure(bar, theme, scale);
         var pillMin = new Vector2(bar.Min.X, bar.Min.Y + 7f * scale);
         var pillMax = new Vector2(bar.Max.X, bar.Max.Y - 7f * scale);
         dl.AddRectFilled(pillMin, pillMax, ImGui.GetColorU32(theme.GroupedCard), (pillMax.Y - pillMin.Y) * 0.5f);
@@ -383,7 +389,7 @@ internal sealed partial class LinkpearlApp
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            if (ImGui.InputTextWithHint("##composer", Loc.T(L.Messages.Placeholder), ref draft, 480,
+            if (ImGui.InputTextWithHint("##composer", Loc.T(L.Messages.Placeholder), ref draft, budget,
                     ImGuiInputTextFlags.EnterReturnsTrue))
             {
                 submitted = true;
@@ -397,7 +403,7 @@ internal sealed partial class LinkpearlApp
         ProgressRing.CenterIcon(sendCenter, FontAwesomeIcon.ArrowUp, new Vector4(1f, 1f, 1f, 1f), sendDiameter * 0.46f);
         var sendMin = sendCenter - new Vector2(sendDiameter * 0.5f, sendDiameter * 0.5f);
         var sendMax = sendCenter + new Vector2(sendDiameter * 0.5f, sendDiameter * 0.5f);
-        if (hasText && ImGui.IsMouseHoveringRect(sendMin, sendMax))
+        if (hasText && UiInteract.Hover(sendMin, sendMax))
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
@@ -408,11 +414,38 @@ internal sealed partial class LinkpearlApp
 
         if (submitted && hasText)
         {
-            send(draft);
-            draft = string.Empty;
-            snapToBottom = true;
+            if (send(draft))
+            {
+                draft = string.Empty;
+                snapToBottom = true;
+                sendFailedAtMilliseconds = 0;
+            }
+            else
+            {
+                sendFailedAtMilliseconds = Environment.TickCount64;
+            }
+
             composerFocus = true;
         }
+    }
+
+    private void DrawSendFailure(Rect bar, PhoneTheme theme, float scale)
+    {
+        if (sendFailedAtMilliseconds == 0 ||
+            Environment.TickCount64 - sendFailedAtMilliseconds >= SendFailedNoticeMilliseconds)
+        {
+            return;
+        }
+
+        var drawList = ImGui.GetForegroundDrawList();
+        var text = Loc.T(L.Messages.SendFailed);
+        var size = Typography.Measure(text, NoticeTextScale);
+        var padding = new Vector2(10f * scale, 5f * scale);
+        var center = new Vector2((bar.Min.X + bar.Max.X) * 0.5f, bar.Min.Y - size.Y * 0.5f - padding.Y - 4f * scale);
+        var min = center - size * 0.5f - padding;
+        var max = center + size * 0.5f + padding;
+        drawList.AddRectFilled(min, max, ImGui.GetColorU32(theme.GroupedCard), (max.Y - min.Y) * 0.5f);
+        Typography.DrawCentered(drawList, center, text, theme.Danger, NoticeTextScale);
     }
 
     private static string FirstName(string name)

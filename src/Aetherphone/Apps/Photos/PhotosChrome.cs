@@ -4,15 +4,9 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface.Textures.TextureWraps;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Photos;
 
-/// <summary>
-/// Pure rendering for the Photos surface: grid thumbnails, the viewer scrims and its interactive
-/// glyphs (navigation arrows, trash). Texture loading, routing, album grouping and delete logic stay
-/// in <see cref="PhotosApp"/>; interactive glyphs return whether they were tapped.
-/// </summary>
 internal static class PhotosChrome
 {
     private const float ThumbRounding = 7f;
@@ -20,7 +14,7 @@ internal static class PhotosChrome
     public static void Thumbnail(ImDrawListPtr drawList, IDalamudTextureWrap? texture, Vector2 min, Vector2 max,
         bool hovered, Vector4 placeholder)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rounding = ThumbRounding * scale;
         if (texture is null)
         {
@@ -57,9 +51,10 @@ internal static class PhotosChrome
     {
         var drawList = ImGui.GetWindowDrawList();
         var radius = 18f * scale;
-        var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var bounds = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.5f : 0.34f)), 28);
+        HoverTooltip.Show(bounds, Loc.T(pointsLeft ? L.Common.Previous : L.Common.Next));
         return Chevron(center, color, pointsLeft, scale) || Tapped(hovered);
     }
 
@@ -68,13 +63,13 @@ internal static class PhotosChrome
         var drawList = ImGui.GetWindowDrawList();
         var radius = 16f * scale;
         var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+            UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         var ink = ImGui.GetColorU32(hovered ? color : color with { W = 0.85f });
         var size = Metrics.Space.Xs * scale;
         var direction = pointsLeft ? -1f : 1f;
-        var tip = new Vector2(center.X - direction * size * 0.4f, center.Y);
-        drawList.AddLine(new Vector2(tip.X + direction * size, tip.Y - size), tip, ink, 2.4f * scale);
-        drawList.AddLine(tip, new Vector2(tip.X + direction * size, tip.Y + size), ink, 2.4f * scale);
+        var tip = new Vector2(center.X + direction * size * 0.4f, center.Y);
+        drawList.AddLine(new Vector2(tip.X - direction * size, tip.Y - size), tip, ink, 2.4f * scale);
+        drawList.AddLine(tip, new Vector2(tip.X - direction * size, tip.Y + size), ink, 2.4f * scale);
         return Tapped(hovered);
     }
 
@@ -83,7 +78,7 @@ internal static class PhotosChrome
         var drawList = ImGui.GetWindowDrawList();
         var radius = 17f * scale;
         var hovered =
-            ImGui.IsMouseHoveringRect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+            UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.5f : 0.32f)), 28);
         var color = theme.Danger;
         var ink = ImGui.GetColorU32(hovered ? color : color with { W = 0.9f });
@@ -97,6 +92,58 @@ internal static class PhotosChrome
             new Vector2(center.X + extent * 0.4f, center.Y - extent), ink, Metrics.Stroke.Thin * scale);
         HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
             Loc.T(L.Photos.Delete));
+        return Tapped(hovered);
+    }
+
+    public static bool AddToAlbum(Vector2 center, Vector4 color, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = 17f * scale;
+        var bounds = new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.5f : 0.32f)), 28);
+        var ink = ImGui.GetColorU32(hovered ? color : color with { W = 0.9f });
+        var extent = 6.5f * scale;
+        var thickness = Metrics.Stroke.Thin * scale;
+        var boxMin = new Vector2(center.X - extent, center.Y - extent);
+        var boxMax = new Vector2(center.X + extent * 0.35f, center.Y + extent * 0.35f);
+        drawList.AddRect(boxMin, boxMax, ink, 2f * scale, ImDrawFlags.RoundCornersAll, thickness);
+        var plusCenter = new Vector2(center.X + extent * 0.55f, center.Y + extent * 0.55f);
+        var arm = extent * 0.5f;
+        drawList.AddLine(new Vector2(plusCenter.X - arm, plusCenter.Y), new Vector2(plusCenter.X + arm, plusCenter.Y),
+            ink, thickness);
+        drawList.AddLine(new Vector2(plusCenter.X, plusCenter.Y - arm), new Vector2(plusCenter.X, plusCenter.Y + arm),
+            ink, thickness);
+        HoverTooltip.Show(bounds, Loc.T(L.Photos.AddToAlbum));
+        return Tapped(hovered);
+    }
+
+    public static bool Share(Vector2 center, Vector4 color, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var radius = 17f * scale;
+        var hovered =
+            UiInteract.Hover(center - new Vector2(radius, radius), center + new Vector2(radius, radius));
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, hovered ? 0.5f : 0.32f)), 28);
+        var ink = ImGui.GetColorU32(hovered ? color : color with { W = 0.9f });
+        var extent = 7f * scale;
+        var thickness = Metrics.Stroke.Thin * scale;
+        var trayTop = center.Y - extent * 0.15f;
+        var trayLeft = center.X - extent * 0.85f;
+        var trayRight = center.X + extent * 0.85f;
+        var trayBottom = center.Y + extent;
+        drawList.AddLine(new Vector2(trayLeft, trayTop), new Vector2(trayLeft, trayBottom), ink, thickness);
+        drawList.AddLine(new Vector2(trayRight, trayTop), new Vector2(trayRight, trayBottom), ink, thickness);
+        drawList.AddLine(new Vector2(trayLeft, trayBottom), new Vector2(trayRight, trayBottom), ink, thickness);
+        var arrowTop = center.Y - extent;
+        drawList.AddLine(new Vector2(center.X, arrowTop), new Vector2(center.X, center.Y + extent * 0.32f), ink,
+            thickness);
+        drawList.AddLine(new Vector2(center.X - extent * 0.45f, arrowTop + extent * 0.48f),
+            new Vector2(center.X, arrowTop), ink, thickness);
+        drawList.AddLine(new Vector2(center.X + extent * 0.45f, arrowTop + extent * 0.48f),
+            new Vector2(center.X, arrowTop), ink, thickness);
+        HoverTooltip.Show(new Rect(center - new Vector2(radius, radius), center + new Vector2(radius, radius)),
+            Loc.T(L.Share.Action));
         return Tapped(hovered);
     }
 

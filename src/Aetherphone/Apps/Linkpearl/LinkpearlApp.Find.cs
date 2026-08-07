@@ -7,7 +7,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Linkpearl;
 
@@ -42,7 +41,7 @@ internal sealed partial class LinkpearlApp
 
     private void DrawFindTab(Rect content)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = frameTheme;
         var pad = 16f * scale;
         var segmentRow = new Rect(new Vector2(content.Min.X + pad, content.Min.Y),
@@ -184,18 +183,29 @@ internal sealed partial class LinkpearlApp
     private static bool DrawResultRow(Rect row, PhoneTheme theme, float scale, string title, string subtitle,
         AvatarHandle image)
     {
-        var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+        var hovered = UiInteract.Hover(row.Min, row.Max);
         var drawList = ImGui.GetWindowDrawList();
         var avatarRadius = 20f * scale;
         var avatarCenter = new Vector2(row.Min.X + avatarRadius, row.Center.Y);
         AvatarView.Draw(drawList, avatarCenter, avatarRadius, theme.SurfaceMuted, Initials.Of(title), 1.4f, image, 48);
         var textX = avatarCenter.X + avatarRadius + 12f * scale;
-        Typography.Draw(new Vector2(textX, row.Center.Y - 16f * scale), title, theme.TextStrong, 0.95f,
-            FontWeight.Medium);
+        var textRight = row.Max.X - 14f * scale;
+        var textMaxWidth = MathF.Max(1f, textRight - textX);
+        var titleY = row.Center.Y - 16f * scale;
+        var titleSize = Typography.Measure(title, 0.95f, FontWeight.Medium);
+        var titleHovering = UiInteract.Hover(new Vector2(textX, titleY),
+            new Vector2(textX + textMaxWidth, titleY + titleSize.Y));
+        Marquee.DrawLeft("linkpearl.result." + title + "." + subtitle, title, textX, titleY,
+            textMaxWidth, new TextStyle(0.95f, FontWeight.Medium), theme.TextStrong, titleHovering);
         if (subtitle.Length > 0)
         {
-            Typography.Draw(new Vector2(textX, row.Center.Y + 3f * scale), subtitle, theme.TextMuted, 0.8f,
-                FontWeight.Regular);
+            var subtitleY = row.Center.Y + 3f * scale;
+            var subtitleSize = Typography.Measure(subtitle, 0.8f, FontWeight.Regular);
+            var subtitleHovering = UiInteract.Hover(new Vector2(textX, subtitleY),
+                new Vector2(textX + textMaxWidth, subtitleY + subtitleSize.Y));
+            Marquee.DrawLeft("linkpearl.result.sub." + title + "." + subtitle, subtitle, textX,
+                subtitleY, textMaxWidth, new TextStyle(0.8f, FontWeight.Regular), theme.TextMuted,
+                subtitleHovering);
         }
 
         DrawChevronRight(new Vector2(row.Max.X, row.Center.Y), 6f * scale, 2.2f * scale,
@@ -212,7 +222,7 @@ internal sealed partial class LinkpearlApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.FindPeople.CharacterTitle), backToList);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var result = lookup.CharacterDetail(route.LookupId, route.LookupName, route.LookupWorld, forceDetail);
@@ -377,7 +387,7 @@ internal sealed partial class LinkpearlApp
     {
         var context = new PhoneContext(area, frameTheme, frameNavigation);
         AppHeader.Draw(context, Loc.T(L.FindPeople.FreeCompanyTitle), backToList);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = frameTheme;
         var body = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var result = lookup.FreeCompanyDetail(route.LookupId, forceDetail);
@@ -433,9 +443,12 @@ internal sealed partial class LinkpearlApp
         cursorY += 22f * scale;
         var recruitColor = detail.Recruiting ? new Vector4(0.30f, 0.78f, 0.46f, 1f) : theme.TextMuted;
         var recruit = detail.Recruiting ? Loc.T(L.FindPeople.Recruiting) : Loc.T(L.FindPeople.Closed);
-        Typography.DrawCentered(new Vector2(centerX - 44f * scale, cursorY), detail.MembersLabel, theme.TextMuted,
+        var sideMaxWidth = 84f * scale;
+        var membersLabel = Typography.FitText(detail.MembersLabel, sideMaxWidth, TextStyles.Footnote);
+        var recruitText = Typography.FitText(recruit, sideMaxWidth, TextStyles.Footnote);
+        Typography.DrawCentered(new Vector2(centerX - 44f * scale, cursorY), membersLabel, theme.TextMuted,
             TextStyles.Footnote);
-        Typography.DrawCentered(new Vector2(centerX + 52f * scale, cursorY), recruit, recruitColor,
+        Typography.DrawCentered(new Vector2(centerX + 52f * scale, cursorY), recruitText, recruitColor,
             TextStyles.Footnote);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, heroHeight));
@@ -459,8 +472,11 @@ internal sealed partial class LinkpearlApp
 
     private static void DrawSloganRow(Rect row, string slogan, PhoneTheme theme)
     {
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - Typography.Measure(slogan, 0.86f).Y * 0.5f), slogan,
-            theme.TextMuted, 0.86f, FontWeight.Regular);
+        var style = new TextStyle(0.86f, FontWeight.Regular);
+        var maxWidth = MathF.Max(1f, row.Width);
+        var hovering = UiInteract.Hover(row.Min, row.Max);
+        Marquee.DrawLeft("linkpearl.slogan." + slogan, slogan, row.Min.X, row.Center.Y - Typography.Measure(slogan, style).Y * 0.5f,
+            maxWidth, style, theme.TextMuted, hovering);
     }
 
     private void DrawRoster(string companyId, FreeCompanyDetailResult result, PhoneTheme theme, float scale)
@@ -530,7 +546,7 @@ internal sealed partial class LinkpearlApp
         var box = 16f * scale;
         var min = center - new Vector2(box, box);
         var max = center + new Vector2(box, box);
-        var hovered = enabled && ImGui.IsMouseHoveringRect(min, max);
+        var hovered = enabled && UiInteract.Hover(min, max);
         var color = enabled ? (hovered ? theme.TextStrong : theme.Accent) : Palette.WithAlpha(theme.TextMuted, 0.35f);
         ProgressRing.CenterIcon(center, icon, color, 16f * scale);
         if (!enabled)

@@ -5,7 +5,6 @@ using Aetherphone.Core.Updates;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 
 namespace Aetherphone.Windows;
@@ -45,20 +44,20 @@ internal sealed class UpdateChipWindow : Window
 
     public override void PreDraw()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var label = Label();
         var textWidth = Typography.Measure(label, TextScale, FontWeight.SemiBold).X;
-        var width = (textWidth + (SidePadding * 2f + IconWidth + IconGap) * scale) / scale;
-        Size = new Vector2(width, ChipHeight);
+        var pixelWidth = textWidth + (SidePadding * 2f + IconWidth + IconGap) * scale;
+        Size = new Vector2(pixelWidth / UiScale.Global, ChipHeight * UiScale.Phone);
         SizeCondition = ImGuiCond.Always;
-        Position = new Vector2(phone.LastPosition.X + (phone.LastSize.X - width * scale) * 0.5f,
+        Position = new Vector2(phone.LastPosition.X + (phone.LastSize.X - pixelWidth) * 0.5f,
             phone.LastPosition.Y + phone.LastSize.Y + Gap * scale);
         PositionCondition = ImGuiCond.Always;
     }
 
     public override void Draw()
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = themes.Chrome;
         var min = ImGui.GetWindowPos();
         var max = min + ImGui.GetWindowSize();

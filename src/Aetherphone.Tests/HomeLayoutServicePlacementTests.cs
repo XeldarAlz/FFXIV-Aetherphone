@@ -59,6 +59,41 @@ public sealed class HomeLayoutServicePlacementTests
     }
 
     [Fact]
+    public void DroppingPastTheLastPage_OpensANewPage()
+    {
+        var apps = MakeApps("a", "b");
+        var configuration = ConfigurationWith(PageOf("a", "b"));
+        var layout = BuildLayout(apps, configuration);
+        var dragged = TileFor(layout, 0, "b");
+        var newPage = layout.PageCount;
+
+        var resolved = layout.TryResolveDrop(newPage, dragged, new GridCell(2, 1), out var cell);
+        layout.MoveTile(dragged, newPage, cell);
+
+        Assert.True(resolved);
+        Assert.Equal(2, layout.PageCount);
+        Assert.Equal(new GridCell(2, 1), TileFor(layout, 1, "b").Cell);
+
+        var reloaded = BuildLayout(apps, configuration);
+        Assert.Equal(2, reloaded.PageCount);
+        Assert.Equal(new GridCell(2, 1), TileFor(reloaded, 1, "b").Cell);
+    }
+
+    [Fact]
+    public void DroppingTwoPagesPastTheLast_IsRefused()
+    {
+        var apps = MakeApps("a", "b");
+        var layout = BuildLayout(apps, ConfigurationWith(PageOf("a", "b")));
+        var dragged = TileFor(layout, 0, "b");
+
+        var resolved = layout.TryResolveDrop(layout.PageCount + 1, dragged, new GridCell(0, 0), out _);
+        layout.MoveTile(dragged, layout.PageCount + 1, new GridCell(0, 0));
+
+        Assert.False(resolved);
+        Assert.Equal(1, layout.PageCount);
+    }
+
+    [Fact]
     public void ATileHeldBeyondTheLastRow_RelocatesWhenTheGridShrinks()
     {
         var apps = MakeApps("a");
@@ -80,7 +115,7 @@ public sealed class HomeLayoutServicePlacementTests
     }
 
     private static HomeLayoutService BuildLayout(List<IPhoneApp> apps, FakeHomeConfiguration configuration) =>
-        new(apps, new WidgetRegistry(Array.Empty<IHomeWidget>(), apps), configuration);
+        new(apps, new WidgetRegistry(Array.Empty<IHomeWidget>(), apps), new FakeShortcutSource(), configuration);
 
     private static FakeHomeConfiguration ConfigurationWith(HomePage page) =>
         new()

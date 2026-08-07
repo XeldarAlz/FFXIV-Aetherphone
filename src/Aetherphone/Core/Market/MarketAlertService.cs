@@ -1,3 +1,4 @@
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Notifications;
 
@@ -11,15 +12,18 @@ internal sealed class MarketAlertService : IDisposable
     private readonly MarketboardService market;
     private readonly NotificationService notifications;
     private readonly Configuration configuration;
+    private readonly AppGate gate;
     private readonly object sync = new();
     private readonly CancellationTokenSource cancellation = new();
     private volatile int triggeredCount;
 
-    public MarketAlertService(MarketboardService market, NotificationService notifications, Configuration configuration)
+    public MarketAlertService(MarketboardService market, NotificationService notifications,
+        Configuration configuration, AppGate gate)
     {
         this.market = market;
         this.notifications = notifications;
         this.configuration = configuration;
+        this.gate = gate;
         _ = Task.Run(() => RunAsync(cancellation.Token));
     }
 
@@ -123,7 +127,10 @@ internal sealed class MarketAlertService : IDisposable
         {
             try
             {
-                await PollAsync(token).ConfigureAwait(false);
+                if (gate.Open)
+                {
+                    await PollAsync(token).ConfigureAwait(false);
+                }
             }
             catch (OperationCanceledException)
             {

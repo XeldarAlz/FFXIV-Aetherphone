@@ -4,10 +4,15 @@ namespace Aetherphone.Core.Theme;
 
 internal static class HexColor
 {
-    public static bool TryParse(string text, out Vector4 color)
+    public static bool TryParse(ReadOnlySpan<char> text, out Vector4 color)
     {
         color = default;
-        var trimmed = text.Trim().TrimStart('#');
+        var trimmed = text.Trim();
+        if (trimmed.Length > 0 && trimmed[0] == '#')
+        {
+            trimmed = trimmed[1..];
+        }
+
         if (trimmed.Length != 6 ||
             !uint.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var value))
         {
@@ -18,7 +23,6 @@ internal static class HexColor
         return true;
     }
 
-    /// <summary>Formats as 6 hex digits without a leading '#'.</summary>
     public static string ToDigits(Vector4 color)
     {
         var r = (int)Math.Clamp(MathF.Round(color.X * 255f), 0f, 255f);

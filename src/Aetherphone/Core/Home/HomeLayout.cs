@@ -5,6 +5,7 @@ internal sealed class HomeLayout
 {
     public List<HomePage> Pages { get; set; } = new();
     public List<string> Installed { get; set; } = new();
+    public List<string> Known { get; set; } = new();
     public List<string>? Dock { get; set; }
 }
 
@@ -24,6 +25,8 @@ internal sealed class HomeItem
     public string FolderName { get; set; } = string.Empty;
     public string FolderTint { get; set; } = string.Empty;
     public List<string> AppIds { get; set; } = new();
+    public List<HomeItem> Members { get; set; } = new();
     public string WidgetId { get; set; } = string.Empty;
     public string WidgetSize { get; set; } = string.Empty;
+    public string ShortcutId { get; set; } = string.Empty;
 }

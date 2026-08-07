@@ -1,11 +1,12 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet.Contracts;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Songs;
+using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Music;
 
@@ -14,14 +15,17 @@ internal sealed partial class MusicApp
     private const float SongRowHeight = 60f;
     private const float ScopeRowHeight = 42f;
 
+    private readonly List<CommunityStationDto> communityMatches = new();
+
     private static readonly Vector4 SearchFieldSurface = new(0.96f, 0.96f, 0.96f, 1f);
     private static readonly Vector4 SearchFieldHint = new(0.38f, 0.39f, 0.40f, 1f);
     private static readonly Vector4 SearchFieldInk = new(0.07f, 0.07f, 0.08f, 1f);
 
     private void DrawSearch(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
+        community.EnsureFresh(false);
         DrawTopBar(context, Loc.T(L.Common.Search), GoToHome);
         var barRect = SearchBarRect(content, scale);
         if (focusSearch)
@@ -47,7 +51,8 @@ internal sealed partial class MusicApp
             return;
         }
 
-        if (results.Length == 0)
+        MatchCommunityStations(lastSearchQuery.Trim());
+        if (results.Length == 0 && communityMatches.Count == 0)
         {
             DrawSearchPlaceholder(body, scale);
             return;
@@ -56,6 +61,7 @@ internal sealed partial class MusicApp
         using (AppSurface.Begin(body))
         {
             ImGui.Dummy(new Vector2(0f, 4f * scale));
+            DrawCommunityMatches(scale);
             for (var index = 0; index < results.Length; index++)
             {
                 DrawSongRow(scale, results[index], index);
@@ -63,6 +69,62 @@ internal sealed partial class MusicApp
 
             ImGui.Dummy(new Vector2(0f, 8f * scale));
         }
+    }
+
+    private void MatchCommunityStations(string query)
+    {
+        communityMatches.Clear();
+        if (query.Length == 0)
+        {
+            return;
+        }
+
+        var stations = community.Stations;
+        for (var index = 0; index < stations.Length; index++)
+        {
+            if (MatchesQuery(stations[index], query))
+            {
+                communityMatches.Add(stations[index]);
+            }
+        }
+    }
+
+    private static bool MatchesQuery(CommunityStationDto station, string query)
+    {
+        if (station.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || station.Description.Contains(query, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        for (var index = 0; index < station.Tags.Length; index++)
+        {
+            if (station.Tags[index].Contains(query, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void DrawCommunityMatches(float scale)
+    {
+        if (communityMatches.Count == 0)
+        {
+            return;
+        }
+
+        Typography.Draw(ImGui.GetWindowDrawList(),
+            new Vector2(ImGui.GetCursorScreenPos().X + 6f * scale, ImGui.GetCursorScreenPos().Y),
+            Loc.T(L.Music.CommunityMatches), ui.MutedInk, TextStyles.Caption1);
+        ImGui.Dummy(new Vector2(0f, 22f * scale));
+        for (var index = 0; index < communityMatches.Count; index++)
+        {
+            DrawCommunityRow(scale, communityMatches[index]);
+        }
+
+        ImGui.Dummy(new Vector2(0f, 10f * scale));
     }
 
     private void DrawScopeChips(Rect content, Rect barRect, float scale)
@@ -122,12 +184,21 @@ internal sealed partial class MusicApp
         var trailing = current ? 32f * scale : showAdd ? 40f * scale : 10f * scale;
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - trailing - textLeft;
-        var title = Typography.FitText(song.Title, textWidth, TextStyles.BodyEmphasized);
-        Typography.Draw(new Vector2(textLeft, min.Y + 10f * scale), title, current ? ui.Accent : ui.TitleInk,
-            TextStyles.BodyEmphasized);
-        var subtitle = Typography.FitText(SongRowSubtitle(song), textWidth, TextStyles.Caption1);
-        Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), subtitle, ui.MutedInk, TextStyles.Caption1);
+        var searchTitleY = min.Y + 10f * scale;
+        var searchTitleSize = Typography.Measure(song.Title, TextStyles.BodyEmphasized);
+        var searchTitleHovering = UiInteract.Hover(new Vector2(textLeft, searchTitleY),
+            new Vector2(textLeft + textWidth, searchTitleY + searchTitleSize.Y));
+        Marquee.DrawLeft("music.searchRow.title." + song.VideoId, song.Title, textLeft, searchTitleY,
+            textWidth, TextStyles.BodyEmphasized, current ? ui.Accent : ui.TitleInk, searchTitleHovering);
+        var searchSub = SongRowSubtitle(song);
+        var searchSubY = min.Y + 34f * scale;
+        var searchSubSize = Typography.Measure(searchSub, TextStyles.Caption1);
+        var searchSubHovering = UiInteract.Hover(new Vector2(textLeft, searchSubY),
+            new Vector2(textLeft + textWidth, searchSubY + searchSubSize.Y));
+        Marquee.DrawLeft("music.searchRow.subtitle." + song.VideoId, searchSub, textLeft,
+            searchSubY, textWidth, TextStyles.Caption1, ui.MutedInk, searchSubHovering);
         var addClicked = false;
+        var overAdd = false;
         if (current)
         {
             Equalizer.Draw(drawList, new Vector2(max.X - 18f * scale, min.Y + rowHeight * 0.5f), scale, 17f * scale,
@@ -135,7 +206,11 @@ internal sealed partial class MusicApp
         }
         else if (showAdd)
         {
-            addClicked = ui.IconButton(new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f), 15f * scale,
+            var addCenter = new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f);
+            var addRadius = 15f * scale;
+            var addHit = new Vector2(addRadius, addRadius);
+            overAdd = UiInteract.Hover(addCenter - addHit, addCenter + addHit);
+            addClicked = ui.IconButton(addCenter, addRadius,
                 FontAwesomeIcon.Plus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f, Loc.T(L.Music.AddToPlaylist));
         }
 
@@ -147,7 +222,7 @@ internal sealed partial class MusicApp
             return;
         }
 
-        if (!UiInteract.Click(min, max, hovered))
+        if (overAdd || !UiInteract.Click(min, max, hovered))
         {
             return;
         }

@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Music;
@@ -35,6 +34,7 @@ internal sealed partial class MusicApp
     private OverlayMode overlay = OverlayMode.None;
     private OverlayMode lastOverlay = OverlayMode.Pick;
     private Spring overlayPresence;
+    private int overlayOpenedFrame;
     private Song pendingSong;
     private bool nameIsRename;
     private string nameTargetId = string.Empty;
@@ -55,6 +55,12 @@ internal sealed partial class MusicApp
         return count == 1 ? Loc.T(L.Music.SongOne) : string.Format(Loc.T(L.Music.SongsMany), count);
     }
 
+    private void ShowOverlay(OverlayMode mode)
+    {
+        overlay = mode;
+        overlayOpenedFrame = ImGui.GetFrameCount();
+    }
+
     private void OpenPicker(in Song song)
     {
         if (string.IsNullOrEmpty(song.VideoId))
@@ -64,7 +70,7 @@ internal sealed partial class MusicApp
 
         pendingSong = song;
         playlistMenu.Close();
-        overlay = OverlayMode.Pick;
+        ShowOverlay(OverlayMode.Pick);
     }
 
     private void OpenPlaylist(string id)
@@ -79,7 +85,7 @@ internal sealed partial class MusicApp
         nameTargetId = string.Empty;
         nameDraft = string.Empty;
         focusNameField = true;
-        overlay = OverlayMode.Name;
+        ShowOverlay(OverlayMode.Name);
     }
 
     private void BeginCreateFromHome()
@@ -89,7 +95,7 @@ internal sealed partial class MusicApp
         nameTargetId = string.Empty;
         nameDraft = string.Empty;
         focusNameField = true;
-        overlay = OverlayMode.Name;
+        ShowOverlay(OverlayMode.Name);
     }
 
     private void BeginRenamePlaylist(string id)
@@ -104,7 +110,7 @@ internal sealed partial class MusicApp
         nameTargetId = id;
         nameDraft = record.Name;
         focusNameField = true;
-        overlay = OverlayMode.Name;
+        ShowOverlay(OverlayMode.Name);
     }
 
     private void CommitName()
@@ -128,7 +134,7 @@ internal sealed partial class MusicApp
         if (!string.IsNullOrEmpty(pendingSong.VideoId))
         {
             playlists.Add(id, pendingSong);
-            overlay = OverlayMode.Pick;
+            ShowOverlay(OverlayMode.Pick);
             return;
         }
 
@@ -139,7 +145,13 @@ internal sealed partial class MusicApp
     private void CancelName()
     {
         nameDraft = string.Empty;
-        overlay = !nameIsRename && !string.IsNullOrEmpty(pendingSong.VideoId) ? OverlayMode.Pick : OverlayMode.None;
+        if (!nameIsRename && !string.IsNullOrEmpty(pendingSong.VideoId))
+        {
+            ShowOverlay(OverlayMode.Pick);
+            return;
+        }
+
+        overlay = OverlayMode.None;
     }
 
     private void DismissOverlay(bool snap)
@@ -209,9 +221,8 @@ internal sealed partial class MusicApp
             }
 
             var textWidth = tileWidth - 24f * scale;
-            var name = Typography.FitText(playlist.Name, textWidth, TextStyles.SubheadlineEmphasized);
-            Typography.Draw(new Vector2(min.X + 12f * scale, max.Y - 34f * scale), name, White,
-                TextStyles.SubheadlineEmphasized);
+            Marquee.DrawLeft("music.playlistShelf.name." + playlist.Id, playlist.Name, min.X + 12f * scale,
+                max.Y - 34f * scale, textWidth, TextStyles.SubheadlineEmphasized, White, hovered);
             var count = Typography.FitText(SongCountLabel(playlist.Songs.Count), textWidth, TextStyles.Caption1);
             Typography.Draw(new Vector2(min.X + 12f * scale, max.Y - 18f * scale), count,
                 new Vector4(1f, 1f, 1f, 0.82f), TextStyles.Caption1);
@@ -298,8 +309,8 @@ internal sealed partial class MusicApp
                 DrawPickCard(drawList, cardRect, scale, interactive);
             }
 
-            if (interactive && ImGui.IsMouseClicked(ImGuiMouseButton.Left) &&
-                !ImGui.IsMouseHoveringRect(cardMin, cardMax))
+            if (interactive && ImGui.GetFrameCount() != overlayOpenedFrame &&
+                UiInteract.ClickedOutside(cardMin, cardMax))
             {
                 if (overlay == OverlayMode.Name)
                 {
@@ -406,8 +417,8 @@ internal sealed partial class MusicApp
             0xFFFFFFFFu, 8f * scale, ImDrawFlags.RoundCornersAll);
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - 44f * scale - textLeft;
-        var name = Typography.FitText(playlist.Name, textWidth, TextStyles.BodyEmphasized);
-        Typography.Draw(new Vector2(textLeft, min.Y + 9f * scale), name, ui.TitleInk, TextStyles.BodyEmphasized);
+        Marquee.DrawLeft("music.pickRow.name." + playlist.Id, playlist.Name, textLeft, min.Y + 9f * scale,
+            textWidth, TextStyles.BodyEmphasized, ui.TitleInk, hovered);
         var count = Typography.FitText(SongCountLabel(playlist.Songs.Count), textWidth, TextStyles.Caption1);
         Typography.Draw(new Vector2(textLeft, min.Y + 30f * scale), count, ui.MutedInk, TextStyles.Caption1);
         var indicatorCenter = new Vector2(max.X - 24f * scale, min.Y + rowHeight * 0.5f);
@@ -495,7 +506,7 @@ internal sealed partial class MusicApp
 
     private void DrawPlaylistDetail(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var content = context.Content;
         if (playlists.Find(selectedPlaylistId) is not { } record)
         {
@@ -616,12 +627,21 @@ internal sealed partial class MusicApp
         var trailing = current ? 32f * scale : showRemove ? 40f * scale : 10f * scale;
         var textLeft = artMax.X + 12f * scale;
         var textWidth = max.X - trailing - textLeft;
-        var title = Typography.FitText(song.Title, textWidth, TextStyles.BodyEmphasized);
-        Typography.Draw(new Vector2(textLeft, min.Y + 10f * scale), title, current ? ui.Accent : ui.TitleInk,
-            TextStyles.BodyEmphasized);
-        var subtitle = Typography.FitText(SongRowSubtitle(song), textWidth, TextStyles.Caption1);
-        Typography.Draw(new Vector2(textLeft, min.Y + 34f * scale), subtitle, ui.MutedInk, TextStyles.Caption1);
+        var songTitleY = min.Y + 10f * scale;
+        var songTitleSize = Typography.Measure(song.Title, TextStyles.BodyEmphasized);
+        var songTitleHovering = UiInteract.Hover(new Vector2(textLeft, songTitleY),
+            new Vector2(textLeft + textWidth, songTitleY + songTitleSize.Y));
+        Marquee.DrawLeft("music.playlistSongRow.title." + song.VideoId + "." + index, song.Title, textLeft,
+            songTitleY, textWidth, TextStyles.BodyEmphasized, current ? ui.Accent : ui.TitleInk, songTitleHovering);
+        var songSub = SongRowSubtitle(song);
+        var songSubY = min.Y + 34f * scale;
+        var songSubSize = Typography.Measure(songSub, TextStyles.Caption1);
+        var songSubHovering = UiInteract.Hover(new Vector2(textLeft, songSubY),
+            new Vector2(textLeft + textWidth, songSubY + songSubSize.Y));
+        Marquee.DrawLeft("music.playlistSongRow.subtitle." + song.VideoId + "." + index, songSub,
+            textLeft, songSubY, textWidth, TextStyles.Caption1, ui.MutedInk, songSubHovering);
         var removeClicked = false;
+        var overRemove = false;
         if (current)
         {
             Equalizer.Draw(drawList, new Vector2(max.X - 18f * scale, min.Y + rowHeight * 0.5f), scale, 17f * scale,
@@ -629,7 +649,11 @@ internal sealed partial class MusicApp
         }
         else if (showRemove)
         {
-            removeClicked = ui.IconButton(new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f), 15f * scale,
+            var removeCenter = new Vector2(max.X - 22f * scale, min.Y + rowHeight * 0.5f);
+            var removeRadius = 15f * scale;
+            var removeHit = new Vector2(removeRadius, removeRadius);
+            overRemove = UiInteract.Hover(removeCenter - removeHit, removeCenter + removeHit);
+            removeClicked = ui.IconButton(removeCenter, removeRadius,
                 FontAwesomeIcon.Minus.ToIconString(), ui.MutedInk, AppSkin.Transparent, 0.82f);
         }
 
@@ -641,7 +665,7 @@ internal sealed partial class MusicApp
             return;
         }
 
-        if (!UiInteract.Click(min, max, hovered))
+        if (overRemove || !UiInteract.Click(min, max, hovered))
         {
             return;
         }

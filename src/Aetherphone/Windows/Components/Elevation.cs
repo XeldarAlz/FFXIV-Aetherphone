@@ -23,8 +23,16 @@ internal static class Elevation
         float opacity = 1f) =>
         Draw(drawList, min, max, rounding, scale, 6f, 2.5f, 0.11f, opacity, 4);
 
+    public static void Squircle(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, float scale,
+        float opacity = 1f) =>
+        DrawLayers(drawList, min, max, rounding, scale, 17f, 6f, 0.24f, opacity, Layers, true);
+
     public static void Draw(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, float scale, float spread,
-        float yOffset, float strength, float opacity = 1f, int layers = Layers)
+        float yOffset, float strength, float opacity = 1f, int layers = Layers) =>
+        DrawLayers(drawList, min, max, rounding, scale, spread, yOffset, strength, opacity, layers, false);
+
+    private static void DrawLayers(ImDrawListPtr drawList, Vector2 min, Vector2 max, float rounding, float scale,
+        float spread, float yOffset, float strength, float opacity, int layers, bool squircle)
     {
         if (opacity <= 0f || strength <= 0f)
         {
@@ -39,6 +47,12 @@ internal static class Elevation
             var inset = maxSpread * (1f - index / (float)layers);
             var layerMin = min - new Vector2(inset, inset) + drop;
             var layerMax = max + new Vector2(inset, inset) + drop;
+            if (squircle)
+            {
+                Components.Squircle.Fill(drawList, layerMin, layerMax, rounding + inset, layerColor);
+                continue;
+            }
+
             drawList.AddRectFilled(layerMin, layerMax, layerColor, rounding + inset);
         }
     }

@@ -1,3 +1,4 @@
+using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Core.Input;
@@ -21,7 +22,7 @@ internal sealed class DragTracker
         }
 
         var position = ImGui.GetMousePos();
-        if (!startZone.Contains(position))
+        if (!UiInteract.HoverWindowOnly(startZone.Min, startZone.Max))
         {
             return false;
         }

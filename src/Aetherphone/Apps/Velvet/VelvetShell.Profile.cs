@@ -8,7 +8,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Velvet;
 
@@ -18,7 +17,7 @@ internal sealed partial class VelvetShell
 
     private void DrawProfile(Rect area, string userId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var user = store.ProfileUserId == userId ? store.ProfileUser : null;
         var title = user != null ? DisplayNameOf(user.DisplayName, user.Handle) : Loc.T(L.Velvet.ProfileTitle);
         if (VHeader.Push(area, title, theme))
@@ -27,7 +26,7 @@ internal sealed partial class VelvetShell
             return;
         }
 
-        if (user != null && store.Me?.UserId != user.UserId)
+        if (user != null && store.Me?.UserId != user.UserId && !AlreadyReported(user.UserId))
         {
             var flagCenter = new Vector2(area.Max.X - 22f * scale, area.Min.Y + VHeader.Height * scale * 0.5f);
             if (ui.IconButton(flagCenter, 15f * scale, FontAwesomeIcon.Flag.ToIconString(), VelvetTheme.MutedInk,
@@ -44,6 +43,15 @@ internal sealed partial class VelvetShell
             {
                 Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetTheme.MutedInk, TextStyles.Callout);
             }
+            else if (store.ProfileFailed)
+            {
+                if (EmptyState.Draw(body, ui, FontAwesomeIcon.CloudDownloadAlt,
+                        Loc.T(L.Velvet.ProfileUnavailable), Loc.T(L.Velvet.ProfileUnavailableHint),
+                        Loc.T(L.Common.Retry)))
+                {
+                    store.OpenProfile(userId);
+                }
+            }
             else
             {
                 EmptyState.Draw(body, ui, FontAwesomeIcon.User, Loc.T(L.Velvet.ProfileUnavailable),
@@ -58,7 +66,7 @@ internal sealed partial class VelvetShell
 
     private void DrawProfileBody(Rect body, VelvetProfileDto user)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var isMe = store.Me?.UserId == user.UserId;
         var connected = isMe || user.ConnectionState == VelvetConnectionState.Connected;
         using (AppSurface.Begin(body))
@@ -71,25 +79,23 @@ internal sealed partial class VelvetShell
             var radius = 56f * scale;
             var avatarCenter = new Vector2(centerX, heroTop.Y + 14f * scale + radius);
             Vector4? ring = isMe ? VelvetTheme.Rose : connected ? VelvetTheme.Moonlight : null;
-            VAvatar.Draw(drawList, avatarCenter, radius, theme, name, user.World, user.AvatarUrl, images, lodestone, -1,
-                ring);
+            VAvatar.Draw(drawList, avatarCenter, radius, theme, name, isMe ? user.World : string.Empty, user.AvatarUrl,
+                images, lodestone, -1, ring);
             avatarLightbox.TryOpen(avatarCenter, radius, user.AvatarUrl, images);
 
             var textWidth = width - HeroTextInset * 2f * scale;
             var lineTop = avatarCenter.Y + radius + 16f * scale;
-            var badgeSpace = user.Verified ? 24f * scale : 0f;
-            var displayName = Typography.FitText(name, textWidth - badgeSpace, TextStyles.Title1);
-            var nameSize = Typography.Measure(displayName, TextStyles.Title1);
+            var badgeSpace = UserName.Reserve(user.Badges, user.BadgeIds, TextStyles.Title1, 2);
+            var nameWidth = MathF.Min(Typography.Measure(name, TextStyles.Title1).X, textWidth - badgeSpace);
+            var nameSize = new Vector2(nameWidth, Typography.Measure(name, TextStyles.Title1).Y);
             var nameX = centerX - (nameSize.X + badgeSpace) * 0.5f;
-            Typography.Draw(new Vector2(nameX, lineTop), displayName, VelvetTheme.TitleInk, TextStyles.Title1);
-            if (user.Verified)
-            {
-                DrawVerifiedBadge(drawList, new Vector2(nameX + nameSize.X + 13f * scale, lineTop + nameSize.Y * 0.5f),
-                    scale);
-            }
+            var nameHovering = UiInteract.Hover(new Vector2(nameX, lineTop),
+                new Vector2(nameX + nameSize.X, lineTop + nameSize.Y));
+            UserName.Draw(drawList, "velvet.profile.name." + user.UserId, name, user.Badges, user.BadgeIds, nameX, lineTop,
+                nameSize.X + badgeSpace, TextStyles.Title1, VelvetTheme.TitleInk, nameHovering, false, 2);
 
             lineTop += nameSize.Y + 4f * scale;
-            var region = RegionOf(user.World);
+            var region = RegionCodeOf(user);
             var meta = SocialIdentity.ProfileMeta(user.Handle, region);
             if (user.Pronouns.Length > 0)
             {
@@ -140,18 +146,6 @@ internal sealed partial class VelvetShell
                 }
             }
 
-            Gap(24f);
-            DrawGallery(user, isMe, connected);
-
-            var genderLabel = VelvetGender.Label(VelvetGender.Sanitize(user.Gender));
-            if (genderLabel.Length > 0)
-            {
-                Gap(20f);
-                VSectionHeader.Bar(Loc.T(L.Velvet.CardGender));
-                Gap(4f);
-                DrawDisplayTokens(new[] { genderLabel }, VChipStyle.Tint, VelvetTheme.Rose);
-            }
-
             if (user.Intro.Length > 0)
             {
                 Gap(20f);
@@ -160,12 +154,39 @@ internal sealed partial class VelvetShell
                 WrapText(user.Intro, VelvetTheme.BodyInk, TextStyles.Body);
             }
 
+            var genderLabels = VelvetGender.Labels(user.Gender);
+            if (genderLabels.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardGender));
+                Gap(4f);
+                DrawDisplayTokens(genderLabels, VChipStyle.Tint, VelvetTheme.Rose);
+            }
+
+            var sexualityLabels = VelvetSexuality.Labels(user.Sexuality);
+            if (sexualityLabels.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardSexuality));
+                Gap(4f);
+                DrawDisplayTokens(sexualityLabels, VChipStyle.Tint, VelvetTheme.Rose);
+            }
+
             if (VelvetIntent.IncludesErp(user.LookingFor) && user.Dynamic.Length > 0)
             {
                 Gap(18f);
                 VSectionHeader.Bar(Loc.T(L.Velvet.CardRole));
                 Gap(4f);
                 DrawDisplayTokens(VelvetTags.Parse(user.Dynamic), VChipStyle.Tint, new Vector4(0.62f, 0.22f, 0.60f, 1f));
+            }
+
+            var kinks = user.Kinks ?? Array.Empty<string>();
+            if (VelvetIntent.IncludesErp(user.LookingFor) && kinks.Length > 0)
+            {
+                Gap(18f);
+                VSectionHeader.Bar(Loc.T(L.Velvet.CardKinks));
+                Gap(4f);
+                DrawDisplayTokens(kinks, VChipStyle.Tint, new Vector4(0.647f, 0.482f, 0.839f, 1f));
             }
 
             if (user.Tags.Length > 0)
@@ -183,6 +204,9 @@ internal sealed partial class VelvetShell
                 Gap(4f);
                 DrawDisplayTokens(user.Limits, VChipStyle.Outline, VelvetTheme.Gold);
             }
+
+            Gap(24f);
+            DrawGallery(user, isMe, connected);
 
             if (!isMe)
             {
@@ -206,9 +230,17 @@ internal sealed partial class VelvetShell
                         Gap(10f);
                     }
 
+                    if (ui.GhostButton(Reserve(42f), Loc.T(L.Velvet.NotInterested)))
+                    {
+                        store.HideFromDiscover(user.UserId);
+                        router.Pop();
+                        return;
+                    }
+
+                    Gap(10f);
                     if (ui.DangerGhostButton(Reserve(42f), Loc.T(L.Velvet.Block)))
                     {
-                        store.Block(user.UserId, _ => { });
+                        AskBlock(user.UserId, DisplayNameOf(user.DisplayName, user.Handle));
                     }
                 }
             }
@@ -232,44 +264,50 @@ internal sealed partial class VelvetShell
         });
     }
 
-    private static void DrawVerifiedBadge(ImDrawListPtr drawList, Vector2 center, float scale)
-    {
-        drawList.AddCircleFilled(center, 8f * scale, VelvetTheme.Rose.Packed(), 20);
-        var ink = VelvetTheme.OnAccent.Packed();
-        drawList.AddLine(new Vector2(center.X - 3.4f * scale, center.Y + 0.4f * scale),
-            new Vector2(center.X - 1f * scale, center.Y + 2.8f * scale), ink, 1.6f * scale);
-        drawList.AddLine(new Vector2(center.X - 1f * scale, center.Y + 2.8f * scale),
-            new Vector2(center.X + 3.6f * scale, center.Y - 2.6f * scale), ink, 1.6f * scale);
-    }
-
     private void DrawGallery(VelvetProfileDto user, bool isMe, bool connected)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        if (!store.FeedLoaded && !store.LoadingFeed)
+        var scale = UiScale.Current;
+        store.EnsureUserPosts(user.UserId);
+        var serverGallery = store.UserPostsUserId == user.UserId && store.UserPostsLoaded;
+        List<VelvetPostDto> owned;
+        int totalCount;
+        if (serverGallery)
         {
-            store.RefreshFeed();
+            var posts = store.UserPosts;
+            owned = new List<VelvetPostDto>(posts.Length);
+            owned.AddRange(posts);
+            totalCount = store.UserPostsTotal;
         }
-
-        var feed = store.Feed;
-        var owned = new List<VelvetPostDto>();
-        for (var index = 0; index < feed.Length; index++)
+        else
         {
-            if (feed[index].OwnerId == user.UserId)
+            if (!store.FeedLoaded && !store.LoadingFeed)
             {
-                owned.Add(feed[index]);
+                store.RefreshFeed();
             }
+
+            var feed = store.Feed;
+            owned = new List<VelvetPostDto>();
+            for (var index = 0; index < feed.Length; index++)
+            {
+                if (feed[index].OwnerId == user.UserId)
+                {
+                    owned.Add(feed[index]);
+                }
+            }
+
+            totalCount = owned.Count;
         }
 
         var width = ScrollLayout.StableContentWidth();
         VSectionHeader.Bar(isMe ? Loc.T(L.Velvet.MyPhotos) : Loc.T(L.Velvet.Photos),
-            owned.Count > 0 ? owned.Count.ToString(Loc.Culture) : string.Empty);
+            totalCount > 0 ? totalCount.ToString(Loc.Culture) : string.Empty);
         Gap(6f);
 
         if (owned.Count == 0)
         {
             if (!isMe && !connected)
             {
-                DrawLockedGallery(DisplayNameOf(user.DisplayName, user.Handle), width);
+                DrawLockedGallery(DisplayNameOf(user.DisplayName, user.Handle), width, totalCount);
             }
             else
             {
@@ -310,11 +348,32 @@ internal sealed partial class VelvetShell
         var gridHeight = rows * cell + (rows - 1) * cellGap;
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, gridHeight));
+
+        if (serverGallery)
+        {
+            if (store.UserPostsLoadingMore)
+            {
+                InfiniteScroll.DrawLoadingRow(origin.X + width * 0.5f, VelvetTheme.MutedInk);
+            }
+            else if (store.HasMoreUserPosts && InfiniteScroll.ReachedBottom())
+            {
+                store.LoadMoreUserPosts();
+            }
+        }
+
+        if (!isMe && !connected && totalCount > owned.Count)
+        {
+            Gap(12f);
+            Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, ImGui.GetCursorScreenPos().Y),
+                Loc.Plural(L.Velvet.ConnectToUnlock, totalCount - owned.Count), VelvetTheme.RoseInk,
+                TextStyles.Callout, width - 40f * scale);
+            Gap(24f);
+        }
     }
 
-    private void DrawLockedGallery(string name, float width)
+    private void DrawLockedGallery(string name, float width, int totalCount)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         const int columns = 3;
         var cellGap = 6f * scale;
         var cell = (width - cellGap * (columns - 1)) / columns;
@@ -330,8 +389,11 @@ internal sealed partial class VelvetShell
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cell));
         Gap(12f);
+        var teaser = totalCount > 0
+            ? Loc.Plural(L.Velvet.ConnectToUnlock, totalCount)
+            : Loc.T(L.Velvet.ConnectToSeePhotos, name);
         Typography.DrawWrappedCentered(new Vector2(origin.X + width * 0.5f, ImGui.GetCursorScreenPos().Y),
-            Loc.T(L.Velvet.ConnectToSeePhotos, name), VelvetTheme.RoseInk, TextStyles.Callout, width - 40f * scale);
+            teaser, VelvetTheme.RoseInk, TextStyles.Callout, width - 40f * scale);
         Gap(30f);
     }
 
@@ -391,7 +453,7 @@ internal sealed partial class VelvetShell
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = ImGui.GetContentRegionAvail().X;
         var models = new VChipModel[tokens.Length];
         for (var index = 0; index < tokens.Length; index++)

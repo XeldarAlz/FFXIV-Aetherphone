@@ -3,7 +3,6 @@ using Aetherphone.Core.Emoji;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -29,6 +28,7 @@ internal sealed class EmojiPicker
     private int lastCategory = -1;
     private int tone;
     private bool resetScroll;
+    private int lastDrawnFrame = -1;
 
     public string? Draw(Rect area, in AppSkin ui)
     {
@@ -37,7 +37,8 @@ internal sealed class EmojiPicker
             return null;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        UiInteract.HoverOverlay(area);
+        var scale = UiScale.Current;
         var theme = ui.Theme;
         string? picked = null;
         ImGui.SetCursorScreenPos(area.Min);
@@ -66,7 +67,9 @@ internal sealed class EmojiPicker
             var searchTop = tabsTop + rowHeight + 6f * scale;
             var searchRect = new Rect(new Vector2(innerLeft, searchTop),
                 new Vector2(innerRight, searchTop + rowHeight));
-            SearchField.Draw(searchRect, "##emojiSearch", Loc.T(L.Common.Search), ref search, theme);
+            var appearing = ImGui.GetFrameCount() - lastDrawnFrame > 1;
+            lastDrawnFrame = ImGui.GetFrameCount();
+            SearchField.Draw(searchRect, "##emojiSearch", Loc.T(L.Common.Search), ref search, theme, 100, appearing);
 
             RebuildViewIfNeeded();
 
@@ -79,7 +82,7 @@ internal sealed class EmojiPicker
 
     private void DrawHeader(ImDrawListPtr drawList, float left, float right, float top, float height, in AppSkin ui)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var centerY = top + height * 0.5f;
         var toneRadius = height * 0.5f;
         var toneCenter = new Vector2(right - toneRadius, centerY);
@@ -114,7 +117,13 @@ internal sealed class EmojiPicker
                     iconMin + new Vector2(glyph, glyph), 0xFFFFFFFF);
             }
 
-            if (UiInteract.HoverClick(cellMin, cellMax))
+            var cellHovered = !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(cellMin, cellMax);
+            if (cellHovered)
+            {
+                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            }
+
+            if (UiInteract.Click(cellMin, cellMax, cellHovered))
             {
                 category = index;
                 search = string.Empty;
@@ -128,7 +137,15 @@ internal sealed class EmojiPicker
         drawList.AddCircleFilled(center, radius * 0.7f, ImGui.GetColorU32(ToneSwatches[tone]), 20);
         drawList.AddCircle(center, radius * 0.7f, ImGui.GetColorU32(Palette.WithAlpha(ui.Theme.TextStrong, 0.35f)), 20,
             1f);
-        if (UiInteract.HoverClick(center - new Vector2(radius, radius), center + new Vector2(radius, radius)))
+        var swatchMin = center - new Vector2(radius, radius);
+        var swatchMax = center + new Vector2(radius, radius);
+        var swatchHovered = !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(swatchMin, swatchMax);
+        if (swatchHovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        if (UiInteract.Click(swatchMin, swatchMax, swatchHovered))
         {
             tone = (tone + 1) % ToneSwatches.Length;
         }
@@ -169,7 +186,7 @@ internal sealed class EmojiPicker
 
     private string? DrawGrid(Rect body, in AppSkin ui)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         string? picked = null;
         var gridKey = ImGui.GetID("##emojiGrid");
         ImGui.SetCursorScreenPos(body.Min);
@@ -220,7 +237,7 @@ internal sealed class EmojiPicker
                     var glyph = glyphs[view[slot]];
                     var min = new Vector2(origin.X + column * stride, origin.Y + rowTop);
                     var max = min + new Vector2(cell, cell);
-                    var hovered = UiInteract.Hover(min, max);
+                    var hovered = !UiInteract.InputBlocked && UiInteract.HoverWindowOnly(min, max);
                     if (hovered)
                     {
                         Squircle.Fill(drawList, min, max, 8f * scale,

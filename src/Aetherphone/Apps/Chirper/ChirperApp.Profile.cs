@@ -6,7 +6,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Chirper;
 
@@ -25,7 +24,7 @@ internal sealed partial class ChirperApp
             : SocialIdentity.Name(user.DisplayName, user.Handle);
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, title, back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var body = new Rect(new Vector2(area.Min.X, top), area.Max);
         if (store.ProfileFailed)
@@ -52,18 +51,35 @@ internal sealed partial class ChirperApp
             }
             else
             {
+                profileVirtualizer.BeginFrame();
                 renderedUnderlyingIds.Clear();
                 for (var index = 0; index < posts.Length; index++)
                 {
-                    if (!renderedUnderlyingIds.Add(posts[index].RepostOfId ?? posts[index].Id))
+                    var post = posts[index];
+                    if (!renderedUnderlyingIds.Add(post.RepostOfId ?? post.Id))
                     {
                         continue;
                     }
 
-                    DrawPost(posts[index]);
+                    if (profileVirtualizer.Skip(post.Id))
+                    {
+                        continue;
+                    }
+
+                    DrawPost(post);
+                    profileVirtualizer.Record(post.Id);
+                }
+
+                if (store.ProfileLoadingMore)
+                {
+                    InfiniteScroll.DrawLoadingRow(body.Center.X, AppPalettes.Chirper.MutedInk);
                 }
 
                 ImGui.Dummy(new Vector2(0f, 24f * scale));
+                if (InfiniteScroll.ReachedBottom() && store.HasMoreProfilePosts && !store.ProfileLoadingMore)
+                {
+                    store.LoadMoreProfilePosts();
+                }
             }
         }
     }
@@ -95,7 +111,7 @@ internal sealed partial class ChirperApp
     {
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, Loc.T(L.Chirper.FindPeople), back);
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var searchHeight = 52f * scale;
         profile.DrawSearchBar(new Rect(new Vector2(area.Min.X, top), new Vector2(area.Max.X, top + searchHeight)));
@@ -104,16 +120,22 @@ internal sealed partial class ChirperApp
 
     private void DrawHomeTopBar(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        const float titleScale = 1.3f;
-        var titleCenter = new Vector2(area.Center.X, rowCenterY);
-        var titleSize = Typography.Measure(DisplayName, titleScale, FontWeight.Bold);
+        var titleStyle = new TextStyle(1.3f, FontWeight.Bold);
+        var leftReserve = area.Min.X + 84f * scale;
+        var rightReserve = area.Max.X - 112f * scale;
+        var titleCenterX = (leftReserve + rightReserve) * 0.5f;
+        var maxTitleWidth = MathF.Max(1f, rightReserve - leftReserve);
+        var titleSize = Typography.Measure(DisplayName, titleStyle);
+        var clampedWidth = MathF.Min(titleSize.X, maxTitleWidth);
         var titlePadding = new Vector2(12f * scale, 6f * scale);
-        var titleMin = titleCenter - titleSize * 0.5f - titlePadding;
-        var titleMax = titleCenter + titleSize * 0.5f + titlePadding;
+        var titleTop = rowCenterY - titleSize.Y * 0.5f;
+        var titleMin = new Vector2(titleCenterX - clampedWidth * 0.5f, titleTop) - titlePadding;
+        var titleMax = new Vector2(titleCenterX + clampedWidth * 0.5f, titleTop + titleSize.Y) + titlePadding;
         UiInteract.HoverHighlight(ImGui.GetWindowDrawList(), titleMin, titleMax, (titleMax.Y - titleMin.Y) * 0.5f);
-        Typography.DrawCentered(titleCenter, DisplayName, AppPalettes.Chirper.TitleInk, titleScale, FontWeight.Bold);
+        Marquee.DrawCenteredAuto("chirper.home.title", DisplayName, titleCenterX, titleTop, maxTitleWidth, titleStyle,
+            AppPalettes.Chirper.TitleInk);
         if (UiInteract.HoverClick(titleMin, titleMax))
         {
             RefreshActiveFeed();

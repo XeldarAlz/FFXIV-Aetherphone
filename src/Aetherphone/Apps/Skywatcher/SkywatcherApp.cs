@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Skywatcher;
@@ -22,6 +21,7 @@ internal enum SkywatcherTab : byte
 internal sealed partial class SkywatcherApp : IPhoneApp
 {
     private const int WindowCount = 8;
+    private const int HourlyStripCount = 5;
     private const float RefreshIntervalSeconds = 5f;
     private const float NavHeight = 60f;
     public string Id => "skywatcher";
@@ -67,7 +67,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
             Refresh();
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var theme = context.Theme;
         var content = context.Content;
         var screen = SceneChrome.ScreenFrom(content, theme, scale);
@@ -108,7 +108,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     {
         if (activeTab == SkywatcherTab.Control)
         {
-            DrawControl(screen, palette, scale);
+            DrawControl(palette, scale);
             return;
         }
 
@@ -120,9 +120,9 @@ internal sealed partial class SkywatcherApp : IPhoneApp
 
         var width = ImGui.GetContentRegionAvail().X;
         DrawHero(width, screen, palette, kind, isDay, scale);
-        SectionLabel(Loc.T(L.Skywatcher.NextFewHours), palette.InkSoft, scale);
+        SectionLabel(Loc.T(L.Skywatcher.NextFewHours), palette, scale);
         DrawHourly(screen, palette, scale);
-        SectionLabel(Loc.T(L.Skywatcher.Forecast), palette.InkSoft, scale);
+        SectionLabel(Loc.T(L.Skywatcher.Forecast), palette, scale);
         DrawForecastList(screen, palette, scale);
         ImGui.Dummy(new Vector2(0f, 8f * scale));
     }
@@ -132,7 +132,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         var margin = 12f * scale;
         var bar = new Rect(new Vector2(nav.Min.X + margin, nav.Min.Y + 3f * scale),
             new Vector2(nav.Max.X - margin, nav.Max.Y - 9f * scale));
-        Material.Glass(ImGui.GetWindowDrawList(), bar.Min, bar.Max, bar.Height * 0.5f, palette.Ink, scale);
+        WeatherCard.Panel(ImGui.GetWindowDrawList(), bar, palette, scale, bar.Height * 0.5f);
         var half = bar.Width * 0.5f;
         DrawNavItem(new Rect(bar.Min, new Vector2(bar.Min.X + half, bar.Max.Y)), FontAwesomeIcon.CloudSun,
             Loc.T(L.Skywatcher.Forecast), SkywatcherTab.Forecast, palette, scale);
@@ -165,28 +165,32 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     {
         var origin = ImGui.GetCursorScreenPos();
         var centerX = origin.X + width * 0.5f;
+        var titleHeight = 0f;
         if (zone.Length > 0)
         {
-            Typography.DrawCentered(new Vector2(centerX, origin.Y + 16f * scale), zone, palette.Ink,
-                TextStyles.Title2.Scale, TextStyles.Title2.Weight);
+            titleHeight = ShadowWrappedCentered(new Vector2(centerX, origin.Y + 16f * scale), zone, palette.Ink,
+                TextStyles.Title2, width - 32f * scale, palette, scale);
         }
 
-        var glyphCenter = new Vector2(centerX, origin.Y + 100f * scale);
+        var glyphBaseline = origin.Y + 100f * scale;
+        var glyphCenter = new Vector2(centerX, MathF.Max(glyphBaseline, origin.Y + 16f * scale + titleHeight + 44f * scale));
+        var glyphOverflow = MathF.Max(0f, glyphCenter.Y - glyphBaseline);
         var radius = 50f * scale;
         WeatherGlyph.Draw(kind, glyphCenter, radius, palette, isDay, SampleSky(palette, screen, glyphCenter.Y));
         WeatherAmbience.Halo(ImGui.GetWindowDrawList(), glyphCenter, radius * 1.05f, palette.Glow,
             0.65f + 0.40f * Pulse.Wave(Pulse.Breath));
-        Typography.DrawCentered(new Vector2(centerX, origin.Y + 176f * scale), forecast[0].Weather.Name, palette.Ink,
-            TextStyles.LargeTitle.Scale, FontWeight.Regular);
-        Typography.DrawCentered(new Vector2(centerX, origin.Y + 210f * scale), Summary(), palette.InkSoft,
-            TextStyles.Subheadline);
+        ShadowCentered(new Vector2(centerX, origin.Y + 176f * scale + glyphOverflow), forecast[0].Weather.Name, palette.Ink,
+            TextStyles.LargeTitle.Scale, FontWeight.Regular, palette, scale);
+        ShadowCentered(new Vector2(centerX, origin.Y + 210f * scale + glyphOverflow), Summary(), palette.InkSoft,
+            TextStyles.Subheadline.Scale, TextStyles.Subheadline.Weight, palette, scale);
+        var heroHeight = 234f * scale + glyphOverflow;
         if (UiAnchors.Recording)
         {
-            UiAnchors.Report("skywatcher.current", new Rect(origin, origin + new Vector2(width, 234f * scale)));
+            UiAnchors.Report("skywatcher.current", new Rect(origin, origin + new Vector2(width, heroHeight)));
         }
 
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, 234f * scale));
+        ImGui.Dummy(new Vector2(width, heroHeight));
     }
 
     private void DrawHourly(Rect screen, in SkyPalette palette, float scale)
@@ -202,7 +206,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
 
         DrawGlass(card, palette, scale);
         var inner = card.Inset(12f * scale);
-        var count = forecast.Count;
+        var count = Math.Min(forecast.Count, HourlyStripCount);
         var columnWidth = inner.Width / count;
         var drawList = ImGui.GetWindowDrawList();
         for (var index = 0; index < count; index++)
@@ -217,11 +221,12 @@ internal sealed partial class SkywatcherApp : IPhoneApp
                     columnWidth * 0.30f);
             }
 
-            Typography.DrawCentered(new Vector2(columnCenterX, inner.Min.Y + 10f * scale), ShortWhen(window),
-                palette.InkSoft, TextStyles.Footnote);
+            var columnMaxWidth = MathF.Max(1f, columnWidth - 4f * scale);
+            Marquee.DrawCentered("skywatcher.hourly." + index, ShortWhen(window), columnCenterX,
+                inner.Min.Y + 10f * scale, columnMaxWidth, TextStyles.Footnote, palette.InkSoft, false);
             var glyphCenter = new Vector2(columnCenterX, inner.Min.Y + inner.Height * 0.62f);
-            var glyphRadius = MathF.Min(columnWidth * 0.34f, inner.Height * 0.28f);
-            DrawMini(window, glyphCenter, glyphRadius, screen);
+            var glyphRadius = MathF.Min(columnWidth * 0.30f, inner.Height * 0.24f);
+            DrawMini(window, glyphCenter, glyphRadius);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -232,7 +237,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
     {
         var origin = ImGui.GetCursorScreenPos();
         var width = ImGui.GetContentRegionAvail().X;
-        var rowHeight = 38f * scale;
+        var rowHeight = 42f * scale;
         var count = forecast.Count;
         var card = new Rect(origin, origin + new Vector2(width, count * rowHeight + 10f * scale));
         DrawGlass(card, palette, scale);
@@ -252,11 +257,14 @@ internal sealed partial class SkywatcherApp : IPhoneApp
             }
 
             var label = window.IsCurrent ? Loc.T(L.Skywatcher.Now) : BellLabel(window);
-            var labelSize = Typography.Measure(label);
-            Typography.Draw(new Vector2(inner.Min.X + 12f * scale, rowCenterY - labelSize.Y * 0.5f), label,
+            var labelMaxWidth = MathF.Max(1f, glyphX - 8f * scale - (inner.Min.X + 12f * scale));
+            var fittedLabel = Typography.FitText(label, labelMaxWidth, TextStyles.Body);
+            var labelSize = Typography.Measure(fittedLabel);
+            Typography.Draw(new Vector2(inner.Min.X + 12f * scale, rowCenterY - labelSize.Y * 0.5f), fittedLabel,
                 window.IsCurrent ? palette.Ink : palette.InkSoft);
-            DrawMini(window, new Vector2(glyphX, rowCenterY), 13f * scale, screen);
-            var name = window.Weather.Name;
+            DrawMini(window, new Vector2(glyphX, rowCenterY), 13f * scale);
+            var nameMaxWidth = MathF.Max(1f, inner.Max.X - 10f * scale - (glyphX + 23f * scale));
+            var name = Typography.FitText(window.Weather.Name, nameMaxWidth, 1f, FontWeight.Regular);
             var nameSize = Typography.Measure(name);
             Typography.Draw(new Vector2(inner.Max.X - 10f * scale - nameSize.X, rowCenterY - nameSize.Y * 0.5f), name,
                 palette.Ink);
@@ -266,12 +274,32 @@ internal sealed partial class SkywatcherApp : IPhoneApp
         ImGui.Dummy(new Vector2(width, card.Height));
     }
 
-    private void DrawMini(WeatherWindow window, Vector2 center, float radius, Rect screen)
+    private static void DrawMini(WeatherWindow window, Vector2 center, float radius)
     {
         var kind = WeatherSky.Classify(window.Weather.EnglishKey);
         var isDay = IsDayWindow(window);
-        var palette = WeatherSky.Resolve(kind, isDay);
-        WeatherGlyph.Draw(kind, center, radius, palette, isDay, SampleSky(palette, screen, center.Y));
+        var scale = UiScale.Current;
+        var half = radius + 3f * scale;
+        var chip = new Rect(new Vector2(center.X - half, center.Y - half),
+            new Vector2(center.X + half, center.Y + half));
+        WeatherCard.Chip(ImGui.GetWindowDrawList(), chip, kind, isDay, scale);
+    }
+
+    private static void ShadowCentered(Vector2 center, string text, Vector4 color, float fontScale, FontWeight weight,
+        in SkyPalette palette, float scale)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var shadow = new Vector4(0f, 0f, 0f, palette.LightSky ? 0.20f : 0.42f);
+        Typography.DrawCentered(drawList, center + new Vector2(0f, 1.4f * scale), text, shadow, fontScale, weight);
+        Typography.DrawCentered(drawList, center, text, color, fontScale, weight);
+    }
+
+    private static float ShadowWrappedCentered(Vector2 topCenter, string text, Vector4 color, in TextStyle style,
+        float maxWidth, in SkyPalette palette, float scale)
+    {
+        var shadow = new Vector4(0f, 0f, 0f, palette.LightSky ? 0.20f : 0.42f);
+        Typography.DrawWrappedCentered(topCenter + new Vector2(0f, 1.4f * scale), text, shadow, style, maxWidth);
+        return Typography.DrawWrappedCentered(topCenter, text, color, style, maxWidth);
     }
 
     private static void DrawEmpty(Rect screen, in SkyPalette palette, float scale)
@@ -285,22 +313,23 @@ internal sealed partial class SkywatcherApp : IPhoneApp
             palette.InkSoft, 1.0f);
     }
 
-    private static void SectionLabel(string title, Vector4 ink, float scale)
+    private static void SectionLabel(string title, in SkyPalette palette, float scale)
     {
         ImGui.Dummy(new Vector2(0f, 12f * scale));
-        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + 4f * scale);
-        using (Plugin.Fonts.Push(TextStyles.FootnoteEmphasized.Scale, TextStyles.FootnoteEmphasized.Weight))
-        using (ImRaii.PushColor(ImGuiCol.Text, ink))
-        {
-            Typography.Plain(Loc.Culture.TextInfo.ToUpper(title));
-        }
-
-        ImGui.Dummy(new Vector2(0f, 6f * scale));
+        var text = Loc.Culture.TextInfo.ToUpper(title);
+        var style = TextStyles.FootnoteEmphasized;
+        var origin = ImGui.GetCursorScreenPos() + new Vector2(4f * scale, 0f);
+        var drawList = ImGui.GetWindowDrawList();
+        var shadow = new Vector4(0f, 0f, 0f, palette.LightSky ? 0.14f : 0.34f);
+        Typography.Draw(drawList, origin + new Vector2(0f, 1f * scale), text, shadow, style);
+        Typography.Draw(drawList, origin, text, palette.InkSoft, style);
+        var size = Typography.Measure(text, style);
+        ImGui.Dummy(new Vector2(size.X + 8f * scale, size.Y + 6f * scale));
     }
 
     private static void DrawGlass(Rect card, in SkyPalette palette, float scale)
     {
-        Material.Glass(ImGui.GetWindowDrawList(), card.Min, card.Max, Metrics.Radius.Lg * scale, palette.Ink, scale);
+        WeatherCard.Panel(ImGui.GetWindowDrawList(), card, palette, scale);
     }
 
     private string Summary()
@@ -330,8 +359,18 @@ internal sealed partial class SkywatcherApp : IPhoneApp
 
     private static bool IsDayWindow(WeatherWindow window)
     {
-        var midpoint = (window.StartBell + 4) % 24;
-        return midpoint >= 6 && midpoint < 19;
+        float bell;
+        if (window.IsCurrent)
+        {
+            var now = EorzeaTime.Now();
+            bell = now.Hour + now.Minute / 60f;
+        }
+        else
+        {
+            bell = window.StartBell;
+        }
+
+        return WeatherSky.Daylight(bell) >= 0.5f;
     }
 
     private static string BellLabel(WeatherWindow window) => $"{window.StartBell:D2}:00";
@@ -343,12 +382,7 @@ internal sealed partial class SkywatcherApp : IPhoneApp
             return Loc.T(L.Skywatcher.Now);
         }
 
-        if (window.MinutesFromNow < 60)
-        {
-            return Loc.T(L.Time.MinutesShort, window.MinutesFromNow);
-        }
-
-        return Loc.T(L.Time.HoursShort, window.MinutesFromNow / 60);
+        return Loc.T(L.Time.MinutesShort, window.MinutesFromNow);
     }
 
     private static string LongWhen(WeatherWindow window)

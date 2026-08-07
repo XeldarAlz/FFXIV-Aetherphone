@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -16,16 +15,18 @@ internal enum SideButtonAction
 internal sealed class SideButton
 {
     private const float HoldSeconds = 0.45f;
+    private const float InwardHitPadding = 8f;
+    private const float OutwardHitPadding = 4f;
+    private const float AlongHitPadding = 8f;
     private bool armed;
     private float held;
     private bool closeFired;
 
-    public SideButtonAction Update(Rect bounds, PhoneTheme theme, float delta)
+    public SideButtonAction Update(Rect bounds, RailSide side, PhoneTheme theme, float delta)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var hitMin = new Vector2(bounds.Min.X - 8f * scale, bounds.Min.Y - 8f * scale);
-        var hitMax = new Vector2(bounds.Max.X + 4f * scale, bounds.Max.Y + 8f * scale);
-        var hovered = ImGui.IsMouseHoveringRect(hitMin, hitMax);
+        var scale = UiScale.Current;
+        var hit = HitRect(bounds, side, scale);
+        var hovered = UiInteract.Hover(hit.Min, hit.Max);
         var action = SideButtonAction.None;
         if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
         {
@@ -56,7 +57,7 @@ internal sealed class SideButton
         }
 
         var progress = armed ? Math.Clamp(held / HoldSeconds, 0f, 1f) : 0f;
-        DrawButton(bounds, theme, hovered, progress, armed);
+        DrawButton(bounds, side, theme, hovered, progress, armed);
         if (hovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
@@ -66,9 +67,28 @@ internal sealed class SideButton
         return action;
     }
 
-    private static void DrawButton(Rect bounds, PhoneTheme theme, bool hovered, float progress, bool pressing)
+    private static Rect HitRect(Rect bounds, RailSide side, float scale)
+    {
+        var inward = InwardHitPadding * scale;
+        var outward = OutwardHitPadding * scale;
+        var along = AlongHitPadding * scale;
+        return side switch
+        {
+            RailSide.Top => new Rect(new Vector2(bounds.Min.X - along, bounds.Min.Y - outward),
+                new Vector2(bounds.Max.X + along, bounds.Max.Y + inward)),
+            RailSide.Bottom => new Rect(new Vector2(bounds.Min.X - along, bounds.Min.Y - inward),
+                new Vector2(bounds.Max.X + along, bounds.Max.Y + outward)),
+            RailSide.Left => new Rect(new Vector2(bounds.Min.X - outward, bounds.Min.Y - along),
+                new Vector2(bounds.Max.X + inward, bounds.Max.Y + along)),
+            _ => new Rect(new Vector2(bounds.Min.X - inward, bounds.Min.Y - along),
+                new Vector2(bounds.Max.X + outward, bounds.Max.Y + along)),
+        };
+    }
+
+    private static void DrawButton(Rect bounds, RailSide side, PhoneTheme theme, bool hovered, float progress,
+        bool pressing)
     {
         var press = pressing ? 0.35f + 0.65f * progress : 0f;
-        HardwareButton.Draw(ImGui.GetWindowDrawList(), bounds, theme, RailSide.Right, hovered, press, 0f);
+        HardwareButton.Draw(ImGui.GetWindowDrawList(), bounds, theme, side, hovered, press, 0f);
     }
 }

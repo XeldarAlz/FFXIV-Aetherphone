@@ -1,7 +1,6 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -17,7 +16,7 @@ internal static class ActivityRings
 
     public static void Draw(Vector4 trackInk, float progressFraction, float adventureFraction, float fortuneFraction)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = ImGui.GetContentRegionAvail().X;
         var origin = ImGui.GetCursorScreenPos();
         var center = new Vector2(origin.X + width * 0.5f, origin.Y + Height * scale * 0.5f);

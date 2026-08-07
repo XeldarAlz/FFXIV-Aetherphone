@@ -7,14 +7,15 @@ internal sealed class ControlLayoutService
     public const int Columns = 4;
     private const int SolverRows = 16;
 
-    private readonly ControlRegistry registry;
-    private readonly Configuration configuration;
+    private readonly IControlRegistry registry;
+    private readonly IControlConfiguration configuration;
     private readonly List<ControlSlot> slots = new();
     private readonly List<GridCell> placements = new();
+    private readonly HashSet<string> enabled = new();
     private bool placementsDirty = true;
     private int rowsUsed;
 
-    public ControlLayoutService(ControlRegistry registry, Configuration configuration)
+    public ControlLayoutService(IControlRegistry registry, IControlConfiguration configuration)
     {
         this.registry = registry;
         this.configuration = configuration;
@@ -117,6 +118,7 @@ internal sealed class ControlLayoutService
     {
         if (slots.Remove(slot))
         {
+            enabled.Remove(slot.Id);
             Commit();
         }
     }
@@ -128,6 +130,7 @@ internal sealed class ControlLayoutService
             return;
         }
 
+        enabled.Add(module.Id);
         slots.Add(ControlSlot.For(module, module.DefaultSpan));
         Commit();
     }
@@ -177,19 +180,58 @@ internal sealed class ControlLayoutService
             }
         }
 
-        var all = registry.Modules;
-        for (var index = 0; index < all.Count; index++)
-        {
-            if (placed.Add(all[index].Id))
-            {
-                slots.Add(ControlSlot.For(all[index], all[index].DefaultSpan));
-            }
-        }
+        LoadEnabled(saved, placed);
 
         placementsDirty = true;
         if (saved is null)
         {
             Save();
+        }
+    }
+
+    private void LoadEnabled(ControlLayout? saved, HashSet<string> placed)
+    {
+        enabled.Clear();
+        if (saved?.Enabled is { Count: > 0 } stored)
+        {
+            for (var index = 0; index < stored.Count; index++)
+            {
+                enabled.Add(stored[index]);
+            }
+        }
+        else
+        {
+            SeedEnabled(saved);
+        }
+
+        enabled.UnionWith(placed);
+
+        var all = registry.Modules;
+        for (var index = 0; index < all.Count; index++)
+        {
+            if (enabled.Contains(all[index].Id) && placed.Add(all[index].Id))
+            {
+                slots.Add(ControlSlot.For(all[index], all[index].DefaultSpan));
+            }
+        }
+    }
+
+    private void SeedEnabled(ControlLayout? saved)
+    {
+        if (saved is null)
+        {
+            var all = registry.Modules;
+            for (var index = 0; index < all.Count; index++)
+            {
+                enabled.Add(all[index].Id);
+            }
+
+            return;
+        }
+
+        for (var index = 0; index < saved.Items.Count; index++)
+        {
+            enabled.Add(saved.Items[index].ModuleId);
         }
     }
 
@@ -224,6 +266,7 @@ internal sealed class ControlLayoutService
             });
         }
 
+        layout.Enabled.AddRange(enabled);
         configuration.ControlPanel = layout;
         configuration.Save();
     }

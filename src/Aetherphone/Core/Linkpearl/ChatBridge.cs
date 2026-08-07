@@ -1,4 +1,6 @@
+using System.Text;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Home;
 using Aetherphone.Core.Notifications;
 using Dalamud.Game.Chat;
 using Dalamud.Game.Text;
@@ -10,37 +12,49 @@ namespace Aetherphone.Core.Linkpearl;
 
 internal sealed class ChatBridge : IDisposable
 {
+    private const string TellCommand = "/tell ";
     private static readonly Vector4 MessagesAccent = new(0.30f, 0.78f, 0.42f, 1f);
     private readonly MessageStore store;
     private readonly NotificationService notifications;
     private readonly LinkpearlNotificationGate gate;
+    private readonly AppGate installed;
     private readonly IChatGui chatGui;
     private readonly GameData gameData;
 
     public ChatBridge(MessageStore store, NotificationService notifications, LinkpearlNotificationGate gate,
-        IChatGui chatGui, GameData gameData)
+        IChatGui chatGui, GameData gameData, AppGate installed)
     {
         this.store = store;
         this.notifications = notifications;
         this.gate = gate;
+        this.installed = installed;
         this.chatGui = chatGui;
         this.gameData = gameData;
         chatGui.ChatMessage += OnChatMessage;
     }
 
-    public void Send(Conversation conversation, string text)
+    public static int ComposerBudget(Conversation conversation) =>
+        Math.Max(0, ChatSender.MaxBytes - TellCommand.Length - 1 -
+                    Encoding.UTF8.GetByteCount(conversation.SendTarget));
+
+    public bool Send(Conversation conversation, string text)
     {
         var trimmed = text.Trim();
         if (trimmed.Length == 0)
         {
-            return;
+            return false;
         }
 
-        ChatSender.TrySend($"/tell {conversation.SendTarget} {trimmed}");
+        return ChatSender.TrySend($"{TellCommand}{conversation.SendTarget} {trimmed}");
     }
 
     private void OnChatMessage(IHandleableChatMessage message)
     {
+        if (!installed.Open)
+        {
+            return;
+        }
+
         var kind = message.LogKind;
         if (kind != XivChatType.TellIncoming && kind != XivChatType.TellOutgoing)
         {

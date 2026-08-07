@@ -2,7 +2,6 @@ using Aetherphone.Core;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -17,6 +16,9 @@ internal static class StatusIcons
     private const float BarGap = 1.8f;
     private const float RightPadding = 24f;
     private const float MinRightPadding = 8f;
+    private const int LowBatteryPercent = 20;
+    private const int CriticalBatteryPercent = 10;
+    private const float CriticalPulseSpeed = 3.2f;
 
     public static float MeasureWidth(float scale, int percent)
     {
@@ -27,7 +29,7 @@ internal static class StatusIcons
 
     public static void Draw(Rect screen, PhoneTheme theme, float rowCenterY, float minClusterLeft)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var device = Plugin.Device;
         var clusterWidth = MeasureWidth(scale, device.BatteryPercent);
         var nubRight = screen.Max.X - RightPadding * scale;
@@ -37,7 +39,7 @@ internal static class StatusIcons
         }
 
         var batteryLeft = DrawBattery(theme, rowCenterY, nubRight, device.BatteryPercent, device.Charging);
-        var labelLeft = DrawBatteryLabel(theme, rowCenterY, batteryLeft, device.BatteryPercent);
+        var labelLeft = DrawBatteryLabel(theme, rowCenterY, batteryLeft, device.BatteryPercent, device.Charging);
         DrawSignal(theme, rowCenterY, labelLeft, device.SignalBars);
         ReportAnchors(scale, rowCenterY, nubRight, labelLeft);
     }
@@ -63,7 +65,7 @@ internal static class StatusIcons
 
     private static float DrawBattery(PhoneTheme theme, float rowCenterY, float nubRight, int percent, bool charging)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var nubWidth = NubWidth * scale;
         var nubHeight = 4.5f * scale;
@@ -72,13 +74,15 @@ internal static class StatusIcons
         var rounding = 3f * scale;
         var bodyMax = new Vector2(nubRight - nubWidth, rowCenterY + bodyHeight * 0.5f);
         var bodyMin = new Vector2(bodyMax.X - bodyWidth, rowCenterY - bodyHeight * 0.5f);
-        var shell = Palette.WithAlpha(theme.TextStrong, 0.6f);
+        var warning = WarningInk(theme, percent, charging);
+        var shell = warning is { } warn
+            ? Palette.WithAlpha(warn, 0.85f)
+            : Palette.WithAlpha(theme.TextStrong, 0.6f);
         dl.AddRect(bodyMin, bodyMax, ImGui.GetColorU32(shell), rounding, ImDrawFlags.RoundCornersAll, 1.2f * scale);
         var nubMin = new Vector2(bodyMax.X, rowCenterY - nubHeight * 0.5f);
         var nubMax = new Vector2(bodyMax.X + nubWidth, rowCenterY + nubHeight * 0.5f);
         dl.AddRectFilled(nubMin, nubMax, ImGui.GetColorU32(shell), nubWidth * 0.5f);
-        var fillColor = charging ? theme.ToggleOn :
-            percent <= 20 ? theme.Danger : theme.TextStrong;
+        var fillColor = charging ? theme.ToggleOn : warning ?? theme.TextStrong;
         var inset = 1.8f * scale;
         var trackLeft = bodyMin.X + inset;
         var trackWidth = bodyMax.X - inset - trackLeft;
@@ -89,19 +93,36 @@ internal static class StatusIcons
         return bodyMin.X;
     }
 
-    private static float DrawBatteryLabel(PhoneTheme theme, float rowCenterY, float batteryLeft, int percent)
+    private static Vector4? WarningInk(PhoneTheme theme, int percent, bool charging)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        if (charging || percent > LowBatteryPercent)
+        {
+            return null;
+        }
+
+        if (percent > CriticalBatteryPercent)
+        {
+            return theme.Danger;
+        }
+
+        var breath = 0.72f + 0.28f * (0.5f + 0.5f * MathF.Sin((float)ImGui.GetTime() * CriticalPulseSpeed));
+        return Palette.WithAlpha(theme.Danger, breath);
+    }
+
+    private static float DrawBatteryLabel(PhoneTheme theme, float rowCenterY, float batteryLeft, int percent,
+        bool charging)
+    {
+        var scale = UiScale.Current;
         var label = percent + "%";
         var size = Typography.Measure(label, LabelScale);
         var position = new Vector2(batteryLeft - LabelGap * scale - size.X, rowCenterY - size.Y * 0.5f);
-        Typography.Draw(position, label, theme.TextStrong, LabelScale);
+        Typography.Draw(position, label, WarningInk(theme, percent, charging) ?? theme.TextStrong, LabelScale);
         return position.X;
     }
 
     private static void DrawSignal(PhoneTheme theme, float rowCenterY, float labelLeft, int bars)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var dl = ImGui.GetWindowDrawList();
         var barWidth = BarWidth * scale;
         var barGap = BarGap * scale;

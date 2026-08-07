@@ -34,6 +34,11 @@
         "resolved": "1.4.0",
         "contentHash": "6ph8mpaQx0KL0COYRt0kI8MB9gSp1PtKijKMhJU//+aVFgKAJLKDesG/+26JSaVCOrHNgPf12wpfoyRcMYOeXg=="
       },
+      "BouncyCastle.Cryptography": {
+        "type": "Transitive",
+        "resolved": "2.6.2",
+        "contentHash": "7oWOcvnntmMKNzDLsdxAYqApt+AjpRpP2CShjMfIa3umZ42UQMvH0tl1qAliYPNYO6vTdcGMqnRrCPmsfzTI1w=="
+      },
       "Concentus": {
         "type": "Transitive",
         "resolved": "2.2.2",
@@ -121,6 +126,20 @@
         "type": "Transitive",
         "resolved": "13.0.4",
         "contentHash": "pdgNNMai3zv51W5aq268sujXUyx7SNdE2bj1wZcWjAQrKMFZV260lbqYop1d2GM67JI1huLRwxo9ZqnfF/lC6A=="
+      },
+      "NLayer": {
+        "type": "Transitive",
+        "resolved": "2.0.1",
+        "contentHash": "0nhnDRx98u7zXXbPIF11QYYupOOOQ9W22eqoyQyXn/gitRXbf9zAK8YfxyqS1Ix+TSqJv8EPNSk3VkDb7fChKw=="
+      },
+      "NLayer.NAudioSupport": {
+        "type": "Transitive",
+        "resolved": "2.0.1",
+        "contentHash": "KA+x8ukKPSq6cyNK4CSKiPw8Wl2RNNbME/t8fohqnldHcaHAmj8+zKMu3L5eAsM+ewhBPFQHC8qVIGXM/C83PQ==",
+        "dependencies": {
+          "NAudio.Core": "2.0.0",
+          "NLayer": "2.0.1"
+        }
       },
       "SharpGen.Runtime": {
         "type": "Transitive",
@@ -230,11 +249,13 @@
       "aetherphone": {
         "type": "Project",
         "dependencies": {
+          "BouncyCastle.Cryptography": "[2.6.2, )",
           "Concentus": "[2.2.2, )",
           "DalamudPackager": "[15.0.0, )",
           "NAudio.Wasapi": "[2.3.0, )",
           "NAudio.WinMM": "[2.3.0, )",
           "NEbml": "[0.11.0, )",
+          "NLayer.NAudioSupport": "[2.0.1, )",
           "NetStone": "[1.4.1, )",
           "Newtonsoft.Json": "[13.0.4, )",
           "SixLabors.ImageSharp": "[3.1.12, )",

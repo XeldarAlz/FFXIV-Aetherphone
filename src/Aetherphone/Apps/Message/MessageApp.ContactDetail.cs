@@ -8,7 +8,6 @@ using Aetherphone.Core.Telephony;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Message;
@@ -29,7 +28,7 @@ internal sealed partial class MessageApp
 
     private void DrawContactDetail(Rect area, string userId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var context = new PhoneContext(area, theme, navigation);
         AppHeader.Draw(context, string.Empty, back);
         var contact = contacts.Find(userId);
@@ -263,12 +262,15 @@ internal sealed partial class MessageApp
 
     private void DrawInfoRow(float left, float right, float top, float rowHeight, string label, string value)
     {
+        var scale = UiScale.Current;
         var centerY = top + rowHeight * 0.5f;
-        Typography.Draw(new Vector2(left, centerY - 8f * ImGuiHelpers.GlobalScale), label, ui.MutedInk,
-            TextStyles.Footnote);
-        var valueSize = Typography.Measure(value, TextStyles.Subheadline);
-        Typography.Draw(new Vector2(right - valueSize.X, centerY - valueSize.Y * 0.5f), value, ui.BodyInk,
-            TextStyles.Subheadline);
+        var labelSize = Typography.Measure(label, TextStyles.Footnote);
+        Typography.Draw(new Vector2(left, centerY - 8f * scale), label, ui.MutedInk, TextStyles.Footnote);
+        var valueMaxWidth = MathF.Max(1f, right - left - labelSize.X - 10f * scale);
+        var valueHovering = UiInteract.Hover(new Vector2(right - valueMaxWidth, top),
+            new Vector2(right, top + rowHeight));
+        Marquee.DrawRight(label + ":value", value, right, centerY - Typography.Measure(value, TextStyles.Subheadline).Y * 0.5f,
+            valueMaxWidth, TextStyles.Subheadline, ui.BodyInk, valueHovering);
     }
 
     private string ContactLocalTime(string userId)

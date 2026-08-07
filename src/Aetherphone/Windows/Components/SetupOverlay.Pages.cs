@@ -6,7 +6,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
@@ -43,7 +42,7 @@ internal sealed partial class SetupOverlay
 
     private static float CenteredTop(Rect screen, float contentHeight, int buttonSlots)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var top = screen.Min.Y + TopMarginUnits * scale;
         var bottom = ButtonRect(screen, Vector2.Zero, buttonSlots - 1).Min.Y - ButtonsGapUnits * scale;
         return top + MathF.Max(0f, (bottom - top - contentHeight) * 0.42f);
@@ -87,7 +86,7 @@ internal sealed partial class SetupOverlay
     private void DrawAccountLanding(Rect screen, PhoneTheme theme, Vector2 offset, float alpha, bool live)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = Loc.T(L.Setup.AccountBody);
         var player = gameData.LocalPlayer;
         var name = player?.Name.TextValue ?? string.Empty;
@@ -136,9 +135,11 @@ internal sealed partial class SetupOverlay
     private void DrawAccountSignedIn(Rect screen, PhoneTheme theme, Vector2 offset, float alpha, bool live)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var user = session.CurrentUser;
-        var displayName = user?.DisplayName ?? user?.Name ?? gameData.LocalPlayer?.Name.TextValue ?? string.Empty;
+        var displayName = user is not null && user.DisplayName.Length > 0
+            ? user.DisplayName
+            : user?.Name ?? gameData.LocalPlayer?.Name.TextValue ?? string.Empty;
         var body = Loc.T(L.Setup.SignedInBody, displayName);
         var avatarRadius = 38f * scale;
         var contentHeight = HeaderHeight(screen, body, TextStyles.Body) + 24f * scale + avatarRadius * 2f;
@@ -161,7 +162,7 @@ internal sealed partial class SetupOverlay
     private void DrawAccountXivAuth(Rect screen, PhoneTheme theme, Vector2 offset, float alpha, bool live)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = Loc.T(L.Account.XivIntro);
         var contentHeight = HeaderHeight(screen, body, TextStyles.Body) + 18f * scale + 54f * scale + 76f * scale;
         var top = CenteredTop(screen, contentHeight, 1) + offset.Y;
@@ -198,7 +199,7 @@ internal sealed partial class SetupOverlay
     private void DrawAccountLodestone(Rect screen, PhoneTheme theme, Vector2 offset, float alpha, bool live)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = Loc.T(L.Account.VerifyIntro);
         var stepsWidth = screen.Width - 80f * scale;
         var step1 = Loc.T(L.Account.Step1);
@@ -260,7 +261,7 @@ internal sealed partial class SetupOverlay
         }
 
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = Loc.T(L.Setup.ProfileBody);
         var hint = handleRejected ? Loc.T(L.Setup.HandleTaken) : Loc.T(L.Setup.HandleRules);
         var fieldHeight = FieldHeightUnits * scale;
@@ -302,7 +303,7 @@ internal sealed partial class SetupOverlay
         }
 
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var user = session.CurrentUser;
         var name = user?.Name ?? gameData.LocalPlayer?.Name.TextValue ?? string.Empty;
         var world = user?.World ?? gameData.WorldName(gameData.LocalHomeWorldId);
@@ -338,7 +339,7 @@ internal sealed partial class SetupOverlay
 
     private void DrawPhotoPicker(Rect screen, PhoneTheme theme)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var area = new Rect(
             new Vector2(screen.Min.X + theme.SidePadding * scale, screen.Min.Y + theme.TopZoneHeight * scale),
             new Vector2(screen.Max.X - theme.SidePadding * scale, screen.Max.Y - theme.BottomZoneHeight * scale));
@@ -356,10 +357,11 @@ internal sealed partial class SetupOverlay
         if (result == ImagePickCropEvent.Committed && !avatarBusy && picker.SourcePath.Length > 0)
         {
             avatarBusy = true;
-            AvatarUploader.Upload(account, media, session, picker.SourcePath, picker.Crop, cancellation.Token, uploaded =>
+            AvatarUploader.Upload(account, media, session, picker.SourcePath, picker.Crop, cancellation.Token, outcome =>
             {
                 avatarBusy = false;
-                avatarOutcome = uploaded ? 1 : 2;
+                avatarFailure = outcome;
+                avatarOutcome = outcome == AvatarUploadOutcome.Uploaded ? 1 : 2;
             });
         }
     }
@@ -367,7 +369,7 @@ internal sealed partial class SetupOverlay
     private void DrawFeatures(Rect screen, PhoneTheme theme, Vector2 offset, float alpha, bool live)
     {
         var drawList = ImGui.GetWindowDrawList();
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var body = Loc.T(L.Onboarding.AllInOneBody);
         var bodyWidth = BodyWidth(screen);
         var titleHeight = LineBlock(TextStyles.Title1);
@@ -437,7 +439,7 @@ internal sealed partial class SetupOverlay
     private static void DrawHeroPage(ImDrawListPtr drawList, Rect screen, PhoneTheme theme, Vector2 offset,
         float alpha, HeroMotif motif, string title, in TextStyle titleStyle, string body, int buttonSlots)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var bodyWidth = BodyWidth(screen);
         var heroHeight = 170f * scale;
         var titleHeight = LineBlock(titleStyle);
@@ -455,7 +457,7 @@ internal sealed partial class SetupOverlay
 
     private static float HeaderHeight(Rect screen, string body, in TextStyle bodyStyle)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         return 60f * scale + 22f * scale + LineBlock(TextStyles.Title1) + 12f * scale +
                WrappedHeight(body, bodyStyle, BodyWidth(screen));
     }
@@ -463,7 +465,7 @@ internal sealed partial class SetupOverlay
     private static float DrawHeader(ImDrawListPtr drawList, Rect screen, Vector2 offset, float alpha,
         FontAwesomeIcon icon, Vector4 tint, string title, string body, in TextStyle bodyStyle, float top)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var centerX = screen.Center.X + offset.X;
         var tileHalf = 30f * scale;
         var tileCenter = new Vector2(centerX, top + tileHalf);
@@ -486,7 +488,7 @@ internal sealed partial class SetupOverlay
             return;
         }
 
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var center = new Vector2(screen.Center.X + offset.X,
             ButtonRect(screen, offset, buttonSlots - 1).Min.Y - 18f * scale);
         Typography.DrawCentered(drawList, center, message, Fade(InkMuted, alpha), TextStyles.Footnote);
@@ -495,22 +497,24 @@ internal sealed partial class SetupOverlay
     private static void DrawIdentityCard(ImDrawListPtr drawList, Rect screen, Vector2 offset, float top, string name,
         string world, float alpha)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var rect = CardRect(screen, offset, top, 62f * scale);
         Squircle.Fill(drawList, rect.Min, rect.Max, 14f * scale, ImGui.GetColorU32(Fade(CardFill, alpha)));
         Squircle.Stroke(drawList, rect.Min, rect.Max, 14f * scale, ImGui.GetColorU32(Fade(CardStroke, alpha)), 1f);
         var left = rect.Min.X + 16f * scale;
         Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 10f * scale), Loc.T(L.Account.SigningInAs),
             Fade(InkMuted, alpha), TextStyles.Footnote);
-        Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 30f * scale), $"{name}@{world}",
+        var identityMaxWidth = rect.Max.X - 16f * scale - left;
+        Typography.Draw(drawList, new Vector2(left, rect.Min.Y + 30f * scale),
+            Typography.FitText($"{name}@{world}", identityMaxWidth, TextStyles.Headline),
             Fade(InkStrong, alpha), TextStyles.Headline);
     }
 
     private static bool DrawCodeCard(ImDrawListPtr drawList, Rect rect, string value, Vector4 accent, float alpha,
         bool live)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var hovered = live && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var scale = UiScale.Current;
+        var hovered = live && UiInteract.Hover(rect.Min, rect.Max);
         var radius = 14f * scale;
         var fill = hovered ? Fade(accent, 0.16f * alpha) : Fade(CardFill, alpha);
         Squircle.Fill(drawList, rect.Min, rect.Max, radius, ImGui.GetColorU32(fill));
@@ -586,9 +590,11 @@ internal sealed partial class SetupOverlay
     private void DrawField(ImDrawListPtr drawList, Rect rect, string id, string label, ref string value, int maxLength,
         float alpha, bool live, string? prefix = null)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, rect.Min.Y - 20f * scale), label,
-            Fade(InkMuted, alpha), TextStyles.Footnote);
+        var scale = UiScale.Current;
+        var labelMaxWidth = rect.Max.X - rect.Min.X - 2f * scale;
+        Typography.Draw(drawList, new Vector2(rect.Min.X + 2f * scale, rect.Min.Y - 20f * scale),
+            Typography.FitText(label, labelMaxWidth, TextStyles.Footnote), Fade(InkMuted, alpha),
+            TextStyles.Footnote);
         Squircle.Fill(drawList, rect.Min, rect.Max, 12f * scale, ImGui.GetColorU32(Fade(CardFill, alpha)));
         Squircle.Stroke(drawList, rect.Min, rect.Max, 12f * scale, ImGui.GetColorU32(Fade(CardStroke, alpha)), 1f);
         var textLeft = rect.Min.X + 14f * scale;
@@ -605,8 +611,10 @@ internal sealed partial class SetupOverlay
             if (value.Length > 0)
             {
                 var valueSize = Typography.Measure(value, TextStyles.Body);
-                Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - valueSize.Y * 0.5f), value,
-                    Fade(InkStrong, alpha), TextStyles.Body);
+                var valueMaxWidth = rect.Max.X - 14f * scale - textLeft;
+                Typography.Draw(drawList, new Vector2(textLeft, rect.Center.Y - valueSize.Y * 0.5f),
+                    Typography.FitText(value, valueMaxWidth, TextStyles.Body), Fade(InkStrong, alpha),
+                    TextStyles.Body);
             }
 
             return;
@@ -626,7 +634,7 @@ internal sealed partial class SetupOverlay
 
     private static Rect CardRect(Rect screen, Vector2 offset, float top, float height)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = MathF.Min(screen.Width - 56f * scale, 312f * scale);
         var left = screen.Center.X + offset.X - width * 0.5f;
         return new Rect(new Vector2(left, top), new Vector2(left + width, top + height));
@@ -634,7 +642,7 @@ internal sealed partial class SetupOverlay
 
     private static Rect ButtonRect(Rect screen, Vector2 offset, int slotFromBottom)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var width = MathF.Min(screen.Width - 56f * scale, 300f * scale);
         var height = 48f * scale;
         var bottom = screen.Max.Y - 62f * scale - slotFromBottom * (height + 12f * scale) + offset.Y;
@@ -645,12 +653,12 @@ internal sealed partial class SetupOverlay
     private static Vector2 TextActionCenter(Rect screen, Vector2 offset, int slotFromBottom)
     {
         var rect = ButtonRect(screen, offset, slotFromBottom);
-        return new Vector2(rect.Center.X, rect.Max.Y - 14f * ImGuiHelpers.GlobalScale);
+        return new Vector2(rect.Center.X, rect.Max.Y - 14f * UiScale.Current);
     }
 
     private static (Rect Left, Rect Right) HalfButtonRects(Rect screen, Vector2 offset, int slotFromBottom)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var full = ButtonRect(screen, offset, slotFromBottom);
         var gap = 10f * scale;
         var half = (full.Width - gap) * 0.5f;
@@ -661,8 +669,8 @@ internal sealed partial class SetupOverlay
     private static bool Primary(ImDrawListPtr drawList, Rect rect, string label, Vector4 accent, float alpha,
         bool live, bool enabled = true)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var hovered = live && enabled && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var scale = UiScale.Current;
+        var hovered = live && enabled && UiInteract.Hover(rect.Min, rect.Max);
         var fill = hovered ? Palette.Mix(accent, Vector4.One, 0.14f) : accent;
         Squircle.Fill(drawList, rect.Min, rect.Max, 15f * scale,
             ImGui.GetColorU32(Fade(fill, (enabled ? 1f : 0.4f) * alpha)));
@@ -678,8 +686,8 @@ internal sealed partial class SetupOverlay
 
     private static bool Secondary(ImDrawListPtr drawList, Rect rect, string label, float alpha, bool live)
     {
-        var scale = ImGuiHelpers.GlobalScale;
-        var hovered = live && ImGui.IsMouseHoveringRect(rect.Min, rect.Max);
+        var scale = UiScale.Current;
+        var hovered = live && UiInteract.Hover(rect.Min, rect.Max);
         var fill = hovered ? 0.16f : 0.09f;
         Squircle.Fill(drawList, rect.Min, rect.Max, 15f * scale,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, fill * alpha)));
@@ -695,10 +703,10 @@ internal sealed partial class SetupOverlay
     private static bool TextAction(ImDrawListPtr drawList, Vector2 center, string label, Vector4 accent, float alpha,
         bool live)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var size = Typography.Measure(label, TextStyles.SubheadlineEmphasized);
         var padding = new Vector2(10f * scale, 8f * scale);
-        var hovered = live && ImGui.IsMouseHoveringRect(center - size * 0.5f - padding, center + size * 0.5f + padding);
+        var hovered = live && UiInteract.Hover(center - size * 0.5f - padding, center + size * 0.5f + padding);
         var ink = hovered ? Palette.Mix(accent, Vector4.One, 0.25f) : accent;
         Typography.DrawCentered(drawList, center, label, Fade(ink, alpha), TextStyles.SubheadlineEmphasized);
         if (hovered)

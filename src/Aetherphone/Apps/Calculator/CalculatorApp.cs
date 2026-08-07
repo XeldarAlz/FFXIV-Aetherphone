@@ -5,7 +5,6 @@ using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.Calculator;
 
@@ -39,7 +38,7 @@ internal sealed class CalculatorApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         ui.Theme = context.Theme;
         ui.Palette = AppPalettes.Calculator;
         var content = context.Content;
@@ -123,7 +122,7 @@ internal sealed class CalculatorApp : IPhoneApp
                 var entry = history[index];
                 var origin = ImGui.GetCursorScreenPos();
                 var row = new Rect(origin, new Vector2(origin.X + width, origin.Y + rowHeight));
-                var hovered = ImGui.IsMouseHoveringRect(row.Min, row.Max);
+                var hovered = UiInteract.Hover(row.Min, row.Max);
                 if (hovered)
                 {
                     Squircle.Fill(drawList, row.Min, row.Max, 6f * scale,
@@ -136,11 +135,11 @@ internal sealed class CalculatorApp : IPhoneApp
                     ui.BodyInk, TextStyles.SubheadlineEmphasized);
 
                 var expressionRight = row.Max.X - resultSize.X - 10f * scale;
-                ImGui.PushClipRect(new Vector2(row.Min.X, row.Min.Y), new Vector2(expressionRight, row.Max.Y), true);
-                var expressionSize = Typography.Measure(entry.Expression, TextStyles.Caption1);
-                Typography.Draw(new Vector2(row.Min.X, row.Center.Y - expressionSize.Y * 0.5f), entry.Expression,
+                var expressionMaxWidth = MathF.Max(1f, expressionRight - row.Min.X);
+                var expressionText = Typography.FitText(entry.Expression, expressionMaxWidth, TextStyles.Caption1);
+                var expressionSize = Typography.Measure(expressionText, TextStyles.Caption1);
+                Typography.Draw(new Vector2(row.Min.X, row.Center.Y - expressionSize.Y * 0.5f), expressionText,
                     ui.MutedInk, TextStyles.Caption1);
-                ImGui.PopClipRect();
 
                 ImGui.SetCursorScreenPos(origin);
                 ImGui.Dummy(new Vector2(width, rowHeight));
@@ -253,7 +252,7 @@ internal sealed class CalculatorApp : IPhoneApp
         var min = new Vector2(left, top);
         var max = new Vector2(left + button * 2f + gap, top + button);
         var center = new Vector2((min.X + max.X) * 0.5f, (min.Y + max.Y) * 0.5f);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var fill = hovered ? Palette.Mix(DigitBg, White, 0.14f) : DigitBg;
         var drawList = ImGui.GetWindowDrawList();
         Squircle.Fill(drawList, min, max, radius, ImGui.GetColorU32(fill));
@@ -281,7 +280,7 @@ internal sealed class CalculatorApp : IPhoneApp
     {
         var min = center - new Vector2(radius, radius);
         var max = center + new Vector2(radius, radius);
-        var hovered = ImGui.IsMouseHoveringRect(min, max);
+        var hovered = UiInteract.Hover(min, max);
         var fill = hovered ? Palette.Mix(background, White, 0.14f) : background;
         var drawList = ImGui.GetWindowDrawList();
         drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 40);

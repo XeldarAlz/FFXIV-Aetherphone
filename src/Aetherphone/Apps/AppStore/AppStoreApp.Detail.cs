@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -17,7 +16,7 @@ internal sealed partial class AppStoreApp
 
     private void DrawDetail(Rect area, string appId)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var app = Find(appId);
         if (app is null)
         {
@@ -64,8 +63,11 @@ internal sealed partial class AppStoreApp
         DrawIcon(drawList, iconCenter, DetailIconSize * scale, app);
         var textLeft = origin.X + (DetailIconSize + 14f) * scale;
         var textWidth = origin.X + width - textLeft;
-        Typography.Draw(drawList, new Vector2(textLeft, top + 6f * scale),
-            Typography.FitText(app.DisplayName, textWidth, TextStyles.Title2), ui.TitleInk, TextStyles.Title2);
+        var nameY = top + 6f * scale;
+        var nameHovering = UiInteract.Hover(new Vector2(textLeft, nameY),
+            new Vector2(textLeft + textWidth, nameY + Typography.Measure(app.DisplayName, TextStyles.Title2).Y));
+        Marquee.DrawLeft("appstore.detail.name." + app.Id, app.DisplayName, textLeft, nameY, textWidth,
+            TextStyles.Title2, ui.TitleInk, nameHovering);
         Typography.DrawWrappedLeft(new Vector2(textLeft, top + 32f * scale), Loc.T(entry.Subtitle), ui.MutedInk,
             TextStyles.Footnote, textWidth);
 
@@ -154,14 +156,21 @@ internal sealed partial class AppStoreApp
         var cardMin = new Vector2(origin.X, top);
         var cardMax = new Vector2(origin.X + width, top + rowCount * rowHeight);
         ui.Card(drawList, cardMin, cardMax, Metrics.Radius.Card * scale, true);
-        DrawInfoRow(drawList, cardMin, cardMax, 0, rowHeight, Loc.T(L.Store.Developer), Loc.T(L.Store.DeveloperName),
-            scale);
+        DrawInfoRow(drawList, cardMin, cardMax, 0, rowHeight, Loc.T(L.Store.Developer), DeveloperName(app), scale);
         DrawInfoRow(drawList, cardMin, cardMax, 1, rowHeight, Loc.T(L.Store.Category),
             Loc.T(AppStoreCatalog.Name(entry.Category)), scale);
         DrawInfoRow(drawList, cardMin, cardMax, 2, rowHeight, Loc.T(L.Store.Languages),
             Loc.T(L.Store.LanguageCount, LanguageCount), scale);
         return cardMax.Y + Metrics.Space.Xl * scale;
     }
+
+    private static string DeveloperName(IPhoneApp app) => app.Id switch
+    {
+        "health" => "Yozora",
+        "housing" => "Yozora",
+        "jobs" => "K.I.R.O",
+        _ => Loc.T(L.Store.DeveloperName),
+    };
 
     private void DrawInfoRow(ImDrawListPtr drawList, Vector2 cardMin, Vector2 cardMax, int index, float rowHeight,
         string label, string value, float scale)

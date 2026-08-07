@@ -178,8 +178,10 @@ internal sealed partial class ActivityApp
     private void DrawWeekRow(Rect row, ActivityDay? day, string label, float scale)
     {
         var labelInk = day is null ? AppPalettes.Activity.MutedInk : AppPalettes.Activity.TitleInk;
-        var labelSize = Typography.Measure(label, TextStyles.Headline);
-        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), label, labelInk,
+        var labelMaxWidth = MathF.Max(1f, row.Max.X - 37f * scale - row.Min.X);
+        var clippedLabel = Typography.FitText(label, labelMaxWidth, TextStyles.Headline);
+        var labelSize = Typography.Measure(clippedLabel, TextStyles.Headline);
+        Typography.Draw(new Vector2(row.Min.X, row.Center.Y - labelSize.Y * 0.5f), clippedLabel, labelInk,
             TextStyles.Headline);
         var ringsCenter = new Vector2(row.Max.X - 15f * scale, row.Center.Y);
         DrawMiniRings(ringsCenter, day, scale);

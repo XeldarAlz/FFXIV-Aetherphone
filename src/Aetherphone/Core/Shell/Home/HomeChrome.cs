@@ -37,8 +37,7 @@ internal sealed class HomeChrome
         {
             var center = new Vector2(startX + index * spacing, y);
             var hovered = interactive && interaction.DragTile is null &&
-                          ImGui.IsMouseHoveringRect(center - new Vector2(spacing * 0.5f),
-                              center + new Vector2(spacing * 0.5f));
+                          UiInteract.Hover(center - new Vector2(spacing * 0.5f), center + new Vector2(spacing * 0.5f));
             var dotAlpha = index == active ? 0.95f : hovered ? 0.55f : 0.32f;
             drawList.AddCircleFilled(center, radius,
                 ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, dotAlpha * alpha)), 16);
@@ -74,7 +73,7 @@ internal sealed class HomeChrome
             : new Rect(new Vector2(rightEdge - tabWidth, centerY - tabHalfHeight),
                 new Vector2(rightEdge, centerY + tabHalfHeight));
         var hit = new Rect(tab.Min - new Vector2(4f * scale), tab.Max + new Vector2(4f * scale));
-        var hovered = interactive && interaction.DragTile is null && ImGui.IsMouseHoveringRect(hit.Min, hit.Max);
+        var hovered = interactive && interaction.DragTile is null && UiInteract.Hover(hit.Min, hit.Max);
         var drawList = ImGui.GetWindowDrawList();
         var rounding = 7f * scale;
         var corners = direction < 0 ? ImDrawFlags.RoundCornersRight : ImDrawFlags.RoundCornersLeft;
@@ -114,7 +113,7 @@ internal sealed class HomeChrome
         var drawList = ImGui.GetWindowDrawList();
         var scale = metrics.Scale;
         var add = AddRect(content, metrics);
-        var addHovered = ImGui.IsMouseHoveringRect(add.Min, add.Max);
+        var addHovered = UiInteract.Hover(add.Min, add.Max);
         var addCenter = add.Center;
         drawList.AddCircleFilled(addCenter, add.Width * 0.5f,
             ImGui.GetColorU32(new Vector4(1f, 1f, 1f, addHovered ? 0.26f : 0.17f)), 32);
@@ -128,7 +127,7 @@ internal sealed class HomeChrome
         }
 
         var done = DoneRect(content, metrics);
-        var doneHovered = ImGui.IsMouseHoveringRect(done.Min, done.Max);
+        var doneHovered = UiInteract.Hover(done.Min, done.Max);
         Squircle.Fill(drawList, done.Min, done.Max, done.Height * 0.5f,
             ImGui.GetColorU32(Palette.WithAlpha(theme.Accent, doneHovered ? 1f : 0.88f)));
         Typography.DrawCentered(done.Center, Loc.T(L.Home.Done), new Vector4(1f, 1f, 1f, 1f), 0.82f,

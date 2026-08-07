@@ -4,7 +4,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Apps.AppStore;
 
@@ -14,7 +13,7 @@ internal sealed partial class AppStoreApp
 
     private void DrawTodayTab(Rect area)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var today = DateTime.Now;
         DrawLargeTitle(area, Loc.T(L.Store.Today),
             Loc.Culture.TextInfo.ToUpper(today.ToString("dddd d MMMM", Loc.Culture)));
@@ -81,9 +80,12 @@ internal sealed partial class AppStoreApp
         var entry = AppStoreCatalog.For(app.Id);
         Typography.Draw(drawList, new Vector2(card.Min.X + pad, card.Min.Y + pad), Loc.T(L.Store.AppOfTheDay),
             Palette.WithAlpha(new Vector4(1f, 1f, 1f, 1f), 0.78f), TextStyles.Caption1);
-        Typography.Draw(drawList, new Vector2(card.Min.X + pad, card.Min.Y + pad + 20f * scale),
-            Typography.FitText(app.DisplayName, card.Width - pad * 2f, TextStyles.Title1), new Vector4(1f, 1f, 1f, 1f),
-            TextStyles.Title1);
+        var nameY = card.Min.Y + pad + 20f * scale;
+        var nameMaxWidth = card.Width - pad * 2f;
+        var nameHovering = UiInteract.Hover(new Vector2(card.Min.X + pad, nameY),
+            new Vector2(card.Min.X + pad + nameMaxWidth, nameY + Typography.Measure(app.DisplayName, TextStyles.Title1).Y));
+        Marquee.DrawLeft("appstore.today.name." + app.Id, app.DisplayName, card.Min.X + pad, nameY, nameMaxWidth,
+            TextStyles.Title1, new Vector4(1f, 1f, 1f, 1f), nameHovering);
         Typography.DrawWrappedLeft(new Vector2(card.Min.X + pad, card.Min.Y + pad + 52f * scale),
             Loc.T(entry.Body), new Vector4(1f, 1f, 1f, 0.86f), TextStyles.Subheadline, card.Width - pad * 2f);
 

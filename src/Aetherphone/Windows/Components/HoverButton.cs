@@ -3,7 +3,6 @@ using Aetherphone.Core.Animation;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Utility;
 
 namespace Aetherphone.Windows.Components;
 
@@ -23,10 +22,10 @@ internal static class HoverButton
         Vector4 tint, Vector4 ink, float delta, float alpha, bool interactive, string? label = null,
         HoverLabelSide side = HoverLabelSide.Below)
     {
-        var scale = ImGuiHelpers.GlobalScale;
+        var scale = UiScale.Current;
         var min = new Vector2(center.X - radius, center.Y - radius);
         var max = new Vector2(center.X + radius, center.Y + radius);
-        var hovered = interactive && ImGui.IsMouseHoveringRect(min, max);
+        var hovered = interactive && UiInteract.Hover(min, max);
         var eased = Step(id, hovered, delta);
         var grow = 1f + GrowAmount * eased;
         var scaledRadius = radius * grow;

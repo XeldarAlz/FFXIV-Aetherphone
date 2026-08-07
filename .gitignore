@@ -2,7 +2,6 @@
 .idea/
 obj/
 bin/
-docs/
 *.user
 
 # Node tooling (tools/icon-generator)
