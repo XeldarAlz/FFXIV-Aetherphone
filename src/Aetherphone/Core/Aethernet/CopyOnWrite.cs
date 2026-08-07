@@ -199,6 +199,34 @@ internal static class CopyOnWrite
         return source;
     }
 
+    // Replaces a post that appears directly in the array, AND updates the ReferencedPost
+    // inside any rechirp wrappers (posts whose RepostOfId matches the updated post's Id).
+    public static PostDto[] ReplaceOrUpdateReferenced(PostDto[] source, PostDto updated)
+    {
+        var changed = false;
+        var result = new PostDto[source.Length];
+        for (var index = 0; index < source.Length; index++)
+        {
+            var item = source[index];
+            if (item.Id == updated.Id)
+            {
+                result[index] = updated;
+                changed = true;
+            }
+            else if (item.RepostOfId == updated.Id && item.ReferencedPost is not null)
+            {
+                result[index] = item with { ReferencedPost = updated };
+                changed = true;
+            }
+            else
+            {
+                result[index] = item;
+            }
+        }
+
+        return changed ? result : source;
+    }
+
     public static T[] Map<T>(T[] source, Func<T, bool> match, Func<T, T> transform)
     {
         var changed = false;

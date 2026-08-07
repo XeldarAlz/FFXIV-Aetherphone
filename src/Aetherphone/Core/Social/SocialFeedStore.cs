@@ -100,6 +100,10 @@ internal abstract class SocialFeedStore : IDisposable
         if (string.Equals(removal.Kind, ContentRemovalKinds.Comment, StringComparison.Ordinal))
         {
             detailComments = CopyOnWrite.RemoveById(detailComments, removal.ContentId);
+            if (removal.ParentId is { } postId)
+            {
+                BumpCommentCount(postId, -1);
+            }
         }
     }
 
@@ -1023,9 +1027,9 @@ internal abstract class SocialFeedStore : IDisposable
 
     protected void ReplacePost(PostDto updated)
     {
-        forYouLane.Items = CopyOnWrite.Replace(forYouLane.Items, updated);
-        followingLane.Items = CopyOnWrite.Replace(followingLane.Items, updated);
-        profileLane.Items = CopyOnWrite.Replace(profileLane.Items, updated);
+        forYouLane.Items = CopyOnWrite.ReplaceOrUpdateReferenced(forYouLane.Items, updated);
+        followingLane.Items = CopyOnWrite.ReplaceOrUpdateReferenced(followingLane.Items, updated);
+        profileLane.Items = CopyOnWrite.ReplaceOrUpdateReferenced(profileLane.Items, updated);
         if (detailPost is { } current && current.Id == updated.Id)
         {
             detailPost = updated;
@@ -1089,8 +1093,16 @@ internal abstract class SocialFeedStore : IDisposable
         wasFollowing == following ? 0 : following ? 1 : -1;
 
     private static PostDto[] MapCommentCount(PostDto[] source, string postId, int delta) =>
-        CopyOnWrite.MapById(source, postId,
-            post => post with { CommentCount = Math.Max(0, post.CommentCount + delta) });
+        CopyOnWrite.Map(source,
+            post => post.Id == postId || post.RepostOfId == postId,
+            post => post.Id == postId
+                ? post with { CommentCount = Math.Max(0, post.CommentCount + delta) }
+                : post with
+                {
+                    ReferencedPost = post.ReferencedPost is { } referenced
+                        ? referenced with { CommentCount = Math.Max(0, referenced.CommentCount + delta) }
+                        : null
+                });
 
     private static UserDto[] MapFollow(UserDto[] source, string userId, bool following, bool requested) =>
         CopyOnWrite.Map(source,
