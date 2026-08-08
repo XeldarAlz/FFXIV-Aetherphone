@@ -67,6 +67,5 @@ internal sealed class StoreWork : IDisposable
     public void Dispose()
     {
         cancellation.Cancel();
-        cancellation.Dispose();
     }
 }

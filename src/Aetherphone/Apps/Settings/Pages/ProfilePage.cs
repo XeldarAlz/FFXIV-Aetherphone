@@ -40,7 +40,11 @@ internal sealed class ProfilePage : ISettingsPage, IDisposable
         var theme = context.Theme;
         using (AppSurface.Begin(body))
         {
-            if (session.IsSignedIn && session.CurrentUser is not null && !initialSynced)
+            if (!session.IsSignedIn)
+            {
+                initialSynced = false;
+            }
+            else if (session.CurrentUser is not null && !initialSynced)
             {
                 initialSynced = true;
                 PushTimeZone(null);

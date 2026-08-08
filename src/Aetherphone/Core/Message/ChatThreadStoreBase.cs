@@ -104,7 +104,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
     private void OnSessionAccountChanged()
     {
         var accountId = session.CurrentUser?.Id;
-        if (accountId is null || string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
+        if (string.Equals(accountId, lastAccountId, StringComparison.Ordinal))
         {
             return;
         }

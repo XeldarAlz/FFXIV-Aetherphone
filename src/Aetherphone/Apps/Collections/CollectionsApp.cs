@@ -89,9 +89,6 @@ internal sealed partial class CollectionsApp : IPhoneApp
     {
         router.Reset();
         ResetFilters();
-        ownershipLabels[0] = Loc.T(L.Collections.FilterAll);
-        ownershipLabels[1] = Loc.T(L.Collections.FilterOwned);
-        ownershipLabels[2] = Loc.T(L.Collections.FilterMissing);
         lodestoneId = ResolveLocalId();
         catalog.ResetOwned();
         catalog.ResetSummaries();

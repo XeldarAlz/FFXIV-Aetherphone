@@ -49,7 +49,7 @@ internal sealed class AppearancePage : ISettingsPage
         {
             SettingsSection.Header(Loc.T(L.Settings.Theme), theme);
             var accentLabel = Loc.T(L.Settings.Accent);
-            var cardWidth = ImGui.GetContentRegionAvail().X - 2f * Metrics.Space.Lg * UiScale.Current;
+            var cardWidth = ScrollLayout.StableContentWidth() - 2f * Metrics.Space.Lg * UiScale.Current;
             var accentStacked = SwatchStrip.NeedsTwoRows(accentLabel, ThemeCatalog.Accents.Count + 1, cardWidth);
             var card = GroupCard.Begin(theme, accentStacked ? 5 : 4);
             var modeIndex = SegmentStrip.Draw("settings.themeMode", card.NextRow(), ModeLabels(), CurrentModeIndex(),
@@ -179,12 +179,12 @@ internal sealed class AppearancePage : ISettingsPage
     {
         SettingsSection.Header(Loc.T(L.Home.HomeScreen), theme);
         var card = GroupCard.Begin(theme, 3);
+        var previousDensityIndex = DensityIndex(configuration.HomeGridRows);
         var densityIndex = SegmentStrip.Draw("settings.homeGrid", card.NextRow(), DensityLabels(),
-            DensityIndex(configuration.HomeGridRows), theme);
-        var rows = GridRowOptions[densityIndex];
-        if (rows != configuration.HomeGridRows)
+            previousDensityIndex, theme);
+        if (densityIndex != previousDensityIndex)
         {
-            configuration.HomeGridRows = rows;
+            configuration.HomeGridRows = GridRowOptions[densityIndex];
             configuration.Save();
         }
 

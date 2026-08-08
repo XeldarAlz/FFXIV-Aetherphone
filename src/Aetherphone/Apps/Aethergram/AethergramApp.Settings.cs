@@ -138,12 +138,14 @@ internal sealed partial class AethergramApp
                 {
                     messagePolicy = me.MessagePolicy;
                     privateAccount = me.IsPrivate;
-                    messagePolicyLoaded = true;
                 }
+
+                messagePolicyLoaded = true;
             }
             catch (Exception exception)
             {
                 AepLog.Warning($"Aethergram message privacy load failed: {exception.Message}");
+                messagePolicyLoaded = true;
             }
             finally
             {

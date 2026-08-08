@@ -24,22 +24,26 @@ internal sealed class KeyVault : IDisposable
     private EcPrivateKey? privateKey;
     private MyKeysDto? serverBundle;
     private volatile bool refreshing;
+    private string? lastUserId;
 
     public KeyVault(Configuration configuration, AethernetSession session, KeysClient client)
     {
         this.configuration = configuration;
         this.session = session;
         this.client = client;
+        lastUserId = session.CurrentUser?.Id;
         session.Changed += OnSessionChanged;
     }
 
     private void OnSessionChanged()
     {
-        if (session.IsSignedIn)
+        var userId = session.CurrentUser?.Id;
+        if (string.Equals(userId, lastUserId, StringComparison.Ordinal))
         {
             return;
         }
 
+        lastUserId = userId;
         _ = RefreshAsync(CancellationToken.None);
     }
 

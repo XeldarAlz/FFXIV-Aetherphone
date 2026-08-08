@@ -539,6 +539,9 @@ internal sealed partial class CollectionsApp
 
     private void DrawOwnershipSegments(Rect bar)
     {
+        ownershipLabels[0] = Loc.T(L.Collections.FilterAll);
+        ownershipLabels[1] = Loc.T(L.Collections.FilterOwned);
+        ownershipLabels[2] = Loc.T(L.Collections.FilterMissing);
         var selected = SegmentStrip.Draw("collections.ownership", bar, ownershipLabels, (int)ownership, ui.Palette);
         if (selected != (int)ownership)
         {

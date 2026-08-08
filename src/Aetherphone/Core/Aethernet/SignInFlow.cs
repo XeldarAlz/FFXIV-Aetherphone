@@ -101,7 +101,7 @@ internal sealed class SignInFlow : IDisposable
                 if (result.Auth is { } auth)
                 {
                     session.SignIn(auth.Token, auth.User);
-                    signedIn?.Invoke();
+                    _ = Plugin.Framework.RunOnFrameworkThread(() => signedIn?.Invoke());
                     Reset();
                     return;
                 }
@@ -188,7 +188,7 @@ internal sealed class SignInFlow : IDisposable
             if (result.Auth is { } auth)
             {
                 session.SignIn(auth.Token, auth.User);
-                signedIn?.Invoke();
+                _ = Plugin.Framework.RunOnFrameworkThread(() => signedIn?.Invoke());
                 Reset();
                 return;
             }

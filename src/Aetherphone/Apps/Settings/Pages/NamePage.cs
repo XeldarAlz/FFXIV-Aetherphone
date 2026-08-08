@@ -27,7 +27,7 @@ internal sealed class NamePage : ISettingsPage, IDisposable
     private readonly CancellationTokenSource cancellation = new();
     private string editDisplay = string.Empty;
     private string editHandle = string.Empty;
-    private string editStatus = string.Empty;
+    private LocString? editStatusKey;
     private string? loadedFor;
     private volatile bool busy;
     private volatile int outcome;
@@ -69,13 +69,13 @@ internal sealed class NamePage : ISettingsPage, IDisposable
         if (outcome == 2)
         {
             outcome = 0;
-            editStatus = Loc.T(L.Account.HandleTaken);
+            editStatusKey = L.Account.HandleTaken;
         }
 
         if (outcome == 3)
         {
             outcome = 0;
-            editStatus = Loc.T(L.Account.CannotReach);
+            editStatusKey = L.Account.CannotReach;
         }
 
         if (loadedFor != user.Id)
@@ -83,7 +83,7 @@ internal sealed class NamePage : ISettingsPage, IDisposable
             loadedFor = user.Id;
             editDisplay = user.DisplayName;
             editHandle = user.Handle;
-            editStatus = string.Empty;
+            editStatusKey = null;
         }
 
         using (AppSurface.Begin(body))
@@ -101,12 +101,12 @@ internal sealed class NamePage : ISettingsPage, IDisposable
                 Save();
             }
 
-            if (editStatus.Length > 0)
+            if (editStatusKey is { } statusKey)
             {
                 ImGui.Dummy(new Vector2(0f, 10f * scale));
                 using (ImRaii.PushColor(ImGuiCol.Text, theme.Danger))
                 {
-                    Typography.Wrapped(editStatus);
+                    Typography.Wrapped(Loc.T(statusKey));
                 }
             }
 
@@ -188,12 +188,12 @@ internal sealed class NamePage : ISettingsPage, IDisposable
 
         if (editDisplay.Trim().Length == 0 || !SocialProfilePages.IsHandleValid(editHandle))
         {
-            editStatus = Loc.T(L.Account.HandleRules);
+            editStatusKey = L.Account.HandleRules;
             return;
         }
 
         busy = true;
-        editStatus = string.Empty;
+        editStatusKey = null;
         var request = new UpdateProfileRequest(editDisplay.Trim(), editHandle.Trim(), null);
         var token = cancellation.Token;
         _ = Task.Run(async () =>

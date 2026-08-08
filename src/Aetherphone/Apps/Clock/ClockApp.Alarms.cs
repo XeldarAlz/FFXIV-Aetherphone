@@ -54,7 +54,7 @@ internal sealed partial class ClockApp
     {
         var scale = UiScale.Current;
         var timeInk = alarm.Enabled ? ui.TitleInk : ui.MutedInk;
-        var time = $"{alarm.Hour:D2}:{alarm.Minute:D2}";
+        var time = TimeText.Clock(new DateTime(1, 1, 1, alarm.Hour, alarm.Minute, 0));
         var timeSize = Typography.Measure(time, TextStyles.Title1);
         Typography.Draw(new Vector2(row.Min.X, row.Center.Y - timeSize.Y * 0.5f), time, timeInk, TextStyles.Title1);
 

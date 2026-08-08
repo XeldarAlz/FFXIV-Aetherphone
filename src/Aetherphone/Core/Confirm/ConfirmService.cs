@@ -25,6 +25,14 @@ internal sealed class ConfirmService
 
     public void Ask(ConfirmRequest request)
     {
+        // Plugin.Framework is null in unit tests - run inline there. In-game, hop onto the
+        // Framework thread when Ask arrives from a websocket / worker callback.
+        if (Plugin.Framework is { } framework && !framework.IsInFrameworkUpdateThread)
+        {
+            _ = framework.RunOnFrameworkThread(() => Ask(request));
+            return;
+        }
+
         if (Active is not null)
         {
             queued.Enqueue(request);
@@ -64,15 +72,26 @@ internal sealed class ConfirmService
             Status = null;
             handler(ok =>
             {
-                Busy = false;
-                if (ok)
+                void Finish()
                 {
-                    Advance();
+                    Busy = false;
+                    if (ok)
+                    {
+                        Advance();
+                    }
+                    else
+                    {
+                        Status = request.FailedMessage;
+                    }
                 }
-                else
+
+                if (Plugin.Framework is { } framework && !framework.IsInFrameworkUpdateThread)
                 {
-                    Status = request.FailedMessage;
+                    _ = framework.RunOnFrameworkThread(Finish);
+                    return;
                 }
+
+                Finish();
             });
             return;
         }
