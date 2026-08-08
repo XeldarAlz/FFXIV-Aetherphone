@@ -1080,7 +1080,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             }
 
             var comments = store.DetailComments;
-            var commentTotal = store.HasMoreComments ? Math.Max(post.CommentCount, comments.Length) : comments.Length;
+            var commentTotal = post.CommentCount;
             ImGui.Dummy(new Vector2(0f, 2f * scale));
             ui.SectionHeading(commentTotal > 0
                 ? $"{Loc.T(L.Chirper.RepliesTitle)} · {commentTotal}"
