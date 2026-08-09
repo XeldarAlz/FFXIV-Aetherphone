@@ -101,28 +101,14 @@
       },
       "YoutubeExplode": {
         "type": "Direct",
-        "requested": "[6.6.0, )",
-        "resolved": "6.6.0",
-        "contentHash": "DCFAmPvADs/ZB3pB24kLFzVY/1o6iECqJ7IL9LKi4zkSZLgcXDwFbOJe3vd2K3FBw36Xa3O/QMv10zelT7hjfA==",
-        "dependencies": {
-          "AngleSharp": "1.4.0",
-          "JsonExtensions": "1.2.0"
-        }
-      },
-      "AngleSharp": {
-        "type": "Transitive",
-        "resolved": "1.4.0",
-        "contentHash": "6ph8mpaQx0KL0COYRt0kI8MB9gSp1PtKijKMhJU//+aVFgKAJLKDesG/+26JSaVCOrHNgPf12wpfoyRcMYOeXg=="
+        "requested": "[6.6.1, )",
+        "resolved": "6.6.1",
+        "contentHash": "9sVVl1n/YqzVN4olebZuZgMdhNCuYXOUt9KPhyivi90QIfm8QQt7GoTQtPpMJCtON6QUCUGZubBxK2xwlGHRMg=="
       },
       "HtmlAgilityPack": {
         "type": "Transitive",
         "resolved": "1.11.46",
         "contentHash": "dLMn4EVfJBHWmWK4Uh0XGD76FPLHI0qr2Tm0s1m/xmgiHb1JUb9zB8AzO8HtrkBBlMN6JfCUBYddhqC0hZNR+g=="
-      },
-      "JsonExtensions": {
-        "type": "Transitive",
-        "resolved": "1.2.0",
-        "contentHash": "ujtrK6m5BQVQLEteLfl54upN7Z59c1ZqEKmU3OlYriqnV74dIgIlNM2vkcgn2AuZEItQDNORD/2H1biI/asOdg=="
       },
       "Karashiiro.HtmlAgilityPack.CssSelectors.NetCoreFork": {
         "type": "Transitive",
