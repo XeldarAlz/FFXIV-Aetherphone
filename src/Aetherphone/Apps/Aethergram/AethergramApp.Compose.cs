@@ -530,7 +530,7 @@ internal sealed partial class AethergramApp
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
             SoftWrapField.Multiline("##gramCaption", ref caption, MaxCaptionLength, inputSize, wrapWidth,
-                composeMentions);
+                composeMentions, allowNewlines: true);
         }
 
         var pickedMention = mentionPopup.Draw(composeMentions, screen, theme, images, lodestone);

@@ -5,13 +5,17 @@ namespace Aetherphone.Windows.Components;
 
 internal static class SoftWrap
 {
-    public static int ApplyEdit(ImGuiInputTextCallbackDataPtr data, float wrapWidth, int maxLength)
+    private const char SoftWrapSentinel = '\u200B';
+
+    public static int ApplyEdit(ImGuiInputTextCallbackDataPtr data, float wrapWidth, int maxLength,
+        bool allowNewlines)
     {
         if (data.EventFlag == ImGuiInputTextFlags.CallbackCharFilter)
         {
             if (data.EventChar is '\n' or '\r')
             {
-                data.EventChar = 0;
+                var shift = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
+                data.EventChar = allowNewlines && shift ? '\n' : (char)0;
             }
 
             return 0;
@@ -19,9 +23,9 @@ internal static class SoftWrap
 
         var current = Encoding.UTF8.GetString(data.BufSpan[..data.BufTextLen]);
         var charCursor = ByteIndexToCharIndex(current, data.CursorPos);
-        var logicalCursor = charCursor - CountNewlines(current, charCursor);
+        var logicalCursor = charCursor - CountNonLogical(current, charCursor);
 
-        var logical = StripNewlines(current);
+        var logical = StripSoftWraps(current);
         if (logical.Length > maxLength)
         {
             logical = logical[..maxLength];
@@ -64,6 +68,16 @@ internal static class SoftWrap
         var index = 0;
         while (index < text.Length)
         {
+            if (text[index] == '\n')
+            {
+                builder.Append('\n');
+                lineStart = builder.Length;
+                lineWidth = 0f;
+                wordStart = builder.Length;
+                index++;
+                continue;
+            }
+
             var runeLength = char.IsHighSurrogate(text[index]) && index + 1 < text.Length &&
                              char.IsLowSurrogate(text[index + 1])
                 ? 2
@@ -75,14 +89,14 @@ internal static class SoftWrap
             {
                 if (wordStart > lineStart)
                 {
-                    builder.Insert(wordStart, '\n');
-                    lineStart = wordStart + 1;
+                    builder.Insert(wordStart, SoftWrapSentinel + "\n");
+                    lineStart = wordStart + 2;
                     lineWidth = MeasureRange(builder, lineStart);
                     wordStart = lineStart;
                 }
                 else
                 {
-                    builder.Append('\n');
+                    builder.Append(SoftWrapSentinel).Append('\n');
                     lineStart = builder.Length;
                     lineWidth = 0f;
                     wordStart = builder.Length;
@@ -102,9 +116,30 @@ internal static class SoftWrap
         return builder.ToString();
     }
 
-    public static string StripNewlines(string text)
+    public static string StripSoftWraps(string text)
     {
-        return text.IndexOf('\n') < 0 ? text : text.Replace("\n", string.Empty);
+        if (text.IndexOf(SoftWrapSentinel) < 0)
+        {
+            return text;
+        }
+
+        var builder = new StringBuilder(text.Length);
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (text[index] == SoftWrapSentinel)
+            {
+                if (index + 1 < text.Length && text[index + 1] == '\n')
+                {
+                    index++;
+                }
+
+                continue;
+            }
+
+            builder.Append(text[index]);
+        }
+
+        return builder.ToString();
     }
 
     public static void ReadLogical(ImGuiInputTextCallbackDataPtr data, out string display, out string logical,
@@ -112,8 +147,8 @@ internal static class SoftWrap
     {
         display = Encoding.UTF8.GetString(data.BufSpan[..data.BufTextLen]);
         var charCursor = ByteIndexToCharIndex(display, data.CursorPos);
-        logicalCursor = charCursor - CountNewlines(display, charCursor);
-        logical = StripNewlines(display);
+        logicalCursor = charCursor - CountNonLogical(display, charCursor);
+        logical = StripSoftWraps(display);
     }
 
     public static void SetCursor(ImGuiInputTextCallbackDataPtr data, string display, int logicalCursor)
@@ -143,7 +178,7 @@ internal static class SoftWrap
         var length = text.Length;
         for (var index = 0; index < text.Length; index++)
         {
-            if (text[index] == '\n')
+            if (text[index] == '\n' || text[index] == SoftWrapSentinel)
             {
                 length--;
             }
@@ -162,12 +197,12 @@ internal static class SoftWrap
         return ImGui.CalcTextSize(builder.ToString(start, builder.Length - start)).X;
     }
 
-    private static int CountNewlines(string text, int limit)
+    private static int CountNonLogical(string text, int limit)
     {
         var count = 0;
         for (var index = 0; index < limit; index++)
         {
-            if (text[index] == '\n')
+            if (text[index] == '\n' || text[index] == SoftWrapSentinel)
             {
                 count++;
             }
@@ -204,7 +239,7 @@ internal static class SoftWrap
         var index = 0;
         while (index < wrapped.Length && seen < logicalCursor)
         {
-            if (wrapped[index] != '\n')
+            if (wrapped[index] != '\n' && wrapped[index] != SoftWrapSentinel)
             {
                 seen++;
             }

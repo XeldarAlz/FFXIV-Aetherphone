@@ -275,7 +275,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         DrawHeader(area, threadId);
         var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
-        var composerHeight = 56f * scale;
+        var composerHeight = composer.ComposerHeight;
         var accessoryHeight = composer.AccessoryHeight;
         var transcriptMessages = BuildTranscript(store.Messages);
         if (searchController.Open)

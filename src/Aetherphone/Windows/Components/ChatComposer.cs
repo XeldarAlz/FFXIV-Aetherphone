@@ -30,6 +30,9 @@ internal sealed class ChatComposer : IDisposable
 {
     private const int TextKind = 0;
     private const float AccessoryBarHeight = 46f;
+    private const float ComposerBaseHeight = 56f;
+    private const float ComposerLineHeight = 20f;
+    private const int ComposerMaxLines = 4;
     private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
     private static readonly Vector4 FieldFill = new(1f, 1f, 1f, 0.10f);
     private static readonly Vector4 BarFill = new(1f, 1f, 1f, 0.05f);
@@ -37,6 +40,7 @@ internal sealed class ChatComposer : IDisposable
     private readonly VoiceNoteRecorder recorder = new();
     private readonly EmojiPicker emojiPicker = new();
     private string draft = string.Empty;
+    private int composerEpoch;
     private bool focus;
     private bool emojiOpen;
     private string? replyTargetId;
@@ -60,6 +64,44 @@ internal sealed class ChatComposer : IDisposable
     public float AccessoryHeight => replyTargetId is not null || editTargetId is not null
         ? AccessoryBarHeight * UiScale.Current
         : 0f;
+
+    public float ComposerHeight
+    {
+        get
+        {
+            var scale = UiScale.Current;
+            var lines = Math.Clamp(CountLines(draft), 1, ComposerMaxLines);
+            return (ComposerBaseHeight + (lines - 1) * ComposerLineHeight) * scale;
+        }
+    }
+
+    private static int NewlineFilterCallback(ImGuiInputTextCallbackDataPtr data)
+    {
+        if (data.EventFlag == ImGuiInputTextFlags.CallbackCharFilter)
+        {
+            if (data.EventChar is '\n' or '\r')
+            {
+                var shift = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
+                data.EventChar = shift ? '\n' : (char)0;
+            }
+        }
+
+        return 0;
+    }
+
+    internal static int CountLines(string text)
+    {
+        var lines = 1;
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (text[index] == '\n')
+            {
+                lines++;
+            }
+        }
+
+        return lines;
+    }
 
     public void BeginReply(string messageId, string senderName, string preview)
     {
@@ -225,9 +267,9 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var textLeft = emojiMax.X + 4f * scale;
-        ImGui.SetCursorScreenPos(new Vector2(textLeft,
-            (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
-        ImGui.SetNextItemWidth(MathF.Max(1f, textRight - textLeft));
+        ImGui.SetCursorScreenPos(new Vector2(textLeft, pillMin.Y + 4f * scale));
+        var inputSize = new Vector2(MathF.Max(1f, textRight - textLeft),
+            MathF.Max(1f, pillMax.Y - pillMin.Y - 8f * scale));
         if (focus)
         {
             ImGui.SetKeyboardFocusHere();
@@ -235,15 +277,20 @@ internal sealed class ChatComposer : IDisposable
         }
 
         var submitted = false;
+        var shiftDown = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
         Plugin.Fonts.NoticeText(draft);
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            if (ImGui.InputTextWithHint("##chatComposerInput", Loc.T(L.Velvet.MessageHint), ref draft, model.MaxLength,
-                    ImGuiInputTextFlags.EnterReturnsTrue))
-            {
-                submitted = true;
-            }
+            ImGui.InputTextMultiline("##chatComposerInput" + composerEpoch, ref draft, model.MaxLength, inputSize,
+                ImGuiInputTextFlags.None, NewlineFilterCallback);
+        }
+
+        if (draft.Length == 0)
+        {
+            var hintPosition = new Vector2(textLeft + ImGui.GetStyle().FramePadding.X,
+                pillMin.Y + 4f * scale + ImGui.GetStyle().FramePadding.Y);
+            drawList.AddText(hintPosition, ImGui.GetColorU32(ui.MutedInk), Loc.T(L.Velvet.MessageHint));
         }
 
         var hasDraft = draft.Trim().Length > 0;
@@ -285,6 +332,11 @@ internal sealed class ChatComposer : IDisposable
             AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), White, 0.9f);
         }
 
+        if (ImGui.IsKeyPressed(ImGuiKey.Enter, false) && !shiftDown)
+        {
+            submitted = true;
+        }
+
         if (submitted && canSend)
         {
             if (editTargetId is { } editId)
@@ -299,6 +351,7 @@ internal sealed class ChatComposer : IDisposable
                 ClearReply();
             }
 
+            composerEpoch++;
             emojiOpen = false;
             focus = true;
         }
