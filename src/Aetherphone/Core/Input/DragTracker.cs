@@ -69,4 +69,12 @@ internal sealed class DragTracker
     }
 
     public void Cancel() => active = false;
+
+    public void Reset()
+    {
+        active = false;
+        origin = Vector2.Zero;
+        last = Vector2.Zero;
+        velocityY = 0f;
+    }
 }

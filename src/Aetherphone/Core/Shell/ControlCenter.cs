@@ -595,6 +595,18 @@ internal sealed class ControlCenter
         gallery.Close();
     }
 
+    public void Suppress()
+    {
+        open = false;
+        target = 0f;
+        offset.SnapTo(0f);
+        editing = false;
+        draggingSlot = null;
+        pressSlot = null;
+        gallery.Close();
+        drag.Reset();
+    }
+
     private void HandleGesture(Rect screen, float delta, bool gesturesEnabled, bool allowDismiss)
     {
         var scale = UiScale.Current;

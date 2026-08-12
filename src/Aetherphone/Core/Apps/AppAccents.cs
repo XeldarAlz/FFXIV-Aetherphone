@@ -70,6 +70,7 @@ internal static class AppAccents
         ["beat"] = AccentRing.Rose,
         ["blade"] = AccentRing.Red,
         ["trivia"] = AccentRing.Indigo,
+        ["gameboy"] = AccentRing.Cyan,
     }.ToFrozenDictionary();
 
     private static readonly FrozenSet<string> BrandLocked =

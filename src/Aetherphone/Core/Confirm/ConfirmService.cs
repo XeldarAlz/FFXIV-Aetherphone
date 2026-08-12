@@ -81,6 +81,16 @@ internal sealed class ConfirmService
         Advance();
     }
 
+    public void Report(string? status)
+    {
+        if (!Busy)
+        {
+            return;
+        }
+
+        Status = status;
+    }
+
     public void CancelActive()
     {
         if (Busy || Active is not { } request)

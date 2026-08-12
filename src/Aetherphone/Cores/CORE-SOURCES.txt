@@ -1,0 +1,150 @@
+Aetherphone libretro core manifest
+=================================
+
+Aetherphone does not distribute any libretro module. Allagan Pocket downloads
+the module for a system from the official libretro buildbot the first time you
+open that system, and only after you confirm the download:
+
+  https://buildbot.libretro.com/nightly/windows/x86_64/latest/
+
+Each archive is verified against the CRC-32 the buildbot publishes in that
+directory's .index-extended manifest before it is installed. Modules are kept
+in the plugin's config folder and loaded at runtime through the public libretro
+ABI. They remain separate works under their own licenses; they are not
+relicensed as part of Aetherphone's AGPL-3.0 code.
+
+PlayStation Portable additionally downloads the PPSSPP system files from
+https://buildbot.libretro.com/assets/system/PPSSPP.zip.
+
+The projects below are the upstream sources for the modules Allagan Pocket can
+fetch, with the license each is published under.
+
+blastem_libretro.dll
+  Project: BlastEm libretro
+  License: GPL-3.0
+  Source: https://github.com/libretro/blastem/commit/277e4a62668597d4f59cadda1cbafb844f981d45
+
+bsnes_libretro.dll
+  Project: bsnes libretro
+  License: GPL-3.0
+  Source: https://github.com/libretro/bsnes/commit/591b7e13b6914beffaa01084e4c0b7a5d9cc0673
+
+clownmdemu_libretro.dll
+  Project: ClownMDEmu libretro
+  License: AGPL-3.0
+  Source: https://github.com/Clownacy/clownmdemu-libretro/commit/935d6fc060eb82172dac29e880fe9b877fbdb640
+
+geargrafx_libretro.dll
+  Project: Geargrafx
+  License: GPL-3.0
+  Source: https://github.com/drhelius/Geargrafx/commit/2fb5d8df1ae419d788bbec53b1f51a12c60d8e7f
+
+geolith_libretro.dll
+  Project: Geolith libretro
+  License: BSD-3-Clause
+  Source: https://github.com/libretro/geolith-libretro/commit/c5b57a6b31b7abef4a8a9b521cae58d653e28154
+
+gpsp_libretro.dll
+  Project: gpSP libretro
+  License: GPL-2.0-only
+  Source: https://github.com/libretro/gpsp/commit/5b6e751f4abf368509146cd143c949c1946ac1ae
+
+mednafen_ngp_libretro.dll
+  Project: Beetle NeoPop libretro
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/beetle-ngp-libretro/commit/a50d5ac288a81f2104ddf43195a4efdd15c72227
+
+mednafen_wswan_libretro.dll
+  Project: Beetle Cygne libretro
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/beetle-wswan-libretro/commit/da6d0d9acb8d4e9bd6725ab44225a275325d8352
+
+melondsds_libretro.dll
+  Project: melonDS DS libretro
+  License: GPL-3.0-or-later
+  Source: https://github.com/JesseTG/melonds-ds/commit/e695b47856a26780d393bf8613bc9d336b30f660
+
+mupen64plus_next_libretro.dll
+  Project: Mupen64Plus-Next
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/mupen64plus-libretro-nx/commit/98c1b0d877542b01314b3b04272282ba223b65b3
+
+nestopia_libretro.dll
+  Project: Nestopia UE libretro
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/nestopia/commit/b0fd87dd07e3c52903435d302b04e5e97796f127
+
+pcsx_rearmed_libretro.dll
+  Project: PCSX-ReARMed
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/pcsx_rearmed/commit/050981b6eeb715f142854f57c68086f62921f027
+
+ppsspp_libretro.dll
+  Project: PPSSPP libretro
+  License: GPL-2.0-or-later with third-party notices
+  Source: https://github.com/hrydgard/ppsspp/commit/a6e4d691efeaf577ca2c557c92eb6737ab2c12be
+
+sameboy_libretro.dll
+  Project: SameBoy libretro
+  License: MIT
+  Source: https://github.com/libretro/SameBoy/commit/06c184f0b186f161bcdfec50ebd604fe789ed04a
+
+smsplus_libretro.dll
+  Project: SMS Plus GX
+  License: GPL-2.0-or-later
+  Source: https://github.com/libretro/smsplus-gx/commit/8a63f82d3c3bbf7215a31f86a4aaa13fb68a579f
+
+stella_libretro.dll
+  Project: Stella libretro
+  License: GPL-2.0
+  Source: https://github.com/libretro/stella/commit/878a9c8d5f03ef0b7cd190b5713d6bf31c48df38
+
+
+Optional starter games
+======================
+
+Allagan Pocket can also fetch a free game for a system, on request, straight
+from its author's own release page. Aetherphone distributes no game data; these
+are listed only so their terms and authors are visible before you download.
+
+uCity
+  System: Game Boy Color
+  Author: Antonio Nino Diaz
+  License: GPL-3.0-or-later (media under CC BY-SA 4.0)
+  Source: https://github.com/AntonioND/ucity
+  Download: https://github.com/AntonioND/ucity/releases/download/v1.3/ucity.gbc
+
+Nova the Squirrel
+  System: Nintendo / Famicom
+  Author: NovaSquirrel
+  License: GPL-3.0
+  Source: https://github.com/NovaSquirrel/NovaTheSquirrel
+  Download: https://github.com/NovaSquirrel/NovaTheSquirrel/releases/download/v1.0.6a/nova.nes
+
+Skyland
+  System: Game Boy Advance
+  Author: Evan Bowman
+  License: MPL-2.0
+  Source: https://github.com/evanbowman/skyland-gba
+  Download: https://github.com/evanbowman/skyland-gba/releases/download/2022.1.7.0/Skyland.gba
+
+N64brew Game Jam 2024
+  System: Nintendo 64
+  Author: N64brew and the jam entrants
+  License: MIT
+  Source: https://github.com/n64brew/N64brew-GameJam2024
+  Download: https://github.com/n64brew/N64brew-GameJam2024/releases/download/1.2.1/gamejam2024.z64
+
+KleleAtoms
+  System: Mega Drive / Genesis
+  Author: Nightwolf-47
+  License: MIT
+  Source: https://github.com/Nightwolf-47/KleleAtoms-MD
+  Download: https://github.com/Nightwolf-47/KleleAtoms-MD/releases/download/v1.2.1/kleleatoms-md-121.bin
+
+Berta and Butterflies
+  System: Atari 2600
+  Author: vandalton
+  License: MIT
+  Source: https://github.com/vandalton/BertaAndButterflies
+  Download: https://github.com/vandalton/BertaAndButterflies/releases/download/v1.00/berta-and-butterflies.v1.00.ntsc.en.bin
