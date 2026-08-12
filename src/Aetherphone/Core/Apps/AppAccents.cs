@@ -111,7 +111,8 @@ internal static class AppAccents
         ["herd"] = AccentRing.Rose,
         ["tempo"] = AccentRing.Violet,
         ["rolladeck"] = AccentRing.Violet,
-        ["hunts"] = AccentRing.Indigo
+        ["hunts"] = AccentRing.Indigo,
+        ["syrcus"] = AccentRing.Cyan
     }.ToFrozenDictionary();
 
     private static readonly FrozenSet<string> BrandLocked =

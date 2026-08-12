@@ -83,6 +83,16 @@ internal sealed class ConfirmService
         }
     }
 
+    public void Report(string? status)
+    {
+        if (!Busy)
+        {
+            return;
+        }
+
+        Status = status;
+    }
+
     public void ReportFailure(AepFailure value)
     {
         failure.Set(value);

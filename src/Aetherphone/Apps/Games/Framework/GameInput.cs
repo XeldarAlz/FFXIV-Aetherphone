@@ -23,17 +23,21 @@ internal static class GameInput
 
     private const long ReleaseDelayMilliseconds = 2000;
 
+    private static VirtualKey[] heldKeys = ConsumedKeys;
     private static int claimedFrame = -1;
     private static long lastClaimTick;
     private static bool releasePending;
 
-    public static bool Claim()
+    public static bool Claim() => ClaimHeld(ConsumedKeys);
+
+    public static bool ClaimHeld(VirtualKey[] consumedKeys)
     {
-        if (!Claim(ConsumedKeys))
+        if (!Claim(consumedKeys))
         {
             return false;
         }
 
+        heldKeys = consumedKeys;
         lastClaimTick = Environment.TickCount64;
         if (!releasePending)
         {
@@ -78,7 +82,7 @@ internal static class GameInput
         }
 
         ImGui.GetIO().WantTextInput = true;
-        Consume(ConsumedKeys);
+        Consume(heldKeys);
     }
 
     private static void Consume(ReadOnlySpan<VirtualKey> consumedKeys)

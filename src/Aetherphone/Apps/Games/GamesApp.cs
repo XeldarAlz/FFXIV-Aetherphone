@@ -48,6 +48,7 @@ using Aetherphone.Apps.Games.Stack;
 using Aetherphone.Apps.Games.Sudoku;
 using Aetherphone.Apps.Games.Sweeper;
 using Aetherphone.Apps.Games.Swoop;
+using Aetherphone.Apps.Games.Syrcus;
 using Aetherphone.Apps.Games.Tempo;
 using Aetherphone.Apps.Games.Tetris;
 using Aetherphone.Apps.Games.Trails;
@@ -170,7 +171,8 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
         Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
         GameRoomsStore gameRooms, Configuration configuration, LeaderboardStore leaderboard, RemoteImageCache images,
-        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher)
+        LodestoneService lodestone, MoogleClickerService moogleClicker, SettingsLauncher settingsLauncher,
+        Core.Confirm.ConfirmService confirm)
     {
         this.stats = stats;
         this.configuration = configuration;
@@ -247,6 +249,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
             new MiniGolfApp(),
             new HerdApp(textures),
             new TempoApp(),
+            new SyrcusApp(textures, configuration, confirm),
         };
         library = new GamesLibrary(games, stats, leaderboard);
         countLabels = new string[library.Entries.Length + 1];
@@ -656,13 +659,25 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         AppLandscape.Release(Id);
     }
 
+    private void SyncGameLandscape(IMiniGame game)
+    {
+        if (game.WantsLandscape)
+        {
+            AppLandscape.Request(Id);
+            return;
+        }
+
+        AppLandscape.Release(Id);
+    }
+
     private void DrawActiveGame(in PhoneContext context)
     {
         var game = currentGame!;
         var spec = game.Spec;
         var scale = UiScale.Current;
         var full = context.Content;
-        var landscape = spec.Landscape && AppLandscape.Held(Id) && full.IsLandscape();
+        SyncGameLandscape(game);
+        var landscape = game.WantsLandscape && AppLandscape.Held(Id) && full.IsLandscape();
         var accent = game.Accent;
         using (AppSurface.BeginEdgeToEdge(full))
         {
@@ -800,7 +815,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
                 OpenLeaderboard(game, session.LeaderboardStatId, game.Title);
                 break;
             case PauseAction.Quit:
-                back();
+                LeaveGame();
                 break;
             default:
                 break;
@@ -1056,6 +1071,16 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
 
     private void Back()
     {
+        if (router.Current.Screen == GamesScreen.Playing && currentGame?.HandleBack() == true)
+        {
+            return;
+        }
+
+        LeaveGame();
+    }
+
+    private void LeaveGame()
+    {
         if (TryDismissLaunch())
         {
             return;
@@ -1130,7 +1155,7 @@ internal sealed partial class GamesApp : IPhoneApp, ITabRouteTarget, INameplateA
         resultProgress = 0f;
         coinSessions.GameOpened(spec.Id);
         stats.MarkPlayed(spec.Id);
-        if (spec.Landscape)
+        if (game.WantsLandscape)
         {
             AppLandscape.Request(Id);
         }

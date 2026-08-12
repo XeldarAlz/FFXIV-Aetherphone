@@ -8,6 +8,7 @@ using Aetherphone.Core.Notes;
 using Aetherphone.Core.Changelog;
 using Aetherphone.Core.ControlCenter;
 using Aetherphone.Core.Dailies;
+using Aetherphone.Core.Emulation;
 using Aetherphone.Core.Feedback;
 using Aetherphone.Core.Fishing;
 using Aetherphone.Core.GameChat;
@@ -354,6 +355,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public List<SongRecord> SongRecents { get; set; } = new();
     public List<PlaylistRecord> Playlists { get; set; } = new();
     public List<GameStatRecord> GameStats { get; set; } = new();
+    public EmulatorSettings Emulator { get; set; } = new();
     public List<GameModeChoice> GameModeChoices { get; set; } = new();
     public List<GameLevelProgress> GameLevelProgress { get; set; } = new();
     public int DailyChallengeStreak { get; set; }
