@@ -10,6 +10,7 @@ namespace Aetherphone.Core.Shell;
 
 internal sealed class ShellScreenPainter
 {
+    public const float ImmersiveInset = 8f;
     private readonly ThemeProvider themes;
     private readonly NavigationStack navigation;
     private readonly HomeScreen home;
@@ -50,7 +51,9 @@ internal sealed class ShellScreenPainter
             DeviceChrome.FillScreen(screen, screenRadius, content.AppBackground);
         }
 
-        var contentRect = ContentRect(screen, theme);
+        var contentRect = app.WantsImmersiveContent
+            ? ImmersiveContentRect(screen)
+            : ContentRect(screen, theme);
         try
         {
             using (AppVisits.Enter(app.Id))
@@ -72,6 +75,12 @@ internal sealed class ShellScreenPainter
         var size = ImGui.CalcTextSize(text);
         var position = new Vector2(content.Center.X - size.X * 0.5f, content.Center.Y - size.Y * 0.5f);
         draw.AddText(position, ImGui.ColorConvertFloat4ToU32(theme.TextMuted), text);
+    }
+
+    public static Rect ImmersiveContentRect(Rect screen)
+    {
+        var inset = ImmersiveInset * UiScale.Current;
+        return screen.Inset(inset);
     }
 
     public static Rect ContentRect(Rect screen, PhoneTheme theme)

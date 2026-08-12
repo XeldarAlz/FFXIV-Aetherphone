@@ -7,6 +7,7 @@ using Aetherphone.Apps.Games.CrystalDrop;
 using Aetherphone.Apps.Games.Flap;
 using Aetherphone.Apps.Games.Flow;
 using Aetherphone.Apps.Games.Framework;
+using Aetherphone.Apps.Games.Syrcus;
 using Aetherphone.Apps.Games.GemSwap;
 using Aetherphone.Apps.Games.Nonogram;
 using Aetherphone.Apps.Games.Pairs;
@@ -78,6 +79,8 @@ internal sealed class GamesApp : IPhoneApp
     private const float CoinChipRingRadius = 7f;
     private const float CoinChipGap = 5f;
     private const float CoinChipReserve = 72f;
+    private const float CompactBackInset = 20f;
+    private const float CompactBackPortraitInset = 50f;
     private const float HeroHeight = 168f;
     private const float SectionHeaderHeight = 30f;
     private const float GameRowHeight = 64f;
@@ -104,9 +107,16 @@ internal sealed class GamesApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Games);
     public string Glyph => ">";
     public int BadgeCount => 0;
+    public bool WantsLandscape => router.Current == GameRoute.Playing && currentGame?.WantsLandscape == true;
+    public bool WantsImmersiveContent =>
+        router.Current == GameRoute.Playing && currentGame?.WantsImmersiveContent == true;
+    public bool WantsStatusBarInImmersiveContent =>
+        router.Current == GameRoute.Playing && currentGame?.WantsStatusBarInImmersiveContent == true;
 
     public GamesApp(GameStatsStore stats, GameData gameData, ITextureProvider textures,
-        Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions)
+        Core.Coins.CoinStore coins, Core.Coins.CoinGameSessionTracker coinSessions,
+        DirectoryInfo configDirectory, IKeyState keyState, IGamepadState gamepadState,
+        Configuration configuration, Core.Confirm.ConfirmService confirm)
     {
         this.stats = stats;
         this.coins = coins;
@@ -118,12 +128,13 @@ internal sealed class GamesApp : IPhoneApp
             new SolitaireApp(), new SimonApp(), new FlapApp(), new ReversiApp(), new WhackApp(), new SnakeApp(),
             new SudokuApp(), new ChessApp(), new StackApp(), new CrystalDropApp(), new BeatApp(), new BladeApp(),
             new TriviaApp(gameData, textures),
+            new SyrcusApp(configDirectory, textures, keyState, gamepadState, configuration, confirm),
         };
         tileOrder = new int[games.Length];
         RebuildLayout();
         router = new ViewRouter<GameRoute>(GameRoute.Launcher);
         drawView = DrawView;
-        back = () => router.Pop();
+        back = NavigateBack;
     }
 
     private void RebuildLayout()
@@ -283,18 +294,24 @@ internal sealed class GamesApp : IPhoneApp
         var game = currentGame!;
         var scale = UiScale.Current;
         var content = context.Content;
-        var chip = BuildCoinSessionChip();
-        if (chip.Visible)
+        var compact = game.UsesCompactHeader;
+        if (!compact)
         {
-            AppHeader.Draw(context, "games.header.title", game.Title, CoinChipReserve * scale, back);
-            DrawCoinSessionChip(chip, content, context.Theme, scale);
-        }
-        else
-        {
-            AppHeader.Draw(context, game.Title, back);
+            var chip = BuildCoinSessionChip();
+            if (chip.Visible)
+            {
+                AppHeader.Draw(context, "games.header.title", game.Title, CoinChipReserve * scale, back);
+                DrawCoinSessionChip(chip, content, context.Theme, scale);
+            }
+            else
+            {
+                AppHeader.Draw(context, game.Title, back);
+            }
         }
 
-        var body = new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
+        var body = compact
+            ? content
+            : new Rect(new Vector2(content.Min.X, content.Min.Y + HeaderHeight * scale), content.Max);
         using (AppSurface.Begin(body))
         {
             var attentive = GameFocus.Active;
@@ -302,6 +319,12 @@ internal sealed class GamesApp : IPhoneApp
             game.Draw(new GameContext(body, context.Theme, stats, attentive ? frameSeconds : 0f));
             pausedVeil.Step(!attentive && game.RunsOnAClock ? 1f : 0f, PausedFadeSeconds, frameSeconds);
             DrawPausedVeil(body, context.Theme);
+        }
+
+        if (compact)
+        {
+            var portraitGameplay = game.WantsImmersiveContent && !game.WantsLandscape;
+            AppHeader.DrawBackOnly(context, back, portraitGameplay ? CompactBackPortraitInset : CompactBackInset);
         }
     }
 
@@ -753,6 +776,16 @@ internal sealed class GamesApp : IPhoneApp
         game.Open();
         coinSessions.GameOpened(game.Id);
         router.Push(GameRoute.Playing);
+    }
+
+    private void NavigateBack()
+    {
+        if (currentGame?.HandleBack() == true)
+        {
+            return;
+        }
+
+        router.Pop();
     }
 
     private void CloseCurrentGame()

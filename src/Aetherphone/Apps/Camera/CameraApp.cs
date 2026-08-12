@@ -41,6 +41,7 @@ internal sealed class CameraApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Camera);
     public string Glyph => "O";
     public int BadgeCount => 0;
+    public bool WantsLandscape => configuration.CameraLandscape;
     public bool WantsTransparentScreen => true;
 
     public Rect? TransparentViewport(Rect screen, float scale) => ViewfinderRect(screen, scale);
