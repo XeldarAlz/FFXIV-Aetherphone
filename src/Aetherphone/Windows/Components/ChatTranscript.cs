@@ -530,6 +530,10 @@ internal sealed class ChatTranscript
         var wrap = available * 0.74f - paddingX * 2f;
         var linkLayout = deleted ? null : LinkText.LayoutFor(message.Body, wrap);
         var textSize = linkLayout is null ? ImGui.CalcTextSize(message.Body, false, wrap) : linkLayout.Size;
+        if (linkLayout is null && EndsWithNewline(message.Body))
+        {
+            textSize.Y += ImGui.GetTextLineHeight();
+        }
         var deletedIconWidth = deleted ? 17f * scale : 0f;
         var stamp = MeasureStamp(message, mine, scale);
         var stampGap = 7f * scale;
@@ -643,6 +647,11 @@ internal sealed class ChatTranscript
             message.MediaWidth, message.MediaHeight, message.ReadAtUnix, message.SenderName, message.SenderTint,
             message.Flags, message.ReplyToId, message.ReplySenderName, message.ReplyBody, message.ReplyKind,
             message.DurationSecs, message.Reactions);
+    }
+
+    private static bool EndsWithNewline(string text)
+    {
+        return text.Length > 0 && text[^1] == '\n';
     }
 
     private void DrawPostCardBubble(TranscriptMessage message, int index, in ChatPostCard card,

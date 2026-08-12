@@ -11,6 +11,7 @@ internal static class SoftWrapField
         public string Logical = string.Empty;
         public float WrapWidth;
         public int MaxLength;
+        public bool AllowNewlines;
         public string? PendingHandle;
         public int LogicalCursor;
         public int? RestoreCursor;
@@ -33,7 +34,7 @@ internal static class SoftWrapField
 
             if (data.EventFlag != ImGuiInputTextFlags.CallbackAlways)
             {
-                return SoftWrap.ApplyEdit(data, WrapWidth, MaxLength);
+                return SoftWrap.ApplyEdit(data, WrapWidth, MaxLength, AllowNewlines);
             }
 
             SoftWrap.ReadLogical(data, out var display, out var logical, out var cursor);
@@ -76,11 +77,12 @@ internal static class SoftWrapField
     private static readonly Dictionary<string, Editor> Editors = new(StringComparer.Ordinal);
 
     public static void Multiline(string id, ref string value, int maxLength, Vector2 size, float wrapWidth,
-        MentionAutocomplete? mentions = null)
+        MentionAutocomplete? mentions = null, bool allowNewlines = false)
     {
         var editor = GetEditor(id, maxLength);
         editor.WrapWidth = wrapWidth;
         editor.MaxLength = maxLength;
+        editor.AllowNewlines = allowNewlines;
         editor.TabRequested = false;
 
         var logical = value ?? string.Empty;
@@ -107,7 +109,7 @@ internal static class SoftWrapField
         }
 
         Plugin.Fonts.NoticeText(editor.Display);
-        var bufferBytes = maxLength * 4 + 1024;
+        var bufferBytes = maxLength * 6 + 2048;
         var flags = ImGuiInputTextFlags.CallbackEdit | ImGuiInputTextFlags.CallbackCharFilter;
         if (mentions is not null)
         {
@@ -122,7 +124,7 @@ internal static class SoftWrapField
         var edited = ImGui.InputTextMultiline(id, ref editor.Display, bufferBytes, size, flags, editor.Callback);
         if (edited)
         {
-            editor.Logical = SoftWrap.StripNewlines(editor.Display);
+            editor.Logical = SoftWrap.StripSoftWraps(editor.Display);
         }
 
         value = editor.Logical;
