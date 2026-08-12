@@ -239,7 +239,7 @@ internal sealed class PhoneWindow : Window
         }
 
         var phase = shell.MinimizePhase;
-        if (phase == MinimizePhase.None)
+        if (phase == MinimizePhase.None && landscapeBlend <= 0f)
         {
             maximizedPosition = ImGui.GetWindowPos();
         }

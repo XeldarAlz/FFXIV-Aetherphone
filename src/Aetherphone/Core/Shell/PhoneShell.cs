@@ -1,6 +1,7 @@
 using Aetherphone.Core.Animation;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Emulation;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Moderation;
@@ -125,11 +126,14 @@ internal sealed class PhoneShell : IDisposable
             loading.BeginSession();
         }
 
+        EmulatorInputCaptureBridge.SetPhoneInteractive(minimize.Phase == MinimizePhase.None);
         director.OnPhoneOpened();
     }
 
     public void OnClosed()
     {
+        EmulatorInputCaptureBridge.SetPhoneInteractive(false);
+
         loading.Cancel();
         director.Suspend();
     }
@@ -170,16 +174,24 @@ internal sealed class PhoneShell : IDisposable
 
     public bool HomeEditing => home.Editing && navigation.Current is null;
 
-    public bool LandscapeActive => configuration.CameraLandscape && minimize.Phase == MinimizePhase.None &&
-                                   !navigation.IsTransitioning && navigation.Current?.Id == "camera";
+    public bool LandscapeActive => minimize.Phase == MinimizePhase.None && !navigation.IsTransitioning &&
+                                   navigation.Current?.WantsLandscape == true;
 
     public MinimizePhase MinimizePhase => minimize.Phase;
 
     public float MinimizeEased => minimize.EasedProgress;
 
-    public void ForceMaximize() => minimize.SnapFull();
+    public void ForceMaximize()
+    {
+        EmulatorInputCaptureBridge.SetPhoneInteractive(true);
+        minimize.SnapFull();
+    }
 
-    public void ForceMinimized() => minimize.SnapMinimized();
+    public void ForceMinimized()
+    {
+        EmulatorInputCaptureBridge.SetPhoneInteractive(false);
+        minimize.SnapMinimized();
+    }
 
     private void OnVibration(PhoneNotification notification)
     {
@@ -217,6 +229,8 @@ internal sealed class PhoneShell : IDisposable
     {
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds);
         minimize.Advance(delta);
+
+        EmulatorInputCaptureBridge.SetPhoneInteractive(minimize.Phase == MinimizePhase.None);
         if (minimize.Phase != MinimizePhase.None)
         {
             if (loading.IsActive)
@@ -263,6 +277,7 @@ internal sealed class PhoneShell : IDisposable
             switch (sideButton.Update(sideButtonRect, sideButtonSide, theme, delta))
             {
                 case SideButtonAction.Minimize:
+                    EmulatorInputCaptureBridge.SetPhoneInteractive(false);
                     minimize.BeginCollapse();
                     break;
                 case SideButtonAction.Close:
@@ -272,6 +287,7 @@ internal sealed class PhoneShell : IDisposable
 
             if (BezelDoubleClicked(device, chassis))
             {
+                EmulatorInputCaptureBridge.SetPhoneInteractive(false);
                 minimize.BeginCollapse();
             }
 
@@ -302,21 +318,26 @@ internal sealed class PhoneShell : IDisposable
         }
 
         SyncCallNavigation();
-        var state = overlays.Assess(screen);
+        var topChromeEnabled = TopChromeEnabled();
+        var state = overlays.Assess(screen, topChromeEnabled);
         director.Advance(delta, state.Busy, navigation.AtHome, navigation.Current?.Id);
         UiAnchors.BeginFrame(director.WantsAnchors);
         UiAnchors.Report("chrome.lock", lockButtonRect);
         UiAnchors.Report("chrome.minimize", sideButtonRect);
-        UiAnchors.Report("chrome.controlcenter",
-            new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * UiScale.Current)));
+        if (topChromeEnabled)
+        {
+            UiAnchors.Report("chrome.controlcenter",
+                new Rect(screen.Min, new Vector2(screen.Max.X, screen.Min.Y + 44f * UiScale.Current)));
+        }
+
         using (InputShield.Engage(state.ShieldBase || director.CapturesPointer))
         {
             DrawContent(chassis, theme);
             DeviceChrome.MaskScreenCorners(ImGui.GetWindowDrawList(), chassis, theme, UiScale.Current);
-            DrawChrome(screen, theme);
+            DrawChrome(screen, theme, topChromeEnabled);
         }
 
-        overlays.DrawOverlays(chassis, theme, delta, state);
+        overlays.DrawOverlays(chassis, theme, delta, state, topChromeEnabled);
     }
 
     private Rect? TransparentBand(Rect screen)
@@ -361,12 +382,21 @@ internal sealed class PhoneShell : IDisposable
         painter.PaintCurrent(chassis.Screen, chassis.ScreenRadius, theme, HomeMotion.Rest);
     }
 
-    private void DrawChrome(Rect screen, PhoneTheme theme)
+    private bool TopChromeEnabled()
+    {
+        var app = navigation.Current;
+        return app is null || !app.WantsImmersiveContent || app.WantsStatusBarInImmersiveContent;
+    }
+
+    private void DrawChrome(Rect screen, PhoneTheme theme, bool topChromeEnabled)
     {
         ImGui.SetCursorScreenPos(screen.Min);
         using (ImRaii.Child("chrome", screen.Size, false, ChromeFlags))
         {
-            StatusBar.Draw(screen, theme, LandscapeActive);
+            if (topChromeEnabled)
+            {
+                StatusBar.Draw(screen, theme, LandscapeActive);
+            }
             DrawHomeIndicator(screen, theme);
         }
     }
