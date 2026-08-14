@@ -4,6 +4,7 @@ obj/
 bin/
 *.user
 .vscode/
+.kiro/
 
 # Node tooling (tools/icon-generator)
 node_modules/
