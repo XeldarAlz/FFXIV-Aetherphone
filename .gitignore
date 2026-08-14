@@ -4,9 +4,6 @@ obj/
 bin/
 *.user
 .vscode/
-.kiro/
-.abacusai/
-kilo.jsonc
 
 # Node tooling (tools/icon-generator)
 node_modules/
