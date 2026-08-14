@@ -12,10 +12,17 @@ internal static class SoftWrap
     {
         if (data.EventFlag == ImGuiInputTextFlags.CallbackCharFilter)
         {
+            if (data.EventChar == SoftWrapSentinel)
+            {
+                data.EventChar = (char)0;
+                return 0;
+            }
+
             if (data.EventChar is '\n' or '\r')
             {
                 var shift = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
-                data.EventChar = allowNewlines && shift ? '\n' : (char)0;
+                var enterPressed = ImGui.IsKeyDown(ImGuiKey.Enter) || ImGui.IsKeyDown(ImGuiKey.KeypadEnter);
+                data.EventChar = allowNewlines && (shift || !enterPressed) ? '\n' : (char)0;
             }
 
             return 0;

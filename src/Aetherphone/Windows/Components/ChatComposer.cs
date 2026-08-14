@@ -41,6 +41,7 @@ internal sealed class ChatComposer : IDisposable
     private readonly EmojiPicker emojiPicker = new();
     private string draft = string.Empty;
     private int composerEpoch;
+    private string inputLabel = "##chatComposerInput0";
     private bool focus;
     private bool emojiOpen;
     private string? replyTargetId;
@@ -82,7 +83,8 @@ internal sealed class ChatComposer : IDisposable
             if (data.EventChar is '\n' or '\r')
             {
                 var shift = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
-                data.EventChar = shift ? '\n' : (char)0;
+                var enterPressed = ImGui.IsKeyDown(ImGuiKey.Enter) || ImGui.IsKeyDown(ImGuiKey.KeypadEnter);
+                data.EventChar = shift || !enterPressed ? '\n' : (char)0;
             }
         }
 
@@ -279,11 +281,13 @@ internal sealed class ChatComposer : IDisposable
         var submitted = false;
         var shiftDown = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
         Plugin.Fonts.NoticeText(draft);
+        bool inputActive;
         using (ImRaii.PushColor(ImGuiCol.FrameBg, new Vector4(0f, 0f, 0f, 0f)))
         using (ImRaii.PushColor(ImGuiCol.Text, theme.TextStrong))
         {
-            ImGui.InputTextMultiline("##chatComposerInput" + composerEpoch, ref draft, model.MaxLength, inputSize,
+            ImGui.InputTextMultiline(inputLabel, ref draft, model.MaxLength, inputSize,
                 ImGuiInputTextFlags.None, NewlineFilterCallback);
+            inputActive = ImGui.IsItemActive();
         }
 
         if (draft.Length == 0)
@@ -332,7 +336,8 @@ internal sealed class ChatComposer : IDisposable
             AppSkin.Icon(sendCenter, FontAwesomeIcon.PaperPlane.ToIconString(), White, 0.9f);
         }
 
-        if (ImGui.IsKeyPressed(ImGuiKey.Enter, false) && !shiftDown)
+        if (inputActive && !shiftDown &&
+            (ImGui.IsKeyPressed(ImGuiKey.Enter, false) || ImGui.IsKeyPressed(ImGuiKey.KeypadEnter, false)))
         {
             submitted = true;
         }
@@ -352,6 +357,7 @@ internal sealed class ChatComposer : IDisposable
             }
 
             composerEpoch++;
+            inputLabel = "##chatComposerInput" + composerEpoch;
             emojiOpen = false;
             focus = true;
         }

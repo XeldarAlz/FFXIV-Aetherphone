@@ -532,6 +532,8 @@ internal sealed class ChatTranscript
         var textSize = linkLayout is null ? ImGui.CalcTextSize(message.Body, false, wrap) : linkLayout.Size;
         if (linkLayout is null && EndsWithNewline(message.Body))
         {
+            // RichText.Build already counts a trailing newline as a blank line via its own
+            // per-line height accumulation; only the raw CalcTextSize path undercounts it.
             textSize.Y += ImGui.GetTextLineHeight();
         }
         var deletedIconWidth = deleted ? 17f * scale : 0f;
