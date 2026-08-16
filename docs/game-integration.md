@@ -11,6 +11,7 @@ This doc explains how Aetherphone reads from and acts on the live game without c
 | src/Aetherphone/Core/Game/GameData.cs | Central Lumina Excel sheet reader (jobs, worlds, items, territories) |
 | src/Aetherphone/Core/Game/WeatherService.cs | Zone weather forecast from sheets plus live rendered weather |
 | src/Aetherphone/Core/Game/WeatherControl.cs | Weather and Eorzea time overrides through game memory |
+| src/Aetherphone/Core/Game/GameUiVisibility.cs | Hides and restores the whole game UI through the game's own visibility flag |
 | src/Aetherphone/Core/Game/EorzeaTime.cs | Reads the in-game clock from `ClientTime` |
 | src/Aetherphone/Core/Game/CharacterWatch.cs | Polls the local character's ContentId and raises `Changed` |
 | src/Aetherphone/Core/Inventory/InventoryReader.cs | `ReadLocalContentId()` and inventory memory reads |
@@ -262,6 +263,7 @@ Game-state awareness beyond window hiding is condition-driven per feature, alway
 | `ChatSender.TrySend` | Any time, if the text is not fully under your control | Length cap, sanitization length check, unlock and condition gates upstream |
 | `RaptureGearsetModule.EquipGearset` | Invalid gearset id | `IsValidGearset` first, `== 0` success check |
 | `EnvManager`/`ClientTime` writes | Left set after combat, zone change, or unload | `WeatherControl` reverts on all of those |
+| `RaptureAtkModule.SetUiVisibility` | Left hidden when a caller never restores, or after unload | `GameUiVisibility` reverts on `Dispose`; callers pair every `Hide` with a `Restore` on their own timeout |
 | `InfoProxyFriendList.RequestData` | Inside instanced content | `CurrentContentFinderConditionId != 0` bail-out |
 | Lifestream IPC | Plugin missing, mid-travel, unattuned aetheryte | `IsAvailable`, `IsBusy`, `IsAttuned` ladder in `LifestreamBridge` |
 | `PluginInterface.SavePluginConfig` | Off the framework thread | `Configuration.Save` marshals via `RunOnFrameworkThread` |
@@ -276,6 +278,7 @@ Game-state awareness beyond window hiding is condition-driven per feature, alway
 - `FriendListReader.RequestServerData` returns false inside duties and when proxies are null. The friend list you read afterward is only as fresh as the last successful request; the Linkpearl app polls, it never assumes.
 - Aetheryte teleports must pass the `Aetheryte` sheet RowId to the Lifestream IPC. Do not build `/li tp <name>` commands to teleport; in this codebase that string exists only as a clipboard fallback for users without the IPC available (`MapsApp.Teleport`, the Muster app's copy fallback, and `ChatTranscript.StartTravel`).
 - Weather and time overrides write shared engine state. Any new writer must revert on territory change, combat, gate close, and `Dispose`, exactly as `WeatherControl` does, or players get stuck weather after unloading the plugin.
+- `GameUiVisibility` writes the same global flag as the game's own "Display/Hide UI" keybind, so it also has to opt the phone out of Dalamud's automatic UI hiding (`UiBuilder.DisableUserUiHide`) or the phone vanishes along with the HUD. It records the previous value and puts it back, and it refuses to hide when the player already has their UI hidden, so restoring never turns a hidden HUD back on.
 - `EorzeaTime.CurrentSeconds` silently switches to a real-time formula when `Framework.Instance()` is null (early boot). Do not treat two consecutive reads as monotonic across that boundary.
 - `ChatSender.TrySend` drops messages over 500 UTF-8 bytes and any message the game's sanitizer would shorten, returning false rather than sending an altered string. Check the return value.
 

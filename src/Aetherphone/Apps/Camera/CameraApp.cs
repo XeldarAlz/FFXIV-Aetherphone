@@ -7,12 +7,9 @@ using Aetherphone.Core.Photos;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Game.Gui.NamePlate;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
-using FFXIVClientStructs.FFXIV.Client.UI;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace Aetherphone.Apps.Camera;
 
@@ -29,15 +26,6 @@ internal sealed class CameraApp : IPhoneApp
     private const int CaptureDelayFrames = 3;
     private const int CaptureWatchdogTicks = 30;
     private static readonly LocString[] Modes = { L.Camera.ModeSquare, L.Camera.ModePhoto };
-
-    private static readonly UiFlags[] HudGroups =
-    {
-        UiFlags.Hud,
-        UiFlags.Shortcuts,
-        UiFlags.ActionBars,
-        UiFlags.TargetInfo,
-        UiFlags.Chat,
-    };
 
     public string Id => "camera";
     public string DisplayName => Loc.T(L.Apps.Camera);
@@ -62,6 +50,7 @@ internal sealed class CameraApp : IPhoneApp
     private readonly PhotoCaptureService capture;
     private readonly PhotoLibrary library;
     private readonly Configuration configuration;
+    private readonly GameUiVisibility gameUiVisibility;
     private int modeIndex = 1;
 
 
@@ -74,13 +63,14 @@ internal sealed class CameraApp : IPhoneApp
     private int captureWatchdogTicks;
     private Rect pendingCaptureRect;
     private bool captureHooksAttached;
-    private UiFlags hiddenHudGroups;
 
-    public CameraApp(PhotoCaptureService capture, PhotoLibrary library, Configuration configuration)
+    public CameraApp(PhotoCaptureService capture, PhotoLibrary library, Configuration configuration,
+        GameUiVisibility gameUiVisibility)
     {
         this.capture = capture;
         this.library = library;
         this.configuration = configuration;
+        this.gameUiVisibility = gameUiVisibility;
     }
 
     public void OnOpened()
@@ -121,8 +111,10 @@ internal sealed class CameraApp : IPhoneApp
         var captureRect = CaptureRect(viewfinder);
 
         var barAction = landscape
-            ? CameraChrome.SideBar(screen, SideBarWidth, configuration.CameraFlash, configuration.CameraLandscape, scale, rounding)
-            : CameraChrome.TopBar(screen, TopBarHeight, configuration.CameraFlash, configuration.CameraLandscape, scale, rounding);
+            ? CameraChrome.SideBar(screen, SideBarWidth, configuration.CameraFlash, configuration.CameraHideUi,
+                configuration.CameraLandscape, scale, rounding)
+            : CameraChrome.TopBar(screen, TopBarHeight, configuration.CameraFlash, configuration.CameraHideUi,
+                configuration.CameraLandscape, scale, rounding);
         var consumed = barAction != CameraBarAction.None;
         ApplyBarAction(barAction);
 
@@ -136,21 +128,22 @@ internal sealed class CameraApp : IPhoneApp
 
     private void ApplyBarAction(CameraBarAction action)
     {
-        if (action == CameraBarAction.ToggleFlash)
+        switch (action)
         {
-            configuration.CameraFlash = !configuration.CameraFlash;
-            configuration.Save();
-            return;
+            case CameraBarAction.ToggleFlash:
+                configuration.CameraFlash = !configuration.CameraFlash;
+                configuration.Save();
+                break;
+            case CameraBarAction.ToggleHideUi:
+                configuration.CameraHideUi = !configuration.CameraHideUi;
+                configuration.Save();
+                break;
+            case CameraBarAction.ToggleLandscape:
+                configuration.CameraLandscape = !configuration.CameraLandscape;
+                configuration.Save();
+                SyncLandscape();
+                break;
         }
-
-        if (action != CameraBarAction.ToggleLandscape)
-        {
-            return;
-        }
-
-        configuration.CameraLandscape = !configuration.CameraLandscape;
-        configuration.Save();
-        SyncLandscape();
     }
 
     private void AdvanceTimers(float delta)
@@ -248,71 +241,6 @@ internal sealed class CameraApp : IPhoneApp
         return consumed;
     }
 
-    private static void StripNamePlates(INamePlateUpdateContext context, IReadOnlyList<INamePlateUpdateHandler> handlers)
-    {
-        for (var index = 0; index < handlers.Count; index++)
-        {
-            NamePlateStripper.Strip(handlers[index]);
-        }
-    }
-
-    private unsafe void HideHudGroups()
-    {
-        hiddenHudGroups = UiFlags.None;
-        var uiModule = UIModule.Instance();
-        var unitManager = RaptureAtkUnitManager.Instance();
-        if (uiModule == null || unitManager == null)
-        {
-            return;
-        }
-
-        for (var index = 0; index < HudGroups.Length; index++)
-        {
-            var group = HudGroups[index];
-            if (!unitManager->IsUiFlagsSet(group))
-            {
-                continue;
-            }
-
-            uiModule->ToggleUi(group, false, true);
-            hiddenHudGroups |= group;
-        }
-    }
-
-    private unsafe void RestoreHudGroups()
-    {
-        if (hiddenHudGroups == UiFlags.None)
-        {
-            return;
-        }
-
-        var uiModule = UIModule.Instance();
-        if (uiModule != null)
-        {
-            for (var index = 0; index < HudGroups.Length; index++)
-            {
-                var group = HudGroups[index];
-                if ((hiddenHudGroups & group) != 0)
-                {
-                    uiModule->ToggleUi(group, true, true);
-                }
-            }
-        }
-
-        hiddenHudGroups = UiFlags.None;
-    }
-
-    private static unsafe void SetNamePlatesVisible(bool visible)
-    {
-        var addon = (AtkUnitBase*)Plugin.GameGui.GetAddonByName("NamePlate").Address;
-        if (addon == null || addon->RootNode == null)
-        {
-            return;
-        }
-
-        addon->RootNode->ToggleVisibility(visible);
-    }
-
     private void Shoot(Rect captureRect)
     {
         if (captureCountdown > 0)
@@ -328,7 +256,6 @@ internal sealed class CameraApp : IPhoneApp
 
         pendingCaptureRect = captureRect;
         AttachCaptureHooks();
-        Plugin.NamePlateGui.RequestRedraw();
         captureCountdown = CaptureDelayFrames;
     }
 
@@ -361,11 +288,12 @@ internal sealed class CameraApp : IPhoneApp
             return;
         }
 
-        Plugin.NamePlateGui.OnNamePlateUpdate += StripNamePlates;
         Plugin.Framework.Update += ReleaseStalledCapture;
         captureHooksAttached = true;
-        SetNamePlatesVisible(false);
-        HideHudGroups();
+        if (configuration.CameraHideUi)
+        {
+            gameUiVisibility.Hide();
+        }
     }
 
     private void ReleaseStalledCapture(IFramework framework)
@@ -387,12 +315,9 @@ internal sealed class CameraApp : IPhoneApp
             return;
         }
 
-        Plugin.NamePlateGui.OnNamePlateUpdate -= StripNamePlates;
         Plugin.Framework.Update -= ReleaseStalledCapture;
         captureHooksAttached = false;
-        RestoreHudGroups();
-        SetNamePlatesVisible(true);
-        Plugin.NamePlateGui.RequestRedraw();
+        gameUiVisibility.Restore();
     }
 
     private void HandleFocusTap(Rect viewfinder, bool consumed)
