@@ -79,9 +79,9 @@
       },
       "SharpCompress": {
         "type": "Direct",
-        "requested": "[0.48.1, )",
-        "resolved": "0.48.1",
-        "contentHash": "SqGaVniGG943Gph/gHhUQUiZPyC7y0tXZyMf0/B2oGsMav9dqs7JJOuUA+xOkwKYaWM2TM7aZQjNK91f4bX71A=="
+        "requested": "[0.50.4, )",
+        "resolved": "0.50.4",
+        "contentHash": "/hxjUR7DEX6mky8/LQXyrnrKioOL6D6veAID1EZpro+q4s02x5dHEYBV3qjEN6lDYYilDoQQ76BcmQj+lRx51w=="
       },
       "SharpDX.D3DCompiler": {
         "type": "Direct",
