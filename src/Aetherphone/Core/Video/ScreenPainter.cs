@@ -30,6 +30,16 @@ internal sealed unsafe class ScreenPainter : IDisposable
 	private readonly DepthStencilState _depthState;
 	private readonly Buffer _cbuf;
 
+	private readonly VertexShader _blitVs;
+	private readonly PixelShader _blitPs;
+	private readonly BlendState _blitBlend;
+
+	private Texture2D? _intermediateTarget;
+	private RenderTargetView? _intermediateRtv;
+	private ShaderResourceView? _intermediateSrv;
+	private uint _intermediateWidth;
+	private uint _intermediateHeight;
+
 	private Texture2D? _texture;
 	private ShaderResourceView? _srv;
 
@@ -111,6 +121,50 @@ internal sealed unsafe class ScreenPainter : IDisposable
 			_vs = new VertexShader(DxHandler.Device, vsb);
 			_ps = new PixelShader(DxHandler.Device, psb);
 		}
+
+		const string blitHlsl = @"
+			struct BOut { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
+
+			BOut BlitVS(uint id : SV_VertexID)
+			{
+				BOut o;
+				o.uv = float2((id << 1) & 2, id & 2);
+				o.pos = float4(o.uv * float2(2, -2) + float2(-1, 1), 0, 1);
+				return o;
+			}
+
+			Texture2D blitTex : register(t0);
+			SamplerState blitSmp : register(s0);
+
+			float4 BlitPS(BOut i) : SV_TARGET
+			{
+				return blitTex.Sample(blitSmp, i.uv);
+			}";
+
+		using (var bvsb = ShaderBytecode.Compile(blitHlsl, "BlitVS", "vs_4_0"))
+		using (var bpsb = ShaderBytecode.Compile(blitHlsl, "BlitPS", "ps_4_0"))
+		{
+			_blitVs = new VertexShader(DxHandler.Device, bvsb);
+			_blitPs = new PixelShader(DxHandler.Device, bpsb);
+		}
+
+		_blitBlend = new BlendState(DxHandler.Device, new BlendStateDescription
+		{
+			RenderTarget =
+			{
+				[0] = new RenderTargetBlendDescription
+				{
+					IsBlendEnabled = true,
+					SourceBlend = BlendOption.One,
+					DestinationBlend = BlendOption.InverseSourceAlpha,
+					BlendOperation = BlendOperation.Add,
+					SourceAlphaBlend = BlendOption.One,
+					DestinationAlphaBlend = BlendOption.InverseSourceAlpha,
+					AlphaBlendOperation = BlendOperation.Add,
+					RenderTargetWriteMask = ColorWriteMaskFlags.All,
+				}
+			}
+		});
 
 		_sampler = new SamplerState(DxHandler.Device, new SamplerStateDescription
 		{
@@ -202,9 +256,23 @@ internal sealed unsafe class ScreenPainter : IDisposable
 			return;
 		}
 
-		RenderTargetView rtv = _cachedRtv;
-		DepthStencilView dsv = _cachedDsv;
+		var rtmInstance = FFXIVClientStructs.FFXIV.Client.Graphics.Render.RenderTargetManager.Instance();
+		var depthWidth = rtmInstance != null ? rtmInstance->Resolution_Width : targetWidth;
+		var depthHeight = rtmInstance != null ? rtmInstance->Resolution_Height : targetHeight;
+		var resolutionMismatch = depthWidth != targetWidth || depthHeight != targetHeight;
 
+		if (resolutionMismatch)
+		{
+			DrawWithIntermediate(worldViewProj.Value, depthWidth, depthHeight, targetWidth, targetHeight);
+		}
+		else
+		{
+			DrawDirect(worldViewProj.Value, _cachedRtv, _cachedDsv, targetWidth, targetHeight);
+		}
+	}
+
+	private void DrawDirect(NumericsMatrix4x4 worldViewProj, RenderTargetView rtv, DepthStencilView dsv, uint width, uint height)
+	{
 		DeviceContext ctx = DxHandler.Device!.ImmediateContext;
 
 		RenderTargetView[] prevRtvs = ctx.OutputMerger.GetRenderTargets(1, out DepthStencilView? prevDsv);
@@ -218,13 +286,13 @@ internal sealed unsafe class ScreenPainter : IDisposable
 
 		try
 		{
-			var p = new ScreenParams { WorldViewProj = worldViewProj.Value, Curvature = Curvature };
+			var p = new ScreenParams { WorldViewProj = worldViewProj, Curvature = Curvature };
 			p.UiRectCount = CollectUiRects(ref p);
 			ScreenParams* pp = &p;
 			ctx.UpdateSubresource(new SharpDX.DataBox((nint)pp), _cbuf);
 
 			ctx.OutputMerger.SetRenderTargets(dsv, rtv);
-			ctx.Rasterizer.SetViewport(0, 0, targetWidth, targetHeight, 0, 1);
+			ctx.Rasterizer.SetViewport(0, 0, width, height, 0, 1);
 			ctx.InputAssembler.InputLayout = null;
 			ctx.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
 			ctx.Rasterizer.State = _rasterState;
@@ -258,7 +326,122 @@ internal sealed unsafe class ScreenPainter : IDisposable
 		}
 	}
 
-	private static int CollectUiRects(ref ScreenParams p)
+	private void DrawWithIntermediate(NumericsMatrix4x4 worldViewProj, uint depthWidth, uint depthHeight, uint outputWidth, uint outputHeight)
+	{
+		EnsureIntermediateTarget(depthWidth, depthHeight);
+		if (_intermediateRtv == null || _intermediateSrv == null)
+		{
+			return;
+		}
+
+		DeviceContext ctx = DxHandler.Device!.ImmediateContext;
+
+		RenderTargetView[] prevRtvs = ctx.OutputMerger.GetRenderTargets(1, out DepthStencilView? prevDsv);
+		VertexShader? prevVs = ctx.VertexShader.Get();
+		PixelShader? prevPs = ctx.PixelShader.Get();
+		InputLayout? prevIl = ctx.InputAssembler.InputLayout;
+		PrimitiveTopology prevTopo = ctx.InputAssembler.PrimitiveTopology;
+		BlendState? prevBlend = ctx.OutputMerger.BlendState;
+		DepthStencilState? prevDss = ctx.OutputMerger.DepthStencilState;
+		RasterizerState? prevRs = ctx.Rasterizer.State;
+
+		try
+		{
+			ctx.ClearRenderTargetView(_intermediateRtv, new SharpDX.Mathematics.Interop.RawColor4(0, 0, 0, 0));
+
+			var uiRectScale = (float)depthWidth / outputWidth;
+			var p = new ScreenParams { WorldViewProj = worldViewProj, Curvature = Curvature };
+			p.UiRectCount = CollectUiRects(ref p, uiRectScale);
+			ScreenParams* pp = &p;
+			ctx.UpdateSubresource(new SharpDX.DataBox((nint)pp), _cbuf);
+
+			ctx.OutputMerger.SetRenderTargets(_cachedDsv, _intermediateRtv);
+			ctx.Rasterizer.SetViewport(0, 0, depthWidth, depthHeight, 0, 1);
+			ctx.InputAssembler.InputLayout = null;
+			ctx.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
+			ctx.Rasterizer.State = _rasterState;
+			ctx.OutputMerger.BlendState = null;
+			ctx.OutputMerger.DepthStencilState = _depthState;
+			ctx.VertexShader.Set(_vs);
+			ctx.VertexShader.SetConstantBuffer(0, _cbuf);
+			ctx.PixelShader.Set(_ps);
+			ctx.PixelShader.SetConstantBuffer(0, _cbuf);
+			ctx.PixelShader.SetShaderResource(0, _srv);
+			ctx.PixelShader.SetSampler(0, _sampler);
+			ctx.Draw(VertexCount, 0);
+			ctx.PixelShader.SetShaderResource(0, null);
+
+			ctx.OutputMerger.SetRenderTargets(null, _cachedRtv);
+			ctx.Rasterizer.SetViewport(0, 0, outputWidth, outputHeight, 0, 1);
+			ctx.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
+			ctx.OutputMerger.BlendState = _blitBlend;
+			ctx.OutputMerger.DepthStencilState = null;
+			ctx.VertexShader.Set(_blitVs);
+			ctx.VertexShader.SetConstantBuffer(0, null);
+			ctx.PixelShader.Set(_blitPs);
+			ctx.PixelShader.SetConstantBuffer(0, null);
+			ctx.PixelShader.SetShaderResource(0, _intermediateSrv);
+			ctx.PixelShader.SetSampler(0, _sampler);
+			ctx.Draw(3, 0);
+			ctx.PixelShader.SetShaderResource(0, null);
+		}
+		finally
+		{
+			ctx.OutputMerger.SetRenderTargets(prevDsv, prevRtvs);
+			foreach (RenderTargetView? prevRtv in prevRtvs)
+			{
+				prevRtv?.Dispose();
+			}
+			prevDsv?.Dispose();
+
+			ctx.VertexShader.Set(prevVs); prevVs?.Dispose();
+			ctx.PixelShader.Set(prevPs); prevPs?.Dispose();
+			ctx.InputAssembler.InputLayout = prevIl; prevIl?.Dispose();
+			ctx.InputAssembler.PrimitiveTopology = prevTopo;
+			ctx.OutputMerger.BlendState = prevBlend; prevBlend?.Dispose();
+			ctx.OutputMerger.DepthStencilState = prevDss; prevDss?.Dispose();
+			ctx.Rasterizer.State = prevRs; prevRs?.Dispose();
+		}
+	}
+
+	private void EnsureIntermediateTarget(uint width, uint height)
+	{
+		if (_intermediateTarget != null && _intermediateWidth == width && _intermediateHeight == height)
+		{
+			return;
+		}
+
+		_intermediateSrv?.Dispose();
+		_intermediateRtv?.Dispose();
+		_intermediateTarget?.Dispose();
+
+		_intermediateTarget = new Texture2D(DxHandler.Device, new Texture2DDescription
+		{
+			Width = (int)width,
+			Height = (int)height,
+			MipLevels = 1,
+			ArraySize = 1,
+			Format = Format.R8G8B8A8_UNorm,
+			BindFlags = BindFlags.ShaderResource | BindFlags.RenderTarget,
+			CpuAccessFlags = CpuAccessFlags.None,
+			SampleDescription = new SampleDescription(1, 0),
+			Usage = ResourceUsage.Default,
+			OptionFlags = ResourceOptionFlags.None,
+		});
+
+		_intermediateRtv = new RenderTargetView(DxHandler.Device, _intermediateTarget);
+		_intermediateSrv = new ShaderResourceView(DxHandler.Device, _intermediateTarget, new ShaderResourceViewDescription
+		{
+			Format = Format.R8G8B8A8_UNorm,
+			Dimension = ShaderResourceViewDimension.Texture2D,
+			Texture2D = { MipLevels = 1 }
+		});
+
+		_intermediateWidth = width;
+		_intermediateHeight = height;
+	}
+
+	private static int CollectUiRects(ref ScreenParams p, float coordinateScale = 1.0f)
 	{
 		GfxGui.AtkStage* stage = GfxGui.AtkStage.Instance();
 		if (stage == null || stage->RaptureAtkUnitManager == null)
@@ -292,10 +475,10 @@ internal sealed unsafe class ScreenPainter : IDisposable
 			}
 
 			int baseIndex = count * 4;
-			p.UiRects[baseIndex + 0] = x;
-			p.UiRects[baseIndex + 1] = y;
-			p.UiRects[baseIndex + 2] = width;
-			p.UiRects[baseIndex + 3] = height;
+			p.UiRects[baseIndex + 0] = x * coordinateScale;
+			p.UiRects[baseIndex + 1] = y * coordinateScale;
+			p.UiRects[baseIndex + 2] = width * coordinateScale;
+			p.UiRects[baseIndex + 3] = height * coordinateScale;
 			count++;
 		}
 
@@ -327,7 +510,7 @@ internal sealed unsafe class ScreenPainter : IDisposable
 		{
 			return false;
 		}
-		if (rtm->Resolution_Width != device->SwapChain->Width || rtm->Resolution_Height != device->SwapChain->Height)
+		if (rtm->Resolution_Width == 0 || rtm->Resolution_Height == 0)
 		{
 			return false;
 		}
@@ -447,13 +630,19 @@ internal sealed unsafe class ScreenPainter : IDisposable
 	{
 		DxHandler.OnPresent -= DrawIfReady;
 
+		_intermediateSrv?.Dispose();
+		_intermediateRtv?.Dispose();
+		_intermediateTarget?.Dispose();
 		_srv?.Dispose();
 		_cachedRtv?.Dispose();
 		_cachedDsv?.Dispose();
 		_cbuf.Dispose();
 		_depthState.Dispose();
+		_blitBlend.Dispose();
 		_rasterState.Dispose();
 		_sampler.Dispose();
+		_blitPs.Dispose();
+		_blitVs.Dispose();
 		_ps.Dispose();
 		_vs.Dispose();
 	}
