@@ -286,6 +286,7 @@ internal static class L
         public static readonly LocString AppStore = new("app.appstore", "App Store");
         public static readonly LocString AetherStream = new("app.aetherstream", "MogCast");
         public static readonly LocString Shortcuts = new("app.shortcuts", "Shortcuts");
+        public static readonly LocString VenueSync = new("app.venueSync", "Venue Manager");
     }
 
     internal static class Shortcuts
@@ -877,6 +878,103 @@ internal static class L
         public static readonly LocString HostedBy = new("venues.hostedBy", "Hosted by {0}");
         public static readonly LocString EmptyHint = new("venues.emptyHint", "Try a different filter or search");
         public static readonly LocString Retry = new("venues.retry", "Retry");
+    }
+
+    internal static class VenueSync
+    {
+        public static readonly LocString NoVenueSelected = new("venueSync.noVenueSelected", "No venue selected");
+        public static readonly LocString OnShift = new("venueSync.onShift", "ON SHIFT");
+        public static readonly LocString OffShift = new("venueSync.offShift", "OFF SHIFT");
+        public static readonly LocString ClockIn = new("venueSync.clockIn", "Clock In");
+        public static readonly LocString ClockOut = new("venueSync.clockOut", "Clock Out");
+        public static readonly LocString Claim = new("venueSync.claim", "Claim");
+        public static readonly LocString LogASale = new("venueSync.logASale", "Log a Sale");
+        public static readonly LocString LogSale = new("venueSync.logSale", "Log Sale");
+        public static readonly LocString RecordATransaction = new("venueSync.recordATransaction", "Record a transaction");
+        public static readonly LocString UpcomingShifts = new("venueSync.upcomingShifts", "Upcoming Shifts");
+        public static readonly LocString NoneOpenRightNow = new("venueSync.noneOpenRightNow", "None open right now");
+        public static readonly LocString TapToViewAndClaim = new("venueSync.tapToViewAndClaim", "Tap to view and claim");
+        public static readonly LocString ThisSession = new("venueSync.thisSession", "This Session");
+        public static readonly LocString NoSalesYet = new("venueSync.noSalesYet", "No sales yet");
+        public static readonly LocString NoSalesLoggedThisSession =
+            new("venueSync.noSalesLoggedThisSession", "No sales logged this session");
+        public static readonly LocPlural SaleCount = new("venueSync.saleCount", "{0} sale", "{0} sales");
+        public static readonly LocString Shifts = new("venueSync.shifts", "Shifts");
+        public static readonly LocString ErrorTapToRetry = new("venueSync.errorTapToRetry", "{0}, tap to retry");
+        public static readonly LocString ErrorTapLogSaleToRetry =
+            new("venueSync.errorTapLogSaleToRetry", "{0}, tap Log Sale to retry");
+        public static readonly LocString NoShiftData = new("venueSync.noShiftData", "No shift data");
+        public static readonly LocString NoShiftsTitle = new("venueSync.noShiftsTitle", "No Shifts");
+        public static readonly LocString NoShiftsSubtitle =
+            new("venueSync.noShiftsSubtitle", "Nothing scheduled right now.");
+        public static readonly LocString OpenToClaim = new("venueSync.openToClaim", "OPEN SHIFTS");
+        public static readonly LocString Upcoming = new("venueSync.upcoming", "UPCOMING");
+        public static readonly LocString DayToday = new("venueSync.dayToday", "Today");
+        public static readonly LocString DayTomorrow = new("venueSync.dayTomorrow", "Tomorrow");
+        public static readonly LocString FailedToClockIn = new("venueSync.failedToClockIn", "Failed to clock in.");
+        public static readonly LocString FailedToClockOut = new("venueSync.failedToClockOut", "Failed to clock out.");
+        public static readonly LocString ClockedOutHoursWorked =
+            new("venueSync.clockedOutHoursWorked", "Clocked out. {0}h worked.");
+        public static readonly LocString FailedToClaimShift = new("venueSync.failedToClaimShift", "Failed to claim shift.");
+        public static readonly LocString SyncSettings = new("venueSync.syncSettings", "Sync Settings");
+        public static readonly LocString ApiKeyHeader = new("venueSync.apiKeyHeader", "API KEY");
+        public static readonly LocString ApiKeyHint = new("venueSync.apiKeyHint", "API key (vm_...)");
+        public static readonly LocString Hide = new("venueSync.hide", "Hide");
+        public static readonly LocString Show = new("venueSync.show", "Show");
+        public static readonly LocString ApiKeySourceHint = new("venueSync.apiKeySourceHint",
+            "Get your API key on the website under Venue Settings, Integrations, Dalamud Plugin, Manage API Keys.");
+        public static readonly LocString OpenWebsite = new("venueSync.openWebsite", "Open Website");
+        public static readonly LocString SelectVenue = new("venueSync.selectVenue", "Select venue");
+        public static readonly LocString Venue = new("venueSync.venue", "Venue");
+        public static readonly LocString VenueHeader = new("venueSync.venueHeader", "VENUE");
+        public static readonly LocString YourPlotHeader = new("venueSync.yourPlotHeader", "YOUR PLOT");
+        public static readonly LocString NoCharacterDetected = new("venueSync.noCharacterDetected",
+            "No character detected. Enter the game world first.");
+        public static readonly LocString CharacterHeader = new("venueSync.characterHeader", "CHARACTER");
+        public static readonly LocString Character = new("venueSync.character", "Character");
+        public static readonly LocString LinkThisCharacter =
+            new("venueSync.linkThisCharacter", "Link this character");
+        public static readonly LocString FailedToLoadVenues =
+            new("venueSync.failedToLoadVenues", "Failed to load venues. Check your API key.");
+        public static readonly LocString HouseLabel = new("venueSync.houseLabel", "{0}, Ward {1}, Plot {2}");
+        public static readonly LocString HouseLabelWithRoom =
+            new("venueSync.houseLabelWithRoom", "{0}, Ward {1}, Plot {2}, Room {3}");
+        public static readonly LocString ApartmentLabel =
+            new("venueSync.apartmentLabel", "{0}, Ward {1}, Apartment Room {2}");
+        public static readonly LocString CurrentlyIn = new("venueSync.currentlyIn", "You're currently in: {0}");
+        public static readonly LocString NotInsideHouse =
+            new("venueSync.notInsideHouse", "Not within any housing plot right now");
+        public static readonly LocString SetAsVenuePlot = new("venueSync.setAsVenuePlot", "Set as {0}'s plot");
+        public static readonly LocString LinkedPlotsHeader = new("venueSync.linkedPlotsHeader", "LINKED PLOTS");
+        public static readonly LocString NoLinkedPlots = new("venueSync.noLinkedPlots", "No plots linked yet");
+        public static readonly LocString Unlink = new("venueSync.unlink", "Unlink");
+        public static readonly LocString PatronTrackingHeader =
+            new("venueSync.patronTrackingHeader", "PATRON TRACKING");
+        public static readonly LocString TrackPatrons = new("venueSync.trackPatrons", "Track patrons");
+        public static readonly LocString TrackPatronsHint = new("venueSync.trackPatronsHint",
+            "Logs staff and patron visits at your linked plots to the website.");
+        public static readonly LocString OnlyDuringEvents = new("venueSync.onlyDuringEvents", "Only during events");
+        public static readonly LocString Linking = new("venueSync.linking", "Linking…");
+        public static readonly LocString Linked = new("venueSync.linked", "Linked ✓");
+        public static readonly LocString FailedToLink = new("venueSync.failedToLink", "Failed to link, tap to retry");
+        public static readonly LocString SelectAService = new("venueSync.selectAService", "Select a service");
+        public static readonly LocString Service = new("venueSync.service", "Service");
+        public static readonly LocString Type = new("venueSync.type", "Type");
+        public static readonly LocString TransactionTypeSale = new("venueSync.transactionTypeSale", "Sale");
+        public static readonly LocString TransactionTypeTip = new("venueSync.transactionTypeTip", "Tip");
+        public static readonly LocString TransactionTypeCoverCharge =
+            new("venueSync.transactionTypeCoverCharge", "Cover charge");
+        public static readonly LocString TransactionTypeOther = new("venueSync.transactionTypeOther", "Other");
+        public static readonly LocString CustomerOptional = new("venueSync.customerOptional", "Customer (optional)");
+        public static readonly LocString UseCurrentTarget = new("venueSync.useCurrentTarget", "Use current target");
+        public static readonly LocString AmountGil = new("venueSync.amountGil", "Amount (gil)");
+        public static readonly LocString EnterAValidAmount = new("venueSync.enterAValidAmount", "Enter a valid amount");
+        public static readonly LocString FailedToLogSale = new("venueSync.failedToLogSale", "Failed to log sale");
+        public static readonly LocString OpenShift = new("venueSync.openShift", "Open Shift");
+        public static readonly LocString ActiveShift = new("venueSync.activeShift", "Active Shift");
+        public static readonly LocString CompletedShift = new("venueSync.completedShift", "Completed Shift");
+        public static readonly LocString UpcomingShift = new("venueSync.upcomingShift", "Upcoming Shift");
+        public static readonly LocString UnknownTime = new("venueSync.unknownTime", "Unknown time");
     }
 
     internal static class Maps

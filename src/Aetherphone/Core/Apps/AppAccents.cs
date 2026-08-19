@@ -19,6 +19,7 @@ internal static class AppAccents
         ["collections"] = AccentRing.Indigo,
         ["skywatcher"] = AccentRing.Cyan,
         ["venues"] = AccentRing.Orchid,
+        ["venue-sync"] = AccentRing.Azure,
         ["maps"] = AccentRing.Teal,
         ["news"] = AccentRing.Slate,
         ["market"] = AccentRing.Gold,

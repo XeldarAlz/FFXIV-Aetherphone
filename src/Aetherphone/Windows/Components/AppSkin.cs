@@ -94,6 +94,9 @@ internal sealed class AppSkin
     public static bool PillButton(Rect rect, string label, bool filled, PhoneTheme theme) =>
         PillButtonCore(rect, label, filled, theme.Accent, theme.SurfaceMuted, theme.TextStrong, theme);
 
+    public static bool PillButton(Rect rect, string label, bool filled, Vector4 accent, PhoneTheme theme) =>
+        PillButtonCore(rect, label, filled, accent, theme.SurfaceMuted, theme.TextStrong, theme);
+
     public static bool PillButton(Rect rect, string label, bool filled, bool enabled, PhoneTheme theme)
     {
         if (enabled)

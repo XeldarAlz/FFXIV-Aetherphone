@@ -10,3 +10,5 @@ TestResults/
 # Node tooling (tools/icon-generator)
 node_modules/
 /docs/plans
+
+.superpowers/
