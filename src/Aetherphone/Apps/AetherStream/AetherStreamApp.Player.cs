@@ -4,6 +4,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Platform;
+using Aetherphone.Core.Shell;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Video;
 using Aetherphone.Windows.Components;
@@ -27,6 +28,8 @@ internal sealed partial class AetherStreamApp
     private Spring heroActionsFade;
 
     private VideoQueueEntry? CurrentEntry => watchAlong.IsViewing ? watchAlong.ViewingEntry : queue.Current;
+
+    private readonly ControlCenter controlCenter;
 
     private void DrawNowPlaying(Rect body, float scale)
     {
@@ -190,6 +193,7 @@ internal sealed partial class AetherStreamApp
         upNextSheet.Close();
         partySheet.Close();
         screenSheet.Close();
+        controlCenter.Dismiss();
         AppLandscape.Request(Id);
     }
 
