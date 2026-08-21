@@ -28,10 +28,11 @@ internal readonly struct BakedImage
 internal static class ImageProcessor
 {
     private const int JpegQuality = 88;
+    private const int JpegQualityFallback = 91;
     private const int EncodeAttemptLimit = 3;
     private const float LumaDeltaLimit = 80f;
     private const float ChromaDeltaLimit = 64f;
-    private const int CorruptSampleLimit = 3;
+    private const int CorruptSampleLimit = 1;
 
     public const long MaxDecodePixels = 4096L * 4096L;
     public const long MaxLocalDecodePixels = 8192L * 8192L;
@@ -159,8 +160,11 @@ internal static class ImageProcessor
                 AepLog.Warning($"[Media] jpeg encode attempt {attempt} of {EncodeAttemptLimit} " +
                     "produced corrupt samples, re-encoding");
             }
+            AepLog.Info("[Media] all encode attempts produced corruption, falling back to quality 91.");
+            using var fallbackStream = new MemoryStream();
+            image.SaveAsJpeg(fallbackStream, new JpegEncoder { Quality = JpegQualityFallback });
 
-            return encoded;
+            return fallbackStream.ToArray();
         }
         finally
         {

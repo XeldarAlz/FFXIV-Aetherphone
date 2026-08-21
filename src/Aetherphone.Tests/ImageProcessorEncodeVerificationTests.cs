@@ -65,11 +65,11 @@ public sealed class ImageProcessorEncodeVerificationTests
     }
 
     [Fact]
-    public void IgnoresFewerThanThreeCorruptSamples()
+    public void FlagsASingleCorruptCellInDarkRegion()
     {
         var source = BuildFlat(10, 10, 14);
         var decoded = (byte[])source.Clone();
-        for (var dashIndex = 0; dashIndex < 2; dashIndex++)
+        for (var dashIndex = 0; dashIndex < 4; dashIndex++)
         {
             var pixelIndex = ((16 * Width) + 20 + dashIndex) * 4;
             decoded[pixelIndex] = (byte)Math.Min(255, decoded[pixelIndex] + 128);
@@ -77,7 +77,7 @@ public sealed class ImageProcessorEncodeVerificationTests
             decoded[pixelIndex + 2] = (byte)Math.Min(255, decoded[pixelIndex + 2] + 128);
         }
 
-        Assert.False(ImageProcessor.HasEncodeCorruption(source, decoded, Width, Height));
+        Assert.True(ImageProcessor.HasEncodeCorruption(source, decoded, Width, Height));
     }
 
     [Fact]
