@@ -69,7 +69,7 @@ public sealed class ImageProcessorEncodeVerificationTests
     {
         var source = BuildFlat(10, 10, 14);
         var decoded = (byte[])source.Clone();
-        for (var dashIndex = 0; dashIndex < 4; dashIndex++)
+        for (var dashIndex = 0; dashIndex < 2; dashIndex++)
         {
             var pixelIndex = ((16 * Width) + 20 + dashIndex) * 4;
             decoded[pixelIndex] = (byte)Math.Min(255, decoded[pixelIndex] + 128);
