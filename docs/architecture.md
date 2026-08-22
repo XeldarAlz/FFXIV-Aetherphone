@@ -270,7 +270,7 @@ One line per subfolder of `src/Aetherphone/Core/`. Root-level files not listed h
 | Games | Mini-game statistics store |
 | Health | Wellness tracker models and store |
 | Home | Home layout model: `AppInstaller`, `AppGate`, grid solver, tiles |
-| Housing | Open housing plot listings via PaissaDB: districts, watches, reminders |
+| Housing | Open housing plot listings via PaissaDB and the China region source (house.ffxiv.cyou): districts, watches, reminders |
 | Input | `DragTracker` pointer gesture helper |
 | Inventory | Inventory capture, model, and search |
 | Jobs | Gearset reading, job categories, custom colors |

@@ -97,6 +97,25 @@ internal sealed class HousingWorldCacheEntry
     [JsonPropertyName("dcName")] public string? DataCenterName { get; set; }
 }
 
+internal sealed class ChinaSalesPlot
+{
+    [JsonPropertyName("Server")] public uint Server { get; set; }
+    [JsonPropertyName("Area")] public int Area { get; set; }
+    [JsonPropertyName("Slot")] public int Slot { get; set; }
+    [JsonPropertyName("ID")] public int Id { get; set; }
+    [JsonPropertyName("Price")] public long Price { get; set; }
+    [JsonPropertyName("Size")] public int Size { get; set; }
+    [JsonPropertyName("FirstSeen")] public long FirstSeen { get; set; }
+    [JsonPropertyName("LastSeen")] public long LastSeen { get; set; }
+    [JsonPropertyName("State")] public int State { get; set; }
+    [JsonPropertyName("Participate")] public int Participate { get; set; }
+    [JsonPropertyName("Winner")] public int Winner { get; set; }
+    [JsonPropertyName("EndTime")] public long EndTime { get; set; }
+    [JsonPropertyName("UpdateTime")] public long UpdateTime { get; set; }
+    [JsonPropertyName("PurchaseType")] public int PurchaseType { get; set; }
+    [JsonPropertyName("RegionType")] public int RegionType { get; set; }
+}
+
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(PaissaWorldSummary[]))]
 [JsonSerializable(typeof(PaissaWorldDetail))]
@@ -104,6 +123,7 @@ internal sealed class HousingWorldCacheEntry
 [JsonSerializable(typeof(PaissaProxyInfo))]
 [JsonSerializable(typeof(HousingCacheFile))]
 [JsonSerializable(typeof(HousingWorldCacheFile))]
+[JsonSerializable(typeof(ChinaSalesPlot[]))]
 internal sealed partial class HousingJsonContext : JsonSerializerContext
 {
 }

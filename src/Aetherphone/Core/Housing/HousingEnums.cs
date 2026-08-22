@@ -45,6 +45,7 @@ internal enum HousingProviderKind : byte
 {
     None,
     Service,
+    China,
     Cache,
 }
 
