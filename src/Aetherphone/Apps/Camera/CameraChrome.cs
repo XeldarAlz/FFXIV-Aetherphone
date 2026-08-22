@@ -11,6 +11,7 @@ internal enum CameraBarAction
 {
     None,
     ToggleFlash,
+    ToggleHideUi,
     ToggleLandscape,
 }
 
@@ -19,64 +20,104 @@ internal static class CameraChrome
     public const float ShutterRadius = 34f;
 
     private const float CarouselGap = 26f;
+    private const float ChipHalfExtent = 16f;
+    private const float ChipSpacing = 52f;
+    private const float ChipEdgeInset = 34f;
+    private const float ChipColumnTop = 64f;
+    private const float ChipGlyphExtent = 8.5f;
 
     private static readonly Vector4 SelectedMode = new(0.98f, 0.79f, 0.20f, 1f);
     private static readonly Vector4 ShutterRing = new(0.98f, 0.98f, 0.98f, 1f);
     private static readonly Vector4 BarTint = new(0f, 0f, 0f, 0.42f);
     private static readonly Vector4 TrayTint = new(0f, 0f, 0f, 0.88f);
+    private static readonly Vector4 ChipIconOn = new(0.08f, 0.07f, 0.04f, 1f);
+    private static readonly Vector4 ChipIconOff = new(0.95f, 0.95f, 0.97f, 0.95f);
 
-    public static CameraBarAction TopBar(Rect screen, float topBarHeight, bool flashEnabled, bool landscapeEnabled,
-        float scale, float rounding)
+    public static CameraBarAction TopBar(Rect screen, float topBarHeight, bool flashEnabled, bool hideUiEnabled,
+        bool landscapeEnabled, float scale, float rounding)
     {
         var dl = ImGui.GetWindowDrawList();
         var barMax = new Vector2(screen.Max.X, screen.Min.Y + topBarHeight * scale);
         dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint), rounding, ImDrawFlags.RoundCornersTop);
-        var rowCenterY = barMax.Y + Metrics.Space.Lg * 3f * scale;
-        if (FlashChip(new Vector2(screen.Min.X + 34f * scale, rowCenterY), flashEnabled, scale))
+        var rowCenterY = barMax.Y - Metrics.Space.Xs * scale - ChipHalfExtent * scale;
+        if (FlashChip(new Vector2(screen.Min.X + ChipEdgeInset * scale, rowCenterY), flashEnabled, scale))
         {
             return CameraBarAction.ToggleFlash;
         }
 
-        return RotateChip(new Vector2(screen.Max.X - 34f * scale, rowCenterY), landscapeEnabled, scale)
+        if (HideUiChip(new Vector2(screen.Center.X, rowCenterY), hideUiEnabled, scale))
+        {
+            return CameraBarAction.ToggleHideUi;
+        }
+
+        return RotateChip(new Vector2(screen.Max.X - ChipEdgeInset * scale, rowCenterY), landscapeEnabled, scale)
             ? CameraBarAction.ToggleLandscape
             : CameraBarAction.None;
     }
 
-    public static CameraBarAction SideBar(Rect screen, float barWidth, bool flashEnabled, bool landscapeEnabled,
-        float scale, float rounding)
+    public static CameraBarAction SideBar(Rect screen, float barWidth, bool flashEnabled, bool hideUiEnabled,
+        bool landscapeEnabled, float scale, float rounding)
     {
         var dl = ImGui.GetWindowDrawList();
         var barMax = new Vector2(screen.Min.X + barWidth * scale, screen.Max.Y);
         dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint), rounding, ImDrawFlags.RoundCornersLeft);
         var columnCenterX = screen.Min.X + barWidth * 0.5f * scale;
-        var flashCenterY = screen.Min.Y + 64f * scale;
+        var flashCenterY = screen.Min.Y + ChipColumnTop * scale;
         if (FlashChip(new Vector2(columnCenterX, flashCenterY), flashEnabled, scale))
         {
             return CameraBarAction.ToggleFlash;
         }
 
-        return RotateChip(new Vector2(columnCenterX, flashCenterY + 52f * scale), landscapeEnabled, scale)
+        if (HideUiChip(new Vector2(columnCenterX, flashCenterY + ChipSpacing * scale), hideUiEnabled, scale))
+        {
+            return CameraBarAction.ToggleHideUi;
+        }
+
+        return RotateChip(new Vector2(columnCenterX, flashCenterY + ChipSpacing * 2f * scale), landscapeEnabled, scale)
             ? CameraBarAction.ToggleLandscape
             : CameraBarAction.None;
     }
 
     private static bool FlashChip(Vector2 center, bool flashEnabled, float scale)
     {
-        var dl = ImGui.GetWindowDrawList();
-        var half = new Vector2(16f * scale, 16f * scale);
-        var min = center - half;
-        var max = center + half;
-        UiAnchors.Report("camera.flash", new Rect(min, max));
-        var hovered = UiInteract.Hover(min, max);
-        var rounding = Metrics.Radius.Field * scale;
-        var fill = flashEnabled
+        UiAnchors.Report("camera.flash", ChipRect(center, scale));
+        var clicked = ChipSurface(center, flashEnabled, scale);
+        DrawBolt(ImGui.GetWindowDrawList(), center, ChipGlyphExtent * scale, ChipIconColor(flashEnabled));
+        return clicked;
+    }
+
+    private static bool HideUiChip(Vector2 center, bool hideUiEnabled, float scale)
+    {
+        var clicked = ChipSurface(center, hideUiEnabled, scale);
+        DrawHudGlyph(ImGui.GetWindowDrawList(), center, ChipGlyphExtent * scale, ChipIconColor(hideUiEnabled),
+            !hideUiEnabled);
+        return clicked;
+    }
+
+    private static bool RotateChip(Vector2 center, bool landscapeEnabled, float scale)
+    {
+        var clicked = ChipSurface(center, landscapeEnabled, scale);
+        DrawRotateGlyph(ImGui.GetWindowDrawList(), center, scale, ChipIconColor(landscapeEnabled), landscapeEnabled);
+        return clicked;
+    }
+
+    private static Rect ChipRect(Vector2 center, float scale)
+    {
+        var half = new Vector2(ChipHalfExtent * scale, ChipHalfExtent * scale);
+        return new Rect(center - half, center + half);
+    }
+
+    private static uint ChipIconColor(bool active) => ImGui.GetColorU32(active ? ChipIconOn : ChipIconOff);
+
+    private static bool ChipSurface(Vector2 center, bool active, float scale)
+    {
+        var bounds = ChipRect(center, scale);
+        var hovered = UiInteract.Hover(bounds.Min, bounds.Max);
+        var fill = active
             ? SelectedMode
             : new Vector4(0f, 0f, 0f, hovered ? 0.44f : 0.30f);
-        dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
-        var boltColor = flashEnabled
-            ? new Vector4(0.08f, 0.07f, 0.04f, 1f)
-            : new Vector4(0.95f, 0.95f, 0.97f, 0.95f);
-        DrawBolt(dl, center, 8.5f * scale, ImGui.GetColorU32(boltColor));
+        ImGui.GetWindowDrawList()
+            .AddRectFilled(bounds.Min, bounds.Max, ImGui.GetColorU32(fill), Metrics.Radius.Field * scale);
         if (!hovered)
         {
             return false;
@@ -86,29 +127,22 @@ internal static class CameraChrome
         return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
-    private static bool RotateChip(Vector2 center, bool landscapeEnabled, float scale)
+    private static void DrawHudGlyph(ImDrawListPtr drawList, Vector2 center, float extent, uint color, bool uiPresent)
     {
-        var dl = ImGui.GetWindowDrawList();
-        var half = new Vector2(16f * scale, 16f * scale);
-        var min = center - half;
-        var max = center + half;
-        var hovered = UiInteract.Hover(min, max);
-        var rounding = Metrics.Radius.Field * scale;
-        var fill = landscapeEnabled
-            ? SelectedMode
-            : new Vector4(0f, 0f, 0f, hovered ? 0.44f : 0.30f);
-        dl.AddRectFilled(min, max, ImGui.GetColorU32(fill), rounding);
-        var iconTint = landscapeEnabled
-            ? new Vector4(0.08f, 0.07f, 0.04f, 1f)
-            : new Vector4(0.95f, 0.95f, 0.97f, 0.95f);
-        DrawRotateGlyph(dl, center, scale, ImGui.GetColorU32(iconTint), landscapeEnabled);
-        if (!hovered)
+        var frameHalf = new Vector2(extent, extent * 0.76f);
+        drawList.AddRect(center - frameHalf, center + frameHalf, color, extent * 0.24f, ImDrawFlags.RoundCornersAll,
+            MathF.Max(1f, extent * 0.16f));
+        if (!uiPresent)
         {
-            return false;
+            return;
         }
 
-        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+        var barSize = new Vector2(extent * 0.53f, extent * 0.19f);
+        var inset = extent * 0.31f;
+        var topLeft = center - frameHalf + new Vector2(inset, inset);
+        drawList.AddRectFilled(topLeft, topLeft + barSize, color);
+        var bottomRight = center + frameHalf - new Vector2(inset, inset) - barSize;
+        drawList.AddRectFilled(bottomRight, bottomRight + barSize, color);
     }
 
     private static void DrawRotateGlyph(ImDrawListPtr dl, Vector2 center, float scale, uint color,
