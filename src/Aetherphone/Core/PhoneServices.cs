@@ -1,24 +1,25 @@
 using Aetherphone.Core.Activity;
 using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Announcements;
+using Aetherphone.Core.Apps;
 using Aetherphone.Core.Collections;
 using Aetherphone.Core.Conduct;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Crypto;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Health;
 using Aetherphone.Core.Housing;
+using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Inventory;
+using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.Lodestone;
 using Aetherphone.Core.Maps;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Media;
 using Aetherphone.Core.Moderation;
 using Aetherphone.Core.Muster;
-using Aetherphone.Core.Apps;
-using Aetherphone.Core.Linkpearl;
-using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Net;
 using Aetherphone.Core.News;
 using Aetherphone.Core.Notifications;
@@ -32,11 +33,11 @@ using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
+using Aetherphone.Core.Video;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Core.YellowPages;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
-using Aetherphone.Core.Video;
 using YoutubeExplode;
 
 namespace Aetherphone.Core;
@@ -157,6 +158,11 @@ internal sealed class PhoneServices : IDisposable
     public required ConductGateService Conduct { get; init; }
     public required WallpaperLibrary Wallpapers { get; init; }
     public required WallpaperImageCache WallpaperImages { get; init; }
+    public required Hunts.HuntsService Hunts { get; init; }
+    public required Hunts.HuntMobCatalog HuntMobCatalog { get; init; }
+    public required Hunts.HuntZoneCatalog HuntZoneCatalog { get; init; }
+    public required Hunts.HuntMobRewardCatalog HuntMobRewardCatalog { get; init; }
+    public required Hunts.HuntsLauncher HuntsLauncher { get; init; }
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
@@ -300,6 +306,26 @@ internal sealed class PhoneServices : IDisposable
             visibility, realtimeSignals, installer.Gate(YellowPagesStore.AppId));
         var adInquiries = new AdInquiryStore(aethernetSession, aethernet.Ads, aethernet.Safety, keyVault, conversationKeys,
             visibility, realtimeSignals, installer.Gate(YellowPagesStore.AppId));
+        var huntMobsFile = new FileInfo(Path.Combine(
+            Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntMob.json"));
+        var huntMobCatalog = new HuntMobCatalog(huntMobsFile);
+        var huntZonesFile = new FileInfo(Path.Combine(
+            Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntPOI.json"));
+        var huntZoneCatalog = new HuntZoneCatalog(huntZonesFile);
+        var huntMobDescriptionsFile = new FileInfo(Path.Combine(
+            Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntMobDescriptions.json"));
+        var huntMobTipsFile = new FileInfo(Path.Combine(
+            Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntMobTips.json"));
+        HuntMobLore.Initialize(new HuntMobTextCatalog(huntMobDescriptionsFile), new HuntMobTextCatalog(huntMobTipsFile));
+        var huntMobRewardsFile = new FileInfo(Path.Combine(
+            Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntMobRewards.json"));
+        var huntMobRewardCatalog = new HuntMobRewardCatalog(huntMobRewardsFile);
+        var huntsAuthTokens = new HuntsAuthTokenStore(http, configuration);
+        var huntsClient = new HuntsClient(http, huntsAuthTokens);
+        var hunts = new HuntsService(huntsClient, huntsAuthTokens, huntMobCatalog, gameData, characterWatch,
+            notifications, configuration);
+
+
         return new PhoneServices
         {
             Installer = installer,
@@ -405,6 +431,11 @@ internal sealed class PhoneServices : IDisposable
             Conduct = new ConductGateService(configuration),
             Wallpapers = wallpapers,
             WallpaperImages = new WallpaperImageCache(),
+            Hunts = hunts,
+            HuntMobCatalog = huntMobCatalog,
+            HuntZoneCatalog = huntZoneCatalog,
+            HuntMobRewardCatalog = huntMobRewardCatalog,
+            HuntsLauncher = new Hunts.HuntsLauncher(),
         };
     }
 

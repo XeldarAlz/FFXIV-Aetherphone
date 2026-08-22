@@ -12,6 +12,7 @@ using Aetherphone.Core.GameChat;
 using Aetherphone.Core.Games;
 using Aetherphone.Core.Home;
 using Aetherphone.Core.Housing;
+using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Jobs;
 using Aetherphone.Core.Market;
 using Aetherphone.Core.Notifications;
@@ -143,6 +144,11 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public string AethernetToken { get; set; } = string.Empty;
     public string EncryptionKeyCache { get; set; } = string.Empty;
     public string EncryptionKeyCacheUserId { get; set; } = string.Empty;
+    public string HuntsSessionCache { get; set; } = string.Empty;
+    public bool HuntsAuthenticated { get; set; }
+    public bool HuntsAppOpened { get; set; }
+    public HuntsFilterSnapshot? HuntsFilterSettings { get; set; }
+    public HuntsNotificationSnapshot? HuntsNotificationSettings { get; set; }
     public bool EncryptionRecoveryNudgeDismissed { get; set; }
     public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
     public Dictionary<ulong, CharacterSession> CharacterSessions { get; set; } = new();

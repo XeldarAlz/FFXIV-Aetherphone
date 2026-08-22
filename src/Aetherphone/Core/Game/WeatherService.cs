@@ -186,7 +186,7 @@ internal sealed class WeatherService
         return chances.Count > 0 ? chances[^1].Id : (byte)0;
     }
 
-    private static uint ForecastTarget(long unixSeconds)
+    internal static uint ForecastTarget(long unixSeconds)
     {
         var eorzeaHour = unixSeconds / RealSecondsPerEorzeaHour;
         var increment = (uint)((eorzeaHour + 8 - eorzeaHour % 8) % 24);

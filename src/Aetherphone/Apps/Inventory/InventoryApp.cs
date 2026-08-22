@@ -8,7 +8,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Inventory;
@@ -543,16 +542,8 @@ internal sealed class InventoryApp : IPhoneApp
         var iconSize = 38f * scale;
         var iconMin = new Vector2(row.Min.X, row.Center.Y - iconSize * 0.5f);
         var iconMax = iconMin + new Vector2(iconSize, iconSize);
-        Squircle.Fill(drawList, iconMin, iconMax, 9f * scale,
-            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.06f)));
-        if (item.IconId != 0)
-        {
-            var texture = textures.GetFromGameIcon(new GameIconLookup(item.IconId)).GetWrapOrEmpty();
-            drawList.AddImageRounded(texture.Handle, iconMin, iconMax, Vector2.Zero, Vector2.One, 0xFFFFFFFFu,
-                9f * scale);
-        }
-
-        Material.EdgeSquircle(drawList, iconMin, iconMax, 9f * scale, scale, 0.5f);
+        GameIconTile.Draw(drawList, textures, item.IconId, iconMin, iconMax, 9f * scale, scale,
+            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.06f)), edgeStroke: true);
         var quantityText = "x" + FormatCount(item.Quantity);
         var quantitySize = Typography.Measure(quantityText, TextStyles.BodyEmphasized);
         var quantityX = row.Max.X - quantitySize.X;

@@ -31,6 +31,8 @@ internal sealed class PhotoZoomView
     private Vector2 lastDrag;
 
     public bool IsZoomed => targetZoom > 1.01f;
+    public float Zoom => zoom.Value;
+    public Vector2 Pan => new(panX.Value, panY.Value);
 
     public void Reset()
     {
@@ -144,7 +146,7 @@ internal sealed class PhotoZoomView
             Math.Clamp(targetPan.Y, -maxPanY, maxPanY));
     }
 
-    private static float FitScale(Rect stage, Vector2 size) =>
+    public static float FitScale(Rect stage, Vector2 size) =>
         MathF.Min(stage.Width / MathF.Max(size.X, 1f), stage.Height / MathF.Max(size.Y, 1f));
 
     private bool DrawButtons(Rect stage, Rect controls, Vector2 size, PhoneTheme theme, float scale)

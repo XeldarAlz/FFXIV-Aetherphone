@@ -32,5 +32,6 @@ internal static class NotificationChannels
         new("notes", L.Apps.Notes, AppAccents.For("notes")),
         new("coin", L.Apps.Coin, AppAccents.For("coin")),
         new("casino", L.Apps.Casino, AppAccents.For("casino")),
+        new("hunts", L.Apps.Hunts, AppAccents.For("hunts")),
     };
 }

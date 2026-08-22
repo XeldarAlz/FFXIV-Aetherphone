@@ -10,7 +10,7 @@ internal sealed class AppAvailability : IDisposable
 
     private static readonly string[] AlwaysAvailable = { "appstore", "settings", "announcements" };
     private static readonly string[] HiddenUntilLaunched = { "muster", "coin", "casino" };
-    private static readonly string[] UnavailableInChina = { "music", "aetherstream", "news" };
+    private static readonly string[] UnavailableInChina = { "music", "aetherstream", "news", "hunts" };
 
     private static AppAvailability? current;
 

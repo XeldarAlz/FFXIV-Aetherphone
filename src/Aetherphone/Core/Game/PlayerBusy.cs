@@ -11,7 +11,8 @@ internal static class PlayerBusy
             var condition = Plugin.Condition;
             return condition[ConditionFlag.InCombat] || condition[ConditionFlag.BoundByDuty] ||
                    condition[ConditionFlag.BoundByDuty56] || condition[ConditionFlag.WatchingCutscene] ||
-                   condition[ConditionFlag.OccupiedInCutSceneEvent] || condition[ConditionFlag.BetweenAreas];
+                   condition[ConditionFlag.OccupiedInCutSceneEvent] || condition[ConditionFlag.BetweenAreas] ||
+                   condition[ConditionFlag.BetweenAreas51];
         }
     }
 }

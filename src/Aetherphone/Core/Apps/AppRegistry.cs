@@ -12,6 +12,7 @@ using Aetherphone.Apps.Fishing;
 using Aetherphone.Apps.Games;
 using Aetherphone.Apps.Health;
 using Aetherphone.Apps.Housing;
+using Aetherphone.Apps.Hunts;
 using Aetherphone.Apps.Inventory;
 using Aetherphone.Apps.Jobs;
 using Aetherphone.Apps.Calculator;
@@ -96,7 +97,7 @@ internal static class AppRegistry
         apps.Add(new FishingApp());
         apps.Add(new GamesApp(services.GameStats, services.GameData, services.Textures, services.Coins,
             services.CoinSessions));
-        apps.Add(new NotificationsApp(services.Notifications, services.SocialNotifications, services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher, services.MusterLauncher, services.YellowPagesLauncher, services.AnnouncementsLauncher, services.SafetyLauncher, services.RadioLauncher, services.CasinoLauncher, services.AetherStreamLauncher));
+        apps.Add(new NotificationsApp(services.Notifications, services.SocialNotifications, services.LinkpearlLauncher, services.VelvetLauncher, services.DmLauncher, services.GramDmLauncher, services.SocialLauncher, services.MusterLauncher, services.YellowPagesLauncher, services.AnnouncementsLauncher, services.SafetyLauncher, services.RadioLauncher, services.CasinoLauncher, services.AetherStreamLauncher, services.HuntsLauncher));
         apps.Add(new SettingsApp(services, photoLibrary));
         var calendarEvents = new CalendarEvents(services.Http, services.AethernetSession);
         apps.Add(new CalendarApp(services.Configuration, calendarEvents, services.Confirm));
@@ -109,6 +110,8 @@ internal static class AppRegistry
             services.Conduct, services.RemoteImages, services.Lodestone));
         apps.Add(new AppStoreApp(services.Installer, apps));
         apps.Add(new HousingApp(services.Housing, services.Configuration, services.Confirm));
+        apps.Add(new HuntsApp(services.Hunts, services.HuntMobCatalog, services.HuntZoneCatalog,
+            services.HuntMobRewardCatalog, services.Configuration, services.Confirm, services.HuntsLauncher));
 
         return new AppBundle
         {

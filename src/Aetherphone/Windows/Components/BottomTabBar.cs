@@ -8,7 +8,7 @@ using Dalamud.Interface;
 namespace Aetherphone.Windows.Components;
 
 internal readonly record struct NavTab(FontAwesomeIcon Icon, string Label, int Badge = 0, bool Raised = false,
-    string? AnchorKey = null);
+    string? AnchorKey = null, bool Disabled = false);
 
 internal sealed class BottomTabBar
 {
@@ -80,6 +80,20 @@ internal sealed class BottomTabBar
     {
         var cellMin = new Vector2(bar.Min.X + slot * index, bar.Min.Y);
         var cellMax = new Vector2(cellMin.X + slot, bar.Max.Y);
+        if (tab.Disabled)
+        {
+            var dimInk = Palette.WithAlpha(ui.MutedInk, 0.35f);
+            var disabledIconCenter = new Vector2((cellMin.X + cellMax.X) * 0.5f, cellMin.Y + LabelIconOffset * scale);
+            AppSkin.Icon(drawList, disabledIconCenter, tab.Icon.ToIconString(), dimInk, LabelIconScale);
+            var disabledStyle = TextStyles.Footnote;
+            var disabledLabel = Typography.FitText(tab.Label, slot - 6f * scale, disabledStyle);
+            Typography.DrawCentered(drawList,
+                new Vector2(disabledIconCenter.X, disabledIconCenter.Y + LabelBaseline * scale), disabledLabel,
+                dimInk, disabledStyle);
+            HoverTooltip.Show(new Rect(cellMin, cellMax), tab.Label, HoverLabelSide.Above);
+            return false;
+        }
+
         var hovered = UiInteract.Hover(cellMin, cellMax);
         var delta = MathF.Min(ImGui.GetIO().DeltaTime, MaxFrameSeconds);
         hover[index].Step(hovered ? 1f : 0f, HoverSmoothTime, delta);
@@ -119,6 +133,14 @@ internal sealed class BottomTabBar
     private bool DrawTab(AppSkin ui, PhoneTheme theme, in NavTab tab, Vector2 center, int slot, bool active,
         float scale)
     {
+        if (tab.Disabled)
+        {
+            var hit = new Vector2(HitRadius * scale, HitRadius * scale);
+            AppSkin.Icon(center, tab.Icon.ToIconString(), Palette.WithAlpha(ui.MutedInk, 0.35f), IconScale);
+            HoverTooltip.Show(new Rect(center - hit, center + hit), tab.Label, HoverLabelSide.Above);
+            return false;
+        }
+
         DrawHoverPill(ui, center, StepHover(slot, center, HitRadius * scale), scale);
         var ink = active ? ui.TitleInk : ui.MutedInk;
         var picked = ui.IconButton(center, HitRadius * scale, tab.Icon.ToIconString(), ink, AppSkin.Transparent,

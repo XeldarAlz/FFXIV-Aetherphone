@@ -425,6 +425,13 @@ internal static class TourRegistry
                 GuideStep.Point(L.Onboarding.AetherStreamSettingsTitle, L.Onboarding.AetherStreamSettingsBody,
                     "aetherstream.settings"),
             });
+        Add(tours, "hunts", 2,
+            new[]
+            {
+                GuideStep.Note(L.Apps.Hunts, L.Onboarding.HuntsBody),
+                GuideStep.Point(L.Onboarding.HuntsSignInTitle, L.Onboarding.HuntsSignInBody, "hunts.auth"),
+                GuideStep.Point(L.Onboarding.HuntsGuideTitle, L.Onboarding.HuntsGuideBody, "hunts.guide"),
+            });
         return tours;
     }
 

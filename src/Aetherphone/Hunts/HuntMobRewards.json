@@ -1,0 +1,1023 @@
+{
+  "items": {
+    "behemoth_horn": {
+      "en": "Behemoth Horn",
+      "ja": "ベヒーモスの角",
+      "fr": "Corne de béhémoth",
+      "de": "Behemoth-Horn"
+    },
+    "odins_mantle": {
+      "en": "Odin's Mantle",
+      "ja": "オーディンの被布",
+      "fr": "Mante d'Odin",
+      "de": "Odins Mantel"
+    },
+    "allied_seal": {
+      "en": "Allied Seal",
+      "ja": "同盟記章",
+      "fr": "Insigne allié",
+      "de": "Jagdabzeichen"
+    },
+    "centurio_seal": {
+      "en": "Centurio Seal",
+      "ja": "セントリオ記章",
+      "fr": "Insigne Centurio",
+      "de": "Centurio-Abzeichen"
+    },
+    "tomestone_legacy": {
+      "en": "Allagan Tomestone of Poetics",
+      "ja": "アラガントームストーン:詩学",
+      "fr": "Mémoquartz allagois poétique",
+      "de": "Allagischer Stein der Poesie"
+    },
+    "tomestone_mathematics": {
+      "en": "Allagan Tomestone of Mathematics",
+      "ja": "アラガントームストーン:数理",
+      "fr": "Mémoquartz allagois mathématique",
+      "de": "Allagischer Stein der Mathematik"
+    },
+    "proto_ultima_exoplating": {
+      "en": "Proto Ultima Exoplating",
+      "ja": "プロトアルテマの装甲板",
+      "fr": "Exoblindage de Proto-Ultima",
+      "de": "Proto-Ultima-Rüstungsplatte"
+    },
+    "coeurlregina_horn": {
+      "en": "Coeurlregina Horn",
+      "ja": "クァールレギナの枝角",
+      "fr": "Corne de Regina coeurl",
+      "de": "Coeurl-Königinhorn"
+    },
+    "faded_copy_of_against_the_wind": {
+      "en": "Faded Copy of Against the Wind",
+      "ja": "古びた譜面:風に向かって",
+      "fr": "Rouleau abîmé \"Against the Wind\"",
+      "de": "Abgenutzte Notenrolle von „Against the Wind“"
+    },
+    "faded_copy_of_painted_foothills": {
+      "en": "Faded Copy of Painted Foothills",
+      "ja": "古びた譜面:彩られし山麓",
+      "fr": "Rouleau abîmé \"Painted Foothills\"",
+      "de": "Abgenutzte Notenrolle von „Painted Foothills“"
+    },
+    "faded_copy_of_missing_pages": {
+      "en": "Faded Copy of Missing Pages",
+      "ja": "古びた譜面:欠けた頁",
+      "fr": "Rouleau abîmé \"Missing Pages\"",
+      "de": "Abgenutzte Notenrolle von „Missing Pages“"
+    },
+    "faded_copy_of_landlords": {
+      "en": "Faded Copy of Landlords",
+      "ja": "古びた譜面:ランドロード",
+      "fr": "Rouleau abîmé \"Landlords\"",
+      "de": "Abgenutzte Notenrolle von „Landlords“"
+    },
+    "faded_copy_of_lost_in_the_clouds": {
+      "en": "Faded Copy of Lost in the Clouds",
+      "ja": "古びた譜面:雲に隠れて",
+      "fr": "Rouleau abîmé \"Lost in the Clouds\"",
+      "de": "Abgenutzte Notenrolle von „Lost In the Clouds“"
+    },
+    "cracked_cluster": {
+      "en": "Cracked Cluster",
+      "ja": "不活性クラスター",
+      "fr": "Agrégat inactif",
+      "de": "Zerbrochener Polykristall"
+    },
+    "sassho_seki_fragment": {
+      "en": "Sassho-seki Fragment",
+      "ja": "殺生石の欠片",
+      "fr": "Fragment de la Roche meurtrière",
+      "de": "Sassho-seki-Fragment"
+    },
+    "ixion_horn": {
+      "en": "Ixion Horn",
+      "ja": "イクシオンの角片",
+      "fr": "Corne d'Ixion",
+      "de": "Ixion-Hornfragment"
+    },
+    "archaeotanias_horn": {
+      "en": "Archaeotania's Horn",
+      "ja": "アルケオタニアの角",
+      "fr": "Corne d'Archaeotania",
+      "de": "Arachaeotania-Horn"
+    },
+    "sack_of_nuts": {
+      "en": "Sack of Nuts",
+      "ja": "モブハントの戦利品",
+      "fr": "Insigne Kupo",
+      "de": "Kupo-Trophäe"
+    },
+    "cracked_planicluster": {
+      "en": "Cracked Planicluster",
+      "ja": "不活性多面クラスター",
+      "fr": "Agrégat multiple inactif",
+      "de": "Inaktiver nichtaspektierter Polykristall"
+    },
+    "cracked_stellacluster": {
+      "en": "Cracked Stellacluster",
+      "ja": "不活性星型クラスター",
+      "fr": "Agrégat stellaire inactif",
+      "de": "Inaktiver sternförmiger Polykristall"
+    },
+    "formidable_cog": {
+      "en": "Formidable Cog",
+      "ja": "フォーミダブルの歯車",
+      "fr": "Rouage du Formidable",
+      "de": "Formidabel-Zahnrad"
+    },
+    "daivadipas_bead": {
+      "en": "Daivadipa's Bead",
+      "ja": "ダイヴァディーパの宝珠",
+      "fr": "Orbe sacré de Daivadipa",
+      "de": "Daivadipa-Edelstein"
+    },
+    "chi_bolt": {
+      "en": "Chi Bolt",
+      "ja": "カイボルト",
+      "fr": "Boulons de Khi",
+      "de": "Mondwrackbolzen"
+    },
+    "cracked_dendrocluster": {
+      "en": "Cracked Dendrocluster",
+      "ja": "不活性樹枝状クラスター",
+      "fr": "Agrégat dendriforme inactif",
+      "de": "Inaktiver dendritischer Polykristall"
+    },
+    "cracked_anthocluster": {
+      "en": "Cracked Anthocluster",
+      "ja": "不活性花弁状クラスター",
+      "fr": "Agrégat pétaloïde inactif",
+      "de": "Inaktiver petaloider Polykristall"
+    },
+    "ttokrrone_scale": {
+      "en": "Ttokrrone Scale",
+      "ja": "トクローネの甲鱗",
+      "fr": "Écaille de Ttokrrone",
+      "de": "Ttokrrone-Schuppe"
+    },
+    "mica_magicog": {
+      "en": "Mica Magicog",
+      "ja": "マイカ・ザ・ムーの歯車",
+      "fr": "Rouage de Mica le mu",
+      "de": "Mica-Zahnrad"
+    },
+    "tomestone_mnemonics": {
+      "en": "Allagan Tomestone of Mnemonics",
+      "ja": "アラガントームストーン:記憶",
+      "fr": "Mémoquartz allagois mnémonique",
+      "de": "Allagischer Stein der Mnemonik"
+    },
+    "cracked_prismaticluster": {
+      "en": "Cracked Prismaticluster",
+      "ja": "不活性多角柱クラスター",
+      "fr": "Agrégat versatile inactif",
+      "de": "inaktiver prismatischer Polykristall"
+    },
+    "cracked_novacluster": {
+      "en": "Cracked Novacluster",
+      "ja": "不活性炸裂状クラスター",
+      "fr": "Agrégat éruptif inactif",
+      "de": "Inaktiver berstender Polykristall"
+    }
+  },
+  "rewardSets": [
+    {
+      "mobIds": [
+        "aegeiros",
+        "arch_eta",
+        "fan_ail",
+        "gurangatch",
+        "hulder",
+        "lunatender_queen",
+        "minerva",
+        "mousse_princess",
+        "petalodus",
+        "storsie",
+        "sugriva",
+        "yilan"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "cracked_dendrocluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_anthocluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "agathos",
+        "bune"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "faded_copy_of_landlords",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "aglaope",
+        "forgiven_pedantry",
+        "gunitt",
+        "ixtab",
+        "tarchia",
+        "tyger"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "cracked_planicluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_stellacluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "agrippa_the_mighty",
+        "bonnacon",
+        "brontes",
+        "chernobog",
+        "croakadile",
+        "croque_mitaine",
+        "laideronnette",
+        "lampalagua",
+        "mindflayer",
+        "minhocao",
+        "nandi",
+        "nunyunuwi",
+        "safat",
+        "the_garlok",
+        "thousand_cast_theda",
+        "wulgaru",
+        "zona_seeker"
+      ],
+      "rewards": [
+        {
+          "itemId": "allied_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "centurio_seal",
+          "amount": 50
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "alectryon",
+        "cornu",
+        "dalvags_final_flame",
+        "forneus",
+        "ghede_ti_malice",
+        "girtab",
+        "hellsclaw",
+        "kurrea",
+        "maahas",
+        "marberry",
+        "marraco",
+        "melt",
+        "nahn",
+        "sabotender_bailarina",
+        "unktehi",
+        "vogaal_ja",
+        "zanigoh"
+      ],
+      "rewards": [
+        {
+          "itemId": "allied_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "centurio_seal",
+          "amount": 20
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "angada",
+        "aqrabuamelu",
+        "erle",
+        "funa_yurei",
+        "gajasura",
+        "girimekhala",
+        "luminare",
+        "mahisha",
+        "oni_yumemi",
+        "orcus",
+        "sum",
+        "vochstein"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "cracked_cluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "arch_aethereater"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 400
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 200
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mnemonics",
+          "amount": 50
+        },
+        {
+          "itemId": "cracked_prismaticluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_novacluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "archaeotania"
+      ],
+      "rewards": [
+        {
+          "itemId": "archaeotanias_horn"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "armstrong",
+        "burfurlur_the_canny",
+        "narrow_rift",
+        "ophioneus",
+        "ruminator",
+        "sphatika"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "cracked_dendrocluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_anthocluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "atticus_the_primogenitor",
+        "ihnuxokiy",
+        "kirlirger_the_abhorrent",
+        "neyoozoteel",
+        "sansheya",
+        "the_forecaster"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 80
+        },
+        {
+          "itemId": "tomestone_mnemonics",
+          "amount": 30
+        },
+        {
+          "itemId": "cracked_prismaticluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_novacluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "baal",
+        "grassman",
+        "huracan",
+        "lil_murderer",
+        "maliktender",
+        "nariphon",
+        "nuckelavee",
+        "o_poorest_pauldia",
+        "rusalka",
+        "sugaar",
+        "supay",
+        "the_mudman"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "cracked_planicluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_stellacluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "behemoth"
+      ],
+      "rewards": [
+        {
+          "itemId": "behemoth_horn"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "bird_of_paradise"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "faded_copy_of_lost_in_the_clouds",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "bone_crawler",
+        "gamma",
+        "okina",
+        "orghana",
+        "salt_and_light",
+        "udumbara"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "cracked_cluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "campacti",
+        "stench_blossom"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "cats_eye",
+        "heshuala",
+        "keheniheyamewi",
+        "nechuciho",
+        "pkuucha",
+        "queen_hawk",
+        "rrax_yitya",
+        "sally_the_sweeper",
+        "starcrier",
+        "the_raintriller",
+        "urna_variabilis",
+        "yehehetoauapyo"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 20
+        },
+        {
+          "itemId": "tomestone_mnemonics",
+          "amount": 10
+        },
+        {
+          "itemId": "cracked_prismaticluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_novacluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "chi"
+      ],
+      "rewards": [
+        {
+          "itemId": "chi_bolt"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "coeurlregina"
+      ],
+      "rewards": [
+        {
+          "itemId": "coeurlregina_horn"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "daivadipa"
+      ],
+      "rewards": [
+        {
+          "itemId": "daivadipas_bead"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "enkelados",
+        "sisiutl"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "faded_copy_of_lost_in_the_clouds",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "forgiven_rebellion"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 400
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 200
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 50
+        },
+        {
+          "itemId": "cracked_planicluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_stellacluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "formidable"
+      ],
+      "rewards": [
+        {
+          "itemId": "formidable_cog"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "gandarewa"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "faded_copy_of_landlords",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "ixion"
+      ],
+      "rewards": [
+        {
+          "itemId": "ixion_horn"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "kaiser_behemoth"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "faded_copy_of_against_the_wind",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "ker"
+      ],
+      "rewards": [
+        {
+          "itemId": "sack_of_nuts",
+          "amount": 400
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 200
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 50
+        },
+        {
+          "itemId": "cracked_dendrocluster",
+          "amount": 1
+        },
+        {
+          "itemId": "cracked_anthocluster",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "leucrotta"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "lord_of_the_wyverns",
+        "pylraster"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "faded_copy_of_painted_foothills",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "lyuba",
+        "mirka"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "faded_copy_of_against_the_wind",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "mica_the_magical_mu"
+      ],
+      "rewards": [
+        {
+          "itemId": "mica_magicog"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "noctilucale"
+      ],
+      "rewards": [
+        {
+          "itemId": "proto_ultima_exoplating"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "odin"
+      ],
+      "rewards": [
+        {
+          "itemId": "odins_mantle"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "senmurv"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "faded_copy_of_painted_foothills",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "slipkinx_steeljoints",
+        "stolas"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 40
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 30
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 10
+        },
+        {
+          "itemId": "faded_copy_of_missing_pages",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "tamamo_gozen"
+      ],
+      "rewards": [
+        {
+          "itemId": "sassho_seki_fragment"
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "the_pale_rider"
+      ],
+      "rewards": [
+        {
+          "itemId": "centurio_seal",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_legacy",
+          "amount": 100
+        },
+        {
+          "itemId": "tomestone_mathematics",
+          "amount": 30
+        },
+        {
+          "itemId": "faded_copy_of_missing_pages",
+          "amount": 1
+        }
+      ]
+    },
+    {
+      "mobIds": [
+        "ttokrrone"
+      ],
+      "rewards": [
+        {
+          "itemId": "ttokrrone_scale"
+        }
+      ]
+    }
+  ]
+}

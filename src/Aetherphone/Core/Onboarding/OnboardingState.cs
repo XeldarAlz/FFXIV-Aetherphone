@@ -36,6 +36,16 @@ internal static class OnboardingState
         Plugin.Cfg.Save();
     }
 
+    public static void Reset(string id)
+    {
+        if (!Plugin.Cfg.OnboardingCompleted.Remove(id))
+        {
+            return;
+        }
+
+        Plugin.Cfg.Save();
+    }
+
     public static void RequestReplayWelcome() => replayWelcomeRequested = true;
 
     public static bool ConsumeReplayWelcome()

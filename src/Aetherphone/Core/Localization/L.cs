@@ -248,6 +248,7 @@ internal static class L
         public static readonly LocString Character = new("app.character", "Character");
         public static readonly LocString Health = new("app.health", "Health");
         public static readonly LocString Housing = new("app.housing", "Housing");
+        public static readonly LocString Hunts = new("app.hunts", "Hunts");
         public static readonly LocString Chirper = new("app.chirper", "Chirper");
         public static readonly LocString Aethergram = new("app.aethergram", "Aethergram");
         public static readonly LocString Velvet = new("app.velvet", "Velvet");
@@ -1142,6 +1143,210 @@ internal static class L
         public static readonly LocString NotifyResultsTitle = new("housing.notifyResultsTitle", "Housing Results");
         public static readonly LocString NotifyResultsBody = new("housing.notifyResultsBody",
             "The results period ends in {0}. Check the estate placard before the claim or refund window closes.");
+    }
+
+    public static class Hunts
+    {
+        public static readonly LocString Empty = new("hunts.empty", "No hunt marks found");
+        public static readonly LocString Failed = new("hunts.failed", "Couldn't load hunt data");
+        public static readonly LocString TryAgain = new("hunts.tryAgain", "Try again");
+        public static readonly LocString Closed = new("hunts.closed", "Closed");
+        public static readonly LocString Open = new("hunts.open", "Open");
+        public static readonly LocString Capped = new("hunts.capped", "Capped");
+        public static readonly LocString Unmet = new("hunts.unmet", "Unmet");
+        public static readonly LocString Spawned = new("hunts.spawned", "Spawned");
+        public static readonly LocString Scheduled = new("hunts.scheduled", "Scheduled");
+        public static readonly LocString NavigateToLocation =
+            new("hunts.navigateToLocation", "Navigate to location");
+        public static readonly LocString PlaceFlagOnMap = new("hunts.placeFlagOnMap", "Place flag on map");
+        public static readonly LocString NoSpawnLocationDetected =
+            new("hunts.noSpawnLocationDetected", "No spawn location detected");
+        public static readonly LocString HistoryTab = new("hunts.historyTab", "History");
+        public static readonly LocString HistoryRequiresLoginTooltip =
+            new("hunts.historyRequiresLoginTooltip", "Log in to Faloop to see hunt history");
+        public static readonly LocString HistoryEmpty = new("hunts.historyEmpty", "No recent hunts found");
+        public static readonly LocString ListTab = new("hunts.listTab", "List");
+        public static readonly LocString NotificationSettingsTab =
+            new("hunts.notificationSettingsTab", "Notifications");
+        public static readonly LocString NotificationSettingsTitle =
+            new("hunts.notificationSettingsTitle", "Notification Settings");
+        public static readonly LocString NotificationSettingsRequiresLoginTooltip =
+            new("hunts.notificationSettingsRequiresLoginTooltip",
+                "Log in to Faloop to receive live spawn notifications");
+        public static readonly LocString ResetToDefault = new("hunts.resetToDefault", "Reset to Default");
+        public static readonly LocString ResetTutorial = new("hunts.resetTutorial", "Reset Tutorial");
+        public static readonly LocString NotifyModeDefault = new("hunts.notifyModeDefault", "Default");
+        public static readonly LocString NotifyModeEnabled = new("hunts.notifyModeEnabled", "Enabled");
+        public static readonly LocString NotifyModeEnabledOnWorldValue =
+            new("hunts.notifyModeEnabledOnWorldValue", "Enabled on {0}");
+        public static readonly LocString NotifyModeDisabled = new("hunts.notifyModeDisabled", "Disabled");
+        public static readonly LocString MarkNotificationsTitle =
+            new("hunts.markNotificationsTitle", "Specific Mark Notification");
+        public static readonly LocString MarkNotificationsCount =
+            new("hunts.markNotificationsCount", "{0} configured");
+        public static readonly LocString MarkNotificationsEmpty =
+            new("hunts.markNotificationsEmpty", "No specific mark notifications configured yet.");
+        public static readonly LocString MarkNotificationsEmptyHint = new("hunts.markNotificationsEmptyHint",
+            "You can configure mark-specific notifications on a mark's detail page.");
+        public static readonly LocString Unknown = new("hunts.unknown", "Unknown");
+        public static readonly LocString FiltersTitle = new("hunts.filtersTitle", "Filters");
+        public static readonly LocString ClearFilters = new("hunts.clearFilters", "Clear filters");
+        public static readonly LocString Submit = new("hunts.submit", "Submit");
+        public static readonly LocString DataCenterLabel = new("hunts.dataCenterLabel", "Data Center");
+        public static readonly LocString ChooseDataCenter = new("hunts.chooseDataCenter", "Choose a data center");
+        public static readonly LocString RanksLabel = new("hunts.ranksLabel", "Ranks");
+        public static readonly LocString WorldsLabel = new("hunts.worldsLabel", "Worlds");
+        public static readonly LocString StatusLabel = new("hunts.statusLabel", "Status");
+        public static readonly LocString ExpansionsLabel = new("hunts.expansionsLabel", "Expansions");
+        public static readonly LocString AllWorlds = new("hunts.allWorlds", "All worlds");
+        public static readonly LocString WorldsSelected = new("hunts.worldsSelected", "{0} selected");
+        public static readonly LocString SpawnConditionSection = new("hunts.spawnConditionSection", "Spawn Condition");
+        public static readonly LocString DescriptionSection = new("hunts.descriptionSection", "Description");
+        public static readonly LocString TipsSection = new("hunts.tipsSection", "Spawn Tips");
+        public static readonly LocString RewardsSection = new("hunts.rewardsSection", "Rewards");
+        public static readonly LocString SpawnInfoSection = new("hunts.spawnInfoSection", "Spawn Information");
+        public static readonly LocString SpawnInfoMinimum = new("hunts.spawnInfoMinimum", "Minimum");
+        public static readonly LocString SpawnInfoAverage = new("hunts.spawnInfoAverage", "Average");
+        public static readonly LocString SpawnInfoMaximum = new("hunts.spawnInfoMaximum", "Maximum");
+        public static readonly LocString SpawnInfoMaintenance = new("hunts.spawnInfoMaintenance", "Post-Maintenance");
+        public static readonly LocString SpawnInfoLineFormat = new("hunts.spawnInfoLineFormat", "{0}: {1}");
+        public static readonly LocString ReportedByLabel = new("hunts.reportedByLabel", "Reported by");
+        public static readonly LocString NoLoreAvailable =
+            new("hunts.noLoreAvailable", "No lore available for this mark yet.");
+        public static readonly LocString LoreNotAvailableInLanguage =
+            new("hunts.loreNotAvailableInLanguage", "This lore is not available in your current language.");
+        public static readonly LocString NoSpecialSpawnCondition =
+            new("hunts.noSpecialSpawnCondition", "No special condition.");
+        public static readonly LocString SearchHint = new("hunts.searchHint", "Search marks");
+        public static readonly LocString AuthenticatedTooltip = new("hunts.authenticatedTooltip", "Authenticated");
+        public static readonly LocString NotAuthenticatedTooltip =
+            new("hunts.notAuthenticatedTooltip", "Not authenticated - Limited functionality mode");
+        public static readonly LocString RealtimeReconnectingTooltip =
+            new("hunts.realtimeReconnectingTooltip", "Realtime updates reconnecting");
+        public static readonly LocString SpawnReleaseNotifyTitle =
+            new("hunts.spawnReleaseNotifyTitle", "Hunt spawn released");
+        public static readonly LocString SpawnReleaseNotifyBody =
+            new("hunts.spawnReleaseNotifyBody", "{0} is up on {1}");
+        public static readonly LocString SignupTitle = new("hunts.signupTitle", "Sign Up");
+        public static readonly LocString SignupIntro = new("hunts.signupIntro",
+            "A Faloop account is required to receive live spawn data. If you don't have one, create it with the button below.");
+        public static readonly LocString SignupCreateAccount =
+            new("hunts.signupCreateAccount", "Create a Faloop account");
+        public static readonly LocString SignupLoginIntro = new("hunts.signupLoginIntro",
+            "Once your account is created, log in below to connect it to Faloop and start receiving live spawn data.");
+        public static readonly LocString SignupUsernameLabel = new("hunts.signupUsernameLabel", "Username");
+        public static readonly LocString SignupPasswordLabel = new("hunts.signupPasswordLabel", "Password");
+        public static readonly LocString SignupLoginButton = new("hunts.signupLoginButton", "Log In");
+        public static readonly LocString SignupLoggingIn = new("hunts.signupLoggingIn", "Logging In...");
+        public static readonly LocString SignupFailed = new("hunts.signupFailed",
+            "Login failed. Check your username and password and try again.");
+        public static readonly LocString SignupAuthenticatedMessage =
+            new("hunts.signupAuthenticatedMessage", "You're logged in to Faloop.");
+        public static readonly LocString SignupLogoutButton = new("hunts.signupLogoutButton", "Log Out");
+        public static readonly LocString GuideTab = new("hunts.guideTab", "Guide");
+        public static readonly LocString GuideHowItWorksTitle =
+            new("hunts.guideHowItWorksTitle", "How does this work?");
+        public static readonly LocString GuideHowItWorksBody = new("hunts.guideHowItWorksBody",
+            "Each mark has a preset window it can spawn in after its last death. A spawn moment gets picked somewhere inside that window, and the mark can only spawn when its condition is met once that moment has passed.\n\nBy tracking these windows, along with when marks spawn and die, we can effectively track every S-rank across every world.\n\nNote that for most marks this isn't random: a window shown at 60% means there's a 60% chance the mark is currently active, not a 60% chance that it will spawn.");
+        public static readonly LocString GuideRanksTitle =
+            new("hunts.guideRanksTitle", "What are the different ranks?");
+        public static readonly LocString GuideRanksBody = new("hunts.guideRanksBody",
+            "F-rank marks, often called FATE marks, come at the end of long FATE chains and only spawn every few hours or days.\n\nB-rank marks are weekly hunt marks. They respawn 5 seconds after the last one is killed, so they're essentially always up.\n\nA-rank marks are rare targets that respawn every few hours with no conditions. They're usually killed together as part of a Hunt Train, a group that works through every A-rank in an expansion. For Stormblood and older expansions, Hunt Trains are rare and marks are typically free-for-all.\n\nS-rank marks have a specific window and only spawn once their condition is met. They're tracked on Faloop and spawn at most every few days.");
+        public static readonly LocString GuideWindowStatusTitle =
+            new("hunts.guideWindowStatusTitle", "What do the window statuses mean?");
+        public static readonly LocString GuideWindowStatusBody = new("hunts.guideWindowStatusBody",
+            "Closed means the mark is certainly outside its window.\nOpen means there's a chance the mark is active.\nCapped means it has reached the end of its window and is certainly active, unless it was sniped.\nUnmet means the window is active, but the mark's spawn condition depends on other factors, like weather, time, or moon phase, that aren't currently in place.");
+        public static readonly LocString GuideSSMarksTitle = new("hunts.guideSSMarksTitle", "What are SS marks?");
+        public static readonly LocString GuideSSMarksBody = new("hunts.guideSSMarksBody",
+            "Every time an S-rank mark dies on a post-Shadowbringers map, there's a chance for 4 minions to spawn. Killing those minions in time spawns a special SS-rank mark, which gives more drops.");
+        public static readonly LocString GuideContributeTitle =
+            new("hunts.guideContributeTitle", "How can I contribute?");
+        public static readonly LocString GuideContributeBody = new("hunts.guideContributeBody",
+            "This app relies on data provided by Faloop. Join the Faloop Discord for more information:\n\nhttps://discord.gg/faloop");
+        public static readonly LocString GuideScheduledTitle =
+            new("hunts.guideScheduledTitle", "What is the Scheduled status?");
+        public static readonly LocString GuideScheduledBody = new("hunts.guideScheduledBody",
+            "Accounts with reporting permissions on Faloop may see some marks as Scheduled. This means a reporter has reported the spawn but hasn't made it public yet. Please respect their decision and wait until the mark is public before advertising it.");
+        public static readonly LocString GuideMaintenanceTitle =
+            new("hunts.guideMaintenanceTitle", "How do maintenances affect mark windows?");
+        public static readonly LocString GuideMaintenanceBody = new("hunts.guideMaintenanceBody",
+            "When maintenance happens and the servers restart, every mark's timer resets to zero, and its window then follows the post-maintenance timing instead of the normal one.\n\nNote that a server crash doesn't always reset S-rank timers, the backend may have stayed up even if players got disconnected.");
+        public static readonly LocString GuideUnlockTitle = new("hunts.guideUnlockTitle", "How do you unlock hunts?");
+        public static readonly LocString GuideUnlockBody = new("hunts.guideUnlockBody",
+            "Hunts unlock through a series of quests, one set per expansion, usually starting partway through that expansion's main scenario. For the full breakdown of every unlock quest, see the wiki:\n\nhttps://ffxiv.consolegameswiki.com/wiki/The_Hunt#Unlock");
+        public static readonly LocString GuideSpawnConditionsTitle =
+            new("hunts.guideSpawnConditionsTitle", "How do people figure out the spawn conditions?");
+        public static readonly LocString GuideSpawnConditionsBody = new("hunts.guideSpawnConditionsBody",
+            "Each area has a specific NPC who shares lore about its S-ranks, and that lore usually hints at how to spawn them.\n\nFor example, Agrippa's lore mentions a hunter being ambushed after searching for treasure, hinting that its spawn condition is opening a treasure map.");
+        public static readonly LocString GuideGlossaryTitle = new("hunts.guideGlossaryTitle", "Glossary");
+        public static readonly LocString GuideGlossaryBody = new("hunts.guideGlossaryBody",
+            "Conductor: Person who leads a Hunt Train.\nET/EzT: Eorzean Time. Pulls are usually scheduled in Eorzean time rather than real-world time.\nLandmine: One of the spots where a mark can spawn.\nPT: Pull Time, the moment the mark will be attacked and killed.\nScouter: Person who locates an A-rank mark ahead of a Hunt Train.\nSniping: Killing a hunt mark without reporting it. Sniping is completely permitted, but is generally considered poor etiquette.\nSpawner/Reporter: Person who first reports a mark's spawn.\nTrain: An organized event where players kill every A-rank mark in an expansion, typically Shadowbringers or later.\ntyfs: Thank You For Spawn, a common way to thank whoever reported the mark.");
+    }
+
+    public static class HuntLore
+    {
+        public static readonly LocString AglaopeSpawn = new("hunts.lore.aglaope.spawn", "Chance on travelling over spawn locations with the Scarlet Peacock minion out.");
+        public static readonly LocString AgrippaTheMightySpawn = new("hunts.lore.agrippa_the_mighty.spawn", "Chance on opening a chest from a treasure map.");
+        public static readonly LocString ArchAethereaterSpawn = new("hunts.lore.arch_aethereater.spawn", "Killing four Crystal Incarnation.");
+        public static readonly LocString ArmstrongSpawn = new("hunts.lore.armstrong.spawn", "Chance on player death on spawn locations while wearing Mended Imperial Pot Helm and Mended Imperial Short Robe.");
+        public static readonly LocString AtticusThePrimogenitorSpawn = new("hunts.lore.atticus_the_primogenitor.spawn", "Craft a high-quality Rroneek Steak.");
+        public static readonly LocString BirdOfParadiseSpawn = new("hunts.lore.bird_of_paradise.spawn", "Chance on when the zone's B-Rank mark Squonk uses the ability Chirp.");
+        public static readonly LocString BoneCrawlerSpawn = new("hunts.lore.bone_crawler.spawn", "Chance when crossing the middle of the zone during a Chocobo Porter journey.");
+        public static readonly LocString BonnaconSpawn = new("hunts.lore.bonnacon.spawn", "Chance on harvesting La Noscean Leeks.");
+        public static readonly LocString BrontesSpawn = new("hunts.lore.brontes.spawn", "Chance when consuming food or drink on spawn locations.");
+        public static readonly LocString BurfurlurTheCannySpawn = new("hunts.lore.burfurlur_the_canny.spawn", "Chance on travelling over spawn locations during the day in the sun with the Tiny Troll minion out.");
+        public static readonly LocString ChernobogSpawn = new("hunts.lore.chernobog.spawn", "Chance on player death.");
+        public static readonly LocString CroakadileSpawn = new("hunts.lore.croakadile.spawn", "Travel over spawn locations during nights of the full moon.");
+        public static readonly LocString CroqueMitaineSpawn = new("hunts.lore.croque_mitaine.spawn", "Chance on mining Grade 3 La Noscean Topsoil.");
+        public static readonly LocString ForgivenPedantrySpawn = new("hunts.lore.forgiven_pedantry.spawn", "Harvest Dwarven Cotton Boll 50 times.");
+        public static readonly LocString ForgivenRebellionSpawn = new("hunts.lore.forgiven_rebellion.spawn", "Killing four Forgiven Gossip.");
+        public static readonly LocString GammaSpawn = new("hunts.lore.gamma.spawn", "Chance on travelling over spawn locations at night with the Toy Alexander minion out.");
+        public static readonly LocString GandarewaSpawn = new("hunts.lore.gandarewa.spawn", "Mine Aurum Regis Ore 50 times and harvest Seventh Heaven 50 times.");
+        public static readonly LocString GunittSpawn = new("hunts.lore.gunitt.spawn", "Chance when a fully enlarged Clionid uses the ability Buccal Cones on the player.");
+        public static readonly LocString IhnuxokiySpawn = new("hunts.lore.ihnuxokiy.spawn", "Chance on travelling over spawn locations with the Morpho minion out.");
+        public static readonly LocString IxtabSpawn = new("hunts.lore.ixtab.spawn", "Killing 100 Cracked Ronkan Doll, 100 Cracked Ronkan Thorn and 100 Cracked Ronkan Vessel.");
+        public static readonly LocString KaiserBehemothSpawn = new("hunts.lore.kaiser_behemoth.spawn", "Chance on travelling over spawn locations with the Behemoth Heir minion out.");
+        public static readonly LocString KerSpawn = new("hunts.lore.ker.spawn", "Killing four Ker Shroud.");
+        public static readonly LocString KirlirgerTheAbhorrentSpawn = new("hunts.lore.kirlirger_the_abhorrent.spawn", "Chance when travelling over spawn locations during the new moon in foggy weather at night.");
+        public static readonly LocString LaideronnetteSpawn = new("hunts.lore.laideronnette.spawn", "After 30 (real-time) minutes of rain in the zone.");
+        public static readonly LocString LeucrottaSpawn = new("hunts.lore.leucrotta.spawn", "Killing 50 Allagan Chimera, 50 Lesser Hydra and 50 Meracydian Vouivre.");
+        public static readonly LocString MindflayerSpawn = new("hunts.lore.mindflayer.spawn", "Travel over spawn locations during nights of the new moon.");
+        public static readonly LocString MinhocaoSpawn = new("hunts.lore.minhocao.spawn", "Killing 100 Earth Sprites.");
+        public static readonly LocString NandiSpawn = new("hunts.lore.nandi.spawn", "Chance on travelling over spawn locations with a minion out.");
+        public static readonly LocString NarrowRiftSpawn = new("hunts.lore.narrow_rift.spawn", "Chance when 10 players travel over spawn locations with the wee Ea minion out.");
+        public static readonly LocString NeyoozoteelSpawn = new("hunts.lore.neyoozoteel.spawn", "Discard a stack of 50 Fish Meal from your inventory.");
+        public static readonly LocString NunyunuwiSpawn = new("hunts.lore.nunyunuwi.spawn", "Complete FATEs for one (real-time) hour without letting any fail.");
+        public static readonly LocString OkinaSpawn = new("hunts.lore.okina.spawn", "During the full moon, after killing 100 Yumemi and 100 Naked Yumemi.");
+        public static readonly LocString OphioneusSpawn = new("hunts.lore.ophioneus.spawn", "Discard a stack of 5 Eggs of Elpis from your inventory.");
+        public static readonly LocString OrghanaSpawn = new("hunts.lore.orghana.spawn", "Chance on travelling over spawn locations with the Not Just a Tribute FATE completed.");
+        public static readonly LocString RuminatorSpawn = new("hunts.lore.ruminator.spawn", "Killing 100 Thinkers, 100 Wanderers and 100 Weepers.");
+        public static readonly LocString SafatSpawn = new("hunts.lore.safat.spawn", "Drop to 1HP by taking falling damage.");
+        public static readonly LocString SaltAndLightSpawn = new("hunts.lore.salt_and_light.spawn", "Discard 50 items from your inventory.");
+        public static readonly LocString SansheyaSpawn = new("hunts.lore.sansheya.spawn", "Successfully complete the You Are What You Drink FATE three times in a row.");
+        public static readonly LocString SenmurvSpawn = new("hunts.lore.senmurv.spawn", "Successfully complete the Cerf's Up FATE five times in a row.");
+        public static readonly LocString SphatikaSpawn = new("hunts.lore.sphatika.spawn", "Killing 100 Asvattha, 100 Pisaca and 100 Vajralangula.");
+        public static readonly LocString TarchiaSpawn = new("hunts.lore.tarchia.spawn", "Chance when players Self Destruct on spawn locations.");
+        public static readonly LocString TheForecasterSpawn = new("hunts.lore.the_forecaster.spawn", "Chance when players cast Northerlies on spawn locations.");
+        public static readonly LocString TheGarlokSpawn = new("hunts.lore.the_garlok.spawn", "After 200 (real-time) minutes of no rain/showers in the zone.");
+        public static readonly LocString ThePaleRiderSpawn = new("hunts.lore.the_pale_rider.spawn", "Chance on opening a chest from a treasure map.");
+        public static readonly LocString ThousandCastThedaSpawn = new("hunts.lore.thousand_cast_theda.spawn", "Chance after successfully landing a Judgeray.");
+        public static readonly LocString TygerSpawn = new("hunts.lore.tyger.spawn", "Discard one Rail Tenderloin from your inventory.");
+        public static readonly LocString UdumbaraSpawn = new("hunts.lore.udumbara.spawn", "Killing 100 Leshy and 100 Diakka.");
+        public static readonly LocString ZonaSeekerSpawn = new("hunts.lore.zona_seeker.spawn", "Chance after successfully landing a Glimmerscale.");
+
+        public static readonly LocString BattlecraftOrGcLevequestSpawn = new("hunts.lore.battlecraftOrGcLevequest.spawn",
+            "Chance on initiation of a Battlecraft or Grand Company levequest.");
+
+        public static readonly LocString ArchaeotaniaSpawn = new("hunts.lore.archaeotania.spawn", "Completion of two FATE chains within The Tempest.");
+        public static readonly LocString ChiSpawn = new("hunts.lore.chi.spawn", "Completion of two FATEs within Ultima Thule.");
+        public static readonly LocString DaivadipaSpawn = new("hunts.lore.daivadipa.spawn", "Completion of two FATEs within Thavnair.");
+        public static readonly LocString FormidableSpawn = new("hunts.lore.formidable.spawn", "Completion of two FATEs within Kholusia.");
+        public static readonly LocString MicaTheMagicalMuSpawn = new("hunts.lore.mica_the_magical_mu.spawn", "Completion of two FATEs within Living Memory.");
+        public static readonly LocString TamamoGozenSpawn = new("hunts.lore.tamamo_gozen.spawn", "Completion of three FATEs within Yanxia.");
+        public static readonly LocString TtokrroneSpawn = new("hunts.lore.ttokrrone.spawn", "Completion of four FATEs within Shaaloani.");
+
+        public static readonly LocString NoSpecificSpawnTrigger = new("hunts.lore.noSpecificSpawnTrigger.spawn",
+            "No specific trigger, will spawn randomly at some point during the open window.");
     }
 
     internal static class Phone
@@ -4087,8 +4292,11 @@ internal static class L
         public static readonly LocString MinutesShort = new("time.minutesShort", "{0}m");
         public static readonly LocString HoursShort = new("time.hoursShort", "{0}h");
         public static readonly LocString DaysShort = new("time.daysShort", "{0}d");
+        public static readonly LocString SecondsAgo = new("time.secondsAgo", "{0}s ago");
         public static readonly LocString MinutesAgo = new("time.minutesAgo", "{0}m ago");
+        public static readonly LocString MinutesSecondsAgo = new("time.minutesSecondsAgo", "{0}m {1}s ago");
         public static readonly LocString HoursAgo = new("time.hoursAgo", "{0}h ago");
+        public static readonly LocString HoursMinutesAgo = new("time.hoursMinutesAgo", "{0}h {1}m ago");
         public static readonly LocString DaysAgo = new("time.daysAgo", "{0}d ago");
         public static readonly LocString Today = new("time.today", "Today");
         public static readonly LocString Yesterday = new("time.yesterday", "Yesterday");
@@ -5222,6 +5430,11 @@ internal static class L
         public static readonly LocString AetherStreamPartyBody = new("onboarding.aetherStreamPartyBody", "Start a party and players nearby can ask to join. You decide who comes in, and everyone stays on the same second of the same video.");
         public static readonly LocString AetherStreamSettingsTitle = new("onboarding.aetherStreamSettingsTitle", "Tune it to your machine");
         public static readonly LocString AetherStreamSettingsBody = new("onboarding.aetherStreamSettingsBody", "Maximum quality, hardware decoding, whether others can find your stream, and the components the player needs, all behind this cog.");
+        public static readonly LocString HuntsBody = new("onboarding.huntsBody", "A Faloop account is required for live spawn data. Browsing marks and mob info works without one.");
+        public static readonly LocString HuntsSignInTitle = new("onboarding.huntsSignInTitle", "Sign in to Faloop");
+        public static readonly LocString HuntsSignInBody = new("onboarding.huntsSignInBody", "Tap here to sign in or create a Faloop account and start getting live spawns.");
+        public static readonly LocString HuntsGuideTitle = new("onboarding.huntsGuideTitle", "Learn more");
+        public static readonly LocString HuntsGuideBody = new("onboarding.huntsGuideBody", "Want to learn more about hunts? Check our guide for more information.");
     }
 
     internal static class Setup

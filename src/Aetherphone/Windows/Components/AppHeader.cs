@@ -27,6 +27,15 @@ internal static class AppHeader
         DrawBack(context, onBack, scale, content.Min.Y + Height * scale * 0.5f);
     }
 
+    public static bool DrawBack(Rect content, float scale, string id, Vector4 color)
+    {
+        var rowCenterY = content.Min.Y + Height * scale * 0.5f;
+        var hitMax = new Vector2(content.Min.X + 44f * scale, content.Min.Y + Height * scale);
+        var hovered = UiInteract.Hover(content.Min, hitMax);
+        var center = new Vector2(content.Min.X + 15f * scale, rowCenterY);
+        return BackButton.Draw(id, center, 15f * scale, color, hovered, scale);
+    }
+
     private static void DrawBack(in PhoneContext context, Action? onBack, float scale, float rowCenterY)
     {
         var content = context.Content;

@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(here, "../../src/Aetherphone/Icons");
-const TABLER_VERSION = "3.44.0";
+const TABLER_VERSION = "3.46.0";
 const SIZE = 256;
 const STROKE = "2.25";
 
@@ -50,6 +50,7 @@ const map = {
   appstore: "apps",
   shortcuts: "bolt",
   aetherstream: "device-tv",
+  hunts: "dragon",
 };
 
 function recolor(svg) {

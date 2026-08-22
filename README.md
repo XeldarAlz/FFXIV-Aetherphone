@@ -49,7 +49,7 @@ Privacy and safety come first: text messages, attachments, and voice notes are e
 
 - **Social**: a microblog, a photo feed, and private messaging with voice notes and group calls, plus an optional 18+ companion app.
 - **Game chat**: every game chat channel on the phone, in tabs you build yourself, with tells as their own conversations.
-- **Utilities**: a market board tracker, a housing browser, a venue and event directory, in-game music with live community radio stations and Rolladeck DJ listings, weather, a wallet, timers and resets, a photo library and camera, shortcuts, and a pocket arcade of mini-games, among 40 apps.
+- **Utilities**: a market board tracker, a housing browser, a hunt train tracker, a venue and event directory, in-game music with live community radio stations and Rolladeck DJ listings, weather, a wallet, timers and resets, a photo library and camera, shortcuts, and a pocket arcade of mini-games, among 41 apps.
 - **Watch together**: cast video, YouTube included, onto an in-world screen, with playback synced for everyone watching along.
 - **Casino**: play-money blackjack, slots, scratch cards, a communal wheel, and bingo. No real money, and nothing has cash value.
 - **Make it yours**: any accent color, wallpapers, Lodestone character portraits, custom ringtones, a text-size zoom, and a phone you can drag to any size.

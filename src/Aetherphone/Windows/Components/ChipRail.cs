@@ -9,6 +9,9 @@ internal sealed class ChipRail
 {
     public const float RowHeight = 34f;
 
+    public const float DefaultLabelPadding = 26f;
+    public const float CompactLabelPadding = 14f;
+
     private const float Gap = 8f;
     private const float SidePad = 2f;
     private const float DragSlop = 5f;
@@ -19,11 +22,12 @@ internal sealed class ChipRail
     private float dragTravel;
     private float lastMouseX;
 
-    public int Draw(AppSkin ui, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, string? anchorKey = null) =>
-        Draw(ReserveRow(this, UiScale.Current), ui, labels, active, false, anchorKey);
+    public int Draw(AppSkin ui, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, string? anchorKey = null,
+        float labelPadding = DefaultLabelPadding) =>
+        Draw(ReserveRow(this, UiScale.Current), ui, labels, active, false, anchorKey, labelPadding);
 
     public int Draw(Rect row, AppSkin ui, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, bool overlay = false,
-        string? anchorKey = null)
+        string? anchorKey = null, float labelPadding = DefaultLabelPadding)
     {
         if (labels.Length == 0)
         {
@@ -40,7 +44,7 @@ internal sealed class ChipRail
         var content = SidePad * 2f * scale;
         for (var index = 0; index < labels.Length; index++)
         {
-            content += ChipWidth(labels[index], scale) + (index > 0 ? gap : 0f);
+            content += ChipWidth(labels[index], scale, labelPadding) + (index > 0 ? gap : 0f);
         }
 
         maxOffset = MathF.Max(0f, content - row.Width);
@@ -51,7 +55,7 @@ internal sealed class ChipRail
         var tapped = -1;
         for (var index = 0; index < labels.Length; index++)
         {
-            var width = ChipWidth(labels[index], scale);
+            var width = ChipWidth(labels[index], scale, labelPadding);
             if (cursorX + width >= row.Min.X && cursorX <= row.Max.X
                 && DrawChip(drawList, ui, labels[index], active[index],
                     new Vector2(cursorX, row.Center.Y), width, scale, overlay))
@@ -66,8 +70,8 @@ internal sealed class ChipRail
         return tapped;
     }
 
-    private static float ChipWidth(string label, float scale) =>
-        Typography.Measure(label, TextStyles.SubheadlineEmphasized).X + 26f * scale;
+    private static float ChipWidth(string label, float scale, float labelPadding) =>
+        Typography.Measure(label, TextStyles.SubheadlineEmphasized).X + labelPadding * scale;
 
     private bool DrawChip(ImDrawListPtr drawList, AppSkin ui, string label, bool active, Vector2 leftCenter,
         float width, float scale, bool overlay)

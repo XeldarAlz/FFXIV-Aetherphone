@@ -6,7 +6,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Textures;
 using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Apps.Market;
@@ -96,17 +95,9 @@ internal sealed partial class MarketApp
         var cardMax = new Vector2(origin.X + width, origin.Y + cardHeight);
         Squircle.Fill(drawList, cardMin, cardMax, cardRounding, ImGui.GetColorU32(frameTheme.GroupedCard));
         Material.EdgeSquircle(drawList, cardMin, cardMax, cardRounding, scale);
-        Elevation.Card(drawList, iconMin, iconMax, tileRounding, scale, 0.5f);
-        Squircle.Fill(drawList, iconMin, iconMax, tileRounding, ImGui.GetColorU32(AppPalettes.Market.CardFill));
-        if (view.IconId != 0)
-        {
-            var texture = textures.GetFromGameIcon(new GameIconLookup(view.IconId)).GetWrapOrEmpty();
-            var inset = 4f * scale;
-            drawList.AddImageRounded(texture.Handle, iconMin + new Vector2(inset, inset),
-                iconMax - new Vector2(inset, inset), Vector2.Zero, Vector2.One, 0xFFFFFFFFu, tileRounding - inset);
-        }
-
-        Material.EdgeSquircle(drawList, iconMin, iconMax, tileRounding, scale);
+        GameIconTile.Draw(drawList, textures, view.IconId, iconMin, iconMax, tileRounding, scale,
+            ImGui.GetColorU32(AppPalettes.Market.CardFill), inset: 4f * scale, cardShadow: true, edgeStroke: true,
+            edgeStrokeOpacity: 1f);
         var titleMaxWidth = MathF.Max(1f, origin.X + width - 16f * scale - textX);
         var titleId = "market.detail.hero." + view.ItemId;
         var titleSize = Typography.Measure(view.Name, TextStyles.Title3);

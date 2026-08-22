@@ -396,7 +396,8 @@ internal sealed class AppSkin
         Field(label, id, ref value, maxLength, multiline,
             multiline ? Metrics.Size.FieldMultiline : Metrics.Size.FieldHeight);
 
-    public void Field(string label, string id, ref string value, int maxLength, bool multiline, float heightUnscaled)
+    public void Field(string label, string id, ref string value, int maxLength, bool multiline, float heightUnscaled,
+        ImGuiInputTextFlags extraFlags = ImGuiInputTextFlags.None)
     {
         var scale = UiScale.Current;
         using (ImRaii.PushColor(ImGuiCol.Text, Palette.MutedInk))
@@ -423,7 +424,7 @@ internal sealed class AppSkin
             }
             else
             {
-                ImGui.InputText(id, ref value, maxLength, ImGuiInputTextFlags.None);
+                ImGui.InputText(id, ref value, maxLength, extraFlags);
             }
         }
 

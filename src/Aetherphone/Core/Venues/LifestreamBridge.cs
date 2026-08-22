@@ -27,6 +27,9 @@ internal static class LifestreamBridge
     private static ICallGateSubscriber<string, bool>? sameDataCenterGate;
     private static ICallGateSubscriber<string, bool>? crossDataCenterGate;
     private static ICallGateSubscriber<HousingAddress, object>? housingAddressGate;
+    private static ICallGateSubscriber<int>? currentInstanceGate;
+    private static ICallGateSubscriber<bool>? canChangeInstanceGate;
+    private static ICallGateSubscriber<int, object>? changeInstanceGate;
 
     public static bool IsAvailable()
     {
@@ -158,7 +161,7 @@ internal static class LifestreamBridge
         }
     }
 
-    private static bool IsBusy()
+    public static bool IsBusy()
     {
         try
         {
@@ -169,6 +172,50 @@ internal static class LifestreamBridge
         {
             AepLog.Warning(exception, "[Lifestream] IsBusy failed");
             return false;
+        }
+    }
+
+    public static int GetCurrentInstance()
+    {
+        try
+        {
+            currentInstanceGate ??=
+                Plugin.PluginInterface.GetIpcSubscriber<int>($"{InternalName}.GetCurrentInstance");
+            return currentInstanceGate.InvokeFunc();
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, "[Lifestream] GetCurrentInstance failed");
+            return 0;
+        }
+    }
+
+    public static bool CanChangeInstance()
+    {
+        try
+        {
+            canChangeInstanceGate ??=
+                Plugin.PluginInterface.GetIpcSubscriber<bool>($"{InternalName}.CanChangeInstance");
+            return canChangeInstanceGate.InvokeFunc();
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, "[Lifestream] CanChangeInstance failed");
+            return false;
+        }
+    }
+
+    public static void ChangeInstance(int instanceNumber)
+    {
+        try
+        {
+            changeInstanceGate ??=
+                Plugin.PluginInterface.GetIpcSubscriber<int, object>($"{InternalName}.ChangeInstance");
+            changeInstanceGate.InvokeAction(instanceNumber);
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, "[Lifestream] ChangeInstance failed");
         }
     }
 

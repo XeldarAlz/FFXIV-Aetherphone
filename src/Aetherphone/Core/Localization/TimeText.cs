@@ -82,6 +82,45 @@ internal static class TimeText
     public static string Ago(long unixSeconds) =>
         unixSeconds <= 0 ? "-" : Ago(DateTimeOffset.FromUnixTimeSeconds(unixSeconds));
 
+    public static string AgoPrecise(DateTime utcMoment)
+    {
+        if (utcMoment == default)
+        {
+            return "-";
+        }
+
+        var delta = DateTime.UtcNow - utcMoment;
+        if (delta < TimeSpan.Zero)
+        {
+            delta = TimeSpan.Zero;
+        }
+
+        if (delta.TotalMinutes < 1)
+        {
+            return Loc.T(L.Time.SecondsAgo, (int)delta.TotalSeconds);
+        }
+
+        if (delta.TotalHours < 1)
+        {
+            var minutes = (int)delta.TotalMinutes;
+            return delta.Seconds > 0
+                ? Loc.T(L.Time.MinutesSecondsAgo, minutes, delta.Seconds)
+                : Loc.T(L.Time.MinutesAgo, minutes);
+        }
+
+        if (delta.TotalHours < 24)
+        {
+            var hours = (int)delta.TotalHours;
+            return delta.Minutes > 0
+                ? Loc.T(L.Time.HoursMinutesAgo, hours, delta.Minutes)
+                : Loc.T(L.Time.HoursAgo, hours);
+        }
+
+        return Loc.T(L.Time.DaysAgo, (int)delta.TotalDays);
+    }
+
+    public static string AgoPrecise(DateTimeOffset moment) => AgoPrecise(moment.UtcDateTime);
+
     public static string Short(long unixSeconds)
     {
         if (unixSeconds <= 0)
@@ -214,14 +253,8 @@ internal static class TimeText
         return FutureDayLabel(unixSeconds) + " " + Clock(unixSeconds);
     }
 
-    public static string Until(long unixSeconds)
+    public static string Until(TimeSpan span)
     {
-        if (unixSeconds <= 0)
-        {
-            return string.Empty;
-        }
-
-        var span = DateTimeOffset.FromUnixTimeSeconds(unixSeconds) - DateTimeOffset.UtcNow;
         if (span <= TimeSpan.Zero)
         {
             return Loc.T(L.Time.Now);
@@ -241,6 +274,16 @@ internal static class TimeText
         }
 
         return Loc.T(L.Timers.InDays, (int)span.TotalDays);
+    }
+
+    public static string Until(long unixSeconds)
+    {
+        if (unixSeconds <= 0)
+        {
+            return string.Empty;
+        }
+
+        return Until(DateTimeOffset.FromUnixTimeSeconds(unixSeconds) - DateTimeOffset.UtcNow);
     }
 
     public static bool SameLocalDay(long firstUnix, long secondUnix) =>

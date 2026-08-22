@@ -72,7 +72,15 @@ internal static class TravelPlanner
     }
 
     public static TravelDestination Resolve(uint territoryId, uint worldId, uint currentWorldId,
-        uint currentTerritoryId)
+        uint currentTerritoryId) =>
+        ResolveCore(territoryId, worldId, currentWorldId, currentTerritoryId, null);
+
+    public static TravelDestination ResolveNearestAetheryteTo(uint territoryId, uint worldId, uint currentWorldId,
+        uint currentTerritoryId, (float X, float Y)? targetCoordinate) =>
+        ResolveCore(territoryId, worldId, currentWorldId, currentTerritoryId, targetCoordinate);
+
+    private static TravelDestination ResolveCore(uint territoryId, uint worldId, uint currentWorldId,
+        uint currentTerritoryId, (float X, float Y)? targetCoordinate)
     {
         if (currentWorldId == 0)
         {
@@ -97,8 +105,93 @@ internal static class TravelPlanner
             return new TravelDestination(TravelKind.AlreadyThere, string.Empty, string.Empty, 0, 0, 0);
         }
 
+        if (targetCoordinate is { } coordinate && ResolveNearestAetheryte(territoryId, coordinate) is { } nearest)
+        {
+            return nearest;
+        }
+
         var lookup = destinationByTerritory ??= BuildDestinationLookup();
         return lookup.TryGetValue(territoryId, out var destination) ? destination : default;
+    }
+
+    private readonly record struct AetheryteCandidate(uint RowId, string Name, Vector2 MapCoordinate);
+
+    private static Dictionary<uint, List<AetheryteCandidate>>? aetherytesByTerritory;
+
+    private static TravelDestination? ResolveNearestAetheryte(uint territoryId, (float X, float Y) targetCoordinate)
+    {
+        var candidates = (aetherytesByTerritory ??= BuildAetheryteCandidates()).GetValueOrDefault(territoryId);
+        if (candidates is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        var target = new Vector2(targetCoordinate.X, targetCoordinate.Y);
+        var nearest = candidates[0];
+        var nearestDistanceSquared = Vector2.DistanceSquared(nearest.MapCoordinate, target);
+        for (var index = 1; index < candidates.Count; index++)
+        {
+            var candidate = candidates[index];
+            var distanceSquared = Vector2.DistanceSquared(candidate.MapCoordinate, target);
+            if (distanceSquared >= nearestDistanceSquared)
+            {
+                continue;
+            }
+
+            nearest = candidate;
+            nearestDistanceSquared = distanceSquared;
+        }
+
+        return new TravelDestination(TravelKind.Aetheryte, nearest.Name, nearest.Name, nearest.RowId, 0, 0);
+    }
+
+    private const byte AetheryteMarkerDataType = 3;
+
+    private static Dictionary<uint, List<AetheryteCandidate>> BuildAetheryteCandidates()
+    {
+        var maps = Plugin.DataManager.GetExcelSheet<Map>();
+        var markers = Plugin.DataManager.GetSubrowExcelSheet<MapMarker>();
+        var aetherytes = Plugin.DataManager.GetExcelSheet<Aetheryte>();
+        var placeNames = Plugin.DataManager.GetExcelSheet<PlaceName>();
+        var byTerritory = new Dictionary<uint, List<AetheryteCandidate>>();
+
+        foreach (var map in maps)
+        {
+            var territoryId = map.TerritoryType.RowId;
+            if (territoryId == 0 || !markers.TryGetRow(map.MapMarkerRange, out var markerGroup))
+            {
+                continue;
+            }
+
+            foreach (var marker in markerGroup)
+            {
+                if (marker.DataType != AetheryteMarkerDataType
+                    || !aetherytes.TryGetRow(marker.DataKey.RowId, out var aetheryte)
+                    || !aetheryte.IsAetheryte || aetheryte.Invisible
+                    || aetheryte.PlaceName.RowId == 0
+                    || !placeNames.TryGetRow(aetheryte.PlaceName.RowId, out var placeName))
+                {
+                    continue;
+                }
+
+                var name = placeName.Name.ExtractText();
+                if (name.Length == 0)
+                {
+                    continue;
+                }
+
+                var (mapX, mapY) = MapPixelMath.ToGameCoordinate(marker.X, marker.Y, map.SizeFactor);
+                if (!byTerritory.TryGetValue(territoryId, out var candidates))
+                {
+                    candidates = new List<AetheryteCandidate>();
+                    byTerritory[territoryId] = candidates;
+                }
+
+                candidates.Add(new AetheryteCandidate(aetheryte.RowId, name, new Vector2(mapX, mapY)));
+            }
+        }
+
+        return byTerritory;
     }
 
     public static bool CanGo(in TravelDestination destination) =>

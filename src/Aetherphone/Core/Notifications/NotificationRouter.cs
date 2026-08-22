@@ -3,6 +3,7 @@ using Aetherphone.Core.Apps;
 using Aetherphone.Core.Casino;
 using Aetherphone.Core.Linkpearl;
 using Aetherphone.Core.GameChat;
+using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Moderation;
 using Aetherphone.Core.Muster;
 using Aetherphone.Core.Radio;
@@ -26,6 +27,7 @@ internal sealed class NotificationRouter
     private const string CasinoAppId = "casino";
     private const string CasinoGroupPrefix = "casino:";
     private const string AetherStreamAppId = "aetherstream";
+    private const string HuntsAppId = "hunts";
     private const int TypeLike = 0;
     private const int TypeComment = 1;
     private const int TypeFollow = 2;
@@ -58,17 +60,19 @@ internal sealed class NotificationRouter
     private readonly RadioLauncher radioLauncher;
     private readonly CasinoLauncher casinoLauncher;
     private readonly AetherStreamLauncher aetherStreamLauncher;
+    private readonly HuntsLauncher huntsLauncher;
 
     public NotificationRouter(INavigator navigation, NotificationService notifications,
         SocialNotificationService socialNotifications, LinkpearlLauncher linkpearlLauncher,
         VelvetLauncher velvetLauncher, DmLauncher dmLauncher, GramDmLauncher gramDmLauncher, SocialLauncher socialLauncher,
         MusterLauncher musterLauncher, YellowPagesLauncher yellowPagesLauncher,
         AnnouncementsLauncher announcementsLauncher, SafetyLauncher safetyLauncher, RadioLauncher radioLauncher,
-        CasinoLauncher casinoLauncher, AetherStreamLauncher aetherStreamLauncher)
+        CasinoLauncher casinoLauncher, AetherStreamLauncher aetherStreamLauncher, HuntsLauncher huntsLauncher)
     {
         this.radioLauncher = radioLauncher;
         this.casinoLauncher = casinoLauncher;
         this.aetherStreamLauncher = aetherStreamLauncher;
+        this.huntsLauncher = huntsLauncher;
         this.navigation = navigation;
         this.notifications = notifications;
         this.socialNotifications = socialNotifications;
@@ -164,6 +168,11 @@ internal sealed class NotificationRouter
         else if (notification.AppId == AetherStreamAppId && notification.GroupKey == StreamSuggestionNotifier.GroupKey)
         {
             aetherStreamLauncher.RequestUpNext();
+        }
+        else if (notification.AppId == HuntsAppId && notification.GroupKey is { } huntsKey
+                 && HuntsService.TryParseGroupKey(huntsKey, out var mobId, out var worldId, out var zoneInstance))
+        {
+            huntsLauncher.RequestDetail(mobId, worldId, zoneInstance);
         }
         else if (notification.AppId == SettingsAppId)
         {

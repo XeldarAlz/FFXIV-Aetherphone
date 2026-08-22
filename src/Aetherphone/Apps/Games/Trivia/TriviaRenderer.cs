@@ -5,7 +5,6 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Games.Trivia;
@@ -219,17 +218,8 @@ internal sealed class TriviaRenderer
             return;
         }
 
-        var texture = textures.GetFromGameIcon(new GameIconLookup(iconId)).GetWrapOrEmpty();
-        if (texture.Handle == 0)
-        {
-            return;
-        }
-
         var half = new Vector2(size * 0.5f, size * 0.5f);
-        var min = center - half;
-        var max = center + half;
-        drawList.AddRectFilled(min + new Vector2(0f, 3f * scale), max + new Vector2(0f, 3f * scale),
-            ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.28f)), size * 0.22f);
-        drawList.AddImageRounded(texture.Handle, min, max, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, size * 0.22f);
+        GameIconTile.Draw(drawList, textures, iconId, center - half, center + half, size * 0.22f, scale,
+            flatShadow: true, requireIcon: true);
     }
 }

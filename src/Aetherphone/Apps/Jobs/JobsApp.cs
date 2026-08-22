@@ -9,7 +9,6 @@ using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
-using Dalamud.Interface.Textures;
 using Dalamud.Plugin.Services;
 
 namespace Aetherphone.Apps.Jobs;
@@ -401,14 +400,8 @@ internal sealed partial class JobsApp : IPhoneApp
         var iconSize = 42f * scale;
         var iconMin = new Vector2(contentRect.Min.X, contentRect.Center.Y - iconSize * 0.5f);
         var iconMax = iconMin + new Vector2(iconSize, iconSize);
-        Squircle.Fill(drawList, iconMin, iconMax, 10f * scale, ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.06f)));
-        if (job.IconId != 0)
-        {
-            var texture = textures.GetFromGameIcon(new GameIconLookup(job.IconId)).GetWrapOrEmpty();
-            drawList.AddImageRounded(texture.Handle, iconMin, iconMax, Vector2.Zero, Vector2.One, 0xFFFFFFFFu, 10f * scale);
-        }
-
-        Material.EdgeSquircle(drawList, iconMin, iconMax, 10f * scale, scale, 0.5f);
+        GameIconTile.Draw(drawList, textures, job.IconId, iconMin, iconMax, 10f * scale, scale,
+            ImGui.GetColorU32(Palette.WithAlpha(ui.TitleInk, 0.06f)), edgeStroke: true);
 
         var note = job.IsActive ? Loc.T(L.Jobs.Active)
             : job.Kind == JobEntryKind.NoGearset ? Loc.T(L.Jobs.NoGearset)

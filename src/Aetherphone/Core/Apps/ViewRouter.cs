@@ -44,6 +44,12 @@ internal sealed class ViewRouter<TView>
         }
     }
 
+    public void Replace(TView view)
+    {
+        stack[stack.Count - 1] = view;
+        viewIds[viewIds.Count - 1] = NewId();
+    }
+
     public bool Pop() => Pop(true);
 
     public bool Pop(bool animate)
