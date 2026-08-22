@@ -1,4 +1,6 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Confirm;
+using Aetherphone.Core.Localization;
 using Dalamud.Bindings.ImGui;
 using System.Diagnostics;
 
@@ -26,6 +28,24 @@ internal static class UrlActions
             ImGui.SetClipboardText(url);
             onError?.Invoke(exception);
         }
+    }
+
+    public static void AskThenOpen(ConfirmService confirm, string url)
+    {
+        confirm.Ask(new ConfirmRequest
+        {
+            Title = Loc.T(L.Common.OpenLinkTitle),
+            Message = string.Empty,
+            Sections =
+            [
+                ConfirmSection.Paragraph(Loc.T(L.Common.OpenLinkWarning)),
+                ConfirmSection.Chip(Loc.T(L.Common.OpenLinkDestination), url),
+            ],
+            ConfirmLabel = Loc.T(L.Common.OpenLinkConfirm),
+            CancelLabel = Loc.T(L.Common.Cancel),
+            Danger = true,
+            Confirm = () => OpenInBrowser(url),
+        });
     }
 
     public static void OpenFolder(string path)

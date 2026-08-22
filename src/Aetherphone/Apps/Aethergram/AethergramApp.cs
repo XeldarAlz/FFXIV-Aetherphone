@@ -21,6 +21,7 @@ using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -1453,6 +1454,11 @@ internal sealed partial class AethergramApp : IPhoneApp
         if (hit.Kind == RichTextRunKind.Hashtag && hit.Clicked)
         {
             OpenHashtag(layout.Tags[hit.TargetIndex]);
+        }
+
+        if (hit.Kind == RichTextRunKind.Link && hit.Clicked)
+        {
+            UrlActions.AskThenOpen(confirm, layout.Urls[hit.TargetIndex]);
         }
     }
 

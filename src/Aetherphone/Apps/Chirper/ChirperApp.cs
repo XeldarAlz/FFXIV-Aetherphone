@@ -18,6 +18,7 @@ using Aetherphone.Core.Sharing;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Wallpapers;
+using Aetherphone.Windows;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
@@ -55,6 +56,7 @@ internal sealed partial class ChirperApp : IPhoneApp
     private readonly RemoteImageCache images;
     private readonly SocialNotificationService social;
     private readonly ConductGateService conduct;
+    private readonly ConfirmService confirmService;
     private readonly AvatarComposer avatar;
     private readonly SocialProfilePages profile;
     private readonly AppSkin ui = new(AppPalettes.Chirper);
@@ -144,6 +146,7 @@ internal sealed partial class ChirperApp : IPhoneApp
             wallpaperImages, confirm, () => store.AvatarFailure);
         router = new ViewRouter<ChirperRoute>(ChirperRoute.Home);
         drawView = DrawView;
+        confirmService = confirm;
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);
         openActivityPost = item => OpenThreadFromLink(item.PostId!);
@@ -1661,6 +1664,11 @@ internal sealed partial class ChirperApp : IPhoneApp
         if (hit.Kind == RichTextRunKind.Hashtag && hit.Clicked)
         {
             OpenHashtag(layout.Tags[hit.TargetIndex]);
+        }
+        
+        if (hit.Kind == RichTextRunKind.Link && hit.Clicked)
+        {
+            UrlActions.AskThenOpen(confirmService, layout.Urls[hit.TargetIndex]);
         }
     }
 
