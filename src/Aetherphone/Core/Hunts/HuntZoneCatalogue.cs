@@ -1,4 +1,5 @@
 using Aetherphone.Core.Maps;
+using Dalamud.Game;
 using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Hunts;
@@ -48,7 +49,7 @@ internal sealed class HuntZoneCatalog
     public uint ResolveTerritoryId(string zoneId)
     {
         var zone = FindZone(zoneId);
-        var name = zone?.Name.GetValueOrDefault(HuntClientLanguage.Key()) ?? zone?.Name.GetValueOrDefault("en");
+        var name = zone?.Name;
         if (string.IsNullOrEmpty(name))
         {
             return 0u;
@@ -76,7 +77,7 @@ internal sealed class HuntZoneCatalog
     private static Dictionary<string, uint> BuildTerritoryIdLookup()
     {
         var lookup = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
-        foreach (var territory in Plugin.DataManager.GetExcelSheet<TerritoryType>())
+        foreach (var territory in Plugin.DataManager.GetExcelSheet<TerritoryType>(ClientLanguage.English))
         {
             if (territory.PlaceName.RowId == 0)
             {

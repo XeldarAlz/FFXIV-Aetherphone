@@ -473,7 +473,7 @@ internal sealed partial class HuntsApp
         var mapLeft = origin.X + (width - size) * 0.5f;
 
         var drawList = ImGui.GetWindowDrawList();
-        var zoneLabel = ResolveZoneLabel(zone);
+        var zoneLabel = ResolveZoneLabel(zone, territoryId);
         var labelSize = Typography.Measure(zoneLabel, TextStyles.Footnote);
         var labelGap = 6f * scale;
         Typography.Draw(drawList, new Vector2(mapLeft + (size - labelSize.X) * 0.5f, origin.Y), zoneLabel,
@@ -499,9 +499,14 @@ internal sealed partial class HuntsApp
         return true;
     }
 
-    private string ResolveZoneLabel(HuntZoneDefinition zone) =>
-        zone.Name.GetValueOrDefault(configuration.Language) ?? zone.Name.GetValueOrDefault("en") ??
-        Prettify(zone.Id);
+    private string ResolveZoneLabel(HuntZoneDefinition zone, uint territoryId) =>
+        ResolveLiveZoneName(territoryId) is { Length: > 0 } name ? name : Prettify(zone.Id);
+
+    private static string? ResolveLiveZoneName(uint territoryId) =>
+        territoryId != 0 && Plugin.DataManager.GetExcelSheet<TerritoryType>(HuntUiLanguage.GameClientLanguage())
+            .TryGetRow(territoryId, out var territory) && territory.PlaceName.RowId != 0
+            ? territory.PlaceName.Value.Name.ExtractText()
+            : null;
 
     private void DrawDetailZoneMapContent(Rect stage, IDalamudTextureWrap texture, float scale, int? confirmedPoiId,
         HuntsView view, uint territoryId)
