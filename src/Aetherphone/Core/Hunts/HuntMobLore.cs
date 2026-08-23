@@ -18,7 +18,7 @@ internal static class HuntMobLore
     public static bool DescriptionIsFallback(string mobId) =>
         descriptions is not null && !descriptions.HasNativeText(mobId, Loc.Current.Code);
 
-    public static string? TipFor(string mobId) => tips?.TextFor(mobId, HuntUiLanguage.Key());
+    public static string? TipFor(string mobId) => tips?.TextFor(mobId, Loc.Current.Code);
 
     public static bool TipIsFallback(string mobId) =>
         tips is not null && !tips.HasNativeText(mobId, Loc.Current.Code);
