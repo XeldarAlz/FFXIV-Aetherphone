@@ -25,23 +25,8 @@ internal sealed class HuntZoneDefinition
 
 internal sealed class HuntZoneMap
 {
-    [JsonPropertyName("pixelSize")]
-    public int PixelSize { get; set; }
-
-    [JsonPropertyName("offset")]
-    public HuntZoneMapOffset Offset { get; set; } = new();
-
     [JsonPropertyName("sizeFactor")]
     public int SizeFactor { get; set; } = 100;
-}
-
-internal sealed class HuntZoneMapOffset
-{
-    [JsonPropertyName("x")]
-    public int X { get; set; }
-
-    [JsonPropertyName("y")]
-    public int Y { get; set; }
 }
 
 internal sealed class HuntPoiEntry

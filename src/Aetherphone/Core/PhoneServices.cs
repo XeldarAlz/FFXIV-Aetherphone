@@ -179,6 +179,7 @@ internal sealed class PhoneServices : IDisposable
     public required Hunts.HuntsService Hunts { get; init; }
     public required Hunts.HuntMobCatalog HuntMobCatalog { get; init; }
     public required Hunts.HuntZoneCatalog HuntZoneCatalog { get; init; }
+    public required Hunts.HuntZoneMapTextures HuntZoneMapTextures { get; init; }
     public required Hunts.HuntMobRewardCatalog HuntMobRewardCatalog { get; init; }
     public required Hunts.HuntsLauncher HuntsLauncher { get; init; }
     public required Shell.MinimizedLayoutService MinimizedLayout { get; init; }
@@ -350,6 +351,7 @@ internal sealed class PhoneServices : IDisposable
         var huntZonesFile = new FileInfo(Path.Combine(
             Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntPOI.json"));
         var huntZoneCatalog = new HuntZoneCatalog(huntZonesFile);
+        var huntZoneMapTextures = new HuntZoneMapTextures(dataManager, textures);
         var huntMobDescriptionsFile = new FileInfo(Path.Combine(
             Plugin.PluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Hunts", "HuntMobDescriptions.json"));
         var huntMobTipsFile = new FileInfo(Path.Combine(
@@ -485,6 +487,7 @@ internal sealed class PhoneServices : IDisposable
             Hunts = hunts,
             HuntMobCatalog = huntMobCatalog,
             HuntZoneCatalog = huntZoneCatalog,
+            HuntZoneMapTextures = huntZoneMapTextures,
             HuntMobRewardCatalog = huntMobRewardCatalog,
             HuntsLauncher = new Hunts.HuntsLauncher(),
         };

@@ -459,8 +459,9 @@ internal sealed partial class HuntsApp
         }
 
         var zone = zoneCatalog.FindZone(detailMapZoneId);
-        var texture = HuntZoneMapTextures.Resolve(detailMapZoneId);
-        if (zone is null || texture is null || zone.Map.PixelSize <= 0)
+        var territoryId = zoneCatalog.ResolveTerritoryId(detailMapZoneId);
+        var texture = zoneMapTextures.Resolve(territoryId);
+        if (zone is null || texture is null)
         {
             detailMapHovered = false;
             return false;
@@ -489,7 +490,7 @@ internal sealed partial class HuntsApp
         {
             if (mapChild)
             {
-                DrawDetailZoneMapContent(stage, zone, texture, scale, confirmedPoiId, view);
+                DrawDetailZoneMapContent(stage, texture, scale, confirmedPoiId, view, territoryId);
             }
         }
 
@@ -502,8 +503,8 @@ internal sealed partial class HuntsApp
         zone.Name.GetValueOrDefault(configuration.Language) ?? zone.Name.GetValueOrDefault("en") ??
         Prettify(zone.Id);
 
-    private void DrawDetailZoneMapContent(Rect stage, HuntZoneDefinition zone, IDalamudTextureWrap texture,
-        float scale, int? confirmedPoiId, HuntsView view)
+    private void DrawDetailZoneMapContent(Rect stage, IDalamudTextureWrap texture, float scale, int? confirmedPoiId,
+        HuntsView view, uint territoryId)
     {
         var drawList = ImGui.GetWindowDrawList();
         detailMapZoom.Draw(stage, texture, frameTheme, Metrics.Radius.Card * scale, showButtons: false);
@@ -529,9 +530,6 @@ internal sealed partial class HuntsApp
 
         var finalLocationResolved = detailMapFinalPhase && detailMapZoneConfirmed && detailMapPoints.Count == 1;
 
-        var pixelSize = (float)zone.Map.PixelSize;
-        var offsetX = (float)zone.Map.Offset.X;
-        var offsetY = (float)zone.Map.Offset.Y;
         drawList.PushClipRect(stage.Min, stage.Max, true);
         for (var index = 0; index < detailMapPoints.Count; index++)
         {
@@ -542,22 +540,19 @@ internal sealed partial class HuntsApp
             }
 
             var (rawX, rawY) = poi.ParsedLocation();
-            var normalizedX = (rawX - offsetX) / pixelSize;
-            var normalizedY = (rawY - offsetY) / pixelSize;
+            var (normalizedX, normalizedY) = MapPixelMath.NormalizeToFullCanvas(rawX, rawY);
             var dotPosition = new Vector2(min.X + normalizedX * (max.X - min.X),
                 min.Y + normalizedY * (max.Y - min.Y));
             DrawSpawnDot(drawList, dotPosition, scale, poi.Id, confirmedKnown, finalLocationResolved);
         }
 
-        var territoryId = zoneCatalog.ResolveTerritoryId(detailMapZoneId);
         var worldId = HuntDataCenterWorlds.WorldRowId(view.WorldId);
         var mapId = ResolveMapId(territoryId);
         for (var index = 0; index < detailMapAetherytePoints.Count; index++)
         {
             var poi = detailMapAetherytePoints[index];
             var (rawX, rawY) = poi.ParsedLocation();
-            var normalizedX = (rawX - offsetX) / pixelSize;
-            var normalizedY = (rawY - offsetY) / pixelSize;
+            var (normalizedX, normalizedY) = MapPixelMath.NormalizeToFullCanvas(rawX, rawY);
             var dotPosition = new Vector2(min.X + normalizedX * (max.X - min.X),
                 min.Y + normalizedY * (max.Y - min.Y));
             DrawAetheryteDot(drawList, dotPosition, scale, poi, territoryId, worldId, mapId, view.ZoneInstance);
