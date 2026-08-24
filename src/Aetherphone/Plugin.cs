@@ -51,6 +51,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
     [PluginService] internal static IGamepadState GamepadState { get; private set; } = null!;
     [PluginService] internal static IAetheryteList AetheryteList { get; private set; } = null!;
+    [PluginService] internal static ITargetManager TargetManager { get; private set; } = null!;
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
@@ -104,7 +105,7 @@ public sealed class Plugin : IDalamudPlugin
             InstallSource.Initialize(PluginInterface);
             Device = new DeviceStatus(ClientState, ObjectTable, DataManager);
             services = PhoneServices.Build(Cfg, ChatGui, DataManager, ObjectTable, ClientState, Framework, DutyState,
-                TextureProvider, PluginInterface.ConfigDirectory, UnlockState, Condition);
+                TextureProvider, PluginInterface.ConfigDirectory, UnlockState, Condition, TargetManager);
             FilePicker.ProblemReporter = message =>
                 services.Confirm.Alert(null, message, Loc.T(L.Common.Close));
             Fonts = new FontService(PluginInterface, Cfg, services.Loading, Cfg.TextZoom,

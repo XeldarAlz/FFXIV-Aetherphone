@@ -1,5 +1,6 @@
 using Dalamud.Game;
 using Dalamud.Game.ClientState.Objects.SubKinds;
+using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Plugin.Services;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
@@ -18,6 +19,7 @@ internal sealed class GameData
     private readonly IDataManager data;
     private readonly IObjectTable objectTable;
     private readonly IFramework framework;
+    private readonly ITargetManager targetManager;
     private uint[]? collectableMountIds;
     private uint[]? collectableMinionIds;
     private uint[]? triviaActionIds;
@@ -28,16 +30,18 @@ internal sealed class GameData
     private Dictionary<string, string>? worldRegionCodes;
     private bool? chineseGameClient;
 
-    public GameData(IDataManager data, IObjectTable objectTable, IFramework framework)
+    public GameData(IDataManager data, IObjectTable objectTable, IFramework framework, ITargetManager targetManager)
     {
         this.data = data;
         this.objectTable = objectTable;
         this.framework = framework;
+        this.targetManager = targetManager;
     }
 
     public IPlayerCharacter? LocalPlayer => objectTable.LocalPlayer;
     public uint LocalHomeWorldId => objectTable.LocalPlayer?.HomeWorld.RowId ?? 0u;
     public uint LocalCurrentWorldId => objectTable.LocalPlayer?.CurrentWorld.RowId ?? 0u;
+    public IGameObject? Target => targetManager.Target;
 
     public bool IsLocalPlayer(string name, string world)
     {

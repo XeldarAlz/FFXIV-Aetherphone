@@ -34,6 +34,7 @@ using Aetherphone.Core.Songs;
 using Aetherphone.Core.Telephony;
 using Aetherphone.Core.Theme;
 using Aetherphone.Core.Venues;
+using Aetherphone.Core.VenueSync;
 using Aetherphone.Core.Video;
 using Aetherphone.Core.Wallpapers;
 using Aetherphone.Core.YellowPages;
@@ -135,6 +136,9 @@ internal sealed class PhoneServices : IDisposable
     public required PlaybackHub Playback { get; init; }
     public required GameStatsStore GameStats { get; init; }
     public required VenuesService Venues { get; init; }
+    public required VenueSyncApiClient VenueSync { get; init; }
+    public required VenueSyncState VenueSyncState { get; init; }
+    public required VenuePatronTracker VenuePatron { get; init; }
     public required MusterStore Musters { get; init; }
     public required MusterLauncher MusterLauncher { get; init; }
 
@@ -168,7 +172,8 @@ internal sealed class PhoneServices : IDisposable
 
     public static PhoneServices Build(Configuration configuration, IChatGui chatGui, IDataManager dataManager,
         IObjectTable objectTable, IClientState clientState, IFramework framework, IDutyState dutyState,
-        ITextureProvider textures, DirectoryInfo configDirectory, IUnlockState unlockState, ICondition condition)
+        ITextureProvider textures, DirectoryInfo configDirectory, IUnlockState unlockState, ICondition condition,
+        ITargetManager targetManager)
     {
         var installer = new Home.AppInstaller();
         var builtInWallpaperDirectory = new DirectoryInfo(
@@ -177,7 +182,7 @@ internal sealed class PhoneServices : IDisposable
         var wallpapers = new WallpaperLibrary(textures, builtInWallpaperDirectory, customWallpaperDirectory,
             configuration);
         var themes = new ThemeProvider(configuration, wallpapers);
-        var gameData = new GameData(dataManager, objectTable, framework);
+        var gameData = new GameData(dataManager, objectTable, framework, targetManager);
         var maps = new MapData(dataManager, clientState);
         var weather = new WeatherService(dataManager, clientState);
         var weatherControl = new WeatherControl(weather, framework, clientState, condition,
@@ -264,6 +269,8 @@ internal sealed class PhoneServices : IDisposable
         var playback = new PlaybackHub(radioPlayer, songPlayer, configuration);
         var gameStats = new GameStatsStore(configuration);
         var venues = new VenuesService(http, notifications, configuration, gameData);
+        var venueSyncClient = new VenueSyncApiClient(http, configuration);
+        var venueSyncState = new VenueSyncState(venueSyncClient, configuration);
         var collectionsRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "collections"));
         var collectionsDisk = new DiskCache(collectionsRoot, 32L * 1024 * 1024);
         var collections = new CollectionsCatalogService(http, collectionsDisk, dataManager, unlockState, framework);
@@ -276,6 +283,8 @@ internal sealed class PhoneServices : IDisposable
         var health = new HealthTracker(framework, characterWatch, notifications, configDirectory);
         var realtimeSignals = new RealtimeSignalBus();
         var visibility = new PhoneVisibility();
+        var venuePatronTracker = new VenuePatronTracker(framework, objectTable, configuration, gameData,
+            venueSyncClient, visibility, installer.Gate("venue-sync"));
         var housingCacheRoot = new DirectoryInfo(Path.Combine(cacheRoot.FullName, "housing"));
         var housingGate = installer.Gate(HousingService.AppId);
         var housingGameMaps = new HousingGameMaps(dataManager, textures);
@@ -413,6 +422,9 @@ internal sealed class PhoneServices : IDisposable
             Playback = playback,
             GameStats = gameStats,
             Venues = venues,
+            VenueSync = venueSyncClient,
+            VenueSyncState = venueSyncState,
+            VenuePatron = venuePatronTracker,
             Musters = musters,
             MusterLauncher = new MusterLauncher(),
             RadioLauncher = new RadioLauncher(),
@@ -464,6 +476,8 @@ internal sealed class PhoneServices : IDisposable
         HousingReminders.Dispose();
         Housing.Dispose();
         Venues.Dispose();
+        VenueSyncState.Dispose();
+        VenuePatron.Dispose();
         Musters.Dispose();
         YellowPages.Dispose();
         AdInquiries.Dispose();

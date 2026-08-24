@@ -200,6 +200,12 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool VenueAllDataCenters { get; set; }
     public bool VenueNotifyNewEvents { get; set; } = true;
     public List<string> VenueFavorites { get; set; } = new();
+    public string VenueSyncApiKey { get; set; } = string.Empty;
+    public string VenueSyncSelectedVenueId { get; set; } = string.Empty;
+    public string VenueSyncSelectedVenueName { get; set; } = string.Empty;
+    public Dictionary<long, string> VenueSyncHouseLinks { get; set; } = new();
+    public bool VenueSyncPatronTrackingEnabled { get; set; }
+    public bool VenueSyncPatronTrackingOnlyDuringEvents { get; set; } = true;
     public int MusterCategoryFilter { get; set; }
     public int MusterScope { get; set; }
     public int MusterDataCenterId { get; set; }
