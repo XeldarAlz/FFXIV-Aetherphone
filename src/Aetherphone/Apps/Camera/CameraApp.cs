@@ -111,9 +111,9 @@ internal sealed class CameraApp : IPhoneApp
         var captureRect = CaptureRect(viewfinder);
 
         var barAction = landscape
-            ? CameraChrome.SideBar(screen, SideBarWidth, configuration.CameraFlash, configuration.CameraHideUi,
+            ? CameraChrome.SideBar(screen, SideBarWidth, configuration.CameraFlash, configuration.CameraShowUi,
                 configuration.CameraLandscape, scale, rounding)
-            : CameraChrome.TopBar(screen, TopBarHeight, configuration.CameraFlash, configuration.CameraHideUi,
+            : CameraChrome.TopBar(screen, TopBarHeight, configuration.CameraFlash, configuration.CameraShowUi,
                 configuration.CameraLandscape, scale, rounding);
         var consumed = barAction != CameraBarAction.None;
         ApplyBarAction(barAction);
@@ -134,8 +134,8 @@ internal sealed class CameraApp : IPhoneApp
                 configuration.CameraFlash = !configuration.CameraFlash;
                 configuration.Save();
                 break;
-            case CameraBarAction.ToggleHideUi:
-                configuration.CameraHideUi = !configuration.CameraHideUi;
+            case CameraBarAction.ToggleShowUi:
+                configuration.CameraShowUi = !configuration.CameraShowUi;
                 configuration.Save();
                 break;
             case CameraBarAction.ToggleLandscape:
@@ -290,7 +290,7 @@ internal sealed class CameraApp : IPhoneApp
 
         Plugin.Framework.Update += ReleaseStalledCapture;
         captureHooksAttached = true;
-        if (configuration.CameraHideUi)
+        if (!configuration.CameraShowUi)
         {
             gameUiVisibility.Hide();
         }

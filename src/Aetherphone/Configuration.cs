@@ -116,7 +116,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool CameraLandscape { get; set; }
     public bool CameraGrid { get; set; }
     public bool CameraFlash { get; set; } = true;
-    public bool CameraHideUi { get; set; }
+    public bool CameraShowUi { get; set; }
     public int PhotosSegment { get; set; }
     public string Language { get; set; } = string.Empty;
     public string TranslationTargetLanguage { get; set; } = string.Empty;

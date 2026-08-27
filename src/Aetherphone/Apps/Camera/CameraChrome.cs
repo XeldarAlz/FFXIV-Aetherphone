@@ -11,7 +11,7 @@ internal enum CameraBarAction
 {
     None,
     ToggleFlash,
-    ToggleHideUi,
+    ToggleShowUi,
     ToggleLandscape,
 }
 
@@ -33,29 +33,33 @@ internal static class CameraChrome
     private static readonly Vector4 ChipIconOn = new(0.08f, 0.07f, 0.04f, 1f);
     private static readonly Vector4 ChipIconOff = new(0.95f, 0.95f, 0.97f, 0.95f);
 
-    public static CameraBarAction TopBar(Rect screen, float topBarHeight, bool flashEnabled, bool hideUiEnabled,
+    public static CameraBarAction TopBar(Rect screen, float topBarHeight, bool flashEnabled, bool showUiEnabled,
         bool landscapeEnabled, float scale, float rounding)
     {
         var dl = ImGui.GetWindowDrawList();
         var barMax = new Vector2(screen.Max.X, screen.Min.Y + topBarHeight * scale);
         dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint), rounding, ImDrawFlags.RoundCornersTop);
         var rowCenterY = barMax.Y - Metrics.Space.Xs * scale - ChipHalfExtent * scale;
+        var action = CameraBarAction.None;
         if (FlashChip(new Vector2(screen.Min.X + ChipEdgeInset * scale, rowCenterY), flashEnabled, scale))
         {
-            return CameraBarAction.ToggleFlash;
+            action = CameraBarAction.ToggleFlash;
         }
 
-        if (HideUiChip(new Vector2(screen.Center.X, rowCenterY), hideUiEnabled, scale))
+        if (ShowUiChip(new Vector2(screen.Center.X, rowCenterY), showUiEnabled, scale))
         {
-            return CameraBarAction.ToggleHideUi;
+            action = CameraBarAction.ToggleShowUi;
         }
 
-        return RotateChip(new Vector2(screen.Max.X - ChipEdgeInset * scale, rowCenterY), landscapeEnabled, scale)
-            ? CameraBarAction.ToggleLandscape
-            : CameraBarAction.None;
+        if (RotateChip(new Vector2(screen.Max.X - ChipEdgeInset * scale, rowCenterY), landscapeEnabled, scale))
+        {
+            action = CameraBarAction.ToggleLandscape;
+        }
+
+        return action;
     }
 
-    public static CameraBarAction SideBar(Rect screen, float barWidth, bool flashEnabled, bool hideUiEnabled,
+    public static CameraBarAction SideBar(Rect screen, float barWidth, bool flashEnabled, bool showUiEnabled,
         bool landscapeEnabled, float scale, float rounding)
     {
         var dl = ImGui.GetWindowDrawList();
@@ -63,19 +67,23 @@ internal static class CameraChrome
         dl.AddRectFilled(screen.Min, barMax, ImGui.GetColorU32(BarTint), rounding, ImDrawFlags.RoundCornersLeft);
         var columnCenterX = screen.Min.X + barWidth * 0.5f * scale;
         var flashCenterY = screen.Min.Y + ChipColumnTop * scale;
+        var action = CameraBarAction.None;
         if (FlashChip(new Vector2(columnCenterX, flashCenterY), flashEnabled, scale))
         {
-            return CameraBarAction.ToggleFlash;
+            action = CameraBarAction.ToggleFlash;
         }
 
-        if (HideUiChip(new Vector2(columnCenterX, flashCenterY + ChipSpacing * scale), hideUiEnabled, scale))
+        if (ShowUiChip(new Vector2(columnCenterX, flashCenterY + ChipSpacing * scale), showUiEnabled, scale))
         {
-            return CameraBarAction.ToggleHideUi;
+            action = CameraBarAction.ToggleShowUi;
         }
 
-        return RotateChip(new Vector2(columnCenterX, flashCenterY + ChipSpacing * 2f * scale), landscapeEnabled, scale)
-            ? CameraBarAction.ToggleLandscape
-            : CameraBarAction.None;
+        if (RotateChip(new Vector2(columnCenterX, flashCenterY + ChipSpacing * 2f * scale), landscapeEnabled, scale))
+        {
+            action = CameraBarAction.ToggleLandscape;
+        }
+
+        return action;
     }
 
     private static bool FlashChip(Vector2 center, bool flashEnabled, float scale)
@@ -86,11 +94,14 @@ internal static class CameraChrome
         return clicked;
     }
 
-    private static bool HideUiChip(Vector2 center, bool hideUiEnabled, float scale)
+    private static bool ShowUiChip(Vector2 center, bool showUiEnabled, float scale)
     {
-        var clicked = ChipSurface(center, hideUiEnabled, scale);
-        DrawHudGlyph(ImGui.GetWindowDrawList(), center, ChipGlyphExtent * scale, ChipIconColor(hideUiEnabled),
-            !hideUiEnabled);
+        UiAnchors.Report("camera.showUi", ChipRect(center, scale));
+        var clicked = ChipSurface(center, showUiEnabled, scale);
+        DrawHudGlyph(ImGui.GetWindowDrawList(), center, ChipGlyphExtent * scale, ChipIconColor(showUiEnabled),
+            showUiEnabled);
+        HoverTooltip.Show(ChipRect(center, scale),
+            Loc.T(showUiEnabled ? L.Camera.HideGameUi : L.Camera.ShowGameUi), HoverLabelSide.Below);
         return clicked;
     }
 

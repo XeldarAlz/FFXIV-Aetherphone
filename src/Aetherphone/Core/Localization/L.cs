@@ -3732,6 +3732,8 @@ internal static class L
     {
         public static readonly LocString ModeSquare = new("camera.modeSquare", "SQUARE");
         public static readonly LocString ModePhoto = new("camera.modePhoto", "PHOTO");
+        public static readonly LocString ShowGameUi = new("camera.showGameUi", "Show game UI");
+        public static readonly LocString HideGameUi = new("camera.hideGameUi", "Hide game UI");
     }
 
     internal static class Contacts
@@ -6133,6 +6135,8 @@ internal static class L
         public static readonly LocString CameraModesBody = new("onboarding.cameraModesBody", "Square gives a centered crop, Photo uses the full viewfinder.");
         public static readonly LocString CameraFlashTitle = new("onboarding.cameraFlashTitle", "Screen flash");
         public static readonly LocString CameraFlashBody = new("onboarding.cameraFlashBody", "With the flash on, the screen blinks white as you capture. Handy in dark zones.");
+        public static readonly LocString CameraShowUiTitle = new("onboarding.cameraShowUiTitle", "Clean shots");
+        public static readonly LocString CameraShowUiBody = new("onboarding.cameraShowUiBody", "The game interface is hidden in your photo by default. Tap this to keep it on.");
         public static readonly LocString CameraShutterTitle = new("onboarding.cameraShutterTitle", "Say cheese");
         public static readonly LocString CameraShutterBody = new("onboarding.cameraShutterBody", "Tap the shutter to snap what's behind the phone. Shots land straight in the Photos app.");
         public static readonly LocString PhotosEmptyTitle = new("onboarding.photosEmptyTitle", "Nothing here yet?");

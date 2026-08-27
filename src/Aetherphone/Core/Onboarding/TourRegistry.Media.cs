@@ -20,12 +20,13 @@ internal static partial class TourRegistry
                 GuideStep.Point(L.Onboarding.PhotosTitle, L.Onboarding.PhotosBody, "photos.grid"),
                 GuideStep.Note(L.Onboarding.PhotosEmptyTitle, L.Onboarding.PhotosEmptyBody),
             });
-        Add(tours, "camera", 2,
+        Add(tours, "camera", 3,
             new[]
             {
                 GuideStep.Note(L.Onboarding.CameraTitle, L.Onboarding.CameraBody),
                 GuideStep.Point(L.Onboarding.CameraModesTitle, L.Onboarding.CameraModesBody, "camera.modes"),
                 GuideStep.Point(L.Onboarding.CameraFlashTitle, L.Onboarding.CameraFlashBody, "camera.flash"),
+                GuideStep.Point(L.Onboarding.CameraShowUiTitle, L.Onboarding.CameraShowUiBody, "camera.showUi"),
                 GuideStep.Point(L.Onboarding.CameraShutterTitle, L.Onboarding.CameraShutterBody, "camera.shutter"),
             });
         Add(tours, "aetherstream", 1,
