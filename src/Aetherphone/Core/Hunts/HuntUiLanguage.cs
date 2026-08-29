@@ -13,7 +13,7 @@ internal static class HuntUiLanguage
         _ => "en",
     };
 
-    public static ClientLanguage GameClientLanguage() => Loc.Current.Code switch
+    public static ClientLanguage SheetLanguage() => Loc.Current.Code switch
     {
         "de" => ClientLanguage.German,
         "fr" => ClientLanguage.French,

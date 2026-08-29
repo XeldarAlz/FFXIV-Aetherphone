@@ -514,7 +514,7 @@ internal sealed partial class HuntsApp
     }
 
     private static string? ResolveLiveZoneName(uint territoryId) =>
-        territoryId != 0 && Plugin.DataManager.GetExcelSheet<TerritoryType>(HuntUiLanguage.GameClientLanguage())
+        territoryId != 0 && Plugin.DataManager.GetExcelSheet<TerritoryType>(HuntUiLanguage.SheetLanguage())
             .TryGetRow(territoryId, out var territory) && territory.PlaceName.RowId != 0
             ? territory.PlaceName.Value.Name.ExtractText()
             : null;
