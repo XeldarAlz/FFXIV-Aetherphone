@@ -474,7 +474,7 @@ internal sealed partial class HuntsApp
         var mapLeft = origin.X + (width - size) * 0.5f;
 
         var drawList = ImGui.GetWindowDrawList();
-        var zoneLabel = ResolveZoneLabel(zone, territoryId);
+        var zoneLabel = ResolveZoneLabel(zone.Id, territoryId);
         var labelSize = Typography.Measure(zoneLabel, TextStyles.Footnote);
         var labelGap = 6f * scale;
         Typography.Draw(drawList, new Vector2(mapLeft + (size - labelSize.X) * 0.5f, origin.Y), zoneLabel,
@@ -500,15 +500,15 @@ internal sealed partial class HuntsApp
         return true;
     }
 
-    private string ResolveZoneLabel(HuntZoneDefinition zone, uint territoryId)
+    private string ResolveZoneLabel(string zoneId, uint territoryId)
     {
-        var key = (territoryId, zone.Id, HuntUiLanguage.Key());
+        var key = (territoryId, zoneId, HuntUiLanguage.Key());
         if (zoneLabelCache.TryGetValue(key, out var cached))
         {
             return cached;
         }
 
-        var label = ResolveLiveZoneName(territoryId) is { Length: > 0 } name ? name : Prettify(zone.Id);
+        var label = ResolveLiveZoneName(territoryId) is { Length: > 0 } name ? name : Prettify(zoneId);
         zoneLabelCache[key] = label;
         return label;
     }
