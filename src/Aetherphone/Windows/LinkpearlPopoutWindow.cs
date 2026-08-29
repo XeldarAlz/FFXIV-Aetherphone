@@ -521,6 +521,10 @@ internal sealed class LinkpearlPopoutWindow : Window
         {
             Touch();
         }
+        else
+        {
+            switchMenu.Close();
+        }
 
         UpdateAttention(row, !collapsed && lively);
         chatMenu.Gate();
