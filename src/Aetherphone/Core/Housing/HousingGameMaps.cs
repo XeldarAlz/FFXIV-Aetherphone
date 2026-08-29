@@ -1,4 +1,5 @@
 using System.Text;
+using Aetherphone.Core.Maps;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
@@ -306,51 +307,8 @@ internal sealed class HousingGameMaps
     private static float Normalize(float world, short offset, float scaleFactor) =>
         ((world + offset) * scaleFactor + MapPageSize * 0.5f) / MapPageSize;
 
-    private string? ResolveTexturePath(string mapId)
-    {
-        if (string.IsNullOrEmpty(mapId))
-        {
-            return null;
-        }
-
-        var candidates = TextureCandidates(mapId);
-        for (var index = 0; index < candidates.Length; index++)
-        {
-            if (FileExists(candidates[index]))
-            {
-                return candidates[index];
-            }
-        }
-
-        return null;
-    }
-
-    private static string[] TextureCandidates(string mapId)
-    {
-        var flat = mapId.Replace("/", string.Empty);
-        var underscored = mapId.Replace('/', '_');
-        return
-        [
-            $"ui/map/{mapId}/{flat}_m.tex",
-            $"ui/map/{mapId}/{flat}m_m.tex",
-            $"ui/map/{mapId}/{flat}_s.tex",
-            $"ui/map/{mapId}/{underscored}_m.tex",
-            $"ui/map/{mapId}/{underscored}m_m.tex",
-        ];
-    }
-
-    private bool FileExists(string path)
-    {
-        try
-        {
-            return data.FileExists(path);
-        }
-        catch (Exception exception)
-        {
-            AepLog.Debug(exception, $"Housing could not test '{path}'");
-            return false;
-        }
-    }
+    private string? ResolveTexturePath(string mapId) =>
+        string.IsNullOrEmpty(mapId) ? null : MapTextures.ResolveTexturePath(data, mapId, "Housing");
 
     public string Describe(uint districtId)
     {
@@ -406,10 +364,11 @@ internal sealed class HousingGameMaps
         }
 
         report.Append($"  sizeFactor {map.SizeFactor} offset {map.OffsetX},{map.OffsetY}\n");
-        var candidates = TextureCandidates(mapId);
+        var candidates = MapTextures.Candidates(mapId);
         for (var index = 0; index < candidates.Length; index++)
         {
-            report.Append($"  texture: {candidates[index]} -> {(FileExists(candidates[index]) ? "OK" : "missing")}\n");
+            report.Append(
+                $"  texture: {candidates[index]} -> {(MapTextures.FileExists(data, candidates[index], "Housing") ? "OK" : "missing")}\n");
         }
 
         var sampleCount = Math.Min(3, markers.Count);

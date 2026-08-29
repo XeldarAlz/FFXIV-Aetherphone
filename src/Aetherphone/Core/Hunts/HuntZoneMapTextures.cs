@@ -1,4 +1,4 @@
-using Aetherphone.Core.Media;
+using Aetherphone.Core.Maps;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
@@ -63,46 +63,6 @@ internal sealed class HuntZoneMapTextures
         }
 
         var mapId = map.Id.ExtractText();
-        if (mapId.Length == 0)
-        {
-            return null;
-        }
-
-        var candidates = TextureCandidates(mapId);
-        for (var index = 0; index < candidates.Length; index++)
-        {
-            if (FileExists(candidates[index]))
-            {
-                return candidates[index];
-            }
-        }
-
-        return null;
-    }
-
-    private static string[] TextureCandidates(string mapId)
-    {
-        var flat = mapId.Replace("/", string.Empty);
-        var underscored = mapId.Replace('/', '_');
-        return
-        [
-            $"ui/map/{mapId}/{flat}_m.tex",
-            $"ui/map/{mapId}/{flat}m_m.tex",
-            $"ui/map/{mapId}/{underscored}_m.tex",
-            $"ui/map/{mapId}/{underscored}m_m.tex",
-        ];
-    }
-
-    private bool FileExists(string path)
-    {
-        try
-        {
-            return data.FileExists(path);
-        }
-        catch (Exception exception)
-        {
-            AepLog.Debug(exception, $"Hunts could not test '{path}'");
-            return false;
-        }
+        return mapId.Length == 0 ? null : MapTextures.ResolveTexturePath(data, mapId, "Hunts");
     }
 }
