@@ -1,5 +1,6 @@
 using Aetherphone.Core.Maps;
 using Dalamud.Game;
+using Lumina.Excel.Exceptions;
 using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Hunts;
@@ -77,7 +78,18 @@ internal sealed class HuntZoneCatalog
     private static Dictionary<string, uint> BuildTerritoryIdLookup()
     {
         var lookup = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
-        foreach (var territory in Plugin.DataManager.GetExcelSheet<TerritoryType>(ClientLanguage.English))
+        Lumina.Excel.ExcelSheet<TerritoryType> sheet;
+        try
+        {
+            sheet = Plugin.DataManager.GetExcelSheet<TerritoryType>(ClientLanguage.English);
+        }
+        catch (UnsupportedLanguageException exception)
+        {
+            AepLog.Warning(exception, "Hunts zone-to-territory lookup unavailable: client has no English TerritoryType sheet");
+            return lookup;
+        }
+
+        foreach (var territory in sheet)
         {
             if (territory.PlaceName.RowId == 0)
             {
