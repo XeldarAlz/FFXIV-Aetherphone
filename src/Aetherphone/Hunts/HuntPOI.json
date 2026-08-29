@@ -2,7 +2,6 @@
   "middle_la_noscea": {
     "id": "middle_la_noscea",
     "name": "Middle La Noscea",
-    "map": {},
     "pois": [
       {
         "id": 3,
@@ -140,7 +139,6 @@
   "lower_la_noscea": {
     "id": "lower_la_noscea",
     "name": "Lower La Noscea",
-    "map": {},
     "pois": [
       {
         "id": 35,
@@ -258,7 +256,6 @@
   "eastern_la_noscea": {
     "id": "eastern_la_noscea",
     "name": "Eastern La Noscea",
-    "map": {},
     "pois": [
       {
         "id": 59,
@@ -447,7 +444,6 @@
   "western_la_noscea": {
     "id": "western_la_noscea",
     "name": "Western La Noscea",
-    "map": {},
     "pois": [
       {
         "id": 98,
@@ -591,7 +587,6 @@
   "upper_la_noscea": {
     "id": "upper_la_noscea",
     "name": "Upper La Noscea",
-    "map": {},
     "pois": [
       {
         "id": 128,
@@ -694,7 +689,6 @@
   "western_thanalan": {
     "id": "western_thanalan",
     "name": "Western Thanalan",
-    "map": {},
     "pois": [
       {
         "id": 149,
@@ -822,7 +816,6 @@
   "central_thanalan": {
     "id": "central_thanalan",
     "name": "Central Thanalan",
-    "map": {},
     "pois": [
       {
         "id": 177,
@@ -955,7 +948,6 @@
   "eastern_thanalan": {
     "id": "eastern_thanalan",
     "name": "Eastern Thanalan",
-    "map": {},
     "pois": [
       {
         "id": 206,
@@ -1143,7 +1135,6 @@
   "southern_thanalan": {
     "id": "southern_thanalan",
     "name": "Southern Thanalan",
-    "map": {},
     "pois": [
       {
         "id": 245,
@@ -1381,7 +1372,6 @@
   "northern_thanalan": {
     "id": "northern_thanalan",
     "name": "Northern Thanalan",
-    "map": {},
     "pois": [
       {
         "id": 290,
@@ -1495,7 +1485,6 @@
   "central_shroud": {
     "id": "central_shroud",
     "name": "Central Shroud",
-    "map": {},
     "pois": [
       {
         "id": 314,
@@ -1638,7 +1627,6 @@
   "east_shroud": {
     "id": "east_shroud",
     "name": "East Shroud",
-    "map": {},
     "pois": [
       {
         "id": 344,
@@ -1846,7 +1834,6 @@
   "south_shroud": {
     "id": "south_shroud",
     "name": "South Shroud",
-    "map": {},
     "pois": [
       {
         "id": 387,
@@ -2035,7 +2022,6 @@
   "north_shroud": {
     "id": "north_shroud",
     "name": "North Shroud",
-    "map": {},
     "pois": [
       {
         "id": 424,
@@ -2168,7 +2154,6 @@
   "coerthas_central_highlands": {
     "id": "coerthas_central_highlands",
     "name": "Coerthas Central Highlands",
-    "map": {},
     "pois": [
       {
         "id": 450,
@@ -2496,7 +2481,6 @@
   "mor_dhona": {
     "id": "mor_dhona",
     "name": "Mor Dhona",
-    "map": {},
     "pois": [
       {
         "id": 516,
@@ -2684,7 +2668,6 @@
   "outer_la_noscea": {
     "id": "outer_la_noscea",
     "name": "Outer La Noscea",
-    "map": {},
     "pois": [
       {
         "id": 553,
@@ -3674,7 +3657,6 @@
   "the_fringes": {
     "id": "the_fringes",
     "name": "The Fringes",
-    "map": {},
     "pois": [
       {
         "id": 749,
@@ -3803,7 +3785,6 @@
   "the_ruby_sea": {
     "id": "the_ruby_sea",
     "name": "The Ruby Sea",
-    "map": {},
     "pois": [
       {
         "id": 773,
@@ -3902,7 +3883,6 @@
   "yanxia": {
     "id": "yanxia",
     "name": "Yanxia",
-    "map": {},
     "pois": [
       {
         "id": 795,
@@ -4016,7 +3996,6 @@
   "the_peaks": {
     "id": "the_peaks",
     "name": "The Peaks",
-    "map": {},
     "pois": [
       {
         "id": 816,
@@ -4135,7 +4114,6 @@
   "the_lochs": {
     "id": "the_lochs",
     "name": "The Lochs",
-    "map": {},
     "pois": [
       {
         "id": 838,
@@ -4274,7 +4252,6 @@
   "the_azim_steppe": {
     "id": "the_azim_steppe",
     "name": "The Azim Steppe",
-    "map": {},
     "pois": [
       {
         "id": 863,
@@ -4404,7 +4381,6 @@
   "lakeland": {
     "id": "lakeland",
     "name": "Lakeland",
-    "map": {},
     "pois": [
       {
         "id": 888,
@@ -4548,7 +4524,6 @@
   "kholusia": {
     "id": "kholusia",
     "name": "Kholusia",
-    "map": {},
     "pois": [
       {
         "id": 915,
@@ -4703,7 +4678,6 @@
   "amh_araeng": {
     "id": "amh_araeng",
     "name": "Amh Araeng",
-    "map": {},
     "pois": [
       {
         "id": 947,
@@ -4858,7 +4832,6 @@
   "il_mheg": {
     "id": "il_mheg",
     "name": "Il Mheg",
-    "map": {},
     "pois": [
       {
         "id": 974,
@@ -5008,7 +4981,6 @@
   "the_raktika_greatwood": {
     "id": "the_raktika_greatwood",
     "name": "The Rak'tika Greatwood",
-    "map": {},
     "pois": [
       {
         "id": 1000,
@@ -5137,7 +5109,6 @@
   "the_tempest": {
     "id": "the_tempest",
     "name": "The Tempest",
-    "map": {},
     "pois": [
       {
         "id": 1024,
@@ -5286,7 +5257,6 @@
   "labyrinthos": {
     "id": "labyrinthos",
     "name": "Labyrinthos",
-    "map": {},
     "pois": [
       {
         "id": 1051,
@@ -5406,7 +5376,6 @@
   "thavnair": {
     "id": "thavnair",
     "name": "Thavnair",
-    "map": {},
     "pois": [
       {
         "id": 1070,
@@ -5526,7 +5495,6 @@
   "garlemald": {
     "id": "garlemald",
     "name": "Garlemald",
-    "map": {},
     "pois": [
       {
         "id": 1088,
@@ -5630,7 +5598,6 @@
   "mare_lamentorum": {
     "id": "mare_lamentorum",
     "name": "Mare Lamentorum",
-    "map": {},
     "pois": [
       {
         "id": 1105,
@@ -5734,7 +5701,6 @@
   "ultima_thule": {
     "id": "ultima_thule",
     "name": "Ultima Thule",
-    "map": {},
     "pois": [
       {
         "id": 1123,
@@ -5854,7 +5820,6 @@
   "elpis": {
     "id": "elpis",
     "name": "Elpis",
-    "map": {},
     "pois": [
       {
         "id": 1141,
@@ -5974,7 +5939,6 @@
   "urqopacha": {
     "id": "urqopacha",
     "name": "Urqopacha",
-    "map": {},
     "pois": [
       {
         "id": 1162,
@@ -6076,7 +6040,6 @@
   "kozamauka": {
     "id": "kozamauka",
     "name": "Kozama'uka",
-    "map": {},
     "pois": [
       {
         "id": 1180,
@@ -6200,7 +6163,6 @@
   "yak_tel": {
     "id": "yak_tel",
     "name": "Yak T'el",
-    "map": {},
     "pois": [
       {
         "id": 1199,
@@ -6300,7 +6262,6 @@
   "shaaloani": {
     "id": "shaaloani",
     "name": "Shaaloani",
-    "map": {},
     "pois": [
       {
         "id": 1216,
@@ -6416,7 +6377,6 @@
   "heritage_found": {
     "id": "heritage_found",
     "name": "Heritage Found",
-    "map": {},
     "pois": [
       {
         "id": 1236,
@@ -6531,7 +6491,6 @@
   "living_memory": {
     "id": "living_memory",
     "name": "Living Memory",
-    "map": {},
     "pois": [
       {
         "id": 1254,
