@@ -43,6 +43,27 @@ internal sealed class PhotoZoomView
         dragging = false;
     }
 
+    public void SnapTo(Rect stage, Vector2 size, float zoomValue, Vector2 panValue)
+    {
+        targetZoom = Math.Clamp(zoomValue, MinZoom, MaxZoom);
+        targetPan = panValue;
+        ClampPan(stage, size);
+        zoom.SnapTo(targetZoom);
+        panX.SnapTo(targetPan.X);
+        panY.SnapTo(targetPan.Y);
+        dragging = false;
+    }
+
+    public void FocusOn(Rect stage, Vector2 size, Rect normalizedBounds, float paddingFraction = 0.3f)
+    {
+        var span = MathF.Max(normalizedBounds.Width, normalizedBounds.Height) * (1f + paddingFraction);
+        var focusZoom = span > 0f ? 1f / span : MaxZoom;
+        var drawn = size * FitScale(stage, size) * Math.Clamp(focusZoom, MinZoom, MaxZoom);
+        var center = normalizedBounds.Center;
+        var pan = new Vector2(drawn.X * (0.5f - center.X), drawn.Y * (0.5f - center.Y));
+        SnapTo(stage, size, focusZoom, pan);
+    }
+
     public bool Draw(Rect stage, IDalamudTextureWrap texture, PhoneTheme theme, float rounding,
         bool showButtons = true, Rect? controls = null)
     {

@@ -49,6 +49,7 @@ internal sealed partial class HuntsApp
     private readonly Dictionary<(uint TerritoryId, string ZoneId, string Language), string> zoneLabelCache = new();
     private readonly PhotoZoomView detailMapZoom = new();
     private bool detailMapHovered;
+    private bool detailMapPendingFocus;
 
     private (int WindowNum, int PhaseNum)? detailMapActivePhase;
     private string? detailMapConfirmedZoneId;
@@ -85,7 +86,7 @@ internal sealed partial class HuntsApp
             detailMapActivePhase = hunts.PhaseFor(mobId, worldId, zoneInstance);
             detailMapConfirmedZoneId = hunts.ZoneIdFor(mobId, worldId, zoneInstance);
             ResolveDetailMap(mobCatalog.Find(mobId), detailMapActivePhase, detailMapConfirmedZoneId);
-            detailMapZoom.Reset();
+            detailMapPendingFocus = true;
             detailMapHovered = false;
         }
 
@@ -522,6 +523,12 @@ internal sealed partial class HuntsApp
     private void DrawDetailZoneMapContent(Rect stage, IDalamudTextureWrap texture, float scale, int? confirmedPoiId,
         HuntsView view, uint territoryId)
     {
+        if (detailMapPendingFocus)
+        {
+            detailMapPendingFocus = false;
+            FocusDetailMap(stage, texture.Size);
+        }
+
         var drawList = ImGui.GetWindowDrawList();
         detailMapZoom.Draw(stage, texture, frameTheme, Metrics.Radius.Card * scale, showButtons: false);
 
@@ -575,6 +582,27 @@ internal sealed partial class HuntsApp
         }
 
         drawList.PopClipRect();
+    }
+
+    private void FocusDetailMap(Rect stage, Vector2 textureSize)
+    {
+        if (detailMapPoints.Count == 0)
+        {
+            detailMapZoom.Reset();
+            return;
+        }
+
+        var min = new Vector2(float.MaxValue, float.MaxValue);
+        var max = new Vector2(float.MinValue, float.MinValue);
+        for (var index = 0; index < detailMapPoints.Count; index++)
+        {
+            var (rawX, rawY) = detailMapPoints[index].ParsedLocation();
+            var (normalizedX, normalizedY) = MapPixelMath.NormalizeToFullCanvas(rawX, rawY);
+            min = new Vector2(MathF.Min(min.X, normalizedX), MathF.Min(min.Y, normalizedY));
+            max = new Vector2(MathF.Max(max.X, normalizedX), MathF.Max(max.Y, normalizedY));
+        }
+
+        detailMapZoom.FocusOn(stage, textureSize, new Rect(min, max));
     }
 
     private void DrawSpawnDot(ImDrawListPtr drawList, Vector2 center, float scale, int poiId, bool confirmed,
