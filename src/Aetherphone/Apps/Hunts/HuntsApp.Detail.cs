@@ -46,6 +46,7 @@ internal sealed partial class HuntsApp
     private string detailMapZoneId = string.Empty;
     private readonly List<HuntPoiEntry> detailMapPoints = new();
     private readonly List<HuntPoiEntry> detailMapAetherytePoints = new();
+    private readonly Dictionary<(uint TerritoryId, string ZoneId, string Language), string> zoneLabelCache = new();
     private readonly PhotoZoomView detailMapZoom = new();
     private bool detailMapHovered;
 
@@ -499,8 +500,18 @@ internal sealed partial class HuntsApp
         return true;
     }
 
-    private string ResolveZoneLabel(HuntZoneDefinition zone, uint territoryId) =>
-        ResolveLiveZoneName(territoryId) is { Length: > 0 } name ? name : Prettify(zone.Id);
+    private string ResolveZoneLabel(HuntZoneDefinition zone, uint territoryId)
+    {
+        var key = (territoryId, zone.Id, HuntUiLanguage.Key());
+        if (zoneLabelCache.TryGetValue(key, out var cached))
+        {
+            return cached;
+        }
+
+        var label = ResolveLiveZoneName(territoryId) is { Length: > 0 } name ? name : Prettify(zone.Id);
+        zoneLabelCache[key] = label;
+        return label;
+    }
 
     private static string? ResolveLiveZoneName(uint territoryId) =>
         territoryId != 0 && Plugin.DataManager.GetExcelSheet<TerritoryType>(HuntUiLanguage.GameClientLanguage())
