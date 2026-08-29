@@ -16,7 +16,7 @@ public sealed class TourRegistryTests
         { "venues", (2, 4) },
         { "music", (2, 4) },
         { "games", (2, 3) },
-        { "camera", (2, 4) },
+        { "camera", (3, 5) },
         { "photos", (2, 2) },
         { "settings", (2, 4) },
         { "character", (2, 3) },
