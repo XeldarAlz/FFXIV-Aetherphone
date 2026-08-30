@@ -348,7 +348,8 @@ internal sealed partial class AethergramApp : IResumableApp
 
         using (InputShield.Engage(avatarLightbox.Expanded))
         {
-            router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+            router.Draw(SceneChrome.AppAreaFrom(context.Content, theme, UiScale.Current), AppSkin.Transparent,
+                ImGui.GetIO().DeltaTime, drawView);
         }
 
         if (avatarLightbox.Active)
