@@ -2181,6 +2181,8 @@
   "story.deleteFailed": "No se pudo eliminar la historia",
   "aethergram.forYou": "Para ti",
   "aethergram.following": "Siguiendo",
+  "aethergram.feedFilters": "Filtros del feed",
+  "aethergram.regions": "Regiones",
   "aethergram.follow": "Seguir",
   "aethergram.unfollow": "Dejar de seguir",
   "aethergram.viewPost": "Ver publicación",

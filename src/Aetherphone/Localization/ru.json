@@ -2181,6 +2181,8 @@
   "story.deleteFailed": "Не удалось удалить историю",
   "aethergram.forYou": "Для вас",
   "aethergram.following": "Подписки",
+  "aethergram.feedFilters": "Фильтры ленты",
+  "aethergram.regions": "Регионы",
   "aethergram.follow": "Подписаться",
   "aethergram.unfollow": "Отписаться",
   "aethergram.viewPost": "Открыть пост",

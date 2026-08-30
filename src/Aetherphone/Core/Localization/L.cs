@@ -3788,6 +3788,8 @@ internal static class L
         public static readonly LocString SetUpAccount = new("aethergram.setUpAccount", "Set up your account in Settings");
         public static readonly LocString ForYou = new("aethergram.forYou", "For You");
         public static readonly LocString Following = new("aethergram.following", "Following");
+        public static readonly LocString FeedFilters = new("aethergram.feedFilters", "Feed filters");
+        public static readonly LocString Regions = new("aethergram.regions", "Regions");
         public static readonly LocString Follow = new("aethergram.follow", "Follow");
         public static readonly LocString Unfollow = new("aethergram.unfollow", "Unfollow");
         public static readonly LocString ViewPost = new("aethergram.viewPost", "View post");

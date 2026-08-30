@@ -80,6 +80,7 @@ internal sealed partial class ChirperApp : IResumableApp
     private const float TabBarAvatarRadius = 13f;
     private const float TabBarAvatarRingGap = 2.5f;
     private const int TabCount = 4;
+    private const int FilterToggleCount = 3;
     private const int TabRevalidateCooldownSeconds = 15;
     private const float FeedTopPadding = 2f;
     private const float CellPadX = 16f;
@@ -180,7 +181,8 @@ internal sealed partial class ChirperApp : IResumableApp
     private readonly FeedVirtualizer profileVirtualizer = new(400f);
     private readonly MentionPopup mentionPopup = new();
     private readonly ActionSheet sheet = new();
-    private readonly ChirperFilterSheet filterSheet = new();
+    private readonly FeedFilterSheet filterSheet = new();
+    private readonly string[] filterLabels = new string[FilterToggleCount];
     private readonly ActionSheet.Item[] sheetItems = new ActionSheet.Item[PostSheetMaxItems];
     private readonly PostSheetAction[] sheetActions = new PostSheetAction[PostSheetMaxItems];
     private int sheetCount;
@@ -689,8 +691,7 @@ internal sealed partial class ChirperApp : IResumableApp
     private void OpenFilterSheet()
     {
         actions.Reset();
-        filterSheet.Open(configuration.ChirperShowPhotoPosts, configuration.ChirperShowGifPosts,
-            configuration.ChirperShowCommentMedia);
+        filterSheet.Open();
     }
 
     private void DrawSheet(Rect screen)
@@ -721,22 +722,29 @@ internal sealed partial class ChirperApp : IResumableApp
             return;
         }
 
-        var picked = filterSheet.Draw(screen, configuration.ChirperShowPhotoPosts, configuration.ChirperShowGifPosts,
-            configuration.ChirperShowCommentMedia, configuration.ChirperFeedRegionMask);
+        filterLabels[0] = Loc.T(L.Settings.ChirperShowPhotos);
+        filterLabels[1] = Loc.T(L.Settings.ChirperShowGifs);
+        filterLabels[2] = Loc.T(L.Settings.ChirperShowReplyMedia);
+        Span<bool> values = stackalloc bool[FilterToggleCount];
+        values[0] = configuration.ChirperShowPhotoPosts;
+        values[1] = configuration.ChirperShowGifPosts;
+        values[2] = configuration.ChirperShowCommentMedia;
+        var picked = filterSheet.Draw(screen, ChirperInk.Shared, Loc.T(L.Chirper.FeedFilters), filterLabels, values,
+            configuration.ChirperFeedRegionMask, Loc.T(L.Chirper.Regions), Loc.T(L.Chirper.Done));
         switch (picked)
         {
-            case ChirperFilterSheet.PhotosToggle:
+            case 0:
                 configuration.ChirperShowPhotoPosts = !configuration.ChirperShowPhotoPosts;
                 break;
-            case ChirperFilterSheet.GifsToggle:
+            case 1:
                 configuration.ChirperShowGifPosts = !configuration.ChirperShowGifPosts;
                 break;
-            case ChirperFilterSheet.ReplyMediaToggle:
+            case 2:
                 configuration.ChirperShowCommentMedia = !configuration.ChirperShowCommentMedia;
                 break;
-            case >= ChirperFilterSheet.FirstRegion:
+            case >= FilterToggleCount:
                 configuration.ChirperFeedRegionMask = SocialRegion.ToggleMask(configuration.ChirperFeedRegionMask,
-                    picked - ChirperFilterSheet.FirstRegion);
+                    picked - FilterToggleCount);
                 store.SetFeedRegions(SocialRegion.FilterCsv(configuration.ChirperFeedRegionMask));
                 break;
             default:

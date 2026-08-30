@@ -40,6 +40,7 @@ A component used by exactly one app does not belong here. It lives in that app, 
 | src/Aetherphone/Windows/Components/Social/SocialPill.cs | Accent gradient, outline, flat and icon pills |
 | src/Aetherphone/Windows/Components/Social/SocialUserRow.cs | Avatar + badged name + subtitle row with a trailing slot for a pill |
 | src/Aetherphone/Windows/Components/Social/SocialProfilePages.cs | Social confirm/report plumbing (block, delete post/comment) plus handle validation and list titles |
+| src/Aetherphone/Windows/Components/Social/FeedFilterSheet.cs | Bottom sheet of iOS toggles plus a region chip row and a Done pill for feed filters |
 | src/Aetherphone/Windows/Components/Sheets/ActionReveal.cs | Open/close state for an anchored popover (progress, opened frame, outside-click dismiss) |
 | src/Aetherphone/Windows/Components/ShellToast.cs | Shell-level bottom-pill toast (replaced the mouse-anchored CopyToast) |
 | src/Aetherphone/Windows/Components/Toggle.cs | iOS-style switch |
@@ -311,6 +312,7 @@ To move, scale or fade a whole screen, do not paint it at a shifted rect or a sm
 | List people with a follow pill | `SocialUserRow.Draw` and fill the returned `Trailing` rect |
 | Anchor a popover to a row and dismiss it on tap-outside | `ActionReveal<TPanel>` + `PopoverSurface.DrawGlass` |
 | Format a like or follower count | `CountText.Compact` |
+| Let someone filter a social feed | `FeedFilterSheet` (`Gate()` each frame, `Draw` returns the toggled index) |
 | Report a transient result | `ShellToast.Show` |
 | Open a link someone else posted | `UrlActions.AskThenOpen` (confirms the destination first) |
 | Show a picker or context menu | `DropdownMenu` |

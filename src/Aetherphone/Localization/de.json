@@ -2181,6 +2181,8 @@
   "story.deleteFailed": "Story konnte nicht gelöscht werden",
   "aethergram.forYou": "Für dich",
   "aethergram.following": "Folge ich",
+  "aethergram.feedFilters": "Feed-Filter",
+  "aethergram.regions": "Regionen",
   "aethergram.follow": "Folgen",
   "aethergram.unfollow": "Entfolgen",
   "aethergram.viewPost": "Beitrag ansehen",

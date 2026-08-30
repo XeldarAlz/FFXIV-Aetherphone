@@ -47,6 +47,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private const int MaxCommentLength = 500;
     private const float BottomNavHeight = 52f;
     private const int NavSlotCount = 4;
+    private const int FilterToggleCount = 2;
     private const float NavIconSize = 26f;
     private const float NavHoverRadius = 20f;
     private const float NavAvatarRadius = 13f;
@@ -59,7 +60,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private const float ScopePopoverWidth = 236f;
     private const float ScopePopoverRowHeight = 42f;
     private const float ScopePopoverPad = 6f;
-    private const float ScopePopoverGap = 8f;
+    private const int ScopeRowCount = 2;
     private const float ScopePopoverRounding = 16f;
     private const float CardPadTop = 10f;
     private const float CardPadBottom = 12f;
@@ -127,6 +128,8 @@ internal sealed partial class AethergramApp : IResumableApp
     internal readonly EncryptionHelpService encryptionHelp;
     private readonly ActionSheet postSheet = new();
     private readonly ActionReveal<HomePanel> homeReveal = new();
+    private readonly FeedFilterSheet filterSheet = new();
+    private readonly string[] filterLabels = new string[FilterToggleCount];
     private Rect scopeAnchor;
     private string cardTimestampPostId = string.Empty;
     private string cardTimestamp = string.Empty;
@@ -324,6 +327,7 @@ internal sealed partial class AethergramApp : IResumableApp
         navigation = context.Navigation;
         ui.Theme = theme;
         postSheet.Gate();
+        filterSheet.Gate();
         commentSheet.Gate();
         profileMenu.Gate();
         profileActionSheet.Gate();
@@ -364,6 +368,7 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         DrawScopePopover(screen);
+        DrawFilterSheet(screen);
         DrawPostSheet(screen);
         DrawCommentSheet(screen);
         DrawProfileMenu(screen);
@@ -1323,6 +1328,13 @@ internal sealed partial class AethergramApp : IResumableApp
             StartCompose(false);
         }
 
+        if (DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(area, 1), PhoneIcons.AdjustmentsHorizontal,
+                Loc.T(L.Aethergram.FeedFilters), FeedFiltersActive(), iconSize: TopBarIconSize))
+        {
+            homeReveal.Dismiss();
+            filterSheet.Open();
+        }
+
         var activityCenter = SocialChrome.HeaderSlot(area, 0);
         UiAnchors.Report("aethergram.activity", new Rect(activityCenter - hitExtent, activityCenter + hitExtent));
         if (DrawHeaderIcon(drawList, activityCenter, PhoneIcons.Heart, Loc.T(L.Social.ActivityTitle),
@@ -1351,9 +1363,7 @@ internal sealed partial class AethergramApp : IResumableApp
         var width = ScopePopoverWidth * scale;
         var rowHeight = ScopePopoverRowHeight * scale;
         var pad = ScopePopoverPad * scale;
-        var gap = ScopePopoverGap * scale;
-        var rowCount = 4 + SocialRegion.Codes.Length;
-        var height = pad * 2f + rowHeight * rowCount + gap;
+        var height = pad * 2f + rowHeight * ScopeRowCount;
         var left = Math.Clamp(scopeAnchor.Center.X - width * 0.5f, screen.Min.X + 12f * scale,
             screen.Max.X - 12f * scale - width);
         var top = scopeAnchor.Max.Y + 2f * scale;
@@ -1379,36 +1389,6 @@ internal sealed partial class AethergramApp : IResumableApp
                 activeScope == SocialFeedScope.Following, progress, interactive))
         {
             SelectScope(SocialFeedScope.Following);
-        }
-
-        DrawHairline(drawList, rowLeft + 8f * scale, rowRight - 8f * scale, y + gap * grow * 0.5f);
-        y += gap * grow;
-        if (DrawScopeRow(drawList, rowLeft, rowRight, ref y, rowGrown, Loc.T(L.Settings.AethergramShowGifs),
-                configuration.AethergramShowGifPosts, progress, interactive))
-        {
-            configuration.AethergramShowGifPosts = !configuration.AethergramShowGifPosts;
-            configuration.Save();
-        }
-
-        if (DrawScopeRow(drawList, rowLeft, rowRight, ref y, rowGrown, Loc.T(L.Settings.AethergramShowCommentMedia),
-                configuration.AethergramShowCommentMedia, progress, interactive))
-        {
-            configuration.AethergramShowCommentMedia = !configuration.AethergramShowCommentMedia;
-            configuration.Save();
-        }
-
-        for (var regionIndex = 0; regionIndex < SocialRegion.Codes.Length; regionIndex++)
-        {
-            if (!DrawScopeRow(drawList, rowLeft, rowRight, ref y, rowGrown, SocialRegion.Codes[regionIndex],
-                    SocialRegion.MaskShows(configuration.AethergramFeedRegionMask, regionIndex), progress, interactive))
-            {
-                continue;
-            }
-
-            configuration.AethergramFeedRegionMask =
-                SocialRegion.ToggleMask(configuration.AethergramFeedRegionMask, regionIndex);
-            store.SetFeedRegions(SocialRegion.FilterCsv(configuration.AethergramFeedRegionMask));
-            configuration.Save();
         }
 
         drawList.PopClipRect();
@@ -1443,6 +1423,44 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
+    }
+
+    private bool FeedFiltersActive() =>
+        !configuration.AethergramShowGifPosts || !configuration.AethergramShowCommentMedia
+        || configuration.AethergramFeedRegionMask != 0;
+
+    private void DrawFilterSheet(Rect screen)
+    {
+        if (!filterSheet.CapturesPointer)
+        {
+            return;
+        }
+
+        filterLabels[0] = Loc.T(L.Settings.AethergramShowGifs);
+        filterLabels[1] = Loc.T(L.Settings.AethergramShowCommentMedia);
+        Span<bool> values = stackalloc bool[FilterToggleCount];
+        values[0] = configuration.AethergramShowGifPosts;
+        values[1] = configuration.AethergramShowCommentMedia;
+        var picked = filterSheet.Draw(screen, Ink, Loc.T(L.Aethergram.FeedFilters), filterLabels, values,
+            configuration.AethergramFeedRegionMask, Loc.T(L.Aethergram.Regions), Loc.T(L.Aethergram.Done));
+        switch (picked)
+        {
+            case 0:
+                configuration.AethergramShowGifPosts = !configuration.AethergramShowGifPosts;
+                break;
+            case 1:
+                configuration.AethergramShowCommentMedia = !configuration.AethergramShowCommentMedia;
+                break;
+            case >= FilterToggleCount:
+                configuration.AethergramFeedRegionMask =
+                    SocialRegion.ToggleMask(configuration.AethergramFeedRegionMask, picked - FilterToggleCount);
+                store.SetFeedRegions(SocialRegion.FilterCsv(configuration.AethergramFeedRegionMask));
+                break;
+            default:
+                return;
+        }
+
+        configuration.Save();
     }
 
     private void SelectScope(SocialFeedScope scope)

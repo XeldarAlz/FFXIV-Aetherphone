@@ -2181,6 +2181,8 @@
   "story.deleteFailed": "ストーリーを削除できませんでした",
   "aethergram.forYou": "おすすめ",
   "aethergram.following": "フォロー中",
+  "aethergram.feedFilters": "フィードフィルター",
+  "aethergram.regions": "地域",
   "aethergram.follow": "フォロー",
   "aethergram.unfollow": "フォロー解除",
   "aethergram.viewPost": "投稿を見る",
