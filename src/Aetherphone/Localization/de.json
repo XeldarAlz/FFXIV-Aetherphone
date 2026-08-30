@@ -2234,6 +2234,8 @@
   "aethergram.removeCommentConfirmMessage": "Diesen Kommentar von deinem Beitrag entfernen? Das kann nicht rückgängig gemacht werden.",
   "aethergram.removeComment": "Kommentar entfernen",
   "aethergram.like": "Gefällt mir",
+  "aethergram.addCommentFor": "Kommentar für {0} hinzufügen…",
+  "aethergram.startConversation": "Beginne die Unterhaltung.",
   "aethergram.comment": "Kommentieren",
   "aethergram.more": "Mehr",
   "aethergram.home": "Start",

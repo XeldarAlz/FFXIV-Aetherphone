@@ -2234,6 +2234,8 @@
   "aethergram.removeCommentConfirmMessage": "Retirer ce commentaire de votre publication ? Cette action est irréversible.",
   "aethergram.removeComment": "Retirer le commentaire",
   "aethergram.like": "J'aime",
+  "aethergram.addCommentFor": "Ajouter un commentaire pour {0}…",
+  "aethergram.startConversation": "Lancez la conversation.",
   "aethergram.comment": "Commenter",
   "aethergram.more": "Plus",
   "aethergram.home": "Accueil",

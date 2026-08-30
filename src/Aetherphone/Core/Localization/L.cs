@@ -3840,6 +3840,8 @@ internal static class L
         public static readonly LocString RemoveCommentConfirmMessage = new("aethergram.removeCommentConfirmMessage", "Remove this comment from your post? This can't be undone.");
         public static readonly LocString RemoveComment = new("aethergram.removeComment", "Remove comment");
         public static readonly LocString Like = new("aethergram.like", "Like");
+        public static readonly LocString AddCommentFor = new("aethergram.addCommentFor", "Add a comment for {0}…");
+        public static readonly LocString StartConversation = new("aethergram.startConversation", "Start the conversation.");
         public static readonly LocString Comment = new("aethergram.comment", "Comment");
         public static readonly LocString More = new("aethergram.more", "More");
         public static readonly LocString Home = new("aethergram.home", "Home");

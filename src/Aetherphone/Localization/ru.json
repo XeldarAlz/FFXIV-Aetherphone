@@ -2234,6 +2234,8 @@
   "aethergram.removeCommentConfirmMessage": "Убрать этот комментарий из вашего поста? Это действие нельзя отменить.",
   "aethergram.removeComment": "Убрать комментарий",
   "aethergram.like": "Нравится",
+  "aethergram.addCommentFor": "Добавьте комментарий для {0}…",
+  "aethergram.startConversation": "Начните беседу.",
   "aethergram.comment": "Комментировать",
   "aethergram.more": "Ещё",
   "aethergram.home": "Главная",

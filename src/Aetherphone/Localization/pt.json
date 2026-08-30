@@ -2234,6 +2234,8 @@
   "aethergram.removeCommentConfirmMessage": "Remover este comentário da sua publicação? Não é possível desfazer.",
   "aethergram.removeComment": "Remover comentário",
   "aethergram.like": "Curtir",
+  "aethergram.addCommentFor": "Adicione um comentário para {0}…",
+  "aethergram.startConversation": "Comece a conversa.",
   "aethergram.comment": "Comentar",
   "aethergram.more": "Mais",
   "aethergram.home": "Início",

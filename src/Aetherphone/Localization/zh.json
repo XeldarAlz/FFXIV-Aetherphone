@@ -2234,6 +2234,8 @@
   "aethergram.removeCommentConfirmMessage": "从你的动态中移除这条评论？此操作无法撤销。",
   "aethergram.removeComment": "移除评论",
   "aethergram.like": "赞",
+  "aethergram.addCommentFor": "为 {0} 添加评论…",
+  "aethergram.startConversation": "开始对话。",
   "aethergram.comment": "评论",
   "aethergram.more": "更多",
   "aethergram.home": "首页",

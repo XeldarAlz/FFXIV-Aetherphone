@@ -2234,6 +2234,8 @@
   "aethergram.removeCommentConfirmMessage": "このコメントを投稿から削除しますか？ この操作は取り消せません。",
   "aethergram.removeComment": "コメントを削除",
   "aethergram.like": "いいね",
+  "aethergram.addCommentFor": "{0}にコメントを追加…",
+  "aethergram.startConversation": "会話を始めましょう。",
   "aethergram.comment": "コメント",
   "aethergram.more": "その他",
   "aethergram.home": "ホーム",

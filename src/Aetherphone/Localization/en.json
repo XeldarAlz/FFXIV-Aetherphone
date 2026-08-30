@@ -2234,6 +2234,8 @@
   "aethergram.removeCommentConfirmMessage": "Remove this comment from your post? This can't be undone.",
   "aethergram.removeComment": "Remove comment",
   "aethergram.like": "Like",
+  "aethergram.addCommentFor": "Add a comment for {0}…",
+  "aethergram.startConversation": "Start the conversation.",
   "aethergram.comment": "Comment",
   "aethergram.more": "More",
   "aethergram.home": "Home",
