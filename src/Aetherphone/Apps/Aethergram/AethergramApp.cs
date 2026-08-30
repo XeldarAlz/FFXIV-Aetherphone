@@ -1091,7 +1091,9 @@ internal sealed partial class AethergramApp : IResumableApp
         }
         else
         {
-            ImageFit.DrawLetterboxed(drawList, texture, rect, Vector2.Zero, Vector2.One, rounding);
+            var (uv0, uv1) = ImageFit.Cover(texture.Size.X, texture.Size.Y, rect.Width, rect.Height);
+            drawList.AddImageRounded(texture.Handle, rect.Min, rect.Max, uv0, uv1, 0xFFFFFFFFu, rounding,
+                ImDrawFlags.RoundCornersAll);
         }
 
         if (GifMedia.IsGif(url))
