@@ -43,12 +43,13 @@ internal static class PhoneIcons
     public const string Ban = "\uE626";
     public const string Language = "\uE627";
     public const string World = "\uE628";
-    public const string BellFilled = "\uE629";
-    public const string HeartFilled = "\uE62A";
-    public const string HomeFilled = "\uE62B";
-    public const string PinFilled = "\uE62C";
-    public const string UserFilled = "\uE62D";
-    public const string BookmarkFilled = "\uE62E";
-    public const string MessageCircleFilled = "\uE62F";
-    public const string SendFilled = "\uE630";
+    public const string LockOpen = "\uE629";
+    public const string BellFilled = "\uE62A";
+    public const string HeartFilled = "\uE62B";
+    public const string HomeFilled = "\uE62C";
+    public const string PinFilled = "\uE62D";
+    public const string UserFilled = "\uE62E";
+    public const string BookmarkFilled = "\uE62F";
+    public const string MessageCircleFilled = "\uE630";
+    public const string SendFilled = "\uE631";
 }

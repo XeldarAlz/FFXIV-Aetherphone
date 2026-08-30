@@ -9,6 +9,7 @@ namespace Aetherphone.Windows.Components;
 internal static class SearchField
 {
     private const float PillHalfHeight = 17f;
+    private const float GlyphSize = 18f;
 
     public static bool DrawSubmit(Rect bar, string imguiId, string hint, ref string text, PhoneTheme theme,
         int maxLength = 64, float sideInset = 4f) =>
@@ -28,8 +29,8 @@ internal static class SearchField
         var pillMin = new Vector2(bar.Min.X + sideInset * scale, bar.Min.Y + 9f * scale);
         var pillMax = new Vector2(bar.Max.X - sideInset * scale, bar.Max.Y - 9f * scale);
         Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(fieldSurface));
-        AppSkin.Icon(new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f),
-            IconGlyph.Of(FontAwesomeIcon.Search), mutedInk, 0.85f);
+        PhoneIcon.Draw(drawList, new Vector2(pillMin.X + 16f * scale, (pillMin.Y + pillMax.Y) * 0.5f),
+            PhoneIcons.Search, mutedInk, GlyphSize * scale);
         ImGui.SetCursorScreenPos(new Vector2(pillMin.X + 32f * scale,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
         ImGui.SetNextItemWidth(pillMax.X - pillMin.X - 44f * scale);
@@ -63,17 +64,7 @@ internal static class SearchField
         var radius = (pillMax.Y - pillMin.Y) * 0.5f;
         Squircle.Fill(drawList, pillMin, pillMax, radius, ImGui.GetColorU32(fieldSurface));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, bar.Center.Y);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
-        {
-            var glyph = IconGlyph.Of(FontAwesomeIcon.Search);
-            var size = ImGui.CalcTextSize(glyph);
-            ImGui.SetCursorScreenPos(new Vector2(glyphCenter.X - size.X * 0.5f, glyphCenter.Y - size.Y * 0.5f));
-            using (ImRaii.PushColor(ImGuiCol.Text, mutedInk))
-            {
-                Typography.Plain(glyph);
-            }
-        }
-
+        PhoneIcon.Draw(drawList, glyphCenter, PhoneIcons.Search, mutedInk, GlyphSize * scale);
         var hasText = text.Length > 0;
         var clearRadius = 9f * scale;
         var clearCenter = new Vector2(pillMax.X - 16f * scale, bar.Center.Y);

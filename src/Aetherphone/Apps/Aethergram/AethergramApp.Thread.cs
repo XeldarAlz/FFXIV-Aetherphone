@@ -297,7 +297,8 @@ internal sealed partial class AethergramApp
                         ? Loc.T(L.Encryption.StateLocked)
                         : Loc.T(L.Encryption.PlaintextIndicator);
             if (SocialChrome.DrawHeaderIcon(drawList, SocialChrome.HeaderSlot(area, 0),
-                    SocialChrome.HeaderIconRadius * scale, PhoneIcons.Lock, ThreadToggleIconSize, lockTooltip, Ink,
+                    SocialChrome.HeaderIconRadius * scale, encrypted ? PhoneIcons.Lock : PhoneIcons.LockOpen,
+                    ThreadToggleIconSize, lockTooltip, Ink,
                     Ink.MutedInk, encrypted))
             {
                 OpenEncryptionInfo(threadId);

@@ -5,7 +5,7 @@ internal static class IconPlan
     public const int FirstIconCodepoint = 0xE000;
     public const int LastIconCodepoint = 0xF8FF;
     public const int FirstTablerCodepoint = 0xE600;
-    public const int LastTablerCodepoint = 0xE630;
+    public const int LastTablerCodepoint = 0xE631;
 
     // Every FontAwesomeIcon the source draws, resolved to its codepoint.
     // IconFontCoverageTests rescans the source and fails if this list drifts.

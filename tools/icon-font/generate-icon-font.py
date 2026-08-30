@@ -73,6 +73,7 @@ OUTLINE = [
     ("Ban", "ban"),
     ("Language", "language"),
     ("World", "world"),
+    ("LockOpen", "lock-open"),
 ]
 
 FILLED = [
