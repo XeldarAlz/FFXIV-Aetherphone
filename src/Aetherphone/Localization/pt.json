@@ -4969,6 +4969,7 @@
   "changelog.r1010.16": "Word Run chegou a Jogos: adivinhe palavras de cinco letras uma atrás da outra até que uma vença você, resolver rápido paga mais, com bancos de palavras em cinco idiomas mais nomes do jogo",
   "changelog.r1010.17": "Tetris ganha um conjunto de regras Moderno ao lado do Clássico, com kicks SRS, atraso de trava, T-spins, pontuação de back-to-back e combos, e o próprio recorde",
   "changelog.sectionMessaging": "Mensagens",
+  "changelog.r1018.0": "Corrigido: fotos verticais altas eram cortadas no feed, a moldura da publicação agora segue o formato da foto e mostra a imagem inteira",
   "changelog.r1017.0": "Corrigido: tocar no número de curtidas abaixo de uma publicação curtia ou descurtia a publicação em vez de abrir a lista Curtido por",
   "changelog.r1016.0": "Reformulação completa: feed inicial com as abas Para você e Seguindo, grade de exploração em Buscar, perfil, página de publicação, caixa de entrada e conversas reconstruídos, um novo fluxo de criação, e Ajustes, Atividade e Pedidos para seguir combinando",
   "changelog.r1016.1": "Adicionada uma tela de Publicações ao Aethergram: tocar em um bloco na grade de perfil, marcados, salvos, hashtag ou exploração percorre toda essa coleção a partir da publicação tocada",

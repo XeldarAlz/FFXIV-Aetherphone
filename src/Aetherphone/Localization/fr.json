@@ -4969,6 +4969,7 @@
   "changelog.r1010.16": "Word Run arrive dans Jeux : devinez des mots de cinq lettres à la chaîne jusqu'à ce qu'un mot vous batte, les résolutions rapides rapportent plus, avec des banques de mots en cinq langues plus des noms du jeu",
   "changelog.r1010.17": "Tetris gagne un règlement Moderne à côté de Classique, avec kicks SRS, délai de verrouillage, T-spins, score back-to-back et combos, et son propre record",
   "changelog.sectionMessaging": "Messagerie",
+  "changelog.r1018.0": "Correction : les photos en format portrait haut étaient rognées dans le fil, le cadre de la publication suit désormais la forme de la photo et montre l'image entière",
   "changelog.r1017.0": "Correction : toucher le nombre de J'aime sous une publication ajoutait ou retirait un J'aime au lieu d'ouvrir la liste Aimé par",
   "changelog.r1016.0": "Refonte complète : fil d'accueil avec les onglets Pour vous et Abonnements, grille d'exploration sous Rechercher, profil, page de publication, boîte de réception et conversations repensés, un nouveau flux de création, et des écrans Réglages, Activité et Demandes d'abonnement assortis",
   "changelog.r1016.1": "Ajout d'un écran Publications à Aethergram : toucher une vignette d'une grille de profil, d'identifications, d'enregistrés, de hashtag ou d'exploration fait défiler toute cette collection à partir de la publication touchée",

@@ -4969,6 +4969,7 @@
   "changelog.r1010.16": "Oyunlar'a Word Run eklendi: beş harfli kelimeleri seni yenen çıkana kadar art arda tahmin et, hızlı çözümler daha çok puan getiriyor, beş dilde kelime listesi ve oyundan adlar var",
   "changelog.r1010.17": "Tetris'e Klasik'in yanına Modern kural seti geldi: SRS kick'ler, kilit gecikmesi, T-spin'ler, back-to-back ve kombo puanı ve kendi rekoru",
   "changelog.sectionMessaging": "Mesajlaşma",
+  "changelog.r1018.0": "Uzun dikey fotoğrafların akışta kırpılması düzeltildi, gönderi çerçevesi artık fotoğrafın biçimine uyuyor ve resmin tamamını gösteriyor",
   "changelog.r1017.0": "Bir gönderinin altındaki beğeni sayısına dokunmanın Beğenenler listesini açmak yerine gönderiyi beğenmesi veya beğeniyi geri alması düzeltildi",
   "changelog.r1016.0": "Baştan sona yenilendi: Senin İçin ve Takip edilenler sekmeli ana akış, Ara altında keşfet ızgarası, yeniden kurulmuş profil, gönderi sayfası, gelen kutusu ve sohbetler, yeni bir oluşturma akışı ve bunlara uyan Ayarlar, Etkinlik ve Takip istekleri ekranları",
   "changelog.r1016.1": "Aethergram'a Gönderiler ekranı eklendi: profil, etiketlenen, kaydedilen, hashtag veya keşfet ızgarasında bir kutucuğa dokunmak, dokunulan gönderiden başlayarak tüm koleksiyonu kaydırarak gösteriyor",
