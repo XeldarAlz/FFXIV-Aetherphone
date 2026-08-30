@@ -59,11 +59,11 @@ body:
       label: Plugin version
       description: Shown in `/xlplugins` next to "Aetherphone".
       options:
+        - 1.0.1.6
         - 1.0.1.5
         - 1.0.1.4
         - 1.0.1.3
         - 1.0.1.2
-        - 1.0.1.1
         - Older / not sure
     validations:
       required: true
@@ -127,7 +127,7 @@ body:
         In the phone, open **Settings > About > Copy support info** and paste the result here. It carries your plugin version, OS, Wine status, game region, and notification settings in one block, which answers most environment questions up front. If you can't open the phone at all, say so and note your OS and whether you play through XIVLauncher on Linux or Mac.
       render: text
       placeholder: |
-        Aetherphone 1.0.1.5
+        Aetherphone 1.0.1.6
         Game: English
         Region: NA
         Chinese client: False
