@@ -1648,6 +1648,12 @@ internal static class L
                 "Fixed an issue where tall portrait photos were cropped in the feed, the post frame now matches the photo's shape and shows the whole picture"),
         };
 
+        public static readonly LocString[] Release1018Settings =
+        {
+            new("changelog.r1018.1",
+                "Copy Support Info in Settings > About now collects everything needed for bug reports on our Discord server"),
+        };
+
         public static readonly LocString[] Release1017Aethergram =
         {
             new("changelog.r1017.0",

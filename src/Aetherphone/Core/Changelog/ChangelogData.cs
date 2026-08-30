@@ -9,6 +9,7 @@ internal static class ChangelogData
         new ChangelogEntry("1.0.1.8", "2026-08-30", new ChangelogSection[]
         {
             new(L.Apps.Aethergram, L.Changelog.Release1018Aethergram),
+            new(L.Apps.Settings, L.Changelog.Release1018Settings),
         }),
         new ChangelogEntry("1.0.1.7", "2026-08-30", new ChangelogSection[]
         {

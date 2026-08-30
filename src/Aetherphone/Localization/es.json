@@ -4970,6 +4970,7 @@
   "changelog.r1010.17": "Tetris gana un reglamento Moderno junto a Clásico, con kicks SRS, retardo de bloqueo, T-spins, puntuación por back-to-back y combos, y su propio récord",
   "changelog.sectionMessaging": "Mensajería",
   "changelog.r1018.0": "Corregido: las fotos verticales altas se recortaban en el feed, el marco de la publicación ahora sigue la forma de la foto y muestra la imagen completa",
+  "changelog.r1018.1": "Copiar info de soporte en Ajustes > Acerca de ahora reúne todo lo necesario para los reportes de errores en nuestro servidor de Discord",
   "changelog.r1017.0": "Corregido: tocar el contador de me gusta debajo de una publicación daba o quitaba el me gusta en lugar de mostrar a quién le gusta la publicación",
   "changelog.r1016.0": "Renovación total: feed de inicio con las pestañas Para ti y Siguiendo, cuadrícula de exploración en Buscar, perfil, página de publicación, bandeja y conversaciones reconstruidos, un nuevo flujo de creación, y Ajustes, Actividad y Solicitudes de seguimiento a juego",
   "changelog.r1016.1": "Se añadió una pantalla de Publicaciones a Aethergram: tocar un mosaico en la cuadrícula de perfil, etiquetadas, guardadas, hashtag o exploración recorre toda esa colección empezando por la publicación tocada",

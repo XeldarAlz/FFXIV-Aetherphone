@@ -4970,6 +4970,7 @@
   "changelog.r1010.17": "Tetris gains a Modern ruleset beside Classic, with SRS kicks, lock delay, T-spins, back-to-back and combo scoring, and its own best score",
   "changelog.sectionMessaging": "Messaging",
   "changelog.r1018.0": "Fixed an issue where tall portrait photos were cropped in the feed, the post frame now matches the photo's shape and shows the whole picture",
+  "changelog.r1018.1": "Copy Support Info in Settings > About now collects everything needed for bug reports on our Discord server",
   "changelog.r1017.0": "Fixed an issue where tapping the like count under a post liked or unliked it instead of opening the Liked by list",
   "changelog.r1016.0": "Overhauled the app from top to bottom: a home feed with For You and Following tabs, an explore grid under Search, a rebuilt profile, post page, inbox and threads, a new compose flow, and Settings, Activity and Follow requests to match",
   "changelog.r1016.1": "Added a Posts screen to Aethergram: tapping a tile on a profile, tagged, saved, hashtag or explore grid scrolls through that whole collection, starting at the tapped post",
