@@ -392,16 +392,16 @@ internal sealed partial class AethergramApp : IResumableApp
                 DrawNewMessage(area);
                 break;
             case AethergramScreen.Thread:
-                threadView.Draw(area, route.Id!);
+                threadView.Draw(ChatArea(area), route.Id!);
                 break;
             case AethergramScreen.ChatImage:
-                threadView.DrawImagePicker(area, route.Id!);
+                threadView.DrawImagePicker(ChatArea(area), route.Id!);
                 break;
             case AethergramScreen.ImageView:
-                threadView.DrawImageViewer(area, route.Id!);
+                threadView.DrawImageViewer(ChatArea(area), route.Id!);
                 break;
             case AethergramScreen.Reactions:
-                threadView.DrawReactions(area, route.Id!);
+                threadView.DrawReactions(ChatArea(area), route.Id!);
                 break;
             case AethergramScreen.Settings:
                 DrawSettings(area);
@@ -416,7 +416,7 @@ internal sealed partial class AethergramApp : IResumableApp
                 DrawSaved(area);
                 break;
             case AethergramScreen.Encryption:
-                threadView.DrawEncryptionScreen(area);
+                threadView.DrawEncryptionScreen(ChatArea(area));
                 break;
             case AethergramScreen.Hashtag:
                 DrawHashtag(area, route.Id!);
@@ -428,6 +428,13 @@ internal sealed partial class AethergramApp : IResumableApp
                 DrawRoot(area);
                 break;
         }
+    }
+
+    private Rect ChatArea(Rect area)
+    {
+        var sidePadding = theme.SidePadding * UiScale.Current;
+        return new Rect(new Vector2(area.Min.X + sidePadding, area.Min.Y),
+            new Vector2(area.Max.X - sidePadding, area.Max.Y));
     }
 
     private void DrawRoot(Rect area)
