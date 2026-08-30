@@ -200,7 +200,10 @@ internal sealed partial class AethergramApp
         var innerRight = origin.X + width - pad;
         var innerWidth = MathF.Max(1f, innerRight - innerLeft);
         var radius = ProfileAvatarRadius * scale;
-        var avatarCenter = new Vector2(innerLeft + radius, origin.Y + ProfileHeadTop * scale + radius);
+        var frame = Frames.Of(user.FrameId);
+        var frameReach = AvatarView.Reserve(frame, radius);
+        var avatarCenter = new Vector2(innerLeft + frameReach + radius,
+            origin.Y + ProfileHeadTop * scale + frameReach + radius);
         var displayName = SocialIdentity.Name(user.DisplayName, user.Handle);
         var nameHeight = Typography.LineHeight(ProfileNameStyle);
         var bioKey = new TranslationKey(TranslationSurface.Bio, user.Id);
@@ -213,7 +216,7 @@ internal sealed partial class AethergramApp
             : 0f;
         var regionCode = ProfileRegionCode(user);
         var hasChips = HasProfileChips(user, regionCode);
-        var nameTop = avatarCenter.Y + radius + ProfileBlockGap * scale;
+        var nameTop = avatarCenter.Y + radius + frameReach + ProfileBlockGap * scale;
         var bioTop = nameTop + nameHeight + (bioHeight > 0f ? 4f * scale : 0f);
         var followedByTop = bioTop + bioHeight + bioLinkHeight + (followedByHeight > 0f ? 6f * scale : 0f);
         var chipsTop = followedByTop + followedByHeight + (hasChips ? ProfileBlockGap * scale : 0f);
@@ -221,8 +224,9 @@ internal sealed partial class AethergramApp
         var buttonsBottom = buttonsTop + PillHeight * scale;
         var blockBottom = buttonsBottom + ProfileBottomPad * scale;
 
-        DrawProfileAvatar(drawList, user, avatarCenter, radius, displayName);
-        DrawProfileStats(drawList, user, avatarCenter.X + radius + ProfileStatsGap * scale, innerRight, avatarCenter.Y);
+        DrawProfileAvatar(drawList, user, avatarCenter, radius, displayName, frame);
+        DrawProfileStats(drawList, user, avatarCenter.X + radius + frameReach + ProfileStatsGap * scale, innerRight,
+            avatarCenter.Y);
         UserName.DrawAuto(drawList, "aethergram.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
             innerLeft, nameTop, innerWidth, ProfileNameStyle, Ink.TitleInk, theme, 2);
         if (bioHeight > 0f)
@@ -257,7 +261,7 @@ internal sealed partial class AethergramApp
     }
 
     private void DrawProfileAvatar(ImDrawListPtr drawList, UserDto user, Vector2 center, float radius,
-        string displayName)
+        string displayName, FrameStyle? frame)
     {
         var scale = UiScale.Current;
         var hasRing = stories.TryRing(user.Id, out var ring);
@@ -267,7 +271,7 @@ internal sealed partial class AethergramApp
         }
 
         DrawAvatar(center, radius, user.IsMe ? user.Name : displayName, user.IsMe ? user.World : string.Empty,
-            user.AvatarUrl, 1.5f, 64, Frames.Of(user.FrameId));
+            user.AvatarUrl, 1.5f, 64, frame);
         if (hasRing)
         {
             if (UiInteract.HoverClickCircle(center, radius))
