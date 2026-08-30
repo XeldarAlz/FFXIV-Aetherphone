@@ -826,20 +826,26 @@ internal sealed partial class AethergramApp : IResumableApp
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var liked = post.MyReaction >= 0;
         var actionX = innerX + CardActionInset * scale - CardActionIconSize * scale * 0.5f;
-        if (DrawCardAction(drawList, ref actionX, actionCenterY, liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart,
-                liked ? Ink.LikeRed : Ink.TitleInk, post.TotalReactions, Loc.T(L.Aethergram.Like)))
+        var likeTap = DrawCardAction(drawList, ref actionX, actionCenterY,
+            liked ? PhoneIcons.HeartFilled : PhoneIcons.Heart, liked ? Ink.LikeRed : Ink.TitleInk,
+            post.TotalReactions, Loc.T(L.Aethergram.Like), Loc.T(L.Social.LikedByTitle));
+        if (likeTap == CardActionTap.Icon)
         {
             store.ToggleLike(post);
         }
+        else if (likeTap == CardActionTap.Count)
+        {
+            OpenUserList(post.Id, UserListKind.Likers);
+        }
 
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.MessageCircle, Ink.TitleInk,
-                post.CommentCount, Loc.T(L.Aethergram.Comment)))
+                post.CommentCount, Loc.T(L.Aethergram.Comment)) != CardActionTap.None)
         {
             OpenDetail(post, true);
         }
 
         if (DrawCardAction(drawList, ref actionX, actionCenterY, PhoneIcons.Send, Ink.TitleInk, 0,
-                Loc.T(L.Aethergram.SendTo)))
+                Loc.T(L.Aethergram.SendTo)) != CardActionTap.None)
         {
             OpenShare(post.Id);
         }
@@ -921,8 +927,15 @@ internal sealed partial class AethergramApp : IResumableApp
         FeedCell.End(drawList, cell, Ink.Hairline);
     }
 
-    private static bool DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph, Vector4 ink,
-        int count, string tooltip)
+    private enum CardActionTap
+    {
+        None,
+        Icon,
+        Count,
+    }
+
+    private static CardActionTap DrawCardAction(ImDrawListPtr drawList, ref float x, float centerY, string glyph,
+        Vector4 ink, int count, string tooltip, string? countTooltip = null)
     {
         var scale = UiScale.Current;
         var iconSize = CardActionIconSize * scale;
@@ -932,8 +945,12 @@ internal sealed partial class AethergramApp : IResumableApp
         var contentWidth = iconSize + (label.Length > 0 ? CardCountGap * scale + labelWidth : 0f);
         var min = new Vector2(x - 6f * scale, centerY - halfHeight);
         var max = new Vector2(x + contentWidth + 6f * scale, centerY + halfHeight);
-        var hovered = UiInteract.Hover(min, max);
-        if (hovered)
+        var splitCount = countTooltip is not null && label.Length > 0;
+        var iconMax = splitCount ? new Vector2(x + iconSize + CardCountGap * scale * 0.5f, max.Y) : max;
+        var countMin = new Vector2(iconMax.X, min.Y);
+        var iconHovered = UiInteract.Hover(min, iconMax);
+        var countHovered = splitCount && UiInteract.Hover(countMin, max);
+        if (iconHovered || countHovered)
         {
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
@@ -946,9 +963,24 @@ internal sealed partial class AethergramApp : IResumableApp
                 label, Ink.TitleInk, CardCountStyle);
         }
 
-        HoverTooltip.Show(new Rect(min, max), tooltip, HoverLabelSide.Above);
+        HoverTooltip.Show(new Rect(min, iconMax), tooltip, HoverLabelSide.Above);
+        if (splitCount)
+        {
+            HoverTooltip.Show(new Rect(countMin, max), countTooltip!, HoverLabelSide.Above);
+        }
+
         x += contentWidth + CardActionGap * scale;
-        return UiInteract.Click(min, max, hovered);
+        if (UiInteract.Click(min, iconMax, iconHovered))
+        {
+            return CardActionTap.Icon;
+        }
+
+        if (splitCount && UiInteract.Click(countMin, max, countHovered))
+        {
+            return CardActionTap.Count;
+        }
+
+        return CardActionTap.None;
     }
 
     private string CardTimestamp(PostDto post)
