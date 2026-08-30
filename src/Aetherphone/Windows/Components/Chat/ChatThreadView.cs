@@ -329,7 +329,10 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             Translation = this,
         };
         transcript.Draw(listRect, model);
-        composer.Draw(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), new ChatComposerModel
+        var composerBleed = composerStyle == ChatComposerStyle.Pill ? Theme.SidePadding * scale : 0f;
+        var composerRect = new Rect(new Vector2(area.Min.X - composerBleed, area.Max.Y - composerHeight),
+            new Vector2(area.Max.X + composerBleed, area.Max.Y));
+        composer.Draw(composerRect, new ChatComposerModel
         {
             Ui = ui,
             Style = composerStyle,
