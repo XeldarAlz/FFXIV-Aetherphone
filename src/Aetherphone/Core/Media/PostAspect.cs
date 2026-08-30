@@ -11,6 +11,7 @@ internal static class PostAspects
 {
     public const float SquareRatio = 1f;
     public const float PortraitRatio = 3f / 4f;
+    public const float TallPortraitRatio = 9f / 16f;
     public const float LandscapeRatio = 16f / 9f;
 
     public static readonly PostAspect[] All = { PostAspect.Square, PostAspect.Portrait, PostAspect.Landscape };
@@ -35,16 +36,25 @@ internal static class PostAspects
         return (Math.Max(1, (int)MathF.Round(baseSize * ratio)), baseSize);
     }
 
-    public static float DisplayRatio(int mediaWidth, int mediaHeight)
+    public static float DisplayRatio(int mediaWidth, int mediaHeight) =>
+        ClampedRatio(mediaWidth, mediaHeight, PortraitRatio);
+
+    public static float DisplayHeight(float width, int mediaWidth, int mediaHeight) =>
+        width / DisplayRatio(mediaWidth, mediaHeight);
+
+    public static float TallDisplayRatio(int mediaWidth, int mediaHeight) =>
+        ClampedRatio(mediaWidth, mediaHeight, TallPortraitRatio);
+
+    public static float TallDisplayHeight(float width, int mediaWidth, int mediaHeight) =>
+        width / TallDisplayRatio(mediaWidth, mediaHeight);
+
+    private static float ClampedRatio(int mediaWidth, int mediaHeight, float portraitLimit)
     {
         if (mediaWidth <= 0 || mediaHeight <= 0)
         {
             return SquareRatio;
         }
 
-        return Math.Clamp((float)mediaWidth / mediaHeight, PortraitRatio, LandscapeRatio);
+        return Math.Clamp((float)mediaWidth / mediaHeight, portraitLimit, LandscapeRatio);
     }
-
-    public static float DisplayHeight(float width, int mediaWidth, int mediaHeight) =>
-        width / DisplayRatio(mediaWidth, mediaHeight);
 }

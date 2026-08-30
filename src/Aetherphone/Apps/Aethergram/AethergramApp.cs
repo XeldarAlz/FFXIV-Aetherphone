@@ -722,7 +722,7 @@ internal sealed partial class AethergramApp : IResumableApp
         var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var headerBlock = CardHeaderBlock * scale;
         var avatarRadius = CardAvatarRadius * scale;
-        var mediaHeight = PostAspects.DisplayHeight(width, post.MediaWidth, post.MediaHeight);
+        var mediaHeight = PostAspects.TallDisplayHeight(width, post.MediaWidth, post.MediaHeight);
         var actionsHeight = CardActionsHeight * scale;
         RichTextLayout? captionLayout = null;
         var translateKey = new TranslationKey(TranslationSurface.Post, post.Id);
