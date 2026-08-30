@@ -27,6 +27,11 @@ internal readonly record struct CommentComposerStyle(
 
 internal static class CommentComposerBar
 {
+    private const float LeadingInset = 6f;
+    private const float LeadingButtonRadius = 12f;
+    private const float LeadingButtonGap = 0f;
+    private const float TextGap = 4f;
+
     public static bool Draw(Rect bar, Rect screen, AppSkin ui, PhoneTheme theme, in CommentComposerStyle style,
         string inputId, string hint, ref string draft, int maxLength, MentionAutocomplete mentions,
         MentionPopup mentionPopup, RemoteImageCache images, LodestoneService lodestone, bool busy,
@@ -61,18 +66,19 @@ internal static class CommentComposerBar
             : style.PillRightInset;
         var pillMax = new Vector2(bar.Max.X - pillRightInset * scale, bar.Max.Y - style.PillPadY * scale);
         Squircle.Fill(drawList, pillMin, pillMax, (pillMax.Y - pillMin.Y) * 0.5f, ImGui.GetColorU32(style.FieldFill));
-        var emojiRadius = 14f * scale;
-        var emojiCenter = new Vector2(pillMin.X + 11f * scale + emojiRadius, bar.Center.Y);
+        var emojiRadius = LeadingButtonRadius * scale;
+        var emojiCenter = new Vector2(pillMin.X + LeadingInset * scale + emojiRadius, bar.Center.Y);
         emoji.DrawToggle(ui, emojiCenter, emojiRadius, style.SendEnabled,
             Palette.WithAlpha(style.TextInk, 0.5f), Loc.T(L.Common.Emoji));
-        var textLeft = emojiCenter.X + emojiRadius + 6f * scale;
+        var textLeft = emojiCenter.X + emojiRadius + TextGap * scale;
         if (attachmentActive)
         {
-            var photoRadius = 13f * scale;
-            var photoCenter = new Vector2(emojiCenter.X + emojiRadius + 8f * scale + photoRadius, bar.Center.Y);
+            var photoRadius = LeadingButtonRadius * scale;
+            var photoCenter = new Vector2(emojiCenter.X + emojiRadius + LeadingButtonGap * scale + photoRadius,
+                bar.Center.Y);
             attachment!.DrawToggle(ui, photoCenter, photoRadius, style.SendEnabled,
                 Palette.WithAlpha(style.TextInk, 0.5f), Loc.T(L.Common.AddPhoto), library!, emoji);
-            textLeft = photoCenter.X + photoRadius + 6f * scale;
+            textLeft = photoCenter.X + photoRadius + TextGap * scale;
         }
         ImGui.SetCursorScreenPos(new Vector2(textLeft,
             (pillMin.Y + pillMax.Y) * 0.5f - ImGui.GetFrameHeight() * 0.5f));
