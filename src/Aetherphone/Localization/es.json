@@ -4971,7 +4971,7 @@
   "changelog.sectionMessaging": "Mensajería",
   "changelog.r1018.0": "Corregido: las fotos verticales altas se recortaban en el feed, el marco de la publicación ahora sigue la forma de la foto y muestra la imagen completa",
   "changelog.r1018.1": "Copiar info de soporte en Ajustes > Acerca de ahora reúne todo lo necesario para los reportes de errores en nuestro servidor de Discord",
-  "changelog.r1017.0": "Corregido: tocar el contador de me gusta debajo de una publicación daba o quitaba el me gusta en lugar de mostrar a quién le gusta la publicación",
+  "changelog.r1018.2": "Las listas de Seguidores y Siguiendo ahora muestran el número exacto bajo el título, la cifra real detrás de valores redondeados como 1,5K",  "changelog.r1017.0": "Corregido: tocar el contador de me gusta debajo de una publicación daba o quitaba el me gusta en lugar de mostrar a quién le gusta la publicación",
   "changelog.r1016.0": "Renovación total: feed de inicio con las pestañas Para ti y Siguiendo, cuadrícula de exploración en Buscar, perfil, página de publicación, bandeja y conversaciones reconstruidos, un nuevo flujo de creación, y Ajustes, Actividad y Solicitudes de seguimiento a juego",
   "changelog.r1016.1": "Se añadió una pantalla de Publicaciones a Aethergram: tocar un mosaico en la cuadrícula de perfil, etiquetadas, guardadas, hashtag o exploración recorre toda esa colección empezando por la publicación tocada",
   "changelog.r1016.2": "Se añadieron reacciones con emoji a los mensajes en todas las apps de mensajería: la tira rápida conserva los seis favoritos y un + abre el selector completo de emoji",

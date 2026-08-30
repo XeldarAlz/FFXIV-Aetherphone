@@ -4971,7 +4971,7 @@
   "changelog.sectionMessaging": "Messaging",
   "changelog.r1018.0": "Fixed an issue where tall portrait photos were cropped in the feed, the post frame now matches the photo's shape and shows the whole picture",
   "changelog.r1018.1": "Copy Support Info in Settings > About now collects everything needed for bug reports on our Discord server",
-  "changelog.r1017.0": "Fixed an issue where tapping the like count under a post liked or unliked it instead of opening the Liked by list",
+  "changelog.r1018.2": "The Followers and Following lists now show the exact count under the title, so you can see the real number behind rounded stats like 1.5K",  "changelog.r1017.0": "Fixed an issue where tapping the like count under a post liked or unliked it instead of opening the Liked by list",
   "changelog.r1016.0": "Overhauled the app from top to bottom: a home feed with For You and Following tabs, an explore grid under Search, a rebuilt profile, post page, inbox and threads, a new compose flow, and Settings, Activity and Follow requests to match",
   "changelog.r1016.1": "Added a Posts screen to Aethergram: tapping a tile on a profile, tagged, saved, hashtag or explore grid scrolls through that whole collection, starting at the tapped post",
   "changelog.r1016.2": "Added emoji reactions to messages in every messaging app: the quick strip keeps the six favorites and a + opens the full emoji drawer",

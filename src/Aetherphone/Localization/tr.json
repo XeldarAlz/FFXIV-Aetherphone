@@ -4971,7 +4971,7 @@
   "changelog.sectionMessaging": "Mesajlaşma",
   "changelog.r1018.0": "Uzun dikey fotoğrafların akışta kırpılması düzeltildi, gönderi çerçevesi artık fotoğrafın biçimine uyuyor ve resmin tamamını gösteriyor",
   "changelog.r1018.1": "Ayarlar > Hakkında bölümündeki Destek bilgisini kopyala artık Discord sunucumuzdaki hata raporları için gereken her şeyi topluyor",
-  "changelog.r1017.0": "Bir gönderinin altındaki beğeni sayısına dokunmanın Beğenenler listesini açmak yerine gönderiyi beğenmesi veya beğeniyi geri alması düzeltildi",
+  "changelog.r1018.2": "Takipçiler ve Takip edilenler listeleri artık başlığın altında tam sayıyı gösteriyor, böylece 1,5K gibi yuvarlanmış istatistiklerin gerçek değeri görülebiliyor",  "changelog.r1017.0": "Bir gönderinin altındaki beğeni sayısına dokunmanın Beğenenler listesini açmak yerine gönderiyi beğenmesi veya beğeniyi geri alması düzeltildi",
   "changelog.r1016.0": "Baştan sona yenilendi: Senin İçin ve Takip edilenler sekmeli ana akış, Ara altında keşfet ızgarası, yeniden kurulmuş profil, gönderi sayfası, gelen kutusu ve sohbetler, yeni bir oluşturma akışı ve bunlara uyan Ayarlar, Etkinlik ve Takip istekleri ekranları",
   "changelog.r1016.1": "Aethergram'a Gönderiler ekranı eklendi: profil, etiketlenen, kaydedilen, hashtag veya keşfet ızgarasında bir kutucuğa dokunmak, dokunulan gönderiden başlayarak tüm koleksiyonu kaydırarak gösteriyor",
   "changelog.r1016.2": "Tüm mesajlaşma uygulamalarında mesajlara emoji tepkileri eklendi: hızlı şerit altı favoriyi koruyor, + ise tam emoji çekmecesini açıyor",

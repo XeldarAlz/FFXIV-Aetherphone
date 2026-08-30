@@ -1646,6 +1646,8 @@ internal static class L
         {
             new("changelog.r1018.0",
                 "Fixed an issue where tall portrait photos were cropped in the feed, the post frame now matches the photo's shape and shows the whole picture"),
+            new("changelog.r1018.2",
+                "The Followers and Following lists now show the exact count under the title, so you can see the real number behind rounded stats like 1.5K"),
         };
 
         public static readonly LocString[] Release1018Settings =
