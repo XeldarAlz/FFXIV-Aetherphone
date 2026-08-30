@@ -125,7 +125,7 @@ internal static class RunText
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        return ImGui.IsMouseClicked(ImGuiMouseButton.Left) ? hovered : -1;
+        return ImGui.IsMouseClicked(ImGuiMouseButton.Left) ? runs[hovered].Target : -1;
     }
 
     private static void Build(RunTextLayout layout, ReadOnlySpan<TextRun> runs, float wrapWidth, float fontSize,
