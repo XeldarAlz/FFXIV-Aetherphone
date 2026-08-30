@@ -1642,6 +1642,12 @@ internal static class L
     {
         public static readonly LocString SectionMessaging = new("changelog.sectionMessaging", "Messaging");
 
+        public static readonly LocString[] Release1017Aethergram =
+        {
+            new("changelog.r1017.0",
+                "Fixed an issue where tapping the like count under a post liked or unliked it instead of opening the Liked by list"),
+        };
+
         public static readonly LocString[] Release1016Aethergram =
         {
             new("changelog.r1016.0",
