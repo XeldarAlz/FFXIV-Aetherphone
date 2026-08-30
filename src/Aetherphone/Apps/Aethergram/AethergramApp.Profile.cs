@@ -31,9 +31,7 @@ internal sealed partial class AethergramApp
     private const float ProfileStatsGap = 18f;
     private const float ProfileStatColumnPad = 10f;
     private const float ProfileBlockGap = 10f;
-    private const float ProfileChipHeight = 26f;
-    private const float ProfileChipGap = 6f;
-    private const float ProfileChipGlyph = 14f;
+    private const float ProfileChipHeight = SocialChrome.MetaChipHeight;
     private const float ProfileButtonGap = 6f;
     private const float ProfileSquareButton = 38f;
     private const float ProfileBottomPad = 14f;
@@ -46,7 +44,7 @@ internal sealed partial class AethergramApp
     private const int ProfileTabCount = 2;
 
     private static readonly TextStyle OwnProfileTitleStyle = new(1.15f, FontWeight.SemiBold);
-    private static readonly TextStyle ProfileNameStyle = new(1f, FontWeight.SemiBold);
+    private static readonly TextStyle ProfileNameStyle = new(1.4f, FontWeight.Bold);
     private static readonly TextStyle ProfileStatValueStyle = new(1.15f, FontWeight.Bold);
     private static readonly TextStyle ProfileStatLabelStyle = TextStyles.Subheadline;
     private static readonly TextStyle ProfileChipStyle = TextStyles.Footnote;
@@ -395,34 +393,8 @@ internal sealed partial class AethergramApp
     }
 
     private static void DrawProfileChip(ImDrawListPtr drawList, ref float cursorX, float right, float centerY,
-        string glyph, string label)
-    {
-        var scale = UiScale.Current;
-        var padX = 9f * scale;
-        var glyphSize = glyph.Length > 0 ? ProfileChipGlyph * scale : 0f;
-        var glyphGap = glyph.Length > 0 ? 5f * scale : 0f;
-        var available = right - cursorX - padX * 2f - glyphSize - glyphGap;
-        if (available < 20f * scale)
-        {
-            return;
-        }
-
-        var fitted = Typography.FitText(label, available, ProfileChipStyle);
-        var size = Typography.Measure(fitted, ProfileChipStyle);
-        var height = ProfileChipHeight * scale;
-        var min = new Vector2(cursorX, centerY - height * 0.5f);
-        var max = new Vector2(cursorX + padX * 2f + glyphSize + glyphGap + size.X, centerY + height * 0.5f);
-        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(Ink.ChipFill));
-        if (glyph.Length > 0)
-        {
-            PhoneIcon.Draw(drawList, new Vector2(min.X + padX + glyphSize * 0.5f, centerY), glyph, Ink.MutedInk,
-                glyphSize);
-        }
-
-        Typography.Draw(drawList, new Vector2(min.X + padX + glyphSize + glyphGap, centerY - size.Y * 0.5f), fitted,
-            Ink.MutedInk, ProfileChipStyle);
-        cursorX = max.X + ProfileChipGap * scale;
-    }
+        string glyph, string label) =>
+        SocialChrome.DrawMetaChip(drawList, ref cursorX, right, centerY, glyph, label, Ink, ProfileChipStyle);
 
     private void DrawProfileButtons(UserDto user, float left, float right, float top)
     {

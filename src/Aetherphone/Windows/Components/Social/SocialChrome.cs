@@ -17,6 +17,13 @@ internal static class SocialChrome
     private const float TitleGap = 10f;
     private const float BadgeHeight = 16f;
     private const float StatGap = 5f;
+    private const float MetaChipPadX = 9f;
+    private const float MetaChipGlyph = 14f;
+    private const float MetaChipGlyphGap = 5f;
+    private const float MetaChipMinLabel = 20f;
+
+    public const float MetaChipHeight = 26f;
+    public const float MetaChipGap = 8f;
 
     public static readonly TextStyle SubtitleStyle = new(0.8f, FontWeight.Regular);
     public static readonly TextStyle BadgeStyle = new(0.67f, FontWeight.Bold);
@@ -180,6 +187,36 @@ internal static class SocialChrome
             Loc.Culture.TextInfo.ToUpper(label), ink.FaintInk, style);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, height));
+    }
+
+    public static void DrawMetaChip(ImDrawListPtr drawList, ref float cursorX, float right, float centerY,
+        string glyph, string label, SocialInk ink, in TextStyle style)
+    {
+        var scale = UiScale.Current;
+        var padX = MetaChipPadX * scale;
+        var glyphSize = glyph.Length > 0 ? MetaChipGlyph * scale : 0f;
+        var glyphGap = glyph.Length > 0 ? MetaChipGlyphGap * scale : 0f;
+        var available = right - cursorX - padX * 2f - glyphSize - glyphGap;
+        if (available < MetaChipMinLabel * scale)
+        {
+            return;
+        }
+
+        var fitted = Typography.FitText(label, available, style);
+        var size = Typography.Measure(fitted, style);
+        var height = MetaChipHeight * scale;
+        var min = new Vector2(cursorX, centerY - height * 0.5f);
+        var max = new Vector2(cursorX + padX * 2f + glyphSize + glyphGap + size.X, centerY + height * 0.5f);
+        Squircle.Fill(drawList, min, max, height * 0.5f, ImGui.GetColorU32(ink.ChipFill));
+        if (glyph.Length > 0)
+        {
+            PhoneIcon.Draw(drawList, new Vector2(min.X + padX + glyphSize * 0.5f, centerY), glyph, ink.MutedInk,
+                glyphSize);
+        }
+
+        Typography.Draw(drawList, new Vector2(min.X + padX + glyphSize + glyphGap, centerY - size.Y * 0.5f), fitted,
+            ink.MutedInk, style);
+        cursorX = max.X + MetaChipGap * scale;
     }
 
     public static void PaintBarBackdrop(AppSkin ui, ImDrawListPtr drawList, Rect bar, Rect screen)

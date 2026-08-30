@@ -28,7 +28,6 @@ internal sealed partial class ChirperApp
     private const float ProfileTabUnderline = 3f;
     private const float ProfileActionHeight = 36f;
     private const float ProfileTabSmoothTime = 0.08f;
-    private const float ProfileMetaIcon = 14f;
     private const int MediaGridColumns = 3;
     private const float MediaGridCellGap = 2f;
 
@@ -39,11 +38,9 @@ internal sealed partial class ChirperApp
     private static readonly TextStyle StatValueStyle = new(1f, FontWeight.Bold);
     private static readonly TextStyle StatLabelStyle = new(0.93f, FontWeight.Regular);
     private static readonly TextStyle FollowedByStyle = new(0.83f, FontWeight.Regular);
-    private static readonly TextStyle FollowsYouStyle = new(0.73f, FontWeight.SemiBold);
     private static readonly TextStyle TabStyle = new(0.97f, FontWeight.SemiBold);
     private static readonly TextStyle TabIdleStyle = new(0.97f, FontWeight.Medium);
     private static readonly TextStyle FollowPillStyle = new(0.97f, FontWeight.Bold);
-    private static readonly Vector4 FollowsYouFill = new(1f, 1f, 1f, 0.09f);
     private static readonly Vector4 GlassPillFill = new(1f, 1f, 1f, 0.08f);
     private static readonly Vector4 OutlinePillFill = new(1f, 1f, 1f, 0.04f);
     private static readonly Vector4 BannerScrim = new(0f, 0f, 0f, 0.4f);
@@ -278,50 +275,31 @@ internal sealed partial class ChirperApp
     private float DrawProfileMetaRow(ImDrawListPtr drawList, UserDto user, float left, float right, float top)
     {
         var scale = UiScale.Current;
-        var lineHeight = Typography.LineHeight(ProfileMetaStyle);
-        var centerY = top + lineHeight * 0.5f;
-        var iconSize = ProfileMetaIcon * scale;
+        var height = SocialChrome.MetaChipHeight * scale;
+        var centerY = top + height * 0.5f;
         var cursorX = left;
         var regionCode = user.IsMe
             ? SocialRegion.EffectiveCode(configuration, gameData)
             : SocialRegion.Resolve(user.Region, user.World, gameData);
         if (regionCode.Length > 0)
         {
-            PhoneIcon.Draw(drawList, new Vector2(cursorX + iconSize * 0.5f, centerY), PhoneIcons.Pin,
-                ChirperInk.MutedInk, iconSize);
-            cursorX += iconSize + 5f * scale;
-            var regionSize = Typography.Measure(regionCode, ProfileMetaStyle);
-            Typography.Draw(drawList, new Vector2(cursorX, top), regionCode, ChirperInk.MutedInk, ProfileMetaStyle);
-            cursorX += regionSize.X + 14f * scale;
+            SocialChrome.DrawMetaChip(drawList, ref cursorX, right, centerY, PhoneIcons.Pin, regionCode,
+                ChirperInk.Shared, ProfileMetaStyle);
         }
 
         if (user.UtcOffsetMinutes is { } offsetMinutes)
         {
-            var clock = SocialTimeZone.ClockLabel(offsetMinutes);
-            var clockFitted = Typography.FitText(clock, MathF.Max(1f, right - cursorX - iconSize - 5f * scale),
-                ProfileMetaStyle);
-            PhoneIcon.Draw(drawList, new Vector2(cursorX + iconSize * 0.5f, centerY), PhoneIcons.Clock,
-                ChirperInk.MutedInk, iconSize);
-            cursorX += iconSize + 5f * scale;
-            Typography.Draw(drawList, new Vector2(cursorX, top), clockFitted, ChirperInk.MutedInk, ProfileMetaStyle);
-            cursorX += Typography.Measure(clockFitted, ProfileMetaStyle).X + 14f * scale;
+            SocialChrome.DrawMetaChip(drawList, ref cursorX, right, centerY, PhoneIcons.Clock,
+                SocialTimeZone.ClockLabel(offsetMinutes), ChirperInk.Shared, ProfileMetaStyle);
         }
 
         if (!user.IsMe && user.FollowsYou)
         {
-            var chipLabel = Loc.T(L.Social.FollowsYou);
-            var chipSize = Typography.Measure(chipLabel, FollowsYouStyle);
-            var chipMin = new Vector2(cursorX, centerY - chipSize.Y * 0.5f - 2.5f * scale);
-            var chipMax = new Vector2(cursorX + chipSize.X + 14f * scale, centerY + chipSize.Y * 0.5f + 2.5f * scale);
-            if (chipMax.X <= right)
-            {
-                Squircle.Fill(drawList, chipMin, chipMax, (chipMax.Y - chipMin.Y) * 0.5f, ImGui.GetColorU32(FollowsYouFill));
-                Typography.DrawCentered(drawList, (chipMin + chipMax) * 0.5f, chipLabel, ChirperInk.BodyInk,
-                    FollowsYouStyle);
-            }
+            SocialChrome.DrawMetaChip(drawList, ref cursorX, right, centerY, string.Empty, Loc.T(L.Social.FollowsYou),
+                ChirperInk.Shared, ProfileMetaStyle);
         }
 
-        return top + lineHeight;
+        return top + height;
     }
 
     private float DrawProfileStats(ImDrawListPtr drawList, UserDto user, float left, float right, float top)
