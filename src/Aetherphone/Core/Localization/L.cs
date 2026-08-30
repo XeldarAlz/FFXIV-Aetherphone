@@ -3788,7 +3788,6 @@ internal static class L
         public static readonly LocString SetUpAccount = new("aethergram.setUpAccount", "Set up your account in Settings");
         public static readonly LocString ForYou = new("aethergram.forYou", "For You");
         public static readonly LocString Following = new("aethergram.following", "Following");
-        public static readonly LocString FeedFilters = new("aethergram.feedFilters", "Feed filters");
         public static readonly LocString Follow = new("aethergram.follow", "Follow");
         public static readonly LocString Unfollow = new("aethergram.unfollow", "Unfollow");
         public static readonly LocString ViewPost = new("aethergram.viewPost", "View post");
@@ -3813,7 +3812,6 @@ internal static class L
         public static readonly LocString Sharing = new("aethergram.sharing", "Sharing…");
         public static readonly LocString Saving = new("aethergram.saving", "Saving…");
         public static readonly LocString PostTitle = new("aethergram.postTitle", "Post");
-        public static readonly LocString CommentsTitle = new("aethergram.comments", "Comments");
         public static readonly LocString NoComments = new("aethergram.noComments", "No comments yet");
         public static readonly LocString EarlierComments = new("aethergram.earlierComments", "View earlier comments");
         public static readonly LocString AddComment = new("aethergram.addComment", "Add a comment…");
@@ -3827,14 +3825,12 @@ internal static class L
         public static readonly LocString StatPosts = new("aethergram.statPosts", "posts");
         public static readonly LocString StatFollowers = new("aethergram.statFollowers", "followers");
         public static readonly LocString StatFollowing = new("aethergram.statFollowing", "following");
-        public static readonly LocString ChangePhoto = new("aethergram.changePhoto", "Change Photo");
         public static readonly LocString DisplayNameLabel = new("aethergram.displayNameLabel", "Display name");
         public static readonly LocString HandleLabel = new("aethergram.handleLabel", "Username");
         public static readonly LocString BioLabel = new("aethergram.bioLabel", "Bio");
         public static readonly LocString HandleRules = new("aethergram.handleRules", "3-15 characters: letters, numbers, or _");
         public static readonly LocString HandleTaken = new("aethergram.handleTaken", "That username is taken");
         public static readonly LocString Save = new("aethergram.save", "Save");
-        public static readonly LocString FindPeople = new("aethergram.findPeople", "Find People");
         public static readonly LocString SearchByName = new("aethergram.searchByName", "Search by name, @username, or world");
         public static readonly LocString NameOrWorld = new("aethergram.nameOrWorld", "Name, @username, or world");
         public static readonly LocPlural Posts = new("aethergram.posts", "{0} post", "{0} posts");
@@ -3861,7 +3857,6 @@ internal static class L
         public static readonly LocString MessageButton = new("aethergram.message", "Message");
         public static readonly LocString ThreadEmpty = new("aethergram.threadEmpty", "Say hello");
         public static readonly LocString Settings = new("aethergram.settings", "Settings");
-        public static readonly LocString ChatsTab = new("aethergram.chatsTab", "Chats");
         public static readonly LocString NewMessage = new("aethergram.newMessage", "New message");
         public static readonly LocString NewMessageHint = new("aethergram.newMessageHint", "To: name or @username");
         public static readonly LocString NewMessageEmpty = new("aethergram.newMessageEmpty", "Search for someone to message");
@@ -3885,7 +3880,6 @@ internal static class L
         public static readonly LocString YouRepliedToStory = new("aethergram.youRepliedToStory", "You replied to their story");
         public static readonly LocString StoryUnavailable = new("aethergram.storyUnavailable", "Story unavailable");
         public static readonly LocString PrivateTitle = new("aethergram.privateTitle", "This account is private");
-        public static readonly LocString Done = new("aethergram.done", "Done");
         public static readonly LocString ActivityToday = new("aethergram.activityToday", "Today");
         public static readonly LocString ActivityThisWeek = new("aethergram.activityThisWeek", "This week");
         public static readonly LocString ActivityThisMonth = new("aethergram.activityThisMonth", "This month");
