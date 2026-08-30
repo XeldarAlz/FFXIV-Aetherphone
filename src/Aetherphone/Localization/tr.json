@@ -1,4 +1,4 @@
-﻿{
+{
   "conduct.chirper.allowed.title": "Nelere İzin Verilir",
   "conduct.chirper.allowed.lead": "Kabul edilebilir içerik örnekleri:",
   "conduct.chirper.allowed.1": "Günlük maceralar ve hikâyeler",
@@ -4974,6 +4974,7 @@
   "changelog.r1016.2": "Tüm mesajlaşma uygulamalarında mesajlara emoji tepkileri eklendi: hızlı şerit altı favoriyi koruyor, + ise tam emoji çekmecesini açıyor",
   "changelog.r1016.3": "Doğrudan mesajlara GIF gönderme eklendi: GIF'ler artık sabit görüntüye dönüştürülmek yerine GIF olarak yükleniyor (4 MB'a kadar) ve baloncukta ve görüntüleyicide oynatılıyor",
   "changelog.r1016.13": "@bahsetme ve Kişi etiketle önerileri iyileştirildi: artık yalnızca tanıtıcının başında değil, tanıtıcının veya görünen adın herhangi bir yerinde eşleşiyor, tanıtıcı eşleşmeleri önce sıralanıyor",
+  "changelog.r1016.14": "Dükkana yeni avatar çerçeveleri eklendi, noxbatty katkısıyla",
   "changelog.r1016.4": "Görsel açıklamalarında, paylaşılan gönderi alıntılarında ve hikâye açıklamalarında emojilerin emoji yerine :shortcode: olarak görünmesi düzeltildi",
   "changelog.r1016.5": "Yazarken emoji çekmecesinin dışına dokunulduğunda çekmecenin açık kalması düzeltildi",
   "changelog.r1016.6": "Linkpearl mesajında metnin ardından gelen bir bağlantının açılamaması düzeltildi",

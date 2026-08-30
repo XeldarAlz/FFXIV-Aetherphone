@@ -1,4 +1,4 @@
-﻿{
+{
   "conduct.chirper.allowed.title": "允许的内容",
   "conduct.chirper.allowed.lead": "可接受内容的示例：",
   "conduct.chirper.allowed.1": "日常冒险与故事",
@@ -4974,6 +4974,7 @@
   "changelog.r1016.2": "在所有消息应用中新增消息的表情反应：快捷栏保留六个常用表情，点按 + 可打开完整的表情抽屉",
   "changelog.r1016.3": "私信新增发送 GIF：GIF 现在以 GIF 形式上传（最大 4 MB），并在气泡和查看器中播放，而不再被压成静态图片",
   "changelog.r1016.13": "改进了 @提及和标记用户的建议：现在可以匹配用户名或显示名称中的任意位置，而不只是用户名开头，用户名匹配排在最前",
+  "changelog.r1016.14": "商店新增头像框，由 noxbatty 贡献",
   "changelog.r1016.4": "修复了图片说明、分享帖子摘录和快拍说明中的表情显示为 :shortcodes: 而非表情的问题",
   "changelog.r1016.5": "修复了输入时点按表情抽屉外部后抽屉仍保持打开的问题",
   "changelog.r1016.6": "修复了 Linkpearl 消息中位于文字之后的链接无法打开的问题",

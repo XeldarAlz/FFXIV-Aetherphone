@@ -1,4 +1,4 @@
-﻿{
+{
   "conduct.chirper.allowed.title": "Was erlaubt ist",
   "conduct.chirper.allowed.lead": "Beispiele für zulässige Inhalte:",
   "conduct.chirper.allowed.1": "Alltägliche Abenteuer und Geschichten",
@@ -4974,6 +4974,7 @@
   "changelog.r1016.2": "Emoji-Reaktionen auf Nachrichten in allen Messaging-Apps hinzugefügt: die Schnellleiste behält die sechs Favoriten und ein + öffnet die vollständige Emoji-Auswahl",
   "changelog.r1016.3": "GIF-Versand in Direktnachrichten hinzugefügt: GIFs werden jetzt als GIF hochgeladen (bis 4 MB) und laufen in der Sprechblase und im Viewer ab, statt zu einem Standbild eingefroren zu werden",
   "changelog.r1016.13": "Vorschläge für @Erwähnungen und Personen markieren verbessert: sie treffen jetzt überall im Handle oder Anzeigenamen statt nur am Anfang des Handles, Handle-Treffer stehen zuerst",
+  "changelog.r1016.14": "Neue Avatar-Rahmen im Shop hinzugefügt, beigetragen von noxbatty",
   "changelog.r1016.4": "Behoben: Emoji in Bildunterschriften, geteilten Beitragsausschnitten und Story-Texten wurden als :Shortcodes: statt als Emoji angezeigt",
   "changelog.r1016.5": "Behoben: Die Emoji-Auswahl blieb offen, wenn beim Schreiben daneben getippt wurde",
   "changelog.r1016.6": "Behoben: Ein Link hinter Text in einer Linkpearl-Nachricht ließ sich nicht öffnen",

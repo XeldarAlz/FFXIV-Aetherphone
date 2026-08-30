@@ -1676,6 +1676,12 @@ internal static class L
                 "Fixed an issue where location shares sent from inside a house showed no place name"),
         };
 
+        public static readonly LocString[] Release1016Coin =
+        {
+            new("changelog.r1016.14",
+                "Added new avatar frames to the shop, contributed by noxbatty"),
+        };
+
         public static readonly LocString[] Release1016Linkpearl =
         {
             new("changelog.r1016.6",

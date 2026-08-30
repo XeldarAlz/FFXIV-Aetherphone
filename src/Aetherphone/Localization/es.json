@@ -1,4 +1,4 @@
-﻿{
+{
   "conduct.chirper.allowed.title": "Qué está permitido",
   "conduct.chirper.allowed.lead": "Ejemplos de contenido aceptable:",
   "conduct.chirper.allowed.1": "Aventuras diarias e historias",
@@ -4974,6 +4974,7 @@
   "changelog.r1016.2": "Se añadieron reacciones con emoji a los mensajes en todas las apps de mensajería: la tira rápida conserva los seis favoritos y un + abre el selector completo de emoji",
   "changelog.r1016.3": "Se añadió el envío de GIF en mensajes directos: los GIF ahora se suben como GIF (hasta 4 MB) y se reproducen en la burbuja y el visor en lugar de aplanarse en una imagen fija",
   "changelog.r1016.13": "Sugerencias de @menciones y Etiquetar mejoradas: ahora coinciden en cualquier parte del handle o del nombre visible en lugar de solo al inicio del handle, con las coincidencias de handle primero",
+  "changelog.r1016.14": "Se añadieron nuevos marcos de avatar a la tienda, contribuido por noxbatty",
   "changelog.r1016.4": "Corregido: los emoji en pies de foto, fragmentos de publicaciones compartidas y textos de historias aparecían como :shortcodes: en lugar de emoji",
   "changelog.r1016.5": "Corregido: el selector de emoji seguía abierto tras tocar fuera de él mientras se escribía",
   "changelog.r1016.6": "Corregido: un enlace que seguía a texto en un mensaje de Linkpearl no se podía abrir",

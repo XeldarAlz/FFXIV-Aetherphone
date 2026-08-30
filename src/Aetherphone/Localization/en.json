@@ -1,4 +1,4 @@
-﻿{
+{
   "conduct.chirper.allowed.title": "What Is Allowed",
   "conduct.chirper.allowed.lead": "Examples of acceptable content include:",
   "conduct.chirper.allowed.1": "Daily adventures and stories",
@@ -4974,6 +4974,7 @@
   "changelog.r1016.2": "Added emoji reactions to messages in every messaging app: the quick strip keeps the six favorites and a + opens the full emoji drawer",
   "changelog.r1016.3": "Added GIF sending to direct messages: GIFs now upload as GIFs (up to 4 MB) and play in the bubble and the viewer instead of being flattened into a still image",
   "changelog.r1016.13": "Improved @mention and Tag people suggestions: they now match anywhere in a handle or display name instead of only the start of the handle, with handle matches ranked first",
+  "changelog.r1016.14": "Added new avatar frames to the shop, contributed by noxbatty",
   "changelog.r1016.4": "Fixed an issue where emoji in image captions, shared post snippets and story captions showed as :shortcodes: instead of emoji",
   "changelog.r1016.5": "Fixed an issue where the emoji drawer stayed open after tapping outside it while composing",
   "changelog.r1016.6": "Fixed an issue where a link that followed text in a Linkpearl message could not be opened",
