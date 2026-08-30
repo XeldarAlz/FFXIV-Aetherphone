@@ -18,7 +18,7 @@ internal sealed partial class AethergramApp
     private const float ThreadPollSeconds = 2.5f;
     private const float TypingSendSeconds = 3f;
     private const float ThreadBackInset = 12f;
-    private const float ThreadAvatarRadius = 18f;
+    private const float ThreadAvatarRadius = 19f;
     private const float ThreadAvatarGap = 6f;
     private const float ThreadNameGap = 9f;
     private const float ThreadToggleIconSize = 21f;
@@ -58,6 +58,10 @@ internal sealed partial class AethergramApp
         protected override string NoPhotosLabel => Loc.T(L.Common.NoPhotos);
         protected override string SaveLabel => Loc.T(L.Common.SaveToGallery);
         protected override string SavedLabel => Loc.T(L.Common.SavedToGallery);
+
+        protected override ChatComposerStyle ComposerStyle => ChatComposerStyle.Pill;
+
+        protected override string ComposerHint => Loc.T(L.Aethergram.MessageHint);
 
         protected override IChatTranscriptPostCards? PostCards => this;
 
@@ -285,6 +289,8 @@ internal sealed partial class AethergramApp
             {
                 app.OpenProfile(threadId);
             }
+
+            DrawHairline(drawList, area.Min.X, area.Max.X, area.Min.Y + AppHeader.Height * scale);
         }
 
         private int DrawHeaderToggles(ImDrawListPtr drawList, Rect area, string threadId)
@@ -464,14 +470,14 @@ internal sealed partial class AethergramApp
 
     private string ThreadSubtitle(string threadId, int presence)
     {
-        if (ThreadOffset(threadId) is { } minutes)
-        {
-            return SocialTimeZone.Describe(minutes);
-        }
-
         if (presence == 1)
         {
             return Loc.T(L.Aethergram.ActiveNow);
+        }
+
+        if (ThreadOffset(threadId) is { } minutes)
+        {
+            return SocialTimeZone.Describe(minutes);
         }
 
         return ThreadHandle(threadId);

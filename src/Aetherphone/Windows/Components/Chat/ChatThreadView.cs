@@ -29,6 +29,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     where TThread : class, IIdentified
 {
     protected const int MessageMax = 1000;
+    private const float ReactorEmojiSize = 26f;
 
     protected readonly ChatThreadStoreBase<TMessage, TThread> store;
     protected readonly AppSkin ui;
@@ -148,6 +149,10 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     protected abstract string SavedLabel { get; }
 
     protected virtual bool IsGroupThread => false;
+
+    protected virtual ChatComposerStyle ComposerStyle => ChatComposerStyle.Bar;
+
+    protected virtual string ComposerHint => Loc.T(L.Velvet.MessageHint);
 
     protected virtual IChatTranscriptPostCards? PostCards => null;
 
@@ -283,7 +288,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         DrawHeader(area, threadId);
         var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
-        var composerHeight = 56f * scale;
+        var composerStyle = ComposerStyle;
+        var composerHeight = ChatComposer.Height(composerStyle);
         var accessoryHeight = composer.AccessoryHeight;
         var transcriptMessages = BuildTranscript(store.Messages);
         SweepTranslations(threadId, transcriptMessages);
@@ -326,6 +332,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
         composer.Draw(new Rect(new Vector2(area.Min.X, area.Max.Y - composerHeight), area.Max), new ChatComposerModel
         {
             Ui = ui,
+            Style = composerStyle,
+            Hint = ComposerHint,
             ConversationId = threadId,
             MaxLength = MessageMax,
             Sending = store.Sending,
@@ -1171,9 +1179,9 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
                 Theme.TextStrong, rowHovering);
         }
 
-        var tokenColor = ReactionArt.Color(reactor.Token);
-        AppSkin.Icon(new Vector2(origin.X + width - pad - 10f * scale, origin.Y + rowHeight * 0.5f),
-            ReactionArt.Glyph(reactor.Token), tokenColor, 1f);
+        ReactionArt.Draw(drawList, reactor.Token,
+            new Vector2(origin.X + width - pad - ReactorEmojiSize * 0.5f * scale, origin.Y + rowHeight * 0.5f),
+            ReactorEmojiSize * scale, 1f, 1f);
         if (mine && UiInteract.HoverClick(origin, rowMax))
         {
             store.SetReaction(messageId, string.Empty);

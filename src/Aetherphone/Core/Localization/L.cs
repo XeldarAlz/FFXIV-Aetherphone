@@ -649,6 +649,7 @@ internal static class L
         public static readonly LocString ReactionAdd = new("message.reactionAdd", "React with this");
         public static readonly LocString HostingMuster = new("message.hostingMuster", "Hosting a meetup, open it");
         public static readonly LocString ReactionRemove = new("message.reactionRemove", "Remove your reaction");
+        public static readonly LocString ReactionMore = new("message.reactionMore", "More reactions");
         public static readonly LocString TapToRemove = new("message.tapToRemove", "Click to remove");
         public static readonly LocString DraftPrefix = new("message.draftPrefix", "Draft:");
         public static readonly LocString PresenceOnline = new("message.presenceOnline", "online");
@@ -3864,6 +3865,7 @@ internal static class L
         public static readonly LocString NewMessageEmpty = new("aethergram.newMessageEmpty", "Search for someone to message");
         public static readonly LocString CannotMessage = new("aethergram.cannotMessage", "Can't message");
         public static readonly LocString ActiveNow = new("aethergram.activeNow", "Active now");
+        public static readonly LocString MessageHint = new("aethergram.messageHint", "Message…");
         public static readonly LocString Requests = new("aethergram.requests", "Requests");
         public static readonly LocString RequestsCount = new("aethergram.requestsCount", "Requests ({0})");
         public static readonly LocString RequestsEmpty = new("aethergram.requestsEmpty", "No message requests");

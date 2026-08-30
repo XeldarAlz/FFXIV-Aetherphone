@@ -44,12 +44,14 @@ internal static class PhoneIcons
     public const string Language = "\uE627";
     public const string World = "\uE628";
     public const string LockOpen = "\uE629";
-    public const string BellFilled = "\uE62A";
-    public const string HeartFilled = "\uE62B";
-    public const string HomeFilled = "\uE62C";
-    public const string PinFilled = "\uE62D";
-    public const string UserFilled = "\uE62E";
-    public const string BookmarkFilled = "\uE62F";
-    public const string MessageCircleFilled = "\uE630";
-    public const string SendFilled = "\uE631";
+    public const string Microphone = "\uE62A";
+    public const string MapPin = "\uE62B";
+    public const string BellFilled = "\uE62C";
+    public const string HeartFilled = "\uE62D";
+    public const string HomeFilled = "\uE62E";
+    public const string PinFilled = "\uE62F";
+    public const string UserFilled = "\uE630";
+    public const string BookmarkFilled = "\uE631";
+    public const string MessageCircleFilled = "\uE632";
+    public const string SendFilled = "\uE633";
 }

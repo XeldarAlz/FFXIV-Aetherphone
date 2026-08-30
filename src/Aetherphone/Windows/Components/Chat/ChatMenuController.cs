@@ -3,6 +3,7 @@ using Aetherphone.Core.Localization;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
+using Dalamud.Interface.Utility.Raii;
 
 namespace Aetherphone.Windows.Components;
 
@@ -46,16 +47,36 @@ internal sealed class ChatMenuController
     private const byte ActReport = 7;
     private const byte ActTranslate = 8;
 
+    private const float StripSlot = 42f;
+    private const float StripPad = 8f;
+    private const float StripHeight = 50f;
+    private const float StripEmoji = 30f;
+    private const float StripEmojiHoverGrow = 1.12f;
+    private const float StripHalo = 18f;
+    private const float StripPlusGlyph = 22f;
+    private const float StripFallbackScale = 1f;
+    private const float StripFallbackHoverScale = 1.12f;
+    private const float SheetHeightRatio = 0.62f;
+    private const float SheetCapHeight = 22f;
+    private const float SheetRounding = 18f;
+    private const float SheetHandleWidth = 40f;
+    private const float SheetHandleHeight = 4f;
+    private static readonly Vector4 SheetScrim = new(0f, 0f, 0f, 0.5f);
+    private static readonly Vector4 SheetHandle = new(1f, 1f, 1f, 0.3f);
+
     private readonly DropdownMenu menu = new();
     private readonly DropdownMenu.Item[] items = new DropdownMenu.Item[8];
     private readonly byte[] actions = new byte[8];
+    private readonly EmojiPicker reactionPicker = new();
     private string? messageId;
     private bool mine;
     private int kind;
     private Vector2 anchor;
     private bool openPending;
+    private string? sheetTargetId;
+    private int sheetOpenedFrame = -1;
 
-    public bool Active => menu.Open || openPending;
+    public bool Active => menu.Open || openPending || sheetTargetId is not null;
 
     public void Open(string messageId, bool mine, int kind)
     {
@@ -74,10 +95,17 @@ internal sealed class ChatMenuController
     public void Close()
     {
         menu.Close();
+        sheetTargetId = null;
     }
 
     public void Draw(Rect area, in ChatMenuModel model)
     {
+        if (sheetTargetId is { } sheetId)
+        {
+            DrawReactionSheet(area, sheetId, model);
+            return;
+        }
+
         if (openPending && messageId is { } pendingId)
         {
             openPending = false;
@@ -199,10 +227,10 @@ internal sealed class ChatMenuController
         }
 
         var scale = UiScale.Current;
-        var slot = 34f * scale;
-        var padding = 7f * scale;
-        var width = ReactionArt.Tokens.Length * slot + padding * 2f;
-        var height = 38f * scale;
+        var slot = StripSlot * scale;
+        var padding = StripPad * scale;
+        var width = (ReactionArt.Tokens.Length + 1) * slot + padding * 2f;
+        var height = StripHeight * scale;
         var left = Math.Clamp(anchor.X - width * 0.5f, area.Min.X + 8f * scale,
             MathF.Max(area.Min.X + 8f * scale, area.Max.X - 8f * scale - width));
         var top = anchor.Y - height - 10f * scale;
@@ -220,8 +248,8 @@ internal sealed class ChatMenuController
         var scale = UiScale.Current;
         var theme = model.Ui.Theme;
         var drawList = ImGui.GetForegroundDrawList();
-        var slot = 34f * scale;
-        var padding = 7f * scale;
+        var slot = StripSlot * scale;
+        var padding = StripPad * scale;
         var height = strip.Height;
         var min = strip.Min;
         var max = strip.Max;
@@ -230,35 +258,106 @@ internal sealed class ChatMenuController
             ImGui.GetColorU32(Palette.WithAlpha(theme.GroupedCard, MathF.Min(0.98f, theme.GroupedCard.W + 0.4f))));
         Material.EdgeSquircle(drawList, min, max, height * 0.5f, scale);
         var myReaction = model.MyReactionTo(targetId);
-        for (var index = 0; index < ReactionArt.Tokens.Length; index++)
+        var centerY = (min.Y + max.Y) * 0.5f;
+        var halo = StripHalo * scale;
+        var tokens = ReactionArt.Tokens;
+        for (var index = 0; index < tokens.Length; index++)
         {
-            var token = ReactionArt.Tokens[index];
-            var center = new Vector2(min.X + padding + slot * (index + 0.5f), (min.Y + max.Y) * 0.5f);
+            var token = tokens[index];
+            var center = new Vector2(min.X + padding + slot * (index + 0.5f), centerY);
             var hitMin = new Vector2(center.X - slot * 0.5f, min.Y);
             var hitMax = new Vector2(center.X + slot * 0.5f, max.Y);
             var hovered = UiInteract.HoverWindowOnly(hitMin, hitMax);
-            if (token == myReaction)
+            var selected = ReactionArt.Same(token, myReaction);
+            if (selected)
             {
-                drawList.AddCircleFilled(center, 14f * scale,
+                drawList.AddCircleFilled(center, halo,
                     ImGui.GetColorU32(Palette.WithAlpha(model.Ui.Accent, 0.25f)), 24);
             }
             else if (hovered)
             {
-                drawList.AddCircleFilled(center, 14f * scale,
+                drawList.AddCircleFilled(center, halo,
                     ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f)), 24);
             }
 
-            var color = ReactionArt.Color(token);
-            AppSkin.Icon(drawList, center, ReactionArt.Glyph(token), color, hovered ? 1.08f : 0.95f);
-            if (hovered)
+            var emojiSize = StripEmoji * scale * (hovered ? StripEmojiHoverGrow : 1f);
+            ReactionArt.Draw(drawList, token, center, emojiSize, 1f,
+                hovered ? StripFallbackHoverScale : StripFallbackScale);
+            if (!hovered)
             {
-                ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    model.OnReact(targetId, token == myReaction ? string.Empty : token);
-                    menu.Close();
-                }
+                continue;
             }
+
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            {
+                model.OnReact(targetId, selected ? string.Empty : ReactionArt.Normalize(token));
+                menu.Close();
+            }
+        }
+
+        var plusCenter = new Vector2(min.X + padding + slot * (tokens.Length + 0.5f), centerY);
+        var plusMin = new Vector2(plusCenter.X - slot * 0.5f, min.Y);
+        var plusMax = new Vector2(plusCenter.X + slot * 0.5f, max.Y);
+        var plusHovered = UiInteract.HoverWindowOnly(plusMin, plusMax);
+        if (plusHovered)
+        {
+            drawList.AddCircleFilled(plusCenter, halo,
+                ImGui.GetColorU32(Palette.WithAlpha(theme.TextStrong, 0.08f)), 24);
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        PhoneIcon.Draw(drawList, plusCenter, PhoneIcons.Plus, theme.TextStrong, StripPlusGlyph * scale);
+        HoverTooltip.Show(new Rect(plusMin, plusMax), Loc.T(L.Message.ReactionMore), HoverLabelSide.Above);
+        if (plusHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            sheetTargetId = targetId;
+            sheetOpenedFrame = ImGui.GetFrameCount();
+            menu.Close();
+        }
+    }
+
+    private void DrawReactionSheet(Rect area, string targetId, in ChatMenuModel model)
+    {
+        var scale = UiScale.Current;
+        var theme = model.Ui.Theme;
+        var drawList = ImGui.GetWindowDrawList();
+        drawList.AddRectFilled(area.Min, area.Max, ImGui.GetColorU32(SheetScrim));
+        var sheetTop = area.Max.Y - area.Height * SheetHeightRatio;
+        var capHeight = SheetCapHeight * scale;
+        var background = theme.AppBackground;
+        Squircle.Fill(drawList, new Vector2(area.Min.X, sheetTop),
+            new Vector2(area.Max.X, sheetTop + capHeight * 2f), SheetRounding * scale,
+            ImGui.GetColorU32(new Vector4(background.X, background.Y, background.Z, 1f)));
+        var handleHalf = new Vector2(SheetHandleWidth * 0.5f * scale, SheetHandleHeight * 0.5f * scale);
+        var handleCenter = new Vector2(area.Center.X, sheetTop + capHeight * 0.5f);
+        Squircle.Fill(drawList, handleCenter - handleHalf, handleCenter + handleHalf, handleHalf.Y,
+            ImGui.GetColorU32(SheetHandle));
+        var panel = new Rect(new Vector2(area.Min.X, sheetTop + capHeight), area.Max);
+        string? picked;
+        using (ImRaii.PushId("reactionSheet"))
+        {
+            picked = reactionPicker.Draw(panel, model.Ui);
+        }
+
+        UiInteract.HoverOverlay(area);
+        if (picked is not null)
+        {
+            model.OnReact(targetId, ReactionArt.Normalize(picked));
+            sheetTargetId = null;
+            return;
+        }
+
+        var frame = ImGui.GetFrameCount();
+        if (frame == sheetOpenedFrame)
+        {
+            return;
+        }
+
+        var sheetMin = new Vector2(area.Min.X, sheetTop);
+        if (ImGui.IsKeyPressed(ImGuiKey.Escape) || UiInteract.ClickedOutside(sheetMin, area.Max))
+        {
+            sheetTargetId = null;
         }
     }
 }

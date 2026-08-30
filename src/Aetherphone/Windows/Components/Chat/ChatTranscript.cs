@@ -39,37 +39,6 @@ internal readonly struct TranscriptReaction
     }
 }
 
-internal static class ReactionArt
-{
-    public static readonly string[] Tokens = { "+1", "heart", "laugh", "wow", "sad", "pray" };
-
-    public static string Glyph(string token)
-    {
-        return token switch
-        {
-            "heart" => IconGlyph.Of(FontAwesomeIcon.Heart),
-            "laugh" => IconGlyph.Of(FontAwesomeIcon.Laugh),
-            "wow" => IconGlyph.Of(FontAwesomeIcon.Surprise),
-            "sad" => IconGlyph.Of(FontAwesomeIcon.SadTear),
-            "pray" => IconGlyph.Of(FontAwesomeIcon.PrayingHands),
-            _ => IconGlyph.Of(FontAwesomeIcon.ThumbsUp),
-        };
-    }
-
-    public static Vector4 Color(string token)
-    {
-        return token switch
-        {
-            "heart" => new Vector4(0.94f, 0.35f, 0.44f, 1f),
-            "laugh" => new Vector4(0.97f, 0.79f, 0.26f, 1f),
-            "wow" => new Vector4(0.97f, 0.72f, 0.32f, 1f),
-            "sad" => new Vector4(0.48f, 0.71f, 0.98f, 1f),
-            "pray" => new Vector4(0.88f, 0.76f, 0.48f, 1f),
-            _ => new Vector4(0.42f, 0.66f, 0.98f, 1f),
-        };
-    }
-}
-
 internal readonly struct TranscriptMessage
 {
     public readonly string Id;
@@ -239,6 +208,20 @@ internal sealed class ChatTranscript
     private const float QuotePreviewScale = 0.80f;
     private const float TravelPillHeight = 26f;
     private const float TravelIconSpace = 17f;
+    private const float ReactionChipHeight = 26f;
+    private const float ReactionChipGap = 4f;
+    private const float ReactionChipEmoji = 17f;
+    private const float ReactionChipPadX = 5f;
+    private const float ReactionChipCountGap = 3f;
+    private const float ReactionChipOverlap = 9f;
+    private const float ReactionChipEdgeInset = 6f;
+    private const float ReactionChipBelowGap = 4f;
+    private const float ReactionChipRing = 1.5f;
+    private const float ReactionChipFallbackScale = 0.72f;
+    private static readonly Vector4 ReactionChipFill = new(0.11f, 0.11f, 0.14f, 0.97f);
+    private static readonly Vector4 ReactionChipStroke = new(1f, 1f, 1f, 0.14f);
+    private static readonly Vector4 ReactionCountInk = new(0.94f, 0.94f, 0.97f, 1f);
+    private static readonly TextStyle ReactionCountStyle = TextStyles.FootnoteEmphasized;
     private static readonly Vector4 SeenTickColor = new(0.45f, 0.83f, 1f, 1f);
 
     private const float FlashSeconds = 1.6f;
@@ -1483,49 +1466,56 @@ internal sealed class ChatTranscript
             return 0f;
         }
 
-        var chipHeight = 20f * scale;
-        var chipGap = 4f * scale;
-        var top = bubbleMax.Y + 3f * scale;
+        var chipHeight = ReactionChipHeight * scale;
+        var chipGap = ReactionChipGap * scale;
+        var emojiSize = ReactionChipEmoji * scale;
+        var padX = ReactionChipPadX * scale;
+        var countGap = ReactionChipCountGap * scale;
+        var top = bubbleMax.Y - ReactionChipOverlap * scale;
         var totalWidth = 0f;
         Span<float> widths = stackalloc float[reactions.Length];
         for (var index = 0; index < reactions.Length; index++)
         {
-            var width = 26f * scale;
+            var width = padX * 2f + emojiSize;
             if (reactions[index].Count > 1)
             {
-                width += Typography.Measure(reactions[index].Count.ToString(Loc.Culture), 0.68f).X + 3f * scale;
+                width += countGap + Typography.Measure(reactions[index].Count.ToString(Loc.Culture),
+                    ReactionCountStyle).X;
             }
 
             widths[index] = width;
             totalWidth += width + (index > 0 ? chipGap : 0f);
         }
 
-        var cursor = mine ? bubbleMax.X - totalWidth : bubbleMin.X;
+        var edgeInset = ReactionChipEdgeInset * scale;
+        var cursor = mine ? bubbleMax.X - edgeInset - totalWidth : bubbleMin.X + edgeInset;
+        var fill = ReactionChipFill;
+        var stroke = ReactionChipStroke;
         for (var index = 0; index < reactions.Length; index++)
         {
             var reaction = reactions[index];
             var chipMin = new Vector2(cursor, top);
             var chipMax = new Vector2(cursor + widths[index], top + chipHeight);
-            var fill = new Vector4(0.13f, 0.13f, 0.16f, 0.92f);
+            var hovered = model.Interactions is not null && Hovering(chipMin, chipMax);
             Squircle.Fill(drawList, chipMin, chipMax, chipHeight * 0.5f,
                 ImGui.GetColorU32(Palette.WithAlpha(fill, fill.W * alpha)));
-            if (reaction.Mine)
-            {
-                Squircle.Stroke(drawList, chipMin, chipMax, chipHeight * 0.5f,
-                    ImGui.GetColorU32(Palette.WithAlpha(model.Accent, 0.9f * alpha)), 1.2f * scale);
-            }
-
-            var tokenColor = ReactionArt.Color(reaction.Token);
-            AppSkin.Icon(drawList, new Vector2(chipMin.X + 13f * scale, top + chipHeight * 0.5f),
-                ReactionArt.Glyph(reaction.Token), Palette.WithAlpha(tokenColor, tokenColor.W * alpha), 0.62f);
+            var ring = reaction.Mine ? Palette.WithAlpha(model.Accent, 0.95f * alpha)
+                : hovered ? Palette.WithAlpha(stroke, stroke.W * 2f * alpha)
+                : Palette.WithAlpha(stroke, stroke.W * alpha);
+            Squircle.Stroke(drawList, chipMin, chipMax, chipHeight * 0.5f, ImGui.GetColorU32(ring),
+                ReactionChipRing * scale);
+            var emojiCenter = new Vector2(chipMin.X + padX + emojiSize * 0.5f, top + chipHeight * 0.5f);
+            ReactionArt.Draw(drawList, reaction.Token, emojiCenter, emojiSize, alpha, ReactionChipFallbackScale);
             if (reaction.Count > 1)
             {
-                Typography.Draw(drawList, new Vector2(chipMin.X + 23f * scale,
-                    top + chipHeight * 0.5f - Typography.Measure("0", 0.68f).Y * 0.5f),
-                    reaction.Count.ToString(Loc.Culture), new Vector4(0.94f, 0.94f, 0.97f, alpha), 0.68f);
+                var label = reaction.Count.ToString(Loc.Culture);
+                var labelSize = Typography.Measure(label, ReactionCountStyle);
+                Typography.Draw(drawList, new Vector2(emojiCenter.X + emojiSize * 0.5f + countGap,
+                    top + chipHeight * 0.5f - labelSize.Y * 0.5f), label,
+                    Palette.WithAlpha(ReactionCountInk, alpha), ReactionCountStyle);
             }
 
-            if (model.Interactions is { } interactions && Hovering(chipMin, chipMax))
+            if (hovered && model.Interactions is { } interactions)
             {
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 HoverTooltip.Show(new Rect(chipMin, chipMax),
@@ -1539,7 +1529,7 @@ internal sealed class ChatTranscript
             cursor = chipMax.X + chipGap;
         }
 
-        return chipHeight + 4f * scale;
+        return chipHeight - ReactionChipOverlap * scale + ReactionChipBelowGap * scale;
     }
 
     private void DrawVoiceBubble(TranscriptMessage message, int index, in ChatTranscriptModel model)

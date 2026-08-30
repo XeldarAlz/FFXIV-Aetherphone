@@ -74,6 +74,8 @@ OUTLINE = [
     ("Language", "language"),
     ("World", "world"),
     ("LockOpen", "lock-open"),
+    ("Microphone", "microphone"),
+    ("MapPin", "map-pin"),
 ]
 
 FILLED = [
