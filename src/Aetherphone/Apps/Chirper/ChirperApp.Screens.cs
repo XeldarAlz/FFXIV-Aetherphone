@@ -281,7 +281,7 @@ internal sealed partial class ChirperApp
     private void DrawUserList(Rect area, string sourceId, UserListKind kind)
     {
         store.EnsureUserList(sourceId, kind);
-        DrawScreenHeader(area, SocialProfilePages.UserListTitle(kind));
+        DrawScreenHeader(area, SocialProfilePages.UserListTitle(kind), 0f, SocialProfilePages.UserListCount(store));
         var scale = UiScale.Current;
         var top = area.Min.Y + AppHeader.Height * scale;
         var counts = kind == UserListKind.Likers ? store.UserListReactionCounts : null;

@@ -13,7 +13,8 @@ internal sealed partial class AethergramApp
     private void DrawUserList(Rect area, string sourceId, UserListKind kind)
     {
         store.EnsureUserList(sourceId, kind);
-        DrawScreenHeader(area, SocialProfilePages.UserListTitle(kind));
+        DrawScreenHeader(area, SocialProfilePages.UserListTitle(kind), 0, true, true,
+            SocialProfilePages.UserListCount(store));
         var scale = UiScale.Current;
         var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
         var snapshot = store.UserListResults;

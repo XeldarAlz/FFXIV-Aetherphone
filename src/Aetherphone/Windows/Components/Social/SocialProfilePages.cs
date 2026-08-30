@@ -83,6 +83,12 @@ internal sealed class SocialProfilePages
         _ => Loc.T(L.Social.LikedByTitle),
     };
 
+    public static string UserListCount(SocialFeedStore store)
+    {
+        var total = store.UserListTotal;
+        return total < 0 ? string.Empty : CountText.Exact(total);
+    }
+
     internal static string FollowedByLine(UserDto user)
     {
         if (user.IsMe || user.FollowedByCount <= 0 || user.FollowedByPreview is not { Length: > 0 } preview)

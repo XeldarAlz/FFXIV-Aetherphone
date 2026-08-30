@@ -2,6 +2,8 @@ namespace Aetherphone.Core.Localization;
 
 internal static class CountText
 {
+    public static string Exact(int value) => value.ToString("N0", Loc.Culture);
+
     public static string Compact(int value)
     {
         if (value < 1000)

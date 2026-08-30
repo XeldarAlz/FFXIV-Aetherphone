@@ -75,6 +75,7 @@ internal abstract class SocialFeedStore : IDisposable
     private volatile Dictionary<string, int>? userListReactionKinds;
     private volatile int[]? userListReactionCounts;
     private volatile int userListReactionFilter = -1;
+    private volatile int userListTotal = -1;
     private int userListGeneration;
     private readonly FeedLane<PostDto> taggedLane = new(ByNewestFirst);
     private volatile string? taggedUserId;
@@ -149,6 +150,7 @@ internal abstract class SocialFeedStore : IDisposable
         userListReactionKinds = null;
         userListReactionCounts = null;
         userListReactionFilter = -1;
+        userListTotal = -1;
         savedLane.Clear();
         likedLane.Clear();
         followRequests = Array.Empty<UserDto>();
@@ -209,6 +211,7 @@ internal abstract class SocialFeedStore : IDisposable
     public bool UserListFailed => userListFailed;
     public int[]? UserListReactionCounts => userListReactionCounts;
     public int UserListReactionFilter => userListReactionFilter;
+    public int UserListTotal => userListTotal;
 
     public int ReactionKindOf(string userId)
     {
@@ -1233,6 +1236,7 @@ internal abstract class SocialFeedStore : IDisposable
         userListKind = kind;
         userListSourceId = sourceId;
         userListKey = key;
+        userListTotal = UserListTotalFor(sourceId, kind);
         if (!keepStaleRows)
         {
             userListResults = Array.Empty<UserDto>();
@@ -1319,6 +1323,22 @@ internal abstract class SocialFeedStore : IDisposable
 
     private static string UserListKeyFor(string sourceId, UserListKind kind, int reactionFilter) =>
         $"{(int)kind}:{sourceId}:{reactionFilter}";
+
+    private int UserListTotalFor(string sourceId, UserListKind kind)
+    {
+        if (profileUser is not { } user || !string.Equals(user.Id, sourceId, StringComparison.Ordinal))
+        {
+            return -1;
+        }
+
+        return kind switch
+        {
+            UserListKind.Followers => user.Followers,
+            UserListKind.Following => user.Following,
+            UserListKind.Mutuals => user.FollowedByCount,
+            _ => -1,
+        };
+    }
 
     private async Task<UserListPage?> FetchUserListPageAsync(
         UserListKind kind, string sourceId, string? cursor, CancellationToken token) =>

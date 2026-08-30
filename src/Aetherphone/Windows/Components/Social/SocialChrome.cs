@@ -64,7 +64,20 @@ internal static class SocialChrome
             var reserve = MathF.Max(titleLeft - area.Min.X, area.Max.X - titleRight);
             var maxWidth = MathF.Max(1f, area.Width - reserve * 2f - 8f * scale);
             var fitted = Typography.FitText(title, maxWidth, titleStyle);
-            Typography.DrawCentered(drawList, new Vector2(area.Center.X, rowCenterY), fitted, ink.TitleInk, titleStyle);
+            if (subtitle.Length == 0)
+            {
+                Typography.DrawCentered(drawList, new Vector2(area.Center.X, rowCenterY), fitted, ink.TitleInk,
+                    titleStyle);
+                return titleLeft;
+            }
+
+            var centeredSubtitleHeight = Typography.LineHeight(SubtitleStyle);
+            var centeredBlockTop = rowCenterY - (titleHeight + centeredSubtitleHeight) * 0.5f;
+            Typography.DrawCentered(drawList, new Vector2(area.Center.X, centeredBlockTop + titleHeight * 0.5f),
+                fitted, ink.TitleInk, titleStyle);
+            Typography.DrawCentered(drawList,
+                new Vector2(area.Center.X, centeredBlockTop + titleHeight + centeredSubtitleHeight * 0.5f),
+                Typography.FitText(subtitle, maxWidth, SubtitleStyle), ink.MutedInk, SubtitleStyle);
             return titleLeft;
         }
 
