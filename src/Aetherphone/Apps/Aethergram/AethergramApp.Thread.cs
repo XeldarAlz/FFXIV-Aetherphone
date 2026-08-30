@@ -26,7 +26,7 @@ internal sealed partial class AethergramApp
     private const float PresenceDotRadius = 4.5f;
     private const float PresenceRingRadius = 6.5f;
 
-    private static readonly TextStyle ThreadNameStyle = TextStyles.Headline;
+    private static readonly TextStyle ThreadNameStyle = new(1.1f, FontWeight.SemiBold);
     private static readonly TextStyle ThreadSubStyle = TextStyles.Footnote;
 
     private string handleLabelSource = string.Empty;
