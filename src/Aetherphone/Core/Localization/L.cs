@@ -1645,7 +1645,7 @@ internal static class L
         public static readonly LocString[] Release1016Aethergram =
         {
             new("changelog.r1016.0",
-                "Overhauled Aethergram from top to bottom: a home feed with For You and Following tabs, an explore grid under Search, a rebuilt profile, post page, inbox and threads, a new compose flow, and Settings, Activity and Follow requests to match"),
+                "Overhauled the app from top to bottom: a home feed with For You and Following tabs, an explore grid under Search, a rebuilt profile, post page, inbox and threads, a new compose flow, and Settings, Activity and Follow requests to match"),
             new("changelog.r1016.1",
                 "Added a Posts screen to Aethergram: tapping a tile on a profile, tagged, saved, hashtag or explore grid scrolls through that whole collection, starting at the tapped post"),
             new("changelog.r1016.13",

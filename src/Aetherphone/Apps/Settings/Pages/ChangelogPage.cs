@@ -85,7 +85,7 @@ internal sealed class ChangelogPage : ISettingsPage
         var dateHeight = Typography.Measure(dateLabel, TextStyles.Footnote).Y;
         var metrics = new BodyMetrics(
             Typography.Measure("Ag", TextStyles.Callout).Y,
-            Typography.Measure("Ag", TextStyles.Headline).Y,
+            Typography.Measure("Ag", TextStyles.Title3).Y,
             8f * scale,
             16f * scale,
             6f * scale);
@@ -186,7 +186,7 @@ internal sealed class ChangelogPage : ISettingsPage
             if (title.Length > 0)
             {
                 Typography.Draw(drawList, new Vector2(innerLeft, y), title, theme.TextStrong,
-                    TextStyles.Headline.Scale, TextStyles.Headline.Weight);
+                    TextStyles.Title3.Scale, TextStyles.Title3.Weight);
                 y += metrics.TitleHeight + metrics.TitleGap;
             }
 
