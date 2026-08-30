@@ -29,6 +29,7 @@ internal enum AethergramScreen
     Encryption,
     Hashtag,
     Activity,
+    NewMessage,
 }
 
 internal readonly record struct AethergramRoute(
@@ -40,6 +41,7 @@ internal readonly record struct AethergramRoute(
     public static readonly AethergramRoute Compose = new(AethergramScreen.Compose);
     public static readonly AethergramRoute EditProfile = new(AethergramScreen.EditProfile);
     public static readonly AethergramRoute Inbox = new(AethergramScreen.Inbox);
+    public static readonly AethergramRoute NewMessage = new(AethergramScreen.NewMessage);
     public static readonly AethergramRoute Settings = new(AethergramScreen.Settings);
     public static readonly AethergramRoute FollowRequests = new(AethergramScreen.FollowRequests);
     public static readonly AethergramRoute Saved = new(AethergramScreen.Saved);

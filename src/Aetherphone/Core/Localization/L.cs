@@ -3862,6 +3862,11 @@ internal static class L
         public static readonly LocString ThreadEmpty = new("aethergram.threadEmpty", "Say hello");
         public static readonly LocString Settings = new("aethergram.settings", "Settings");
         public static readonly LocString ChatsTab = new("aethergram.chatsTab", "Chats");
+        public static readonly LocString NewMessage = new("aethergram.newMessage", "New message");
+        public static readonly LocString NewMessageHint = new("aethergram.newMessageHint", "To: name or @username");
+        public static readonly LocString NewMessageEmpty = new("aethergram.newMessageEmpty", "Search for someone to message");
+        public static readonly LocString CannotMessage = new("aethergram.cannotMessage", "Can't message");
+        public static readonly LocString ActiveNow = new("aethergram.activeNow", "Active now");
         public static readonly LocString Requests = new("aethergram.requests", "Requests");
         public static readonly LocString RequestsCount = new("aethergram.requestsCount", "Requests ({0})");
         public static readonly LocString RequestsEmpty = new("aethergram.requestsEmpty", "No message requests");
