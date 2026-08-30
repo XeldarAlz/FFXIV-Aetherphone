@@ -275,8 +275,9 @@ internal sealed class StoryViewerOverlay
         var captionWidth = stage.Width - inset * 2f;
         var storyKey = new TranslationKey(TranslationSurface.Story, story.Id);
         var captionText = translation.View(storyKey, story.Caption, story.Lang).Text;
+        var captionLayout = hasCaption ? LinkText.LayoutFor(captionText, captionWidth) : null;
         var captionHeight = hasCaption
-            ? Typography.MeasureWrappedBlock(captionText, TextStyles.Body, captionWidth).Y
+            ? captionLayout?.Size.Y ?? Typography.MeasureWrappedBlock(captionText, TextStyles.Body, captionWidth).Y
             : 0f;
         var linkHeight = hasCaption ? TranslateLink.Height(translation, storyKey, story.Lang, scale) : 0f;
         var seenHeight = showSeen ? SeenPillHeight * scale : 0f;
@@ -289,8 +290,19 @@ internal sealed class StoryViewerOverlay
             ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.78f)));
         if (hasCaption)
         {
-            Typography.DrawWrappedCentered(new Vector2(stage.Center.X, top), captionText,
-                new Vector4(1f, 1f, 1f, 0.96f), TextStyles.Body, captionWidth);
+            var captionInk = new Vector4(1f, 1f, 1f, 0.96f);
+            if (captionLayout is not null)
+            {
+                LinkText.Draw(drawList, captionLayout,
+                    new Vector2(stage.Center.X - captionLayout.Size.X * 0.5f, top), 1f, captionInk, captionInk, 1f,
+                    true);
+            }
+            else
+            {
+                Typography.DrawWrappedCentered(new Vector2(stage.Center.X, top), captionText, captionInk,
+                    TextStyles.Body, captionWidth);
+            }
+
             if (linkHeight > 0f)
             {
                 TranslateLink.Draw(translation, confirm, storyKey, story.Lang, story.Caption,
