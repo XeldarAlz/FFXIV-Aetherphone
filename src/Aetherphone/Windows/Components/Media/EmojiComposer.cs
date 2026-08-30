@@ -10,6 +10,8 @@ internal sealed class EmojiComposer
     private const float PanelHeightUnits = 244f;
 
     private readonly EmojiPicker picker = new();
+    private int openedFrame = -1;
+    private int closedFrame = -1;
     private bool open;
 
     public bool Open => open;
@@ -49,10 +51,13 @@ internal sealed class EmojiComposer
         }
 
         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-        if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        if (!ImGui.IsMouseClicked(ImGuiMouseButton.Left) || ImGui.GetFrameCount() == closedFrame)
         {
-            open = !open;
+            return;
         }
+
+        open = !open;
+        openedFrame = ImGui.GetFrameCount();
     }
 
     public void DrawPanel(Rect panel, in AppSkin ui, ref string draft, int maxLength)
@@ -63,11 +68,29 @@ internal sealed class EmojiComposer
         }
 
         var picked = picker.Draw(panel, ui);
-        if (picked is null || draft.Length + picked.Length > maxLength)
+        if (picked is null)
+        {
+            DismissOnOutsideClick(panel);
+            return;
+        }
+
+        if (draft.Length + picked.Length > maxLength)
         {
             return;
         }
 
         draft += picked;
+    }
+
+    private void DismissOnOutsideClick(Rect panel)
+    {
+        var frame = ImGui.GetFrameCount();
+        if (frame == openedFrame || !UiInteract.ClickedOutside(panel.Min, panel.Max))
+        {
+            return;
+        }
+
+        open = false;
+        closedFrame = frame;
     }
 }
