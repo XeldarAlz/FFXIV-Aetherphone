@@ -223,6 +223,9 @@ internal sealed partial class AethergramApp
         protected override void DrawHeader(Rect area, string threadId)
         {
             var scale = UiScale.Current;
+            var sidePadding = app.theme.SidePadding * scale;
+            area = new Rect(new Vector2(area.Min.X - sidePadding, area.Min.Y),
+                new Vector2(area.Max.X + sidePadding, area.Max.Y));
             var drawList = ImGui.GetWindowDrawList();
             var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
             var chipRadius = SocialChrome.BackChipRadius * scale;
