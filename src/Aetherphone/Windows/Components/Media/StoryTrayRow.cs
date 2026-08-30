@@ -179,7 +179,8 @@ internal sealed class StoryTrayRow
     {
         var maxWidth = TileWidth * scale - 8f * scale;
         var fitted = Typography.FitText(label, maxWidth, TextStyles.Footnote);
-        var baseline = new Vector2(center.X, center.Y + radius + LabelGap * scale);
-        Typography.DrawCentered(drawList, baseline, fitted, palette.MutedInk, TextStyles.Footnote);
+        var size = Typography.Measure(fitted, TextStyles.Footnote);
+        var top = new Vector2(center.X - size.X * 0.5f, center.Y + radius + LabelGap * scale - size.Y * 0.5f);
+        Typography.Draw(drawList, top, fitted, palette.MutedInk, TextStyles.Footnote);
     }
 }
