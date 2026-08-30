@@ -3819,6 +3819,14 @@ internal static class L
         public static readonly LocString AddComment = new("aethergram.addComment", "Add a comment…");
         public static readonly LocString ProfileError = new("aethergram.profileError", "Couldn't load this profile");
         public static readonly LocString EditProfile = new("aethergram.editProfile", "Edit Profile");
+        public static readonly LocString Done = new("aethergram.done", "Done");
+        public static readonly LocString EditPicture = new("aethergram.editPicture", "Edit picture");
+        public static readonly LocString CreateFirstPost = new("aethergram.createFirstPost", "Create your first post");
+        public static readonly LocString CreateFirstPostHint = new("aethergram.createFirstPostHint", "Show some love to your profile");
+        public static readonly LocString Create = new("aethergram.create", "Create");
+        public static readonly LocString StatPosts = new("aethergram.statPosts", "posts");
+        public static readonly LocString StatFollowers = new("aethergram.statFollowers", "followers");
+        public static readonly LocString StatFollowing = new("aethergram.statFollowing", "following");
         public static readonly LocString ChangePhoto = new("aethergram.changePhoto", "Change Photo");
         public static readonly LocString DisplayNameLabel = new("aethergram.displayNameLabel", "Display name");
         public static readonly LocString HandleLabel = new("aethergram.handleLabel", "Username");
