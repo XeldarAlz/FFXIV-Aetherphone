@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Aethernet;
 using Aetherphone.Core.Apps;
 using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
@@ -13,12 +14,14 @@ internal sealed class AboutPage : ISettingsPage
 {
     private readonly Configuration configuration;
     private readonly GameData gameData;
+    private readonly AethernetSession aethernetSession;
     private DateTime copiedAt;
 
-    public AboutPage(Configuration configuration, GameData gameData)
+    public AboutPage(Configuration configuration, GameData gameData, AethernetSession aethernetSession)
     {
         this.configuration = configuration;
         this.gameData = gameData;
+        this.aethernetSession = aethernetSession;
     }
 
     public string Title => Loc.T(L.Settings.About);
@@ -41,7 +44,7 @@ internal sealed class AboutPage : ISettingsPage
             var copyLabel = copied ? Loc.T(L.Settings.SupportInfoCopied) : Loc.T(L.Settings.CopySupportInfo);
             if (SettingsRow.Action(card.NextRow(), copyLabel, theme.Accent, theme))
             {
-                ImGui.SetClipboardText(SupportInfo.Build(configuration, gameData));
+                ImGui.SetClipboardText(SupportInfo.Build(configuration, gameData, aethernetSession));
                 copiedAt = DateTime.UtcNow;
             }
 

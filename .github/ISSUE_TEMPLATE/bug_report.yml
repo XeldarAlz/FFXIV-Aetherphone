@@ -124,15 +124,16 @@ body:
     attributes:
       label: Support info
       description: |
-        In the phone, open **Settings > About > Copy support info** and paste the result here. It carries your plugin version, OS, Wine status, game region, and notification settings in one block, which answers most environment questions up front. If you can't open the phone at all, say so and note your OS and whether you play through XIVLauncher on Linux or Mac.
+        In the phone, open **Settings > About > Copy support info** and paste the result here. It carries your plugin and Dalamud versions, install source, OS, Wine status, game region and world, UI scale, the settings that matter for triage, and your loaded plugin list in one block, which answers most environment questions up front. If you can't open the phone at all, say so and note your OS and whether you play through XIVLauncher on Linux or Mac.
       render: text
       placeholder: |
         Aetherphone 1.0.1.8
-        Game: English
-        Region: NA
-        Chinese client: False
+        Source: ...
+        Dalamud: ...
         OS: ...
         Wine: False
+        Game language: English
+        Region: NA
         ...
 
   - type: textarea
@@ -144,7 +145,7 @@ body:
 
         - **Dalamud log**: open `/xllog`, click the *Open log folder* button at the bottom-right, attach `dalamud.log`. Filter by `Aetherphone` if you want to trim it down. The log contains file paths like `C:\Users\<your name>\...`; redact the user name if it is your real name.
         - **Screenshots or a short clip** if the issue is visual (a misaligned row, wrong colors, a frozen animation).
-        - **Other plugins active**, plus ReShade/GShade or other overlays, to help rule out conflicts.
+        - **ReShade/GShade or other overlays**, to help rule out conflicts (the support info block above already lists your plugins).
         - **MogCast only**: the exact link you tried, whether a VPN or proxy was on, the text of the red card under the player, and your graphics upscaling settings (DLSS or FSR, 3D resolution scaling, dynamic resolution on or off).
 
         Short log excerpts can go straight in the box below; attach full files instead of pasting them.

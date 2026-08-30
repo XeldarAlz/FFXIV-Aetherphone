@@ -109,7 +109,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         tagsMentionsPage = new TagsMentionsPage(aethernetSession, aethernet.Account, this);
         privacyPage = new PrivacyPage(configuration, aethernetSession, aethernet.Account, aethernet.Safety,
             confirm, this, tagsMentionsPage);
-        var about = new AboutPage(configuration, gameData);
+        var about = new AboutPage(configuration, gameData, aethernetSession);
         changelogPage = new ChangelogPage(configuration);
         var groups = new[]
         {
