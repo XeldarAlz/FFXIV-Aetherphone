@@ -29,6 +29,7 @@ internal sealed partial class AethergramApp
     private const float ProfileStoryBadgeRadius = 10f;
     private const float ProfileHeadTop = 12f;
     private const float ProfileStatsGap = 18f;
+    private const float ProfileStatColumnPad = 10f;
     private const float ProfileBlockGap = 10f;
     private const float ProfileChipHeight = 26f;
     private const float ProfileChipGap = 6f;
@@ -216,7 +217,11 @@ internal sealed partial class AethergramApp
             : 0f;
         var regionCode = ProfileRegionCode(user);
         var hasChips = HasProfileChips(user, regionCode);
-        var nameTop = avatarCenter.Y + radius + frameReach + ProfileBlockGap * scale;
+        var statsLeft = avatarCenter.X + radius + frameReach + ProfileStatsGap * scale;
+        var statsHeight = Typography.LineHeight(ProfileStatValueStyle) + Typography.LineHeight(ProfileStatLabelStyle);
+        var statsInline = StatsFitInline(innerRight - statsLeft, scale);
+        var statsRowTop = avatarCenter.Y + radius + frameReach + ProfileBlockGap * scale;
+        var nameTop = statsInline ? statsRowTop : statsRowTop + statsHeight + ProfileBlockGap * scale;
         var bioTop = nameTop + nameHeight + (bioHeight > 0f ? 4f * scale : 0f);
         var followedByTop = bioTop + bioHeight + bioLinkHeight + (followedByHeight > 0f ? 6f * scale : 0f);
         var chipsTop = followedByTop + followedByHeight + (hasChips ? ProfileBlockGap * scale : 0f);
@@ -225,8 +230,14 @@ internal sealed partial class AethergramApp
         var blockBottom = buttonsBottom + ProfileBottomPad * scale;
 
         DrawProfileAvatar(drawList, user, avatarCenter, radius, displayName, frame);
-        DrawProfileStats(drawList, user, avatarCenter.X + radius + frameReach + ProfileStatsGap * scale, innerRight,
-            avatarCenter.Y);
+        if (statsInline)
+        {
+            DrawProfileStats(drawList, user, statsLeft, innerRight, avatarCenter.Y);
+        }
+        else
+        {
+            DrawProfileStats(drawList, user, innerLeft, innerRight, statsRowTop + statsHeight * 0.5f);
+        }
         UserName.DrawAuto(drawList, "aethergram.profile.name." + user.Id, displayName, user.Badges, user.ProfileBadges,
             innerLeft, nameTop, innerWidth, ProfileNameStyle, Ink.TitleInk, theme, 2);
         if (bioHeight > 0f)
@@ -301,6 +312,14 @@ internal sealed partial class AethergramApp
         {
             StartStoryCompose();
         }
+    }
+
+    private static bool StatsFitInline(float available, float scale)
+    {
+        var widest = MathF.Max(Typography.Measure(Loc.T(L.Aethergram.StatPosts), ProfileStatLabelStyle).X,
+            MathF.Max(Typography.Measure(Loc.T(L.Aethergram.StatFollowers), ProfileStatLabelStyle).X,
+                Typography.Measure(Loc.T(L.Aethergram.StatFollowing), ProfileStatLabelStyle).X));
+        return (widest + ProfileStatColumnPad * scale) * 3f <= available;
     }
 
     private void DrawProfileStats(ImDrawListPtr drawList, UserDto user, float left, float right, float centerY)
