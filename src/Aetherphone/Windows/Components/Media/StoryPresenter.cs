@@ -79,8 +79,10 @@ internal sealed class StoryPresenter : IDisposable
     public void CreateStory(string sourcePath, WallpaperCrop crop, string caption, Action<bool> onComplete) =>
         stories.CreateStory(sourcePath, crop, caption, onComplete);
 
-    public void DrawTray(PhoneTheme theme) =>
-        tray.Draw(theme, palette, stories.Rings, stories.HasOwnRing, painter, onCompose, OpenRing);
+    public void DrawTray(PhoneTheme theme, string? ownAvatarUrl = null, string ownName = "",
+        string? ownFrameId = null) =>
+        tray.Draw(theme, palette, stories.Rings, stories.HasOwnRing, painter, onCompose, OpenRing, ownAvatarUrl,
+            ownName, ownFrameId);
 
     public void DrawViewer(Rect screen, PhoneTheme theme) =>
         viewer.Draw(screen, theme, confirm.Active is not null);

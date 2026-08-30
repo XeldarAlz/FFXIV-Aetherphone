@@ -354,6 +354,7 @@ internal sealed partial class AethergramApp : IResumableApp
         navigation = context.Navigation;
         ui.Theme = theme;
         postSheet.Gate();
+        commentSheet.Gate();
         inboxRowSheet.Gate();
         homeReveal.Tick(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         if (homeReveal.IsOpen)
@@ -392,6 +393,7 @@ internal sealed partial class AethergramApp : IResumableApp
 
         DrawScopePopover(screen);
         DrawPostSheet(screen);
+        DrawCommentSheet(screen);
         DrawInboxRowSheet(screen);
     }
 
@@ -658,7 +660,8 @@ internal sealed partial class AethergramApp : IResumableApp
 
             pullToRefresh[scope].Draw(listRect, surface.Pull, surface.Dragging,
                 store.IsLoading(scope), Ink.MutedInk, () => RefreshFeed(scope));
-            stories.DrawTray(theme);
+            stories.DrawTray(theme, store.Me?.AvatarUrl, store.Me is { } me ? me.Name : string.Empty,
+                store.Me?.FrameId);
             if (snapshot.Length == 0)
             {
                 var failed = !store.IsLoading(scope) && store.FeedFailed(scope);
