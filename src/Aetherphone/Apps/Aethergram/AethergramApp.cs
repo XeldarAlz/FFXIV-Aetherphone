@@ -171,8 +171,6 @@ internal sealed partial class AethergramApp : IResumableApp
     private bool composeStoryMode;
     private readonly string[] aspectLabels = new string[PostAspects.All.Length];
     private string? pendingSharedPhoto;
-    private static readonly LocString[] ProfileTabs = { L.PhotoTag.PostsTab, L.PhotoTag.TaggedTab };
-    private readonly string[] profileTabLabels = new string[ProfileTabs.Length];
     private int profileTab;
     private bool composeTagMode;
     private int composeTagPhotoIndex;
@@ -355,6 +353,8 @@ internal sealed partial class AethergramApp : IResumableApp
         ui.Theme = theme;
         postSheet.Gate();
         commentSheet.Gate();
+        profileMenu.Gate();
+        profileActionSheet.Gate();
         inboxRowSheet.Gate();
         homeReveal.Tick(MathF.Min(ImGui.GetIO().DeltaTime, TransitionTiming.MaxFrameSeconds));
         if (homeReveal.IsOpen)
@@ -394,6 +394,8 @@ internal sealed partial class AethergramApp : IResumableApp
         DrawScopePopover(screen);
         DrawPostSheet(screen);
         DrawCommentSheet(screen);
+        DrawProfileMenu(screen);
+        DrawProfileActionSheet(screen);
         DrawInboxRowSheet(screen);
     }
 
@@ -412,10 +414,10 @@ internal sealed partial class AethergramApp : IResumableApp
                 DrawProfile(area, route.Id!);
                 break;
             case AethergramScreen.EditProfile:
-                profile.DrawEditProfile(area, theme, navigation);
+                DrawEditProfile(area);
                 break;
             case AethergramScreen.UserList:
-                profile.DrawUserList(area, theme, navigation, route.Id!, route.Kind);
+                DrawUserList(area, route.Id!, route.Kind);
                 break;
             case AethergramScreen.Inbox:
                 DrawInbox(area);
@@ -501,13 +503,6 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         DrawBottomNav(navRect);
-    }
-
-    private void DrawTabTitle(Rect area, string title)
-    {
-        var scale = UiScale.Current;
-        var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
-        Typography.DrawCentered(new Vector2(area.Center.X, rowCenterY), title, Ink.TitleInk, 1.2f, FontWeight.SemiBold);
     }
 
     private void DrawFeedTab(Rect area)
