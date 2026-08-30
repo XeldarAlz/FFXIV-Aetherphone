@@ -48,9 +48,9 @@ internal sealed partial class AethergramApp
         FeedCell.Hairline(drawList, left, right, y, Ink.Hairline);
 
     private void DrawScreenHeader(Rect area, string title, int trailingSlots = 0, bool showBack = true,
-        bool centered = true) =>
+        bool centered = true, string subtitle = "") =>
         SocialChrome.DrawScreenHeader(area, title, Ink, back, ScreenTitleStyle,
-            SocialChrome.HeaderReserve(trailingSlots), string.Empty, showBack, centered);
+            SocialChrome.HeaderReserve(trailingSlots), subtitle, showBack, centered);
 
     private static bool DrawHeaderIcon(ImDrawListPtr drawList, Vector2 center, string glyph, string tooltip,
         bool highlighted = false, int badge = 0, float iconSize = HeaderIconSize) =>
@@ -90,7 +90,7 @@ internal sealed partial class AethergramApp
     }
 
     private void DrawPostGrid(PostDto[] posts, LocString emptyMessage, bool hasMore, bool loadingMore,
-        Action loadMore, in PostGridStyle style)
+        Action loadMore, in PostGridStyle style, PostSource source)
     {
         var scale = UiScale.Current;
         if (posts.Length == 0)
@@ -116,7 +116,7 @@ internal sealed partial class AethergramApp
                 DrawGridTile(posts[index], min, max, style);
                 if (UiInteract.Click(min, max, UiInteract.Hover(min, max)))
                 {
-                    OpenDetail(posts[index]);
+                    OpenPosts(posts[index].Id, source);
                 }
 
                 if (index % GridColumns != GridColumns - 1)

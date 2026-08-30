@@ -178,7 +178,7 @@ internal sealed partial class AethergramApp
             {
                 ImGui.Dummy(new Vector2(0f, 2f * scale));
                 DrawPostGrid(posts, L.Aethergram.ExploreEmpty, store.HasMoreFeed(scope), store.LoadingMore(scope),
-                    loadMoreExplore, ExploreGrid);
+                    loadMoreExplore, ExploreGrid, PostSource.Explore);
                 return;
             }
 
@@ -310,7 +310,7 @@ internal sealed partial class AethergramApp
             if (posts.Length > 0)
             {
                 DrawPostGrid(posts, L.Social.HashtagEmpty, store.HasMoreHashtagPosts, store.HashtagLoadingMore,
-                    store.LoadMoreHashtagPosts, SquareGrid);
+                    store.LoadMoreHashtagPosts, SquareGrid, PostSource.Hashtag);
                 return;
             }
 
@@ -366,7 +366,7 @@ internal sealed partial class AethergramApp
             {
                 ImGui.Dummy(new Vector2(0f, 2f * scale));
                 DrawPostGrid(posts, L.Aethergram.SavedEmpty, store.HasMoreSaved, store.SavedLoadingMore,
-                    store.LoadMoreSaved, SquareGrid);
+                    store.LoadMoreSaved, SquareGrid, PostSource.Saved);
                 return;
             }
 

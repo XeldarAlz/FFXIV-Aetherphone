@@ -376,6 +376,9 @@ internal sealed partial class AethergramApp : IResumableApp
             case AethergramScreen.Detail:
                 DrawDetail(area, route.Id!);
                 break;
+            case AethergramScreen.Posts:
+                DrawPosts(area, route.Id!, route.Source);
+                break;
             case AethergramScreen.Profile:
                 DrawProfile(area, route.Id!);
                 break;
@@ -617,7 +620,7 @@ internal sealed partial class AethergramApp : IResumableApp
                 OpenDetail(post);
                 break;
             case PostSheetAction.Delete:
-                profile.AskDeletePost(post.Id, back);
+                profile.AskDeletePost(post.Id, router.Current.Screen == AethergramScreen.Detail ? back : null);
                 break;
             case PostSheetAction.Follow:
                 store.SetFollow(post.AuthorId, !post.IsFollowing);

@@ -9,11 +9,21 @@ internal enum AethergramTab
     Profile,
 }
 
+internal enum PostSource
+{
+    Profile,
+    Tagged,
+    Saved,
+    Hashtag,
+    Explore,
+}
+
 internal enum AethergramScreen
 {
     Home,
     Compose,
     Detail,
+    Posts,
     Profile,
     EditProfile,
     UserList,
@@ -35,7 +45,8 @@ internal enum AethergramScreen
 internal readonly record struct AethergramRoute(
     AethergramScreen Screen,
     string? Id = null,
-    UserListKind Kind = UserListKind.Followers)
+    UserListKind Kind = UserListKind.Followers,
+    PostSource Source = PostSource.Profile)
 {
     public static readonly AethergramRoute Home = new(AethergramScreen.Home);
     public static readonly AethergramRoute Compose = new(AethergramScreen.Compose);
@@ -48,6 +59,10 @@ internal readonly record struct AethergramRoute(
     public static readonly AethergramRoute Encryption = new(AethergramScreen.Encryption);
     public static readonly AethergramRoute Activity = new(AethergramScreen.Activity);
     public static AethergramRoute Detail(string postId) => new(AethergramScreen.Detail, postId);
+
+    public static AethergramRoute Posts(string postId, PostSource source) =>
+        new(AethergramScreen.Posts, postId, UserListKind.Followers, source);
+
     public static AethergramRoute Profile(string userId) => new(AethergramScreen.Profile, userId);
     public static AethergramRoute Thread(string userId) => new(AethergramScreen.Thread, userId);
     public static AethergramRoute ChatImage(string userId) => new(AethergramScreen.ChatImage, userId);

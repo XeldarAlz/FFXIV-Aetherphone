@@ -303,6 +303,7 @@ internal abstract class SocialFeedStore : IDisposable
         Task.FromResult<FeedPage?>(null);
 
     public PostDto[] HashtagPosts => hashtagLane.Items;
+    public string? HashtagTag => hashtagTag;
 
     public bool HashtagLoading => hashtagLane.Loading;
     public bool HashtagLoadingMore => hashtagLane.LoadingMore;
@@ -1441,6 +1442,9 @@ internal abstract class SocialFeedStore : IDisposable
         forYouLane.Items = CopyOnWrite.Replace(forYouLane.Items, updated);
         followingLane.Items = CopyOnWrite.Replace(followingLane.Items, updated);
         profileLane.Items = CopyOnWrite.Replace(profileLane.Items, updated);
+        savedLane.Items = CopyOnWrite.Replace(savedLane.Items, updated);
+        taggedLane.Items = CopyOnWrite.Replace(taggedLane.Items, updated);
+        hashtagLane.Items = CopyOnWrite.Replace(hashtagLane.Items, updated);
         if (detailPost is { } current && current.Id == updated.Id)
         {
             detailPost = updated;
@@ -1454,6 +1458,7 @@ internal abstract class SocialFeedStore : IDisposable
         profileLane.Items = CopyOnWrite.RemoveById(profileLane.Items, postId);
         savedLane.Items = CopyOnWrite.RemoveById(savedLane.Items, postId);
         taggedLane.Items = CopyOnWrite.RemoveById(taggedLane.Items, postId);
+        hashtagLane.Items = CopyOnWrite.RemoveById(hashtagLane.Items, postId);
         if (detailPost is { } current && current.Id == postId)
         {
             detailPost = null;
@@ -1468,6 +1473,9 @@ internal abstract class SocialFeedStore : IDisposable
         forYouLane.Items = MapCommentCount(forYouLane.Items, postId, delta);
         followingLane.Items = MapCommentCount(followingLane.Items, postId, delta);
         profileLane.Items = MapCommentCount(profileLane.Items, postId, delta);
+        savedLane.Items = MapCommentCount(savedLane.Items, postId, delta);
+        taggedLane.Items = MapCommentCount(taggedLane.Items, postId, delta);
+        hashtagLane.Items = MapCommentCount(hashtagLane.Items, postId, delta);
         if (detailPost is { } current && current.Id == postId)
         {
             detailPost = current with { CommentCount = Math.Max(0, current.CommentCount + delta) };
