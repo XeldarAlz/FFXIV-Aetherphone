@@ -282,29 +282,9 @@ internal sealed partial class ChirperApp : IResumableApp
         router = new ViewRouter<ChirperRoute>(ChirperRoute.Home);
         drawView = DrawView;
         back = () => router.Pop();
-        profile = new SocialProfilePages(store, ui, new SocialProfileStyle
+        profile = new SocialProfilePages(store, new SocialProfileStyle
         {
-            Palette = AppPalettes.Chirper,
-            SearchInputId = "##chirperSearch",
-            StatsPostsFirst = false,
-            CountGrams = false,
-            CardUserRows = true,
-            HandleValidInk = AppPalettes.Chirper.TitleInk,
-            EditProfile = L.Chirper.EditProfile,
-            Follow = L.Chirper.Follow,
-            Following = L.Chirper.Following,
-            Posts = L.Chirper.Posts,
-            Save = L.Chirper.Save,
             Saving = L.Chirper.Saving,
-            HandleTaken = L.Chirper.HandleTaken,
-            HandleRules = L.Chirper.HandleRules,
-            HandleLabel = L.Chirper.HandleLabel,
-            DisplayNameLabel = L.Chirper.DisplayNameLabel,
-            BioLabel = L.Chirper.BioLabel,
-            ChangePhoto = L.Chirper.ChangePhoto,
-            ProfileError = L.Chirper.ProfileError,
-            NameOrWorld = L.Chirper.NameOrWorld,
-            SearchByName = L.Chirper.SearchByName,
             DeleteConfirmMessage = L.Chirper.DeleteConfirmMessage,
             DeleteConfirm = L.Chirper.DeleteConfirm,
             DeleteCancel = L.Chirper.DeleteCancel,
@@ -312,9 +292,7 @@ internal sealed partial class ChirperApp : IResumableApp
             DeleteCommentConfirmMessage = L.Chirper.DeleteCommentConfirmMessage,
             DeleteCommentFailed = L.Chirper.DeleteCommentFailed,
             RemoveCommentConfirmMessage = L.Chirper.RemoveCommentConfirmMessage,
-        }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report, translation,
-            () => router.Push(ChirperRoute.EditProfile), OpenAvatarComposer, OpenProfile, OpenUserList, back,
-            null);
+        }, confirm, report);
     }
 
     public void OnOpened()
@@ -322,7 +300,6 @@ internal sealed partial class ChirperApp : IResumableApp
         router.Reset();
         avatarLightbox.Reset();
         draft = string.Empty;
-        profile.SearchDraft = string.Empty;
         actions.Reset();
         ResetReactionsExpansion();
         sheet.Close();

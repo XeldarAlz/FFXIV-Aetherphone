@@ -34,6 +34,13 @@ A component used by exactly one app does not belong here. It lives in that app, 
 | src/Aetherphone/Windows/Components/GroupCard.cs | Grouped inset list card (theme or AppSkin overload) with fixed rows |
 | src/Aetherphone/Windows/Components/ListSection.cs | Section header over cell lists (SettingsSection and ListSection.Label delegate here) |
 | src/Aetherphone/Windows/Components/ActionSheet.cs | iOS bottom action sheet with an optional header band |
+| src/Aetherphone/Windows/Components/Social/SocialInk.cs | Social ink token set derived from any `AppPalette` (accent link/deep/wash, faint ink, glass, chips, button fills) |
+| src/Aetherphone/Windows/Components/Social/SocialChrome.cs | Glass back chip screen header, top bar icon buttons with knockout count badges, inline stats, section labels, bar backdrop |
+| src/Aetherphone/Windows/Components/Social/UnderlineTabs.cs | Sliding underline tabs: a text pair or an icon row |
+| src/Aetherphone/Windows/Components/Social/SocialPill.cs | Accent gradient, outline, flat and icon pills |
+| src/Aetherphone/Windows/Components/Social/SocialUserRow.cs | Avatar + badged name + subtitle row with a trailing slot for a pill |
+| src/Aetherphone/Windows/Components/Social/SocialProfilePages.cs | Social confirm/report plumbing (block, delete post/comment) plus handle validation and list titles |
+| src/Aetherphone/Windows/Components/Sheets/ActionReveal.cs | Open/close state for an anchored popover (progress, opened frame, outside-click dismiss) |
 | src/Aetherphone/Windows/Components/ShellToast.cs | Shell-level bottom-pill toast (replaced the mouse-anchored CopyToast) |
 | src/Aetherphone/Windows/Components/Toggle.cs | iOS-style switch |
 | src/Aetherphone/Windows/Components/ChipRail.cs | Single pannable row of filter chips |
@@ -297,6 +304,13 @@ To move, scale or fade a whole screen, do not paint it at a shifted rect or a sm
 | Confirm a destructive action | `ConfirmService.Ask` with `Sheet = true` (never draw `ConfirmDialog` yourself) |
 | Confirm money, consent, or the irreversible | `ConfirmService.Ask` (alert presentation) or `Alert` |
 | Offer post or row overflow actions | `ActionSheet` (style via `ActionSheetStyle.From`) |
+| Head a social sub-screen | `SocialChrome.DrawScreenHeader` (glass back chip, left or centred title) |
+| Put icon buttons in a social top bar | `SocialChrome.DrawHeaderIcon` + `HeaderSlot` (count badge built in) |
+| Switch between two feeds or an icon tab row | `UnderlineTabs.Draw` / `UnderlineTabs.DrawIcons` |
+| Draw a Follow, Edit profile or Send button | `SocialPill.Accent` / `Outline` / `Flat` |
+| List people with a follow pill | `SocialUserRow.Draw` and fill the returned `Trailing` rect |
+| Anchor a popover to a row and dismiss it on tap-outside | `ActionReveal<TPanel>` + `PopoverSurface.DrawGlass` |
+| Format a like or follower count | `CountText.Compact` |
 | Report a transient result | `ShellToast.Show` |
 | Open a link someone else posted | `UrlActions.AskThenOpen` (confirms the destination first) |
 | Show a picker or context menu | `DropdownMenu` |

@@ -16,7 +16,6 @@ internal sealed partial class AethergramApp
 {
     private const float AspectPickerReserve = 42f;
     private const float ComposeThumbSize = 64f;
-    private const float ComposeThumbRounding = 6f;
     private const float ComposeRowHeight = 52f;
     private const float ComposeRowGlyph = 22f;
     private const float ComposeShareHeight = 46f;

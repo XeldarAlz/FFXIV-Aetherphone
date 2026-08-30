@@ -30,7 +30,6 @@ internal sealed partial class AethergramApp
 
     private static readonly SocialInk Ink = AethergramInk.Shared;
     private static readonly TextStyle ScreenTitleStyle = new(1.05f, FontWeight.SemiBold);
-    private static readonly TextStyle WordmarkStyle = new(1.4f, FontWeight.Bold);
     private static readonly TextStyle PillStyle = TextStyles.SubheadlineEmphasized;
     private static readonly TextStyle GridOverlayStyle = TextStyles.FootnoteEmphasized;
     private static readonly TextStyle EmptyTitleStyle = TextStyles.Title2;

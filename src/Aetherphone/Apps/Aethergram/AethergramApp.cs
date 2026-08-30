@@ -81,7 +81,6 @@ internal sealed partial class AethergramApp : IResumableApp
     private const int PostSheetMaxItems = 4;
     private const float LikeBurstDuration = 0.9f;
     private const float LikeBurstSize = 84f;
-    private const float TagModeBarHeight = 28f;
 
     public string Id => "aethergram";
     public Vector4 Accent => AppAccents.For(Id);
@@ -150,7 +149,6 @@ internal sealed partial class AethergramApp : IResumableApp
     private readonly SocialProfilePages profile;
     private readonly RichTextCache bodyLayouts = new(scanHashtags: true);
     private readonly FeedVirtualizer feedVirtualizer = new(400f);
-    private readonly RichTextCache detailBodyLayouts = new(scanHashtags: true);
     private readonly RichTextCache commentLayouts = new(scanHashtags: true);
     private readonly MentionPopup mentionPopup = new();
     private readonly EmojiComposer commentEmoji = new();
@@ -169,7 +167,6 @@ internal sealed partial class AethergramApp : IResumableApp
     private readonly PhotoComposeSession composeSession;
     private bool composeAvatarMode;
     private bool composeStoryMode;
-    private readonly string[] aspectLabels = new string[PostAspects.All.Length];
     private string? pendingSharedPhoto;
     private int profileTab;
     private bool composeTagMode;
@@ -244,28 +241,9 @@ internal sealed partial class AethergramApp : IResumableApp
         back = () => router.Pop();
         openActivityActor = item => OpenProfile(item.ActorId);
         openActivityPost = item => OpenDetailFromLink(item.PostId!);
-        profile = new SocialProfilePages(store, ui, new SocialProfileStyle
+        profile = new SocialProfilePages(store, new SocialProfileStyle
         {
-            Palette = AppPalettes.Aethergram,
-            SearchInputId = "##aethergramSearch",
-            StatsPostsFirst = true,
-            CountGrams = true,
-            CardUserRows = false,
-            EditProfile = L.Aethergram.EditProfile,
-            Follow = L.Aethergram.Follow,
-            Following = L.Aethergram.Following,
-            Posts = L.Aethergram.Posts,
-            Save = L.Aethergram.Save,
             Saving = L.Aethergram.Saving,
-            HandleTaken = L.Aethergram.HandleTaken,
-            HandleRules = L.Aethergram.HandleRules,
-            HandleLabel = L.Aethergram.HandleLabel,
-            DisplayNameLabel = L.Aethergram.DisplayNameLabel,
-            BioLabel = L.Aethergram.BioLabel,
-            ChangePhoto = L.Aethergram.ChangePhoto,
-            ProfileError = L.Aethergram.ProfileError,
-            NameOrWorld = L.Aethergram.NameOrWorld,
-            SearchByName = L.Aethergram.SearchByName,
             DeleteConfirmMessage = L.Aethergram.DeleteConfirmMessage,
             DeleteConfirm = L.Aethergram.DeleteConfirm,
             DeleteCancel = L.Aethergram.DeleteCancel,
@@ -273,12 +251,7 @@ internal sealed partial class AethergramApp : IResumableApp
             DeleteCommentConfirmMessage = L.Aethergram.DeleteCommentConfirmMessage,
             DeleteCommentFailed = L.Aethergram.DeleteCommentFailed,
             RemoveCommentConfirmMessage = L.Aethergram.RemoveCommentConfirmMessage,
-            MessageLabel = L.Aethergram.MessageButton,
-            SettingsLabel = L.Aethergram.Settings,
-            SavedLabel = L.Aethergram.SavedTitle,
-        }, images, lodestone, avatarLightbox, configuration, gameData, confirm, report, translation,
-            () => router.Push(AethergramRoute.EditProfile), () => StartCompose(true), OpenProfile, OpenUserList, back,
-            null, OpenThread, () => router.Push(AethergramRoute.Settings), OpenSaved);
+        }, confirm, report);
         threadView = new ThreadView(this);
     }
 
@@ -289,7 +262,6 @@ internal sealed partial class AethergramApp : IResumableApp
         avatarLightbox.Reset();
         caption = string.Empty;
         composeSensitive = false;
-        profile.SearchDraft = string.Empty;
         commentDraft = string.Empty;
         shareSearchDraft = string.Empty;
         shareSentUserIds.Clear();
