@@ -54,7 +54,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private const float NavAvatarRingGap = 2.5f;
     private const float NavAnchorHalf = 20f;
     private const float TopBarIconSize = 26f;
-    private const float LogoSize = 26f;
+    private const float LogoSize = 30f;
     private const float LogoGap = 10f;
     private const float FeedTabRowHeight = 44f;
     private const float FeedTabUnderline = 2f;
@@ -1290,7 +1290,7 @@ internal sealed partial class AethergramApp : IResumableApp
         var rowCenterY = area.Min.Y + AppHeader.Height * scale * 0.5f;
         var logoSize = LogoSize * scale;
         var logoCenter = new Vector2(area.Min.X + CellPadX * scale + logoSize * 0.5f, rowCenterY);
-        if (!AppIconTextures.TryDraw(drawList, Id, logoCenter, logoSize, Ink.AccentLink))
+        if (!AppIconTextures.TryDrawArtwork(drawList, Id, logoCenter, logoSize, Ink.AccentLink))
         {
             PhoneIcon.Draw(drawList, logoCenter, PhoneIcons.Camera, Ink.AccentLink, logoSize);
         }

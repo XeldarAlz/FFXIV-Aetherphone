@@ -20,6 +20,8 @@ internal sealed class ChangelogPage : ISettingsPage
     private const float BulletColumn = 20f;
     private readonly List<string> wrappedLines = new();
     private readonly List<int> highlightLineCounts = new();
+    private readonly List<string> sectionTitles = new();
+    private readonly List<int> sectionHighlightCounts = new();
     private readonly Configuration configuration;
     public string Title => Loc.T(L.Settings.Changelog);
     public string Summary => string.Empty;
@@ -81,19 +83,14 @@ internal sealed class ChangelogPage : ISettingsPage
         var versionHeight = Typography.Measure(versionLabel, TextStyles.Title3).Y;
         var dateLabel = FormatDate(entry.Date);
         var dateHeight = Typography.Measure(dateLabel, TextStyles.Footnote).Y;
-        var lineHeight = Typography.Measure("Ag", TextStyles.Callout).Y;
-        var bulletGap = 8f * scale;
-        WrapHighlights(entry.Highlights, textWidth);
-        var highlightsHeight = 0f;
-        for (var index = 0; index < highlightLineCounts.Count; index++)
-        {
-            highlightsHeight += highlightLineCounts[index] * lineHeight;
-            if (index > 0)
-            {
-                highlightsHeight += bulletGap;
-            }
-        }
-
+        var metrics = new BodyMetrics(
+            Typography.Measure("Ag", TextStyles.Callout).Y,
+            Typography.Measure("Ag", TextStyles.Headline).Y,
+            8f * scale,
+            16f * scale,
+            6f * scale);
+        WrapEntry(entry, textWidth);
+        var highlightsHeight = MeasureBody(metrics);
         var headerHeight = versionHeight + 4f * scale + dateHeight;
         var separatorGap = 13f * scale;
         var cardHeight = paddingY + headerHeight + separatorGap + 1f + separatorGap + highlightsHeight + paddingY;
@@ -120,24 +117,7 @@ internal sealed class ChangelogPage : ISettingsPage
         var separatorY = dateTop + dateHeight + separatorGap;
         drawList.AddLine(new Vector2(innerLeft, separatorY), new Vector2(innerRight, separatorY),
             ImGui.GetColorU32(theme.Separator), 1f);
-        var lineCursor = 0;
-        var y = separatorY + separatorGap;
-        for (var highlightIndex = 0; highlightIndex < highlightLineCounts.Count; highlightIndex++)
-        {
-            var bulletCenter = new Vector2(innerLeft + 3f * scale, y + lineHeight * 0.5f);
-            drawList.AddCircleFilled(bulletCenter, 2.5f * scale, ImGui.GetColorU32(theme.Accent));
-            var lineCount = highlightLineCounts[highlightIndex];
-            for (var line = 0; line < lineCount; line++)
-            {
-                Typography.Draw(drawList, new Vector2(textLeft, y), wrappedLines[lineCursor], theme.TextStrong,
-                    TextStyles.Callout.Scale, TextStyles.Callout.Weight);
-                lineCursor++;
-                y += lineHeight;
-            }
-
-            y += bulletGap;
-        }
-
+        DrawBody(drawList, theme, scale, metrics, innerLeft, textLeft, separatorY + separatorGap);
         ImGui.SetCursorScreenPos(origin);
         ImGui.Dummy(new Vector2(width, cardHeight));
     }
@@ -157,10 +137,108 @@ internal sealed class ChangelogPage : ISettingsPage
             TextStyles.Caption2.Scale, TextStyles.Caption2.Weight);
     }
 
-    private void WrapHighlights(IReadOnlyList<LocString> highlights, float maxWidth)
+    private float MeasureBody(in BodyMetrics metrics)
+    {
+        var height = 0f;
+        var highlightCursor = 0;
+        for (var sectionIndex = 0; sectionIndex < sectionTitles.Count; sectionIndex++)
+        {
+            if (sectionIndex > 0)
+            {
+                height += metrics.SectionGap;
+            }
+
+            if (sectionTitles[sectionIndex].Length > 0)
+            {
+                height += metrics.TitleHeight + metrics.TitleGap;
+            }
+
+            var highlightCount = sectionHighlightCounts[sectionIndex];
+            for (var offset = 0; offset < highlightCount; offset++)
+            {
+                if (offset > 0)
+                {
+                    height += metrics.BulletGap;
+                }
+
+                height += highlightLineCounts[highlightCursor] * metrics.LineHeight;
+                highlightCursor++;
+            }
+        }
+
+        return height;
+    }
+
+    private void DrawBody(ImDrawListPtr drawList, PhoneTheme theme, float scale, in BodyMetrics metrics,
+        float innerLeft, float textLeft, float top)
+    {
+        var y = top;
+        var highlightCursor = 0;
+        var lineCursor = 0;
+        for (var sectionIndex = 0; sectionIndex < sectionTitles.Count; sectionIndex++)
+        {
+            if (sectionIndex > 0)
+            {
+                y += metrics.SectionGap;
+            }
+
+            var title = sectionTitles[sectionIndex];
+            if (title.Length > 0)
+            {
+                Typography.Draw(drawList, new Vector2(innerLeft, y), title, theme.TextStrong,
+                    TextStyles.Headline.Scale, TextStyles.Headline.Weight);
+                y += metrics.TitleHeight + metrics.TitleGap;
+            }
+
+            var highlightCount = sectionHighlightCounts[sectionIndex];
+            for (var offset = 0; offset < highlightCount; offset++)
+            {
+                if (offset > 0)
+                {
+                    y += metrics.BulletGap;
+                }
+
+                var bulletCenter = new Vector2(innerLeft + 3f * scale, y + metrics.LineHeight * 0.5f);
+                drawList.AddCircleFilled(bulletCenter, 2.5f * scale, ImGui.GetColorU32(theme.Accent));
+                var lineCount = highlightLineCounts[highlightCursor];
+                for (var line = 0; line < lineCount; line++)
+                {
+                    Typography.Draw(drawList, new Vector2(textLeft, y), wrappedLines[lineCursor], theme.TextStrong,
+                        TextStyles.Callout.Scale, TextStyles.Callout.Weight);
+                    lineCursor++;
+                    y += metrics.LineHeight;
+                }
+
+                highlightCursor++;
+            }
+        }
+    }
+
+    private void WrapEntry(in ChangelogEntry entry, float maxWidth)
     {
         wrappedLines.Clear();
         highlightLineCounts.Clear();
+        sectionTitles.Clear();
+        sectionHighlightCounts.Clear();
+        if (entry.Sections.Count == 0)
+        {
+            sectionTitles.Add(string.Empty);
+            sectionHighlightCounts.Add(entry.Highlights.Count);
+            WrapHighlights(entry.Highlights, maxWidth);
+            return;
+        }
+
+        for (var index = 0; index < entry.Sections.Count; index++)
+        {
+            var section = entry.Sections[index];
+            sectionTitles.Add(Loc.T(section.Title));
+            sectionHighlightCounts.Add(section.Highlights.Count);
+            WrapHighlights(section.Highlights, maxWidth);
+        }
+    }
+
+    private void WrapHighlights(IReadOnlyList<LocString> highlights, float maxWidth)
+    {
         for (var index = 0; index < highlights.Count; index++)
         {
             var before = wrappedLines.Count;
@@ -186,5 +264,23 @@ internal sealed class ChangelogPage : ISettingsPage
         }
 
         return isoDate;
+    }
+
+    private readonly struct BodyMetrics
+    {
+        public readonly float LineHeight;
+        public readonly float TitleHeight;
+        public readonly float BulletGap;
+        public readonly float SectionGap;
+        public readonly float TitleGap;
+
+        public BodyMetrics(float lineHeight, float titleHeight, float bulletGap, float sectionGap, float titleGap)
+        {
+            LineHeight = lineHeight;
+            TitleHeight = titleHeight;
+            BulletGap = bulletGap;
+            SectionGap = sectionGap;
+            TitleGap = titleGap;
+        }
     }
 }
