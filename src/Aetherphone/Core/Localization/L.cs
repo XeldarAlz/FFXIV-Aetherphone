@@ -1640,6 +1640,36 @@ internal static class L
 
     internal static class Changelog
     {
+        public static readonly LocString[] Release1016 =
+        {
+            new("changelog.r1016.0",
+                "Overhauled Aethergram from top to bottom: a home feed with For You and Following tabs, an explore grid under Search, a rebuilt profile, post page, inbox and threads, a new compose flow, and Settings, Activity and Follow requests to match"),
+            new("changelog.r1016.1",
+                "Added a Posts screen to Aethergram: tapping a tile on a profile, tagged, saved, hashtag or explore grid scrolls through that whole collection, starting at the tapped post"),
+            new("changelog.r1016.2",
+                "Added emoji reactions to messages in every messaging app: the quick strip keeps the six favorites and a + opens the full emoji drawer"),
+            new("changelog.r1016.3",
+                "Added GIF sending to direct messages: GIFs now upload as GIFs (up to 4 MB) and play in the bubble and the viewer instead of being flattened into a still image"),
+            new("changelog.r1016.4",
+                "Fixed an issue where emoji in image captions, shared post snippets and story captions showed as :shortcodes: instead of emoji"),
+            new("changelog.r1016.5",
+                "Fixed an issue where the emoji drawer stayed open after tapping outside it while composing"),
+            new("changelog.r1016.6",
+                "Fixed an issue where a link that followed text in a Linkpearl message could not be opened"),
+            new("changelog.r1016.7",
+                "Fixed an issue where location shares sent from inside a house showed no place name"),
+            new("changelog.r1016.8",
+                "Fixed an issue where an equipped avatar frame spilled over the Aethergram profile name and the screen edge, and squeezed the follower counts until their labels clipped"),
+            new("changelog.r1016.9",
+                "Fixed an issue where tall or wide photos sat letterboxed in the Aethergram feed, the post now fills with the photo and the viewer still shows the whole picture"),
+            new("changelog.r1016.10",
+                "Fixed an issue where story tray names wrapped letter by letter when a tile slid under the screen edge"),
+            new("changelog.r1016.11",
+                "Fixed an issue where the Aethergram thread header cut the other person's name short"),
+            new("changelog.r1016.12",
+                "Fixed an issue where the emoji and photo buttons in the Aethergram and Chirper comment composer left the field too narrow to show its hint"),
+        };
+
         public static readonly LocString[] Release1015 =
         {
             new("changelog.r1015.0",
