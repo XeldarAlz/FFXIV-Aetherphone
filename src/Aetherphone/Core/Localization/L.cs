@@ -3885,6 +3885,11 @@ internal static class L
         public static readonly LocString YouRepliedToStory = new("aethergram.youRepliedToStory", "You replied to their story");
         public static readonly LocString StoryUnavailable = new("aethergram.storyUnavailable", "Story unavailable");
         public static readonly LocString PrivateTitle = new("aethergram.privateTitle", "This account is private");
+        public static readonly LocString Done = new("aethergram.done", "Done");
+        public static readonly LocString ActivityToday = new("aethergram.activityToday", "Today");
+        public static readonly LocString ActivityThisWeek = new("aethergram.activityThisWeek", "This week");
+        public static readonly LocString ActivityThisMonth = new("aethergram.activityThisMonth", "This month");
+        public static readonly LocString ActivityEarlier = new("aethergram.activityEarlier", "Earlier");
         public static readonly LocString PrivateSubtitle = new("aethergram.privateSubtitle", "Follow this account to see their photos");
         public static readonly LocString SavedTitle = new("aethergram.savedTitle", "Saved");
         public static readonly LocString SavedEmpty = new("aethergram.savedEmpty", "Nothing saved yet");

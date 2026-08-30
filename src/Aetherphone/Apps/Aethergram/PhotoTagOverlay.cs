@@ -5,7 +5,6 @@ using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Apps.Aethergram;
 
@@ -50,7 +49,8 @@ internal sealed class PhotoTagOverlay
         var chipCenter = new Vector2(frame.Min.X + 14f * scale + ChipRadius * scale,
             frame.Max.Y - 14f * scale - ChipRadius * scale);
         drawList.AddCircleFilled(chipCenter, ChipRadius * scale, ImGui.GetColorU32(BadgeSurface), 24);
-        AppSkin.Icon(chipCenter, IconGlyph.Of(FontAwesomeIcon.User), new Vector4(1f, 1f, 1f, 0.92f), 0.62f);
+        PhoneIcon.Draw(drawList, chipCenter, PhoneIcons.UserFilled, new Vector4(1f, 1f, 1f, 0.92f),
+            ChipRadius * 1.3f * scale);
         var chipMin = chipCenter - new Vector2(ChipRadius * scale, ChipRadius * scale);
         var chipMax = chipCenter + new Vector2(ChipRadius * scale, ChipRadius * scale);
         if (UiInteract.HoverClick(chipMin, chipMax))

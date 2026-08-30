@@ -1,8 +1,6 @@
 using Aetherphone.Core;
-using Aetherphone.Core.Apps;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Social;
-using Aetherphone.Core.Theme;
 using Aetherphone.Windows.Components;
 using Dalamud.Bindings.ImGui;
 
@@ -10,6 +8,15 @@ namespace Aetherphone.Apps.Aethergram;
 
 internal sealed partial class AethergramApp
 {
+    private const float SettingsRowHeight = 48f;
+    private const float SettingsToggleWidth = 48f;
+    private const float SettingsToggleHeight = 28f;
+    private const float SettingsCheckSize = 20f;
+
+    private static readonly TextStyle SettingsRowStyle = TextStyles.Body;
+    private static readonly TextStyle SettingsHintStyle = TextStyles.Footnote;
+    private static readonly TextStyle SettingsSectionStyle = TextStyles.FootnoteEmphasized;
+
     private volatile int messagePolicy;
     private volatile bool messagePolicyLoaded;
     private volatile bool messagePolicyLoading;
@@ -17,106 +24,92 @@ internal sealed partial class AethergramApp
 
     private void DrawSettings(Rect area)
     {
-        var context = new PhoneContext(area, theme, navigation);
-        AppHeader.Draw(context, Loc.T(L.Aethergram.Settings), back);
+        DrawScreenHeader(area, Loc.T(L.Aethergram.Settings));
         var scale = UiScale.Current;
         EnsureMessagePolicyLoaded();
         var listRect = new Rect(new Vector2(area.Min.X, area.Min.Y + AppHeader.Height * scale), area.Max);
-        using (AppSurface.Begin(listRect))
+        using (AppSurface.BeginEdgeToEdge(listRect))
         {
-            var drawList = ImGui.GetWindowDrawList();
-            ImGui.Dummy(new Vector2(0f, 10f * scale));
-            var width = ScrollLayout.StableContentWidth();
-            var origin = ImGui.GetCursorScreenPos();
-            Typography.Draw(drawList, new Vector2(origin.X + 4f * scale, origin.Y),
-                Loc.T(L.Social.AllowMessages), AppPalettes.Aethergram.TitleInk, TextStyles.SubheadlineEmphasized);
-            ImGui.Dummy(new Vector2(width, 28f * scale));
+            ImGui.Dummy(new Vector2(0f, 6f * scale));
+            SocialChrome.DrawSectionLabel(Loc.T(L.Social.AllowMessages), Ink, SettingsSectionStyle);
             if (!messagePolicyLoaded)
             {
-                var loadingTop = ImGui.GetCursorScreenPos();
-                Typography.Draw(drawList, new Vector2(loadingTop.X + 4f * scale, loadingTop.Y),
-                    Loc.T(L.Common.Loading), AppPalettes.Aethergram.MutedInk, TextStyles.Subheadline);
+                DrawSettingsHint(Loc.T(L.Common.Loading));
                 return;
             }
 
-            DrawAudienceCard(drawList, width, scale);
-            ImGui.Dummy(new Vector2(width, 10f * scale));
-            var hintTop = ImGui.GetCursorScreenPos();
-            var hintHeight = Typography.DrawWrappedLeft(new Vector2(hintTop.X + 4f * scale, hintTop.Y),
-                Loc.T(L.Social.MessagesAudienceHint), AppPalettes.Aethergram.MutedInk, TextStyles.Footnote,
-                width - 8f * scale);
-            ImGui.Dummy(new Vector2(width, hintHeight + 24f * scale));
-            DrawPrivateAccountCard(drawList, width, scale);
-            ImGui.Dummy(new Vector2(width, 10f * scale));
-            var privateHintTop = ImGui.GetCursorScreenPos();
-            var privateHintHeight = Typography.DrawWrappedLeft(new Vector2(privateHintTop.X + 4f * scale, privateHintTop.Y),
-                Loc.T(L.Aethergram.PrivateAccountHint), AppPalettes.Aethergram.MutedInk, TextStyles.Footnote,
-                width - 8f * scale);
-            ImGui.Dummy(new Vector2(width, privateHintHeight + 24f * scale));
+            for (var index = 0; index < SocialAudience.Options.Length; index++)
+            {
+                if (DrawSettingsChoiceRow(Loc.T(SocialAudience.Options[index]), messagePolicy == index))
+                {
+                    SetMessagePolicy(index);
+                }
+            }
+
+            DrawSettingsHint(Loc.T(L.Social.MessagesAudienceHint));
+            ImGui.Dummy(new Vector2(0f, 12f * scale));
+            var toggled = DrawSettingsToggleRow(Loc.T(L.Aethergram.PrivateAccount), privateAccount);
+            if (toggled != privateAccount)
+            {
+                SetAccountPrivacy(toggled);
+            }
+
+            DrawSettingsHint(Loc.T(L.Aethergram.PrivateAccountHint));
+            ImGui.Dummy(new Vector2(0f, 24f * scale));
         }
     }
 
-    private void DrawPrivateAccountCard(ImDrawListPtr drawList, float width, float scale)
+    private bool DrawSettingsChoiceRow(string label, bool selected)
     {
-        var origin = ImGui.GetCursorScreenPos();
-        var rowHeight = 46f * scale;
-        var cardMax = new Vector2(origin.X + width, origin.Y + rowHeight);
-        ui.Card(drawList, origin, cardMax, 16f * scale);
-        var row = new Rect(new Vector2(origin.X + 16f * scale, origin.Y),
-            new Vector2(origin.X + width - 16f * scale, cardMax.Y));
-        var toggled = SettingsRow.Bool(row, Loc.T(L.Aethergram.PrivateAccount), privateAccount, theme);
-        if (toggled != privateAccount)
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var cell = FeedCell.Begin(drawList, SettingsRowHeight * scale, Ink.HoverTint, !selected);
+        var left = cell.Bounds.Min.X + CellPadX * scale;
+        var checkCenter = new Vector2(cell.Bounds.Max.X - CellPadX * scale - SettingsCheckSize * 0.5f * scale,
+            cell.Bounds.Center.Y);
+        var labelRight = checkCenter.X - SettingsCheckSize * scale;
+        var fitted = Typography.FitText(label, MathF.Max(1f, labelRight - left), SettingsRowStyle);
+        var size = Typography.Measure(fitted, SettingsRowStyle);
+        Typography.Draw(drawList, new Vector2(left, cell.Bounds.Center.Y - size.Y * 0.5f), fitted,
+            selected ? Ink.TitleInk : Ink.BodyInk, SettingsRowStyle);
+        if (selected)
         {
-            SetAccountPrivacy(toggled);
+            PhoneIcon.Draw(drawList, checkCenter, PhoneIcons.Check, Ink.AccentLink, SettingsCheckSize * scale);
         }
 
-        ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rowHeight));
+        FeedCell.End(drawList, cell, Ink.Hairline);
+        return cell.Tapped;
     }
 
-    private void DrawAudienceCard(ImDrawListPtr drawList, float width, float scale)
+    private bool DrawSettingsToggleRow(string label, bool value)
     {
+        var scale = UiScale.Current;
+        var drawList = ImGui.GetWindowDrawList();
+        var cell = FeedCell.Begin(drawList, SettingsRowHeight * scale, Ink.HoverTint, false);
+        var left = cell.Bounds.Min.X + CellPadX * scale;
+        var toggleMax = new Vector2(cell.Bounds.Max.X - CellPadX * scale,
+            cell.Bounds.Center.Y + SettingsToggleHeight * 0.5f * scale);
+        var toggleMin = new Vector2(toggleMax.X - SettingsToggleWidth * scale,
+            cell.Bounds.Center.Y - SettingsToggleHeight * 0.5f * scale);
+        var fitted = Typography.FitText(label, MathF.Max(1f, toggleMin.X - 12f * scale - left), SettingsRowStyle);
+        var size = Typography.Measure(fitted, SettingsRowStyle);
+        Typography.Draw(drawList, new Vector2(left, cell.Bounds.Center.Y - size.Y * 0.5f), fitted, Ink.TitleInk,
+            SettingsRowStyle);
+        var result = Toggle.Draw("aethergram.settings.private", new Rect(toggleMin, toggleMax), value, theme);
+        FeedCell.End(drawList, cell, Ink.Hairline);
+        return result;
+    }
+
+    private static void DrawSettingsHint(string text)
+    {
+        var scale = UiScale.Current;
         var origin = ImGui.GetCursorScreenPos();
-        var rowHeight = 46f * scale;
-        var cardMax = new Vector2(origin.X + width, origin.Y + rowHeight * SocialAudience.Options.Length);
-        ui.Card(drawList, origin, cardMax, 16f * scale);
-        var dividerColor = ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.07f));
-        for (var index = 0; index < SocialAudience.Options.Length; index++)
-        {
-            var rowMin = new Vector2(origin.X, origin.Y + rowHeight * index);
-            var rowMax = new Vector2(origin.X + width, rowMin.Y + rowHeight);
-            var selected = messagePolicy == index;
-            Typography.Draw(drawList, new Vector2(rowMin.X + 16f * scale, rowMin.Y + rowHeight * 0.5f - 9f * scale),
-                Loc.T(SocialAudience.Options[index]),
-                selected ? theme.TextStrong : AppPalettes.Aethergram.BodyInk, 1f,
-                selected ? FontWeight.SemiBold : FontWeight.Regular);
-            var radioCenter = new Vector2(rowMax.X - 22f * scale, rowMin.Y + rowHeight * 0.5f);
-            if (selected)
-            {
-                drawList.AddCircleFilled(radioCenter, 8f * scale, ImGui.GetColorU32(Accent), 32);
-                drawList.AddCircleFilled(radioCenter, 3.2f * scale,
-                    ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.95f)), 24);
-            }
-            else
-            {
-                drawList.AddCircle(radioCenter, 8f * scale,
-                    ImGui.GetColorU32(Palette.WithAlpha(AppPalettes.Aethergram.MutedInk, 0.55f)), 32, 1.6f * scale);
-            }
-
-            if (index > 0)
-            {
-                drawList.AddLine(new Vector2(rowMin.X + 16f * scale, rowMin.Y),
-                    new Vector2(rowMax.X - 16f * scale, rowMin.Y), dividerColor, 1f);
-            }
-
-            if (!selected && UiInteract.HoverClick(rowMin, rowMax))
-            {
-                SetMessagePolicy(index);
-            }
-        }
-
+        var width = ScrollLayout.StableContentWidth();
+        var padX = CellPadX * scale;
+        var height = Typography.DrawWrappedLeft(new Vector2(origin.X + padX, origin.Y + 10f * scale), text,
+            Ink.MutedInk, SettingsHintStyle, width - padX * 2f);
         ImGui.SetCursorScreenPos(origin);
-        ImGui.Dummy(new Vector2(width, rowHeight * SocialAudience.Options.Length));
+        ImGui.Dummy(new Vector2(width, height + 16f * scale));
     }
 
     private void EnsureMessagePolicyLoaded()
