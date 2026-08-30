@@ -6,7 +6,6 @@ using Aetherphone.Core.Media;
 using Aetherphone.Core.Social;
 using Aetherphone.Core.Theme;
 using Dalamud.Bindings.ImGui;
-using Dalamud.Interface;
 
 namespace Aetherphone.Windows.Components;
 
@@ -14,10 +13,19 @@ internal delegate void StoryRingPainter(ImDrawListPtr drawList, Vector2 center, 
 
 internal sealed class StoryTrayRow
 {
-    private const float Height = 92f;
-    private const float TileWidth = 68f;
-    private const float RingRadius = 27f;
+    private const float Height = 100f;
+    private const float TileWidth = 76f;
+    private const float RingRadius = 30f;
+    private const float AvatarInset = 4f;
+    private const float AvatarLift = 9f;
+    private const float LabelGap = 9f;
+    private const float AddBadgeRadius = 9f;
+    private const float AddBadgeRing = 2f;
+    private const float AddBadgeGlyph = 12f;
     private const float DragSlop = 5f;
+
+    private static readonly Vector4 White = new(1f, 1f, 1f, 1f);
+    private static readonly Vector4 EmptyRing = new(1f, 1f, 1f, 0.18f);
 
     private readonly RemoteImageCache images;
     private readonly LodestoneService lodestone;
@@ -34,7 +42,8 @@ internal sealed class StoryTrayRow
     }
 
     public void Draw(PhoneTheme theme, AppPalette palette, StoryRingDto[] rings, bool hasOwnStory,
-        StoryRingPainter painter, Action onAddStory, Action<StoryRingDto> onOpenRing)
+        StoryRingPainter painter, Action onAddStory, Action<StoryRingDto> onOpenRing, string? ownAvatarUrl = null,
+        string ownName = "", string? ownFrameId = null)
     {
         var scale = UiScale.Current;
         var tile = TileWidth * scale;
@@ -54,7 +63,8 @@ internal sealed class StoryTrayRow
         var x = row.Min.X + 6f * scale - offset;
         if (!hasOwnStory)
         {
-            DrawAddTile(drawList, new Vector2(x + tile * 0.5f, row.Center.Y), theme, palette, scale, onAddStory);
+            DrawAddTile(drawList, new Vector2(x + tile * 0.5f, row.Center.Y), theme, palette, scale, onAddStory,
+                ownAvatarUrl, ownName, ownFrameId);
             x += tile;
         }
 
@@ -117,13 +127,29 @@ internal sealed class StoryTrayRow
     }
 
     private void DrawAddTile(ImDrawListPtr drawList, Vector2 slotCenter, PhoneTheme theme, AppPalette palette,
-        float scale, Action onAddStory)
+        float scale, Action onAddStory, string? ownAvatarUrl, string ownName, string? ownFrameId)
     {
         var radius = RingRadius * scale;
-        var center = new Vector2(slotCenter.X, slotCenter.Y - 8f * scale);
-        drawList.AddCircleFilled(center, radius - 2f * scale, ImGui.GetColorU32(palette.FieldSurface), 32);
-        drawList.AddCircle(center, radius, ImGui.GetColorU32(new Vector4(1f, 1f, 1f, 0.18f)), 32, 1.4f * scale);
-        AppSkin.Icon(center, IconGlyph.Of(FontAwesomeIcon.Plus), palette.BodyInk, 1.2f);
+        var center = new Vector2(slotCenter.X, slotCenter.Y - AvatarLift * scale);
+        var avatarRadius = radius - AvatarInset * scale;
+        if (ownAvatarUrl is null && ownName.Length == 0)
+        {
+            drawList.AddCircleFilled(center, avatarRadius, ImGui.GetColorU32(palette.FieldSurface), 32);
+            drawList.AddCircle(center, radius, ImGui.GetColorU32(EmptyRing), 32, 1.4f * scale);
+            PhoneIcon.Draw(drawList, center, PhoneIcons.Plus, palette.BodyInk, 22f * scale);
+        }
+        else
+        {
+            AvatarView.DrawRemote(drawList, center, avatarRadius, theme, ownName, string.Empty, ownAvatarUrl, images,
+                lodestone, 0.8f, 32, 1f, Frames.Of(ownFrameId));
+            var badgeCenter = center + new Vector2(avatarRadius, avatarRadius) * 0.72f;
+            var badgeRadius = AddBadgeRadius * scale;
+            drawList.AddCircleFilled(badgeCenter, badgeRadius + AddBadgeRing * scale,
+                ImGui.GetColorU32(palette.BackdropTop), 24);
+            drawList.AddCircleFilled(badgeCenter, badgeRadius, ImGui.GetColorU32(palette.Accent), 24);
+            PhoneIcon.Draw(drawList, badgeCenter, PhoneIcons.Plus, White, AddBadgeGlyph * scale);
+        }
+
         DrawLabel(drawList, center, radius, Loc.T(L.Story.YourStory), palette, scale);
         if (ClickedTile(center, radius))
         {
@@ -135,11 +161,12 @@ internal sealed class StoryTrayRow
         StoryRingDto ring, float scale, StoryRingPainter painter, Action<StoryRingDto> onOpenRing)
     {
         var radius = RingRadius * scale;
-        var center = new Vector2(slotCenter.X, slotCenter.Y - 8f * scale);
+        var center = new Vector2(slotCenter.X, slotCenter.Y - AvatarLift * scale);
         painter(drawList, center, radius, scale, ring.HasUnseen);
-        var label = ring.IsMe ? Loc.T(L.Story.YourStory) : SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
-        AvatarView.DrawRemote(drawList, center, radius - 4f * scale, theme, label, string.Empty, ring.AuthorAvatarUrl,
-            images, lodestone, 0.8f, 32, 1f, Frames.Of(ring.AuthorFrameId));
+        var name = SocialIdentity.Name(ring.AuthorDisplayName, ring.AuthorHandle);
+        var label = ring.IsMe ? Loc.T(L.Story.YourStory) : ring.AuthorHandle.Length > 0 ? ring.AuthorHandle : name;
+        AvatarView.DrawRemote(drawList, center, radius - AvatarInset * scale, theme, name, string.Empty,
+            ring.AuthorAvatarUrl, images, lodestone, 0.8f, 32, 1f, Frames.Of(ring.AuthorFrameId));
         DrawLabel(drawList, center, radius, label, palette, scale);
         if (ClickedTile(center, radius))
         {
@@ -151,9 +178,8 @@ internal sealed class StoryTrayRow
         AppPalette palette, float scale)
     {
         var maxWidth = TileWidth * scale - 8f * scale;
-        var fitted = Typography.FitText(label, maxWidth, TextStyles.Caption1);
-        var baseline = new Vector2(center.X, center.Y + radius + 11f * scale);
-        Typography.DrawCentered(drawList, baseline, fitted, palette.MutedInk, TextStyles.Caption1);
+        var fitted = Typography.FitText(label, maxWidth, TextStyles.Footnote);
+        var baseline = new Vector2(center.X, center.Y + radius + LabelGap * scale);
+        Typography.DrawCentered(drawList, baseline, fitted, palette.MutedInk, TextStyles.Footnote);
     }
-
 }
