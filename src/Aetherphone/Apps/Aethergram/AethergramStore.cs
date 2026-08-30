@@ -37,8 +37,9 @@ internal sealed class AethergramStore : SocialFeedStore
         grams.TagPostsAsync(tag, cursor, token);
 
     // aspects holds one choice per photo. The post's MediaWidth/MediaHeight is the first photo's
-    // aspect box, which frames the whole carousel; each photo is baked to fit inside its own box
-    // and is contain-fit into that frame at draw time.
+    // real baked size (GIFs already send theirs), so the feed frame matches that photo's shape;
+    // the other carousel photos are baked to their own boxes and cover-fit into the frame at
+    // draw time.
     public void CreateGram(string[] sourcePaths, WallpaperCrop[] crops, PostAspect[] aspects, string caption,
         PhotoTagInput[]? photoTags, bool sensitive, Action<bool> onComplete)
     {
@@ -80,6 +81,11 @@ internal sealed class AethergramStore : SocialFeedStore
                         bakedHeight, PostAspects.RevealsWholeImage(aspects[index]));
                     bytes = baked.Bytes;
                     contentType = "image/jpeg";
+                    if (index == 0)
+                    {
+                        containerWidth = baked.Width;
+                        containerHeight = baked.Height;
+                    }
                 }
 
                 var upload = await media.UploadUrlAsync(contentType, "gram", token).ConfigureAwait(false);

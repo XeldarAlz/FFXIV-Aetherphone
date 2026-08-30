@@ -722,7 +722,8 @@ internal sealed partial class AethergramApp : IResumableApp
         var displayName = SocialIdentity.Name(post.AuthorDisplayName, post.AuthorHandle);
         var headerBlock = CardHeaderBlock * scale;
         var avatarRadius = CardAvatarRadius * scale;
-        var mediaHeight = PostAspects.TallDisplayHeight(width, post.MediaWidth, post.MediaHeight);
+        var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
+        var mediaHeight = CardMediaHeight(width, post, photos);
         var actionsHeight = CardActionsHeight * scale;
         RichTextLayout? captionLayout = null;
         var translateKey = new TranslationKey(TranslationSurface.Post, post.Id);
@@ -821,7 +822,6 @@ internal sealed partial class AethergramApp : IResumableApp
         }
 
         var imageRect = new Rect(new Vector2(origin.X, imageTop), new Vector2(origin.X + width, imageBottom));
-        var photos = PostMedia.Photos(post.MediaUrls, post.MediaUrl);
         var page = DrawGramCarousel(imageRect, post, photos, 0f);
         var actionCenterY = actionsTop + actionsHeight * 0.5f;
         var liked = post.MyReaction >= 0;
@@ -925,6 +925,16 @@ internal sealed partial class AethergramApp : IResumableApp
         Typography.Draw(drawList, new Vector2(innerX, y), Typography.FitText(time, innerWidth, CardTimeStyle),
             Ink.MutedInk, CardTimeStyle);
         FeedCell.End(drawList, cell, Ink.Hairline);
+    }
+
+    private float CardMediaHeight(float width, PostDto post, string[] photos)
+    {
+        if (photos.Length > 0 && GifMedia.Texture(images, photos[0], ImGui.GetTime()) is { } texture)
+        {
+            return PostAspects.TallDisplayHeight(width, (int)texture.Size.X, (int)texture.Size.Y);
+        }
+
+        return PostAspects.TallDisplayHeight(width, post.MediaWidth, post.MediaHeight);
     }
 
     private enum CardActionTap
