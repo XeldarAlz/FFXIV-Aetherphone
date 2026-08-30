@@ -137,6 +137,17 @@ public static readonly LocString[] Release1003 =
 new ChangelogEntry("1.0.0.3", "2026-08-17", L.Changelog.Release1003),
 ```
 
+Since 1.0.1.6 a release can group its bullets under headers instead of one flat list. Keep one `LocString[]` per group in L.cs (`Release1016Aethergram`, `Release1016Messaging`, `Release1016Linkpearl`) and hand `ChangelogEntry` a `ChangelogSection[]` that pairs each array with its title. App headers reuse the app name strings in `L.Apps`; a header that is not an app name (Messaging) gets its own key next to the arrays, `changelog.sectionMessaging`. Flat entries keep working, so older releases are untouched.
+
+```csharp
+new ChangelogEntry("1.0.1.6", "2026-08-30", new ChangelogSection[]
+{
+    new(L.Apps.Aethergram, L.Changelog.Release1016Aethergram),
+    new(L.Changelog.SectionMessaging, L.Changelog.Release1016Messaging),
+    new(L.Apps.Linkpearl, L.Changelog.Release1016Linkpearl),
+}),
+```
+
 Copy rules for bullets (see [Localization](localization.md) for the full set):
 
 - One idea per bullet. Split "fixed X and added Y" into two bullets.
