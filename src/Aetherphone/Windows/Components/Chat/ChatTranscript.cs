@@ -208,6 +208,7 @@ internal sealed class ChatTranscript
     private const float QuotePreviewScale = 0.80f;
     private const float TravelPillHeight = 26f;
     private const float TravelIconSpace = 17f;
+    private const float CaptionTextScale = 0.9f;
     private const float ReactionChipHeight = 26f;
     private const float ReactionChipGap = 4f;
     private const float ReactionChipEmoji = 17f;
@@ -732,12 +733,17 @@ internal sealed class ChatTranscript
         var innerWidth = MathF.Min(available * 0.62f, 210f * scale);
         var stamp = MeasureStamp(message, mine, scale);
         var snippet = card.Available ? card.Snippet : string.Empty;
+        var snippetScale = TextStyles.Footnote.Scale;
         var snippetHeight = 0f;
+        RichTextLayout? snippetLayout = null;
         if (snippet.Length > 0)
         {
             var lineHeight = Typography.Measure("Ag", TextStyles.Footnote).Y;
-            snippetHeight = MathF.Min(Typography.MeasureWrappedBlock(snippet, TextStyles.Footnote, innerWidth).Y,
-                lineHeight * 2f);
+            snippetLayout = LinkText.LayoutFor(snippet, innerWidth / snippetScale);
+            var naturalHeight = snippetLayout is not null
+                ? snippetLayout.Size.Y * snippetScale
+                : Typography.MeasureWrappedBlock(snippet, TextStyles.Footnote, innerWidth).Y;
+            snippetHeight = MathF.Min(naturalHeight, lineHeight * 2f);
         }
 
         var unavailableLabel = Loc.T(L.Aethergram.PostUnavailable);
@@ -819,8 +825,17 @@ internal sealed class ChatTranscript
                 var snippetMin = new Vector2(bubbleMin.X + paddingX, contentTop);
                 var snippetMax = new Vector2(bubbleMin.X + paddingX + innerWidth, contentTop + snippetHeight);
                 drawList.PushClipRect(fx.Apply(snippetMin), fx.Apply(snippetMax), true);
-                Typography.DrawWrappedLeft(fx.Apply(snippetMin), snippet,
-                    Palette.WithAlpha(mutedInk, mutedInk.W * fx.Alpha), TextStyles.Footnote, innerWidth);
+                if (snippetLayout is not null)
+                {
+                    LinkText.Draw(drawList, snippetLayout, fx.Apply(snippetMin), snippetScale * fx.Pop, mutedInk,
+                        mutedInk, fx.Alpha, false);
+                }
+                else
+                {
+                    Typography.DrawWrappedLeft(fx.Apply(snippetMin), snippet,
+                        Palette.WithAlpha(mutedInk, mutedInk.W * fx.Alpha), TextStyles.Footnote, innerWidth);
+                }
+
                 drawList.PopClipRect();
                 contentTop += snippetHeight;
             }
@@ -1643,7 +1658,11 @@ internal sealed class ChatTranscript
 
         var caption = message.Body ?? string.Empty;
         var stamp = MeasureStamp(message, mine, scale);
-        var captionHeight = caption.Length > 0 ? Typography.Measure(caption, 0.9f).Y + 6f * scale : 0f;
+        var captionLayout = caption.Length > 0 ? LinkText.LayoutFor(caption, imageWidth / CaptionTextScale) : null;
+        var captionTextHeight = captionLayout is not null
+            ? captionLayout.Size.Y * CaptionTextScale
+            : Typography.Measure(caption, CaptionTextScale).Y;
+        var captionHeight = caption.Length > 0 ? captionTextHeight + 6f * scale : 0f;
         var stampRowHeight = caption.Length > 0 ? stamp.Height + 3f * scale : 0f;
         var forwardLabel = MeasureForwardLabel(message, scale);
         var forwardBlock = forwardLabel.Y > 0f ? forwardLabel.Y + 4f * scale : 0f;
@@ -1705,9 +1724,17 @@ internal sealed class ChatTranscript
             var ink = mine ? new Vector4(1f, 1f, 1f, 1f) : model.Theme.TextStrong;
             var captionTop = imageMax.Y + 4f * scale * fx.Pop;
             var captionMaxWidth = imageMax.X - imageMin.X;
-            Marquee.DrawLeftAuto(new MarqueeId("chattranscript.caption.", message.Id), caption, imageMin.X, captionTop,
-                captionMaxWidth, new TextStyle(0.9f * fx.Pop, FontWeight.Regular),
-                Palette.WithAlpha(ink, fx.Alpha));
+            if (captionLayout is not null)
+            {
+                LinkText.Draw(drawList, captionLayout, new Vector2(imageMin.X, captionTop), CaptionTextScale * fx.Pop,
+                    ink, mine ? ink : model.Accent, fx.Alpha, entrance >= 1f);
+            }
+            else
+            {
+                Marquee.DrawLeftAuto(new MarqueeId("chattranscript.caption.", message.Id), caption, imageMin.X,
+                    captionTop, captionMaxWidth, new TextStyle(CaptionTextScale * fx.Pop, FontWeight.Regular),
+                    Palette.WithAlpha(ink, fx.Alpha));
+            }
             var timeColor = mine
                 ? new Vector4(1f, 1f, 1f, 0.72f)
                 : Palette.WithAlpha(model.MutedInk, 0.95f);

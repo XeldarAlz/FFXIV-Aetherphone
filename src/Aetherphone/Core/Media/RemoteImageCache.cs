@@ -28,7 +28,9 @@ internal sealed class RemoteImageCache : IDisposable
         return !string.IsNullOrEmpty(url) && url.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
     }
 
-    public IDalamudTextureWrap? Get(string? url)
+    public IDalamudTextureWrap? Get(string? url) => GetAt(url, 0d);
+
+    public IDalamudTextureWrap? GetAt(string? url, double timeSeconds)
     {
         if (!Fetchable(url))
         {
@@ -36,7 +38,7 @@ internal sealed class RemoteImageCache : IDisposable
         }
 
         var resolved = LegacyMediaHosts.Normalize(url!);
-        if (ready.Get(resolved) is { } wrap)
+        if (ready.GetAt(new LedgerKey(resolved, TextureSizes.Native), timeSeconds) is { } wrap)
         {
             return wrap;
         }
@@ -134,9 +136,13 @@ internal sealed class RemoteImageCache : IDisposable
 
     public IDalamudTextureWrap? Resident(string key) => ready.Get(key);
 
-    public IDalamudTextureWrap? GetSealed(string key, string url, Func<byte[], byte[]?> unseal)
+    public IDalamudTextureWrap? ResidentAt(string key, double timeSeconds) =>
+        ready.GetAt(new LedgerKey(key, TextureSizes.Native), timeSeconds);
+
+    public IDalamudTextureWrap? GetSealed(string key, string url, Func<byte[], byte[]?> unseal,
+        double timeSeconds = 0d)
     {
-        if (ready.Get(key) is { } wrap)
+        if (ready.GetAt(new LedgerKey(key, TextureSizes.Native), timeSeconds) is { } wrap)
         {
             return wrap;
         }

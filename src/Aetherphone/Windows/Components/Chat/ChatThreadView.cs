@@ -89,6 +89,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
     private string[] pickerPaths = Array.Empty<string>();
     private string? pickerThreadId;
     private string? pendingPickedPath;
+    private string pickerNotice = string.Empty;
     private volatile ReactorDto[]? reactors;
     private string? reactorsFor;
 
@@ -861,7 +862,8 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     protected IDalamudTextureWrap? ResolveThreadImage(string messageId)
     {
-        if (images.Resident(messageId) is { } resident)
+        var time = ImGui.GetTime();
+        if (images.ResidentAt(messageId, time) is { } resident)
         {
             return resident;
         }
@@ -874,7 +876,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
         if (!IsEncrypted(message))
         {
-            return images.Get(store.DmMediaUrl(messageId));
+            return images.GetAt(store.DmMediaUrl(messageId), time);
         }
 
         var threadId = store.CurrentThreadId;
@@ -884,7 +886,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             return null;
         }
 
-        return images.GetSealed(messageId, url, sealedBytes => DecryptSealed(message, threadId, sealedBytes));
+        return images.GetSealed(messageId, url, sealedBytes => DecryptSealed(message, threadId, sealedBytes), time);
     }
 
     public void DrawImageViewer(Rect area, string messageId)
@@ -996,6 +998,7 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             pickerThreadId = threadId;
             pickerPaths = library.List();
             pendingPickedPath = null;
+            pickerNotice = string.Empty;
         }
 
         var picked = Interlocked.Exchange(ref pendingPickedPath, null);
@@ -1015,7 +1018,16 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
             FilePicker.PickImage(PickerTitle, path => Interlocked.Exchange(ref pendingPickedPath, path));
         }
 
-        var gridRect = new Rect(new Vector2(area.Min.X, importRect.Max.Y + 12f * scale), area.Max);
+        var gridTop = importRect.Max.Y + 12f * scale;
+        if (pickerNotice.Length > 0)
+        {
+            var noticeWidth = importRect.Width;
+            var noticeHeight = Typography.DrawWrappedCentered(ImGui.GetWindowDrawList(), pickerNotice,
+                TextStyles.Footnote, Theme.Danger, new Vector2(area.Center.X, gridTop), noticeWidth);
+            gridTop += noticeHeight + 10f * scale;
+        }
+
+        var gridRect = new Rect(new Vector2(area.Min.X, gridTop), area.Max);
         using (AppSurface.Begin(gridRect))
         {
             if (pickerPaths.Length == 0)
@@ -1062,6 +1074,13 @@ internal abstract class ChatThreadView<TMessage, TThread> : IDisposable, IChatTr
 
     private void SendChatImage(string threadId, string path)
     {
+        if (GifMedia.IsGif(path) && !GifMedia.FitsSizeCap(path))
+        {
+            pickerNotice = Loc.T(L.Common.GifTooLarge);
+            return;
+        }
+
+        pickerNotice = string.Empty;
         store.SendImageMessage(threadId, path, string.Empty, _ => { });
         transcript.RequestSnapToBottom();
         pickerThreadId = null;

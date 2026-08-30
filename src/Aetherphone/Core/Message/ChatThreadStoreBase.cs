@@ -967,16 +967,40 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
         sending = true;
         work.Run("send image", async token =>
         {
-            var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
-            var outbound = PrepareMedia(id, baked.Bytes, caption.Trim(), ImageMediaKind);
-            var upload = await media.UploadUrlAsync("image/jpeg", ImageUploadScope, token).ConfigureAwait(false);
+            byte[] plainBytes;
+            int width;
+            int height;
+            string contentType;
+            if (GifMedia.IsGif(sourcePath))
+            {
+                plainBytes = await File.ReadAllBytesAsync(sourcePath, token).ConfigureAwait(false);
+                if (plainBytes.Length == 0 || plainBytes.Length > GifMedia.MaxBytes)
+                {
+                    AepLog.Warning($"[{logTag}] send image aborted: GIF of {plainBytes.Length} bytes exceeds the {GifMedia.MaxBytes} cap");
+                    return false;
+                }
+
+                (width, height) = ImageProcessor.IdentifyDimensions(plainBytes);
+                contentType = "image/gif";
+            }
+            else
+            {
+                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
+                plainBytes = baked.Bytes;
+                width = baked.Width;
+                height = baked.Height;
+                contentType = "image/jpeg";
+            }
+
+            var outbound = PrepareMedia(id, plainBytes, caption.Trim(), ImageMediaKind);
+            var upload = await media.UploadUrlAsync(contentType, ImageUploadScope, token).ConfigureAwait(false);
             if (upload is null)
             {
                 AepLog.Warning($"[{logTag}] send image aborted: upload-url denied (scope={ImageUploadScope}, enc={outbound.EncVersion})");
                 return false;
             }
 
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, outbound.UploadBytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, outbound.UploadBytes, contentType, token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {
@@ -985,7 +1009,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
 
             var sent = await SendMessageRequestAsync(id, outbound.Body, ImageMediaKind, token, upload.Key,
-                baked.Width, baked.Height, encVersion: outbound.EncVersion, commitmentTag: outbound.CommitmentTag)
+                width, height, encVersion: outbound.EncVersion, commitmentTag: outbound.CommitmentTag)
                 .ConfigureAwait(false);
             if (sent is null)
             {

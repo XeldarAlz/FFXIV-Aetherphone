@@ -37,9 +37,15 @@ internal static class LocationShare
         }
 
         var player = Plugin.ObjectTable.LocalPlayer;
-        var territoryId = Plugin.ClientState.TerritoryType;
-        if (player is null || territoryId == 0
-            || !Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
+        var currentTerritoryId = Plugin.ClientState.TerritoryType;
+        if (player is null || currentTerritoryId == 0)
+        {
+            return null;
+        }
+
+        var (ward, plot, room) = ReadHousing();
+        var territoryId = NamedHousingTerritory(currentTerritoryId, ward);
+        if (!Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {
             return null;
         }
@@ -54,8 +60,57 @@ internal static class LocationShare
             mapY = ToMapCoordinate(position.Z, map.SizeFactor, map.OffsetY);
         }
 
-        var (ward, plot, room) = ReadHousing();
         return new SharedLocation(territoryId, mapId, mapX, mapY, player.CurrentWorld.RowId, ward, plot, room);
+    }
+
+    // Since patch 7.2 every house interior loads into one shared, nameless territory; the district only
+    // survives through HousingManager, so a share from inside a house is stamped with the named territory.
+    private static uint NamedHousingTerritory(uint territoryId, short ward)
+    {
+        if (ward == 0 || ZoneName(territoryId).Length > 0)
+        {
+            return territoryId;
+        }
+
+        var sheet = Plugin.DataManager.GetExcelSheet<TerritoryType>();
+        var (original, district) = ReadHouseTerritories();
+        if (original != 0 && sheet.HasRow(original) && ZoneName(original).Length > 0)
+        {
+            return original;
+        }
+
+        if (district != 0 && sheet.HasRow(district) && ZoneName(district).Length > 0)
+        {
+            return district;
+        }
+
+        return territoryId;
+    }
+
+    private static (uint Original, uint District) ReadHouseTerritories()
+    {
+        try
+        {
+            unsafe
+            {
+                var housing = FFXIVClientStructs.FFXIV.Client.Game.HousingManager.Instance();
+                if (housing == null)
+                {
+                    return (0, 0);
+                }
+
+                var original = FFXIVClientStructs.FFXIV.Client.Game.HousingManager.GetOriginalHouseTerritoryTypeId();
+                var house = housing->IndoorTerritory != null
+                    ? housing->GetCurrentIndoorHouseId()
+                    : housing->GetCurrentHouseId();
+                return (original, house.TerritoryTypeId);
+            }
+        }
+        catch (Exception exception)
+        {
+            AepLog.Warning(exception, "[LocationShare] house territory read failed");
+            return (0, 0);
+        }
     }
 
     public static uint CurrentWorldId()

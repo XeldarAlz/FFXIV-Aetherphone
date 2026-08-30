@@ -466,12 +466,6 @@ internal sealed class ChatComposer : IDisposable
                 ToggleEmoji();
             }
 
-            if (model.CanImage && DrawPillIcon(drawList, ref rightEdge, centerY, PhoneIcons.Photo, idleInk,
-                    theme.TextStrong, Loc.T(L.Velvet.SendPicture), scale))
-            {
-                model.OnPickImage(model.ConversationId);
-            }
-
             if (model.CanVoice && DrawPillIcon(drawList, ref rightEdge, centerY, PhoneIcons.Microphone, idleInk,
                     theme.TextStrong, Loc.T(L.Message.RecordVoiceHint), scale) && !model.Sending)
             {
