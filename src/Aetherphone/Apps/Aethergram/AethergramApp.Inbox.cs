@@ -8,7 +8,8 @@ using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Apps.Aethergram;
 
-internal readonly record struct InboxPreviewLine(long At, string Source, string SenderId, long Minute, string Line);
+internal readonly record struct InboxPreviewLine(long At, string Source, string SenderId, long Minute, string Line,
+    int StampLength);
 
 internal sealed partial class AethergramApp
 {
@@ -30,6 +31,7 @@ internal sealed partial class AethergramApp
     private readonly ActionSheet.Item[] inboxRowSheetItems = new ActionSheet.Item[1];
     private readonly List<GramThreadDto> inboxFiltered = new();
     private readonly Dictionary<string, InboxPreviewLine> inboxPreviews = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RichLineFit> inboxPreviewFits = new(StringComparer.Ordinal);
     private GramThreadDto[] inboxFilterSource = Array.Empty<GramThreadDto>();
     private string inboxFilterQuery = string.Empty;
     private bool inboxFilterRequests;
@@ -238,9 +240,16 @@ internal sealed partial class AethergramApp
         var name = SocialIdentity.Name(thread.OtherDisplayName, thread.OtherHandle);
         Typography.Draw(drawList, new Vector2(textLeft, blockTop), Typography.FitText(name, textWidth, nameStyle),
             Ink.TitleInk, nameStyle);
-        var preview = InboxPreview(thread);
-        Typography.Draw(drawList, new Vector2(textLeft, blockTop + nameHeight + 3f * scale),
-            Typography.FitText(preview, textWidth, previewStyle), unread ? Ink.TitleInk : Ink.MutedInk, previewStyle);
+        var preview = InboxPreview(thread, out var stampLength);
+        if (!inboxPreviewFits.TryGetValue(thread.OtherUserId, out var previewFit)
+            || !RichLine.Valid(previewFit, preview, textWidth, previewStyle))
+        {
+            previewFit = RichLine.Fit(preview, stampLength, textWidth, previewStyle);
+            inboxPreviewFits[thread.OtherUserId] = previewFit;
+        }
+
+        RichLine.Draw(drawList, previewFit, new Vector2(textLeft, blockTop + nameHeight + 3f * scale),
+            unread ? Ink.TitleInk : Ink.MutedInk);
         if (unread)
         {
             SocialChrome.DrawUnreadDot(drawList,
@@ -259,7 +268,7 @@ internal sealed partial class AethergramApp
         FeedCell.End(drawList, cell, Ink.Hairline, false);
     }
 
-    private string InboxPreview(GramThreadDto thread)
+    private string InboxPreview(GramThreadDto thread, out int stampLength)
     {
         var minute = Environment.TickCount64 / MinuteTicks;
         if (inboxPreviews.TryGetValue(thread.OtherUserId, out var cached)
@@ -268,6 +277,7 @@ internal sealed partial class AethergramApp
             && ReferenceEquals(cached.SenderId, thread.LastMessageSenderId)
             && cached.Minute == minute)
         {
+            stampLength = cached.StampLength;
             return cached.Line;
         }
 
@@ -281,9 +291,17 @@ internal sealed partial class AethergramApp
             body = $"{Loc.T(L.Message.You)}: {body}";
         }
 
-        var line = thread.LastMessageAtUnix > 0 ? $"{body} · {TimeText.Short(thread.LastMessageAtUnix)}" : body;
+        var line = body;
+        stampLength = 0;
+        if (thread.LastMessageAtUnix > 0)
+        {
+            var stamp = $" · {TimeText.Short(thread.LastMessageAtUnix)}";
+            line = body + stamp;
+            stampLength = stamp.Length;
+        }
+
         inboxPreviews[thread.OtherUserId] = new InboxPreviewLine(thread.LastMessageAtUnix, thread.LastMessagePreview,
-            thread.LastMessageSenderId, minute, line);
+            thread.LastMessageSenderId, minute, line, stampLength);
         return line;
     }
 
