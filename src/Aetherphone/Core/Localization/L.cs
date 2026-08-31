@@ -1641,12 +1641,37 @@ internal static class L
     internal static class Changelog
     {
         public static readonly LocString SectionMessaging = new("changelog.sectionMessaging", "Messaging");
+        public static readonly LocString SectionPhone = new("changelog.sectionPhone", "Phone");
 
-        public static readonly LocString[] Release1019Aethergram =
+        public static readonly LocString[] Release102Phone =
         {
-            new("changelog.r1019.0",
+            new("changelog.r102.2",
+                "Added an app switcher: hold the home bar for a moment and every app you left mid-use lines up as a live preview card, tap one to jump back in"),
+            new("changelog.r102.3",
+                "Swipe a card up in the switcher to close that app, or tap Close All to have every app start from its first screen next time"),
+            new("changelog.r102.4",
+                "The switcher row glides with a flick, snaps to the nearest card, and arrows on both sides step through one app at a time"),
+        };
+
+        public static readonly LocString[] Release102Camera =
+        {
+            new("changelog.r102.5",
+                "Added clean shots: the game interface is hidden in your photos by default, with a button next to the shutter to keep it visible, contributed by Radvo"),
+        };
+
+        public static readonly LocString[] Release102Hunts =
+        {
+            new("changelog.r102.6",
+                "Zone maps are now read straight from the game client and open fitted to the spawn cluster, contributed by Deldee"),
+            new("changelog.r102.7",
+                "Fixed spawn tips that could show up in the wrong language"),
+        };
+
+        public static readonly LocString[] Release102Aethergram =
+        {
+            new("changelog.r102.0",
                 "Added caption editing: choose Edit caption from the menu on one of your posts to fix the text without deleting the post and losing its likes and comments"),
-            new("changelog.r1019.1",
+            new("changelog.r102.1",
                 "Posts with an edited caption show an Edited mark next to the timestamp"),
         };
 
