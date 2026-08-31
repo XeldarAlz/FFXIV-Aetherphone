@@ -161,6 +161,8 @@ internal sealed record CreatePostRequest(
 
 internal sealed record SetSensitiveRequest(bool Sensitive);
 
+internal sealed record EditGramCaptionRequest(string Caption);
+
 internal sealed record ReactRequest(int Kind);
 
 internal sealed record MentionDto(string Handle, string UserId, string DisplayName);
@@ -221,7 +223,8 @@ internal sealed record PostDto(
     string AuthorFrameId = "",
     bool Sensitive = false,
     bool SensitiveLocked = false,
-    string? Lang = null) : IIdentified;
+    string? Lang = null,
+    long? EditedAtUnix = null) : IIdentified;
 
 internal sealed record FeedPage(PostDto[] Items, string? NextCursor);
 

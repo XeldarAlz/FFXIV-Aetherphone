@@ -26,6 +26,7 @@ internal enum AethergramScreen
     Posts,
     Profile,
     EditProfile,
+    EditCaption,
     UserList,
     Inbox,
     Thread,
@@ -59,6 +60,7 @@ internal readonly record struct AethergramRoute(
     public static readonly AethergramRoute Encryption = new(AethergramScreen.Encryption);
     public static readonly AethergramRoute Activity = new(AethergramScreen.Activity);
     public static AethergramRoute Detail(string postId) => new(AethergramScreen.Detail, postId);
+    public static AethergramRoute EditCaption(string postId) => new(AethergramScreen.EditCaption, postId);
 
     public static AethergramRoute Posts(string postId, PostSource source) =>
         new(AethergramScreen.Posts, postId, UserListKind.Followers, source);

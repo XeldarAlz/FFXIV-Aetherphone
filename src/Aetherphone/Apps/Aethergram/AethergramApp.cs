@@ -36,6 +36,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private enum PostSheetAction
     {
         View,
+        Edit,
         Delete,
         Follow,
         Report,
@@ -128,6 +129,7 @@ internal sealed partial class AethergramApp : IResumableApp
     private readonly string[] filterLabels = new string[FilterToggleCount];
     private string cardTimestampPostId = string.Empty;
     private string cardTimestamp = string.Empty;
+    private long? cardTimestampEditedAt;
     private readonly ActionSheet.Item[] postSheetItems = new ActionSheet.Item[PostSheetMaxItems];
     private readonly PostSheetAction[] postSheetActions = new PostSheetAction[PostSheetMaxItems];
     private int postSheetCount;
@@ -212,6 +214,7 @@ internal sealed partial class AethergramApp : IResumableApp
             conversationKeys, chatHistory, visibility, realtimeSignals, installer);
         composeMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
+        editCaptionMentions = new MentionAutocomplete(store.NewMentionSuggestions());
         personPicker = new PersonPicker(store.NewMentionSuggestions());
         stories = new StoryPresenter(session, net.Grams, net.Media, images, lodestone, AethergramArt.StoryRing,
             AppPalettes.Aethergram, new StoryConfirmLabels(L.Aethergram.DeleteConfirm, L.Aethergram.DeleteCancel,
@@ -384,6 +387,9 @@ internal sealed partial class AethergramApp : IResumableApp
                 break;
             case AethergramScreen.EditProfile:
                 DrawEditProfile(area);
+                break;
+            case AethergramScreen.EditCaption:
+                DrawEditCaption(area);
                 break;
             case AethergramScreen.UserList:
                 DrawUserList(area, route.Id!, route.Kind);
@@ -580,6 +586,7 @@ internal sealed partial class AethergramApp : IResumableApp
 
         if (store.Me is { } me && me.Id == post.AuthorId)
         {
+            AddPostSheetItem(PostSheetAction.Edit, Loc.T(L.Aethergram.EditCaption), false);
             AddPostSheetItem(PostSheetAction.Delete, Loc.T(L.Aethergram.DeleteConfirm), true);
         }
         else
@@ -618,6 +625,9 @@ internal sealed partial class AethergramApp : IResumableApp
         {
             case PostSheetAction.View:
                 OpenDetail(post);
+                break;
+            case PostSheetAction.Edit:
+                OpenEditCaption(post);
                 break;
             case PostSheetAction.Delete:
                 profile.AskDeletePost(post.Id, router.Current.Screen == AethergramScreen.Detail ? back : null);
@@ -921,7 +931,7 @@ internal sealed partial class AethergramApp : IResumableApp
             y += commentsHeight;
         }
 
-        var time = detail ? CardTimestamp(post) : TimeText.Short(post.CreatedAtUnix);
+        var time = detail ? CardTimestamp(post) : FeedTimestamp(post);
         Typography.Draw(drawList, new Vector2(innerX, y), Typography.FitText(time, innerWidth, CardTimeStyle),
             Ink.MutedInk, CardTimeStyle);
         FeedCell.End(drawList, cell, Ink.Hairline);
@@ -995,14 +1005,23 @@ internal sealed partial class AethergramApp : IResumableApp
 
     private string CardTimestamp(PostDto post)
     {
-        if (!string.Equals(cardTimestampPostId, post.Id, StringComparison.Ordinal))
+        if (!string.Equals(cardTimestampPostId, post.Id, StringComparison.Ordinal)
+            || cardTimestampEditedAt != post.EditedAtUnix)
         {
             var local = DateTimeOffset.FromUnixTimeSeconds(post.CreatedAtUnix).ToLocalTime();
             cardTimestampPostId = post.Id;
-            cardTimestamp = $"{TimeText.Clock(local)} · {local.ToString("d MMM yyyy", Loc.Culture)}";
+            cardTimestampEditedAt = post.EditedAtUnix;
+            var stamp = $"{TimeText.Clock(local)} · {local.ToString("d MMM yyyy", Loc.Culture)}";
+            cardTimestamp = post.EditedAtUnix is null ? stamp : Loc.T(L.Aethergram.EditedStamp, stamp);
         }
 
         return cardTimestamp;
+    }
+
+    private static string FeedTimestamp(PostDto post)
+    {
+        var time = TimeText.Short(post.CreatedAtUnix);
+        return post.EditedAtUnix is null ? time : Loc.T(L.Aethergram.EditedStamp, time);
     }
 
     private int DrawGramCarousel(Rect imageRect, PostDto post, string[] photos, float rounding)

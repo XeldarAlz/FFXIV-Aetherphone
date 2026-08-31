@@ -158,6 +158,14 @@ internal sealed class SocialClient
             AethernetJsonContext.Default.PostDto, token, null, onFailure);
     }
 
+    public Task<PostDto?> EditCaptionAsync(string postId, string caption, CancellationToken token,
+        Action<AepFailure>? onFailure = null)
+    {
+        return net.SendJsonAsync(HttpMethod.Put, $"/posts/{Uri.EscapeDataString(postId)}/caption",
+            new EditGramCaptionRequest(caption), AethernetJsonContext.Default.EditGramCaptionRequest,
+            AethernetJsonContext.Default.PostDto, token, null, onFailure);
+    }
+
     public Task<TagSearchResult?> TagSearchAsync(string query, CancellationToken token,
         Action<AepFailure>? onFailure = null)
     {

@@ -124,6 +124,14 @@ internal sealed class TranslationService : IDisposable
         return string.Equals(LanguageGuess.Detect(text), TargetLanguage, StringComparison.OrdinalIgnoreCase);
     }
 
+    public void Forget(in TranslationKey key)
+    {
+        if (entries.TryRemove(key, out _))
+        {
+            Interlocked.Increment(ref version);
+        }
+    }
+
     public void Request(in TranslationKey key, string text)
     {
         if (!Enabled || text.Length == 0)

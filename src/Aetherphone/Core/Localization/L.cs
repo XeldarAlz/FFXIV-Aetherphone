@@ -1642,6 +1642,14 @@ internal static class L
     {
         public static readonly LocString SectionMessaging = new("changelog.sectionMessaging", "Messaging");
 
+        public static readonly LocString[] Release1019Aethergram =
+        {
+            new("changelog.r1019.0",
+                "Added caption editing: choose Edit caption from the menu on one of your posts to fix the text without deleting the post and losing its likes and comments"),
+            new("changelog.r1019.1",
+                "Posts with an edited caption show an Edited mark next to the timestamp"),
+        };
+
         public static readonly LocString[] Release1018Aethergram =
         {
             new("changelog.r1018.0",
@@ -3910,6 +3918,9 @@ internal static class L
         public static readonly LocString DeleteConfirm = new("aethergram.deleteConfirm", "Delete");
         public static readonly LocString DeleteCancel = new("aethergram.deleteCancel", "Cancel");
         public static readonly LocString DeleteFailed = new("aethergram.deleteFailed", "Couldn't delete the post");
+        public static readonly LocString EditCaption = new("aethergram.editCaption", "Edit caption");
+        public static readonly LocString EditCaptionFailed = new("aethergram.editCaptionFailed", "Couldn't save the caption");
+        public static readonly LocString EditedStamp = new("aethergram.editedStamp", "{0} · Edited");
         public static readonly LocString DeleteCommentFailed = new("aethergram.deleteCommentFailed", "Couldn't delete the comment");
         public static readonly LocString DeleteComment = new("aethergram.deleteComment", "Delete comment");
         public static readonly LocString RemoveCommentConfirmMessage = new("aethergram.removeCommentConfirmMessage", "Remove this comment from your post? This can't be undone.");

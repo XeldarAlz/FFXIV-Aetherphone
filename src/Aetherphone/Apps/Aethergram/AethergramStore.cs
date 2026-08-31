@@ -128,6 +128,21 @@ internal sealed class AethergramStore : SocialFeedStore
             () => posting = false);
     }
 
+    public void EditCaption(string postId, string caption, Action<bool> onComplete)
+    {
+        work.Run("edit caption", async token =>
+        {
+            var result = await client.EditCaptionAsync(postId, caption, token).ConfigureAwait(false);
+            if (result is null)
+            {
+                return false;
+            }
+
+            ReplacePost(result);
+            return true;
+        }, onComplete);
+    }
+
     public void ToggleLike(PostDto post)
     {
         var liked = post.MyReaction < 0;
