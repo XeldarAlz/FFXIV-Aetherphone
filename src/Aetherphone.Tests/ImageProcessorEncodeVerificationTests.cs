@@ -147,6 +147,35 @@ public sealed class ImageProcessorEncodeVerificationTests
         }
     }
 
+    [Fact]
+    public void StripsSourceMetadataFromTheBake()
+    {
+        var sourcePath = Path.Combine(Path.GetTempPath(), $"aetherphone-test-{Guid.NewGuid():N}.jpg");
+        try
+        {
+            using (var image = Image.LoadPixelData<Rgba32>(BuildGradient(), Width, Height))
+            {
+                var exif = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
+                exif.SetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.GPSLatitude,
+                    new[] { new Rational(48), new Rational(51), new Rational(29) });
+                exif.SetValue(SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Model, "TestCamera X100");
+                image.Metadata.ExifProfile = exif;
+                image.SaveAsJpeg(sourcePath);
+            }
+
+            var baked = ImageProcessor.Bake(sourcePath, Width);
+
+            using var roundtrip = Image.Load(baked.Bytes);
+            Assert.Null(roundtrip.Metadata.ExifProfile);
+            Assert.Null(roundtrip.Metadata.XmpProfile);
+            Assert.Null(roundtrip.Metadata.IptcProfile);
+        }
+        finally
+        {
+            File.Delete(sourcePath);
+        }
+    }
+
     private static byte[] BuildFlat(byte red, byte green, byte blue)
     {
         var pixels = new byte[Width * Height * 4];

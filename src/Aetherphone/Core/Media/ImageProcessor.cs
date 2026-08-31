@@ -169,7 +169,7 @@ internal static class ImageProcessor
 
     private static BakedImage EncodeVerified(Image image)
     {
-        using var normalized = image.CloneAs<Rgb24>();
+        using var normalized = PixelsOnlyRgb24(image);
         var width = normalized.Width;
         var height = normalized.Height;
         var length = checked(width * height * 4);
@@ -233,6 +233,22 @@ internal static class ImageProcessor
         {
             ArrayPool<byte>.Shared.Return(referencePixels);
             ArrayPool<byte>.Shared.Return(decodedPixels);
+        }
+    }
+
+    private static Image<Rgb24> PixelsOnlyRgb24(Image image)
+    {
+        using var converted = image.CloneAs<Rgb24>();
+        var length = checked(converted.Width * converted.Height * 3);
+        var buffer = ArrayPool<byte>.Shared.Rent(length);
+        try
+        {
+            converted.CopyPixelDataTo(buffer.AsSpan(0, length));
+            return Image.LoadPixelData<Rgb24>(buffer.AsSpan(0, length), converted.Width, converted.Height);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
         }
     }
 
