@@ -4989,6 +4989,8 @@
   "changelog.r1019.6": "Les cartes de zone sont désormais lues directement depuis le client du jeu et s'ouvrent cadrées sur le groupe de points d'apparition, contribution de Deldee",
   "changelog.r1019.7": "Correction d'un problème où les conseils d'apparition pouvaient s'afficher dans la mauvaise langue",
   "changelog.r1019.8": "Tri d'eau utilise désormais une palette adaptée aux daltoniens : chaque liquide se distingue par sa teinte et sa luminosité, les couleurs proches sont donc plus faciles à différencier",
+  "changelog.r1019.9": "Correction des noms de joueur vides dans les salons Jouer entre amis : un joueur qui n'a jamais défini de nom affiché apparaît désormais avec son pseudo sur la carte de siège, dans le texte de tour et sur la carte du salon",
+  "changelog.r1019.10": "Correction des noms de joueur vides aux tables : les joueurs qui n'ont jamais défini de nom affiché apparaissent désormais avec leur pseudo",
   "changelog.r1018.0": "Correction : les photos en format portrait haut étaient rognées dans le fil, le cadre de la publication suit désormais la forme de la photo et montre l'image entière",
   "changelog.r1018.1": "Copier les infos de support dans Réglages > À propos rassemble désormais tout le nécessaire pour les rapports de bug sur notre serveur Discord",
   "changelog.r1018.2": "Les listes Abonnés et Abonnements affichent désormais le nombre exact sous le titre, ce qui révèle la valeur réelle derrière les chiffres arrondis comme 1,5K",  "changelog.r1017.0": "Correction : toucher le nombre de J'aime sous une publication ajoutait ou retirait un J'aime au lieu d'ouvrir la liste Aimé par",

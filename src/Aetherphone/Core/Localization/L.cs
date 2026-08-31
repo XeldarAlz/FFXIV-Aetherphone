@@ -1679,6 +1679,14 @@ internal static class L
         {
             new("changelog.r1019.8",
                 "Water Sort now pours from a colorblind-friendly palette: every liquid differs in both hue and brightness, so shades that used to look alike are easier to tell apart"),
+            new("changelog.r1019.9",
+                "Fixed blank player names in Play with friends rooms: a player who never set a display name now shows their handle on the seat card, in the turn text, and on the room card"),
+        };
+
+        public static readonly LocString[] Release1019Casino =
+        {
+            new("changelog.r1019.10",
+                "Fixed blank player names at the tables for players who never set a display name, their handle is shown instead"),
         };
 
         public static readonly LocString[] Release1018Aethergram =

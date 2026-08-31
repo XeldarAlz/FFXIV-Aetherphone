@@ -4989,6 +4989,8 @@
   "changelog.r1019.6": "Zone maps are now read straight from the game client and open fitted to the spawn cluster, contributed by Deldee",
   "changelog.r1019.7": "Fixed spawn tips that could show up in the wrong language",
   "changelog.r1019.8": "Water Sort now pours from a colorblind-friendly palette: every liquid differs in both hue and brightness, so shades that used to look alike are easier to tell apart",
+  "changelog.r1019.9": "Fixed blank player names in Play with friends rooms: a player who never set a display name now shows their handle on the seat card, in the turn text, and on the room card",
+  "changelog.r1019.10": "Fixed blank player names at the tables for players who never set a display name, their handle is shown instead",
   "changelog.r1018.0": "Fixed an issue where tall portrait photos were cropped in the feed, the post frame now matches the photo's shape and shows the whole picture",
   "changelog.r1018.1": "Copy Support Info in Settings > About now collects everything needed for bug reports on our Discord server",
   "changelog.r1018.2": "The Followers and Following lists now show the exact count under the title, so you can see the real number behind rounded stats like 1.5K",  "changelog.r1017.0": "Fixed an issue where tapping the like count under a post liked or unliked it instead of opening the Liked by list",

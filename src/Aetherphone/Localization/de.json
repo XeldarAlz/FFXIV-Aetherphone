@@ -4989,6 +4989,8 @@
   "changelog.r1019.6": "Zonenkarten werden jetzt direkt aus dem Spielclient gelesen und öffnen passend auf die Spawn-Punkte zugeschnitten, beigetragen von Deldee",
   "changelog.r1019.7": "Ein Fehler wurde behoben, durch den Spawn-Hinweise in der falschen Sprache erscheinen konnten",
   "changelog.r1019.8": "Wasser sortieren nutzt jetzt eine für Farbenblinde geeignete Palette: jede Flüssigkeit unterscheidet sich in Farbton und Helligkeit, sodass sich ähnliche Töne leichter unterscheiden lassen",
+  "changelog.r1019.9": "Leere Spielernamen in den Räumen von Mit Freunden spielen behoben: Wer keinen Anzeigenamen festgelegt hat, erscheint jetzt mit seinem Handle auf der Sitzkarte, in der Zuganzeige und auf der Raumkarte",
+  "changelog.r1019.10": "Leere Spielernamen an den Tischen behoben: Wer keinen Anzeigenamen festgelegt hat, erscheint jetzt mit seinem Handle",
   "changelog.r1018.0": "Behoben: Hochformatige Fotos wurden im Feed beschnitten, der Beitragsrahmen folgt jetzt der Form des Fotos und zeigt das ganze Bild",
   "changelog.r1018.1": "Supportinfos kopieren unter Einstellungen > Info sammelt jetzt alles, was für Fehlerberichte auf unserem Discord-Server benötigt wird",
   "changelog.r1018.2": "Die Abonnenten- und Folge-ich-Listen zeigen jetzt die genaue Zahl unter dem Titel, so ist der echte Wert hinter gerundeten Angaben wie 1,5K sichtbar",  "changelog.r1017.0": "Behoben: Ein Tipp auf die Gefällt-mir-Zahl unter einem Beitrag setzte oder entfernte das Gefällt mir, statt anzuzeigen, wem der Beitrag gefällt",
