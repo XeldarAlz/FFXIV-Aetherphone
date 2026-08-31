@@ -86,7 +86,6 @@ Two exceptions keep their own format: [the art asset specification](ART-ASSET-SP
 | Doc | What it covers |
 | --- | --- |
 | [Art asset specification](ART-ASSET-SPEC.md) | The spec artists follow to produce app icons, phone cases, and avatar frames that drop in without engineering work, plus the open art decisions still on the table |
-| [Encryption lifecycle audit](encryption-lifecycle-audit.md) | The full E2EE lifecycle from fresh install through key loss, recovery, and rotation: a scenario matrix of what each user sees, severity-ranked findings, and the test coverage map |
 | [Translator guide](translating.md) | For translators with no code background: editing one language JSON and opening a pull request entirely in the browser |
 
 ## Find it fast
