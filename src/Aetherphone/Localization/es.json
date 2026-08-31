@@ -4991,6 +4991,7 @@
   "changelog.r1019.8": "Agua y tubos ahora usa una paleta apta para daltónicos: cada líquido se distingue por tono y brillo, así que los colores parecidos son más fáciles de diferenciar",
   "changelog.r1019.9": "Corregidos los nombres de jugador en blanco en las salas de Juega con amigos: un jugador que nunca configuró su nombre visible ahora muestra su handle en la tarjeta de asiento, en el texto de turno y en la tarjeta de la sala",
   "changelog.r1019.10": "Corregidos los nombres de jugador en blanco en las mesas: los jugadores que nunca configuraron su nombre visible ahora muestran su handle",
+  "changelog.r1019.11": "Las listas de reproducción de Música ahora tienen modo aleatorio: un nuevo botón junto a Reproducir todo reproduce la lista en orden aleatorio, y el control Aleatorio del reproductor mezcla la cola actual",
   "changelog.r1018.0": "Corregido: las fotos verticales altas se recortaban en el feed, el marco de la publicación ahora sigue la forma de la foto y muestra la imagen completa",
   "changelog.r1018.1": "Copiar info de soporte en Ajustes > Acerca de ahora reúne todo lo necesario para los reportes de errores en nuestro servidor de Discord",
   "changelog.r1018.2": "Las listas de Seguidores y Siguiendo ahora muestran el número exacto bajo el título, la cifra real detrás de valores redondeados como 1,5K",  "changelog.r1017.0": "Corregido: tocar el contador de me gusta debajo de una publicación daba o quitaba el me gusta en lugar de mostrar a quién le gusta la publicación",

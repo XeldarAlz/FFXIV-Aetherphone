@@ -1675,6 +1675,12 @@ internal static class L
                 "Posts with an edited caption show an Edited mark next to the timestamp"),
         };
 
+        public static readonly LocString[] Release1019Music =
+        {
+            new("changelog.r1019.11",
+                "Music playlists can now shuffle: a new button next to Play all plays the list in random order, and the shuffle toggle in the player mixes whatever is queued"),
+        };
+
         public static readonly LocString[] Release1019Games =
         {
             new("changelog.r1019.8",

@@ -12,6 +12,7 @@ internal static class ChangelogData
             new(L.Apps.Camera, L.Changelog.Release1019Camera),
             new(L.Apps.Hunts, L.Changelog.Release1019Hunts),
             new(L.Apps.Aethergram, L.Changelog.Release1019Aethergram),
+            new(L.Apps.Music, L.Changelog.Release1019Music),
             new(L.Apps.Games, L.Changelog.Release1019Games),
             new(L.Apps.Casino, L.Changelog.Release1019Casino),
         }),
