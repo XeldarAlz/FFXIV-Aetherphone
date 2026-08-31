@@ -1,8 +1,5 @@
 using System.Buffers;
 using System.Buffers.Binary;
-using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics.X86;
-using System.Text;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -39,7 +36,10 @@ internal static class ImageProcessor
 
     private const int JpegQuality = 88;
     private const int JpegAttemptLimit = 3;
-    private const int PngAttemptLimit = 2;
+    private const int PngAttemptLimit = 4;
+    private const int PngShrinkLimit = 4;
+    private const int RetryPauseMilliseconds = 150;
+    private const float PngShrinkFactor = 0.85f;
     private const float LumaDeltaLimit = 80f;
     private const float ChromaDeltaLimit = 64f;
     private const int CorruptSampleLimit = 3;
@@ -47,8 +47,6 @@ internal static class ImageProcessor
     private const int FlatSourceRangeLimit = 24;
     private const int FlatWindowRadius = 2;
     private const int ServerMaxImageBytes = 8 * 1024 * 1024;
-
-    private static readonly string ProcessorName = ReadProcessorName();
 
     public const long MaxDecodePixels = 4096L * 4096L;
     public const long MaxLocalDecodePixels = 8192L * 8192L;
@@ -201,33 +199,45 @@ internal static class ImageProcessor
                 }
 
                 AepLog.Warning($"[Media] jpeg bake attempt {attempt} of {JpegAttemptLimit} failed verification " +
-                    $"({width}x{height}, cpu: {ProcessorName})");
+                    $"({width}x{height}), retrying");
+                Thread.Sleep(RetryPauseMilliseconds);
             }
 
-            for (var attempt = 1; attempt <= PngAttemptLimit; attempt++)
+            for (var shrink = 0; shrink <= PngShrinkLimit; shrink++)
             {
-                var encoded = EncodePngBytes(normalized);
-                if (PngRoundTripMatches(encoded, referencePixels, decodedPixels, length))
+                for (var attempt = 1; attempt <= PngAttemptLimit; attempt++)
                 {
+                    var encoded = EncodePngBytes(normalized);
+                    if (!PngRoundTripMatches(encoded, referencePixels, decodedPixels, length))
+                    {
+                        AepLog.Warning($"[Media] png bake attempt {attempt} of {PngAttemptLimit} failed " +
+                            "verification, retrying");
+                        Thread.Sleep(RetryPauseMilliseconds);
+                        continue;
+                    }
+
                     if (encoded.Length <= ServerMaxImageBytes)
                     {
                         AepLog.Warning($"[Media] shipping a verified lossless png bake of {encoded.Length} bytes " +
-                            $"after jpeg verification failed (cpu: {ProcessorName})");
+                            "after jpeg verification failed");
                         return new BakedImage(encoded, width, height, PngContentType);
                     }
 
-                    AepLog.Warning($"[Media] png fallback of {encoded.Length} bytes exceeds the " +
-                        $"{ServerMaxImageBytes} byte upload cap");
+                    AepLog.Warning($"[Media] verified png of {encoded.Length} bytes exceeds the " +
+                        $"{ServerMaxImageBytes} byte upload cap, shrinking");
                     break;
                 }
 
-                AepLog.Warning($"[Media] png bake attempt {attempt} of {PngAttemptLimit} failed verification " +
-                    $"(cpu: {ProcessorName})");
+                width = Math.Max(1, (int)MathF.Round(width * PngShrinkFactor));
+                height = Math.Max(1, (int)MathF.Round(height * PngShrinkFactor));
+                length = checked(width * height * 4);
+                normalized.Mutate(context => context.Resize(width, height));
+                using var reference = normalized.CloneAs<Rgba32>();
+                reference.CopyPixelDataTo(referencePixels.AsSpan(0, length));
             }
 
             throw new InvalidImageContentException(
-                $"Every encode attempt failed verification on this machine (cpu: {ProcessorName}); " +
-                "refusing to upload a corrupt photo.");
+                "Every encode attempt failed verification on this machine; the photo was not uploaded.");
         }
         finally
         {
@@ -282,36 +292,6 @@ internal static class ImageProcessor
         using var decoded = Image.Load<Rgba32>(SingleFrame, decodedStream);
         decoded.CopyPixelDataTo(decodedPixels.AsSpan(0, length));
         return referencePixels.AsSpan(0, length).SequenceEqual(decodedPixels.AsSpan(0, length));
-    }
-
-    private static string ReadProcessorName()
-    {
-        if (!X86Base.IsSupported)
-        {
-            return RuntimeInformation.ProcessArchitecture.ToString();
-        }
-
-        var (maxExtendedLeaf, _, _, _) = X86Base.CpuId(unchecked((int)0x80000000), 0);
-        if ((uint)maxExtendedLeaf < 0x80000004)
-        {
-            return RuntimeInformation.ProcessArchitecture.ToString();
-        }
-
-        Span<int> registers = stackalloc int[12];
-        for (var leafIndex = 0; leafIndex < 3; leafIndex++)
-        {
-            var (eax, ebx, ecx, edx) = X86Base.CpuId(unchecked((int)(0x80000002u + (uint)leafIndex)), 0);
-            var registerIndex = leafIndex * 4;
-            registers[registerIndex] = eax;
-            registers[registerIndex + 1] = ebx;
-            registers[registerIndex + 2] = ecx;
-            registers[registerIndex + 3] = edx;
-        }
-
-        var brandBytes = MemoryMarshal.AsBytes(registers);
-        var terminatorIndex = brandBytes.IndexOf((byte)0);
-        var nameLength = terminatorIndex < 0 ? brandBytes.Length : terminatorIndex;
-        return Encoding.ASCII.GetString(brandBytes[..nameLength]).Trim();
     }
 
     internal static bool HasEncodeCorruption(ReadOnlySpan<byte> sourceRgba, ReadOnlySpan<byte> decodedRgba,
