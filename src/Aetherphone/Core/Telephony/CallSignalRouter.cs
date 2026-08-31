@@ -65,6 +65,9 @@ internal sealed class CallSignalRouter : IDisposable
             case SignalType.KeysStale:
                 signals.PublishKeysStale();
                 return;
+            case SignalType.KeysLinkPending:
+                signals.PublishDeviceLinkRequested();
+                return;
             case SignalType.VelvetPing:
                 signals.PublishVelvet();
                 return;

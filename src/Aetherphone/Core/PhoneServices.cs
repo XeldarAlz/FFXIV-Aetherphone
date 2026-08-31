@@ -317,7 +317,7 @@ internal sealed class PhoneServices : IDisposable
         var housingReminders = new HousingReminderService(configuration, framework, notifications, housing.Watch,
             housingGate);
         var confirm = new ConfirmService();
-        var deviceLinks = new DeviceLinkWatcher(keyVault, aethernetSession, confirm);
+        var deviceLinks = new DeviceLinkWatcher(keyVault, aethernetSession, confirm, realtimeSignals);
         var encryptionGuide = new EncryptionGuide(keyVault, aethernetSession, notifications);
         Windows.UrlActions.Configure(confirm);
         var calls = new CallHub(configuration, aethernetSession, notifications, sound, playback, realtimeSignals,

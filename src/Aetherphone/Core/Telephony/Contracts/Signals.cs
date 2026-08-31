@@ -25,6 +25,7 @@ internal static class SignalType
     public const string Unavailable = "call.unavailable";
     public const string ContentRemoved = "content.removed";
     public const string KeysStale = "keys.stale";
+    public const string KeysLinkPending = "keys.linkPending";
     public const string ChatPing = "chat.ping";
     public const string VelvetPing = "velvet.ping";
     public const string GramPing = "gram.ping";
