@@ -1770,6 +1770,7 @@
   "music.nowPlayingState": "正在播放",
   "music.playbackFailed": "播放失败",
   "music.repeat": "循环播放",
+  "music.shuffle": "随机播放",
   "music.goodMorning": "早上好",
   "music.goodAfternoon": "下午好",
   "music.goodEvening": "晚上好",

@@ -3465,6 +3465,7 @@ internal static class L
         public static readonly LocString NowPlayingState = new("music.nowPlayingState", "Now playing");
         public static readonly LocString PlaybackFailed = new("music.playbackFailed", "Playback failed");
         public static readonly LocString Repeat = new("music.repeat", "Repeat");
+        public static readonly LocString Shuffle = new("music.shuffle", "Shuffle");
         public static readonly LocString GoodMorning = new("music.goodMorning", "Good morning");
         public static readonly LocString GoodAfternoon = new("music.goodAfternoon", "Good afternoon");
         public static readonly LocString GoodEvening = new("music.goodEvening", "Good evening");

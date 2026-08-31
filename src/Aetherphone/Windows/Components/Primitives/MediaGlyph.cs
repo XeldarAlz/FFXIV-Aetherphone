@@ -51,6 +51,28 @@ internal static class MediaGlyph
         RepeatArrow(drawList, center, radius, MathF.PI * 1.59f, thickness, ink);
     }
 
+    public static void Shuffle(ImDrawListPtr drawList, Vector2 center, float size, uint ink)
+    {
+        var thickness = MathF.Max(1.4f, size * 0.24f);
+        ShuffleStrand(drawList, center, size, -size * 0.58f, size * 0.58f, ink, thickness);
+        ShuffleStrand(drawList, center, size, size * 0.58f, -size * 0.58f, ink, thickness);
+    }
+
+    private static void ShuffleStrand(ImDrawListPtr drawList, Vector2 center, float size, float fromY, float toY,
+        uint ink, float thickness)
+    {
+        var lead = size * 0.42f;
+        drawList.PathLineTo(center + new Vector2(-size, fromY));
+        drawList.PathLineTo(center + new Vector2(-size + lead, fromY));
+        drawList.PathLineTo(center + new Vector2(size - lead, toY));
+        drawList.PathLineTo(center + new Vector2(size, toY));
+        drawList.PathStroke(ink, ImDrawFlags.None, thickness);
+        var head = MathF.Max(2.8f, thickness * 2f);
+        var tip = center + new Vector2(size + head * 0.4f, toY);
+        drawList.AddTriangleFilled(tip, tip + new Vector2(-head, -head * 0.8f), tip + new Vector2(-head, head * 0.8f),
+            ink);
+    }
+
     private static void RepeatArc(ImDrawListPtr drawList, Vector2 center, float radius, float from, float to, uint ink,
         float thickness)
     {

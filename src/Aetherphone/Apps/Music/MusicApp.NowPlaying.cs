@@ -181,7 +181,7 @@ internal sealed partial class MusicApp
         }
 
         var leftBound = frame.Min.X + 26f * scale + 13f * scale + 10f * scale;
-        var rightBound = playback.SongActive ? frame.Max.X - 100f * scale - 15f * scale - 10f * scale
+        var rightBound = playback.SongActive ? frame.Max.X - 142f * scale - 15f * scale - 10f * scale
             : playback.RadioActive ? frame.Max.X - 58f * scale - 14f * scale - 10f * scale
             : frame.Max.X - 26f * scale - 14f * scale - 10f * scale;
         var textCenterX = (leftBound + rightBound) * 0.5f;
@@ -202,6 +202,7 @@ internal sealed partial class MusicApp
             TextStyles.FootnoteEmphasized, ui.TitleInk, sourceHovering);
         if (playback.SongActive)
         {
+            DrawShuffleButton(drawList, new Vector2(frame.Max.X - 142f * scale, barCenterY), scale);
             DrawRepeatButton(drawList, new Vector2(frame.Max.X - 100f * scale, barCenterY), scale);
             if (ui.IconButton(new Vector2(frame.Max.X - 58f * scale, barCenterY), 14f * scale,
                     IconGlyph.Of(FontAwesomeIcon.Plus), ui.MutedInk, AppSkin.Transparent, 0.82f,
@@ -349,6 +350,27 @@ internal sealed partial class MusicApp
         drawList.AddCircleFilled(new Vector2(labelPosition.X - 9f * scale, labelPosition.Y + labelSize.Y * 0.5f),
             3f * scale, ImGui.GetColorU32(ui.Accent), 16);
         Typography.Draw(drawList, labelPosition, label, ui.TitleInk, TextStyles.FootnoteEmphasized);
+    }
+
+    private void DrawShuffleButton(ImDrawListPtr drawList, Vector2 center, float scale)
+    {
+        var active = playback.ShuffleEnabled;
+        var hitRadius = 15f * scale;
+        var hit = new Vector2(hitRadius, hitRadius);
+        var hovered = UiInteract.Hover(center - hit, center + hit);
+        var baseColor = active ? ui.Accent : Palette.WithAlpha(ui.TitleInk, 0.5f);
+        var color = hovered ? Palette.Mix(baseColor, White, 0.25f) : baseColor;
+        MediaGlyph.Shuffle(drawList, center, 8.5f * scale, ImGui.GetColorU32(color));
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        HoverTooltip.Show(new Rect(center - hit, center + hit), Loc.T(L.Music.Shuffle), HoverLabelSide.Above);
+        if (hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+        {
+            playback.ToggleShuffle();
+        }
     }
 
     private void DrawRepeatButton(ImDrawListPtr drawList, Vector2 center, float scale)

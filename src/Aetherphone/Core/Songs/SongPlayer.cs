@@ -50,6 +50,9 @@ internal sealed class SongPlayer : IDisposable
     private int pendingSeekMs = -1;
     private Song[] queue = Array.Empty<Song>();
     private int queueIndex = -1;
+    private volatile bool shuffled;
+    private int[] shuffleOrder = Array.Empty<int>();
+    private int shufflePosition = -1;
 
     public SongPlayer(YoutubeClient youtube, DiskCache cache, SongLinkResolver linkResolver)
     {
@@ -75,6 +78,27 @@ internal sealed class SongPlayer : IDisposable
         set => repeat = value;
     }
 
+    public bool Shuffled
+    {
+        get => shuffled;
+        set
+        {
+            lock (gate)
+            {
+                if (shuffled == value)
+                {
+                    return;
+                }
+
+                shuffled = value;
+                if (shuffled && queue.Length > 0)
+                {
+                    RebuildShuffleOrder(queueIndex);
+                }
+            }
+        }
+    }
+
     public float Volume
     {
         get => volume;
@@ -93,6 +117,10 @@ internal sealed class SongPlayer : IDisposable
         {
             queue = songs;
             queueIndex = start;
+            if (shuffled)
+            {
+                RebuildShuffleOrder(start);
+            }
         }
 
         StartSong(songs[start]);
@@ -111,11 +139,52 @@ internal sealed class SongPlayer : IDisposable
                 return;
             }
 
-            queueIndex = ((queueIndex + direction) % queue.Length + queue.Length) % queue.Length;
+            if (shuffled && shuffleOrder.Length == queue.Length)
+            {
+                shufflePosition = ((shufflePosition + direction) % shuffleOrder.Length + shuffleOrder.Length) %
+                                  shuffleOrder.Length;
+                queueIndex = shuffleOrder[shufflePosition];
+            }
+            else
+            {
+                queueIndex = ((queueIndex + direction) % queue.Length + queue.Length) % queue.Length;
+            }
+
             song = queue[queueIndex];
         }
 
         StartSong(song);
+    }
+
+    private void RebuildShuffleOrder(int startIndex)
+    {
+        var count = queue.Length;
+        if (shuffleOrder.Length != count)
+        {
+            shuffleOrder = new int[count];
+        }
+
+        for (var index = 0; index < count; index++)
+        {
+            shuffleOrder[index] = index;
+        }
+
+        for (var index = count - 1; index > 0; index--)
+        {
+            var swapIndex = Random.Shared.Next(index + 1);
+            (shuffleOrder[index], shuffleOrder[swapIndex]) = (shuffleOrder[swapIndex], shuffleOrder[index]);
+        }
+
+        for (var index = 0; index < count; index++)
+        {
+            if (shuffleOrder[index] == startIndex)
+            {
+                (shuffleOrder[0], shuffleOrder[index]) = (shuffleOrder[index], shuffleOrder[0]);
+                break;
+            }
+        }
+
+        shufflePosition = 0;
     }
 
     public void Seek(float seconds)
@@ -567,6 +636,18 @@ internal sealed class SongPlayer : IDisposable
 
             if (repeat == SongRepeatMode.One)
             {
+                next = queue[queueIndex];
+            }
+            else if (shuffled && shuffleOrder.Length == queue.Length)
+            {
+                if (shufflePosition + 1 >= shuffleOrder.Length)
+                {
+                    ResetTrackState();
+                    return;
+                }
+
+                shufflePosition++;
+                queueIndex = shuffleOrder[shufflePosition];
                 next = queue[queueIndex];
             }
             else if (queueIndex + 1 < queue.Length)

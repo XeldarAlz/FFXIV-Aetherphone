@@ -763,6 +763,12 @@ internal sealed partial class MusicApp : IResumableApp
         playback.PlaySongs(list, index);
     }
 
+    private void PlayShuffled(Song[] list, string source)
+    {
+        playSource = source;
+        playback.PlaySongsShuffled(list);
+    }
+
     private void PlayStation(int index)
     {
         playSource = string.IsNullOrEmpty(radioQuery) ? CategoryTitle() : Loc.T(L.Music.SourceRadioSearch);

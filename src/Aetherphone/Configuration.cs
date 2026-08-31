@@ -152,6 +152,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool UiSoundDefaultsApplied { get; set; }
     public float MusicVolume { get; set; } = 0.6f;
     public int MusicRepeat { get; set; }
+    public bool MusicShuffle { get; set; }
     public float VideoVolume { get; set; } = 0.6f;
     public int VideoMaxQualityHeight { get; set; } = 720;
     public bool VideoHideNameplates { get; set; } = true;

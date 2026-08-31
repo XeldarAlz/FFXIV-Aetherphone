@@ -20,6 +20,7 @@ internal sealed class PlaybackHub
         radio.Volume = volume;
         songs.Volume = volume;
         songs.Repeat = configuration.MusicRepeat == 0 ? SongRepeatMode.Off : SongRepeatMode.One;
+        songs.Shuffled = configuration.MusicShuffle;
     }
 
     public RadioPlayer Radio => radio;
@@ -65,6 +66,31 @@ internal sealed class PlaybackHub
         var next = songs.Repeat == SongRepeatMode.Off ? SongRepeatMode.One : SongRepeatMode.Off;
         songs.Repeat = next;
         configuration.MusicRepeat = (int)next;
+        configuration.Save();
+    }
+
+    public bool ShuffleEnabled => songs.Shuffled;
+
+    public void ToggleShuffle()
+    {
+        SetShuffle(!songs.Shuffled);
+    }
+
+    public void PlaySongsShuffled(Song[] list)
+    {
+        if (list.Length == 0)
+        {
+            return;
+        }
+
+        SetShuffle(true);
+        PlaySongs(list, Random.Shared.Next(list.Length));
+    }
+
+    private void SetShuffle(bool enabled)
+    {
+        songs.Shuffled = enabled;
+        configuration.MusicShuffle = enabled;
         configuration.Save();
     }
 

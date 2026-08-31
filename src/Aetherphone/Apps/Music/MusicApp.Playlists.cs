@@ -612,10 +612,36 @@ internal sealed partial class MusicApp
             PlaySong(songs, 0, record.Name);
         }
 
+        var shuffleCenter = new Vector2(playRect.Max.X + 32f * scale, centerY);
+        if (DrawShuffleCircle(shuffleCenter, 20f * scale, songs.Length > 0))
+        {
+            PlayShuffled(songs, record.Name);
+        }
+
         var countLabel = SongCountLabel(songs.Length);
         var countSize = Typography.Measure(countLabel, TextStyles.Subheadline);
         Typography.Draw(new Vector2(content.Max.X - 16f * scale - countSize.X, centerY - countSize.Y * 0.5f),
             countLabel, ui.MutedInk, TextStyles.Subheadline);
+    }
+
+    private bool DrawShuffleCircle(Vector2 center, float radius, bool enabled)
+    {
+        var drawList = ImGui.GetWindowDrawList();
+        var hit = new Vector2(radius, radius);
+        var hovered = enabled && UiInteract.Hover(center - hit, center + hit);
+        var fill = Palette.WithAlpha(ui.TitleInk, hovered ? 0.18f : 0.10f);
+        drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(fill), 32);
+        var ink = enabled
+            ? Palette.WithAlpha(ui.TitleInk, hovered ? 1f : 0.85f)
+            : Palette.WithAlpha(ui.TitleInk, 0.35f);
+        MediaGlyph.Shuffle(drawList, center, radius * 0.44f, ImGui.GetColorU32(ink));
+        if (hovered)
+        {
+            ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+        }
+
+        HoverTooltip.Show(new Rect(center - hit, center + hit), Loc.T(L.Music.Shuffle), HoverLabelSide.Above);
+        return hovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left);
     }
 
     private void DrawPlaylistSongRow(float scale, Song song, int index, Song[] songs, PlaylistRecord record)
