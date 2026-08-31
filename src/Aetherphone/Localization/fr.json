@@ -4980,6 +4980,7 @@
   "changelog.r1010.17": "Tetris gagne un règlement Moderne à côté de Classique, avec kicks SRS, délai de verrouillage, T-spins, score back-to-back et combos, et son propre record",
   "changelog.sectionMessaging": "Messagerie",
   "changelog.sectionPhone": "Téléphone",
+  "changelog.r10110.0": "Correction d'un problème où le téléphone provoquait des erreurs Trop de requêtes, la communication en arrière-plan avec le serveur est désormais bien plus légère",
   "changelog.r1019.0": "Ajout de la modification de légende : Modifier la légende dans le menu d'une de vos publications corrige le texte sans supprimer la publication ni perdre ses J'aime et ses commentaires",
   "changelog.r1019.1": "Les publications dont la légende a été modifiée affichent la mention Modifié à côté de l'horodatage",
   "changelog.r1019.2": "Ajout d'un sélecteur d'applications : maintenez un instant la barre en bas de l'écran et toutes les applications laissées en cours s'alignent en cartes avec aperçu en direct, touchez-en une pour y revenir",

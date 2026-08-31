@@ -4980,6 +4980,7 @@
   "changelog.r1010.17": "Tetris gains a Modern ruleset beside Classic, with SRS kicks, lock delay, T-spins, back-to-back and combo scoring, and its own best score",
   "changelog.sectionMessaging": "Messaging",
   "changelog.sectionPhone": "Phone",
+  "changelog.r10110.0": "Fixed an issue where the phone was causing Too many requests errors, background communication with the server is now much lighter",
   "changelog.r1019.0": "Added caption editing: choose Edit caption from the menu on one of your posts to fix the text without deleting the post and losing its likes and comments",
   "changelog.r1019.1": "Posts with an edited caption show an Edited mark next to the timestamp",
   "changelog.r1019.2": "Added an app switcher: hold the home bar for a moment and every app you left mid-use lines up as a live preview card, tap one to jump back in",

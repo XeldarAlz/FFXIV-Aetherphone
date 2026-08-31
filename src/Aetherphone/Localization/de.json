@@ -4980,6 +4980,7 @@
   "changelog.r1010.17": "Tetris bekommt neben Klassisch ein Regelwerk Modern mit SRS-Kicks, Lock Delay, T-Spins, Back-to-Back- und Combo-Wertung und eigener Bestleistung",
   "changelog.sectionMessaging": "Nachrichten",
   "changelog.sectionPhone": "Telefon",
+  "changelog.r10110.0": "Ein Problem behoben, durch das das Telefon Zu viele Anfragen-Fehler auslöste, die Hintergrundkommunikation mit dem Server ist jetzt deutlich sparsamer",
   "changelog.r1019.0": "Bildunterschriften lassen sich jetzt bearbeiten: Bildunterschrift bearbeiten im Menü eines eigenen Beitrags korrigiert den Text, ohne den Beitrag samt Likes und Kommentaren zu löschen",
   "changelog.r1019.1": "Beiträge mit bearbeiteter Bildunterschrift zeigen neben dem Zeitstempel den Hinweis Bearbeitet",
   "changelog.r1019.2": "App-Umschalter hinzugefügt: Halte die Leiste am unteren Bildschirmrand kurz gedrückt und alle zuletzt genutzten Apps reihen sich als Karten mit Live-Vorschau auf, tippe eine an, um dort weiterzumachen",

@@ -4980,6 +4980,7 @@
   "changelog.r1010.17": "Tetris gana un reglamento Moderno junto a Clásico, con kicks SRS, retardo de bloqueo, T-spins, puntuación por back-to-back y combos, y su propio récord",
   "changelog.sectionMessaging": "Mensajería",
   "changelog.sectionPhone": "Teléfono",
+  "changelog.r10110.0": "Corregido un problema por el que el teléfono provocaba errores de Demasiadas solicitudes, la comunicación en segundo plano con el servidor ahora es mucho más ligera",
   "changelog.r1019.0": "Ahora se puede editar la descripción: elige Editar descripción en el menú de una de tus publicaciones para corregir el texto sin borrar la publicación ni perder sus me gusta y comentarios",
   "changelog.r1019.1": "Las publicaciones con la descripción editada muestran la marca Editado junto a la fecha",
   "changelog.r1019.2": "Añadido un selector de aplicaciones: mantén pulsada un momento la barra inferior de la pantalla y todas las aplicaciones que dejaste a medias se alinean como tarjetas con vista previa en vivo, toca una para volver a ella",

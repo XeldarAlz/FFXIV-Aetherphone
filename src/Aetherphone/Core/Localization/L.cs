@@ -1643,6 +1643,12 @@ internal static class L
         public static readonly LocString SectionMessaging = new("changelog.sectionMessaging", "Messaging");
         public static readonly LocString SectionPhone = new("changelog.sectionPhone", "Phone");
 
+        public static readonly LocString[] Release10110Phone =
+        {
+            new("changelog.r10110.0",
+                "Fixed an issue where the phone was causing Too many requests errors, background communication with the server is now much lighter"),
+        };
+
         public static readonly LocString[] Release1019Phone =
         {
             new("changelog.r1019.2",
