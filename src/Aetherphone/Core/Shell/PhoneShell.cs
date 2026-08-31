@@ -58,6 +58,7 @@ internal sealed class PhoneShell : IDisposable
     private readonly SuspensionGate suspensions;
     private readonly AethernetSession session;
     private readonly ConfirmService confirm;
+    private readonly AppSwitcher appSwitcher;
     private NotificationShake shake = new(ShakeDuration, ShakeFrequency, ShakeAmplitude);
     private bool closeRequested;
     private readonly HomeIndicatorGesture indicatorGesture = new();
@@ -121,10 +122,11 @@ internal sealed class PhoneShell : IDisposable
             services.RemoteImages, services.Lodestone, bundle.Photos, services.WallpaperImages, navigation,
             configuration, services.Confirm, themes);
         painter = new ShellScreenPainter(themes, navigation, home);
+        appSwitcher = new AppSwitcher(navigation, painter);
         transition = new ShellTransitionRenderer(themes, navigation, home, painter);
         morph = new MinimizeMorphView(themes, minimize, minimizedPhone, painter, configuration);
-        overlays = new ShellOverlayCoordinator(configuration, loading, navigation, controlCenter, banner, island,
-            rateLimitPill, shortcutPill, coinPill, coinFloats, incomingOverlay, banOverlay, confirmOverlay,
+        overlays = new ShellOverlayCoordinator(configuration, loading, navigation, controlCenter, appSwitcher, banner,
+            island, rateLimitPill, shortcutPill, coinPill, coinFloats, incomingOverlay, banOverlay, confirmOverlay,
             reportOverlay, shareSheet, conductOverlay, encryptionHelpOverlay, director, setup);
     }
 
@@ -142,6 +144,7 @@ internal sealed class PhoneShell : IDisposable
     {
         loading.Cancel();
         director.Suspend();
+        appSwitcher.CloseImmediate();
         SensitiveReveals.Clear();
         UiFeedback.Play(UiSound.Sleep);
     }
@@ -289,6 +292,7 @@ internal sealed class PhoneShell : IDisposable
         DeviceChrome.DrawBody(chassis, theme, turn.Turning ? null : TransparentBand(screen));
         loading.Advance(delta);
         navigation.Advance(delta);
+        appSwitcher.Advance(screen, delta);
         if (!navigation.IsTransitioning)
         {
             transition.ResetPrepared();
@@ -367,6 +371,11 @@ internal sealed class PhoneShell : IDisposable
 
     private Rect? TransparentBand(Rect screen)
     {
+        if (appSwitcher.Overtakes)
+        {
+            return null;
+        }
+
         var scale = UiScale.Current;
         if (navigation.IsTransitioning)
         {
@@ -398,6 +407,12 @@ internal sealed class PhoneShell : IDisposable
 
     private void DrawContent(in ChassisGeometry chassis, PhoneTheme theme)
     {
+        if (appSwitcher.Overtakes)
+        {
+            appSwitcher.DrawStage(chassis.Screen, chassis.ScreenRadius, theme);
+            return;
+        }
+
         if (navigation.IsTransitioning)
         {
             transition.Draw(chassis.Screen, chassis.ScreenRadius, theme);
@@ -434,10 +449,11 @@ internal sealed class PhoneShell : IDisposable
         var hitMin = new Vector2(min.X - 24f * scale, min.Y - 16f * scale);
         var hitMax = new Vector2(max.X + 24f * scale, max.Y + 16f * scale);
         var hovered = UiInteract.Hover(hitMin, hitMax);
-        var usable = navigation.CanGoHome;
-        var actionable = usable && (hovered || indicatorGesture.Pressed);
+        var scrubUsable = navigation.CanGoHome;
+        var holdUsable = !navigation.IsTransitioning && !LandscapeActive;
+        var actionable = (scrubUsable || holdUsable) && (hovered || indicatorGesture.Pressed);
         HomeIndicator.Draw(ImGui.GetWindowDrawList(), bounds, theme, actionable);
-        if (!usable)
+        if (!scrubUsable && !holdUsable)
         {
             indicatorGesture.Cancel();
             return;
@@ -461,7 +477,17 @@ internal sealed class PhoneShell : IDisposable
 
         if (ImGui.IsMouseDown(ImGuiMouseButton.Left))
         {
-            TrackIndicatorDrag(mouse, screen, scale);
+            if (scrubUsable)
+            {
+                TrackIndicatorDrag(mouse, screen, scale);
+            }
+
+            if (holdUsable && indicatorGesture.TrackHold(mouse, FrameClock.Delta, scale))
+            {
+                indicatorGesture.Cancel();
+                appSwitcher.Open();
+            }
+
             return;
         }
 
@@ -472,7 +498,7 @@ internal sealed class PhoneShell : IDisposable
             return;
         }
 
-        if (hovered)
+        if (hovered && scrubUsable)
         {
             navigation.GoHome();
         }

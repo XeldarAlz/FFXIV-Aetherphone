@@ -7,6 +7,7 @@ internal readonly record struct ScrubRelease(bool WasScrubbing, bool ToHome, flo
 internal sealed class HomeIndicatorGesture
 {
     private const float DeadZoneUnits = 6f;
+    private const float HoldSeconds = 0.45f;
     private const float RangeFraction = 0.38f;
     private const float HeldCover = 0.45f;
     private const float OverflowGain = 0.2f;
@@ -18,6 +19,9 @@ internal sealed class HomeIndicatorGesture
     private Vector2 pressPosition;
     private Vector2 lastPosition;
     private float velocityUp;
+    private float heldSeconds;
+    private bool holdFired;
+    private bool holdCancelled;
     private bool pressed;
     private bool scrubbing;
 
@@ -29,8 +33,34 @@ internal sealed class HomeIndicatorGesture
         pressPosition = position;
         lastPosition = position;
         velocityUp = 0f;
+        heldSeconds = 0f;
+        holdFired = false;
+        holdCancelled = false;
         pressed = true;
         scrubbing = false;
+    }
+
+    public bool TrackHold(Vector2 position, float deltaSeconds, float scale)
+    {
+        if (!pressed || scrubbing || holdFired || holdCancelled)
+        {
+            return false;
+        }
+
+        if ((position - pressPosition).Length() > DeadZoneUnits * scale)
+        {
+            holdCancelled = true;
+            return false;
+        }
+
+        heldSeconds += deltaSeconds;
+        if (heldSeconds < HoldSeconds)
+        {
+            return false;
+        }
+
+        holdFired = true;
+        return true;
     }
 
     public void Cancel()

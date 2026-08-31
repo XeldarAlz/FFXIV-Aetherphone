@@ -4670,6 +4670,12 @@ internal static class L
         public static readonly LocString EditHint = new("controlCenter.editHint", "Drag to rearrange · tap ⤢ to resize");
     }
 
+    internal static class AppSwitcher
+    {
+        public static readonly LocString CloseAll = new("appSwitcher.closeAll", "Close All");
+        public static readonly LocString Empty = new("appSwitcher.empty", "Nothing is open");
+    }
+
     internal static class Home
     {
         public static readonly LocString Done = new("home.done", "Done");

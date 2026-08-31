@@ -2653,6 +2653,8 @@
   "controlCenter.addControls": "Добавить элемент",
   "controlCenter.allControlsAdded": "Все элементы на месте",
   "controlCenter.editHint": "Перетащите для перестановки · нажмите ⤢ для изменения размера",
+  "appSwitcher.closeAll": "Закрыть все",
+  "appSwitcher.empty": "Ничего не открыто",
   "home.done": "Готово",
   "home.newFolder": "Папка",
   "home.widgets": "Виджеты",

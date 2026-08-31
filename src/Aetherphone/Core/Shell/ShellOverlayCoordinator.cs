@@ -30,6 +30,7 @@ internal sealed class ShellOverlayCoordinator
     private readonly LoadingScreen loading;
     private readonly NavigationStack navigation;
     private readonly ControlCenter controlCenter;
+    private readonly AppSwitcher appSwitcher;
     private readonly NotificationBanner banner;
     private readonly DynamicIsland island;
     private readonly RateLimitPill rateLimitPill;
@@ -47,8 +48,8 @@ internal sealed class ShellOverlayCoordinator
     private readonly SetupOverlay setup;
 
     public ShellOverlayCoordinator(Configuration configuration, LoadingScreen loading, NavigationStack navigation,
-        ControlCenter controlCenter, NotificationBanner banner, DynamicIsland island, RateLimitPill rateLimitPill,
-        ShortcutRunPill shortcutPill, CoinEarnPill coinPill, CoinEarnFloats coinFloats,
+        ControlCenter controlCenter, AppSwitcher appSwitcher, NotificationBanner banner, DynamicIsland island,
+        RateLimitPill rateLimitPill, ShortcutRunPill shortcutPill, CoinEarnPill coinPill, CoinEarnFloats coinFloats,
         IncomingCallOverlay incomingOverlay, BanOverlay banOverlay,
         ConfirmOverlay confirmOverlay, ReportOverlay reportOverlay, ShareSheet shareSheet,
         ConductGateOverlay conductOverlay, EncryptionHelpOverlay encryptionHelpOverlay,
@@ -60,6 +61,7 @@ internal sealed class ShellOverlayCoordinator
         this.loading = loading;
         this.navigation = navigation;
         this.controlCenter = controlCenter;
+        this.appSwitcher = appSwitcher;
         this.banner = banner;
         this.island = island;
         this.rateLimitPill = rateLimitPill;
@@ -85,18 +87,19 @@ internal sealed class ShellOverlayCoordinator
                          (confirmOverlay.CapturesPointer || reportOverlay.CapturesPointer ||
                           shareSheet.CapturesPointer);
         var controlCenterCaptures = !loading.IsActive && controlCenter.CapturesPointer;
-        var overlaysCapture = controlCenterCaptures && !director.WantsControlCenter;
+        var switcherCaptures = !loading.IsActive && appSwitcher.CapturesPointer;
+        var overlaysCapture = (controlCenterCaptures && !director.WantsControlCenter) || switcherCaptures;
         var ringing = !loading.IsActive && incomingOverlay.IsRinging;
-        var islandCaptures = !loading.IsActive && !controlCenterCaptures && !ringing && !confirming &&
-                             !setupActive && !conductActive && !helpActive && !banNotice &&
+        var islandCaptures = !loading.IsActive && !controlCenterCaptures && !switcherCaptures && !ringing &&
+                             !confirming && !setupActive && !conductActive && !helpActive && !banNotice &&
                              !DragScrollHost.AnyDragging &&
                              (island.CapturesPointer() ||
                               (!director.CapturesPointer &&
                                (banner.CapturesPointer(screen) || shortcutPill.CapturesPointer())));
         var busy = loading.IsActive || overlaysCapture || ringing || confirming || navigation.IsTransitioning ||
                    setupActive || banNotice || conductActive || helpActive;
-        var shieldBase = loading.IsActive || islandCaptures || controlCenterCaptures || ringing || confirming ||
-                         setupActive || banNotice || conductActive || helpActive;
+        var shieldBase = loading.IsActive || islandCaptures || controlCenterCaptures || switcherCaptures || ringing ||
+                         confirming || setupActive || banNotice || conductActive || helpActive;
         return new ShellOverlayState(setupActive, confirming, islandCaptures, busy, shieldBase);
     }
 
@@ -109,7 +112,7 @@ internal sealed class ShellOverlayCoordinator
 
         var helpActive = encryptionHelpOverlay.Captures;
         if (!helpActive && !confirmOverlay.CapturesPointer && !reportOverlay.CapturesPointer &&
-            !shareSheet.CapturesPointer && !controlCenter.IsActive)
+            !shareSheet.CapturesPointer && !controlCenter.IsActive && !appSwitcher.IsActive)
         {
             return;
         }
@@ -148,7 +151,13 @@ internal sealed class ShellOverlayCoordinator
             return;
         }
 
-        controlCenter.Dismiss();
+        if (controlCenter.IsActive)
+        {
+            controlCenter.Dismiss();
+            return;
+        }
+
+        appSwitcher.Dismiss();
     }
 
     public void DrawOverlays(in ChassisGeometry chassis, PhoneTheme theme, float delta, in ShellOverlayState state,
@@ -179,7 +188,7 @@ internal sealed class ShellOverlayCoordinator
 
         if (!director.CapturesPointer)
         {
-            if (!controlCenter.IsActive)
+            if (!controlCenter.IsActive && !appSwitcher.IsActive)
             {
                 banner.Draw(screen, theme);
                 island.Draw(screen, theme, navigation, navigation.Current?.Id);
@@ -210,11 +219,18 @@ internal sealed class ShellOverlayCoordinator
             controlCenter.Dismiss();
         }
 
+        if (landscapeHeld && appSwitcher.IsActive)
+        {
+            appSwitcher.Dismiss();
+        }
+
         HandleEscape();
 
+        appSwitcher.DrawOverlay(screen, theme, delta, !director.CapturesPointer && !state.Confirming);
         controlCenter.Draw(screen, theme, delta,
             !navigation.IsTransitioning && !director.CapturesPointer && !state.IslandCaptures &&
-            !banOverlay.IsActive && navigation.Current?.Id != "camera" && !landscapeHeld,
+            !banOverlay.IsActive && navigation.Current?.Id != "camera" && !landscapeHeld &&
+            !appSwitcher.IsActive,
             !director.CapturesPointer);
             
         HoverTooltip.Flush();

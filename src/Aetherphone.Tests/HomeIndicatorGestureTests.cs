@@ -122,6 +122,55 @@ public sealed class HomeIndicatorGestureTests
     }
 
     [Fact]
+    public void HoldingStillFiresTheHoldExactlyOnce()
+    {
+        var gesture = new HomeIndicatorGesture();
+        gesture.Press(new Vector2(200f, 780f));
+        var firedCount = 0;
+        for (var frame = 0; frame < 60; frame++)
+        {
+            if (gesture.TrackHold(new Vector2(200f, 780f), FrameSeconds, Scale))
+            {
+                firedCount++;
+            }
+        }
+
+        Assert.Equal(1, firedCount);
+        Assert.True(gesture.Pressed);
+    }
+
+    [Fact]
+    public void MovingBeyondTheDeadZoneCancelsTheHold()
+    {
+        var gesture = new HomeIndicatorGesture();
+        gesture.Press(new Vector2(200f, 780f));
+        gesture.TrackHold(new Vector2(220f, 780f), FrameSeconds, Scale);
+        var fired = false;
+        for (var frame = 0; frame < 120; frame++)
+        {
+            fired |= gesture.TrackHold(new Vector2(200f, 780f), FrameSeconds, Scale);
+        }
+
+        Assert.False(fired);
+    }
+
+    [Fact]
+    public void ScrubbingSuppressesTheHold()
+    {
+        var gesture = new HomeIndicatorGesture();
+        gesture.Press(new Vector2(200f, 780f));
+        gesture.Track(new Vector2(200f, 700f), FrameSeconds, ScreenHeight, Scale);
+        var fired = false;
+        for (var frame = 0; frame < 120; frame++)
+        {
+            fired |= gesture.TrackHold(new Vector2(200f, 700f), FrameSeconds, Scale);
+        }
+
+        Assert.False(fired);
+        Assert.True(gesture.Scrubbing);
+    }
+
+    [Fact]
     public void DriftFollowsTheCursorAtHalfSpeed()
     {
         var gesture = new HomeIndicatorGesture();

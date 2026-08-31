@@ -2653,6 +2653,8 @@
   "controlCenter.addControls": "Añadir un control",
   "controlCenter.allControlsAdded": "Todos los controles están en su sitio",
   "controlCenter.editHint": "Arrastra para reorganizar · toca ⤢ para cambiar el tamaño",
+  "appSwitcher.closeAll": "Cerrar todo",
+  "appSwitcher.empty": "No hay nada abierto",
   "home.done": "Listo",
   "home.newFolder": "Carpeta",
   "home.widgets": "Widgets",

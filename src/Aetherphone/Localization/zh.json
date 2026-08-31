@@ -2653,6 +2653,8 @@
   "controlCenter.addControls": "添加控件",
   "controlCenter.allControlsAdded": "所有控件都已添加",
   "controlCenter.editHint": "拖动以重新排列 · 点按 ⤢ 调整大小",
+  "appSwitcher.closeAll": "全部关闭",
+  "appSwitcher.empty": "没有打开的应用",
   "home.done": "完成",
   "home.newFolder": "文件夹",
   "home.widgets": "小组件",

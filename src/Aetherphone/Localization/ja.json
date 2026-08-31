@@ -2653,6 +2653,8 @@
   "controlCenter.addControls": "コントロールを追加",
   "controlCenter.allControlsAdded": "すべてのコントロールが配置済みです",
   "controlCenter.editHint": "ドラッグで並べ替え · ⤢ をタップでサイズ変更",
+  "appSwitcher.closeAll": "すべて閉じる",
+  "appSwitcher.empty": "開いているアプリはありません",
   "home.done": "完了",
   "home.newFolder": "フォルダ",
   "home.widgets": "ウィジェット",

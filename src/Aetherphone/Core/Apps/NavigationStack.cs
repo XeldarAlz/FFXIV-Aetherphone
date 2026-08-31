@@ -21,6 +21,7 @@ internal sealed class NavigationStack : INavigator
     private readonly SuspensionGate suspensions;
     private readonly Stack<IPhoneApp> history = new();
     private readonly Dictionary<string, long> closedAtTicks = new(StringComparer.Ordinal);
+    private readonly HashSet<string> forgetOnClose = new(StringComparer.Ordinal);
     private bool resumingOpen;
     private bool scrubbing;
     private Spring cover;
@@ -123,6 +124,7 @@ internal sealed class NavigationStack : INavigator
 
     private void NotifyOpened(IPhoneApp app)
     {
+        forgetOnClose.Remove(app.Id);
         resumingOpen = TryResume(app, requireRecentClose: true);
         if (!resumingOpen)
         {
@@ -164,6 +166,119 @@ internal sealed class NavigationStack : INavigator
         }
 
         return false;
+    }
+
+    public void CollectOpen(List<IPhoneApp> results)
+    {
+        results.Clear();
+        if (current is not null)
+        {
+            results.Add(current);
+        }
+
+        var now = Environment.TickCount64;
+        var sortedFrom = results.Count;
+        foreach (var entry in closedAtTicks)
+        {
+            if (now - entry.Value > ResumeWindowMilliseconds)
+            {
+                continue;
+            }
+
+            var app = FindApp(entry.Key);
+            if (app is not IResumableApp || ReferenceEquals(app, current) || !app.IsAvailable ||
+                !installer.IsInstalled(app.Id) || suspensions.Blocks(app.Id))
+            {
+                continue;
+            }
+
+            var insertIndex = results.Count;
+            while (insertIndex > sortedFrom && closedAtTicks[results[insertIndex - 1].Id] < entry.Value)
+            {
+                insertIndex--;
+            }
+
+            results.Insert(insertIndex, app);
+        }
+    }
+
+    public void Forget(string appId)
+    {
+        closedAtTicks.Remove(appId);
+        RemoveFromHistory(appId);
+        if (current is { } leaving && string.Equals(leaving.Id, appId, StringComparison.Ordinal))
+        {
+            forgetOnClose.Add(appId);
+            GoHome();
+            SettleAny();
+        }
+    }
+
+    public void ForgetAll()
+    {
+        closedAtTicks.Clear();
+        history.Clear();
+        if (current is { } leaving)
+        {
+            forgetOnClose.Add(leaving.Id);
+            GoHome();
+            SettleAny();
+        }
+    }
+
+    public void OpenSettled(string appId)
+    {
+        if (!installer.IsInstalled(appId))
+        {
+            return;
+        }
+
+        var app = FindApp(appId);
+        if (app is null || !app.IsAvailable)
+        {
+            return;
+        }
+
+        OpenApp(app);
+        SettleAny();
+    }
+
+    private IPhoneApp? FindApp(string appId)
+    {
+        for (var index = 0; index < apps.Count; index++)
+        {
+            if (apps[index].Id == appId)
+            {
+                return apps[index];
+            }
+        }
+
+        return null;
+    }
+
+    private void RemoveFromHistory(string appId)
+    {
+        if (history.Count == 0)
+        {
+            return;
+        }
+
+        var retained = new IPhoneApp[history.Count];
+        var retainedCount = 0;
+        while (history.Count > 0)
+        {
+            var entry = history.Pop();
+            if (!string.Equals(entry.Id, appId, StringComparison.Ordinal))
+            {
+                retained[retainedCount] = entry;
+                retainedCount++;
+            }
+        }
+
+        for (var index = retainedCount - 1; index >= 0; index--)
+        {
+            history.Push(retained[index]);
+        }
     }
 
     public void Open(string appId)
@@ -395,6 +510,11 @@ internal sealed class NavigationStack : INavigator
         }
 
         app.OnClosed();
+        if (forgetOnClose.Remove(app.Id))
+        {
+            return;
+        }
+
         closedAtTicks[app.Id] = Environment.TickCount64;
     }
 }

@@ -2653,6 +2653,8 @@
   "controlCenter.addControls": "Denetim Ekle",
   "controlCenter.allControlsAdded": "Tüm denetimler yerinde",
   "controlCenter.editHint": "Yeniden düzenlemek için sürükle · yeniden boyutlandırmak için ⤢ öğesine dokun",
+  "appSwitcher.closeAll": "Tümünü Kapat",
+  "appSwitcher.empty": "Açık uygulama yok",
   "home.done": "Bitti",
   "home.newFolder": "Klasör",
   "home.widgets": "Widget'lar",

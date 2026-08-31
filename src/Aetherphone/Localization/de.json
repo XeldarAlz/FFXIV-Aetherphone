@@ -2653,6 +2653,8 @@
   "controlCenter.addControls": "Bedienelement hinzufügen",
   "controlCenter.allControlsAdded": "Alle Bedienelemente sind platziert",
   "controlCenter.editHint": "Zum Umordnen ziehen · ⤢ tippen zum Skalieren",
+  "appSwitcher.closeAll": "Alle schließen",
+  "appSwitcher.empty": "Nichts ist geöffnet",
   "home.done": "Fertig",
   "home.newFolder": "Ordner",
   "home.widgets": "Widgets",
