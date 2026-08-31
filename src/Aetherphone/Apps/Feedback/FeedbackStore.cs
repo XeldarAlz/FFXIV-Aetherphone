@@ -59,14 +59,14 @@ internal sealed class FeedbackStore : IDisposable
         var keys = new string[imagePaths.Count];
         for (var index = 0; index < imagePaths.Count; index++)
         {
-            var baked = ImageProcessor.BakeJpeg(imagePaths[index], MaxImageDimension);
-            var upload = await media.UploadUrlAsync("image/jpeg", "feedback", token).ConfigureAwait(false);
+            var baked = ImageProcessor.Bake(imagePaths[index], MaxImageDimension);
+            var upload = await media.UploadUrlAsync(baked.ContentType, "feedback", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return null;
             }
 
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType, token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {

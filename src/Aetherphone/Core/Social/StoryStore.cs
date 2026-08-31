@@ -272,14 +272,14 @@ internal sealed class StoryStore : IDisposable
         posting = true;
         work.Run("create story", async token =>
         {
-            var baked = ImageProcessor.BakeCroppedJpeg(sourcePath, crop, StoryWidth, StoryHeight);
-            var upload = await media.UploadUrlAsync("image/jpeg", "story", token).ConfigureAwait(false);
+            var baked = ImageProcessor.BakeCropped(sourcePath, crop, StoryWidth, StoryHeight);
+            var upload = await media.UploadUrlAsync(baked.ContentType, "story", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType, token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {

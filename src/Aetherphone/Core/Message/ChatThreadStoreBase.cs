@@ -985,11 +985,11 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             }
             else
             {
-                var baked = ImageProcessor.BakeJpeg(sourcePath, DmImageMaxDimension);
+                var baked = ImageProcessor.Bake(sourcePath, DmImageMaxDimension);
                 plainBytes = baked.Bytes;
                 width = baked.Width;
                 height = baked.Height;
-                contentType = "image/jpeg";
+                contentType = baked.ContentType;
             }
 
             var outbound = PrepareMedia(id, plainBytes, caption.Trim(), ImageMediaKind);
@@ -1428,7 +1428,7 @@ internal abstract class ChatThreadStoreBase<TMessage, TThread> : IDisposable
             return null;
         }
 
-        var contentType = kind == VoiceMediaKind ? "audio/wav" : "image/jpeg";
+        var contentType = kind == VoiceMediaKind ? "audio/wav" : ImageProcessor.ImageContentTypeOf(plain);
         var upload = await media.UploadUrlAsync(contentType, ReportEvidenceUploadScope, token).ConfigureAwait(false);
         if (upload is null
             || !await media.UploadImageAsync(upload.UploadUrl, plain, contentType, token).ConfigureAwait(false))

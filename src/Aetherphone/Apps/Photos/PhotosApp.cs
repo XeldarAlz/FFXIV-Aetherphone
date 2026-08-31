@@ -640,7 +640,7 @@ internal sealed partial class PhotosApp : IPhoneApp
             }
             else
             {
-                bytes = ImageProcessor.BakeJpeg(path, ThumbnailMaxDimension).Bytes;
+                bytes = ImageProcessor.Bake(path, ThumbnailMaxDimension).Bytes;
                 Directory.CreateDirectory(Path.GetDirectoryName(thumbnailPath)!);
                 await File.WriteAllBytesAsync(thumbnailPath, bytes, token).ConfigureAwait(false);
             }

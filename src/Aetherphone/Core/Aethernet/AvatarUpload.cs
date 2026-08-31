@@ -47,14 +47,14 @@ internal static class AvatarUpload
     public static async Task<AvatarUploadResult> RunAsync(AccountClient account, MediaClient media, string sourcePath,
         WallpaperCrop crop, CancellationToken token)
     {
-        var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, Size);
-        var upload = await media.UploadUrlAsync("image/jpeg", "avatar", token).ConfigureAwait(false);
+        var baked = ImageProcessor.BakeSquare(sourcePath, crop, Size);
+        var upload = await media.UploadUrlAsync(baked.ContentType, "avatar", token).ConfigureAwait(false);
         if (upload is null)
         {
             return AvatarUploadResult.Unreachable;
         }
 
-        if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false))
+        if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType, token).ConfigureAwait(false))
         {
             return AvatarUploadResult.Unreachable;
         }

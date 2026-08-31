@@ -14,14 +14,14 @@ internal static class StationArtworkUpload
     {
         try
         {
-            var baked = ImageProcessor.BakeSquareJpeg(sourcePath, crop, Size);
-            var upload = await media.UploadUrlAsync("image/jpeg", "radio", token).ConfigureAwait(false);
+            var baked = ImageProcessor.BakeSquare(sourcePath, crop, Size);
+            var upload = await media.UploadUrlAsync(baked.ContentType, "radio", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return false;
             }
 
-            if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType, token)
                     .ConfigureAwait(false))
             {
                 return false;

@@ -423,14 +423,14 @@ internal sealed class YellowPagesStore : IDisposable
         var keys = new string[photoPaths.Count];
         for (var index = 0; index < photoPaths.Count; index++)
         {
-            var baked = ImageProcessor.BakeJpeg(photoPaths[index], MaxImageDimension);
-            var upload = await media.UploadUrlAsync("image/jpeg", "ad", token).ConfigureAwait(false);
+            var baked = ImageProcessor.Bake(photoPaths[index], MaxImageDimension);
+            var upload = await media.UploadUrlAsync(baked.ContentType, "ad", token).ConfigureAwait(false);
             if (upload is null)
             {
                 return null;
             }
 
-            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token)
+            var uploaded = await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType, token)
                 .ConfigureAwait(false);
             if (!uploaded)
             {

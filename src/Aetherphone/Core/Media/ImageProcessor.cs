@@ -1,5 +1,8 @@
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics.X86;
+using System.Text;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Textures.TextureWraps;
@@ -7,6 +10,7 @@ using Dalamud.Plugin.Services;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 
@@ -17,22 +21,34 @@ internal readonly struct BakedImage
     public readonly byte[] Bytes;
     public readonly int Width;
     public readonly int Height;
+    public readonly string ContentType;
 
-    public BakedImage(byte[] bytes, int width, int height)
+    public BakedImage(byte[] bytes, int width, int height, string contentType)
     {
         Bytes = bytes;
         Width = width;
         Height = height;
+        ContentType = contentType;
     }
 }
 
 internal static class ImageProcessor
 {
+    public const string JpegContentType = "image/jpeg";
+    public const string PngContentType = "image/png";
+
     private const int JpegQuality = 88;
-    private const int EncodeAttemptLimit = 3;
+    private const int JpegAttemptLimit = 3;
+    private const int PngAttemptLimit = 2;
     private const float LumaDeltaLimit = 80f;
     private const float ChromaDeltaLimit = 64f;
     private const int CorruptSampleLimit = 3;
+    private const int SpeckleChannelDeltaLimit = 96;
+    private const int FlatSourceRangeLimit = 24;
+    private const int FlatWindowRadius = 2;
+    private const int ServerMaxImageBytes = 8 * 1024 * 1024;
+
+    private static readonly string ProcessorName = ReadProcessorName();
 
     public const long MaxDecodePixels = 4096L * 4096L;
     public const long MaxLocalDecodePixels = 8192L * 8192L;
@@ -94,9 +110,9 @@ internal static class ImageProcessor
         image.Mutate(context => context.Resize(width, height));
     }
 
-    public static BakedImage BakeSquareJpeg(string sourcePath, WallpaperCrop crop, int target)
+    public static BakedImage BakeSquare(string sourcePath, WallpaperCrop crop, int target)
     {
-        return BakeCroppedJpeg(sourcePath, crop, target, target);
+        return BakeCropped(sourcePath, crop, target, target);
     }
 
     // revealWholeImage lets the crop fall below WallpaperCrop.MinZoom so the whole source stays
@@ -105,7 +121,7 @@ internal static class ImageProcessor
     // keeps real pixels only and the display side frames it (see ImageFit.DrawLetterboxed), rather
     // than burning bars into the JPEG where a cover-cropping profile grid would later cut through
     // them.
-    public static BakedImage BakeCroppedJpeg(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
+    public static BakedImage BakeCropped(string sourcePath, WallpaperCrop crop, int targetWidth, int targetHeight,
         bool revealWholeImage = false)
     {
         using var sourceStream = File.OpenRead(sourcePath);
@@ -126,7 +142,7 @@ internal static class ImageProcessor
         image.Mutate(context => context
             .Crop(new Rectangle(x, y, width, height))
             .Resize(containedWidth, containedHeight));
-        return new BakedImage(EncodeJpegVerified(image), containedWidth, containedHeight);
+        return EncodeVerified(image);
     }
 
     public static (int Width, int Height) ContainSize(int width, int height, int targetWidth, int targetHeight)
@@ -142,44 +158,76 @@ internal static class ImageProcessor
         return (containedWidth, containedHeight);
     }
 
-    public static BakedImage BakeJpeg(string sourcePath, int maxDimension)
+    public static BakedImage Bake(string sourcePath, int maxDimension)
     {
         using var sourceStream = File.OpenRead(sourcePath);
         EnsureDecodable(sourceStream, MaxLocalDecodePixels);
         using var image = Image.Load(SingleFrame, sourceStream);
         ScaleWithin(image, maxDimension);
-        return new BakedImage(EncodeJpegVerified(image), image.Width, image.Height);
+        return EncodeVerified(image);
     }
 
-    private static byte[] EncodeJpegVerified(Image image)
+    private static BakedImage EncodeVerified(Image image)
     {
-        using var reference = image.CloneAs<Rgba32>();
-        var length = checked(reference.Width * reference.Height * 4);
+        using var normalized = image.CloneAs<Rgb24>();
+        var width = normalized.Width;
+        var height = normalized.Height;
+        var length = checked(width * height * 4);
         var referencePixels = ArrayPool<byte>.Shared.Rent(length);
         var decodedPixels = ArrayPool<byte>.Shared.Rent(length);
         try
         {
-            reference.CopyPixelDataTo(referencePixels.AsSpan(0, length));
-            var encoded = Array.Empty<byte>();
-            for (var attempt = 1; attempt <= EncodeAttemptLimit; attempt++)
+            using (var reference = normalized.CloneAs<Rgba32>())
             {
-                using var stream = new MemoryStream();
-                image.SaveAsJpeg(stream, new JpegEncoder { Quality = JpegQuality });
-                encoded = stream.ToArray();
-                using var decodedStream = new MemoryStream(encoded);
-                using var decoded = Image.Load<Rgba32>(SingleFrame, decodedStream);
-                decoded.CopyPixelDataTo(decodedPixels.AsSpan(0, length));
-                if (!HasEncodeCorruption(referencePixels.AsSpan(0, length), decodedPixels.AsSpan(0, length),
-                        reference.Width, reference.Height))
-                {
-                    return encoded;
-                }
-
-                AepLog.Warning($"[Media] jpeg encode attempt {attempt} of {EncodeAttemptLimit} " +
-                    "produced corrupt samples, re-encoding");
+                reference.CopyPixelDataTo(referencePixels.AsSpan(0, length));
             }
 
-            return encoded;
+            for (var attempt = 1; attempt <= JpegAttemptLimit; attempt++)
+            {
+                byte[] encoded;
+                if (attempt < JpegAttemptLimit)
+                {
+                    encoded = EncodeJpegBytes(normalized);
+                }
+                else
+                {
+                    using var rebuilt = normalized.Clone();
+                    encoded = EncodeJpegBytes(rebuilt);
+                }
+
+                if (DecodesCleanly(encoded, referencePixels, decodedPixels, length, width, height))
+                {
+                    return new BakedImage(encoded, width, height, JpegContentType);
+                }
+
+                AepLog.Warning($"[Media] jpeg bake attempt {attempt} of {JpegAttemptLimit} failed verification " +
+                    $"({width}x{height}, cpu: {ProcessorName})");
+            }
+
+            for (var attempt = 1; attempt <= PngAttemptLimit; attempt++)
+            {
+                var encoded = EncodePngBytes(normalized);
+                if (PngRoundTripMatches(encoded, referencePixels, decodedPixels, length))
+                {
+                    if (encoded.Length <= ServerMaxImageBytes)
+                    {
+                        AepLog.Warning($"[Media] shipping a verified lossless png bake of {encoded.Length} bytes " +
+                            $"after jpeg verification failed (cpu: {ProcessorName})");
+                        return new BakedImage(encoded, width, height, PngContentType);
+                    }
+
+                    AepLog.Warning($"[Media] png fallback of {encoded.Length} bytes exceeds the " +
+                        $"{ServerMaxImageBytes} byte upload cap");
+                    break;
+                }
+
+                AepLog.Warning($"[Media] png bake attempt {attempt} of {PngAttemptLimit} failed verification " +
+                    $"(cpu: {ProcessorName})");
+            }
+
+            throw new InvalidImageContentException(
+                $"Every encode attempt failed verification on this machine (cpu: {ProcessorName}); " +
+                "refusing to upload a corrupt photo.");
         }
         finally
         {
@@ -188,7 +236,135 @@ internal static class ImageProcessor
         }
     }
 
+    private static byte[] EncodeJpegBytes(Image image)
+    {
+        using var stream = new MemoryStream();
+        image.SaveAsJpeg(stream, new JpegEncoder { Quality = JpegQuality });
+        return stream.ToArray();
+    }
+
+    private static byte[] EncodePngBytes(Image image)
+    {
+        using var stream = new MemoryStream();
+        image.SaveAsPng(stream, new PngEncoder { CompressionLevel = PngCompressionLevel.BestCompression });
+        return stream.ToArray();
+    }
+
+    private static bool DecodesCleanly(byte[] encoded, byte[] referencePixels, byte[] decodedPixels, int length,
+        int width, int height)
+    {
+        using var decodedStream = new MemoryStream(encoded);
+        using var decoded = Image.Load<Rgba32>(SingleFrame, decodedStream);
+        decoded.CopyPixelDataTo(decodedPixels.AsSpan(0, length));
+        return !HasEncodeCorruption(referencePixels.AsSpan(0, length), decodedPixels.AsSpan(0, length),
+            width, height);
+    }
+
+    private static bool PngRoundTripMatches(byte[] encoded, byte[] referencePixels, byte[] decodedPixels, int length)
+    {
+        using var decodedStream = new MemoryStream(encoded);
+        using var decoded = Image.Load<Rgba32>(SingleFrame, decodedStream);
+        decoded.CopyPixelDataTo(decodedPixels.AsSpan(0, length));
+        return referencePixels.AsSpan(0, length).SequenceEqual(decodedPixels.AsSpan(0, length));
+    }
+
+    private static string ReadProcessorName()
+    {
+        if (!X86Base.IsSupported)
+        {
+            return RuntimeInformation.ProcessArchitecture.ToString();
+        }
+
+        var (maxExtendedLeaf, _, _, _) = X86Base.CpuId(unchecked((int)0x80000000), 0);
+        if ((uint)maxExtendedLeaf < 0x80000004)
+        {
+            return RuntimeInformation.ProcessArchitecture.ToString();
+        }
+
+        Span<int> registers = stackalloc int[12];
+        for (var leafIndex = 0; leafIndex < 3; leafIndex++)
+        {
+            var (eax, ebx, ecx, edx) = X86Base.CpuId(unchecked((int)(0x80000002u + (uint)leafIndex)), 0);
+            var registerIndex = leafIndex * 4;
+            registers[registerIndex] = eax;
+            registers[registerIndex + 1] = ebx;
+            registers[registerIndex + 2] = ecx;
+            registers[registerIndex + 3] = edx;
+        }
+
+        var brandBytes = MemoryMarshal.AsBytes(registers);
+        var terminatorIndex = brandBytes.IndexOf((byte)0);
+        var nameLength = terminatorIndex < 0 ? brandBytes.Length : terminatorIndex;
+        return Encoding.ASCII.GetString(brandBytes[..nameLength]).Trim();
+    }
+
     internal static bool HasEncodeCorruption(ReadOnlySpan<byte> sourceRgba, ReadOnlySpan<byte> decodedRgba,
+        int width, int height)
+    {
+        return HasCorruptCells(sourceRgba, decodedRgba, width, height)
+            || HasFlatAreaSpeckle(sourceRgba, decodedRgba, width, height);
+    }
+
+    internal static bool HasFlatAreaSpeckle(ReadOnlySpan<byte> sourceRgba, ReadOnlySpan<byte> decodedRgba,
+        int width, int height)
+    {
+        for (var pixelY = 0; pixelY < height; pixelY++)
+        {
+            var rowStart = pixelY * width;
+            for (var pixelX = 0; pixelX < width; pixelX++)
+            {
+                var index = (rowStart + pixelX) * 4;
+                if (Math.Abs(sourceRgba[index] - decodedRgba[index]) <= SpeckleChannelDeltaLimit
+                    && Math.Abs(sourceRgba[index + 1] - decodedRgba[index + 1]) <= SpeckleChannelDeltaLimit
+                    && Math.Abs(sourceRgba[index + 2] - decodedRgba[index + 2]) <= SpeckleChannelDeltaLimit)
+                {
+                    continue;
+                }
+
+                if (SourceWindowIsFlat(sourceRgba, width, height, pixelX, pixelY))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private static bool SourceWindowIsFlat(ReadOnlySpan<byte> sourceRgba, int width, int height,
+        int centerX, int centerY)
+    {
+        var startX = Math.Max(0, centerX - FlatWindowRadius);
+        var endX = Math.Min(width - 1, centerX + FlatWindowRadius);
+        var startY = Math.Max(0, centerY - FlatWindowRadius);
+        var endY = Math.Min(height - 1, centerY + FlatWindowRadius);
+        var minRed = 255;
+        var maxRed = 0;
+        var minGreen = 255;
+        var maxGreen = 0;
+        var minBlue = 255;
+        var maxBlue = 0;
+        for (var windowY = startY; windowY <= endY; windowY++)
+        {
+            var rowStart = windowY * width;
+            for (var windowX = startX; windowX <= endX; windowX++)
+            {
+                var index = (rowStart + windowX) * 4;
+                minRed = Math.Min(minRed, sourceRgba[index]);
+                maxRed = Math.Max(maxRed, sourceRgba[index]);
+                minGreen = Math.Min(minGreen, sourceRgba[index + 1]);
+                maxGreen = Math.Max(maxGreen, sourceRgba[index + 1]);
+                minBlue = Math.Min(minBlue, sourceRgba[index + 2]);
+                maxBlue = Math.Max(maxBlue, sourceRgba[index + 2]);
+            }
+        }
+
+        return maxRed - minRed < FlatSourceRangeLimit
+            && maxGreen - minGreen < FlatSourceRangeLimit
+            && maxBlue - minBlue < FlatSourceRangeLimit;
+    }
+
+    private static bool HasCorruptCells(ReadOnlySpan<byte> sourceRgba, ReadOnlySpan<byte> decodedRgba,
         int width, int height)
     {
         var corruptSamples = 0;
@@ -287,6 +463,21 @@ internal static class ImageProcessor
         var pixels = new byte[length];
         image.CopyPixelDataTo(pixels);
         return (pixels, image.Width, image.Height);
+    }
+
+    public static string ImageContentTypeOf(ReadOnlySpan<byte> bytes)
+    {
+        if (IsGif(bytes))
+        {
+            return "image/gif";
+        }
+
+        if (bytes.Length >= PngSignature.Length && bytes[..PngSignature.Length].SequenceEqual(PngSignature))
+        {
+            return PngContentType;
+        }
+
+        return JpegContentType;
     }
 
     public static bool IsGif(ReadOnlySpan<byte> bytes)

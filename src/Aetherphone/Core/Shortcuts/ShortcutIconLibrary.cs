@@ -47,7 +47,7 @@ internal sealed class ShortcutIconLibrary
     }
 
     public static byte[] Bake(string sourcePath, WallpaperCrop crop) =>
-        ImageProcessor.BakeSquareJpeg(sourcePath, crop, IconSize).Bytes;
+        ImageProcessor.BakeSquare(sourcePath, crop, IconSize).Bytes;
 
     public string Commit(byte[] bakedBytes)
     {

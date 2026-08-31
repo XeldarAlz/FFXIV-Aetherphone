@@ -77,10 +77,10 @@ internal sealed class AethergramStore : SocialFeedStore
                 else
                 {
                     var (bakedWidth, bakedHeight) = PostAspects.Size(aspects[index], GramSize);
-                    var baked = ImageProcessor.BakeCroppedJpeg(sourcePaths[index], crops[index], bakedWidth,
+                    var baked = ImageProcessor.BakeCropped(sourcePaths[index], crops[index], bakedWidth,
                         bakedHeight, PostAspects.RevealsWholeImage(aspects[index]));
                     bytes = baked.Bytes;
-                    contentType = "image/jpeg";
+                    contentType = baked.ContentType;
                     if (index == 0)
                     {
                         containerWidth = baked.Width;

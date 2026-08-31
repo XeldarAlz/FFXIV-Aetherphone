@@ -65,7 +65,7 @@ public sealed class ImageProcessorEncodeVerificationTests
     }
 
     [Fact]
-    public void IgnoresFewerThanThreeCorruptSamples()
+    public void FlagsATwoPixelDashOnAFlatArea()
     {
         var source = BuildFlat(10, 10, 14);
         var decoded = (byte[])source.Clone();
@@ -76,6 +76,45 @@ public sealed class ImageProcessorEncodeVerificationTests
             decoded[pixelIndex + 1] = (byte)Math.Min(255, decoded[pixelIndex + 1] + 128);
             decoded[pixelIndex + 2] = (byte)Math.Min(255, decoded[pixelIndex + 2] + 128);
         }
+
+        Assert.True(ImageProcessor.HasEncodeCorruption(source, decoded, Width, Height));
+    }
+
+    [Fact]
+    public void FlagsASingleSaturatedSpeckleOnAFlatArea()
+    {
+        var source = BuildFlat(128, 128, 128);
+        var decoded = (byte[])source.Clone();
+        var pixelIndex = ((20 * Width) + 32) * 4;
+        decoded[pixelIndex] = 0;
+        decoded[pixelIndex + 1] = 0;
+        decoded[pixelIndex + 2] = 255;
+
+        Assert.True(ImageProcessor.HasEncodeCorruption(source, decoded, Width, Height));
+    }
+
+    [Fact]
+    public void FlagsARedSpeckleTheLumaCheckCannotSee()
+    {
+        var source = BuildFlat(128, 128, 128);
+        var decoded = (byte[])source.Clone();
+        var pixelIndex = ((20 * Width) + 32) * 4;
+        decoded[pixelIndex] = 255;
+        decoded[pixelIndex + 1] = 0;
+        decoded[pixelIndex + 2] = 0;
+
+        Assert.True(ImageProcessor.HasEncodeCorruption(source, decoded, Width, Height));
+    }
+
+    [Fact]
+    public void IgnoresASpeckleSizedDeltaInsideBusyDetail()
+    {
+        var source = BuildCheckerboard();
+        var decoded = (byte[])source.Clone();
+        var pixelIndex = ((20 * Width) + 32) * 4;
+        decoded[pixelIndex] = (byte)Math.Min(255, decoded[pixelIndex] + 128);
+        decoded[pixelIndex + 1] = (byte)Math.Min(255, decoded[pixelIndex + 1] + 128);
+        decoded[pixelIndex + 2] = (byte)Math.Min(255, decoded[pixelIndex + 2] + 128);
 
         Assert.False(ImageProcessor.HasEncodeCorruption(source, decoded, Width, Height));
     }
@@ -91,11 +130,12 @@ public sealed class ImageProcessorEncodeVerificationTests
                 image.SaveAsPng(sourcePath);
             }
 
-            var baked = ImageProcessor.BakeJpeg(sourcePath, Width);
+            var baked = ImageProcessor.Bake(sourcePath, Width);
 
             Assert.NotEmpty(baked.Bytes);
             Assert.Equal(Width, baked.Width);
             Assert.Equal(Height, baked.Height);
+            Assert.Equal(ImageProcessor.JpegContentType, baked.ContentType);
             using var roundtrip = Image.Load<Rgba32>(baked.Bytes);
             var decodedPixels = new byte[Width * Height * 4];
             roundtrip.CopyPixelDataTo(decodedPixels);
@@ -116,6 +156,25 @@ public sealed class ImageProcessorEncodeVerificationTests
             pixels[pixelIndex + 1] = green;
             pixels[pixelIndex + 2] = blue;
             pixels[pixelIndex + 3] = 255;
+        }
+
+        return pixels;
+    }
+
+    private static byte[] BuildCheckerboard()
+    {
+        var pixels = new byte[Width * Height * 4];
+        for (var pixelY = 0; pixelY < Height; pixelY++)
+        {
+            for (var pixelX = 0; pixelX < Width; pixelX++)
+            {
+                var pixelIndex = ((pixelY * Width) + pixelX) * 4;
+                var shade = (pixelX + pixelY) % 2 == 0 ? (byte)0 : (byte)255;
+                pixels[pixelIndex] = shade;
+                pixels[pixelIndex + 1] = shade;
+                pixels[pixelIndex + 2] = shade;
+                pixels[pixelIndex + 3] = 255;
+            }
         }
 
         return pixels;

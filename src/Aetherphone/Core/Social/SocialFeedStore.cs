@@ -634,11 +634,11 @@ internal abstract class SocialFeedStore : IDisposable
             }
             else
             {
-                var baked = ImageProcessor.BakeJpeg(imagePaths[index], maxDimension);
+                var baked = ImageProcessor.Bake(imagePaths[index], maxDimension);
                 bytes = baked.Bytes;
                 width = baked.Width;
                 height = baked.Height;
-                contentType = "image/jpeg";
+                contentType = baked.ContentType;
             }
 
             var upload = await media.UploadUrlAsync(contentType, uploadScope, token, onFailure).ConfigureAwait(false);

@@ -14,14 +14,14 @@ internal static class BannerUpload
     public static async Task<AvatarUploadResult> RunAsync(AccountClient account, MediaClient media, string sourcePath,
         WallpaperCrop crop, CancellationToken token)
     {
-        var baked = ImageProcessor.BakeCroppedJpeg(sourcePath, crop, Width, Height);
-        var upload = await media.UploadUrlAsync("image/jpeg", "banner", token).ConfigureAwait(false);
+        var baked = ImageProcessor.BakeCropped(sourcePath, crop, Width, Height);
+        var upload = await media.UploadUrlAsync(baked.ContentType, "banner", token).ConfigureAwait(false);
         if (upload is null)
         {
             return AvatarUploadResult.Unreachable;
         }
 
-        if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, "image/jpeg", token).ConfigureAwait(false))
+        if (!await media.UploadImageAsync(upload.UploadUrl, baked.Bytes, baked.ContentType, token).ConfigureAwait(false))
         {
             return AvatarUploadResult.Unreachable;
         }
