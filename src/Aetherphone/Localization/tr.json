@@ -4988,6 +4988,7 @@
   "changelog.r1019.5": "Temiz çekim eklendi: oyun arayüzü artık fotoğraflarda varsayılan olarak gizli, deklanşörün yanındaki düğme isterseniz görünür bırakır, Radvo katkısıyla",
   "changelog.r1019.6": "Bölge haritaları artık doğrudan oyun istemcisinden okunuyor ve doğma noktası kümesine sığdırılmış olarak açılıyor, Deldee katkısıyla",
   "changelog.r1019.7": "Doğma ipuçlarının yanlış dilde görünebilmesine yol açan bir sorun düzeltildi",
+  "changelog.r1019.8": "Su Ayır artık renk körlüğüne uygun bir palet kullanıyor: her sıvı hem ton hem parlaklık olarak farklı olduğundan birbirine benzeyen renkleri ayırt etmek daha kolay",
   "changelog.r1018.0": "Uzun dikey fotoğrafların akışta kırpılması düzeltildi, gönderi çerçevesi artık fotoğrafın biçimine uyuyor ve resmin tamamını gösteriyor",
   "changelog.r1018.1": "Ayarlar > Hakkında bölümündeki Destek bilgisini kopyala artık Discord sunucumuzdaki hata raporları için gereken her şeyi topluyor",
   "changelog.r1018.2": "Takipçiler ve Takip edilenler listeleri artık başlığın altında tam sayıyı gösteriyor, böylece 1,5K gibi yuvarlanmış istatistiklerin gerçek değeri görülebiliyor",  "changelog.r1017.0": "Bir gönderinin altındaki beğeni sayısına dokunmanın Beğenenler listesini açmak yerine gönderiyi beğenmesi veya beğeniyi geri alması düzeltildi",

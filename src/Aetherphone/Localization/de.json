@@ -4988,6 +4988,7 @@
   "changelog.r1019.5": "Saubere Aufnahmen hinzugefügt: Die Spieloberfläche ist auf Fotos jetzt standardmäßig ausgeblendet, ein Knopf neben dem Auslöser behält sie bei Bedarf im Bild, beigetragen von Radvo",
   "changelog.r1019.6": "Zonenkarten werden jetzt direkt aus dem Spielclient gelesen und öffnen passend auf die Spawn-Punkte zugeschnitten, beigetragen von Deldee",
   "changelog.r1019.7": "Ein Fehler wurde behoben, durch den Spawn-Hinweise in der falschen Sprache erscheinen konnten",
+  "changelog.r1019.8": "Wasser sortieren nutzt jetzt eine für Farbenblinde geeignete Palette: jede Flüssigkeit unterscheidet sich in Farbton und Helligkeit, sodass sich ähnliche Töne leichter unterscheiden lassen",
   "changelog.r1018.0": "Behoben: Hochformatige Fotos wurden im Feed beschnitten, der Beitragsrahmen folgt jetzt der Form des Fotos und zeigt das ganze Bild",
   "changelog.r1018.1": "Supportinfos kopieren unter Einstellungen > Info sammelt jetzt alles, was für Fehlerberichte auf unserem Discord-Server benötigt wird",
   "changelog.r1018.2": "Die Abonnenten- und Folge-ich-Listen zeigen jetzt die genaue Zahl unter dem Titel, so ist der echte Wert hinter gerundeten Angaben wie 1,5K sichtbar",  "changelog.r1017.0": "Behoben: Ein Tipp auf die Gefällt-mir-Zahl unter einem Beitrag setzte oder entfernte das Gefällt mir, statt anzuzeigen, wem der Beitrag gefällt",

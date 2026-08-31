@@ -1675,6 +1675,12 @@ internal static class L
                 "Posts with an edited caption show an Edited mark next to the timestamp"),
         };
 
+        public static readonly LocString[] Release1019Games =
+        {
+            new("changelog.r1019.8",
+                "Water Sort now pours from a colorblind-friendly palette: every liquid differs in both hue and brightness, so shades that used to look alike are easier to tell apart"),
+        };
+
         public static readonly LocString[] Release1018Aethergram =
         {
             new("changelog.r1018.0",

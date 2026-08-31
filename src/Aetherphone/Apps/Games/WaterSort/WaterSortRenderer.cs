@@ -7,11 +7,18 @@ namespace Aetherphone.Apps.Games.WaterSort;
 
 internal sealed class WaterSortRenderer
 {
+    // Okabe-Ito colorblind-safe palette plus white and maroon; every entry also differs in lightness
     private static readonly Vector4[] LiquidColors =
     {
-        new(0.95f, 0.45f, 0.78f, 1f), new(0.40f, 0.68f, 0.98f, 1f), new(0.46f, 0.86f, 0.66f, 1f),
-        new(0.95f, 0.62f, 0.30f, 1f), new(0.72f, 0.46f, 0.96f, 1f), new(0.93f, 0.42f, 0.50f, 1f),
-        new(0.36f, 0.82f, 0.82f, 1f), new(0.92f, 0.84f, 0.36f, 1f), new(0.62f, 0.66f, 0.74f, 1f),
+        new(0.10f, 0.48f, 0.82f, 1f), // blue
+        new(0.96f, 0.88f, 0.25f, 1f), // yellow
+        new(0.86f, 0.24f, 0.22f, 1f), // red
+        new(0.00f, 0.66f, 0.47f, 1f), // green
+        new(0.94f, 0.62f, 0.05f, 1f), // orange
+        new(0.36f, 0.74f, 0.94f, 1f), // sky
+        new(0.87f, 0.48f, 0.70f, 1f), // pink
+        new(0.85f, 0.87f, 0.92f, 1f), // white
+        new(0.47f, 0.16f, 0.22f, 1f), // maroon
     };
 
     public static Vector4 ColorOf(int color) => LiquidColors[color % LiquidColors.Length];

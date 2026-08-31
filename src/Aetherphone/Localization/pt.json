@@ -4988,6 +4988,7 @@
   "changelog.r1019.5": "Adicionadas fotos limpas: a interface do jogo agora fica oculta nas suas fotos por padrão, com um botão ao lado do obturador para mantê-la visível, contribuição de Radvo",
   "changelog.r1019.6": "Os mapas de zona agora são lidos direto do cliente do jogo e abrem ajustados ao grupo de pontos de surgimento, contribuição de Deldee",
   "changelog.r1019.7": "Corrigido um problema em que as dicas de surgimento podiam aparecer no idioma errado",
+  "changelog.r1019.8": "Água e Tubos agora usa uma paleta amigável para daltônicos: cada líquido se distingue por tom e brilho, então cores parecidas ficam mais fáceis de diferenciar",
   "changelog.r1018.0": "Corrigido: fotos verticais altas eram cortadas no feed, a moldura da publicação agora segue o formato da foto e mostra a imagem inteira",
   "changelog.r1018.1": "Copiar info de suporte em Ajustes > Sobre agora reúne tudo o que é preciso para relatos de bugs no nosso servidor do Discord",
   "changelog.r1018.2": "As listas de Seguidores e Seguindo agora mostram o número exato sob o título, revelando o valor real por trás de números arredondados como 1,5K",  "changelog.r1017.0": "Corrigido: tocar no número de curtidas abaixo de uma publicação curtia ou descurtia a publicação em vez de abrir a lista Curtido por",
