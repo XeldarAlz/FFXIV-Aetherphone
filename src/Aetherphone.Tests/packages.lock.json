@@ -112,6 +112,11 @@
         "resolved": "1.1.0.5",
         "contentHash": "svtqDc+hue9kbnqNN2KkK4om/hDrc7K127cNb5FIYfgKgzo+JNDPXNLp8NioCchHhBO3lxWd4Cp/iiZZ3aoUqg=="
       },
+      "Net.Codecrete.QrCodeGenerator": {
+        "type": "Transitive",
+        "resolved": "2.0.6",
+        "contentHash": "2Go9wbHKqpNkU3E/RGMOLx0icLGjRxZklS/CHM2Zy+iGymK+lBEJnacxouhAGQrhesYa+NG1s0dnYbIIIYGlbQ=="
+      },
       "NETStandard.Library": {
         "type": "Transitive",
         "resolved": "1.6.1",
@@ -306,12 +311,13 @@
           "BouncyCastle.Cryptography": "[2.7.0, )",
           "Concentus": "[2.2.2, )",
           "DalamudPackager": "[15.0.0, )",
-          "ManagedDoom": "[1.0.0.9, )",
+          "ManagedDoom": "[1.0.1.9, )",
           "MeltySynth": "[2.4.1, )",
           "NAudio.Wasapi": "[2.3.0, )",
           "NAudio.WinMM": "[2.3.0, )",
           "NEbml": "[1.1.0.5, )",
           "NLayer.NAudioSupport": "[2.0.1, )",
+          "Net.Codecrete.QrCodeGenerator": "[2.0.6, )",
           "NetStone": "[1.4.1, )",
           "Newtonsoft.Json": "[13.0.4, )",
           "SharpCompress": "[0.48.1, )",

@@ -69,4 +69,19 @@ internal sealed class AuthClient
     {
         return net.SendWithBearerAsync(HttpMethod.Delete, "/auth/token", bearer, token);
     }
+
+    public Task<DeviceLinkNewResponse?> NewDeviceLinkAsync(CancellationToken token)
+    {
+        return net.PostAsync("/auth/device-link/new", new DeviceLinkNewRequest(), AethernetJsonContext.Default.DeviceLinkNewRequest, AethernetJsonContext.Default.DeviceLinkNewResponse, token);
+    }
+
+    public Task<DeviceLinkStatusResponse?> DeviceLinkStatusAsync(string code, CancellationToken token)
+    {
+        return net.GetAsync($"/auth/device-link/status/{code}", AethernetJsonContext.Default.DeviceLinkStatusResponse, token);
+    }
+
+    public Task<DeviceLinkApproveResponse?> ApproveDeviceLinkAsync(string code, CancellationToken token)
+    {
+        return net.PostAsync("/auth/device-link/approve", new DeviceLinkApproveRequest(code), AethernetJsonContext.Default.DeviceLinkApproveRequest, AethernetJsonContext.Default.DeviceLinkApproveResponse, token);
+    }
 }
