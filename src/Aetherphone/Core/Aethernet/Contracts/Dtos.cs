@@ -40,6 +40,16 @@ internal sealed record XivAuthStartResponse(
 
 internal sealed record XivAuthPollRequest(string FlowId);
 
+internal sealed record DeviceLinkNewRequest;
+
+internal sealed record DeviceLinkNewResponse(string Code, int ExpiresInSeconds);
+
+internal sealed record DeviceLinkStatusResponse(bool Ok, string? DeviceName, bool Approved);
+
+internal sealed record DeviceLinkApproveRequest(string Code);
+
+internal sealed record DeviceLinkApproveResponse(bool Ok, string? Reason);
+
 internal sealed record UserDto(
     string Id,
     string Name,

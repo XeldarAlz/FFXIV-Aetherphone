@@ -56,6 +56,12 @@
         "resolved": "1.1.0.5",
         "contentHash": "svtqDc+hue9kbnqNN2KkK4om/hDrc7K127cNb5FIYfgKgzo+JNDPXNLp8NioCchHhBO3lxWd4Cp/iiZZ3aoUqg=="
       },
+      "Net.Codecrete.QrCodeGenerator": {
+        "type": "Direct",
+        "requested": "[2.0.6, )",
+        "resolved": "2.0.6",
+        "contentHash": "2Go9wbHKqpNkU3E/RGMOLx0icLGjRxZklS/CHM2Zy+iGymK+lBEJnacxouhAGQrhesYa+NG1s0dnYbIIIYGlbQ=="
+      },
       "NetStone": {
         "type": "Direct",
         "requested": "[1.4.1, )",

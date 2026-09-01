@@ -46,6 +46,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
     private readonly EncryptionPage encryptionPage;
     private readonly ChangelogPage changelogPage;
     private readonly PrivacyPage privacyPage;
+    private readonly LinkedDevicesPage linkedDevicesPage;
     private readonly TagsMentionsPage tagsMentionsPage;
     private readonly ThemeProvider themes;
     private readonly WallpaperLibrary wallpapers;
@@ -116,10 +117,11 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
             confirm, this, tagsMentionsPage);
         var about = new AboutPage(configuration, gameData, aethernetSession);
         changelogPage = new ChangelogPage(configuration);
+        linkedDevicesPage = new LinkedDevicesPage(aethernetSession, aethernet.Auth);
         var groups = new[]
         {
             new ISettingsPage[] { general, appearance, sounds, notificationsPage, callsPage, language },
-            new ISettingsPage[] { privacyPage, safetyPage },
+            new ISettingsPage[] { privacyPage, safetyPage, linkedDevicesPage },
             new ISettingsPage[] { tutorials, commands, changelogPage, about },
         };
         var searchableCount = 0;
@@ -305,5 +307,6 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
         encryptionPage.Dispose();
         privacyPage.Dispose();
         tagsMentionsPage.Dispose();
+        linkedDevicesPage.Dispose();
     }
 }
