@@ -66,7 +66,10 @@ internal sealed class DailiesApp : IPhoneApp
         this.gameData = gameData;
         checkStore = new DailyCheckStore(configuration);
         autoStatuses = new DailyAutoStatus[DailyCatalog.Items.Length];
-        RefreshAuto();
+        if (GameMemory.Attached)
+        {
+            RefreshAuto();
+        }
     }
 
     public void OnOpened() => RefreshAuto();

@@ -59,7 +59,10 @@ internal sealed class SongPlayer : IDisposable
         this.youtube = youtube;
         this.cache = cache;
         this.linkResolver = linkResolver;
-        MediaFoundationApi.Startup();
+        if (OperatingSystem.IsWindows())
+        {
+            MediaFoundationApi.Startup();
+        }
     }
 
     public SongPlaybackState State => state;
@@ -679,6 +682,9 @@ internal sealed class SongPlayer : IDisposable
             return;
         }
 
-        MediaFoundationApi.Shutdown();
+        if (OperatingSystem.IsWindows())
+        {
+            MediaFoundationApi.Shutdown();
+        }
     }
 }

@@ -108,6 +108,14 @@ internal sealed class DeviceStatus : IDisposable
 
     private void SampleBattery()
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            batteryPresent = false;
+            batteryPercent = 100;
+            charging = false;
+            return;
+        }
+
         try
         {
             if (GetSystemPowerStatus(out var status))
