@@ -56,7 +56,14 @@ The server advances time only when a command asks for frames, so the state betwe
 | `command TEXT` | `/command?text=` | Runs a registered chat command |
 | `quit` | `/quit` | Stops the server |
 
+| `home` | `/home` | Back to the home screen |
+| `url` | | Prints the viewer address |
+
 Coordinates are phone-relative pixels, the same space as the cropped screenshot. Anchors come from `UiAnchors.Report` calls in draw code; the harness forces recording every frame, so anything the onboarding tours can point at can be tapped by name.
+
+## The browser viewer
+
+The server also serves a page at `http://127.0.0.1:47821/` (`tools/harness/aep url` prints it). It streams the phone as PNG frames and forwards mouse, wheel, and keyboard events to ImGui through `/event`, so a person can use the phone the way they would in game. Each frame request steps the simulation by the real time elapsed since the previous one, which means time only runs while a viewer is connected; close the tab and the driver is deterministic again. Expect 10 to 15 frames per second: the CPU rasterizer, not the network, sets the pace.
 
 ## What is faked and what is real
 

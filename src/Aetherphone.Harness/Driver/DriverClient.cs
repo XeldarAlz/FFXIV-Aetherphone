@@ -113,15 +113,19 @@ internal static class DriverClient
             case "log":
                 AddOptions(rest, 0, query);
                 break;
+            case "url":
+                Console.WriteLine($"http://127.0.0.1:{port}/");
+                return 0;
             case "state":
             case "anchors":
             case "settings":
+            case "home":
             case "login":
             case "logout":
             case "quit":
                 break;
             default:
-                return Usage("state | step [N] | shot [PATH] [--full] | tap X Y | tap ANCHOR | drag X1 Y1 X2 Y2 | scroll X Y DY | type TEXT | key NAME | open [APP] | settings | anchors | log [--since N] | command TEXT | login | logout | quit");
+                return Usage("url | state | step [N] | shot [PATH] [--full] | tap X Y | tap ANCHOR | drag X1 Y1 X2 Y2 | scroll X Y DY | type TEXT | key NAME | open [APP] | home | settings | anchors | log [--since N] | command TEXT | login | logout | quit");
         }
 
         var url = BuildUrl(port, command, query);

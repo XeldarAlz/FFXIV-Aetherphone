@@ -17,6 +17,7 @@ internal sealed unsafe class PhoneHost : IDisposable
 {
     private const float FrameSeconds = 1f / 60f;
     private const float DalamudDefaultFontPx = 16.5f;
+    private const int HomeReturnFrames = 20;
     private readonly TextureStore textures = new();
     private readonly FrameRenderer renderer;
     private readonly FakeFontAtlas fontAtlas;
@@ -127,12 +128,14 @@ internal sealed unsafe class PhoneHost : IDisposable
         }
     }
 
-    public void Step()
+    public void Step() => Step(FrameSeconds);
+
+    public void Step(float deltaSeconds)
     {
         fontAtlas.RebuildIfDirty();
         var io = ImGui.GetIO();
-        io.DeltaTime = FrameSeconds;
-        framework.Tick(TimeSpan.FromSeconds(FrameSeconds));
+        io.DeltaTime = deltaSeconds;
+        framework.Tick(TimeSpan.FromSeconds(deltaSeconds));
         ImGui.NewFrame();
         uiBuilder.InvokeDraw();
         ImGui.Render();
@@ -160,8 +163,17 @@ internal sealed unsafe class PhoneHost : IDisposable
         var window = plugin.MainWindow;
         window.Maximize();
         window.IsOpen = true;
+        var current = plugin.Shell.CurrentAppId;
+        if (current is not null && current != appId)
+        {
+            plugin.Shell.GoHome();
+            Step(HomeReturnFrames);
+        }
+
         plugin.Shell.OpenApp(appId);
     }
+
+    public void GoHome() => plugin.Shell.GoHome();
 
     public void OpenSettings() => uiBuilder.InvokeOpenConfigUi();
 
@@ -217,26 +229,45 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public void TypeText(string text, int settleFrames)
     {
-        ImGui.GetIO().AddInputCharacters(text);
+        TextInput(text);
         Step();
         Step(settleFrames);
     }
 
     public bool PressKey(string name, int settleFrames)
     {
-        if (!Enum.TryParse<ImGuiKey>(name, true, out var key))
+        if (!KeyEvent(name, true))
+        {
+            return false;
+        }
+
+        Step();
+        KeyEvent(name, false);
+        Step();
+        Step(settleFrames);
+        return true;
+    }
+
+    public bool KeyEvent(string name, bool down)
+    {
+        if (!BrowserKeys.TryMap(name, out var key, out var modifier))
         {
             return false;
         }
 
         var io = ImGui.GetIO();
-        io.AddKeyEvent(key, true);
-        Step();
-        io.AddKeyEvent(key, false);
-        Step();
-        Step(settleFrames);
+        if (modifier != ImGuiKey.None)
+        {
+            io.AddKeyEvent(modifier, down);
+        }
+
+        io.AddKeyEvent(key, down);
         return true;
     }
+
+    public void TextInput(string text) => ImGui.GetIO().AddInputCharacters(text);
+
+    public void MouseLeave() => ImGui.GetIO().AddMousePosEvent(-float.MaxValue, -float.MaxValue);
 
     public List<KeyValuePair<string, Rect>> Anchors()
     {
@@ -246,12 +277,14 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public bool TryFindAnchor(string key, out Rect rect) => UiAnchors.TryGet(key, out rect);
 
-    public byte[] ScreenshotPng(bool cropToPhone)
+    public byte[] ScreenshotPng(bool cropToPhone) => ScreenshotPng(cropToPhone, false);
+
+    public byte[] ScreenshotPng(bool cropToPhone, bool fast)
     {
         var pixels = renderer.Resolve();
         if (!cropToPhone)
         {
-            return PngWriter.Encode(pixels, Width, Height);
+            return PngWriter.Encode(pixels, Width, Height, fast);
         }
 
         var rect = PhoneRect;
@@ -267,7 +300,7 @@ internal sealed unsafe class PhoneHost : IDisposable
             Buffer.BlockCopy(pixels, ((top + row) * Width + left) * 4, cropped, row * cropWidth * 4, cropWidth * 4);
         }
 
-        return PngWriter.Encode(cropped, cropWidth, cropHeight);
+        return PngWriter.Encode(cropped, cropWidth, cropHeight, fast);
     }
 
     public void Screenshot(string path, bool cropToPhone)
