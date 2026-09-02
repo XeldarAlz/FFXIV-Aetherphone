@@ -1,4 +1,5 @@
 using Aetherphone.Core;
+using Aetherphone.Core.Onboarding;
 using Dalamud.Bindings.ImGui;
 
 namespace Aetherphone.Windows.Components;
@@ -22,6 +23,7 @@ internal sealed partial class SetupOverlay
             return false;
         }
 
+        UiAnchors.Report("setup.primary", rect);
         var hovered = live && enabled && UiInteract.Hover(rect.Min, rect.Max);
         MotionButton.Brand(drawList, rect, text, text, alpha, hovered, enabled, ink.Disabled, ink.DisabledText);
         return live && enabled && UiInteract.Click(rect.Min, rect.Max, hovered);
