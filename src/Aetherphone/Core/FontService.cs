@@ -94,7 +94,7 @@ internal sealed class FontService : IDisposable
         atlas = pluginInterface.UiBuilder.FontAtlas;
         dalamudIconHandle = pluginInterface.UiBuilder.IconFontHandle;
         fontDirectory = Path.Combine(pluginInterface.AssemblyLocation.DirectoryName ?? string.Empty, "Fonts");
-        baseSize = UiBuilder.DefaultFontSizePx;
+        baseSize = pluginInterface.UiBuilder.FontDefaultSizePx;
         sharedSize = baseSize * SizeMultipliers[SizeMultipliers.Length - 1] * MaxZoom;
         this.zoom = zoom;
         this.phoneZoom = phoneZoom;
@@ -256,11 +256,11 @@ internal sealed class FontService : IDisposable
         return !found.IsNull;
     }
 
-    private static int NearestIconSize(float pixelHeight)
+    private int NearestIconSize(float pixelHeight)
     {
         for (var index = 0; index < IconSizeMultipliers.Length - 1; index++)
         {
-            if (UiBuilder.DefaultFontSizePx * IconSizeMultipliers[index] >= pixelHeight)
+            if (baseSize * IconSizeMultipliers[index] >= pixelHeight)
             {
                 return index;
             }
@@ -405,7 +405,7 @@ internal sealed class FontService : IDisposable
 
     private IFontHandle BuildIconHandle(int sizeIndex)
     {
-        var pixels = UiBuilder.DefaultFontSizePx * IconSizeMultipliers[sizeIndex];
+        var pixels = baseSize * IconSizeMultipliers[sizeIndex];
         var tablerPath = Path.Combine(fontDirectory, TablerIconFile);
         return atlas.NewDelegateFontHandle(e => e.OnPreBuild(tk =>
         {
