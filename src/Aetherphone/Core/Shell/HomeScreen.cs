@@ -192,7 +192,7 @@ internal sealed class HomeScreen
         var anchor = interaction.CommittedRect(metrics, tile);
         if (anchor is not { } rect)
         {
-            sizeMenu.Close();
+            sizeMenu.CloseImmediate();
             return;
         }
 
