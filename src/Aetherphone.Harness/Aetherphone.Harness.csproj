@@ -9,7 +9,6 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
     <RootNamespace>Aetherphone.Harness</RootNamespace>
-    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -25,13 +24,32 @@
     <NativeImGuiSource Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(HarnessCache)/native/libcimgui.so</NativeImGuiSource>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+  </PropertyGroup>
+
   <ItemGroup>
+    <Reference Include="Dalamud" Private="true" />
     <Reference Include="Dalamud.Bindings.ImGui" Private="true" />
     <Reference Include="HexaGen.Runtime" Private="true" />
+    <Reference Include="Lumina" Private="true" />
+    <Reference Include="Lumina.Excel" Private="true" />
+    <Reference Include="FFXIVClientStructs" Private="true" />
+    <Reference Include="InteropGenerator.Runtime" Private="true" />
+    <Reference Include="Serilog" Private="true" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Aetherphone\Aetherphone.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\tools\harness\Bootstrap\PortableExecutablePatcher.cs" Link="Native\PortableExecutablePatcher.cs" />
   </ItemGroup>
 
   <ItemGroup>
