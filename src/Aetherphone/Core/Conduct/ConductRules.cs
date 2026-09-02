@@ -225,7 +225,31 @@ internal static class ConductRules
         },
     };
 
-    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet, Muster, YellowPages, Casino, Coin };
+    public static readonly ConductGate KindKupo = new()
+    {
+        AppId = "kindkupo",
+        Version = 1,
+        Icon = FontAwesomeIcon.Heart,
+        Title = L.Conduct.KindKupoTitle,
+        Intro = L.Conduct.KindKupoIntro,
+        Sections = new[]
+        {
+            new ConductSection(ConductTone.Encouraged, L.Conduct.KindKupoAllowedTitle,
+                L.Conduct.KindKupoAllowedLead, L.Conduct.KindKupoAllowedItems),
+            new ConductSection(ConductTone.Restricted, L.Conduct.KindKupoRespectTitle,
+                L.Conduct.KindKupoRespectLead, L.Conduct.KindKupoRespectItems, FontAwesomeIcon.Heart),
+            new ConductSection(ConductTone.Neutral, L.Conduct.KindKupoPrivacyTitle,
+                L.Conduct.KindKupoPrivacyBody, Array.Empty<LocString>(), FontAwesomeIcon.Lock),
+            new ConductSection(ConductTone.Restricted, L.Conduct.KindKupoAppropriateTitle,
+                L.Conduct.KindKupoAppropriateLead, L.Conduct.KindKupoAppropriateItems, FontAwesomeIcon.EyeSlash),
+            new ConductSection(ConductTone.Prohibited, L.Conduct.KindKupoChildSafetyTitle,
+                L.Conduct.KindKupoChildSafetyBody, Array.Empty<LocString>(), FontAwesomeIcon.Child),
+            new ConductSection(ConductTone.Neutral, L.Conduct.KindKupoDiscretionTitle,
+                L.Conduct.KindKupoDiscretionBody, Array.Empty<LocString>(), FontAwesomeIcon.Gavel),
+        },
+    };
+
+    private static readonly ConductGate[] All = { Chirper, Aethergram, Velvet, Muster, YellowPages, Casino, Coin, KindKupo };
 
     public static ConductGate? For(string appId)
     {

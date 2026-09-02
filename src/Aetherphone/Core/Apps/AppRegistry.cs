@@ -17,6 +17,7 @@ using Aetherphone.Apps.Inventory;
 using Aetherphone.Apps.Jobs;
 using Aetherphone.Apps.Calculator;
 using Aetherphone.Apps.Casino;
+using Aetherphone.Apps.KindKupo;
 using Aetherphone.Apps.Maps;
 using Aetherphone.Apps.Market;
 using Aetherphone.Apps.Linkpearl;
@@ -68,6 +69,7 @@ internal static class AppRegistry
         apps.Add(new ChirperApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "chirper"), services.Lodestone, services.RemoteImages, photoLibrary, services.SocialLauncher, services.GameData, services.Configuration, services.SocialNotifications, services.WallpaperImages, services.Confirm, services.Translation, services.Report, services.Conduct, services.RealtimeSignals));
         apps.Add(new AethergramApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "aethergram"), services.Lodestone, services.RemoteImages, photoLibrary, services.SocialLauncher, services.GramDmLauncher, services.GameData, services.Configuration, services.SocialNotifications, services.Notifications, services.Http, services.KeyVault, services.ConversationKeys, services.ChatHistory, services.Visibility, services.RealtimeSignals, services.WallpaperImages, services.Confirm, services.Translation, services.Report, services.Conduct, services.Installer, services.EncryptionHelp));
         apps.Add(new VelvetShell(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "velvet"), services.Lodestone, services.Configuration, photoLibrary, services.Http, services.RemoteImages, services.Notifications, services.VelvetLauncher, services.SocialLauncher, services.GameData, services.SocialNotifications, services.KeyVault, services.ConversationKeys, services.ChatHistory, services.Visibility, services.RealtimeSignals, services.WallpaperImages, services.Confirm, services.Translation, services.Report, services.Conduct, services.Installer, services.EncryptionHelp));
+        apps.Add(new KindKupoApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "kindkupo"), services.Report, services.Conduct, services.SocialNotifications));
         var feedbackNet = new AethernetApi(services.Http, services.AethernetSession, "feedback");
         apps.Add(new FeedbackApp(services.AethernetSession, feedbackNet.Feedback, feedbackNet.Media, photoLibrary, services.Configuration, services.Confirm, services.WallpaperImages));
         apps.Add(new PollsApp(services.AethernetSession, new AethernetApi(services.Http, services.AethernetSession, "polls").Polls, services.Installer, services.RealtimeSignals));

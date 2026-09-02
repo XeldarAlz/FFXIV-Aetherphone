@@ -294,6 +294,43 @@ internal static class L
         public static readonly LocString AppStore = new("app.appstore", "App Store");
         public static readonly LocString AetherStream = new("app.aetherstream", "MogCast");
         public static readonly LocString Shortcuts = new("app.shortcuts", "Shortcuts");
+        public static readonly LocString KindKupo = new("app.kindkupo", "KindKupo");
+    }
+
+    internal static class KindKupo
+    {
+        public static readonly LocString Feed = new("kindkupo.feed", "Confessions");
+        public static readonly LocString Write = new("kindkupo.write", "Write");
+        public static readonly LocString Rules = new("kindkupo.rules", "Rules");
+        public static readonly LocString Inbox = new("kindkupo.inbox", "Inbox");
+        public static readonly LocString YourInbox = new("kindkupo.yourInbox", "Your Inbox");
+        public static readonly LocString Respond = new("kindkupo.respond", "Respond");
+        public static readonly LocString Responses = new("kindkupo.responses", "Responses");
+        public static readonly LocString Replies = new("kindkupo.replies", "Replies");
+        public static readonly LocString ViewReplies = new("kindkupo.viewReplies", "View {0} Replies");
+        public static readonly LocString NewConfession = new("kindkupo.newConfession", "New Confession");
+        public static readonly LocString ExpiryDate = new("kindkupo.expiryDate", "Expiry Date");
+        public static readonly LocString Post = new("kindkupo.post", "Post");
+        public static readonly LocString Placeholder = new("kindkupo.placeholder", "What's on your mind?");
+        public static readonly LocString ReplyPlaceholder =
+            new("kindkupo.replyPlaceholder", "Write a kind and supportive reply…");
+        public static readonly LocString ExpiryNever = new("kindkupo.expiryNever", "Nvr");
+        public static readonly LocString Expiry1d = new("kindkupo.expiry1d", "1d");
+        public static readonly LocString Expiry3d = new("kindkupo.expiry3d", "3d");
+        public static readonly LocString Expiry7d = new("kindkupo.expiry7d", "7d");
+        public static readonly LocString NoConfessions = new("kindkupo.noConfessions", "No confessions yet");
+        public static readonly LocString NoReplies = new("kindkupo.noReplies", "No replies yet");
+        public static readonly LocString Written = new("kindkupo.written", "Written");
+        public static readonly LocString Kudos = new("kindkupo.kudos", "Kudos");
+        public static readonly LocString RulesTitle = new("kindkupo.rulesTitle", "KindKupo Guidelines");
+        public static readonly LocString RulesBody =
+            new("kindkupo.rulesBody", "KindKupo is a place for kind, anonymous confessions and supportive listening. Please be thoughtful and gentle.");
+        public static readonly LocString Report = new("kindkupo.report", "Report");
+        public static readonly LocString ReportConfession = new("kindkupo.reportConfession", "Report Confession");
+        public static readonly LocString ReportReply = new("kindkupo.reportReply", "Report Reply");
+        public static readonly LocString SignInTitle = new("kindkupo.signInTitle", "Sign in required");
+        public static readonly LocString SignInHint =
+            new("kindkupo.signInHint", "Sign in to Aethernet in Settings to use KindKupo");
     }
 
     internal static class Shortcuts
@@ -439,6 +476,9 @@ internal static class L
         public static readonly LocString VelvetSub = new("storeCopy.velvetSub", "After dark, adults only");
         public static readonly LocString VelvetBody = new("storeCopy.velvetBody",
             "An 18+ space for connections, collaborative writing and private messages, kept well apart from the rest of your phone.");
+        public static readonly LocString KindKupoSub = new("storeCopy.kindKupoSub", "Anonymous, and kind");
+        public static readonly LocString KindKupoBody = new("storeCopy.kindKupoBody",
+            "Share what is on your mind without a name attached, and answer other players with the kind of reply you would want back.");
         public static readonly LocString PollsSub = new("storeCopy.pollsSub", "Ask the whole server");
         public static readonly LocString PollsBody = new("storeCopy.pollsBody",
             "Put a question to Eorzea and watch the votes land while you wait.");
@@ -6393,6 +6433,28 @@ internal static class L
         public static readonly LocString AetherStreamPartyBody = new("onboarding.aetherStreamPartyBody", "Start a party and players nearby can ask to join. You decide who comes in, and everyone stays on the same second of the same video.");
         public static readonly LocString AetherStreamSettingsTitle = new("onboarding.aetherStreamSettingsTitle", "Tune it to your machine");
         public static readonly LocString AetherStreamSettingsBody = new("onboarding.aetherStreamSettingsBody", "Maximum quality, hardware decoding, whether others can find your stream, and the components the player needs, all behind this cog.");
+        public static readonly LocString KindKupoBody =
+            new("onboarding.kindkupoBody", "A place to share anonymous confessions and receive kind, supportive responses from the community.");
+        public static readonly LocString KindKupoStatsTitle =
+            new("onboarding.kindkupoStatsTitle", "Your activity");
+        public static readonly LocString KindKupoStatsBody =
+            new("onboarding.kindkupoStatsBody", "Track how many confessions you've posted, the responses you've received, and kudos given by others.");
+        public static readonly LocString KindKupoWriteTitle =
+            new("onboarding.kindkupoWriteTitle", "Share what's on your mind");
+        public static readonly LocString KindKupoWriteBody =
+            new("onboarding.kindkupoWriteBody", "Post an anonymous confession and choose how long before it expires, from 24 hours to forever.");
+        public static readonly LocString KindKupoRespondTitle =
+            new("onboarding.kindkupoRespondTitle", "Support others");
+        public static readonly LocString KindKupoRespondBody =
+            new("onboarding.kindkupoRespondBody", "Browse confessions from other players and send gentle, supportive replies.");
+        public static readonly LocString KindKupoInboxTitle =
+            new("onboarding.kindkupoInboxTitle", "Your inbox");
+        public static readonly LocString KindKupoInboxBody =
+            new("onboarding.kindkupoInboxBody", "Check replies to your confessions and keep supportive conversations in your private inbox.");
+        public static readonly LocString KindKupoRulesTitle =
+            new("onboarding.kindkupoRulesTitle", "Kindness first");
+        public static readonly LocString KindKupoRulesBody =
+            new("onboarding.kindkupoRulesBody", "KindKupo is dedicated to positivity and support. Please be thoughtful and gentle.");
         public static readonly LocString HuntsBody = new("onboarding.huntsBody", "A Faloop account is required for live spawn data. Browsing marks and mob info works without one. Faloop is not affiliated with Aetherphone.");
         public static readonly LocString HuntsSignInTitle = new("onboarding.huntsSignInTitle", "Sign in to Faloop");
         public static readonly LocString HuntsSignInBody = new("onboarding.huntsSignInBody", "Tap here to sign in or create a Faloop account and start getting live spawns.");
@@ -7031,6 +7093,41 @@ internal static class L
             new("conduct.coin.scams.2", "Links or tells asking you to sign in somewhere or share a code"),
             new("conduct.coin.scams.3", "Giveaways that ask for gil or items up front"),
         };
+
+        public static readonly LocString KindKupoTitle = new("conduct.kindkupo.title", "KindKupo Community Rules");
+        public static readonly LocString KindKupoIntro = new("conduct.kindkupo.intro", "KindKupo is a place for kind, anonymous confessions and supportive listening. Please read the community rules before posting.");
+        public static readonly LocString KindKupoAllowedTitle = new("conduct.kindkupo.allowed.title", "What Is Encouraged");
+        public static readonly LocString KindKupoAllowedLead = new("conduct.kindkupo.allowed.lead", "Examples of positive contributions include:");
+        public static readonly LocString[] KindKupoAllowedItems =
+        {
+            new("conduct.kindkupo.allowed.1", "Venting daily thoughts, feelings, and personal reflections"),
+            new("conduct.kindkupo.allowed.2", "Kind, empathetic, and encouraging responses"),
+            new("conduct.kindkupo.allowed.3", "Wholesome stories, compliments, and thank-yous"),
+            new("conduct.kindkupo.allowed.4", "Sharing struggles and seeking gentle advice"),
+        };
+        public static readonly LocString KindKupoRespectTitle = new("conduct.kindkupo.respect.title", "Be Kind & Supportive");
+        public static readonly LocString KindKupoRespectLead = new("conduct.kindkupo.respect.lead", "KindKupo is strictly a supportive space. Do not post:");
+        public static readonly LocString[] KindKupoRespectItems =
+        {
+            new("conduct.kindkupo.respect.1", "Harassment, insults, mocking, or mean-spirited comments"),
+            new("conduct.kindkupo.respect.2", "Hate speech, discrimination, or slurs"),
+            new("conduct.kindkupo.respect.3", "Invalidating, dismissive, or hostile replies"),
+            new("conduct.kindkupo.respect.4", "Targeted attacks or callouts of specific players"),
+        };
+        public static readonly LocString KindKupoPrivacyTitle = new("conduct.kindkupo.privacy.title", "Protect Anonymity & Privacy");
+        public static readonly LocString KindKupoPrivacyBody = new("conduct.kindkupo.privacy.body", "Do not share real-world personal information, character names, or private conversations. Respect everyone's privacy and right to anonymity.");
+        public static readonly LocString KindKupoAppropriateTitle = new("conduct.kindkupo.appropriate.title", "Keep It Safe & Appropriate");
+        public static readonly LocString KindKupoAppropriateLead = new("conduct.kindkupo.appropriate.lead", "To maintain a safe environment, please avoid:");
+        public static readonly LocString[] KindKupoAppropriateItems =
+        {
+            new("conduct.kindkupo.appropriate.1", "Explicit sexual content or solicitation"),
+            new("conduct.kindkupo.appropriate.2", "Graphic descriptions of violence or self-harm"),
+            new("conduct.kindkupo.appropriate.3", "Scams, fraud, or commercial advertisements"),
+        };
+        public static readonly LocString KindKupoChildSafetyTitle = new("conduct.kindkupo.childSafety.title", "Child Safety");
+        public static readonly LocString KindKupoChildSafetyBody = new("conduct.kindkupo.childSafety.body", "Any content sexualizing minors or child-like characters is strictly prohibited and will result in an immediate permanent ban.");
+        public static readonly LocString KindKupoDiscretionTitle = new("conduct.kindkupo.discretion.title", "Moderator Discretion");
+        public static readonly LocString KindKupoDiscretionBody = new("conduct.kindkupo.discretion.body", "Confessions or replies that disrupt the supportive spirit of KindKupo may be removed at moderator discretion.");
     }
 
     internal static class Health

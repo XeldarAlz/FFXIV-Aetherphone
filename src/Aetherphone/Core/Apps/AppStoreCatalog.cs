@@ -38,6 +38,7 @@ internal static class AppStoreCatalog
         ["chirper"] = new(L.StoreCopy.ChirperSub, L.StoreCopy.ChirperBody, StoreCategory.Social),
         ["aethergram"] = new(L.StoreCopy.AethergramSub, L.StoreCopy.AethergramBody, StoreCategory.Social),
         ["velvet"] = new(L.StoreCopy.VelvetSub, L.StoreCopy.VelvetBody, StoreCategory.Social),
+        ["kindkupo"] = new(L.StoreCopy.KindKupoSub, L.StoreCopy.KindKupoBody, StoreCategory.Social),
         ["polls"] = new(L.StoreCopy.PollsSub, L.StoreCopy.PollsBody, StoreCategory.Social),
         ["announcements"] = new(L.StoreCopy.AnnouncementsSub, L.StoreCopy.AnnouncementsBody, StoreCategory.Social),
         ["venues"] = new(L.StoreCopy.VenuesSub, L.StoreCopy.VenuesBody, StoreCategory.Social),

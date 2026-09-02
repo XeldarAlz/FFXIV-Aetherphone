@@ -72,5 +72,14 @@ internal static partial class TourRegistry
                     "yellowpages.tab.inquiries"),
                 GuideStep.Note(L.Onboarding.YellowPagesSafetyTitle, L.Onboarding.YellowPagesSafetyBody),
             });
+        Add(tours, "kindkupo", 1,
+            new[]
+            {
+                GuideStep.Note(L.Apps.KindKupo, L.Onboarding.KindKupoBody),
+                GuideStep.Point(L.Onboarding.KindKupoWriteTitle, L.Onboarding.KindKupoWriteBody, "kindkupo.write"),
+                GuideStep.Point(L.Onboarding.KindKupoRespondTitle, L.Onboarding.KindKupoRespondBody, "kindkupo.respond"),
+                GuideStep.Point(L.Onboarding.KindKupoInboxTitle, L.Onboarding.KindKupoInboxBody, "kindkupo.inbox"),
+                GuideStep.Point(L.Onboarding.KindKupoRulesTitle, L.Onboarding.KindKupoRulesBody, "kindkupo.rules"),
+            });
     }
 }
