@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -12,12 +13,17 @@ internal sealed class DriverServer
 {
     private const int DefaultSettleFrames = 12;
     private const int DefaultDragFrames = 12;
+    private const float MinimumLiveDelta = 1f / 90f;
+    private const float MaximumLiveDelta = 1f / 10f;
+    private const float FirstLiveDelta = 1f / 60f;
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     private readonly PhoneHost host;
     private readonly HttpListener listener = new();
     private readonly BlockingCollection<Job> jobs = new();
     private readonly string infoPath;
     private readonly int port;
+    private long lastLiveTimestamp;
+    private byte[]? latestFrame;
 
     public DriverServer(PhoneHost host, int port, string cacheDirectory)
     {
@@ -114,6 +120,16 @@ internal sealed class DriverServer
     {
         switch (route)
         {
+            case "/":
+                return new Response(200, "text/html; charset=utf-8", Encoding.UTF8.GetBytes(ViewerPage.Html));
+            case "/frame":
+                return new Response(200, "image/png", LiveFrame(query["full"] is null));
+            case "/event":
+                return ApplyEvent(query);
+            case "/home":
+                host.GoHome();
+                host.Step(Int(query, "settle", DefaultSettleFrames));
+                return Json(200, State());
             case "/state":
                 return Json(200, State());
             case "/step":
@@ -172,6 +188,49 @@ internal sealed class DriverServer
             default:
                 return Json(404, new { ok = false, error = $"unknown route {route}" });
         }
+    }
+
+    private byte[] LiveFrame(bool cropToPhone)
+    {
+        var now = Stopwatch.GetTimestamp();
+        var elapsed = lastLiveTimestamp == 0 ? FirstLiveDelta : (float)((now - lastLiveTimestamp) / (double)Stopwatch.Frequency);
+        if (latestFrame is null || elapsed >= MinimumLiveDelta)
+        {
+            host.Step(Math.Clamp(elapsed, MinimumLiveDelta, MaximumLiveDelta));
+            lastLiveTimestamp = now;
+            latestFrame = host.ScreenshotPng(cropToPhone, true);
+        }
+
+        return latestFrame;
+    }
+
+    private Response ApplyEvent(System.Collections.Specialized.NameValueCollection query)
+    {
+        switch (query["kind"])
+        {
+            case "move":
+                host.MouseMove(Point(query, "x", "y"));
+                break;
+            case "leave":
+                host.MouseLeave();
+                break;
+            case "button":
+                host.MouseButton(Int(query, "button", 0), Int(query, "down", 0) != 0);
+                break;
+            case "wheel":
+                host.MouseWheel(Float(query, "dx", 0f), Float(query, "dy", 0f));
+                break;
+            case "key":
+                host.KeyEvent(query["name"] ?? string.Empty, Int(query, "down", 0) != 0);
+                break;
+            case "text":
+                host.TextInput(query["text"] ?? string.Empty);
+                break;
+            default:
+                return Json(400, new { ok = false, error = $"unknown event kind '{query["kind"]}'" });
+        }
+
+        return Json(200, new { ok = true });
     }
 
     private Response Tap(System.Collections.Specialized.NameValueCollection query)

@@ -26,6 +26,8 @@ tools/harness/aep serve
 
 The server steps frames only when a command asks it to. Nothing moves between commands, so screenshots are deterministic.
 
+A person can watch and use the same phone in a browser: `tools/harness/aep url` prints the address (http://127.0.0.1:47821/ by default). While that page is open, time runs in real time and mouse and keyboard go to the phone, so take driver screenshots when nobody is interacting.
+
 ## Commands
 
 Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windows). Coordinates are phone-relative pixels matching the cropped screenshot; add `--space screen` for display coordinates.
@@ -41,7 +43,9 @@ Every command is `tools/harness/aep <command>` (`tools\harness\aep.cmd` on Windo
 | `scroll X Y DY` | Mouse wheel at a point |
 | `type TEXT` | Type into the focused field |
 | `key NAME` | Press an ImGui key: Enter, Escape, Backspace, Tab, ... |
-| `open APPID` | Open the phone on an app (ids in Core/Apps/AppRegistry.cs) |
+| `open APPID` | Open the phone on an app (ids in Core/Apps/AppRegistry.cs); goes home first, like a launch |
+| `home` | Return to the home screen |
+| `url` | Print the browser viewer address |
 | `settings` | Open the Settings app the way Dalamud's config button would |
 | `log [--since N]` | Plugin warnings, errors, and harness notes since a sequence number |
 | `login` / `logout` | Simulate the character logging in or out |
