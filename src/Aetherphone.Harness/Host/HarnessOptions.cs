@@ -4,9 +4,10 @@ internal sealed class HarnessOptions
 {
     private const string CacheEnvironmentVariable = "AETHERPHONE_HARNESS_CACHE";
     private const string SqpackEnvironmentVariable = "AETHERPHONE_SQPACK";
-    private const int DefaultWidth = 1280;
-    private const int DefaultHeight = 800;
+    private const int DefaultWidth = 1600;
+    private const int DefaultHeight = 1200;
     private const int DefaultFrames = 90;
+    private const int DefaultPort = 47821;
 
     public string CacheDirectory { get; private set; } = DefaultCacheDirectory();
 
@@ -24,10 +25,12 @@ internal sealed class HarnessOptions
 
     public int Frames { get; private set; } = DefaultFrames;
 
-    public static HarnessOptions Parse(string[] arguments)
+    public int Port { get; private set; } = DefaultPort;
+
+    public static HarnessOptions Parse(string[] arguments, int start)
     {
         var options = new HarnessOptions();
-        for (var index = 0; index < arguments.Length; index++)
+        for (var index = start; index < arguments.Length; index++)
         {
             switch (arguments[index])
             {
@@ -54,6 +57,9 @@ internal sealed class HarnessOptions
                     break;
                 case "--frames":
                     options.Frames = int.Parse(Value(arguments, ref index));
+                    break;
+                case "--port":
+                    options.Port = int.Parse(Value(arguments, ref index));
                     break;
                 default:
                     throw new ArgumentException($"Unknown argument '{arguments[index]}'.");
