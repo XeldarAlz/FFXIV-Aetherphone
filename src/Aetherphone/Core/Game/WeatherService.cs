@@ -68,6 +68,11 @@ internal sealed class WeatherService
 
     public unsafe byte LiveWeatherId()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var environment = EnvManager.Instance();
         return environment == null ? (byte)0 : environment->ActiveWeather;
     }

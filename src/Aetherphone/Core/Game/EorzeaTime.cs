@@ -15,7 +15,7 @@ internal readonly record struct EorzeaTime(int Hour, int Minute)
 
     public static unsafe long CurrentSeconds()
     {
-        var framework = Framework.Instance();
+        var framework = GameMemory.Attached ? Framework.Instance() : null;
         if (framework == null)
         {
             return DateTimeOffset.UtcNow.ToUnixTimeSeconds() * 144 / 7;

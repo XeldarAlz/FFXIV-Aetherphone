@@ -21,6 +21,11 @@ internal static unsafe class PlayerActions
 
     public static PlayerActionAvailability Resolve(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return PlayerActionAvailability.None;
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return PlayerActionAvailability.None;
@@ -57,6 +62,11 @@ internal static unsafe class PlayerActions
 
     public static bool InviteToParty(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return false;
@@ -82,16 +92,31 @@ internal static unsafe class PlayerActions
 
     public static bool SendFriendRequest(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         return SendTargetedCommand(FriendRequestCommand, name, world, "[PlayerActions] friend request failed");
     }
 
     public static bool AddToBlacklist(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         return SendTargetedCommand(BlacklistCommand, name, world, "[PlayerActions] blacklist failed");
     }
 
     public static bool OpenAdventurerPlate(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return false;
@@ -131,6 +156,11 @@ internal static unsafe class PlayerActions
 
     public static bool TargetPlayer(string name, string world)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         if (!PlayerTarget.TrySplit(name, world, out var playerName, out var worldName))
         {
             return false;

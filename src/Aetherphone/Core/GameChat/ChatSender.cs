@@ -1,6 +1,7 @@
-using System.Text;
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.System.String;
 using FFXIVClientStructs.FFXIV.Client.UI;
+using System.Text;
 
 namespace Aetherphone.Core.GameChat;
 
@@ -14,6 +15,11 @@ internal static unsafe class ChatSender
 
     private static bool Send(string message, bool requireClean)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         if (string.IsNullOrEmpty(message))
         {
             return false;

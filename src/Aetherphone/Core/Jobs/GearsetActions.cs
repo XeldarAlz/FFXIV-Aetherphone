@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Game.ClientState.Conditions;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
@@ -47,6 +48,11 @@ internal static unsafe class GearsetActions
 
     private static GearsetEquipResult EquipNow(int gearsetId)
     {
+        if (!GameMemory.Attached)
+        {
+            return GearsetEquipResult.Failed;
+        }
+
         try
         {
             var module = RaptureGearsetModule.Instance();

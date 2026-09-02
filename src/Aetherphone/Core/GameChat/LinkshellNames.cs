@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
 namespace Aetherphone.Core.GameChat;
@@ -32,6 +33,11 @@ internal static unsafe class LinkshellNames
 
     private static void Refresh()
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var now = Environment.TickCount64;
         if (now - lastReadMilliseconds < RefreshIntervalMilliseconds)
         {

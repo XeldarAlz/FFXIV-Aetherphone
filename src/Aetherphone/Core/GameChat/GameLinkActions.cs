@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
@@ -8,6 +9,11 @@ internal static unsafe class GameLinkActions
 {
     public static void TryOn(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         if (itemId == 0)
         {
             return;
@@ -18,6 +24,11 @@ internal static unsafe class GameLinkActions
 
     public static void CompareItem(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var agent = AgentItemComp.Instance();
         if (itemId == 0 || agent is null)
         {
@@ -29,6 +40,11 @@ internal static unsafe class GameLinkActions
 
     public static void SearchRecipes(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var agent = AgentRecipeProductList.Instance();
         if (itemId == 0 || agent is null)
         {
@@ -40,6 +56,11 @@ internal static unsafe class GameLinkActions
 
     public static void FindItem(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var module = ItemFinderModule.Instance();
         if (itemId == 0 || module is null)
         {
@@ -51,6 +72,11 @@ internal static unsafe class GameLinkActions
 
     public static void LinkInChat(uint itemId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var agent = AgentChatLog.Instance();
         if (itemId == 0 || agent is null)
         {

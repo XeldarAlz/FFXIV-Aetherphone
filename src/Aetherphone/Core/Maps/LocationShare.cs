@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Housing;
 using Aetherphone.Core.Localization;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -89,6 +90,11 @@ internal static class LocationShare
 
     private static uint ReadIndoorHouseDistrict()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         try
         {
             unsafe
@@ -152,6 +158,11 @@ internal static class LocationShare
 
     public static bool IsIndoors()
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         try
         {
             unsafe
@@ -373,6 +384,11 @@ internal static class LocationShare
 
     private static (short Ward, short Plot, short Room) ReadHousing()
     {
+        if (!GameMemory.Attached)
+        {
+            return default;
+        }
+
         try
         {
             unsafe
