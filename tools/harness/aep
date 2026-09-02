@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+dll="$root/src/Aetherphone.Harness/bin/Release/net10.0-windows/Aetherphone.Harness.dll"
+if [ ! -f "$dll" ]; then
+  echo "Harness not built. Run: dotnet build src/Aetherphone.Harness -c Release" >&2
+  exit 1
+fi
+exec dotnet "$dll" "$@"
