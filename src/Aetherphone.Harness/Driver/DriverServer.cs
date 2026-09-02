@@ -24,6 +24,8 @@ internal sealed class DriverServer
     private readonly int port;
     private long lastLiveTimestamp;
     private byte[]? latestFrame;
+    private int latestOriginX;
+    private int latestOriginY;
 
     public DriverServer(PhoneHost host, int port, string cacheDirectory)
     {
@@ -106,6 +108,14 @@ internal sealed class DriverServer
         {
             context.Response.StatusCode = response.Status;
             context.Response.ContentType = response.ContentType;
+            if (response.Headers is not null)
+            {
+                foreach (var header in response.Headers)
+                {
+                    context.Response.Headers[header.Key] = header.Value;
+                }
+            }
+
             context.Response.ContentLength64 = response.Body.Length;
             context.Response.OutputStream.Write(response.Body, 0, response.Body.Length);
             context.Response.Close();
@@ -123,7 +133,12 @@ internal sealed class DriverServer
             case "/":
                 return new Response(200, "text/html; charset=utf-8", Encoding.UTF8.GetBytes(ViewerPage.Html));
             case "/frame":
-                return new Response(200, "image/png", LiveFrame(query["full"] is null));
+                var frame = LiveFrame(query["full"] is null);
+                return new Response(200, "image/png", frame, new Dictionary<string, string>
+                {
+                    ["X-Phone-X"] = latestOriginX.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["X-Phone-Y"] = latestOriginY.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                });
             case "/event":
                 return ApplyEvent(query);
             case "/home":
@@ -198,7 +213,7 @@ internal sealed class DriverServer
         {
             host.Step(Math.Clamp(elapsed, MinimumLiveDelta, MaximumLiveDelta));
             lastLiveTimestamp = now;
-            latestFrame = host.ScreenshotPng(cropToPhone, true);
+            latestFrame = host.ScreenshotPng(cropToPhone, true, out latestOriginX, out latestOriginY);
         }
 
         return latestFrame;
@@ -329,5 +344,5 @@ internal sealed class DriverServer
 
     private readonly record struct Job(string Route, System.Collections.Specialized.NameValueCollection Query, TaskCompletionSource<Response> Completion);
 
-    private readonly record struct Response(int Status, string ContentType, byte[] Body);
+    private readonly record struct Response(int Status, string ContentType, byte[] Body, Dictionary<string, string>? Headers = null);
 }
