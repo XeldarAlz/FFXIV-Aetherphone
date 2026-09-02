@@ -73,7 +73,10 @@ internal sealed class SongPlayer : IDisposable
             ReadFully = true,
         };
         master = new VolumeSampleProvider(mixer) { Volume = 0.6f };
-        MediaFoundationApi.Startup();
+        if (OperatingSystem.IsWindows())
+        {
+            MediaFoundationApi.Startup();
+        }
     }
 
     public Func<string, SongResolvedAudio?>? OfflineSource { get; set; }
