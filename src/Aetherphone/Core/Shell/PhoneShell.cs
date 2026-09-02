@@ -181,6 +181,8 @@ internal sealed class PhoneShell : IDisposable
 
     public string? CurrentAppId => navigation.Current?.Id;
 
+    public void GoHome() => navigation.GoHome();
+
     private static bool BezelDoubleClicked(Rect device, in ChassisGeometry chassis)
     {
         if (!ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) || ImGui.IsAnyItemHovered())

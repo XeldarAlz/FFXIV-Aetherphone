@@ -176,6 +176,11 @@ internal sealed class UiSoundPlayer : IDisposable
             return true;
         }
 
+        if (!OperatingSystem.IsWindows())
+        {
+            return false;
+        }
+
         try
         {
             var built = new MixingSampleProvider(WaveFormat.CreateIeeeFloatWaveFormat(SampleRate, ChannelCount))
