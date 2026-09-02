@@ -59,6 +59,11 @@ internal sealed class WeatherControl : IDisposable
 
     public unsafe void ClearWeather()
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         if (weatherOverride == NoWeather)
         {
             return;
@@ -76,6 +81,11 @@ internal sealed class WeatherControl : IDisposable
 
     public unsafe void ClearTime()
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         timeOverride = NoTime;
         var instance = Framework.Instance();
         if (instance != null)
@@ -92,6 +102,11 @@ internal sealed class WeatherControl : IDisposable
 
     private unsafe void OnUpdate(IFramework _)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         if (weatherOverride == NoWeather && timeOverride == NoTime)
         {
             return;

@@ -76,12 +76,22 @@ internal static unsafe class WalletReader
 
     public static long CurrentGil()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var manager = InventoryManager.Instance();
         return manager is null ? 0 : manager->GetGil();
     }
 
     public static long EndgameCurrencyTotal(List<uint> tomestoneItemIds)
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -138,6 +148,11 @@ internal static unsafe class WalletReader
 
     public static bool IsCurrencyLoaded()
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -150,6 +165,11 @@ internal static unsafe class WalletReader
 
     public static void RefreshAmounts(WalletEntry gil, WalletEntry[] entries)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -182,6 +202,11 @@ internal static unsafe class WalletReader
 
     public static uint GrandCompanySealItemId()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var playerState = PlayerState.Instance();
         if (playerState is null)
         {

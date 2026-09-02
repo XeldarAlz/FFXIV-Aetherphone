@@ -8,6 +8,11 @@ internal static unsafe class FriendListReader
 {
     public static bool RequestServerData()
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         var gameMain = GameMain.Instance();
         if (gameMain == null || gameMain->CurrentContentFinderConditionId != 0)
         {
@@ -25,6 +30,11 @@ internal static unsafe class FriendListReader
 
     public static void Read(List<FriendEntry> into, GameData gameData)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         into.Clear();
         var proxy = InfoProxyFriendList.Instance();
         if (proxy == null)

@@ -1,8 +1,9 @@
-using System.Collections.Concurrent;
-using System.Text;
+using Aetherphone.Core.Game;
 using Dalamud.Hooking;
 using Dalamud.Interface;
 using Dalamud.Plugin;
+using System.Collections.Concurrent;
+using System.Text;
 using D3D11 = SharpDX.Direct3D11;
 using GfxKernel = FFXIVClientStructs.FFXIV.Client.Graphics.Kernel;
 
@@ -25,6 +26,11 @@ internal static class DxHandler
 
 	internal static void Initialise(IDalamudPluginInterface pluginInterface)
 	{
+		if (!GameMemory.Attached)
+		{
+			return;
+		}
+
 		Device = new D3D11.Device(pluginInterface.UiBuilder.DeviceHandle);
 
 		if (TryHookPresent())

@@ -1,7 +1,8 @@
-using System.Runtime.InteropServices;
 using Aetherphone.Core;
-using Vortice.Direct3D11;
+using Aetherphone.Core.Game;
+using System.Runtime.InteropServices;
 using Vortice.DXGI;
+using Vortice.Direct3D11;
 using Box = Vortice.Mathematics.Box;
 using KernelDevice = FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Device;
 
@@ -11,6 +12,14 @@ internal sealed class PhotoCaptureService
 {
     public unsafe bool TryCapture(Rect region, out byte[] pixels, out int width, out int height)
     {
+        if (!GameMemory.Attached)
+        {
+            pixels = Array.Empty<byte>();
+            width = 0;
+            height = 0;
+            return false;
+        }
+
         pixels = Array.Empty<byte>();
         width = 0;
         height = 0;
