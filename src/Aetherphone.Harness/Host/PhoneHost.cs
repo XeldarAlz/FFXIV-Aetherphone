@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using Aetherphone.Core;
 using Aetherphone.Core.Game;
+using Aetherphone.Core.Onboarding;
 using Aetherphone.Harness.Fakes;
 using Aetherphone.Harness.Fonts;
 using Aetherphone.Harness.Native;
@@ -21,9 +23,11 @@ internal sealed unsafe class PhoneHost : IDisposable
     private readonly FakeUiBuilder uiBuilder;
     private readonly FakeFramework framework;
     private readonly FakeClientState clientState;
+    private readonly FakeCommandManager commands;
+    private readonly FakeDataManager data;
     private readonly Plugin plugin;
     private readonly Stopwatch stopwatch = new();
-    private int frameIndex;
+    private readonly List<KeyValuePair<string, Rect>> anchorScratch = new();
 
     public PhoneHost(HarnessOptions options)
     {
@@ -44,18 +48,20 @@ internal sealed unsafe class PhoneHost : IDisposable
         uiBuilder = new FakeUiBuilder(fontAtlas, defaultHandle, iconHandle);
         framework = new FakeFramework();
         clientState = new FakeClientState();
-        var data = new FakeDataManager(options.SqpackDirectory);
+        commands = new FakeCommandManager();
+        data = new FakeDataManager(options.SqpackDirectory);
         var pluginInterface = new FakePluginInterface(options.ConfigDirectory, options.AssetDirectory, uiBuilder,
             typeof(Plugin).Assembly);
-        HarnessLog.Note(data.HasGameData ? "game data: " + options.SqpackDirectory : "game data: none (sheet reads will fail)");
+        HarnessLog.Note(data.HasGameData ? "game data: " + options.SqpackDirectory : "game data: none, sheet-bound apps disabled");
         GameMemory.Detach();
         if (!data.HasGameData)
         {
             GameSheets.MarkUnavailable();
         }
 
+        UiAnchors.ForceRecording = true;
         Plugin.PluginInterface = pluginInterface;
-        Plugin.CommandManager = new FakeCommandManager();
+        Plugin.CommandManager = commands;
         Plugin.DtrBar = new FakeDtrBar();
         Plugin.ChatGui = new FakeChatGui();
         Plugin.DataManager = data;
@@ -77,9 +83,40 @@ internal sealed unsafe class PhoneHost : IDisposable
         Plugin.GamepadState = NullProxy.Create<IGamepadState>();
         Plugin.AetheryteList = NullProxy.Create<IAetheryteList>();
         fontAtlas.RebuildIfDirty();
-        HarnessLog.Note($"global scale: {ImGuiHelpers.GlobalScale}");
         plugin = new Plugin();
         HarnessLog.Note("plugin constructed");
+    }
+
+    public int FrameIndex { get; private set; }
+
+    public int Width => renderer.Width;
+
+    public int Height => renderer.Height;
+
+    public bool HasGameData => data.HasGameData;
+
+    public bool IsLoggedIn => clientState.IsLoggedIn;
+
+    public bool PhoneOpen => plugin.MainWindow.IsOpen;
+
+    public string? CurrentAppId => plugin.Shell.CurrentAppId;
+
+    public string MinimizePhase => plugin.Shell.MinimizePhase.ToString();
+
+    public bool HomeEditing => plugin.Shell.HomeEditing;
+
+    public Rect PhoneRect
+    {
+        get
+        {
+            var window = plugin.MainWindow;
+            if (window.LastSize.X <= 0f || window.LastSize.Y <= 0f)
+            {
+                return new Rect(Vector2.Zero, new Vector2(Width, Height));
+            }
+
+            return new Rect(window.LastPosition, window.LastPosition + window.LastSize);
+        }
     }
 
     public void Step(int frames)
@@ -103,24 +140,139 @@ internal sealed unsafe class PhoneHost : IDisposable
         renderer.Render(ImGui.GetDrawData(), 24, 26, 32);
         stopwatch.Stop();
         uiBuilder.FrameCount += 1;
-        frameIndex += 1;
-        if (frameIndex % 30 == 0)
+        FrameIndex += 1;
+        if (FrameIndex % 60 == 0)
         {
-            HarnessLog.Note($"frame {frameIndex}: {renderer.TrianglesDrawn} triangles, raster {stopwatch.Elapsed.TotalMilliseconds:F1} ms");
+            HarnessLog.Note($"frame {FrameIndex}: {renderer.TrianglesDrawn} triangles, raster {stopwatch.Elapsed.TotalMilliseconds:F1} ms");
         }
     }
 
-    public void OpenPhone() => uiBuilder.InvokeOpenMainUi();
+    public void OpenPhone()
+    {
+        if (!plugin.MainWindow.IsOpen)
+        {
+            uiBuilder.InvokeOpenMainUi();
+        }
+    }
+
+    public void OpenApp(string appId)
+    {
+        var window = plugin.MainWindow;
+        window.Maximize();
+        window.IsOpen = true;
+        plugin.Shell.OpenApp(appId);
+    }
+
+    public void OpenSettings() => uiBuilder.InvokeOpenConfigUi();
 
     public void Login() => clientState.SimulateLogin();
 
-    public void MouseMove(float x, float y) => ImGui.GetIO().AddMousePosEvent(x, y);
+    public void Logout() => clientState.SimulateLogout();
+
+    public bool RunCommand(string text) => commands.ProcessCommand(text);
+
+    public void MouseMove(Vector2 screen) => ImGui.GetIO().AddMousePosEvent(screen.X, screen.Y);
 
     public void MouseButton(int button, bool down) => ImGui.GetIO().AddMouseButtonEvent(button, down);
 
-    public void Screenshot(string path)
+    public void MouseWheel(float deltaX, float deltaY) => ImGui.GetIO().AddMouseWheelEvent(deltaX, deltaY);
+
+    public void Tap(Vector2 screen, int button, int settleFrames)
     {
-        PngWriter.Write(path, renderer.Resolve(), renderer.Width, renderer.Height);
+        MouseMove(screen);
+        Step();
+        MouseButton(button, true);
+        Step();
+        MouseButton(button, false);
+        Step();
+        Step(settleFrames);
+    }
+
+    public void Drag(Vector2 from, Vector2 to, int frames, int settleFrames)
+    {
+        MouseMove(from);
+        Step();
+        MouseButton(0, true);
+        Step();
+        var steps = Math.Max(frames, 1);
+        for (var index = 1; index <= steps; index++)
+        {
+            MouseMove(Vector2.Lerp(from, to, index / (float)steps));
+            Step();
+        }
+
+        MouseButton(0, false);
+        Step();
+        Step(settleFrames);
+    }
+
+    public void Scroll(Vector2 screen, float deltaY, int settleFrames)
+    {
+        MouseMove(screen);
+        Step();
+        MouseWheel(0f, deltaY);
+        Step();
+        Step(settleFrames);
+    }
+
+    public void TypeText(string text, int settleFrames)
+    {
+        ImGui.GetIO().AddInputCharacters(text);
+        Step();
+        Step(settleFrames);
+    }
+
+    public bool PressKey(string name, int settleFrames)
+    {
+        if (!Enum.TryParse<ImGuiKey>(name, true, out var key))
+        {
+            return false;
+        }
+
+        var io = ImGui.GetIO();
+        io.AddKeyEvent(key, true);
+        Step();
+        io.AddKeyEvent(key, false);
+        Step();
+        Step(settleFrames);
+        return true;
+    }
+
+    public List<KeyValuePair<string, Rect>> Anchors()
+    {
+        UiAnchors.CopyTo(anchorScratch);
+        return anchorScratch;
+    }
+
+    public bool TryFindAnchor(string key, out Rect rect) => UiAnchors.TryGet(key, out rect);
+
+    public byte[] ScreenshotPng(bool cropToPhone)
+    {
+        var pixels = renderer.Resolve();
+        if (!cropToPhone)
+        {
+            return PngWriter.Encode(pixels, Width, Height);
+        }
+
+        var rect = PhoneRect;
+        var left = Math.Clamp((int)MathF.Floor(rect.Min.X), 0, Width - 1);
+        var top = Math.Clamp((int)MathF.Floor(rect.Min.Y), 0, Height - 1);
+        var right = Math.Clamp((int)MathF.Ceiling(rect.Max.X), left + 1, Width);
+        var bottom = Math.Clamp((int)MathF.Ceiling(rect.Max.Y), top + 1, Height);
+        var cropWidth = right - left;
+        var cropHeight = bottom - top;
+        var cropped = new byte[cropWidth * cropHeight * 4];
+        for (var row = 0; row < cropHeight; row++)
+        {
+            Buffer.BlockCopy(pixels, ((top + row) * Width + left) * 4, cropped, row * cropWidth * 4, cropWidth * 4);
+        }
+
+        return PngWriter.Encode(cropped, cropWidth, cropHeight);
+    }
+
+    public void Screenshot(string path, bool cropToPhone)
+    {
+        File.WriteAllBytes(path, ScreenshotPng(cropToPhone));
         HarnessLog.Note($"screenshot written to {path}");
     }
 
