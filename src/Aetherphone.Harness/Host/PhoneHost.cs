@@ -20,7 +20,8 @@ internal sealed unsafe class PhoneHost : IDisposable
     private const int HomeReturnFrames = 20;
     private const float PhoneMargin = 40f;
     private readonly TextureStore textures = new();
-    private readonly FrameRenderer renderer;
+    private FrameRenderer renderer;
+    private int rasterizedFrame = -1;
     private readonly FakeFontAtlas fontAtlas;
     private readonly FakeUiBuilder uiBuilder;
     private readonly FakeFramework framework;
@@ -96,6 +97,26 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public int Height => renderer.Height;
 
+    public TextureStore Textures => textures;
+
+    public ImDrawDataPtr DrawData => ImGui.GetDrawData();
+
+    public Vector2 PhoneSize => plugin.MainWindow.Size ?? new Vector2(Width, Height);
+
+    public float PhoneMarginPixels => PhoneMargin;
+
+    public void SetDisplaySize(int width, int height)
+    {
+        ImGui.GetIO().DisplaySize = new Vector2(width, height);
+        if (width == renderer.Width && height == renderer.Height)
+        {
+            return;
+        }
+
+        renderer = new FrameRenderer(width, height, textures);
+        rasterizedFrame = -1;
+    }
+
     public bool HasGameData => data.HasGameData;
 
     public bool IsLoggedIn => clientState.IsLoggedIn;
@@ -138,18 +159,28 @@ internal sealed unsafe class PhoneHost : IDisposable
         var io = ImGui.GetIO();
         io.DeltaTime = deltaSeconds;
         framework.Tick(TimeSpan.FromSeconds(deltaSeconds));
+        stopwatch.Restart();
         ImGui.NewFrame();
         uiBuilder.InvokeDraw();
         ImGui.Render();
-        stopwatch.Restart();
-        renderer.Render(ImGui.GetDrawData(), 24, 26, 32);
         stopwatch.Stop();
         uiBuilder.FrameCount += 1;
         FrameIndex += 1;
-        if (FrameIndex % 60 == 0)
+        if (FrameIndex % 300 == 0)
         {
-            HarnessLog.Note($"frame {FrameIndex}: {renderer.TrianglesDrawn} triangles, raster {stopwatch.Elapsed.TotalMilliseconds:F1} ms");
+            HarnessLog.Note($"frame {FrameIndex}: {ImGui.GetDrawData().TotalIdxCount / 3} triangles, simulate {stopwatch.Elapsed.TotalMilliseconds:F1} ms");
         }
+    }
+
+    public void Rasterize()
+    {
+        if (rasterizedFrame == FrameIndex)
+        {
+            return;
+        }
+
+        renderer.Render(ImGui.GetDrawData(), 24, 26, 32);
+        rasterizedFrame = FrameIndex;
     }
 
     public void OpenPhone()
@@ -257,6 +288,12 @@ internal sealed unsafe class PhoneHost : IDisposable
             return false;
         }
 
+        KeyEvent(key, modifier, down);
+        return true;
+    }
+
+    public void KeyEvent(ImGuiKey key, ImGuiKey modifier, bool down)
+    {
         var io = ImGui.GetIO();
         if (modifier != ImGuiKey.None)
         {
@@ -264,7 +301,6 @@ internal sealed unsafe class PhoneHost : IDisposable
         }
 
         io.AddKeyEvent(key, down);
-        return true;
     }
 
     public void TextInput(string text) => ImGui.GetIO().AddInputCharacters(text);
@@ -289,6 +325,7 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public byte[] ScreenshotRaw(bool cropToPhone, out int width, out int height, out int originX, out int originY)
     {
+        Rasterize();
         originX = 0;
         originY = 0;
         width = Width;

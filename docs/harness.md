@@ -12,7 +12,8 @@ This doc covers `src/Aetherphone.Harness`, a console host that runs the real plu
 | src/Aetherphone.Harness/Driver/DriverServer.cs | The HTTP driver and its routes |
 | src/Aetherphone.Harness/Fakes | One fake per Dalamud service the plugin consumes |
 | src/Aetherphone.Harness/Fonts | The font atlas fake over ImGui's own atlas |
-| src/Aetherphone.Harness/Rendering | The CPU rasterizer and PNG output |
+| src/Aetherphone.Harness/Rendering | The CPU rasterizer and PNG output, used for driver screenshots |
+| src/Aetherphone.Harness/Viewer | The native window: GLFW input and the OpenGL renderer |
 | src/Aetherphone/Core/Game/GameMemory.cs | The game-memory gate the harness switches off |
 | src/Aetherphone/Core/Game/GameSheets.cs | The game-data gate that hides sheet-bound apps |
 | .claude/skills/phone-preview/SKILL.md | The short version for Claude Code sessions |
@@ -34,9 +35,11 @@ Optional: copy `sqpack/ffxiv/0a0000.win32.dat0`, `.index`, and `.index2` from a 
 
 ## Running
 
-`tools/harness/aep serve` starts the phone and listens on `http://127.0.0.1:47821/` (`--port` changes it; the port is written to `~/.aetherphone-harness/driver.json`). `tools/harness/aep render --out phone.png` renders a single screenshot and exits. Both accept `--width`, `--height`, `--frames`, `--config`, `--assets`, `--sqpack`, and `--cache`.
+`tools/harness/aep window` opens a native window (Silk.NET over GLFW and OpenGL 3.3, so it runs on macOS, Windows, and Linux) sized to the phone, renders on the GPU at vsync, and takes mouse and keyboard input directly. `tools/harness/aep serve` runs the same thing headless. Both listen on `http://127.0.0.1:47821/` (`--port` changes it; the port is written to `~/.aetherphone-harness/driver.json`). `tools/harness/aep render --out phone.png` renders a single screenshot and exits. All accept `--width`, `--height`, `--frames`, `--config`, `--assets`, `--sqpack`, and `--cache`.
 
-The server advances time only when a command asks for frames, so the state between commands is frozen and screenshots are repeatable. Every driver command is available as a CLI verb and as an HTTP route with the same name and query parameters:
+In window mode time runs in real time, one simulation step per displayed frame, and driver commands run between frames. In headless mode time advances only when a command asks for frames.
+
+Every driver command is available as a CLI verb and as an HTTP route with the same name and query parameters:
 
 | Verb | Route | Notes |
 | --- | --- | --- |
@@ -63,7 +66,7 @@ Coordinates are phone-relative pixels, the same space as the cropped screenshot.
 
 ## The browser viewer
 
-The server also serves a page at `http://127.0.0.1:47821/` (`tools/harness/aep url` prints it). It streams the phone as PNG frames and forwards mouse, wheel, and keyboard events to ImGui through `/event`, so a person can use the phone the way they would in game. Each frame request steps the simulation by the real time elapsed since the previous one, which means time only runs while a viewer is connected; close the tab and the driver is deterministic again. Frames travel as raw pixels, and the rasterizer splits the screen into horizontal bands across every core, so expect roughly 30 frames per second on a modern machine.
+Both modes also serve a page at `http://127.0.0.1:47821/` (`tools/harness/aep url` prints it). It streams the phone as PNG frames and forwards mouse, wheel, and keyboard events to ImGui through `/event`, so a person can use the phone the way they would in game. Each frame request steps the simulation by the real time elapsed since the previous one, which means time only runs while a viewer is connected; close the tab and the driver is deterministic again. Frames travel as raw pixels, and the rasterizer splits the screen into horizontal bands across every core, so expect roughly 30 frames per second on a modern machine.
 
 ## What is faked and what is real
 
