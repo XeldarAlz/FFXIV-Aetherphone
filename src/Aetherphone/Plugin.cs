@@ -61,6 +61,8 @@ public sealed class Plugin : IDalamudPlugin
     internal static DeviceStatus Device { get; set; } = null!;
     internal static UpdateCheckService Updates { get; set; } = null!;
     internal static PhotoWindow PhotoWindow { get; set; } = null!;
+    internal PhoneShell Shell => shell;
+    internal PhoneWindow MainWindow => phoneWindow;
     private readonly WindowSystem windowSystem = new(AepConstants.Name);
     private readonly PhoneServices services;
     private readonly PhoneShell shell;

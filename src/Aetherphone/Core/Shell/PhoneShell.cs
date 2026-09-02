@@ -168,6 +168,8 @@ internal sealed class PhoneShell : IDisposable
 
     public bool MinimizedResting => minimize.MinimizedResting;
 
+    public string? CurrentAppId => navigation.Current?.Id;
+
     private static bool BezelDoubleClicked(Rect device, in ChassisGeometry chassis)
     {
         if (!ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left) || ImGui.IsAnyItemHovered())

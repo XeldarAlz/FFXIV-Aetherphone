@@ -6,9 +6,11 @@ internal static class UiAnchors
     private static bool recording;
     public static bool Recording => recording;
 
+    internal static bool ForceRecording { get; set; }
+
     public static void BeginFrame(bool enabled)
     {
-        recording = enabled;
+        recording = enabled || ForceRecording;
         Anchors.Clear();
     }
 
@@ -23,4 +25,13 @@ internal static class UiAnchors
     }
 
     public static bool TryGet(string key, out Rect rect) => Anchors.TryGetValue(key, out rect);
+
+    internal static void CopyTo(List<KeyValuePair<string, Rect>> into)
+    {
+        into.Clear();
+        foreach (var entry in Anchors)
+        {
+            into.Add(entry);
+        }
+    }
 }
