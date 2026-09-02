@@ -1923,7 +1923,7 @@ internal sealed class ChatTranscript
         var seen = message.ReadAtUnix is not null;
         var glyph = IconGlyph.Of((seen ? FontAwesomeIcon.CheckDouble : FontAwesomeIcon.Check));
         float tickWidth;
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             tickWidth = ImGui.CalcTextSize(glyph).X * StampTickScale;
         }

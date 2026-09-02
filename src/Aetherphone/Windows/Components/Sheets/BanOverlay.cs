@@ -90,7 +90,7 @@ internal sealed class BanOverlay
         var iconRadius = 40f * scale;
         dl.AddCircleFilled(iconCenter, iconRadius,
             ImGui.GetColorU32(Palette.WithAlpha(theme.Danger, 0.16f * alpha)), 48);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var glyph = IconGlyph.Of(FontAwesomeIcon.Ban);
             var size = ImGui.CalcTextSize(glyph);

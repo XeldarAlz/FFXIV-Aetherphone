@@ -409,7 +409,7 @@ internal sealed class NewsApp : IPhoneApp
         UiAnchors.Report("news.refresh", new Rect(center - new Vector2(box, box), center + new Vector2(box, box)));
         var hovered = UiInteract.Hover(center - new Vector2(box, box), center + new Vector2(box, box));
         var glyph = IconGlyph.Of(FontAwesomeIcon.Sync);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var size = ImGui.CalcTextSize(glyph);
             ImGui.SetCursorScreenPos(center - size * 0.5f);

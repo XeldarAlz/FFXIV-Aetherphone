@@ -239,6 +239,17 @@ internal sealed class FontService : IDisposable
         return new FontToken(dalamudIconHandle.Push());
     }
 
+    public FontToken PushDalamudIcon() => new(dalamudIconHandle.Push());
+
+    public ImFontPtr DalamudIconFont
+    {
+        get
+        {
+            using var locked = dalamudIconHandle.Lock();
+            return locked.ImFont;
+        }
+    }
+
     private static unsafe bool HasGlyph(ImFontPtr font, char codepoint)
     {
         ImFontGlyphPtr found = font.FindGlyphNoFallback(codepoint);

@@ -567,7 +567,7 @@ internal sealed class AppSkin
     public static void Icon(ImDrawListPtr drawList, Vector2 center, string glyph, Vector4 color, float scale)
     {
         float targetSize;
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             targetSize = ImGui.GetFontSize() * scale;
         }

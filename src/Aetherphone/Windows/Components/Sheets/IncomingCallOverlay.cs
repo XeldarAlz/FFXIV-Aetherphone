@@ -101,7 +101,7 @@ internal sealed class IncomingCallOverlay
                           center + new Vector2(radius, radius));
         var color = hovered ? Palette.Mix(fill, Ink, 0.14f) : fill;
         dl.AddCircleFilled(center, radius, ImGui.GetColorU32(Palette.WithAlpha(color, alpha)), 40);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);

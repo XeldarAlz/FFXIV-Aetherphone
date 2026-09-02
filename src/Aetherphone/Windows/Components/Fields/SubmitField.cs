@@ -20,7 +20,7 @@ internal static class SubmitField
         var radius = (pillMax.Y - pillMin.Y) * 0.5f;
         Squircle.Fill(drawList, pillMin, pillMax, radius, ImGui.GetColorU32(theme.GroupedCard));
         var glyphCenter = new Vector2(pillMin.X + 16f * scale, bar.Center.Y);
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var glyph = IconGlyph.Of(icon);
             var size = ImGui.CalcTextSize(glyph);

@@ -75,7 +75,7 @@ internal static class SupportButton
         var ink = new Vector4(1f, 1f, 1f, 1f);
         var heartGlyph = IconGlyph.Of(FontAwesomeIcon.Heart);
         Vector2 iconSize;
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             iconSize = ImGui.CalcTextSize(heartGlyph);
         }

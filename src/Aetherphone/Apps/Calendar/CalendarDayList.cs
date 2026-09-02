@@ -108,12 +108,12 @@ internal static class CalendarDayList
             drawList.AddCircleFilled(center, radius, ImGui.GetColorU32(ui.HoverTint), 24);
         }
 
-        using (ImRaii.PushFont(UiBuilder.IconFont))
+        using (Plugin.Fonts.PushDalamudIcon())
         {
             var glyph = IconGlyph.Of(FontAwesomeIcon.Trash);
             var fontSize = ImGui.GetFontSize() * 0.72f;
             var size = ImGui.CalcTextSize(glyph) * 0.72f;
-            drawList.AddText(UiBuilder.IconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(ui.MutedInk), glyph);
+            drawList.AddText(Plugin.Fonts.DalamudIconFont, fontSize, center - size * 0.5f, ImGui.GetColorU32(ui.MutedInk), glyph);
         }
 
         HoverTooltip.Show(new Rect(min, max), Loc.T(L.Calendar.DeleteEvent), HoverLabelSide.Above);
