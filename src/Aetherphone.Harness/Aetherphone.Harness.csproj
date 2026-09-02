@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>preview</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Aetherphone.Harness</RootNamespace>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <HarnessCache Condition="'$(AETHERPHONE_HARNESS_CACHE)' != ''">$(AETHERPHONE_HARNESS_CACHE)</HarnessCache>
+    <HarnessCache Condition="'$(HarnessCache)' == '' And $([MSBuild]::IsOSPlatform('Windows'))">$(USERPROFILE)\.aetherphone-harness</HarnessCache>
+    <HarnessCache Condition="'$(HarnessCache)' == ''">$(HOME)/.aetherphone-harness</HarnessCache>
+    <DalamudLibPath Condition="'$(DALAMUD_HOME)' != ''">$(DALAMUD_HOME)/</DalamudLibPath>
+    <DalamudLibPath Condition="'$(DalamudLibPath)' == '' And $([MSBuild]::IsOSPlatform('Windows')) And Exists('$(appdata)\XIVLauncher\addon\Hooks\dev\Dalamud.dll')">$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
+    <DalamudLibPath Condition="'$(DalamudLibPath)' == ''">$(HarnessCache)/dalamud/</DalamudLibPath>
+    <AssemblySearchPaths>$(AssemblySearchPaths);$(DalamudLibPath)</AssemblySearchPaths>
+    <NativeImGuiSource Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(DalamudLibPath)cimgui.dll</NativeImGuiSource>
+    <NativeImGuiSource Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(HarnessCache)/native/libcimgui.dylib</NativeImGuiSource>
+    <NativeImGuiSource Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(HarnessCache)/native/libcimgui.so</NativeImGuiSource>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Dalamud.Bindings.ImGui" Private="true" />
+    <Reference Include="HexaGen.Runtime" Private="true" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Remove="System.Linq" />
+    <Using Include="System.Numerics" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="$(NativeImGuiSource)" Link="cimgui.dll" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
