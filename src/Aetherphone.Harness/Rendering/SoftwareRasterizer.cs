@@ -107,6 +107,20 @@ internal sealed unsafe class SoftwareRasterizer
         UnpackColor(first.Color, out var red0, out var green0, out var blue0, out var alpha0);
         UnpackColor(second.Color, out var red1, out var green1, out var blue1, out var alpha1);
         UnpackColor(third.Color, out var red2, out var green2, out var blue2, out var alpha2);
+        var uniformTexel = first.Uv == second.Uv && second.Uv == third.Uv;
+        var texelRed = 255f;
+        var texelGreen = 255f;
+        var texelBlue = 255f;
+        var texelAlpha = 255f;
+        if (uniformTexel)
+        {
+            texture.SampleBilinear(first.Uv.X, first.Uv.Y, out texelRed, out texelGreen, out texelBlue, out texelAlpha);
+            if (texelAlpha <= 0f)
+            {
+                return;
+            }
+        }
+
         var target = accumulator;
         var startCenter = new Vector2(minX + 0.5f, minY + 0.5f);
         var rowWeight0 = Orient(position1, position2, startCenter);
@@ -120,11 +134,25 @@ internal sealed unsafe class SoftwareRasterizer
         var stepY2 = position1.X - position0.X;
         for (var y = minY; y <= maxY; y++)
         {
-            var weight0 = rowWeight0;
-            var weight1 = rowWeight1;
-            var weight2 = rowWeight2;
+            var spanStart = minX;
+            var spanEnd = maxX;
+            ClampSpan(rowWeight0, stepX0, minX, ref spanStart, ref spanEnd);
+            ClampSpan(rowWeight1, stepX1, minX, ref spanStart, ref spanEnd);
+            ClampSpan(rowWeight2, stepX2, minX, ref spanStart, ref spanEnd);
+            if (spanStart > spanEnd)
+            {
+                rowWeight0 += stepY0;
+                rowWeight1 += stepY1;
+                rowWeight2 += stepY2;
+                continue;
+            }
+
+            var skipped = spanStart - minX;
+            var weight0 = rowWeight0 + stepX0 * skipped;
+            var weight1 = rowWeight1 + stepX1 * skipped;
+            var weight2 = rowWeight2 + stepX2 * skipped;
             var rowOffset = y * Width;
-            for (var x = minX; x <= maxX; x++)
+            for (var x = spanStart; x <= spanEnd; x++)
             {
                 var inside = (weight0 > 0f || (weight0 == 0f && topLeft0)) &&
                              (weight1 > 0f || (weight1 == 0f && topLeft1)) &&
@@ -134,10 +162,13 @@ internal sealed unsafe class SoftwareRasterizer
                     var barycentric0 = weight0 * inverseArea;
                     var barycentric1 = weight1 * inverseArea;
                     var barycentric2 = weight2 * inverseArea;
-                    var u = first.Uv.X * barycentric0 + second.Uv.X * barycentric1 + third.Uv.X * barycentric2;
-                    var v = first.Uv.Y * barycentric0 + second.Uv.Y * barycentric1 + third.Uv.Y * barycentric2;
-                    texture.SampleBilinear(u, v, out var texelRed, out var texelGreen, out var texelBlue,
-                        out var texelAlpha);
+                    if (!uniformTexel)
+                    {
+                        var u = first.Uv.X * barycentric0 + second.Uv.X * barycentric1 + third.Uv.X * barycentric2;
+                        var v = first.Uv.Y * barycentric0 + second.Uv.Y * barycentric1 + third.Uv.Y * barycentric2;
+                        texture.SampleBilinear(u, v, out texelRed, out texelGreen, out texelBlue, out texelAlpha);
+                    }
+
                     var red = (red0 * barycentric0 + red1 * barycentric1 + red2 * barycentric2) * texelRed * ChannelScale;
                     var green = (green0 * barycentric0 + green1 * barycentric1 + green2 * barycentric2) * texelGreen * ChannelScale;
                     var blue = (blue0 * barycentric0 + blue1 * barycentric1 + blue2 * barycentric2) * texelBlue * ChannelScale;
@@ -161,6 +192,40 @@ internal sealed unsafe class SoftwareRasterizer
             rowWeight0 += stepY0;
             rowWeight1 += stepY1;
             rowWeight2 += stepY2;
+        }
+    }
+
+    private static void ClampSpan(float weightAtStart, float step, int startX, ref int spanStart, ref int spanEnd)
+    {
+        if (step > 0f)
+        {
+            if (weightAtStart < 0f)
+            {
+                var first = startX + (int)MathF.Ceiling(-weightAtStart / step);
+                spanStart = Math.Max(spanStart, first);
+            }
+
+            return;
+        }
+
+        if (step < 0f)
+        {
+            if (weightAtStart >= 0f)
+            {
+                var last = startX + (int)MathF.Floor(weightAtStart / -step);
+                spanEnd = Math.Min(spanEnd, last);
+            }
+            else
+            {
+                spanEnd = spanStart - 1;
+            }
+
+            return;
+        }
+
+        if (weightAtStart < 0f)
+        {
+            spanEnd = spanStart - 1;
         }
     }
 
