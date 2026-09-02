@@ -192,6 +192,7 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public HuntsFilterSnapshot? HuntsFilterSettings { get; set; }
     public Core.Strats.StratsSnapshot? StratsSettings { get; set; }
     public HuntsNotificationSnapshot? HuntsNotificationSettings { get; set; }
+    public bool HuntsNativeMapMarkers { get; set; }
     public bool EncryptionRecoveryNudgeDismissed { get; set; }
     public Dictionary<string, int> KnownPeerKeyVersions { get; set; } = new();
     public Dictionary<ulong, CharacterSession> CharacterSessions { get; set; } = new();

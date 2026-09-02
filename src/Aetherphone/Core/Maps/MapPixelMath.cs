@@ -14,4 +14,10 @@ internal static class MapPixelMath
 
     public static (float X, float Y) NormalizeToFullCanvas(float rawX, float rawY) =>
         (rawX / FullCanvasSize, rawY / FullCanvasSize);
+
+    public static float ToWorldCoordinate(float rawPixel, int sizeFactor, int offset)
+    {
+        var scale = Math.Max(sizeFactor, 1) / 100f;
+        return (rawPixel - FullCanvasSize / 2f) / scale - offset;
+    }
 }

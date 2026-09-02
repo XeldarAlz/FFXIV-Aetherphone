@@ -44,7 +44,6 @@ internal sealed partial class HuntsApp
     private bool detailTimingExpanded = true;
     private string detailMobId = string.Empty;
     private string detailMapZoneId = string.Empty;
-    private readonly List<HuntPoiEntry> detailMapPoints = new();
     private readonly List<HuntPoiEntry> detailMapAetherytePoints = new();
     private readonly Dictionary<(uint TerritoryId, string ZoneId, string Language), string> zoneLabelCache = new();
     private readonly PhotoZoomView detailMapZoom = new();
@@ -53,8 +52,6 @@ internal sealed partial class HuntsApp
 
     private (int WindowNum, int PhaseNum)? detailMapActivePhase;
     private string? detailMapConfirmedZoneId;
-    private bool detailMapFinalPhase;
-    private bool detailMapZoneConfirmed;
 
     private uint pendingFlagWorldId;
     private uint pendingFlagTerritoryId;
@@ -85,7 +82,7 @@ internal sealed partial class HuntsApp
             detailTimingExpanded = true;
             detailMapActivePhase = hunts.PhaseFor(mobId, worldId, zoneInstance);
             detailMapConfirmedZoneId = hunts.ZoneIdFor(mobId, worldId, zoneInstance);
-            ResolveDetailMap(mobCatalog.Find(mobId), detailMapActivePhase, detailMapConfirmedZoneId);
+            ResolveDetailMap(mobCatalog.Find(mobId), worldId, zoneInstance);
             detailMapPendingFocus = true;
             detailMapHovered = false;
         }
@@ -94,94 +91,19 @@ internal sealed partial class HuntsApp
         router.Push(new HuntsView(HuntsRoute.Detail, mobId, worldId, zoneInstance));
     }
 
-    private void ResolveDetailMap(HuntMobDefinition? mob, (int WindowNum, int PhaseNum)? activePhase,
-        string? confirmedZoneId)
+    private void ResolveDetailMap(HuntMobDefinition? mob, string worldId, int zoneInstance)
     {
         detailMapZoneId = string.Empty;
-        detailMapPoints.Clear();
         detailMapAetherytePoints.Clear();
-        detailMapFinalPhase = false;
-        detailMapZoneConfirmed = false;
 
         if (mob is null || mob.ZoneIds.Length == 0)
         {
             return;
         }
 
-        var poiIds = new HashSet<int>();
-        if (activePhase is { } phase && mob.Windows.Length > 0)
-        {
-            var windowIndex = Math.Clamp(phase.WindowNum - 1, 0, mob.Windows.Length - 1);
-            var phases = mob.Windows[windowIndex].Phases;
-            if (phases.Length > 0)
-            {
-                var phaseIndex = Math.Clamp(phase.PhaseNum - 1, 0, phases.Length - 1);
-                detailMapFinalPhase = phaseIndex > 0;
-                var zonePoiIds = phases[phaseIndex].ZonePoiIds;
-                for (var poiIndex = 0; poiIndex < zonePoiIds.Length; poiIndex++)
-                {
-                    poiIds.Add(zonePoiIds[poiIndex]);
-                }
-            }
-        }
-        else
-        {
-            for (var windowIndex = 0; windowIndex < mob.Windows.Length; windowIndex++)
-            {
-                var phases = mob.Windows[windowIndex].Phases;
-                for (var phaseIndex = 0; phaseIndex < phases.Length; phaseIndex++)
-                {
-                    var zonePoiIds = phases[phaseIndex].ZonePoiIds;
-                    for (var poiIndex = 0; poiIndex < zonePoiIds.Length; poiIndex++)
-                    {
-                        poiIds.Add(zonePoiIds[poiIndex]);
-                    }
-                }
-            }
-        }
-
-        if (confirmedZoneId is { Length: > 0 } && Array.IndexOf(mob.ZoneIds, confirmedZoneId) >= 0)
-        {
-            detailMapZoneId = confirmedZoneId;
-            detailMapZoneConfirmed = true;
-            foreach (var poiId in poiIds)
-            {
-                var found = zoneCatalog.FindPoi(poiId);
-                if (found is { } resolved && string.Equals(resolved.ZoneId, confirmedZoneId, StringComparison.Ordinal))
-                {
-                    detailMapPoints.Add(resolved.Poi);
-                }
-            }
-
-            PopulateAetherytePoints(confirmedZoneId);
-            return;
-        }
-
-        var bestZoneId = string.Empty;
-        var bestPoints = new List<HuntPoiEntry>();
-        for (var zoneIndex = 0; zoneIndex < mob.ZoneIds.Length; zoneIndex++)
-        {
-            var candidateZoneId = mob.ZoneIds[zoneIndex];
-            var candidatePoints = new List<HuntPoiEntry>();
-            foreach (var poiId in poiIds)
-            {
-                var found = zoneCatalog.FindPoi(poiId);
-                if (found is { } resolved && string.Equals(resolved.ZoneId, candidateZoneId, StringComparison.Ordinal))
-                {
-                    candidatePoints.Add(resolved.Poi);
-                }
-            }
-
-            if (candidatePoints.Count > bestPoints.Count)
-            {
-                bestZoneId = candidateZoneId;
-                bestPoints = candidatePoints;
-            }
-        }
-
-        detailMapZoneId = bestZoneId;
-        detailMapPoints.AddRange(bestPoints);
-        PopulateAetherytePoints(bestZoneId);
+        detailMapZoneId = HuntCandidateResolver.ResolveBestZoneId(mob, worldId, zoneInstance, zoneCatalog, hunts,
+            out _);
+        PopulateAetherytePoints(detailMapZoneId);
     }
 
     private void PopulateAetherytePoints(string zoneId)
@@ -267,16 +189,19 @@ internal sealed partial class HuntsApp
             {
                 detailMapActivePhase = livePhase;
                 detailMapConfirmedZoneId = liveZoneId;
-                ResolveDetailMap(def, livePhase, liveZoneId);
+                ResolveDetailMap(def, view.WorldId, view.ZoneInstance);
             }
 
-            var spawned = hunts.IsSpawned(view.MobId, view.WorldId, view.ZoneInstance);
-            var confirmedPoiId = spawned ? ResolveConfirmedPoiId(view) : null;
-            if (DrawDetailZoneMap(scale, confirmedPoiId, view))
+            var (states, confirmedPoiId) = def is not null
+                ? candidateCache.ResolveFor(def, view.WorldId, view.ZoneInstance, detailMapZoneId,
+                    includeLandmineOnlySpots: false)
+                : (Array.Empty<HuntPoiState>(), null);
+            if (DrawDetailZoneMap(scale, states, view))
             {
                 Gap(20f);
             }
 
+            var spawned = hunts.IsSpawned(view.MobId, view.WorldId, view.ZoneInstance);
             if (spawned && DrawNavigateButton(view, scale, confirmedPoiId))
             {
                 Gap(20f);
@@ -337,18 +262,6 @@ internal sealed partial class HuntsApp
         return null;
     }
 
-    private int? ResolveConfirmedPoiId(HuntsView view)
-    {
-        if (hunts.ConfirmedPoiIdFor(view.MobId, view.WorldId, view.ZoneInstance) is { } reported)
-        {
-            return reported;
-        }
-
-        return detailMapFinalPhase && detailMapZoneConfirmed && detailMapPoints.Count == 1
-            ? detailMapPoints[0].Id
-            : null;
-    }
-
     private void DrawDetailWindowBar(HuntWindowDto window, HuntMobDefinition? def, DateTimeOffset now, float scale)
     {
         var origin = ImGui.GetCursorScreenPos();
@@ -375,6 +288,7 @@ internal sealed partial class HuntsApp
         var barTop = origin.Y + headerHeight + 10f * scale;
         var barHeight = 8f * scale;
         var percentage = HuntWindowMath.Percentage(window, def, now);
+        var fillPercentage = HuntWindowMath.RawPercentage(window, def, now);
 
         var detailLabel = ResolveDetailLabel(status, window, def, now);
         var reporterLabel = ResolveReporterLabel(window);
@@ -415,7 +329,8 @@ internal sealed partial class HuntsApp
         Typography.Draw(drawList, new Vector2(contentRight - statusSize.X, origin.Y), statusLabel, statusInk,
             TextStyles.Title3);
 
-        DrawBigProgressBar(drawList, contentLeft, contentRight, barTop, barHeight, status, percentage ?? 0d, scale);
+        DrawBigProgressBar(drawList, contentLeft, contentRight, barTop, barHeight, status, percentage, fillPercentage,
+            scale);
 
         var lineTop = barTop + barHeight;
         if (detailLabel.Length > 0)
@@ -446,15 +361,15 @@ internal sealed partial class HuntsApp
     }
 
     private void DrawBigProgressBar(ImDrawListPtr drawList, float left, float right, float top, float height,
-        HuntWindowStatus status, double percentage, float scale)
+        HuntWindowStatus status, double? percentage, double? fillPercentage, float scale)
     {
-        ProgressBar.Draw(drawList, left, right, top, height, percentage, StatusColor(status), TextStyles.Headline,
-            8f * scale);
+        ProgressBar.Draw(drawList, left, right, top, height, percentage, fillPercentage, StatusColor(status),
+            TextStyles.Headline, 8f * scale);
     }
 
-    private bool DrawDetailZoneMap(float scale, int? confirmedPoiId, HuntsView view)
+    private bool DrawDetailZoneMap(float scale, IReadOnlyList<HuntPoiState> states, HuntsView view)
     {
-        if (detailMapPoints.Count == 0 && detailMapAetherytePoints.Count == 0)
+        if (states.Count == 0 && detailMapAetherytePoints.Count == 0)
         {
             detailMapHovered = false;
             return false;
@@ -492,7 +407,7 @@ internal sealed partial class HuntsApp
         {
             if (mapChild)
             {
-                DrawDetailZoneMapContent(stage, texture, scale, confirmedPoiId, view, territoryId);
+                DrawDetailZoneMapContent(stage, texture, scale, states, view, territoryId);
             }
         }
 
@@ -520,13 +435,13 @@ internal sealed partial class HuntsApp
             ? territory.PlaceName.Value.Name.ExtractText()
             : null;
 
-    private void DrawDetailZoneMapContent(Rect stage, IDalamudTextureWrap texture, float scale, int? confirmedPoiId,
-        HuntsView view, uint territoryId)
+    private void DrawDetailZoneMapContent(Rect stage, IDalamudTextureWrap texture, float scale,
+        IReadOnlyList<HuntPoiState> states, HuntsView view, uint territoryId)
     {
         if (detailMapPendingFocus)
         {
             detailMapPendingFocus = false;
-            FocusDetailMap(stage, texture.Size);
+            FocusDetailMap(stage, texture.Size, states);
         }
 
         var drawList = ImGui.GetWindowDrawList();
@@ -538,35 +453,15 @@ internal sealed partial class HuntsApp
         var min = center - drawnSize * 0.5f;
         var max = center + drawnSize * 0.5f;
 
-        var confirmedKnown = false;
-        if (confirmedPoiId is { } confirmed)
-        {
-            for (var checkIndex = 0; checkIndex < detailMapPoints.Count; checkIndex++)
-            {
-                if (detailMapPoints[checkIndex].Id == confirmed)
-                {
-                    confirmedKnown = true;
-                    break;
-                }
-            }
-        }
-
-        var finalLocationResolved = detailMapFinalPhase && detailMapZoneConfirmed && detailMapPoints.Count == 1;
-
         drawList.PushClipRect(stage.Min, stage.Max, true);
-        for (var index = 0; index < detailMapPoints.Count; index++)
+        for (var index = 0; index < states.Count; index++)
         {
-            var poi = detailMapPoints[index];
-            if (confirmedKnown && poi.Id != confirmedPoiId)
-            {
-                continue;
-            }
-
+            var (poi, state) = states[index];
             var (rawX, rawY) = poi.ParsedLocation();
             var (normalizedX, normalizedY) = MapPixelMath.NormalizeToFullCanvas(rawX, rawY);
             var dotPosition = new Vector2(min.X + normalizedX * (max.X - min.X),
                 min.Y + normalizedY * (max.Y - min.Y));
-            DrawSpawnDot(drawList, dotPosition, scale, poi.Id, confirmedKnown, finalLocationResolved);
+            DrawSpawnDot(drawList, dotPosition, scale, poi.Id, state);
         }
 
         var worldId = HuntDataCenterWorlds.WorldRowId(view.WorldId);
@@ -584,9 +479,9 @@ internal sealed partial class HuntsApp
         drawList.PopClipRect();
     }
 
-    private void FocusDetailMap(Rect stage, Vector2 textureSize)
+    private void FocusDetailMap(Rect stage, Vector2 textureSize, IReadOnlyList<HuntPoiState> states)
     {
-        if (detailMapPoints.Count == 0)
+        if (states.Count == 0)
         {
             detailMapZoom.Reset();
             return;
@@ -594,9 +489,9 @@ internal sealed partial class HuntsApp
 
         var min = new Vector2(float.MaxValue, float.MaxValue);
         var max = new Vector2(float.MinValue, float.MinValue);
-        for (var index = 0; index < detailMapPoints.Count; index++)
+        for (var index = 0; index < states.Count; index++)
         {
-            var (rawX, rawY) = detailMapPoints[index].ParsedLocation();
+            var (rawX, rawY) = states[index].Poi.ParsedLocation();
             var (normalizedX, normalizedY) = MapPixelMath.NormalizeToFullCanvas(rawX, rawY);
             min = new Vector2(MathF.Min(min.X, normalizedX), MathF.Min(min.Y, normalizedY));
             max = new Vector2(MathF.Max(max.X, normalizedX), MathF.Max(max.Y, normalizedY));
@@ -605,10 +500,17 @@ internal sealed partial class HuntsApp
         detailMapZoom.FocusOn(stage, textureSize, new Rect(min, max));
     }
 
-    private void DrawSpawnDot(ImDrawListPtr drawList, Vector2 center, float scale, int poiId, bool confirmed,
-        bool finalLocation)
+    private void DrawSpawnDot(ImDrawListPtr drawList, Vector2 center, float scale, int poiId,
+        HuntsMapMarkerState state)
     {
-        var ink = finalLocation ? frameTheme.Danger : confirmed ? OpenBarColor : ui.Accent;
+        var ink = state switch
+        {
+            HuntsMapMarkerState.Confirmed => OpenBarColor,
+            HuntsMapMarkerState.Sighted => ui.MutedInk,
+            HuntsMapMarkerState.ActiveMinion => SpawnedBarColor,
+            HuntsMapMarkerState.SsSpawn => ui.Theme.Danger,
+            _ => ui.Accent,
+        };
         drawList.AddCircleFilled(center, MapDotRingRadius * scale, ImGui.GetColorU32(new Vector4(0f, 0f, 0f, 0.35f)),
             20);
         drawList.AddCircle(center, MapDotRingRadius * scale, ImGui.GetColorU32(Vector4.One), 20, 1.4f * scale);
@@ -651,7 +553,8 @@ internal sealed partial class HuntsApp
 
         if (UiInteract.Click(hitMin, hitMax, hovered) && territoryId != 0 && worldId != 0)
         {
-            NavigateToCoordinate(territoryId, worldId, mapId, zoneCatalog.ResolveCoordinate(poi.Id), zoneInstance);
+            var poiCoordinate = zoneCatalog.ResolveCoordinate(poi.Id);
+            NavigateToAetheryte(territoryId, worldId, mapId, poiCoordinate, zoneInstance);
         }
     }
 
@@ -698,7 +601,7 @@ internal sealed partial class HuntsApp
         var label = alreadyThere ? Loc.T(L.Hunts.PlaceFlagOnMap) : Loc.T(L.Hunts.NavigateToLocation);
         if (ui.PillButton(rect, label, true, "hunts.detail.navigate"))
         {
-            NavigateToCoordinate(territoryId, worldId, mapId, coordinate, view.ZoneInstance);
+            NavigateToCoordinate(territoryId, worldId, mapId, coordinate, coordinate, view.ZoneInstance);
         }
 
         ImGui.SetCursorScreenPos(origin);
@@ -706,16 +609,16 @@ internal sealed partial class HuntsApp
         return true;
     }
 
-    private void NavigateToCoordinate(uint territoryId, uint worldId, uint mapId, (float X, float Y)? coordinate,
-        int zoneInstance)
+    private void NavigateToCoordinate(uint territoryId, uint worldId, uint mapId, (float X, float Y)? targetCoordinate,
+        (float X, float Y)? flagCoordinate, int zoneInstance)
     {
         ArmPendingInstanceSync(worldId, territoryId, zoneInstance);
 
         var destination = TravelPlanner.ResolveNearestAetheryteTo(territoryId, worldId, LocationShare.CurrentWorldId(),
-            Plugin.ClientState.TerritoryType, coordinate);
+            Plugin.ClientState.TerritoryType, targetCoordinate);
         if (destination.Kind == TravelKind.AlreadyThere)
         {
-            if (coordinate is { } here)
+            if (flagCoordinate is { } here)
             {
                 DropFlag(territoryId, mapId, here.X, here.Y);
             }
@@ -723,7 +626,22 @@ internal sealed partial class HuntsApp
             return;
         }
 
-        TravelToHuntZone(in destination, worldId, territoryId, mapId, coordinate);
+        TravelToHuntZone(in destination, worldId, territoryId, mapId, flagCoordinate);
+    }
+
+    private void NavigateToAetheryte(uint territoryId, uint worldId, uint mapId, (float X, float Y)? targetCoordinate,
+        int zoneInstance)
+    {
+        if (targetCoordinate is not { } coordinate)
+        {
+            return;
+        }
+
+        ArmPendingInstanceSync(worldId, territoryId, zoneInstance);
+
+        var destination = TravelPlanner.ResolveAetheryteAt(territoryId, worldId, LocationShare.CurrentWorldId(),
+            coordinate);
+        TravelToHuntZone(in destination, worldId, territoryId, mapId, null);
     }
 
     private void TravelToHuntZone(in TravelDestination destination, uint worldId, uint territoryId, uint mapId,

@@ -36,11 +36,11 @@ internal sealed class ChipRail
     private bool paging;
 
     public int Draw(AppSkin ui, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, string? anchorKey = null,
-        float labelPadding = DefaultLabelPadding) =>
-        Draw(ReserveRow(this, UiScale.Current), ui, labels, active, false, anchorKey, labelPadding);
+        float labelPadding = DefaultLabelPadding, bool interactive = true) =>
+        Draw(ReserveRow(this, UiScale.Current), ui, labels, active, false, anchorKey, labelPadding, interactive);
 
     public int Draw(Rect row, AppSkin ui, ReadOnlySpan<string> labels, ReadOnlySpan<bool> active, bool overlay = false,
-        string? anchorKey = null, float labelPadding = DefaultLabelPadding)
+        string? anchorKey = null, float labelPadding = DefaultLabelPadding, bool interactive = true)
     {
         if (labels.Length == 0)
         {
@@ -78,7 +78,7 @@ internal sealed class ChipRail
             var width = ChipWidth(labels[index], scale, labelPadding);
             if (cursorX + width >= row.Min.X && cursorX <= row.Max.X
                 && DrawChip(drawList, ui, labels[index], active[index],
-                    new Vector2(cursorX, row.Center.Y), width, scale, overlay, arrowHovered))
+                    new Vector2(cursorX, row.Center.Y), width, scale, overlay, arrowHovered, interactive))
             {
                 tapped = index;
             }
@@ -158,13 +158,13 @@ internal sealed class ChipRail
         Typography.Measure(label, TextStyles.SubheadlineEmphasized).X + labelPadding * scale;
 
     private bool DrawChip(ImDrawListPtr drawList, AppSkin ui, string label, bool active, Vector2 leftCenter,
-        float width, float scale, bool overlay, bool shadowed)
+        float width, float scale, bool overlay, bool shadowed, bool interactive = true)
     {
         var height = RowHeight * scale;
         var min = new Vector2(leftCenter.X, leftCenter.Y - height * 0.5f);
         var max = new Vector2(leftCenter.X + width, leftCenter.Y + height * 0.5f);
         var radius = height * 0.5f;
-        var hovered = !shadowed && Hovered(min, max, overlay);
+        var hovered = interactive && !shadowed && Hovered(min, max, overlay);
         var highlighted = hovered && !dragging;
         var fill = active
             ? Palette.WithAlpha(ui.Accent, highlighted ? 1f : 0.92f)
@@ -179,7 +179,7 @@ internal sealed class ChipRail
             ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
         }
 
-        return dragTravel <= DragSlop * scale && UiInteract.Click(min, max, hovered);
+        return interactive && dragTravel <= DragSlop * scale && UiInteract.Click(min, max, hovered);
     }
 
     private static Rect ReserveRow(ChipRail rail, float scale)

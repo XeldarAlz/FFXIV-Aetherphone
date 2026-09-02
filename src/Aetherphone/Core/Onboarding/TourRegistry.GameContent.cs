@@ -47,12 +47,16 @@ internal static partial class TourRegistry
                 GuideStep.Point(L.Onboarding.MapsSearchTitle, L.Onboarding.MapsSearchBody, "maps.search"),
                 GuideStep.Note(L.Onboarding.MapsStarTitle, L.Onboarding.MapsStarBody),
             });
-        Add(tours, "hunts", 2,
+        Add(tours, "hunts", 5,
             new[]
             {
                 GuideStep.Note(L.Apps.Hunts, L.Onboarding.HuntsBody),
                 GuideStep.Point(L.Onboarding.HuntsSignInTitle, L.Onboarding.HuntsSignInBody, "hunts.auth"),
                 GuideStep.Point(L.Onboarding.HuntsGuideTitle, L.Onboarding.HuntsGuideBody, "hunts.guide"),
+                GuideStep.Tap(L.Onboarding.HuntsSettingsTitle, L.Onboarding.HuntsSettingsBody, "hunts.settings",
+                    "hunts.tab.settings"),
+                GuideStep.Point(L.Onboarding.HuntsMapMarkersTitle, L.Onboarding.HuntsMapMarkersBody,
+                    "hunts.settings.nativeMapMarkers"),
             });
         Add(tours, "fishing", 2,
             new[]

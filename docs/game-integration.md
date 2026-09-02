@@ -26,6 +26,7 @@ This doc explains how Aetherphone reads from and acts on the live game without c
 | src/Aetherphone/Core/Dailies/DailiesReader.cs | Roulette, allowance, and Wondrous Tails completion reads |
 | src/Aetherphone/Core/Maps/MapData.cs | Aetheryte and zone catalog from sheets |
 | src/Aetherphone/Core/Maps/LocationShare.cs | Captures player position, opens map links |
+| src/Aetherphone/Core/Maps/HuntsMapMarkers.cs | Draws hunt candidates on the native map and minimap via `AgentMap`; see Gotchas below on why it resets the whole marker array |
 | src/Aetherphone/Core/Venues/LifestreamBridge.cs | Teleports through the Lifestream plugin's IPC |
 | src/Aetherphone/Core/PhoneVisibility.cs | "Is the phone on screen" probe consumed by services |
 | src/Aetherphone/Core/PollCadence.cs | Slows background polling when the phone is hidden |
@@ -281,6 +282,7 @@ Game-state awareness beyond window hiding is condition-driven per feature, alway
 - `GameUiVisibility` writes the same global flag as the game's own "Display/Hide UI" keybind, so it also has to opt the phone out of Dalamud's automatic UI hiding (`UiBuilder.DisableUserUiHide`) or the phone vanishes along with the HUD. It records the previous value and puts it back, and it refuses to hide when the player already has their UI hidden, so restoring never turns a hidden HUD back on.
 - `EorzeaTime.CurrentSeconds` silently switches to a real-time formula when `Framework.Instance()` is null (early boot). Do not treat two consecutive reads as monotonic across that boundary.
 - `ChatSender.TrySend` drops messages over 500 UTF-8 bytes and any message the game's sanitizer would shorten, returning false rather than sending an altered string. Check the return value.
+- `AgentMap`'s map and minimap marker arrays are process-wide: every plugin's markers and the game's own quest, gathering, and treasure markers all share the same `byte` count and append-only `Add*Marker` call, with no per-marker handle to remove just one. `HuntsMapMarkers` calls `ResetMapMarkers`/`ResetMiniMapMarkers` before every redraw, which clears everyone's markers, not only ours; anyone else's redraw on their own next tick puts theirs back. A byte-count "only remove what we added" scheme was tried and reverted: the game repopulates its own markers around most `AreaMap` opens, which drifted the count out of sync with reality and left our markers invisible indefinitely until an unrelated context change forced a redraw. The full reset is the accepted tradeoff.
 
 ## Related docs
 

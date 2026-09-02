@@ -50,7 +50,7 @@ public sealed class TourRegistryTests
         { "housing", (1, 7) },
         { "casino", (1, 8) },
         { "aetherstream", (1, 7) },
-        { "hunts", (2, 3) },
+        { "hunts", (5, 5) },
     };
 
     [Fact]

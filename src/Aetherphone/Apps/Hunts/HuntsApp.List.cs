@@ -136,8 +136,8 @@ internal sealed partial class HuntsApp
             return leftSpawned ? -1 : 1;
         }
 
-        var leftPercentage = HuntWindowMath.Percentage(left, mobCatalog.Find(left.MobId), sortNow);
-        var rightPercentage = HuntWindowMath.Percentage(right, mobCatalog.Find(right.MobId), sortNow);
+        var leftPercentage = HuntWindowMath.RawPercentage(left, mobCatalog.Find(left.MobId), sortNow);
+        var rightPercentage = HuntWindowMath.RawPercentage(right, mobCatalog.Find(right.MobId), sortNow);
         if (leftPercentage is null && rightPercentage is null)
         {
             return CompareByMinimumReachedAt(left, right);
@@ -200,7 +200,8 @@ internal sealed partial class HuntsApp
         var statusInk = StatusColor(status);
 
         var percentage = HuntWindowMath.Percentage(window, def, now);
-        DrawProgressBar(row, status, percentage ?? 0d, scale);
+        var fillPercentage = HuntWindowMath.RawPercentage(window, def, now);
+        DrawProgressBar(row, status, percentage, fillPercentage, scale);
 
         var detailLabel = ResolveDetailLabel(status, window, def, now);
 
@@ -346,11 +347,12 @@ internal sealed partial class HuntsApp
         _ => ui.MutedInk,
     };
 
-    private void DrawProgressBar(Rect row, HuntWindowStatus status, double percentage, float scale)
+    private void DrawProgressBar(Rect row, HuntWindowStatus status, double? percentage, double? fillPercentage,
+        float scale)
     {
         var barHeight = 3f * scale;
         var top = row.Max.Y - 6f * scale - barHeight;
-        ProgressBar.Draw(ImGui.GetWindowDrawList(), row.Min.X, row.Max.X, top, barHeight, percentage,
+        ProgressBar.Draw(ImGui.GetWindowDrawList(), row.Min.X, row.Max.X, top, barHeight, percentage, fillPercentage,
             StatusColor(status), TextStyles.Caption2, 6f * scale);
     }
 

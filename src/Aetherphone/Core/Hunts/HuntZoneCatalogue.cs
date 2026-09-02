@@ -11,6 +11,7 @@ internal sealed class HuntZoneCatalog
     private Dictionary<string, HuntZoneDefinition> byId = new();
     private Dictionary<int, (string ZoneId, HuntPoiEntry Poi)> poisById = new();
     private Dictionary<string, uint>? territoryIdByPlaceName;
+    private Dictionary<uint, string>? zoneIdByTerritory;
 
     public HuntZoneCatalog(FileInfo source)
     {
@@ -58,6 +59,28 @@ internal sealed class HuntZoneCatalog
 
         var lookup = territoryIdByPlaceName ??= BuildTerritoryIdLookup();
         return lookup.TryGetValue(name, out var territoryId) ? territoryId : 0u;
+    }
+
+    public string? ZoneIdForTerritory(uint territoryId)
+    {
+        loader.EnsureLoaded();
+        var lookup = zoneIdByTerritory ??= BuildZoneIdByTerritoryLookup();
+        return lookup.TryGetValue(territoryId, out var zoneId) ? zoneId : null;
+    }
+
+    private Dictionary<uint, string> BuildZoneIdByTerritoryLookup()
+    {
+        var lookup = new Dictionary<uint, string>();
+        foreach (var zone in byId.Values)
+        {
+            var territoryId = ResolveTerritoryId(zone.Id);
+            if (territoryId != 0)
+            {
+                lookup[territoryId] = zone.Id;
+            }
+        }
+
+        return lookup;
     }
 
     private void OnLoaded(Dictionary<string, HuntZoneDefinition> parsed)

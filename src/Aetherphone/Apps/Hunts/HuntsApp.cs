@@ -4,6 +4,7 @@ using Aetherphone.Core.Config;
 using Aetherphone.Core.Confirm;
 using Aetherphone.Core.Hunts;
 using Aetherphone.Core.Localization;
+using Aetherphone.Core.Maps;
 using Aetherphone.Core.Onboarding;
 using Aetherphone.Core.Runtime;
 using Aetherphone.Core.Theme;
@@ -22,9 +23,9 @@ internal sealed partial class HuntsApp : IPhoneApp
         Detail,
         Signup,
         History,
-        NotificationSettings,
         MarkNotifications,
         Guide,
+        Settings,
     }
 
     private readonly record struct HuntsView(HuntsRoute Route, string MobId = "", string WorldId = "",
@@ -41,9 +42,11 @@ internal sealed partial class HuntsApp : IPhoneApp
     private readonly HuntZoneCatalog zoneCatalog;
     private readonly HuntZoneMapTextures zoneMapTextures;
     private readonly HuntMobRewardCatalog rewardCatalog;
+    private readonly HuntCandidateCache candidateCache;
     private readonly Configuration configuration;
     private readonly ConfirmService confirm;
     private readonly HuntsLauncher launcher;
+    private readonly HuntsMapMarkers huntsMapMarkers;
     private const float ToolbarHeight = 44f;
     private const float ToolbarButtonSize = 34f;
 
@@ -65,17 +68,19 @@ internal sealed partial class HuntsApp : IPhoneApp
     private readonly Comparison<HuntWindowDto> compareByPercentageDescending;
 
     public HuntsApp(HuntsService hunts, HuntMobCatalog mobCatalog, HuntZoneCatalog zoneCatalog,
-        HuntZoneMapTextures zoneMapTextures, HuntMobRewardCatalog rewardCatalog, Configuration configuration,
-        ConfirmService confirm, HuntsLauncher launcher)
+        HuntZoneMapTextures zoneMapTextures, HuntMobRewardCatalog rewardCatalog, HuntCandidateCache candidateCache,
+        Configuration configuration, ConfirmService confirm, HuntsLauncher launcher, HuntsMapMarkers huntsMapMarkers)
     {
         this.hunts = hunts;
         this.mobCatalog = mobCatalog;
         this.zoneCatalog = zoneCatalog;
         this.zoneMapTextures = zoneMapTextures;
         this.rewardCatalog = rewardCatalog;
+        this.candidateCache = candidateCache;
         this.configuration = configuration;
         this.confirm = confirm;
         this.launcher = launcher;
+        this.huntsMapMarkers = huntsMapMarkers;
         compareByPercentageDescending = CompareByPercentageDescending;
         router = new ViewRouter<HuntsView>(new HuntsView(HuntsRoute.List));
         drawView = DrawView;
@@ -117,6 +122,11 @@ internal sealed partial class HuntsApp : IPhoneApp
 
     public void Draw(in PhoneContext context)
     {
+        if (GuideIntents.Consume("hunts.tab.settings"))
+        {
+            router.Replace(new HuntsView(HuntsRoute.Settings));
+        }
+
         frameTheme = context.Theme;
         ui.Theme = context.Theme;
         navigation = context.Navigation;
@@ -181,14 +191,6 @@ internal sealed partial class HuntsApp : IPhoneApp
                 var historyBody = new Rect(new Vector2(content.Min.X, historyHeader.Max.Y), content.Max);
                 DrawHistory(historyBody, scale);
                 break;
-            case HuntsRoute.NotificationSettings:
-                var notifyHeaderTop = content.Min.Y;
-                var notifyHeader = new Rect(new Vector2(content.Min.X, notifyHeaderTop),
-                    new Vector2(content.Max.X, notifyHeaderTop + ToolbarHeight * scale));
-                DrawNotificationSettingsHeader(notifyHeader, scale);
-                var notifyBody = new Rect(new Vector2(content.Min.X, notifyHeader.Max.Y), content.Max);
-                DrawNotificationSettings(notifyBody, scale);
-                break;
             case HuntsRoute.Guide:
                 var guideHeaderTop = content.Min.Y;
                 var guideHeader = new Rect(new Vector2(content.Min.X, guideHeaderTop),
@@ -196,6 +198,14 @@ internal sealed partial class HuntsApp : IPhoneApp
                 DrawGuideHeader(guideHeader, scale);
                 var guideBody = new Rect(new Vector2(content.Min.X, guideHeader.Max.Y), content.Max);
                 DrawGuideBody(guideBody, scale);
+                break;
+            case HuntsRoute.Settings:
+                var settingsHeaderTop = content.Min.Y;
+                var settingsHeader = new Rect(new Vector2(content.Min.X, settingsHeaderTop),
+                    new Vector2(content.Max.X, settingsHeaderTop + ToolbarHeight * scale));
+                DrawSettingsHeader(settingsHeader, scale);
+                var settingsBody = new Rect(new Vector2(content.Min.X, settingsHeader.Max.Y), content.Max);
+                DrawSettings(settingsBody, scale);
                 break;
             default:
                 var toolbarTop = content.Min.Y;
@@ -217,16 +227,14 @@ internal sealed partial class HuntsApp : IPhoneApp
             authLocked ? Loc.T(L.Hunts.HistoryRequiresLoginTooltip) : Loc.T(L.Hunts.HistoryTab),
             Disabled: authLocked);
         footerTabs[1] = new NavTab(FontAwesomeIcon.Book, Loc.T(L.Hunts.ListTab));
-        footerTabs[2] = new NavTab(FontAwesomeIcon.Bell,
-            authLocked ? Loc.T(L.Hunts.NotificationSettingsRequiresLoginTooltip) : Loc.T(L.Hunts.NotificationSettingsTab),
-            Disabled: authLocked);
-        footerTabs[3] = new NavTab(FontAwesomeIcon.Question, Loc.T(L.Hunts.GuideTab), AnchorKey: "hunts.guide");
+        footerTabs[2] = new NavTab(FontAwesomeIcon.Question, Loc.T(L.Hunts.GuideTab), AnchorKey: "hunts.guide");
+        footerTabs[3] = new NavTab(FontAwesomeIcon.Cog, Loc.T(L.Hunts.SettingsTab), AnchorKey: "hunts.settings");
 
         var active = route switch
         {
             HuntsRoute.History => 0,
-            HuntsRoute.NotificationSettings => 2,
-            HuntsRoute.Guide => 3,
+            HuntsRoute.Guide => 2,
+            HuntsRoute.Settings => 3,
             _ => 1,
         };
 
@@ -246,10 +254,10 @@ internal sealed partial class HuntsApp : IPhoneApp
                 router.Replace(new HuntsView(HuntsRoute.List));
                 break;
             case 2:
-                router.Replace(new HuntsView(HuntsRoute.NotificationSettings));
+                router.Replace(new HuntsView(HuntsRoute.Guide));
                 break;
             case 3:
-                router.Replace(new HuntsView(HuntsRoute.Guide));
+                router.Replace(new HuntsView(HuntsRoute.Settings));
                 break;
         }
     }

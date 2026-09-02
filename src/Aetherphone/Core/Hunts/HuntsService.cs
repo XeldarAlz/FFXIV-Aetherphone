@@ -32,6 +32,74 @@ internal readonly struct HuntSpawnKey : IEquatable<HuntSpawnKey>
         HashCode.Combine(MobId, StringComparer.OrdinalIgnoreCase.GetHashCode(WorldId), ZoneInstance);
 }
 
+internal readonly struct HuntSightingKey : IEquatable<HuntSightingKey>
+{
+    public readonly string MobId;
+    public readonly string WorldId;
+    public readonly int ZoneInstance;
+    public readonly int ZonePoiId;
+
+    public HuntSightingKey(string mobId, string worldId, int zoneInstance, int zonePoiId)
+    {
+        MobId = mobId;
+        WorldId = worldId;
+        ZoneInstance = zoneInstance;
+        ZonePoiId = zonePoiId;
+    }
+
+    public bool Equals(HuntSightingKey other) =>
+        ZoneInstance == other.ZoneInstance &&
+        ZonePoiId == other.ZonePoiId &&
+        string.Equals(MobId, other.MobId, StringComparison.Ordinal) &&
+        string.Equals(WorldId, other.WorldId, StringComparison.OrdinalIgnoreCase);
+
+    public override bool Equals(object? obj) => obj is HuntSightingKey other && Equals(other);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(MobId, StringComparer.OrdinalIgnoreCase.GetHashCode(WorldId), ZoneInstance, ZonePoiId);
+}
+
+internal readonly struct HuntSightingScopeKey : IEquatable<HuntSightingScopeKey>
+{
+    public readonly string MobId;
+    public readonly string WorldId;
+    public readonly int ZoneInstance;
+
+    public HuntSightingScopeKey(string mobId, string worldId, int zoneInstance)
+    {
+        MobId = mobId;
+        WorldId = worldId;
+        ZoneInstance = zoneInstance;
+    }
+
+    public bool Equals(HuntSightingScopeKey other) =>
+        ZoneInstance == other.ZoneInstance &&
+        string.Equals(MobId, other.MobId, StringComparison.Ordinal) &&
+        string.Equals(WorldId, other.WorldId, StringComparison.OrdinalIgnoreCase);
+
+    public override bool Equals(object? obj) => obj is HuntSightingScopeKey other && Equals(other);
+
+    public override int GetHashCode() =>
+        HashCode.Combine(MobId, StringComparer.OrdinalIgnoreCase.GetHashCode(WorldId), ZoneInstance);
+}
+
+internal readonly record struct HuntCandidateStateToken(int ActiveSpawnVersion,
+    HashSet<HuntSightingKey> SightedPoiIds, Dictionary<HuntSpawnKey, int> Locations,
+    Dictionary<HuntSpawnKey, (int WindowNum, int PhaseNum)> Phases, Dictionary<HuntSpawnKey, string> Zones);
+
+internal enum HuntsMapMarkerState
+{
+    Candidate,
+    Sighted,
+    Confirmed,
+    ActiveMinion,
+    SsSpawn,
+    FateInactive,
+    FateActive,
+}
+
+internal readonly record struct HuntsMapMarkerPoint(float RawX, float RawY, HuntsMapMarkerState State);
+
 internal sealed class HuntsService : IDisposable
 {
     private const string AppId = "hunts";
@@ -67,6 +135,8 @@ internal sealed class HuntsService : IDisposable
     private volatile Dictionary<HuntSpawnKey, string> realtimeZoneIds = new();
 
     private volatile Dictionary<HuntSpawnKey, string[]> realtimeReporterNames = new();
+    private volatile HashSet<HuntSightingKey> sightedPoiIds = new();
+    private readonly Dictionary<HuntSightingScopeKey, HuntSightingEntryDto[]> pendingSightingReplaces = new();
     private volatile bool loading;
     private volatile bool loaded;
     private volatile bool failed;
@@ -94,6 +164,7 @@ internal sealed class HuntsService : IDisposable
         work = new StoreWork("Hunts");
         realtimeClient = new HuntsRealtimeClient(tokens);
         realtimeClient.MobReportReceived += OnMobReportReceived;
+        realtimeClient.SightingReportReceived += OnSightingReportReceived;
         realtimeClient.MobWorldKillReceived += OnMobWorldKillReceived;
         realtimeClient.ConnectedChanged += OnRealtimeConnectedChanged;
         loginFlow = new HuntsLoginFlow(client, tokens);
@@ -136,6 +207,9 @@ internal sealed class HuntsService : IDisposable
     public bool IsAuthenticated => tokens.IsAuthenticated;
     public bool RealtimeConnected => realtimeConnected;
     public int ActiveSpawnVersion => activeSpawnVersion;
+
+    public HuntCandidateStateToken CandidateStateToken =>
+        new(activeSpawnVersion, sightedPoiIds, realtimeSpawnLocations, realtimePhases, realtimeZoneIds);
 
     public int ActiveSpawnCount
     {
@@ -206,6 +280,9 @@ internal sealed class HuntsService : IDisposable
             ? names
             : null;
 
+    public bool IsPoiSighted(string mobId, string worldId, int zoneInstance, int zonePoiId) =>
+        sightedPoiIds.Contains(new HuntSightingKey(mobId, worldId, zoneInstance, zonePoiId));
+
     public int ZoneInstanceCountFor(HuntMobDefinition mob)
     {
         var maxInstances = 1;
@@ -220,6 +297,9 @@ internal sealed class HuntsService : IDisposable
 
         return maxInstances;
     }
+
+    public int ZoneInstanceCountFor(string zoneId) =>
+        zoneInstanceCounts.TryGetValue(zoneId, out var count) ? count : 1;
 
     public void EnsureActive()
     {
@@ -350,6 +430,7 @@ internal sealed class HuntsService : IDisposable
             }
             SeedActiveSpawnsFromPoll(status?.Spawns);
             EnsureWindowEntriesForActiveSpawns();
+            sightedPoiIds = BuildSightedPoiIds(status?.Sightings);
             failed = false;
         }, () =>
         {
@@ -533,6 +614,9 @@ internal sealed class HuntsService : IDisposable
             case "death" when report.Data is { } data:
                 ApplyDeathReport(identity, data);
                 return;
+            case "spawn_false":
+                ClearSpawnRelease(identity);
+                return;
             case "spawn_location" when report.Data is { ZonePoiId: { } poiId }:
                 SetRealtimeLocation(identity, poiId);
                 SetRealtimeZone(identity, identity.ZoneId);
@@ -540,6 +624,17 @@ internal sealed class HuntsService : IDisposable
             case "spawn_release":
                 SetRealtimePhase(identity);
                 HandleSpawnRelease(identity);
+                return;
+            case "spawn_claim" when report.Data is { ClaimReporterName: { Length: > 0 } claimReporterName }:
+                if (report.Data.IsRemoving)
+                {
+                    RemoveRealtimeReporter(identity, claimReporterName);
+                }
+                else
+                {
+                    AddRealtimeReporter(identity, claimReporterName);
+                }
+
                 return;
             case "spawn_claim":
                 return;
@@ -565,6 +660,143 @@ internal sealed class HuntsService : IDisposable
                 SetRealtimePhase(identity);
                 return;
         }
+    }
+
+    private void OnSightingReportReceived(HuntsSocketSightingReport report)
+    {
+        if (report.MobId.Length == 0 || report.WorldId.Length == 0)
+        {
+            return;
+        }
+
+        var dataCenter = currentDataCenter;
+        if (dataCenter is null || !ContainsWorld(HuntDataCenterWorlds.WorldsFor(dataCenter), report.WorldId))
+        {
+            return;
+        }
+
+        switch (report.Action)
+        {
+            case "sighting_set":
+                AddSighting(report.MobId, report.WorldId, report.ZoneInstance, report.ZonePoiId);
+                return;
+            case "sighting_clear":
+                RemoveSighting(report.MobId, report.WorldId, report.ZoneInstance, report.ZonePoiId);
+                return;
+            case "sighting_replace":
+                ApplyOrDeferSightingReplace(report.MobId, report.WorldId, report.ZoneInstance,
+                    report.ReplaceEntries ?? Array.Empty<HuntSightingEntryDto>());
+                return;
+        }
+    }
+
+    private void ApplyOrDeferSightingReplace(string mobId, string worldId, int zoneInstance,
+        HuntSightingEntryDto[] entries)
+    {
+        if (!IsSpawned(mobId, worldId, zoneInstance))
+        {
+            ReplaceSightings(mobId, worldId, zoneInstance, entries);
+            return;
+        }
+
+        lock (realtimeStateGate)
+        {
+            pendingSightingReplaces[new HuntSightingScopeKey(mobId, worldId, zoneInstance)] = entries;
+        }
+    }
+
+    private void FlushPendingSightingReplace(string mobId, string worldId, int zoneInstance)
+    {
+        HuntSightingEntryDto[]? entries = null;
+        lock (realtimeStateGate)
+        {
+            var key = new HuntSightingScopeKey(mobId, worldId, zoneInstance);
+            if (pendingSightingReplaces.TryGetValue(key, out var pending))
+            {
+                entries = pending;
+                pendingSightingReplaces.Remove(key);
+            }
+        }
+
+        if (entries is not null)
+        {
+            ReplaceSightings(mobId, worldId, zoneInstance, entries);
+        }
+    }
+
+    private void AddSighting(string mobId, string worldId, int zoneInstance, int zonePoiId)
+    {
+        lock (realtimeStateGate)
+        {
+            var next = new HashSet<HuntSightingKey>(sightedPoiIds)
+            {
+                new HuntSightingKey(mobId, worldId, zoneInstance, zonePoiId),
+            };
+            sightedPoiIds = next;
+        }
+    }
+
+    private void RemoveSighting(string mobId, string worldId, int zoneInstance, int zonePoiId)
+    {
+        lock (realtimeStateGate)
+        {
+            var key = new HuntSightingKey(mobId, worldId, zoneInstance, zonePoiId);
+            if (!sightedPoiIds.Contains(key))
+            {
+                return;
+            }
+
+            var next = new HashSet<HuntSightingKey>(sightedPoiIds);
+            next.Remove(key);
+            sightedPoiIds = next;
+        }
+    }
+
+    private void ReplaceSightings(string mobId, string worldId, int zoneInstance, HuntSightingEntryDto[] entries)
+    {
+        lock (realtimeStateGate)
+        {
+            var next = new HashSet<HuntSightingKey>();
+            foreach (var existing in sightedPoiIds)
+            {
+                if (existing.ZoneInstance != zoneInstance ||
+                    !string.Equals(existing.MobId, mobId, StringComparison.Ordinal) ||
+                    !string.Equals(existing.WorldId, worldId, StringComparison.OrdinalIgnoreCase))
+                {
+                    next.Add(existing);
+                }
+            }
+
+            for (var index = 0; index < entries.Length; index++)
+            {
+                next.Add(new HuntSightingKey(mobId, worldId, zoneInstance, entries[index].ZonePoiId));
+            }
+
+            sightedPoiIds = next;
+        }
+    }
+
+    private static HashSet<HuntSightingKey> BuildSightedPoiIds(HuntSightingEntryDto[]? sightings)
+    {
+        var result = new HashSet<HuntSightingKey>();
+        if (sightings is null)
+        {
+            return result;
+        }
+
+        for (var index = 0; index < sightings.Length; index++)
+        {
+            var sighting = sightings[index];
+            if (sighting.MobId.Length == 0 || sighting.WorldId.Length == 0)
+            {
+                continue;
+            }
+
+            result.Add(new HuntSightingKey(sighting.MobId, sighting.WorldId, sighting.ZoneInstance,
+                sighting.ZonePoiId));
+        }
+
+        return result;
     }
 
     private void SeedActiveSpawnsFromPoll(HuntSpawnEntryDto[]? spawns)
@@ -686,6 +918,8 @@ internal sealed class HuntsService : IDisposable
             activeSpawnVersion++;
         }
 
+        FlushPendingSightingReplace(identity.MobId, identity.WorldId, identity.ZoneInstance);
+
         if (!wasActive)
         {
             return;
@@ -728,6 +962,12 @@ internal sealed class HuntsService : IDisposable
         realtimePhases = new Dictionary<HuntSpawnKey, (int WindowNum, int PhaseNum)>();
         realtimeZoneIds = new Dictionary<HuntSpawnKey, string>();
         realtimeReporterNames = new Dictionary<HuntSpawnKey, string[]>();
+        sightedPoiIds = new HashSet<HuntSightingKey>();
+        lock (realtimeStateGate)
+        {
+            pendingSightingReplaces.Clear();
+        }
+
         lock (historyGate)
         {
             history = Array.Empty<HuntLogEntryDto>();
@@ -881,6 +1121,72 @@ internal sealed class HuntsService : IDisposable
 
             var next = new Dictionary<HuntSpawnKey, string[]>(realtimeReporterNames);
             next.Remove(key);
+            realtimeReporterNames = next;
+        }
+    }
+
+    private void AddRealtimeReporter(HuntsSocketMobIdentity identity, string name)
+    {
+        var key = new HuntSpawnKey(identity.MobId, identity.WorldId, identity.ZoneInstance);
+        lock (realtimeStateGate)
+        {
+            var existing = realtimeReporterNames.TryGetValue(key, out var names) ? names : Array.Empty<string>();
+            for (var index = 0; index < existing.Length; index++)
+            {
+                if (string.Equals(existing[index], name, StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
+
+            var appended = new string[existing.Length + 1];
+            Array.Copy(existing, appended, existing.Length);
+            appended[existing.Length] = name;
+
+            var next = new Dictionary<HuntSpawnKey, string[]>(realtimeReporterNames) { [key] = appended };
+            realtimeReporterNames = next;
+        }
+    }
+
+    private void RemoveRealtimeReporter(HuntsSocketMobIdentity identity, string name)
+    {
+        var key = new HuntSpawnKey(identity.MobId, identity.WorldId, identity.ZoneInstance);
+        lock (realtimeStateGate)
+        {
+            if (!realtimeReporterNames.TryGetValue(key, out var existing))
+            {
+                return;
+            }
+
+            var removeIndex = -1;
+            for (var index = 0; index < existing.Length; index++)
+            {
+                if (string.Equals(existing[index], name, StringComparison.Ordinal))
+                {
+                    removeIndex = index;
+                    break;
+                }
+            }
+
+            if (removeIndex < 0)
+            {
+                return;
+            }
+
+            var remaining = new string[existing.Length - 1];
+            Array.Copy(existing, remaining, removeIndex);
+            Array.Copy(existing, removeIndex + 1, remaining, removeIndex, existing.Length - removeIndex - 1);
+
+            var next = new Dictionary<HuntSpawnKey, string[]>(realtimeReporterNames);
+            if (remaining.Length == 0)
+            {
+                next.Remove(key);
+            }
+            else
+            {
+                next[key] = remaining;
+            }
+
             realtimeReporterNames = next;
         }
     }
@@ -1145,6 +1451,7 @@ internal sealed class HuntsService : IDisposable
     {
         characterWatch.Changed -= OnCharacterChanged;
         realtimeClient.MobReportReceived -= OnMobReportReceived;
+        realtimeClient.SightingReportReceived -= OnSightingReportReceived;
         realtimeClient.MobWorldKillReceived -= OnMobWorldKillReceived;
         realtimeClient.ConnectedChanged -= OnRealtimeConnectedChanged;
         NotificationSettings.Changed -= OnNotificationSettingsChanged;

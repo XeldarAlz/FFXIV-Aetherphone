@@ -79,6 +79,25 @@ internal static class TravelPlanner
         uint currentTerritoryId, (float X, float Y)? targetCoordinate) =>
         ResolveCore(territoryId, worldId, currentWorldId, currentTerritoryId, targetCoordinate);
 
+    public static TravelDestination ResolveAetheryteAt(uint territoryId, uint worldId, uint currentWorldId,
+        (float X, float Y) targetCoordinate)
+    {
+        if (currentWorldId == 0)
+        {
+            return default;
+        }
+
+        if (worldId != 0 && currentWorldId != worldId)
+        {
+            var worldName = LocationShare.WorldName(worldId);
+            return worldName.Length > 0
+                ? new TravelDestination(TravelKind.World, worldName, worldName, 0, 0, worldId)
+                : default;
+        }
+
+        return territoryId != 0 ? ResolveNearestAetheryte(territoryId, targetCoordinate) ?? default : default;
+    }
+
     private static TravelDestination ResolveCore(uint territoryId, uint worldId, uint currentWorldId,
         uint currentTerritoryId, (float X, float Y)? targetCoordinate)
     {

@@ -54,6 +54,7 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IKeyState KeyState { get; private set; } = null!;
     [PluginService] internal static IGamepadState GamepadState { get; private set; } = null!;
     [PluginService] internal static IAetheryteList AetheryteList { get; private set; } = null!;
+    [PluginService] internal static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
     internal static Plugin Instance { get; private set; } = null!;
     internal static Configuration Cfg { get; private set; } = null!;
     internal static FontService Fonts { get; private set; } = null!;
@@ -73,6 +74,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly VideoDebugWindow videoDebugWindow;
     private readonly AetherStreamScreenWindow screenWindow;
     private readonly UpdateChipWindow updateChipWindow;
+    private readonly HuntsMapMarkersIndicatorWindow huntsMapMarkersIndicatorWindow;
     private readonly LinkpearlPopouts linkpearlPopouts;
     private readonly PopoutPresence linkpearlPresence;
     private readonly LinkpearlHotkey linkpearlHotkey;
@@ -146,9 +148,12 @@ public sealed class Plugin : IDalamudPlugin
             phoneWindow = new PhoneWindow(shell, Cfg);
             Updates = new UpdateCheckService(services.Http, PluginInterface);
             updateChipWindow = new UpdateChipWindow(phoneWindow, Updates, services.Themes);
+            huntsMapMarkersIndicatorWindow =
+                new HuntsMapMarkersIndicatorWindow(services.HuntsMapMarkers, services.Themes);
             PhotoWindow = new PhotoWindow(services.Themes);
             windowSystem.AddWindow(phoneWindow);
             windowSystem.AddWindow(updateChipWindow);
+            windowSystem.AddWindow(huntsMapMarkersIndicatorWindow);
             windowSystem.AddWindow(PhotoWindow);
             windowSystem.AddWindow(videoDebugWindow);
             windowSystem.AddWindow(screenWindow);
