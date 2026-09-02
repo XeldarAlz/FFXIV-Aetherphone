@@ -54,6 +54,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="Aetherphone.Tests" />
+    <InternalsVisibleTo Include="Aetherphone.Harness" />
   </ItemGroup>
 
   <ItemGroup>
