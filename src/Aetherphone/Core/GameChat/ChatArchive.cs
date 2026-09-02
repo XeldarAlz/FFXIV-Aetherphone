@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Aetherphone.Core.Game;
 using Newtonsoft.Json;
 
@@ -497,16 +495,6 @@ internal sealed class ChatArchive : IDisposable
         }
     }
 
-    private static string PathFor(DirectoryInfo directory, string streamKey)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(streamKey.ToLowerInvariant()));
-        var builder = new StringBuilder(hash.Length * 2 + 5);
-        for (var index = 0; index < hash.Length; index++)
-        {
-            builder.Append(hash[index].ToString("x2"));
-        }
-
-        builder.Append(".json");
-        return Path.Combine(directory.FullName, builder.ToString());
-    }
+    private static string PathFor(DirectoryInfo directory, string streamKey) =>
+        HashedFileName.For(directory, streamKey.ToLowerInvariant());
 }

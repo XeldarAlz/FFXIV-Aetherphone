@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "Terminé",
   "velvet.filtersTitle": "Filtres",
   "velvet.filterHint": "Touchez une fois pour inclure, encore une fois pour exclure.",
-  "velvet.filterMuteHint": "Les puces exclues sont enregistrées et masquent les profils et publications correspondants partout dans Velvet.",
   "velvet.postTagsTitle": "Tags",
   "velvet.postTagsEmpty": "Ajouter des tags",
   "velvet.postTagsHint": "Indiquez le contenu de cette publication pour que les autres puissent la filtrer.",

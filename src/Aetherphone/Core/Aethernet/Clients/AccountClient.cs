@@ -6,6 +6,7 @@ namespace Aetherphone.Core.Aethernet.Clients;
 internal sealed class AccountClient
 {
     private readonly AethernetTransport net;
+    private readonly RetryGate meGate = new(TimeSpan.FromSeconds(30));
 
     public AccountClient(AethernetTransport net)
     {
@@ -26,6 +27,11 @@ internal sealed class AccountClient
     {
         var session = net.Session;
         if (!session.IsSignedIn || session.CurrentUser is not null)
+        {
+            return;
+        }
+
+        if (!meGate.TryPass())
         {
             return;
         }

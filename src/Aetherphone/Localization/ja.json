@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "完了",
   "velvet.filtersTitle": "フィルター",
   "velvet.filterHint": "1回タップで含める、もう1回タップで除外します。",
-  "velvet.filterMuteHint": "除外したチップは保存され、Velvet 全体で該当する相手と投稿を非表示にします。",
   "velvet.postTagsTitle": "タグ",
   "velvet.postTagsEmpty": "タグを追加",
   "velvet.postTagsHint": "この投稿の内容にタグを付けると、見たくない人が除外できます。",

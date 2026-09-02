@@ -272,7 +272,8 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
 
     public bool IsVelvetOnboarded() => VelvetOnboarded && VelvetOnboardedVersion >= VelvetOnboardVersion;
     public bool VelvetBlurByDefault { get; set; } = true;
-    public VelvetMutePreferences VelvetMutes { get; set; } = new();
+    public VelvetFilterPreferences VelvetMutes { get; set; } = new();
+    public HashSet<string> VelvetMutesMigratedAccountIds { get; set; } = new(StringComparer.Ordinal);
     public List<string> VelvetPinnedThreads { get; set; } = new();
     public List<string> MessagePinnedChats { get; set; } = new();
     public List<string> MessageArchivedChats { get; set; } = new();

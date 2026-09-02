@@ -18,6 +18,16 @@ public sealed class ConfigMigrationsTests
     }
 
     [Fact]
+    public void RewritesLegacyVelvetMutePreferencesTypeName()
+    {
+        const string json =
+            """{"VelvetMutes":{"$type":"Aetherphone.Core.Social.VelvetMutePreferences, Aetherphone","Intent":1}}""";
+        var rewritten = ConfigMigrations.RewriteTypeNames(json);
+        Assert.Contains("Aetherphone.Core.Social.VelvetFilterPreferences, Aetherphone", rewritten);
+        Assert.DoesNotContain("VelvetMutePreferences", rewritten);
+    }
+
+    [Fact]
     public void RewritesEveryRelocatedAppTypeName()
     {
         const string json =

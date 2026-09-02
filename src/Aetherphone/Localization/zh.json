@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "完成",
   "velvet.filtersTitle": "筛选",
   "velvet.filterHint": "点击一次表示包含，再次点击表示排除。",
-  "velvet.filterMuteHint": "排除的标签会被保存，并在整个 Velvet 中隐藏相符的用户和帖子。",
   "velvet.postTagsTitle": "标签",
   "velvet.postTagsEmpty": "添加标签",
   "velvet.postTagsHint": "标注这条帖子的内容，方便他人过滤。",

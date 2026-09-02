@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "Done",
   "velvet.filtersTitle": "Filters",
   "velvet.filterHint": "Tap once to include, tap again to exclude.",
-  "velvet.filterMuteHint": "Excluded chips are saved and hide matching people and posts everywhere in Velvet.",
   "velvet.postTagsTitle": "Tags",
   "velvet.postTagsEmpty": "Add tags",
   "velvet.postTagsHint": "Tag what this post contains so people can filter it out.",

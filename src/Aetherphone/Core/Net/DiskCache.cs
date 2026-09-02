@@ -1,6 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
-
 namespace Aetherphone.Core.Net;
 
 internal sealed class DiskCache
@@ -83,15 +80,5 @@ internal sealed class DiskCache
         }
     }
 
-    private string PathFor(string key)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(key));
-        var builder = new StringBuilder(hash.Length * 2);
-        for (var index = 0; index < hash.Length; index++)
-        {
-            builder.Append(hash[index].ToString("x2"));
-        }
-
-        return Path.Combine(root.FullName, builder.ToString());
-    }
+    private string PathFor(string key) => HashedFileName.For(root, key, string.Empty);
 }

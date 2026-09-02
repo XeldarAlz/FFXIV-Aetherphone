@@ -18,6 +18,8 @@ internal static class ConfigMigrations
             "Aetherphone.Core.Clock.WorldClockEntry, Aetherphone"),
         ("Aetherphone.Apps.Clock.AlarmEntry, Aetherphone",
             "Aetherphone.Core.Clock.AlarmEntry, Aetherphone"),
+        ("Aetherphone.Core.Social.VelvetMutePreferences, Aetherphone",
+            "Aetherphone.Core.Social.VelvetFilterPreferences, Aetherphone"),
     };
 
     public static string RewriteTypeNames(string json)

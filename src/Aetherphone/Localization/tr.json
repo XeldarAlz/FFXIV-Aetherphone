@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "Bitti",
   "velvet.filtersTitle": "Filtreler",
   "velvet.filterHint": "Dahil etmek için bir kez, hariç tutmak için tekrar dokunun.",
-  "velvet.filterMuteHint": "Hariç tuttuklarınız kaydedilir ve Velvet'in her yerinde eşleşen kişileri ve gönderileri gizler.",
   "velvet.postTagsTitle": "Etiketler",
   "velvet.postTagsEmpty": "Etiket ekle",
   "velvet.postTagsHint": "Bu gönderinin içeriğini etiketleyin ki isteyenler filtreleyebilsin.",

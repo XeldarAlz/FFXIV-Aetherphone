@@ -4160,9 +4160,6 @@ internal static class L
         public static readonly LocString FiltersTitle = new("velvet.filtersTitle", "Filters");
         public static readonly LocString FilterHint =
             new("velvet.filterHint", "Tap once to include, tap again to exclude.");
-        public static readonly LocString FilterMuteHint =
-            new("velvet.filterMuteHint",
-                "Excluded chips are saved and hide matching people and posts everywhere in Velvet.");
         public static readonly LocString PostTagsTitle = new("velvet.postTagsTitle", "Tags");
         public static readonly LocString PostTagsEmpty = new("velvet.postTagsEmpty", "Add tags");
         public static readonly LocString PostTagsHint =

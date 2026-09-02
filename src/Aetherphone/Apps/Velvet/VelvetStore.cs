@@ -516,6 +516,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         return cipher.TryDecryptMedia(scope, generation, sealedBytes, message.SenderId, message.Kind);
     }
 
+    public void EnsureCurrentUser() => account.EnsureCurrentUser();
+
     public void EnsureMe()
     {
         ReconcileAccountBadges();

@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "Listo",
   "velvet.filtersTitle": "Filtros",
   "velvet.filterHint": "Toca una vez para incluir, otra vez para excluir.",
-  "velvet.filterMuteHint": "Los chips excluidos se guardan y ocultan a las personas y publicaciones que coincidan en todo Velvet.",
   "velvet.postTagsTitle": "Etiquetas",
   "velvet.postTagsEmpty": "Añadir etiquetas",
   "velvet.postTagsHint": "Etiqueta lo que contiene esta publicación para que otros puedan filtrarla.",

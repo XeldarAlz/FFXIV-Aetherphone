@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "Готово",
   "velvet.filtersTitle": "Фильтры",
   "velvet.filterHint": "Нажмите один раз, чтобы включить, ещё раз, чтобы исключить.",
-  "velvet.filterMuteHint": "Исключённые чипы сохраняются и скрывают подходящих людей и посты во всём Velvet.",
   "velvet.postTagsTitle": "Теги",
   "velvet.postTagsEmpty": "Добавить теги",
   "velvet.postTagsHint": "Отметьте содержимое поста, чтобы другие могли его отфильтровать.",

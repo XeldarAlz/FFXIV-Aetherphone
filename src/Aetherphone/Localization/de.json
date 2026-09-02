@@ -2421,7 +2421,6 @@
   "velvet.filterDone": "Fertig",
   "velvet.filtersTitle": "Filter",
   "velvet.filterHint": "Einmal tippen zum Einschließen, erneut tippen zum Ausschließen.",
-  "velvet.filterMuteHint": "Ausgeschlossene Chips werden gespeichert und blenden passende Personen und Beiträge überall in Velvet aus.",
   "velvet.postTagsTitle": "Tags",
   "velvet.postTagsEmpty": "Tags hinzufügen",
   "velvet.postTagsHint": "Kennzeichne den Inhalt dieses Beitrags, damit andere ihn ausblenden können.",

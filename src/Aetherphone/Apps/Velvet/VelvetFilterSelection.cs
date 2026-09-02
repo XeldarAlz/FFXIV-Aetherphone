@@ -36,39 +36,54 @@ internal sealed class VelvetFilterSelection
         Tags.Clear();
     }
 
-    public void LoadFrom(VelvetMutePreferences stored)
+    public void LoadFrom(VelvetFilterPreferences stored)
     {
         Clear();
         Intent = stored.Intent;
         Gender = stored.Gender;
         Sexuality = stored.Sexuality;
         Relationship = stored.Relationship;
+        Region = stored.Region;
         CopyInto(stored.Roles, Roles);
         CopyInto(stored.Kinks, Kinks);
         CopyInto(stored.Limits, Limits);
         CopyInto(stored.Tags, Tags);
     }
 
-    public void SaveInto(VelvetMutePreferences stored)
+    public void SaveInto(VelvetFilterPreferences stored)
     {
         stored.Intent = Intent;
         stored.Gender = Gender;
         stored.Sexuality = Sexuality;
         stored.Relationship = Relationship;
+        stored.Region = Region;
         stored.Roles = new List<string>(Roles);
         stored.Kinks = new List<string>(Kinks);
         stored.Limits = new List<string>(Limits);
         stored.Tags = new List<string>(Tags);
     }
 
-    public static VelvetDiscoverFilter Combine(VelvetFilterSelection include, VelvetFilterSelection exclude) =>
+    public void MergeInto(VelvetFilterPreferences stored)
+    {
+        stored.Intent |= Intent;
+        stored.Gender |= Gender;
+        stored.Sexuality |= Sexuality;
+        stored.Relationship |= Relationship;
+        MergeUnique(stored.Roles, Roles);
+        MergeUnique(stored.Kinks, Kinks);
+        MergeUnique(stored.Limits, Limits);
+        MergeUnique(stored.Tags, Tags);
+    }
+
+    public static VelvetDiscoverFilter Combine(VelvetFilterSelection include, VelvetFilterSelection exclude,
+        VelvetFilterSelection mutes) =>
         new(VelvetIntent.Sanitize(include.Intent), VelvetIntent.Sanitize(exclude.Intent),
-            VelvetGender.Sanitize(include.Gender), VelvetGender.Sanitize(exclude.Gender),
+            VelvetGender.Sanitize(include.Gender), VelvetGender.Sanitize(mutes.Gender),
             VelvetSexuality.Sanitize(include.Sexuality), VelvetSexuality.Sanitize(exclude.Sexuality),
             include.Relationship, exclude.Relationship,
             include.Roles.ToArray(), exclude.Roles.ToArray(),
-            include.Kinks.ToArray(), exclude.Kinks.ToArray(),
-            include.Limits.ToArray(), exclude.Limits.ToArray(),
+            include.Kinks.ToArray(), mutes.Kinks.ToArray(),
+            include.Limits.ToArray(), mutes.Limits.ToArray(),
             include.Tags.ToArray(), exclude.Tags.ToArray());
 
     private static void CopyInto(List<string> source, HashSet<string> target)
@@ -76,6 +91,17 @@ internal sealed class VelvetFilterSelection
         for (var index = 0; index < source.Count; index++)
         {
             target.Add(source[index]);
+        }
+    }
+
+    private static void MergeUnique(List<string> target, HashSet<string> source)
+    {
+        foreach (var value in source)
+        {
+            if (!target.Contains(value))
+            {
+                target.Add(value);
+            }
         }
     }
 }

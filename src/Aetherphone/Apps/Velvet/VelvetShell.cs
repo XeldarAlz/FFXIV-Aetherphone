@@ -37,6 +37,8 @@ internal sealed partial class VelvetShell : IResumableApp
     private const byte LalafellRaceId = 3;
 
     private readonly VelvetStore store;
+    private readonly AethernetSession session;
+    private readonly VelvetFilterArchive filterArchive;
     private readonly FailureSlot discoverFailure = new();
     private readonly FailureSlot commentFailure = new();
     private string? commentRestore;
@@ -84,8 +86,13 @@ internal sealed partial class VelvetShell : IResumableApp
     private bool cachedLalafell;
     private bool raceKnown;
     private ulong raceContentId;
+    private readonly VelvetFilterSelection mutes = new();
     private readonly VelvetFilterSelection discoverInclude = new();
+    private readonly VelvetFilterSelection discoverExclude = new();
     private readonly VelvetFilterSelection feedInclude = new();
+    private readonly VelvetFilterSelection feedExclude = new();
+    private readonly StoredVelvetFilters storedFilters = new();
+    private string filtersAccountId = string.Empty;
     private readonly ActionSheet postSheet = new();
     private readonly ActionSheet threadSheet = new();
     private VelvetMessagesTab messagesTab = VelvetMessagesTab.Chats;
@@ -103,6 +110,8 @@ internal sealed partial class VelvetShell : IResumableApp
         this.translation = translation;
         var velvetArchiveDir = new DirectoryInfo(Path.Combine(Plugin.PluginInterface.ConfigDirectory.FullName, "Velvet"));
         var notInterestedArchive = new VelvetNotInterestedArchive(velvetArchiveDir);
+        filterArchive = new VelvetFilterArchive(new DirectoryInfo(Path.Combine(velvetArchiveDir.FullName, "Filters")));
+        this.session = session;
         store = new VelvetStore(session, net.Velvet, net.Account, net.Safety, net.Media, notifications, configuration,
             keyVault, conversationKeys, chatHistory, visibility, realtimeSignals, installer, notInterestedArchive);
         commentMentions = new MentionAutocomplete(store.NewMentionSuggestions());
@@ -134,7 +143,23 @@ internal sealed partial class VelvetShell : IResumableApp
         drawView = DrawView;
         back = () => router.Pop();
         threadView = new ThreadView(this);
-        LoadMutes();
+        session.Changed += OnFilterAccountChanged;
+        var initialAccountId = session.CurrentUser?.Id;
+        if (initialAccountId is not null)
+        {
+            LoadFiltersForAccount(initialAccountId);
+        }
+    }
+
+    private void OnFilterAccountChanged()
+    {
+        var accountId = session.CurrentUser?.Id ?? string.Empty;
+        if (string.Equals(accountId, filtersAccountId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        LoadFiltersForAccount(accountId);
     }
 
     public string Id => "velvet";
@@ -182,8 +207,6 @@ internal sealed partial class VelvetShell : IResumableApp
         messagesTab = VelvetMessagesTab.Chats;
         avatarLightbox.Reset();
         store.ClearDiscover();
-        discoverInclude.Clear();
-        feedInclude.Clear();
         RefreshAndConsumeLaunch();
     }
 
@@ -243,6 +266,14 @@ internal sealed partial class VelvetShell : IResumableApp
             TourHolds.Hold(Id);
             EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Moon, Loc.T(L.Velvet.SignedOutTitle),
                 Loc.T(L.Velvet.SignedOutHint));
+            return;
+        }
+
+        if (session.CurrentUser is null)
+        {
+            TourHolds.Hold(Id);
+            store.EnsureCurrentUser();
+            EmptyState.Draw(context.Content, ui, FontAwesomeIcon.Spinner, Loc.T(L.Common.Loading), string.Empty);
             return;
         }
 
@@ -307,6 +338,7 @@ internal sealed partial class VelvetShell : IResumableApp
 
     public void Dispose()
     {
+        session.Changed -= OnFilterAccountChanged;
         threadView.Dispose();
         stories.Dispose();
         store.Dispose();

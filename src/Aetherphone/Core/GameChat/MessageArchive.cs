@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Newtonsoft.Json;
 
 namespace Aetherphone.Core.GameChat;
@@ -239,16 +237,6 @@ internal sealed class MessageArchive
         }
     }
 
-    private static string PathFor(DirectoryInfo directory, string sendTarget)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(sendTarget.ToLowerInvariant()));
-        var builder = new StringBuilder(hash.Length * 2 + 5);
-        for (var index = 0; index < hash.Length; index++)
-        {
-            builder.Append(hash[index].ToString("x2"));
-        }
-
-        builder.Append(".json");
-        return Path.Combine(directory.FullName, builder.ToString());
-    }
+    private static string PathFor(DirectoryInfo directory, string sendTarget) =>
+        HashedFileName.For(directory, sendTarget.ToLowerInvariant());
 }

@@ -68,7 +68,7 @@ internal sealed partial class VelvetShell
                     TextStyles.Headline);
                 if (!store.LoadingFeed)
                 {
-                    var filtered = feedInclude.Any || mutes.Any;
+                    var filtered = feedInclude.Any || feedExclude.Any || mutes.Any;
                     Typography.DrawCentered(new Vector2(area.Center.X, emptyY + 26f * scale),
                         Loc.T(filtered ? L.Velvet.FeedNoneFiltered : L.Velvet.FeedNoneHint), VelvetTheme.MutedInk,
                         TextStyles.Subheadline);
