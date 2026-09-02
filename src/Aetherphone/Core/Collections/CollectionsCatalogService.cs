@@ -1,8 +1,9 @@
-using System.Collections.Concurrent;
-using System.Text.Json;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Net;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
+using System.Collections.Concurrent;
+using System.Text.Json;
 using EmoteSheet = Lumina.Excel.Sheets.Emote;
 
 namespace Aetherphone.Core.Collections;
@@ -308,6 +309,11 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     private LocalUnlocks CollectMounts()
     {
+        if (!GameSheets.Available)
+        {
+            return LocalUnlocks.Empty;
+        }
+
         var ids = new HashSet<int>();
         var total = 0;
         foreach (var row in dataManager.GetExcelSheet<Mount>())
@@ -329,6 +335,11 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     private LocalUnlocks CollectMinions()
     {
+        if (!GameSheets.Available)
+        {
+            return LocalUnlocks.Empty;
+        }
+
         var ids = new HashSet<int>();
         var total = 0;
         foreach (var row in dataManager.GetExcelSheet<Companion>())
@@ -350,6 +361,11 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     private LocalUnlocks CollectEmotes()
     {
+        if (!GameSheets.Available)
+        {
+            return LocalUnlocks.Empty;
+        }
+
         var ids = new HashSet<int>();
         var total = 0;
         foreach (var row in dataManager.GetExcelSheet<EmoteSheet>())
@@ -371,6 +387,11 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     private LocalUnlocks CollectOrchestrions()
     {
+        if (!GameSheets.Available)
+        {
+            return LocalUnlocks.Empty;
+        }
+
         var ids = new HashSet<int>();
         var total = 0;
         foreach (var row in dataManager.GetExcelSheet<Orchestrion>())
@@ -392,6 +413,11 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     private LocalUnlocks CollectHairstyles()
     {
+        if (!GameSheets.Available)
+        {
+            return LocalUnlocks.Empty;
+        }
+
         var ids = new HashSet<int>();
         var seen = new HashSet<int>();
         foreach (var row in dataManager.GetExcelSheet<CharaMakeCustomize>())
@@ -418,6 +444,11 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     private LocalUnlocks CollectFacewear()
     {
+        if (!GameSheets.Available)
+        {
+            return LocalUnlocks.Empty;
+        }
+
         var ids = new HashSet<int>();
         var total = 0;
         foreach (var row in dataManager.GetExcelSheet<Glasses>())
@@ -439,6 +470,11 @@ internal sealed class CollectionsCatalogService : IDisposable
 
     private LocalUnlocks CollectTriadCards()
     {
+        if (!GameSheets.Available)
+        {
+            return LocalUnlocks.Empty;
+        }
+
         var ids = new HashSet<int>();
         var total = 0;
         foreach (var row in dataManager.GetExcelSheet<TripleTriadCard>())

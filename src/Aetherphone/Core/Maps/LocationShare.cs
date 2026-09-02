@@ -32,6 +32,11 @@ internal static class LocationShare
 
     public static SharedLocation? Capture()
     {
+        if (!GameSheets.Available)
+        {
+            return null;
+        }
+
         if (!Plugin.ClientState.IsLoggedIn)
         {
             return null;
@@ -233,6 +238,11 @@ internal static class LocationShare
 
     public static string ZoneName(uint territoryId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (territoryId != 0
             && Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {
@@ -244,6 +254,11 @@ internal static class LocationShare
 
     public static string WorldName(uint worldId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (worldId != 0 && Plugin.DataManager.GetExcelSheet<World>().TryGetRow(worldId, out var world))
         {
             return world.Name.ExtractText();
@@ -254,6 +269,11 @@ internal static class LocationShare
 
     public static string DataCenterName(uint worldId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (worldId != 0 && Plugin.DataManager.GetExcelSheet<World>().TryGetRow(worldId, out var world)
             && world.DataCenter.RowId != 0)
         {

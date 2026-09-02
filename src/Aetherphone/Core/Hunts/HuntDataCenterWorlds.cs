@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Hunts;
@@ -22,6 +23,11 @@ internal static class HuntDataCenterWorlds
 
     private static Dictionary<string, uint> BuildRowIdLookup()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<string, uint>();
+        }
+
         var lookup = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
         foreach (var world in Plugin.DataManager.GetExcelSheet<World>())
         {
@@ -42,6 +48,11 @@ internal static class HuntDataCenterWorlds
 
     private static Dictionary<string, string[]> BuildWorldsByDataCenter()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<string, string[]>();
+        }
+
         var grouped = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
         foreach (var world in Plugin.DataManager.GetExcelSheet<World>())
         {

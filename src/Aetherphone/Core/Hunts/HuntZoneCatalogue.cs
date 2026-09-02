@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Maps;
 using Dalamud.Game;
 using Lumina.Excel.Exceptions;
@@ -77,6 +78,11 @@ internal sealed class HuntZoneCatalog
 
     private static Dictionary<string, uint> BuildTerritoryIdLookup()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<string, uint>();
+        }
+
         var lookup = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
         Lumina.Excel.ExcelSheet<TerritoryType> sheet;
         try

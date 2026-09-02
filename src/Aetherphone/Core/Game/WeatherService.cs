@@ -31,6 +31,11 @@ internal sealed class WeatherService
 
     public string CurrentZone()
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         var territoryId = clientState.TerritoryType;
         if (territoryId != 0 && data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {
@@ -96,6 +101,11 @@ internal sealed class WeatherService
 
     public WeatherEntry Entry(byte id)
     {
+        if (!GameSheets.Available)
+        {
+            return new WeatherEntry(id, string.Empty, string.Empty);
+        }
+
         if (entries.TryGetValue(id, out var cached))
         {
             return cached;
@@ -132,6 +142,11 @@ internal sealed class WeatherService
 
     private void Rebuild(uint territoryId)
     {
+        if (!GameSheets.Available)
+        {
+            return;
+        }
+
         chances.Clear();
         zoneWeathers.Clear();
         if (territoryId == 0 || !data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))

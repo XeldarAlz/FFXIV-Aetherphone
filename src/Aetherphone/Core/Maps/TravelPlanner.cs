@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Aetherphone.Core.Venues;
 using Lumina.Excel;
@@ -149,6 +150,11 @@ internal static class TravelPlanner
 
     private static Dictionary<uint, List<AetheryteCandidate>> BuildAetheryteCandidates()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, List<AetheryteCandidate>>();
+        }
+
         var maps = Plugin.DataManager.GetExcelSheet<Map>();
         var markers = Plugin.DataManager.GetSubrowExcelSheet<MapMarker>();
         var aetherytes = Plugin.DataManager.GetExcelSheet<Aetheryte>();
@@ -250,6 +256,11 @@ internal static class TravelPlanner
 
     private static Dictionary<uint, HousingHome> BuildHousingLookup()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, HousingHome>();
+        }
+
         var territories = Plugin.DataManager.GetExcelSheet<TerritoryType>();
         var districtByCity = new Dictionary<uint, (uint DistrictId, string DistrictName)>();
         foreach (var territory in territories)
@@ -287,6 +298,11 @@ internal static class TravelPlanner
 
     private static string CityName(uint cityAetheryteRowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (!Plugin.DataManager.GetExcelSheet<Aetheryte>().TryGetRow(cityAetheryteRowId, out var aetheryte))
         {
             return string.Empty;
@@ -299,6 +315,11 @@ internal static class TravelPlanner
 
     private static Dictionary<uint, TravelDestination> BuildDestinationLookup()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, TravelDestination>();
+        }
+
         var aetherytes = Plugin.DataManager.GetExcelSheet<Aetheryte>();
         var placeNames = Plugin.DataManager.GetExcelSheet<PlaceName>();
         var mastersByAethernetGroup = BuildMasterLookup(aetherytes, placeNames);

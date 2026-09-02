@@ -1,8 +1,9 @@
-using System.Text;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Maps;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
+using System.Text;
 
 namespace Aetherphone.Core.Housing;
 
@@ -146,6 +147,11 @@ internal sealed class HousingGameMaps
 
     private Entry Build(uint districtId)
     {
+        if (!GameSheets.Available)
+        {
+            return new Entry(null, HousingGameMapFailure.TerritoryMissing, string.Empty);
+        }
+
         if (data.GetExcelSheet<TerritoryType>().GetRowOrDefault(districtId) is not { } territory)
         {
             return new Entry(null, HousingGameMapFailure.TerritoryMissing, $"no TerritoryType row {districtId}");
@@ -230,6 +236,11 @@ internal sealed class HousingGameMaps
 
     private Dictionary<uint, List<Vector3>> CollectMarkerGroups(uint districtId)
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, List<Vector3>>();
+        }
+
         var groups = new Dictionary<uint, List<Vector3>>();
         if (data.GetSubrowExcelSheet<HousingMapMarkerInfo>().GetRowOrDefault(districtId) is not { } row)
         {
@@ -312,6 +323,11 @@ internal sealed class HousingGameMaps
 
     public string Describe(uint districtId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         var report = new StringBuilder();
         var district = HousingDistricts.Resolve(districtId);
         report.Append("Aetherphone Housing map diagnostics\n");
@@ -354,6 +370,11 @@ internal sealed class HousingGameMaps
 
     private void DescribeGroup(StringBuilder report, uint mapRowId, List<Vector3> markers, bool isMain)
     {
+        if (!GameSheets.Available)
+        {
+            return;
+        }
+
         var mapRow = data.GetExcelSheet<Map>().GetRowOrDefault(mapRowId);
         var mapId = mapRow is { } value ? value.Id.ExtractText() : "?";
         var tag = isMain ? " <= district map" : string.Empty;

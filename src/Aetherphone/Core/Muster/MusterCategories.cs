@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Dalamud.Interface;
 using Lumina.Excel.Sheets;
@@ -76,6 +77,11 @@ internal static class MusterCategories
 
     public static int RegionBitForWorld(uint worldId)
     {
+        if (!GameSheets.Available)
+        {
+            return 0;
+        }
+
         if (worldId == 0 || !Plugin.DataManager.GetExcelSheet<World>().TryGetRow(worldId, out var world)
             || world.DataCenter.RowId == 0)
         {

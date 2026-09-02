@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Plugin.Services;
 using Lumina.Excel.Sheets;
 
@@ -39,6 +40,11 @@ internal sealed class MapData
 
     public MapLocation CurrentLocation()
     {
+        if (!GameSheets.Available)
+        {
+            return new MapLocation(string.Empty, string.Empty);
+        }
+
         var territoryId = clientState.TerritoryType;
         if (territoryId == 0 || !data.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {
@@ -76,6 +82,11 @@ internal sealed class MapData
 
     private void Build()
     {
+        if (!GameSheets.Available)
+        {
+            return;
+        }
+
         var aetherytesByTerritory = CollectAetherytes();
         var territories = data.GetExcelSheet<TerritoryType>();
         var aetherytesByRegion = new Dictionary<string, List<MapAetheryte>>(StringComparer.Ordinal);
@@ -158,6 +169,11 @@ internal sealed class MapData
 
     private Dictionary<uint, List<MapAetheryte>> CollectAetherytes()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<uint, List<MapAetheryte>>();
+        }
+
         var result = new Dictionary<uint, List<MapAetheryte>>();
         var seenNames = new Dictionary<uint, HashSet<string>>();
         foreach (var aetheryte in data.GetExcelSheet<Aetheryte>())
@@ -204,6 +220,11 @@ internal sealed class MapData
 
     private string PlaceName(uint placeNameRowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (placeNameRowId != 0 && data.GetExcelSheet<PlaceName>().TryGetRow(placeNameRowId, out var placeName))
         {
             return placeName.Name.ExtractText();
@@ -214,6 +235,11 @@ internal sealed class MapData
 
     private string ExpansionName(uint exVersionRowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (data.GetExcelSheet<ExVersion>().TryGetRow(exVersionRowId, out var exVersion))
         {
             var name = exVersion.Name.ExtractText();

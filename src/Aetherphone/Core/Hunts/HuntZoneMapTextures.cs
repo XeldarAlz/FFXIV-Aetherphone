@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Maps;
 using Dalamud.Interface.Textures.TextureWraps;
 using Dalamud.Plugin.Services;
@@ -56,6 +57,11 @@ internal sealed class HuntZoneMapTextures
 
     private string? BuildTexturePath(uint territoryId)
     {
+        if (!GameSheets.Available)
+        {
+            return null;
+        }
+
         if (data.GetExcelSheet<TerritoryType>().GetRowOrDefault(territoryId) is not { } territory
             || territory.Map.ValueNullable is not { } map)
         {

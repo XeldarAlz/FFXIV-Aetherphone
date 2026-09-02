@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Aetherphone.Windows;
 using Dalamud.Game.ClientState.Conditions;
 using Lumina.Excel.Sheets;
@@ -100,6 +101,11 @@ internal sealed class PopoutPresence : IDisposable
 
     private static bool IsFieldOperation(uint territoryId)
     {
+        if (!GameSheets.Available)
+        {
+            return false;
+        }
+
         if (territoryId == 0 ||
             !Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {
