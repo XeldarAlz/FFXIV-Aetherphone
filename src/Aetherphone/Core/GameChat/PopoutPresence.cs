@@ -102,6 +102,11 @@ internal sealed class PopoutPresence : IDisposable
 
     private static bool IsFieldOperation(uint territoryId)
     {
+        if (!GameSheets.Available)
+        {
+            return false;
+        }
+
         if (territoryId == 0 ||
             !Plugin.DataManager.GetExcelSheet<TerritoryType>().TryGetRow(territoryId, out var territory))
         {

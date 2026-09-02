@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Lumina.Excel.Sheets;
 
 namespace Aetherphone.Core.Muster;
@@ -55,6 +56,11 @@ internal static class MusterDataCenters
 
     private static MusterDataCenter[] Build()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<MusterDataCenter>();
+        }
+
         var populated = new HashSet<uint>();
         foreach (var world in Plugin.DataManager.GetExcelSheet<World>())
         {

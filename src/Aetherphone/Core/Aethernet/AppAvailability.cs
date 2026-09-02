@@ -34,10 +34,15 @@ internal sealed class AppAvailability : IDisposable
         current = this;
     }
 
-    public static bool IsEnabled(string appId) => current is null || current.Enabled(appId);
+    public static bool IsEnabled(string appId) => GameSheets.Supports(appId) && (current is null || current.Enabled(appId));
 
     public bool Enabled(string appId)
     {
+        if (!GameSheets.Supports(appId))
+        {
+            return false;
+        }
+
         if (IsUnavailableInChina(appId) && gameData.IsChineseGameClient())
         {
             return false;
