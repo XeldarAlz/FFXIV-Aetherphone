@@ -26,10 +26,12 @@ internal static class Program
         }
 
         var nativePath = await NativeImGuiBuild.EnsureAsync(dalamudDirectory, options.CacheDirectory, options.Refresh);
+        var assetDirectory = await DalamudAssets.EnsureFontsAsync(options.CacheDirectory, options.Refresh);
         Console.WriteLine();
         Console.WriteLine("Harness cache ready.");
         Console.WriteLine($"  Dalamud:      {dalamudDirectory}");
         Console.WriteLine($"  Native ImGui: {nativePath}");
+        Console.WriteLine($"  Fonts:        {assetDirectory}");
         Console.WriteLine($"  Set DALAMUD_HOME={dalamudDirectory} to build the plugin and the harness against this cache.");
         return 0;
     }
