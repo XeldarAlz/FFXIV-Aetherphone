@@ -283,30 +283,26 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public byte[] ScreenshotPng(bool cropToPhone, bool fast, out int originX, out int originY)
     {
-        var pixels = renderer.Resolve();
+        var pixels = ScreenshotRaw(cropToPhone, out var width, out var height, out originX, out originY);
+        return PngWriter.Encode(pixels, width, height, fast);
+    }
+
+    public byte[] ScreenshotRaw(bool cropToPhone, out int width, out int height, out int originX, out int originY)
+    {
         originX = 0;
         originY = 0;
-        if (!cropToPhone)
+        width = Width;
+        height = Height;
+        if (cropToPhone)
         {
-            return PngWriter.Encode(pixels, Width, Height, fast);
+            var rect = PhoneRect;
+            originX = Math.Clamp((int)MathF.Floor(rect.Min.X), 0, Width - 1);
+            originY = Math.Clamp((int)MathF.Floor(rect.Min.Y), 0, Height - 1);
+            width = Math.Clamp((int)MathF.Ceiling(rect.Max.X), originX + 1, Width) - originX;
+            height = Math.Clamp((int)MathF.Ceiling(rect.Max.Y), originY + 1, Height) - originY;
         }
 
-        var rect = PhoneRect;
-        var left = Math.Clamp((int)MathF.Floor(rect.Min.X), 0, Width - 1);
-        var top = Math.Clamp((int)MathF.Floor(rect.Min.Y), 0, Height - 1);
-        originX = left;
-        originY = top;
-        var right = Math.Clamp((int)MathF.Ceiling(rect.Max.X), left + 1, Width);
-        var bottom = Math.Clamp((int)MathF.Ceiling(rect.Max.Y), top + 1, Height);
-        var cropWidth = right - left;
-        var cropHeight = bottom - top;
-        var cropped = new byte[cropWidth * cropHeight * 4];
-        for (var row = 0; row < cropHeight; row++)
-        {
-            Buffer.BlockCopy(pixels, ((top + row) * Width + left) * 4, cropped, row * cropWidth * 4, cropWidth * 4);
-        }
-
-        return PngWriter.Encode(cropped, cropWidth, cropHeight, fast);
+        return renderer.Resolve(originX, originY, width, height);
     }
 
     public void Screenshot(string path, bool cropToPhone)
