@@ -69,7 +69,6 @@ internal static partial class TourRegistry
                 GuideStep.Note(L.Apps.Dailies, L.Onboarding.DailiesBody),
                 GuideStep.Tap(L.Onboarding.DailiesCadenceTitle, L.Onboarding.DailiesCadenceBody, "dailies.cadence",
                     "dailies.tab.weekly"),
-                GuideStep.Point(L.Onboarding.DailiesBadgeTitle, L.Onboarding.DailiesBadgeBody, "dailies.badge"),
             });
         Add(tours, "jobs", 1,
             new[]

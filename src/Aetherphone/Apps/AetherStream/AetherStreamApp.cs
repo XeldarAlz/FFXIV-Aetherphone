@@ -84,6 +84,7 @@ internal sealed partial class AetherStreamApp : IPhoneApp
     public string Glyph => "V";
     public Vector4 Accent => AppAccents.For(Id);
     public int BadgeCount => watchAlong.PendingRequests.Count + watchAlong.PendingQueueSuggestions.Count;
+    public bool HasBadge => true;
 
     public void OnOpened()
     {

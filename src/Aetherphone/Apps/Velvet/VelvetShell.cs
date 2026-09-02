@@ -146,6 +146,7 @@ internal sealed partial class VelvetShell : IResumableApp
     public string Glyph => "Ve";
 
     public int BadgeCount => store.UnreadCount + store.RequestCount;
+    public bool HasBadge => true;
 
     public ShareKindSet AcceptedShares =>
         GateAccepted && store.IsSignedIn && configuration.IsVelvetOnboarded()

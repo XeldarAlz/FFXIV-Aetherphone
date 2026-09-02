@@ -44,6 +44,7 @@ internal sealed partial class MessageApp : IResumableApp, ISpotlightConversation
     public string DisplayName => Loc.T(L.Apps.Message);
     public string Glyph => "Me";
     public int BadgeCount => store.UnreadTotal + calls.UnseenMissed;
+    public bool HasBadge => true;
     public ConversationDto[] SearchableConversations => store.Conversations;
 
     public ConversationDto[] SpotlightConversations => store.Conversations;

@@ -27,6 +27,7 @@ using Aetherphone.Core.Venues;
 using Aetherphone.Core.Video;
 using Aetherphone.Core.Wallpapers;
 using Dalamud.Configuration;
+using Newtonsoft.Json;
 
 namespace Aetherphone;
 
@@ -96,9 +97,14 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
     public bool NotifyWeeklyReset { get; set; }
     public bool NotifyGrandCompanyReset { get; set; }
     public bool NotifyRetainerVentures { get; set; }
-    public bool ShowWalletBadge { get; set; } = true;
-    public bool ShowDailiesBadge { get; set; } = true;
-    public bool ShowActivityBadge { get; set; } = true;
+    [JsonProperty("ShowWalletBadge")]
+    public bool LegacyShowWalletBadge { get; set; } = true;
+    [JsonProperty("ShowDailiesBadge")]
+    public bool LegacyShowDailiesBadge { get; set; } = true;
+    [JsonProperty("ShowActivityBadge")]
+    public bool LegacyShowActivityBadge { get; set; } = true;
+    public Dictionary<string, bool> BadgeSettings { get; set; } = new();
+    public bool BadgeSettingsMigrated { get; set; }
     public List<DailyCheckRecord> DailyChecks { get; set; } = new();
     public float ActivityGoalLevels { get; set; } = 1f;
     public int ActivityGoalDuties { get; set; } = 3;
@@ -721,6 +727,51 @@ internal sealed class Configuration : IPluginConfiguration, IHomeConfiguration, 
             : null;
 
     public string ResolveNotificationToken(string appId) => AppSoundOverride(appId) ?? NotificationSound;
+
+    public bool IsAppBadgeEnabled(string appId) =>
+        !BadgeSettings.TryGetValue(appId, out var enabled) || enabled;
+
+    public void SetAppBadgeEnabled(string appId, bool enabled)
+    {
+        BadgeSettings[appId] = enabled;
+        Save();
+    }
+
+    public void MigrateBadgeSettings()
+    {
+        if (!ApplyBadgeSettingsMigration())
+        {
+            return;
+        }
+
+        Save();
+    }
+
+    internal bool ApplyBadgeSettingsMigration()
+    {
+        if (BadgeSettingsMigrated)
+        {
+            return false;
+        }
+
+        if (!LegacyShowWalletBadge)
+        {
+            BadgeSettings["wallet"] = false;
+        }
+
+        if (!LegacyShowDailiesBadge)
+        {
+            BadgeSettings["dailies"] = false;
+        }
+
+        if (!LegacyShowActivityBadge)
+        {
+            BadgeSettings["character"] = false;
+        }
+
+        BadgeSettingsMigrated = true;
+        return true;
+    }
 
     public void MigrateSoundSettings()
     {

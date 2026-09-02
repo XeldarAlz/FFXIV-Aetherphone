@@ -49,7 +49,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
     private readonly Action<string> assignWallpaper;
     private string? pendingSharedWallpaper;
 
-    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary)
+    public SettingsApp(PhoneServices services, PhotoLibrary photoLibrary, IReadOnlyList<IPhoneApp> apps)
     {
         sound = services.Sound;
         configuration = services.Configuration;
@@ -89,7 +89,7 @@ internal sealed class SettingsApp : IResumableApp, ISettingsNavigator, ISpotligh
                 configuration.NotificationVolume = volume;
                 configuration.Save();
             });
-        var notifications = new NotificationsPage(configuration, this, appNotifications, services.Installer);
+        var notifications = new NotificationsPage(configuration, this, appNotifications, services.Installer, apps);
         var ringtonePage = new SoundSettingsPage(sound, SoundKind.Ringtone, L.Settings.Ringtone, FontAwesomeIcon.Music,
             new Vector4(0.95f, 0.40f, 0.65f, 1f), "settings.ringtoneVolume",
             () => configuration.RingtoneSound, token =>

@@ -21,6 +21,7 @@ internal sealed partial class MarketApp : IResumableApp
     public string DisplayName => Loc.T(L.Apps.Market);
     public string Glyph => "$";
     public int BadgeCount => alerts.TriggeredCount;
+    public bool HasBadge => true;
     private readonly MarketboardService market;
     private readonly MarketItemIndex index;
     private readonly MarketAlertService alerts;

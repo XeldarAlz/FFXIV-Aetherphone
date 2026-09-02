@@ -87,6 +87,7 @@ internal sealed partial class AethergramApp : IResumableApp
     public string DisplayName => Loc.T(L.Apps.Aethergram);
     public string Glyph => "Ag";
     public int BadgeCount => dmStore.UnreadCount + social.UnseenCount(Id);
+    public bool HasBadge => true;
     public ShareKindSet AcceptedShares => store.IsSignedIn ? ShareKindSet.Photo : ShareKindSet.None;
     private static readonly TextStyle CardNameStyle = new(0.97f, FontWeight.SemiBold);
     private static readonly TextStyle CardMetaStyle = new(0.85f, FontWeight.Regular);

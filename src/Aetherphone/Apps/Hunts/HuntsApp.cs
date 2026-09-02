@@ -35,6 +35,7 @@ internal sealed partial class HuntsApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Hunts);
     public string Glyph => "Hu";
     public int BadgeCount => hunts.ActiveSpawnCount;
+    public bool HasBadge => true;
 
     private readonly HuntsService hunts;
     private readonly HuntMobCatalog mobCatalog;

@@ -131,7 +131,7 @@ Settings storage is `Configuration.NotificationSettings`, a `Dictionary<string, 
 - `Sound` (default null): a per-channel sound token. `Configuration.ResolveNotificationToken` falls back to the global `Configuration.NotificationSound` when no override is set.
 - `ShowNotificationBanner` (default true): the per-channel banner switch. The `Presented` event requires this and the global `Configuration.ShowNotificationBanner` together.
 
-The UI is Settings > Notifications (`NotificationsPage`), which owns the `QuietWhileBusy` and global banner switches, lists only the installed channel apps, and links each to `AppNotificationPage` for the enable toggle, the banner toggle, and the sound picker.
+The UI is Settings > Notifications and Badges (`NotificationsPage`), which owns the `QuietWhileBusy` and global banner switches and lists every installed app that has a channel, `HasBadge`, or both, linking each to `AppNotificationPage` for whichever of the enable toggle, banner toggle, sound picker, and badge toggle apply. See [Hiding a badge](#hiding-a-badge) below.
 
 ## Sounds
 
@@ -182,9 +182,9 @@ Because `OnOpened` re-fires, treat it as re-entrant: reset first, then consume. 
 
 ## Badges
 
-Badges on home screen tiles come from `IPhoneApp.BadgeCount` (src/Aetherphone/Core/Apps/IPhoneApp.cs), drawn by `HomeTileView` (src/Aetherphone/Windows/Components/HomeTileView.cs). `BadgeAsDot` swaps the number for a dot (Settings uses it for the unseen changelog marker). Folder tiles combine the badges of the apps inside.
+Badges on home screen tiles come from `IPhoneApp.BadgeCount` (src/Aetherphone/Core/Apps/IPhoneApp.cs), drawn by `HomeTileView` (src/Aetherphone/Windows/Components/Chrome/HomeTileView.cs). `BadgeAsDot` swaps the number for a dot (Settings uses it for the unseen changelog marker). Folder tiles combine the badges of the apps inside.
 
-Badges are **not** driven by the notification center. Each app computes its own unread state:
+Badges are **not** driven by the notification center. Each app still computes its own unread number:
 
 | App | BadgeCount source |
 | --- | --- |
@@ -195,6 +195,12 @@ Badges are **not** driven by the notification center. Each app computes its own 
 | AnnouncementsApp | `store.UnreadCount` |
 
 For social apps, `SocialNotificationService.UnseenCount` prefers the server's `UnreadByApp` counts from the notification poll, with one override: while an acknowledgement is still queued for flush, the pending ack watermark wins over the server count, so the badge does not bounce back up between the ack and the next poll. With no server counts at all it falls back to counting items newer than the per-account watermark stored in `Configuration.SocialActivitySeenUnix`. Opening an app's activity screen calls `MarkSeen(appId)`, which clears the local count, removes that app's social notifications from the center, and sends a read acknowledgement to the backend when the watermark actually advanced, or, when the server still reported unread for that app, an acknowledgement up to the current time even though the local watermark stayed put. Tapping a single notification acknowledges only up to that item (`AcknowledgeUpTo`).
+
+### Hiding a badge
+
+Whether the count actually reaches the tile is a separate, generic on/off switch: `IPhoneApp.HasBadge` (default `false`) opts an app into it, and the enabled state lives in `Configuration.BadgeSettings`, a `Dictionary<string, bool>` keyed by app id with the same missing-entry-means-on default as `NotificationSettings` (`Configuration.IsAppBadgeEnabled`/`SetAppBadgeEnabled`). `HomeTileView` checks it centrally before drawing, so an app with `HasBadge` never needs to gate its own `BadgeCount` getter.
+
+The toggle is not a separate screen: Settings > Notifications and Badges (`NotificationsPage`) builds one row per app from the live app list (`AppBundle.Apps`, threaded into `SettingsApp`/`NotificationsPage` the same way it already reaches `AppStoreApp`), showing any app that either has a notification channel (`NotificationChannels.Contains`) or `HasBadge`. `AppNotificationPage` then draws whichever sections apply to that app, top to bottom: Alerts (only when it has a channel), a "Show badge" row under Home Screen (only when `HasBadge` is true), then Sound (only when it has a channel and notifications are enabled). An app can have either, both, or (for most apps, which set neither) no row at all.
 
 The minimized phone also shows `NotificationService.UnreadCount` as a badge (`MinimizedPhone.DrawBadge` in src/Aetherphone/Windows/Components/MinimizedPhone.cs).
 
@@ -258,7 +264,7 @@ Everything that can stop a notification, in pipeline order:
 | Thread being viewed | `ChatThreadStoreBase` viewing grace | No inbox notification for the open thread |
 | Moderation dedup | `ModerationNoticePresenter.presented` set | Each pending notice id presented once |
 
-The quiet-while-busy gate deserves emphasis because `Configuration.QuietWhileBusy` defaults to true: out of the box, alerts are silent in combat, duties, cutscenes, and while zoning (the `PlayerBusy.Now` states), with the notification still landing in the center and counting as unread. Users regularly report that silence as a bug; it is the shipped default, toggled in Settings > Notifications.
+The quiet-while-busy gate deserves emphasis because `Configuration.QuietWhileBusy` defaults to true: out of the box, alerts are silent in combat, duties, cutscenes, and while zoning (the `PlayerBusy.Now` states), with the notification still landing in the center and counting as unread. Users regularly report that silence as a bug; it is the shipped default, toggled in Settings > Notifications and Badges.
 
 Do not disturb is toggled three ways: the switch on the phone chassis (`PhoneShell` via `DeviceChrome.MuteButtonRect`), the switch on the root Settings page (`RootSettingsPage`; the Notifications page does not host it, it only dims its two alert rows while it is on), and the `dnd` tile in the control center (`ControlRegistry` in src/Aetherphone/Core/ControlCenter/ControlRegistry.cs). While it is on, a moon shows in the status bar (`StatusBar` in src/Aetherphone/Core/Shell/StatusBar.cs) and the coin earn pill holds its pending toasts (`CoinEarnPill` in src/Aetherphone/Core/Shell/CoinEarnPill.cs).
 

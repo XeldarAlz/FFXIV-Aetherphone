@@ -20,16 +20,18 @@ internal sealed class NotificationsPage : ISettingsPage
     private readonly ISettingsNavigator navigator;
     private readonly AppNotificationPage appPage;
     private readonly AppInstaller installer;
-    private readonly NotificationChannel[] sortedChannels = BuildChannelsArray();
-    private LanguageInfo? sortedLanguage;
+    private readonly IReadOnlyList<IPhoneApp> apps;
+    private readonly List<AppSettingsEntry> entries = new();
+    private LanguageInfo? entriesLanguage;
 
     public NotificationsPage(Configuration configuration, ISettingsNavigator navigator, AppNotificationPage appPage,
-        AppInstaller installer)
+        AppInstaller installer, IReadOnlyList<IPhoneApp> apps)
     {
         this.configuration = configuration;
         this.navigator = navigator;
         this.appPage = appPage;
         this.installer = installer;
+        this.apps = apps;
     }
 
     public void Draw(in PhoneContext context, Rect body)
@@ -60,63 +62,65 @@ internal sealed class NotificationsPage : ISettingsPage
                 configuration.Save();
             }
 
-            EnsureSortedChannels();
+            EnsureEntries();
             SettingsSection.Header(Loc.T(L.Settings.NotificationApps), theme);
-            var apps = GroupCard.Begin(theme, CountInstalled(NotificationChannels.All));
-            for (var index = 0; index < sortedChannels.Length; index++)
+            var installedCount = CountInstalled(entries);
+            var rows = GroupCard.Begin(theme, installedCount);
+            for (var index = 0; index < entries.Count; index++)
             {
-                var channel = sortedChannels[index];
-                if (!installer.IsInstalled(channel.AppId))
+                var entry = entries[index];
+                if (!installer.IsInstalled(entry.AppId))
                 {
                     continue;
                 }
 
-                if (SettingsRow.AppLink(apps.NextRow(), channel.AppId, channel.Accent, Loc.T(channel.Name),
-                        Summarize(channel.AppId), theme))
+                if (SettingsRow.AppLink(rows.NextRow(), entry.AppId, entry.Accent, entry.Name, Summarize(entry),
+                        theme))
                 {
-                    appPage.Show(channel);
+                    appPage.Show(entry);
                     navigator.Open(appPage);
                 }
             }
 
-            apps.End();
+            rows.End();
         }
     }
 
-    private void EnsureSortedChannels()
+    private void EnsureEntries()
     {
-        if (ReferenceEquals(sortedLanguage, Loc.Current))
+        if (ReferenceEquals(entriesLanguage, Loc.Current))
         {
             return;
         }
 
-        Array.Sort(sortedChannels, static (left, right) =>
+        entries.Clear();
+        for (var index = 0; index < apps.Count; index++)
         {
-            var primary = Loc.Culture.CompareInfo.Compare(Loc.T(left.Name), Loc.T(right.Name),
-                CompareOptions.IgnoreCase);
-            return primary != 0 ? primary : string.CompareOrdinal(left.AppId, right.AppId);
-        });
-        sortedLanguage = Loc.Current;
-    }
+            var app = apps[index];
+            var hasChannel = NotificationChannels.Contains(app.Id);
+            if (!app.HasBadge && !hasChannel)
+            {
+                continue;
+            }
 
-    private static NotificationChannel[] BuildChannelsArray()
-    {
-        var channels = NotificationChannels.All;
-        var array = new NotificationChannel[channels.Count];
-        for (var index = 0; index < channels.Count; index++)
-        {
-            array[index] = channels[index];
+            entries.Add(new AppSettingsEntry(app.Id, app.DisplayName, app.Accent, hasChannel, app.HasBadge, app));
         }
 
-        return array;
+        entries.Sort(static (left, right) =>
+        {
+            var primary = Loc.Culture.CompareInfo.Compare(left.Name, right.Name, CompareOptions.IgnoreCase);
+            return primary != 0 ? primary : string.CompareOrdinal(left.AppId, right.AppId);
+        });
+
+        entriesLanguage = Loc.Current;
     }
 
-    private int CountInstalled(IReadOnlyList<NotificationChannel> channels)
+    private int CountInstalled(List<AppSettingsEntry> source)
     {
         var count = 0;
-        for (var index = 0; index < channels.Count; index++)
+        for (var index = 0; index < source.Count; index++)
         {
-            if (installer.IsInstalled(channels[index].AppId))
+            if (installer.IsInstalled(source[index].AppId))
             {
                 count++;
             }
@@ -125,6 +129,22 @@ internal sealed class NotificationsPage : ISettingsPage
         return count;
     }
 
-    private string Summarize(string appId) =>
-        configuration.IsAppNotificationEnabled(appId) ? string.Empty : Loc.T(L.Settings.NotificationsOff);
+    private string Summarize(AppSettingsEntry entry)
+    {
+        var notificationsOn = !entry.HasChannel || configuration.IsAppNotificationEnabled(entry.AppId);
+        var badgeOn = !entry.HasBadge || configuration.IsAppBadgeEnabled(entry.AppId);
+        if (notificationsOn && badgeOn)
+        {
+            return string.Empty;
+        }
+
+        if (!entry.HasChannel || !entry.HasBadge)
+        {
+            return Loc.T(L.Settings.NotificationsOff);
+        }
+
+        return notificationsOn ? Loc.T(L.Settings.NotificationOnly)
+            : badgeOn ? Loc.T(L.Settings.BadgeOnly)
+            : Loc.T(L.Settings.NotificationsOff);
+    }
 }

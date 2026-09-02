@@ -101,6 +101,7 @@ public sealed class Plugin : IDalamudPlugin
             Cfg.MigrateSoundSettings();
             Cfg.MigrateUiSoundDefaults(freshInstall);
             Cfg.MigrateChangelogSeen();
+            Cfg.MigrateBadgeSettings();
             Cfg.MigrateMessage();
             Cfg.MigrateMessagesMerge();
             Cfg.MigrateSetupCompleted();
@@ -461,7 +462,7 @@ public sealed class Plugin : IDalamudPlugin
 
     private void UpdateDtrBadge()
     {
-        var unread = services.Notifications.UnreadCount;
+        var unread = Cfg.IsAppBadgeEnabled("notifications") ? services.Notifications.UnreadCount : 0;
         dtrEntry.Text = unread > 0 ? $"{AepConstants.Name} ({unread})" : AepConstants.Name;
     }
 

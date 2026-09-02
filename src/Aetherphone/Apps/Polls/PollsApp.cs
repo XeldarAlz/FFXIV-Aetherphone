@@ -35,6 +35,7 @@ internal sealed class PollsApp : IPhoneApp
     public string DisplayName => Loc.T(L.Apps.Polls);
     public string Glyph => "Po";
     public int BadgeCount => store.UnvotedCount;
+    public bool HasBadge => true;
 
     private readonly PollsStore store;
     private readonly AppSkin ui = new(AppPalettes.Polls);

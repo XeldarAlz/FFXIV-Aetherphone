@@ -713,6 +713,14 @@ internal sealed class MinimizedPhone : IDisposable
 
     private void RefreshBadge()
     {
+        if (!Plugin.Cfg.IsAppBadgeEnabled("notifications"))
+        {
+            countValue = 0;
+            countLabel = string.Empty;
+            badgeAppId = null;
+            return;
+        }
+
         var unread = notifications.UnreadCount;
         if (unread != countValue)
         {

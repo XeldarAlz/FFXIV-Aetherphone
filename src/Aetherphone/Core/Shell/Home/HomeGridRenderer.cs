@@ -21,10 +21,12 @@ internal sealed class HomeGridRenderer
     private readonly ShortcutStore shortcuts;
     private readonly Func<ShortcutEntry, IDalamudTextureWrap?> shortcutIcon;
     private readonly ConfirmService confirm;
+    private readonly Configuration configuration;
     private bool widgetAnchorReported;
 
     public HomeGridRenderer(HomeLayoutService layout, Pager pager, TilePoseCache poses,
-        HomeInteractionController interaction, ShortcutStore shortcuts, ConfirmService confirm)
+        HomeInteractionController interaction, ShortcutStore shortcuts, ConfirmService confirm,
+        Configuration configuration)
     {
         this.layout = layout;
         this.pager = pager;
@@ -33,6 +35,7 @@ internal sealed class HomeGridRenderer
         this.shortcuts = shortcuts;
         shortcutIcon = shortcuts.Icon;
         this.confirm = confirm;
+        this.configuration = configuration;
     }
 
     public void DrawPages(in HomeMetrics metrics, PhoneTheme theme, float delta, float labelAlpha, bool showLabels,
@@ -153,7 +156,8 @@ internal sealed class HomeGridRenderer
         {
             HomeTileView.DrawFolder(center, rect.Width, tile, theme,
                 interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
-                labelAlpha, showLabels, Loc.T(L.Home.NewFolder), metrics.CellWidth, shortcutIcon, zoom);
+                labelAlpha, showLabels, Loc.T(L.Home.NewFolder), metrics.CellWidth, shortcutIcon, configuration,
+                zoom);
             if (interaction.RemoveBadgesLive(motion) &&
                 HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
             {
@@ -167,7 +171,7 @@ internal sealed class HomeGridRenderer
 
         HomeTileView.DrawApp(center, rect.Width, tile.App!, theme,
             interaction.TapScale(tile) * interaction.Magnify(center, metrics.CellWidth),
-            labelAlpha, showLabels, metrics.CellWidth, zoom);
+            labelAlpha, showLabels, metrics.CellWidth, configuration, zoom);
         if (interaction.RemoveBadgesLive(motion) && HomeLayoutService.CanUninstall(tile.App!.Id) &&
             HomeTileView.RemoveBadge(new Vector2(rect.Min.X + 2f * scale, rect.Min.Y + 2f * scale), scale, theme))
         {
@@ -247,7 +251,7 @@ internal sealed class HomeGridRenderer
             var jiggle = interaction.Jiggle(tile, metrics.Scale);
             HomeTileView.DrawApp(rect.Center + jiggle, rect.Width, tile.App!, theme,
                 interaction.TapScale(tile) * interaction.Magnify(rect.Center, metrics.CellWidth), 0f, true, 0f,
-                motion.Zoom);
+                configuration, motion.Zoom);
             if (!interaction.Editing && dragTile is null)
             {
                 HoverTooltip.Show(string.Concat("dock:", tile.Key), rect, tile.App!.DisplayName,
@@ -314,11 +318,12 @@ internal sealed class HomeGridRenderer
         if (tile.IsFolder)
         {
             HomeTileView.DrawFolder(position, metrics.IconSize, tile, theme, scale, 0f, true, Loc.T(L.Home.NewFolder),
-                metrics.CellWidth, shortcutIcon);
+                metrics.CellWidth, shortcutIcon, configuration);
             return;
         }
 
-        HomeTileView.DrawApp(position, metrics.IconSize, tile.App!, theme, scale, 0f, true, metrics.CellWidth);
+        HomeTileView.DrawApp(position, metrics.IconSize, tile.App!, theme, scale, 0f, true, metrics.CellWidth,
+            configuration);
     }
 
     private static float WidgetChromeRadius(float scale) => 22f * scale;

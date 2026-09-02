@@ -11,6 +11,7 @@ internal interface IPhoneApp : IDisposable
     string Glyph { get; }
     Vector4 Accent => AppAccents.For(Id);
     int BadgeCount { get; }
+    bool HasBadge => false;
     bool BadgeAsDot => false;
     bool WantsTransparentScreen => false;
     bool WantsSystemTheme => false;
