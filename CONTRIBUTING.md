@@ -14,6 +14,8 @@ You need the .NET 10 SDK. The plugin requires Dalamud at runtime; CI pulls a Dal
 
 Load the built plugin via `/xlsettings` -> **Experimental** -> **Dev Plugin Locations**, pointing at `src/Aetherphone/bin/Release/Aetherphone.dll`.
 
+No game on this machine? [docs/harness.md](docs/harness.md) describes the headless preview harness: one bootstrap downloads Dalamud into a local cache, and `tools/harness/aep serve` renders and drives the phone on macOS, Windows, or Linux.
+
 A `Debug` build produces a separate side-by-side plugin instead: `src/Aetherphone/bin/Debug/AetherphoneDev.dll`, loaded as `AetherphoneDev`, opened with `/phonedev`, with its own config and pointed at the development Aethernet instance. Register whichever path you build.
 
 ## Project layout

@@ -33,7 +33,7 @@ Dalamud is a community plugin framework that XIVLauncher injects into the runnin
 [PluginService] internal static IPluginLog Log { get; private set; } = null!;
 ```
 
-The project uses the `Dalamud.NET.Sdk` MSBuild SDK (see `src/Aetherphone/Aetherphone.csproj`), which supplies the Dalamud and ImGui assembly references and packages the build output into a plugin zip. On Windows it finds those assemblies where XIVLauncher keeps its current Dalamud build (`%AppData%\XIVLauncher\addon\Hooks\dev`); on Linux the csproj resolves them from a `DALAMUD_HOME` environment variable instead.
+The project uses the `Dalamud.NET.Sdk` MSBuild SDK (see `src/Aetherphone/Aetherphone.csproj`), which supplies the Dalamud and ImGui assembly references and packages the build output into a plugin zip. On Windows it finds those assemblies where XIVLauncher keeps its current Dalamud build (`%AppData%\XIVLauncher\addon\Hooks\dev`); on Linux the csproj resolves them from a `DALAMUD_HOME` environment variable instead. On a machine with neither, run the [harness bootstrap](harness.md) once: `Directory.Build.props` then builds against the Dalamud copy it caches.
 
 ### What is Dear ImGui?
 

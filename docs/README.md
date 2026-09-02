@@ -80,6 +80,7 @@ Two exceptions keep their own format: [the art asset specification](ART-ASSET-SP
 | Doc | What it covers |
 | --- | --- |
 | [Testing, CI, and releases](testing-and-release.md) | The test project, the pull request workflows, the tag-and-release pipeline, and the changelog system |
+| [Headless preview harness](harness.md) | Render and drive the phone without the game or Dalamud: setup, the driver commands, what is faked, what is switched off |
 
 ### Reference
 
@@ -108,6 +109,7 @@ Common first questions, each with the doc and section that answers it:
 14. **How do I add a home screen widget or a Control Center tile?** [App framework: home widgets](app-framework.md#home-widgets) and [Control Center tiles](app-framework.md#control-center-tiles).
 15. **How do voice calls work?** [Networking: calls](networking.md#calls) covers the lifecycle, audio pipeline, and UI entry points.
 16. **I want to fix a translation but I do not write code.** [Translator guide](translating.md): edit one JSON file and open the pull request from the browser.
+17. **How do I see a screen without launching the game?** [Headless preview harness](harness.md): one bootstrap, then `tools/harness/aep serve` and screenshots on demand.
 
 ## Contributing and questions
 
