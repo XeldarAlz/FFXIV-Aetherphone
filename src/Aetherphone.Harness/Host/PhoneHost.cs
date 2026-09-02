@@ -49,6 +49,11 @@ internal sealed unsafe class PhoneHost : IDisposable
             typeof(Plugin).Assembly);
         HarnessLog.Note(data.HasGameData ? "game data: " + options.SqpackDirectory : "game data: none (sheet reads will fail)");
         GameMemory.Detach();
+        if (!data.HasGameData)
+        {
+            GameSheets.MarkUnavailable();
+        }
+
         Plugin.PluginInterface = pluginInterface;
         Plugin.CommandManager = new FakeCommandManager();
         Plugin.DtrBar = new FakeDtrBar();
