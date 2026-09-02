@@ -35,6 +35,15 @@
     <AnalysisLevel>latest-minimum</AnalysisLevel>
   </PropertyGroup>
 
+  <!--
+    Dalamud ships x64-stamped assemblies. On an arm64 host the harness
+    bootstrap retargets them so they load, which makes the compiler warn
+    that they target a different processor. Windows CI never sees this.
+  -->
+  <PropertyGroup Label="HostArchitecture" Condition="!$([MSBuild]::IsOSPlatform('Windows'))">
+    <NoWarn>$(NoWarn);CS8012</NoWarn>
+  </PropertyGroup>
+
   <PropertyGroup Label="Restore">
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
