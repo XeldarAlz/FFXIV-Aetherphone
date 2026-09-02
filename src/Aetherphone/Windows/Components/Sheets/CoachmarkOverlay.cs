@@ -483,6 +483,7 @@ internal sealed class CoachmarkOverlay
         var half = size * 0.5f;
         var min = center - half;
         var max = center + half;
+        UiAnchors.Report("tour.advance", new Rect(min, max));
         var radius = size.Y * 0.5f;
         var hovered = live && UiInteract.Hover(min, max);
         var fill = hovered ? Palette.Mix(accent, Vector4.One, 0.14f) : accent;

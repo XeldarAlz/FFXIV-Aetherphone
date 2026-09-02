@@ -1110,6 +1110,7 @@ internal sealed partial class SetupOverlay
     private static bool Primary(ImDrawListPtr drawList, Rect rect, string label, PhoneTheme theme, float alpha,
         bool live, bool enabled = true)
     {
+        UiAnchors.Report("setup.primary", rect);
         var hovered = live && enabled && UiInteract.Hover(rect.Min, rect.Max);
         var fill = hovered ? Palette.Mix(theme.Accent, Vector4.One, 0.14f) : theme.Accent;
         var radius = rect.Height * 0.5f;
