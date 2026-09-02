@@ -44,6 +44,20 @@
     <NoWarn>$(NoWarn);CS8012</NoWarn>
   </PropertyGroup>
 
+  <!--
+    A machine without Dalamud installed builds against the cache that
+    tools/harness/Bootstrap fills, unless DALAMUD_HOME says otherwise.
+  -->
+  <PropertyGroup Label="DalamudFallback" Condition="'$(DALAMUD_HOME)' == ''">
+    <HarnessCache Condition="'$(AETHERPHONE_HARNESS_CACHE)' != ''">$(AETHERPHONE_HARNESS_CACHE)</HarnessCache>
+    <HarnessCache Condition="'$(HarnessCache)' == '' And $([MSBuild]::IsOSPlatform('Windows'))">$(USERPROFILE)\.aetherphone-harness</HarnessCache>
+    <HarnessCache Condition="'$(HarnessCache)' == ''">$(HOME)/.aetherphone-harness</HarnessCache>
+    <DalamudDefaultInstall Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(appdata)\XIVLauncher\addon\Hooks\dev\Dalamud.dll</DalamudDefaultInstall>
+    <DalamudDefaultInstall Condition="$([MSBuild]::IsOSPlatform('Linux'))">$(HOME)/.xlcore/dalamud/Hooks/dev/Dalamud.dll</DalamudDefaultInstall>
+    <DalamudDefaultInstall Condition="$([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/XIV on Mac/dalamud/Hooks/dev/Dalamud.dll</DalamudDefaultInstall>
+    <DALAMUD_HOME Condition="!Exists('$(DalamudDefaultInstall)') And Exists('$(HarnessCache)/dalamud/Dalamud.dll')">$(HarnessCache)/dalamud</DALAMUD_HOME>
+  </PropertyGroup>
+
   <PropertyGroup Label="Restore">
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
