@@ -39,34 +39,62 @@ internal sealed class DriverServer
 
     public void Run()
     {
+        Start();
+        foreach (var job in jobs.GetConsumingEnumerable())
+        {
+            if (ExecuteJob(job))
+            {
+                break;
+            }
+        }
+
+        Stop();
+    }
+
+    public void Start()
+    {
         listener.Prefixes.Add($"http://127.0.0.1:{port}/");
         listener.Start();
         File.WriteAllText(infoPath, JsonSerializer.Serialize(new { port, pid = Environment.ProcessId }, JsonOptions));
         var accept = new Thread(AcceptLoop) { IsBackground = true, Name = "driver-accept" };
         accept.Start();
         HarnessLog.Note($"driver listening on http://127.0.0.1:{port}/");
-        foreach (var job in jobs.GetConsumingEnumerable())
-        {
-            Response response;
-            try
-            {
-                response = Execute(job.Route, job.Query);
-            }
-            catch (Exception exception)
-            {
-                HarnessLog.Failure($"driver {job.Route}", exception);
-                response = Json(500, new { ok = false, error = exception.Message });
-            }
+    }
 
-            job.Completion.TrySetResult(response);
-            if (job.Route == "/quit")
+    public bool Pump()
+    {
+        while (jobs.TryTake(out var job))
+        {
+            if (ExecuteJob(job))
             {
-                break;
+                return true;
             }
         }
 
+        return jobs.IsAddingCompleted;
+    }
+
+    public void Stop()
+    {
         listener.Stop();
         File.Delete(infoPath);
+    }
+
+    private bool ExecuteJob(Job job)
+    {
+        Response response;
+        try
+        {
+            response = Execute(job.Route, job.Query);
+        }
+        catch (Exception exception)
+        {
+            HarnessLog.Failure($"driver {job.Route}", exception);
+            response = Json(500, new { ok = false, error = exception.Message });
+        }
+
+        job.Completion.TrySetResult(response);
+        return job.Route == "/quit";
     }
 
     private void AcceptLoop()

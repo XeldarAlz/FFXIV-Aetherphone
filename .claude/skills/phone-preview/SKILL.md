@@ -26,7 +26,7 @@ tools/harness/aep serve
 
 The server steps frames only when a command asks it to. Nothing moves between commands, so screenshots are deterministic.
 
-A person can watch and use the same phone in a browser: `tools/harness/aep url` prints the address (http://127.0.0.1:47821/ by default). While that page is open, time runs in real time and mouse and keyboard go to the phone, so take driver screenshots when nobody is interacting.
+A person can use the same phone live: `tools/harness/aep window` opens a native 60 fps window (GPU rendered) instead of the headless server, with the same driver inside it, and `tools/harness/aep url` prints a browser viewer that works with either mode. While a person is interacting, time runs in real time, so take driver screenshots when nobody is interacting.
 
 ## Commands
 
