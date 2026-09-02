@@ -13,6 +13,11 @@ internal static unsafe class DailiesReader
 
     public static DailyAutoStatus Read(DailyTracking tracking, int goal)
     {
+        if (!GameMemory.Attached)
+        {
+            return default;
+        }
+
         switch (tracking)
         {
             case DailyTracking.BeastTribeAllowances:
@@ -130,6 +135,11 @@ internal static unsafe class DailiesReader
 
     public static DailyAutoStatus ReadDutyRoulettes(IReadOnlyList<byte> rouletteRowIds)
     {
+        if (!GameMemory.Attached)
+        {
+            return default;
+        }
+
         var content = InstanceContent.Instance();
         if (content is null || rouletteRowIds.Count == 0)
         {
@@ -152,6 +162,11 @@ internal static unsafe class DailiesReader
     public static DailyAutoStatus ReadHuntBills(IReadOnlyList<byte> weeklyIndices,
         ExcelSheet<MobHuntOrderType> orderTypes, SubrowExcelSheet<MobHuntOrder> orders)
     {
+        if (!GameMemory.Attached)
+        {
+            return default;
+        }
+
         var hunt = MobHunt.Instance();
         if (hunt is null || weeklyIndices.Count == 0)
         {

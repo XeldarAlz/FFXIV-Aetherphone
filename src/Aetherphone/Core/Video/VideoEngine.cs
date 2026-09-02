@@ -1,7 +1,8 @@
-using System.Text.RegularExpressions;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
-using SharpDX.Direct3D11;
 using SharpDX.DXGI;
+using SharpDX.Direct3D11;
+using System.Text.RegularExpressions;
 
 namespace Aetherphone.Core.Video;
 
@@ -38,10 +39,10 @@ internal sealed class VideoEngine : IDisposable
     private static readonly Regex YouTubeHost =
         new(@"^\w+://[^/]*youtube\.\w+/|^\w+://youtu\.be/", RegexOptions.Compiled);
 
-    private readonly ScreenPainter screenPainter;
+    private readonly ScreenPainter? screenPainter;
     private readonly List<ScreenPositionPreset> screenPresets = [];
     private readonly SemaphoreSlim playGate = new(1, 1);
-    private readonly Texture2D screenTexture;
+    private readonly Texture2D? screenTexture;
 
     private static readonly Texture2DDescription ScreenTextureDescription = new()
     {
@@ -84,10 +85,12 @@ internal sealed class VideoEngine : IDisposable
     internal VideoEngine()
     {
         Dependencies = new MediaDependencies();
-        DxHandler.Initialise(Plugin.PluginInterface);
-
-        screenTexture = new Texture2D(DxHandler.Device, ScreenTextureDescription);
-        screenPainter = new ScreenPainter();
+        if (GameMemory.Attached)
+        {
+            DxHandler.Initialise(Plugin.PluginInterface);
+            screenTexture = new Texture2D(DxHandler.Device, ScreenTextureDescription);
+            screenPainter = new ScreenPainter();
+        }
 
         screenPresets.AddRange(Plugin.Cfg.ScreenPresets);
     }
@@ -185,7 +188,7 @@ internal sealed class VideoEngine : IDisposable
                 framesProgressAtTicks = stallProgressAtTicks;
                 lastObservedFrameVersion = player.FrameVersion;
                 active = true;
-                screenPainter.SetTransform(ScreenPosition, ScreenYaw, ScreenScale);
+                screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenScale);
                 return PlayStart.Started;
             }
             finally
@@ -250,6 +253,10 @@ internal sealed class VideoEngine : IDisposable
         }
 
         DetachRenderer();
+        if (screenTexture is null)
+        {
+            return null;
+        }
 
         var created = new MpvRenderer();
         try
@@ -610,7 +617,7 @@ internal sealed class VideoEngine : IDisposable
         active = false;
         recoveryNotice = null;
         renderer?.Stop();
-        screenPainter.SetTarget(null);
+        screenPainter?.SetTarget(null);
     }
 
     internal void Shutdown()
@@ -618,7 +625,7 @@ internal sealed class VideoEngine : IDisposable
         Interlocked.Increment(ref loadGeneration);
         active = false;
         DetachRenderer();
-        screenPainter.SetTarget(null);
+        screenPainter?.SetTarget(null);
     }
 
     internal void Pause(bool paused) => renderer?.Pause(paused);
@@ -645,7 +652,7 @@ internal sealed class VideoEngine : IDisposable
     {
         get
         {
-            if (screenView is null && DxHandler.Device is { } device)
+            if (screenView is null && screenTexture is not null && DxHandler.Device is { } device)
             {
                 screenView = new ShaderResourceView(device, screenTexture);
             }
@@ -711,7 +718,7 @@ internal sealed class VideoEngine : IDisposable
 
         if (active)
         {
-            screenPainter.SetTransform(ScreenPosition, ScreenYaw, ScreenScale);
+            screenPainter?.SetTransform(ScreenPosition, ScreenYaw, ScreenScale);
         }
     }
 
@@ -758,7 +765,7 @@ internal sealed class VideoEngine : IDisposable
     private void PrepareScreenForSession()
     {
         var isNewSession = !active;
-        screenPainter.SetTarget(screenTexture);
+        screenPainter?.SetTarget(screenTexture);
 
         if (isNewSession)
         {
@@ -768,17 +775,23 @@ internal sealed class VideoEngine : IDisposable
 
     internal bool ScreenVisible
     {
-        get => screenPainter.Visible;
-        set => screenPainter.Visible = value;
+        get => screenPainter?.Visible ?? false;
+        set
+        {
+            if (screenPainter is not null)
+            {
+                screenPainter.Visible = value;
+            }
+        }
     }
 
     public void Dispose()
     {
         lifetime.Cancel();
         DetachRenderer();
-        screenPainter.Dispose();
+        screenPainter?.Dispose();
         screenView?.Dispose();
-        screenTexture.Dispose();
+        screenTexture?.Dispose();
         Dependencies.Dispose();
         playGate.Dispose();
         lifetime.Dispose();

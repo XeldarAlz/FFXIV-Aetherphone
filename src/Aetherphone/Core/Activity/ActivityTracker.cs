@@ -99,6 +99,11 @@ internal sealed unsafe class ActivityTracker : IDisposable
 
     private void OnTick()
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var nowMilliseconds = Environment.TickCount64;
         var elapsed = lastTickMilliseconds == 0 ? 0 : nowMilliseconds - lastTickMilliseconds;
         lastTickMilliseconds = nowMilliseconds;

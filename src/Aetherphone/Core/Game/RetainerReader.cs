@@ -6,6 +6,11 @@ internal static unsafe class RetainerReader
 {
     public static bool TryRead(List<RetainerVenture> into)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         into.Clear();
         var manager = RetainerManager.Instance();
         if (manager is null)

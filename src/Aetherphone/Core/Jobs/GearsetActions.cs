@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Misc;
 
 namespace Aetherphone.Core.Jobs;
@@ -6,6 +7,11 @@ internal static unsafe class GearsetActions
 {
     public static bool Equip(int gearsetId)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         var module = RaptureGearsetModule.Instance();
         if (module is null || !module->IsValidGearset(gearsetId))
         {

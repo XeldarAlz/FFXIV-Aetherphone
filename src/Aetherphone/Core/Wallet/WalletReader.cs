@@ -58,6 +58,11 @@ internal static unsafe class WalletReader
 
     public static long CurrentGil()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var manager = InventoryManager.Instance();
         return manager is null ? 0 : (long)manager->GetGil();
     }
@@ -75,6 +80,11 @@ internal static unsafe class WalletReader
 
     public static void RefreshAmounts(WalletEntry gil, WalletSection[] sections)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -96,6 +106,11 @@ internal static unsafe class WalletReader
 
     public static int CountCapped(GameData gameData)
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var manager = InventoryManager.Instance();
         if (manager is null)
         {
@@ -234,6 +249,11 @@ internal static unsafe class WalletReader
 
     private static uint GrandCompanySealItemId()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var playerState = PlayerState.Instance();
         if (playerState is null)
         {

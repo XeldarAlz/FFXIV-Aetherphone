@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
@@ -8,6 +9,11 @@ internal static unsafe class InventoryReader
 {
     public static ulong ReadLocalContentId()
     {
+        if (!GameMemory.Attached)
+        {
+            return 0;
+        }
+
         var playerState = PlayerState.Instance();
         if (playerState is null)
         {
@@ -52,6 +58,11 @@ internal static unsafe class InventoryReader
     public static bool ReadLocal(List<InventoryStack> bags, List<InventoryStack> armoury, List<InventoryStack> crystals,
         List<InventoryStack> saddlebag, List<InventoryStack> equipped)
     {
+        if (!GameMemory.Attached)
+        {
+            return false;
+        }
+
         bags.Clear();
         armoury.Clear();
         crystals.Clear();
@@ -73,6 +84,13 @@ internal static unsafe class InventoryReader
 
     public static bool ReadActiveRetainer(List<InventoryStack> into, out ulong retainerId, out string retainerName)
     {
+        if (!GameMemory.Attached)
+        {
+            retainerId = 0;
+            retainerName = string.Empty;
+            return false;
+        }
+
         into.Clear();
         retainerId = 0;
         retainerName = string.Empty;
@@ -107,6 +125,13 @@ internal static unsafe class InventoryReader
 
     public static bool ReadFreeCompany(List<InventoryStack> into, out ulong freeCompanyId, out string freeCompanyName)
     {
+        if (!GameMemory.Attached)
+        {
+            freeCompanyId = 0;
+            freeCompanyName = string.Empty;
+            return false;
+        }
+
         into.Clear();
         freeCompanyId = 0;
         freeCompanyName = string.Empty;

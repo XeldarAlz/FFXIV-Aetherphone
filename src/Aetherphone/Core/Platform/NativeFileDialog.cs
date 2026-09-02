@@ -1,6 +1,7 @@
+using Aetherphone.Core.Game;
+using Aetherphone.Core.Localization;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using Aetherphone.Core.Localization;
 using KernelDevice = FFXIVClientStructs.FFXIV.Client.Graphics.Kernel.Device;
 
 namespace Aetherphone.Core.Platform;
@@ -79,6 +80,11 @@ internal static class NativeFileDialog
 
     private static unsafe IntPtr GameWindow()
     {
+        if (!GameMemory.Attached)
+        {
+            return IntPtr.Zero;
+        }
+
         var device = KernelDevice.Instance();
         return device == null ? IntPtr.Zero : (IntPtr)device->hWnd;
     }

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Plugin.Services;
 using FFXIVClientStructs.FFXIV.Client.Game.Character;
@@ -65,6 +66,11 @@ internal sealed class PhoneEmoteController : IDisposable
 
     private void OnUpdate(IFramework owner)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         if (!configuration.ScrollWhileIdle || !isPhoneVisible())
         {
             hasSample = false;

@@ -48,6 +48,11 @@ internal sealed class WeatherService
 
     public unsafe WeatherEntry? LiveRenderedWeather()
     {
+        if (!GameMemory.Attached)
+        {
+            return null;
+        }
+
         var environment = EnvManager.Instance();
         if (environment == null || environment->ActiveWeather == 0)
         {

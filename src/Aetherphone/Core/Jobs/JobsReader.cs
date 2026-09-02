@@ -15,6 +15,11 @@ internal static unsafe class JobsReader
 
     public static JobSection[] Build(GameData gameData, IReadOnlyList<JobsCategory> categories)
     {
+        if (!GameMemory.Attached)
+        {
+            return Array.Empty<JobSection>();
+        }
+
         var playerState = PlayerState.Instance();
         if (playerState is null)
         {

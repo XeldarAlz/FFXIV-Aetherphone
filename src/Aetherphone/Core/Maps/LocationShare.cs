@@ -1,8 +1,9 @@
-using System.Collections.Concurrent;
-using System.Globalization;
+using Aetherphone.Core.Game;
 using Aetherphone.Core.Localization;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Lumina.Excel.Sheets;
+using System.Collections.Concurrent;
+using System.Globalization;
 
 namespace Aetherphone.Core.Maps;
 
@@ -89,6 +90,11 @@ internal static class LocationShare
 
     private static (uint Original, uint District) ReadHouseTerritories()
     {
+        if (!GameMemory.Attached)
+        {
+            return default;
+        }
+
         try
         {
             unsafe
@@ -320,6 +326,11 @@ internal static class LocationShare
 
     private static (short Ward, short Plot, short Room) ReadHousing()
     {
+        if (!GameMemory.Attached)
+        {
+            return default;
+        }
+
         try
         {
             unsafe

@@ -1,3 +1,4 @@
+using Aetherphone.Core.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Client.UI.Info;
 
@@ -7,6 +8,11 @@ internal static unsafe class FriendActions
 {
     public static void OpenAdventurerPlate(ulong contentId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var agent = AgentCharaCard.Instance();
         if (agent != null)
         {
@@ -16,6 +22,11 @@ internal static unsafe class FriendActions
 
     public static void InviteToParty(ulong contentId, ushort worldId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var invite = InfoProxyPartyInvite.Instance();
         if (invite != null)
         {
@@ -25,6 +36,11 @@ internal static unsafe class FriendActions
 
     public static void VisitEstate(ulong contentId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var agent = AgentFriendlist.Instance();
         if (agent != null)
         {
@@ -34,6 +50,11 @@ internal static unsafe class FriendActions
 
     public static void OpenSearchInfo(ulong contentId)
     {
+        if (!GameMemory.Attached)
+        {
+            return;
+        }
+
         var proxy = InfoProxyFriendList.Instance();
         if (proxy == null)
         {
