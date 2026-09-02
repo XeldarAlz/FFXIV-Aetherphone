@@ -24,8 +24,11 @@ internal sealed class DriverServer
     private readonly int port;
     private long lastLiveTimestamp;
     private byte[]? latestFrame;
+    private bool latestFrameRaw;
     private int latestOriginX;
     private int latestOriginY;
+    private int latestWidth;
+    private int latestHeight;
 
     public DriverServer(PhoneHost host, int port, string cacheDirectory)
     {
@@ -133,11 +136,14 @@ internal sealed class DriverServer
             case "/":
                 return new Response(200, "text/html; charset=utf-8", Encoding.UTF8.GetBytes(ViewerPage.Html));
             case "/frame":
-                var frame = LiveFrame(query["full"] is null);
-                return new Response(200, "image/png", frame, new Dictionary<string, string>
+                var raw = query["format"] == "raw";
+                var frame = LiveFrame(query["full"] is null, raw);
+                return new Response(200, raw ? "application/octet-stream" : "image/png", frame, new Dictionary<string, string>
                 {
                     ["X-Phone-X"] = latestOriginX.ToString(System.Globalization.CultureInfo.InvariantCulture),
                     ["X-Phone-Y"] = latestOriginY.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["X-Width"] = latestWidth.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    ["X-Height"] = latestHeight.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 });
             case "/event":
                 return ApplyEvent(query);
@@ -205,15 +211,23 @@ internal sealed class DriverServer
         }
     }
 
-    private byte[] LiveFrame(bool cropToPhone)
+    private byte[] LiveFrame(bool cropToPhone, bool raw)
     {
         var now = Stopwatch.GetTimestamp();
         var elapsed = lastLiveTimestamp == 0 ? FirstLiveDelta : (float)((now - lastLiveTimestamp) / (double)Stopwatch.Frequency);
-        if (latestFrame is null || elapsed >= MinimumLiveDelta)
+        if (latestFrame is null || latestFrameRaw != raw || elapsed >= MinimumLiveDelta)
         {
             host.Step(Math.Clamp(elapsed, MinimumLiveDelta, MaximumLiveDelta));
             lastLiveTimestamp = now;
-            latestFrame = host.ScreenshotPng(cropToPhone, true, out latestOriginX, out latestOriginY);
+            latestFrameRaw = raw;
+            latestFrame = raw
+                ? host.ScreenshotRaw(cropToPhone, out latestWidth, out latestHeight, out latestOriginX, out latestOriginY)
+                : host.ScreenshotPng(cropToPhone, true, out latestOriginX, out latestOriginY);
+            if (!raw)
+            {
+                latestWidth = 0;
+                latestHeight = 0;
+            }
         }
 
         return latestFrame;
