@@ -65,6 +65,11 @@ internal sealed class GameData
 
     public string WorldName(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (rowId != 0 && data.GetExcelSheet<World>().TryGetRow(rowId, out var world))
         {
             return world.Name.ExtractText();
@@ -89,6 +94,11 @@ internal sealed class GameData
 
     public string JobAbbreviation(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
         {
             return job.Abbreviation.ExtractText();
@@ -99,6 +109,11 @@ internal sealed class GameData
 
     public string JobName(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
         {
             return CultureInfo.CurrentCulture.TextInfo.ToTitleCase(job.Name.ExtractText());
@@ -110,6 +125,15 @@ internal sealed class GameData
     public bool TryGetClassJobDivision(uint rowId, out byte jobType, out byte role, out byte uiPriority,
         out uint classJobCategoryId)
     {
+        if (!GameSheets.Available)
+        {
+            jobType = 0;
+            role = 0;
+            uiPriority = 0;
+            classJobCategoryId = 0;
+            return false;
+        }
+
         jobType = 0;
         role = 0;
         uiPriority = 0;
@@ -128,6 +152,11 @@ internal sealed class GameData
 
     public uint[] ClassJobIdsInCategory(uint classJobCategoryId)
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<uint>();
+        }
+
         classJobIdsByCategory ??= new Dictionary<uint, uint[]>();
         if (classJobIdsByCategory.TryGetValue(classJobCategoryId, out var cached))
         {
@@ -152,6 +181,11 @@ internal sealed class GameData
 
     public int JobExpArrayIndex(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return -1;
+        }
+
         if (rowId != 0 && data.GetExcelSheet<ClassJob>().TryGetRow(rowId, out var job))
         {
             return job.ExpArrayIndex;
@@ -162,6 +196,11 @@ internal sealed class GameData
 
     public long ExpToNextLevel(int level)
     {
+        if (!GameSheets.Available)
+        {
+            return 0;
+        }
+
         if (level > 0 && data.GetExcelSheet<ParamGrow>().TryGetRow((uint)level, out var row))
         {
             return row.ExpToNext;
@@ -172,6 +211,11 @@ internal sealed class GameData
 
     public string TerritoryName(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (rowId != 0 && data.GetExcelSheet<TerritoryType>().TryGetRow(rowId, out var territory))
         {
             return territory.PlaceName.Value.Name.ExtractText();
@@ -182,6 +226,11 @@ internal sealed class GameData
 
     public string DataCenterName(uint worldId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) &&
             world.DataCenter.RowId != 0)
         {
@@ -193,6 +242,11 @@ internal sealed class GameData
 
     public bool IsDataCenterName(string value)
     {
+        if (!GameSheets.Available)
+        {
+            return false;
+        }
+
         if (string.IsNullOrEmpty(value))
         {
             return false;
@@ -217,6 +271,11 @@ internal sealed class GameData
 
     public string RegionName(uint worldId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (worldId != 0 && data.GetExcelSheet<World>().TryGetRow(worldId, out var world) &&
             world.DataCenter.RowId != 0)
         {
@@ -239,6 +298,11 @@ internal sealed class GameData
 
     public IReadOnlyList<(uint WorldId, string Name, uint DataCenterId, string DataCenterName)> ChinaWorlds()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<(uint WorldId, string Name, uint DataCenterId, string DataCenterName)>();
+        }
+
         var results = new List<(uint WorldId, string Name, uint DataCenterId, string DataCenterName)>();
 
         if (!IsChineseGameClient())
@@ -277,6 +341,11 @@ internal sealed class GameData
 
     public bool IsChineseGameClient()
     {
+        if (!GameSheets.Available)
+        {
+            return false;
+        }
+
         if (chineseGameClient is { } known)
         {
             return known;
@@ -316,6 +385,11 @@ internal sealed class GameData
 
     private Dictionary<string, string> BuildWorldRegionCodes()
     {
+        if (!GameSheets.Available)
+        {
+            return new Dictionary<string, string>();
+        }
+
         var map = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var world in data.GetExcelSheet<World>())
         {
@@ -364,6 +438,11 @@ internal sealed class GameData
 
     private uint RegionId()
     {
+        if (!GameSheets.Available)
+        {
+            return 0;
+        }
+
         var worldId = LocalCurrentWorldId;
         if (worldId == 0)
         {
@@ -389,6 +468,11 @@ internal sealed class GameData
 
     public string RaceName(uint raceId, bool female)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (raceId != 0 && data.GetExcelSheet<Race>().TryGetRow(raceId, out var race))
         {
             return (female ? race.Feminine : race.Masculine).ExtractText();
@@ -399,6 +483,11 @@ internal sealed class GameData
 
     public string ClanName(uint tribeId, bool female)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (tribeId != 0 && data.GetExcelSheet<Tribe>().TryGetRow(tribeId, out var tribe))
         {
             return (female ? tribe.Feminine : tribe.Masculine).ExtractText();
@@ -409,6 +498,11 @@ internal sealed class GameData
 
     public string GuardianDeityName(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (rowId != 0 && data.GetExcelSheet<GuardianDeity>().TryGetRow(rowId, out var deity))
         {
             return deity.Name.ExtractText();
@@ -419,6 +513,11 @@ internal sealed class GameData
 
     public string CityStateName(uint townId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (townId != 0 && data.GetExcelSheet<Town>().TryGetRow(townId, out var town))
         {
             return town.Name.ExtractText();
@@ -429,6 +528,11 @@ internal sealed class GameData
 
     public string GrandCompanyName(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return string.Empty;
+        }
+
         if (rowId != 0 && data.GetExcelSheet<GrandCompany>().TryGetRow(rowId, out var company))
         {
             return company.Name.ExtractText();
@@ -442,6 +546,11 @@ internal sealed class GameData
         name = string.Empty;
         iconId = 0;
         itemLevel = 0;
+        if (!GameSheets.Available)
+        {
+            return false;
+        }
+
         if (itemId == 0 || !data.GetExcelSheet<Item>().TryGetRow(itemId, out var item))
         {
             return false;
@@ -455,6 +564,12 @@ internal sealed class GameData
 
     public void CollectTomestoneItemIds(List<uint> into, out uint limitedItemId)
     {
+        if (!GameSheets.Available)
+        {
+            limitedItemId = 0;
+            return;
+        }
+
         into.Clear();
         FindTopTomestoneItemIds(out var newest, out var previous, out limitedItemId);
         if (newest != 0)
@@ -502,6 +617,11 @@ internal sealed class GameData
 
     public uint[] CollectableMountIds()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<uint>();
+        }
+
         if (collectableMountIds is not null)
         {
             return collectableMountIds;
@@ -524,6 +644,11 @@ internal sealed class GameData
 
     public uint[] CollectableMinionIds()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<uint>();
+        }
+
         if (collectableMinionIds is not null)
         {
             return collectableMinionIds;
@@ -546,6 +671,11 @@ internal sealed class GameData
 
     public uint[] TriviaActionIds()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<uint>();
+        }
+
         if (triviaActionIds is not null)
         {
             return triviaActionIds;
@@ -575,6 +705,11 @@ internal sealed class GameData
 
     public uint[] TriviaEmoteIds()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<uint>();
+        }
+
         if (triviaEmoteIds is not null)
         {
             return triviaEmoteIds;
@@ -598,6 +733,11 @@ internal sealed class GameData
 
     public NamedIcon ActionEntry(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return default;
+        }
+
         if (!data.GetExcelSheet<ActionSheet>().TryGetRow(rowId, out var row))
         {
             return default;
@@ -608,6 +748,11 @@ internal sealed class GameData
 
     public NamedIcon EmoteEntry(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return default;
+        }
+
         if (!data.GetExcelSheet<EmoteSheet>().TryGetRow(rowId, out var row))
         {
             return default;
@@ -618,6 +763,11 @@ internal sealed class GameData
 
     public NamedIcon MountEntry(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return default;
+        }
+
         if (!data.GetExcelSheet<Mount>().TryGetRow(rowId, out var row))
         {
             return default;
@@ -628,6 +778,11 @@ internal sealed class GameData
 
     public NamedIcon MinionEntry(uint rowId)
     {
+        if (!GameSheets.Available)
+        {
+            return default;
+        }
+
         if (!data.GetExcelSheet<Companion>().TryGetRow(rowId, out var row))
         {
             return default;
@@ -648,6 +803,11 @@ internal sealed class GameData
 
     public byte[] DailyBonusRouletteRowIds()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<byte>();
+        }
+
         if (dailyBonusRouletteRowIds is not null)
         {
             return dailyBonusRouletteRowIds;
@@ -675,6 +835,11 @@ internal sealed class GameData
 
     public byte[] WeeklyHuntBillIndices()
     {
+        if (!GameSheets.Available)
+        {
+            return Array.Empty<byte>();
+        }
+
         if (weeklyHuntBillIndices is not null)
         {
             return weeklyHuntBillIndices;
