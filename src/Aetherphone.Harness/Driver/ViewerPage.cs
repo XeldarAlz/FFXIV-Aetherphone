@@ -61,16 +61,17 @@ internal static class ViewerPage
         window.addEventListener('keyup', event => send('kind=key&name=' + encodeURIComponent(event.key) + '&down=0'));
         async function loop() {
             try {
-                const response = await fetch('/frame?t=' + Date.now(), { cache: 'no-store' });
+                const response = await fetch('/frame?format=raw&t=' + Date.now(), { cache: 'no-store' });
                 originX = parseInt(response.headers.get('X-Phone-X') || '0', 10);
                 originY = parseInt(response.headers.get('X-Phone-Y') || '0', 10);
-                const bitmap = await createImageBitmap(await response.blob());
-                if (bitmap.width !== width || bitmap.height !== height) {
-                    width = bitmap.width; height = bitmap.height;
+                const frameWidth = parseInt(response.headers.get('X-Width') || '0', 10);
+                const frameHeight = parseInt(response.headers.get('X-Height') || '0', 10);
+                const pixels = new Uint8ClampedArray(await response.arrayBuffer());
+                if (frameWidth !== width || frameHeight !== height) {
+                    width = frameWidth; height = frameHeight;
                     canvas.width = width; canvas.height = height;
                 }
-                context.drawImage(bitmap, 0, 0);
-                bitmap.close();
+                context.putImageData(new ImageData(pixels, width, height), 0, 0);
                 frames += 1;
                 const seconds = (performance.now() - started) / 1000;
                 if (seconds >= 1) {

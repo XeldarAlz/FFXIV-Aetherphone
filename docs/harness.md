@@ -63,7 +63,7 @@ Coordinates are phone-relative pixels, the same space as the cropped screenshot.
 
 ## The browser viewer
 
-The server also serves a page at `http://127.0.0.1:47821/` (`tools/harness/aep url` prints it). It streams the phone as PNG frames and forwards mouse, wheel, and keyboard events to ImGui through `/event`, so a person can use the phone the way they would in game. Each frame request steps the simulation by the real time elapsed since the previous one, which means time only runs while a viewer is connected; close the tab and the driver is deterministic again. Expect 10 to 15 frames per second: the CPU rasterizer, not the network, sets the pace.
+The server also serves a page at `http://127.0.0.1:47821/` (`tools/harness/aep url` prints it). It streams the phone as PNG frames and forwards mouse, wheel, and keyboard events to ImGui through `/event`, so a person can use the phone the way they would in game. Each frame request steps the simulation by the real time elapsed since the previous one, which means time only runs while a viewer is connected; close the tab and the driver is deterministic again. Frames travel as raw pixels, and the rasterizer splits the screen into horizontal bands across every core, so expect roughly 30 frames per second on a modern machine.
 
 ## What is faked and what is real
 
@@ -77,7 +77,7 @@ Switched off through the plugin's own gates: `GameMemory.Detach()` makes every F
 
 - Three Dalamud statics resolve through Dalamud's service locator and wait forever without one: `UiBuilder.DefaultFontSizePx`, `UiBuilder.IconFont`, and `WindowSystem.Draw`. The plugin reads the first two through instance seams and the harness draws windows with its own loop. If the harness hangs on a new Dalamud API, `dotnet-stack report -p <pid>` shows which static is waiting.
 - Dalamud stamps its assemblies x64-only. The harness retargets `Aetherphone.dll` in its own output at startup; the test project's output needs the same treatment to run on Apple Silicon.
-- The rasterizer has no GPU. A phone frame costs about 50 ms at 1600x1200, so `step 1000` takes under a minute.
+- The rasterizer has no GPU. A phone frame costs about 12 ms at 1600x1200 on a 10-core machine, so `step 1000` takes around fifteen seconds.
 - A fresh config runs the full first-run boot (emblem and greetings, roughly 15 seconds of frames) and then the onboarding tour. Config lives in `~/.aetherphone-harness/config`, so it happens once.
 - The Aethernet apps talk to the real dev backend from the harness. Anything you post is real.
 - The phone window is pinned at a fixed spot inside the display. In game the chassis can be dragged; under the harness that drag is ignored so the crop and the viewer's input mapping stay stable.

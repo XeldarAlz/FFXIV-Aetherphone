@@ -3,55 +3,61 @@ namespace Aetherphone.Harness.Rendering;
 internal sealed unsafe class SoftwareRasterizer
 {
     private const float ChannelScale = 1f / 255f;
-    private readonly byte[] pixels;
     private readonly float[] accumulator;
+    private readonly float[] clearRow;
 
     public SoftwareRasterizer(int width, int height)
     {
         Width = width;
         Height = height;
-        pixels = new byte[width * height * 4];
         accumulator = new float[width * height * 4];
+        clearRow = new float[width * 4];
     }
 
     public int Width { get; }
 
     public int Height { get; }
 
-    public int TrianglesDrawn { get; private set; }
-
     public void Clear(byte red, byte green, byte blue, byte alpha)
     {
-        TrianglesDrawn = 0;
-        var target = accumulator;
-        for (var offset = 0; offset < target.Length; offset += 4)
+        var row = clearRow;
+        for (var offset = 0; offset < row.Length; offset += 4)
         {
-            target[offset] = red;
-            target[offset + 1] = green;
-            target[offset + 2] = blue;
-            target[offset + 3] = alpha;
+            row[offset] = red;
+            row[offset + 1] = green;
+            row[offset + 2] = blue;
+            row[offset + 3] = alpha;
+        }
+
+        var target = accumulator;
+        for (var y = 0; y < Height; y++)
+        {
+            Array.Copy(row, 0, target, y * row.Length, row.Length);
         }
     }
 
-    public byte[] Resolve()
+    public void Resolve(int left, int top, int width, int height, byte[] target)
     {
         var source = accumulator;
-        var target = pixels;
-        for (var index = 0; index < target.Length; index++)
+        for (var row = 0; row < height; row++)
         {
-            target[index] = (byte)Math.Clamp(source[index] + 0.5f, 0f, 255f);
+            var sourceOffset = ((top + row) * Width + left) * 4;
+            var targetOffset = row * width * 4;
+            var count = width * 4;
+            for (var index = 0; index < count; index++)
+            {
+                target[targetOffset + index] = (byte)Math.Clamp(source[sourceOffset + index] + 0.5f, 0f, 255f);
+            }
         }
-
-        return target;
     }
 
     public void DrawTriangles(DrawVertex* vertices, ushort* indices, int elementCount, Vector4 clipRect,
-        Vector2 displayOffset, CpuTexture texture)
+        Vector2 displayOffset, CpuTexture texture, int bandMinY, int bandMaxY)
     {
         var clipMinX = Math.Max((int)MathF.Floor(clipRect.X - displayOffset.X), 0);
-        var clipMinY = Math.Max((int)MathF.Floor(clipRect.Y - displayOffset.Y), 0);
+        var clipMinY = Math.Max((int)MathF.Floor(clipRect.Y - displayOffset.Y), bandMinY);
         var clipMaxX = Math.Min((int)MathF.Ceiling(clipRect.Z - displayOffset.X), Width) - 1;
-        var clipMaxY = Math.Min((int)MathF.Ceiling(clipRect.W - displayOffset.Y), Height) - 1;
+        var clipMaxY = Math.Min((int)MathF.Ceiling(clipRect.W - displayOffset.Y) - 1, bandMaxY);
         if (clipMinX > clipMaxX || clipMinY > clipMaxY)
         {
             return;
@@ -99,7 +105,6 @@ internal sealed unsafe class SoftwareRasterizer
             return;
         }
 
-        TrianglesDrawn += 1;
         var inverseArea = 1f / area;
         var topLeft0 = IsTopLeft(position1, position2);
         var topLeft1 = IsTopLeft(position2, position0);
