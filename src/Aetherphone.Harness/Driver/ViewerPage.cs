@@ -21,13 +21,13 @@ internal static class ViewerPage
         const canvas = document.getElementById('phone');
         const context = canvas.getContext('2d');
         const status = document.getElementById('status');
-        let width = 0, height = 0, frames = 0, started = performance.now(), lastMove = 0;
+        let width = 0, height = 0, originX = 0, originY = 0, frames = 0, started = performance.now(), lastMove = 0;
         function send(query) { fetch('/event?' + query, { keepalive: true }).catch(() => {}); }
         function point(event) {
             const rect = canvas.getBoundingClientRect();
-            const x = (event.clientX - rect.left) * width / rect.width;
-            const y = (event.clientY - rect.top) * height / rect.height;
-            return 'x=' + x.toFixed(1) + '&y=' + y.toFixed(1);
+            const x = originX + (event.clientX - rect.left) * width / rect.width;
+            const y = originY + (event.clientY - rect.top) * height / rect.height;
+            return 'space=screen&x=' + x.toFixed(1) + '&y=' + y.toFixed(1);
         }
         function button(event) { return event.button === 2 ? 1 : event.button === 1 ? 2 : 0; }
         canvas.addEventListener('mousemove', event => {
@@ -59,14 +59,18 @@ internal static class ViewerPage
             if (!event.metaKey && !event.ctrlKey && event.key !== 'F5') { event.preventDefault(); }
         });
         window.addEventListener('keyup', event => send('kind=key&name=' + encodeURIComponent(event.key) + '&down=0'));
-        function loop() {
-            const image = new Image();
-            image.onload = () => {
-                if (image.width !== width || image.height !== height) {
-                    width = image.width; height = image.height;
+        async function loop() {
+            try {
+                const response = await fetch('/frame?t=' + Date.now(), { cache: 'no-store' });
+                originX = parseInt(response.headers.get('X-Phone-X') || '0', 10);
+                originY = parseInt(response.headers.get('X-Phone-Y') || '0', 10);
+                const bitmap = await createImageBitmap(await response.blob());
+                if (bitmap.width !== width || bitmap.height !== height) {
+                    width = bitmap.width; height = bitmap.height;
                     canvas.width = width; canvas.height = height;
                 }
-                context.drawImage(image, 0, 0);
+                context.drawImage(bitmap, 0, 0);
+                bitmap.close();
                 frames += 1;
                 const seconds = (performance.now() - started) / 1000;
                 if (seconds >= 1) {
@@ -74,9 +78,10 @@ internal static class ViewerPage
                     frames = 0; started = performance.now();
                 }
                 loop();
-            };
-            image.onerror = () => { status.textContent = 'driver not reachable, retrying'; setTimeout(loop, 500); };
-            image.src = '/frame?t=' + Date.now();
+            } catch (error) {
+                status.textContent = 'driver not reachable, retrying';
+                setTimeout(loop, 500);
+            }
         }
         loop();
         </script>

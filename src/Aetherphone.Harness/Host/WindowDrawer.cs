@@ -6,6 +6,14 @@ namespace Aetherphone.Harness.Host;
 internal sealed class WindowDrawer
 {
     private readonly HashSet<Window> open = new();
+    private Window? pinned;
+    private Vector2 pinnedPosition;
+
+    public void Pin(Window window, Vector2 position)
+    {
+        pinned = window;
+        pinnedPosition = position;
+    }
 
     public void Draw(IReadOnlyList<IWindow> windows)
     {
@@ -53,6 +61,11 @@ internal sealed class WindowDrawer
 
         window.PreDraw();
         ApplyConditionals(window);
+        if (ReferenceEquals(window, pinned))
+        {
+            ImGui.SetNextWindowPos(pinnedPosition, ImGuiCond.Always);
+        }
+
         bool drawn;
         if (window.ShowCloseButton)
         {

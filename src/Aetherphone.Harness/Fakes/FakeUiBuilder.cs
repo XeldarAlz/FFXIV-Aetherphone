@@ -138,5 +138,7 @@ internal sealed class FakeUiBuilder : IUiBuilder
 
     public void InvokeOpenMainUi() => OpenMainUi?.Invoke();
 
+    public void PinWindow(Window window, Vector2 position) => windowDrawer.Pin(window, position);
+
     public void InvokeOpenConfigUi() => OpenConfigUi?.Invoke();
 }

@@ -80,6 +80,7 @@ Switched off through the plugin's own gates: `GameMemory.Detach()` makes every F
 - The rasterizer has no GPU. A phone frame costs about 50 ms at 1600x1200, so `step 1000` takes under a minute.
 - A fresh config runs the full first-run boot (emblem and greetings, roughly 15 seconds of frames) and then the onboarding tour. Config lives in `~/.aetherphone-harness/config`, so it happens once.
 - The Aethernet apps talk to the real dev backend from the harness. Anything you post is real.
+- The phone window is pinned at a fixed spot inside the display. In game the chassis can be dragged; under the harness that drag is ignored so the crop and the viewer's input mapping stay stable.
 
 ## Related docs
 
