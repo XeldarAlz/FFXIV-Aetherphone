@@ -18,6 +18,7 @@ internal sealed unsafe class PhoneHost : IDisposable
     private const float FrameSeconds = 1f / 60f;
     private const float DalamudDefaultFontPx = 16.5f;
     private const int HomeReturnFrames = 20;
+    private const float PhoneMargin = 40f;
     private readonly TextureStore textures = new();
     private readonly FrameRenderer renderer;
     private readonly FakeFontAtlas fontAtlas;
@@ -85,6 +86,7 @@ internal sealed unsafe class PhoneHost : IDisposable
         Plugin.AetheryteList = NullProxy.Create<IAetheryteList>();
         fontAtlas.RebuildIfDirty();
         plugin = new Plugin();
+        uiBuilder.PinWindow(plugin.MainWindow, new Vector2(PhoneMargin, PhoneMargin));
         HarnessLog.Note("plugin constructed");
     }
 
@@ -277,11 +279,13 @@ internal sealed unsafe class PhoneHost : IDisposable
 
     public bool TryFindAnchor(string key, out Rect rect) => UiAnchors.TryGet(key, out rect);
 
-    public byte[] ScreenshotPng(bool cropToPhone) => ScreenshotPng(cropToPhone, false);
+    public byte[] ScreenshotPng(bool cropToPhone) => ScreenshotPng(cropToPhone, false, out _, out _);
 
-    public byte[] ScreenshotPng(bool cropToPhone, bool fast)
+    public byte[] ScreenshotPng(bool cropToPhone, bool fast, out int originX, out int originY)
     {
         var pixels = renderer.Resolve();
+        originX = 0;
+        originY = 0;
         if (!cropToPhone)
         {
             return PngWriter.Encode(pixels, Width, Height, fast);
@@ -290,6 +294,8 @@ internal sealed unsafe class PhoneHost : IDisposable
         var rect = PhoneRect;
         var left = Math.Clamp((int)MathF.Floor(rect.Min.X), 0, Width - 1);
         var top = Math.Clamp((int)MathF.Floor(rect.Min.Y), 0, Height - 1);
+        originX = left;
+        originY = top;
         var right = Math.Clamp((int)MathF.Ceiling(rect.Max.X), left + 1, Width);
         var bottom = Math.Clamp((int)MathF.Ceiling(rect.Max.Y), top + 1, Height);
         var cropWidth = right - left;
