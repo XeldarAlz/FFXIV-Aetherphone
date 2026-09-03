@@ -44,6 +44,7 @@ internal sealed class WidgetSizeMenu
     {
         tile = null;
         closing = false;
+        pop.SnapTo(0f);
     }
 
     public void Draw(Rect content, Rect anchor, PhoneTheme theme, float delta, float scale)
