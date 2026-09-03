@@ -40,6 +40,13 @@ internal sealed class WidgetSizeMenu
         closing = true;
     }
 
+    public void CloseImmediate()
+    {
+        tile = null;
+        closing = false;
+        pop.SnapTo(0f);
+    }
+
     public void Draw(Rect content, Rect anchor, PhoneTheme theme, float delta, float scale)
     {
         if (tile is null)

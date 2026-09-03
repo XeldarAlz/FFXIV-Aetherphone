@@ -99,6 +99,7 @@ internal sealed class HomeScreen
     {
         gallery.CloseImmediate();
         spotlight.CloseImmediate();
+        sizeMenu.CloseImmediate();
         interaction.ResetForReveal();
         var page = PageContaining(appId);
         if (page >= 0)
@@ -192,7 +193,7 @@ internal sealed class HomeScreen
         var anchor = interaction.CommittedRect(metrics, tile);
         if (anchor is not { } rect)
         {
-            sizeMenu.Close();
+            sizeMenu.CloseImmediate();
             return;
         }
 
