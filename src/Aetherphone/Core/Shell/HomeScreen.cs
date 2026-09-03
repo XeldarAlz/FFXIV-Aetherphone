@@ -99,6 +99,7 @@ internal sealed class HomeScreen
     {
         gallery.CloseImmediate();
         spotlight.CloseImmediate();
+        sizeMenu.CloseImmediate();
         interaction.ResetForReveal();
         var page = PageContaining(appId);
         if (page >= 0)
