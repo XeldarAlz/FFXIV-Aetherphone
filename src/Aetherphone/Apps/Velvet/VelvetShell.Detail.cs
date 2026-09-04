@@ -18,6 +18,7 @@ internal sealed partial class VelvetShell
 {
     private string commentsPostId = string.Empty;
     private string commentDraft = string.Empty;
+    private string? refreshedDetailPostId;
 
     private void DrawPostDetail(Rect area, string postId)
     {
@@ -42,18 +43,25 @@ internal sealed partial class VelvetShell
             found = fetched;
         }
 
-        if (found is not { } post)
-        {
-            store.EnsurePost(postId);
-            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetTheme.MutedInk);
-            return;
-        }
-
         if (commentsPostId != postId)
         {
             commentsPostId = postId;
             commentDraft = string.Empty;
+            refreshedDetailPostId = postId;
+            store.EnsurePost(postId);
             store.OpenComments(postId);
+        }
+        else if (!router.IsTransitioning && refreshedDetailPostId != postId)
+        {
+            refreshedDetailPostId = postId;
+            store.EnsurePost(postId);
+            store.RevalidateComments(postId);
+        }
+
+        if (found is not { } post)
+        {
+            Typography.DrawCentered(body.Center, Loc.T(L.Common.Loading), VelvetTheme.MutedInk);
+            return;
         }
 
         var composerHeight = 52f * scale;
