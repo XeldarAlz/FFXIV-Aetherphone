@@ -229,6 +229,8 @@ internal sealed partial class VelvetShell : IResumableApp
         postSheet.Close();
         threadSheet.Close();
         stories.Close();
+        refreshedDetailPostId = null;
+        store.LeavePostDetail();
     }
 
     public void Draw(in PhoneContext context)
@@ -294,6 +296,12 @@ internal sealed partial class VelvetShell : IResumableApp
         using (InputShield.Engage(avatarLightbox.Expanded))
         {
             router.Draw(context.Content, AppSkin.Transparent, ImGui.GetIO().DeltaTime, drawView);
+        }
+
+        if (router.Current.Screen != VelvetScreenId.PostDetail)
+        {
+            refreshedDetailPostId = null;
+            store.LeavePostDetail();
         }
 
         if (avatarLightbox.Active)

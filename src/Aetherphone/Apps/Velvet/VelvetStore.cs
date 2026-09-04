@@ -79,6 +79,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     private volatile bool commentsLoadingMore;
     private volatile bool loadingComments;
     private volatile bool commenting;
+    private readonly object commentsSync = new();
+    private int commentsGeneration;
     private volatile bool feedLoadedAll;
     private volatile bool feedLoadedConnections;
     private volatile int feedScope = (int)VelvetFeedScope.All;
@@ -135,7 +137,10 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
         if (string.Equals(removal.Kind, ContentRemovalKinds.Comment, StringComparison.Ordinal))
         {
-            detailComments = CopyOnWrite.RemoveById(detailComments, removal.ContentId);
+            lock (commentsSync)
+            {
+                detailComments = CopyOnWrite.RemoveById(detailComments, removal.ContentId);
+            }
         }
     }
 
@@ -145,6 +150,8 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         {
             RefreshRequests();
         }
+
+        RevalidateViewedPost();
     }
 
     private void OnRealtimeConnected(bool active)
@@ -152,6 +159,7 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         if (active)
         {
             InboxCadence.RequestImmediate();
+            RevalidateViewedPost();
         }
     }
 
@@ -161,6 +169,19 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     {
         InboxCadence.RequestImmediate();
         RequestThreadRefresh();
+        RevalidateViewedPost();
+    }
+
+    private void RevalidateViewedPost()
+    {
+        var postId = detailPostId;
+        if (postId is null)
+        {
+            return;
+        }
+
+        FetchPost(postId);
+        RefreshOpenComments(postId);
     }
 
     public MentionSuggestions NewMentionSuggestions() => new(account, work);
@@ -288,7 +309,9 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         userPostsCursor = null;
         userPostsLoaded = false;
         userPostsFailed = false;
+        Interlocked.Increment(ref commentsGeneration);
         detailPostId = null;
+        loadingComments = false;
         detailComments = Array.Empty<VelvetCommentDto>();
         commentsCursor = null;
         for (var laneIndex = 0; laneIndex < feedLanes.Length; laneIndex++)
@@ -1431,18 +1454,34 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public void EnsurePost(string postId)
     {
-        if (fetchingPostId == postId || fetchedPost?.Id == postId)
+        var cached = fetchedPost?.Id == postId;
+        FetchPost(postId);
+        if (!cached && fetchingPostId == postId)
+        {
+            fetchedPost = null;
+        }
+    }
+
+    private void FetchPost(string postId)
+    {
+        if (fetchingPostId == postId)
         {
             return;
         }
 
         fetchingPostId = postId;
-        fetchedPost = null;
         work.Run("post by id", async token =>
         {
             var post = await client.PostAsync(postId, token).ConfigureAwait(false);
-            if (fetchingPostId == postId && post is not null)
+            if (fetchingPostId != postId)
             {
+                return;
+            }
+
+            fetchingPostId = null;
+            if (post is not null)
+            {
+                AcceptPostEverywhere(post);
                 fetchedPost = post;
             }
         });
@@ -1520,25 +1559,85 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public void OpenComments(string postId)
     {
+        var generation = Interlocked.Increment(ref commentsGeneration);
         detailPostId = postId;
-        detailComments = Array.Empty<VelvetCommentDto>();
-        commentsCursor = null;
+        lock (commentsSync)
+        {
+            detailComments = Array.Empty<VelvetCommentDto>();
+            commentsCursor = null;
+        }
+
         loadingComments = true;
         work.Run("comments", async token =>
         {
             var page = await client.CommentsAsync(postId, null, token).ConfigureAwait(false);
-            if (detailPostId == postId && page is not null)
+            if (Volatile.Read(ref commentsGeneration) != generation || page is null)
             {
+                return;
+            }
+
+            lock (commentsSync)
+            {
+                if (detailPostId != postId || Volatile.Read(ref commentsGeneration) != generation)
+                {
+                    return;
+                }
+
                 detailComments = page.Items;
                 commentsCursor = page.NextCursor;
             }
         }, () =>
         {
-            if (detailPostId == postId)
+            if (Volatile.Read(ref commentsGeneration) == generation)
             {
                 loadingComments = false;
             }
         });
+    }
+
+    public void RevalidateComments(string postId)
+    {
+        detailPostId = postId;
+        RefreshOpenComments(postId);
+    }
+
+    public void LeavePostDetail()
+    {
+        detailPostId = null;
+    }
+
+    private void RefreshOpenComments(string postId)
+    {
+        if (detailPostId != postId || loadingComments || commentsLoadingMore)
+        {
+            return;
+        }
+
+        var generation = Volatile.Read(ref commentsGeneration);
+        work.Run("comments refresh", async token =>
+        {
+            var page = await client.CommentsAsync(postId, null, token).ConfigureAwait(false);
+            if (detailPostId != postId || page is null || Volatile.Read(ref commentsGeneration) != generation)
+            {
+                return;
+            }
+
+            lock (commentsSync)
+            {
+                if (detailPostId != postId)
+                {
+                    return;
+                }
+
+                detailComments = IdentifiedMerge.MergeById(detailComments, page.Items, CompareCommentsOldestFirst);
+            }
+        });
+    }
+
+    private static int CompareCommentsOldestFirst(VelvetCommentDto left, VelvetCommentDto right)
+    {
+        var byTime = left.CreatedAtUnix.CompareTo(right.CreatedAtUnix);
+        return byTime != 0 ? byTime : string.CompareOrdinal(left.Id, right.Id);
     }
 
     public void LoadMoreComments()
@@ -1554,13 +1653,16 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         work.Run("comments more", async token =>
         {
             var page = await client.CommentsAsync(postId, cursor, token).ConfigureAwait(false);
-            if (page is null || detailPostId != postId)
+            lock (commentsSync)
             {
-                return;
-            }
+                if (page is null || detailPostId != postId)
+                {
+                    return;
+                }
 
-            detailComments = CopyOnWrite.AppendPageById(detailComments, page.Items);
-            commentsCursor = page.NextCursor;
+                detailComments = CopyOnWrite.AppendPageById(detailComments, page.Items);
+                commentsCursor = page.NextCursor;
+            }
         }, () => commentsLoadingMore = false);
     }
 
@@ -1583,9 +1685,12 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
                 return false;
             }
 
-            if (detailPostId == postId)
+            lock (commentsSync)
             {
-                detailComments = CopyOnWrite.Append(detailComments, created);
+                if (detailPostId == postId)
+                {
+                    detailComments = CopyOnWrite.Append(detailComments, created);
+                }
             }
 
             return true;
@@ -1595,17 +1700,24 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
     public void ToggleCommentLike(VelvetCommentDto comment)
     {
         var liked = !comment.Liked;
-        detailComments = CopyOnWrite.MapById(detailComments, comment.Id, stored => stored.Liked == liked
-            ? stored
-            : stored with { Liked = liked, LikeCount = Math.Max(0, stored.LikeCount + (liked ? 1 : -1)) });
+        lock (commentsSync)
+        {
+            detailComments = CopyOnWrite.MapById(detailComments, comment.Id, stored => stored.Liked == liked
+                ? stored
+                : stored with { Liked = liked, LikeCount = Math.Max(0, stored.LikeCount + (liked ? 1 : -1)) });
+        }
+
         work.Run("comment like", async token =>
         {
             var updated = liked
                 ? await client.LikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false)
                 : await client.UnlikeCommentAsync(comment.PostId, comment.Id, token).ConfigureAwait(false);
-            if (updated is not null && detailPostId == comment.PostId)
+            lock (commentsSync)
             {
-                detailComments = CopyOnWrite.Replace(detailComments, updated);
+                if (updated is not null && detailPostId == comment.PostId)
+                {
+                    detailComments = CopyOnWrite.Replace(detailComments, updated);
+                }
             }
         });
     }
@@ -1689,9 +1801,12 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
 
     public void DeleteComment(string postId, string commentId)
     {
-        if (detailPostId == postId)
+        lock (commentsSync)
         {
-            detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
+            if (detailPostId == postId)
+            {
+                detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
+            }
         }
 
         work.Run("comment delete",
@@ -1703,9 +1818,12 @@ internal sealed class VelvetStore : ChatThreadStoreBase<VelvetMessageDto, Velvet
         work.Run("comment delete", async token =>
         {
             var succeeded = await client.DeleteCommentAsync(postId, commentId, token).ConfigureAwait(false);
-            if (succeeded && detailPostId == postId)
+            lock (commentsSync)
             {
-                detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
+                if (succeeded && detailPostId == postId)
+                {
+                    detailComments = CopyOnWrite.RemoveById(detailComments, commentId);
+                }
             }
 
             return succeeded;
