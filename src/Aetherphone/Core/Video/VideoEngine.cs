@@ -342,17 +342,20 @@ internal sealed class VideoEngine : IDisposable
             framesProgressAtTicks = now;
         }
 
-        if (info.CoreIdle || !info.HasAudioPosition)
+        if (info.CoreIdle)
         {
             lastObservedAudioPosition = info.AudioPositionSeconds;
             audioProgressAtTicks = now;
         }
-        else if (!audioPositionSeen
-                 || Math.Abs(info.AudioPositionSeconds - lastObservedAudioPosition) > StallPositionTolerance)
+        else if (info.HasAudioPosition)
         {
-            audioPositionSeen = true;
-            lastObservedAudioPosition = info.AudioPositionSeconds;
-            audioProgressAtTicks = now;
+            if (!audioPositionSeen
+                 || Math.Abs(info.AudioPositionSeconds - lastObservedAudioPosition) > StallPositionTolerance)
+            {
+                audioPositionSeen = true;
+                lastObservedAudioPosition = info.AudioPositionSeconds;
+                audioProgressAtTicks = now;
+            }
         }
 
         var nearEnd = info.DurationSeconds > 0d
